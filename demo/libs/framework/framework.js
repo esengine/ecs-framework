@@ -289,6 +289,7 @@ var Entity = (function () {
     };
     Entity.prototype.update = function () {
         this.components.forEach(function (component) { return component.update(); });
+        this.transform.updateTransform();
     };
     Entity.prototype.destory = function () {
         this.scene.entities.remove(this);
@@ -377,6 +378,13 @@ var SceneManager = (function () {
     SceneManager._loadedScenes = new Map();
     return SceneManager;
 }());
+var DirtyType;
+(function (DirtyType) {
+    DirtyType[DirtyType["clean"] = 0] = "clean";
+    DirtyType[DirtyType["positionDirty"] = 1] = "positionDirty";
+    DirtyType[DirtyType["scaleDirty"] = 2] = "scaleDirty";
+    DirtyType[DirtyType["rotationDirty"] = 3] = "rotationDirty";
+})(DirtyType || (DirtyType = {}));
 var Transform = (function () {
     function Transform(entity) {
         this._localRotation = 0;
@@ -451,6 +459,7 @@ var Transform = (function () {
         if (localPosition == this._localPosition)
             return this;
         this._localPosition = localPosition;
+        this._localDirty = this._positionDirty = this._localPositionDirty = this._localRotationDirty = this._localScaleDirty = true;
         return this;
     };
     Transform.prototype.setPosition = function (position) {
@@ -473,20 +482,41 @@ var Transform = (function () {
         return this;
     };
     Transform.prototype.updateTransform = function () {
-        this._translationMatrix = Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y);
-        this._rotationMatrix = Matrix2D.createRotation(this._localRotation);
-        this._scaleMatrix = Matrix2D.createScale(this._localScale.x, this._localScale.y);
-        this._localTransform = Matrix2D.multiply(this._scaleMatrix, this._rotationMatrix);
-        this._localTransform = Matrix2D.multiply(this._localTransform, this._translationMatrix);
-        if (!this.parent) {
-            this._worldTransform = this._localTransform;
-            this._rotation = this._localRotation;
-            this._scale = this._localScale;
-        }
-        else {
-            this._worldTransform = Matrix2D.multiply(this._localTransform, this.parent._worldTransform);
-            this._rotation = this._localRotation + this.parent._rotation;
-            this._scale = Vector2.multiply(this.parent._scale, this._localScale);
+        if (this._hierachyDirty != DirtyType.clean) {
+            if (this.parent)
+                this.parent.updateTransform();
+            if (this._localDirty) {
+                if (this._localPositionDirty) {
+                    this._translationMatrix = Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y);
+                    this._localPositionDirty = false;
+                }
+                if (this._localRotationDirty) {
+                    this._rotationMatrix = Matrix2D.createRotation(this._localRotation);
+                    this._localRotationDirty = false;
+                }
+                if (this._localScaleDirty) {
+                    this._scaleMatrix = Matrix2D.createScale(this._localScale.x, this._localScale.y);
+                    this._localScaleDirty = false;
+                }
+                this._localTransform = Matrix2D.multiply(this._scaleMatrix, this._rotationMatrix);
+                this._localTransform = Matrix2D.multiply(this._localTransform, this._translationMatrix);
+                if (!this.parent) {
+                    this._worldTransform = this._localTransform;
+                    this._rotation = this._localRotation;
+                    this._scale = this._localScale;
+                    this._worldInverseDirty = true;
+                }
+                this._localDirty = false;
+            }
+            if (this.parent) {
+                this._worldTransform = Matrix2D.multiply(this._localTransform, this.parent._worldTransform);
+                this._rotation = this._localRotation + this.parent._rotation;
+                this._scale = Vector2.multiply(this.parent._scale, this._localScale);
+                this._worldInverseDirty = true;
+            }
+            this._worldToLocalDirty = true;
+            this._positionDirty = true;
+            this._hierachyDirty = DirtyType.clean;
         }
     };
     return Transform;

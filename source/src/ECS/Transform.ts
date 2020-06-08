@@ -1,3 +1,10 @@
+enum DirtyType{
+    clean,
+    positionDirty,
+    scaleDirty,
+    rotationDirty,
+}
+
 class Transform {
     /** 相关联的实体 */
     public readonly entity: Entity;
@@ -21,6 +28,14 @@ class Transform {
     private _scale: Vector2;
 
     private _localTransform;
+    private _hierachyDirty: DirtyType;
+    private _localDirty: boolean;
+    private _localPositionDirty: boolean;
+    private _localScaleDirty: boolean;
+    private _localRotationDirty: boolean;
+    private _positionDirty: boolean;
+    private _worldToLocalDirty: boolean;
+    private _worldInverseDirty: boolean;
 
     public get childCount(){
         return this._children.length;
@@ -89,7 +104,8 @@ class Transform {
             return this;
 
         this._localPosition = localPosition;
-        
+        this._localDirty = this._positionDirty = this._localPositionDirty = this._localRotationDirty = this._localScaleDirty = true;
+
         return this;
     }
 
@@ -116,25 +132,53 @@ class Transform {
     }
 
     public updateTransform(){
-        if (this.parent)
-            this.parent.updateTransform();
+        if (this._hierachyDirty != DirtyType.clean){
+            if (this.parent)
+                this.parent.updateTransform();
 
-        this._translationMatrix = Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y);
-        this._rotationMatrix = Matrix2D.createRotation(this._localRotation);
-        this._scaleMatrix = Matrix2D.createScale(this._localScale.x, this._localScale.y);
+            if (this._localDirty){
+                if (this._localPositionDirty){
+                    this._translationMatrix = Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y);
+                    this._localPositionDirty = false;
+                }
 
-        this._localTransform = Matrix2D.multiply(this._scaleMatrix, this._rotationMatrix);
-        this._localTransform = Matrix2D.multiply(this._localTransform, this._translationMatrix);
+                if (this._localRotationDirty){
+                    this._rotationMatrix = Matrix2D.createRotation(this._localRotation);
+                    this._localRotationDirty = false;
+                }
+                
 
-        if (!this.parent){
-            this._worldTransform = this._localTransform;
-            this._rotation = this._localRotation;
-            this._scale = this._localScale;
-        }else{
-            this._worldTransform = Matrix2D.multiply(this._localTransform, this.parent._worldTransform);
+                if (this._localScaleDirty){
+                    this._scaleMatrix = Matrix2D.createScale(this._localScale.x, this._localScale.y);
+                    this._localScaleDirty = false;
+                }
+                
 
-            this._rotation = this._localRotation + this.parent._rotation;
-            this._scale = Vector2.multiply( this.parent._scale, this._localScale);
+                this._localTransform = Matrix2D.multiply(this._scaleMatrix, this._rotationMatrix);
+                this._localTransform = Matrix2D.multiply(this._localTransform, this._translationMatrix);
+    
+                if (!this.parent){
+                    this._worldTransform = this._localTransform;
+                    this._rotation = this._localRotation;
+                    this._scale = this._localScale;
+                    this._worldInverseDirty = true;
+                }
+
+                this._localDirty = false;
+            }
+           
+            if (this.parent){
+                this._worldTransform = Matrix2D.multiply(this._localTransform, this.parent._worldTransform);
+    
+                this._rotation = this._localRotation + this.parent._rotation;
+                this._scale = Vector2.multiply( this.parent._scale, this._localScale);
+                this._worldInverseDirty = true;
+            }
+            
+            this._worldToLocalDirty = true;
+            this._positionDirty = true;
+            this._hierachyDirty = DirtyType.clean;
         }
+        
     }
 }

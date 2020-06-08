@@ -51,6 +51,7 @@ class Entity {
 
     public update(){
         this.components.forEach(component => component.update());
+        this.transform.updateTransform();
     }
 
     public destory(){

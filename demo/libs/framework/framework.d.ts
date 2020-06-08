@@ -63,6 +63,12 @@ declare class SceneManager {
     static setActiveScene(scene: Scene): Scene;
     static getActiveScene(): Scene;
 }
+declare enum DirtyType {
+    clean = 0,
+    positionDirty = 1,
+    scaleDirty = 2,
+    rotationDirty = 3
+}
 declare class Transform {
     readonly entity: Entity;
     private _children;
@@ -80,6 +86,14 @@ declare class Transform {
     private _position;
     private _scale;
     private _localTransform;
+    private _hierachyDirty;
+    private _localDirty;
+    private _localPositionDirty;
+    private _localScaleDirty;
+    private _localRotationDirty;
+    private _positionDirty;
+    private _worldToLocalDirty;
+    private _worldInverseDirty;
     readonly childCount: number;
     constructor(entity: Entity);
     getChild(index: number): Transform;
