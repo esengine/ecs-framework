@@ -91,12 +91,9 @@ class Main extends eui.UILayer {
      * Create scene interface
      */
     protected createGameScene(): void {
-        let scene = SceneManager.createScene("main", new Scene(this)).setActive();
+        let scene = SceneManager.createScene("main", new MainScene(this)).setActive();
         let player = scene.createEntity("player");
-        let texture = RES.getRes("checkbox_select_down_png");
-        player.addComponent(new TestComponent(new eui.Image(texture)));
-        scene.camera.setPosition(new Vector2(-100, -50));
-        player.transform.setPosition(new Vector2(10, 10));
+        player.addComponent(new SpawnComponent(EnemyType.worm));
         // console.log(player.transform.position);
     }
 }

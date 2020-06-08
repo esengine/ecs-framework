@@ -20,6 +20,9 @@ declare interface Array<T> {
 declare abstract class Component {
     entity: Entity;
     displayRender: egret.DisplayObject;
+    private _enabled;
+    enabled: boolean;
+    setEnabled(isEnabled: boolean): this;
     abstract initialize(): any;
     update(): void;
     bind(displayRender: egret.DisplayObject): this;
@@ -30,11 +33,15 @@ declare class Entity {
     readonly transform: Transform;
     readonly components: Component[];
     private _updateOrder;
+    private _enabled;
+    enabled: boolean;
+    setEnabled(isEnabled: boolean): this;
     constructor(name: string);
     updateOrder: number;
     setUpdateOrder(updateOrder: number): this;
     attachToScene(newScene: Scene): void;
     addComponent<T extends Component>(component: T): T;
+    getComponent<T extends Component>(): T;
     update(): void;
     destory(): void;
 }
@@ -44,9 +51,15 @@ declare class Scene extends egret.DisplayObjectContainer {
     private _projectionMatrix;
     private _transformMatrix;
     private _matrixTransformMatrix;
+    readonly entityProcessors: EntitySystem[];
     constructor(displayObject: egret.DisplayObject);
     createEntity(name: string): Entity;
     addEntity(entity: Entity): Entity;
+    destoryAllEntities(): void;
+    findEntity(name: string): Entity;
+    addEntityProcessor(processor: EntitySystem): EntitySystem;
+    removeEntityProcessor(processor: EntitySystem): void;
+    getEntityProcessor<T extends EntitySystem>(): T;
     setActive(): Scene;
     initialize(): void;
     onActive(): void;
@@ -117,6 +130,31 @@ declare class Camera extends Component {
     setPosition(position: Vector2): this;
     updateMatrixes(): void;
     destory(): void;
+}
+declare class EntitySystem {
+    private _scene;
+    private _entities;
+    private _matcher;
+    readonly matcher: Matcher;
+    scene: Scene;
+    constructor(matcher?: Matcher);
+    initialize(): void;
+    update(): void;
+    lateUpdate(): void;
+    protected begin(): void;
+    protected process(entities: Entity[]): void;
+    protected lateProcess(entities: Entity[]): void;
+    protected end(): void;
+}
+declare abstract class EntityProcessingSystem extends EntitySystem {
+    constructor(matcher: Matcher);
+    abstract processEntity(entity: Entity): any;
+    lateProcessEntity(entity: Entity): void;
+    protected process(entities: Entity[]): void;
+    protected lateProcess(entities: Entity[]): void;
+}
+declare class Matcher {
+    static empty(): Matcher;
 }
 declare class MathHelper {
     static toDegrees(radians: number): number;

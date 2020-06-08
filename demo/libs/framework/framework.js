@@ -240,7 +240,24 @@ Array.prototype.sum = function (selector) {
 };
 var Component = (function () {
     function Component() {
+        this._enabled = true;
     }
+    Object.defineProperty(Component.prototype, "enabled", {
+        get: function () {
+            return this.entity ? this.entity.enabled && this._enabled : this._enabled;
+        },
+        set: function (value) {
+            this.setEnabled(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Component.prototype.setEnabled = function (isEnabled) {
+        if (this._enabled != isEnabled) {
+            this._enabled = isEnabled;
+        }
+        return this;
+    };
     Component.prototype.update = function () {
     };
     Component.prototype.bind = function (displayRender) {
@@ -252,10 +269,27 @@ var Component = (function () {
 var Entity = (function () {
     function Entity(name) {
         this._updateOrder = 0;
+        this._enabled = true;
         this.name = name;
         this.transform = new Transform(this);
         this.components = [];
     }
+    Object.defineProperty(Entity.prototype, "enabled", {
+        get: function () {
+            return this._enabled;
+        },
+        set: function (value) {
+            this.setEnabled(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Entity.prototype.setEnabled = function (isEnabled) {
+        if (this._enabled != isEnabled) {
+            this._enabled = isEnabled;
+        }
+        return this;
+    };
     Object.defineProperty(Entity.prototype, "updateOrder", {
         get: function () {
             return this._updateOrder;
@@ -287,6 +321,9 @@ var Entity = (function () {
         component.initialize();
         return component;
     };
+    Entity.prototype.getComponent = function () {
+        return this.components.firstOrDefault(function (component) { return component instanceof Component; });
+    };
     Entity.prototype.update = function () {
         this.components.forEach(function (component) { return component.update(); });
         this.transform.updateTransform();
@@ -307,8 +344,8 @@ var Scene = (function (_super) {
         var _this = _super.call(this) || this;
         _this.entities = [];
         displayObject.stage.addChild(_this);
-        _this.camera = _this.createEntity("camera").addComponent(new Camera());
         _this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
+        _this.entityProcessors = [];
         _this.addEventListener(egret.Event.ACTIVATE, _this.onActive, _this);
         _this.addEventListener(egret.Event.DEACTIVATE, _this.onDeactive, _this);
         _this.addEventListener(egret.Event.ENTER_FRAME, _this.update, _this);
@@ -324,18 +361,39 @@ var Scene = (function (_super) {
         entity.scene = this;
         return entity;
     };
+    Scene.prototype.destoryAllEntities = function () {
+        this.entities.forEach(function (entity) { return entity.destory(); });
+    };
+    Scene.prototype.findEntity = function (name) {
+        return this.entities.firstOrDefault(function (entity) { return entity.name == name; });
+    };
+    Scene.prototype.addEntityProcessor = function (processor) {
+        processor.scene = this;
+        this.entityProcessors.push(processor);
+        return processor;
+    };
+    Scene.prototype.removeEntityProcessor = function (processor) {
+        this.entityProcessors.remove(processor);
+    };
+    Scene.prototype.getEntityProcessor = function () {
+        return this.entityProcessors.firstOrDefault(function (processor) { return processor instanceof EntitySystem; });
+    };
     Scene.prototype.setActive = function () {
         SceneManager.setActiveScene(this);
         return this;
     };
     Scene.prototype.initialize = function () {
+        this.camera = this.createEntity("camera").addComponent(new Camera());
+        this.entityProcessors.forEach(function (processor) { return processor.initialize(); });
     };
     Scene.prototype.onActive = function () {
     };
     Scene.prototype.onDeactive = function () {
     };
     Scene.prototype.update = function () {
+        this.entityProcessors.forEach(function (processor) { return processor.update(); });
         this.entities.forEach(function (entity) { return entity.update(); });
+        this.entityProcessors.forEach(function (processor) { return processor.lateUpdate(); });
     };
     Scene.prototype.prepRenderState = function () {
         this._projectionMatrix.m11 = 2 / this.stage.width;
@@ -561,6 +619,74 @@ var Camera = (function (_super) {
     };
     return Camera;
 }(Component));
+var EntitySystem = (function () {
+    function EntitySystem(matcher) {
+        this._entities = [];
+        this._matcher = matcher ? matcher : Matcher.empty();
+    }
+    Object.defineProperty(EntitySystem.prototype, "matcher", {
+        get: function () {
+            return this._matcher;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(EntitySystem.prototype, "scene", {
+        get: function () {
+            return this._scene;
+        },
+        set: function (value) {
+            this._scene = value;
+            this._entities = [];
+        },
+        enumerable: true,
+        configurable: true
+    });
+    EntitySystem.prototype.initialize = function () {
+    };
+    EntitySystem.prototype.update = function () {
+        this.begin();
+        this.process(this._entities);
+    };
+    EntitySystem.prototype.lateUpdate = function () {
+        this.lateProcess(this._entities);
+        this.end();
+    };
+    EntitySystem.prototype.begin = function () {
+    };
+    EntitySystem.prototype.process = function (entities) {
+    };
+    EntitySystem.prototype.lateProcess = function (entities) {
+    };
+    EntitySystem.prototype.end = function () {
+    };
+    return EntitySystem;
+}());
+var EntityProcessingSystem = (function (_super) {
+    __extends(EntityProcessingSystem, _super);
+    function EntityProcessingSystem(matcher) {
+        return _super.call(this, matcher) || this;
+    }
+    EntityProcessingSystem.prototype.lateProcessEntity = function (entity) {
+    };
+    EntityProcessingSystem.prototype.process = function (entities) {
+        var _this = this;
+        entities.forEach(function (entity) { return _this.processEntity(entity); });
+    };
+    EntityProcessingSystem.prototype.lateProcess = function (entities) {
+        var _this = this;
+        entities.forEach(function (entity) { return _this.lateProcessEntity(entity); });
+    };
+    return EntityProcessingSystem;
+}(EntitySystem));
+var Matcher = (function () {
+    function Matcher() {
+    }
+    Matcher.empty = function () {
+        return new Matcher();
+    };
+    return Matcher;
+}());
 var MathHelper = (function () {
     function MathHelper() {
     }

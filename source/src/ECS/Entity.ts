@@ -7,6 +7,23 @@ class Entity {
     /** 当前附加到此实体的所有组件的列表 */
     public readonly components: Component[];
     private _updateOrder: number = 0;
+    private _enabled: boolean = true;
+
+    public get enabled(){
+        return this._enabled;
+    }
+
+    public set enabled(value: boolean){
+        this.setEnabled(value);
+    }
+
+    public setEnabled(isEnabled: boolean){
+        if (this._enabled != isEnabled){
+            this._enabled = isEnabled;
+        }
+
+        return this;
+    }
 
     constructor(name: string){
         this.name = name;
@@ -47,6 +64,10 @@ class Entity {
         this.components.push(component);
         component.initialize();
         return component;
+    }
+
+    public getComponent<T extends Component>(): T{
+        return this.components.firstOrDefault(component => component instanceof Component) as T;
     }
 
     public update(){

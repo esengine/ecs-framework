@@ -7,12 +7,14 @@ class Scene extends egret.DisplayObjectContainer {
    private _transformMatrix: Matrix2D;
    private _matrixTransformMatrix: Matrix2D;
 
+   public readonly entityProcessors: EntitySystem[];
+
    constructor(displayObject: egret.DisplayObject){
       super();
       displayObject.stage.addChild(this);
-      /** 初始化默认相机 */
-      this.camera = this.createEntity("camera").addComponent(new Camera());
       this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
+      this.entityProcessors = [];
+      
       this.addEventListener(egret.Event.ACTIVATE, this.onActive, this);
       this.addEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
       this.addEventListener(egret.Event.ENTER_FRAME, this.update, this);
@@ -31,6 +33,32 @@ class Scene extends egret.DisplayObjectContainer {
       return entity;
    }
 
+   public destoryAllEntities(){
+      this.entities.forEach(entity => entity.destory());
+   }
+
+   public findEntity(name: string): Entity{
+      return this.entities.firstOrDefault(entity => entity.name == name);
+   }
+
+   /**
+    * 在场景中添加一个EntitySystem处理器
+    * @param processor 处理器
+    */
+   public addEntityProcessor(processor: EntitySystem){
+      processor.scene = this;
+      this.entityProcessors.push(processor);
+      return processor;
+   }
+
+   public removeEntityProcessor(processor: EntitySystem){
+      this.entityProcessors.remove(processor);
+   }
+
+   public getEntityProcessor<T extends EntitySystem>(): T {
+      return this.entityProcessors.firstOrDefault(processor => processor instanceof EntitySystem) as T;
+   }
+
    public setActive(): Scene{
       SceneManager.setActiveScene(this);
 
@@ -39,7 +67,9 @@ class Scene extends egret.DisplayObjectContainer {
 
    /** 初始化场景 */
    public initialize(){
-
+      /** 初始化默认相机 */
+      this.camera = this.createEntity("camera").addComponent(new Camera());
+      this.entityProcessors.forEach(processor => processor.initialize());
    }
 
    /** 场景激活 */
@@ -53,7 +83,9 @@ class Scene extends egret.DisplayObjectContainer {
    }
 
    public update(){
+      this.entityProcessors.forEach(processor => processor.update());
       this.entities.forEach(entity => entity.update());
+      this.entityProcessors.forEach(processor => processor.lateUpdate());
    }
 
    public prepRenderState(){

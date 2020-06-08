@@ -15,6 +15,8 @@
 		"bin-debug/Main.js",
 		"bin-debug/Platform.js",
 		"bin-debug/ThemeAdapter.js",
-		"bin-debug/game/TestComponent.js"
+		"bin-debug/game/MainScene.js",
+		"bin-debug/game/SpawnerComponent.js",
+		"bin-debug/game/SpawnerSystem.js"
 	]
 }
