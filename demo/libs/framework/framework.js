@@ -76,7 +76,7 @@ Array.prototype.findAll = function (predicate) {
 Array.prototype.contains = function (value) {
     function contains(array, value) {
         for (var i = 0, len = array.length; i < len; i++) {
-            if (JSON.stringify(array[i]) == JSON.stringify(value)) {
+            if (array[i] == value) {
                 return true;
             }
         }
@@ -265,9 +265,12 @@ var Component = (function () {
         return this;
     };
     Component.prototype.registerComponent = function () {
-        var _this = this;
+        this.entity.componentBits.set(ComponentTypeManager.getIndexFor(this), false);
+        this.entity.scene.entityProcessors.onComponentAdded(this.entity);
+    };
+    Component.prototype.deregisterComponent = function () {
         this.entity.componentBits.set(ComponentTypeManager.getIndexFor(this));
-        this.entity.scene.entityProcessors.forEach(function (processor) { return processor.onChanged(_this.entity); });
+        this.entity.scene.entityProcessors.onComponentRemoved(this.entity);
     };
     return Component;
 }());
@@ -328,8 +331,8 @@ var Entity = (function () {
         component.initialize();
         return component;
     };
-    Entity.prototype.getComponent = function () {
-        return this.components.firstOrDefault(function (component) { return component instanceof Component; });
+    Entity.prototype.getComponent = function (type) {
+        return this.components.firstOrDefault(function (component) { return component instanceof type; });
     };
     Entity.prototype.update = function () {
         this.components.forEach(function (component) { return component.update(); });
@@ -351,7 +354,7 @@ var Scene = (function (_super) {
         var _this = _super.call(this) || this;
         displayObject.stage.addChild(_this);
         _this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
-        _this.entityProcessors = [];
+        _this.entityProcessors = new EntityProcessorList();
         _this.entities = new EntityList(_this);
         _this.addEventListener(egret.Event.ACTIVATE, _this.onActive, _this);
         _this.addEventListener(egret.Event.DEACTIVATE, _this.onDeactive, _this);
@@ -380,14 +383,14 @@ var Scene = (function (_super) {
     };
     Scene.prototype.addEntityProcessor = function (processor) {
         processor.scene = this;
-        this.entityProcessors.push(processor);
+        this.entityProcessors.add(processor);
         return processor;
     };
     Scene.prototype.removeEntityProcessor = function (processor) {
         this.entityProcessors.remove(processor);
     };
     Scene.prototype.getEntityProcessor = function () {
-        return this.entityProcessors.firstOrDefault(function (processor) { return processor instanceof EntitySystem; });
+        return this.entityProcessors.getProcessor();
     };
     Scene.prototype.setActive = function () {
         SceneManager.setActiveScene(this);
@@ -395,17 +398,21 @@ var Scene = (function (_super) {
     };
     Scene.prototype.initialize = function () {
         this.camera = this.createEntity("camera").addComponent(new Camera());
-        this.entityProcessors.forEach(function (processor) { return processor.initialize(); });
+        if (this.entityProcessors)
+            this.entityProcessors.begin();
     };
     Scene.prototype.onActive = function () {
     };
     Scene.prototype.onDeactive = function () {
     };
     Scene.prototype.update = function () {
+        Time.update(egret.getTimer());
         this.entities.updateLists();
-        this.entityProcessors.forEach(function (processor) { return processor.update(); });
+        if (this.entityProcessors)
+            this.entityProcessors.update();
         this.entities.update();
-        this.entityProcessors.forEach(function (processor) { return processor.lateUpdate(); });
+        if (this.entityProcessors)
+            this.entityProcessors.lateUpdate();
     };
     Scene.prototype.prepRenderState = function () {
         this._projectionMatrix.m11 = 2 / this.stage.width;
@@ -784,7 +791,7 @@ var BitSet = (function () {
     };
     BitSet.prototype.isEmpty = function () {
         for (var i = this._bits.length - 1; i >= 0; i--) {
-            if (this._bits[i] != 0)
+            if (this._bits[i])
                 return false;
         }
         return true;
@@ -805,10 +812,16 @@ var BitSet = (function () {
         }
         return -1;
     };
-    BitSet.prototype.set = function (pos) {
-        var offset = pos >> 6;
-        this.ensure(offset);
-        this._bits[offset] |= 1 << pos;
+    BitSet.prototype.set = function (pos, value) {
+        if (value === void 0) { value = true; }
+        if (value) {
+            var offset = pos >> 6;
+            this.ensure(offset);
+            this._bits[offset] |= 1 << pos;
+        }
+        else {
+            this.clear(pos);
+        }
     };
     BitSet.LONG_MASK = 0x3f;
     return BitSet;
@@ -895,7 +908,7 @@ var EntityList = (function () {
             this._tempEntityList.forEach(function (entity) {
                 _this._entities.remove(entity);
                 entity.scene = null;
-                _this.scene.entityProcessors.forEach(function (processor) { return processor.remove(entity); });
+                _this.scene.entityProcessors.onEntityRemoved(entity);
             });
             this._tempEntityList.length = 0;
         }
@@ -906,12 +919,68 @@ var EntityList = (function () {
             this._tempEntityList.forEach(function (entity) {
                 _this._entities.push(entity);
                 entity.scene = _this.scene;
-                _this.scene.entityProcessors.forEach(function (processor) { return processor.onChanged(entity); });
+                _this.scene.entityProcessors.onEntityAdded(entity);
             });
             this._tempEntityList.length = 0;
         }
     };
     return EntityList;
+}());
+var EntityProcessorList = (function () {
+    function EntityProcessorList() {
+        this._processors = [];
+    }
+    EntityProcessorList.prototype.add = function (processor) {
+        this._processors.push(processor);
+    };
+    EntityProcessorList.prototype.remove = function (processor) {
+        this._processors.remove(processor);
+    };
+    EntityProcessorList.prototype.onComponentAdded = function (entity) {
+        this.notifyEntityChanged(entity);
+    };
+    EntityProcessorList.prototype.onComponentRemoved = function (entity) {
+        this.notifyEntityChanged(entity);
+    };
+    EntityProcessorList.prototype.onEntityAdded = function (entity) {
+        this.notifyEntityChanged(entity);
+    };
+    EntityProcessorList.prototype.onEntityRemoved = function (entity) {
+        this.removeFromProcessors(entity);
+    };
+    EntityProcessorList.prototype.notifyEntityChanged = function (entity) {
+        for (var i = 0; i < this._processors.length; i++) {
+            this._processors[i].onChanged(entity);
+        }
+    };
+    EntityProcessorList.prototype.removeFromProcessors = function (entity) {
+        for (var i = 0; i < this._processors.length; i++) {
+            this._processors[i].remove(entity);
+        }
+    };
+    EntityProcessorList.prototype.begin = function () {
+    };
+    EntityProcessorList.prototype.update = function () {
+        for (var i = 0; i < this._processors.length; i++) {
+            this._processors[i].update();
+        }
+    };
+    EntityProcessorList.prototype.lateUpdate = function () {
+        for (var i = 0; i < this._processors.length; i++) {
+            this._processors[i].lateUpdate();
+        }
+    };
+    EntityProcessorList.prototype.end = function () {
+    };
+    EntityProcessorList.prototype.getProcessor = function () {
+        for (var i = 0; i < this._processors.length; i++) {
+            var processor = this._processors[i];
+            if (processor instanceof EntitySystem)
+                return processor;
+        }
+        return null;
+    };
+    return EntityProcessorList;
 }());
 var Matcher = (function () {
     function Matcher() {
@@ -936,6 +1005,19 @@ var Matcher = (function () {
         return true;
     };
     return Matcher;
+}());
+var Time = (function () {
+    function Time() {
+    }
+    Time.update = function (currentTime) {
+        var dt = (currentTime - this._lastTime) / 1000;
+        this.deltaTime = dt * this.timeScale;
+        this.unscaledDeltaTime = dt;
+        this._lastTime = currentTime;
+    };
+    Time.timeScale = 1;
+    Time._lastTime = 0;
+    return Time;
 }());
 var MathHelper = (function () {
     function MathHelper() {

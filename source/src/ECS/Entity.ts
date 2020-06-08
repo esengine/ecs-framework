@@ -70,8 +70,8 @@ class Entity {
         return component;
     }
 
-    public getComponent<T extends Component>(): T{
-        return this.components.firstOrDefault(component => component instanceof Component) as T;
+    public getComponent<T extends Component>(type): T{
+        return this.components.firstOrDefault(component => component instanceof type) as T;
     }
 
     public update(){

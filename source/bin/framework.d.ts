@@ -27,6 +27,7 @@ declare abstract class Component {
     update(): void;
     bind(displayRender: egret.DisplayObject): this;
     registerComponent(): void;
+    deregisterComponent(): void;
 }
 declare class Entity {
     name: string;
@@ -43,7 +44,7 @@ declare class Entity {
     setUpdateOrder(updateOrder: number): this;
     attachToScene(newScene: Scene): void;
     addComponent<T extends Component>(component: T): T;
-    getComponent<T extends Component>(): T;
+    getComponent<T extends Component>(type: any): T;
     update(): void;
     destory(): void;
 }
@@ -53,7 +54,7 @@ declare class Scene extends egret.DisplayObjectContainer {
     private _projectionMatrix;
     private _transformMatrix;
     private _matrixTransformMatrix;
-    readonly entityProcessors: EntitySystem[];
+    readonly entityProcessors: EntityProcessorList;
     constructor(displayObject: egret.DisplayObject);
     createEntity(name: string): Entity;
     addEntity(entity: Entity): Entity;
@@ -173,7 +174,7 @@ declare class BitSet {
     intersects(set: BitSet): boolean;
     isEmpty(): boolean;
     nextSetBit(from: number): number;
-    set(pos: number): void;
+    set(pos: number, value?: boolean): void;
 }
 declare class ComponentTypeManager {
     private static _componentTypesMask;
@@ -196,12 +197,35 @@ declare class EntityList {
     removeAllEntities(): void;
     updateLists(): void;
 }
+declare class EntityProcessorList {
+    private _processors;
+    add(processor: EntitySystem): void;
+    remove(processor: EntitySystem): void;
+    onComponentAdded(entity: Entity): void;
+    onComponentRemoved(entity: Entity): void;
+    onEntityAdded(entity: Entity): void;
+    onEntityRemoved(entity: Entity): void;
+    protected notifyEntityChanged(entity: Entity): void;
+    protected removeFromProcessors(entity: Entity): void;
+    begin(): void;
+    update(): void;
+    lateUpdate(): void;
+    end(): void;
+    getProcessor<T extends EntitySystem>(): T;
+}
 declare class Matcher {
     protected allSet: BitSet;
     protected exclusionSet: BitSet;
     protected oneSet: BitSet;
     static empty(): Matcher;
     IsIntersted(e: Entity): boolean;
+}
+declare class Time {
+    static unscaledDeltaTime: any;
+    static deltaTime: number;
+    static timeScale: number;
+    private static _lastTime;
+    static update(currentTime: number): void;
 }
 declare class MathHelper {
     static toDegrees(radians: number): number;

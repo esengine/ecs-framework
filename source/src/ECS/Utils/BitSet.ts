@@ -94,7 +94,7 @@ class BitSet{
 
     public isEmpty(): boolean{
         for (let i = this._bits.length - 1; i >= 0; i --){
-            if (this._bits[i] != 0)
+            if (this._bits[i])
                 return false;
         }
 
@@ -121,9 +121,13 @@ class BitSet{
         return -1;
     }
 
-    public set(pos: number){
-        let offset = pos >> 6;
-        this.ensure(offset);
-        this._bits[offset] |= 1 << pos;
+    public set(pos: number, value: boolean = true){
+        if (value){
+            let offset = pos >> 6;
+            this.ensure(offset);
+            this._bits[offset] |= 1 << pos;
+        }else{
+            this.clear(pos);
+        }
     }
 }

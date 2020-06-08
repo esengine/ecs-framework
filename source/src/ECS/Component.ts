@@ -33,7 +33,12 @@ abstract class Component {
 
     /** 内部使用 运行时不应该调用 */
     public registerComponent(){
+        this.entity.componentBits.set(ComponentTypeManager.getIndexFor(this), false);
+        this.entity.scene.entityProcessors.onComponentAdded(this.entity);
+    }
+
+    public deregisterComponent(){
         this.entity.componentBits.set(ComponentTypeManager.getIndexFor(this));
-        this.entity.scene.entityProcessors.forEach(processor => processor.onChanged(this.entity));
+        this.entity.scene.entityProcessors.onComponentRemoved(this.entity);
     }
 }

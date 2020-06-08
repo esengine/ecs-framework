@@ -7,13 +7,13 @@ class Scene extends egret.DisplayObjectContainer {
    private _transformMatrix: Matrix2D;
    private _matrixTransformMatrix: Matrix2D;
 
-   public readonly entityProcessors: EntitySystem[];
+   public readonly entityProcessors: EntityProcessorList;
 
    constructor(displayObject: egret.DisplayObject){
       super();
       displayObject.stage.addChild(this);
       this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
-      this.entityProcessors = [];
+      this.entityProcessors = new EntityProcessorList();
       this.entities = new EntityList(this);
       
       this.addEventListener(egret.Event.ACTIVATE, this.onActive, this);
@@ -53,7 +53,7 @@ class Scene extends egret.DisplayObjectContainer {
     */
    public addEntityProcessor(processor: EntitySystem){
       processor.scene = this;
-      this.entityProcessors.push(processor);
+      this.entityProcessors.add(processor);
       return processor;
    }
 
@@ -62,7 +62,7 @@ class Scene extends egret.DisplayObjectContainer {
    }
 
    public getEntityProcessor<T extends EntitySystem>(): T {
-      return this.entityProcessors.firstOrDefault(processor => processor instanceof EntitySystem) as T;
+      return this.entityProcessors.getProcessor<T>();
    }
 
    public setActive(): Scene{
@@ -75,7 +75,9 @@ class Scene extends egret.DisplayObjectContainer {
    public initialize(){
       /** 初始化默认相机 */
       this.camera = this.createEntity("camera").addComponent(new Camera());
-      this.entityProcessors.forEach(processor => processor.initialize());
+
+      if (this.entityProcessors)
+         this.entityProcessors.begin();
    }
 
    /** 场景激活 */
@@ -89,11 +91,17 @@ class Scene extends egret.DisplayObjectContainer {
    }
 
    public update(){
+      Time.update(egret.getTimer());
+
       this.entities.updateLists();
 
-      this.entityProcessors.forEach(processor => processor.update());
+      if (this.entityProcessors)
+         this.entityProcessors.update()
+
       this.entities.update();
-      this.entityProcessors.forEach(processor => processor.lateUpdate());
+
+      if (this.entityProcessors)
+         this.entityProcessors.lateUpdate();
    }
 
    public prepRenderState(){

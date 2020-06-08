@@ -69,7 +69,7 @@ class EntityList{
                 this._entities.remove(entity);
                 entity.scene = null;
 
-                this.scene.entityProcessors.forEach(processor => processor.remove(entity));
+                this.scene.entityProcessors.onEntityRemoved(entity);
             });
 
             this._tempEntityList.length = 0;
@@ -83,7 +83,7 @@ class EntityList{
                 this._entities.push(entity);
                 entity.scene = this.scene;
 
-                this.scene.entityProcessors.forEach(processor => processor.onChanged(entity));
+                this.scene.entityProcessors.onEntityAdded(entity)
             });
 
             this._tempEntityList.length = 0;

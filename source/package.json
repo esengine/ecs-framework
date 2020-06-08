@@ -28,5 +28,7 @@
     "watchify": "^3.9.0",
     "gulp-inject-string": "^1.1.2"
   },
-  "publishConfig": { "registry": "https://npm.pkg.github.com/359807859@qq.com" }
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/359807859@qq.com"
+  }
 }
