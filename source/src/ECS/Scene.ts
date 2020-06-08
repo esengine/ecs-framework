@@ -1,7 +1,7 @@
 /** 场景 */
 class Scene extends egret.DisplayObjectContainer {
    public camera: Camera; 
-   public entities: Entity[] = [];
+   public readonly entities: EntityList;
 
    private _projectionMatrix: Matrix2D;
    private _transformMatrix: Matrix2D;
@@ -14,6 +14,7 @@ class Scene extends egret.DisplayObjectContainer {
       displayObject.stage.addChild(this);
       this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
       this.entityProcessors = [];
+      this.entities = new EntityList(this);
       
       this.addEventListener(egret.Event.ACTIVATE, this.onActive, this);
       this.addEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
@@ -27,18 +28,23 @@ class Scene extends egret.DisplayObjectContainer {
    }
 
    public addEntity(entity: Entity){
-      this.entities.push(entity);
+      this.entities.add(entity);
       entity.scene = this;
+
+      for (let i = 0; i < entity.transform.childCount; i ++)
+         this.addEntity(entity.transform.getChild(i).entity);
 
       return entity;
    }
 
-   public destoryAllEntities(){
-      this.entities.forEach(entity => entity.destory());
+   public destroyAllEntities(){
+      for (let i = 0; i < this.entities.count; i ++){
+         this.entities.buffer[i].destory();
+      }
    }
 
    public findEntity(name: string): Entity{
-      return this.entities.firstOrDefault(entity => entity.name == name);
+      return this.entities.findEntity(name);
    }
 
    /**
@@ -74,7 +80,7 @@ class Scene extends egret.DisplayObjectContainer {
 
    /** 场景激活 */
    public onActive(){
-
+      
    }
 
    /** 场景失去焦点 */
@@ -83,8 +89,10 @@ class Scene extends egret.DisplayObjectContainer {
    }
 
    public update(){
+      this.entities.updateLists();
+
       this.entityProcessors.forEach(processor => processor.update());
-      this.entities.forEach(entity => entity.update());
+      this.entities.update();
       this.entityProcessors.forEach(processor => processor.lateUpdate());
    }
 
@@ -103,7 +111,6 @@ class Scene extends egret.DisplayObjectContainer {
       this.camera.destory();
       this.camera = null;
 
-      this.entities.forEach(entity => entity.destory());
-      this.entities.length = 0;
+      this.entities.removeAllEntities();
    }
 }

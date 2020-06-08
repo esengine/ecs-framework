@@ -264,6 +264,11 @@ var Component = (function () {
         this.displayRender = displayRender;
         return this;
     };
+    Component.prototype.registerComponent = function () {
+        var _this = this;
+        this.entity.componentBits.set(ComponentTypeManager.getIndexFor(this));
+        this.entity.scene.entityProcessors.forEach(function (processor) { return processor.onChanged(_this.entity); });
+    };
     return Component;
 }());
 var Entity = (function () {
@@ -273,6 +278,7 @@ var Entity = (function () {
         this.name = name;
         this.transform = new Transform(this);
         this.components = [];
+        this.componentBits = new BitSet();
     }
     Object.defineProperty(Entity.prototype, "enabled", {
         get: function () {
@@ -310,7 +316,8 @@ var Entity = (function () {
     };
     Entity.prototype.attachToScene = function (newScene) {
         this.scene = newScene;
-        newScene.entities.push(this);
+        newScene.entities.add(this);
+        this.components.forEach(function (component) { return component.registerComponent(); });
         for (var i = 0; i < this.transform.childCount; i++) {
             this.transform.getChild(i).entity.attachToScene(newScene);
         }
@@ -342,10 +349,10 @@ var Scene = (function (_super) {
     __extends(Scene, _super);
     function Scene(displayObject) {
         var _this = _super.call(this) || this;
-        _this.entities = [];
         displayObject.stage.addChild(_this);
         _this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
         _this.entityProcessors = [];
+        _this.entities = new EntityList(_this);
         _this.addEventListener(egret.Event.ACTIVATE, _this.onActive, _this);
         _this.addEventListener(egret.Event.DEACTIVATE, _this.onDeactive, _this);
         _this.addEventListener(egret.Event.ENTER_FRAME, _this.update, _this);
@@ -357,15 +364,19 @@ var Scene = (function (_super) {
         return this.addEntity(entity);
     };
     Scene.prototype.addEntity = function (entity) {
-        this.entities.push(entity);
+        this.entities.add(entity);
         entity.scene = this;
+        for (var i = 0; i < entity.transform.childCount; i++)
+            this.addEntity(entity.transform.getChild(i).entity);
         return entity;
     };
-    Scene.prototype.destoryAllEntities = function () {
-        this.entities.forEach(function (entity) { return entity.destory(); });
+    Scene.prototype.destroyAllEntities = function () {
+        for (var i = 0; i < this.entities.count; i++) {
+            this.entities.buffer[i].destory();
+        }
     };
     Scene.prototype.findEntity = function (name) {
-        return this.entities.firstOrDefault(function (entity) { return entity.name == name; });
+        return this.entities.findEntity(name);
     };
     Scene.prototype.addEntityProcessor = function (processor) {
         processor.scene = this;
@@ -391,8 +402,9 @@ var Scene = (function (_super) {
     Scene.prototype.onDeactive = function () {
     };
     Scene.prototype.update = function () {
+        this.entities.updateLists();
         this.entityProcessors.forEach(function (processor) { return processor.update(); });
-        this.entities.forEach(function (entity) { return entity.update(); });
+        this.entities.update();
         this.entityProcessors.forEach(function (processor) { return processor.lateUpdate(); });
     };
     Scene.prototype.prepRenderState = function () {
@@ -406,8 +418,7 @@ var Scene = (function (_super) {
         this.removeEventListener(egret.Event.ACTIVATE, this.onActive, this);
         this.camera.destory();
         this.camera = null;
-        this.entities.forEach(function (entity) { return entity.destory(); });
-        this.entities.length = 0;
+        this.entities.removeAllEntities();
     };
     return Scene;
 }(egret.DisplayObjectContainer));
@@ -599,7 +610,7 @@ var Camera = (function (_super) {
     };
     Camera.prototype.update = function () {
         var _this = this;
-        SceneManager.getActiveScene().entities.forEach(function (entity) { return entity.components.forEach(function (component) {
+        SceneManager.getActiveScene().entities.buffer.forEach(function (entity) { return entity.components.forEach(function (component) {
             if (component.displayRender) {
                 var has = _this.entity.scene.$children.indexOf(component.displayRender);
                 if (has == -1) {
@@ -644,6 +655,26 @@ var EntitySystem = (function () {
     });
     EntitySystem.prototype.initialize = function () {
     };
+    EntitySystem.prototype.onChanged = function (entity) {
+        var contains = this._entities.contains(entity);
+        var interest = this._matcher.IsIntersted(entity);
+        if (interest && !contains)
+            this.add(entity);
+        else if (!interest && contains)
+            this.remove(entity);
+    };
+    EntitySystem.prototype.add = function (entity) {
+        this._entities.push(entity);
+        this.onAdded(entity);
+    };
+    EntitySystem.prototype.onAdded = function (entity) {
+    };
+    EntitySystem.prototype.remove = function (entity) {
+        this._entities.remove(entity);
+        this.onRemoved(entity);
+    };
+    EntitySystem.prototype.onRemoved = function (entity) {
+    };
     EntitySystem.prototype.update = function () {
         this.begin();
         this.process(this._entities);
@@ -679,11 +710,230 @@ var EntityProcessingSystem = (function (_super) {
     };
     return EntityProcessingSystem;
 }(EntitySystem));
+var BitSet = (function () {
+    function BitSet(nbits) {
+        if (nbits === void 0) { nbits = 64; }
+        var length = nbits >> 6;
+        if ((nbits & BitSet.LONG_MASK) != 0)
+            length++;
+        this._bits = new Array(length);
+    }
+    BitSet.prototype.and = function (bs) {
+        var max = Math.min(this._bits.length, bs._bits.length);
+        var i;
+        for (var i_1 = 0; i_1 < max; ++i_1)
+            this._bits[i_1] &= bs._bits[i_1];
+        while (i < this._bits.length)
+            this._bits[i++] = 0;
+    };
+    BitSet.prototype.andNot = function (bs) {
+        var i = Math.min(this._bits.length, bs._bits.length);
+        while (--i >= 0)
+            this._bits[i] &= ~bs._bits[i];
+    };
+    BitSet.prototype.cardinality = function () {
+        var card = 0;
+        for (var i = this._bits.length - 1; i >= 0; i--) {
+            var a = this._bits[i];
+            if (a == 0)
+                continue;
+            if (a == -1) {
+                card += 64;
+                continue;
+            }
+            a = ((a >> 1) & 0x5555555555555555) + (a & 0x5555555555555555);
+            a = ((a >> 2) & 0x3333333333333333) + (a & 0x3333333333333333);
+            var b = ((a >> 32) + a);
+            b = ((b >> 4) & 0x0f0f0f0f) + (b & 0x0f0f0f0f);
+            b = ((b >> 8) & 0x00ff00ff) + (b & 0x00ff00ff);
+            card += ((b >> 16) & 0x0000ffff) + (b & 0x0000ffff);
+        }
+        return card;
+    };
+    BitSet.prototype.clear = function (pos) {
+        if (pos != undefined) {
+            var offset = pos >> 6;
+            this.ensure(offset);
+            this._bits[offset] &= ~(1 << pos);
+        }
+        else {
+            for (var i = 0; i < this._bits.length; i++)
+                this._bits[i] = 0;
+        }
+    };
+    BitSet.prototype.ensure = function (lastElt) {
+        if (lastElt >= this._bits.length) {
+            var nd = new Number[lastElt + 1];
+            nd = this._bits.copyWithin(0, 0, this._bits.length);
+            this._bits = nd;
+        }
+    };
+    BitSet.prototype.get = function (pos) {
+        var offset = pos >> 6;
+        if (offset >= this._bits.length)
+            return false;
+        return (this._bits[offset] & (1 << pos)) != 0;
+    };
+    BitSet.prototype.intersects = function (set) {
+        var i = Math.min(this._bits.length, set._bits.length);
+        while (--i >= 0) {
+            if ((this._bits[i] & set._bits[i]) != 0)
+                return true;
+        }
+        return false;
+    };
+    BitSet.prototype.isEmpty = function () {
+        for (var i = this._bits.length - 1; i >= 0; i--) {
+            if (this._bits[i] != 0)
+                return false;
+        }
+        return true;
+    };
+    BitSet.prototype.nextSetBit = function (from) {
+        var offset = from >> 6;
+        var mask = 1 << from;
+        while (offset < this._bits.length) {
+            var h = this._bits[offset];
+            do {
+                if ((h & mask) != 0)
+                    return from;
+                mask <<= 1;
+                from++;
+            } while (mask != 0);
+            mask = 1;
+            offset++;
+        }
+        return -1;
+    };
+    BitSet.prototype.set = function (pos) {
+        var offset = pos >> 6;
+        this.ensure(offset);
+        this._bits[offset] |= 1 << pos;
+    };
+    BitSet.LONG_MASK = 0x3f;
+    return BitSet;
+}());
+var ComponentTypeManager = (function () {
+    function ComponentTypeManager() {
+    }
+    ComponentTypeManager.add = function (type) {
+        if (!this._componentTypesMask.has(type))
+            this._componentTypesMask[type] = this._componentTypesMask.size;
+    };
+    ComponentTypeManager.getIndexFor = function (type) {
+        var v = -1;
+        if (!this._componentTypesMask.has(type)) {
+            this.add(type);
+            v = this._componentTypesMask.get(type);
+        }
+        return v;
+    };
+    ComponentTypeManager._componentTypesMask = new Map();
+    return ComponentTypeManager;
+}());
+var EntityList = (function () {
+    function EntityList(scene) {
+        this._entitiesToRemove = [];
+        this._entitiesToAdded = [];
+        this._tempEntityList = [];
+        this._entities = [];
+        this.scene = scene;
+    }
+    Object.defineProperty(EntityList.prototype, "count", {
+        get: function () {
+            return this._entities.length;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(EntityList.prototype, "buffer", {
+        get: function () {
+            return this._entities;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    EntityList.prototype.add = function (entity) {
+        this._entitiesToAdded.push(entity);
+    };
+    EntityList.prototype.remove = function (entity) {
+        if (this._entitiesToAdded.contains(entity)) {
+            this._entitiesToAdded.remove(entity);
+            return;
+        }
+        if (!this._entitiesToRemove.contains(entity))
+            this._entitiesToRemove.push(entity);
+    };
+    EntityList.prototype.findEntity = function (name) {
+        for (var i = 0; i < this._entities.length; i++) {
+            if (this._entities[i].name == name)
+                return this._entities[i];
+        }
+        return this._entitiesToAdded.firstOrDefault(function (entity) { return entity.name == name; });
+    };
+    EntityList.prototype.update = function () {
+        for (var i = 0; i < this._entities.length; i++) {
+            var entity = this._entities[i];
+            if (entity.enabled)
+                entity.update();
+        }
+    };
+    EntityList.prototype.removeAllEntities = function () {
+        this._entitiesToAdded.length = 0;
+        this.updateLists();
+        for (var i = 0; i < this._entities.length; i++) {
+            this._entities[i].scene = null;
+        }
+        this._entities.length = 0;
+    };
+    EntityList.prototype.updateLists = function () {
+        var _this = this;
+        if (this._entitiesToRemove.length > 0) {
+            var temp = this._entitiesToRemove;
+            this._entitiesToRemove = this._tempEntityList;
+            this._tempEntityList = temp;
+            this._tempEntityList.forEach(function (entity) {
+                _this._entities.remove(entity);
+                entity.scene = null;
+                _this.scene.entityProcessors.forEach(function (processor) { return processor.remove(entity); });
+            });
+            this._tempEntityList.length = 0;
+        }
+        if (this._entitiesToAdded.length > 0) {
+            var temp = this._entitiesToAdded;
+            this._entitiesToAdded = this._tempEntityList;
+            this._tempEntityList = temp;
+            this._tempEntityList.forEach(function (entity) {
+                _this._entities.push(entity);
+                entity.scene = _this.scene;
+                _this.scene.entityProcessors.forEach(function (processor) { return processor.onChanged(entity); });
+            });
+            this._tempEntityList.length = 0;
+        }
+    };
+    return EntityList;
+}());
 var Matcher = (function () {
     function Matcher() {
+        this.allSet = new BitSet();
+        this.exclusionSet = new BitSet();
+        this.oneSet = new BitSet();
     }
     Matcher.empty = function () {
         return new Matcher();
+    };
+    Matcher.prototype.IsIntersted = function (e) {
+        if (!this.allSet.isEmpty()) {
+            for (var i = this.allSet.nextSetBit(0); i >= 0; i = this.allSet.nextSetBit(i + 1)) {
+                if (!e.componentBits.get(i))
+                    return false;
+            }
+        }
+        if (!this.exclusionSet.isEmpty() && this.exclusionSet.intersects(e.componentBits))
+            return false;
+        if (!this.oneSet.isEmpty() && !this.oneSet.intersects(e.componentBits))
+            return false;
+        return true;
     };
     return Matcher;
 }());

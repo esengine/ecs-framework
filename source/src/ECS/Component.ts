@@ -30,4 +30,10 @@ abstract class Component {
 
         return this;
     }
+
+    /** 内部使用 运行时不应该调用 */
+    public registerComponent(){
+        this.entity.componentBits.set(ComponentTypeManager.getIndexFor(this));
+        this.entity.scene.entityProcessors.forEach(processor => processor.onChanged(this.entity));
+    }
 }

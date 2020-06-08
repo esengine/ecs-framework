@@ -26,6 +26,7 @@ declare abstract class Component {
     abstract initialize(): any;
     update(): void;
     bind(displayRender: egret.DisplayObject): this;
+    registerComponent(): void;
 }
 declare class Entity {
     name: string;
@@ -34,6 +35,7 @@ declare class Entity {
     readonly components: Component[];
     private _updateOrder;
     private _enabled;
+    componentBits: BitSet;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
     constructor(name: string);
@@ -47,7 +49,7 @@ declare class Entity {
 }
 declare class Scene extends egret.DisplayObjectContainer {
     camera: Camera;
-    entities: Entity[];
+    readonly entities: EntityList;
     private _projectionMatrix;
     private _transformMatrix;
     private _matrixTransformMatrix;
@@ -55,7 +57,7 @@ declare class Scene extends egret.DisplayObjectContainer {
     constructor(displayObject: egret.DisplayObject);
     createEntity(name: string): Entity;
     addEntity(entity: Entity): Entity;
-    destoryAllEntities(): void;
+    destroyAllEntities(): void;
     findEntity(name: string): Entity;
     addEntityProcessor(processor: EntitySystem): EntitySystem;
     removeEntityProcessor(processor: EntitySystem): void;
@@ -139,6 +141,11 @@ declare class EntitySystem {
     scene: Scene;
     constructor(matcher?: Matcher);
     initialize(): void;
+    onChanged(entity: Entity): void;
+    add(entity: Entity): void;
+    onAdded(entity: Entity): void;
+    remove(entity: Entity): void;
+    onRemoved(entity: Entity): void;
     update(): void;
     lateUpdate(): void;
     protected begin(): void;
@@ -153,8 +160,48 @@ declare abstract class EntityProcessingSystem extends EntitySystem {
     protected process(entities: Entity[]): void;
     protected lateProcess(entities: Entity[]): void;
 }
+declare class BitSet {
+    private static LONG_MASK;
+    private _bits;
+    constructor(nbits?: number);
+    and(bs: BitSet): void;
+    andNot(bs: BitSet): void;
+    cardinality(): number;
+    clear(pos?: number): void;
+    private ensure;
+    get(pos: number): boolean;
+    intersects(set: BitSet): boolean;
+    isEmpty(): boolean;
+    nextSetBit(from: number): number;
+    set(pos: number): void;
+}
+declare class ComponentTypeManager {
+    private static _componentTypesMask;
+    static add(type: any): void;
+    static getIndexFor(type: any): number;
+}
+declare class EntityList {
+    scene: Scene;
+    private _entitiesToRemove;
+    private _entitiesToAdded;
+    private _tempEntityList;
+    private _entities;
+    constructor(scene: Scene);
+    readonly count: number;
+    readonly buffer: Entity[];
+    add(entity: Entity): void;
+    remove(entity: Entity): void;
+    findEntity(name: string): Entity;
+    update(): void;
+    removeAllEntities(): void;
+    updateLists(): void;
+}
 declare class Matcher {
+    protected allSet: BitSet;
+    protected exclusionSet: BitSet;
+    protected oneSet: BitSet;
     static empty(): Matcher;
+    IsIntersted(e: Entity): boolean;
 }
 declare class MathHelper {
     static toDegrees(radians: number): number;

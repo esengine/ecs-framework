@@ -9,6 +9,8 @@ class Entity {
     private _updateOrder: number = 0;
     private _enabled: boolean = true;
 
+    public componentBits: BitSet;
+
     public get enabled(){
         return this._enabled;
     }
@@ -29,6 +31,7 @@ class Entity {
         this.name = name;
         this.transform = new Transform(this);
         this.components = [];
+        this.componentBits = new BitSet();
     }
 
     public get updateOrder(){
@@ -52,7 +55,8 @@ class Entity {
 
     public attachToScene(newScene: Scene){
         this.scene = newScene;
-        newScene.entities.push(this);
+        newScene.entities.add(this);
+        this.components.forEach(component => component.registerComponent());
 
         for (let i = 0; i < this.transform.childCount; i ++){
             this.transform.getChild(i).entity.attachToScene(newScene);

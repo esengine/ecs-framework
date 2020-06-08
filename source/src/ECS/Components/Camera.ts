@@ -20,7 +20,7 @@ class Camera extends Component {
     }
 
     public update(){
-        SceneManager.getActiveScene().entities.forEach(entity => entity.components.forEach(component => {
+        SceneManager.getActiveScene().entities.buffer.forEach(entity => entity.components.forEach(component => {
             if (component.displayRender){
                 let has = this.entity.scene.$children.indexOf(component.displayRender)
                 if (has == -1){

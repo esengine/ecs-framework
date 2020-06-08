@@ -21,7 +21,34 @@ class EntitySystem {
     }
 
     public initialize(){
-        
+
+    }
+
+    public onChanged(entity: Entity){
+        let contains = this._entities.contains(entity);
+        let interest = this._matcher.IsIntersted(entity);
+
+        if (interest && !contains)
+            this.add(entity);
+        else if(!interest && contains)
+            this.remove(entity);
+    }
+
+    public add(entity: Entity){
+        this._entities.push(entity);
+        this.onAdded(entity);
+    }
+
+    public onAdded(entity: Entity){
+    }
+
+    public remove(entity: Entity){
+        this._entities.remove(entity);
+        this.onRemoved(entity);
+    }
+
+    public onRemoved(entity: Entity){
+
     }
 
     public update(){
