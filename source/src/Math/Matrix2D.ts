@@ -2,14 +2,14 @@
  * 表示右手3 * 3的浮点矩阵，可以存储平移、缩放和旋转信息。
  */
 class Matrix2D {
-    public m11: number;
-    public m12: number;
+    public m11: number = 0;
+    public m12: number = 0;
 
-    public m21: number;
-    public m22: number;
+    public m21: number = 0;
+    public m22: number = 0;
 
-    public m31: number;
-    public m32: number;
+    public m31: number = 0;
+    public m32: number = 0;
 
     private static _identity: Matrix2D = new Matrix2D(1, 0, 0, 1, 0, 0);
 
@@ -60,11 +60,11 @@ class Matrix2D {
      * 以度为单位的旋转存储在这个矩阵中
      */
     public get rotationDegrees(){
-        return MathHelper.ToDegrees(this.rotation);
+        return MathHelper.toDegrees(this.rotation);
     }
 
     public set rotationDegrees(value: number){
-        this.rotation = MathHelper.ToRadians(value);
+        this.rotation = MathHelper.toRadians(value);
     }
 
     public get scale(){
@@ -126,5 +126,69 @@ class Matrix2D {
         matrix1.m31 = m31;
         matrix1.m32 = m32;
         return matrix1;
+    }
+
+    public static multiplyTranslation(matrix: Matrix2D, x: number, y: number){
+        let trans = Matrix2D.createTranslation(x, y);
+        return Matrix2D.multiply(matrix, trans);
+    }
+
+    public determinant(){
+        return this.m11 * this.m22 - this.m12 * this.m21;
+    }
+
+    public static invert(matrix: Matrix2D, result: Matrix2D){
+        let det = 1 / matrix.determinant();
+
+        result.m11 = matrix.m22 * det;
+        result.m12 = -matrix.m12 * det;
+
+        result.m21 = -matrix.m21 * det;
+        result.m22 = matrix.m11 * det;
+
+        result.m31 = (matrix.m32 * matrix.m21 - matrix.m31 * matrix.m22) * det;
+        result.m32 = -(matrix.m32 * matrix.m11 - matrix.m31 * matrix.m12) * det;
+
+        return result;
+    }
+
+    public static createTranslation(xPosition: number, yPosition: number, result: Matrix2D = Matrix2D.identity){
+        result.m11 = 1;
+        result.m12 = 0;
+
+        result.m21 = 0;
+        result.m22 = 1;
+
+        result.m31 = xPosition;
+        result.m32 = yPosition;
+
+        return result;
+    }
+
+    public static createRotation(radians: number, result?: Matrix2D){
+        result = Matrix2D.identity;
+
+        let val1 = Math.cos(radians);
+        let val2 = Math.sin(radians);
+
+        result.m11 = val1;
+        result.m12 = val2;
+        result.m21 = -val2;
+        result.m22 = val1;
+
+        return result;
+    }
+
+    public static createScale(xScale: number, yScale: number, result: Matrix2D = Matrix2D.identity){
+        result.m11 = xScale;
+        result.m12 = 0;
+
+        result.m21 = 0;
+        result.m22 = yScale;
+
+        result.m31 = 0;
+        result.m32 = 0;
+
+        return result;
     }
 }

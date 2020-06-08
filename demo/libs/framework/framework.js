@@ -238,17 +238,57 @@ Array.prototype.sum = function (selector) {
     }
     return sum(this, selector);
 };
+var Component = (function () {
+    function Component() {
+    }
+    Component.prototype.update = function () {
+    };
+    Component.prototype.bind = function (displayRender) {
+        this.displayRender = displayRender;
+        return this;
+    };
+    return Component;
+}());
 var Entity = (function () {
     function Entity(name) {
+        this._updateOrder = 0;
         this.name = name;
         this.transform = new Transform(this);
+        this.components = [];
     }
+    Object.defineProperty(Entity.prototype, "updateOrder", {
+        get: function () {
+            return this._updateOrder;
+        },
+        set: function (value) {
+            this.setUpdateOrder(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Entity.prototype.setUpdateOrder = function (updateOrder) {
+        if (this._updateOrder != updateOrder) {
+            this._updateOrder = updateOrder;
+            if (this.scene) {
+            }
+            return this;
+        }
+    };
     Entity.prototype.attachToScene = function (newScene) {
         this.scene = newScene;
         newScene.entities.push(this);
         for (var i = 0; i < this.transform.childCount; i++) {
             this.transform.getChild(i).entity.attachToScene(newScene);
         }
+    };
+    Entity.prototype.addComponent = function (component) {
+        component.entity = this;
+        this.components.push(component);
+        component.initialize();
+        return component;
+    };
+    Entity.prototype.update = function () {
+        this.components.forEach(function (component) { return component.update(); });
     };
     Entity.prototype.destory = function () {
         this.scene.entities.remove(this);
@@ -265,13 +305,17 @@ var Scene = (function (_super) {
     function Scene(displayObject) {
         var _this = _super.call(this) || this;
         _this.entities = [];
-        _this.camera = new Camera(displayObject);
+        displayObject.stage.addChild(_this);
+        _this.camera = _this.createEntity("camera").addComponent(new Camera());
+        _this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
         _this.addEventListener(egret.Event.ACTIVATE, _this.onActive, _this);
         _this.addEventListener(egret.Event.DEACTIVATE, _this.onDeactive, _this);
+        _this.addEventListener(egret.Event.ENTER_FRAME, _this.update, _this);
         return _this;
     }
     Scene.prototype.createEntity = function (name) {
         var entity = new Entity(name);
+        entity.transform.position = new Vector2(0, 0);
         return this.addEntity(entity);
     };
     Scene.prototype.addEntity = function (entity) {
@@ -288,6 +332,15 @@ var Scene = (function (_super) {
     Scene.prototype.onActive = function () {
     };
     Scene.prototype.onDeactive = function () {
+    };
+    Scene.prototype.update = function () {
+        this.entities.forEach(function (entity) { return entity.update(); });
+    };
+    Scene.prototype.prepRenderState = function () {
+        this._projectionMatrix.m11 = 2 / this.stage.width;
+        this._projectionMatrix.m22 = -2 / this.stage.height;
+        this._transformMatrix = this.camera.transformMatrix;
+        this._matrixTransformMatrix = Matrix2D.multiply(this._transformMatrix, this._projectionMatrix);
     };
     Scene.prototype.destory = function () {
         this.removeEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
@@ -318,12 +371,21 @@ var SceneManager = (function () {
         this._activeScene.initialize();
         return scene;
     };
+    SceneManager.getActiveScene = function () {
+        return this._activeScene;
+    };
     SceneManager._loadedScenes = new Map();
     return SceneManager;
 }());
 var Transform = (function () {
     function Transform(entity) {
+        this._localRotation = 0;
+        this._worldTransform = Matrix2D.identity;
+        this._worldToLocalTransform = Matrix2D.identity;
+        this._worldInverseTransform = Matrix2D.identity;
+        this._rotation = 0;
         this.entity = entity;
+        this._scale = this._localScale = Vector2.One;
         this._children = [];
     }
     Object.defineProperty(Transform.prototype, "childCount", {
@@ -356,30 +418,138 @@ var Transform = (function () {
         this._parent = parent;
         return this;
     };
+    Object.defineProperty(Transform.prototype, "position", {
+        get: function () {
+            this.updateTransform();
+            if (!this.parent) {
+                this._position = this._localPosition;
+            }
+            else {
+                this.parent.updateTransform();
+                this._position = Vector2.transform(this._localPosition, this.parent._worldTransform);
+            }
+            return this._position;
+        },
+        set: function (value) {
+            this.setPosition(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Transform.prototype, "localPosition", {
+        get: function () {
+            this.updateTransform();
+            return this._localPosition;
+        },
+        set: function (value) {
+            this.setLocalPosition(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Transform.prototype.setLocalPosition = function (localPosition) {
+        if (localPosition == this._localPosition)
+            return this;
+        this._localPosition = localPosition;
+        return this;
+    };
+    Transform.prototype.setPosition = function (position) {
+        if (position == this._position)
+            return this;
+        this._position = position;
+        if (this.parent) {
+            this.localPosition = Vector2.transform(this._position, this._worldToLocalTransform);
+        }
+        else {
+            this.localPosition = position;
+        }
+        for (var i = 0; i < this.entity.components.length; i++) {
+            var component = this.entity.components[i];
+            if (component.displayRender) {
+                component.displayRender.x = this.entity.scene.camera.transformMatrix.m31 + this.position.x;
+                component.displayRender.y = this.entity.scene.camera.transformMatrix.m32 + this.position.y;
+            }
+        }
+        return this;
+    };
+    Transform.prototype.updateTransform = function () {
+        this._translationMatrix = Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y);
+        this._rotationMatrix = Matrix2D.createRotation(this._localRotation);
+        this._scaleMatrix = Matrix2D.createScale(this._localScale.x, this._localScale.y);
+        this._localTransform = Matrix2D.multiply(this._scaleMatrix, this._rotationMatrix);
+        this._localTransform = Matrix2D.multiply(this._localTransform, this._translationMatrix);
+        if (!this.parent) {
+            this._worldTransform = this._localTransform;
+            this._rotation = this._localRotation;
+            this._scale = this._localScale;
+        }
+        else {
+            this._worldTransform = Matrix2D.multiply(this._localTransform, this.parent._worldTransform);
+            this._rotation = this._localRotation + this.parent._rotation;
+            this._scale = Vector2.multiply(this.parent._scale, this._localScale);
+        }
+    };
     return Transform;
 }());
-var Camera = (function () {
-    function Camera(displayObject) {
-        this._displayContent = displayObject;
+var Camera = (function (_super) {
+    __extends(Camera, _super);
+    function Camera() {
+        var _this = _super.call(this) || this;
+        _this._transformMatrix = Matrix2D.identity;
+        _this._inverseTransformMatrix = Matrix2D.identity;
+        return _this;
     }
+    Object.defineProperty(Camera.prototype, "transformMatrix", {
+        get: function () {
+            this.updateMatrixes();
+            return this._transformMatrix;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Camera.prototype.initialize = function () {
+    };
+    Camera.prototype.update = function () {
+        var _this = this;
+        SceneManager.getActiveScene().entities.forEach(function (entity) { return entity.components.forEach(function (component) {
+            if (component.displayRender) {
+                var has = _this.entity.scene.$children.indexOf(component.displayRender);
+                if (has == -1) {
+                    _this.entity.scene.stage.addChild(component.displayRender);
+                }
+            }
+        }); });
+    };
+    Camera.prototype.setPosition = function (position) {
+        this.entity.transform.setPosition(position);
+        return this;
+    };
+    Camera.prototype.updateMatrixes = function () {
+        this._transformMatrix = Matrix2D.createTranslation(-this.entity.transform.position.x, -this.entity.transform.position.y);
+    };
     Camera.prototype.destory = function () {
-        this._displayContent = null;
     };
     return Camera;
-}());
+}(Component));
 var MathHelper = (function () {
     function MathHelper() {
     }
-    MathHelper.ToDegrees = function (radians) {
+    MathHelper.toDegrees = function (radians) {
         return radians * 57.295779513082320876798154814105;
     };
-    MathHelper.ToRadians = function (degrees) {
+    MathHelper.toRadians = function (degrees) {
         return degrees * 0.017453292519943295769236907684886;
     };
     return MathHelper;
 }());
 var Matrix2D = (function () {
     function Matrix2D(m11, m12, m21, m22, m31, m32) {
+        this.m11 = 0;
+        this.m12 = 0;
+        this.m21 = 0;
+        this.m22 = 0;
+        this.m31 = 0;
+        this.m32 = 0;
         this.m11 = m11;
         this.m12 = m12;
         this.m21 = m21;
@@ -422,10 +592,10 @@ var Matrix2D = (function () {
     });
     Object.defineProperty(Matrix2D.prototype, "rotationDegrees", {
         get: function () {
-            return MathHelper.ToDegrees(this.rotation);
+            return MathHelper.toDegrees(this.rotation);
         },
         set: function (value) {
-            this.rotation = MathHelper.ToRadians(value);
+            this.rotation = MathHelper.toRadians(value);
         },
         enumerable: true,
         configurable: true
@@ -474,14 +644,70 @@ var Matrix2D = (function () {
         matrix1.m32 = m32;
         return matrix1;
     };
+    Matrix2D.multiplyTranslation = function (matrix, x, y) {
+        var trans = Matrix2D.createTranslation(x, y);
+        return Matrix2D.multiply(matrix, trans);
+    };
+    Matrix2D.prototype.determinant = function () {
+        return this.m11 * this.m22 - this.m12 * this.m21;
+    };
+    Matrix2D.invert = function (matrix, result) {
+        var det = 1 / matrix.determinant();
+        result.m11 = matrix.m22 * det;
+        result.m12 = -matrix.m12 * det;
+        result.m21 = -matrix.m21 * det;
+        result.m22 = matrix.m11 * det;
+        result.m31 = (matrix.m32 * matrix.m21 - matrix.m31 * matrix.m22) * det;
+        result.m32 = -(matrix.m32 * matrix.m11 - matrix.m31 * matrix.m12) * det;
+        return result;
+    };
+    Matrix2D.createTranslation = function (xPosition, yPosition, result) {
+        if (result === void 0) { result = Matrix2D.identity; }
+        result.m11 = 1;
+        result.m12 = 0;
+        result.m21 = 0;
+        result.m22 = 1;
+        result.m31 = xPosition;
+        result.m32 = yPosition;
+        return result;
+    };
+    Matrix2D.createRotation = function (radians, result) {
+        result = Matrix2D.identity;
+        var val1 = Math.cos(radians);
+        var val2 = Math.sin(radians);
+        result.m11 = val1;
+        result.m12 = val2;
+        result.m21 = -val2;
+        result.m22 = val1;
+        return result;
+    };
+    Matrix2D.createScale = function (xScale, yScale, result) {
+        if (result === void 0) { result = Matrix2D.identity; }
+        result.m11 = xScale;
+        result.m12 = 0;
+        result.m21 = 0;
+        result.m22 = yScale;
+        result.m31 = 0;
+        result.m32 = 0;
+        return result;
+    };
     Matrix2D._identity = new Matrix2D(1, 0, 0, 1, 0, 0);
     return Matrix2D;
 }());
 var Vector2 = (function () {
     function Vector2(x, y) {
+        this.x = 0;
+        this.y = 0;
         this.x = x;
         this.y = y;
     }
+    Object.defineProperty(Vector2, "One", {
+        get: function () {
+            return this.unitVector2;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Vector2.add = function (value1, value2) {
         value1.x += value2.x;
         value1.y += value2.y;
@@ -507,5 +733,9 @@ var Vector2 = (function () {
         this.x *= val;
         this.y *= val;
     };
+    Vector2.transform = function (position, matrix) {
+        return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
+    };
+    Vector2.unitVector2 = new Vector2(1, 1);
     return Vector2;
 }());

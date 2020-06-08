@@ -1,7 +1,13 @@
 /** 2d 向量 */
 class Vector2 {
-    public x: number;
-    public y: number;
+    public x: number = 0;
+    public y: number = 0;
+
+    private static readonly unitVector2 = new Vector2(1, 1);
+
+    public static get One(){
+        return this.unitVector2;
+    }
 
     /**
      * 从两个值构造一个带有X和Y的二维向量。
@@ -42,5 +48,9 @@ class Vector2 {
         let val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
         this.x *= val;
         this.y *= val;
+    }
+
+    public static transform(position: Vector2, matrix: Matrix2D){
+        return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
     }
 }

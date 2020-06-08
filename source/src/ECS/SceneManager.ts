@@ -33,4 +33,8 @@ class SceneManager {
         this._activeScene.initialize();
         return scene;
     }
+
+    public static getActiveScene(){
+        return this._activeScene;
+    }
 }

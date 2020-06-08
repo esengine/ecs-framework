@@ -3,17 +3,24 @@ class Scene extends egret.DisplayObjectContainer {
    public camera: Camera; 
    public entities: Entity[] = [];
 
+   private _projectionMatrix: Matrix2D;
+   private _transformMatrix: Matrix2D;
+   private _matrixTransformMatrix: Matrix2D;
+
    constructor(displayObject: egret.DisplayObject){
       super();
+      displayObject.stage.addChild(this);
       /** 初始化默认相机 */
-      this.camera = new Camera(displayObject);
+      this.camera = this.createEntity("camera").addComponent(new Camera());
+      this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
       this.addEventListener(egret.Event.ACTIVATE, this.onActive, this);
       this.addEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
+      this.addEventListener(egret.Event.ENTER_FRAME, this.update, this);
    }
 
    public createEntity(name: string){
       let entity = new Entity(name);
-
+      entity.transform.position = new Vector2(0, 0);
       return this.addEntity(entity);
    }
 
@@ -43,6 +50,18 @@ class Scene extends egret.DisplayObjectContainer {
    /** 场景失去焦点 */
    public onDeactive(){
 
+   }
+
+   public update(){
+      this.entities.forEach(entity => entity.update());
+   }
+
+   public prepRenderState(){
+      this._projectionMatrix.m11 = 2 / this.stage.width;
+      this._projectionMatrix.m22 = -2 / this.stage.height;
+
+      this._transformMatrix = this.camera.transformMatrix;
+      this._matrixTransformMatrix = Matrix2D.multiply(this._transformMatrix, this._projectionMatrix);
    }
 
    public destory(){

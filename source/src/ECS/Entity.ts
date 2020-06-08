@@ -4,10 +4,33 @@ class Entity {
     public scene: Scene;
     /** 封装实体的位置/旋转/缩放，并允许设置一个高层结构 */
     public readonly transform: Transform;
+    /** 当前附加到此实体的所有组件的列表 */
+    public readonly components: Component[];
+    private _updateOrder: number = 0;
 
     constructor(name: string){
         this.name = name;
         this.transform = new Transform(this);
+        this.components = [];
+    }
+
+    public get updateOrder(){
+        return this._updateOrder;
+    }
+
+    public set updateOrder(value: number){
+        this.setUpdateOrder(value);
+    }
+
+    public setUpdateOrder(updateOrder: number){
+        if (this._updateOrder != updateOrder){
+            this._updateOrder = updateOrder;
+            if (this.scene){
+                
+            }
+
+            return this;
+        }
     }
 
     public attachToScene(newScene: Scene){
@@ -17,6 +40,17 @@ class Entity {
         for (let i = 0; i < this.transform.childCount; i ++){
             this.transform.getChild(i).entity.attachToScene(newScene);
         }
+    }
+
+    public addComponent<T extends Component>(component: T): T{
+        component.entity = this;
+        this.components.push(component);
+        component.initialize();
+        return component;
+    }
+
+    public update(){
+        this.components.forEach(component => component.update());
     }
 
     public destory(){

@@ -55,7 +55,8 @@ class Main extends eui.UILayer {
         this.runGame();
     }
 
-    private runGame() {
+    private async runGame() {
+        await this.loadResource();
         this.createGameScene();
     }
 
@@ -91,5 +92,11 @@ class Main extends eui.UILayer {
      */
     protected createGameScene(): void {
         let scene = SceneManager.createScene("main", new Scene(this)).setActive();
+        let player = scene.createEntity("player");
+        let texture = RES.getRes("checkbox_select_down_png");
+        player.addComponent(new TestComponent(new eui.Image(texture)));
+        scene.camera.setPosition(new Vector2(-100, -50));
+        player.transform.setPosition(new Vector2(10, 10));
+        // console.log(player.transform.position);
     }
 }
