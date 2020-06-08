@@ -20,6 +20,26 @@ abstract class Component {
 
     public abstract initialize();
 
+    public onAddedToEntity(){
+
+    }
+
+    public onRemovedFromEntity(){
+
+    }
+
+    public onEnabled(){
+
+    }
+
+    public onDisabled(){
+
+    }
+
+    public onEntityTransformChanged(comp: ComponentTransform){
+        
+    }
+
     public update(){
 
     }

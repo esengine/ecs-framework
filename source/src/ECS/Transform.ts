@@ -5,6 +5,12 @@ enum DirtyType{
     rotationDirty,
 }
 
+enum ComponentTransform{
+    position,
+    scale,
+    rotation
+}
+
 class Transform {
     /** 相关联的实体 */
     public readonly entity: Entity;
@@ -105,6 +111,7 @@ class Transform {
 
         this._localPosition = localPosition;
         this._localDirty = this._positionDirty = this._localPositionDirty = this._localRotationDirty = this._localScaleDirty = true;
+        this.setDirty(DirtyType.positionDirty);
 
         return this;
     }
@@ -120,8 +127,8 @@ class Transform {
             this.localPosition = position;
         }
 
-        for (let i = 0; i < this.entity.components.length; i ++){
-            let component = this.entity.components[i];
+        for (let i = 0; i < this.entity.components.buffer.length; i ++){
+            let component = this.entity.components.buffer[i];
             if (component.displayRender){
                 component.displayRender.x = this.entity.scene.camera.transformMatrix.m31 + this.position.x;
                 component.displayRender.y = this.entity.scene.camera.transformMatrix.m32 + this.position.y;
@@ -129,6 +136,31 @@ class Transform {
         }
 
         return this;
+    }
+
+    public setDirty(dirtyFlagType: DirtyType){
+        if ((this._hierachyDirty & dirtyFlagType) == 0){
+            this._hierachyDirty |= dirtyFlagType;
+
+            switch (dirtyFlagType){
+                case DirtyType.positionDirty:
+                    this.entity.onTransformChanged(ComponentTransform.position);
+                    break;
+                case DirtyType.rotationDirty:
+                    this.entity.onTransformChanged(ComponentTransform.rotation);
+                    break;
+                case DirtyType.scaleDirty:
+                    this.entity.onTransformChanged(ComponentTransform.scale);
+                    break;
+            }
+
+            if (this._children == null)
+                this._children = [];
+
+            for (let i = 0; i < this._children.length; i ++){
+                this._children[i].setDirty(dirtyFlagType);
+            }
+        }
     }
 
     public updateTransform(){

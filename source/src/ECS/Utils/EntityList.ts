@@ -86,6 +86,7 @@ class EntityList{
                 this.scene.entityProcessors.onEntityAdded(entity)
             });
 
+            this._tempEntityList.forEach(entity => entity.onAddedToScene());
             this._tempEntityList.length = 0;
         }
     }

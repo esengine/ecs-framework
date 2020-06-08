@@ -24,6 +24,11 @@ declare abstract class Component {
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
     abstract initialize(): any;
+    onAddedToEntity(): void;
+    onRemovedFromEntity(): void;
+    onEnabled(): void;
+    onDisabled(): void;
+    onEntityTransformChanged(comp: ComponentTransform): void;
     update(): void;
     bind(displayRender: egret.DisplayObject): this;
     registerComponent(): void;
@@ -33,19 +38,25 @@ declare class Entity {
     name: string;
     scene: Scene;
     readonly transform: Transform;
-    readonly components: Component[];
+    readonly components: ComponentList;
     private _updateOrder;
     private _enabled;
+    private _isDestoryed;
     componentBits: BitSet;
+    readonly isDestoryed: boolean;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
     constructor(name: string);
     updateOrder: number;
     setUpdateOrder(updateOrder: number): this;
     attachToScene(newScene: Scene): void;
+    detachFromScene(): void;
     addComponent<T extends Component>(component: T): T;
     getComponent<T extends Component>(type: any): T;
     update(): void;
+    onAddedToScene(): void;
+    onRemovedFromScene(): void;
+    onTransformChanged(comp: ComponentTransform): void;
     destory(): void;
 }
 declare class Scene extends egret.DisplayObjectContainer {
@@ -85,6 +96,11 @@ declare enum DirtyType {
     scaleDirty = 2,
     rotationDirty = 3
 }
+declare enum ComponentTransform {
+    position = 0,
+    scale = 1,
+    rotation = 2
+}
 declare class Transform {
     readonly entity: Entity;
     private _children;
@@ -119,6 +135,7 @@ declare class Transform {
     localPosition: Vector2;
     setLocalPosition(localPosition: Vector2): this;
     setPosition(position: Vector2): this;
+    setDirty(dirtyFlagType: DirtyType): void;
     updateTransform(): void;
 }
 declare class Camera extends Component {
@@ -175,6 +192,25 @@ declare class BitSet {
     isEmpty(): boolean;
     nextSetBit(from: number): number;
     set(pos: number, value?: boolean): void;
+}
+declare class ComponentList {
+    private _entity;
+    private _components;
+    private _componentsToAdd;
+    private _componentsToRemove;
+    private _tempBufferList;
+    constructor(entity: Entity);
+    readonly buffer: Component[];
+    add(component: Component): void;
+    remove(component: Component): void;
+    removeAllComponents(): void;
+    deregisterAllComponents(): void;
+    registerAllComponents(): void;
+    updateLists(): void;
+    private handleRemove;
+    getComponent<T extends Component>(type: any, onlyReturnInitializedComponents: boolean): T;
+    update(): void;
+    onEntityTransformChanged(comp: any): void;
 }
 declare class ComponentTypeManager {
     private static _componentTypesMask;

@@ -258,6 +258,16 @@ var Component = (function () {
         }
         return this;
     };
+    Component.prototype.onAddedToEntity = function () {
+    };
+    Component.prototype.onRemovedFromEntity = function () {
+    };
+    Component.prototype.onEnabled = function () {
+    };
+    Component.prototype.onDisabled = function () {
+    };
+    Component.prototype.onEntityTransformChanged = function (comp) {
+    };
     Component.prototype.update = function () {
     };
     Component.prototype.bind = function (displayRender) {
@@ -280,9 +290,16 @@ var Entity = (function () {
         this._enabled = true;
         this.name = name;
         this.transform = new Transform(this);
-        this.components = [];
+        this.components = new ComponentList(this);
         this.componentBits = new BitSet();
     }
+    Object.defineProperty(Entity.prototype, "isDestoryed", {
+        get: function () {
+            return this._isDestoryed;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Entity.prototype, "enabled", {
         get: function () {
             return this._enabled;
@@ -320,25 +337,41 @@ var Entity = (function () {
     Entity.prototype.attachToScene = function (newScene) {
         this.scene = newScene;
         newScene.entities.add(this);
-        this.components.forEach(function (component) { return component.registerComponent(); });
+        this.components.registerAllComponents();
         for (var i = 0; i < this.transform.childCount; i++) {
             this.transform.getChild(i).entity.attachToScene(newScene);
         }
     };
+    Entity.prototype.detachFromScene = function () {
+        this.scene.entities.remove(this);
+        this.components.deregisterAllComponents();
+        for (var i = 0; i < this.transform.childCount; i++)
+            this.transform.getChild(i).entity.detachFromScene();
+    };
     Entity.prototype.addComponent = function (component) {
         component.entity = this;
-        this.components.push(component);
+        this.components.add(component);
         component.initialize();
         return component;
     };
     Entity.prototype.getComponent = function (type) {
-        return this.components.firstOrDefault(function (component) { return component instanceof type; });
+        return this.components.getComponent(type, false);
     };
     Entity.prototype.update = function () {
-        this.components.forEach(function (component) { return component.update(); });
+        this.components.update();
         this.transform.updateTransform();
     };
+    Entity.prototype.onAddedToScene = function () {
+    };
+    Entity.prototype.onRemovedFromScene = function () {
+        if (this._isDestoryed)
+            this.components.remove;
+    };
+    Entity.prototype.onTransformChanged = function (comp) {
+        this.components.onEntityTransformChanged(comp);
+    };
     Entity.prototype.destory = function () {
+        this._isDestoryed = true;
         this.scene.entities.remove(this);
         this.transform.parent = null;
         for (var i = this.transform.childCount - 1; i >= 0; i--) {
@@ -461,6 +494,12 @@ var DirtyType;
     DirtyType[DirtyType["scaleDirty"] = 2] = "scaleDirty";
     DirtyType[DirtyType["rotationDirty"] = 3] = "rotationDirty";
 })(DirtyType || (DirtyType = {}));
+var ComponentTransform;
+(function (ComponentTransform) {
+    ComponentTransform[ComponentTransform["position"] = 0] = "position";
+    ComponentTransform[ComponentTransform["scale"] = 1] = "scale";
+    ComponentTransform[ComponentTransform["rotation"] = 2] = "rotation";
+})(ComponentTransform || (ComponentTransform = {}));
 var Transform = (function () {
     function Transform(entity) {
         this._localRotation = 0;
@@ -536,6 +575,7 @@ var Transform = (function () {
             return this;
         this._localPosition = localPosition;
         this._localDirty = this._positionDirty = this._localPositionDirty = this._localRotationDirty = this._localScaleDirty = true;
+        this.setDirty(DirtyType.positionDirty);
         return this;
     };
     Transform.prototype.setPosition = function (position) {
@@ -548,14 +588,35 @@ var Transform = (function () {
         else {
             this.localPosition = position;
         }
-        for (var i = 0; i < this.entity.components.length; i++) {
-            var component = this.entity.components[i];
+        for (var i = 0; i < this.entity.components.buffer.length; i++) {
+            var component = this.entity.components.buffer[i];
             if (component.displayRender) {
                 component.displayRender.x = this.entity.scene.camera.transformMatrix.m31 + this.position.x;
                 component.displayRender.y = this.entity.scene.camera.transformMatrix.m32 + this.position.y;
             }
         }
         return this;
+    };
+    Transform.prototype.setDirty = function (dirtyFlagType) {
+        if ((this._hierachyDirty & dirtyFlagType) == 0) {
+            this._hierachyDirty |= dirtyFlagType;
+            switch (dirtyFlagType) {
+                case DirtyType.positionDirty:
+                    this.entity.onTransformChanged(ComponentTransform.position);
+                    break;
+                case DirtyType.rotationDirty:
+                    this.entity.onTransformChanged(ComponentTransform.rotation);
+                    break;
+                case DirtyType.scaleDirty:
+                    this.entity.onTransformChanged(ComponentTransform.scale);
+                    break;
+            }
+            if (this._children == null)
+                this._children = [];
+            for (var i = 0; i < this._children.length; i++) {
+                this._children[i].setDirty(dirtyFlagType);
+            }
+        }
     };
     Transform.prototype.updateTransform = function () {
         if (this._hierachyDirty != DirtyType.clean) {
@@ -617,7 +678,7 @@ var Camera = (function (_super) {
     };
     Camera.prototype.update = function () {
         var _this = this;
-        SceneManager.getActiveScene().entities.buffer.forEach(function (entity) { return entity.components.forEach(function (component) {
+        SceneManager.getActiveScene().entities.buffer.forEach(function (entity) { return entity.components.buffer.forEach(function (component) {
             if (component.displayRender) {
                 var has = _this.entity.scene.$children.indexOf(component.displayRender);
                 if (has == -1) {
@@ -826,6 +887,116 @@ var BitSet = (function () {
     BitSet.LONG_MASK = 0x3f;
     return BitSet;
 }());
+var ComponentList = (function () {
+    function ComponentList(entity) {
+        this._components = [];
+        this._componentsToAdd = [];
+        this._componentsToRemove = [];
+        this._tempBufferList = [];
+        this._entity = entity;
+    }
+    Object.defineProperty(ComponentList.prototype, "buffer", {
+        get: function () {
+            return this._components;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    ComponentList.prototype.add = function (component) {
+        this._componentsToAdd.push(component);
+    };
+    ComponentList.prototype.remove = function (component) {
+        if (this._componentsToAdd.contains(component)) {
+            this._componentsToAdd.remove(component);
+            return;
+        }
+        this._componentsToRemove.push(component);
+    };
+    ComponentList.prototype.removeAllComponents = function () {
+        for (var i = 0; i < this._components.length; i++) {
+            this.handleRemove(this._components[i]);
+        }
+        this._components.length = 0;
+        this._componentsToAdd.length = 0;
+        this._componentsToRemove.length = 0;
+    };
+    ComponentList.prototype.deregisterAllComponents = function () {
+        for (var i = 0; i < this._components.length; i++) {
+            var component = this._components[i];
+            this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
+            this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+        }
+    };
+    ComponentList.prototype.registerAllComponents = function () {
+        for (var i = 0; i < this._components.length; i++) {
+            var component = this._components[i];
+            this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
+            this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+        }
+    };
+    ComponentList.prototype.updateLists = function () {
+        if (this._componentsToRemove.length > 0) {
+            for (var i = 0; i < this._componentsToRemove.length; i++) {
+                this.handleRemove(this._componentsToRemove[i]);
+                this._components.remove(this._componentsToRemove[i]);
+            }
+            this._componentsToRemove.length = 0;
+        }
+        if (this._componentsToAdd.length > 0) {
+            for (var i = 0, count = this._componentsToAdd.length; i < count; i++) {
+                var component = this._componentsToAdd[i];
+                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
+                this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                this._components.push(component);
+                this._tempBufferList.push(component);
+            }
+            this._componentsToAdd.length = 0;
+            for (var i = 0; i < this._tempBufferList.length; i++) {
+                var component = this._tempBufferList[i];
+                component.onAddedToEntity();
+                if (component.enabled) {
+                    component.onEnabled();
+                }
+            }
+            this._tempBufferList.length = 0;
+        }
+    };
+    ComponentList.prototype.handleRemove = function (component) {
+        this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
+        this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+        component.onRemovedFromEntity();
+        component.entity = null;
+    };
+    ComponentList.prototype.getComponent = function (type, onlyReturnInitializedComponents) {
+        for (var i = 0; i < this._components.length; i++) {
+            var component = this._components[i];
+            if (component instanceof type)
+                return component;
+        }
+        if (!onlyReturnInitializedComponents) {
+            for (var i = 0; i < this._componentsToAdd.length; i++) {
+                var component = this._componentsToAdd[i];
+                if (component instanceof type)
+                    return component;
+            }
+        }
+        return null;
+    };
+    ComponentList.prototype.update = function () {
+        this.updateLists();
+    };
+    ComponentList.prototype.onEntityTransformChanged = function (comp) {
+        for (var i = 0; i < this._components.length; i++) {
+            if (this._components[i].enabled)
+                this._components[i].onEntityTransformChanged(comp);
+        }
+        for (var i = 0; i < this._componentsToAdd.length; i++) {
+            if (this._componentsToAdd[i].enabled)
+                this._componentsToAdd[i].onEntityTransformChanged(comp);
+        }
+    };
+    return ComponentList;
+}());
 var ComponentTypeManager = (function () {
     function ComponentTypeManager() {
     }
@@ -921,6 +1092,7 @@ var EntityList = (function () {
                 entity.scene = _this.scene;
                 _this.scene.entityProcessors.onEntityAdded(entity);
             });
+            this._tempEntityList.forEach(function (entity) { return entity.onAddedToScene(); });
             this._tempEntityList.length = 0;
         }
     };
