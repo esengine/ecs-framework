@@ -1,0 +1,29 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Launch Wing Player",
+			"type": "chrome",
+			"request": "launch",
+			"file": "index.html",
+			"runtimeExecutable": "${execPath}",
+			"useBuildInServer": true,
+			"sourceMaps": true,
+			"webRoot": "${workspaceRoot}",
+			"preLaunchTask":"build",
+			"port":5479
+		},
+		{
+			"name": "Launch Chrome",
+			"type": "chrome",
+			"request": "launch",
+			"file": "index.html",
+			"useBuildInServer": true,
+			"sourceMaps": true,
+			"webRoot": "${workspaceRoot}",
+			"preLaunchTask":"build",
+			"userDataDir":"${tmpdir}",
+			"port":5479
+		}
+	]
+}

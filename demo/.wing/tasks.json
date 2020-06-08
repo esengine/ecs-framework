@@ -1,0 +1,34 @@
+{
+    "version": "0.1.0",
+    "command": "egret",
+    "isShellCommand": true,
+    "suppressTaskName": true,
+    "tasks": [
+        {
+            "taskName": "build",
+            "showOutput": "always",
+            "args": [
+                "build",
+                "-sourcemap"
+            ],
+            "problemMatcher": "$tsc"
+        },
+        {
+            "taskName": "clean",
+            "showOutput": "always",
+            "args": [
+                "build",
+                "-e"
+            ],
+            "problemMatcher": "$tsc"
+        },
+        {
+            "taskName": "publish",
+            "showOutput": "always",
+            "args": [
+                "publish"
+            ],
+            "problemMatcher": "$tsc"
+        }
+    ]
+}
