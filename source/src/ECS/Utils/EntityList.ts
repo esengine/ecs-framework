@@ -4,6 +4,8 @@ class EntityList{
     private _entitiesToAdded: Entity[] = [];
     private _tempEntityList: Entity[] = [];
     private _entities: Entity[] = [];
+    private _entityDict: Map<number, Entity[]> = new Map<number, Entity[]>();
+    private _unsortedTags: number[] = [];
 
     constructor(scene: Scene){
         this.scene = scene;
@@ -40,6 +42,31 @@ class EntityList{
         return this._entitiesToAdded.firstOrDefault(entity => entity.name == name);
     }
 
+    public getTagList(tag: number){
+        let list = this._entityDict.get(tag);
+        if (!list){
+            list = [];
+            this._entityDict.set(tag, list);
+        }
+
+        return this._entityDict.get(tag);
+    }
+
+    public addToTagList(entity: Entity){
+        let list = this.getTagList(entity.tag);
+        if (!list.contains(entity)){
+            list.push(entity);
+            this._unsortedTags.push(entity.tag);
+        }
+    }
+
+    public removeFromTagList(entity: Entity){
+        let list = this._entityDict.get(entity.tag);
+        if (list){
+            list.remove(entity);
+        }
+    }
+
     public update(){
         for (let i = 0; i < this._entities.length; i++){
             let entity = this._entities[i];
@@ -58,6 +85,7 @@ class EntityList{
         }
 
         this._entities.length = 0;
+        this._entityDict.clear();
     }
 
     public updateLists(){
@@ -88,6 +116,14 @@ class EntityList{
 
             this._tempEntityList.forEach(entity => entity.onAddedToScene());
             this._tempEntityList.length = 0;
+        }
+
+        if (this._unsortedTags.length > 0){
+            this._unsortedTags.forEach(tag => {
+                this._entityDict.get(tag).sort();
+            });
+
+            this._unsortedTags.length = 0;
         }
     }
 }

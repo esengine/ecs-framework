@@ -1,5 +1,8 @@
 class Entity {
+    private static _idGenerator: number;
+
     public name: string;
+    public readonly id: number;
     /** 当前实体所属的场景 */
     public scene: Scene;
     /** 封装实体的位置/旋转/缩放，并允许设置一个高层结构 */
@@ -9,6 +12,7 @@ class Entity {
     private _updateOrder: number = 0;
     private _enabled: boolean = true;
     private _isDestoryed: boolean;
+    private _tag: number = 0;
 
     public componentBits: BitSet;
 
@@ -116,10 +120,20 @@ class Entity {
         return this;
     }
 
+    public get tag(){
+        return this._tag;
+    }
+
+    public set tag(value: number){
+        this.setTag(value);
+    }
+
     constructor(name: string){
         this.name = name;
         this.transform = new Transform(this);
         this.components = new ComponentList(this);
+        this.id = Entity._idGenerator ++;
+
         this.componentBits = new BitSet();
     }
 
@@ -140,6 +154,20 @@ class Entity {
 
             return this;
         }
+    }
+
+    public setTag(tag: number): Entity{
+        if (this._tag != tag){
+            if (this.scene){
+                this.scene.entities.removeFromTagList(this);
+            }
+            this._tag = tag;
+            if (this.scene){
+                this.scene.entities.addToTagList(this);
+            }
+        }
+
+        return this;
     }
 
     public attachToScene(newScene: Scene){

@@ -3,10 +3,15 @@ class Vector2 {
     public x: number = 0;
     public y: number = 0;
 
-    private static readonly unitVector2 = new Vector2(1, 1);
+    private static readonly zeroVector = new Vector2(0, 0);
+    private static readonly unitVector = new Vector2(1, 1);
 
     public static get One(){
-        return this.unitVector2;
+        return this.unitVector;
+    }
+
+    public static get Zero(){
+        return this.zeroVector;
     }
 
     /**
@@ -48,6 +53,25 @@ class Vector2 {
         let val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
         this.x *= val;
         this.y *= val;
+    }
+
+    /**
+     * 返回两个向量的点积
+     * @param value1 
+     * @param value2 
+     */
+    public static dot(value1: Vector2, value2: Vector2): number{
+        return (value1.x * value2.x) + (value1.y * value2.y);
+    }
+
+    /**
+     * 返回两个向量之间距离的平方
+     * @param value1 
+     * @param value2 
+     */
+    public static distanceSquared(value1: Vector2, value2: Vector2){
+        let v1 = value1.x - value2.x, v2 = value1.y - value2.y;
+        return (v1 * v1) + (v2 * v2);
     }
 
     public static transform(position: Vector2, matrix: Matrix2D){
