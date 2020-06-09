@@ -92,13 +92,16 @@ declare abstract class Component {
     deregisterComponent(): void;
 }
 declare class Entity {
+    private static _idGenerator;
     name: string;
+    readonly id: number;
     scene: Scene;
     readonly transform: Transform;
     readonly components: ComponentList;
     private _updateOrder;
     private _enabled;
     private _isDestoryed;
+    private _tag;
     componentBits: BitSet;
     parent: Transform;
     position: Vector2;
@@ -115,9 +118,11 @@ declare class Entity {
     readonly isDestoryed: boolean;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
+    tag: number;
     constructor(name: string);
     updateOrder: number;
     setUpdateOrder(updateOrder: number): this;
+    setTag(tag: number): Entity;
     attachToScene(newScene: Scene): void;
     detachFromScene(): void;
     addComponent<T extends Component>(component: T): T;
@@ -323,12 +328,17 @@ declare class EntityList {
     private _entitiesToAdded;
     private _tempEntityList;
     private _entities;
+    private _entityDict;
+    private _unsortedTags;
     constructor(scene: Scene);
     readonly count: number;
     readonly buffer: Entity[];
     add(entity: Entity): void;
     remove(entity: Entity): void;
     findEntity(name: string): Entity;
+    getTagList(tag: number): Entity[];
+    addToTagList(entity: Entity): void;
+    removeFromTagList(entity: Entity): void;
     update(): void;
     removeAllEntities(): void;
     updateLists(): void;
@@ -398,16 +408,50 @@ declare class Point {
     y: number;
     constructor(x: number, y: number);
 }
+declare class Rectangle {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    constructor(x: number, y: number, width: number, height: number);
+}
 declare class Vector2 {
     x: number;
     y: number;
-    private static readonly unitVector2;
+    private static readonly zeroVector;
+    private static readonly unitVector;
     static readonly One: Vector2;
+    static readonly Zero: Vector2;
     constructor(x: number, y: number);
     static add(value1: Vector2, value2: Vector2): Vector2;
     static divide(value1: Vector2, value2: Vector2): Vector2;
     static multiply(value1: Vector2, value2: Vector2): Vector2;
     static subtract(value1: Vector2, value2: Vector2): Vector2;
     normalize(): void;
+    static dot(value1: Vector2, value2: Vector2): number;
+    static distanceSquared(value1: Vector2, value2: Vector2): number;
     static transform(position: Vector2, matrix: Matrix2D): Vector2;
+}
+declare enum PointSectors {
+    center = 0,
+    top = 1,
+    bottom = 2,
+    topLeft = 9,
+    topRight = 5,
+    left = 8,
+    right = 4,
+    bottomLeft = 10,
+    bottomRight = 6
+}
+declare class Collisions {
+    static isLineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): boolean;
+    static lineToLineIntersection(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): Vector2;
+    static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
+    static isCircleToCircle(circleCenter1: Vector2, circleRadius1: number, circleCenter2: Vector2, circleRadius2: number): boolean;
+    static isCircleToLine(circleCenter: Vector2, radius: number, lineFrom: Vector2, lineTo: Vector2): boolean;
+    static isCircleToPoint(circleCenter: Vector2, radius: number, point: Vector2): boolean;
+    static isRectToCircle(rect: Rectangle, cPosition: Vector2, cRadius: number): boolean;
+    static isRectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2): boolean;
+    static isRectToPoint(rX: number, rY: number, rW: number, rH: number, point: Vector2): boolean;
+    static getSector(rX: number, rY: number, rW: number, rH: number, point: Vector2): PointSectors;
 }

@@ -558,9 +558,11 @@ var Entity = (function () {
     function Entity(name) {
         this._updateOrder = 0;
         this._enabled = true;
+        this._tag = 0;
         this.name = name;
         this.transform = new Transform(this);
         this.components = new ComponentList(this);
+        this.id = Entity._idGenerator++;
         this.componentBits = new BitSet();
     }
     Object.defineProperty(Entity.prototype, "parent", {
@@ -697,6 +699,16 @@ var Entity = (function () {
         }
         return this;
     };
+    Object.defineProperty(Entity.prototype, "tag", {
+        get: function () {
+            return this._tag;
+        },
+        set: function (value) {
+            this.setTag(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Entity.prototype, "updateOrder", {
         get: function () {
             return this._updateOrder;
@@ -714,6 +726,18 @@ var Entity = (function () {
             }
             return this;
         }
+    };
+    Entity.prototype.setTag = function (tag) {
+        if (this._tag != tag) {
+            if (this.scene) {
+                this.scene.entities.removeFromTagList(this);
+            }
+            this._tag = tag;
+            if (this.scene) {
+                this.scene.entities.addToTagList(this);
+            }
+        }
+        return this;
     };
     Entity.prototype.attachToScene = function (newScene) {
         this.scene = newScene;
@@ -1675,6 +1699,8 @@ var EntityList = (function () {
         this._entitiesToAdded = [];
         this._tempEntityList = [];
         this._entities = [];
+        this._entityDict = new Map();
+        this._unsortedTags = [];
         this.scene = scene;
     }
     Object.defineProperty(EntityList.prototype, "count", {
@@ -1709,6 +1735,27 @@ var EntityList = (function () {
         }
         return this._entitiesToAdded.firstOrDefault(function (entity) { return entity.name == name; });
     };
+    EntityList.prototype.getTagList = function (tag) {
+        var list = this._entityDict.get(tag);
+        if (!list) {
+            list = [];
+            this._entityDict.set(tag, list);
+        }
+        return this._entityDict.get(tag);
+    };
+    EntityList.prototype.addToTagList = function (entity) {
+        var list = this.getTagList(entity.tag);
+        if (!list.contains(entity)) {
+            list.push(entity);
+            this._unsortedTags.push(entity.tag);
+        }
+    };
+    EntityList.prototype.removeFromTagList = function (entity) {
+        var list = this._entityDict.get(entity.tag);
+        if (list) {
+            list.remove(entity);
+        }
+    };
     EntityList.prototype.update = function () {
         for (var i = 0; i < this._entities.length; i++) {
             var entity = this._entities[i];
@@ -1723,6 +1770,7 @@ var EntityList = (function () {
             this._entities[i].scene = null;
         }
         this._entities.length = 0;
+        this._entityDict.clear();
     };
     EntityList.prototype.updateLists = function () {
         var _this = this;
@@ -1748,6 +1796,12 @@ var EntityList = (function () {
             });
             this._tempEntityList.forEach(function (entity) { return entity.onAddedToScene(); });
             this._tempEntityList.length = 0;
+        }
+        if (this._unsortedTags.length > 0) {
+            this._unsortedTags.forEach(function (tag) {
+                _this._entityDict.get(tag).sort();
+            });
+            this._unsortedTags.length = 0;
         }
     };
     return EntityList;
@@ -2026,6 +2080,15 @@ var Point = (function () {
     }
     return Point;
 }());
+var Rectangle = (function () {
+    function Rectangle(x, y, width, height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
+    return Rectangle;
+}());
 var Vector2 = (function () {
     function Vector2(x, y) {
         this.x = 0;
@@ -2035,7 +2098,14 @@ var Vector2 = (function () {
     }
     Object.defineProperty(Vector2, "One", {
         get: function () {
-            return this.unitVector2;
+            return this.unitVector;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Vector2, "Zero", {
+        get: function () {
+            return this.zeroVector;
         },
         enumerable: true,
         configurable: true
@@ -2065,9 +2135,169 @@ var Vector2 = (function () {
         this.x *= val;
         this.y *= val;
     };
+    Vector2.dot = function (value1, value2) {
+        return (value1.x * value2.x) + (value1.y * value2.y);
+    };
+    Vector2.distanceSquared = function (value1, value2) {
+        var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
+        return (v1 * v1) + (v2 * v2);
+    };
     Vector2.transform = function (position, matrix) {
         return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
     };
-    Vector2.unitVector2 = new Vector2(1, 1);
+    Vector2.zeroVector = new Vector2(0, 0);
+    Vector2.unitVector = new Vector2(1, 1);
     return Vector2;
+}());
+var PointSectors;
+(function (PointSectors) {
+    PointSectors[PointSectors["center"] = 0] = "center";
+    PointSectors[PointSectors["top"] = 1] = "top";
+    PointSectors[PointSectors["bottom"] = 2] = "bottom";
+    PointSectors[PointSectors["topLeft"] = 9] = "topLeft";
+    PointSectors[PointSectors["topRight"] = 5] = "topRight";
+    PointSectors[PointSectors["left"] = 8] = "left";
+    PointSectors[PointSectors["right"] = 4] = "right";
+    PointSectors[PointSectors["bottomLeft"] = 10] = "bottomLeft";
+    PointSectors[PointSectors["bottomRight"] = 6] = "bottomRight";
+})(PointSectors || (PointSectors = {}));
+var Collisions = (function () {
+    function Collisions() {
+    }
+    Collisions.isLineToLine = function (a1, a2, b1, b2) {
+        var b = Vector2.subtract(a2, a1);
+        var d = Vector2.subtract(b2, b1);
+        var bDotDPerp = b.x * d.y - b.y * d.x;
+        if (bDotDPerp == 0)
+            return false;
+        var c = Vector2.subtract(b1, a1);
+        var t = (c.x * d.y - c.y * d.x) / bDotDPerp;
+        if (t < 0 || t > 1)
+            return false;
+        var u = (c.x * b.y - c.y * b.x) / bDotDPerp;
+        if (u < 0 || u > 1)
+            return false;
+        return true;
+    };
+    Collisions.lineToLineIntersection = function (a1, a2, b1, b2) {
+        var intersection = Vector2.Zero;
+        var b = Vector2.subtract(a2, a1);
+        var d = Vector2.subtract(b2, b1);
+        var bDotDPerp = b.x * d.y - b.y * d.x;
+        if (bDotDPerp == 0)
+            return intersection;
+        var c = Vector2.subtract(b1, a1);
+        var t = (c.x * d.y - c.y * d.x) / bDotDPerp;
+        if (t < 0 || t > 1)
+            return intersection;
+        var u = (c.x * b.y - c.y * b.x) / bDotDPerp;
+        if (u < 0 || u > 1)
+            return intersection;
+        intersection = Vector2.add(a1, new Vector2(t * b.x, t * b.y));
+        return intersection;
+    };
+    Collisions.closestPointOnLine = function (lineA, lineB, closestTo) {
+        var v = Vector2.subtract(lineB, lineA);
+        var w = Vector2.subtract(closestTo, lineA);
+        var t = Vector2.dot(w, v) / Vector2.dot(v, v);
+        t = MathHelper.clamp(t, 0, 1);
+        return Vector2.add(lineA, new Vector2(v.x * t, v.y * t));
+    };
+    Collisions.isCircleToCircle = function (circleCenter1, circleRadius1, circleCenter2, circleRadius2) {
+        return Vector2.distanceSquared(circleCenter1, circleCenter2) < (circleRadius1 + circleRadius2) * (circleRadius1 + circleRadius2);
+    };
+    Collisions.isCircleToLine = function (circleCenter, radius, lineFrom, lineTo) {
+        return Vector2.distanceSquared(circleCenter, this.closestPointOnLine(lineFrom, lineTo, circleCenter)) < radius * radius;
+    };
+    Collisions.isCircleToPoint = function (circleCenter, radius, point) {
+        return Vector2.distanceSquared(circleCenter, point) < radius * radius;
+    };
+    Collisions.isRectToCircle = function (rect, cPosition, cRadius) {
+        if (this.isRectToPoint(rect.x, rect.y, rect.width, rect.height, cPosition))
+            return true;
+        var edgeFrom;
+        var edgeTo;
+        var sector = this.getSector(rect.x, rect.y, rect.width, rect.height, cPosition);
+        if ((sector & PointSectors.top) != 0) {
+            edgeFrom = new Vector2(rect.x, rect.y);
+            edgeTo = new Vector2(rect.x + rect.width, rect.y);
+            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                return true;
+        }
+        if ((sector & PointSectors.bottom) != 0) {
+            edgeFrom = new Vector2(rect.x, rect.y + rect.height);
+            edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
+            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                return true;
+        }
+        if ((sector & PointSectors.left) != 0) {
+            edgeFrom = new Vector2(rect.x, rect.y);
+            edgeTo = new Vector2(rect.x, rect.y + rect.height);
+            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                return true;
+        }
+        if ((sector & PointSectors.right) != 0) {
+            edgeFrom = new Vector2(rect.x + rect.width, rect.y);
+            edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
+            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                return true;
+        }
+        return false;
+    };
+    Collisions.isRectToLine = function (rect, lineFrom, lineTo) {
+        var fromSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineFrom);
+        var toSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineTo);
+        if (fromSector == PointSectors.center || toSector == PointSectors.center) {
+            return true;
+        }
+        else if ((fromSector & toSector) != 0) {
+            return false;
+        }
+        else {
+            var both = fromSector | toSector;
+            var edgeFrom = void 0;
+            var edgeTo = void 0;
+            if ((both & PointSectors.top) != 0) {
+                edgeFrom = new Vector2(rect.x, rect.y);
+                edgeTo = new Vector2(rect.x + rect.width, rect.y);
+                if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    return true;
+            }
+            if ((both & PointSectors.bottom) != 0) {
+                edgeFrom = new Vector2(rect.x, rect.y + rect.height);
+                edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
+                if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    return true;
+            }
+            if ((both & PointSectors.left) != 0) {
+                edgeFrom = new Vector2(rect.x, rect.y);
+                edgeTo = new Vector2(rect.x, rect.y + rect.height);
+                if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    return true;
+            }
+            if ((both & PointSectors.right) != 0) {
+                edgeFrom = new Vector2(rect.x + rect.width, rect.y);
+                edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
+                if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    return true;
+            }
+        }
+        return false;
+    };
+    Collisions.isRectToPoint = function (rX, rY, rW, rH, point) {
+        return point.x >= rX && point.y >= rY && point.x < rX + rW && point.y < rY + rH;
+    };
+    Collisions.getSector = function (rX, rY, rW, rH, point) {
+        var sector = PointSectors.center;
+        if (point.x < rX)
+            sector |= PointSectors.left;
+        else if (point.x >= rX + rW)
+            sector |= PointSectors.right;
+        if (point.y < rY)
+            sector |= PointSectors.top;
+        else if (point.y >= rY + rH)
+            sector |= PointSectors.bottom;
+        return sector;
+    };
+    return Collisions;
 }());
