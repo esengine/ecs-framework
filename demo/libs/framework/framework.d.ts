@@ -17,6 +17,61 @@ declare interface Array<T> {
     groupBy(keySelector: Function): Array<T>;
     sum(selector: any): any;
 }
+declare class PriorityQueueNode {
+    priority: number;
+    insertionIndex: number;
+    queueIndex: number;
+}
+declare class AStarPathfinder {
+    static search<T>(graph: IAstarGraph<T>, start: T, goal: T): T[];
+    private static hasKey;
+    private static getKey;
+    static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[];
+}
+declare class AStarNode<T> extends PriorityQueueNode {
+    data: T;
+    constructor(data: T);
+}
+declare class AstarGridGraph implements IAstarGraph<Point> {
+    dirs: Point[];
+    walls: Point[];
+    weightedNodes: Point[];
+    defaultWeight: number;
+    weightedNodeWeight: number;
+    private _width;
+    private _height;
+    private _neighbors;
+    constructor(width: number, height: number);
+    isNodeInBounds(node: Point): boolean;
+    isNodePassable(node: Point): boolean;
+    search(start: Point, goal: Point): Point[];
+    getNeighbors(node: Point): Point[];
+    cost(from: Point, to: Point): number;
+    heuristic(node: Point, goal: Point): number;
+}
+interface IAstarGraph<T> {
+    getNeighbors(node: T): Array<T>;
+    cost(from: T, to: T): number;
+    heuristic(node: T, goal: T): any;
+}
+declare class PriorityQueue<T extends PriorityQueueNode> {
+    private _numNodes;
+    private _nodes;
+    private _numNodesEverEnqueued;
+    constructor(maxNodes: number);
+    clear(): void;
+    readonly count: number;
+    contains(node: T): boolean;
+    enqueue(node: T, priority: number): void;
+    dequeue(): T;
+    remove(node: T): void;
+    isValidQueue(): boolean;
+    private onNodeUpdated;
+    private cascadeDown;
+    private cascadeUp;
+    private swap;
+    private hasHigherPriority;
+}
 declare abstract class Component {
     entity: Entity;
     displayRender: egret.DisplayObject;
@@ -337,6 +392,11 @@ declare class Matrix2D {
     static createTranslation(xPosition: number, yPosition: number, result?: Matrix2D): Matrix2D;
     static createRotation(radians: number, result?: Matrix2D): Matrix2D;
     static createScale(xScale: number, yScale: number, result?: Matrix2D): Matrix2D;
+}
+declare class Point {
+    x: number;
+    y: number;
+    constructor(x: number, y: number);
 }
 declare class Vector2 {
     x: number;

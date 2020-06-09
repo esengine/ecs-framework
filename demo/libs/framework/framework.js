@@ -238,6 +238,262 @@ Array.prototype.sum = function (selector) {
     }
     return sum(this, selector);
 };
+var PriorityQueueNode = (function () {
+    function PriorityQueueNode() {
+        this.priority = 0;
+        this.insertionIndex = 0;
+        this.queueIndex = 0;
+    }
+    return PriorityQueueNode;
+}());
+var AStarPathfinder = (function () {
+    function AStarPathfinder() {
+    }
+    AStarPathfinder.search = function (graph, start, goal) {
+        var _this = this;
+        var foundPath = false;
+        var cameFrom = new Map();
+        cameFrom.set(start, start);
+        var costSoFar = new Map();
+        var frontier = new PriorityQueue(1000);
+        frontier.enqueue(new AStarNode(start), 0);
+        costSoFar.set(start, 0);
+        var _loop_2 = function () {
+            var current = frontier.dequeue();
+            if (JSON.stringify(current.data) == JSON.stringify(goal)) {
+                foundPath = true;
+                return "break";
+            }
+            graph.getNeighbors(current.data).forEach(function (next) {
+                var newCost = costSoFar.get(current.data) + graph.cost(current.data, next);
+                if (!_this.hasKey(costSoFar, next) || newCost < costSoFar.get(next)) {
+                    costSoFar.set(next, newCost);
+                    var priority = newCost + graph.heuristic(next, goal);
+                    frontier.enqueue(new AStarNode(next), priority);
+                    cameFrom.set(next, current.data);
+                }
+            });
+        };
+        while (frontier.count > 0) {
+            var state_1 = _loop_2();
+            if (state_1 === "break")
+                break;
+        }
+        return foundPath ? this.recontructPath(cameFrom, start, goal) : null;
+    };
+    AStarPathfinder.hasKey = function (map, compareKey) {
+        var iterator = map.keys();
+        var r;
+        while (r = iterator.next(), !r.done) {
+            if (JSON.stringify(r.value) == JSON.stringify(compareKey))
+                return true;
+        }
+        return false;
+    };
+    AStarPathfinder.getKey = function (map, compareKey) {
+        var iterator = map.keys();
+        var valueIterator = map.values();
+        var r;
+        var v;
+        while (r = iterator.next(), v = valueIterator.next(), !r.done) {
+            if (JSON.stringify(r.value) == JSON.stringify(compareKey))
+                return v.value;
+        }
+        return null;
+    };
+    AStarPathfinder.recontructPath = function (cameFrom, start, goal) {
+        var path = [];
+        var current = goal;
+        path.push(goal);
+        while (current != start) {
+            current = this.getKey(cameFrom, current);
+            path.push(current);
+        }
+        path.reverse();
+        return path;
+    };
+    return AStarPathfinder;
+}());
+var AStarNode = (function (_super) {
+    __extends(AStarNode, _super);
+    function AStarNode(data) {
+        var _this = _super.call(this) || this;
+        _this.data = data;
+        return _this;
+    }
+    return AStarNode;
+}(PriorityQueueNode));
+var AstarGridGraph = (function () {
+    function AstarGridGraph(width, height) {
+        this.dirs = [
+            new Point(1, 0),
+            new Point(0, -1),
+            new Point(-1, 0),
+            new Point(0, 1)
+        ];
+        this.walls = [];
+        this.weightedNodes = [];
+        this.defaultWeight = 1;
+        this.weightedNodeWeight = 5;
+        this._neighbors = new Array(4);
+        this._width = width;
+        this._height = height;
+    }
+    AstarGridGraph.prototype.isNodeInBounds = function (node) {
+        return 0 <= node.x && node.x < this._width && 0 <= node.y && node.y < this._height;
+    };
+    AstarGridGraph.prototype.isNodePassable = function (node) {
+        return !this.walls.contains(node);
+    };
+    AstarGridGraph.prototype.search = function (start, goal) {
+        return AStarPathfinder.search(this, start, goal);
+    };
+    AstarGridGraph.prototype.getNeighbors = function (node) {
+        var _this = this;
+        this._neighbors.length = 0;
+        this.dirs.forEach(function (dir) {
+            var next = new Point(node.x + dir.x, node.y + dir.y);
+            if (_this.isNodeInBounds(next) && _this.isNodePassable(next))
+                _this._neighbors.push(next);
+        });
+        return this._neighbors;
+    };
+    AstarGridGraph.prototype.cost = function (from, to) {
+        return this.weightedNodes.find(function (p) { return JSON.stringify(p) == JSON.stringify(to); }) ? this.weightedNodeWeight : this.defaultWeight;
+    };
+    AstarGridGraph.prototype.heuristic = function (node, goal) {
+        return Math.abs(node.x - goal.x) + Math.abs(node.y - goal.y);
+    };
+    return AstarGridGraph;
+}());
+var PriorityQueue = (function () {
+    function PriorityQueue(maxNodes) {
+        this._numNodes = 0;
+        this._nodes = new Array(maxNodes + 1);
+        this._numNodesEverEnqueued = 0;
+    }
+    PriorityQueue.prototype.clear = function () {
+        this._nodes.splice(1, this._numNodes);
+        this._numNodes = 0;
+    };
+    Object.defineProperty(PriorityQueue.prototype, "count", {
+        get: function () {
+            return this._numNodes;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    PriorityQueue.prototype.contains = function (node) {
+        return (this._nodes[node.queueIndex] == node);
+    };
+    PriorityQueue.prototype.enqueue = function (node, priority) {
+        node.priority = priority;
+        this._numNodes++;
+        this._nodes[this._numNodes] = node;
+        node.queueIndex = this._numNodes;
+        node.insertionIndex = this._numNodesEverEnqueued++;
+        this.cascadeUp(this._nodes[this._numNodes]);
+    };
+    PriorityQueue.prototype.dequeue = function () {
+        var returnMe = this._nodes[1];
+        this.remove(returnMe);
+        return returnMe;
+    };
+    PriorityQueue.prototype.remove = function (node) {
+        if (node.queueIndex == this._numNodes) {
+            this._nodes[this._numNodes] = null;
+            this._numNodes--;
+            return;
+        }
+        var formerLastNode = this._nodes[this._numNodes];
+        this.swap(node, formerLastNode);
+        delete this._nodes[this._numNodes];
+        this._numNodes--;
+        this.onNodeUpdated(formerLastNode);
+    };
+    PriorityQueue.prototype.isValidQueue = function () {
+        for (var i = 1; i < this._nodes.length; i++) {
+            if (this._nodes[i]) {
+                var childLeftIndex = 2 * i;
+                if (childLeftIndex < this._nodes.length && this._nodes[childLeftIndex] &&
+                    this.hasHigherPriority(this._nodes[childLeftIndex], this._nodes[i]))
+                    return false;
+                var childRightIndex = childLeftIndex + 1;
+                if (childRightIndex < this._nodes.length && this._nodes[childRightIndex] &&
+                    this.hasHigherPriority(this._nodes[childRightIndex], this._nodes[i]))
+                    return false;
+            }
+        }
+        return true;
+    };
+    PriorityQueue.prototype.onNodeUpdated = function (node) {
+        var parentIndex = Math.floor(node.queueIndex / 2);
+        var parentNode = this._nodes[parentIndex];
+        if (parentIndex > 0 && this.hasHigherPriority(node, parentNode)) {
+            this.cascadeUp(node);
+        }
+        else {
+            this.cascadeDown(node);
+        }
+    };
+    PriorityQueue.prototype.cascadeDown = function (node) {
+        var newParent;
+        var finalQueueIndex = node.queueIndex;
+        while (true) {
+            newParent = node;
+            var childLeftIndex = 2 * finalQueueIndex;
+            if (childLeftIndex > this._numNodes) {
+                node.queueIndex = finalQueueIndex;
+                this._nodes[finalQueueIndex] = node;
+                break;
+            }
+            var childLeft = this._nodes[childLeftIndex];
+            if (this.hasHigherPriority(childLeft, newParent)) {
+                newParent = childLeft;
+            }
+            var childRightIndex = childLeftIndex + 1;
+            if (childRightIndex <= this._numNodes) {
+                var childRight = this._nodes[childRightIndex];
+                if (this.hasHigherPriority(childRight, newParent)) {
+                    newParent = childRight;
+                }
+            }
+            if (newParent != node) {
+                this._nodes[finalQueueIndex] = newParent;
+                var temp = newParent.queueIndex;
+                newParent.queueIndex = finalQueueIndex;
+                finalQueueIndex = temp;
+            }
+            else {
+                node.queueIndex = finalQueueIndex;
+                this._nodes[finalQueueIndex] = node;
+                break;
+            }
+        }
+    };
+    PriorityQueue.prototype.cascadeUp = function (node) {
+        var parent = Math.floor(node.queueIndex / 2);
+        while (parent >= 1) {
+            var parentNode = this._nodes[parent];
+            if (this.hasHigherPriority(parentNode, node))
+                break;
+            this.swap(node, parentNode);
+            parent = Math.floor(node.queueIndex / 2);
+        }
+    };
+    PriorityQueue.prototype.swap = function (node1, node2) {
+        this._nodes[node1.queueIndex] = node2;
+        this._nodes[node2.queueIndex] = node1;
+        var temp = node1.queueIndex;
+        node1.queueIndex = node2.queueIndex;
+        node2.queueIndex = temp;
+    };
+    PriorityQueue.prototype.hasHigherPriority = function (higher, lower) {
+        return (higher.priority < lower.priority ||
+            (higher.priority == lower.priority && higher.insertionIndex < lower.insertionIndex));
+    };
+    return PriorityQueue;
+}());
 var Component = (function () {
     function Component() {
         this._enabled = true;
@@ -1762,6 +2018,13 @@ var Matrix2D = (function () {
     };
     Matrix2D._identity = new Matrix2D(1, 0, 0, 1, 0, 0);
     return Matrix2D;
+}());
+var Point = (function () {
+    function Point(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+    return Point;
 }());
 var Vector2 = (function () {
     function Vector2(x, y) {

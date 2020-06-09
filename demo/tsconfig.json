@@ -3,10 +3,12 @@
         "target": "es5",
         "outDir": "bin-debug",
         "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
         "lib": [
             "es5",
             "dom",
-            "es2015.promise"
+            "es2015.promise",
+            "es6"
         ],
         "types": []
     },
