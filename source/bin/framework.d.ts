@@ -21,6 +21,8 @@ declare abstract class Component {
     entity: Entity;
     displayRender: egret.DisplayObject;
     private _enabled;
+    updateInterval: number;
+    readonly transform: Transform;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
     abstract initialize(): any;
@@ -43,6 +45,18 @@ declare class Entity {
     private _enabled;
     private _isDestoryed;
     componentBits: BitSet;
+    parent: Transform;
+    position: Vector2;
+    localPosition: Vector2;
+    rotation: number;
+    rotationDegrees: number;
+    localRotation: number;
+    localRotationDegrees: number;
+    scale: Vector2;
+    localScale: Vector2;
+    readonly worldInverseTransform: Matrix2D;
+    readonly localToWorldTransform: Matrix2D;
+    readonly worldToLocalTransform: Matrix2D;
     readonly isDestoryed: boolean;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
@@ -52,7 +66,12 @@ declare class Entity {
     attachToScene(newScene: Scene): void;
     detachFromScene(): void;
     addComponent<T extends Component>(component: T): T;
+    hasComponent<T extends Component>(type: any): boolean;
+    getOrCreateComponent<T extends Component>(type: T): T;
     getComponent<T extends Component>(type: any): T;
+    removeComponentForType<T extends Component>(type: any): boolean;
+    removeComponent(component: Component): void;
+    removeAllComponents(): void;
     update(): void;
     onAddedToScene(): void;
     onRemovedFromScene(): void;
@@ -129,10 +148,25 @@ declare class Transform {
     readonly childCount: number;
     constructor(entity: Entity);
     getChild(index: number): Transform;
+    readonly worldInverseTransform: Matrix2D;
+    readonly localToWorldTransform: Matrix2D;
+    readonly worldToLocalTransform: Matrix2D;
     parent: Transform;
     setParent(parent: Transform): this;
+    rotation: number;
+    localRotation: number;
     position: Vector2;
     localPosition: Vector2;
+    scale: Vector2;
+    localScale: Vector2;
+    rotationDegrees: number;
+    localRotationDegrees: number;
+    setLocalScale(scale: Vector2): this;
+    setScale(scale: Vector2): this;
+    setLocalRotationDegrees(degrees: number): this;
+    setLocalRotation(radians: number): this;
+    setRotation(radians: number): this;
+    setRotationDegrees(degrees: number): this;
     setLocalPosition(localPosition: Vector2): this;
     setPosition(position: Vector2): this;
     setDirty(dirtyFlagType: DirtyType): void;
@@ -143,8 +177,18 @@ declare class Camera extends Component {
     private _origin;
     private _transformMatrix;
     private _inverseTransformMatrix;
+    private _minimumZoom;
+    private _maximumZoom;
+    private _areMatrixesDirty;
+    zoom: number;
+    minimumZoom: number;
+    maximumZoom: number;
+    origin: Vector2;
     readonly transformMatrix: Matrix2D;
     constructor();
+    setMinimumZoom(minZoom: number): Camera;
+    setMaximumZoom(maxZoom: number): Camera;
+    setZoom(zoom: number): this;
     initialize(): void;
     update(): void;
     setPosition(position: Vector2): this;
@@ -200,6 +244,7 @@ declare class ComponentList {
     private _componentsToRemove;
     private _tempBufferList;
     constructor(entity: Entity);
+    readonly count: number;
     readonly buffer: Component[];
     add(component: Component): void;
     remove(component: Component): void;
@@ -266,6 +311,8 @@ declare class Time {
 declare class MathHelper {
     static toDegrees(radians: number): number;
     static toRadians(degrees: number): number;
+    static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number;
+    static clamp(value: number, min: number, max: number): number;
 }
 declare class Matrix2D {
     m11: number;
@@ -286,7 +333,7 @@ declare class Matrix2D {
     static multiply(matrix1: Matrix2D, matrix2: Matrix2D): Matrix2D;
     static multiplyTranslation(matrix: Matrix2D, x: number, y: number): Matrix2D;
     determinant(): number;
-    static invert(matrix: Matrix2D, result: Matrix2D): Matrix2D;
+    static invert(matrix: Matrix2D, result?: Matrix2D): Matrix2D;
     static createTranslation(xPosition: number, yPosition: number, result?: Matrix2D): Matrix2D;
     static createRotation(radians: number, result?: Matrix2D): Matrix2D;
     static createScale(xScale: number, yScale: number, result?: Matrix2D): Matrix2D;

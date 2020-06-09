@@ -12,6 +12,90 @@ class Entity {
 
     public componentBits: BitSet;
 
+    public get parent(){
+        return this.transform.parent;
+    }
+
+    public set parent(value: Transform){
+        this.transform.setParent(value);
+    }
+
+    public get position(){
+        return this.transform.position;
+    }
+
+    public set position(value: Vector2){
+        this.transform.setPosition(value);
+    }
+
+    public get localPosition(){
+        return this.transform.localPosition;
+    }
+
+    public set localPosition(value: Vector2){
+        this.transform.setLocalPosition(value);
+    }
+
+    public get rotation(){
+        return this.transform.rotation;
+    }
+
+    public set rotation(value: number){
+        this.transform.setRotation(value);
+    }
+
+    public get rotationDegrees(){
+        return this.transform.rotationDegrees;
+    }
+
+    public set rotationDegrees(value: number){
+        this.transform.setRotationDegrees(value);
+    }
+
+    public get localRotation(){
+        return this.transform.localRotation;
+    }
+
+    public set localRotation(value: number){
+        this.transform.setLocalRotation(value);
+    }
+
+    public get localRotationDegrees(){
+        return this.transform.localRotationDegrees;
+    }
+
+    public set localRotationDegrees(value: number){
+        this.transform.setLocalRotationDegrees(value);
+    }
+
+    public get scale(){
+        return this.transform.scale;
+    }
+
+    public set scale(value: Vector2){
+        this.transform.setScale(value);
+    }
+
+    public get localScale(){
+        return this.transform.scale;
+    }
+
+    public set localScale(value: Vector2){
+        this.transform.setScale(value);
+    }
+
+    public get worldInverseTransform(){
+        return this.transform.worldInverseTransform;
+    }
+
+    public get localToWorldTransform(){
+        return this.transform.localToWorldTransform;
+    }
+
+    public get worldToLocalTransform(){
+        return this.transform.worldToLocalTransform;
+    }
+
     public get isDestoryed(){
         return this._isDestoryed;
     }
@@ -83,8 +167,41 @@ class Entity {
         return component;
     }
 
+    public hasComponent<T extends Component>(type){
+        return this.components.getComponent<T>(type, false) != null;
+    }
+
+    public getOrCreateComponent<T extends Component>(type: T){
+        let comp = this.components.getComponent<T>(type, true);
+        if (!comp){
+            comp = this.addComponent<T>(type);
+        }
+
+        return comp;
+    }
+
     public getComponent<T extends Component>(type): T{
         return this.components.getComponent(type, false) as T;
+    }
+
+    public removeComponentForType<T extends Component>(type){
+        let comp = this.getComponent<T>(type);
+        if (comp){
+            this.removeComponent(comp);
+            return true;
+        }
+
+        return false;
+    }
+
+    public removeComponent(component: Component){
+        this.components.remove(component);
+    }
+
+    public removeAllComponents(){
+        for (let i = 0; i < this.components.count; i ++){
+            this.removeComponent(this.components.buffer[i]);
+        }
     }
 
     public update(){

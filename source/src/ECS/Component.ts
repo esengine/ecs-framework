@@ -2,6 +2,12 @@ abstract class Component {
     public entity: Entity;
     public displayRender: egret.DisplayObject;
     private _enabled: boolean = true;
+    public updateInterval: number = 1;
+
+    public get transform(){
+        return this.entity.transform;
+    }
+
     public get enabled(){
         return this.entity ? this.entity.enabled && this._enabled : this._enabled;
     }
@@ -13,6 +19,12 @@ abstract class Component {
     public setEnabled(isEnabled: boolean){
         if (this._enabled != isEnabled){
             this._enabled = isEnabled;
+
+            if (this._enabled){
+                this.onEnabled();
+            }else{
+                this.onDisabled();
+            }
         }
 
         return this;

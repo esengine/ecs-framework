@@ -241,7 +241,15 @@ Array.prototype.sum = function (selector) {
 var Component = (function () {
     function Component() {
         this._enabled = true;
+        this.updateInterval = 1;
     }
+    Object.defineProperty(Component.prototype, "transform", {
+        get: function () {
+            return this.entity.transform;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Component.prototype, "enabled", {
         get: function () {
             return this.entity ? this.entity.enabled && this._enabled : this._enabled;
@@ -255,6 +263,12 @@ var Component = (function () {
     Component.prototype.setEnabled = function (isEnabled) {
         if (this._enabled != isEnabled) {
             this._enabled = isEnabled;
+            if (this._enabled) {
+                this.onEnabled();
+            }
+            else {
+                this.onDisabled();
+            }
         }
         return this;
     };
@@ -293,6 +307,117 @@ var Entity = (function () {
         this.components = new ComponentList(this);
         this.componentBits = new BitSet();
     }
+    Object.defineProperty(Entity.prototype, "parent", {
+        get: function () {
+            return this.transform.parent;
+        },
+        set: function (value) {
+            this.transform.setParent(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "position", {
+        get: function () {
+            return this.transform.position;
+        },
+        set: function (value) {
+            this.transform.setPosition(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "localPosition", {
+        get: function () {
+            return this.transform.localPosition;
+        },
+        set: function (value) {
+            this.transform.setLocalPosition(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "rotation", {
+        get: function () {
+            return this.transform.rotation;
+        },
+        set: function (value) {
+            this.transform.setRotation(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "rotationDegrees", {
+        get: function () {
+            return this.transform.rotationDegrees;
+        },
+        set: function (value) {
+            this.transform.setRotationDegrees(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "localRotation", {
+        get: function () {
+            return this.transform.localRotation;
+        },
+        set: function (value) {
+            this.transform.setLocalRotation(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "localRotationDegrees", {
+        get: function () {
+            return this.transform.localRotationDegrees;
+        },
+        set: function (value) {
+            this.transform.setLocalRotationDegrees(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "scale", {
+        get: function () {
+            return this.transform.scale;
+        },
+        set: function (value) {
+            this.transform.setScale(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "localScale", {
+        get: function () {
+            return this.transform.scale;
+        },
+        set: function (value) {
+            this.transform.setScale(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "worldInverseTransform", {
+        get: function () {
+            return this.transform.worldInverseTransform;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "localToWorldTransform", {
+        get: function () {
+            return this.transform.localToWorldTransform;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "worldToLocalTransform", {
+        get: function () {
+            return this.transform.worldToLocalTransform;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Entity.prototype, "isDestoryed", {
         get: function () {
             return this._isDestoryed;
@@ -354,8 +479,34 @@ var Entity = (function () {
         component.initialize();
         return component;
     };
+    Entity.prototype.hasComponent = function (type) {
+        return this.components.getComponent(type, false) != null;
+    };
+    Entity.prototype.getOrCreateComponent = function (type) {
+        var comp = this.components.getComponent(type, true);
+        if (!comp) {
+            comp = this.addComponent(type);
+        }
+        return comp;
+    };
     Entity.prototype.getComponent = function (type) {
         return this.components.getComponent(type, false);
+    };
+    Entity.prototype.removeComponentForType = function (type) {
+        var comp = this.getComponent(type);
+        if (comp) {
+            this.removeComponent(comp);
+            return true;
+        }
+        return false;
+    };
+    Entity.prototype.removeComponent = function (component) {
+        this.components.remove(component);
+    };
+    Entity.prototype.removeAllComponents = function () {
+        for (var i = 0; i < this.components.count; i++) {
+            this.removeComponent(this.components.buffer[i]);
+        }
     };
     Entity.prototype.update = function () {
         this.components.update();
@@ -521,6 +672,43 @@ var Transform = (function () {
     Transform.prototype.getChild = function (index) {
         return this._children[index];
     };
+    Object.defineProperty(Transform.prototype, "worldInverseTransform", {
+        get: function () {
+            this.updateTransform();
+            if (this._worldInverseDirty) {
+                this._worldInverseTransform = Matrix2D.invert(this._worldTransform, this._worldInverseTransform);
+                this._worldInverseDirty = false;
+            }
+            return this._worldInverseTransform;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Transform.prototype, "localToWorldTransform", {
+        get: function () {
+            this.updateTransform();
+            return this._worldTransform;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Transform.prototype, "worldToLocalTransform", {
+        get: function () {
+            if (this._worldToLocalDirty) {
+                if (!this.parent) {
+                    this._worldInverseTransform = Matrix2D.identity;
+                }
+                else {
+                    this.parent.updateTransform();
+                    this._worldToLocalTransform = Matrix2D.invert(this.parent._worldTransform, this._worldToLocalTransform);
+                }
+                this._worldToLocalDirty = false;
+            }
+            return this._worldToLocalTransform;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Transform.prototype, "parent", {
         get: function () {
             return this._parent;
@@ -541,6 +729,28 @@ var Transform = (function () {
         this._parent = parent;
         return this;
     };
+    Object.defineProperty(Transform.prototype, "rotation", {
+        get: function () {
+            this.updateTransform();
+            return this._rotation;
+        },
+        set: function (value) {
+            this.setRotation(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Transform.prototype, "localRotation", {
+        get: function () {
+            this.updateTransform();
+            return this._localRotation;
+        },
+        set: function (value) {
+            this.setLocalRotation(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Transform.prototype, "position", {
         get: function () {
             this.updateTransform();
@@ -570,6 +780,99 @@ var Transform = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(Transform.prototype, "scale", {
+        get: function () {
+            this.updateTransform();
+            return this._scale;
+        },
+        set: function (value) {
+            this.setScale(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Transform.prototype, "localScale", {
+        get: function () {
+            this.updateTransform();
+            return this._localScale;
+        },
+        set: function (value) {
+            this.setLocalScale(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Transform.prototype, "rotationDegrees", {
+        get: function () {
+            return MathHelper.toDegrees(this._rotation);
+        },
+        set: function (value) {
+            this.setRotation(MathHelper.toRadians(value));
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Transform.prototype, "localRotationDegrees", {
+        get: function () {
+            return MathHelper.toDegrees(this._localRotation);
+        },
+        set: function (value) {
+            this.localRotation = MathHelper.toRadians(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Transform.prototype.setLocalScale = function (scale) {
+        this._localScale = scale;
+        this._localDirty = this._positionDirty = this._localScaleDirty = true;
+        this.setDirty(DirtyType.scaleDirty);
+        return this;
+    };
+    Transform.prototype.setScale = function (scale) {
+        this._scale = scale;
+        if (this.parent) {
+            this.localScale = Vector2.divide(scale, this.parent._scale);
+        }
+        else {
+            this.localScale = scale;
+        }
+        for (var i = 0; i < this.entity.components.buffer.length; i++) {
+            var component = this.entity.components.buffer[i];
+            if (component.displayRender) {
+                component.displayRender.scaleX = this.scale.x;
+                component.displayRender.scaleY = this.scale.y;
+            }
+        }
+        return this;
+    };
+    Transform.prototype.setLocalRotationDegrees = function (degrees) {
+        return this.setLocalRotation(MathHelper.toRadians(degrees));
+    };
+    Transform.prototype.setLocalRotation = function (radians) {
+        this._localRotation = radians;
+        this._localDirty = this._positionDirty = this._localPositionDirty = this._localRotationDirty = this._localScaleDirty = true;
+        this.setDirty(DirtyType.rotationDirty);
+        return this;
+    };
+    Transform.prototype.setRotation = function (radians) {
+        this._rotation = radians;
+        if (this.parent) {
+            this.localRotation = this.parent.rotation + radians;
+        }
+        else {
+            this.localRotation = radians;
+        }
+        for (var i = 0; i < this.entity.components.buffer.length; i++) {
+            var component = this.entity.components.buffer[i];
+            if (component.displayRender) {
+                component.displayRender.rotation = this.rotation;
+            }
+        }
+        return this;
+    };
+    Transform.prototype.setRotationDegrees = function (degrees) {
+        return this.setRotation(MathHelper.toRadians(degrees));
+    };
     Transform.prototype.setLocalPosition = function (localPosition) {
         if (localPosition == this._localPosition)
             return this;
@@ -664,8 +967,59 @@ var Camera = (function (_super) {
         var _this = _super.call(this) || this;
         _this._transformMatrix = Matrix2D.identity;
         _this._inverseTransformMatrix = Matrix2D.identity;
+        _this._minimumZoom = 0.3;
+        _this._maximumZoom = 3;
+        _this._areMatrixesDirty = true;
+        _this.setZoom(0);
         return _this;
     }
+    Object.defineProperty(Camera.prototype, "zoom", {
+        get: function () {
+            if (this._zoom == 0)
+                return 1;
+            if (this._zoom < 1)
+                return MathHelper.map(this._zoom, this._minimumZoom, 1, -1, 0);
+            return MathHelper.map(this._zoom, 1, this._maximumZoom, 0, 1);
+        },
+        set: function (value) {
+            this.setZoom(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Camera.prototype, "minimumZoom", {
+        get: function () {
+            return this._minimumZoom;
+        },
+        set: function (value) {
+            this.setMinimumZoom(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Camera.prototype, "maximumZoom", {
+        get: function () {
+            return this._maximumZoom;
+        },
+        set: function (value) {
+            this.setMaximumZoom(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Camera.prototype, "origin", {
+        get: function () {
+            return this._origin;
+        },
+        set: function (value) {
+            if (this._origin != value) {
+                this._origin = value;
+                this._areMatrixesDirty = true;
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Camera.prototype, "transformMatrix", {
         get: function () {
             this.updateMatrixes();
@@ -674,6 +1028,32 @@ var Camera = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    Camera.prototype.setMinimumZoom = function (minZoom) {
+        if (this._zoom < minZoom)
+            this._zoom = this.minimumZoom;
+        this._minimumZoom = minZoom;
+        return this;
+    };
+    Camera.prototype.setMaximumZoom = function (maxZoom) {
+        if (this._zoom > maxZoom)
+            this._zoom = maxZoom;
+        this._maximumZoom = maxZoom;
+        return this;
+    };
+    Camera.prototype.setZoom = function (zoom) {
+        var newZoom = MathHelper.clamp(zoom, -1, 1);
+        if (newZoom == 0) {
+            this._zoom = 1;
+        }
+        else if (newZoom < 0) {
+            this._zoom = MathHelper.map(newZoom, -1, 0, this._minimumZoom, 1);
+        }
+        else {
+            this._zoom = MathHelper.map(newZoom, 0, 1, 1, this._maximumZoom);
+        }
+        this._areMatrixesDirty = true;
+        return this;
+    };
     Camera.prototype.initialize = function () {
     };
     Camera.prototype.update = function () {
@@ -692,7 +1072,18 @@ var Camera = (function (_super) {
         return this;
     };
     Camera.prototype.updateMatrixes = function () {
+        if (!this._areMatrixesDirty)
+            return;
+        var tempMat;
         this._transformMatrix = Matrix2D.createTranslation(-this.entity.transform.position.x, -this.entity.transform.position.y);
+        if (this._zoom != 1) {
+            tempMat = Matrix2D.createScale(this._zoom, this._zoom);
+            this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
+        }
+        tempMat = Matrix2D.createTranslation(this._origin.x, this._origin.y, tempMat);
+        this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
+        this._inverseTransformMatrix = Matrix2D.invert(this._transformMatrix);
+        this._areMatrixesDirty = false;
     };
     Camera.prototype.destory = function () {
     };
@@ -895,6 +1286,13 @@ var ComponentList = (function () {
         this._tempBufferList = [];
         this._entity = entity;
     }
+    Object.defineProperty(ComponentList.prototype, "count", {
+        get: function () {
+            return this._components.length;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(ComponentList.prototype, "buffer", {
         get: function () {
             return this._components;
@@ -1200,6 +1598,16 @@ var MathHelper = (function () {
     MathHelper.toRadians = function (degrees) {
         return degrees * 0.017453292519943295769236907684886;
     };
+    MathHelper.map = function (value, leftMin, leftMax, rightMin, rightMax) {
+        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
+    };
+    MathHelper.clamp = function (value, min, max) {
+        if (value < min)
+            return min;
+        if (value > max)
+            return max;
+        return value;
+    };
     return MathHelper;
 }());
 var Matrix2D = (function () {
@@ -1312,6 +1720,7 @@ var Matrix2D = (function () {
         return this.m11 * this.m22 - this.m12 * this.m21;
     };
     Matrix2D.invert = function (matrix, result) {
+        if (result === void 0) { result = Matrix2D.identity; }
         var det = 1 / matrix.determinant();
         result.m11 = matrix.m22 * det;
         result.m12 = -matrix.m12 * det;

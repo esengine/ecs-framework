@@ -9,6 +9,10 @@ class ComponentList {
         this._entity = entity;
     }
 
+    public get count(){
+        return this._components.length;
+    }
+
     public get buffer(){
         return this._components;
     }

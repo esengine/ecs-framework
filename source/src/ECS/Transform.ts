@@ -57,6 +57,36 @@ class Transform {
         return this._children[index];
     }
 
+    public get worldInverseTransform(){
+        this.updateTransform();
+        if (this._worldInverseDirty){
+            this._worldInverseTransform = Matrix2D.invert(this._worldTransform, this._worldInverseTransform);
+            this._worldInverseDirty = false;
+        }
+
+        return this._worldInverseTransform;
+    }
+
+    public get localToWorldTransform(){
+        this.updateTransform();
+        return this._worldTransform;
+    }
+
+    public get worldToLocalTransform(){
+        if (this._worldToLocalDirty){
+            if (!this.parent){
+                this._worldInverseTransform = Matrix2D.identity;
+            } else{
+                this.parent.updateTransform();
+                this._worldToLocalTransform = Matrix2D.invert(this.parent._worldTransform, this._worldToLocalTransform);
+            }
+
+            this._worldToLocalDirty = false;
+        }
+
+        return this._worldToLocalTransform;
+    }
+
     public get parent(){
         return this._parent;
     }
@@ -78,6 +108,24 @@ class Transform {
         this._parent = parent;
 
         return this;
+    }
+
+    public get rotation() {
+        this.updateTransform();
+        return this._rotation;
+    }
+
+    public set rotation(value: number){
+        this.setRotation(value);
+    }
+
+    public get localRotation(){
+        this.updateTransform();
+        return this._localRotation;
+    }
+
+    public set localRotation(value: number){
+        this.setLocalRotation(value);
     }
 
     public get position(){
@@ -103,6 +151,101 @@ class Transform {
 
     public set localPosition(value: Vector2){
         this.setLocalPosition(value);
+    }
+
+    public get scale(){
+        this.updateTransform();
+        return this._scale;
+    }
+
+    public set scale(value: Vector2){
+        this.setScale(value);
+    }
+
+    public get localScale(){
+        this.updateTransform();
+        return this._localScale;
+    }
+
+    public set localScale(value: Vector2){
+        this.setLocalScale(value);
+    }
+
+    public get rotationDegrees(){
+        return MathHelper.toDegrees(this._rotation);
+    }
+
+    public set rotationDegrees(value: number){
+        this.setRotation(MathHelper.toRadians(value));
+    }
+
+    public get localRotationDegrees(){
+        return MathHelper.toDegrees(this._localRotation);
+    }
+
+    public set localRotationDegrees(value: number){
+        this.localRotation = MathHelper.toRadians(value);
+    }
+
+    public setLocalScale(scale: Vector2){
+        this._localScale = scale;
+        this._localDirty = this._positionDirty = this._localScaleDirty = true;
+        this.setDirty(DirtyType.scaleDirty);
+
+        return this;
+    }
+
+    public setScale(scale: Vector2){
+        this._scale = scale;
+        if (this.parent){
+            this.localScale = Vector2.divide(scale, this.parent._scale);
+        }else{
+            this.localScale = scale;
+        }
+
+        for (let i = 0; i < this.entity.components.buffer.length; i ++){
+            let component = this.entity.components.buffer[i];
+            if (component.displayRender){
+                component.displayRender.scaleX = this.scale.x;
+                component.displayRender.scaleY = this.scale.y;
+            }
+        }
+
+        return this;
+    }
+
+    public setLocalRotationDegrees(degrees: number){
+        return this.setLocalRotation(MathHelper.toRadians(degrees));
+    }
+
+    public setLocalRotation(radians: number){
+        this._localRotation = radians;
+        this._localDirty = this._positionDirty = this._localPositionDirty = this._localRotationDirty = this._localScaleDirty = true;
+        this.setDirty(DirtyType.rotationDirty);
+
+        return this;
+    }
+
+    public setRotation(radians: number){
+        this._rotation = radians;
+        if (this.parent){
+            this.localRotation = this.parent.rotation + radians;
+        } else {
+            this.localRotation = radians;
+        }
+
+        for (let i = 0; i < this.entity.components.buffer.length; i ++){
+            let component = this.entity.components.buffer[i];
+            if (component.displayRender){
+                component.displayRender.rotation = this.rotation;
+            }
+        }
+
+        return this;
+    }
+
+    public setRotationDegrees(degrees: number){
+        return this.setRotation(MathHelper.toRadians(degrees));
     }
 
     public setLocalPosition(localPosition: Vector2){

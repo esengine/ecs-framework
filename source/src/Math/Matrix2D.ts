@@ -137,7 +137,7 @@ class Matrix2D {
         return this.m11 * this.m22 - this.m12 * this.m21;
     }
 
-    public static invert(matrix: Matrix2D, result: Matrix2D){
+    public static invert(matrix: Matrix2D, result: Matrix2D = Matrix2D.identity){
         let det = 1 / matrix.determinant();
 
         result.m11 = matrix.m22 * det;

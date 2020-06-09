@@ -14,4 +14,26 @@ class MathHelper {
     public static toRadians(degrees: number){
         return degrees * 0.017453292519943295769236907684886;
     }
+
+    /**
+     * mapps值(在leftMin - leftMax范围内)到rightMin - rightMax范围内的值
+     * @param value 
+     * @param leftMin 
+     * @param leftMax 
+     * @param rightMin 
+     * @param rightMax 
+     */
+    public static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number){
+        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
+    }
+
+    public static clamp(value: number, min: number, max: number){
+        if (value < min)
+            return min;
+
+        if (value > max)
+            return max;
+
+        return value;
+    }
 }
