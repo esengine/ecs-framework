@@ -255,6 +255,25 @@ declare class Camera extends Component {
     updateMatrixes(): void;
     destory(): void;
 }
+declare class Mesh extends Component {
+    private _verts;
+    private _primitiveCount;
+    private _triangles;
+    private _topLeftVertPosition;
+    private _width;
+    private _height;
+    initialize(): void;
+    setVertPosition(positions: Vector2[]): this;
+    setTriangles(triangles: number[]): this;
+    recalculateBounds(): this;
+}
+declare class VertexPosition {
+    position: Vector2;
+    constructor(position: Vector2);
+}
+declare class PolygonMesh extends Mesh {
+    constructor(points: Vector2[], arePointsCCW?: boolean);
+}
 declare class EntitySystem {
     private _scene;
     private _entities;
@@ -454,4 +473,16 @@ declare class Collisions {
     static isRectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2): boolean;
     static isRectToPoint(rX: number, rY: number, rW: number, rH: number, point: Vector2): boolean;
     static getSector(rX: number, rY: number, rW: number, rH: number, point: Vector2): PointSectors;
+}
+declare class Triangulator {
+    triangleIndices: number[];
+    private _triPrev;
+    private _triNext;
+    triangulate(points: Vector2[], arePointsCCW?: boolean): void;
+    private initialize;
+    static testPointTriangle(point: Vector2, a: Vector2, b: Vector2, c: Vector2): boolean;
+}
+declare class Vector2Ext {
+    static isTriangleCCW(a: Vector2, center: Vector2, c: Vector2): boolean;
+    static cross(u: Vector2, v: Vector2): number;
 }

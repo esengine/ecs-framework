@@ -1369,6 +1369,62 @@ var Camera = (function (_super) {
     };
     return Camera;
 }(Component));
+var Mesh = (function (_super) {
+    __extends(Mesh, _super);
+    function Mesh() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    Mesh.prototype.initialize = function () {
+    };
+    Mesh.prototype.setVertPosition = function (positions) {
+        var createVerts = !this._verts || this._verts.length != positions.length;
+        if (createVerts)
+            this._verts = new Array(positions.length);
+        for (var i = 0; i < this._verts.length; i++) {
+            this._verts[i] = new VertexPosition(positions[i]);
+        }
+        return this;
+    };
+    Mesh.prototype.setTriangles = function (triangles) {
+        this._primitiveCount = triangles.length / 3;
+        this._triangles = triangles;
+        return this;
+    };
+    Mesh.prototype.recalculateBounds = function () {
+        this._topLeftVertPosition = new Vector2(Number.MAX_VALUE, Number.MAX_VALUE);
+        var max = new Vector2(Number.MIN_VALUE, Number.MIN_VALUE);
+        for (var i = 0; i < this._verts.length; i++) {
+            this._topLeftVertPosition.x = Math.min(this._topLeftVertPosition.x, this._verts[i].position.x);
+            this._topLeftVertPosition.y = Math.min(this._topLeftVertPosition.y, this._verts[i].position.y);
+            max.x = Math.max(max.x, this._verts[i].position.x);
+            max.y = Math.max(max.y, this._verts[i].position.y);
+        }
+        this._width = max.x - this._topLeftVertPosition.x;
+        this._height = max.y - this._topLeftVertPosition.y;
+        return this;
+    };
+    return Mesh;
+}(Component));
+var VertexPosition = (function () {
+    function VertexPosition(position) {
+        this.position = position;
+    }
+    return VertexPosition;
+}());
+var PolygonMesh = (function (_super) {
+    __extends(PolygonMesh, _super);
+    function PolygonMesh(points, arePointsCCW) {
+        if (arePointsCCW === void 0) { arePointsCCW = true; }
+        var _this = _super.call(this) || this;
+        var triangulator = new Triangulator();
+        triangulator.triangulate(points, arePointsCCW);
+        _this.setVertPosition(points);
+        _this.setTriangles(triangulator.triangleIndices);
+        _this.recalculateBounds();
+        return _this;
+    }
+    return PolygonMesh;
+}(Mesh));
 var EntitySystem = (function () {
     function EntitySystem(matcher) {
         this._entities = [];
@@ -2300,4 +2356,93 @@ var Collisions = (function () {
         return sector;
     };
     return Collisions;
+}());
+var Triangulator = (function () {
+    function Triangulator() {
+        this.triangleIndices = [];
+        this._triPrev = new Array(12);
+        this._triNext = new Array(12);
+    }
+    Triangulator.prototype.triangulate = function (points, arePointsCCW) {
+        if (arePointsCCW === void 0) { arePointsCCW = true; }
+        var count = points.length;
+        this.initialize(count);
+        var iterations = 0;
+        var index = 0;
+        while (count > 3 && iterations < 500) {
+            iterations++;
+            var isEar = true;
+            var a = points[this._triPrev[index]];
+            var b = points[index];
+            var c = points[this._triNext[index]];
+            if (Vector2Ext.isTriangleCCW(a, b, c)) {
+                var k = this._triNext[this._triNext[index]];
+                do {
+                    if (Triangulator.testPointTriangle(points[k], a, b, c)) {
+                        isEar = false;
+                        break;
+                    }
+                    k = this._triNext[k];
+                } while (k != this._triPrev[index]);
+            }
+            else {
+                isEar = false;
+            }
+            if (isEar) {
+                this.triangleIndices.push(this._triPrev[index]);
+                this.triangleIndices.push(index);
+                this.triangleIndices.push(this._triNext[index]);
+                this._triNext[this._triPrev[index]] = this._triNext[index];
+                this._triPrev[this._triNext[index]] = this._triPrev[index];
+                count--;
+                index = this._triPrev[index];
+            }
+            else {
+                index = this._triNext[index];
+            }
+        }
+        this.triangleIndices.push(this._triPrev[index]);
+        this.triangleIndices.push(index);
+        this.triangleIndices.push(this._triNext[index]);
+        if (!arePointsCCW)
+            this.triangleIndices.reverse();
+    };
+    Triangulator.prototype.initialize = function (count) {
+        this.triangleIndices.length = 0;
+        if (this._triNext.length < count) {
+            this._triNext.reverse();
+            this._triNext = new Array(Math.max(this._triNext.length * 2, count));
+        }
+        if (this._triPrev.length < count) {
+            this._triPrev.reverse();
+            this._triPrev = new Array(Math.max(this._triPrev.length * 2, count));
+        }
+        for (var i = 0; i < count; i++) {
+            this._triPrev[i] = i - 1;
+            this._triNext[i] = i + 1;
+        }
+        this._triPrev[0] = count - 1;
+        this._triNext[count - 1] = 0;
+    };
+    Triangulator.testPointTriangle = function (point, a, b, c) {
+        if (Vector2Ext.cross(Vector2.subtract(point, a), Vector2.subtract(b, a)) < 0)
+            return false;
+        if (Vector2Ext.cross(Vector2.subtract(point, b), Vector2.subtract(c, b)) < 0)
+            return false;
+        if (Vector2Ext.cross(Vector2.subtract(point, c), Vector2.subtract(a, c)) < 0)
+            return false;
+        return true;
+    };
+    return Triangulator;
+}());
+var Vector2Ext = (function () {
+    function Vector2Ext() {
+    }
+    Vector2Ext.isTriangleCCW = function (a, center, c) {
+        return this.cross(Vector2.subtract(center, a), Vector2.subtract(c, center)) < 0;
+    };
+    Vector2Ext.cross = function (u, v) {
+        return u.y * v.x - u.x * v.y;
+    };
+    return Vector2Ext;
 }());

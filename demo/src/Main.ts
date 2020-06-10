@@ -93,6 +93,11 @@ class Main extends eui.UILayer {
     protected createGameScene(): void {
         let scene = SceneManager.createScene("main", new MainScene(this)).setActive();
         let player = scene.createEntity("player");
+        player.addComponent(new PolygonMesh([new Vector2(0, 0),
+            new Vector2(10, 0),
+            new Vector2(10, 10),
+            new Vector2(0, 10),
+            new Vector2(0, 0)]));
         player.addComponent(new SpawnComponent(EnemyType.worm));
         // console.log(player.transform.position);
     }
