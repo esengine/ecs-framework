@@ -776,10 +776,6 @@ var Component = (function () {
     };
     Component.prototype.update = function () {
     };
-    Component.prototype.bind = function (displayRender) {
-        this.displayRender = displayRender;
-        return this;
-    };
     Component.prototype.registerComponent = function () {
         this.entity.componentBits.set(ComponentTypeManager.getIndexFor(this), false);
         this.entity.scene.entityProcessors.onComponentAdded(this.entity);
@@ -1352,13 +1348,6 @@ var Transform = (function () {
         else {
             this.localScale = scale;
         }
-        for (var i = 0; i < this.entity.components.buffer.length; i++) {
-            var component = this.entity.components.buffer[i];
-            if (component.displayRender) {
-                component.displayRender.scaleX = this.scale.x;
-                component.displayRender.scaleY = this.scale.y;
-            }
-        }
         return this;
     };
     Transform.prototype.setLocalRotationDegrees = function (degrees) {
@@ -1377,12 +1366,6 @@ var Transform = (function () {
         }
         else {
             this.localRotation = radians;
-        }
-        for (var i = 0; i < this.entity.components.buffer.length; i++) {
-            var component = this.entity.components.buffer[i];
-            if (component.displayRender) {
-                component.displayRender.rotation = this.rotation;
-            }
         }
         return this;
     };
@@ -1406,13 +1389,6 @@ var Transform = (function () {
         }
         else {
             this.localPosition = position;
-        }
-        for (var i = 0; i < this.entity.components.buffer.length; i++) {
-            var component = this.entity.components.buffer[i];
-            if (component.displayRender) {
-                component.displayRender.x = this.entity.scene.camera.transformMatrix.m31 + this.position.x;
-                component.displayRender.y = this.entity.scene.camera.transformMatrix.m32 + this.position.y;
-            }
         }
         return this;
     };
@@ -1573,15 +1549,6 @@ var Camera = (function (_super) {
     Camera.prototype.initialize = function () {
     };
     Camera.prototype.update = function () {
-        var _this = this;
-        SceneManager.getActiveScene().entities.buffer.forEach(function (entity) { return entity.components.buffer.forEach(function (component) {
-            if (component.displayRender) {
-                var has = _this.entity.scene.$children.indexOf(component.displayRender);
-                if (has == -1) {
-                    _this.entity.scene.stage.addChild(component.displayRender);
-                }
-            }
-        }); });
     };
     Camera.prototype.setPosition = function (position) {
         this.entity.transform.setPosition(position);
@@ -1663,6 +1630,38 @@ var PolygonMesh = (function (_super) {
     }
     return PolygonMesh;
 }(Mesh));
+var RenderableComponent = (function (_super) {
+    __extends(RenderableComponent, _super);
+    function RenderableComponent() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    return RenderableComponent;
+}(Component));
+var SpriteRenderer = (function (_super) {
+    __extends(SpriteRenderer, _super);
+    function SpriteRenderer() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    Object.defineProperty(SpriteRenderer.prototype, "sprite", {
+        get: function () {
+            return this._sprite;
+        },
+        set: function (value) {
+            this.setSprite(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    SpriteRenderer.prototype.setSprite = function (sprite) {
+        this._sprite = sprite;
+        if (this._sprite)
+            this._origin = new Vector2(this._sprite.anchorOffsetX, this._sprite.anchorOffsetY);
+        return this;
+    };
+    SpriteRenderer.prototype.initialize = function () {
+    };
+    return SpriteRenderer;
+}(RenderableComponent));
 var EntitySystem = (function () {
     function EntitySystem(matcher) {
         this._entities = [];
@@ -2681,7 +2680,9 @@ var WebGLUtils = (function () {
     function WebGLUtils() {
     }
     WebGLUtils.getWebGL = function () {
-        return document.querySelector("canvas").getContext("webgl");
+        if (egret.WebGLUtils.checkCanUseWebGL())
+            return document.querySelector("canvas").getContext("webgl");
+        throw new Error("cannot get webgl");
     };
     WebGLUtils.drawUserIndexPrimitives = function (primitiveType, vertexData, vertexOffset, numVertices, indexData, indexOffset, primitiveCount) {
         var GL = this.getWebGL();

@@ -137,7 +137,6 @@ declare class WeightedPathfinder {
 }
 declare abstract class Component {
     entity: Entity;
-    displayRender: egret.DisplayObject;
     private _enabled;
     updateInterval: number;
     readonly transform: Transform;
@@ -150,7 +149,6 @@ declare abstract class Component {
     onDisabled(): void;
     onEntityTransformChanged(comp: ComponentTransform): void;
     update(): void;
-    bind(displayRender: egret.DisplayObject): this;
     registerComponent(): void;
     deregisterComponent(): void;
 }
@@ -337,6 +335,15 @@ declare class VertexPosition {
 }
 declare class PolygonMesh extends Mesh {
     constructor(points: Vector2[], arePointsCCW?: boolean);
+}
+declare abstract class RenderableComponent extends Component {
+}
+declare class SpriteRenderer extends RenderableComponent {
+    private _sprite;
+    private _origin;
+    sprite: egret.DisplayObject;
+    setSprite(sprite: egret.DisplayObject): SpriteRenderer;
+    initialize(): void;
 }
 declare class EntitySystem {
     private _scene;

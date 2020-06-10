@@ -1,6 +1,9 @@
 class WebGLUtils {
     public static getWebGL(): WebGLRenderingContext{
-        return document.querySelector("canvas").getContext("webgl");
+        if (egret.WebGLUtils.checkCanUseWebGL())
+            return document.querySelector("canvas").getContext("webgl");
+
+        throw new Error("cannot get webgl");
     }
 
     public static drawUserIndexPrimitives<T>(primitiveType: number, vertexData: T[], vertexOffset: number, numVertices: number, indexData: number[], indexOffset: number, primitiveCount: number){

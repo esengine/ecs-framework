@@ -203,14 +203,6 @@ class Transform {
             this.localScale = scale;
         }
 
-        for (let i = 0; i < this.entity.components.buffer.length; i ++){
-            let component = this.entity.components.buffer[i];
-            if (component.displayRender){
-                component.displayRender.scaleX = this.scale.x;
-                component.displayRender.scaleY = this.scale.y;
-            }
-        }
-
         return this;
     }
 
@@ -232,13 +224,6 @@ class Transform {
             this.localRotation = this.parent.rotation + radians;
         } else {
             this.localRotation = radians;
-        }
-
-        for (let i = 0; i < this.entity.components.buffer.length; i ++){
-            let component = this.entity.components.buffer[i];
-            if (component.displayRender){
-                component.displayRender.rotation = this.rotation;
-            }
         }
 
         return this;
@@ -268,14 +253,6 @@ class Transform {
             this.localPosition = Vector2.transform(this._position, this._worldToLocalTransform);
         }else{
             this.localPosition = position;
-        }
-
-        for (let i = 0; i < this.entity.components.buffer.length; i ++){
-            let component = this.entity.components.buffer[i];
-            if (component.displayRender){
-                component.displayRender.x = this.entity.scene.camera.transformMatrix.m31 + this.position.x;
-                component.displayRender.y = this.entity.scene.camera.transformMatrix.m32 + this.position.y;
-            }
         }
 
         return this;

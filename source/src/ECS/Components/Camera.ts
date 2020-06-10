@@ -98,14 +98,7 @@ class Camera extends Component {
     }
 
     public update(){
-        SceneManager.getActiveScene().entities.buffer.forEach(entity => entity.components.buffer.forEach(component => {
-            if (component.displayRender){
-                let has = this.entity.scene.$children.indexOf(component.displayRender)
-                if (has == -1){
-                    this.entity.scene.stage.addChild(component.displayRender);
-                }
-            }
-        }));
+        
     }
 
     public setPosition(position: Vector2){
