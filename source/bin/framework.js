@@ -1462,9 +1462,41 @@ var Camera = (function (_super) {
         _this._minimumZoom = 0.3;
         _this._maximumZoom = 3;
         _this._areMatrixesDirty = true;
+        _this._areBoundsDirty = true;
         _this.setZoom(0);
         return _this;
     }
+    Object.defineProperty(Camera.prototype, "bounds", {
+        get: function () {
+            if (this._areMatrixesDirty)
+                this.updateMatrixes();
+            if (this._areBoundsDirty) {
+                var stage = this.entity.scene.stage;
+                var topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
+                var bottomRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, stage.stageHeight - this._inset.bottom));
+                if (this.entity.transform.rotation != 0) {
+                    var topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));
+                    var bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left, stage.stageHeight - this._inset.bottom));
+                    var minX = MathHelper.minOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                    var maxX = MathHelper.maxOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                    var minY = MathHelper.minOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                    var maxY = MathHelper.maxOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                    this._bounds.location = new Vector2(minX, minY);
+                    this._bounds.width = maxX - minX;
+                    this._bounds.height = maxY - minY;
+                }
+                else {
+                    this._bounds.location = topLeft;
+                    this._bounds.width = bottomRight.x - topLeft.x;
+                    this._bounds.height = bottomRight.y - topLeft.y;
+                }
+                this._areBoundsDirty = false;
+            }
+            return this._bounds;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Camera.prototype, "zoom", {
         get: function () {
             if (this._zoom == 0)
@@ -1514,8 +1546,18 @@ var Camera = (function (_super) {
     });
     Object.defineProperty(Camera.prototype, "transformMatrix", {
         get: function () {
-            this.updateMatrixes();
+            if (this._areBoundsDirty)
+                this.updateMatrixes();
             return this._transformMatrix;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Camera.prototype, "inverseTransformMatrix", {
+        get: function () {
+            if (this._areBoundsDirty)
+                this.updateMatrixes();
+            return this._inverseTransformMatrix;
         },
         enumerable: true,
         configurable: true
@@ -1566,12 +1608,26 @@ var Camera = (function (_super) {
         tempMat = Matrix2D.createTranslation(this._origin.x, this._origin.y, tempMat);
         this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
         this._inverseTransformMatrix = Matrix2D.invert(this._transformMatrix);
+        this._areBoundsDirty = true;
         this._areMatrixesDirty = false;
+    };
+    Camera.prototype.screenToWorldPoint = function (screenPosition) {
+        this.updateMatrixes();
+        return Vector2.transform(screenPosition, this._inverseTransformMatrix);
+    };
+    Camera.prototype.worldToScreenPoint = function (worldPosition) {
+        this.updateMatrixes();
+        return Vector2.transform(worldPosition, this._transformMatrix);
     };
     Camera.prototype.destory = function () {
     };
     return Camera;
 }(Component));
+var CameraInset = (function () {
+    function CameraInset() {
+    }
+    return CameraInset;
+}());
 var Mesh = (function (_super) {
     __extends(Mesh, _super);
     function Mesh() {
@@ -1633,8 +1689,55 @@ var PolygonMesh = (function (_super) {
 var RenderableComponent = (function (_super) {
     __extends(RenderableComponent, _super);
     function RenderableComponent() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this._areBoundsDirty = true;
+        return _this;
     }
+    Object.defineProperty(RenderableComponent.prototype, "width", {
+        get: function () {
+            return this.bounds.width;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(RenderableComponent.prototype, "height", {
+        get: function () {
+            return this.bounds.height;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(RenderableComponent.prototype, "isVisible", {
+        get: function () {
+            return this._isVisible;
+        },
+        set: function (value) {
+            this._isVisible = value;
+            if (this._isVisible)
+                this.onBecameVisible();
+            else
+                this.onBecameInvisible();
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(RenderableComponent.prototype, "bounds", {
+        get: function () {
+            if (this._areBoundsDirty) {
+                this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, Vector2.Zero, this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
+                this._areBoundsDirty = false;
+            }
+            return this._bounds;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    RenderableComponent.prototype.onBecameVisible = function () { };
+    RenderableComponent.prototype.onBecameInvisible = function () { };
+    RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
+        this.isVisible = camera.bounds.intersects(this.bounds);
+        return this.isVisible;
+    };
     return RenderableComponent;
 }(Component));
 var SpriteRenderer = (function (_super) {
@@ -2211,6 +2314,12 @@ var MathHelper = (function () {
             return max;
         return value;
     };
+    MathHelper.minOf = function (a, b, c, d) {
+        return Math.min(a, Math.min(b, Math.min(c, d)));
+    };
+    MathHelper.maxOf = function (a, b, c, d) {
+        return Math.max(a, Math.max(b, Math.max(c, d)));
+    };
     return MathHelper;
 }());
 var Matrix2D = (function () {
@@ -2373,6 +2482,85 @@ var Rectangle = (function () {
         this.width = width;
         this.height = height;
     }
+    Object.defineProperty(Rectangle.prototype, "left", {
+        get: function () {
+            return this.x;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Rectangle.prototype, "right", {
+        get: function () {
+            return this.x + this.width;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Rectangle.prototype, "top", {
+        get: function () {
+            return this.y;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Rectangle.prototype, "bottom", {
+        get: function () {
+            return this.y + this.height;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Rectangle.prototype, "location", {
+        get: function () {
+            return new Vector2(this.x, this.y);
+        },
+        set: function (value) {
+            this.x = value.x;
+            this.y = value.y;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Rectangle.prototype.intersects = function (value) {
+        return value.left < this.right &&
+            this.left < value.right &&
+            value.top < this.bottom &&
+            this.top < value.bottom;
+    };
+    Rectangle.prototype.calculateBounds = function (parentPosition, position, origin, scale, rotation, width, height) {
+        if (rotation == 0) {
+            this.x = parentPosition.x + position.x - origin.x * scale.x;
+            this.y = parentPosition.y + position.y - origin.y * scale.y;
+            this.width = width * scale.x;
+            this.height = height * scale.y;
+        }
+        else {
+            var worldPosX = parentPosition.x + position.x;
+            var worldPosY = parentPosition.y + position.y;
+            this._transformMat = Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
+            this._tempMat = Matrix2D.createScale(scale.x, scale.y);
+            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
+            this._tempMat = Matrix2D.createRotation(rotation);
+            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
+            this._tempMat = Matrix2D.createTranslation(worldPosX, worldPosY);
+            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
+            var topLeft = new Vector2(worldPosX, worldPosY);
+            var topRight = new Vector2(worldPosX + width, worldPosY);
+            var bottomLeft = new Vector2(worldPosX, worldPosY + height);
+            var bottomRight = new Vector2(worldPosX + width, worldPosY + height);
+            topLeft = Vector2.transform(topLeft, this._transformMat);
+            topRight = Vector2.transform(topRight, this._transformMat);
+            bottomLeft = Vector2.transform(bottomLeft, this._transformMat);
+            bottomRight = Vector2.transform(bottomRight, this._transformMat);
+            var minX = MathHelper.minOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+            var maxX = MathHelper.maxOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+            var minY = MathHelper.minOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+            var maxY = MathHelper.maxOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+            this.location = new Vector2(minX, minY);
+            this.width = maxX - minX;
+            this.height = maxY - minY;
+        }
+    };
     return Rectangle;
 }());
 var Vector2 = (function () {

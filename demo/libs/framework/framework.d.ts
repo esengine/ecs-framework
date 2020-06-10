@@ -301,11 +301,16 @@ declare class Camera extends Component {
     private _minimumZoom;
     private _maximumZoom;
     private _areMatrixesDirty;
+    private _inset;
+    private _bounds;
+    private _areBoundsDirty;
+    readonly bounds: Rectangle;
     zoom: number;
     minimumZoom: number;
     maximumZoom: number;
     origin: Vector2;
     readonly transformMatrix: Matrix2D;
+    readonly inverseTransformMatrix: Matrix2D;
     constructor();
     setMinimumZoom(minZoom: number): Camera;
     setMaximumZoom(maxZoom: number): Camera;
@@ -314,7 +319,15 @@ declare class Camera extends Component {
     update(): void;
     setPosition(position: Vector2): this;
     updateMatrixes(): void;
+    screenToWorldPoint(screenPosition: Vector2): Vector2;
+    worldToScreenPoint(worldPosition: Vector2): Vector2;
     destory(): void;
+}
+declare class CameraInset {
+    left: any;
+    right: any;
+    top: any;
+    bottom: any;
 }
 declare class Mesh extends Component {
     private _verts;
@@ -337,6 +350,17 @@ declare class PolygonMesh extends Mesh {
     constructor(points: Vector2[], arePointsCCW?: boolean);
 }
 declare abstract class RenderableComponent extends Component {
+    private _isVisible;
+    private _areBoundsDirty;
+    private _bounds;
+    private _localOffset;
+    readonly width: number;
+    readonly height: number;
+    isVisible: boolean;
+    readonly bounds: Rectangle;
+    protected onBecameVisible(): void;
+    protected onBecameInvisible(): void;
+    isVisibleFromCamera(camera: Camera): boolean;
 }
 declare class SpriteRenderer extends RenderableComponent {
     private _sprite;
@@ -468,6 +492,8 @@ declare class MathHelper {
     static toRadians(degrees: number): number;
     static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number;
     static clamp(value: number, min: number, max: number): number;
+    static minOf(a: number, b: number, c: number, d: number): number;
+    static maxOf(a: number, b: number, c: number, d: number): number;
 }
 declare class Matrix2D {
     m11: number;
@@ -498,7 +524,16 @@ declare class Rectangle {
     y: number;
     width: number;
     height: number;
+    private _tempMat;
+    private _transformMat;
+    readonly left: number;
+    readonly right: number;
+    readonly top: number;
+    readonly bottom: number;
+    location: Vector2;
     constructor(x: number, y: number, width: number, height: number);
+    intersects(value: Rectangle): boolean;
+    calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
 }
 declare class Vector2 {
     x: number;

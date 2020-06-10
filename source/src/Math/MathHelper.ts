@@ -36,4 +36,12 @@ class MathHelper {
 
         return value;
     }
+
+    public static minOf(a: number, b: number, c: number, d: number){
+        return Math.min(a, Math.min(b, Math.min(c, d)));
+    }
+
+    public static maxOf(a: number, b: number, c: number, d: number){
+        return Math.max(a, Math.max(b, Math.max(c, d)));
+    }
 }

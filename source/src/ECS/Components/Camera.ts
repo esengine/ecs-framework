@@ -8,6 +8,42 @@ class Camera extends Component {
     private _minimumZoom = 0.3;
     private _maximumZoom = 3;
     private _areMatrixesDirty = true;
+    private _inset: CameraInset;
+    private _bounds: Rectangle;
+    private _areBoundsDirty = true;
+
+    public get bounds(){
+        if (this._areMatrixesDirty)
+            this.updateMatrixes();
+
+        if (this._areBoundsDirty){
+            let stage = this.entity.scene.stage;
+            let topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
+            let bottomRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, stage.stageHeight - this._inset.bottom));
+
+            if (this.entity.transform.rotation != 0){
+                let topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));
+                let bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left, stage.stageHeight - this._inset.bottom));
+
+                let minX = MathHelper.minOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                let maxX = MathHelper.maxOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                let minY = MathHelper.minOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                let maxY = MathHelper.maxOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+
+                this._bounds.location = new Vector2(minX, minY);
+                this._bounds.width = maxX - minX;
+                this._bounds.height = maxY - minY;
+            }else{
+                this._bounds.location = topLeft;
+                this._bounds.width = bottomRight.x - topLeft.x;
+                this._bounds.height = bottomRight.y - topLeft.y;
+            }
+
+            this._areBoundsDirty = false;
+        }
+
+        return this._bounds;
+    }
 
     public get zoom(){
         if (this._zoom == 0)
@@ -51,9 +87,15 @@ class Camera extends Component {
     }
 
     public get transformMatrix(){
-        this.updateMatrixes();
-
+        if (this._areBoundsDirty)
+            this.updateMatrixes();
         return this._transformMatrix;
+    }
+
+    public get inverseTransformMatrix(){
+        if (this._areBoundsDirty)
+            this.updateMatrixes();
+        return this._inverseTransformMatrix;
     }
 
     constructor() {
@@ -123,10 +165,28 @@ class Camera extends Component {
 
         this._inverseTransformMatrix = Matrix2D.invert(this._transformMatrix);
 
+        this._areBoundsDirty = true;
         this._areMatrixesDirty = false;
+    }
+
+    public screenToWorldPoint(screenPosition: Vector2){
+        this.updateMatrixes();
+        return Vector2.transform(screenPosition, this._inverseTransformMatrix);
+    }
+
+    public worldToScreenPoint(worldPosition: Vector2){
+        this.updateMatrixes();
+        return Vector2.transform(worldPosition, this._transformMatrix);
     }
 
     public destory() {
 
     }
+}
+
+class CameraInset {
+    public left;
+    public right;
+    public top;
+    public bottom;
 }
