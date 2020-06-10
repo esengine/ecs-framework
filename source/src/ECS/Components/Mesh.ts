@@ -43,6 +43,9 @@ class Mesh extends Component {
 
         return this;
     }
+
+    public render(){
+    }
 }
 
 class VertexPosition{

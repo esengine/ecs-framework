@@ -72,6 +72,69 @@ declare class PriorityQueue<T extends PriorityQueueNode> {
     private swap;
     private hasHigherPriority;
 }
+declare class BreadthFirstPathfinder {
+    static search<T>(graph: IUnweightedGraph<T>, start: T, goal: T): T[];
+    private static hasKey;
+}
+interface IUnweightedGraph<T> {
+    getNeighbors(node: T): T[];
+}
+declare class UnweightedGraph<T> implements IUnweightedGraph<T> {
+    edges: Map<T, T[]>;
+    addEdgesForNode(node: T, edges: T[]): this;
+    getNeighbors(node: T): T[];
+}
+declare class Point {
+    x: number;
+    y: number;
+    constructor(x: number, y: number);
+}
+declare class UnweightedGridGraph implements IUnweightedGraph<Point> {
+    private static readonly CARDINAL_DIRS;
+    private static readonly COMPASS_DIRS;
+    walls: Point[];
+    private _width;
+    private _hegiht;
+    private _dirs;
+    private _neighbors;
+    constructor(width: number, height: number, allowDiagonalSearch?: boolean);
+    isNodeInBounds(node: Point): boolean;
+    isNodePassable(node: Point): boolean;
+    getNeighbors(node: Point): Point[];
+    search(start: Point, goal: Point): Point[];
+}
+interface IWeightedGraph<T> {
+    getNeighbors(node: T): T[];
+    cost(from: T, to: T): number;
+}
+declare class WeightedGridGraph implements IWeightedGraph<Point> {
+    static readonly CARDINAL_DIRS: Point[];
+    private static readonly COMPASS_DIRS;
+    walls: Point[];
+    weightedNodes: Point[];
+    defaultWeight: number;
+    weightedNodeWeight: number;
+    private _width;
+    private _height;
+    private _dirs;
+    private _neighbors;
+    constructor(width: number, height: number, allowDiagonalSearch?: boolean);
+    isNodeInBounds(node: Point): boolean;
+    isNodePassable(node: Point): boolean;
+    search(start: Point, goal: Point): Point[];
+    getNeighbors(node: Point): Point[];
+    cost(from: Point, to: Point): number;
+}
+declare class WeightedNode<T> extends PriorityQueueNode {
+    data: T;
+    constructor(data: T);
+}
+declare class WeightedPathfinder {
+    static search<T>(graph: IWeightedGraph<T>, start: T, goal: T): T[];
+    private static hasKey;
+    private static getKey;
+    static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[];
+}
 declare abstract class Component {
     entity: Entity;
     displayRender: egret.DisplayObject;
@@ -266,6 +329,7 @@ declare class Mesh extends Component {
     setVertPosition(positions: Vector2[]): this;
     setTriangles(triangles: number[]): this;
     recalculateBounds(): this;
+    render(): void;
 }
 declare class VertexPosition {
     position: Vector2;
@@ -421,11 +485,6 @@ declare class Matrix2D {
     static createTranslation(xPosition: number, yPosition: number, result?: Matrix2D): Matrix2D;
     static createRotation(radians: number, result?: Matrix2D): Matrix2D;
     static createScale(xScale: number, yScale: number, result?: Matrix2D): Matrix2D;
-}
-declare class Point {
-    x: number;
-    y: number;
-    constructor(x: number, y: number);
 }
 declare class Rectangle {
     x: number;

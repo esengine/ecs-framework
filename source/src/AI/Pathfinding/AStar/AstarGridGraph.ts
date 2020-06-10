@@ -37,7 +37,7 @@ class AstarGridGraph implements IAstarGraph<Point> {
      * @param node 
      */
     public isNodePassable(node: Point): boolean {
-        return !this.walls.contains(node);
+        return !this.walls.firstOrDefault(wall => JSON.stringify(wall) == JSON.stringify(node));
     }
 
     public search(start: Point, goal: Point){

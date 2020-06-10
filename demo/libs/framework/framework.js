@@ -343,7 +343,7 @@ var AstarGridGraph = (function () {
         return 0 <= node.x && node.x < this._width && 0 <= node.y && node.y < this._height;
     };
     AstarGridGraph.prototype.isNodePassable = function (node) {
-        return !this.walls.contains(node);
+        return !this.walls.firstOrDefault(function (wall) { return JSON.stringify(wall) == JSON.stringify(node); });
     };
     AstarGridGraph.prototype.search = function (start, goal) {
         return AStarPathfinder.search(this, start, goal);
@@ -493,6 +493,242 @@ var PriorityQueue = (function () {
             (higher.priority == lower.priority && higher.insertionIndex < lower.insertionIndex));
     };
     return PriorityQueue;
+}());
+var BreadthFirstPathfinder = (function () {
+    function BreadthFirstPathfinder() {
+    }
+    BreadthFirstPathfinder.search = function (graph, start, goal) {
+        var _this = this;
+        var foundPath = false;
+        var frontier = [];
+        frontier.unshift(start);
+        var cameFrom = new Map();
+        cameFrom.set(start, start);
+        var _loop_3 = function () {
+            var current = frontier.shift();
+            if (JSON.stringify(current) == JSON.stringify(goal)) {
+                foundPath = true;
+                return "break";
+            }
+            graph.getNeighbors(current).forEach(function (next) {
+                if (!_this.hasKey(cameFrom, next)) {
+                    frontier.unshift(next);
+                    cameFrom.set(next, current);
+                }
+            });
+        };
+        while (frontier.length > 0) {
+            var state_2 = _loop_3();
+            if (state_2 === "break")
+                break;
+        }
+        return foundPath ? AStarPathfinder.recontructPath(cameFrom, start, goal) : null;
+    };
+    BreadthFirstPathfinder.hasKey = function (map, compareKey) {
+        var iterator = map.keys();
+        var r;
+        while (r = iterator.next(), !r.done) {
+            if (JSON.stringify(r.value) == JSON.stringify(compareKey))
+                return true;
+        }
+        return false;
+    };
+    return BreadthFirstPathfinder;
+}());
+var UnweightedGraph = (function () {
+    function UnweightedGraph() {
+        this.edges = new Map();
+    }
+    UnweightedGraph.prototype.addEdgesForNode = function (node, edges) {
+        this.edges.set(node, edges);
+        return this;
+    };
+    UnweightedGraph.prototype.getNeighbors = function (node) {
+        return this.edges.get(node);
+    };
+    return UnweightedGraph;
+}());
+var Point = (function () {
+    function Point(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+    return Point;
+}());
+var UnweightedGridGraph = (function () {
+    function UnweightedGridGraph(width, height, allowDiagonalSearch) {
+        if (allowDiagonalSearch === void 0) { allowDiagonalSearch = false; }
+        this.walls = [];
+        this._neighbors = new Array(4);
+        this._width = width;
+        this._hegiht = height;
+        this._dirs = allowDiagonalSearch ? UnweightedGridGraph.COMPASS_DIRS : UnweightedGridGraph.CARDINAL_DIRS;
+    }
+    UnweightedGridGraph.prototype.isNodeInBounds = function (node) {
+        return 0 <= node.x && node.x < this._width && 0 <= node.y && node.y < this._hegiht;
+    };
+    UnweightedGridGraph.prototype.isNodePassable = function (node) {
+        return !this.walls.firstOrDefault(function (wall) { return JSON.stringify(wall) == JSON.stringify(node); });
+    };
+    UnweightedGridGraph.prototype.getNeighbors = function (node) {
+        var _this = this;
+        this._neighbors.length = 0;
+        this._dirs.forEach(function (dir) {
+            var next = new Point(node.x + dir.x, node.y + dir.y);
+            if (_this.isNodeInBounds(next) && _this.isNodePassable(next))
+                _this._neighbors.push(next);
+        });
+        return this._neighbors;
+    };
+    UnweightedGridGraph.prototype.search = function (start, goal) {
+        return BreadthFirstPathfinder.search(this, start, goal);
+    };
+    UnweightedGridGraph.CARDINAL_DIRS = [
+        new Point(1, 0),
+        new Point(0, -1),
+        new Point(-1, 0),
+        new Point(0, -1)
+    ];
+    UnweightedGridGraph.COMPASS_DIRS = [
+        new Point(1, 0),
+        new Point(1, -1),
+        new Point(0, -1),
+        new Point(-1, -1),
+        new Point(-1, 0),
+        new Point(-1, 1),
+        new Point(0, 1),
+        new Point(1, 1),
+    ];
+    return UnweightedGridGraph;
+}());
+var WeightedGridGraph = (function () {
+    function WeightedGridGraph(width, height, allowDiagonalSearch) {
+        if (allowDiagonalSearch === void 0) { allowDiagonalSearch = false; }
+        this.walls = [];
+        this.weightedNodes = [];
+        this.defaultWeight = 1;
+        this.weightedNodeWeight = 5;
+        this._neighbors = new Array(4);
+        this._width = width;
+        this._height = height;
+        this._dirs = allowDiagonalSearch ? WeightedGridGraph.COMPASS_DIRS : WeightedGridGraph.CARDINAL_DIRS;
+    }
+    WeightedGridGraph.prototype.isNodeInBounds = function (node) {
+        return 0 <= node.x && node.x < this._width && 0 <= node.y && node.y < this._height;
+    };
+    WeightedGridGraph.prototype.isNodePassable = function (node) {
+        return !this.walls.firstOrDefault(function (wall) { return JSON.stringify(wall) == JSON.stringify(node); });
+    };
+    WeightedGridGraph.prototype.search = function (start, goal) {
+        return WeightedPathfinder.search(this, start, goal);
+    };
+    WeightedGridGraph.prototype.getNeighbors = function (node) {
+        var _this = this;
+        this._neighbors.length = 0;
+        this._dirs.forEach(function (dir) {
+            var next = new Point(node.x + dir.x, node.y + dir.y);
+            if (_this.isNodeInBounds(next) && _this.isNodePassable(next))
+                _this._neighbors.push(next);
+        });
+        return this._neighbors;
+    };
+    WeightedGridGraph.prototype.cost = function (from, to) {
+        return this.weightedNodes.find(function (t) { return JSON.stringify(t) == JSON.stringify(to); }) ? this.weightedNodeWeight : this.defaultWeight;
+    };
+    WeightedGridGraph.CARDINAL_DIRS = [
+        new Point(1, 0),
+        new Point(0, -1),
+        new Point(-1, 0),
+        new Point(0, 1)
+    ];
+    WeightedGridGraph.COMPASS_DIRS = [
+        new Point(1, 0),
+        new Point(1, -1),
+        new Point(0, -1),
+        new Point(-1, -1),
+        new Point(-1, 0),
+        new Point(-1, 1),
+        new Point(0, 1),
+        new Point(1, 1),
+    ];
+    return WeightedGridGraph;
+}());
+var WeightedNode = (function (_super) {
+    __extends(WeightedNode, _super);
+    function WeightedNode(data) {
+        var _this = _super.call(this) || this;
+        _this.data = data;
+        return _this;
+    }
+    return WeightedNode;
+}(PriorityQueueNode));
+var WeightedPathfinder = (function () {
+    function WeightedPathfinder() {
+    }
+    WeightedPathfinder.search = function (graph, start, goal) {
+        var _this = this;
+        var foundPath = false;
+        var cameFrom = new Map();
+        cameFrom.set(start, start);
+        var costSoFar = new Map();
+        var frontier = new PriorityQueue(1000);
+        frontier.enqueue(new WeightedNode(start), 0);
+        costSoFar.set(start, 0);
+        var _loop_4 = function () {
+            var current = frontier.dequeue();
+            if (JSON.stringify(current.data) == JSON.stringify(goal)) {
+                foundPath = true;
+                return "break";
+            }
+            graph.getNeighbors(current.data).forEach(function (next) {
+                var newCost = costSoFar.get(current.data) + graph.cost(current.data, next);
+                if (!_this.hasKey(costSoFar, next) || newCost < costSoFar.get(next)) {
+                    costSoFar.set(next, newCost);
+                    var priprity = newCost;
+                    frontier.enqueue(new WeightedNode(next), priprity);
+                    cameFrom.set(next, current.data);
+                }
+            });
+        };
+        while (frontier.count > 0) {
+            var state_3 = _loop_4();
+            if (state_3 === "break")
+                break;
+        }
+        return foundPath ? this.recontructPath(cameFrom, start, goal) : null;
+    };
+    WeightedPathfinder.hasKey = function (map, compareKey) {
+        var iterator = map.keys();
+        var r;
+        while (r = iterator.next(), !r.done) {
+            if (JSON.stringify(r.value) == JSON.stringify(compareKey))
+                return true;
+        }
+        return false;
+    };
+    WeightedPathfinder.getKey = function (map, compareKey) {
+        var iterator = map.keys();
+        var valueIterator = map.values();
+        var r;
+        var v;
+        while (r = iterator.next(), v = valueIterator.next(), !r.done) {
+            if (JSON.stringify(r.value) == JSON.stringify(compareKey))
+                return v.value;
+        }
+        return null;
+    };
+    WeightedPathfinder.recontructPath = function (cameFrom, start, goal) {
+        var path = [];
+        var current = goal;
+        path.push(goal);
+        while (current != start) {
+            current = this.getKey(cameFrom, current);
+            path.push(current);
+        }
+        path.reverse();
+        return path;
+    };
+    return WeightedPathfinder;
 }());
 var Component = (function () {
     function Component() {
@@ -1403,6 +1639,8 @@ var Mesh = (function (_super) {
         this._height = max.y - this._topLeftVertPosition.y;
         return this;
     };
+    Mesh.prototype.render = function () {
+    };
     return Mesh;
 }(Component));
 var VertexPosition = (function () {
@@ -2128,13 +2366,6 @@ var Matrix2D = (function () {
     };
     Matrix2D._identity = new Matrix2D(1, 0, 0, 1, 0, 0);
     return Matrix2D;
-}());
-var Point = (function () {
-    function Point(x, y) {
-        this.x = x;
-        this.y = y;
-    }
-    return Point;
 }());
 var Rectangle = (function () {
     function Rectangle(x, y, width, height) {
