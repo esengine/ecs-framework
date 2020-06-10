@@ -2677,3 +2677,41 @@ var Vector2Ext = (function () {
     };
     return Vector2Ext;
 }());
+var WebGLUtils = (function () {
+    function WebGLUtils() {
+    }
+    WebGLUtils.getWebGL = function () {
+        return document.querySelector("canvas").getContext("webgl");
+    };
+    WebGLUtils.drawUserIndexPrimitives = function (primitiveType, vertexData, vertexOffset, numVertices, indexData, indexOffset, primitiveCount) {
+        var GL = this.getWebGL();
+        GL.bindBuffer(GL.ARRAY_BUFFER, 0);
+        this.checkGLError();
+        GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, 0);
+        this.checkGLError();
+        GL.drawElements(primitiveType, this.getElementCountArray(primitiveType, primitiveCount), GL.UNSIGNED_SHORT, indexOffset * 2);
+        this.checkGLError();
+    };
+    WebGLUtils.getElementCountArray = function (primitiveType, primitiveCount) {
+        var GL = this.getWebGL();
+        switch (primitiveType) {
+            case GL.LINES:
+                return primitiveCount * 2;
+            case GL.LINE_STRIP:
+                return primitiveCount + 1;
+            case GL.TRIANGLES:
+                return primitiveCount * 3;
+            case GL.TRIANGLE_STRIP:
+                return primitiveCount + 2;
+        }
+        throw new Error("not support");
+    };
+    WebGLUtils.checkGLError = function () {
+        var GL = this.getWebGL();
+        var error = GL.getError();
+        if (error != GL.NO_ERROR) {
+            throw new Error("GL.GetError() returned" + error);
+        }
+    };
+    return WebGLUtils;
+}());

@@ -38,7 +38,7 @@ class WeightedPathfinder {
                 }
             });
         }
-
+        
         return foundPath ? this.recontructPath(cameFrom, start, goal) : null;
     }
 

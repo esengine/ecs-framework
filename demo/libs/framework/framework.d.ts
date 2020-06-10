@@ -545,3 +545,9 @@ declare class Vector2Ext {
     static isTriangleCCW(a: Vector2, center: Vector2, c: Vector2): boolean;
     static cross(u: Vector2, v: Vector2): number;
 }
+declare class WebGLUtils {
+    static getWebGL(): WebGLRenderingContext;
+    static drawUserIndexPrimitives<T>(primitiveType: number, vertexData: T[], vertexOffset: number, numVertices: number, indexData: number[], indexOffset: number, primitiveCount: number): void;
+    private static getElementCountArray;
+    static checkGLError(): void;
+}
