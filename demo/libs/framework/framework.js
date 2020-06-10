@@ -730,6 +730,13 @@ var WeightedPathfinder = (function () {
     };
     return WeightedPathfinder;
 }());
+var DebugDefaults = (function () {
+    function DebugDefaults() {
+    }
+    DebugDefaults.verletParticle = 0xDC345E;
+    DebugDefaults.verletConstraintEdge = 0x433E36;
+    return DebugDefaults;
+}());
 var Component = (function () {
     function Component() {
         this._enabled = true;
@@ -1171,7 +1178,7 @@ var Transform = (function () {
         this._worldInverseTransform = Matrix2D.identity;
         this._rotation = 0;
         this.entity = entity;
-        this._scale = this._localScale = Vector2.One;
+        this._scale = this._localScale = new Vector2(0, 0);
         this._children = [];
     }
     Object.defineProperty(Transform.prototype, "childCount", {
@@ -1695,14 +1702,14 @@ var RenderableComponent = (function (_super) {
     }
     Object.defineProperty(RenderableComponent.prototype, "width", {
         get: function () {
-            return this.bounds.width;
+            return this.getWidth();
         },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(RenderableComponent.prototype, "height", {
         get: function () {
-            return this.bounds.height;
+            return this.getHeight();
         },
         enumerable: true,
         configurable: true
@@ -1723,15 +1730,24 @@ var RenderableComponent = (function (_super) {
     });
     Object.defineProperty(RenderableComponent.prototype, "bounds", {
         get: function () {
-            if (this._areBoundsDirty) {
-                this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, Vector2.Zero, this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
-                this._areBoundsDirty = false;
-            }
-            return this._bounds;
+            return this.getBounds();
         },
         enumerable: true,
         configurable: true
     });
+    RenderableComponent.prototype.getWidth = function () {
+        return this.bounds.width;
+    };
+    RenderableComponent.prototype.getHeight = function () {
+        return this.bounds.height;
+    };
+    RenderableComponent.prototype.getBounds = function () {
+        if (this._areBoundsDirty) {
+            this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new Vector2(0, 0), this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
+            this._areBoundsDirty = false;
+        }
+        return this._bounds;
+    };
     RenderableComponent.prototype.onBecameVisible = function () { };
     RenderableComponent.prototype.onBecameInvisible = function () { };
     RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
@@ -2058,6 +2074,11 @@ var ComponentList = (function () {
     };
     ComponentList.prototype.update = function () {
         this.updateLists();
+        for (var i = 0; i < this._components.length; i++) {
+            var component = this._components[i];
+            if (component.enabled && (component.updateInterval == 1 || Time.frameCount % component.updateInterval == 0))
+                component.update();
+        }
     };
     ComponentList.prototype.onEntityTransformChanged = function (comp) {
         for (var i = 0; i < this._components.length; i++) {
@@ -2285,13 +2306,17 @@ var Matcher = (function () {
 var Time = (function () {
     function Time() {
     }
+    ;
     Time.update = function (currentTime) {
         var dt = (currentTime - this._lastTime) / 1000;
         this.deltaTime = dt * this.timeScale;
         this.unscaledDeltaTime = dt;
+        this.frameCount++;
         this._lastTime = currentTime;
     };
+    Time.deltaTime = 0;
     Time.timeScale = 1;
+    Time.frameCount = 0;
     Time._lastTime = 0;
     return Time;
 }());
@@ -2570,44 +2595,37 @@ var Vector2 = (function () {
         this.x = x;
         this.y = y;
     }
-    Object.defineProperty(Vector2, "One", {
-        get: function () {
-            return this.unitVector;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Vector2, "Zero", {
-        get: function () {
-            return this.zeroVector;
-        },
-        enumerable: true,
-        configurable: true
-    });
     Vector2.add = function (value1, value2) {
-        value1.x += value2.x;
-        value1.y += value2.y;
-        return value1;
+        var result = new Vector2(0, 0);
+        result.x = value1.x + value2.x;
+        result.y = value1.y + value2.y;
+        return result;
     };
     Vector2.divide = function (value1, value2) {
-        value1.x /= value2.x;
-        value1.y /= value2.y;
+        var result = new Vector2(0, 0);
+        result.x = value1.x / value2.x;
+        result.y = value1.y / value2.y;
         return value1;
     };
     Vector2.multiply = function (value1, value2) {
-        value1.x *= value2.x;
-        value1.y *= value2.y;
-        return value1;
+        var result = new Vector2(0, 0);
+        result.x = value1.x * value2.x;
+        result.y = value1.y * value2.y;
+        return result;
     };
     Vector2.subtract = function (value1, value2) {
-        value1.x -= value2.x;
-        value1.y -= value2.y;
+        var result = new Vector2(0, 0);
+        result.x = value1.x - value2.x;
+        result.y = value1.y - value2.y;
         return value1;
     };
     Vector2.prototype.normalize = function () {
         var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
         this.x *= val;
         this.y *= val;
+    };
+    Vector2.prototype.length = function () {
+        return Math.sqrt((this.x * this.x) + (this.y * this.y));
     };
     Vector2.dot = function (value1, value2) {
         return (value1.x * value2.x) + (value1.y * value2.y);
@@ -2619,8 +2637,10 @@ var Vector2 = (function () {
     Vector2.transform = function (position, matrix) {
         return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
     };
-    Vector2.zeroVector = new Vector2(0, 0);
-    Vector2.unitVector = new Vector2(1, 1);
+    Vector2.distance = function (value1, value2) {
+        var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
+        return Math.sqrt((v1 * v1) + (v2 * v2));
+    };
     return Vector2;
 }());
 var PointSectors;
@@ -2654,7 +2674,7 @@ var Collisions = (function () {
         return true;
     };
     Collisions.lineToLineIntersection = function (a1, a2, b1, b2) {
-        var intersection = Vector2.Zero;
+        var intersection = new Vector2(0, 0);
         var b = Vector2.subtract(a2, a1);
         var d = Vector2.subtract(b2, b1);
         var bDotDPerp = b.x * d.y - b.y * d.x;
@@ -2775,6 +2795,258 @@ var Collisions = (function () {
     };
     return Collisions;
 }());
+var Physics = (function () {
+    function Physics() {
+    }
+    Physics.overlapCircleAll = function (center, randius, results, layerMask) {
+        if (layerMask === void 0) { layerMask = -1; }
+        return this._spatialHash.overlapCircle(center, randius, results, layerMask);
+    };
+    return Physics;
+}());
+var Particle = (function () {
+    function Particle(position) {
+        this.position = new Vector2(0, 0);
+        this.lastPosition = new Vector2(0, 0);
+        this.acceleration = new Vector2(0, 0);
+        this.mass = 1;
+        this.radius = 0;
+        this.collidesWithColliders = true;
+        this.position = position;
+        this.lastPosition = position;
+    }
+    Particle.prototype.applyForce = function (force) {
+        this.acceleration = Vector2.add(this.acceleration, new Vector2(force.x / this.mass, force.y / this.mass));
+    };
+    return Particle;
+}());
+var SpatialHash = (function () {
+    function SpatialHash() {
+    }
+    SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
+        var resultCounter = 0;
+        return resultCounter;
+    };
+    return SpatialHash;
+}());
+var VerletWorld = (function () {
+    function VerletWorld(simulationBounds) {
+        this.gravity = new Vector2(0, 980);
+        this.maximumStepIterations = 5;
+        this.constraintIterations = 3;
+        this._leftOverTime = 0;
+        this._iterationSteps = 0;
+        this._fixedDeltaTime = 1 / 60;
+        this._composites = [];
+        this.simulationBounds = simulationBounds;
+        this._fixedDeltaTimeSq = Math.pow(this._fixedDeltaTime, 2);
+    }
+    VerletWorld.prototype.update = function () {
+        this.updateTiming();
+        for (var iteration = 1; iteration <= this._iterationSteps; iteration++) {
+            for (var i = this._composites.length - 1; i >= 0; i--) {
+                var composite = this._composites[i];
+                for (var s = 0; s < this.constraintIterations; s++) {
+                    composite.solveConstraints();
+                }
+                composite.updateParticles(this._fixedDeltaTimeSq, this.gravity);
+                for (var j = 0; j < composite.particles.length; j++) {
+                    var p = composite.particles[j];
+                    if (this.simulationBounds) {
+                        this.constrainParticleToBounds(p);
+                    }
+                }
+            }
+        }
+    };
+    VerletWorld.prototype.handleCollisions = function (p, collidesWithLayers) {
+        var collidedCount = Physics.overlapCircleAll(p.position, p.radius, VerletWorld._colliders, collidesWithLayers);
+    };
+    VerletWorld.prototype.constrainParticleToBounds = function (p) {
+        var tempPos = p.position;
+        var bounds = this.simulationBounds;
+        if (p.radius == 0) {
+            if (tempPos.y > bounds.height) {
+                tempPos.y = bounds.height;
+            }
+            else if (tempPos.y < bounds.y) {
+                tempPos.y = bounds.y;
+            }
+            if (tempPos.x < bounds.x) {
+                tempPos.x = bounds.x;
+            }
+            else if (tempPos.x > bounds.width) {
+                tempPos.x = bounds.width;
+            }
+        }
+        else {
+            if (tempPos.y < bounds.y + p.radius) {
+                tempPos.y = 2 * (bounds.y + p.radius) - tempPos.y;
+            }
+            if (tempPos.y > bounds.height - p.radius) {
+                tempPos.y = 2 * (bounds.height - p.radius) - tempPos.y;
+            }
+            if (tempPos.x > bounds.width - p.radius) {
+                tempPos.x = 2 * (bounds.width - p.radius) - tempPos.x;
+            }
+            if (tempPos.x < bounds.x + p.radius)
+                tempPos.x = 2 * (bounds.x + p.radius) - tempPos.x;
+        }
+        p.position = tempPos;
+    };
+    VerletWorld.prototype.debugRender = function (displayObject) {
+        if (!displayObject)
+            return;
+        displayObject.stage.removeChildren();
+        for (var i = 0; i < this._composites.length; i++) {
+            var shape = new egret.Shape();
+            this._composites[i].debugRender(shape.graphics);
+            displayObject.stage.addChild(shape);
+        }
+    };
+    VerletWorld.prototype.addComposite = function (composite) {
+        this._composites.push(composite);
+        return composite;
+    };
+    VerletWorld.prototype.updateTiming = function () {
+        this._leftOverTime += Time.deltaTime;
+        this._iterationSteps = Math.trunc(this._leftOverTime / this._fixedDeltaTime);
+        this._leftOverTime -= this._iterationSteps * this._fixedDeltaTime;
+        this._iterationSteps = Math.min(this._iterationSteps, this.maximumStepIterations);
+    };
+    VerletWorld._colliders = new Array(4);
+    return VerletWorld;
+}());
+var Composite = (function () {
+    function Composite() {
+        this._constraints = [];
+        this.friction = new Vector2(0.98, 1);
+        this.drawParticles = true;
+        this.drawConstraints = true;
+        this.particles = [];
+    }
+    Composite.prototype.solveConstraints = function () {
+        for (var i = this._constraints.length - 1; i >= 0; i--) {
+            this._constraints[i].solve();
+        }
+    };
+    Composite.prototype.addParticle = function (particle) {
+        this.particles.push(particle);
+        return particle;
+    };
+    Composite.prototype.addConstraint = function (constraint) {
+        this._constraints.push(constraint);
+        constraint.composite = this;
+        return constraint;
+    };
+    Composite.prototype.removeConstraint = function (constraint) {
+        this._constraints.remove(constraint);
+    };
+    Composite.prototype.updateParticles = function (deltaTimeSquared, gravity) {
+        for (var j = 0; j < this.particles.length; j++) {
+            var p = this.particles[j];
+            if (p.isPinned) {
+                p.position = p.pinnedPosition;
+                continue;
+            }
+            p.applyForce(Vector2.multiply(new Vector2(p.mass, p.mass), gravity));
+            var vel = Vector2.multiply(Vector2.subtract(p.position, p.lastPosition), this.friction);
+            var nextPos = Vector2.add(Vector2.add(p.position, vel), Vector2.multiply(p.acceleration, new Vector2(0.5 * deltaTimeSquared, 0.5 * deltaTimeSquared)));
+            p.lastPosition = p.position;
+            p.position = nextPos;
+            p.acceleration.x = p.acceleration.y = 0;
+        }
+    };
+    Composite.prototype.debugRender = function (graphics) {
+        if (this.drawConstraints) {
+            for (var i = 0; i < this._constraints.length; i++) {
+                this._constraints[i].debugRender(graphics);
+            }
+        }
+        if (this.drawParticles) {
+            for (var i = 0; i < this.particles.length; i++) {
+                var size = this.particles[i].radius ? this.particles[i].radius : 4;
+                graphics.lineStyle(4, DebugDefaults.verletParticle);
+                graphics.drawRect(this.particles[i].position.x, this.particles[i].position.y, size, size);
+                graphics.endFill();
+            }
+        }
+    };
+    return Composite;
+}());
+var Box = (function (_super) {
+    __extends(Box, _super);
+    function Box(center, width, height, borderStiffness, diagonalStiffness) {
+        if (borderStiffness === void 0) { borderStiffness = 0.2; }
+        if (diagonalStiffness === void 0) { diagonalStiffness = 0.5; }
+        var _this = _super.call(this) || this;
+        var tl = _this.addParticle(new Particle(Vector2.add(center, new Vector2(-width / 2, -height / 2))));
+        var tr = _this.addParticle(new Particle(Vector2.add(center, new Vector2(width / 2, -height / 2))));
+        var br = _this.addParticle(new Particle(Vector2.add(center, new Vector2(width / 2, height / 2))));
+        var bl = _this.addParticle(new Particle(Vector2.add(center, new Vector2(-width / 2, height / 2))));
+        _this.addConstraint(new DistanceConstraint(tl, tr, borderStiffness));
+        _this.addConstraint(new DistanceConstraint(tr, br, borderStiffness));
+        _this.addConstraint(new DistanceConstraint(br, bl, borderStiffness));
+        _this.addConstraint(new DistanceConstraint(bl, tl, borderStiffness));
+        _this.addConstraint(new DistanceConstraint(tl, br, diagonalStiffness)).setCollidesWithColliders(false);
+        _this.addConstraint(new DistanceConstraint(bl, tr, diagonalStiffness)).setCollidesWithColliders(false);
+        return _this;
+    }
+    return Box;
+}(Composite));
+var Constraint = (function () {
+    function Constraint() {
+        this.collidesWithColliders = true;
+    }
+    Constraint.prototype.debugRender = function (graphics) { };
+    return Constraint;
+}());
+var DistanceConstraint = (function (_super) {
+    __extends(DistanceConstraint, _super);
+    function DistanceConstraint(first, second, stiffness, distance) {
+        if (distance === void 0) { distance = -1; }
+        var _this = _super.call(this) || this;
+        _this.stiffness = 0;
+        _this.restingDistance = 0;
+        _this.tearSensitivity = Number.POSITIVE_INFINITY;
+        _this._particleOne = first;
+        _this._particleTwo = second;
+        _this.stiffness = stiffness;
+        if (distance > -1) {
+            _this.restingDistance = distance;
+        }
+        else {
+            _this.restingDistance = Vector2.distance(first.position, second.position);
+        }
+        return _this;
+    }
+    DistanceConstraint.prototype.setCollidesWithColliders = function (collidesWithColliders) {
+        this.collidesWithColliders = collidesWithColliders;
+        return this;
+    };
+    DistanceConstraint.prototype.solve = function () {
+        var diff = Vector2.subtract(this._particleOne.position, this._particleTwo.position);
+        var d = diff.length();
+        var difference = (this.restingDistance - d) / d;
+        if (d / this.restingDistance > this.tearSensitivity) {
+            this.composite.removeConstraint(this);
+            return;
+        }
+        var im1 = 1 / this._particleOne.mass;
+        var im2 = 1 / this._particleTwo.mass;
+        var scalarP1 = (im1 / (im1 + im2)) * this.stiffness;
+        var scalarP2 = this.stiffness - scalarP1;
+        this._particleOne.position = Vector2.add(this._particleOne.position, Vector2.multiply(diff, new Vector2(scalarP1 * difference, scalarP1 * difference)));
+        this._particleTwo.position = Vector2.subtract(this._particleTwo.position, Vector2.multiply(diff, new Vector2(scalarP2 * difference, scalarP2 * difference)));
+    };
+    DistanceConstraint.prototype.debugRender = function (graphics) {
+        graphics.lineStyle(1, DebugDefaults.verletConstraintEdge);
+        graphics.lineTo(this._particleOne.position.x, this._particleOne.position.y);
+        graphics.lineTo(this._particleTwo.position.x, this._particleTwo.position.y);
+        graphics.endFill();
+    };
+    return DistanceConstraint;
+}(Constraint));
 var Triangulator = (function () {
     function Triangulator() {
         this.triangleIndices = [];

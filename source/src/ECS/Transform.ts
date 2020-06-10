@@ -49,7 +49,7 @@ class Transform {
 
     constructor(entity: Entity){
         this.entity = entity;
-        this._scale = this._localScale = Vector2.One;
+        this._scale = this._localScale = new Vector2(0, 0);
         this._children = [];
     }
 

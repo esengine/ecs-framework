@@ -33,7 +33,7 @@ class Collisions {
     }
 
     public static lineToLineIntersection(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): Vector2 {
-        let intersection = Vector2.Zero;
+        let intersection = new Vector2(0, 0);
 
         let b = Vector2.subtract(a2, a1);
         let d = Vector2.subtract(b2, b1);

@@ -135,6 +135,10 @@ declare class WeightedPathfinder {
     private static getKey;
     static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[];
 }
+declare class DebugDefaults {
+    static verletParticle: number;
+    static verletConstraintEdge: number;
+}
 declare abstract class Component {
     entity: Entity;
     private _enabled;
@@ -358,6 +362,9 @@ declare abstract class RenderableComponent extends Component {
     readonly height: number;
     isVisible: boolean;
     readonly bounds: Rectangle;
+    protected getWidth(): number;
+    protected getHeight(): number;
+    protected getBounds(): Rectangle;
     protected onBecameVisible(): void;
     protected onBecameInvisible(): void;
     isVisibleFromCamera(camera: Camera): boolean;
@@ -484,6 +491,7 @@ declare class Time {
     static unscaledDeltaTime: any;
     static deltaTime: number;
     static timeScale: number;
+    static frameCount: number;
     private static _lastTime;
     static update(currentTime: number): void;
 }
@@ -538,19 +546,17 @@ declare class Rectangle {
 declare class Vector2 {
     x: number;
     y: number;
-    private static readonly zeroVector;
-    private static readonly unitVector;
-    static readonly One: Vector2;
-    static readonly Zero: Vector2;
     constructor(x: number, y: number);
     static add(value1: Vector2, value2: Vector2): Vector2;
     static divide(value1: Vector2, value2: Vector2): Vector2;
     static multiply(value1: Vector2, value2: Vector2): Vector2;
     static subtract(value1: Vector2, value2: Vector2): Vector2;
     normalize(): void;
+    length(): number;
     static dot(value1: Vector2, value2: Vector2): number;
     static distanceSquared(value1: Vector2, value2: Vector2): number;
     static transform(position: Vector2, matrix: Matrix2D): Vector2;
+    static distance(value1: Vector2, value2: Vector2): number;
 }
 declare enum PointSectors {
     center = 0,
@@ -574,6 +580,77 @@ declare class Collisions {
     static isRectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2): boolean;
     static isRectToPoint(rX: number, rY: number, rW: number, rH: number, point: Vector2): boolean;
     static getSector(rX: number, rY: number, rW: number, rH: number, point: Vector2): PointSectors;
+}
+declare class Physics {
+    private static _spatialHash;
+    static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
+}
+declare class Particle {
+    position: Vector2;
+    lastPosition: Vector2;
+    isPinned: boolean;
+    pinnedPosition: any;
+    acceleration: Vector2;
+    mass: number;
+    radius: number;
+    collidesWithColliders: boolean;
+    constructor(position: Vector2);
+    applyForce(force: Vector2): void;
+}
+declare class SpatialHash {
+    overlapCircle(circleCenter: Vector2, radius: number, results: any[], layerMask: any): number;
+}
+declare class VerletWorld {
+    gravity: Vector2;
+    maximumStepIterations: number;
+    constraintIterations: number;
+    simulationBounds: Rectangle;
+    private _leftOverTime;
+    private _iterationSteps;
+    private _fixedDeltaTime;
+    private _composites;
+    private _fixedDeltaTimeSq;
+    private static _colliders;
+    constructor(simulationBounds?: Rectangle);
+    update(): void;
+    private handleCollisions;
+    private constrainParticleToBounds;
+    debugRender(displayObject: egret.DisplayObject): void;
+    addComposite<T extends Composite>(composite: T): T;
+    private updateTiming;
+}
+declare class Composite {
+    private _constraints;
+    friction: Vector2;
+    drawParticles: boolean;
+    drawConstraints: boolean;
+    particles: Particle[];
+    solveConstraints(): void;
+    addParticle(particle: Particle): Particle;
+    addConstraint<T extends Constraint>(constraint: T): T;
+    removeConstraint(constraint: Constraint): void;
+    updateParticles(deltaTimeSquared: number, gravity: Vector2): void;
+    debugRender(graphics: egret.Graphics): void;
+}
+declare class Box extends Composite {
+    constructor(center: Vector2, width: number, height: number, borderStiffness?: number, diagonalStiffness?: number);
+}
+declare abstract class Constraint {
+    composite: Composite;
+    collidesWithColliders: boolean;
+    abstract solve(): any;
+    debugRender(graphics: egret.Graphics): void;
+}
+declare class DistanceConstraint extends Constraint {
+    stiffness: number;
+    restingDistance: number;
+    tearSensitivity: number;
+    private _particleOne;
+    private _particleTwo;
+    constructor(first: Particle, second: Particle, stiffness: number, distance?: number);
+    setCollidesWithColliders(collidesWithColliders: boolean): this;
+    solve(): void;
+    debugRender(graphics: egret.Graphics): void;
 }
 declare class Triangulator {
     triangleIndices: number[];

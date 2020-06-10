@@ -8,11 +8,11 @@ abstract class RenderableComponent extends Component {
     private _localOffset: Vector2;
 
     public get width(){
-        return this.bounds.width;
+        return this.getWidth();
     }
 
     public get height(){
-        return this.bounds.height;
+        return this.getHeight();
     }
 
     public get isVisible(){
@@ -29,8 +29,20 @@ abstract class RenderableComponent extends Component {
     }
 
     public get bounds(): Rectangle{
+        return this.getBounds();
+    }
+
+    protected getWidth(){
+        return this.bounds.width;
+    }
+
+    protected getHeight(){
+        return this.bounds.height;
+    }
+
+    protected getBounds(){
         if (this._areBoundsDirty){
-            this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, Vector2.Zero,
+            this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new Vector2(0, 0),
                 this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
             this._areBoundsDirty = false;
         }

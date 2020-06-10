@@ -122,6 +122,11 @@ class ComponentList {
 
     public update(){
         this.updateLists();
+        for (let i = 0; i < this._components.length; i ++){
+            let component = this._components[i];
+            if (component.enabled && (component.updateInterval == 1 || Time.frameCount % component.updateInterval == 0))
+                component.update();
+        }
     }
 
     public onEntityTransformChanged(comp){
