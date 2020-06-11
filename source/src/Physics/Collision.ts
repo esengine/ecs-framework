@@ -79,42 +79,12 @@ class Collisions {
     }
 
     public static isRectToCircle(rect: Rectangle, cPosition: Vector2, cRadius: number): boolean {
-        if (this.isRectToPoint(rect.x, rect.y, rect.width, rect.height, cPosition))
-            return true;
+        let ew = rect.width * 0.5;
+        let eh = rect.height * 0.5;
+        let vx = Math.max(0, Math.max(cPosition.x - rect.x) - ew);
+        let vy = Math.max(0, Math.max(cPosition.y - rect.y) - eh);
 
-        let edgeFrom: Vector2;
-        let edgeTo: Vector2;
-        let sector = this.getSector(rect.x, rect.y, rect.width, rect.height, cPosition);
-
-        if ((sector & PointSectors.top) != 0) {
-            edgeFrom = new Vector2(rect.x, rect.y);
-            edgeTo = new Vector2(rect.x + rect.width, rect.y);
-            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
-                return true;
-        }
-
-        if ((sector & PointSectors.bottom) != 0) {
-            edgeFrom = new Vector2(rect.x, rect.y + rect.height);
-            edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
-            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
-                return true;
-        }
-
-        if ((sector & PointSectors.left) != 0) {
-            edgeFrom = new Vector2(rect.x, rect.y);
-            edgeTo = new Vector2(rect.x, rect.y + rect.height);
-            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
-                return true;
-        }
-
-        if ((sector & PointSectors.right) != 0) {
-            edgeFrom = new Vector2(rect.x + rect.width, rect.y);
-            edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
-            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
-                return true;
-        }
-
-        return false;
+        return vx * vx + vy * vy < cRadius * cRadius;
     }
 
     public static isRectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2){
