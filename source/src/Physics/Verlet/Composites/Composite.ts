@@ -5,6 +5,8 @@ class Composite {
     public drawParticles: boolean = true;
     public drawConstraints: boolean = true;
     public particles: Particle[] = [];
+    public collidesWithLayers = -1;
+
     /**
      * 处理解决所有约束条件
      */
@@ -45,6 +47,13 @@ class Composite {
             p.lastPosition = p.position;
             p.position = nextPos;
             p.acceleration.x = p.acceleration.y = 0;
+        }
+    }
+
+    public handleConstraintCollisions(){
+        for (let i = this._constraints.length - 1; i >= 0; i --){
+            if (this._constraints[i].collidesWithColliders)
+                this._constraints[i].handleCollisions(this.collidesWithLayers);
         }
     }
 

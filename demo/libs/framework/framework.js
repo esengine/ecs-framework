@@ -2552,6 +2552,8 @@ var Rectangle = (function () {
             value.top < this.bottom &&
             this.top < value.bottom;
     };
+    Rectangle.fromMinMax = function (minX, minY, maxX, maxY) {
+    };
     Rectangle.prototype.calculateBounds = function (parentPosition, position, origin, scale, rotation, width, height) {
         if (rotation == 0) {
             this.x = parentPosition.x + position.x - origin.x * scale.x;
@@ -2707,36 +2709,11 @@ var Collisions = (function () {
         return Vector2.distanceSquared(circleCenter, point) < radius * radius;
     };
     Collisions.isRectToCircle = function (rect, cPosition, cRadius) {
-        if (this.isRectToPoint(rect.x, rect.y, rect.width, rect.height, cPosition))
-            return true;
-        var edgeFrom;
-        var edgeTo;
-        var sector = this.getSector(rect.x, rect.y, rect.width, rect.height, cPosition);
-        if ((sector & PointSectors.top) != 0) {
-            edgeFrom = new Vector2(rect.x, rect.y);
-            edgeTo = new Vector2(rect.x + rect.width, rect.y);
-            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
-                return true;
-        }
-        if ((sector & PointSectors.bottom) != 0) {
-            edgeFrom = new Vector2(rect.x, rect.y + rect.height);
-            edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
-            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
-                return true;
-        }
-        if ((sector & PointSectors.left) != 0) {
-            edgeFrom = new Vector2(rect.x, rect.y);
-            edgeTo = new Vector2(rect.x, rect.y + rect.height);
-            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
-                return true;
-        }
-        if ((sector & PointSectors.right) != 0) {
-            edgeFrom = new Vector2(rect.x + rect.width, rect.y);
-            edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
-            if (this.isCircleToLine(cPosition, cRadius, edgeFrom, edgeTo))
-                return true;
-        }
-        return false;
+        var ew = rect.width * 0.5;
+        var eh = rect.height * 0.5;
+        var vx = Math.max(0, Math.max(cPosition.x - rect.x) - ew);
+        var vy = Math.max(0, Math.max(cPosition.y - rect.y) - eh);
+        return vx * vx + vy * vy < cRadius * cRadius;
     };
     Collisions.isRectToLine = function (rect, lineFrom, lineTo) {
         var fromSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineFrom);
@@ -2804,6 +2781,42 @@ var Physics = (function () {
     };
     return Physics;
 }());
+var Shape = (function () {
+    function Shape() {
+    }
+    return Shape;
+}());
+var Polygon = (function (_super) {
+    __extends(Polygon, _super);
+    function Polygon(vertCount, radius) {
+        var _this = _super.call(this) || this;
+        _this.setPoints(Polygon.buildSymmertricalPolygon(vertCount, radius));
+        return _this;
+    }
+    Polygon.prototype.setPoints = function (points) {
+        this.points = points;
+        this.recalculateCenterAndEdgeNormals();
+    };
+    Polygon.prototype.recalculateCenterAndEdgeNormals = function () {
+    };
+    Polygon.findPolygonCenter = function (points) {
+        var x = 0, y = 0;
+        for (var i = 0; i < points.length; i++) {
+            x += points[i].x;
+            y += points[i].y;
+        }
+        return new Vector2(x / points.length, y / points.length);
+    };
+    Polygon.buildSymmertricalPolygon = function (vertCount, radius) {
+        var verts = new Vector2[vertCount];
+        for (var i = 0; i < vertCount; i++) {
+            var a = 2 * Math.PI * (i / vertCount);
+            verts[i] = new Vector2(Math.cos(a), Math.sign(a) * radius);
+        }
+        return verts;
+    };
+    return Polygon;
+}(Shape));
 var Particle = (function () {
     function Particle(position) {
         this.position = new Vector2(0, 0);
@@ -2850,6 +2863,7 @@ var VerletWorld = (function () {
                     composite.solveConstraints();
                 }
                 composite.updateParticles(this._fixedDeltaTimeSq, this.gravity);
+                composite.handleConstraintCollisions();
                 for (var j = 0; j < composite.particles.length; j++) {
                     var p = composite.particles[j];
                     if (this.simulationBounds) {
@@ -2924,6 +2938,7 @@ var Composite = (function () {
         this.drawParticles = true;
         this.drawConstraints = true;
         this.particles = [];
+        this.collidesWithLayers = -1;
     }
     Composite.prototype.solveConstraints = function () {
         for (var i = this._constraints.length - 1; i >= 0; i--) {
@@ -2955,6 +2970,12 @@ var Composite = (function () {
             p.lastPosition = p.position;
             p.position = nextPos;
             p.acceleration.x = p.acceleration.y = 0;
+        }
+    };
+    Composite.prototype.handleConstraintCollisions = function () {
+        for (var i = this._constraints.length - 1; i >= 0; i--) {
+            if (this._constraints[i].collidesWithColliders)
+                this._constraints[i].handleCollisions(this.collidesWithLayers);
         }
     };
     Composite.prototype.debugRender = function (graphics) {
@@ -2998,6 +3019,8 @@ var Constraint = (function () {
     function Constraint() {
         this.collidesWithColliders = true;
     }
+    Constraint.prototype.handleCollisions = function (collidesWithLayers) {
+    };
     Constraint.prototype.debugRender = function (graphics) { };
     return Constraint;
 }());
@@ -3024,6 +3047,12 @@ var DistanceConstraint = (function (_super) {
         this.collidesWithColliders = collidesWithColliders;
         return this;
     };
+    DistanceConstraint.prototype.handleCollisions = function (collidersWithLayers) {
+        var minX = Math.min(this._particleOne.position.x, this._particleTwo.position.x);
+        var maxX = Math.max(this._particleOne.position.x, this._particleTwo.position.x);
+        var minY = Math.min(this._particleOne.position.y, this._particleTwo.position.y);
+        var maxY = Math.max(this._particleOne.position.y, this._particleTwo.position.y);
+    };
     DistanceConstraint.prototype.solve = function () {
         var diff = Vector2.subtract(this._particleOne.position, this._particleTwo.position);
         var d = diff.length();
@@ -3045,6 +3074,7 @@ var DistanceConstraint = (function (_super) {
         graphics.lineTo(this._particleTwo.position.x, this._particleTwo.position.y);
         graphics.endFill();
     };
+    DistanceConstraint._polygon = new Polygon(2, 1);
     return DistanceConstraint;
 }(Constraint));
 var Triangulator = (function () {

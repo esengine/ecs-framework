@@ -1,24 +1,26 @@
 class VerletDemo extends RenderableComponent {
     private _world: VerletWorld;
+    private _stage: egret.Stage;
 
     protected getWidth(){
-        return 800;
+        return this.entity.scene.stage.stageWidth;
     }
 
     protected getHeight(){
-        return 600;
+        return this.entity.scene.stage.stageHeight;
     }
 
     public onAddedToEntity(){
-        this._world = new VerletWorld(new Rectangle(0, 0, 800, 600));
+        this._stage = this.entity.scene.stage;
+        this._world = new VerletWorld(new Rectangle(0, 0, this.width, this.height));
 
         this._world.addComposite(new Box(new Vector2(100, 100), 50, 20));
         this._world.addComposite(new Box(new Vector2(10, 10), 200, 100));
-        this._world.debugRender(this.entity.scene.stage);
     }
 
     public update(){
         this._world.update();
+        this._world.debugRender(this._stage);
     }
 
     initialize() {

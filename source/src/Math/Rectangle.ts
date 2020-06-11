@@ -46,6 +46,10 @@ class Rectangle {
             this.top < value.bottom;
     }
 
+    public static fromMinMax(minX: number, minY: number, maxX: number, maxY: number){
+        
+    }
+
     public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2,
         rotation: number, width: number, height: number) {
         if (rotation == 0) {

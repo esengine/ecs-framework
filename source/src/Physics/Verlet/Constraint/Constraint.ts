@@ -4,5 +4,9 @@ abstract class Constraint {
 
     public abstract solve();
 
+    public handleCollisions(collidesWithLayers: number){
+        
+    }
+
     public debugRender(graphics: egret.Graphics) {}
 }

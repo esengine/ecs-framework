@@ -541,6 +541,7 @@ declare class Rectangle {
     location: Vector2;
     constructor(x: number, y: number, width: number, height: number);
     intersects(value: Rectangle): boolean;
+    static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): void;
     calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
 }
 declare class Vector2 {
@@ -585,6 +586,17 @@ declare class Physics {
     private static _spatialHash;
     static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
 }
+declare abstract class Shape {
+    bounds: Rectangle;
+}
+declare class Polygon extends Shape {
+    points: Vector2[];
+    constructor(vertCount: number, radius: number);
+    setPoints(points: Vector2[]): void;
+    recalculateCenterAndEdgeNormals(): void;
+    static findPolygonCenter(points: Vector2[]): Vector2;
+    static buildSymmertricalPolygon(vertCount: number, radius: number): any;
+}
 declare class Particle {
     position: Vector2;
     lastPosition: Vector2;
@@ -625,11 +637,13 @@ declare class Composite {
     drawParticles: boolean;
     drawConstraints: boolean;
     particles: Particle[];
+    collidesWithLayers: number;
     solveConstraints(): void;
     addParticle(particle: Particle): Particle;
     addConstraint<T extends Constraint>(constraint: T): T;
     removeConstraint(constraint: Constraint): void;
     updateParticles(deltaTimeSquared: number, gravity: Vector2): void;
+    handleConstraintCollisions(): void;
     debugRender(graphics: egret.Graphics): void;
 }
 declare class Box extends Composite {
@@ -639,6 +653,7 @@ declare abstract class Constraint {
     composite: Composite;
     collidesWithColliders: boolean;
     abstract solve(): any;
+    handleCollisions(collidesWithLayers: number): void;
     debugRender(graphics: egret.Graphics): void;
 }
 declare class DistanceConstraint extends Constraint {
@@ -647,8 +662,10 @@ declare class DistanceConstraint extends Constraint {
     tearSensitivity: number;
     private _particleOne;
     private _particleTwo;
+    private static _polygon;
     constructor(first: Particle, second: Particle, stiffness: number, distance?: number);
     setCollidesWithColliders(collidesWithColliders: boolean): this;
+    handleCollisions(collidersWithLayers: any): void;
     solve(): void;
     debugRender(graphics: egret.Graphics): void;
 }

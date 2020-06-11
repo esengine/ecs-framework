@@ -1,5 +1,5 @@
 /**
- * 基于verlet 物理引擎进行改造的物理引擎 ts重写
+ * 基于verlet进行改造的物理引擎 ts重写
  * https://github.com/subprotocol/verlet-js
  */
 class VerletWorld {
@@ -33,6 +33,8 @@ class VerletWorld {
                 }
 
                 composite.updateParticles(this._fixedDeltaTimeSq, this.gravity);
+
+                composite.handleConstraintCollisions();
 
                 for (let j = 0; j < composite.particles.length; j ++){
                     let p = composite.particles[j];

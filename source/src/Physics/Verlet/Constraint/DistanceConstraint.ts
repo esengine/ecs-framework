@@ -1,3 +1,4 @@
+///<reference path="../../Shapes/Polygon.ts"/>
 class DistanceConstraint extends Constraint {
     public stiffness: number = 0;
     public restingDistance: number = 0;
@@ -5,6 +6,7 @@ class DistanceConstraint extends Constraint {
 
     private _particleOne: Particle;
     private _particleTwo: Particle;
+    private static _polygon = new Polygon(2, 1);
 
     constructor(first: Particle, second: Particle, stiffness: number, distance = -1){
         super();
@@ -23,6 +25,14 @@ class DistanceConstraint extends Constraint {
     public setCollidesWithColliders(collidesWithColliders: boolean){
         this.collidesWithColliders = collidesWithColliders;
         return this;
+    }
+
+    public handleCollisions(collidersWithLayers){
+        let minX = Math.min(this._particleOne.position.x, this._particleTwo.position.x);
+        let maxX = Math.max(this._particleOne.position.x, this._particleTwo.position.x);
+        let minY = Math.min(this._particleOne.position.y, this._particleTwo.position.y);
+        let maxY = Math.max(this._particleOne.position.y, this._particleTwo.position.y);
+        // DistanceConstraint._polygon.bounds = Rectangle.
     }
 
     public solve() {
