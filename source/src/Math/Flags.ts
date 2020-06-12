@@ -1,9 +1,12 @@
 /**
  * 帮助处理位掩码的实用程序类
+ * 除了isFlagSet之外，所有方法都期望flag参数是一个非移位的标志
+ * 允许您使用普通的(0、1、2、3等)来设置/取消您的标记
  */
 class Flags {
     /**
-     * 检查位标志是否已在整型中设置
+     * 检查位标志是否已在数值中设置
+     * 检查期望标志是否已经移位
      * @param self 
      * @param flag 
      */
@@ -12,7 +15,7 @@ class Flags {
     }
 
     /**
-     * 检查位标志是否在整型中设置
+     * 检查位标志是否在数值中设置
      * @param self 
      * @param flag 
      */
@@ -22,12 +25,12 @@ class Flags {
     }
 
     /**
-     *  设置标志位，移除所有已经设置的标志
+     *  设置数值标志位，移除所有已经设置的标志
      * @param self 
      * @param flag 
      */
     public static setFlagExclusive(self: number, flag: number){
-        self = 1 << flag;
+        return 1 << flag;
     }
 
     /**
@@ -36,7 +39,7 @@ class Flags {
      * @param flag 
      */
     public static setFlag(self: number, flag: number){
-        self = (self | 1 << flag);
+        return (self | 1 << flag);
     }
 
     /**
@@ -46,14 +49,14 @@ class Flags {
      */
     public static unsetFlag(self: number, flag: number){
         flag = 1 << flag;
-        self = (self & (~flag));
+        return (self & (~flag));
     }
 
     /**
-     * 反转集合位
+     * 反转数值集合位
      * @param self 
      */
     public static invertFlags(self: number){
-        self = ~self;
+        return ~self;
     }
 }

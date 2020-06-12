@@ -2347,17 +2347,17 @@ var Flags = (function () {
         return (self & flag) != 0;
     };
     Flags.setFlagExclusive = function (self, flag) {
-        self = 1 << flag;
+        return 1 << flag;
     };
     Flags.setFlag = function (self, flag) {
-        self = (self | 1 << flag);
+        return (self | 1 << flag);
     };
     Flags.unsetFlag = function (self, flag) {
         flag = 1 << flag;
-        self = (self & (~flag));
+        return (self & (~flag));
     };
     Flags.invertFlags = function (self) {
-        self = ~self;
+        return ~self;
     };
     return Flags;
 }());

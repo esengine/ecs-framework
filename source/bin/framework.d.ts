@@ -503,10 +503,10 @@ declare class Time {
 declare class Flags {
     static isFlagSet(self: number, flag: number): boolean;
     static isUnshiftedFlagSet(self: number, flag: number): boolean;
-    static setFlagExclusive(self: number, flag: number): void;
-    static setFlag(self: number, flag: number): void;
-    static unsetFlag(self: number, flag: number): void;
-    static invertFlags(self: number): void;
+    static setFlagExclusive(self: number, flag: number): number;
+    static setFlag(self: number, flag: number): number;
+    static unsetFlag(self: number, flag: number): number;
+    static invertFlags(self: number): number;
 }
 declare class MathHelper {
     static toDegrees(radians: number): number;
