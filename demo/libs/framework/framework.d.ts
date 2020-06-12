@@ -376,6 +376,11 @@ declare class SpriteRenderer extends RenderableComponent {
     setSprite(sprite: egret.DisplayObject): SpriteRenderer;
     initialize(): void;
 }
+declare abstract class Collider extends Component {
+    shape: Shape;
+    physicsLayer: number;
+    readonly bounds: Rectangle;
+}
 declare class EntitySystem {
     private _scene;
     private _entities;
@@ -495,6 +500,14 @@ declare class Time {
     private static _lastTime;
     static update(currentTime: number): void;
 }
+declare class Flags {
+    static isFlagSet(self: number, flag: number): boolean;
+    static isUnshiftedFlagSet(self: number, flag: number): boolean;
+    static setFlagExclusive(self: number, flag: number): void;
+    static setFlag(self: number, flag: number): void;
+    static unsetFlag(self: number, flag: number): void;
+    static invertFlags(self: number): void;
+}
 declare class MathHelper {
     static toDegrees(radians: number): number;
     static toRadians(degrees: number): number;
@@ -588,6 +601,12 @@ declare class Physics {
 }
 declare abstract class Shape {
     bounds: Rectangle;
+    position: Vector2;
+}
+declare class Circle extends Shape {
+    radius: number;
+    private _originalRadius;
+    constructor(radius: number);
 }
 declare class Polygon extends Shape {
     points: Vector2[];
@@ -610,7 +629,28 @@ declare class Particle {
     applyForce(force: Vector2): void;
 }
 declare class SpatialHash {
-    overlapCircle(circleCenter: Vector2, radius: number, results: any[], layerMask: any): number;
+    private _raycastParser;
+    private _cellSize;
+    private _inverseCellSize;
+    private _overlapTestCircle;
+    private _tempHashSet;
+    private _cellDict;
+    constructor(cellSize?: number);
+    overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: any): number;
+    aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
+    private cellAtPosition;
+    private cellCoords;
+}
+declare class RaycastResultParser {
+}
+declare class NumberDictionary {
+    private _store;
+    private getKey;
+    add(x: number, y: number, list: Collider[]): void;
+    remove(obj: Collider): void;
+    tryGetValue(x: number, y: number): Collider[];
+    getAllObjects(): Collider[];
+    clear(): void;
 }
 declare class VerletWorld {
     gravity: Vector2;

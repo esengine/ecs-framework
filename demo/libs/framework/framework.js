@@ -1781,6 +1781,22 @@ var SpriteRenderer = (function (_super) {
     };
     return SpriteRenderer;
 }(RenderableComponent));
+var Collider = (function (_super) {
+    __extends(Collider, _super);
+    function Collider() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.physicsLayer = 1 << 0;
+        return _this;
+    }
+    Object.defineProperty(Collider.prototype, "bounds", {
+        get: function () {
+            return this.shape.bounds;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    return Collider;
+}(Component));
 var EntitySystem = (function () {
     function EntitySystem(matcher) {
         this._entities = [];
@@ -2320,6 +2336,31 @@ var Time = (function () {
     Time._lastTime = 0;
     return Time;
 }());
+var Flags = (function () {
+    function Flags() {
+    }
+    Flags.isFlagSet = function (self, flag) {
+        return (self & flag) != 0;
+    };
+    Flags.isUnshiftedFlagSet = function (self, flag) {
+        flag = 1 << flag;
+        return (self & flag) != 0;
+    };
+    Flags.setFlagExclusive = function (self, flag) {
+        self = 1 << flag;
+    };
+    Flags.setFlag = function (self, flag) {
+        self = (self | 1 << flag);
+    };
+    Flags.unsetFlag = function (self, flag) {
+        flag = 1 << flag;
+        self = (self & (~flag));
+    };
+    Flags.invertFlags = function (self) {
+        self = ~self;
+    };
+    return Flags;
+}());
 var MathHelper = (function () {
     function MathHelper() {
     }
@@ -2786,6 +2827,16 @@ var Shape = (function () {
     }
     return Shape;
 }());
+var Circle = (function (_super) {
+    __extends(Circle, _super);
+    function Circle(radius) {
+        var _this = _super.call(this) || this;
+        _this.radius = radius;
+        _this._originalRadius = radius;
+        return _this;
+    }
+    return Circle;
+}(Shape));
 var Polygon = (function (_super) {
     __extends(Polygon, _super);
     function Polygon(vertCount, radius) {
@@ -2834,13 +2885,95 @@ var Particle = (function () {
     return Particle;
 }());
 var SpatialHash = (function () {
-    function SpatialHash() {
+    function SpatialHash(cellSize) {
+        if (cellSize === void 0) { cellSize = 100; }
+        this._tempHashSet = [];
+        this._cellDict = new NumberDictionary();
+        this._cellSize = cellSize;
+        this._inverseCellSize = 1 / this._cellSize;
+        this._raycastParser = new RaycastResultParser();
     }
     SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
+        var bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
+        this._overlapTestCircle.radius = radius;
+        this._overlapTestCircle.position = circleCenter;
         var resultCounter = 0;
+        var potentials = this.aabbBroadphase(bounds, null, layerMask);
+        potentials.forEach(function (collider) {
+            if (resultCounter == results.length)
+                return resultCounter;
+        });
         return resultCounter;
     };
+    SpatialHash.prototype.aabbBroadphase = function (bounds, excludeCollider, layerMask) {
+        this._tempHashSet.length = 0;
+        var p1 = this.cellCoords(bounds.x, bounds.y);
+        var p2 = this.cellCoords(bounds.right, bounds.bottom);
+        for (var x = p1.x; x <= p2.x; x++) {
+            for (var y = p1.y; y <= p2.y; y++) {
+                var cell = this.cellAtPosition(x, y);
+                if (!cell)
+                    continue;
+                for (var i = 0; i < cell.length; i++) {
+                    var collider = cell[i];
+                    if (collider == excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer))
+                        continue;
+                    if (bounds.intersects(collider.bounds))
+                        this._tempHashSet.push(collider);
+                }
+            }
+        }
+        return this._tempHashSet;
+    };
+    SpatialHash.prototype.cellAtPosition = function (x, y, createCellIfEmpty) {
+        if (createCellIfEmpty === void 0) { createCellIfEmpty = false; }
+        var cell = this._cellDict.tryGetValue(x, y);
+        if (!cell) {
+            if (createCellIfEmpty) {
+                cell = [];
+                this._cellDict.add(x, y, cell);
+            }
+        }
+        return cell;
+    };
+    SpatialHash.prototype.cellCoords = function (x, y) {
+        return new Point(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
+    };
     return SpatialHash;
+}());
+var RaycastResultParser = (function () {
+    function RaycastResultParser() {
+    }
+    return RaycastResultParser;
+}());
+var NumberDictionary = (function () {
+    function NumberDictionary() {
+        this._store = new Map();
+    }
+    NumberDictionary.prototype.getKey = function (x, y) {
+        return x << 32 | y;
+    };
+    NumberDictionary.prototype.add = function (x, y, list) {
+        this._store.set(this.getKey(x, y), list);
+    };
+    NumberDictionary.prototype.remove = function (obj) {
+        this._store.forEach(function (list) {
+            if (list.contains(obj))
+                list.remove(obj);
+        });
+    };
+    NumberDictionary.prototype.tryGetValue = function (x, y) {
+        return this._store.get(this.getKey(x, y));
+    };
+    NumberDictionary.prototype.getAllObjects = function () {
+        var set = [];
+        this._store.forEach(function (list) { return set.concat(list); });
+        return set;
+    };
+    NumberDictionary.prototype.clear = function () {
+        this._store.clear();
+    };
+    return NumberDictionary;
 }());
 var VerletWorld = (function () {
     function VerletWorld(simulationBounds) {
