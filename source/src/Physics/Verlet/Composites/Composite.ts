@@ -5,7 +5,7 @@ class Composite {
     public drawParticles: boolean = true;
     public drawConstraints: boolean = true;
     public particles: Particle[] = [];
-    public collidesWithLayers = -1;
+    public collidesWithLayers = Physics.allLayers;
 
     /**
      * 处理解决所有约束条件

@@ -52,6 +52,13 @@ class Vector2 {
         return Math.sqrt((this.x * this.x) + (this.y * this.y));
     }
 
+    public static normalize(value: Vector2){
+        let val = 1 / Math.sqrt((value.x * value.x) + (value.y * value.y));
+        value.x *= val;
+        value.y *= val;
+        return value;
+    }
+
     /**
      * 返回两个向量的点积
      * @param value1 

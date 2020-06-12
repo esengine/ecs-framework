@@ -14,7 +14,8 @@ class VerletWorld {
     private _composites: Composite[] = [];
     private _fixedDeltaTimeSq: number;
 
-    private static _colliders = new Array(4);
+    private static _colliders: Collider[] = new Array(4);
+    private _tempCircle: Circle = new Circle(1);
 
     constructor(simulationBounds?: Rectangle){
         this.simulationBounds = simulationBounds;
@@ -43,8 +44,8 @@ class VerletWorld {
                         this.constrainParticleToBounds(p);
                     }
 
-                    // if (p.collidesWithColliders)
-                    //     this.handleCollisions(p, -1);
+                    if (p.collidesWithColliders)
+                        this.handleCollisions(p, composite.collidesWithLayers);
                 }
             }
         }
@@ -52,7 +53,26 @@ class VerletWorld {
 
     private handleCollisions(p: Particle, collidesWithLayers: number){
         let collidedCount = Physics.overlapCircleAll(p.position, p.radius, VerletWorld._colliders, collidesWithLayers);
-        // handle
+        for (let i = 0; i < collidedCount; i ++){
+            let collider = VerletWorld._colliders[i];
+            if (collider.isTrigger)
+                continue;
+
+            if (p.radius < 2){
+                let collisionResult = collider.shape.pointCollidesWithShape(p.position);
+                if (collisionResult){
+                    p.position = Vector2.subtract(p.position, collisionResult.minimumTranslationVector);
+                }
+            }else{
+                this._tempCircle.radius = p.radius;
+                this._tempCircle.position = p.position;
+
+                let collisionResult = this._tempCircle.collidesWithShape(collider.shape);
+                if (collisionResult){
+                    p.position = Vector2.subtract(p.position, collisionResult.minimumTranslationVector);
+                }
+            }
+        }
     }
 
     private constrainParticleToBounds(p: Particle){

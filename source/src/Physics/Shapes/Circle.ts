@@ -8,4 +8,16 @@ class Circle extends Shape {
         this.radius = radius;
         this._originalRadius = radius;
     }
+
+    public pointCollidesWithShape(point: Vector2): CollisionResult {
+        return ShapeCollisions.pointToCicle(point, this);
+    }
+
+    public collidesWithShape(other: Shape): CollisionResult{
+        if (other instanceof Rect && (other as Rect).isUnrotated){
+            return ShapeCollisions.circleToRect(this, other as Rect);
+        }
+
+        throw new Error(`Collisions of Circle to ${other} are not supported`);
+    }
 }

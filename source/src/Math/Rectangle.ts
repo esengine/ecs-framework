@@ -46,8 +46,59 @@ class Rectangle {
             this.top < value.bottom;
     }
 
-    public static fromMinMax(minX: number, minY: number, maxX: number, maxY: number){
-        
+    public contains(value: Vector2) {
+        return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
+            (this.y <= value.y)) &&
+            (value.y < (this.y + this.height)));
+    }
+
+    public static fromMinMax(minX: number, minY: number, maxX: number, maxY: number) {
+        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    public getClosestPointOnRectangleBorderToPoint(point: Point): {res: Vector2, edgeNormal: Vector2} {
+        let edgeNormal = new Vector2(0, 0);
+
+        let res = new Vector2(0, 0);
+        res.x = MathHelper.clamp(point.x, this.left, this.right);
+        res.y = MathHelper.clamp(point.y, this.top, this.bottom);
+
+        if (this.contains(res)){
+            let dl = res.x - this.left;
+            let dr = this.right - res.x;
+            let dt = res.y - this.top;
+            let db = this.bottom - res.y;
+
+            let min = MathHelper.minOf(dl, dr, dt, db);
+            if (min == dt){
+                res.y = this.top;
+                edgeNormal.y = -1;
+            } else if(min == db){
+                res.y = this.bottom;
+                edgeNormal.y = 1;
+            } else if(min == dl){
+                res.x = this.left;
+                edgeNormal.x = -1;
+            } else{
+                res.x = this.right;
+                edgeNormal.x = 1;
+            }
+        } else {
+            if (res.x == this.left){
+                edgeNormal.x = -1;
+            }
+            if (res.x == this.right){
+                edgeNormal.x = 1;
+            }
+            if (res.y == this.top){
+                edgeNormal.y = -1;
+            }
+            if (res.y == this.bottom){
+                edgeNormal.y = 1;
+            }
+        }
+
+        return {res: res, edgeNormal: edgeNormal};
     }
 
     public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2,
@@ -57,7 +108,7 @@ class Rectangle {
             this.y = parentPosition.y + position.y - origin.y * scale.y;
             this.width = width * scale.x;
             this.height = height * scale.y;
-        }else{
+        } else {
             let worldPosX = parentPosition.x + position.x;
             let worldPosY = parentPosition.y + position.y;
 

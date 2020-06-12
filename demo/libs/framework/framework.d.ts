@@ -379,6 +379,7 @@ declare class SpriteRenderer extends RenderableComponent {
 declare abstract class Collider extends Component {
     shape: Shape;
     physicsLayer: number;
+    isTrigger: boolean;
     readonly bounds: Rectangle;
 }
 declare class EntitySystem {
@@ -554,7 +555,12 @@ declare class Rectangle {
     location: Vector2;
     constructor(x: number, y: number, width: number, height: number);
     intersects(value: Rectangle): boolean;
-    static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): void;
+    contains(value: Vector2): boolean;
+    static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
+    getClosestPointOnRectangleBorderToPoint(point: Point): {
+        res: Vector2;
+        edgeNormal: Vector2;
+    };
     calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
 }
 declare class Vector2 {
@@ -567,6 +573,7 @@ declare class Vector2 {
     static subtract(value1: Vector2, value2: Vector2): Vector2;
     normalize(): void;
     length(): number;
+    static normalize(value: Vector2): Vector2;
     static dot(value1: Vector2, value2: Vector2): number;
     static distanceSquared(value1: Vector2, value2: Vector2): number;
     static transform(position: Vector2, matrix: Matrix2D): Vector2;
@@ -597,24 +604,53 @@ declare class Collisions {
 }
 declare class Physics {
     private static _spatialHash;
+    static readonly allLayers: number;
     static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
 }
 declare abstract class Shape {
     bounds: Rectangle;
     position: Vector2;
+    abstract pointCollidesWithShape(point: Vector2): CollisionResult;
 }
 declare class Circle extends Shape {
     radius: number;
     private _originalRadius;
     constructor(radius: number);
+    pointCollidesWithShape(point: Vector2): CollisionResult;
+    collidesWithShape(other: Shape): CollisionResult;
+}
+declare class CollisionResult {
+    minimumTranslationVector: Vector2;
+    normal: Vector2;
+    point: Vector2;
 }
 declare class Polygon extends Shape {
     points: Vector2[];
+    isUnrotated: boolean;
+    private _polygonCenter;
+    private _areEdgeNormalsDirty;
+    private _originalPoint;
     constructor(vertCount: number, radius: number);
     setPoints(points: Vector2[]): void;
     recalculateCenterAndEdgeNormals(): void;
     static findPolygonCenter(points: Vector2[]): Vector2;
+    static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): {
+        closestPoint: any;
+        distanceSquared: any;
+        edgeNormal: any;
+    };
+    pointCollidesWithShape(point: Vector2): CollisionResult;
+    containsPoint(point: Vector2): boolean;
     static buildSymmertricalPolygon(vertCount: number, radius: number): any;
+}
+declare class Rect extends Polygon {
+    containsPoint(point: Vector2): boolean;
+}
+declare class ShapeCollisions {
+    static circleToRect(circle: Circle, box: Rect): CollisionResult;
+    static pointToCicle(point: Vector2, circle: Circle): CollisionResult;
+    static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
+    static pointToPoly(point: Vector2, poly: Polygon): CollisionResult;
 }
 declare class Particle {
     position: Vector2;
@@ -663,6 +699,7 @@ declare class VerletWorld {
     private _composites;
     private _fixedDeltaTimeSq;
     private static _colliders;
+    private _tempCircle;
     constructor(simulationBounds?: Rectangle);
     update(): void;
     private handleCollisions;
