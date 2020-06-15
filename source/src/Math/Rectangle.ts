@@ -32,11 +32,11 @@ class Rectangle {
         this.y = value.y;
     }
 
-    constructor(x: number, y: number, width: number, height: number) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
+    constructor(x?: number, y?: number, width?: number, height?: number) {
+        this.x = x ? x : 0;
+        this.y = y ? y : 0;
+        this.width = width ? width : 0;
+        this.height = height ? height : 0;
     }
 
     public intersects(value: Rectangle) {

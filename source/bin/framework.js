@@ -1786,6 +1786,7 @@ var Collider = (function (_super) {
     function Collider() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.physicsLayer = 1 << 0;
+        _this._isPositionDirty = true;
         return _this;
     }
     Object.defineProperty(Collider.prototype, "bounds", {
@@ -1795,8 +1796,38 @@ var Collider = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    Collider.prototype.initialize = function () {
+    };
     return Collider;
 }(Component));
+var BoxCollider = (function (_super) {
+    __extends(BoxCollider, _super);
+    function BoxCollider() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    Object.defineProperty(BoxCollider.prototype, "width", {
+        get: function () {
+            return this.shape.width;
+        },
+        set: function (value) {
+            this.setWidth(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    BoxCollider.prototype.setWidth = function (width) {
+        this._colliderRequiresAutoSizing = false;
+        var box = this.shape;
+        if (width != box.width) {
+            box.updateBox(width, box.height);
+            this._isPositionDirty = true;
+            if (this.entity && this._isParentEntityAddedToScene)
+                Physics.updateCollider(this);
+        }
+        return this;
+    };
+    return BoxCollider;
+}(Collider));
 var EntitySystem = (function () {
     function EntitySystem(matcher) {
         this._entities = [];
@@ -2373,6 +2404,9 @@ var MathHelper = (function () {
     MathHelper.map = function (value, leftMin, leftMax, rightMin, rightMax) {
         return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
     };
+    MathHelper.lerp = function (value1, value2, amount) {
+        return value1 + (value2 - value1) * amount;
+    };
     MathHelper.clamp = function (value, min, max) {
         if (value < min)
             return min;
@@ -2543,10 +2577,10 @@ var Matrix2D = (function () {
 }());
 var Rectangle = (function () {
     function Rectangle(x, y, width, height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
+        this.x = x ? x : 0;
+        this.y = y ? y : 0;
+        this.width = width ? width : 0;
+        this.height = height ? height : 0;
     }
     Object.defineProperty(Rectangle.prototype, "left", {
         get: function () {
@@ -2686,7 +2720,7 @@ var Vector2 = (function () {
         this.x = 0;
         this.y = 0;
         this.x = x;
-        this.y = y;
+        this.y = y ? y : x;
     }
     Vector2.add = function (value1, value2) {
         var result = new Vector2(0, 0);
@@ -2732,6 +2766,9 @@ var Vector2 = (function () {
     Vector2.distanceSquared = function (value1, value2) {
         var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
         return (v1 * v1) + (v2 * v2);
+    };
+    Vector2.lerp = function (value1, value2, amount) {
+        return new Vector2(MathHelper.lerp(value1.x, value2.x, amount), MathHelper.lerp(value1.y, value2.y, amount));
     };
     Vector2.transform = function (position, matrix) {
         return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
@@ -2876,6 +2913,14 @@ var Physics = (function () {
         if (layerMask === void 0) { layerMask = -1; }
         return this._spatialHash.overlapCircle(center, randius, results, layerMask);
     };
+    Physics.boxcastBroadphase = function (rect, layerMask) {
+        if (layerMask === void 0) { layerMask = this.allLayers; }
+        return this._spatialHash.aabbBroadphase(rect, null, layerMask);
+    };
+    Physics.updateCollider = function (collider) {
+        this._spatialHash.remove(collider);
+        this._spatialHash.register(collider);
+    };
     Physics.allLayers = -1;
     return Physics;
 }());
@@ -2883,30 +2928,6 @@ var Shape = (function () {
     function Shape() {
     }
     return Shape;
-}());
-var Circle = (function (_super) {
-    __extends(Circle, _super);
-    function Circle(radius) {
-        var _this = _super.call(this) || this;
-        _this.radius = radius;
-        _this._originalRadius = radius;
-        return _this;
-    }
-    Circle.prototype.pointCollidesWithShape = function (point) {
-        return ShapeCollisions.pointToCicle(point, this);
-    };
-    Circle.prototype.collidesWithShape = function (other) {
-        if (other instanceof Rect && other.isUnrotated) {
-            return ShapeCollisions.circleToRect(this, other);
-        }
-        throw new Error("Collisions of Circle to " + other + " are not supported");
-    };
-    return Circle;
-}(Shape));
-var CollisionResult = (function () {
-    function CollisionResult() {
-    }
-    return CollisionResult;
 }());
 var Polygon = (function (_super) {
     __extends(Polygon, _super);
@@ -2917,11 +2938,40 @@ var Polygon = (function (_super) {
         _this.setPoints(Polygon.buildSymmertricalPolygon(vertCount, radius));
         return _this;
     }
+    Object.defineProperty(Polygon.prototype, "edgeNormals", {
+        get: function () {
+            if (this._areEdgeNormalsDirty)
+                this.buildEdgeNormals();
+            return this._edgeNormals;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Polygon.prototype.buildEdgeNormals = function () {
+        var totalEdges = this.isBox ? 2 : this.points.length;
+        if (this._edgeNormals == null || this._edgeNormals.length != totalEdges)
+            this._edgeNormals = new Vector2[totalEdges];
+        var p2;
+        for (var i = 0; i < totalEdges; i++) {
+            var p1 = this.points[i];
+            if (i + 1 >= this.points.length)
+                p2 = this.points[0];
+            else
+                p2 = this.points[i + 1];
+            var perp = Vector2Ext.perpendicular(p1, p2);
+            perp = Vector2.normalize(perp);
+            this._edgeNormals[i] = perp;
+        }
+    };
     Polygon.prototype.setPoints = function (points) {
         this.points = points;
         this.recalculateCenterAndEdgeNormals();
-        this._originalPoint = new Vector2[points.length];
-        this._originalPoint = points;
+        this._originalPoints = new Vector2[points.length];
+        this._originalPoints = points;
+    };
+    Polygon.prototype.collidesWithShape = function (other) {
+        if (other instanceof Polygon)
+            return ShapeCollisions.polygonToPolygon(this, other);
     };
     Polygon.prototype.recalculateCenterAndEdgeNormals = function () {
         this._polygonCenter = Polygon.findPolygonCenter(this.points);
@@ -2982,21 +3032,84 @@ var Polygon = (function (_super) {
     };
     return Polygon;
 }(Shape));
-var Rect = (function (_super) {
-    __extends(Rect, _super);
-    function Rect() {
+var Box = (function (_super) {
+    __extends(Box, _super);
+    function Box() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    Rect.prototype.containsPoint = function (point) {
+    Box.prototype.updateBox = function (width, height) {
+        this.width = width;
+        this.height = height;
+        var halfWidth = width / 2;
+        var halfHeight = height / 2;
+        this.points[0] = new Vector2(-halfWidth, -halfHeight);
+        this.points[1] = new Vector2(halfWidth, -halfHeight);
+        this.points[2] = new Vector2(halfWidth, halfHeight);
+        this.points[3] = new Vector2(-halfWidth, halfHeight);
+        for (var i = 0; i < this.points.length; i++)
+            this._originalPoints[i] = this.points[i];
+    };
+    Box.prototype.containsPoint = function (point) {
         if (this.isUnrotated)
             return this.bounds.contains(point);
         return _super.prototype.containsPoint.call(this, point);
     };
-    return Rect;
+    return Box;
 }(Polygon));
+var Circle = (function (_super) {
+    __extends(Circle, _super);
+    function Circle(radius) {
+        var _this = _super.call(this) || this;
+        _this.radius = radius;
+        _this._originalRadius = radius;
+        return _this;
+    }
+    Circle.prototype.pointCollidesWithShape = function (point) {
+        return ShapeCollisions.pointToCicle(point, this);
+    };
+    Circle.prototype.collidesWithShape = function (other) {
+        if (other instanceof Box && other.isUnrotated) {
+            return ShapeCollisions.circleToRect(this, other);
+        }
+        throw new Error("Collisions of Circle to " + other + " are not supported");
+    };
+    return Circle;
+}(Shape));
+var CollisionResult = (function () {
+    function CollisionResult() {
+    }
+    return CollisionResult;
+}());
 var ShapeCollisions = (function () {
     function ShapeCollisions() {
     }
+    ShapeCollisions.polygonToPolygon = function (first, second) {
+        var result = new CollisionResult();
+        var isIntersecting = true;
+    };
+    ShapeCollisions.circleToPolygon = function (circle, polygon) {
+        var result = new CollisionResult();
+        var poly2Circle = Vector2.subtract(circle.position, polygon.position);
+        var gpp = Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle);
+        var closestPoint = gpp.closestPoint;
+        var distanceSquared = gpp.distanceSquared;
+        result.normal = gpp.edgeNormal;
+        var circleCenterInsidePoly = polygon.containsPoint(circle.position);
+        if (distanceSquared > circle.radius * circle.radius && !circleCenterInsidePoly)
+            return result;
+        var mtv;
+        if (circleCenterInsidePoly) {
+            mtv = Vector2.multiply(result.normal, new Vector2(Math.sqrt(distanceSquared) - circle.radius, Math.sqrt(distanceSquared) - circle.radius));
+        }
+        else {
+            if (distanceSquared == 0) {
+                mtv = Vector2.multiply(result.normal, new Vector2(circle.radius, circle.radius));
+            }
+            else {
+                var distance = Math.sqrt(distanceSquared);
+            }
+        }
+    };
     ShapeCollisions.circleToRect = function (circle, box) {
         var result = new CollisionResult();
         var closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position).res;
@@ -3062,12 +3175,33 @@ var Particle = (function () {
 var SpatialHash = (function () {
     function SpatialHash(cellSize) {
         if (cellSize === void 0) { cellSize = 100; }
+        this.gridBounds = new Rectangle();
         this._tempHashSet = [];
         this._cellDict = new NumberDictionary();
         this._cellSize = cellSize;
         this._inverseCellSize = 1 / this._cellSize;
         this._raycastParser = new RaycastResultParser();
     }
+    SpatialHash.prototype.remove = function (collider) {
+        var bounds = collider.registeredPhysicsBounds;
+        var p1 = this.cellCoords(bounds.x, bounds.y);
+        var p2 = this.cellCoords(bounds.right, bounds.bottom);
+        for (var x = p1.x; x <= p2.x; x++) {
+            for (var y = p1.y; y <= p2.y; y++) {
+                var cell = this.cellAtPosition(x, y);
+                if (!cell)
+                    console.error("removing Collider [" + collider + "] from a cell that it is not present in");
+                else
+                    cell.remove(collider);
+            }
+        }
+    };
+    SpatialHash.prototype.register = function (collider) {
+        var bounds = collider.bounds;
+        collider.registeredPhysicsBounds = bounds;
+        var p1 = this.cellCoords(bounds.x, bounds.y);
+        var p2 = this.cellCoords(bounds.right, bounds.bottom);
+    };
     SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
         var bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
         this._overlapTestCircle.radius = radius;
@@ -3150,263 +3284,6 @@ var NumberDictionary = (function () {
     };
     return NumberDictionary;
 }());
-var VerletWorld = (function () {
-    function VerletWorld(simulationBounds) {
-        this.gravity = new Vector2(0, 980);
-        this.maximumStepIterations = 5;
-        this.constraintIterations = 3;
-        this._leftOverTime = 0;
-        this._iterationSteps = 0;
-        this._fixedDeltaTime = 1 / 60;
-        this._composites = [];
-        this._tempCircle = new Circle(1);
-        this.simulationBounds = simulationBounds;
-        this._fixedDeltaTimeSq = Math.pow(this._fixedDeltaTime, 2);
-    }
-    VerletWorld.prototype.update = function () {
-        this.updateTiming();
-        for (var iteration = 1; iteration <= this._iterationSteps; iteration++) {
-            for (var i = this._composites.length - 1; i >= 0; i--) {
-                var composite = this._composites[i];
-                for (var s = 0; s < this.constraintIterations; s++) {
-                    composite.solveConstraints();
-                }
-                composite.updateParticles(this._fixedDeltaTimeSq, this.gravity);
-                composite.handleConstraintCollisions();
-                for (var j = 0; j < composite.particles.length; j++) {
-                    var p = composite.particles[j];
-                    if (this.simulationBounds) {
-                        this.constrainParticleToBounds(p);
-                    }
-                    if (p.collidesWithColliders)
-                        this.handleCollisions(p, composite.collidesWithLayers);
-                }
-            }
-        }
-    };
-    VerletWorld.prototype.handleCollisions = function (p, collidesWithLayers) {
-        var collidedCount = Physics.overlapCircleAll(p.position, p.radius, VerletWorld._colliders, collidesWithLayers);
-        for (var i = 0; i < collidedCount; i++) {
-            var collider = VerletWorld._colliders[i];
-            if (collider.isTrigger)
-                continue;
-            if (p.radius < 2) {
-                var collisionResult = collider.shape.pointCollidesWithShape(p.position);
-                if (collisionResult) {
-                    p.position = Vector2.subtract(p.position, collisionResult.minimumTranslationVector);
-                }
-            }
-            else {
-                this._tempCircle.radius = p.radius;
-                this._tempCircle.position = p.position;
-                var collisionResult = this._tempCircle.collidesWithShape(collider.shape);
-                if (collisionResult) {
-                    p.position = Vector2.subtract(p.position, collisionResult.minimumTranslationVector);
-                }
-            }
-        }
-    };
-    VerletWorld.prototype.constrainParticleToBounds = function (p) {
-        var tempPos = p.position;
-        var bounds = this.simulationBounds;
-        if (p.radius == 0) {
-            if (tempPos.y > bounds.height) {
-                tempPos.y = bounds.height;
-            }
-            else if (tempPos.y < bounds.y) {
-                tempPos.y = bounds.y;
-            }
-            if (tempPos.x < bounds.x) {
-                tempPos.x = bounds.x;
-            }
-            else if (tempPos.x > bounds.width) {
-                tempPos.x = bounds.width;
-            }
-        }
-        else {
-            if (tempPos.y < bounds.y + p.radius) {
-                tempPos.y = 2 * (bounds.y + p.radius) - tempPos.y;
-            }
-            if (tempPos.y > bounds.height - p.radius) {
-                tempPos.y = 2 * (bounds.height - p.radius) - tempPos.y;
-            }
-            if (tempPos.x > bounds.width - p.radius) {
-                tempPos.x = 2 * (bounds.width - p.radius) - tempPos.x;
-            }
-            if (tempPos.x < bounds.x + p.radius)
-                tempPos.x = 2 * (bounds.x + p.radius) - tempPos.x;
-        }
-        p.position = tempPos;
-    };
-    VerletWorld.prototype.debugRender = function (displayObject) {
-        if (!displayObject)
-            return;
-        displayObject.stage.removeChildren();
-        for (var i = 0; i < this._composites.length; i++) {
-            var shape = new egret.Shape();
-            this._composites[i].debugRender(shape.graphics);
-            displayObject.stage.addChild(shape);
-        }
-    };
-    VerletWorld.prototype.addComposite = function (composite) {
-        this._composites.push(composite);
-        return composite;
-    };
-    VerletWorld.prototype.updateTiming = function () {
-        this._leftOverTime += Time.deltaTime;
-        this._iterationSteps = Math.trunc(this._leftOverTime / this._fixedDeltaTime);
-        this._leftOverTime -= this._iterationSteps * this._fixedDeltaTime;
-        this._iterationSteps = Math.min(this._iterationSteps, this.maximumStepIterations);
-    };
-    VerletWorld._colliders = new Array(4);
-    return VerletWorld;
-}());
-var Composite = (function () {
-    function Composite() {
-        this._constraints = [];
-        this.friction = new Vector2(0.98, 1);
-        this.drawParticles = true;
-        this.drawConstraints = true;
-        this.particles = [];
-        this.collidesWithLayers = Physics.allLayers;
-    }
-    Composite.prototype.solveConstraints = function () {
-        for (var i = this._constraints.length - 1; i >= 0; i--) {
-            this._constraints[i].solve();
-        }
-    };
-    Composite.prototype.addParticle = function (particle) {
-        this.particles.push(particle);
-        return particle;
-    };
-    Composite.prototype.addConstraint = function (constraint) {
-        this._constraints.push(constraint);
-        constraint.composite = this;
-        return constraint;
-    };
-    Composite.prototype.removeConstraint = function (constraint) {
-        this._constraints.remove(constraint);
-    };
-    Composite.prototype.updateParticles = function (deltaTimeSquared, gravity) {
-        for (var j = 0; j < this.particles.length; j++) {
-            var p = this.particles[j];
-            if (p.isPinned) {
-                p.position = p.pinnedPosition;
-                continue;
-            }
-            p.applyForce(Vector2.multiply(new Vector2(p.mass, p.mass), gravity));
-            var vel = Vector2.multiply(Vector2.subtract(p.position, p.lastPosition), this.friction);
-            var nextPos = Vector2.add(Vector2.add(p.position, vel), Vector2.multiply(p.acceleration, new Vector2(0.5 * deltaTimeSquared, 0.5 * deltaTimeSquared)));
-            p.lastPosition = p.position;
-            p.position = nextPos;
-            p.acceleration.x = p.acceleration.y = 0;
-        }
-    };
-    Composite.prototype.handleConstraintCollisions = function () {
-        for (var i = this._constraints.length - 1; i >= 0; i--) {
-            if (this._constraints[i].collidesWithColliders)
-                this._constraints[i].handleCollisions(this.collidesWithLayers);
-        }
-    };
-    Composite.prototype.debugRender = function (graphics) {
-        if (this.drawConstraints) {
-            for (var i = 0; i < this._constraints.length; i++) {
-                this._constraints[i].debugRender(graphics);
-            }
-        }
-        if (this.drawParticles) {
-            for (var i = 0; i < this.particles.length; i++) {
-                var size = this.particles[i].radius ? this.particles[i].radius : 4;
-                graphics.lineStyle(4, DebugDefaults.verletParticle);
-                graphics.drawRect(this.particles[i].position.x, this.particles[i].position.y, size, size);
-                graphics.endFill();
-            }
-        }
-    };
-    return Composite;
-}());
-var Box = (function (_super) {
-    __extends(Box, _super);
-    function Box(center, width, height, borderStiffness, diagonalStiffness) {
-        if (borderStiffness === void 0) { borderStiffness = 0.2; }
-        if (diagonalStiffness === void 0) { diagonalStiffness = 0.5; }
-        var _this = _super.call(this) || this;
-        var tl = _this.addParticle(new Particle(Vector2.add(center, new Vector2(-width / 2, -height / 2))));
-        var tr = _this.addParticle(new Particle(Vector2.add(center, new Vector2(width / 2, -height / 2))));
-        var br = _this.addParticle(new Particle(Vector2.add(center, new Vector2(width / 2, height / 2))));
-        var bl = _this.addParticle(new Particle(Vector2.add(center, new Vector2(-width / 2, height / 2))));
-        _this.addConstraint(new DistanceConstraint(tl, tr, borderStiffness));
-        _this.addConstraint(new DistanceConstraint(tr, br, borderStiffness));
-        _this.addConstraint(new DistanceConstraint(br, bl, borderStiffness));
-        _this.addConstraint(new DistanceConstraint(bl, tl, borderStiffness));
-        _this.addConstraint(new DistanceConstraint(tl, br, diagonalStiffness)).setCollidesWithColliders(false);
-        _this.addConstraint(new DistanceConstraint(bl, tr, diagonalStiffness)).setCollidesWithColliders(false);
-        return _this;
-    }
-    return Box;
-}(Composite));
-var Constraint = (function () {
-    function Constraint() {
-        this.collidesWithColliders = true;
-    }
-    Constraint.prototype.handleCollisions = function (collidesWithLayers) {
-    };
-    Constraint.prototype.debugRender = function (graphics) { };
-    return Constraint;
-}());
-var DistanceConstraint = (function (_super) {
-    __extends(DistanceConstraint, _super);
-    function DistanceConstraint(first, second, stiffness, distance) {
-        if (distance === void 0) { distance = -1; }
-        var _this = _super.call(this) || this;
-        _this.stiffness = 0;
-        _this.restingDistance = 0;
-        _this.tearSensitivity = Number.POSITIVE_INFINITY;
-        _this._particleOne = first;
-        _this._particleTwo = second;
-        _this.stiffness = stiffness;
-        if (distance > -1) {
-            _this.restingDistance = distance;
-        }
-        else {
-            _this.restingDistance = Vector2.distance(first.position, second.position);
-        }
-        return _this;
-    }
-    DistanceConstraint.prototype.setCollidesWithColliders = function (collidesWithColliders) {
-        this.collidesWithColliders = collidesWithColliders;
-        return this;
-    };
-    DistanceConstraint.prototype.handleCollisions = function (collidersWithLayers) {
-        var minX = Math.min(this._particleOne.position.x, this._particleTwo.position.x);
-        var maxX = Math.max(this._particleOne.position.x, this._particleTwo.position.x);
-        var minY = Math.min(this._particleOne.position.y, this._particleTwo.position.y);
-        var maxY = Math.max(this._particleOne.position.y, this._particleTwo.position.y);
-    };
-    DistanceConstraint.prototype.solve = function () {
-        var diff = Vector2.subtract(this._particleOne.position, this._particleTwo.position);
-        var d = diff.length();
-        var difference = (this.restingDistance - d) / d;
-        if (d / this.restingDistance > this.tearSensitivity) {
-            this.composite.removeConstraint(this);
-            return;
-        }
-        var im1 = 1 / this._particleOne.mass;
-        var im2 = 1 / this._particleTwo.mass;
-        var scalarP1 = (im1 / (im1 + im2)) * this.stiffness;
-        var scalarP2 = this.stiffness - scalarP1;
-        this._particleOne.position = Vector2.add(this._particleOne.position, Vector2.multiply(diff, new Vector2(scalarP1 * difference, scalarP1 * difference)));
-        this._particleTwo.position = Vector2.subtract(this._particleTwo.position, Vector2.multiply(diff, new Vector2(scalarP2 * difference, scalarP2 * difference)));
-    };
-    DistanceConstraint.prototype.debugRender = function (graphics) {
-        graphics.lineStyle(1, DebugDefaults.verletConstraintEdge);
-        graphics.lineTo(this._particleOne.position.x, this._particleOne.position.y);
-        graphics.lineTo(this._particleTwo.position.x, this._particleTwo.position.y);
-        graphics.endFill();
-    };
-    DistanceConstraint._polygon = new Polygon(2, 1);
-    return DistanceConstraint;
-}(Constraint));
 var Triangulator = (function () {
     function Triangulator() {
         this.triangleIndices = [];
@@ -3493,6 +3370,9 @@ var Vector2Ext = (function () {
     };
     Vector2Ext.cross = function (u, v) {
         return u.y * v.x - u.x * v.y;
+    };
+    Vector2Ext.perpendicular = function (first, second) {
+        return new Vector2(-1 * (second.y - first.y), second.x - first.x);
     };
     return Vector2Ext;
 }());

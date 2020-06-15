@@ -380,7 +380,16 @@ declare abstract class Collider extends Component {
     shape: Shape;
     physicsLayer: number;
     isTrigger: boolean;
+    registeredPhysicsBounds: Rectangle;
+    protected _isParentEntityAddedToScene: any;
+    protected _isPositionDirty: boolean;
+    protected _colliderRequiresAutoSizing: any;
     readonly bounds: Rectangle;
+    initialize(): void;
+}
+declare class BoxCollider extends Collider {
+    width: number;
+    setWidth(width: number): BoxCollider;
 }
 declare class EntitySystem {
     private _scene;
@@ -513,6 +522,7 @@ declare class MathHelper {
     static toDegrees(radians: number): number;
     static toRadians(degrees: number): number;
     static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number;
+    static lerp(value1: number, value2: number, amount: number): number;
     static clamp(value: number, min: number, max: number): number;
     static minOf(a: number, b: number, c: number, d: number): number;
     static maxOf(a: number, b: number, c: number, d: number): number;
@@ -553,7 +563,7 @@ declare class Rectangle {
     readonly top: number;
     readonly bottom: number;
     location: Vector2;
-    constructor(x: number, y: number, width: number, height: number);
+    constructor(x?: number, y?: number, width?: number, height?: number);
     intersects(value: Rectangle): boolean;
     contains(value: Vector2): boolean;
     static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
@@ -566,7 +576,7 @@ declare class Rectangle {
 declare class Vector2 {
     x: number;
     y: number;
-    constructor(x: number, y: number);
+    constructor(x: number, y?: number);
     static add(value1: Vector2, value2: Vector2): Vector2;
     static divide(value1: Vector2, value2: Vector2): Vector2;
     static multiply(value1: Vector2, value2: Vector2): Vector2;
@@ -576,6 +586,7 @@ declare class Vector2 {
     static normalize(value: Vector2): Vector2;
     static dot(value1: Vector2, value2: Vector2): number;
     static distanceSquared(value1: Vector2, value2: Vector2): number;
+    static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
     static transform(position: Vector2, matrix: Matrix2D): Vector2;
     static distance(value1: Vector2, value2: Vector2): number;
 }
@@ -606,11 +617,43 @@ declare class Physics {
     private static _spatialHash;
     static readonly allLayers: number;
     static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
+    static boxcastBroadphase(rect: Rectangle, layerMask?: number): Collider[];
+    static updateCollider(collider: Collider): void;
 }
 declare abstract class Shape {
     bounds: Rectangle;
     position: Vector2;
     abstract pointCollidesWithShape(point: Vector2): CollisionResult;
+}
+declare class Polygon extends Shape {
+    points: Vector2[];
+    isUnrotated: boolean;
+    private _polygonCenter;
+    private _areEdgeNormalsDirty;
+    protected _originalPoints: Vector2[];
+    _edgeNormals: Vector2[];
+    readonly edgeNormals: Vector2[];
+    isBox: boolean;
+    constructor(vertCount: number, radius: number);
+    private buildEdgeNormals;
+    setPoints(points: Vector2[]): void;
+    collidesWithShape(other: Shape): void;
+    recalculateCenterAndEdgeNormals(): void;
+    static findPolygonCenter(points: Vector2[]): Vector2;
+    static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): {
+        closestPoint: any;
+        distanceSquared: any;
+        edgeNormal: any;
+    };
+    pointCollidesWithShape(point: Vector2): CollisionResult;
+    containsPoint(point: Vector2): boolean;
+    static buildSymmertricalPolygon(vertCount: number, radius: number): any;
+}
+declare class Box extends Polygon {
+    width: number;
+    height: number;
+    updateBox(width: number, height: number): void;
+    containsPoint(point: Vector2): boolean;
 }
 declare class Circle extends Shape {
     radius: number;
@@ -624,30 +667,10 @@ declare class CollisionResult {
     normal: Vector2;
     point: Vector2;
 }
-declare class Polygon extends Shape {
-    points: Vector2[];
-    isUnrotated: boolean;
-    private _polygonCenter;
-    private _areEdgeNormalsDirty;
-    private _originalPoint;
-    constructor(vertCount: number, radius: number);
-    setPoints(points: Vector2[]): void;
-    recalculateCenterAndEdgeNormals(): void;
-    static findPolygonCenter(points: Vector2[]): Vector2;
-    static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): {
-        closestPoint: any;
-        distanceSquared: any;
-        edgeNormal: any;
-    };
-    pointCollidesWithShape(point: Vector2): CollisionResult;
-    containsPoint(point: Vector2): boolean;
-    static buildSymmertricalPolygon(vertCount: number, radius: number): any;
-}
-declare class Rect extends Polygon {
-    containsPoint(point: Vector2): boolean;
-}
 declare class ShapeCollisions {
-    static circleToRect(circle: Circle, box: Rect): CollisionResult;
+    static polygonToPolygon(first: Polygon, second: Polygon): void;
+    static circleToPolygon(circle: Circle, polygon: Polygon): CollisionResult;
+    static circleToRect(circle: Circle, box: Box): CollisionResult;
     static pointToCicle(point: Vector2, circle: Circle): CollisionResult;
     static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
     static pointToPoly(point: Vector2, poly: Polygon): CollisionResult;
@@ -665,6 +688,7 @@ declare class Particle {
     applyForce(force: Vector2): void;
 }
 declare class SpatialHash {
+    gridBounds: Rectangle;
     private _raycastParser;
     private _cellSize;
     private _inverseCellSize;
@@ -672,6 +696,8 @@ declare class SpatialHash {
     private _tempHashSet;
     private _cellDict;
     constructor(cellSize?: number);
+    remove(collider: Collider): void;
+    register(collider: Collider): void;
     overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: any): number;
     aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
     private cellAtPosition;
@@ -688,64 +714,6 @@ declare class NumberDictionary {
     getAllObjects(): Collider[];
     clear(): void;
 }
-declare class VerletWorld {
-    gravity: Vector2;
-    maximumStepIterations: number;
-    constraintIterations: number;
-    simulationBounds: Rectangle;
-    private _leftOverTime;
-    private _iterationSteps;
-    private _fixedDeltaTime;
-    private _composites;
-    private _fixedDeltaTimeSq;
-    private static _colliders;
-    private _tempCircle;
-    constructor(simulationBounds?: Rectangle);
-    update(): void;
-    private handleCollisions;
-    private constrainParticleToBounds;
-    debugRender(displayObject: egret.DisplayObject): void;
-    addComposite<T extends Composite>(composite: T): T;
-    private updateTiming;
-}
-declare class Composite {
-    private _constraints;
-    friction: Vector2;
-    drawParticles: boolean;
-    drawConstraints: boolean;
-    particles: Particle[];
-    collidesWithLayers: number;
-    solveConstraints(): void;
-    addParticle(particle: Particle): Particle;
-    addConstraint<T extends Constraint>(constraint: T): T;
-    removeConstraint(constraint: Constraint): void;
-    updateParticles(deltaTimeSquared: number, gravity: Vector2): void;
-    handleConstraintCollisions(): void;
-    debugRender(graphics: egret.Graphics): void;
-}
-declare class Box extends Composite {
-    constructor(center: Vector2, width: number, height: number, borderStiffness?: number, diagonalStiffness?: number);
-}
-declare abstract class Constraint {
-    composite: Composite;
-    collidesWithColliders: boolean;
-    abstract solve(): any;
-    handleCollisions(collidesWithLayers: number): void;
-    debugRender(graphics: egret.Graphics): void;
-}
-declare class DistanceConstraint extends Constraint {
-    stiffness: number;
-    restingDistance: number;
-    tearSensitivity: number;
-    private _particleOne;
-    private _particleTwo;
-    private static _polygon;
-    constructor(first: Particle, second: Particle, stiffness: number, distance?: number);
-    setCollidesWithColliders(collidesWithColliders: boolean): this;
-    handleCollisions(collidersWithLayers: any): void;
-    solve(): void;
-    debugRender(graphics: egret.Graphics): void;
-}
 declare class Triangulator {
     triangleIndices: number[];
     private _triPrev;
@@ -757,6 +725,7 @@ declare class Triangulator {
 declare class Vector2Ext {
     static isTriangleCCW(a: Vector2, center: Vector2, c: Vector2): boolean;
     static cross(u: Vector2, v: Vector2): number;
+    static perpendicular(first: Vector2, second: Vector2): Vector2;
 }
 declare class WebGLUtils {
     static getWebGL(): WebGLRenderingContext;

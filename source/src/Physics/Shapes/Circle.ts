@@ -14,8 +14,8 @@ class Circle extends Shape {
     }
 
     public collidesWithShape(other: Shape): CollisionResult{
-        if (other instanceof Rect && (other as Rect).isUnrotated){
-            return ShapeCollisions.circleToRect(this, other as Rect);
+        if (other instanceof Box && (other as Box).isUnrotated){
+            return ShapeCollisions.circleToRect(this, other as Box);
         }
 
         throw new Error(`Collisions of Circle to ${other} are not supported`);

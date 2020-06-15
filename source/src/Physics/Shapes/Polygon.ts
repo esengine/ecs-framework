@@ -4,7 +4,7 @@ class Polygon extends Shape {
     public isUnrotated: boolean = true;
     private _polygonCenter: Vector2;
     private _areEdgeNormalsDirty = true;
-    private _originalPoint: Vector2[];
+    protected _originalPoints: Vector2[];
 
     public _edgeNormals: Vector2[];
     public get edgeNormals(){
@@ -42,8 +42,8 @@ class Polygon extends Shape {
         this.points = points;
         this.recalculateCenterAndEdgeNormals();
 
-        this._originalPoint = new Vector2[points.length];
-        this._originalPoint = points;
+        this._originalPoints = new Vector2[points.length];
+        this._originalPoints = points;
     }
 
     public collidesWithShape(other: Shape){

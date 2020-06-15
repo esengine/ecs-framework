@@ -32,7 +32,7 @@ class ShapeCollisions {
         }
     }
 
-    public static circleToRect(circle: Circle, box: Rect): CollisionResult{
+    public static circleToRect(circle: Circle, box: Box): CollisionResult{
         let result = new CollisionResult();
         let closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position).res;
 

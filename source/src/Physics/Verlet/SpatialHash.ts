@@ -1,4 +1,6 @@
 class SpatialHash {
+    public gridBounds: Rectangle = new Rectangle();
+
     private _raycastParser: RaycastResultParser;
     private _cellSize: number;
     private _inverseCellSize: number;
@@ -10,6 +12,29 @@ class SpatialHash {
         this._cellSize = cellSize;
         this._inverseCellSize = 1 / this._cellSize;
         this._raycastParser = new RaycastResultParser();
+    }
+
+    public remove(collider: Collider){
+        let bounds = collider.registeredPhysicsBounds;
+        let p1 = this.cellCoords(bounds.x, bounds.y);
+        let p2 = this.cellCoords(bounds.right, bounds.bottom);
+
+        for (let x = p1.x; x <= p2.x; x ++){
+            for (let y = p1.y; y <= p2.y; y ++){
+                let cell = this.cellAtPosition(x, y);
+                if (!cell)
+                    console.error(`removing Collider [${collider}] from a cell that it is not present in`);
+                else
+                    cell.remove(collider);
+            }
+        }
+    }
+
+    public register(collider: Collider){
+        let bounds = collider.bounds;
+        collider.registeredPhysicsBounds = bounds;
+        let p1 = this.cellCoords(bounds.x, bounds.y);
+        let p2 = this.cellCoords(bounds.right, bounds.bottom);
     }
 
     public overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask){
