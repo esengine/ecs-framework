@@ -27,6 +27,10 @@ class MathHelper {
         return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
     }
 
+    public static lerp(value1: number, value2: number, amount: number){
+        return value1 + (value2 - value1) * amount;
+    }
+
     public static clamp(value: number, min: number, max: number){
         if (value < min)
             return min;

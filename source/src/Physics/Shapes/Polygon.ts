@@ -4,11 +4,38 @@ class Polygon extends Shape {
     public isUnrotated: boolean = true;
     private _polygonCenter: Vector2;
     private _areEdgeNormalsDirty = true;
-    private _originalPoint: Vector2[]
+    private _originalPoint: Vector2[];
+
+    public _edgeNormals: Vector2[];
+    public get edgeNormals(){
+        if (this._areEdgeNormalsDirty)
+            this.buildEdgeNormals();
+        return this._edgeNormals;
+    }
+    public isBox: boolean;
 
     constructor(vertCount: number, radius: number) {
         super();
         this.setPoints(Polygon.buildSymmertricalPolygon(vertCount, radius));
+    }
+
+    private buildEdgeNormals(){
+        let totalEdges = this.isBox ? 2 : this.points.length;
+        if (this._edgeNormals == null || this._edgeNormals.length != totalEdges)
+            this._edgeNormals = new Vector2[totalEdges];
+
+        let p2: Vector2;
+        for (let i = 0; i < totalEdges; i ++){
+            let p1 = this.points[i];
+            if (i + 1 >= this.points.length)
+                p2 = this.points[0];
+            else
+                p2 = this.points[i + 1];
+
+            let perp = Vector2Ext.perpendicular(p1, p2);
+            perp = Vector2.normalize(perp);
+            this._edgeNormals[i] = perp;
+        }
     }
 
     public setPoints(points: Vector2[]) {
@@ -17,6 +44,11 @@ class Polygon extends Shape {
 
         this._originalPoint = new Vector2[points.length];
         this._originalPoint = points;
+    }
+
+    public collidesWithShape(other: Shape){
+        if (other instanceof Polygon)
+            return ShapeCollisions.polygonToPolygon(this, other);
     }
 
     public recalculateCenterAndEdgeNormals() {

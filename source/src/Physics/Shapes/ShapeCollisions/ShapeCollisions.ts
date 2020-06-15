@@ -1,4 +1,37 @@
 class ShapeCollisions {
+    public static polygonToPolygon(first: Polygon, second: Polygon){
+        let result = new CollisionResult();
+        let isIntersecting = true;
+        // let firstEdges = first.ed
+    }
+
+    public static circleToPolygon(circle: Circle, polygon: Polygon){
+        let result = new CollisionResult();
+
+        let poly2Circle = Vector2.subtract(circle.position, polygon.position);
+
+        let gpp = Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle);
+        let closestPoint = gpp.closestPoint;
+        let distanceSquared: number = gpp.distanceSquared;
+        result.normal = gpp.edgeNormal;
+
+        let circleCenterInsidePoly = polygon.containsPoint(circle.position);
+        if (distanceSquared > circle.radius * circle.radius && !circleCenterInsidePoly)
+            return result;
+
+        let mtv: Vector2;
+        if (circleCenterInsidePoly){
+            mtv = Vector2.multiply(result.normal, new Vector2(Math.sqrt(distanceSquared) - circle.radius, Math.sqrt(distanceSquared) - circle.radius));
+        }else{
+            if (distanceSquared == 0){
+                mtv = Vector2.multiply(result.normal, new Vector2(circle.radius, circle.radius));
+            }else{
+                let distance = Math.sqrt(distanceSquared);
+                // mtv = Vector2.multiply( -Vector2.subtract(poly2Circle, closestPoint), new Vector2((circle.radius - distanceSquared) / distance))
+            }
+        }
+    }
+
     public static circleToRect(circle: Circle, box: Rect): CollisionResult{
         let result = new CollisionResult();
         let closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position).res;

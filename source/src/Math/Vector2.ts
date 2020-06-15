@@ -8,9 +8,9 @@ class Vector2 {
      * @param x 二维空间中的x坐标
      * @param y 二维空间的y坐标
      */
-    constructor(x: number, y: number){
+    constructor(x: number, y?: number){
         this.x = x;
-        this.y = y;
+        this.y = y ? y : x;
     }
 
     public static add(value1: Vector2, value2: Vector2){
@@ -76,6 +76,10 @@ class Vector2 {
     public static distanceSquared(value1: Vector2, value2: Vector2){
         let v1 = value1.x - value2.x, v2 = value1.y - value2.y;
         return (v1 * v1) + (v2 * v2);
+    }
+
+    public static lerp(value1: Vector2, value2: Vector2, amount: number){
+        return new Vector2(MathHelper.lerp(value1.x, value2.x, amount), MathHelper.lerp(value1.y, value2.y, amount));
     }
 
     public static transform(position: Vector2, matrix: Matrix2D){

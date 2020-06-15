@@ -17,4 +17,13 @@ class Vector2Ext {
     public static cross(u: Vector2, v: Vector2){
         return u.y * v.x - u.x * v.y;
     }
+
+    /**
+     * 返回与传入向量垂直的向量
+     * @param first 
+     * @param second 
+     */
+    public static perpendicular(first: Vector2, second: Vector2){
+        return new Vector2(-1 * (second.y - first.y), second.x - first.x);
+    }
 }

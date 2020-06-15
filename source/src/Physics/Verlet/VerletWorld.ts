@@ -14,7 +14,7 @@ class VerletWorld {
     private _composites: Composite[] = [];
     private _fixedDeltaTimeSq: number;
 
-    private static _colliders: Collider[] = new Array(4);
+    public static colliders: Collider[] = new Array(4);
     private _tempCircle: Circle = new Circle(1);
 
     constructor(simulationBounds?: Rectangle){
@@ -52,9 +52,9 @@ class VerletWorld {
     }
 
     private handleCollisions(p: Particle, collidesWithLayers: number){
-        let collidedCount = Physics.overlapCircleAll(p.position, p.radius, VerletWorld._colliders, collidesWithLayers);
+        let collidedCount = Physics.overlapCircleAll(p.position, p.radius, VerletWorld.colliders, collidesWithLayers);
         for (let i = 0; i < collidedCount; i ++){
-            let collider = VerletWorld._colliders[i];
+            let collider = VerletWorld.colliders[i];
             if (collider.isTrigger)
                 continue;
 
