@@ -18,6 +18,18 @@ class Circle extends Shape {
             return ShapeCollisions.circleToRect(this, other as Box);
         }
 
+        if (other instanceof Circle){
+            // TODO CIRCLETOCIRCLE
+        }
+
+        if (other instanceof Polygon){
+            return ShapeCollisions.circleToPolygon(this, other);
+        }
+
         throw new Error(`Collisions of Circle to ${other} are not supported`);
+    }
+
+    public recalculateBounds(collider: Collider) {
+        this.center = collider.localOffset;
     }
 }

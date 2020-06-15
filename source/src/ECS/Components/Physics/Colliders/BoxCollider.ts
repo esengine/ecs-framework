@@ -1,6 +1,5 @@
 ///<reference path="./Collider.ts" />
 class BoxCollider extends Collider {
-
     public get width(){
         return (this.shape as Box).width;
     }
@@ -20,5 +19,31 @@ class BoxCollider extends Collider {
         }
 
         return this;
+    }
+
+    public get height(){
+        return (this.shape as Box).height;
+    }
+
+    public set height(value: number){
+        this.setHeight(value);
+    }
+
+    public setHeight(height: number){
+        this._colliderRequiresAutoSizing = false;
+        let box = this.shape as Box;
+        if (height != box.height){
+            box.updateBox(box.width, height);
+            this._isPositionDirty = true;
+            if (this.entity && this._isParentEntityAddedToScene)
+                Physics.updateCollider(this);
+        }
+    }
+
+    constructor(){
+        super();
+
+        this.shape = new Box(1, 1);
+        this._colliderRequiresAutoSizing = true;
     }
 }

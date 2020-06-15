@@ -105,7 +105,7 @@ class Main extends eui.UILayer {
             new Vector2(0, 10),
             new Vector2(0, 0)]));
         player.addComponent(new SpawnComponent(EnemyType.worm));
-        // console.log(player.transform.position);
+        player.addComponent(new BoxCollider());
 
         Main.emitter.addObserver(CoreEmitterType.Update, ()=>{
             console.log("update emitter");

@@ -1,12 +1,13 @@
 class WebGLUtils {
-    public static getWebGL(): WebGLRenderingContext{
+    public static getWebGL(): WebGLRenderingContext {
         if (egret.WebGLUtils.checkCanUseWebGL())
             return document.querySelector("canvas").getContext("webgl");
 
         throw new Error("cannot get webgl");
     }
 
-    public static drawUserIndexPrimitives<T>(primitiveType: number, vertexData: T[], vertexOffset: number, numVertices: number, indexData: number[], indexOffset: number, primitiveCount: number){
+    public static drawUserIndexPrimitives<T>(primitiveType: number, vertexData: T[], vertexOffset: number, 
+        numVertices: number, indexData: number[], indexOffset: number, primitiveCount: number) {
         let GL = this.getWebGL();
 
         GL.bindBuffer(GL.ARRAY_BUFFER, 0);
@@ -14,16 +15,16 @@ class WebGLUtils {
         GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, 0);
         this.checkGLError();
 
-        GL.drawElements(primitiveType, 
-            this.getElementCountArray(primitiveType, primitiveCount), 
-            GL.UNSIGNED_SHORT, 
+        GL.drawElements(primitiveType,
+            this.getElementCountArray(primitiveType, primitiveCount),
+            GL.UNSIGNED_SHORT,
             indexOffset * 2);
         this.checkGLError();
     }
 
-    private static getElementCountArray(primitiveType: number, primitiveCount: number){
+    private static getElementCountArray(primitiveType: number, primitiveCount: number) {
         let GL = this.getWebGL();
-        switch (primitiveType){
+        switch (primitiveType) {
             case GL.LINES:
                 return primitiveCount * 2;
             case GL.LINE_STRIP:
@@ -37,10 +38,10 @@ class WebGLUtils {
         throw new Error("not support");
     }
 
-    public static checkGLError(){
+    public static checkGLError() {
         let GL = this.getWebGL();
         let error = GL.getError();
-        if (error != GL.NO_ERROR){
+        if (error != GL.NO_ERROR) {
             throw new Error("GL.GetError() returned" + error);
         }
     }

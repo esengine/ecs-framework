@@ -10,6 +10,35 @@ class ShapeCollisions {
         let polygonOffset = Vector2.subtract(first.position, second.position);
         let axis: Vector2;
         
+        for (let edgeIndex = 0; edgeIndex < firstEdges.length + secondEdges.length; edgeIndex ++){
+            if (edgeIndex < firstEdges.length){
+                axis = firstEdges[edgeIndex];
+            } else {
+                axis = secondEdges[edgeIndex - firstEdges.length];
+            }
+
+            let minA = 0;
+            let minB = 0;
+            let maxA = 0;
+            let maxB = 0;
+            let intervalDist = 0;
+            this.getInterval(axis, first, minA, maxA);
+            this.getInterval(axis, second, minB, maxB);
+        }
+    }
+
+    public static getInterval(axis: Vector2, polygon: Polygon, min: number, max: number){
+        let dot = Vector2.dot(polygon.points[0], axis);
+        min = max = dot;
+
+        for (let i = 1; i < polygon.points.length; i++){
+            dot = Vector2.dot(polygon.points[i], axis);
+            if (dot < min){
+                min = dot;
+            }else if(dot > max){
+                max = dot;
+            }
+        }
     }
 
     public static circleToPolygon(circle: Circle, polygon: Polygon){

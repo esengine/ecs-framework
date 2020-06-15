@@ -22,7 +22,7 @@ class Polygon extends Shape {
     private buildEdgeNormals(){
         let totalEdges = this.isBox ? 2 : this.points.length;
         if (this._edgeNormals == null || this._edgeNormals.length != totalEdges)
-            this._edgeNormals = new Vector2[totalEdges];
+            this._edgeNormals = new Array(totalEdges);
 
         let p2: Vector2;
         for (let i = 0; i < totalEdges; i ++){
@@ -42,7 +42,7 @@ class Polygon extends Shape {
         this.points = points;
         this.recalculateCenterAndEdgeNormals();
 
-        this._originalPoints = new Vector2[points.length];
+        this._originalPoints = new Array(points.length);
         this._originalPoints = points;
     }
 
@@ -116,7 +116,7 @@ class Polygon extends Shape {
     }
 
     public static buildSymmertricalPolygon(vertCount: number, radius: number) {
-        let verts = new Vector2[vertCount];
+        let verts = new Array(vertCount);
 
         for (let i = 0; i < vertCount; i++) {
             let a = 2 * Math.PI * (i / vertCount);
@@ -124,5 +124,9 @@ class Polygon extends Shape {
         }
 
         return verts;
+    }
+
+    public recalculateBounds(collider: Collider) {
+        this.center = collider.localOffset;
     }
 }

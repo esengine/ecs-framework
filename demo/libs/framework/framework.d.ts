@@ -383,13 +383,23 @@ declare abstract class Collider extends Component {
     registeredPhysicsBounds: Rectangle;
     protected _isParentEntityAddedToScene: any;
     protected _isPositionDirty: boolean;
+    protected _isRotationDirty: boolean;
     protected _colliderRequiresAutoSizing: any;
+    protected _localOffset: Vector2;
+    protected _isColliderRegisterd: any;
     readonly bounds: Rectangle;
+    localOffset: Vector2;
+    setLocalOffset(offset: Vector2): void;
+    registerColliderWithPhysicsSystem(): void;
+    unregisterColliderWithPhysicsSystem(): void;
     initialize(): void;
 }
 declare class BoxCollider extends Collider {
     width: number;
     setWidth(width: number): BoxCollider;
+    height: number;
+    setHeight(height: number): void;
+    constructor();
 }
 declare class EntitySystem {
     private _scene;
@@ -618,11 +628,15 @@ declare class Physics {
     static readonly allLayers: number;
     static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
     static boxcastBroadphase(rect: Rectangle, layerMask?: number): Collider[];
+    static addCollider(collider: Collider): void;
+    static removeCollider(collider: Collider): void;
     static updateCollider(collider: Collider): void;
 }
 declare abstract class Shape {
     bounds: Rectangle;
     position: Vector2;
+    center: Vector2;
+    abstract recalculateBounds(collider: Collider): any;
     abstract pointCollidesWithShape(point: Vector2): CollisionResult;
 }
 declare class Polygon extends Shape {
@@ -647,7 +661,8 @@ declare class Polygon extends Shape {
     };
     pointCollidesWithShape(point: Vector2): CollisionResult;
     containsPoint(point: Vector2): boolean;
-    static buildSymmertricalPolygon(vertCount: number, radius: number): any;
+    static buildSymmertricalPolygon(vertCount: number, radius: number): any[];
+    recalculateBounds(collider: Collider): void;
 }
 declare class Box extends Polygon {
     width: number;
@@ -661,6 +676,7 @@ declare class Circle extends Shape {
     constructor(radius: number);
     pointCollidesWithShape(point: Vector2): CollisionResult;
     collidesWithShape(other: Shape): CollisionResult;
+    recalculateBounds(collider: Collider): void;
 }
 declare class CollisionResult {
     minimumTranslationVector: Vector2;
@@ -669,6 +685,7 @@ declare class CollisionResult {
 }
 declare class ShapeCollisions {
     static polygonToPolygon(first: Polygon, second: Polygon): void;
+    static getInterval(axis: Vector2, polygon: Polygon, min: number, max: number): void;
     static circleToPolygon(circle: Circle, polygon: Polygon): CollisionResult;
     static circleToRect(circle: Circle, box: Box): CollisionResult;
     static pointToCicle(point: Vector2, circle: Circle): CollisionResult;

@@ -23,7 +23,9 @@ class Emitter<T> {
 
     public emit(eventType: T, data: any){
         let list: Function[] = this._messageTable.get(eventType);
-        for (let i = list.length - 1; i >= 0; i --)
-            list[i](data);
+        if (list){
+            for (let i = list.length - 1; i >= 0; i --)
+                list[i](data);
+        }
     }
 }

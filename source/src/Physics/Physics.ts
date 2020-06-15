@@ -11,6 +11,14 @@ class Physics {
         return this._spatialHash.aabbBroadphase(rect, null, layerMask);
     }
 
+    public static addCollider(collider: Collider){
+        Physics._spatialHash.register(collider);
+    }
+
+    public static removeCollider(collider: Collider){
+        Physics._spatialHash.remove(collider);
+    }
+
     public static updateCollider(collider: Collider){
         this._spatialHash.remove(collider);
         this._spatialHash.register(collider);
