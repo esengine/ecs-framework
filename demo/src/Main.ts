@@ -29,6 +29,7 @@
 
 
 class Main extends eui.UILayer {
+    public static emitter: Emitter<CoreEmitterType>; 
 
     protected createChildren(): void {
         super.createChildren();
@@ -51,8 +52,13 @@ class Main extends eui.UILayer {
         egret.registerImplementation("eui.IAssetAdapter", assetAdapter);
         egret.registerImplementation("eui.IThemeAdapter", new ThemeAdapter());
 
-
+        Main.emitter = new Emitter<CoreEmitterType>();
+        this.addEventListener(egret.Event.ENTER_FRAME, this.updateFrame, this);
         this.runGame();
+    }
+
+    private updateFrame(evt: egret.Event){
+        Main.emitter.emit(CoreEmitterType.Update, evt);
     }
 
     private async runGame() {
@@ -98,8 +104,11 @@ class Main extends eui.UILayer {
             new Vector2(10, 10),
             new Vector2(0, 10),
             new Vector2(0, 0)]));
-        player.addComponent(new VerletDemo());
         player.addComponent(new SpawnComponent(EnemyType.worm));
         // console.log(player.transform.position);
+
+        Main.emitter.addObserver(CoreEmitterType.Update, ()=>{
+            console.log("update emitter");
+        });
     }
 }

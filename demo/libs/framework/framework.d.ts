@@ -576,7 +576,7 @@ declare class Rectangle {
 declare class Vector2 {
     x: number;
     y: number;
-    constructor(x: number, y?: number);
+    constructor(x?: number, y?: number);
     static add(value1: Vector2, value2: Vector2): Vector2;
     static divide(value1: Vector2, value2: Vector2): Vector2;
     static multiply(value1: Vector2, value2: Vector2): Vector2;
@@ -675,18 +675,6 @@ declare class ShapeCollisions {
     static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
     static pointToPoly(point: Vector2, poly: Polygon): CollisionResult;
 }
-declare class Particle {
-    position: Vector2;
-    lastPosition: Vector2;
-    isPinned: boolean;
-    pinnedPosition: any;
-    acceleration: Vector2;
-    mass: number;
-    radius: number;
-    collidesWithColliders: boolean;
-    constructor(position: Vector2);
-    applyForce(force: Vector2): void;
-}
 declare class SpatialHash {
     gridBounds: Rectangle;
     private _raycastParser;
@@ -713,6 +701,13 @@ declare class NumberDictionary {
     tryGetValue(x: number, y: number): Collider[];
     getAllObjects(): Collider[];
     clear(): void;
+}
+declare class Emitter<T> {
+    private _messageTable;
+    constructor();
+    addObserver(eventType: T, handler: Function): void;
+    removeObserver(eventType: T, handler: Function): void;
+    emit(eventType: T, data: any): void;
 }
 declare class Triangulator {
     triangleIndices: number[];

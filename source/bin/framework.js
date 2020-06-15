@@ -2719,8 +2719,8 @@ var Vector2 = (function () {
     function Vector2(x, y) {
         this.x = 0;
         this.y = 0;
-        this.x = x;
-        this.y = y ? y : x;
+        this.x = x ? x : 0;
+        this.y = y ? y : this.x;
     }
     Vector2.add = function (value1, value2) {
         var result = new Vector2(0, 0);
@@ -3026,7 +3026,7 @@ var Polygon = (function (_super) {
         var verts = new Vector2[vertCount];
         for (var i = 0; i < vertCount; i++) {
             var a = 2 * Math.PI * (i / vertCount);
-            verts[i] = new Vector2(Math.cos(a), Math.sign(a) * radius);
+            verts[i] = new Vector2(Math.cos(a), Math.sin(a) * radius);
         }
         return verts;
     };
@@ -3086,6 +3086,12 @@ var ShapeCollisions = (function () {
     ShapeCollisions.polygonToPolygon = function (first, second) {
         var result = new CollisionResult();
         var isIntersecting = true;
+        var firstEdges = first.edgeNormals;
+        var secondEdges = second.edgeNormals;
+        var minIntervalDistance = Number.POSITIVE_INFINITY;
+        var translationAxis = new Vector2();
+        var polygonOffset = Vector2.subtract(first.position, second.position);
+        var axis;
     };
     ShapeCollisions.circleToPolygon = function (circle, polygon) {
         var result = new CollisionResult();
@@ -3155,22 +3161,6 @@ var ShapeCollisions = (function () {
         return result;
     };
     return ShapeCollisions;
-}());
-var Particle = (function () {
-    function Particle(position) {
-        this.position = new Vector2(0, 0);
-        this.lastPosition = new Vector2(0, 0);
-        this.acceleration = new Vector2(0, 0);
-        this.mass = 1;
-        this.radius = 0;
-        this.collidesWithColliders = true;
-        this.position = position;
-        this.lastPosition = position;
-    }
-    Particle.prototype.applyForce = function (force) {
-        this.acceleration = Vector2.add(this.acceleration, new Vector2(force.x / this.mass, force.y / this.mass));
-    };
-    return Particle;
 }());
 var SpatialHash = (function () {
     function SpatialHash(cellSize) {
@@ -3283,6 +3273,30 @@ var NumberDictionary = (function () {
         this._store.clear();
     };
     return NumberDictionary;
+}());
+var Emitter = (function () {
+    function Emitter() {
+        this._messageTable = new Map();
+    }
+    Emitter.prototype.addObserver = function (eventType, handler) {
+        var list = this._messageTable.get(eventType);
+        if (!list) {
+            list = [];
+            this._messageTable.set(eventType, list);
+        }
+        if (list.contains(handler))
+            console.warn("您试图添加相同的观察者两次");
+        list.push(handler);
+    };
+    Emitter.prototype.removeObserver = function (eventType, handler) {
+        this._messageTable.get(eventType).remove(handler);
+    };
+    Emitter.prototype.emit = function (eventType, data) {
+        var list = this._messageTable.get(eventType);
+        for (var i = list.length - 1; i >= 0; i--)
+            list[i](data);
+    };
+    return Emitter;
 }());
 var Triangulator = (function () {
     function Triangulator() {

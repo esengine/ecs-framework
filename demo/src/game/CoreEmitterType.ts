@@ -1,0 +1,3 @@
+enum CoreEmitterType {
+    Update,
+}

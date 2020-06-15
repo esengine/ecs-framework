@@ -2,7 +2,14 @@ class ShapeCollisions {
     public static polygonToPolygon(first: Polygon, second: Polygon){
         let result = new CollisionResult();
         let isIntersecting = true;
-        // let firstEdges = first.ed
+
+        let firstEdges = first.edgeNormals;
+        let secondEdges = second.edgeNormals;
+        let minIntervalDistance = Number.POSITIVE_INFINITY;
+        let translationAxis = new Vector2();
+        let polygonOffset = Vector2.subtract(first.position, second.position);
+        let axis: Vector2;
+        
     }
 
     public static circleToPolygon(circle: Circle, polygon: Polygon){

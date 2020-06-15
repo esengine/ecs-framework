@@ -8,9 +8,9 @@ class Vector2 {
      * @param x 二维空间中的x坐标
      * @param y 二维空间的y坐标
      */
-    constructor(x: number, y?: number){
-        this.x = x;
-        this.y = y ? y : x;
+    constructor(x? : number, y?: number){
+        this.x = x ? x : 0;
+        this.y = y ? y : this.x;
     }
 
     public static add(value1: Vector2, value2: Vector2){

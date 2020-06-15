@@ -120,7 +120,7 @@ class Polygon extends Shape {
 
         for (let i = 0; i < vertCount; i++) {
             let a = 2 * Math.PI * (i / vertCount);
-            verts[i] = new Vector2(Math.cos(a), Math.sign(a) * radius);
+            verts[i] = new Vector2(Math.cos(a), Math.sin(a) * radius);
         }
 
         return verts;
