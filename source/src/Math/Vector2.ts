@@ -3,6 +3,26 @@ class Vector2 {
     public x: number = 0;
     public y: number = 0;
 
+    private static readonly unitYVector = new Vector2(0, 1);
+    private static readonly unitXVector = new Vector2(1, 0);
+    private static readonly unitVector2 = new Vector2(1, 1);
+    private static readonly zeroVector2 = new Vector2(0, 0);
+    public static get zero(){
+        return Vector2.zeroVector2;
+    }
+
+    public static get one(){
+        return Vector2.unitVector2;
+    }
+
+    public static get unitX(){
+        return Vector2.unitXVector;
+    }
+
+    public static get unitY(){
+        return Vector2.unitYVector;
+    }
+
     /**
      * 从两个值构造一个带有X和Y的二维向量。
      * @param x 二维空间中的x坐标
@@ -89,5 +109,13 @@ class Vector2 {
     public static distance(value1: Vector2, value2: Vector2){
         let v1 = value1.x - value2.x, v2 = value1.y - value2.y;
         return Math.sqrt((v1 * v1) + (v2 * v2));
+    }
+
+    public static negate(value: Vector2){
+        let result: Vector2 = new Vector2();
+        result.x = -value.x;
+        result.y = -value.y;
+
+        return result;
     }
 }

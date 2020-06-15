@@ -29,7 +29,9 @@ abstract class Component {
         return this;
     }
 
-    public abstract initialize();
+    public initialize(){
+        
+    }
 
     public onAddedToEntity(){
 

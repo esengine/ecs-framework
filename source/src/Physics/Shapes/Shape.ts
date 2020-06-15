@@ -5,4 +5,5 @@ abstract class Shape {
 
     public abstract recalculateBounds(collider: Collider);
     public abstract pointCollidesWithShape(point: Vector2): CollisionResult;
+    public abstract overlaps(other: Shape);
 }

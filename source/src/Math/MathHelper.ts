@@ -1,4 +1,8 @@
 class MathHelper {
+    public static readonly Epsilon: number = 0.00001;
+    public static readonly Rad2Deg = 57.29578;
+    public static readonly Deg2Rad = 0.0174532924;
+
     /**
      * 将弧度转换成角度。
      * @param radians 用弧度表示的角
@@ -47,5 +51,10 @@ class MathHelper {
 
     public static maxOf(a: number, b: number, c: number, d: number){
         return Math.max(a, Math.max(b, Math.max(c, d)));
+    }
+
+    public static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number){
+        let radians = MathHelper.toRadians(angleInDegrees);
+        return new Vector2(Math.cos(radians) * radians + circleCenter.x, Math.sin(radians) * radians + circleCenter.y);
     }
 }

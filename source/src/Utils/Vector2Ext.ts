@@ -26,4 +26,20 @@ class Vector2Ext {
     public static perpendicular(first: Vector2, second: Vector2){
         return new Vector2(-1 * (second.y - first.y), second.x - first.x);
     }
+
+    /**
+     * Vector2的临时解决方案
+     * 标准化把向量弄乱了
+     * @param vec 
+     */
+    public static normalize(vec: Vector2){
+        let magnitude = Math.sqrt((vec.x * vec.x) + (vec.y * vec.y));
+        if (magnitude > MathHelper.Epsilon){
+            vec = Vector2.divide(vec, new Vector2(magnitude));
+        } else {
+            vec.x = vec.y = 0;
+        }
+
+        return vec;
+    }
 }

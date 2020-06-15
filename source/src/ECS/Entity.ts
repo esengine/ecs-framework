@@ -212,6 +212,10 @@ class Entity {
         return this.components.getComponent(type, false) as T;
     }
 
+    public getComponents<T extends Component>(type): T[]{
+        return this.components.getComponents<T>(type);
+    }
+
     public removeComponentForType<T extends Component>(type){
         let comp = this.getComponent<T>(type);
         if (comp){

@@ -120,6 +120,23 @@ class ComponentList {
         return null;
     }
 
+    public getComponents<T extends Component>(type): T[]{
+        let components = [];
+        for (let i = 0; i < this._components.length; i ++){
+            let component = this._components[i];
+            if (component instanceof type)
+                components.push(components);
+        }
+
+        for (let i = 0; i < this._componentsToAdd.length; i ++){
+            let component = this._componentsToAdd[i];
+            if (component instanceof type)
+                components.push(components);
+        }
+
+        return components;
+    }
+
     public update(){
         this.updateLists();
         for (let i = 0; i < this._components.length; i ++){

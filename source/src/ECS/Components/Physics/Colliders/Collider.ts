@@ -3,7 +3,10 @@ abstract class Collider extends Component{
     public physicsLayer = 1 << 0;
     public isTrigger: boolean;
     public registeredPhysicsBounds: Rectangle;
+    public shouldColliderScaleAndRotationWithTransform = true;
+    public collidesWithLayers = Physics.allLayers;
 
+    public _localOffsetLength: number;
     protected _isParentEntityAddedToScene;
     protected _isPositionDirty = true;
     protected _isRotationDirty = true;
@@ -32,6 +35,7 @@ abstract class Collider extends Component{
         if (this._localOffset != offset){
             this.unregisterColliderWithPhysicsSystem();
             this._localOffset = offset;
+            this._localOffsetLength = this._localOffset.length();
             this._isPositionDirty = true;
             this.registerColliderWithPhysicsSystem();
         }
@@ -51,6 +55,33 @@ abstract class Collider extends Component{
         this._isColliderRegisterd = false;
     }
 
-    public initialize() {
+    public overlaps(other: Collider){
+        return this.shape.overlaps(other.shape);
+    }
+
+    public onEntityTransformChanged(comp: ComponentTransform){
+        switch (comp){
+            case ComponentTransform.position:
+                this._isPositionDirty = true;
+                break;
+            case ComponentTransform.scale:
+                this._isPositionDirty = true;
+                break;
+            case ComponentTransform.rotation:
+                this._isRotationDirty = true;
+                break;
+        }
+
+        if (this._isColliderRegisterd)
+            Physics.updateCollider(this);
+    }
+
+    public onEnabled(){
+        this.registerColliderWithPhysicsSystem();
+        this._isPositionDirty = this._isRotationDirty = true;
+    }
+
+    public onDisabled(){
+        this.unregisterColliderWithPhysicsSystem();
     }
 }

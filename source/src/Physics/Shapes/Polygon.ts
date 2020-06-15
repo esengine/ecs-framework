@@ -56,6 +56,24 @@ class Polygon extends Shape {
         this._areEdgeNormalsDirty = true;
     }
 
+    public overlaps(other: Shape){
+        let result: CollisionResult;
+        if (other instanceof Polygon)
+            return ShapeCollisions.polygonToPolygon(this, other);
+
+        if (other instanceof Circle){
+            result = ShapeCollisions.circleToPolygon(other, this);
+            if (result){
+                result.invertResult();
+                return true;
+            }
+
+            return false;
+        }
+
+        throw new Error(`overlaps of Pologon to ${other} are not supported`);
+    }
+
     public static findPolygonCenter(points: Vector2[]) {
         let x = 0, y = 0;
 

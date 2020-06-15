@@ -146,7 +146,7 @@ declare abstract class Component {
     readonly transform: Transform;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
-    abstract initialize(): any;
+    initialize(): void;
     onAddedToEntity(): void;
     onRemovedFromEntity(): void;
     onEnabled(): void;
@@ -194,6 +194,7 @@ declare class Entity {
     hasComponent<T extends Component>(type: any): boolean;
     getOrCreateComponent<T extends Component>(type: T): T;
     getComponent<T extends Component>(type: any): T;
+    getComponents<T extends Component>(type: any): T[];
     removeComponentForType<T extends Component>(type: any): boolean;
     removeComponent(component: Component): void;
     removeAllComponents(): void;
@@ -376,11 +377,18 @@ declare class SpriteRenderer extends RenderableComponent {
     setSprite(sprite: egret.DisplayObject): SpriteRenderer;
     initialize(): void;
 }
+interface ITriggerListener {
+    onTriggerEnter(other: Collider, local: Collider): any;
+    onTriggerExit(other: Collider, local: Collider): any;
+}
 declare abstract class Collider extends Component {
     shape: Shape;
     physicsLayer: number;
     isTrigger: boolean;
     registeredPhysicsBounds: Rectangle;
+    shouldColliderScaleAndRotationWithTransform: boolean;
+    collidesWithLayers: number;
+    _localOffsetLength: number;
     protected _isParentEntityAddedToScene: any;
     protected _isPositionDirty: boolean;
     protected _isRotationDirty: boolean;
@@ -392,7 +400,10 @@ declare abstract class Collider extends Component {
     setLocalOffset(offset: Vector2): void;
     registerColliderWithPhysicsSystem(): void;
     unregisterColliderWithPhysicsSystem(): void;
-    initialize(): void;
+    overlaps(other: Collider): any;
+    onEntityTransformChanged(comp: ComponentTransform): void;
+    onEnabled(): void;
+    onDisabled(): void;
 }
 declare class BoxCollider extends Collider {
     width: number;
@@ -460,6 +471,7 @@ declare class ComponentList {
     updateLists(): void;
     private handleRemove;
     getComponent<T extends Component>(type: any, onlyReturnInitializedComponents: boolean): T;
+    getComponents<T extends Component>(type: any): T[];
     update(): void;
     onEntityTransformChanged(comp: any): void;
 }
@@ -529,6 +541,9 @@ declare class Flags {
     static invertFlags(self: number): number;
 }
 declare class MathHelper {
+    static readonly Epsilon: number;
+    static readonly Rad2Deg: number;
+    static readonly Deg2Rad: number;
     static toDegrees(radians: number): number;
     static toRadians(degrees: number): number;
     static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number;
@@ -536,6 +551,7 @@ declare class MathHelper {
     static clamp(value: number, min: number, max: number): number;
     static minOf(a: number, b: number, c: number, d: number): number;
     static maxOf(a: number, b: number, c: number, d: number): number;
+    static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number): Vector2;
 }
 declare class Matrix2D {
     m11: number;
@@ -586,6 +602,14 @@ declare class Rectangle {
 declare class Vector2 {
     x: number;
     y: number;
+    private static readonly unitYVector;
+    private static readonly unitXVector;
+    private static readonly unitVector2;
+    private static readonly zeroVector2;
+    static readonly zero: Vector2;
+    static readonly one: Vector2;
+    static readonly unitX: Vector2;
+    static readonly unitY: Vector2;
     constructor(x?: number, y?: number);
     static add(value1: Vector2, value2: Vector2): Vector2;
     static divide(value1: Vector2, value2: Vector2): Vector2;
@@ -599,6 +623,11 @@ declare class Vector2 {
     static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
     static transform(position: Vector2, matrix: Matrix2D): Vector2;
     static distance(value1: Vector2, value2: Vector2): number;
+    static negate(value: Vector2): Vector2;
+}
+declare class ColliderTriggerHelper {
+    private _entity;
+    update(): void;
 }
 declare enum PointSectors {
     center = 0,
@@ -638,6 +667,7 @@ declare abstract class Shape {
     center: Vector2;
     abstract recalculateBounds(collider: Collider): any;
     abstract pointCollidesWithShape(point: Vector2): CollisionResult;
+    abstract overlaps(other: Shape): any;
 }
 declare class Polygon extends Shape {
     points: Vector2[];
@@ -651,8 +681,9 @@ declare class Polygon extends Shape {
     constructor(vertCount: number, radius: number);
     private buildEdgeNormals;
     setPoints(points: Vector2[]): void;
-    collidesWithShape(other: Shape): void;
+    collidesWithShape(other: Shape): CollisionResult;
     recalculateCenterAndEdgeNormals(): void;
+    overlaps(other: Shape): any;
     static findPolygonCenter(points: Vector2[]): Vector2;
     static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): {
         closestPoint: any;
@@ -677,20 +708,27 @@ declare class Circle extends Shape {
     pointCollidesWithShape(point: Vector2): CollisionResult;
     collidesWithShape(other: Shape): CollisionResult;
     recalculateBounds(collider: Collider): void;
+    overlaps(other: Shape): any;
 }
 declare class CollisionResult {
     minimumTranslationVector: Vector2;
     normal: Vector2;
     point: Vector2;
+    invertResult(): void;
 }
 declare class ShapeCollisions {
-    static polygonToPolygon(first: Polygon, second: Polygon): void;
-    static getInterval(axis: Vector2, polygon: Polygon, min: number, max: number): void;
+    static polygonToPolygon(first: Polygon, second: Polygon): CollisionResult;
+    static intervalDistance(minA: number, maxA: number, minB: number, maxB: any): number;
+    static getInterval(axis: Vector2, polygon: Polygon, min: number, max: number): {
+        min: number;
+        max: number;
+    };
     static circleToPolygon(circle: Circle, polygon: Polygon): CollisionResult;
-    static circleToRect(circle: Circle, box: Box): CollisionResult;
-    static pointToCicle(point: Vector2, circle: Circle): CollisionResult;
+    static circleToBox(circle: Circle, box: Box): CollisionResult;
+    static pointToCircle(point: Vector2, circle: Circle): CollisionResult;
     static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
     static pointToPoly(point: Vector2, poly: Polygon): CollisionResult;
+    static circleToCircle(first: Circle, second: Circle): CollisionResult;
 }
 declare class SpatialHash {
     gridBounds: Rectangle;
@@ -738,6 +776,7 @@ declare class Vector2Ext {
     static isTriangleCCW(a: Vector2, center: Vector2, c: Vector2): boolean;
     static cross(u: Vector2, v: Vector2): number;
     static perpendicular(first: Vector2, second: Vector2): Vector2;
+    static normalize(vec: Vector2): Vector2;
 }
 declare class WebGLUtils {
     static getWebGL(): WebGLRenderingContext;
