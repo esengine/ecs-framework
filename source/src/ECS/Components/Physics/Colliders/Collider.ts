@@ -79,7 +79,7 @@ abstract class Collider extends Component{
             }
 
             let renderable = this.entity.getComponent<RenderableComponent>(RenderableComponent);
-            if (!renderable){
+            if (renderable){
                 let renderbaleBounds = renderable.bounds;
 
                 let width = renderbaleBounds.width / this.entity.transform.scale.x;
@@ -97,6 +97,11 @@ abstract class Collider extends Component{
 
         this._isParentEntityAddedToScene = true;
         this.registerColliderWithPhysicsSystem();
+    }
+    
+    public onRemovedFromEntity(){
+        this.unregisterColliderWithPhysicsSystem();
+        this._isParentEntityAddedToScene = false;
     }
 
     public onEntityTransformChanged(comp: ComponentTransform){

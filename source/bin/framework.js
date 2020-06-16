@@ -1911,7 +1911,7 @@ var Collider = (function (_super) {
                 console.error("Only box and circle colliders can be created automatically");
             }
             var renderable = this.entity.getComponent(RenderableComponent);
-            if (!renderable) {
+            if (renderable) {
                 var renderbaleBounds = renderable.bounds;
                 var width = renderbaleBounds.width / this.entity.transform.scale.x;
                 var height = renderbaleBounds.height / this.entity.transform.scale.y;
@@ -1925,6 +1925,10 @@ var Collider = (function (_super) {
         }
         this._isParentEntityAddedToScene = true;
         this.registerColliderWithPhysicsSystem();
+    };
+    Collider.prototype.onRemovedFromEntity = function () {
+        this.unregisterColliderWithPhysicsSystem();
+        this._isParentEntityAddedToScene = false;
     };
     Collider.prototype.onEntityTransformChanged = function (comp) {
         switch (comp) {
@@ -3844,7 +3848,13 @@ var NumberDictionary = (function () {
         this._store = new Map();
     }
     NumberDictionary.prototype.getKey = function (x, y) {
-        return x << 32 | y;
+        return x << 32 | this.intToUint(y);
+    };
+    NumberDictionary.prototype.intToUint = function (i) {
+        if (i >= 0)
+            return i;
+        else
+            return 4294967296 + i;
     };
     NumberDictionary.prototype.add = function (x, y, list) {
         this._store.set(this.getKey(x, y), list);

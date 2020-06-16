@@ -126,8 +126,20 @@ class RaycastResultParser {
 class NumberDictionary {
     private _store: Map<number, Collider[]> = new Map<number, Collider[]>();
 
+    /**
+     * 根据x和y值计算并返回散列键
+     * @param x 
+     * @param y 
+     */
     private getKey(x: number, y: number): number {
-        return x << 32 | y;
+        return x << 32 | this.intToUint(y);
+    }
+
+    private intToUint(i){
+        if (i >= 0)
+            return i;
+        else
+            return 4294967296 + i;
     }
 
     public add(x: number, y: number, list: Collider[]) {

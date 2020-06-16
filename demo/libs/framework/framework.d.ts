@@ -411,6 +411,7 @@ declare abstract class Collider extends Component {
     overlaps(other: Collider): any;
     collidesWith(collider: Collider, motion: Vector2): CollisionResult;
     onAddedToEntity(): void;
+    onRemovedFromEntity(): void;
     onEntityTransformChanged(comp: ComponentTransform): void;
     onEnabled(): void;
     onDisabled(): void;
@@ -777,6 +778,7 @@ declare class RaycastResultParser {
 declare class NumberDictionary {
     private _store;
     private getKey;
+    private intToUint;
     add(x: number, y: number, list: Collider[]): void;
     remove(obj: Collider): void;
     tryGetValue(x: number, y: number): Collider[];
