@@ -11,7 +11,7 @@ abstract class Collider extends Component{
     public _isRotationDirty = true;
     protected _isParentEntityAddedToScene;
     protected _colliderRequiresAutoSizing;
-    protected _localOffset: Vector2;
+    protected _localOffset: Vector2 = new Vector2(0, 0);
     protected _isColliderRegisterd;
 
     public get bounds(): Rectangle {

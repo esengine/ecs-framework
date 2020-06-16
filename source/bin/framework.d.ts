@@ -87,7 +87,7 @@ declare class UnweightedGraph<T> implements IUnweightedGraph<T> {
 declare class Point {
     x: number;
     y: number;
-    constructor(x: number, y: number);
+    constructor(x?: number, y?: number);
 }
 declare class UnweightedGridGraph implements IUnweightedGraph<Point> {
     private static readonly CARDINAL_DIRS;
@@ -153,6 +153,7 @@ declare abstract class Component {
     onDisabled(): void;
     onEntityTransformChanged(comp: ComponentTransform): void;
     update(): void;
+    debugRender(): void;
     registerComponent(): void;
     deregisterComponent(): void;
 }
@@ -420,6 +421,7 @@ declare class BoxCollider extends Collider {
     height: number;
     setHeight(height: number): void;
     constructor();
+    setSize(width: number, height: number): this;
 }
 declare class EntitySystem {
     private _scene;
@@ -671,7 +673,9 @@ declare class Collisions {
 }
 declare class Physics {
     private static _spatialHash;
+    static spatialHashCellSize: number;
     static readonly allLayers: number;
+    static reset(): void;
     static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
     static boxcastBroadphase(rect: Rectangle, layerMask?: number): Collider[];
     static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Collider[];
@@ -798,6 +802,10 @@ declare class Pair<T> {
     constructor(first: T, second: T);
     clear(): void;
     equals(other: Pair<T>): boolean;
+}
+declare class RectangleExt {
+    static union(first: Rectangle, point: Point): Rectangle;
+    static unionR(value1: Rectangle, value2: Rectangle): Rectangle;
 }
 declare class Triangulator {
     triangleIndices: number[];

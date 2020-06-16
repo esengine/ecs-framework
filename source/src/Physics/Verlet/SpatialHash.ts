@@ -35,6 +35,21 @@ class SpatialHash {
         collider.registeredPhysicsBounds = bounds;
         let p1 = this.cellCoords(bounds.x, bounds.y);
         let p2 = this.cellCoords(bounds.right, bounds.bottom);
+
+        if (!this.gridBounds.contains(new Vector2(p1.x, p1.y))){
+            this.gridBounds = RectangleExt.union(this.gridBounds, p1);
+        }
+        
+        if (!this.gridBounds.contains(new Vector2(p2.x, p2.y))){
+            this.gridBounds = RectangleExt.union(this.gridBounds, p2);
+        }
+
+        for (let x = p1.x; x <= p2.x; x++){
+            for (let y = p1.y; y <= p2.y; y++){
+                let c = this.cellAtPosition(x, y, true);
+                c.push(collider);
+            }
+        }
     }
 
     public overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask){

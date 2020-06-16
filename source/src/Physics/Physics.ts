@@ -1,7 +1,13 @@
 class Physics {
     private static _spatialHash: SpatialHash;
+    /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
+    public static spatialHashCellSize = 100;
 
     public static readonly allLayers: number = -1;
+
+    public static reset(){
+        this._spatialHash = new SpatialHash(this.spatialHashCellSize);
+    }
 
     public static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask = -1){
         return this._spatialHash.overlapCircle(center, randius, results, layerMask);

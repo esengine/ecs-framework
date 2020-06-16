@@ -550,8 +550,8 @@ var UnweightedGraph = (function () {
 }());
 var Point = (function () {
     function Point(x, y) {
-        this.x = x;
-        this.y = y;
+        this.x = x ? x : 0;
+        this.y = y ? y : this.x;
     }
     return Point;
 }());
@@ -784,6 +784,8 @@ var Component = (function () {
     Component.prototype.onEntityTransformChanged = function (comp) {
     };
     Component.prototype.update = function () {
+    };
+    Component.prototype.debugRender = function () {
     };
     Component.prototype.registerComponent = function () {
         this.entity.componentBits.set(ComponentTypeManager.getIndexFor(this), false);
@@ -1105,7 +1107,8 @@ var Scene = (function (_super) {
         return this;
     };
     Scene.prototype.initialize = function () {
-        this.camera = this.createEntity("camera").addComponent(new Camera());
+        this.camera = this.createEntity("camera").getOrCreateComponent(new Camera());
+        Physics.reset();
         if (this.entityProcessors)
             this.entityProcessors.begin();
     };
@@ -1845,6 +1848,7 @@ var Collider = (function (_super) {
         _this.collidesWithLayers = Physics.allLayers;
         _this._isPositionDirty = true;
         _this._isRotationDirty = true;
+        _this._localOffset = new Vector2(0, 0);
         return _this;
     }
     Object.defineProperty(Collider.prototype, "bounds", {
@@ -1994,6 +1998,17 @@ var BoxCollider = (function (_super) {
             if (this.entity && this._isParentEntityAddedToScene)
                 Physics.updateCollider(this);
         }
+    };
+    BoxCollider.prototype.setSize = function (width, height) {
+        this._colliderRequiresAutoSizing = false;
+        var box = this.shape;
+        if (width != box.width || height != box.height) {
+            box.updateBox(width, height);
+            this._isPositionDirty = true;
+            if (this.entity && this._isParentEntityAddedToScene)
+                Physics.updateCollider(this);
+        }
+        return this;
     };
     return BoxCollider;
 }(Collider));
@@ -3245,6 +3260,9 @@ var Collisions = (function () {
 var Physics = (function () {
     function Physics() {
     }
+    Physics.reset = function () {
+        this._spatialHash = new SpatialHash(this.spatialHashCellSize);
+    };
     Physics.overlapCircleAll = function (center, randius, results, layerMask) {
         if (layerMask === void 0) { layerMask = -1; }
         return this._spatialHash.overlapCircle(center, randius, results, layerMask);
@@ -3267,6 +3285,7 @@ var Physics = (function () {
         this._spatialHash.remove(collider);
         this._spatialHash.register(collider);
     };
+    Physics.spatialHashCellSize = 100;
     Physics.allLayers = -1;
     return Physics;
 }());
@@ -3717,6 +3736,18 @@ var SpatialHash = (function () {
         collider.registeredPhysicsBounds = bounds;
         var p1 = this.cellCoords(bounds.x, bounds.y);
         var p2 = this.cellCoords(bounds.right, bounds.bottom);
+        if (!this.gridBounds.contains(new Vector2(p1.x, p1.y))) {
+            this.gridBounds = RectangleExt.union(this.gridBounds, p1);
+        }
+        if (!this.gridBounds.contains(new Vector2(p2.x, p2.y))) {
+            this.gridBounds = RectangleExt.union(this.gridBounds, p2);
+        }
+        for (var x = p1.x; x <= p2.x; x++) {
+            for (var y = p1.y; y <= p2.y; y++) {
+                var c = this.cellAtPosition(x, y, true);
+                c.push(collider);
+            }
+        }
     };
     SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
         var bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
@@ -3868,6 +3899,23 @@ var Pair = (function () {
         return this.first == other.first && this.second == other.second;
     };
     return Pair;
+}());
+var RectangleExt = (function () {
+    function RectangleExt() {
+    }
+    RectangleExt.union = function (first, point) {
+        var rect = new Rectangle(point.x, point.y, 0, 0);
+        return this.unionR(first, rect);
+    };
+    RectangleExt.unionR = function (value1, value2) {
+        var result = new Rectangle();
+        result.x = Math.min(value1.x, value2.x);
+        result.y = Math.min(value1.y, value2.y);
+        result.width = Math.max(value1.right, value2.right) - result.x;
+        result.height = Math.max(value1.bottom, value2.bottom) - result.y;
+        return result;
+    };
+    return RectangleExt;
 }());
 var Triangulator = (function () {
     function Triangulator() {

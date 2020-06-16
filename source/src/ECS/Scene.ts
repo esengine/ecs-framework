@@ -74,7 +74,9 @@ class Scene extends egret.DisplayObjectContainer {
    /** 初始化场景 */
    public initialize(){
       /** 初始化默认相机 */
-      this.camera = this.createEntity("camera").addComponent(new Camera());
+      this.camera = this.createEntity("camera").getOrCreateComponent(new Camera());
+
+      Physics.reset();
 
       if (this.entityProcessors)
          this.entityProcessors.begin();
