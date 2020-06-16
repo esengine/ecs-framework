@@ -30,7 +30,7 @@ abstract class Component {
     }
 
     public initialize(){
-        
+
     }
 
     public onAddedToEntity(){

@@ -1013,8 +1013,8 @@ var Entity = (function () {
     Entity.prototype.getComponent = function (type) {
         return this.components.getComponent(type, false);
     };
-    Entity.prototype.getComponents = function (type) {
-        return this.components.getComponents(type);
+    Entity.prototype.getComponents = function (typeName, componentList) {
+        return this.components.getComponents(typeName, componentList);
     };
     Entity.prototype.removeComponentForType = function (type) {
         var comp = this.getComponent(type);
@@ -2208,17 +2208,18 @@ var ComponentList = (function () {
         }
         return null;
     };
-    ComponentList.prototype.getComponents = function (type) {
-        var components = [];
+    ComponentList.prototype.getComponents = function (typeName, components) {
+        if (!components)
+            components = [];
         for (var i = 0; i < this._components.length; i++) {
             var component = this._components[i];
-            if (component instanceof type)
-                components.push(components);
+            if (egret.is(component, typeName))
+                components.push(component);
         }
         for (var i = 0; i < this._componentsToAdd.length; i++) {
             var component = this._componentsToAdd[i];
-            if (component instanceof type)
-                components.push(components);
+            if (egret.is(component, typeName))
+                components.push(component);
         }
         return components;
     };
@@ -2928,10 +2929,14 @@ var Vector2 = (function () {
     return Vector2;
 }());
 var ColliderTriggerHelper = (function () {
-    function ColliderTriggerHelper() {
+    function ColliderTriggerHelper(entity) {
+        this._activeTriggerIntersections = [];
+        this._previousTriggerIntersections = [];
+        this._tempTriggerList = [];
+        this._entity = entity;
     }
     ColliderTriggerHelper.prototype.update = function () {
-        var colliders = this._entity.getComponents(Collider);
+        var colliders = this._entity.getComponents("Collider");
         for (var i = 0; i < colliders.length; i++) {
             var collider = colliders[i];
             var neighbors = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
@@ -2940,7 +2945,56 @@ var ColliderTriggerHelper = (function () {
                 if (!collider.isTrigger && !neighbor.isTrigger)
                     continue;
                 if (collider.overlaps(neighbor)) {
+                    var pair = new Pair(collider, neighbor);
+                    var shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) &&
+                        !this._previousTriggerIntersections.contains(pair);
+                    if (shouldReportTriggerEvent)
+                        this.notifyTriggerListeners(pair, true);
+                    this._activeTriggerIntersections.push(pair);
                 }
+            }
+        }
+        ListPool.free(colliders);
+        this.checkForExitedColliders();
+    };
+    ColliderTriggerHelper.prototype.checkForExitedColliders = function () {
+        var _this = this;
+        var tempIntersections = [];
+        this._previousTriggerIntersections = this._previousTriggerIntersections.filter(function (value) {
+            for (var i = 0; i < _this._activeTriggerIntersections.length; i++) {
+                if (value == _this._activeTriggerIntersections[i]) {
+                    tempIntersections.push(value);
+                    return true;
+                }
+            }
+            return false;
+        });
+        this._previousTriggerIntersections.forEach(function (pair) { return _this.notifyTriggerListeners(pair, false); });
+        this._previousTriggerIntersections.length = 0;
+        tempIntersections.forEach(function (value) { return _this._previousTriggerIntersections.push(value); });
+        this._activeTriggerIntersections.length = 0;
+    };
+    ColliderTriggerHelper.prototype.notifyTriggerListeners = function (collisionPair, isEntering) {
+        collisionPair.first.entity.getComponents("ITriggerListener", this._tempTriggerList);
+        for (var i = 0; i < this._tempTriggerList.length; i++) {
+            if (isEntering) {
+                this._tempTriggerList[i].onTriggerEnter(collisionPair.second, collisionPair.first);
+            }
+            else {
+                this._tempTriggerList[i].onTriggerExit(collisionPair.second, collisionPair.first);
+            }
+            this._tempTriggerList.length = 0;
+            if (collisionPair.second.entity) {
+                collisionPair.second.entity.getComponents("ITriggerListener", this._tempTriggerList);
+                for (var i_3 = 0; i_3 < this._tempTriggerList.length; i_3++) {
+                    if (isEntering) {
+                        this._tempTriggerList[i_3].onTriggerEnter(collisionPair.first, collisionPair.second);
+                    }
+                    else {
+                        this._tempTriggerList[i_3].onTriggerExit(collisionPair.first, collisionPair.second);
+                    }
+                }
+                this._tempTriggerList.length = 0;
             }
         }
     };
@@ -3611,6 +3665,49 @@ var Emitter = (function () {
         }
     };
     return Emitter;
+}());
+var ListPool = (function () {
+    function ListPool() {
+    }
+    ListPool.warmCache = function (cacheCount) {
+        cacheCount -= this._objectQueue.length;
+        if (cacheCount > 0) {
+            for (var i = 0; i < cacheCount; i++) {
+                this._objectQueue.unshift([]);
+            }
+        }
+    };
+    ListPool.trimCache = function (cacheCount) {
+        while (cacheCount > this._objectQueue.length)
+            this._objectQueue.shift();
+    };
+    ListPool.clearCache = function () {
+        this._objectQueue.length = 0;
+    };
+    ListPool.obtain = function () {
+        if (this._objectQueue.length > 0)
+            return this._objectQueue.shift();
+        return [];
+    };
+    ListPool.free = function (obj) {
+        this._objectQueue.unshift(obj);
+        obj.length = 0;
+    };
+    ListPool._objectQueue = [];
+    return ListPool;
+}());
+var Pair = (function () {
+    function Pair(first, second) {
+        this.first = first;
+        this.second = second;
+    }
+    Pair.prototype.clear = function () {
+        this.first = this.second = null;
+    };
+    Pair.prototype.equals = function (other) {
+        return this.first == other.first && this.second == other.second;
+    };
+    return Pair;
 }());
 var Triangulator = (function () {
     function Triangulator() {

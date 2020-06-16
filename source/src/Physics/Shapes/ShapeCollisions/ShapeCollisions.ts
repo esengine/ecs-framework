@@ -1,4 +1,9 @@
 class ShapeCollisions {
+    /**
+     * 检查两个多边形之间的碰撞
+     * @param first 
+     * @param second 
+     */
     public static polygonToPolygon(first: Polygon, second: Polygon) {
         let result = new CollisionResult();
         let isIntersecting = true;
@@ -56,6 +61,13 @@ class ShapeCollisions {
         return result;
     }
 
+    /**
+     * 计算[minA, maxA]和[minB, maxB]之间的距离。如果间隔重叠，距离是负的
+     * @param minA 
+     * @param maxA 
+     * @param minB 
+     * @param maxB 
+     */
     public static intervalDistance(minA: number, maxA: number, minB: number, maxB) {
         if (minA < minB)
             return minB - maxA;
@@ -63,6 +75,13 @@ class ShapeCollisions {
         return minA - minB;
     }
 
+    /**
+     * 计算一个多边形在一个轴上的投影，并返回一个[min，max]区间
+     * @param axis 
+     * @param polygon 
+     * @param min 
+     * @param max 
+     */
     public static getInterval(axis: Vector2, polygon: Polygon, min: number, max: number) {
         let dot = Vector2.dot(polygon.points[0], axis);
         min = max = dot;
@@ -79,6 +98,11 @@ class ShapeCollisions {
         return { min: min, max: max };
     }
 
+    /**
+     * 
+     * @param circle 
+     * @param polygon 
+     */
     public static circleToPolygon(circle: Circle, polygon: Polygon) {
         let result = new CollisionResult();
 
@@ -111,6 +135,11 @@ class ShapeCollisions {
         return result;
     }
 
+    /**
+     * 适用于圆心在方框内以及只与方框外圆心重叠的圆。
+     * @param circle 
+     * @param box 
+     */
     public static circleToBox(circle: Circle, box: Box): CollisionResult {
         let result = new CollisionResult();
         let closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position).res;
@@ -139,6 +168,11 @@ class ShapeCollisions {
         return null;
     }
 
+    /**
+     * 
+     * @param point 
+     * @param circle 
+     */
     public static pointToCircle(point: Vector2, circle: Circle) {
         let result = new CollisionResult();
 
@@ -157,6 +191,12 @@ class ShapeCollisions {
         return null;
     }
 
+    /**
+     * 
+     * @param lineA 
+     * @param lineB 
+     * @param closestTo 
+     */
     public static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2) {
         let v = Vector2.subtract(lineB, lineA);
         let w = Vector2.subtract(closestTo, lineA);
@@ -166,6 +206,11 @@ class ShapeCollisions {
         return Vector2.add(lineA, Vector2.multiply(v, new Vector2(t, t)));
     }
 
+    /**
+     * 
+     * @param point 
+     * @param poly 
+     */
     public static pointToPoly(point: Vector2, poly: Polygon) {
         let result = new CollisionResult();
 
@@ -185,6 +230,11 @@ class ShapeCollisions {
         return null;
     }
 
+    /**
+     * 
+     * @param first 
+     * @param second 
+     */
     public static circleToCircle(first: Circle, second: Circle){
         let result = new CollisionResult();
 

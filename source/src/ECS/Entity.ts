@@ -212,8 +212,8 @@ class Entity {
         return this.components.getComponent(type, false) as T;
     }
 
-    public getComponents<T extends Component>(type): T[]{
-        return this.components.getComponents<T>(type);
+    public getComponents(typeName: string, componentList?){
+        return this.components.getComponents(typeName, componentList);
     }
 
     public removeComponentForType<T extends Component>(type){

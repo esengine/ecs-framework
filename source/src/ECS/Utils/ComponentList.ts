@@ -120,18 +120,20 @@ class ComponentList {
         return null;
     }
 
-    public getComponents<T extends Component>(type): T[]{
-        let components = [];
+    public getComponents(typeName: string, components?){
+        if (!components)
+            components = [];
+
         for (let i = 0; i < this._components.length; i ++){
             let component = this._components[i];
-            if (component instanceof type)
-                components.push(components);
+            if (egret.is(component, typeName))
+                components.push(component);
         }
 
         for (let i = 0; i < this._componentsToAdd.length; i ++){
             let component = this._componentsToAdd[i];
-            if (component instanceof type)
-                components.push(components);
+            if (egret.is(component, typeName))
+                components.push(component);
         }
 
         return components;

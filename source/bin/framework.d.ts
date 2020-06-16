@@ -194,7 +194,7 @@ declare class Entity {
     hasComponent<T extends Component>(type: any): boolean;
     getOrCreateComponent<T extends Component>(type: T): T;
     getComponent<T extends Component>(type: any): T;
-    getComponents<T extends Component>(type: any): T[];
+    getComponents(typeName: string, componentList?: any): any;
     removeComponentForType<T extends Component>(type: any): boolean;
     removeComponent(component: Component): void;
     removeAllComponents(): void;
@@ -471,7 +471,7 @@ declare class ComponentList {
     updateLists(): void;
     private handleRemove;
     getComponent<T extends Component>(type: any, onlyReturnInitializedComponents: boolean): T;
-    getComponents<T extends Component>(type: any): T[];
+    getComponents(typeName: string, components?: any): any;
     update(): void;
     onEntityTransformChanged(comp: any): void;
 }
@@ -627,7 +627,13 @@ declare class Vector2 {
 }
 declare class ColliderTriggerHelper {
     private _entity;
+    private _activeTriggerIntersections;
+    private _previousTriggerIntersections;
+    private _tempTriggerList;
+    constructor(entity: Entity);
     update(): void;
+    private checkForExitedColliders;
+    private notifyTriggerListeners;
 }
 declare enum PointSectors {
     center = 0,
@@ -763,6 +769,21 @@ declare class Emitter<T> {
     addObserver(eventType: T, handler: Function): void;
     removeObserver(eventType: T, handler: Function): void;
     emit(eventType: T, data: any): void;
+}
+declare class ListPool {
+    private static readonly _objectQueue;
+    static warmCache(cacheCount: number): void;
+    static trimCache(cacheCount: any): void;
+    static clearCache(): void;
+    static obtain<T>(): Array<T>;
+    static free<T>(obj: Array<T>): void;
+}
+declare class Pair<T> {
+    first: T;
+    second: T;
+    constructor(first: T, second: T);
+    clear(): void;
+    equals(other: Pair<T>): boolean;
 }
 declare class Triangulator {
     triangleIndices: number[];
