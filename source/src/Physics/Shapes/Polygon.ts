@@ -14,9 +14,11 @@ class Polygon extends Shape {
     }
     public isBox: boolean;
 
-    constructor(vertCount: number, radius: number) {
+    constructor(points: Vector2[], isBox?: boolean){
         super();
-        this.setPoints(Polygon.buildSymmertricalPolygon(vertCount, radius));
+
+        this.setPoints(points);
+        this.isBox = isBox;
     }
 
     private buildEdgeNormals(){
@@ -42,8 +44,10 @@ class Polygon extends Shape {
         this.points = points;
         this.recalculateCenterAndEdgeNormals();
 
-        this._originalPoints = new Array(this.points.length);
-        this.points.forEach(point => this._originalPoints.push(point));
+        this._originalPoints = [];
+        for (let i = 0; i < this.points.length; i ++){
+            this._originalPoints.push(this.points[i]);
+        }
     }
 
     public collidesWithShape(other: Shape){

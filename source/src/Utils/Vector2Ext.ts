@@ -47,7 +47,7 @@ class Vector2Ext {
         destinationArray: Vector2[], destinationIndex: number, length: number) {
             for (let i = 0; i < length; i ++){
                 let position = sourceArray[sourceIndex + i];
-                let destination = destinationArray[destinationIndex + 1];
+                let destination = destinationArray[destinationIndex + i];
                 destination.x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
                 destination.y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
                 destinationArray[destinationIndex + i] = destination;

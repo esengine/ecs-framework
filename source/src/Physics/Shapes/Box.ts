@@ -3,6 +3,24 @@ class Box extends Polygon {
     public width: number;
     public height: number;
 
+    constructor(width: number, height: number){
+        super(Box.buildBox(width, height), true);
+        this.width = width;
+        this.height = height;
+    }
+
+    private static buildBox(width: number, height: number): Vector2[]{
+        let halfWidth = width / 2;
+        let halfHeight = height / 2;
+        let verts = new Array(4);
+        verts[0] = new Vector2(-halfWidth, -halfHeight);
+        verts[1] = new Vector2(halfWidth, -halfHeight);
+        verts[2] = new Vector2(halfWidth, halfHeight);
+        verts[3] = new Vector2(-halfWidth, halfHeight);
+
+        return verts;
+    }
+
     public updateBox(width: number, height: number){
         this.width = width;
         this.height = height;

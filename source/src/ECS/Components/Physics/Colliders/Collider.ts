@@ -12,7 +12,7 @@ abstract class Collider extends Component{
     protected _isParentEntityAddedToScene;
     protected _colliderRequiresAutoSizing;
     protected _localOffset: Vector2 = new Vector2(0, 0);
-    protected _isColliderRegisterd;
+    protected _isColliderRegistered;
 
     public get bounds(): Rectangle {
         if (this._isPositionDirty || this._isRotationDirty){
@@ -42,17 +42,17 @@ abstract class Collider extends Component{
     }
 
     public registerColliderWithPhysicsSystem(){
-        if (this._isParentEntityAddedToScene && !this._isColliderRegisterd){
+        if (this._isParentEntityAddedToScene && !this._isColliderRegistered){
             Physics.addCollider(this);
-            this._isColliderRegisterd = true;
+            this._isColliderRegistered = true;
         }
     }
 
     public unregisterColliderWithPhysicsSystem(){
-        if (this._isParentEntityAddedToScene && this._isColliderRegisterd){
+        if (this._isParentEntityAddedToScene && this._isColliderRegistered){
             Physics.removeCollider(this);
         }
-        this._isColliderRegisterd = false;
+        this._isColliderRegistered = false;
     }
 
     public overlaps(other: Collider){
@@ -112,7 +112,7 @@ abstract class Collider extends Component{
                 break;
         }
 
-        if (this._isColliderRegisterd)
+        if (this._isColliderRegistered)
             Physics.updateCollider(this);
     }
 

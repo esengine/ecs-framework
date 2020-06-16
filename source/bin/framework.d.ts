@@ -402,7 +402,7 @@ declare abstract class Collider extends Component {
     protected _isParentEntityAddedToScene: any;
     protected _colliderRequiresAutoSizing: any;
     protected _localOffset: Vector2;
-    protected _isColliderRegisterd: any;
+    protected _isColliderRegistered: any;
     readonly bounds: Rectangle;
     localOffset: Vector2;
     setLocalOffset(offset: Vector2): void;
@@ -701,7 +701,7 @@ declare class Polygon extends Shape {
     _edgeNormals: Vector2[];
     readonly edgeNormals: Vector2[];
     isBox: boolean;
-    constructor(vertCount: number, radius: number);
+    constructor(points: Vector2[], isBox?: boolean);
     private buildEdgeNormals;
     setPoints(points: Vector2[]): void;
     collidesWithShape(other: Shape): CollisionResult;
@@ -721,6 +721,8 @@ declare class Polygon extends Shape {
 declare class Box extends Polygon {
     width: number;
     height: number;
+    constructor(width: number, height: number);
+    private static buildBox;
     updateBox(width: number, height: number): void;
     containsPoint(point: Vector2): boolean;
 }

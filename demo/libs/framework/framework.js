@@ -1186,7 +1186,7 @@ var Transform = (function () {
         this._worldInverseTransform = Matrix2D.identity;
         this._rotation = 0;
         this.entity = entity;
-        this._scale = this._localScale = new Vector2(0, 0);
+        this._scale = this._localScale = Vector2.one;
         this._children = [];
     }
     Object.defineProperty(Transform.prototype, "childCount", {
@@ -1882,16 +1882,16 @@ var Collider = (function (_super) {
         }
     };
     Collider.prototype.registerColliderWithPhysicsSystem = function () {
-        if (this._isParentEntityAddedToScene && !this._isColliderRegisterd) {
+        if (this._isParentEntityAddedToScene && !this._isColliderRegistered) {
             Physics.addCollider(this);
-            this._isColliderRegisterd = true;
+            this._isColliderRegistered = true;
         }
     };
     Collider.prototype.unregisterColliderWithPhysicsSystem = function () {
-        if (this._isParentEntityAddedToScene && this._isColliderRegisterd) {
+        if (this._isParentEntityAddedToScene && this._isColliderRegistered) {
             Physics.removeCollider(this);
         }
-        this._isColliderRegisterd = false;
+        this._isColliderRegistered = false;
     };
     Collider.prototype.overlaps = function (other) {
         return this.shape.overlaps(other.shape);
@@ -1938,7 +1938,7 @@ var Collider = (function (_super) {
                 this._isRotationDirty = true;
                 break;
         }
-        if (this._isColliderRegisterd)
+        if (this._isColliderRegistered)
             Physics.updateCollider(this);
     };
     Collider.prototype.onEnabled = function () {
@@ -2308,18 +2308,28 @@ var ComponentList = (function () {
             components = [];
         for (var i = 0; i < this._components.length; i++) {
             var component = this._components[i];
-            if (typeof (typeName) == "string" && egret.is(component, typeName))
-                components.push(component);
-            else if (component instanceof typeName) {
-                components.push(component);
+            if (typeof (typeName) == "string") {
+                if (egret.is(component, typeName)) {
+                    components.push(component);
+                }
+            }
+            else {
+                if (component instanceof typeName) {
+                    components.push(component);
+                }
             }
         }
         for (var i = 0; i < this._componentsToAdd.length; i++) {
             var component = this._componentsToAdd[i];
-            if (typeof (typeName) == "string" && egret.is(component, typeName))
-                components.push(component);
-            else if (component instanceof typeName) {
-                components.push(component);
+            if (typeof (typeName) == "string") {
+                if (egret.is(component, typeName)) {
+                    components.push(component);
+                }
+            }
+            else {
+                if (component instanceof typeName) {
+                    components.push(component);
+                }
             }
         }
         return components;
@@ -3099,9 +3109,13 @@ var ColliderTriggerHelper = (function () {
             }
             return false;
         });
-        this._previousTriggerIntersections.forEach(function (pair) { return _this.notifyTriggerListeners(pair, false); });
+        for (var i = 0; i < this._previousTriggerIntersections.length; i++) {
+            this.notifyTriggerListeners(this._previousTriggerIntersections[i], false);
+        }
         this._previousTriggerIntersections.length = 0;
-        tempIntersections.forEach(function (value) { return _this._previousTriggerIntersections.push(value); });
+        for (var i = 0; i < tempIntersections.length; i++) {
+            this._previousTriggerIntersections.push(tempIntersections[i]);
+        }
         this._activeTriggerIntersections.length = 0;
     };
     ColliderTriggerHelper.prototype.notifyTriggerListeners = function (collisionPair, isEntering) {
@@ -3296,11 +3310,12 @@ var Shape = (function () {
 }());
 var Polygon = (function (_super) {
     __extends(Polygon, _super);
-    function Polygon(vertCount, radius) {
+    function Polygon(points, isBox) {
         var _this = _super.call(this) || this;
         _this.isUnrotated = true;
         _this._areEdgeNormalsDirty = true;
-        _this.setPoints(Polygon.buildSymmertricalPolygon(vertCount, radius));
+        _this.setPoints(points);
+        _this.isBox = isBox;
         return _this;
     }
     Object.defineProperty(Polygon.prototype, "edgeNormals", {
@@ -3329,11 +3344,12 @@ var Polygon = (function (_super) {
         }
     };
     Polygon.prototype.setPoints = function (points) {
-        var _this = this;
         this.points = points;
         this.recalculateCenterAndEdgeNormals();
-        this._originalPoints = new Array(this.points.length);
-        this.points.forEach(function (point) { return _this._originalPoints.push(point); });
+        this._originalPoints = [];
+        for (var i = 0; i < this.points.length; i++) {
+            this._originalPoints.push(this.points[i]);
+        }
     };
     Polygon.prototype.collidesWithShape = function (other) {
         var result = new CollisionResult();
@@ -3457,9 +3473,22 @@ var Polygon = (function (_super) {
 }(Shape));
 var Box = (function (_super) {
     __extends(Box, _super);
-    function Box() {
-        return _super !== null && _super.apply(this, arguments) || this;
+    function Box(width, height) {
+        var _this = _super.call(this, Box.buildBox(width, height), true) || this;
+        _this.width = width;
+        _this.height = height;
+        return _this;
     }
+    Box.buildBox = function (width, height) {
+        var halfWidth = width / 2;
+        var halfHeight = height / 2;
+        var verts = new Array(4);
+        verts[0] = new Vector2(-halfWidth, -halfHeight);
+        verts[1] = new Vector2(halfWidth, -halfHeight);
+        verts[2] = new Vector2(halfWidth, halfHeight);
+        verts[3] = new Vector2(-halfWidth, halfHeight);
+        return verts;
+    };
     Box.prototype.updateBox = function (width, height) {
         this.width = width;
         this.height = height;
@@ -3755,10 +3784,18 @@ var SpatialHash = (function () {
         this._overlapTestCircle.position = circleCenter;
         var resultCounter = 0;
         var potentials = this.aabbBroadphase(bounds, null, layerMask);
-        potentials.forEach(function (collider) {
+        for (var i = 0; i < potentials.length; i++) {
+            var collider = potentials[i];
+            if (collider instanceof BoxCollider) {
+                results[resultCounter] = collider;
+                resultCounter++;
+            }
+            else {
+                throw new Error("overlapCircle against this collider type is not implemented!");
+            }
             if (resultCounter == results.length)
                 return resultCounter;
-        });
+        }
         return resultCounter;
     };
     SpatialHash.prototype.aabbBroadphase = function (bounds, excludeCollider, layerMask) {
@@ -4020,7 +4057,7 @@ var Vector2Ext = (function () {
     Vector2Ext.transformA = function (sourceArray, sourceIndex, matrix, destinationArray, destinationIndex, length) {
         for (var i = 0; i < length; i++) {
             var position = sourceArray[sourceIndex + i];
-            var destination = destinationArray[destinationIndex + 1];
+            var destination = destinationArray[destinationIndex + i];
             destination.x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
             destination.y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
             destinationArray[destinationIndex + i] = destination;

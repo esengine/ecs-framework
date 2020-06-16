@@ -55,9 +55,13 @@ class ColliderTriggerHelper {
             return false;
         });
 
-        this._previousTriggerIntersections.forEach(pair => this.notifyTriggerListeners(pair, false));
+        for (let i = 0; i < this._previousTriggerIntersections.length; i ++){
+            this.notifyTriggerListeners(this._previousTriggerIntersections[i], false)
+        }
         this._previousTriggerIntersections.length = 0;
-        tempIntersections.forEach(value => this._previousTriggerIntersections.push(value));
+        for (let i = 0; i < tempIntersections.length; i ++){
+            this._previousTriggerIntersections.push(tempIntersections[i]);
+        }
         this._activeTriggerIntersections.length = 0;
     }
 

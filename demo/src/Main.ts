@@ -105,7 +105,7 @@ class Main extends eui.UILayer {
             new Vector2(0, 10),
             new Vector2(0, 0)]));
         player.addComponent(new SpawnComponent(EnemyType.worm));
-        player.addComponent(new BoxCollider()).setSize(100, 100);
+        player.addComponent(new BoxCollider()).setSize(100, 100).isTrigger = true;
         player.addComponent(new Mover());
 
         let player2 = scene.createEntity("player2");

@@ -21,11 +21,11 @@ class SpawnComponent extends Component implements ITriggerListener {
     }
 
     public onTriggerEnter(other: Collider, local: Collider){
-        console.log("enter collider", other, local);
+        console.log("enter collider");
     }
 
     public onTriggerExit(other: Collider, local: Collider){
-        console.log("exit collider", other, local);
+        console.log("exit collider");
     }
 }
 
