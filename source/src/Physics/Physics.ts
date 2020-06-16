@@ -11,6 +11,10 @@ class Physics {
         return this._spatialHash.aabbBroadphase(rect, null, layerMask);
     }
 
+    public static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask = this.allLayers){
+        return this._spatialHash.aabbBroadphase(rect, collider, layerMask);
+    }
+
     public static addCollider(collider: Collider){
         Physics._spatialHash.register(collider);
     }

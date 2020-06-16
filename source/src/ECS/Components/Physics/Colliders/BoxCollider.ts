@@ -46,4 +46,17 @@ class BoxCollider extends Collider {
         this.shape = new Box(1, 1);
         this._colliderRequiresAutoSizing = true;
     }
+
+    public setSize(width: number, height: number){
+        this._colliderRequiresAutoSizing = false;
+        let box = this.shape as Box;
+        if (width != box.width || height != box.height){
+            box.updateBox(width, height);
+            this._isPositionDirty = true;
+            if (this.entity && this._isParentEntityAddedToScene)
+                Physics.updateCollider(this);
+        }
+
+        return this;
+    }
 }

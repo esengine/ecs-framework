@@ -1786,6 +1786,56 @@ var SpriteRenderer = (function (_super) {
     };
     return SpriteRenderer;
 }(RenderableComponent));
+var Mover = (function (_super) {
+    __extends(Mover, _super);
+    function Mover() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    Mover.prototype.onAddedToEntity = function () {
+        this._triggerHelper = new ColliderTriggerHelper(this.entity);
+    };
+    Mover.prototype.calculateMovement = function (motion) {
+        var collisionResult = new CollisionResult();
+        if (!this.entity.getComponent(Collider) || !this._triggerHelper) {
+            return null;
+        }
+        var colliders = this.entity.getComponents(Collider);
+        for (var i = 0; i < colliders.length; i++) {
+            var collider = colliders[i];
+            if (collider.isTrigger)
+                continue;
+            var bounds = collider.bounds;
+            bounds.x += motion.x;
+            bounds.y += motion.y;
+            var neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
+            for (var j = 0; j < neighbors.length; j++) {
+                var neighbor = neighbors[j];
+                if (neighbor.isTrigger)
+                    continue;
+                var _internalcollisionResult = collider.collidesWith(neighbor, motion);
+                if (_internalcollisionResult) {
+                    motion = Vector2.subtract(motion, _internalcollisionResult.minimumTranslationVector);
+                    if (_internalcollisionResult.collider) {
+                        collisionResult = _internalcollisionResult;
+                    }
+                }
+            }
+        }
+        ListPool.free(colliders);
+        return collisionResult;
+    };
+    Mover.prototype.applyMovement = function (motion) {
+        this.entity.transform.position = Vector2.add(this.entity.transform.position, motion);
+        if (this._triggerHelper)
+            this._triggerHelper.update();
+    };
+    Mover.prototype.move = function (motion) {
+        var collisionResult = this.calculateMovement(motion);
+        this.applyMovement(motion);
+        return collisionResult;
+    };
+    return Mover;
+}(Component));
 var Collider = (function (_super) {
     __extends(Collider, _super);
     function Collider() {
@@ -1841,6 +1891,36 @@ var Collider = (function (_super) {
     };
     Collider.prototype.overlaps = function (other) {
         return this.shape.overlaps(other.shape);
+    };
+    Collider.prototype.collidesWith = function (collider, motion) {
+        var oldPosition = this.shape.position;
+        this.shape.position = Vector2.add(this.shape.position, motion);
+        var result = this.shape.collidesWithShape(collider.shape);
+        if (result)
+            result.collider = collider;
+        this.shape.position = oldPosition;
+        return result;
+    };
+    Collider.prototype.onAddedToEntity = function () {
+        if (this._colliderRequiresAutoSizing) {
+            if (!(this instanceof BoxCollider)) {
+                console.error("Only box and circle colliders can be created automatically");
+            }
+            var renderable = this.entity.getComponent(RenderableComponent);
+            if (!renderable) {
+                var renderbaleBounds = renderable.bounds;
+                var width = renderbaleBounds.width / this.entity.transform.scale.x;
+                var height = renderbaleBounds.height / this.entity.transform.scale.y;
+                if (this instanceof BoxCollider) {
+                    var boxCollider = this;
+                    boxCollider.width = width;
+                    boxCollider.height = height;
+                    this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.transform.position);
+                }
+            }
+        }
+        this._isParentEntityAddedToScene = true;
+        this.registerColliderWithPhysicsSystem();
     };
     Collider.prototype.onEntityTransformChanged = function (comp) {
         switch (comp) {
@@ -2213,13 +2293,19 @@ var ComponentList = (function () {
             components = [];
         for (var i = 0; i < this._components.length; i++) {
             var component = this._components[i];
-            if (egret.is(component, typeName))
+            if (typeof (typeName) == "string" && egret.is(component, typeName))
                 components.push(component);
+            else if (component instanceof typeName) {
+                components.push(component);
+            }
         }
         for (var i = 0; i < this._componentsToAdd.length; i++) {
             var component = this._componentsToAdd[i];
-            if (egret.is(component, typeName))
+            if (typeof (typeName) == "string" && egret.is(component, typeName))
                 components.push(component);
+            else if (component instanceof typeName) {
+                components.push(component);
+            }
         }
         return components;
     };
@@ -2721,6 +2807,13 @@ var Rectangle = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(Rectangle.prototype, "center", {
+        get: function () {
+            return new Vector2(this.x + (this.width / 2), this.y + (this.height / 2));
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Rectangle.prototype, "location", {
         get: function () {
             return new Vector2(this.x, this.y);
@@ -2823,6 +2916,28 @@ var Rectangle = (function () {
             this.width = maxX - minX;
             this.height = maxY - minY;
         }
+    };
+    Rectangle.rectEncompassingPoints = function (points) {
+        var minX = Number.POSITIVE_INFINITY;
+        var minY = Number.POSITIVE_INFINITY;
+        var maxX = Number.NEGATIVE_INFINITY;
+        var maxY = Number.NEGATIVE_INFINITY;
+        for (var i = 0; i < points.length; i++) {
+            var pt = points[i];
+            if (pt.x < minX) {
+                minX = pt.x;
+            }
+            if (pt.x > maxX) {
+                maxX = pt.x;
+            }
+            if (pt.y < minY) {
+                minY = pt.y;
+            }
+            if (pt.y > maxY) {
+                maxY = pt.y;
+            }
+        }
+        return this.fromMinMax(minX, minY, maxX, maxY);
     };
     return Rectangle;
 }());
@@ -2936,7 +3051,7 @@ var ColliderTriggerHelper = (function () {
         this._entity = entity;
     }
     ColliderTriggerHelper.prototype.update = function () {
-        var colliders = this._entity.getComponents("Collider");
+        var colliders = this._entity.getComponents(Collider);
         for (var i = 0; i < colliders.length; i++) {
             var collider = colliders[i];
             var neighbors = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
@@ -3138,6 +3253,10 @@ var Physics = (function () {
         if (layerMask === void 0) { layerMask = this.allLayers; }
         return this._spatialHash.aabbBroadphase(rect, null, layerMask);
     };
+    Physics.boxcastBroadphaseExcludingSelf = function (collider, rect, layerMask) {
+        if (layerMask === void 0) { layerMask = this.allLayers; }
+        return this._spatialHash.aabbBroadphase(rect, collider, layerMask);
+    };
     Physics.addCollider = function (collider) {
         Physics._spatialHash.register(collider);
     };
@@ -3191,14 +3310,27 @@ var Polygon = (function (_super) {
         }
     };
     Polygon.prototype.setPoints = function (points) {
+        var _this = this;
         this.points = points;
         this.recalculateCenterAndEdgeNormals();
-        this._originalPoints = new Array(points.length);
-        this._originalPoints = points;
+        this._originalPoints = new Array(this.points.length);
+        this.points.forEach(function (point) { return _this._originalPoints.push(point); });
     };
     Polygon.prototype.collidesWithShape = function (other) {
-        if (other instanceof Polygon)
-            return ShapeCollisions.polygonToPolygon(this, other);
+        var result = new CollisionResult();
+        if (other instanceof Polygon) {
+            result = ShapeCollisions.polygonToPolygon(this, other);
+            return result;
+        }
+        if (other instanceof Circle) {
+            result = ShapeCollisions.circleToPolygon(other, this);
+            if (result) {
+                result.invertResult();
+                return result;
+            }
+            return null;
+        }
+        throw new Error("overlaps of Polygon to " + other + " are not supported");
     };
     Polygon.prototype.recalculateCenterAndEdgeNormals = function () {
         this._polygonCenter = Polygon.findPolygonCenter(this.points);
@@ -3273,6 +3405,34 @@ var Polygon = (function (_super) {
     };
     Polygon.prototype.recalculateBounds = function (collider) {
         this.center = collider.localOffset;
+        if (collider.shouldColliderScaleAndRotationWithTransform) {
+            var hasUnitScale = true;
+            var tempMat = void 0;
+            var combinedMatrix = Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
+            if (collider.entity.transform.scale != Vector2.one) {
+                tempMat = Matrix2D.createScale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
+                combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
+                hasUnitScale = false;
+                var scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.transform.scale);
+                this.center = scaledOffset;
+            }
+            if (collider.entity.transform.rotation != 0) {
+                tempMat = Matrix2D.createRotation(collider.entity.transform.rotation);
+                combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
+                var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
+                var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.transform.scale)).length();
+                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
+            }
+            tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
+            combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
+            Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
+            this.isUnrotated = collider.entity.transform.rotation == 0;
+            if (collider._isRotationDirty)
+                this._areEdgeNormalsDirty = true;
+        }
+        this.position = Vector2.add(collider.entity.transform.position, this.center);
+        this.bounds = Rectangle.rectEncompassingPoints(this.points);
+        this.bounds.location = Vector2.add(this.bounds.location, this.position);
     };
     return Polygon;
 }(Shape));
@@ -3808,6 +3968,18 @@ var Vector2Ext = (function () {
             vec.x = vec.y = 0;
         }
         return vec;
+    };
+    Vector2Ext.transformA = function (sourceArray, sourceIndex, matrix, destinationArray, destinationIndex, length) {
+        for (var i = 0; i < length; i++) {
+            var position = sourceArray[sourceIndex + i];
+            var destination = destinationArray[destinationIndex + 1];
+            destination.x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
+            destination.y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
+            destinationArray[destinationIndex + i] = destination;
+        }
+    };
+    Vector2Ext.transform = function (sourceArray, matrix, destinationArray) {
+        this.transformA(sourceArray, 0, matrix, destinationArray, 0, sourceArray.length);
     };
     return Vector2Ext;
 }());

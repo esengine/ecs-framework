@@ -14,7 +14,7 @@ class ColliderTriggerHelper {
      * 实体被移动后，应该调用更新。它会处理碰撞器重叠的任何itriggerlistener。
      */
     public update() {
-        let colliders = this._entity.getComponents("Collider");
+        let colliders = this._entity.getComponents(Collider);
         for (let i = 0; i < colliders.length; i++) {
             let collider = colliders[i];
 

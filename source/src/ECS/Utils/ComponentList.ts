@@ -120,20 +120,26 @@ class ComponentList {
         return null;
     }
 
-    public getComponents(typeName: string, components?){
+    public getComponents(typeName: string | any, components?){
         if (!components)
             components = [];
 
         for (let i = 0; i < this._components.length; i ++){
             let component = this._components[i];
-            if (egret.is(component, typeName))
+            if (typeof(typeName) == "string" && egret.is(component, typeName))
                 components.push(component);
+            else if (component instanceof typeName) {
+                components.push(component);
+            }
         }
 
         for (let i = 0; i < this._componentsToAdd.length; i ++){
             let component = this._componentsToAdd[i];
-            if (egret.is(component, typeName))
+            if (typeof(typeName) == "string" && egret.is(component, typeName))
                 components.push(component);
+            else if (component instanceof typeName){
+                components.push(component);
+            }
         }
 
         return components;

@@ -42,13 +42,29 @@ class Polygon extends Shape {
         this.points = points;
         this.recalculateCenterAndEdgeNormals();
 
-        this._originalPoints = new Array(points.length);
-        this._originalPoints = points;
+        this._originalPoints = new Array(this.points.length);
+        this.points.forEach(point => this._originalPoints.push(point));
     }
 
     public collidesWithShape(other: Shape){
-        if (other instanceof Polygon)
-            return ShapeCollisions.polygonToPolygon(this, other);
+        let result = new CollisionResult();
+        if (other instanceof Polygon){
+            result = ShapeCollisions.polygonToPolygon(this, other);
+            return result;
+        }
+           
+
+        if (other instanceof Circle){
+            result = ShapeCollisions.circleToPolygon(other, this);
+            if (result){
+                result.invertResult();
+                return result;
+            }
+
+            return null;
+        }
+
+        throw new Error(`overlaps of Polygon to ${other} are not supported`);
     }
 
     public recalculateCenterAndEdgeNormals() {
@@ -133,6 +149,11 @@ class Polygon extends Shape {
         return isInside;
     }
 
+    /**
+     * 建立一个对称的多边形(六边形，八角形，n角形)并返回点
+     * @param vertCount 
+     * @param radius 
+     */
     public static buildSymmertricalPolygon(vertCount: number, radius: number) {
         let verts = new Array(vertCount);
 
@@ -146,5 +167,42 @@ class Polygon extends Shape {
 
     public recalculateBounds(collider: Collider) {
         this.center = collider.localOffset;
+
+        if (collider.shouldColliderScaleAndRotationWithTransform){
+            let hasUnitScale = true;
+            let tempMat: Matrix2D;
+            let combinedMatrix = Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
+
+            if (collider.entity.transform.scale != Vector2.one){
+                tempMat = Matrix2D.createScale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
+                combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
+
+                hasUnitScale = false;
+                let scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.transform.scale);
+                this.center = scaledOffset;
+            }
+
+            if (collider.entity.transform.rotation != 0){
+                tempMat = Matrix2D.createRotation(collider.entity.transform.rotation);
+                combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
+
+                let offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
+                let offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.transform.scale)).length();
+                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
+            }
+
+            tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
+            combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
+
+            Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
+            this.isUnrotated = collider.entity.transform.rotation == 0;
+
+            if (collider._isRotationDirty)
+                this._areEdgeNormalsDirty = true;
+        }
+
+        this.position = Vector2.add(collider.entity.transform.position, this.center);
+        this.bounds = Rectangle.rectEncompassingPoints(this.points);
+        this.bounds.location = Vector2.add(this.bounds.location, this.position);
     }
 }

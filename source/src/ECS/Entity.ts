@@ -212,7 +212,7 @@ class Entity {
         return this.components.getComponent(type, false) as T;
     }
 
-    public getComponents(typeName: string, componentList?){
+    public getComponents(typeName: string | any, componentList?){
         return this.components.getComponents(typeName, componentList);
     }
 

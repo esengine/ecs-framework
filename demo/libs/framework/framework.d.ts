@@ -194,7 +194,7 @@ declare class Entity {
     hasComponent<T extends Component>(type: any): boolean;
     getOrCreateComponent<T extends Component>(type: T): T;
     getComponent<T extends Component>(type: any): T;
-    getComponents(typeName: string, componentList?: any): any;
+    getComponents(typeName: string | any, componentList?: any): any;
     removeComponentForType<T extends Component>(type: any): boolean;
     removeComponent(component: Component): void;
     removeAllComponents(): void;
@@ -381,6 +381,13 @@ interface ITriggerListener {
     onTriggerEnter(other: Collider, local: Collider): any;
     onTriggerExit(other: Collider, local: Collider): any;
 }
+declare class Mover extends Component {
+    private _triggerHelper;
+    onAddedToEntity(): void;
+    calculateMovement(motion: Vector2): CollisionResult;
+    applyMovement(motion: Vector2): void;
+    move(motion: Vector2): CollisionResult;
+}
 declare abstract class Collider extends Component {
     shape: Shape;
     physicsLayer: number;
@@ -389,9 +396,9 @@ declare abstract class Collider extends Component {
     shouldColliderScaleAndRotationWithTransform: boolean;
     collidesWithLayers: number;
     _localOffsetLength: number;
+    _isPositionDirty: boolean;
+    _isRotationDirty: boolean;
     protected _isParentEntityAddedToScene: any;
-    protected _isPositionDirty: boolean;
-    protected _isRotationDirty: boolean;
     protected _colliderRequiresAutoSizing: any;
     protected _localOffset: Vector2;
     protected _isColliderRegisterd: any;
@@ -401,6 +408,8 @@ declare abstract class Collider extends Component {
     registerColliderWithPhysicsSystem(): void;
     unregisterColliderWithPhysicsSystem(): void;
     overlaps(other: Collider): any;
+    collidesWith(collider: Collider, motion: Vector2): CollisionResult;
+    onAddedToEntity(): void;
     onEntityTransformChanged(comp: ComponentTransform): void;
     onEnabled(): void;
     onDisabled(): void;
@@ -471,7 +480,7 @@ declare class ComponentList {
     updateLists(): void;
     private handleRemove;
     getComponent<T extends Component>(type: any, onlyReturnInitializedComponents: boolean): T;
-    getComponents(typeName: string, components?: any): any;
+    getComponents(typeName: string | any, components?: any): any;
     update(): void;
     onEntityTransformChanged(comp: any): void;
 }
@@ -588,6 +597,7 @@ declare class Rectangle {
     readonly right: number;
     readonly top: number;
     readonly bottom: number;
+    readonly center: Vector2;
     location: Vector2;
     constructor(x?: number, y?: number, width?: number, height?: number);
     intersects(value: Rectangle): boolean;
@@ -598,6 +608,7 @@ declare class Rectangle {
         edgeNormal: Vector2;
     };
     calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
+    static rectEncompassingPoints(points: Vector2[]): Rectangle;
 }
 declare class Vector2 {
     x: number;
@@ -663,6 +674,7 @@ declare class Physics {
     static readonly allLayers: number;
     static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
     static boxcastBroadphase(rect: Rectangle, layerMask?: number): Collider[];
+    static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Collider[];
     static addCollider(collider: Collider): void;
     static removeCollider(collider: Collider): void;
     static updateCollider(collider: Collider): void;
@@ -674,6 +686,7 @@ declare abstract class Shape {
     abstract recalculateBounds(collider: Collider): any;
     abstract pointCollidesWithShape(point: Vector2): CollisionResult;
     abstract overlaps(other: Shape): any;
+    abstract collidesWithShape(other: Shape): CollisionResult;
 }
 declare class Polygon extends Shape {
     points: Vector2[];
@@ -717,6 +730,7 @@ declare class Circle extends Shape {
     overlaps(other: Shape): any;
 }
 declare class CollisionResult {
+    collider: Collider;
     minimumTranslationVector: Vector2;
     normal: Vector2;
     point: Vector2;
@@ -798,6 +812,8 @@ declare class Vector2Ext {
     static cross(u: Vector2, v: Vector2): number;
     static perpendicular(first: Vector2, second: Vector2): Vector2;
     static normalize(vec: Vector2): Vector2;
+    static transformA(sourceArray: Vector2[], sourceIndex: number, matrix: Matrix2D, destinationArray: Vector2[], destinationIndex: number, length: number): void;
+    static transform(sourceArray: Vector2[], matrix: Matrix2D, destinationArray: Vector2[]): void;
 }
 declare class WebGLUtils {
     static getWebGL(): WebGLRenderingContext;

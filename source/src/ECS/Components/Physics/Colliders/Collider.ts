@@ -7,9 +7,9 @@ abstract class Collider extends Component{
     public collidesWithLayers = Physics.allLayers;
 
     public _localOffsetLength: number;
+    public _isPositionDirty = true;
+    public _isRotationDirty = true;
     protected _isParentEntityAddedToScene;
-    protected _isPositionDirty = true;
-    protected _isRotationDirty = true;
     protected _colliderRequiresAutoSizing;
     protected _localOffset: Vector2;
     protected _isColliderRegisterd;
@@ -57,6 +57,46 @@ abstract class Collider extends Component{
 
     public overlaps(other: Collider){
         return this.shape.overlaps(other.shape);
+    }
+
+    public collidesWith(collider: Collider, motion: Vector2){
+        let oldPosition = this.shape.position;
+        this.shape.position = Vector2.add(this.shape.position, motion);
+
+        let result = this.shape.collidesWithShape(collider.shape);
+        if (result)
+            result.collider = collider;
+
+        this.shape.position = oldPosition;
+
+        return result;
+    }
+
+    public onAddedToEntity(){
+        if (this._colliderRequiresAutoSizing){
+            if (!(this instanceof BoxCollider)){
+                console.error("Only box and circle colliders can be created automatically");
+            }
+
+            let renderable = this.entity.getComponent<RenderableComponent>(RenderableComponent);
+            if (!renderable){
+                let renderbaleBounds = renderable.bounds;
+
+                let width = renderbaleBounds.width / this.entity.transform.scale.x;
+                let height = renderbaleBounds.height / this.entity.transform.scale.y;
+
+                if (this instanceof BoxCollider){
+                    let boxCollider = this as BoxCollider;
+                    boxCollider.width = width;
+                    boxCollider.height = height;
+
+                    this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.transform.position);
+                }
+            }
+        }
+
+        this._isParentEntityAddedToScene = true;
+        this.registerColliderWithPhysicsSystem();
     }
 
     public onEntityTransformChanged(comp: ComponentTransform){

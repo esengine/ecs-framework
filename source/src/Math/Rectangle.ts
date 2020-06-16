@@ -23,6 +23,10 @@ class Rectangle {
         return this.y + this.height;
     }
 
+    public get center(){
+        return new Vector2(this.x + (this.width / 2), this.y + (this.height / 2));
+    }
+
     public get location() {
         return new Vector2(this.x, this.y);
     }
@@ -139,5 +143,36 @@ class Rectangle {
             this.width = maxX - minX;
             this.height = maxY - minY;
         }
+    }
+
+    /**
+     * 给定多边形的点，计算边界
+     * @param points 
+     */
+    public static rectEncompassingPoints(points: Vector2[]){
+        let minX = Number.POSITIVE_INFINITY;
+        let minY = Number.POSITIVE_INFINITY;
+        let maxX = Number.NEGATIVE_INFINITY;
+        let maxY = Number.NEGATIVE_INFINITY;
+
+        for (let i = 0; i < points.length; i ++){
+            let pt = points[i];
+
+            if (pt.x < minX){
+                minX = pt.x;
+            }
+            if (pt.x > maxX){
+                maxX = pt.x;
+            }
+
+            if (pt.y < minY){
+                minY = pt.y;
+            }
+            if (pt.y > maxY){
+                maxY = pt.y;
+            }
+        }
+
+        return this.fromMinMax(minX, minY, maxX, maxY);
     }
 }

@@ -1,4 +1,4 @@
-class SpawnComponent extends Component {
+class SpawnComponent extends Component implements ITriggerListener {
     public cooldown = -1;
     public minInterval = 2;
     public maxInterval = 60;
@@ -17,6 +17,15 @@ class SpawnComponent extends Component {
 
     public update() {
         // console.log("update");
+        this.entity.getComponent<Mover>(Mover).move(new Vector2(1, 0));
+    }
+
+    public onTriggerEnter(other: Collider, local: Collider){
+        console.log("enter collider", other, local);
+    }
+
+    public onTriggerExit(other: Collider, local: Collider){
+        console.log("exit collider", other, local);
     }
 }
 

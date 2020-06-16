@@ -57,6 +57,10 @@ abstract class Component {
 
     }
 
+    public debugRender(){
+        
+    }
+
     /** 内部使用 运行时不应该调用 */
     public registerComponent(){
         this.entity.componentBits.set(ComponentTypeManager.getIndexFor(this), false);
