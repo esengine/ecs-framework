@@ -552,6 +552,59 @@ declare class Flags {
     static unsetFlag(self: number, flag: number): number;
     static invertFlags(self: number): number;
 }
+declare interface Long {
+    toInt(): number;
+    negate(): Long;
+    add(addend: any): any;
+    divide(divisor: any): Long;
+    equals(other: any): any;
+    not(): any;
+    toString(radix: any): string;
+    isZero(): any;
+    isNegative(): any;
+    multiply(multiplier: any): Long;
+    shiftRight(numBits: any): any;
+    shiftRightUnsigned(numBits: any): any;
+    subtract(subtrahend: any): Long;
+    greaterThan(other: any): any;
+    compare(other: any): any;
+    toUnsigned(): Long;
+    toNumber(): any;
+    greaterThanOrEqual(other: any): any;
+    isOdd(): any;
+    lessThan(other: any): any;
+}
+declare class Long {
+    low: number;
+    high: number;
+    unsigned: boolean;
+    private static ini_cache;
+    private static unit_cache;
+    static uzero: Long;
+    static zero: Long;
+    static two_pwr_16_dbl: number;
+    static two_pwe_24_dbl: number;
+    static two_pwr_32_dbl: number;
+    static two_pwr_64_dbl: number;
+    static two_pwr_63_dbl: number;
+    static two_pwr_24: Long;
+    static max_unsigned_value: Long;
+    static min_value: Long;
+    static max_value: Long;
+    static one: Long;
+    static neg_one: Long;
+    constructor(low: number, high: number, unsigned?: boolean);
+    shiftLeft(numBits: number | Long): Long;
+    static fromBits(lowBits: any, highBits: any, unsigned: any): Long;
+    static fromValue(val: number | string | {
+        low: number;
+        high: number;
+        unsigned: boolean;
+    }, unsigned?: any): Long;
+    static fromString(str: string, unsigned: any, radix?: any): Long;
+    static fromNumber(value: any, unsigned?: any): Long;
+    static fromInt(value: any, unsigned?: any): Long;
+}
 declare class MathHelper {
     static readonly Epsilon: number;
     static readonly Rad2Deg: number;

@@ -57,15 +57,15 @@ class SpatialHash {
 
         this._overlapTestCircle.radius = radius;
         this._overlapTestCircle.position = circleCenter;
-
+        
         let resultCounter = 0;
         let potentials = this.aabbBroadphase(bounds, null, layerMask);
-        for (let i = 0; i < potentials.length; i ++){
+        for (let i = 0; i < potentials.length; i++) {
             let collider = potentials[i];
-            if (collider instanceof BoxCollider){
+            if (collider instanceof BoxCollider) {
                 results[resultCounter] = collider;
-                resultCounter ++;
-            }else{
+                resultCounter++;
+            } else {
                 throw new Error("overlapCircle against this collider type is not implemented!");
             }
 
@@ -132,10 +132,10 @@ class NumberDictionary {
      * @param y 
      */
     private getKey(x: number, y: number): number {
-        return x << 32 | this.intToUint(y);
+        return Number(Long.fromValue(x).shiftLeft(32).toString(10)) | this.intToUint(y);
     }
 
-    private intToUint(i){
+    private intToUint(i) {
         if (i >= 0)
             return i;
         else
