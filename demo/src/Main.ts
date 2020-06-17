@@ -59,6 +59,14 @@ class Main extends eui.UILayer {
 
     private updateFrame(evt: egret.Event){
         Main.emitter.emit(CoreEmitterType.Update, evt);
+        let activeScene = SceneManager.getActiveScene();
+        if (activeScene){
+            let player = activeScene.findEntity("player");
+            if (player){
+                let mover = player.getComponent<Mover>(Mover);
+                mover.move(new Vector2(0, 0));
+            }
+        }
     }
 
     private async runGame() {

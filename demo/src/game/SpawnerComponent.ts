@@ -17,7 +17,6 @@ class SpawnComponent extends Component implements ITriggerListener {
 
     public update() {
         // console.log("update");
-        this.entity.getComponent<Mover>(Mover).move(new Vector2(0, 0));
     }
 
     public onTriggerEnter(other: Collider, local: Collider){

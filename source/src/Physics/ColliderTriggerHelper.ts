@@ -19,15 +19,14 @@ class ColliderTriggerHelper {
             let collider = colliders[i];
 
             let neighbors = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-            for (let i = 0; i < neighbors.length; i++) {
-                let neighbor = neighbors[i];
+            for (let j = 0; j < neighbors.length; j++) {
+                let neighbor = neighbors[j];
                 if (!collider.isTrigger && !neighbor.isTrigger)
                     continue;
 
                 if (collider.overlaps(neighbor)) {
                     let pair = new Pair<Collider>(collider, neighbor);
-                    let shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) &&
-                        !this._previousTriggerIntersections.contains(pair);
+                    let shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) && !this._previousTriggerIntersections.contains(pair);
 
                     if (shouldReportTriggerEvent)
                         this.notifyTriggerListeners(pair, true);

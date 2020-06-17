@@ -3084,14 +3084,13 @@ var ColliderTriggerHelper = (function () {
         for (var i = 0; i < colliders.length; i++) {
             var collider = colliders[i];
             var neighbors = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-            for (var i_2 = 0; i_2 < neighbors.length; i_2++) {
-                var neighbor = neighbors[i_2];
+            for (var j = 0; j < neighbors.length; j++) {
+                var neighbor = neighbors[j];
                 if (!collider.isTrigger && !neighbor.isTrigger)
                     continue;
                 if (collider.overlaps(neighbor)) {
                     var pair = new Pair(collider, neighbor);
-                    var shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) &&
-                        !this._previousTriggerIntersections.contains(pair);
+                    var shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) && !this._previousTriggerIntersections.contains(pair);
                     if (shouldReportTriggerEvent)
                         this.notifyTriggerListeners(pair, true);
                     this._activeTriggerIntersections.push(pair);
@@ -3134,12 +3133,12 @@ var ColliderTriggerHelper = (function () {
             this._tempTriggerList.length = 0;
             if (collisionPair.second.entity) {
                 collisionPair.second.entity.getComponents("ITriggerListener", this._tempTriggerList);
-                for (var i_3 = 0; i_3 < this._tempTriggerList.length; i_3++) {
+                for (var i_2 = 0; i_2 < this._tempTriggerList.length; i_2++) {
                     if (isEntering) {
-                        this._tempTriggerList[i_3].onTriggerEnter(collisionPair.first, collisionPair.second);
+                        this._tempTriggerList[i_2].onTriggerEnter(collisionPair.first, collisionPair.second);
                     }
                     else {
-                        this._tempTriggerList[i_3].onTriggerExit(collisionPair.first, collisionPair.second);
+                        this._tempTriggerList[i_2].onTriggerExit(collisionPair.first, collisionPair.second);
                     }
                 }
                 this._tempTriggerList.length = 0;
