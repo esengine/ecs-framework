@@ -559,11 +559,11 @@ declare interface Long {
     divide(divisor: any): Long;
     equals(other: any): any;
     not(): any;
-    toString(radix: any): string;
+    toString(radix?: any): string;
     isZero(): any;
     isNegative(): any;
     multiply(multiplier: any): Long;
-    shiftRight(numBits: any): any;
+    shiftRight(numBits: any): Long;
     shiftRightUnsigned(numBits: any): any;
     subtract(subtrahend: any): Long;
     greaterThan(other: any): any;
@@ -593,7 +593,7 @@ declare class Long {
     static max_value: Long;
     static one: Long;
     static neg_one: Long;
-    constructor(low: number, high: number, unsigned?: boolean);
+    constructor(low: number, high: number, unsigned: boolean);
     shiftLeft(numBits: number | Long): Long;
     static fromBits(lowBits: any, highBits: any, unsigned: any): Long;
     static fromValue(val: number | string | {

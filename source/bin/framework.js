@@ -2613,7 +2613,6 @@ var Flags = (function () {
 }());
 var Long = (function () {
     function Long(low, high, unsigned) {
-        if (unsigned === void 0) { unsigned = true; }
         this.low = low | 0;
         this.high = high | 0;
         this.unsigned = !!unsigned;
@@ -2841,8 +2840,8 @@ Long.prototype.divide = function (divisor) {
                 return Long.one;
             else {
                 var halfThis = i.shiftRight(1);
-                approx = halfThis.div(divisor).shl(1);
-                if (approx.eq(Long.zero)) {
+                approx = halfThis.divide(divisor).shiftLeft(1);
+                if (approx.equals(Long.zero)) {
                     return divisor.isNegative() ? Long.one : Long.neg_one;
                 }
                 else {
@@ -2860,7 +2859,7 @@ Long.prototype.divide = function (divisor) {
             return i.negate().divide(divisor).negate();
         }
         else if (divisor.isNegative())
-            return this.div(divisor.negate()).neg();
+            return i.divide(divisor.negate()).negate();
         res = Long.zero;
     }
     else {
@@ -2878,7 +2877,7 @@ Long.prototype.divide = function (divisor) {
         var log2 = Math.ceil(Math.log(approx) / Math.LN2), delta = (log2 <= 48) ? 1 : Math.pow(2, log2 - 48), approxRes = Long.fromNumber(approx), approxRem = approxRes.multiply(divisor);
         while (approxRem.isNegative() || approxRem.greaterThan(rem)) {
             approx -= delta;
-            approxRes = Long.fromNumber(approx, this.unsigned);
+            approxRes = Long.fromNumber(approx, i.unsigned);
             approxRem = approxRes.multiply(divisor);
         }
         if (approxRes.isZero())
@@ -2924,7 +2923,7 @@ Long.prototype.greaterThan = function (other) {
 };
 Long.prototype.compare = function (other) {
     var i = this;
-    if (typeof (other) === "number")
+    if (typeof other === "number")
         other = Long.fromValue(other);
     if (i.equals(other))
         return 0;
@@ -4251,7 +4250,7 @@ var NumberDictionary = (function () {
         this._store = new Map();
     }
     NumberDictionary.prototype.getKey = function (x, y) {
-        return Number(Long.fromValue(x).shiftLeft(32).toString(10)) | this.intToUint(y);
+        return Number(Long.fromNumber(x << 32).toString()) | this.intToUint(y);
     };
     NumberDictionary.prototype.intToUint = function (i) {
         if (i >= 0)

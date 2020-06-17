@@ -132,7 +132,7 @@ class NumberDictionary {
      * @param y 
      */
     private getKey(x: number, y: number): number {
-        return Number(Long.fromValue(x).shiftLeft(32).toString(10)) | this.intToUint(y);
+        return Number(Long.fromNumber(x << 32).toString()) | this.intToUint(y);
     }
 
     private intToUint(i) {

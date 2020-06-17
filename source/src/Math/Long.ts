@@ -5,11 +5,11 @@ declare interface Long {
     divide(divisor): Long;
     equals(other);
     not();
-    toString(radix): string;
+    toString(radix?): string;
     isZero();
     isNegative();
     multiply(multiplier): Long;
-    shiftRight(numBits);
+    shiftRight(numBits): Long;
     shiftRightUnsigned(numBits);
     subtract(subtrahend): Long;
     greaterThan(other);
@@ -42,7 +42,7 @@ class Long {
     public static one = Long.fromInt(1);
     public static neg_one = Long.fromInt(-1);
 
-    constructor(low: number, high: number, unsigned: boolean = true){
+    constructor(low: number, high: number, unsigned: boolean){
         this.low = low | 0;
         this.high = high | 0;
         this.unsigned = !!unsigned;
@@ -216,7 +216,7 @@ Long.prototype.not = function(){
     return Long.fromBits(~i.low, ~i.high, i.unsigned);
 }
 
-Long.prototype.toString = function(radix){
+Long.prototype.toString = function(radix?){
     let i = this as Long;
     radix = radix || 10;
     if (radix < 2 || 36 < radix)
@@ -271,7 +271,7 @@ Long.prototype.divide = function(divisor: number | Long){
 
     if (i.isZero())
         return i.unsigned ? Long.uzero : Long.zero;
-    let approx, rem: Long, res;
+    let approx: number | Long, rem: Long, res;
     if (!i.unsigned) {
         if (i.equals(Long.min_value)) {
             if (divisor.equals(Long.one) || divisor.equals(Long.neg_one))
@@ -279,9 +279,9 @@ Long.prototype.divide = function(divisor: number | Long){
             else if (divisor.equals(Long.min_value))
                 return Long.one;
             else {
-                var halfThis = i.shiftRight(1);
-                approx = halfThis.div(divisor).shl(1);
-                if (approx.eq(Long.zero)) {
+                let halfThis = i.shiftRight(1);
+                approx = halfThis.divide(divisor).shiftLeft(1);
+                if (approx.equals(Long.zero)) {
                     return divisor.isNegative() ? Long.one : Long.neg_one;
                 } else {
                     rem = i.subtract(divisor.multiply(approx));
@@ -296,7 +296,7 @@ Long.prototype.divide = function(divisor: number | Long){
                 return i.negate().divide(divisor.negate());
             return i.negate().divide(divisor).negate();
         } else if (divisor.isNegative())
-            return this.div(divisor.negate()).neg();
+            return i.divide(divisor.negate()).negate();
         res = Long.zero;
     } else {
         if (!divisor.unsigned)
@@ -318,7 +318,7 @@ Long.prototype.divide = function(divisor: number | Long){
             approxRem = approxRes.multiply(divisor);
         while (approxRem.isNegative() || approxRem.greaterThan(rem)) {
             approx -= delta;
-            approxRes = Long.fromNumber(approx, this.unsigned);
+            approxRes = Long.fromNumber(approx, i.unsigned);
             approxRem = approxRes.multiply(divisor);
         }
 
@@ -358,7 +358,7 @@ Long.prototype.subtract = function(subtrahend: number | Long){
     let i = this as Long;
     if (typeof subtrahend === "number")
         subtrahend = Long.fromValue(subtrahend);
-    return i.add((subtrahend as Long).negate());
+    return i.add(subtrahend.negate());
 }
 
 Long.prototype.greaterThan = function(other){
@@ -368,7 +368,7 @@ Long.prototype.greaterThan = function(other){
 
 Long.prototype.compare = function(other: number | Long){
     let i = this as Long;
-    if (typeof (other) === "number")
+    if (typeof other === "number")
         other = Long.fromValue(other);
     if (i.equals(other))
         return 0;
