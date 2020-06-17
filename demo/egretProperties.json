@@ -27,6 +27,10 @@
     {
       "name": "framework",
       "path": "./libs/framework"
+    },
+    {
+      "name": "long",
+      "path": "./libs/long"
     }
   ]
 }

@@ -7,7 +7,8 @@
 		"libs/modules/game/game.js",
 		"libs/modules/tween/tween.js",
 		"libs/modules/promise/promise.js",
-		"libs/framework/framework.js"
+		"libs/framework/framework.js",
+		"libs/long/long.js"
 	],
 	"game": [
 		"bin-debug/AssetAdapter.js",
