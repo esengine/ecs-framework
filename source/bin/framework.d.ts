@@ -782,7 +782,6 @@ declare class NumberDictionary {
     add(x: number, y: number, list: Collider[]): void;
     remove(obj: Collider): void;
     tryGetValue(x: number, y: number): Collider[];
-    getAllObjects(): Collider[];
     clear(): void;
 }
 declare class Emitter<T> {

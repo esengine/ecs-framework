@@ -20,6 +20,8 @@ class SpawnComponent extends Component implements ITriggerListener {
     }
 
     public onTriggerEnter(other: Collider, local: Collider){
+        if (other == local)
+            console.log("repeat collider")
         console.log("enter collider");
     }
 

@@ -20,7 +20,8 @@ class EntityList{
     }
 
     public add(entity: Entity){
-        this._entitiesToAdded.push(entity);
+        if (this._entitiesToAdded.indexOf(entity) == -1)
+            this._entitiesToAdded.push(entity);
     }
 
     public remove(entity: Entity){
@@ -108,10 +109,12 @@ class EntityList{
             this._entitiesToAdded = this._tempEntityList;
             this._tempEntityList = temp;
             this._tempEntityList.forEach(entity => {
-                this._entities.push(entity);
-                entity.scene = this.scene;
+                if (!this._entities.contains(entity)){
+                    this._entities.push(entity);
+                    entity.scene = this.scene;
 
-                this.scene.entityProcessors.onEntityAdded(entity)
+                    this.scene.entityProcessors.onEntityAdded(entity)
+                }
             });
 
             this._tempEntityList.forEach(entity => entity.onAddedToScene());

@@ -117,7 +117,7 @@ class Main extends eui.UILayer {
         player.addComponent(new Mover());
 
         let player2 = scene.createEntity("player2");
-        player2.addComponent(new BoxCollider()).setSize(100, 100);
+        player2.addComponent(new BoxCollider()).setSize(99, 99);
 
         // Main.emitter.addObserver(CoreEmitterType.Update, ()=>{
         //     console.log("update emitter");

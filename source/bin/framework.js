@@ -2401,7 +2401,8 @@ var EntityList = (function () {
         configurable: true
     });
     EntityList.prototype.add = function (entity) {
-        this._entitiesToAdded.push(entity);
+        if (this._entitiesToAdded.indexOf(entity) == -1)
+            this._entitiesToAdded.push(entity);
     };
     EntityList.prototype.remove = function (entity) {
         if (this._entitiesToAdded.contains(entity)) {
@@ -2473,9 +2474,11 @@ var EntityList = (function () {
             this._entitiesToAdded = this._tempEntityList;
             this._tempEntityList = temp;
             this._tempEntityList.forEach(function (entity) {
-                _this._entities.push(entity);
-                entity.scene = _this.scene;
-                _this.scene.entityProcessors.onEntityAdded(entity);
+                if (!_this._entities.contains(entity)) {
+                    _this._entities.push(entity);
+                    entity.scene = _this.scene;
+                    _this.scene.entityProcessors.onEntityAdded(entity);
+                }
             });
             this._tempEntityList.forEach(function (entity) { return entity.onAddedToScene(); });
             this._tempEntityList.length = 0;
@@ -3084,17 +3087,26 @@ var ColliderTriggerHelper = (function () {
         for (var i = 0; i < colliders.length; i++) {
             var collider = colliders[i];
             var neighbors = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-            for (var j = 0; j < neighbors.length; j++) {
+            var _loop_5 = function (j) {
                 var neighbor = neighbors[j];
                 if (!collider.isTrigger && !neighbor.isTrigger)
-                    continue;
+                    return "continue";
                 if (collider.overlaps(neighbor)) {
-                    var pair = new Pair(collider, neighbor);
-                    var shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) && !this._previousTriggerIntersections.contains(pair);
+                    var pair_1 = new Pair(collider, neighbor);
+                    var shouldReportTriggerEvent = this_1._activeTriggerIntersections.findIndex(function (value) {
+                        return value.first == pair_1.first && value.second == pair_1.second;
+                    }) == -1 && this_1._previousTriggerIntersections.findIndex(function (value) {
+                        return value.first == pair_1.first && value.second == pair_1.second;
+                    }) == -1;
                     if (shouldReportTriggerEvent)
-                        this.notifyTriggerListeners(pair, true);
-                    this._activeTriggerIntersections.push(pair);
+                        this_1.notifyTriggerListeners(pair_1, true);
+                    if (!this_1._activeTriggerIntersections.contains(pair_1))
+                        this_1._activeTriggerIntersections.push(pair_1);
                 }
+            };
+            var this_1 = this;
+            for (var j = 0; j < neighbors.length; j++) {
+                _loop_5(j);
             }
         }
         ListPool.free(colliders);
@@ -3102,22 +3114,27 @@ var ColliderTriggerHelper = (function () {
     };
     ColliderTriggerHelper.prototype.checkForExitedColliders = function () {
         var _this = this;
-        var tempIntersections = [];
-        this._previousTriggerIntersections = this._previousTriggerIntersections.filter(function (value) {
-            for (var i = 0; i < _this._activeTriggerIntersections.length; i++) {
-                if (value == _this._activeTriggerIntersections[i]) {
-                    tempIntersections.push(value);
+        var _loop_6 = function (i) {
+            var index = this_2._previousTriggerIntersections.findIndex(function (value) {
+                if (value.first == _this._activeTriggerIntersections[i].first && value.second == _this._activeTriggerIntersections[i].second)
                     return true;
-                }
-            }
-            return false;
-        });
+                return false;
+            });
+            if (index != -1)
+                this_2._previousTriggerIntersections.removeAt(index);
+        };
+        var this_2 = this;
+        for (var i = 0; i < this._activeTriggerIntersections.length; i++) {
+            _loop_6(i);
+        }
         for (var i = 0; i < this._previousTriggerIntersections.length; i++) {
             this.notifyTriggerListeners(this._previousTriggerIntersections[i], false);
         }
         this._previousTriggerIntersections.length = 0;
-        for (var i = 0; i < tempIntersections.length; i++) {
-            this._previousTriggerIntersections.push(tempIntersections[i]);
+        for (var i = 0; i < this._activeTriggerIntersections.length; i++) {
+            if (!this._previousTriggerIntersections.contains(this._activeTriggerIntersections[i])) {
+                this._previousTriggerIntersections.push(this._activeTriggerIntersections[i]);
+            }
         }
         this._activeTriggerIntersections.length = 0;
     };
@@ -3814,8 +3831,10 @@ var SpatialHash = (function () {
                     var collider = cell[i];
                     if (collider == excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer))
                         continue;
-                    if (bounds.intersects(collider.bounds))
-                        this._tempHashSet.push(collider);
+                    if (bounds.intersects(collider.bounds)) {
+                        if (this._tempHashSet.indexOf(collider) == -1)
+                            this._tempHashSet.push(collider);
+                    }
                 }
             }
         }
@@ -3866,11 +3885,6 @@ var NumberDictionary = (function () {
     };
     NumberDictionary.prototype.tryGetValue = function (x, y) {
         return this._store.get(this.getKey(x, y));
-    };
-    NumberDictionary.prototype.getAllObjects = function () {
-        var set = [];
-        this._store.forEach(function (list) { return set.concat(list); });
-        return set;
     };
     NumberDictionary.prototype.clear = function () {
         this._store.clear();

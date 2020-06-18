@@ -26,12 +26,17 @@ class ColliderTriggerHelper {
 
                 if (collider.overlaps(neighbor)) {
                     let pair = new Pair<Collider>(collider, neighbor);
-                    let shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) && !this._previousTriggerIntersections.contains(pair);
+                    let shouldReportTriggerEvent = this._activeTriggerIntersections.findIndex(value => {
+                        return value.first == pair.first && value.second == pair.second;
+                    }) == -1 && this._previousTriggerIntersections.findIndex(value => {
+                        return value.first == pair.first && value.second == pair.second;
+                    }) == -1;
 
                     if (shouldReportTriggerEvent)
                         this.notifyTriggerListeners(pair, true);
 
-                    this._activeTriggerIntersections.push(pair);
+                    if (!this._activeTriggerIntersections.contains(pair))
+                        this._activeTriggerIntersections.push(pair);
                 }
             }
         }
@@ -42,24 +47,25 @@ class ColliderTriggerHelper {
     }
 
     private checkForExitedColliders(){
-        let tempIntersections = [];
-        this._previousTriggerIntersections = this._previousTriggerIntersections.filter(value => {
-            for (let i = 0; i < this._activeTriggerIntersections.length; i ++){
-                if (value == this._activeTriggerIntersections[i]){
-                    tempIntersections.push(value);
+        for (let i = 0; i < this._activeTriggerIntersections.length; i ++){
+            let index = this._previousTriggerIntersections.findIndex(value => {
+                if (value.first == this._activeTriggerIntersections[i].first && value.second == this._activeTriggerIntersections[i].second)
                     return true;
-                }
-            }
 
-            return false;
-        });
+                return false;
+            });
+            if (index != -1)
+                this._previousTriggerIntersections.removeAt(index);
+        }
 
         for (let i = 0; i < this._previousTriggerIntersections.length; i ++){
             this.notifyTriggerListeners(this._previousTriggerIntersections[i], false)
         }
         this._previousTriggerIntersections.length = 0;
-        for (let i = 0; i < tempIntersections.length; i ++){
-            this._previousTriggerIntersections.push(tempIntersections[i]);
+        for (let i = 0; i < this._activeTriggerIntersections.length; i ++){
+            if (!this._previousTriggerIntersections.contains(this._activeTriggerIntersections[i])){
+                this._previousTriggerIntersections.push(this._activeTriggerIntersections[i]);
+            }
         }
         this._activeTriggerIntersections.length = 0;
     }

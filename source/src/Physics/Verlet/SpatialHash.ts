@@ -94,8 +94,10 @@ class SpatialHash {
                     if (collider == excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer))
                         continue;
 
-                    if (bounds.intersects(collider.bounds))
-                        this._tempHashSet.push(collider);
+                    if (bounds.intersects(collider.bounds)){
+                        if (this._tempHashSet.indexOf(collider) == -1)
+                            this._tempHashSet.push(collider);
+                    }
                 }
             }
         }
@@ -155,14 +157,6 @@ class NumberDictionary {
 
     public tryGetValue(x: number, y: number): Collider[] {
         return this._store.get(this.getKey(x, y));
-    }
-
-    public getAllObjects(): Collider[] {
-        let set: Collider[] = [];
-
-        this._store.forEach(list => set.concat(list));
-
-        return set;
     }
 
     public clear() {
