@@ -33,6 +33,11 @@ class Vector2 {
         this.y = y ? y : this.x;
     }
 
+    /**
+     * 
+     * @param value1 
+     * @param value2 
+     */
     public static add(value1: Vector2, value2: Vector2){
         let result: Vector2 = new Vector2(0, 0);
         result.x = value1.x + value2.x;
@@ -40,6 +45,11 @@ class Vector2 {
         return result;
     }
 
+    /**
+     * 
+     * @param value1 
+     * @param value2 
+     */
     public static divide(value1: Vector2, value2: Vector2){
         let result: Vector2 = new Vector2(0, 0);
         result.x = value1.x / value2.x;
@@ -47,6 +57,11 @@ class Vector2 {
         return value1;
     }
 
+    /**
+     * 
+     * @param value1 
+     * @param value2 
+     */
     public static multiply(value1: Vector2, value2: Vector2){
         let result: Vector2 = new Vector2(0, 0);
         result.x = value1.x * value2.x;
@@ -54,6 +69,11 @@ class Vector2 {
         return result;
     }
 
+    /**
+     * 
+     * @param value1 
+     * @param value2 
+     */
     public static subtract(value1: Vector2, value2: Vector2){
         let result: Vector2 = new Vector2(0, 0);
         result.x = value1.x - value2.x;
@@ -68,10 +88,16 @@ class Vector2 {
         this.y *= val;
     }
 
+    /** 返回它的长度 */
     public length(){
         return Math.sqrt((this.x * this.x) + (this.y * this.y));
     }
 
+    /**
+     * 创建一个新的Vector2
+     * 它包含来自另一个向量的标准化值。
+     * @param value 
+     */
     public static normalize(value: Vector2){
         let val = 1 / Math.sqrt((value.x * value.x) + (value.y * value.y));
         value.x *= val;
@@ -98,19 +124,39 @@ class Vector2 {
         return (v1 * v1) + (v2 * v2);
     }
 
+    /**
+     * 包含指定向量的线性插值
+     * @param value1 第一个向量
+     * @param value2 第二个向量
+     * @param amount 权重值(0.0到1.0之间)
+     */
     public static lerp(value1: Vector2, value2: Vector2, amount: number){
         return new Vector2(MathHelper.lerp(value1.x, value2.x, amount), MathHelper.lerp(value1.y, value2.y, amount));
     }
 
+    /**
+     * 
+     * @param position 
+     * @param matrix 
+     */
     public static transform(position: Vector2, matrix: Matrix2D){
         return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
     }
 
+    /**
+     * 返回两个向量之间的距离
+     * @param value1 
+     * @param value2 
+     */
     public static distance(value1: Vector2, value2: Vector2){
         let v1 = value1.x - value2.x, v2 = value1.y - value2.y;
         return Math.sqrt((v1 * v1) + (v2 * v2));
     }
 
+    /**
+     * 矢量反演的结果
+     * @param value 
+     */
     public static negate(value: Vector2){
         let result: Vector2 = new Vector2();
         result.x = -value.x;

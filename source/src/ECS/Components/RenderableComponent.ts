@@ -3,9 +3,9 @@
  */
 abstract class RenderableComponent extends Component {
     private _isVisible: boolean;
-    private _areBoundsDirty = true;
-    private _bounds: Rectangle;
-    private _localOffset: Vector2;
+    protected _areBoundsDirty = true;
+    protected _bounds: Rectangle;
+    protected _localOffset: Vector2;
 
     public get width(){
         return this.getWidth();
@@ -53,6 +53,8 @@ abstract class RenderableComponent extends Component {
     protected onBecameVisible(){}
 
     protected onBecameInvisible(){}
+
+    public abstract render(camera: Camera);
 
     public isVisibleFromCamera(camera: Camera): boolean{
         this.isVisible = camera.bounds.intersects(this.bounds);

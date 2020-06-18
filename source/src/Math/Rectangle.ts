@@ -73,7 +73,7 @@ class Rectangle {
             let dt = res.y - this.top;
             let db = this.bottom - res.y;
 
-            let min = MathHelper.minOf(dl, dr, dt, db);
+            let min = Math.min(dl, dr, dt, db);
             if (min == dt){
                 res.y = this.top;
                 edgeNormal.y = -1;
@@ -134,10 +134,10 @@ class Rectangle {
             bottomLeft = Vector2.transform(bottomLeft, this._transformMat);
             bottomRight = Vector2.transform(bottomRight, this._transformMat);
 
-            let minX = MathHelper.minOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-            let maxX = MathHelper.maxOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-            let minY = MathHelper.minOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-            let maxY = MathHelper.maxOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+            let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+            let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+            let minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+            let maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
 
             this.location = new Vector2(minX, minY);
             this.width = maxX - minX;

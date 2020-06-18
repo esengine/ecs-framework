@@ -1492,10 +1492,10 @@ var Camera = (function (_super) {
                 if (this.entity.transform.rotation != 0) {
                     var topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));
                     var bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left, stage.stageHeight - this._inset.bottom));
-                    var minX = MathHelper.minOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                    var maxX = MathHelper.maxOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                    var minY = MathHelper.minOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-                    var maxY = MathHelper.maxOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                    var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                    var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                    var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                    var maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
                     this._bounds.location = new Vector2(minX, minY);
                     this._bounds.width = maxX - minX;
                     this._bounds.height = maxY - minY;
@@ -1769,6 +1769,19 @@ var SpriteRenderer = (function (_super) {
     function SpriteRenderer() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    Object.defineProperty(SpriteRenderer.prototype, "bounds", {
+        get: function () {
+            if (this._areBoundsDirty) {
+                if (this._sprite) {
+                    this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this._sprite.width, this._sprite.height);
+                    this._areBoundsDirty = false;
+                }
+                return this.bounds;
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(SpriteRenderer.prototype, "sprite", {
         get: function () {
             return this._sprite;
@@ -1785,7 +1798,16 @@ var SpriteRenderer = (function (_super) {
             this._origin = new Vector2(this._sprite.anchorOffsetX, this._sprite.anchorOffsetY);
         return this;
     };
-    SpriteRenderer.prototype.initialize = function () {
+    SpriteRenderer.prototype.render = function (camera) {
+        if (!this.sprite)
+            return;
+        this.sprite.x = this.entity.transform.position.x;
+        this.sprite.y = this.entity.transform.position.y;
+        this.sprite.rotation = this.entity.transform.rotation;
+        this.sprite.anchorOffsetX = this._origin.x;
+        this.sprite.anchorOffsetY = this._origin.y;
+        this.sprite.scaleX = this.entity.transform.scale.x;
+        this.sprite.scaleY = this.entity.transform.scale.y;
     };
     return SpriteRenderer;
 }(RenderableComponent));
@@ -2636,12 +2658,6 @@ var MathHelper = (function () {
             return max;
         return value;
     };
-    MathHelper.minOf = function (a, b, c, d) {
-        return Math.min(a, Math.min(b, Math.min(c, d)));
-    };
-    MathHelper.maxOf = function (a, b, c, d) {
-        return Math.max(a, Math.max(b, Math.max(c, d)));
-    };
     MathHelper.pointOnCirlce = function (circleCenter, radius, angleInDegrees) {
         var radians = MathHelper.toRadians(angleInDegrees);
         return new Vector2(Math.cos(radians) * radians + circleCenter.x, Math.sin(radians) * radians + circleCenter.y);
@@ -2881,7 +2897,7 @@ var Rectangle = (function () {
             var dr = this.right - res.x;
             var dt = res.y - this.top;
             var db = this.bottom - res.y;
-            var min = MathHelper.minOf(dl, dr, dt, db);
+            var min = Math.min(dl, dr, dt, db);
             if (min == dt) {
                 res.y = this.top;
                 edgeNormal.y = -1;
@@ -2940,10 +2956,10 @@ var Rectangle = (function () {
             topRight = Vector2.transform(topRight, this._transformMat);
             bottomLeft = Vector2.transform(bottomLeft, this._transformMat);
             bottomRight = Vector2.transform(bottomRight, this._transformMat);
-            var minX = MathHelper.minOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-            var maxX = MathHelper.maxOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-            var minY = MathHelper.minOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-            var maxY = MathHelper.maxOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+            var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+            var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+            var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+            var maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
             this.location = new Vector2(minX, minY);
             this.width = maxX - minX;
             this.height = maxY - minY;

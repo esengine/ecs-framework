@@ -25,10 +25,10 @@ class Camera extends Component {
                 let topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));
                 let bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left, stage.stageHeight - this._inset.bottom));
 
-                let minX = MathHelper.minOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                let maxX = MathHelper.maxOf(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                let minY = MathHelper.minOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-                let maxY = MathHelper.maxOf(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                let minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                let maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
 
                 this._bounds.location = new Vector2(minX, minY);
                 this._bounds.width = maxX - minX;

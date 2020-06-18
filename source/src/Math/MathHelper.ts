@@ -45,14 +45,6 @@ class MathHelper {
         return value;
     }
 
-    public static minOf(a: number, b: number, c: number, d: number){
-        return Math.min(a, Math.min(b, Math.min(c, d)));
-    }
-
-    public static maxOf(a: number, b: number, c: number, d: number){
-        return Math.max(a, Math.max(b, Math.max(c, d)));
-    }
-
     public static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number){
         let radians = MathHelper.toRadians(angleInDegrees);
         return new Vector2(Math.cos(radians) * radians + circleCenter.x, Math.sin(radians) * radians + circleCenter.y);

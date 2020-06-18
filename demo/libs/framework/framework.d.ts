@@ -357,9 +357,9 @@ declare class PolygonMesh extends Mesh {
 }
 declare abstract class RenderableComponent extends Component {
     private _isVisible;
-    private _areBoundsDirty;
-    private _bounds;
-    private _localOffset;
+    protected _areBoundsDirty: boolean;
+    protected _bounds: Rectangle;
+    protected _localOffset: Vector2;
     readonly width: number;
     readonly height: number;
     isVisible: boolean;
@@ -369,14 +369,16 @@ declare abstract class RenderableComponent extends Component {
     protected getBounds(): Rectangle;
     protected onBecameVisible(): void;
     protected onBecameInvisible(): void;
+    abstract render(camera: Camera): any;
     isVisibleFromCamera(camera: Camera): boolean;
 }
 declare class SpriteRenderer extends RenderableComponent {
     private _sprite;
     private _origin;
+    readonly bounds: any;
     sprite: egret.DisplayObject;
     setSprite(sprite: egret.DisplayObject): SpriteRenderer;
-    initialize(): void;
+    render(camera: Camera): void;
 }
 interface ITriggerListener {
     onTriggerEnter(other: Collider, local: Collider): any;
@@ -561,8 +563,6 @@ declare class MathHelper {
     static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number;
     static lerp(value1: number, value2: number, amount: number): number;
     static clamp(value: number, min: number, max: number): number;
-    static minOf(a: number, b: number, c: number, d: number): number;
-    static maxOf(a: number, b: number, c: number, d: number): number;
     static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number): Vector2;
 }
 declare class Matrix2D {
