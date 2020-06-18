@@ -1118,6 +1118,10 @@ var Scene = (function (_super) {
     };
     Scene.prototype.update = function () {
         Time.update(egret.getTimer());
+        for (var i = GlobalManager.globalManagers.length - 1; i >= 0; i--) {
+            if (GlobalManager.globalManagers[i].enabled)
+                GlobalManager.globalManagers[i].update();
+        }
         this.entities.updateLists();
         if (this.entityProcessors)
             this.entityProcessors.update();
@@ -3932,6 +3936,51 @@ var Emitter = (function () {
         }
     };
     return Emitter;
+}());
+var GlobalManager = (function () {
+    function GlobalManager() {
+    }
+    Object.defineProperty(GlobalManager.prototype, "enabled", {
+        get: function () {
+            return this._enabled;
+        },
+        set: function (value) {
+            this.setEnabled(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    GlobalManager.prototype.setEnabled = function (isEnabled) {
+        if (this._enabled != isEnabled) {
+            this._enabled = isEnabled;
+            if (this._enabled) {
+                this.onEnabled();
+            }
+            else {
+                this.onDisabled();
+            }
+        }
+    };
+    GlobalManager.prototype.onEnabled = function () { };
+    GlobalManager.prototype.onDisabled = function () { };
+    GlobalManager.prototype.update = function () { };
+    GlobalManager.registerGlobalManager = function (manager) {
+        this.globalManagers.push(manager);
+        manager.enabled = true;
+    };
+    GlobalManager.unregisterGlobalManager = function (manager) {
+        this.globalManagers.remove(manager);
+        manager.enabled = false;
+    };
+    GlobalManager.getGlobalManager = function (type) {
+        for (var i = 0; i < this.globalManagers.length; i++) {
+            if (this.globalManagers[i] instanceof type)
+                return this.globalManagers[i];
+        }
+        return null;
+    };
+    GlobalManager.globalManagers = [];
+    return GlobalManager;
 }());
 var ListPool = (function () {
     function ListPool() {

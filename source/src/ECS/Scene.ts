@@ -95,6 +95,11 @@ class Scene extends egret.DisplayObjectContainer {
    public update(){
       Time.update(egret.getTimer());
 
+      for (let i = GlobalManager.globalManagers.length - 1; i >= 0; i --){
+         if (GlobalManager.globalManagers[i].enabled)
+            GlobalManager.globalManagers[i].update();
+      }
+
       this.entities.updateLists();
 
       if (this.entityProcessors)

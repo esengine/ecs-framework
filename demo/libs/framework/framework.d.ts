@@ -791,6 +791,18 @@ declare class Emitter<T> {
     removeObserver(eventType: T, handler: Function): void;
     emit(eventType: T, data: any): void;
 }
+declare class GlobalManager {
+    static globalManagers: GlobalManager[];
+    private _enabled;
+    enabled: boolean;
+    setEnabled(isEnabled: boolean): void;
+    onEnabled(): void;
+    onDisabled(): void;
+    update(): void;
+    static registerGlobalManager(manager: GlobalManager): void;
+    static unregisterGlobalManager(manager: GlobalManager): void;
+    static getGlobalManager<T extends GlobalManager>(type: any): T;
+}
 declare class ListPool {
     private static readonly _objectQueue;
     static warmCache(cacheCount: number): void;
