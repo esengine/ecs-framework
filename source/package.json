@@ -1,6 +1,6 @@
 {
   "name": "@esengine/egret-framework",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "用于egret 包含众多高性能方法以供使用",
   "main": "index.js",
   "directories": {

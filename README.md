@@ -1,7 +1,5 @@
 # egret-framework
-用于egret 包含众多高性能方法以供使用
-
-> 正在施工中 试验版本 功能包含如下
+用于egret的一套框架 包含众多游戏中可能用到的系统
 
 ## 当前版本功能
 
@@ -40,6 +38,6 @@
   - [ ] 浮点助手类
 - [ ] 高性能数组
 
-## 相关库
+## 作者其他库（egret）
 
 - [x] [行为树/实用AI 系统](https://github.com/esengine/egret-BehaviourTree-ai)
