@@ -1,16 +1,18 @@
 ///<reference path="../Component.ts"/>
 class Camera extends Component {
     private _zoom;
-    private _origin: Vector2;
+    private _origin: Vector2 = Vector2.zero;
     private _transformMatrix: Matrix2D = Matrix2D.identity;
     private _inverseTransformMatrix = Matrix2D.identity;
+    private _projectionMatrix = Matrix2D.identity;
 
     private _minimumZoom = 0.3;
     private _maximumZoom = 3;
     private _areMatrixesDirty = true;
-    private _inset: CameraInset;
-    private _bounds: Rectangle;
+    private _inset: CameraInset = new CameraInset();
+    private _bounds: Rectangle = new Rectangle();
     private _areBoundsDirty = true;
+    private _isProjectionMatrixDirty = true;
 
     public get bounds(){
         if (this._areMatrixesDirty)
@@ -102,6 +104,14 @@ class Camera extends Component {
         super();
 
         this.setZoom(0);
+    }
+
+    public onSceneSizeChanged(newWidth: number, newHeight: number){
+        this._isProjectionMatrixDirty = true;
+        let oldOrigin = this._origin;
+        this.origin = new Vector2(newWidth / 2, newHeight / 2);
+
+        this.entity.transform.position = Vector2.add(this.entity.transform.position, Vector2.subtract(this._origin, oldOrigin));
     }
 
     public setMinimumZoom(minZoom: number): Camera{

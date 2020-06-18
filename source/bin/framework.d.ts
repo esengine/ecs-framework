@@ -230,6 +230,7 @@ declare class Scene extends egret.DisplayObjectContainer {
     onActive(): void;
     onDeactive(): void;
     update(): void;
+    render(): void;
     prepRenderState(): void;
     destory(): void;
 }
@@ -309,12 +310,14 @@ declare class Camera extends Component {
     private _origin;
     private _transformMatrix;
     private _inverseTransformMatrix;
+    private _projectionMatrix;
     private _minimumZoom;
     private _maximumZoom;
     private _areMatrixesDirty;
     private _inset;
     private _bounds;
     private _areBoundsDirty;
+    private _isProjectionMatrixDirty;
     readonly bounds: Rectangle;
     zoom: number;
     minimumZoom: number;
@@ -323,6 +326,7 @@ declare class Camera extends Component {
     readonly transformMatrix: Matrix2D;
     readonly inverseTransformMatrix: Matrix2D;
     constructor();
+    onSceneSizeChanged(newWidth: number, newHeight: number): void;
     setMinimumZoom(minZoom: number): Camera;
     setMaximumZoom(maxZoom: number): Camera;
     setZoom(zoom: number): this;
@@ -386,7 +390,7 @@ declare enum SpriteEffects {
 declare class SpriteRenderer extends RenderableComponent {
     private _sprite;
     private _origin;
-    readonly bounds: any;
+    protected getBounds(): Rectangle;
     sprite: egret.DisplayObject;
     setSprite(sprite: egret.DisplayObject): SpriteRenderer;
     origin: Vector2;

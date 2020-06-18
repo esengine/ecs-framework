@@ -16,7 +16,7 @@ class SpawnComponent extends Component implements ITriggerListener {
     }
 
     public update() {
-        // console.log("update");
+        console.log("update");
     }
 
     public onTriggerEnter(other: Collider, local: Collider){

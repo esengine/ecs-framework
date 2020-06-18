@@ -4,8 +4,8 @@
 abstract class RenderableComponent extends Component implements IRenderable {
     private _isVisible: boolean;
     protected _areBoundsDirty = true;
-    protected _bounds: Rectangle;
-    protected _localOffset: Vector2;
+    protected _bounds: Rectangle = new Rectangle();
+    protected _localOffset: Vector2 = Vector2.zero;
 
     public get width(){
         return this.getWidth();
@@ -57,8 +57,10 @@ abstract class RenderableComponent extends Component implements IRenderable {
     public abstract render(camera: Camera);
 
     public isVisibleFromCamera(camera: Camera): boolean{
-        this.isVisible = camera.bounds.intersects(this.bounds);
-        return this.isVisible;
+        // this.isVisible = camera.bounds.intersects(this.bounds);
+        // return this.isVisible;
+
+        return true;
     }
 
     public onEntityTransformChanged(comp: ComponentTransform){

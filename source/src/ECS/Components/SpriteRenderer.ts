@@ -2,7 +2,7 @@ class SpriteRenderer extends RenderableComponent {
     private _sprite: egret.DisplayObject;
     private _origin: Vector2;
 
-    public get bounds(){
+    protected getBounds(){
         if (this._areBoundsDirty){
             if (this._sprite){
                 this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin,

@@ -105,16 +105,15 @@ class Main extends eui.UILayer {
      * Create scene interface
      */
     protected createGameScene(): void {
+        let image = new eui.Image(RES.getRes("checkbox_select_disabled_png"));
+        this.addChild(image);
         let scene = SceneManager.createScene("main", new MainScene(this)).setActive();
         let player = scene.createEntity("player");
-        player.addComponent(new PolygonMesh([new Vector2(0, 0),
-            new Vector2(10, 0),
-            new Vector2(10, 10),
-            new Vector2(0, 10),
-            new Vector2(0, 0)]));
+        player.addComponent(new SpriteRenderer()).setSprite(image)
         player.addComponent(new SpawnComponent(EnemyType.worm));
         player.addComponent(new BoxCollider()).setSize(100, 100).isTrigger = true;
         player.addComponent(new Mover());
+        player.position = new Vector2(100, 100);
 
         let player2 = scene.createEntity("player2");
         player2.addComponent(new BoxCollider()).setSize(99, 99);

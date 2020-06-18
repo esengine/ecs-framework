@@ -1133,6 +1133,7 @@ var Scene = (function (_super) {
         Physics.reset();
         if (this.entityProcessors)
             this.entityProcessors.begin();
+        this.camera.onSceneSizeChanged(this.stage.width, this.stage.height);
     };
     Scene.prototype.onActive = function () {
     };
@@ -1151,6 +1152,12 @@ var Scene = (function (_super) {
         if (this.entityProcessors)
             this.entityProcessors.lateUpdate();
         this.renderableComponents.updateList();
+        this.render();
+    };
+    Scene.prototype.render = function () {
+        for (var i = 0; i < this._renderers.length; i++) {
+            this._renderers[i].render(this);
+        }
     };
     Scene.prototype.prepRenderState = function () {
         this._projectionMatrix.m11 = 2 / this.stage.width;
@@ -1499,12 +1506,17 @@ var Camera = (function (_super) {
     __extends(Camera, _super);
     function Camera() {
         var _this = _super.call(this) || this;
+        _this._origin = Vector2.zero;
         _this._transformMatrix = Matrix2D.identity;
         _this._inverseTransformMatrix = Matrix2D.identity;
+        _this._projectionMatrix = Matrix2D.identity;
         _this._minimumZoom = 0.3;
         _this._maximumZoom = 3;
         _this._areMatrixesDirty = true;
+        _this._inset = new CameraInset();
+        _this._bounds = new Rectangle();
         _this._areBoundsDirty = true;
+        _this._isProjectionMatrixDirty = true;
         _this.setZoom(0);
         return _this;
     }
@@ -1604,6 +1616,12 @@ var Camera = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    Camera.prototype.onSceneSizeChanged = function (newWidth, newHeight) {
+        this._isProjectionMatrixDirty = true;
+        var oldOrigin = this._origin;
+        this.origin = new Vector2(newWidth / 2, newHeight / 2);
+        this.entity.transform.position = Vector2.add(this.entity.transform.position, Vector2.subtract(this._origin, oldOrigin));
+    };
     Camera.prototype.setMinimumZoom = function (minZoom) {
         if (this._zoom < minZoom)
             this._zoom = this.minimumZoom;
@@ -1733,6 +1751,8 @@ var RenderableComponent = (function (_super) {
     function RenderableComponent() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this._areBoundsDirty = true;
+        _this._bounds = new Rectangle();
+        _this._localOffset = Vector2.zero;
         return _this;
     }
     Object.defineProperty(RenderableComponent.prototype, "width", {
@@ -1786,8 +1806,7 @@ var RenderableComponent = (function (_super) {
     RenderableComponent.prototype.onBecameVisible = function () { };
     RenderableComponent.prototype.onBecameInvisible = function () { };
     RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
-        this.isVisible = camera.bounds.intersects(this.bounds);
-        return this.isVisible;
+        return true;
     };
     RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
         this._areBoundsDirty = true;
@@ -1805,19 +1824,15 @@ var SpriteRenderer = (function (_super) {
     function SpriteRenderer() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    Object.defineProperty(SpriteRenderer.prototype, "bounds", {
-        get: function () {
-            if (this._areBoundsDirty) {
-                if (this._sprite) {
-                    this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this._sprite.width, this._sprite.height);
-                    this._areBoundsDirty = false;
-                }
-                return this.bounds;
+    SpriteRenderer.prototype.getBounds = function () {
+        if (this._areBoundsDirty) {
+            if (this._sprite) {
+                this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this._sprite.width, this._sprite.height);
+                this._areBoundsDirty = false;
             }
-        },
-        enumerable: true,
-        configurable: true
-    });
+            return this.bounds;
+        }
+    };
     Object.defineProperty(SpriteRenderer.prototype, "sprite", {
         get: function () {
             return this._sprite;
@@ -2323,6 +2338,8 @@ var ComponentList = (function () {
     ComponentList.prototype.deregisterAllComponents = function () {
         for (var i = 0; i < this._components.length; i++) {
             var component = this._components[i];
+            if (component instanceof RenderableComponent)
+                this._entity.scene.renderableComponents.remove(component);
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
         }
@@ -2330,6 +2347,8 @@ var ComponentList = (function () {
     ComponentList.prototype.registerAllComponents = function () {
         for (var i = 0; i < this._components.length; i++) {
             var component = this._components[i];
+            if (component instanceof RenderableComponent)
+                this._entity.scene.renderableComponents.add(component);
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
             this._entity.scene.entityProcessors.onComponentAdded(this._entity);
         }
@@ -2345,6 +2364,8 @@ var ComponentList = (function () {
         if (this._componentsToAdd.length > 0) {
             for (var i = 0, count = this._componentsToAdd.length; i < count; i++) {
                 var component = this._componentsToAdd[i];
+                if (component instanceof RenderableComponent)
+                    this._entity.scene.renderableComponents.add(component);
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                 this._components.push(component);

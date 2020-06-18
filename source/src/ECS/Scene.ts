@@ -109,6 +109,8 @@ class Scene extends egret.DisplayObjectContainer {
 
       if (this.entityProcessors)
          this.entityProcessors.begin();
+
+      this.camera.onSceneSizeChanged(this.stage.width, this.stage.height);
    }
 
    /** 场景激活 */
@@ -140,6 +142,13 @@ class Scene extends egret.DisplayObjectContainer {
          this.entityProcessors.lateUpdate();
 
       this.renderableComponents.updateList();
+      this.render();
+   }
+
+   public render(){
+      for (let i = 0; i <this._renderers.length; i ++){
+         this._renderers[i].render(this);
+      }
    }
 
    public prepRenderState() {
