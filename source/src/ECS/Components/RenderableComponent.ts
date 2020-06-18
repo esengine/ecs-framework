@@ -1,7 +1,7 @@
 /** 
  * 所有可渲染组件的基类 
  */
-abstract class RenderableComponent extends Component {
+abstract class RenderableComponent extends Component implements IRenderable {
     private _isVisible: boolean;
     protected _areBoundsDirty = true;
     protected _bounds: Rectangle;
@@ -59,5 +59,9 @@ abstract class RenderableComponent extends Component {
     public isVisibleFromCamera(camera: Camera): boolean{
         this.isVisible = camera.bounds.intersects(this.bounds);
         return this.isVisible;
+    }
+
+    public onEntityTransformChanged(comp: ComponentTransform){
+        this._areBoundsDirty = true;
     }
 }

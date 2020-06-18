@@ -1062,9 +1062,11 @@ var Scene = (function (_super) {
     __extends(Scene, _super);
     function Scene(displayObject) {
         var _this = _super.call(this) || this;
+        _this._renderers = [];
         displayObject.stage.addChild(_this);
         _this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
         _this.entityProcessors = new EntityProcessorList();
+        _this.renderableComponents = new RenderableComponentList();
         _this.entities = new EntityList(_this);
         _this.addEventListener(egret.Event.ACTIVATE, _this.onActive, _this);
         _this.addEventListener(egret.Event.DEACTIVATE, _this.onDeactive, _this);
@@ -1106,7 +1108,27 @@ var Scene = (function (_super) {
         SceneManager.setActiveScene(this);
         return this;
     };
+    Scene.prototype.addRenderer = function (renderer) {
+        this._renderers.push(renderer);
+        this._renderers.sort();
+        renderer.onAddedToScene(this);
+        return renderer;
+    };
+    Scene.prototype.getRenderer = function (type) {
+        for (var i = 0; i < this._renderers.length; i++) {
+            if (this._renderers[i] instanceof type)
+                return this._renderers[i];
+        }
+        return null;
+    };
+    Scene.prototype.removeRenderer = function (renderer) {
+        this._renderers.remove(renderer);
+    };
     Scene.prototype.initialize = function () {
+        if (this._renderers.length == 0) {
+            this.addRenderer(new DefaultRenderer());
+            console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
+        }
         this.camera = this.createEntity("camera").getOrCreateComponent(new Camera());
         Physics.reset();
         if (this.entityProcessors)
@@ -1128,6 +1150,7 @@ var Scene = (function (_super) {
         this.entities.update();
         if (this.entityProcessors)
             this.entityProcessors.lateUpdate();
+        this.renderableComponents.updateList();
     };
     Scene.prototype.prepRenderState = function () {
         this._projectionMatrix.m11 = 2 / this.stage.width;
@@ -1766,8 +1789,17 @@ var RenderableComponent = (function (_super) {
         this.isVisible = camera.bounds.intersects(this.bounds);
         return this.isVisible;
     };
+    RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
+        this._areBoundsDirty = true;
+    };
     return RenderableComponent;
 }(Component));
+var SpriteEffects;
+(function (SpriteEffects) {
+    SpriteEffects[SpriteEffects["none"] = 0] = "none";
+    SpriteEffects[SpriteEffects["flipHorizontally"] = 1] = "flipHorizontally";
+    SpriteEffects[SpriteEffects["flipVertically"] = 2] = "flipVertically";
+})(SpriteEffects || (SpriteEffects = {}));
 var SpriteRenderer = (function (_super) {
     __extends(SpriteRenderer, _super);
     function SpriteRenderer() {
@@ -1800,6 +1832,23 @@ var SpriteRenderer = (function (_super) {
         this._sprite = sprite;
         if (this._sprite)
             this._origin = new Vector2(this._sprite.anchorOffsetX, this._sprite.anchorOffsetY);
+        return this;
+    };
+    Object.defineProperty(SpriteRenderer.prototype, "origin", {
+        get: function () {
+            return this._origin;
+        },
+        set: function (value) {
+            this.setOrigin(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    SpriteRenderer.prototype.setOrigin = function (origin) {
+        if (this._origin != origin) {
+            this._origin = origin;
+            this._areBoundsDirty = true;
+        }
         return this;
     };
     SpriteRenderer.prototype.render = function (camera) {
@@ -2598,6 +2647,34 @@ var Matcher = (function () {
     };
     return Matcher;
 }());
+var RenderableComponentList = (function () {
+    function RenderableComponentList() {
+        this._components = [];
+    }
+    Object.defineProperty(RenderableComponentList.prototype, "count", {
+        get: function () {
+            return this._components.length;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(RenderableComponentList.prototype, "buffer", {
+        get: function () {
+            return this._components;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    RenderableComponentList.prototype.add = function (component) {
+        this._components.push(component);
+    };
+    RenderableComponentList.prototype.remove = function (component) {
+        this._components.remove(component);
+    };
+    RenderableComponentList.prototype.updateList = function () {
+    };
+    return RenderableComponentList;
+}());
 var Time = (function () {
     function Time() {
     }
@@ -2615,6 +2692,39 @@ var Time = (function () {
     Time._lastTime = 0;
     return Time;
 }());
+var Renderer = (function () {
+    function Renderer() {
+    }
+    Renderer.prototype.onAddedToScene = function (scene) { };
+    Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
+        renderable.render(cam);
+    };
+    return Renderer;
+}());
+var DefaultRenderer = (function (_super) {
+    __extends(DefaultRenderer, _super);
+    function DefaultRenderer() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    DefaultRenderer.prototype.render = function (scene) {
+        var cam = this.camera ? this.camera : scene.camera;
+        for (var i = 0; i < scene.renderableComponents.count; i++) {
+            var renderable = scene.renderableComponents.buffer[i];
+            if (renderable.enabled && renderable.isVisibleFromCamera(cam))
+                this.renderAfterStateCheck(renderable, cam);
+        }
+    };
+    return DefaultRenderer;
+}(Renderer));
+var ScreenSpaceRenderer = (function (_super) {
+    __extends(ScreenSpaceRenderer, _super);
+    function ScreenSpaceRenderer() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    ScreenSpaceRenderer.prototype.render = function (scene) {
+    };
+    return ScreenSpaceRenderer;
+}(Renderer));
 var Flags = (function () {
     function Flags() {
     }

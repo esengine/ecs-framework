@@ -31,6 +31,20 @@ class SpriteRenderer extends RenderableComponent {
         return this;
     }
 
+    public get origin(){
+        return this._origin;
+    }
+    public set origin(value: Vector2){
+        this.setOrigin(value);
+    }
+    public setOrigin(origin: Vector2){
+        if (this._origin != origin){
+            this._origin = origin;
+            this._areBoundsDirty = true;
+        }
+        return this;
+    }
+
     public render(camera: Camera) {
         if (!this.sprite)
             return;

@@ -208,9 +208,11 @@ declare class Entity {
 declare class Scene extends egret.DisplayObjectContainer {
     camera: Camera;
     readonly entities: EntityList;
+    readonly renderableComponents: RenderableComponentList;
     private _projectionMatrix;
     private _transformMatrix;
     private _matrixTransformMatrix;
+    private _renderers;
     readonly entityProcessors: EntityProcessorList;
     constructor(displayObject: egret.DisplayObject);
     createEntity(name: string): Entity;
@@ -221,6 +223,9 @@ declare class Scene extends egret.DisplayObjectContainer {
     removeEntityProcessor(processor: EntitySystem): void;
     getEntityProcessor<T extends EntitySystem>(): T;
     setActive(): Scene;
+    addRenderer<T extends Renderer>(renderer: T): T;
+    getRenderer<T extends Renderer>(type: any): T;
+    removeRenderer(renderer: Renderer): void;
     initialize(): void;
     onActive(): void;
     onDeactive(): void;
@@ -355,7 +360,7 @@ declare class VertexPosition {
 declare class PolygonMesh extends Mesh {
     constructor(points: Vector2[], arePointsCCW?: boolean);
 }
-declare abstract class RenderableComponent extends Component {
+declare abstract class RenderableComponent extends Component implements IRenderable {
     private _isVisible;
     protected _areBoundsDirty: boolean;
     protected _bounds: Rectangle;
@@ -371,6 +376,12 @@ declare abstract class RenderableComponent extends Component {
     protected onBecameInvisible(): void;
     abstract render(camera: Camera): any;
     isVisibleFromCamera(camera: Camera): boolean;
+    onEntityTransformChanged(comp: ComponentTransform): void;
+}
+declare enum SpriteEffects {
+    none = 0,
+    flipHorizontally = 1,
+    flipVertically = 2
 }
 declare class SpriteRenderer extends RenderableComponent {
     private _sprite;
@@ -378,6 +389,8 @@ declare class SpriteRenderer extends RenderableComponent {
     readonly bounds: any;
     sprite: egret.DisplayObject;
     setSprite(sprite: egret.DisplayObject): SpriteRenderer;
+    origin: Vector2;
+    setOrigin(origin: Vector2): this;
     render(camera: Camera): void;
 }
 interface ITriggerListener {
@@ -538,6 +551,14 @@ declare class Matcher {
     static empty(): Matcher;
     IsIntersted(e: Entity): boolean;
 }
+declare class RenderableComponentList {
+    private _components;
+    readonly count: number;
+    readonly buffer: IRenderable[];
+    add(component: IRenderable): void;
+    remove(component: IRenderable): void;
+    updateList(): void;
+}
 declare class Time {
     static unscaledDeltaTime: any;
     static deltaTime: number;
@@ -545,6 +566,25 @@ declare class Time {
     static frameCount: number;
     private static _lastTime;
     static update(currentTime: number): void;
+}
+declare abstract class Renderer {
+    camera: Camera;
+    onAddedToScene(scene: Scene): void;
+    abstract render(scene: Scene): any;
+    protected renderAfterStateCheck(renderable: IRenderable, cam: Camera): void;
+}
+declare class DefaultRenderer extends Renderer {
+    render(scene: Scene): void;
+}
+interface IRenderable {
+    bounds: Rectangle;
+    enabled: boolean;
+    isVisible: boolean;
+    isVisibleFromCamera(camera: Camera): any;
+    render(camera: Camera): any;
+}
+declare class ScreenSpaceRenderer extends Renderer {
+    render(scene: Scene): void;
 }
 declare class Flags {
     static isFlagSet(self: number, flag: number): boolean;
