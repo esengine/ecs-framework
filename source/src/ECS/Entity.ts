@@ -238,7 +238,6 @@ class Entity {
 
     public update(){
         this.components.update();
-        this.transform.updateTransform();
     }
 
     public onAddedToScene(){

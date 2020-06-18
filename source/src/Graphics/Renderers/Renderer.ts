@@ -15,6 +15,15 @@ abstract class Renderer {
      */
     public onAddedToScene(scene: Scene){}
 
+    protected beginRender(cam: Camera){
+        cam.transform.updateTransform();
+        
+        let entities = SceneManager.getActiveScene().entities;
+        for (let i = 0; i < entities.buffer.length; i ++){
+            entities.buffer[i].transform.updateTransform();
+        }
+    }
+
     /**
      * 
      * @param scene 

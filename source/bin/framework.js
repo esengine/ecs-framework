@@ -1036,7 +1036,6 @@ var Entity = (function () {
     };
     Entity.prototype.update = function () {
         this.components.update();
-        this.transform.updateTransform();
     };
     Entity.prototype.onAddedToScene = function () {
     };
@@ -1156,6 +1155,9 @@ var Scene = (function (_super) {
     };
     Scene.prototype.render = function () {
         for (var i = 0; i < this._renderers.length; i++) {
+            if (this._renderers[i].camera)
+                this._renderers[i].camera.forceMatrixUpdate();
+            this.camera.forceMatrixUpdate();
             this._renderers[i].render(this);
         }
     };
@@ -1215,9 +1217,9 @@ var ComponentTransform;
 var Transform = (function () {
     function Transform(entity) {
         this._localRotation = 0;
-        this._worldTransform = Matrix2D.identity;
-        this._worldToLocalTransform = Matrix2D.identity;
-        this._worldInverseTransform = Matrix2D.identity;
+        this._worldTransform = new Matrix2D();
+        this._worldToLocalTransform = new Matrix2D();
+        this._worldInverseTransform = new Matrix2D();
         this._rotation = 0;
         this.entity = entity;
         this._scale = this._localScale = Vector2.one;
@@ -1257,7 +1259,7 @@ var Transform = (function () {
         get: function () {
             if (this._worldToLocalDirty) {
                 if (!this.parent) {
-                    this._worldInverseTransform = Matrix2D.identity;
+                    this._worldInverseTransform = new Matrix2D();
                 }
                 else {
                     this.parent.updateTransform();
@@ -1320,7 +1322,7 @@ var Transform = (function () {
             }
             else {
                 this.parent.updateTransform();
-                this._position = Vector2.transform(this._localPosition, this.parent._worldTransform);
+                this._position = Vector2Ext.transformR(this._localPosition, this.parent._worldTransform);
             }
             return this._position;
         },
@@ -1507,9 +1509,9 @@ var Camera = (function (_super) {
     function Camera() {
         var _this = _super.call(this) || this;
         _this._origin = Vector2.zero;
-        _this._transformMatrix = Matrix2D.identity;
-        _this._inverseTransformMatrix = Matrix2D.identity;
-        _this._projectionMatrix = Matrix2D.identity;
+        _this._transformMatrix = new Matrix2D();
+        _this._inverseTransformMatrix = new Matrix2D();
+        _this._projectionMatrix = new Matrix2D();
         _this._minimumZoom = 0.3;
         _this._maximumZoom = 3;
         _this._areMatrixesDirty = true;
@@ -1648,13 +1650,12 @@ var Camera = (function (_super) {
         this._areMatrixesDirty = true;
         return this;
     };
-    Camera.prototype.initialize = function () {
-    };
-    Camera.prototype.update = function () {
-    };
     Camera.prototype.setPosition = function (position) {
         this.entity.transform.setPosition(position);
         return this;
+    };
+    Camera.prototype.forceMatrixUpdate = function () {
+        this._areMatrixesDirty = true;
     };
     Camera.prototype.updateMatrixes = function () {
         if (!this._areMatrixesDirty)
@@ -1665,6 +1666,10 @@ var Camera = (function (_super) {
             tempMat = Matrix2D.createScale(this._zoom, this._zoom);
             this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
         }
+        if (this.entity.transform.rotation != 0) {
+            tempMat = Matrix2D.createRotation(this.entity.rotation);
+            this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
+        }
         tempMat = Matrix2D.createTranslation(this._origin.x, this._origin.y, tempMat);
         this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
         this._inverseTransformMatrix = Matrix2D.invert(this._transformMatrix);
@@ -1673,11 +1678,14 @@ var Camera = (function (_super) {
     };
     Camera.prototype.screenToWorldPoint = function (screenPosition) {
         this.updateMatrixes();
-        return Vector2.transform(screenPosition, this._inverseTransformMatrix);
+        return Vector2Ext.transformR(screenPosition, this._inverseTransformMatrix);
     };
     Camera.prototype.worldToScreenPoint = function (worldPosition) {
         this.updateMatrixes();
-        return Vector2.transform(worldPosition, this._transformMatrix);
+        return Vector2Ext.transformR(worldPosition, this._transformMatrix);
+    };
+    Camera.prototype.onEntityTransformChanged = function (comp) {
+        this._areMatrixesDirty = true;
     };
     Camera.prototype.destory = function () {
     };
@@ -1869,8 +1877,8 @@ var SpriteRenderer = (function (_super) {
     SpriteRenderer.prototype.render = function (camera) {
         if (!this.sprite)
             return;
-        this.sprite.x = this.entity.transform.position.x;
-        this.sprite.y = this.entity.transform.position.y;
+        this.sprite.x = this.entity.transform.position.x - camera.transform.position.x;
+        this.sprite.y = this.entity.transform.position.y - camera.transform.position.y;
         this.sprite.rotation = this.entity.transform.rotation;
         this.sprite.anchorOffsetX = this._origin.x;
         this.sprite.anchorOffsetY = this._origin.y;
@@ -2717,6 +2725,13 @@ var Renderer = (function () {
     function Renderer() {
     }
     Renderer.prototype.onAddedToScene = function (scene) { };
+    Renderer.prototype.beginRender = function (cam) {
+        cam.transform.updateTransform();
+        var entities = SceneManager.getActiveScene().entities;
+        for (var i = 0; i < entities.buffer.length; i++) {
+            entities.buffer[i].transform.updateTransform();
+        }
+    };
     Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
         renderable.render(cam);
     };
@@ -2729,6 +2744,7 @@ var DefaultRenderer = (function (_super) {
     }
     DefaultRenderer.prototype.render = function (scene) {
         var cam = this.camera ? this.camera : scene.camera;
+        this.beginRender(cam);
         for (var i = 0; i < scene.renderableComponents.count; i++) {
             var renderable = scene.renderableComponents.buffer[i];
             if (renderable.enabled && renderable.isVisibleFromCamera(cam))
@@ -2810,12 +2826,12 @@ var Matrix2D = (function () {
         this.m22 = 0;
         this.m31 = 0;
         this.m32 = 0;
-        this.m11 = m11;
-        this.m12 = m12;
-        this.m21 = m21;
-        this.m22 = m22;
-        this.m31 = m31;
-        this.m32 = m32;
+        this.m11 = m11 ? m11 : 1;
+        this.m12 = m12 ? m12 : 0;
+        this.m21 = m21 ? m21 : 0;
+        this.m22 = m22 ? m22 : 1;
+        this.m31 = m31 ? m31 : 0;
+        this.m32 = m32 ? m32 : 0;
     }
     Object.defineProperty(Matrix2D, "identity", {
         get: function () {
@@ -2890,19 +2906,20 @@ var Matrix2D = (function () {
         return matrix1;
     };
     Matrix2D.multiply = function (matrix1, matrix2) {
+        var result = new Matrix2D();
         var m11 = (matrix1.m11 * matrix2.m11) + (matrix1.m12 * matrix2.m21);
         var m12 = (matrix1.m11 * matrix2.m12) + (matrix1.m12 * matrix2.m22);
         var m21 = (matrix1.m21 * matrix2.m11) + (matrix1.m22 * matrix2.m21);
         var m22 = (matrix1.m21 * matrix2.m12) + (matrix1.m22 * matrix2.m22);
         var m31 = (matrix1.m31 * matrix2.m11) + (matrix1.m32 * matrix2.m21) + matrix2.m31;
         var m32 = (matrix1.m31 * matrix2.m12) + (matrix1.m32 * matrix2.m22) + matrix2.m32;
-        matrix1.m11 = m11;
-        matrix1.m12 = m12;
-        matrix1.m21 = m21;
-        matrix1.m22 = m22;
-        matrix1.m31 = m31;
-        matrix1.m32 = m32;
-        return matrix1;
+        result.m11 = m11;
+        result.m12 = m12;
+        result.m21 = m21;
+        result.m22 = m22;
+        result.m31 = m31;
+        result.m32 = m32;
+        return result;
     };
     Matrix2D.multiplyTranslation = function (matrix, x, y) {
         var trans = Matrix2D.createTranslation(x, y);
@@ -2912,7 +2929,7 @@ var Matrix2D = (function () {
         return this.m11 * this.m22 - this.m12 * this.m21;
     };
     Matrix2D.invert = function (matrix, result) {
-        if (result === void 0) { result = Matrix2D.identity; }
+        if (result === void 0) { result = new Matrix2D(); }
         var det = 1 / matrix.determinant();
         result.m11 = matrix.m22 * det;
         result.m12 = -matrix.m12 * det;
@@ -2923,7 +2940,7 @@ var Matrix2D = (function () {
         return result;
     };
     Matrix2D.createTranslation = function (xPosition, yPosition, result) {
-        if (result === void 0) { result = Matrix2D.identity; }
+        result = result ? result : new Matrix2D();
         result.m11 = 1;
         result.m12 = 0;
         result.m21 = 0;
@@ -2933,7 +2950,7 @@ var Matrix2D = (function () {
         return result;
     };
     Matrix2D.createRotation = function (radians, result) {
-        result = Matrix2D.identity;
+        result = new Matrix2D();
         var val1 = Math.cos(radians);
         var val2 = Math.sin(radians);
         result.m11 = val1;
@@ -2943,7 +2960,7 @@ var Matrix2D = (function () {
         return result;
     };
     Matrix2D.createScale = function (xScale, yScale, result) {
-        if (result === void 0) { result = Matrix2D.identity; }
+        if (result === void 0) { result = new Matrix2D(); }
         result.m11 = xScale;
         result.m12 = 0;
         result.m21 = 0;
@@ -4281,6 +4298,11 @@ var Vector2Ext = (function () {
             destination.y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
             destinationArray[destinationIndex + i] = destination;
         }
+    };
+    Vector2Ext.transformR = function (position, matrix) {
+        var x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
+        var y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
+        return new Vector2(x, y);
     };
     Vector2Ext.transform = function (sourceArray, matrix, destinationArray) {
         this.transformA(sourceArray, 0, matrix, destinationArray, 0, sourceArray.length);

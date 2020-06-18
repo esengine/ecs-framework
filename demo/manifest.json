@@ -18,6 +18,7 @@
 		"bin-debug/ThemeAdapter.js",
 		"bin-debug/game/CoreEmitterType.js",
 		"bin-debug/game/MainScene.js",
+		"bin-debug/game/PlayerController.js",
 		"bin-debug/game/SpawnerComponent.js",
 		"bin-debug/game/SpawnerSystem.js"
 	]

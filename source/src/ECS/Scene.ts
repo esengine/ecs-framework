@@ -147,6 +147,9 @@ class Scene extends egret.DisplayObjectContainer {
 
    public render(){
       for (let i = 0; i <this._renderers.length; i ++){
+         if (this._renderers[i].camera)
+            this._renderers[i].camera.forceMatrixUpdate();
+         this.camera.forceMatrixUpdate();
          this._renderers[i].render(this);
       }
    }

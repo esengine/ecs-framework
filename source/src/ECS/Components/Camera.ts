@@ -2,9 +2,9 @@
 class Camera extends Component {
     private _zoom;
     private _origin: Vector2 = Vector2.zero;
-    private _transformMatrix: Matrix2D = Matrix2D.identity;
-    private _inverseTransformMatrix = Matrix2D.identity;
-    private _projectionMatrix = Matrix2D.identity;
+    private _transformMatrix: Matrix2D = new Matrix2D();
+    private _inverseTransformMatrix = new Matrix2D();
+    private _projectionMatrix = new Matrix2D();
 
     private _minimumZoom = 0.3;
     private _maximumZoom = 3;
@@ -145,18 +145,14 @@ class Camera extends Component {
         return this;
     }
 
-    public initialize() {
-
-    }
-
-    public update(){
-        
-    }
-
     public setPosition(position: Vector2){
         this.entity.transform.setPosition(position);
 
         return this;
+    }
+
+    public forceMatrixUpdate(){
+        this._areMatrixesDirty = true;
     }
 
     public updateMatrixes(){
@@ -167,6 +163,11 @@ class Camera extends Component {
         this._transformMatrix = Matrix2D.createTranslation(-this.entity.transform.position.x, -this.entity.transform.position.y);
         if (this._zoom != 1){
             tempMat = Matrix2D.createScale(this._zoom, this._zoom);
+            this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
+        }
+
+        if (this.entity.transform.rotation != 0){
+            tempMat = Matrix2D.createRotation(this.entity.rotation);
             this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
         }
 
@@ -181,12 +182,16 @@ class Camera extends Component {
 
     public screenToWorldPoint(screenPosition: Vector2){
         this.updateMatrixes();
-        return Vector2.transform(screenPosition, this._inverseTransformMatrix);
+        return Vector2Ext.transformR(screenPosition, this._inverseTransformMatrix);
     }
 
     public worldToScreenPoint(worldPosition: Vector2){
         this.updateMatrixes();
-        return Vector2.transform(worldPosition, this._transformMatrix);
+        return Vector2Ext.transformR(worldPosition, this._transformMatrix);
+    }
+
+    public onEntityTransformChanged(comp: ComponentTransform){
+        this._areMatrixesDirty = true;
     }
 
     public destory() {

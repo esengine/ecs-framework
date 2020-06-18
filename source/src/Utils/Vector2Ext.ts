@@ -54,6 +54,12 @@ class Vector2Ext {
             }
     }
 
+    public static transformR(position: Vector2, matrix: Matrix2D){
+        let x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
+        let y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
+        return new Vector2(x, y);
+    }
+
     public static transform(sourceArray: Vector2[], matrix: Matrix2D, destinationArray: Vector2[]) {
         this.transformA(sourceArray, 0, matrix, destinationArray, 0, sourceArray.length);
     }

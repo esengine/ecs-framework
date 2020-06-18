@@ -20,15 +20,15 @@ class Matrix2D {
         return Matrix2D._identity;
     }
 
-    constructor(m11: number, m12: number, m21: number, m22: number, m31: number, m32: number){
-        this.m11 = m11;
-        this.m12 = m12;
+    constructor(m11?: number, m12?: number, m21?: number, m22?: number, m31?: number, m32?: number){
+        this.m11 = m11 ? m11 : 1;
+        this.m12 = m12 ? m12 : 0;
 
-        this.m21 = m21;
-        this.m22 = m22;
+        this.m21 = m21 ? m21 : 0;
+        this.m22 = m22 ? m22 : 1;
         
-        this.m31 = m31;
-        this.m32 = m32;
+        this.m31 = m31 ? m31 : 0;
+        this.m32 = m32 ? m32 : 0;
     }
 
     /** 存储在这个矩阵中的位置 */
@@ -108,6 +108,8 @@ class Matrix2D {
     }
 
     public static multiply(matrix1: Matrix2D, matrix2: Matrix2D){
+        let result = new Matrix2D();
+
         let m11 = ( matrix1.m11 * matrix2.m11 ) + ( matrix1.m12 * matrix2.m21 );
         let m12 = ( matrix1.m11 * matrix2.m12 ) + ( matrix1.m12 * matrix2.m22 );
 
@@ -117,15 +119,16 @@ class Matrix2D {
         let m31 = ( matrix1.m31 * matrix2.m11 ) + ( matrix1.m32 * matrix2.m21 ) + matrix2.m31;
         let m32 = ( matrix1.m31 * matrix2.m12 ) + ( matrix1.m32 * matrix2.m22 ) + matrix2.m32;
 
-        matrix1.m11 = m11;
-        matrix1.m12 = m12;
+        result.m11 = m11;
+        result.m12 = m12;
 
-        matrix1.m21 = m21;
-        matrix1.m22 = m22;
+        result.m21 = m21;
+        result.m22 = m22;
 
-        matrix1.m31 = m31;
-        matrix1.m32 = m32;
-        return matrix1;
+        result.m31 = m31;
+        result.m32 = m32;
+
+        return result;
     }
 
     public static multiplyTranslation(matrix: Matrix2D, x: number, y: number){
@@ -137,7 +140,7 @@ class Matrix2D {
         return this.m11 * this.m22 - this.m12 * this.m21;
     }
 
-    public static invert(matrix: Matrix2D, result: Matrix2D = Matrix2D.identity){
+    public static invert(matrix: Matrix2D, result: Matrix2D = new Matrix2D()){
         let det = 1 / matrix.determinant();
 
         result.m11 = matrix.m22 * det;
@@ -152,7 +155,9 @@ class Matrix2D {
         return result;
     }
 
-    public static createTranslation(xPosition: number, yPosition: number, result: Matrix2D = Matrix2D.identity){
+    public static createTranslation(xPosition: number, yPosition: number, result?: Matrix2D){
+        result = result ? result : new Matrix2D();
+        
         result.m11 = 1;
         result.m12 = 0;
 
@@ -166,7 +171,7 @@ class Matrix2D {
     }
 
     public static createRotation(radians: number, result?: Matrix2D){
-        result = Matrix2D.identity;
+        result = new Matrix2D();
 
         let val1 = Math.cos(radians);
         let val2 = Math.sin(radians);
@@ -179,7 +184,7 @@ class Matrix2D {
         return result;
     }
 
-    public static createScale(xScale: number, yScale: number, result: Matrix2D = Matrix2D.identity){
+    public static createScale(xScale: number, yScale: number, result: Matrix2D = new Matrix2D()){
         result.m11 = xScale;
         result.m12 = 0;
 

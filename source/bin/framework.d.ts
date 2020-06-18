@@ -330,12 +330,12 @@ declare class Camera extends Component {
     setMinimumZoom(minZoom: number): Camera;
     setMaximumZoom(maxZoom: number): Camera;
     setZoom(zoom: number): this;
-    initialize(): void;
-    update(): void;
     setPosition(position: Vector2): this;
+    forceMatrixUpdate(): void;
     updateMatrixes(): void;
     screenToWorldPoint(screenPosition: Vector2): Vector2;
     worldToScreenPoint(worldPosition: Vector2): Vector2;
+    onEntityTransformChanged(comp: ComponentTransform): void;
     destory(): void;
 }
 declare class CameraInset {
@@ -574,6 +574,7 @@ declare class Time {
 declare abstract class Renderer {
     camera: Camera;
     onAddedToScene(scene: Scene): void;
+    protected beginRender(cam: Camera): void;
     abstract render(scene: Scene): any;
     protected renderAfterStateCheck(renderable: IRenderable, cam: Camera): void;
 }
@@ -618,7 +619,7 @@ declare class Matrix2D {
     m32: number;
     private static _identity;
     static readonly identity: Matrix2D;
-    constructor(m11: number, m12: number, m21: number, m22: number, m31: number, m32: number);
+    constructor(m11?: number, m12?: number, m21?: number, m22?: number, m31?: number, m32?: number);
     translation: Vector2;
     rotation: number;
     rotationDegrees: number;
@@ -880,6 +881,7 @@ declare class Vector2Ext {
     static perpendicular(first: Vector2, second: Vector2): Vector2;
     static normalize(vec: Vector2): Vector2;
     static transformA(sourceArray: Vector2[], sourceIndex: number, matrix: Matrix2D, destinationArray: Vector2[], destinationIndex: number, length: number): void;
+    static transformR(position: Vector2, matrix: Matrix2D): Vector2;
     static transform(sourceArray: Vector2[], matrix: Matrix2D, destinationArray: Vector2[]): void;
 }
 declare class WebGLUtils {

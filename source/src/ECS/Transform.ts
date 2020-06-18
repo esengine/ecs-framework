@@ -25,9 +25,9 @@ class Transform {
     private _rotationMatrix: Matrix2D;
     private _scaleMatrix: Matrix2D;
 
-    private _worldTransform = Matrix2D.identity;
-    private _worldToLocalTransform = Matrix2D.identity;
-    private _worldInverseTransform = Matrix2D.identity;
+    private _worldTransform = new Matrix2D();
+    private _worldToLocalTransform = new Matrix2D();
+    private _worldInverseTransform = new Matrix2D();
 
     private _rotation: number = 0;
     private _position: Vector2;
@@ -75,7 +75,7 @@ class Transform {
     public get worldToLocalTransform(){
         if (this._worldToLocalDirty){
             if (!this.parent){
-                this._worldInverseTransform = Matrix2D.identity;
+                this._worldInverseTransform = new Matrix2D();
             } else{
                 this.parent.updateTransform();
                 this._worldToLocalTransform = Matrix2D.invert(this.parent._worldTransform, this._worldToLocalTransform);
@@ -134,7 +134,7 @@ class Transform {
             this._position = this._localPosition;
         }else{
             this.parent.updateTransform();
-            this._position = Vector2.transform(this._localPosition, this.parent._worldTransform);
+            this._position = Vector2Ext.transformR(this._localPosition, this.parent._worldTransform);
         }
         
         return this._position;

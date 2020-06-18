@@ -59,14 +59,6 @@ class Main extends eui.UILayer {
 
     private updateFrame(evt: egret.Event){
         Main.emitter.emit(CoreEmitterType.Update, evt);
-        let activeScene = SceneManager.getActiveScene();
-        if (activeScene){
-            let player = activeScene.findEntity("player");
-            if (player){
-                let mover = player.getComponent<Mover>(Mover);
-                mover.move(new Vector2(0, 0));
-            }
-        }
     }
 
     private async runGame() {
@@ -109,14 +101,14 @@ class Main extends eui.UILayer {
         this.addChild(image);
         let scene = SceneManager.createScene("main", new MainScene(this)).setActive();
         let player = scene.createEntity("player");
-        player.addComponent(new SpriteRenderer()).setSprite(image)
+        player.addComponent(new SpriteRenderer()).setSprite(image);
         player.addComponent(new SpawnComponent(EnemyType.worm));
-        player.addComponent(new BoxCollider()).setSize(100, 100).isTrigger = true;
-        player.addComponent(new Mover());
-        player.position = new Vector2(100, 100);
+        player.addComponent(new PlayerController());
 
         let player2 = scene.createEntity("player2");
         player2.addComponent(new BoxCollider()).setSize(99, 99);
+
+        scene.camera.setPosition(new Vector2(-200, -200));
 
         // Main.emitter.addObserver(CoreEmitterType.Update, ()=>{
         //     console.log("update emitter");

@@ -49,8 +49,8 @@ class SpriteRenderer extends RenderableComponent {
         if (!this.sprite)
             return;
         
-        this.sprite.x = this.entity.transform.position.x;
-        this.sprite.y = this.entity.transform.position.y;
+        this.sprite.x = this.entity.transform.position.x - camera.transform.position.x;
+        this.sprite.y = this.entity.transform.position.y - camera.transform.position.y;
         this.sprite.rotation = this.entity.transform.rotation;
         this.sprite.anchorOffsetX = this._origin.x;
         this.sprite.anchorOffsetY = this._origin.y;
