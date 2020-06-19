@@ -2026,8 +2026,22 @@ var SpriteRenderer = (function (_super) {
         }
         return this;
     };
+    SpriteRenderer.prototype.setColor = function (color) {
+        var colorMatrix = [
+            1, 0, 0, 0, 0,
+            0, 1, 0, 0, 0,
+            0, 0, 1, 0, 0,
+            0, 0, 0, 1, 0
+        ];
+        colorMatrix[0] = Math.floor(color / 256 / 256) / 255;
+        colorMatrix[6] = Math.floor(color / 256 % 256) / 255;
+        colorMatrix[12] = color % 256 / 255;
+        var colorFilter = new egret.ColorMatrixFilter(colorMatrix);
+        this._bitmap.filters = [colorFilter];
+    };
     SpriteRenderer.prototype.isVisibleFromCamera = function (camera) {
-        this.isVisible = new Rectangle(0, 0, this.stage.stageWidth, this.stage.stageHeight).intersects(this.bounds);
+        var topLeft = camera.screenToWorldPoint(new Vector2(0, 0));
+        this.isVisible = new Rectangle(topLeft.x, topLeft.y, this.stage.stageWidth, this.stage.stageHeight).intersects(this.bounds);
         this._bitmap.visible = this.isVisible;
         return this.isVisible;
     };

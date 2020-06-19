@@ -425,6 +425,7 @@ declare class SpriteRenderer extends RenderableComponent {
     setSprite(sprite: Sprite): SpriteRenderer;
     origin: Vector2;
     setOrigin(origin: Vector2): this;
+    setColor(color: number): void;
     isVisibleFromCamera(camera: Camera): boolean;
     render(camera: Camera): void;
 }

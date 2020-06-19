@@ -49,8 +49,23 @@ class SpriteRenderer extends RenderableComponent {
         return this;
     }
 
+    public setColor(color: number){
+        let colorMatrix = [
+            1, 0, 0, 0, 0,
+            0, 1, 0, 0, 0,
+            0, 0, 1, 0, 0,
+            0, 0, 0, 1, 0
+        ];
+        colorMatrix[0] = Math.floor(color / 256 / 256) / 255;
+        colorMatrix[6] = Math.floor(color / 256 % 256) / 255;
+        colorMatrix[12] = color % 256 / 255;
+        let colorFilter = new egret.ColorMatrixFilter(colorMatrix);
+        this._bitmap.filters = [colorFilter];
+    }
+
     public isVisibleFromCamera(camera: Camera): boolean{
-        this.isVisible = new Rectangle(0, 0, this.stage.stageWidth, this.stage.stageHeight).intersects(this.bounds);
+        let topLeft = camera.screenToWorldPoint(new Vector2(0, 0));
+        this.isVisible = new Rectangle(topLeft.x, topLeft.y, this.stage.stageWidth, this.stage.stageHeight).intersects(this.bounds);
         this._bitmap.visible = this.isVisible;
         return this.isVisible;
     }

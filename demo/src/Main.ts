@@ -100,7 +100,7 @@ class Main extends eui.UILayer {
         let sprite = new Sprite(RES.getRes("checkbox_select_disabled_png"));
         let scene = SceneManager.createScene("main", new MainScene(this)).setActive();
         let player = scene.createEntity("player");
-        player.addComponent(new SpriteRenderer()).setSprite(sprite);
+        player.addComponent(new SpriteRenderer()).setSprite(sprite).setColor(0xFF0000);
         player.addComponent(new SpawnComponent(EnemyType.worm));
         player.addComponent(new PlayerController());
         player.addComponent(new FollowCamera(player));
