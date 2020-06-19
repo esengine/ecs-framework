@@ -54,7 +54,7 @@ class Vector2 {
         let result: Vector2 = new Vector2(0, 0);
         result.x = value1.x / value2.x;
         result.y = value1.y / value2.y;
-        return value1;
+        return result;
     }
 
     /**
@@ -78,7 +78,7 @@ class Vector2 {
         let result: Vector2 = new Vector2(0, 0);
         result.x = value1.x - value2.x;
         result.y = value1.y - value2.y;
-        return value1;
+        return result;
     }
 
     /** 变成一个方向相同的单位向量 */

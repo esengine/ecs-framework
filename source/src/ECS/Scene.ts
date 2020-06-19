@@ -106,6 +106,7 @@ class Scene extends egret.DisplayObjectContainer {
       this.camera = this.createEntity("camera").getOrCreateComponent(new Camera());
 
       Physics.reset();
+      Input.initialize();
 
       if (this.entityProcessors)
          this.entityProcessors.begin();

@@ -20,8 +20,8 @@ class Camera extends Component {
 
         if (this._areBoundsDirty){
             let stage = this.stage;
-            let topLeft = this.screenToWorldPoint(new Vector2(stage.x + this._inset.left, stage.y + this._inset.top));
-            let bottomRight = this.screenToWorldPoint(new Vector2(stage.x + stage.stageWidth - this._inset.right, stage.y + stage.stageHeight - this._inset.bottom));
+            let topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
+            let bottomRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, stage.stageHeight - this._inset.bottom));
 
             if (this.entity.transform.rotation != 0){
                 let topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));

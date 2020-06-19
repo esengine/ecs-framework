@@ -1148,6 +1148,7 @@ var Scene = (function (_super) {
         }
         this.camera = this.createEntity("camera").getOrCreateComponent(new Camera());
         Physics.reset();
+        Input.initialize();
         if (this.entityProcessors)
             this.entityProcessors.begin();
         this.camera.onSceneSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
@@ -1553,8 +1554,8 @@ var Camera = (function (_super) {
                 this.updateMatrixes();
             if (this._areBoundsDirty) {
                 var stage = this.stage;
-                var topLeft = this.screenToWorldPoint(new Vector2(stage.x + this._inset.left, stage.y + this._inset.top));
-                var bottomRight = this.screenToWorldPoint(new Vector2(stage.x + stage.stageWidth - this._inset.right, stage.y + stage.stageHeight - this._inset.bottom));
+                var topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
+                var bottomRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, stage.stageHeight - this._inset.bottom));
                 if (this.entity.transform.rotation != 0) {
                     var topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));
                     var bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left, stage.stageHeight - this._inset.bottom));
@@ -3376,7 +3377,7 @@ var Vector2 = (function () {
         var result = new Vector2(0, 0);
         result.x = value1.x / value2.x;
         result.y = value1.y / value2.y;
-        return value1;
+        return result;
     };
     Vector2.multiply = function (value1, value2) {
         var result = new Vector2(0, 0);
@@ -3388,7 +3389,7 @@ var Vector2 = (function () {
         var result = new Vector2(0, 0);
         result.x = value1.x - value2.x;
         result.y = value1.y - value2.y;
-        return value1;
+        return result;
     };
     Vector2.prototype.normalize = function () {
         var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
@@ -4325,6 +4326,158 @@ var GlobalManager = (function () {
     };
     GlobalManager.globalManagers = [];
     return GlobalManager;
+}());
+var TouchState = (function () {
+    function TouchState() {
+        this.x = 0;
+        this.y = 0;
+        this.touchPoint = -1;
+        this.touchDown = false;
+    }
+    Object.defineProperty(TouchState.prototype, "position", {
+        get: function () {
+            return new Vector2(this.x, this.y);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    TouchState.prototype.reset = function () {
+        this.x = 0;
+        this.y = 0;
+        this.touchDown = false;
+        this.touchPoint = -1;
+    };
+    return TouchState;
+}());
+var Input = (function () {
+    function Input() {
+    }
+    Object.defineProperty(Input, "touchPosition", {
+        get: function () {
+            return this._gameTouchs[0].position;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Input, "maxSupportedTouch", {
+        get: function () {
+            return this._stage.maxTouches;
+        },
+        set: function (value) {
+            this._stage.maxTouches = value;
+            this.initTouchCache();
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Input, "resolutionScale", {
+        get: function () {
+            return this._resolutionScale;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Input, "totalTouchCount", {
+        get: function () {
+            return this._totalTouchCount;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Input, "gameTouchs", {
+        get: function () {
+            return this._gameTouchs;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Input, "touchPositionDelta", {
+        get: function () {
+            var delta = Vector2.subtract(this.touchPosition, this._previousTouchState.position);
+            if (delta.length() > 0) {
+                this.setpreviousTouchState(this._gameTouchs[0]);
+            }
+            return delta;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Input.initialize = function () {
+        if (this._init)
+            return;
+        this._init = true;
+        this._stage = SceneManager.getActiveScene().stage;
+        this._stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
+        this._stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
+        this._stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
+        this._stage.addEventListener(egret.TouchEvent.TOUCH_CANCEL, this.touchEnd, this);
+        this._stage.addEventListener(egret.TouchEvent.TOUCH_RELEASE_OUTSIDE, this.touchEnd, this);
+        this.initTouchCache();
+    };
+    Input.initTouchCache = function () {
+        this._totalTouchCount = 0;
+        this._touchIndex = 0;
+        this._gameTouchs.length = 0;
+        for (var i = 0; i < this.maxSupportedTouch; i++) {
+            this._gameTouchs.push(new TouchState());
+        }
+    };
+    Input.touchBegin = function (evt) {
+        if (this._touchIndex < this.maxSupportedTouch) {
+            this._gameTouchs[this._touchIndex].touchPoint = evt.touchPointID;
+            this._gameTouchs[this._touchIndex].touchDown = evt.touchDown;
+            this._gameTouchs[this._touchIndex].x = evt.stageX;
+            this._gameTouchs[this._touchIndex].y = evt.stageY;
+            if (this._touchIndex == 0) {
+                this.setpreviousTouchState(this._gameTouchs[0]);
+            }
+            this._touchIndex++;
+            this._totalTouchCount++;
+        }
+    };
+    Input.touchMove = function (evt) {
+        if (evt.touchPointID == this._gameTouchs[0].touchPoint) {
+            this.setpreviousTouchState(this._gameTouchs[0]);
+        }
+        var touchIndex = this._gameTouchs.findIndex(function (touch) { return touch.touchPoint == evt.touchPointID; });
+        if (touchIndex != -1) {
+            var touchData = this._gameTouchs[touchIndex];
+            touchData.x = evt.stageX;
+            touchData.y = evt.stageY;
+        }
+    };
+    Input.touchEnd = function (evt) {
+        var touchIndex = this._gameTouchs.findIndex(function (touch) { return touch.touchPoint == evt.touchPointID; });
+        if (touchIndex != -1) {
+            var touchData = this._gameTouchs[touchIndex];
+            touchData.reset();
+            if (touchIndex == 0)
+                this._previousTouchState.reset();
+            this._totalTouchCount--;
+            if (this.totalTouchCount == 0) {
+                this._touchIndex = 0;
+            }
+        }
+    };
+    Input.setpreviousTouchState = function (touchState) {
+        this._previousTouchState = new TouchState();
+        this._previousTouchState.x = touchState.position.x;
+        this._previousTouchState.y = touchState.position.y;
+        this._previousTouchState.touchPoint = touchState.touchPoint;
+        this._previousTouchState.touchDown = touchState.touchDown;
+    };
+    Input.scaledPosition = function (position) {
+        var scaledPos = new Vector2(position.x - this._resolutionOffset.x, position.y - this._resolutionOffset.y);
+        return Vector2.multiply(scaledPos, this.resolutionScale);
+    };
+    Input._init = false;
+    Input._previousTouchState = new TouchState();
+    Input._gameTouchs = [];
+    Input._resolutionOffset = new Vector2();
+    Input._resolutionScale = Vector2.one;
+    Input._touchIndex = 0;
+    Input._totalTouchCount = 0;
+    return Input;
 }());
 var ListPool = (function () {
     function ListPool() {

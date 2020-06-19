@@ -1,6 +1,7 @@
 class PlayerController extends Component {
     private down: boolean = false;
     private touchPoint: Vector2 = Vector2.zero;
+    private mover: Mover;
 
     public onAddedToEntity(){
         this.entity.scene.stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
@@ -19,10 +20,17 @@ class PlayerController extends Component {
     }
 
     public update(){
+        if (!this.mover)
+            this.mover = this.entity.getComponent<Mover>(Mover);
+
+        if (!this.mover)
+            return;
+
         if (this.down){
             let camera = SceneManager.getActiveScene().camera;
             let worldVec = camera.screenToWorldPoint(this.touchPoint);
-            this.entity.position = Vector2.lerp(this.entity.position, worldVec, Time.deltaTime);
+            this.mover.move(Input.touchPositionDelta);
+            console.log(Input.touchPositionDelta);
         }
     }
 }

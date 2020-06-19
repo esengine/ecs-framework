@@ -885,6 +885,37 @@ declare class GlobalManager {
     static unregisterGlobalManager(manager: GlobalManager): void;
     static getGlobalManager<T extends GlobalManager>(type: any): T;
 }
+declare class TouchState {
+    x: number;
+    y: number;
+    touchPoint: number;
+    touchDown: boolean;
+    readonly position: Vector2;
+    reset(): void;
+}
+declare class Input {
+    private static _init;
+    private static _stage;
+    private static _previousTouchState;
+    private static _gameTouchs;
+    private static _resolutionOffset;
+    private static _resolutionScale;
+    private static _touchIndex;
+    private static _totalTouchCount;
+    static readonly touchPosition: Vector2;
+    static maxSupportedTouch: number;
+    static readonly resolutionScale: Vector2;
+    static readonly totalTouchCount: number;
+    static readonly gameTouchs: TouchState[];
+    static readonly touchPositionDelta: Vector2;
+    static initialize(): void;
+    private static initTouchCache;
+    private static touchBegin;
+    private static touchMove;
+    private static touchEnd;
+    private static setpreviousTouchState;
+    static scaledPosition(position: Vector2): Vector2;
+}
 declare class ListPool {
     private static readonly _objectQueue;
     static warmCache(cacheCount: number): void;
