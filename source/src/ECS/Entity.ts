@@ -128,6 +128,13 @@ class Entity {
         this.setTag(value);
     }
 
+    public get stage(){
+        if (!this.scene)
+            return null;
+        
+        return this.scene.stage;
+    }
+
     constructor(name: string){
         this.name = name;
         this.transform = new Transform(this);

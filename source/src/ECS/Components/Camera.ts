@@ -19,9 +19,9 @@ class Camera extends Component {
             this.updateMatrixes();
 
         if (this._areBoundsDirty){
-            let stage = this.entity.scene.stage;
-            let topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
-            let bottomRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, stage.stageHeight - this._inset.bottom));
+            let stage = this.stage;
+            let topLeft = this.screenToWorldPoint(new Vector2(stage.x + this._inset.left, stage.y + this._inset.top));
+            let bottomRight = this.screenToWorldPoint(new Vector2(stage.x + stage.stageWidth - this._inset.right, stage.y + stage.stageHeight - this._inset.bottom));
 
             if (this.entity.transform.rotation != 0){
                 let topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));
@@ -163,7 +163,7 @@ class Camera extends Component {
         this._areMatrixesDirty = true;
     }
 
-    public updateMatrixes(){
+    protected updateMatrixes(){
         if (!this._areMatrixesDirty)
             return;
 
@@ -208,8 +208,8 @@ class Camera extends Component {
 }
 
 class CameraInset {
-    public left;
-    public right;
-    public top;
-    public bottom;
+    public left = 0;
+    public right = 0;
+    public top = 0;
+    public bottom = 0;
 }

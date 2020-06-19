@@ -146,6 +146,7 @@ declare abstract class Component {
     readonly transform: Transform;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
+    readonly stage: egret.Stage;
     initialize(): void;
     onAddedToEntity(): void;
     onRemovedFromEntity(): void;
@@ -185,6 +186,7 @@ declare class Entity {
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
     tag: number;
+    readonly stage: egret.Stage;
     constructor(name: string);
     updateOrder: number;
     setUpdateOrder(updateOrder: number): this;
@@ -334,17 +336,17 @@ declare class Camera extends Component {
     setZoom(zoom: number): this;
     setPosition(position: Vector2): this;
     forceMatrixUpdate(): void;
-    updateMatrixes(): void;
+    protected updateMatrixes(): void;
     screenToWorldPoint(screenPosition: Vector2): Vector2;
     worldToScreenPoint(worldPosition: Vector2): Vector2;
     onEntityTransformChanged(comp: ComponentTransform): void;
     destory(): void;
 }
 declare class CameraInset {
-    left: any;
-    right: any;
-    top: any;
-    bottom: any;
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
 }
 declare class FollowCamera extends Component {
     camera: Camera;
@@ -400,26 +402,30 @@ declare abstract class RenderableComponent extends Component implements IRendera
     readonly bounds: Rectangle;
     protected getWidth(): number;
     protected getHeight(): number;
-    protected getBounds(): Rectangle;
     protected onBecameVisible(): void;
     protected onBecameInvisible(): void;
     abstract render(camera: Camera): any;
     isVisibleFromCamera(camera: Camera): boolean;
     onEntityTransformChanged(comp: ComponentTransform): void;
 }
-declare enum SpriteEffects {
-    none = 0,
-    flipHorizontally = 1,
-    flipVertically = 2
+declare class Sprite {
+    texture2D: egret.Texture;
+    readonly sourceRect: Rectangle;
+    readonly center: Vector2;
+    origin: Vector2;
+    readonly uvs: Rectangle;
+    constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
 }
 declare class SpriteRenderer extends RenderableComponent {
     private _sprite;
     private _origin;
-    protected getBounds(): Rectangle;
-    sprite: egret.DisplayObject;
-    setSprite(sprite: egret.DisplayObject): SpriteRenderer;
+    private _bitmap;
+    readonly bounds: Rectangle;
+    sprite: Sprite;
+    setSprite(sprite: Sprite): SpriteRenderer;
     origin: Vector2;
     setOrigin(origin: Vector2): this;
+    isVisibleFromCamera(camera: Camera): boolean;
     render(camera: Camera): void;
 }
 interface ITriggerListener {
@@ -677,6 +683,7 @@ declare class Rectangle {
     intersects(value: Rectangle): boolean;
     contains(value: Vector2): boolean;
     containsRect(value: Rectangle): boolean;
+    getHalfSize(): Vector2;
     static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
     getClosestPointOnRectangleBorderToPoint(point: Point): {
         res: Vector2;

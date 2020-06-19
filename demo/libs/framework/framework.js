@@ -771,6 +771,15 @@ var Component = (function () {
         }
         return this;
     };
+    Object.defineProperty(Component.prototype, "stage", {
+        get: function () {
+            if (!this.entity)
+                return null;
+            return this.entity.stage;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Component.prototype.initialize = function () {
     };
     Component.prototype.onAddedToEntity = function () {
@@ -948,6 +957,15 @@ var Entity = (function () {
         },
         set: function (value) {
             this.setTag(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "stage", {
+        get: function () {
+            if (!this.scene)
+                return null;
+            return this.scene.stage;
         },
         enumerable: true,
         configurable: true
@@ -1217,9 +1235,9 @@ var ComponentTransform;
 var Transform = (function () {
     function Transform(entity) {
         this._localRotation = 0;
-        this._worldTransform = new Matrix2D();
-        this._worldToLocalTransform = new Matrix2D();
-        this._worldInverseTransform = new Matrix2D();
+        this._worldTransform = Matrix2D.identity;
+        this._worldToLocalTransform = Matrix2D.identity;
+        this._worldInverseTransform = Matrix2D.identity;
         this._rotation = 0;
         this.entity = entity;
         this._scale = this._localScale = Vector2.one;
@@ -1317,12 +1335,15 @@ var Transform = (function () {
     Object.defineProperty(Transform.prototype, "position", {
         get: function () {
             this.updateTransform();
-            if (!this.parent) {
-                this._position = this._localPosition;
-            }
-            else {
-                this.parent.updateTransform();
-                this._position = Vector2Ext.transformR(this._localPosition, this.parent._worldTransform);
+            if (this._positionDirty) {
+                if (!this.parent) {
+                    this._position = this._localPosition;
+                }
+                else {
+                    this.parent.updateTransform();
+                    this._position = Vector2Ext.transformR(this._localPosition, this.parent._worldTransform);
+                }
+                this._positionDirty = false;
             }
             return this._position;
         },
@@ -1441,6 +1462,7 @@ var Transform = (function () {
         else {
             this.localPosition = position;
         }
+        this._positionDirty = false;
         return this;
     };
     Transform.prototype.setDirty = function (dirtyFlagType) {
@@ -1530,9 +1552,9 @@ var Camera = (function (_super) {
             if (this._areMatrixesDirty)
                 this.updateMatrixes();
             if (this._areBoundsDirty) {
-                var stage = this.entity.scene.stage;
-                var topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
-                var bottomRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, stage.stageHeight - this._inset.bottom));
+                var stage = this.stage;
+                var topLeft = this.screenToWorldPoint(new Vector2(stage.x + this._inset.left, stage.y + this._inset.top));
+                var bottomRight = this.screenToWorldPoint(new Vector2(stage.x + stage.stageWidth - this._inset.right, stage.y + stage.stageHeight - this._inset.bottom));
                 if (this.entity.transform.rotation != 0) {
                     var topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));
                     var bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left, stage.stageHeight - this._inset.bottom));
@@ -1706,6 +1728,10 @@ var Camera = (function (_super) {
 }(Component));
 var CameraInset = (function () {
     function CameraInset() {
+        this.left = 0;
+        this.right = 0;
+        this.top = 0;
+        this.bottom = 0;
     }
     return CameraInset;
 }());
@@ -1903,7 +1929,11 @@ var RenderableComponent = (function (_super) {
     });
     Object.defineProperty(RenderableComponent.prototype, "bounds", {
         get: function () {
-            return this.getBounds();
+            if (this._areBoundsDirty) {
+                this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new Vector2(0, 0), this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
+                this._areBoundsDirty = false;
+            }
+            return this._bounds;
         },
         enumerable: true,
         configurable: true
@@ -1914,43 +1944,53 @@ var RenderableComponent = (function (_super) {
     RenderableComponent.prototype.getHeight = function () {
         return this.bounds.height;
     };
-    RenderableComponent.prototype.getBounds = function () {
-        if (this._areBoundsDirty) {
-            this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new Vector2(0, 0), this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
-            this._areBoundsDirty = false;
-        }
-        return this._bounds;
-    };
     RenderableComponent.prototype.onBecameVisible = function () { };
     RenderableComponent.prototype.onBecameInvisible = function () { };
     RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
-        return true;
+        this.isVisible = camera.bounds.intersects(this.bounds);
+        return this.isVisible;
     };
     RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
         this._areBoundsDirty = true;
     };
     return RenderableComponent;
 }(Component));
-var SpriteEffects;
-(function (SpriteEffects) {
-    SpriteEffects[SpriteEffects["none"] = 0] = "none";
-    SpriteEffects[SpriteEffects["flipHorizontally"] = 1] = "flipHorizontally";
-    SpriteEffects[SpriteEffects["flipVertically"] = 2] = "flipVertically";
-})(SpriteEffects || (SpriteEffects = {}));
+var Sprite = (function () {
+    function Sprite(texture, sourceRect, origin) {
+        if (sourceRect === void 0) { sourceRect = new Rectangle(texture.textureWidth, texture.textureHeight); }
+        if (origin === void 0) { origin = sourceRect.getHalfSize(); }
+        this.uvs = new Rectangle();
+        this.texture2D = texture;
+        this.sourceRect = sourceRect;
+        this.center = new Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
+        this.origin = origin;
+        var inverseTexW = 1 / texture.textureWidth;
+        var inverseTexH = 1 / texture.textureHeight;
+        this.uvs.x = sourceRect.x * inverseTexW;
+        this.uvs.y = sourceRect.y * inverseTexH;
+        this.uvs.width = sourceRect.width * inverseTexW;
+        this.uvs.height = sourceRect.height * inverseTexH;
+    }
+    return Sprite;
+}());
 var SpriteRenderer = (function (_super) {
     __extends(SpriteRenderer, _super);
     function SpriteRenderer() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    SpriteRenderer.prototype.getBounds = function () {
-        if (this._areBoundsDirty) {
-            if (this._sprite) {
-                this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this._sprite.width, this._sprite.height);
-                this._areBoundsDirty = false;
+    Object.defineProperty(SpriteRenderer.prototype, "bounds", {
+        get: function () {
+            if (this._areBoundsDirty) {
+                if (this._sprite) {
+                    this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this._sprite.texture2D.textureWidth, this._sprite.texture2D.textureHeight);
+                    this._areBoundsDirty = false;
+                }
             }
-            return this.bounds;
-        }
-    };
+            return this._bounds;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(SpriteRenderer.prototype, "sprite", {
         get: function () {
             return this._sprite;
@@ -1964,7 +2004,9 @@ var SpriteRenderer = (function (_super) {
     SpriteRenderer.prototype.setSprite = function (sprite) {
         this._sprite = sprite;
         if (this._sprite)
-            this._origin = new Vector2(this._sprite.anchorOffsetX, this._sprite.anchorOffsetY);
+            this._origin = sprite.origin;
+        this._bitmap = new egret.Bitmap(sprite.texture2D);
+        this.stage.addChild(this._bitmap);
         return this;
     };
     Object.defineProperty(SpriteRenderer.prototype, "origin", {
@@ -1984,16 +2026,21 @@ var SpriteRenderer = (function (_super) {
         }
         return this;
     };
+    SpriteRenderer.prototype.isVisibleFromCamera = function (camera) {
+        this.isVisible = new Rectangle(0, 0, this.stage.stageWidth, this.stage.stageHeight).intersects(this.bounds);
+        this._bitmap.visible = this.isVisible;
+        return this.isVisible;
+    };
     SpriteRenderer.prototype.render = function (camera) {
         if (!this.sprite)
             return;
-        this.sprite.x = this.entity.transform.position.x - camera.transform.position.x;
-        this.sprite.y = this.entity.transform.position.y - camera.transform.position.y;
-        this.sprite.rotation = this.entity.transform.rotation;
-        this.sprite.anchorOffsetX = this._origin.x;
-        this.sprite.anchorOffsetY = this._origin.y;
-        this.sprite.scaleX = this.entity.transform.scale.x;
-        this.sprite.scaleY = this.entity.transform.scale.y;
+        this._bitmap.x = this.entity.transform.position.x - camera.transform.position.x + camera.origin.x;
+        this._bitmap.y = this.entity.transform.position.y - camera.transform.position.y + camera.origin.y;
+        this._bitmap.rotation = this.entity.transform.rotation;
+        this._bitmap.anchorOffsetX = this._origin.x;
+        this._bitmap.anchorOffsetY = this._origin.y;
+        this._bitmap.scaleX = this.entity.transform.scale.x;
+        this._bitmap.scaleY = this.entity.transform.scale.y;
     };
     return SpriteRenderer;
 }(RenderableComponent));
@@ -3162,6 +3209,9 @@ var Rectangle = (function () {
             (this.y <= value.y)) &&
             (value.y < (this.y + this.height)));
     };
+    Rectangle.prototype.getHalfSize = function () {
+        return new Vector2(this.width * 0.5, this.height * 0.5);
+    };
     Rectangle.fromMinMax = function (minX, minY, maxX, maxY) {
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     };
@@ -3230,10 +3280,10 @@ var Rectangle = (function () {
             var topRight = new Vector2(worldPosX + width, worldPosY);
             var bottomLeft = new Vector2(worldPosX, worldPosY + height);
             var bottomRight = new Vector2(worldPosX + width, worldPosY + height);
-            topLeft = Vector2.transform(topLeft, this._transformMat);
-            topRight = Vector2.transform(topRight, this._transformMat);
-            bottomLeft = Vector2.transform(bottomLeft, this._transformMat);
-            bottomRight = Vector2.transform(bottomRight, this._transformMat);
+            topLeft = Vector2Ext.transformR(topLeft, this._transformMat);
+            topRight = Vector2Ext.transformR(topRight, this._transformMat);
+            bottomLeft = Vector2Ext.transformR(bottomLeft, this._transformMat);
+            bottomRight = Vector2Ext.transformR(bottomRight, this._transformMat);
             var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
             var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
             var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);

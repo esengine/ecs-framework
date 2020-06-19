@@ -71,6 +71,10 @@ class Rectangle {
             (value.y < (this.y + this.height)));
     }
 
+    public getHalfSize(){
+        return new Vector2(this.width * 0.5, this.height * 0.5);
+    }
+
     public static fromMinMax(minX: number, minY: number, maxX: number, maxY: number) {
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     }
@@ -144,10 +148,10 @@ class Rectangle {
             let bottomLeft = new Vector2(worldPosX, worldPosY + height);
             let bottomRight = new Vector2(worldPosX + width, worldPosY + height);
 
-            topLeft = Vector2.transform(topLeft, this._transformMat);
-            topRight = Vector2.transform(topRight, this._transformMat);
-            bottomLeft = Vector2.transform(bottomLeft, this._transformMat);
-            bottomRight = Vector2.transform(bottomRight, this._transformMat);
+            topLeft = Vector2Ext.transformR(topLeft, this._transformMat);
+            topRight = Vector2Ext.transformR(topRight, this._transformMat);
+            bottomLeft = Vector2Ext.transformR(bottomLeft, this._transformMat);
+            bottomRight = Vector2Ext.transformR(bottomRight, this._transformMat);
 
             let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
             let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);

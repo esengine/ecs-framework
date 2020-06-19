@@ -29,6 +29,13 @@ abstract class Component {
         return this;
     }
 
+    public get stage(){
+        if (!this.entity)
+            return null;
+
+        return this.entity.stage;
+    }
+
     public initialize(){
 
     }

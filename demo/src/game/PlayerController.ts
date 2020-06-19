@@ -22,8 +22,7 @@ class PlayerController extends Component {
         if (this.down){
             let camera = SceneManager.getActiveScene().camera;
             let worldVec = camera.screenToWorldPoint(this.touchPoint);
-            this.entity.position = Vector2.lerp(this.entity.position, Vector2.add(worldVec, 
-            new Vector2(this.entity.scene.stage.stageWidth / 2, this.entity.scene.stage.stageHeight / 2)), Time.deltaTime);
+            this.entity.position = Vector2.lerp(this.entity.position, worldVec, Time.deltaTime);
         }
     }
 }

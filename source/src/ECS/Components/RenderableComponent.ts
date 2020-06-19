@@ -29,7 +29,13 @@ abstract class RenderableComponent extends Component implements IRenderable {
     }
 
     public get bounds(): Rectangle{
-        return this.getBounds();
+        if (this._areBoundsDirty){
+            this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new Vector2(0, 0),
+                this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
+            this._areBoundsDirty = false;
+        }
+
+        return this._bounds;
     }
 
     protected getWidth(){
@@ -40,16 +46,6 @@ abstract class RenderableComponent extends Component implements IRenderable {
         return this.bounds.height;
     }
 
-    protected getBounds(){
-        if (this._areBoundsDirty){
-            this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new Vector2(0, 0),
-                this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
-            this._areBoundsDirty = false;
-        }
-
-        return this._bounds;
-    }
-
     protected onBecameVisible(){}
 
     protected onBecameInvisible(){}
@@ -57,10 +53,8 @@ abstract class RenderableComponent extends Component implements IRenderable {
     public abstract render(camera: Camera);
 
     public isVisibleFromCamera(camera: Camera): boolean{
-        // this.isVisible = camera.bounds.intersects(this.bounds);
-        // return this.isVisible;
-
-        return true;
+        this.isVisible = camera.bounds.intersects(this.bounds);
+        return this.isVisible;
     }
 
     public onEntityTransformChanged(comp: ComponentTransform){
