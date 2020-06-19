@@ -1132,7 +1132,7 @@ var Scene = (function (_super) {
         Physics.reset();
         if (this.entityProcessors)
             this.entityProcessors.begin();
-        this.camera.onSceneSizeChanged(this.stage.width, this.stage.height);
+        this.camera.onSceneSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
     };
     Scene.prototype.onActive = function () {
     };

@@ -110,7 +110,7 @@ class Scene extends egret.DisplayObjectContainer {
       if (this.entityProcessors)
          this.entityProcessors.begin();
 
-      this.camera.onSceneSizeChanged(this.stage.width, this.stage.height);
+      this.camera.onSceneSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
    }
 
    /** 场景激活 */

@@ -105,8 +105,14 @@ class Main extends eui.UILayer {
         player.addComponent(new SpawnComponent(EnemyType.worm));
         player.addComponent(new PlayerController());
 
-        let player2 = scene.createEntity("player2");
-        player2.addComponent(new BoxCollider()).setSize(99, 99);
+        for (let i = 0; i < 20; i ++){
+            let image = new eui.Image(RES.getRes("checkbox_select_disabled_png"));
+            let player2 = scene.createEntity("player2");
+            player2.addComponent(new SpriteRenderer()).setSprite(image);
+            this.addChild(image);
+            player2.transform.position = new Vector2(Math.random() * 100 * i, Math.random() * 100 * i);
+        }
+        
 
         scene.camera.setPosition(new Vector2(-200, -200));
 
