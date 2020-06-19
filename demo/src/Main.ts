@@ -104,6 +104,7 @@ class Main extends eui.UILayer {
         player.addComponent(new SpriteRenderer()).setSprite(image);
         player.addComponent(new SpawnComponent(EnemyType.worm));
         player.addComponent(new PlayerController());
+        player.addComponent(new FollowCamera(player)).focusOffset = new Vector2(this.stage.stageWidth / 2, this.stage.stageHeight / 2);
 
         for (let i = 0; i < 20; i ++){
             let image = new eui.Image(RES.getRes("checkbox_select_disabled_png"));
@@ -112,9 +113,6 @@ class Main extends eui.UILayer {
             this.addChild(image);
             player2.transform.position = new Vector2(Math.random() * 100 * i, Math.random() * 100 * i);
         }
-        
-
-        scene.camera.setPosition(new Vector2(-200, -200));
 
         // Main.emitter.addObserver(CoreEmitterType.Update, ()=>{
         //     console.log("update emitter");

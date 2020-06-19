@@ -88,6 +88,14 @@ class Camera extends Component {
         }
     }
 
+    public get position(){
+        return this.entity.transform.position;
+    }
+
+    public set position(value: Vector2){
+        this.entity.transform.position = value;
+    }
+
     public get transformMatrix(){
         if (this._areBoundsDirty)
             this.updateMatrixes();

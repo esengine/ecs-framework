@@ -23,7 +23,7 @@ class Rectangle {
         return this.y + this.height;
     }
 
-    public get center(){
+    public get center() {
         return new Vector2(this.x + (this.width / 2), this.y + (this.height / 2));
     }
 
@@ -34,6 +34,15 @@ class Rectangle {
     public set location(value: Vector2) {
         this.x = value.x;
         this.y = value.y;
+    }
+
+    public get size() {
+        return new Vector2(this.width, this.height);
+    }
+
+    public set size(value: Vector2) {
+        this.width = value.x;
+        this.height = value.y;
     }
 
     constructor(x?: number, y?: number, width?: number, height?: number) {
@@ -56,53 +65,59 @@ class Rectangle {
             (value.y < (this.y + this.height)));
     }
 
+    public containsRect(value: Rectangle) {
+        return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
+            (this.y <= value.y)) &&
+            (value.y < (this.y + this.height)));
+    }
+
     public static fromMinMax(minX: number, minY: number, maxX: number, maxY: number) {
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     }
 
-    public getClosestPointOnRectangleBorderToPoint(point: Point): {res: Vector2, edgeNormal: Vector2} {
+    public getClosestPointOnRectangleBorderToPoint(point: Point): { res: Vector2, edgeNormal: Vector2 } {
         let edgeNormal = new Vector2(0, 0);
 
         let res = new Vector2(0, 0);
         res.x = MathHelper.clamp(point.x, this.left, this.right);
         res.y = MathHelper.clamp(point.y, this.top, this.bottom);
 
-        if (this.contains(res)){
+        if (this.contains(res)) {
             let dl = res.x - this.left;
             let dr = this.right - res.x;
             let dt = res.y - this.top;
             let db = this.bottom - res.y;
 
             let min = Math.min(dl, dr, dt, db);
-            if (min == dt){
+            if (min == dt) {
                 res.y = this.top;
                 edgeNormal.y = -1;
-            } else if(min == db){
+            } else if (min == db) {
                 res.y = this.bottom;
                 edgeNormal.y = 1;
-            } else if(min == dl){
+            } else if (min == dl) {
                 res.x = this.left;
                 edgeNormal.x = -1;
-            } else{
+            } else {
                 res.x = this.right;
                 edgeNormal.x = 1;
             }
         } else {
-            if (res.x == this.left){
+            if (res.x == this.left) {
                 edgeNormal.x = -1;
             }
-            if (res.x == this.right){
+            if (res.x == this.right) {
                 edgeNormal.x = 1;
             }
-            if (res.y == this.top){
+            if (res.y == this.top) {
                 edgeNormal.y = -1;
             }
-            if (res.y == this.bottom){
+            if (res.y == this.bottom) {
                 edgeNormal.y = 1;
             }
         }
 
-        return {res: res, edgeNormal: edgeNormal};
+        return { res: res, edgeNormal: edgeNormal };
     }
 
     public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2,
@@ -149,26 +164,26 @@ class Rectangle {
      * 给定多边形的点，计算边界
      * @param points 
      */
-    public static rectEncompassingPoints(points: Vector2[]){
+    public static rectEncompassingPoints(points: Vector2[]) {
         let minX = Number.POSITIVE_INFINITY;
         let minY = Number.POSITIVE_INFINITY;
         let maxX = Number.NEGATIVE_INFINITY;
         let maxY = Number.NEGATIVE_INFINITY;
 
-        for (let i = 0; i < points.length; i ++){
+        for (let i = 0; i < points.length; i++) {
             let pt = points[i];
 
-            if (pt.x < minX){
+            if (pt.x < minX) {
                 minX = pt.x;
             }
-            if (pt.x > maxX){
+            if (pt.x > maxX) {
                 maxX = pt.x;
             }
 
-            if (pt.y < minY){
+            if (pt.y < minY) {
                 minY = pt.y;
             }
-            if (pt.y > maxY){
+            if (pt.y > maxY) {
                 maxY = pt.y;
             }
         }

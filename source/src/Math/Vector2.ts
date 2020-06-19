@@ -93,6 +93,11 @@ class Vector2 {
         return Math.sqrt((this.x * this.x) + (this.y * this.y));
     }
 
+    /** 对x和y值四舍五入 */
+    public round(): Vector2{
+        return new Vector2(Math.round(this.x), Math.round(this.y));
+    }
+
     /**
      * 创建一个新的Vector2
      * 它包含来自另一个向量的标准化值。
@@ -122,6 +127,17 @@ class Vector2 {
     public static distanceSquared(value1: Vector2, value2: Vector2){
         let v1 = value1.x - value2.x, v2 = value1.y - value2.y;
         return (v1 * v1) + (v2 * v2);
+    }
+
+    /**
+     * 
+     * @param value1 
+     * @param min 
+     * @param max 
+     */
+    public static clamp(value1: Vector2, min: Vector2, max: Vector2){
+        return new Vector2(MathHelper.clamp(value1.x, min.x, max.x),
+            MathHelper.clamp(value1.y, min.y, max.y));
     }
 
     /**

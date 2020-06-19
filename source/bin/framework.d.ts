@@ -303,6 +303,7 @@ declare class Transform {
     setLocalPosition(localPosition: Vector2): this;
     setPosition(position: Vector2): this;
     setDirty(dirtyFlagType: DirtyType): void;
+    roundPosition(): void;
     updateTransform(): void;
 }
 declare class Camera extends Component {
@@ -323,6 +324,7 @@ declare class Camera extends Component {
     minimumZoom: number;
     maximumZoom: number;
     origin: Vector2;
+    position: Vector2;
     readonly transformMatrix: Matrix2D;
     readonly inverseTransformMatrix: Matrix2D;
     constructor();
@@ -343,6 +345,29 @@ declare class CameraInset {
     right: any;
     top: any;
     bottom: any;
+}
+declare class FollowCamera extends Component {
+    camera: Camera;
+    followLerp: number;
+    deadzone: Rectangle;
+    focusOffset: Vector2;
+    mapLockEnabled: boolean;
+    mapSize: Vector2;
+    private _targetEntity;
+    private _cameraStyle;
+    private _worldSpaceDeadZone;
+    private _desiredPositionDelta;
+    private _targetCollider;
+    constructor(targetEntity: Entity, cameraStyle?: CameraStyle);
+    onAddedToEntity(): void;
+    follow(targetEntity: Entity, cameraStyle?: CameraStyle): void;
+    update(): void;
+    private clampToMapSize;
+    private updateFollow;
+}
+declare enum CameraStyle {
+    lockOn = 0,
+    cameraWindow = 1
 }
 declare class Mesh extends Component {
     private _verts;
@@ -647,9 +672,11 @@ declare class Rectangle {
     readonly bottom: number;
     readonly center: Vector2;
     location: Vector2;
+    size: Vector2;
     constructor(x?: number, y?: number, width?: number, height?: number);
     intersects(value: Rectangle): boolean;
     contains(value: Vector2): boolean;
+    containsRect(value: Rectangle): boolean;
     static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
     getClosestPointOnRectangleBorderToPoint(point: Point): {
         res: Vector2;
@@ -676,9 +703,11 @@ declare class Vector2 {
     static subtract(value1: Vector2, value2: Vector2): Vector2;
     normalize(): void;
     length(): number;
+    round(): Vector2;
     static normalize(value: Vector2): Vector2;
     static dot(value1: Vector2, value2: Vector2): number;
     static distanceSquared(value1: Vector2, value2: Vector2): number;
+    static clamp(value1: Vector2, min: Vector2, max: Vector2): Vector2;
     static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
     static transform(position: Vector2, matrix: Matrix2D): Vector2;
     static distance(value1: Vector2, value2: Vector2): number;

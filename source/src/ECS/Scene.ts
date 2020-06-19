@@ -155,8 +155,8 @@ class Scene extends egret.DisplayObjectContainer {
    }
 
    public prepRenderState() {
-      this._projectionMatrix.m11 = 2 / this.stage.width;
-      this._projectionMatrix.m22 = -2 / this.stage.height;
+      this._projectionMatrix.m11 = 2 / this.stage.stageWidth;
+      this._projectionMatrix.m22 = -2 / this.stage.stageHeight;
 
       this._transformMatrix = this.camera.transformMatrix;
       this._matrixTransformMatrix = Matrix2D.multiply(this._transformMatrix, this._projectionMatrix);

@@ -1162,8 +1162,8 @@ var Scene = (function (_super) {
         }
     };
     Scene.prototype.prepRenderState = function () {
-        this._projectionMatrix.m11 = 2 / this.stage.width;
-        this._projectionMatrix.m22 = -2 / this.stage.height;
+        this._projectionMatrix.m11 = 2 / this.stage.stageWidth;
+        this._projectionMatrix.m22 = -2 / this.stage.stageHeight;
         this._transformMatrix = this.camera.transformMatrix;
         this._matrixTransformMatrix = Matrix2D.multiply(this._transformMatrix, this._projectionMatrix);
     };
@@ -1464,6 +1464,9 @@ var Transform = (function () {
             }
         }
     };
+    Transform.prototype.roundPosition = function () {
+        this.position = this._position.round();
+    };
     Transform.prototype.updateTransform = function () {
         if (this._hierachyDirty != DirtyType.clean) {
             if (this.parent)
@@ -1600,6 +1603,16 @@ var Camera = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(Camera.prototype, "position", {
+        get: function () {
+            return this.entity.transform.position;
+        },
+        set: function (value) {
+            this.entity.transform.position = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Camera.prototype, "transformMatrix", {
         get: function () {
             if (this._areBoundsDirty)
@@ -1696,6 +1709,103 @@ var CameraInset = (function () {
     }
     return CameraInset;
 }());
+var FollowCamera = (function (_super) {
+    __extends(FollowCamera, _super);
+    function FollowCamera(targetEntity, cameraStyle) {
+        if (cameraStyle === void 0) { cameraStyle = CameraStyle.lockOn; }
+        var _this = _super.call(this) || this;
+        _this.followLerp = 0.1;
+        _this.deadzone = new Rectangle();
+        _this.focusOffset = new Vector2();
+        _this.mapSize = new Vector2();
+        _this._worldSpaceDeadZone = new Rectangle();
+        _this._desiredPositionDelta = new Vector2();
+        _this._targetEntity = targetEntity;
+        _this._cameraStyle = cameraStyle;
+        _this.camera = null;
+        return _this;
+    }
+    FollowCamera.prototype.onAddedToEntity = function () {
+        if (!this.camera)
+            this.camera = this.entity.scene.camera;
+        this.follow(this._targetEntity, this._cameraStyle);
+    };
+    FollowCamera.prototype.follow = function (targetEntity, cameraStyle) {
+        if (cameraStyle === void 0) { cameraStyle = CameraStyle.cameraWindow; }
+        this._targetEntity = targetEntity;
+        this._cameraStyle = cameraStyle;
+        var cameraBounds = this.camera.bounds;
+        switch (this._cameraStyle) {
+            case CameraStyle.cameraWindow:
+                var w = cameraBounds.width / 6;
+                var h = cameraBounds.height / 3;
+                this.deadzone = new Rectangle((cameraBounds.width - w) / 2, (cameraBounds.height - h) / 2, w, h);
+                break;
+            case CameraStyle.lockOn:
+                this.deadzone = new Rectangle(cameraBounds.width / 2, cameraBounds.height / 2, 10, 10);
+                break;
+        }
+    };
+    FollowCamera.prototype.update = function () {
+        var halfScreen = Vector2.multiply(this.camera.bounds.size, new Vector2(0.5));
+        this._worldSpaceDeadZone.x = this.camera.position.x - halfScreen.x + this.deadzone.x + this.focusOffset.x;
+        this._worldSpaceDeadZone.y = this.camera.position.y - halfScreen.y + this.deadzone.y + this.focusOffset.y;
+        this._worldSpaceDeadZone.width = this.deadzone.width;
+        this._worldSpaceDeadZone.height = this.deadzone.height;
+        if (this._targetEntity)
+            this.updateFollow();
+        this.camera.position = Vector2.lerp(this.camera.position, Vector2.add(this.camera.position, this._desiredPositionDelta), this.followLerp);
+        this.camera.entity.transform.roundPosition();
+        if (this.mapLockEnabled) {
+            this.camera.position = this.clampToMapSize(this.camera.position);
+            this.camera.entity.transform.roundPosition();
+        }
+    };
+    FollowCamera.prototype.clampToMapSize = function (position) {
+        var halfScreen = Vector2.multiply(new Vector2(this.camera.bounds.width, this.camera.bounds.height), new Vector2(0.5));
+        var cameraMax = new Vector2(this.mapSize.x - halfScreen.x, this.mapSize.y - halfScreen.y);
+        return Vector2.clamp(position, halfScreen, cameraMax);
+    };
+    FollowCamera.prototype.updateFollow = function () {
+        this._desiredPositionDelta.x = this._desiredPositionDelta.y = 0;
+        if (this._cameraStyle == CameraStyle.lockOn) {
+            var targetX = this._targetEntity.transform.position.x;
+            var targetY = this._targetEntity.transform.position.y;
+            if (this._worldSpaceDeadZone.x > targetX)
+                this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;
+            else if (this._worldSpaceDeadZone.x < targetX)
+                this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;
+            if (this._worldSpaceDeadZone.y < targetY)
+                this._desiredPositionDelta.y = targetY - this._worldSpaceDeadZone.y;
+            else if (this._worldSpaceDeadZone.y > targetY)
+                this._desiredPositionDelta.y = targetY - this._worldSpaceDeadZone.y;
+        }
+        else {
+            if (!this._targetCollider) {
+                this._targetCollider = this._targetEntity.getComponent(Collider);
+                if (!this._targetCollider)
+                    return;
+            }
+            var targetBounds = this._targetEntity.getComponent(Collider).bounds;
+            if (!this._worldSpaceDeadZone.containsRect(targetBounds)) {
+                if (this._worldSpaceDeadZone.left > targetBounds.left)
+                    this._desiredPositionDelta.x = targetBounds.left - this._worldSpaceDeadZone.left;
+                else if (this._worldSpaceDeadZone.right < targetBounds.right)
+                    this._desiredPositionDelta.x = targetBounds.right - this._worldSpaceDeadZone.right;
+                if (this._worldSpaceDeadZone.bottom < targetBounds.bottom)
+                    this._desiredPositionDelta.y = targetBounds.bottom - this._worldSpaceDeadZone.bottom;
+                else if (this._worldSpaceDeadZone.top > targetBounds.top)
+                    this._desiredPositionDelta.y = targetBounds.top - this._worldSpaceDeadZone.top;
+            }
+        }
+    };
+    return FollowCamera;
+}(Component));
+var CameraStyle;
+(function (CameraStyle) {
+    CameraStyle[CameraStyle["lockOn"] = 0] = "lockOn";
+    CameraStyle[CameraStyle["cameraWindow"] = 1] = "cameraWindow";
+})(CameraStyle || (CameraStyle = {}));
 var Mesh = (function (_super) {
     __extends(Mesh, _super);
     function Mesh() {
@@ -3025,6 +3135,17 @@ var Rectangle = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(Rectangle.prototype, "size", {
+        get: function () {
+            return new Vector2(this.width, this.height);
+        },
+        set: function (value) {
+            this.width = value.x;
+            this.height = value.y;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Rectangle.prototype.intersects = function (value) {
         return value.left < this.right &&
             this.left < value.right &&
@@ -3032,6 +3153,11 @@ var Rectangle = (function () {
             this.top < value.bottom;
     };
     Rectangle.prototype.contains = function (value) {
+        return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
+            (this.y <= value.y)) &&
+            (value.y < (this.y + this.height)));
+    };
+    Rectangle.prototype.containsRect = function (value) {
         return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
             (this.y <= value.y)) &&
             (value.y < (this.y + this.height)));
@@ -3208,6 +3334,9 @@ var Vector2 = (function () {
     Vector2.prototype.length = function () {
         return Math.sqrt((this.x * this.x) + (this.y * this.y));
     };
+    Vector2.prototype.round = function () {
+        return new Vector2(Math.round(this.x), Math.round(this.y));
+    };
     Vector2.normalize = function (value) {
         var val = 1 / Math.sqrt((value.x * value.x) + (value.y * value.y));
         value.x *= val;
@@ -3220,6 +3349,9 @@ var Vector2 = (function () {
     Vector2.distanceSquared = function (value1, value2) {
         var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
         return (v1 * v1) + (v2 * v2);
+    };
+    Vector2.clamp = function (value1, min, max) {
+        return new Vector2(MathHelper.clamp(value1.x, min.x, max.x), MathHelper.clamp(value1.y, min.y, max.y));
     };
     Vector2.lerp = function (value1, value2, amount) {
         return new Vector2(MathHelper.lerp(value1.x, value2.x, amount), MathHelper.lerp(value1.y, value2.y, amount));

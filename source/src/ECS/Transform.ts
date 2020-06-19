@@ -283,6 +283,10 @@ class Transform {
         }
     }
 
+    public roundPosition(){
+        this.position = this._position.round();
+    }
+
     public updateTransform(){
         if (this._hierachyDirty != DirtyType.clean){
             if (this.parent)
