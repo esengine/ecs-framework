@@ -211,10 +211,12 @@ declare class Scene extends egret.DisplayObjectContainer {
     camera: Camera;
     readonly entities: EntityList;
     readonly renderableComponents: RenderableComponentList;
+    readonly content: ContentManager;
     private _projectionMatrix;
     private _transformMatrix;
     private _matrixTransformMatrix;
     private _renderers;
+    private _didSceneBegin;
     readonly entityProcessors: EntityProcessorList;
     constructor(displayObject: egret.DisplayObject);
     createEntity(name: string): Entity;
@@ -224,25 +226,27 @@ declare class Scene extends egret.DisplayObjectContainer {
     addEntityProcessor(processor: EntitySystem): EntitySystem;
     removeEntityProcessor(processor: EntitySystem): void;
     getEntityProcessor<T extends EntitySystem>(): T;
-    setActive(): Scene;
     addRenderer<T extends Renderer>(renderer: T): T;
     getRenderer<T extends Renderer>(type: any): T;
     removeRenderer(renderer: Renderer): void;
-    initialize(): void;
-    onActive(): void;
-    onDeactive(): void;
+    begin(): void;
+    end(): void;
+    protected onStart(): void;
+    protected onActive(): void;
+    protected onDeactive(): void;
     update(): void;
     render(): void;
-    prepRenderState(): void;
-    destory(): void;
 }
 declare class SceneManager {
-    private static _loadedScenes;
-    private static _lastScene;
-    private static _activeScene;
-    static createScene(name: string, scene: Scene): Scene;
-    static setActiveScene(scene: Scene): Scene;
-    static getActiveScene(): Scene;
+    private static _scene;
+    private static _nextScene;
+    static sceneTransition: SceneTransition;
+    constructor(stage: egret.Stage);
+    static scene: Scene;
+    static initialize(stage: egret.Stage): void;
+    static update(): void;
+    static render(): void;
+    static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
 }
 declare enum DirtyType {
     clean = 0,
@@ -623,6 +627,33 @@ interface IRenderable {
 declare class ScreenSpaceRenderer extends Renderer {
     render(scene: Scene): void;
 }
+declare abstract class SceneTransition {
+    loadsNewScene: boolean;
+    isNewSceneLoaded: boolean;
+    wantsPreviousSceneRender: boolean;
+    protected sceneLoadAction: Function;
+    previousSceneRender: egret.RenderTexture;
+    onScreenObscured: Function;
+    onTransitionCompleted: Function;
+    progress: number;
+    constructor(sceneLoadAction: Function, wantsPreviousSceneRender?: boolean);
+    private _hasPreviousSceneRender;
+    readonly hasPreviousSceneRender: boolean;
+    preRender(): void;
+    render(): void;
+    onBeginTransition(): Promise<any>;
+    protected transitionComplete(): void;
+    protected loadScene(): Promise<any>;
+}
+declare class FadeTransition extends SceneTransition {
+    fadeToColor: number;
+    fadeOutDuration: number;
+    private _color;
+    private _toColor;
+    private _destinationRect;
+    private _overlayTexture;
+    constructor(sceneLoadAction: Function);
+}
 declare class Flags {
     static isFlagSet(self: number, flag: number): boolean;
     static isUnshiftedFlagSet(self: number, flag: number): boolean;
@@ -759,6 +790,7 @@ declare class Physics {
     static spatialHashCellSize: number;
     static readonly allLayers: number;
     static reset(): void;
+    static clear(): void;
     static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
     static boxcastBroadphase(rect: Rectangle, layerMask?: number): Collider[];
     static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Collider[];
@@ -787,7 +819,7 @@ declare class Polygon extends Shape {
     constructor(points: Vector2[], isBox?: boolean);
     private buildEdgeNormals;
     setPoints(points: Vector2[]): void;
-    collidesWithShape(other: Shape): CollisionResult;
+    collidesWithShape(other: Shape): any;
     recalculateCenterAndEdgeNormals(): void;
     overlaps(other: Shape): any;
     static findPolygonCenter(points: Vector2[]): Vector2;
@@ -850,6 +882,7 @@ declare class SpatialHash {
     constructor(cellSize?: number);
     remove(collider: Collider): void;
     register(collider: Collider): void;
+    clear(): void;
     overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: any): number;
     aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
     private cellAtPosition;
@@ -865,6 +898,11 @@ declare class NumberDictionary {
     remove(obj: Collider): void;
     tryGetValue(x: number, y: number): Collider[];
     clear(): void;
+}
+declare class ContentManager {
+    protected loadedAssets: Map<string, any>;
+    load(name: string, local?: boolean): Promise<any>;
+    dispose(): void;
 }
 declare class Emitter<T> {
     private _messageTable;
@@ -908,7 +946,7 @@ declare class Input {
     static readonly totalTouchCount: number;
     static readonly gameTouchs: TouchState[];
     static readonly touchPositionDelta: Vector2;
-    static initialize(): void;
+    static initialize(stage: egret.Stage): void;
     private static initTouchCache;
     private static touchBegin;
     private static touchMove;

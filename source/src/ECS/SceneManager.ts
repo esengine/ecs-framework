@@ -1,40 +1,94 @@
 /** 运行时的场景管理。 */
 class SceneManager {
-    private static _loadedScenes: Map<string, Scene> = new Map();
-    /** 上一个场景 */
-    private static _lastScene: Scene;
-    /** 当前激活的场景 */
-    private static _activeScene: Scene;
+    private static _scene: Scene;
+    private static _nextScene: Scene;
+    public static sceneTransition: SceneTransition;
 
-    /**
-     * 使用给定的名称在运行时创建一个空的新场景。
-     * 新场景将与当前打开的任何现有场景一起被添加到层次结构中。
-     * 这个函数用于在运行时创建场景。
-     * @param name 
-     * @param scene 
-     */
-    public static createScene(name: string, scene: Scene){
-        scene.name = name;
-        this._loadedScenes.set(name, scene);
-        return scene;
+    constructor(stage: egret.Stage) {
+        stage.addEventListener(egret.Event.ENTER_FRAME, SceneManager.update, this);
+
+        SceneManager.initialize(stage);
     }
 
-    public static setActiveScene(scene: Scene){
-        if (this._activeScene){
-            // 如果场景相同则不进行切换
-            if (this._activeScene == scene)
-                return;
+    public static get scene() {
+        return this._scene;
+    }
+    public static set scene(value: Scene) {
+        if (!value)
+            throw new Error("场景不能为空");
 
-            this._lastScene = this._activeScene;
-            this._activeScene.destory();
+        if (this._scene == null) {
+            this._scene = value;
+            this._scene.begin();
+        } else {
+            this._nextScene = value;
+        }
+    }
+
+    public static initialize(stage: egret.Stage) {
+        Input.initialize(stage);
+    }
+
+    public static update() {
+        Time.update(egret.getTimer());
+
+        if (SceneManager._scene) {
+            for (let i = GlobalManager.globalManagers.length - 1; i >= 0; i--) {
+                if (GlobalManager.globalManagers[i].enabled)
+                    GlobalManager.globalManagers[i].update();
+            }
+
+            if (!SceneManager.sceneTransition ||
+                (SceneManager.sceneTransition && (!SceneManager.sceneTransition.loadsNewScene || SceneManager.sceneTransition.isNewSceneLoaded))) {
+                    SceneManager._scene.update();
+            }
+
+            if (SceneManager._nextScene) {
+                SceneManager._scene.end();
+
+                for (let i = 0; i < SceneManager._scene.entities.buffer.length; i++) {
+                    let entity = SceneManager._scene.entities.buffer[i];
+                    entity.destory();
+                }
+
+                SceneManager._scene = SceneManager._nextScene;
+                SceneManager._nextScene = null;
+
+                SceneManager._scene.begin();
+            }
         }
 
-        this._activeScene = scene;
-        this._activeScene.initialize();
-        return scene;
+        SceneManager.render();
     }
 
-    public static getActiveScene(){
-        return this._activeScene;
+    public static render() {
+        if (this.sceneTransition)
+            this.sceneTransition.preRender();
+
+        if (this.sceneTransition) {
+            if (this._scene && this.sceneTransition.wantsPreviousSceneRender && !this.sceneTransition.hasPreviousSceneRender) {
+                this._scene.render();
+                this.sceneTransition.onBeginTransition();
+            } else if (this._scene && this.sceneTransition.isNewSceneLoaded) {
+                this._scene.render();
+            }
+
+            this.sceneTransition.render();
+        } else if (this.scene) {
+            this.scene.render();
+        }
+    }
+
+    /**
+     * 临时运行SceneTransition，允许一个场景过渡到另一个平滑的自定义效果。
+     * @param sceneTransition 
+     */
+    public static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T {
+        if (!this.sceneTransition) {
+            throw new Error("在前一个场景完成之前，不能开始一个新的场景转换。");
+        }
+
+        this.sceneTransition = sceneTransition;
+        return sceneTransition;
     }
 }

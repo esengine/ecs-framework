@@ -76,10 +76,10 @@ class SpriteRenderer extends RenderableComponent {
         
         this._bitmap.x = this.entity.transform.position.x - camera.transform.position.x + camera.origin.x;
         this._bitmap.y = this.entity.transform.position.y - camera.transform.position.y + camera.origin.y;
-        this._bitmap.rotation = this.entity.transform.rotation;
+        this._bitmap.rotation = this.entity.transform.rotation + camera.transform.rotation;
         this._bitmap.anchorOffsetX = this._origin.x;
         this._bitmap.anchorOffsetY = this._origin.y;
-        this._bitmap.scaleX = this.entity.transform.scale.x;
-        this._bitmap.scaleY = this.entity.transform.scale.y;
+        this._bitmap.scaleX = this.entity.transform.scale.x * camera.transform.scale.x;
+        this._bitmap.scaleY = this.entity.transform.scale.y * camera.transform.scale.y;
     }
 }

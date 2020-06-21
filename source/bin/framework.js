@@ -8,6 +8,41 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 Array.prototype.findIndex = function (predicate) {
     function findIndex(array, predicate) {
         for (var i = 0, len = array.length; i < len; i++) {
@@ -1085,9 +1120,9 @@ var Scene = (function (_super) {
         _this.entityProcessors = new EntityProcessorList();
         _this.renderableComponents = new RenderableComponentList();
         _this.entities = new EntityList(_this);
+        _this.content = new ContentManager();
         _this.addEventListener(egret.Event.ACTIVATE, _this.onActive, _this);
         _this.addEventListener(egret.Event.DEACTIVATE, _this.onDeactive, _this);
-        _this.addEventListener(egret.Event.ENTER_FRAME, _this.update, _this);
         return _this;
     }
     Scene.prototype.createEntity = function (name) {
@@ -1121,10 +1156,6 @@ var Scene = (function (_super) {
     Scene.prototype.getEntityProcessor = function () {
         return this.entityProcessors.getProcessor();
     };
-    Scene.prototype.setActive = function () {
-        SceneManager.setActiveScene(this);
-        return this;
-    };
     Scene.prototype.addRenderer = function (renderer) {
         this._renderers.push(renderer);
         this._renderers.sort();
@@ -1141,28 +1172,38 @@ var Scene = (function (_super) {
     Scene.prototype.removeRenderer = function (renderer) {
         this._renderers.remove(renderer);
     };
-    Scene.prototype.initialize = function () {
+    Scene.prototype.begin = function () {
         if (this._renderers.length == 0) {
             this.addRenderer(new DefaultRenderer());
             console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
         }
         this.camera = this.createEntity("camera").getOrCreateComponent(new Camera());
         Physics.reset();
-        Input.initialize();
         if (this.entityProcessors)
             this.entityProcessors.begin();
         this.camera.onSceneSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
+        this._didSceneBegin = true;
+        this.onStart();
+    };
+    Scene.prototype.end = function () {
+        this._didSceneBegin = false;
+        this.removeEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
+        this.removeEventListener(egret.Event.ACTIVATE, this.onActive, this);
+        this.entities.removeAllEntities();
+        Physics.clear();
+        this.camera.destory();
+        this.camera = null;
+        this.content.dispose();
+        if (this.entityProcessors)
+            this.entityProcessors.end();
+    };
+    Scene.prototype.onStart = function () {
     };
     Scene.prototype.onActive = function () {
     };
     Scene.prototype.onDeactive = function () {
     };
     Scene.prototype.update = function () {
-        Time.update(egret.getTimer());
-        for (var i = GlobalManager.globalManagers.length - 1; i >= 0; i--) {
-            if (GlobalManager.globalManagers[i].enabled)
-                GlobalManager.globalManagers[i].update();
-        }
         this.entities.updateLists();
         if (this.entityProcessors)
             this.entityProcessors.update();
@@ -1170,7 +1211,6 @@ var Scene = (function (_super) {
         if (this.entityProcessors)
             this.entityProcessors.lateUpdate();
         this.renderableComponents.updateList();
-        this.render();
     };
     Scene.prototype.render = function () {
         for (var i = 0; i < this._renderers.length; i++) {
@@ -1180,44 +1220,82 @@ var Scene = (function (_super) {
             this._renderers[i].render(this);
         }
     };
-    Scene.prototype.prepRenderState = function () {
-        this._projectionMatrix.m11 = 2 / this.stage.stageWidth;
-        this._projectionMatrix.m22 = -2 / this.stage.stageHeight;
-        this._transformMatrix = this.camera.transformMatrix;
-        this._matrixTransformMatrix = Matrix2D.multiply(this._transformMatrix, this._projectionMatrix);
-    };
-    Scene.prototype.destory = function () {
-        this.removeEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
-        this.removeEventListener(egret.Event.ACTIVATE, this.onActive, this);
-        this.camera.destory();
-        this.camera = null;
-        this.entities.removeAllEntities();
-    };
     return Scene;
 }(egret.DisplayObjectContainer));
 var SceneManager = (function () {
-    function SceneManager() {
+    function SceneManager(stage) {
+        stage.addEventListener(egret.Event.ENTER_FRAME, SceneManager.update, this);
+        SceneManager.initialize(stage);
     }
-    SceneManager.createScene = function (name, scene) {
-        scene.name = name;
-        this._loadedScenes.set(name, scene);
-        return scene;
+    Object.defineProperty(SceneManager, "scene", {
+        get: function () {
+            return this._scene;
+        },
+        set: function (value) {
+            if (!value)
+                throw new Error("场景不能为空");
+            if (this._scene == null) {
+                this._scene = value;
+                this._scene.begin();
+            }
+            else {
+                this._nextScene = value;
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
+    SceneManager.initialize = function (stage) {
+        Input.initialize(stage);
     };
-    SceneManager.setActiveScene = function (scene) {
-        if (this._activeScene) {
-            if (this._activeScene == scene)
-                return;
-            this._lastScene = this._activeScene;
-            this._activeScene.destory();
+    SceneManager.update = function () {
+        Time.update(egret.getTimer());
+        if (SceneManager._scene) {
+            for (var i = GlobalManager.globalManagers.length - 1; i >= 0; i--) {
+                if (GlobalManager.globalManagers[i].enabled)
+                    GlobalManager.globalManagers[i].update();
+            }
+            if (!SceneManager.sceneTransition ||
+                (SceneManager.sceneTransition && (!SceneManager.sceneTransition.loadsNewScene || SceneManager.sceneTransition.isNewSceneLoaded))) {
+                SceneManager._scene.update();
+            }
+            if (SceneManager._nextScene) {
+                SceneManager._scene.end();
+                for (var i = 0; i < SceneManager._scene.entities.buffer.length; i++) {
+                    var entity = SceneManager._scene.entities.buffer[i];
+                    entity.destory();
+                }
+                SceneManager._scene = SceneManager._nextScene;
+                SceneManager._nextScene = null;
+                SceneManager._scene.begin();
+            }
         }
-        this._activeScene = scene;
-        this._activeScene.initialize();
-        return scene;
+        SceneManager.render();
     };
-    SceneManager.getActiveScene = function () {
-        return this._activeScene;
+    SceneManager.render = function () {
+        if (this.sceneTransition)
+            this.sceneTransition.preRender();
+        if (this.sceneTransition) {
+            if (this._scene && this.sceneTransition.wantsPreviousSceneRender && !this.sceneTransition.hasPreviousSceneRender) {
+                this._scene.render();
+                this.sceneTransition.onBeginTransition();
+            }
+            else if (this._scene && this.sceneTransition.isNewSceneLoaded) {
+                this._scene.render();
+            }
+            this.sceneTransition.render();
+        }
+        else if (this.scene) {
+            this.scene.render();
+        }
     };
-    SceneManager._loadedScenes = new Map();
+    SceneManager.startSceneTransition = function (sceneTransition) {
+        if (!this.sceneTransition) {
+            throw new Error("在前一个场景完成之前，不能开始一个新的场景转换。");
+        }
+        this.sceneTransition = sceneTransition;
+        return sceneTransition;
+    };
     return SceneManager;
 }());
 var DirtyType;
@@ -2051,11 +2129,11 @@ var SpriteRenderer = (function (_super) {
             return;
         this._bitmap.x = this.entity.transform.position.x - camera.transform.position.x + camera.origin.x;
         this._bitmap.y = this.entity.transform.position.y - camera.transform.position.y + camera.origin.y;
-        this._bitmap.rotation = this.entity.transform.rotation;
+        this._bitmap.rotation = this.entity.transform.rotation + camera.transform.rotation;
         this._bitmap.anchorOffsetX = this._origin.x;
         this._bitmap.anchorOffsetY = this._origin.y;
-        this._bitmap.scaleX = this.entity.transform.scale.x;
-        this._bitmap.scaleY = this.entity.transform.scale.y;
+        this._bitmap.scaleX = this.entity.transform.scale.x * camera.transform.scale.x;
+        this._bitmap.scaleY = this.entity.transform.scale.y * camera.transform.scale.y;
     };
     return SpriteRenderer;
 }(RenderableComponent));
@@ -2899,7 +2977,7 @@ var Renderer = (function () {
     Renderer.prototype.onAddedToScene = function (scene) { };
     Renderer.prototype.beginRender = function (cam) {
         cam.transform.updateTransform();
-        var entities = SceneManager.getActiveScene().entities;
+        var entities = SceneManager.scene.entities;
         for (var i = 0; i < entities.buffer.length; i++) {
             entities.buffer[i].transform.updateTransform();
         }
@@ -2934,6 +3012,85 @@ var ScreenSpaceRenderer = (function (_super) {
     };
     return ScreenSpaceRenderer;
 }(Renderer));
+var SceneTransition = (function () {
+    function SceneTransition(sceneLoadAction, wantsPreviousSceneRender) {
+        if (wantsPreviousSceneRender === void 0) { wantsPreviousSceneRender = true; }
+        this.progress = 0;
+        this.sceneLoadAction = sceneLoadAction;
+        this.wantsPreviousSceneRender = wantsPreviousSceneRender;
+        this.loadsNewScene = sceneLoadAction != null;
+        if (wantsPreviousSceneRender)
+            this.previousSceneRender = new egret.RenderTexture();
+    }
+    Object.defineProperty(SceneTransition.prototype, "hasPreviousSceneRender", {
+        get: function () {
+            if (!this._hasPreviousSceneRender) {
+                this._hasPreviousSceneRender = true;
+                return false;
+            }
+            return true;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    SceneTransition.prototype.preRender = function () { };
+    SceneTransition.prototype.render = function () {
+    };
+    SceneTransition.prototype.onBeginTransition = function () {
+        var _this = this;
+        return new Promise(function (resolve) {
+            resolve(_this.loadScene());
+            _this.transitionComplete();
+        });
+    };
+    SceneTransition.prototype.transitionComplete = function () {
+        SceneManager.sceneTransition = null;
+        if (this.previousSceneRender) {
+            this.previousSceneRender.dispose();
+            this.previousSceneRender = null;
+        }
+        if (this.onTransitionCompleted) {
+            this.onTransitionCompleted();
+        }
+    };
+    SceneTransition.prototype.loadScene = function () {
+        var _this = this;
+        return new Promise(function (resolve) { return __awaiter(_this, void 0, void 0, function () {
+            var _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        if (this.onScreenObscured)
+                            this.onScreenObscured();
+                        if (!this.loadsNewScene) {
+                            this.isNewSceneLoaded = true;
+                            resolve();
+                        }
+                        _a = SceneManager;
+                        return [4, this.sceneLoadAction()];
+                    case 1:
+                        _a.scene = _b.sent();
+                        this.isNewSceneLoaded = true;
+                        return [2];
+                }
+            });
+        }); });
+    };
+    return SceneTransition;
+}());
+var FadeTransition = (function (_super) {
+    __extends(FadeTransition, _super);
+    function FadeTransition(sceneLoadAction) {
+        var _this = _super.call(this, sceneLoadAction, true) || this;
+        _this.fadeToColor = 0x000000;
+        _this.fadeOutDuration = 0.4;
+        _this._color = 0xFFFFFF;
+        _this._toColor = 0xFFFFFF;
+        _this._destinationRect = new Rectangle(0, 0, _this.previousSceneRender.textureWidth, _this.previousSceneRender.textureHeight);
+        return _this;
+    }
+    return FadeTransition;
+}(SceneTransition));
 var Flags = (function () {
     function Flags() {
     }
@@ -3662,6 +3819,9 @@ var Physics = (function () {
     Physics.reset = function () {
         this._spatialHash = new SpatialHash(this.spatialHashCellSize);
     };
+    Physics.clear = function () {
+        this._spatialHash.clear();
+    };
     Physics.overlapCircleAll = function (center, randius, results, layerMask) {
         if (layerMask === void 0) { layerMask = -1; }
         return this._spatialHash.overlapCircle(center, randius, results, layerMask);
@@ -3739,8 +3899,7 @@ var Polygon = (function (_super) {
     Polygon.prototype.collidesWithShape = function (other) {
         var result = new CollisionResult();
         if (other instanceof Polygon) {
-            result = ShapeCollisions.polygonToPolygon(this, other);
-            return result;
+            return ShapeCollisions.polygonToPolygon(this, other);
         }
         if (other instanceof Circle) {
             result = ShapeCollisions.circleToPolygon(other, this);
@@ -4163,6 +4322,9 @@ var SpatialHash = (function () {
             }
         }
     };
+    SpatialHash.prototype.clear = function () {
+        this._cellDict.clear();
+    };
     SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
         var bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
         this._overlapTestCircle.radius = radius;
@@ -4255,6 +4417,48 @@ var NumberDictionary = (function () {
         this._store.clear();
     };
     return NumberDictionary;
+}());
+var ContentManager = (function () {
+    function ContentManager() {
+        this.loadedAssets = new Map();
+    }
+    ContentManager.prototype.load = function (name, local) {
+        var _this = this;
+        if (local === void 0) { local = true; }
+        return new Promise(function (resolve, reject) {
+            var res = _this.loadedAssets.get(name);
+            if (res) {
+                resolve(res);
+                return;
+            }
+            if (local) {
+                RES.getResAsync(name).then(function (data) {
+                    _this.loadedAssets.set(name, data);
+                    resolve(data);
+                }).catch(function (err) {
+                    console.error("资源加载错误:", name, err);
+                    reject(err);
+                });
+            }
+            else {
+                RES.getResByUrl(name).then(function (data) {
+                    _this.loadedAssets.set(name, data);
+                    resolve(data);
+                }).catch(function (err) {
+                    console.error("资源加载错误:", name, err);
+                    reject(err);
+                });
+            }
+        });
+    };
+    ContentManager.prototype.dispose = function () {
+        this.loadedAssets.forEach(function (value) {
+            var assetsToRemove = value;
+            assetsToRemove.dispose();
+        });
+        this.loadedAssets.clear();
+    };
+    return ContentManager;
 }());
 var Emitter = (function () {
     function Emitter() {
@@ -4354,6 +4558,8 @@ var Input = (function () {
     }
     Object.defineProperty(Input, "touchPosition", {
         get: function () {
+            if (!this._gameTouchs[0])
+                return Vector2.zero;
             return this._gameTouchs[0].position;
         },
         enumerable: true,
@@ -4402,11 +4608,11 @@ var Input = (function () {
         enumerable: true,
         configurable: true
     });
-    Input.initialize = function () {
+    Input.initialize = function (stage) {
         if (this._init)
             return;
         this._init = true;
-        this._stage = SceneManager.getActiveScene().stage;
+        this._stage = stage;
         this._stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
         this._stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
         this._stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);

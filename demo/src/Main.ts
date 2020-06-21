@@ -30,6 +30,7 @@
 
 class Main extends eui.UILayer {
     public static emitter: Emitter<CoreEmitterType>; 
+    public static manager: SceneManager;
 
     protected createChildren(): void {
         super.createChildren();
@@ -52,6 +53,7 @@ class Main extends eui.UILayer {
         egret.registerImplementation("eui.IAssetAdapter", assetAdapter);
         egret.registerImplementation("eui.IThemeAdapter", new ThemeAdapter());
 
+        Main.manager = new SceneManager(this.stage);
         Main.emitter = new Emitter<CoreEmitterType>();
         this.addEventListener(egret.Event.ENTER_FRAME, this.updateFrame, this);
         this.runGame();
@@ -97,23 +99,7 @@ class Main extends eui.UILayer {
      * Create scene interface
      */
     protected createGameScene(): void {
-        let sprite = new Sprite(RES.getRes("checkbox_select_disabled_png"));
-        let scene = SceneManager.createScene("main", new MainScene(this)).setActive();
-        let player = scene.createEntity("player");
-        player.addComponent(new SpriteRenderer()).setSprite(sprite).setColor(0xFF0000);
-        player.addComponent(new SpawnComponent(EnemyType.worm));
-        player.addComponent(new Mover());
-        player.addComponent(new PlayerController());
-        player.addComponent(new FollowCamera(player));
-        player.addComponent(new BoxCollider());
-
-        for (let i = 0; i < 20; i ++){
-            let sprite = new Sprite(RES.getRes("checkbox_select_disabled_png"));
-            let player2 = scene.createEntity("player2");
-            player2.addComponent(new SpriteRenderer()).setSprite(sprite);
-            player2.transform.position = new Vector2(Math.random() * 100 * i, Math.random() * 100 * i);
-            player2.addComponent(new BoxCollider());
-        }
+        SceneManager.scene = new MainScene(this);
 
         // Main.emitter.addObserver(CoreEmitterType.Update, ()=>{
         //     console.log("update emitter");
