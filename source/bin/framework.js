@@ -3029,6 +3029,16 @@ var SceneTransition = (function () {
         SceneManager.scene = this.sceneLoadAction();
         this.isNewSceneLoaded = true;
     };
+    SceneTransition.prototype.tickEffectProgressProperty = function (filter, duration, easeType, reverseDirection) {
+        if (reverseDirection === void 0) { reverseDirection = false; }
+        return new Promise(function (resolve) {
+            var start = reverseDirection ? 1 : 0;
+            var end = reverseDirection ? 0 : 1;
+            egret.Tween.get(filter.uniforms).set({ _progress: start }).to({ _progress: end }, duration * 1000, easeType).call(function () {
+                resolve();
+            });
+        });
+    };
     return SceneTransition;
 }());
 var FadeTransition = (function (_super) {
@@ -3066,6 +3076,72 @@ var FadeTransition = (function (_super) {
         this._mask.graphics.endFill();
     };
     return FadeTransition;
+}(SceneTransition));
+var WindTransition = (function (_super) {
+    __extends(WindTransition, _super);
+    function WindTransition(sceneLoadAction) {
+        var _this = _super.call(this, sceneLoadAction) || this;
+        _this.duration = 1;
+        _this.easeType = egret.Ease.quadOut;
+        var vertexSrc = "attribute vec2 aVertexPosition;\n" +
+            "attribute vec2 aTextureCoord;\n" +
+            "uniform vec2 projectionVector;\n" +
+            "varying vec2 vTextureCoord;\n" +
+            "const vec2 center = vec2(-1.0, 1.0);\n" +
+            "void main(void) {\n" +
+            "   gl_Position = vec4( (aVertexPosition / projectionVector) + center , 0.0, 1.0);\n" +
+            "   vTextureCoord = aTextureCoord;\n" +
+            "}";
+        var fragmentSrc = "precision lowp float;\n" +
+            "varying vec2 vTextureCoord;\n" +
+            "uniform sampler2D uSampler;\n" +
+            "uniform float _progress;\n" +
+            "uniform float _size;\n" +
+            "uniform float _windSegments;\n" +
+            "void main(void) {\n" +
+            "vec2 co = floor(vec2(0.0, vTextureCoord.y * _windSegments));\n" +
+            "float x = sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453;\n" +
+            "float r = x - floor(x);\n" +
+            "float m = smoothstep(0.0, -_size, vTextureCoord.x * (1.0 - _size) + _size * r - (_progress * (1.0 + _size)));\n" +
+            "vec4 fg = texture2D(uSampler, vTextureCoord);\n" +
+            "gl_FragColor = mix(fg, vec4(0, 0, 0, 0), m);\n" +
+            "}";
+        _this._windEffect = new egret.CustomFilter(vertexSrc, fragmentSrc, {
+            _progress: 0,
+            _size: 0.3,
+            _windSegments: 100
+        });
+        _this._mask = new egret.Shape();
+        _this._mask.graphics.beginFill(0xFFFFFF, 1);
+        _this._mask.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        _this._mask.graphics.endFill();
+        _this._mask.filters = [_this._windEffect];
+        SceneManager.stage.addChild(_this._mask);
+        return _this;
+    }
+    Object.defineProperty(WindTransition.prototype, "windSegments", {
+        set: function (value) {
+            this._windEffect.uniforms._windSegments = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(WindTransition.prototype, "size", {
+        set: function (value) {
+            this._windEffect.uniforms._size = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    WindTransition.prototype.onBeginTransition = function () {
+        var _this = this;
+        this.loadNextScene();
+        this.tickEffectProgressProperty(this._windEffect, this.duration, this.easeType).then(function () {
+            _this.transitionComplete();
+            SceneManager.stage.removeChild(_this._mask);
+        });
+    };
+    return WindTransition;
 }(SceneTransition));
 var Flags = (function () {
     function Flags() {

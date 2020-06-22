@@ -108,7 +108,7 @@ class Main extends eui.UILayer {
         button.label = "切换场景";
         this.stage.addChild(button);
         button.addEventListener(egret.TouchEvent.TOUCH_TAP, ()=>{
-            SceneManager.startSceneTransition(new FadeTransition(()=>{
+            SceneManager.startSceneTransition(new WindTransition(()=>{
                 return new MainScene(this);
             }));
         }, this);

@@ -645,6 +645,7 @@ declare abstract class SceneTransition {
     onBeginTransition(): void;
     protected transitionComplete(): void;
     protected loadNextScene(): void;
+    tickEffectProgressProperty(filter: egret.CustomFilter, duration: number, easeType: Function, reverseDirection?: boolean): Promise<{}>;
 }
 declare class FadeTransition extends SceneTransition {
     fadeToColor: number;
@@ -656,6 +657,16 @@ declare class FadeTransition extends SceneTransition {
     constructor(sceneLoadAction: Function);
     onBeginTransition(): void;
     render(): void;
+}
+declare class WindTransition extends SceneTransition {
+    private _mask;
+    private _windEffect;
+    duration: number;
+    windSegments: number;
+    size: number;
+    easeType: (t: number) => number;
+    constructor(sceneLoadAction: Function);
+    onBeginTransition(): void;
 }
 declare class Flags {
     static isFlagSet(self: number, flag: number): boolean;
