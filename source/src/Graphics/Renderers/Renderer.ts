@@ -29,6 +29,8 @@ abstract class Renderer {
      * @param scene 
      */
     public abstract render(scene: Scene);
+
+    public unload(){ }
     
     /**
      * 

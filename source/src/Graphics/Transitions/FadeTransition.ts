@@ -2,32 +2,37 @@
 class FadeTransition extends SceneTransition {
     public fadeToColor: number = 0x000000;
     public fadeOutDuration = 0.4;
-    private _color: number = 0xFFFFFF;
-    private _toColor: number = 0xFFFFFF;
-    private _destinationRect: Rectangle;
-    private _overlayTexture: egret.RenderTexture;
-    
-    constructor(sceneLoadAction: Function){
-        super(sceneLoadAction, true);
-        this._destinationRect = new Rectangle(0, 0, this.previousSceneRender.textureWidth, this.previousSceneRender.textureHeight);
+    public fadeEaseType: Function = egret.Ease.quadInOut;
+    public delayBeforeFadeInDuration = 0.1;
+    private _mask: egret.Shape;
+    private _alpha: number = 0;
+
+    constructor(sceneLoadAction: Function) {
+        super(sceneLoadAction);
+        this._mask = new egret.Shape();
     }
 
-    // public onBeginTransition(){
-    //     this._overlayTexture = new egret.RenderTexture();
-    //     let shape = new egret.Shape();
-    //     shape.graphics.beginFill(0xFFFFFF, 1);
-    //     shape.graphics.drawRect(0, 0, 1, 1);
-    //     shape.graphics.endFill();
-    //     this._overlayTexture.drawToTexture(shape);
+    public onBeginTransition() {
+        this._mask.graphics.beginFill(this.fadeToColor, 1);
+        this._mask.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        this._mask.graphics.endFill();
+        SceneManager.stage.addChild(this._mask);
 
-    //     let elapsed = 0;
-    //     let _toColor;
-    //     while (elapsed < this.fadeOutDuration){
-    //         elapsed += Time.deltaTime;
-            
-    //         // egret.Tween.get(this).to({_color: this._toColor, })
-    //     }
+        egret.Tween.get(this).to({ _alpha: 1}, this.fadeOutDuration * 1000, this.fadeEaseType)
+            .call(() => {
+                this.loadNextScene();
+            }).wait(this.delayBeforeFadeInDuration).call(() => {
+                egret.Tween.get(this).to({ _alpha: 0 }, this.fadeOutDuration * 1000, this.fadeEaseType).call(() => {
+                    this.transitionComplete();
+                    SceneManager.stage.removeChild(this._mask);
+                });
+            });
+    }
 
-        
-    // }
+    public render(){
+        this._mask.graphics.clear();
+        this._mask.graphics.beginFill(this.fadeToColor, this._alpha);
+        this._mask.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        this._mask.graphics.endFill();
+    }
 }

@@ -117,6 +117,9 @@ class Scene extends egret.DisplayObjectContainer {
       this.removeEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
       this.removeEventListener(egret.Event.ACTIVATE, this.onActive, this);
 
+      for (let i = 0; i < this._renderers.length; i ++){
+         this._renderers[i].unload();
+      }
       this.entities.removeAllEntities();
 
       Physics.clear();
@@ -127,6 +130,8 @@ class Scene extends egret.DisplayObjectContainer {
 
       if (this.entityProcessors)
          this.entityProcessors.end();
+
+      this.unload();
    }
 
    protected onStart(){
@@ -142,6 +147,8 @@ class Scene extends egret.DisplayObjectContainer {
    protected onDeactive() {
 
    }
+
+   protected unload(){ }
 
    public update() {
       this.entities.updateLists();

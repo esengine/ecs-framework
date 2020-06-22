@@ -167,7 +167,7 @@ declare class Entity {
     readonly components: ComponentList;
     private _updateOrder;
     private _enabled;
-    private _isDestoryed;
+    _isDestoryed: boolean;
     private _tag;
     componentBits: BitSet;
     parent: Transform;
@@ -234,6 +234,7 @@ declare class Scene extends egret.DisplayObjectContainer {
     protected onStart(): void;
     protected onActive(): void;
     protected onDeactive(): void;
+    protected unload(): void;
     update(): void;
     render(): void;
 }
@@ -241,6 +242,7 @@ declare class SceneManager {
     private static _scene;
     private static _nextScene;
     static sceneTransition: SceneTransition;
+    static stage: egret.Stage;
     constructor(stage: egret.Stage);
     static scene: Scene;
     static initialize(stage: egret.Stage): void;
@@ -432,6 +434,7 @@ declare class SpriteRenderer extends RenderableComponent {
     setColor(color: number): void;
     isVisibleFromCamera(camera: Camera): boolean;
     render(camera: Camera): void;
+    onRemovedFromEntity(): void;
 }
 interface ITriggerListener {
     onTriggerEnter(other: Collider, local: Collider): any;
@@ -612,6 +615,7 @@ declare abstract class Renderer {
     onAddedToScene(scene: Scene): void;
     protected beginRender(cam: Camera): void;
     abstract render(scene: Scene): any;
+    unload(): void;
     protected renderAfterStateCheck(renderable: IRenderable, cam: Camera): void;
 }
 declare class DefaultRenderer extends Renderer {
@@ -628,31 +632,30 @@ declare class ScreenSpaceRenderer extends Renderer {
     render(scene: Scene): void;
 }
 declare abstract class SceneTransition {
+    private _hasPreviousSceneRender;
     loadsNewScene: boolean;
     isNewSceneLoaded: boolean;
-    wantsPreviousSceneRender: boolean;
     protected sceneLoadAction: Function;
-    previousSceneRender: egret.RenderTexture;
     onScreenObscured: Function;
     onTransitionCompleted: Function;
-    progress: number;
-    constructor(sceneLoadAction: Function, wantsPreviousSceneRender?: boolean);
-    private _hasPreviousSceneRender;
     readonly hasPreviousSceneRender: boolean;
+    constructor(sceneLoadAction: Function);
     preRender(): void;
     render(): void;
-    onBeginTransition(): Promise<any>;
+    onBeginTransition(): void;
     protected transitionComplete(): void;
-    protected loadScene(): Promise<any>;
+    protected loadNextScene(): void;
 }
 declare class FadeTransition extends SceneTransition {
     fadeToColor: number;
     fadeOutDuration: number;
-    private _color;
-    private _toColor;
-    private _destinationRect;
-    private _overlayTexture;
+    fadeEaseType: Function;
+    delayBeforeFadeInDuration: number;
+    private _mask;
+    private _alpha;
     constructor(sceneLoadAction: Function);
+    onBeginTransition(): void;
+    render(): void;
 }
 declare class Flags {
     static isFlagSet(self: number, flag: number): boolean;

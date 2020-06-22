@@ -82,4 +82,9 @@ class SpriteRenderer extends RenderableComponent {
         this._bitmap.scaleX = this.entity.transform.scale.x * camera.transform.scale.x;
         this._bitmap.scaleY = this.entity.transform.scale.y * camera.transform.scale.y;
     }
+
+    public onRemovedFromEntity(){
+        if (this._bitmap)
+            this.stage.removeChild(this._bitmap);
+    }
 }

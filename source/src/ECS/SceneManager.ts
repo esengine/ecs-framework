@@ -3,10 +3,12 @@ class SceneManager {
     private static _scene: Scene;
     private static _nextScene: Scene;
     public static sceneTransition: SceneTransition;
+    public static stage: egret.Stage;
 
     constructor(stage: egret.Stage) {
         stage.addEventListener(egret.Event.ENTER_FRAME, SceneManager.update, this);
 
+        SceneManager.stage = stage;
         SceneManager.initialize(stage);
     }
 
@@ -62,18 +64,19 @@ class SceneManager {
     }
 
     public static render() {
-        if (this.sceneTransition)
+        if (this.sceneTransition){
             this.sceneTransition.preRender();
 
-        if (this.sceneTransition) {
-            if (this._scene && this.sceneTransition.wantsPreviousSceneRender && !this.sceneTransition.hasPreviousSceneRender) {
-                this._scene.render();
+            if (this._scene && !this.sceneTransition.hasPreviousSceneRender){
+                this.scene.render();
                 this.sceneTransition.onBeginTransition();
-            } else if (this._scene && this.sceneTransition.isNewSceneLoaded) {
-                this._scene.render();
+            } else if (this.sceneTransition) {
+                if (this._scene && this.sceneTransition.isNewSceneLoaded) {
+                    this._scene.render();
+                }
+    
+                this.sceneTransition.render();
             }
-
-            this.sceneTransition.render();
         } else if (this.scene) {
             this.scene.render();
         }
@@ -84,7 +87,7 @@ class SceneManager {
      * @param sceneTransition 
      */
     public static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T {
-        if (!this.sceneTransition) {
+        if (this.sceneTransition) {
             throw new Error("在前一个场景完成之前，不能开始一个新的场景转换。");
         }
 

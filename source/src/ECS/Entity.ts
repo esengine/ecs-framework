@@ -11,7 +11,7 @@ class Entity {
     public readonly components: ComponentList;
     private _updateOrder: number = 0;
     private _enabled: boolean = true;
-    private _isDestoryed: boolean;
+    public _isDestoryed: boolean;
     private _tag: number = 0;
 
     public componentBits: BitSet;
@@ -253,7 +253,7 @@ class Entity {
 
     public onRemovedFromScene(){
         if (this._isDestoryed)
-            this.components.remove
+            this.components.removeAllComponents();
     }
 
     public onTransformChanged(comp: ComponentTransform){
