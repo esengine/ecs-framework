@@ -18,7 +18,7 @@ abstract class Renderer {
     protected beginRender(cam: Camera){
         cam.transform.updateTransform();
         
-        let entities = SceneManager.getActiveScene().entities;
+        let entities = SceneManager.scene.entities;
         for (let i = 0; i < entities.buffer.length; i ++){
             entities.buffer[i].transform.updateTransform();
         }
@@ -29,6 +29,8 @@ abstract class Renderer {
      * @param scene 
      */
     public abstract render(scene: Scene);
+
+    public unload(){ }
     
     /**
      * 

@@ -9,6 +9,10 @@ class Physics {
         this._spatialHash = new SpatialHash(this.spatialHashCellSize);
     }
 
+    public static clear(){
+        this._spatialHash.clear();
+    }
+
     public static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask = -1){
         return this._spatialHash.overlapCircle(center, randius, results, layerMask);
     }

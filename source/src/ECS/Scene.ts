@@ -3,11 +3,13 @@ class Scene extends egret.DisplayObjectContainer {
    public camera: Camera;
    public readonly entities: EntityList;
    public readonly renderableComponents: RenderableComponentList;
+   public readonly content: ContentManager;
 
    private _projectionMatrix: Matrix2D;
    private _transformMatrix: Matrix2D;
    private _matrixTransformMatrix: Matrix2D;
    private _renderers: Renderer[] = [];
+   private _didSceneBegin;
 
    public readonly entityProcessors: EntityProcessorList;
 
@@ -18,10 +20,10 @@ class Scene extends egret.DisplayObjectContainer {
       this.entityProcessors = new EntityProcessorList();
       this.renderableComponents = new RenderableComponentList();
       this.entities = new EntityList(this);
+      this.content = new ContentManager();
 
       this.addEventListener(egret.Event.ACTIVATE, this.onActive, this);
       this.addEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
-      this.addEventListener(egret.Event.ENTER_FRAME, this.update, this);
    }
 
    public createEntity(name: string) {
@@ -68,12 +70,6 @@ class Scene extends egret.DisplayObjectContainer {
       return this.entityProcessors.getProcessor<T>();
    }
 
-   public setActive(): Scene {
-      SceneManager.setActiveScene(this);
-
-      return this;
-   }
-
    public addRenderer<T extends Renderer>(renderer: T) {
       this._renderers.push(renderer);
       this._renderers.sort();
@@ -96,8 +92,7 @@ class Scene extends egret.DisplayObjectContainer {
       this._renderers.remove(renderer);
    }
 
-   /** 初始化场景 */
-   public initialize() {
+   public begin(){
       if (this._renderers.length == 0) {
          this.addRenderer(new DefaultRenderer());
          console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
@@ -106,32 +101,56 @@ class Scene extends egret.DisplayObjectContainer {
       this.camera = this.createEntity("camera").getOrCreateComponent(new Camera());
 
       Physics.reset();
-      Input.initialize();
 
       if (this.entityProcessors)
          this.entityProcessors.begin();
 
       this.camera.onSceneSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
+      
+      this._didSceneBegin = true;
+      this.onStart();
+   }
+
+   public end(){
+      this._didSceneBegin = false;
+
+      this.removeEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
+      this.removeEventListener(egret.Event.ACTIVATE, this.onActive, this);
+
+      for (let i = 0; i < this._renderers.length; i ++){
+         this._renderers[i].unload();
+      }
+      this.entities.removeAllEntities();
+
+      Physics.clear();
+
+      this.camera.destory();
+      this.camera = null;
+      this.content.dispose();
+
+      if (this.entityProcessors)
+         this.entityProcessors.end();
+
+      this.unload();
+   }
+
+   protected onStart(){
+
    }
 
    /** 场景激活 */
-   public onActive() {
+   protected onActive() {
 
    }
 
    /** 场景失去焦点 */
-   public onDeactive() {
+   protected onDeactive() {
 
    }
 
+   protected unload(){ }
+
    public update() {
-      Time.update(egret.getTimer());
-
-      for (let i = GlobalManager.globalManagers.length - 1; i >= 0; i--) {
-         if (GlobalManager.globalManagers[i].enabled)
-            GlobalManager.globalManagers[i].update();
-      }
-
       this.entities.updateLists();
 
       if (this.entityProcessors)
@@ -143,7 +162,6 @@ class Scene extends egret.DisplayObjectContainer {
          this.entityProcessors.lateUpdate();
 
       this.renderableComponents.updateList();
-      this.render();
    }
 
    public render(){
@@ -153,23 +171,5 @@ class Scene extends egret.DisplayObjectContainer {
          this.camera.forceMatrixUpdate();
          this._renderers[i].render(this);
       }
-   }
-
-   public prepRenderState() {
-      this._projectionMatrix.m11 = 2 / this.stage.stageWidth;
-      this._projectionMatrix.m22 = -2 / this.stage.stageHeight;
-
-      this._transformMatrix = this.camera.transformMatrix;
-      this._matrixTransformMatrix = Matrix2D.multiply(this._transformMatrix, this._projectionMatrix);
-   }
-
-   public destory() {
-      this.removeEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
-      this.removeEventListener(egret.Event.ACTIVATE, this.onActive, this);
-
-      this.camera.destory();
-      this.camera = null;
-
-      this.entities.removeAllEntities();
    }
 }

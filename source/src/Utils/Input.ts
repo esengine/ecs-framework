@@ -6,7 +6,7 @@ class TouchState {
     public get position(){
         return new Vector2(this.x, this.y);
     }
-    
+
     public reset(){
         this.x = 0;
         this.y = 0;
@@ -26,6 +26,8 @@ class Input {
     private static _totalTouchCount: number = 0;
     /** 返回第一个触摸点的坐标 */
     public static get touchPosition(){
+        if (!this._gameTouchs[0])
+            return Vector2.zero;
         return this._gameTouchs[0].position;
     }
     /** 获取最大触摸数 */
@@ -65,12 +67,12 @@ class Input {
         return delta;
     }
 
-    public static initialize(){
+    public static initialize(stage: egret.Stage){
         if (this._init)
             return;
 
         this._init = true;
-        this._stage = SceneManager.getActiveScene().stage;
+        this._stage = stage;
         this._stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
         this._stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
         this._stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);

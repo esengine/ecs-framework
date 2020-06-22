@@ -52,6 +52,10 @@ class SpatialHash {
         }
     }
 
+    public clear(){
+        this._cellDict.clear();
+    }
+
     public overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask) {
         let bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
 

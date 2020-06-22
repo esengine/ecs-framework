@@ -53,10 +53,8 @@ class Polygon extends Shape {
     public collidesWithShape(other: Shape){
         let result = new CollisionResult();
         if (other instanceof Polygon){
-            result = ShapeCollisions.polygonToPolygon(this, other);
-            return result;
+            return ShapeCollisions.polygonToPolygon(this, other);
         }
-           
 
         if (other instanceof Circle){
             result = ShapeCollisions.circleToPolygon(other, this);

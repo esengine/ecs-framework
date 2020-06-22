@@ -27,7 +27,7 @@ class PlayerController extends Component {
             return;
 
         if (this.down){
-            let camera = SceneManager.getActiveScene().camera;
+            let camera = SceneManager.scene.camera;
             let worldVec = camera.screenToWorldPoint(this.touchPoint);
             this.mover.move(Input.touchPositionDelta);
             console.log(Input.touchPositionDelta);

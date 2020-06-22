@@ -1059,7 +1059,7 @@ var Entity = (function () {
     };
     Entity.prototype.onRemovedFromScene = function () {
         if (this._isDestoryed)
-            this.components.remove;
+            this.components.removeAllComponents();
     };
     Entity.prototype.onTransformChanged = function (comp) {
         this.components.onEntityTransformChanged(comp);
@@ -1085,9 +1085,9 @@ var Scene = (function (_super) {
         _this.entityProcessors = new EntityProcessorList();
         _this.renderableComponents = new RenderableComponentList();
         _this.entities = new EntityList(_this);
+        _this.content = new ContentManager();
         _this.addEventListener(egret.Event.ACTIVATE, _this.onActive, _this);
         _this.addEventListener(egret.Event.DEACTIVATE, _this.onDeactive, _this);
-        _this.addEventListener(egret.Event.ENTER_FRAME, _this.update, _this);
         return _this;
     }
     Scene.prototype.createEntity = function (name) {
@@ -1121,10 +1121,6 @@ var Scene = (function (_super) {
     Scene.prototype.getEntityProcessor = function () {
         return this.entityProcessors.getProcessor();
     };
-    Scene.prototype.setActive = function () {
-        SceneManager.setActiveScene(this);
-        return this;
-    };
     Scene.prototype.addRenderer = function (renderer) {
         this._renderers.push(renderer);
         this._renderers.sort();
@@ -1141,28 +1137,43 @@ var Scene = (function (_super) {
     Scene.prototype.removeRenderer = function (renderer) {
         this._renderers.remove(renderer);
     };
-    Scene.prototype.initialize = function () {
+    Scene.prototype.begin = function () {
         if (this._renderers.length == 0) {
             this.addRenderer(new DefaultRenderer());
             console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
         }
         this.camera = this.createEntity("camera").getOrCreateComponent(new Camera());
         Physics.reset();
-        Input.initialize();
         if (this.entityProcessors)
             this.entityProcessors.begin();
         this.camera.onSceneSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
+        this._didSceneBegin = true;
+        this.onStart();
+    };
+    Scene.prototype.end = function () {
+        this._didSceneBegin = false;
+        this.removeEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
+        this.removeEventListener(egret.Event.ACTIVATE, this.onActive, this);
+        for (var i = 0; i < this._renderers.length; i++) {
+            this._renderers[i].unload();
+        }
+        this.entities.removeAllEntities();
+        Physics.clear();
+        this.camera.destory();
+        this.camera = null;
+        this.content.dispose();
+        if (this.entityProcessors)
+            this.entityProcessors.end();
+        this.unload();
+    };
+    Scene.prototype.onStart = function () {
     };
     Scene.prototype.onActive = function () {
     };
     Scene.prototype.onDeactive = function () {
     };
+    Scene.prototype.unload = function () { };
     Scene.prototype.update = function () {
-        Time.update(egret.getTimer());
-        for (var i = GlobalManager.globalManagers.length - 1; i >= 0; i--) {
-            if (GlobalManager.globalManagers[i].enabled)
-                GlobalManager.globalManagers[i].update();
-        }
         this.entities.updateLists();
         if (this.entityProcessors)
             this.entityProcessors.update();
@@ -1170,7 +1181,6 @@ var Scene = (function (_super) {
         if (this.entityProcessors)
             this.entityProcessors.lateUpdate();
         this.renderableComponents.updateList();
-        this.render();
     };
     Scene.prototype.render = function () {
         for (var i = 0; i < this._renderers.length; i++) {
@@ -1180,44 +1190,84 @@ var Scene = (function (_super) {
             this._renderers[i].render(this);
         }
     };
-    Scene.prototype.prepRenderState = function () {
-        this._projectionMatrix.m11 = 2 / this.stage.stageWidth;
-        this._projectionMatrix.m22 = -2 / this.stage.stageHeight;
-        this._transformMatrix = this.camera.transformMatrix;
-        this._matrixTransformMatrix = Matrix2D.multiply(this._transformMatrix, this._projectionMatrix);
-    };
-    Scene.prototype.destory = function () {
-        this.removeEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
-        this.removeEventListener(egret.Event.ACTIVATE, this.onActive, this);
-        this.camera.destory();
-        this.camera = null;
-        this.entities.removeAllEntities();
-    };
     return Scene;
 }(egret.DisplayObjectContainer));
 var SceneManager = (function () {
-    function SceneManager() {
+    function SceneManager(stage) {
+        stage.addEventListener(egret.Event.ENTER_FRAME, SceneManager.update, this);
+        SceneManager.stage = stage;
+        SceneManager.initialize(stage);
     }
-    SceneManager.createScene = function (name, scene) {
-        scene.name = name;
-        this._loadedScenes.set(name, scene);
-        return scene;
+    Object.defineProperty(SceneManager, "scene", {
+        get: function () {
+            return this._scene;
+        },
+        set: function (value) {
+            if (!value)
+                throw new Error("场景不能为空");
+            if (this._scene == null) {
+                this._scene = value;
+                this._scene.begin();
+            }
+            else {
+                this._nextScene = value;
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
+    SceneManager.initialize = function (stage) {
+        Input.initialize(stage);
     };
-    SceneManager.setActiveScene = function (scene) {
-        if (this._activeScene) {
-            if (this._activeScene == scene)
-                return;
-            this._lastScene = this._activeScene;
-            this._activeScene.destory();
+    SceneManager.update = function () {
+        Time.update(egret.getTimer());
+        if (SceneManager._scene) {
+            for (var i = GlobalManager.globalManagers.length - 1; i >= 0; i--) {
+                if (GlobalManager.globalManagers[i].enabled)
+                    GlobalManager.globalManagers[i].update();
+            }
+            if (!SceneManager.sceneTransition ||
+                (SceneManager.sceneTransition && (!SceneManager.sceneTransition.loadsNewScene || SceneManager.sceneTransition.isNewSceneLoaded))) {
+                SceneManager._scene.update();
+            }
+            if (SceneManager._nextScene) {
+                SceneManager._scene.end();
+                for (var i = 0; i < SceneManager._scene.entities.buffer.length; i++) {
+                    var entity = SceneManager._scene.entities.buffer[i];
+                    entity.destory();
+                }
+                SceneManager._scene = SceneManager._nextScene;
+                SceneManager._nextScene = null;
+                SceneManager._scene.begin();
+            }
         }
-        this._activeScene = scene;
-        this._activeScene.initialize();
-        return scene;
+        SceneManager.render();
     };
-    SceneManager.getActiveScene = function () {
-        return this._activeScene;
+    SceneManager.render = function () {
+        if (this.sceneTransition) {
+            this.sceneTransition.preRender();
+            if (this._scene && !this.sceneTransition.hasPreviousSceneRender) {
+                this.scene.render();
+                this.sceneTransition.onBeginTransition();
+            }
+            else if (this.sceneTransition) {
+                if (this._scene && this.sceneTransition.isNewSceneLoaded) {
+                    this._scene.render();
+                }
+                this.sceneTransition.render();
+            }
+        }
+        else if (this.scene) {
+            this.scene.render();
+        }
     };
-    SceneManager._loadedScenes = new Map();
+    SceneManager.startSceneTransition = function (sceneTransition) {
+        if (this.sceneTransition) {
+            throw new Error("在前一个场景完成之前，不能开始一个新的场景转换。");
+        }
+        this.sceneTransition = sceneTransition;
+        return sceneTransition;
+    };
     return SceneManager;
 }());
 var DirtyType;
@@ -2051,11 +2101,15 @@ var SpriteRenderer = (function (_super) {
             return;
         this._bitmap.x = this.entity.transform.position.x - camera.transform.position.x + camera.origin.x;
         this._bitmap.y = this.entity.transform.position.y - camera.transform.position.y + camera.origin.y;
-        this._bitmap.rotation = this.entity.transform.rotation;
+        this._bitmap.rotation = this.entity.transform.rotation + camera.transform.rotation;
         this._bitmap.anchorOffsetX = this._origin.x;
         this._bitmap.anchorOffsetY = this._origin.y;
-        this._bitmap.scaleX = this.entity.transform.scale.x;
-        this._bitmap.scaleY = this.entity.transform.scale.y;
+        this._bitmap.scaleX = this.entity.transform.scale.x * camera.transform.scale.x;
+        this._bitmap.scaleY = this.entity.transform.scale.y * camera.transform.scale.y;
+    };
+    SpriteRenderer.prototype.onRemovedFromEntity = function () {
+        if (this._bitmap)
+            this.stage.removeChild(this._bitmap);
     };
     return SpriteRenderer;
 }(RenderableComponent));
@@ -2727,6 +2781,8 @@ var EntityList = (function () {
         this._entitiesToAdded.length = 0;
         this.updateLists();
         for (var i = 0; i < this._entities.length; i++) {
+            this._entities[i]._isDestoryed = true;
+            this._entities[i].onRemovedFromScene();
             this._entities[i].scene = null;
         }
         this._entities.length = 0;
@@ -2899,11 +2955,12 @@ var Renderer = (function () {
     Renderer.prototype.onAddedToScene = function (scene) { };
     Renderer.prototype.beginRender = function (cam) {
         cam.transform.updateTransform();
-        var entities = SceneManager.getActiveScene().entities;
+        var entities = SceneManager.scene.entities;
         for (var i = 0; i < entities.buffer.length; i++) {
             entities.buffer[i].transform.updateTransform();
         }
     };
+    Renderer.prototype.unload = function () { };
     Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
         renderable.render(cam);
     };
@@ -2934,6 +2991,82 @@ var ScreenSpaceRenderer = (function (_super) {
     };
     return ScreenSpaceRenderer;
 }(Renderer));
+var SceneTransition = (function () {
+    function SceneTransition(sceneLoadAction) {
+        this.sceneLoadAction = sceneLoadAction;
+        this.loadsNewScene = sceneLoadAction != null;
+    }
+    Object.defineProperty(SceneTransition.prototype, "hasPreviousSceneRender", {
+        get: function () {
+            if (!this._hasPreviousSceneRender) {
+                this._hasPreviousSceneRender = true;
+                return false;
+            }
+            return true;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    SceneTransition.prototype.preRender = function () { };
+    SceneTransition.prototype.render = function () {
+    };
+    SceneTransition.prototype.onBeginTransition = function () {
+        this.loadNextScene();
+        this.transitionComplete();
+    };
+    SceneTransition.prototype.transitionComplete = function () {
+        SceneManager.sceneTransition = null;
+        if (this.onTransitionCompleted) {
+            this.onTransitionCompleted();
+        }
+    };
+    SceneTransition.prototype.loadNextScene = function () {
+        if (this.onScreenObscured)
+            this.onScreenObscured();
+        if (!this.loadsNewScene) {
+            this.isNewSceneLoaded = true;
+        }
+        SceneManager.scene = this.sceneLoadAction();
+        this.isNewSceneLoaded = true;
+    };
+    return SceneTransition;
+}());
+var FadeTransition = (function (_super) {
+    __extends(FadeTransition, _super);
+    function FadeTransition(sceneLoadAction) {
+        var _this = _super.call(this, sceneLoadAction) || this;
+        _this.fadeToColor = 0x000000;
+        _this.fadeOutDuration = 0.4;
+        _this.fadeEaseType = egret.Ease.quadInOut;
+        _this.delayBeforeFadeInDuration = 0.1;
+        _this._alpha = 0;
+        _this._mask = new egret.Shape();
+        return _this;
+    }
+    FadeTransition.prototype.onBeginTransition = function () {
+        var _this = this;
+        this._mask.graphics.beginFill(this.fadeToColor, 1);
+        this._mask.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        this._mask.graphics.endFill();
+        SceneManager.stage.addChild(this._mask);
+        egret.Tween.get(this).to({ _alpha: 1 }, this.fadeOutDuration * 1000, this.fadeEaseType)
+            .call(function () {
+            _this.loadNextScene();
+        }).wait(this.delayBeforeFadeInDuration).call(function () {
+            egret.Tween.get(_this).to({ _alpha: 0 }, _this.fadeOutDuration * 1000, _this.fadeEaseType).call(function () {
+                _this.transitionComplete();
+                SceneManager.stage.removeChild(_this._mask);
+            });
+        });
+    };
+    FadeTransition.prototype.render = function () {
+        this._mask.graphics.clear();
+        this._mask.graphics.beginFill(this.fadeToColor, this._alpha);
+        this._mask.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        this._mask.graphics.endFill();
+    };
+    return FadeTransition;
+}(SceneTransition));
 var Flags = (function () {
     function Flags() {
     }
@@ -3662,6 +3795,9 @@ var Physics = (function () {
     Physics.reset = function () {
         this._spatialHash = new SpatialHash(this.spatialHashCellSize);
     };
+    Physics.clear = function () {
+        this._spatialHash.clear();
+    };
     Physics.overlapCircleAll = function (center, randius, results, layerMask) {
         if (layerMask === void 0) { layerMask = -1; }
         return this._spatialHash.overlapCircle(center, randius, results, layerMask);
@@ -3739,8 +3875,7 @@ var Polygon = (function (_super) {
     Polygon.prototype.collidesWithShape = function (other) {
         var result = new CollisionResult();
         if (other instanceof Polygon) {
-            result = ShapeCollisions.polygonToPolygon(this, other);
-            return result;
+            return ShapeCollisions.polygonToPolygon(this, other);
         }
         if (other instanceof Circle) {
             result = ShapeCollisions.circleToPolygon(other, this);
@@ -4163,6 +4298,9 @@ var SpatialHash = (function () {
             }
         }
     };
+    SpatialHash.prototype.clear = function () {
+        this._cellDict.clear();
+    };
     SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
         var bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
         this._overlapTestCircle.radius = radius;
@@ -4255,6 +4393,48 @@ var NumberDictionary = (function () {
         this._store.clear();
     };
     return NumberDictionary;
+}());
+var ContentManager = (function () {
+    function ContentManager() {
+        this.loadedAssets = new Map();
+    }
+    ContentManager.prototype.load = function (name, local) {
+        var _this = this;
+        if (local === void 0) { local = true; }
+        return new Promise(function (resolve, reject) {
+            var res = _this.loadedAssets.get(name);
+            if (res) {
+                resolve(res);
+                return;
+            }
+            if (local) {
+                RES.getResAsync(name).then(function (data) {
+                    _this.loadedAssets.set(name, data);
+                    resolve(data);
+                }).catch(function (err) {
+                    console.error("资源加载错误:", name, err);
+                    reject(err);
+                });
+            }
+            else {
+                RES.getResByUrl(name).then(function (data) {
+                    _this.loadedAssets.set(name, data);
+                    resolve(data);
+                }).catch(function (err) {
+                    console.error("资源加载错误:", name, err);
+                    reject(err);
+                });
+            }
+        });
+    };
+    ContentManager.prototype.dispose = function () {
+        this.loadedAssets.forEach(function (value) {
+            var assetsToRemove = value;
+            assetsToRemove.dispose();
+        });
+        this.loadedAssets.clear();
+    };
+    return ContentManager;
 }());
 var Emitter = (function () {
     function Emitter() {
@@ -4354,6 +4534,8 @@ var Input = (function () {
     }
     Object.defineProperty(Input, "touchPosition", {
         get: function () {
+            if (!this._gameTouchs[0])
+                return Vector2.zero;
             return this._gameTouchs[0].position;
         },
         enumerable: true,
@@ -4402,11 +4584,11 @@ var Input = (function () {
         enumerable: true,
         configurable: true
     });
-    Input.initialize = function () {
+    Input.initialize = function (stage) {
         if (this._init)
             return;
         this._init = true;
-        this._stage = SceneManager.getActiveScene().stage;
+        this._stage = stage;
         this._stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
         this._stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
         this._stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
