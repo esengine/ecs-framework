@@ -49,4 +49,8 @@ class MathHelper {
         let radians = MathHelper.toRadians(angleInDegrees);
         return new Vector2(Math.cos(radians) * radians + circleCenter.x, Math.sin(radians) * radians + circleCenter.y);
     }
+
+    public static isEven(value: number){
+        return value % 2 == 0;
+    }
 }

@@ -68,17 +68,20 @@ class SceneManager {
             this.sceneTransition.preRender();
 
             if (this._scene && !this.sceneTransition.hasPreviousSceneRender){
-                this.scene.render();
+                this._scene.render();
+                this._scene.postRender();
                 this.sceneTransition.onBeginTransition();
             } else if (this.sceneTransition) {
                 if (this._scene && this.sceneTransition.isNewSceneLoaded) {
                     this._scene.render();
+                    this._scene.postRender();
                 }
     
                 this.sceneTransition.render();
             }
-        } else if (this.scene) {
-            this.scene.render();
+        } else if (this._scene) {
+            this._scene.render();
+            this._scene.postRender();
         }
     }
 

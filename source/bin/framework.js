@@ -1079,7 +1079,10 @@ var Scene = (function (_super) {
     __extends(Scene, _super);
     function Scene(displayObject) {
         var _this = _super.call(this) || this;
+        _this.enablePostProcessing = true;
         _this._renderers = [];
+        _this._postProcessors = [];
+        _this._afterPostProcessorRenderer = [];
         displayObject.stage.addChild(_this);
         _this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
         _this.entityProcessors = new EntityProcessorList();
@@ -1157,6 +1160,9 @@ var Scene = (function (_super) {
         for (var i = 0; i < this._renderers.length; i++) {
             this._renderers[i].unload();
         }
+        for (var i = 0; i < this._postProcessors.length; i++) {
+            this._postProcessors[i].unload();
+        }
         this.entities.removeAllEntities();
         Physics.clear();
         this.camera.destory();
@@ -1181,6 +1187,26 @@ var Scene = (function (_super) {
         if (this.entityProcessors)
             this.entityProcessors.lateUpdate();
         this.renderableComponents.updateList();
+    };
+    Scene.prototype.postRender = function () {
+        var enabledCounter = 0;
+        if (this.enablePostProcessing) {
+            for (var i = 0; i < this._postProcessors.length; i++) {
+                if (this._postProcessors[i].enable) {
+                    var isEven = MathHelper.isEven(enabledCounter);
+                    enabledCounter++;
+                    this._postProcessors[i].process(this);
+                }
+            }
+        }
+        for (var i = 0; i < this._afterPostProcessorRenderer.length; i++) {
+            if (i == 0) {
+            }
+            if (this._afterPostProcessorRenderer[i].camera) {
+                this._afterPostProcessorRenderer[i].camera.forceMatrixUpdate();
+            }
+            this._afterPostProcessorRenderer[i].render(this);
+        }
     };
     Scene.prototype.render = function () {
         for (var i = 0; i < this._renderers.length; i++) {
@@ -1247,18 +1273,21 @@ var SceneManager = (function () {
         if (this.sceneTransition) {
             this.sceneTransition.preRender();
             if (this._scene && !this.sceneTransition.hasPreviousSceneRender) {
-                this.scene.render();
+                this._scene.render();
+                this._scene.postRender();
                 this.sceneTransition.onBeginTransition();
             }
             else if (this.sceneTransition) {
                 if (this._scene && this.sceneTransition.isNewSceneLoaded) {
                     this._scene.render();
+                    this._scene.postRender();
                 }
                 this.sceneTransition.render();
             }
         }
-        else if (this.scene) {
-            this.scene.render();
+        else if (this._scene) {
+            this._scene.render();
+            this._scene.postRender();
         }
     };
     SceneManager.startSceneTransition = function (sceneTransition) {
@@ -2006,6 +2035,15 @@ var RenderableComponent = (function (_super) {
     };
     return RenderableComponent;
 }(Component));
+var ScreenSpaceCamera = (function (_super) {
+    __extends(ScreenSpaceCamera, _super);
+    function ScreenSpaceCamera() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    ScreenSpaceCamera.prototype.updateMatrixes = function () {
+    };
+    return ScreenSpaceCamera;
+}(Camera));
 var Sprite = (function () {
     function Sprite(texture, sourceRect, origin) {
         if (sourceRect === void 0) { sourceRect = new Rectangle(texture.textureWidth, texture.textureHeight); }
@@ -2949,6 +2987,36 @@ var Time = (function () {
     Time._lastTime = 0;
     return Time;
 }());
+var PostProcessor = (function () {
+    function PostProcessor(effect) {
+        if (effect === void 0) { effect = null; }
+        this.effect = effect;
+    }
+    PostProcessor.prototype.onAddedToScene = function (scene) {
+        this.scene = scene;
+        this.shape = new egret.Shape();
+        scene.addChild(this.shape);
+    };
+    PostProcessor.prototype.process = function (source) {
+        this.drawFullscreenQuad(source, this.effect);
+    };
+    PostProcessor.prototype.drawFullscreenQuad = function (texture, effect) {
+        if (effect === void 0) { effect = null; }
+        this.shape.graphics.clear();
+        this.shape.graphics.beginFill(0x000000, 1);
+        this.shape.graphics.drawRect(0, 0, texture.width, texture.height);
+        this.shape.graphics.endFill();
+        this.shape.filters = [effect];
+    };
+    PostProcessor.prototype.unload = function () {
+        if (this.effect) {
+            this.effect = null;
+        }
+        this.scene = null;
+        this.scene.removeChild(this.shape);
+    };
+    return PostProcessor;
+}());
 var Renderer = (function () {
     function Renderer() {
     }
@@ -3193,6 +3261,9 @@ var MathHelper = (function () {
     MathHelper.pointOnCirlce = function (circleCenter, radius, angleInDegrees) {
         var radians = MathHelper.toRadians(angleInDegrees);
         return new Vector2(Math.cos(radians) * radians + circleCenter.x, Math.sin(radians) * radians + circleCenter.y);
+    };
+    MathHelper.isEven = function (value) {
+        return value % 2 == 0;
     };
     MathHelper.Epsilon = 0.00001;
     MathHelper.Rad2Deg = 57.29578;

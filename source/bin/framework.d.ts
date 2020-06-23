@@ -212,10 +212,13 @@ declare class Scene extends egret.DisplayObjectContainer {
     readonly entities: EntityList;
     readonly renderableComponents: RenderableComponentList;
     readonly content: ContentManager;
+    enablePostProcessing: boolean;
     private _projectionMatrix;
     private _transformMatrix;
     private _matrixTransformMatrix;
     private _renderers;
+    private _postProcessors;
+    private _afterPostProcessorRenderer;
     private _didSceneBegin;
     readonly entityProcessors: EntityProcessorList;
     constructor(displayObject: egret.DisplayObject);
@@ -236,6 +239,7 @@ declare class Scene extends egret.DisplayObjectContainer {
     protected onDeactive(): void;
     protected unload(): void;
     update(): void;
+    postRender(): void;
     render(): void;
 }
 declare class SceneManager {
@@ -413,6 +417,9 @@ declare abstract class RenderableComponent extends Component implements IRendera
     abstract render(camera: Camera): any;
     isVisibleFromCamera(camera: Camera): boolean;
     onEntityTransformChanged(comp: ComponentTransform): void;
+}
+declare class ScreenSpaceCamera extends Camera {
+    protected updateMatrixes(): void;
 }
 declare class Sprite {
     texture2D: egret.Texture;
@@ -610,6 +617,17 @@ declare class Time {
     private static _lastTime;
     static update(currentTime: number): void;
 }
+declare class PostProcessor {
+    enable: boolean;
+    effect: egret.CustomFilter;
+    scene: Scene;
+    shape: egret.Shape;
+    constructor(effect?: egret.CustomFilter);
+    onAddedToScene(scene: Scene): void;
+    process(source: egret.DisplayObject): void;
+    protected drawFullscreenQuad(texture: egret.DisplayObject, effect?: egret.CustomFilter): void;
+    unload(): void;
+}
 declare abstract class Renderer {
     camera: Camera;
     onAddedToScene(scene: Scene): void;
@@ -686,6 +704,7 @@ declare class MathHelper {
     static lerp(value1: number, value2: number, amount: number): number;
     static clamp(value: number, min: number, max: number): number;
     static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number): Vector2;
+    static isEven(value: number): boolean;
 }
 declare class Matrix2D {
     m11: number;

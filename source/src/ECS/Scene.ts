@@ -4,11 +4,14 @@ class Scene extends egret.DisplayObjectContainer {
    public readonly entities: EntityList;
    public readonly renderableComponents: RenderableComponentList;
    public readonly content: ContentManager;
+   public enablePostProcessing = true;
 
    private _projectionMatrix: Matrix2D;
    private _transformMatrix: Matrix2D;
    private _matrixTransformMatrix: Matrix2D;
    private _renderers: Renderer[] = [];
+   private _postProcessors: PostProcessor[] = [];
+   private _afterPostProcessorRenderer: Renderer[] = [];
    private _didSceneBegin;
 
    public readonly entityProcessors: EntityProcessorList;
@@ -79,8 +82,8 @@ class Scene extends egret.DisplayObjectContainer {
       return renderer;
    }
 
-   public getRenderer<T extends Renderer>(type): T{
-      for (let i = 0; i < this._renderers.length; i ++){
+   public getRenderer<T extends Renderer>(type): T {
+      for (let i = 0; i < this._renderers.length; i++) {
          if (this._renderers[i] instanceof type)
             return this._renderers[i] as T;
       }
@@ -88,11 +91,11 @@ class Scene extends egret.DisplayObjectContainer {
       return null;
    }
 
-   public removeRenderer(renderer: Renderer){
+   public removeRenderer(renderer: Renderer) {
       this._renderers.remove(renderer);
    }
 
-   public begin(){
+   public begin() {
       if (this._renderers.length == 0) {
          this.addRenderer(new DefaultRenderer());
          console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
@@ -106,20 +109,25 @@ class Scene extends egret.DisplayObjectContainer {
          this.entityProcessors.begin();
 
       this.camera.onSceneSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
-      
+
       this._didSceneBegin = true;
       this.onStart();
    }
 
-   public end(){
+   public end() {
       this._didSceneBegin = false;
 
       this.removeEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
       this.removeEventListener(egret.Event.ACTIVATE, this.onActive, this);
 
-      for (let i = 0; i < this._renderers.length; i ++){
+      for (let i = 0; i < this._renderers.length; i++) {
          this._renderers[i].unload();
       }
+
+      for (let i = 0; i < this._postProcessors.length; i++) {
+         this._postProcessors[i].unload();
+      }
+
       this.entities.removeAllEntities();
 
       Physics.clear();
@@ -134,7 +142,7 @@ class Scene extends egret.DisplayObjectContainer {
       this.unload();
    }
 
-   protected onStart(){
+   protected onStart() {
 
    }
 
@@ -148,7 +156,7 @@ class Scene extends egret.DisplayObjectContainer {
 
    }
 
-   protected unload(){ }
+   protected unload() { }
 
    public update() {
       this.entities.updateLists();
@@ -164,8 +172,33 @@ class Scene extends egret.DisplayObjectContainer {
       this.renderableComponents.updateList();
    }
 
-   public render(){
-      for (let i = 0; i <this._renderers.length; i ++){
+   public postRender() {
+      let enabledCounter = 0;
+      if (this.enablePostProcessing) {
+         for (let i = 0; i < this._postProcessors.length; i++) {
+            if (this._postProcessors[i].enable) {
+               let isEven = MathHelper.isEven(enabledCounter);
+               enabledCounter ++;
+
+               this._postProcessors[i].process(this);
+            }
+         }
+      }
+
+      for (let i = 0; i < this._afterPostProcessorRenderer.length; i ++){
+         if (i == 0){
+            // TODO: 设置渲染对象
+         }
+
+         if (this._afterPostProcessorRenderer[i].camera){
+            this._afterPostProcessorRenderer[i].camera.forceMatrixUpdate();
+         }
+         this._afterPostProcessorRenderer[i].render(this);
+      }
+   }
+
+   public render() {
+      for (let i = 0; i < this._renderers.length; i++) {
          if (this._renderers[i].camera)
             this._renderers[i].camera.forceMatrixUpdate();
          this.camera.forceMatrixUpdate();
