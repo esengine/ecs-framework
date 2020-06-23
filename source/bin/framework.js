@@ -780,6 +780,15 @@ var Component = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(Component.prototype, "scene", {
+        get: function () {
+            if (!this.entity)
+                return null;
+            return this.entity.scene;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Component.prototype.initialize = function () {
     };
     Component.prototype.onAddedToEntity = function () {
@@ -1077,13 +1086,11 @@ var Entity = (function () {
 }());
 var Scene = (function (_super) {
     __extends(Scene, _super);
-    function Scene(displayObject) {
+    function Scene() {
         var _this = _super.call(this) || this;
         _this.enablePostProcessing = true;
         _this._renderers = [];
         _this._postProcessors = [];
-        _this._afterPostProcessorRenderer = [];
-        displayObject.stage.addChild(_this);
         _this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
         _this.entityProcessors = new EntityProcessorList();
         _this.renderableComponents = new RenderableComponentList();
@@ -1139,8 +1146,10 @@ var Scene = (function (_super) {
     };
     Scene.prototype.removeRenderer = function (renderer) {
         this._renderers.remove(renderer);
+        renderer.unload();
     };
     Scene.prototype.begin = function () {
+        SceneManager.stage.addChildAt(this, 0);
         if (this._renderers.length == 0) {
             this.addRenderer(new DefaultRenderer());
             console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
@@ -1199,14 +1208,6 @@ var Scene = (function (_super) {
                 }
             }
         }
-        for (var i = 0; i < this._afterPostProcessorRenderer.length; i++) {
-            if (i == 0) {
-            }
-            if (this._afterPostProcessorRenderer[i].camera) {
-                this._afterPostProcessorRenderer[i].camera.forceMatrixUpdate();
-            }
-            this._afterPostProcessorRenderer[i].render(this);
-        }
     };
     Scene.prototype.render = function () {
         for (var i = 0; i < this._renderers.length; i++) {
@@ -1215,6 +1216,15 @@ var Scene = (function (_super) {
             this.camera.forceMatrixUpdate();
             this._renderers[i].render(this);
         }
+    };
+    Scene.prototype.addPostProcessor = function (postProcessor) {
+        this._postProcessors.push(postProcessor);
+        this._postProcessors.sort();
+        postProcessor.onAddedToScene(this);
+        if (this._didSceneBegin) {
+            postProcessor.onSceneBackBufferSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
+        }
+        return postProcessor;
     };
     return Scene;
 }(egret.DisplayObjectContainer));
@@ -1292,7 +1302,8 @@ var SceneManager = (function () {
     };
     SceneManager.startSceneTransition = function (sceneTransition) {
         if (this.sceneTransition) {
-            throw new Error("在前一个场景完成之前，不能开始一个新的场景转换。");
+            console.error("在前一个场景完成之前，不能开始一个新的场景转换。");
+            return;
         }
         this.sceneTransition = sceneTransition;
         return sceneTransition;
@@ -2095,7 +2106,7 @@ var SpriteRenderer = (function (_super) {
         if (this._sprite)
             this._origin = sprite.origin;
         this._bitmap = new egret.Bitmap(sprite.texture2D);
-        this.stage.addChild(this._bitmap);
+        this.scene.addChild(this._bitmap);
         return this;
     };
     Object.defineProperty(SpriteRenderer.prototype, "origin", {
@@ -2147,7 +2158,7 @@ var SpriteRenderer = (function (_super) {
     };
     SpriteRenderer.prototype.onRemovedFromEntity = function () {
         if (this._bitmap)
-            this.stage.removeChild(this._bitmap);
+            this.scene.removeChild(this._bitmap);
     };
     return SpriteRenderer;
 }(RenderableComponent));
@@ -2987,9 +2998,122 @@ var Time = (function () {
     Time._lastTime = 0;
     return Time;
 }());
+var GaussianBlurEffect = (function (_super) {
+    __extends(GaussianBlurEffect, _super);
+    function GaussianBlurEffect() {
+        var _this = _super.call(this, GaussianBlurEffect.vertSrc, GaussianBlurEffect.fragmentSrc) || this;
+        _this._blurAmount = 2;
+        _this._horizontalBlurDelta = 0.01;
+        _this._verticalBlurDelta = 0.01;
+        _this._sampleWeights = [];
+        _this._verticalSampleOffsets = [];
+        _this._horizontalSampleOffsets = [];
+        _this._verticalSampleOffsets[0] = Vector2.zero;
+        _this._horizontalSampleOffsets[0] = Vector2.zero;
+        _this.calculateSampleWeights();
+        _this.setBlurEffectParameters(_this._horizontalBlurDelta, 0, _this._horizontalSampleOffsets);
+        _this.prepareForHorizontalBlur();
+        return _this;
+    }
+    Object.defineProperty(GaussianBlurEffect.prototype, "blurAmount", {
+        get: function () {
+            return this._blurAmount;
+        },
+        set: function (value) {
+            if (this._blurAmount != value) {
+                if (value == 0)
+                    value = 0.001;
+                this._blurAmount = value;
+                this.calculateSampleWeights();
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(GaussianBlurEffect.prototype, "horizontalBlurDelta", {
+        get: function () {
+            return this._horizontalBlurDelta;
+        },
+        set: function (value) {
+            if (value != this._horizontalBlurDelta) {
+                this._horizontalBlurDelta = value;
+                this.setBlurEffectParameters(this._horizontalBlurDelta, 0, this._horizontalSampleOffsets);
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(GaussianBlurEffect.prototype, "verticalBlurDelta", {
+        get: function () {
+            return this._verticalBlurDelta;
+        },
+        set: function (value) {
+            if (value != this._verticalBlurDelta) {
+                this._verticalBlurDelta = value;
+                this.setBlurEffectParameters(0, this._verticalBlurDelta, this._verticalSampleOffsets);
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
+    GaussianBlurEffect.prototype.prepareForHorizontalBlur = function () {
+        this.uniforms._sampleOffsets = this._horizontalSampleOffsets;
+    };
+    GaussianBlurEffect.prototype.prepareForVerticalBlur = function () {
+        this.uniforms._sampleOffsets = this._verticalSampleOffsets;
+    };
+    GaussianBlurEffect.prototype.calculateSampleWeights = function () {
+        this._sampleWeights[0] = this.computeGaussian(0);
+        var totalWeights = this._sampleWeights[0];
+        for (var i = 0; i < 15 / 2; i++) {
+            var weight = this.computeGaussian(i + 1);
+            this._sampleWeights[i * 2 + 1] = weight;
+            this._sampleWeights[i * 2 + 2] = weight;
+            totalWeights += weight * 2;
+        }
+        for (var i = 0; i < this._sampleWeights.length; i++) {
+            this._sampleWeights[i] /= totalWeights;
+        }
+        this.uniforms._sampleWeights = this._sampleWeights;
+    };
+    GaussianBlurEffect.prototype.setBlurEffectParameters = function (dx, dy, offsets) {
+        for (var i = 0; i < 15 / 2; i++) {
+            var sampleOffset = i * 2 + 1.5;
+            var delta = Vector2.subtract(new Vector2(dx, dy), new Vector2(sampleOffset));
+            offsets[i * 2 + 1] = delta;
+            offsets[i * 2 + 2] = new Vector2(-delta);
+        }
+    };
+    GaussianBlurEffect.prototype.computeGaussian = function (n) {
+        return ((1 / Math.sqrt(2 * Math.PI * this._blurAmount)) * Math.exp(-(n * n) / (2 * this._blurAmount * this._blurAmount)));
+    };
+    GaussianBlurEffect.vertSrc = "attribute vec2 aVertexPosition;\n" +
+        "attribute vec2 aTextureCoord;\n" +
+        "uniform vec2 projectionVector;\n" +
+        "varying vec2 vTextureCoord;\n" +
+        "const vec2 center = vec2(-1.0, 1.0);\n" +
+        "void main(void) {\n" +
+        "   gl_Position = vec4( (aVertexPosition / projectionVector) + center , 0.0, 1.0);\n" +
+        "   vTextureCoord = aTextureCoord;\n" +
+        "}";
+    GaussianBlurEffect.fragmentSrc = "precision lowp float;\n" +
+        "varying vec2 vTextureCoord;\n" +
+        "uniform sampler2D uSampler;\n" +
+        "#define SAMPLE_COUNT 15\n" +
+        "uniform vec2 _sampleOffsets[SAMPLE_COUNT];\n" +
+        "uniform float _sampleWeights[SAMPLE_COUNT];\n" +
+        "void main(void) {\n" +
+        "vec4 c = 0;\n" +
+        "for( int i = 0; i < SAMPLE_COUNT; i++ )\n" +
+        "   c += texture2D( s0, texCoord + _sampleOffsets[i] ) * _sampleWeights[i];\n" +
+        "gl_FragColor = c;\n" +
+        "}";
+    return GaussianBlurEffect;
+}(egret.CustomFilter));
 var PostProcessor = (function () {
     function PostProcessor(effect) {
         if (effect === void 0) { effect = null; }
+        this.enable = true;
         this.effect = effect;
     }
     PostProcessor.prototype.onAddedToScene = function (scene) {
@@ -3000,23 +3124,80 @@ var PostProcessor = (function () {
     PostProcessor.prototype.process = function (source) {
         this.drawFullscreenQuad(source, this.effect);
     };
+    PostProcessor.prototype.onSceneBackBufferSizeChanged = function (newWidth, newHeight) { };
     PostProcessor.prototype.drawFullscreenQuad = function (texture, effect) {
         if (effect === void 0) { effect = null; }
-        this.shape.graphics.clear();
-        this.shape.graphics.beginFill(0x000000, 1);
-        this.shape.graphics.drawRect(0, 0, texture.width, texture.height);
-        this.shape.graphics.endFill();
-        this.shape.filters = [effect];
+        texture.filters = [effect];
     };
     PostProcessor.prototype.unload = function () {
         if (this.effect) {
             this.effect = null;
         }
-        this.scene = null;
         this.scene.removeChild(this.shape);
+        this.scene = null;
     };
     return PostProcessor;
 }());
+var BloomSettings = (function () {
+    function BloomSettings(bloomThreshold, blurAmount, bloomIntensity, baseIntensity, bloomSaturation, baseSaturation) {
+        this.threshold = bloomThreshold;
+        this.blurAmount = blurAmount;
+        this.intensity = bloomIntensity;
+        this.baseIntensity = baseIntensity;
+        this.saturation = bloomSaturation;
+        this.baseStaturation = baseSaturation;
+    }
+    BloomSettings.presetSettings = [
+        new BloomSettings(0.1, 0.6, 2, 1, 1, 0),
+        new BloomSettings(0, 3, 1, 1, 1, 1),
+        new BloomSettings(0.5, 8, 2, 1, 0, 1),
+        new BloomSettings(0.25, 8, 1.3, 1, 1, 0),
+        new BloomSettings(0, 2, 1, 0.1, 1, 1),
+        new BloomSettings(0.5, 2, 1, 1, 1, 1)
+    ];
+    return BloomSettings;
+}());
+var GaussianBlurPostProcessor = (function (_super) {
+    __extends(GaussianBlurPostProcessor, _super);
+    function GaussianBlurPostProcessor() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this._renderTargetScale = 1;
+        return _this;
+    }
+    Object.defineProperty(GaussianBlurPostProcessor.prototype, "renderTargetScale", {
+        get: function () {
+            return this._renderTargetScale;
+        },
+        set: function (value) {
+            if (this._renderTargetScale != value) {
+                this._renderTargetScale = value;
+                this.updateEffectDeltas();
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
+    GaussianBlurPostProcessor.prototype.onAddedToScene = function (scene) {
+        _super.prototype.onAddedToScene.call(this, scene);
+        this.effect = new GaussianBlurEffect();
+    };
+    GaussianBlurPostProcessor.prototype.onSceneBackBufferSizeChanged = function (newWidth, newHeight) {
+        this.updateEffectDeltas();
+    };
+    GaussianBlurPostProcessor.prototype.updateEffectDeltas = function () {
+        var effect = this.effect;
+        effect.horizontalBlurDelta = 1 / (this.scene.stage.stageWidth * this._renderTargetScale);
+        effect.verticalBlurDelta = 1 / (this.scene.stage.stageHeight * this._renderTargetScale);
+    };
+    GaussianBlurPostProcessor.prototype.process = function (source) {
+        var effect = this.effect;
+        effect.prepareForHorizontalBlur();
+        this.drawFullscreenQuad(source, this.effect);
+        effect.prepareForVerticalBlur();
+        this.drawFullscreenQuad(source, this.effect);
+    };
+    return GaussianBlurPostProcessor;
+}(PostProcessor));
 var Renderer = (function () {
     function Renderer() {
     }

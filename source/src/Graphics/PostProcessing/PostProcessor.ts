@@ -5,6 +5,7 @@ class PostProcessor {
     public shape: egret.Shape;
 
     constructor(effect: egret.CustomFilter = null){
+        this.enable = true;
         this.effect = effect;
     }
 
@@ -18,12 +19,10 @@ class PostProcessor {
         this.drawFullscreenQuad(source, this.effect);
     }
 
+    public onSceneBackBufferSizeChanged(newWidth: number, newHeight: number){}
+
     protected drawFullscreenQuad(texture: egret.DisplayObject, effect: egret.CustomFilter = null){
-        this.shape.graphics.clear();
-        this.shape.graphics.beginFill(0x000000, 1);
-        this.shape.graphics.drawRect(0, 0, texture.width, texture.height);
-        this.shape.graphics.endFill();
-        this.shape.filters = [effect];
+        texture.filters = [effect];
     }
 
     public unload(){
@@ -31,7 +30,7 @@ class PostProcessor {
             this.effect = null;
         }
 
-        this.scene = null;
         this.scene.removeChild(this.shape);
+        this.scene = null;
     }
 }

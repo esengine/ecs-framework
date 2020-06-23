@@ -11,14 +11,12 @@ class Scene extends egret.DisplayObjectContainer {
    private _matrixTransformMatrix: Matrix2D;
    private _renderers: Renderer[] = [];
    private _postProcessors: PostProcessor[] = [];
-   private _afterPostProcessorRenderer: Renderer[] = [];
    private _didSceneBegin;
 
    public readonly entityProcessors: EntityProcessorList;
 
-   constructor(displayObject: egret.DisplayObject) {
+   constructor() {
       super();
-      displayObject.stage.addChild(this);
       this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
       this.entityProcessors = new EntityProcessorList();
       this.renderableComponents = new RenderableComponentList();
@@ -93,9 +91,11 @@ class Scene extends egret.DisplayObjectContainer {
 
    public removeRenderer(renderer: Renderer) {
       this._renderers.remove(renderer);
+      renderer.unload();
    }
 
    public begin() {
+      SceneManager.stage.addChildAt(this, 0);
       if (this._renderers.length == 0) {
          this.addRenderer(new DefaultRenderer());
          console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
@@ -184,17 +184,6 @@ class Scene extends egret.DisplayObjectContainer {
             }
          }
       }
-
-      for (let i = 0; i < this._afterPostProcessorRenderer.length; i ++){
-         if (i == 0){
-            // TODO: 设置渲染对象
-         }
-
-         if (this._afterPostProcessorRenderer[i].camera){
-            this._afterPostProcessorRenderer[i].camera.forceMatrixUpdate();
-         }
-         this._afterPostProcessorRenderer[i].render(this);
-      }
    }
 
    public render() {
@@ -204,5 +193,17 @@ class Scene extends egret.DisplayObjectContainer {
          this.camera.forceMatrixUpdate();
          this._renderers[i].render(this);
       }
+   }
+
+   public addPostProcessor<T extends PostProcessor>(postProcessor: T): T{
+      this._postProcessors.push(postProcessor);
+      this._postProcessors.sort();
+      postProcessor.onAddedToScene(this);
+
+      if (this._didSceneBegin){
+         postProcessor.onSceneBackBufferSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
+      }
+
+      return postProcessor;
    }
 }

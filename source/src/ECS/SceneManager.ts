@@ -91,7 +91,8 @@ class SceneManager {
      */
     public static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T {
         if (this.sceneTransition) {
-            throw new Error("在前一个场景完成之前，不能开始一个新的场景转换。");
+            console.error("在前一个场景完成之前，不能开始一个新的场景转换。");
+            return;
         }
 
         this.sceneTransition = sceneTransition;

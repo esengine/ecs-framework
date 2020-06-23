@@ -99,20 +99,10 @@ class Main extends eui.UILayer {
      * Create scene interface
      */
     protected createGameScene(): void {
-        SceneManager.scene = new MainScene(this);
+        SceneManager.scene = new MainScene();
 
         // Main.emitter.addObserver(CoreEmitterType.Update, ()=>{
         //     console.log("update emitter");
         // });
-        let button = new eui.Button();
-        button.label = "切换场景";
-        this.stage.addChild(button);
-        button.addEventListener(egret.TouchEvent.TOUCH_TAP, ()=>{
-            SceneManager.startSceneTransition(new WindTransition(()=>{
-                return new MainScene(this);
-            }));
-        }, this);
-
-        
     }
 }

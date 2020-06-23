@@ -30,7 +30,7 @@ class SpriteRenderer extends RenderableComponent {
             this._origin = sprite.origin;
 
         this._bitmap = new egret.Bitmap(sprite.texture2D);
-        this.stage.addChild(this._bitmap);
+        this.scene.addChild(this._bitmap);
 
         return this;
     }
@@ -85,6 +85,6 @@ class SpriteRenderer extends RenderableComponent {
 
     public onRemovedFromEntity(){
         if (this._bitmap)
-            this.stage.removeChild(this._bitmap);
+            this.scene.removeChild(this._bitmap);
     }
 }

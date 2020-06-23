@@ -147,6 +147,7 @@ declare abstract class Component {
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
     readonly stage: egret.Stage;
+    readonly scene: Scene;
     initialize(): void;
     onAddedToEntity(): void;
     onRemovedFromEntity(): void;
@@ -218,10 +219,9 @@ declare class Scene extends egret.DisplayObjectContainer {
     private _matrixTransformMatrix;
     private _renderers;
     private _postProcessors;
-    private _afterPostProcessorRenderer;
     private _didSceneBegin;
     readonly entityProcessors: EntityProcessorList;
-    constructor(displayObject: egret.DisplayObject);
+    constructor();
     createEntity(name: string): Entity;
     addEntity(entity: Entity): Entity;
     destroyAllEntities(): void;
@@ -241,6 +241,7 @@ declare class Scene extends egret.DisplayObjectContainer {
     update(): void;
     postRender(): void;
     render(): void;
+    addPostProcessor<T extends PostProcessor>(postProcessor: T): T;
 }
 declare class SceneManager {
     private static _scene;
@@ -617,6 +618,25 @@ declare class Time {
     private static _lastTime;
     static update(currentTime: number): void;
 }
+declare class GaussianBlurEffect extends egret.CustomFilter {
+    private static vertSrc;
+    private static fragmentSrc;
+    private _sampleWeights;
+    private _verticalSampleOffsets;
+    private _horizontalSampleOffsets;
+    private _blurAmount;
+    private _horizontalBlurDelta;
+    private _verticalBlurDelta;
+    blurAmount: number;
+    horizontalBlurDelta: number;
+    verticalBlurDelta: number;
+    constructor();
+    prepareForHorizontalBlur(): void;
+    prepareForVerticalBlur(): void;
+    private calculateSampleWeights;
+    private setBlurEffectParameters;
+    private computeGaussian;
+}
 declare class PostProcessor {
     enable: boolean;
     effect: egret.CustomFilter;
@@ -625,8 +645,27 @@ declare class PostProcessor {
     constructor(effect?: egret.CustomFilter);
     onAddedToScene(scene: Scene): void;
     process(source: egret.DisplayObject): void;
+    onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
     protected drawFullscreenQuad(texture: egret.DisplayObject, effect?: egret.CustomFilter): void;
     unload(): void;
+}
+declare class BloomSettings {
+    readonly threshold: any;
+    readonly blurAmount: any;
+    readonly intensity: any;
+    readonly baseIntensity: any;
+    readonly saturation: any;
+    readonly baseStaturation: any;
+    constructor(bloomThreshold: number, blurAmount: number, bloomIntensity: number, baseIntensity: number, bloomSaturation: number, baseSaturation: number);
+    static presetSettings: BloomSettings[];
+}
+declare class GaussianBlurPostProcessor extends PostProcessor {
+    private _renderTargetScale;
+    renderTargetScale: number;
+    onAddedToScene(scene: Scene): void;
+    onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
+    private updateEffectDeltas;
+    process(source: egret.DisplayObject): void;
 }
 declare abstract class Renderer {
     camera: Camera;
