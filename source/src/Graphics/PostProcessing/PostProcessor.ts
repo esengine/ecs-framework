@@ -12,17 +12,20 @@ class PostProcessor {
     public onAddedToScene(scene: Scene){
         this.scene = scene;
         this.shape = new egret.Shape();
+        this.shape.graphics.beginFill(0xFFFFFF, 1);
+        this.shape.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        this.shape.graphics.endFill();
         scene.addChild(this.shape);
     }
 
-    public process(source: egret.DisplayObject){
-        this.drawFullscreenQuad(source, this.effect);
+    public process(){
+        this.drawFullscreenQuad();
     }
 
     public onSceneBackBufferSizeChanged(newWidth: number, newHeight: number){}
 
-    protected drawFullscreenQuad(texture: egret.DisplayObject, effect: egret.CustomFilter = null){
-        texture.filters = [effect];
+    protected drawFullscreenQuad(){
+        this.shape.filters = [this.effect];
     }
 
     public unload(){

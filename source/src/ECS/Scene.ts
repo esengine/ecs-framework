@@ -95,7 +95,12 @@ class Scene extends egret.DisplayObjectContainer {
    }
 
    public begin() {
-      SceneManager.stage.addChildAt(this, 0);
+      if (SceneManager.sceneTransition){
+         SceneManager.stage.addChildAt(this, SceneManager.stage.numChildren - 1);
+      }else{
+         SceneManager.stage.addChild(this);
+      }
+      
       if (this._renderers.length == 0) {
          this.addRenderer(new DefaultRenderer());
          console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
@@ -180,7 +185,7 @@ class Scene extends egret.DisplayObjectContainer {
                let isEven = MathHelper.isEven(enabledCounter);
                enabledCounter ++;
 
-               this._postProcessors[i].process(this);
+               this._postProcessors[i].process();
             }
          }
       }

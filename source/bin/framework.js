@@ -1149,7 +1149,12 @@ var Scene = (function (_super) {
         renderer.unload();
     };
     Scene.prototype.begin = function () {
-        SceneManager.stage.addChildAt(this, 0);
+        if (SceneManager.sceneTransition) {
+            SceneManager.stage.addChildAt(this, SceneManager.stage.numChildren - 1);
+        }
+        else {
+            SceneManager.stage.addChild(this);
+        }
         if (this._renderers.length == 0) {
             this.addRenderer(new DefaultRenderer());
             console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
@@ -1204,7 +1209,7 @@ var Scene = (function (_super) {
                 if (this._postProcessors[i].enable) {
                     var isEven = MathHelper.isEven(enabledCounter);
                     enabledCounter++;
-                    this._postProcessors[i].process(this);
+                    this._postProcessors[i].process();
                 }
             }
         }
@@ -1302,7 +1307,7 @@ var SceneManager = (function () {
     };
     SceneManager.startSceneTransition = function (sceneTransition) {
         if (this.sceneTransition) {
-            console.error("在前一个场景完成之前，不能开始一个新的场景转换。");
+            console.warn("在前一个场景完成之前，不能开始一个新的场景转换。");
             return;
         }
         this.sceneTransition = sceneTransition;
@@ -3005,6 +3010,7 @@ var GaussianBlurEffect = (function (_super) {
         _this._blurAmount = 2;
         _this._horizontalBlurDelta = 0.01;
         _this._verticalBlurDelta = 0.01;
+        _this._sampleCount = 15;
         _this._sampleWeights = [];
         _this._verticalSampleOffsets = [];
         _this._horizontalSampleOffsets = [];
@@ -3065,7 +3071,7 @@ var GaussianBlurEffect = (function (_super) {
     GaussianBlurEffect.prototype.calculateSampleWeights = function () {
         this._sampleWeights[0] = this.computeGaussian(0);
         var totalWeights = this._sampleWeights[0];
-        for (var i = 0; i < 15 / 2; i++) {
+        for (var i = 0; i < this._sampleCount / 2; i++) {
             var weight = this.computeGaussian(i + 1);
             this._sampleWeights[i * 2 + 1] = weight;
             this._sampleWeights[i * 2 + 2] = weight;
@@ -3077,9 +3083,9 @@ var GaussianBlurEffect = (function (_super) {
         this.uniforms._sampleWeights = this._sampleWeights;
     };
     GaussianBlurEffect.prototype.setBlurEffectParameters = function (dx, dy, offsets) {
-        for (var i = 0; i < 15 / 2; i++) {
+        for (var i = 0; i < this._sampleCount / 2; i++) {
             var sampleOffset = i * 2 + 1.5;
-            var delta = Vector2.subtract(new Vector2(dx, dy), new Vector2(sampleOffset));
+            var delta = Vector2.multiply(new Vector2(dx, dy), new Vector2(sampleOffset));
             offsets[i * 2 + 1] = delta;
             offsets[i * 2 + 2] = new Vector2(-delta);
         }
@@ -3103,9 +3109,9 @@ var GaussianBlurEffect = (function (_super) {
         "uniform vec2 _sampleOffsets[SAMPLE_COUNT];\n" +
         "uniform float _sampleWeights[SAMPLE_COUNT];\n" +
         "void main(void) {\n" +
-        "vec4 c = 0;\n" +
+        "vec4 c = vec4(0, 0, 0, 0);\n" +
         "for( int i = 0; i < SAMPLE_COUNT; i++ )\n" +
-        "   c += texture2D( s0, texCoord + _sampleOffsets[i] ) * _sampleWeights[i];\n" +
+        "   c += texture2D( uSampler, vTextureCoord + _sampleOffsets[i] ) * _sampleWeights[i];\n" +
         "gl_FragColor = c;\n" +
         "}";
     return GaussianBlurEffect;
@@ -3119,15 +3125,17 @@ var PostProcessor = (function () {
     PostProcessor.prototype.onAddedToScene = function (scene) {
         this.scene = scene;
         this.shape = new egret.Shape();
+        this.shape.graphics.beginFill(0xFFFFFF, 1);
+        this.shape.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        this.shape.graphics.endFill();
         scene.addChild(this.shape);
     };
-    PostProcessor.prototype.process = function (source) {
-        this.drawFullscreenQuad(source, this.effect);
+    PostProcessor.prototype.process = function () {
+        this.drawFullscreenQuad();
     };
     PostProcessor.prototype.onSceneBackBufferSizeChanged = function (newWidth, newHeight) { };
-    PostProcessor.prototype.drawFullscreenQuad = function (texture, effect) {
-        if (effect === void 0) { effect = null; }
-        texture.filters = [effect];
+    PostProcessor.prototype.drawFullscreenQuad = function () {
+        this.shape.filters = [this.effect];
     };
     PostProcessor.prototype.unload = function () {
         if (this.effect) {
@@ -3189,12 +3197,12 @@ var GaussianBlurPostProcessor = (function (_super) {
         effect.horizontalBlurDelta = 1 / (this.scene.stage.stageWidth * this._renderTargetScale);
         effect.verticalBlurDelta = 1 / (this.scene.stage.stageHeight * this._renderTargetScale);
     };
-    GaussianBlurPostProcessor.prototype.process = function (source) {
+    GaussianBlurPostProcessor.prototype.process = function () {
         var effect = this.effect;
         effect.prepareForHorizontalBlur();
-        this.drawFullscreenQuad(source, this.effect);
+        this.drawFullscreenQuad();
         effect.prepareForVerticalBlur();
-        this.drawFullscreenQuad(source, this.effect);
+        this.drawFullscreenQuad();
     };
     return GaussianBlurPostProcessor;
 }(PostProcessor));

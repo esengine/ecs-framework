@@ -22,9 +22,9 @@ class GaussianBlurEffect extends egret.CustomFilter {
     "uniform float _sampleWeights[SAMPLE_COUNT];\n" +
 
     "void main(void) {\n" +
-    "vec4 c = 0;\n" +
+    "vec4 c = vec4(0, 0, 0, 0);\n" +
     "for( int i = 0; i < SAMPLE_COUNT; i++ )\n" +
-    "   c += texture2D( s0, texCoord + _sampleOffsets[i] ) * _sampleWeights[i];\n" +
+    "   c += texture2D( uSampler, vTextureCoord + _sampleOffsets[i] ) * _sampleWeights[i];\n" +
     "gl_FragColor = c;\n" +
     "}";
     private _sampleWeights: number[];
@@ -33,6 +33,7 @@ class GaussianBlurEffect extends egret.CustomFilter {
     private _blurAmount = 2;
     private _horizontalBlurDelta = 0.01;
     private _verticalBlurDelta = 0.01;
+    private _sampleCount: number = 15;
 
     public get blurAmount(){
         return this._blurAmount;
@@ -94,7 +95,7 @@ class GaussianBlurEffect extends egret.CustomFilter {
         this._sampleWeights[0] = this.computeGaussian(0);
         let totalWeights = this._sampleWeights[0];
 
-        for (let i = 0; i < 15 / 2; i ++){
+        for (let i = 0; i < this._sampleCount / 2; i ++){
             let weight = this.computeGaussian(i + 1);
             this._sampleWeights[i * 2 + 1] = weight;
             this._sampleWeights[i * 2 + 2] = weight;
@@ -110,9 +111,9 @@ class GaussianBlurEffect extends egret.CustomFilter {
     }
 
     private setBlurEffectParameters(dx: number, dy: number, offsets: Vector2[]){
-        for (let i = 0; i < 15 / 2; i ++){
+        for (let i = 0; i < this._sampleCount / 2; i ++){
             let sampleOffset = i * 2 + 1.5;
-            let delta = Vector2.subtract( new Vector2(dx, dy), new Vector2(sampleOffset));
+            let delta = Vector2.multiply( new Vector2(dx, dy), new Vector2(sampleOffset));
 
             offsets[i * 2 + 1] = delta;
             offsets[i * 2 + 2] = new Vector2(-delta);

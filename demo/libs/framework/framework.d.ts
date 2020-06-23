@@ -627,6 +627,7 @@ declare class GaussianBlurEffect extends egret.CustomFilter {
     private _blurAmount;
     private _horizontalBlurDelta;
     private _verticalBlurDelta;
+    private _sampleCount;
     blurAmount: number;
     horizontalBlurDelta: number;
     verticalBlurDelta: number;
@@ -644,9 +645,9 @@ declare class PostProcessor {
     shape: egret.Shape;
     constructor(effect?: egret.CustomFilter);
     onAddedToScene(scene: Scene): void;
-    process(source: egret.DisplayObject): void;
+    process(): void;
     onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
-    protected drawFullscreenQuad(texture: egret.DisplayObject, effect?: egret.CustomFilter): void;
+    protected drawFullscreenQuad(): void;
     unload(): void;
 }
 declare class BloomSettings {
@@ -665,7 +666,7 @@ declare class GaussianBlurPostProcessor extends PostProcessor {
     onAddedToScene(scene: Scene): void;
     onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
     private updateEffectDeltas;
-    process(source: egret.DisplayObject): void;
+    process(): void;
 }
 declare abstract class Renderer {
     camera: Camera;

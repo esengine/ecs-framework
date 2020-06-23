@@ -25,12 +25,12 @@ class GaussianBlurPostProcessor extends PostProcessor {
         effect.verticalBlurDelta = 1 / (this.scene.stage.stageHeight * this._renderTargetScale);
     }
 
-    public process(source: egret.DisplayObject){
+    public process(){
         let effect = this.effect as GaussianBlurEffect;
         effect.prepareForHorizontalBlur();
-        this.drawFullscreenQuad(source, this.effect);
+        this.drawFullscreenQuad();
         
         effect.prepareForVerticalBlur();
-        this.drawFullscreenQuad(source, this.effect);
+        this.drawFullscreenQuad();
     }
 }

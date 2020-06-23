@@ -18,7 +18,6 @@ class MainScene extends Scene {
         let bgSprite = new Sprite(RES.getRes("bg_jpg"));
         let bg = this.createEntity("bg");
         bg.position = new Vector2(0, 0);
-        bg.scale = new Vector2(0.5);
         bg.addComponent(new SpriteRenderer()).setSprite(bgSprite);
 
         for (let i = 0; i < 20; i ++){
@@ -31,11 +30,19 @@ class MainScene extends Scene {
 
         let button = new eui.Button();
         button.label = "切换场景";
-        this.stage.addChild(button);
+        this.addChild(button);
         button.addEventListener(egret.TouchEvent.TOUCH_TAP, ()=>{
             SceneManager.startSceneTransition(new WindTransition(()=>{
                 return new MainScene();
             }));
+        }, this);
+
+        let cancel = new eui.Button();
+        cancel.label = "打开高斯模糊";
+        cancel.y = 100;
+        this.addChild(cancel);
+        cancel.addEventListener(egret.TouchEvent.TOUCH_TAP, ()=>{
+            this.addPostProcessor(new GaussianBlurPostProcessor());
         }, this);
     }
 
