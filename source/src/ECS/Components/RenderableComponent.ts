@@ -7,6 +7,8 @@ abstract class RenderableComponent extends Component implements IRenderable {
     protected _bounds: Rectangle = new Rectangle();
     protected _localOffset: Vector2 = Vector2.zero;
 
+    public color: number = 0x000000;
+
     public get width(){
         return this.getWidth();
     }

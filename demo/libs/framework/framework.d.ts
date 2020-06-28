@@ -407,6 +407,7 @@ declare abstract class RenderableComponent extends Component implements IRendera
     protected _areBoundsDirty: boolean;
     protected _bounds: Rectangle;
     protected _localOffset: Vector2;
+    color: number;
     readonly width: number;
     readonly height: number;
     isVisible: boolean;
@@ -619,31 +620,21 @@ declare class Time {
     static update(currentTime: number): void;
 }
 declare class GaussianBlurEffect extends egret.CustomFilter {
+    private static blur_frag;
+    constructor();
+}
+declare class PolygonLightEffect extends egret.CustomFilter {
     private static vertSrc;
     private static fragmentSrc;
-    private _sampleWeights;
-    private _verticalSampleOffsets;
-    private _horizontalSampleOffsets;
-    private _blurAmount;
-    private _horizontalBlurDelta;
-    private _verticalBlurDelta;
-    private _sampleCount;
-    blurAmount: number;
-    horizontalBlurDelta: number;
-    verticalBlurDelta: number;
     constructor();
-    prepareForHorizontalBlur(): void;
-    prepareForVerticalBlur(): void;
-    private calculateSampleWeights;
-    private setBlurEffectParameters;
-    private computeGaussian;
 }
 declare class PostProcessor {
     enable: boolean;
-    effect: egret.CustomFilter;
+    effect: egret.Filter;
     scene: Scene;
     shape: egret.Shape;
-    constructor(effect?: egret.CustomFilter);
+    static default_vert: string;
+    constructor(effect?: egret.Filter);
     onAddedToScene(scene: Scene): void;
     process(): void;
     onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
@@ -661,12 +652,7 @@ declare class BloomSettings {
     static presetSettings: BloomSettings[];
 }
 declare class GaussianBlurPostProcessor extends PostProcessor {
-    private _renderTargetScale;
-    renderTargetScale: number;
     onAddedToScene(scene: Scene): void;
-    onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
-    private updateEffectDeltas;
-    process(): void;
 }
 declare abstract class Renderer {
     camera: Camera;
@@ -688,6 +674,18 @@ interface IRenderable {
 }
 declare class ScreenSpaceRenderer extends Renderer {
     render(scene: Scene): void;
+}
+declare class PolyLight extends RenderableComponent {
+    power: number;
+    protected _radius: number;
+    private _lightEffect;
+    private _indices;
+    readonly bounds: Rectangle;
+    radius: number;
+    constructor(radius: number, color: number, power: number);
+    private computeTriangleIndices;
+    setRadius(radius: number): void;
+    render(camera: Camera): void;
 }
 declare abstract class SceneTransition {
     private _hasPreviousSceneRender;

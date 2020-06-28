@@ -1,10 +1,28 @@
 class PostProcessor {
     public enable: boolean;
-    public effect: egret.CustomFilter;
+    public effect: egret.Filter;
     public scene: Scene;
     public shape: egret.Shape;
 
-    constructor(effect: egret.CustomFilter = null){
+    public static default_vert = "attribute vec2 aVertexPosition;\n" + 
+        "attribute vec2 aTextureCoord;\n" + 
+        "attribute vec2 aColor;\n" + 
+        
+        "uniform vec2 projectionVector;\n" + 
+        //"uniform vec2 offsetVector;\n" + 
+
+        "varying vec2 vTextureCoord;\n" + 
+        "varying vec4 vColor;\n" + 
+
+        "const vec2 center = vec2(-1.0, 1.0);\n" + 
+
+        "void main(void) {\n" + 
+        "gl_Position = vec4( (aVertexPosition / projectionVector) + center , 0.0, 1.0);\n" + 
+        "vTextureCoord = aTextureCoord;\n" + 
+        "vColor = vec4(aColor.x, aColor.x, aColor.x, aColor.x);\n" + 
+        "}";
+
+    constructor(effect: egret.Filter = null){
         this.enable = true;
         this.effect = effect;
     }
@@ -25,7 +43,8 @@ class PostProcessor {
     public onSceneBackBufferSizeChanged(newWidth: number, newHeight: number){}
 
     protected drawFullscreenQuad(){
-        this.shape.filters = [this.effect];
+        this.scene.filters = [this.effect];
+        // this.shape.filters = [this.effect];
     }
 
     public unload(){
