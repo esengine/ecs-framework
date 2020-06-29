@@ -6,7 +6,7 @@ class PolyLight extends RenderableComponent {
 
     public get bounds(){
         if (this._areBoundsDirty){
-            this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new Vector2(this._radius),
+            this._bounds.calculateBounds(this.entity.position, this._localOffset, new Vector2(this._radius),
                 Vector2.one, 0, this._radius * 2, this._radius * 2);
             this._areBoundsDirty = false;
         }

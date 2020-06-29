@@ -1,11 +1,7 @@
-abstract class Component {
+abstract class Component extends egret.DisplayObjectContainer {
     public entity: Entity;
     private _enabled: boolean = true;
     public updateInterval: number = 1;
-
-    public get transform(){
-        return this.entity.transform;
-    }
 
     public get enabled(){
         return this.entity ? this.entity.enabled && this._enabled : this._enabled;

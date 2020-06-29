@@ -31,13 +31,7 @@ abstract class RenderableComponent extends Component implements IRenderable {
     }
 
     public get bounds(): Rectangle{
-        if (this._areBoundsDirty){
-            this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new Vector2(0, 0),
-                this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
-            this._areBoundsDirty = false;
-        }
-
-        return this._bounds;
+        return new Rectangle(this.getBounds().x, this.getBounds().y, this.getBounds().width, this.getBounds().height);
     }
 
     protected getWidth(){

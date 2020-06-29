@@ -63,4 +63,8 @@ class Vector2Ext {
     public static transform(sourceArray: Vector2[], matrix: Matrix2D, destinationArray: Vector2[]) {
         this.transformA(sourceArray, 0, matrix, destinationArray, 0, sourceArray.length);
     }
+
+    public static round(vec: Vector2){
+        return new Vector2(Math.round(vec.x), Math.round(vec.y));
+    }
 }

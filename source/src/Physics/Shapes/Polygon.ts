@@ -175,35 +175,35 @@ class Polygon extends Shape {
             let tempMat: Matrix2D;
             let combinedMatrix = Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
 
-            if (collider.entity.transform.scale != Vector2.one){
-                tempMat = Matrix2D.createScale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
+            if (collider.entity.scale != Vector2.one){
+                tempMat = Matrix2D.createScale(collider.entity.scale.x, collider.entity.scale.y);
                 combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
 
                 hasUnitScale = false;
-                let scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.transform.scale);
+                let scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.scale);
                 this.center = scaledOffset;
             }
 
-            if (collider.entity.transform.rotation != 0){
-                tempMat = Matrix2D.createRotation(collider.entity.transform.rotation);
+            if (collider.entity.rotation != 0){
+                tempMat = Matrix2D.createRotation(collider.entity.rotation);
                 combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
 
                 let offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
-                let offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.transform.scale)).length();
-                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
+                let offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
+                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
             }
 
             tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
             combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
 
             Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
-            this.isUnrotated = collider.entity.transform.rotation == 0;
+            this.isUnrotated = collider.entity.rotation == 0;
 
             if (collider._isRotationDirty)
                 this._areEdgeNormalsDirty = true;
         }
 
-        this.position = Vector2.add(collider.entity.transform.position, this.center);
+        this.position = Vector2.add(collider.entity.position, this.center);
         this.bounds = Rectangle.rectEncompassingPoints(this.points);
         this.bounds.location = Vector2.add(this.bounds.location, this.position);
     }

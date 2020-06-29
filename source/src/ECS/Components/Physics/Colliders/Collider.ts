@@ -82,15 +82,15 @@ abstract class Collider extends Component{
             if (renderable){
                 let renderbaleBounds = renderable.bounds;
 
-                let width = renderbaleBounds.width / this.entity.transform.scale.x;
-                let height = renderbaleBounds.height / this.entity.transform.scale.y;
+                let width = renderbaleBounds.width / this.entity.scale.x;
+                let height = renderbaleBounds.height / this.entity.scale.y;
 
                 if (this instanceof BoxCollider){
                     let boxCollider = this as BoxCollider;
                     boxCollider.width = width;
                     boxCollider.height = height;
 
-                    this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.transform.position);
+                    this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.position);
                 }
             }
         }

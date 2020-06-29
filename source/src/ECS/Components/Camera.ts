@@ -4,7 +4,6 @@ class Camera extends Component {
     private _origin: Vector2 = Vector2.zero;
     private _transformMatrix: Matrix2D = new Matrix2D();
     private _inverseTransformMatrix = new Matrix2D();
-    private _projectionMatrix = new Matrix2D();
 
     private _minimumZoom = 0.3;
     private _maximumZoom = 3;
@@ -12,7 +11,6 @@ class Camera extends Component {
     private _inset: CameraInset = new CameraInset();
     private _bounds: Rectangle = new Rectangle();
     private _areBoundsDirty = true;
-    private _isProjectionMatrixDirty = true;
 
     public get bounds(){
         if (this._areMatrixesDirty)
@@ -23,7 +21,7 @@ class Camera extends Component {
             let topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
             let bottomRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, stage.stageHeight - this._inset.bottom));
 
-            if (this.entity.transform.rotation != 0){
+            if (this.entity.rotation != 0){
                 let topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));
                 let bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left, stage.stageHeight - this._inset.bottom));
 
@@ -89,11 +87,11 @@ class Camera extends Component {
     }
 
     public get position(){
-        return this.entity.transform.position;
+        return this.entity.position;
     }
 
     public set position(value: Vector2){
-        this.entity.transform.position = value;
+        this.entity.position = value;
     }
 
     public get transformMatrix(){
@@ -115,11 +113,10 @@ class Camera extends Component {
     }
 
     public onSceneSizeChanged(newWidth: number, newHeight: number){
-        this._isProjectionMatrixDirty = true;
         let oldOrigin = this._origin;
         this.origin = new Vector2(newWidth / 2, newHeight / 2);
 
-        this.entity.transform.position = Vector2.add(this.entity.transform.position, Vector2.subtract(this._origin, oldOrigin));
+        this.entity.position = Vector2.add(this.entity.position, Vector2.subtract(this._origin, oldOrigin));
     }
 
     public setMinimumZoom(minZoom: number): Camera{
@@ -154,7 +151,7 @@ class Camera extends Component {
     }
 
     public setPosition(position: Vector2){
-        this.entity.transform.setPosition(position);
+        this.entity.position = position;
 
         return this;
     }
@@ -168,13 +165,13 @@ class Camera extends Component {
             return;
 
         let tempMat: Matrix2D;
-        this._transformMatrix = Matrix2D.createTranslation(-this.entity.transform.position.x, -this.entity.transform.position.y);
+        this._transformMatrix = Matrix2D.createTranslation(-this.entity.position.x, -this.entity.position.y);
         if (this._zoom != 1){
             tempMat = Matrix2D.createScale(this._zoom, this._zoom);
             this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
         }
 
-        if (this.entity.transform.rotation != 0){
+        if (this.entity.rotation != 0){
             tempMat = Matrix2D.createRotation(this.entity.rotation);
             this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
         }

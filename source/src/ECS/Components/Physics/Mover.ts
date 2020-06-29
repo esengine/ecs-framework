@@ -46,7 +46,7 @@ class Mover extends Component {
     }
 
     public applyMovement(motion: Vector2){
-        this.entity.transform.position = Vector2.add(this.entity.transform.position, motion);
+        this.entity.position = Vector2.add(this.entity.position, motion);
 
         if (this._triggerHelper)
             this._triggerHelper.update();

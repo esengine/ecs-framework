@@ -139,11 +139,10 @@ declare class DebugDefaults {
     static verletParticle: number;
     static verletConstraintEdge: number;
 }
-declare abstract class Component {
+declare abstract class Component extends egret.DisplayObjectContainer {
     entity: Entity;
     private _enabled;
     updateInterval: number;
-    readonly transform: Transform;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
     readonly stage: egret.Stage;
@@ -159,37 +158,27 @@ declare abstract class Component {
     registerComponent(): void;
     deregisterComponent(): void;
 }
-declare class Entity {
+declare class Entity extends egret.DisplayObjectContainer {
     private static _idGenerator;
     name: string;
     readonly id: number;
     scene: Scene;
-    readonly transform: Transform;
     readonly components: ComponentList;
     private _updateOrder;
     private _enabled;
     _isDestoryed: boolean;
     private _tag;
     componentBits: BitSet;
-    parent: Transform;
-    position: Vector2;
-    localPosition: Vector2;
-    rotation: number;
-    rotationDegrees: number;
-    localRotation: number;
-    localRotationDegrees: number;
-    scale: Vector2;
-    localScale: Vector2;
-    readonly worldInverseTransform: Matrix2D;
-    readonly localToWorldTransform: Matrix2D;
-    readonly worldToLocalTransform: Matrix2D;
     readonly isDestoryed: boolean;
+    position: Vector2;
+    scale: Vector2;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
     tag: number;
     readonly stage: egret.Stage;
     constructor(name: string);
     updateOrder: number;
+    roundPosition(): void;
     setUpdateOrder(updateOrder: number): this;
     setTag(tag: number): Entity;
     attachToScene(newScene: Scene): void;
@@ -206,7 +195,7 @@ declare class Entity {
     onAddedToScene(): void;
     onRemovedFromScene(): void;
     onTransformChanged(comp: ComponentTransform): void;
-    destory(): void;
+    destroy(): void;
 }
 declare class Scene extends egret.DisplayObjectContainer {
     camera: Camera;
@@ -214,9 +203,6 @@ declare class Scene extends egret.DisplayObjectContainer {
     readonly renderableComponents: RenderableComponentList;
     readonly content: ContentManager;
     enablePostProcessing: boolean;
-    private _projectionMatrix;
-    private _transformMatrix;
-    private _matrixTransformMatrix;
     private _renderers;
     private _postProcessors;
     private _didSceneBegin;
@@ -324,14 +310,12 @@ declare class Camera extends Component {
     private _origin;
     private _transformMatrix;
     private _inverseTransformMatrix;
-    private _projectionMatrix;
     private _minimumZoom;
     private _maximumZoom;
     private _areMatrixesDirty;
     private _inset;
     private _bounds;
     private _areBoundsDirty;
-    private _isProjectionMatrixDirty;
     readonly bounds: Rectangle;
     zoom: number;
     minimumZoom: number;
@@ -432,14 +416,10 @@ declare class Sprite {
     constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
 }
 declare class SpriteRenderer extends RenderableComponent {
-    private _sprite;
     private _origin;
-    private _bitmap;
-    readonly bounds: Rectangle;
-    sprite: Sprite;
-    setSprite(sprite: Sprite): SpriteRenderer;
     origin: Vector2;
     setOrigin(origin: Vector2): this;
+    setSprite(sprite: Sprite): void;
     setColor(color: number): void;
     isVisibleFromCamera(camera: Camera): boolean;
     render(camera: Camera): void;
@@ -619,6 +599,39 @@ declare class Time {
     private static _lastTime;
     static update(currentTime: number): void;
 }
+declare class GraphicsCapabilities {
+    supportsTextureFilterAnisotropic: boolean;
+    supportsNonPowerOfTwo: boolean;
+    supportsDepth24: boolean;
+    supportsPackedDepthStencil: boolean;
+    supportsDepthNonLinear: boolean;
+    supportsTextureMaxLevel: boolean;
+    supportsS3tc: boolean;
+    supportsDxt1: boolean;
+    supportsPvrtc: boolean;
+    supportsAtitc: boolean;
+    supportsFramebufferObjectARB: boolean;
+    initialize(device: GraphicsDevice): void;
+    private platformInitialize;
+}
+declare class GraphicsDevice {
+    private viewport;
+    graphicsCapabilities: GraphicsCapabilities;
+    constructor();
+}
+declare class Viewport {
+    private _x;
+    private _y;
+    private _width;
+    private _height;
+    private _minDepth;
+    private _maxDepth;
+    readonly aspectRatio: number;
+    bounds: Rectangle;
+    constructor(x: number, y: number, width: number, height: number);
+}
+declare abstract class GraphicsResource {
+}
 declare class GaussianBlurEffect extends egret.CustomFilter {
     private static blur_frag;
     constructor();
@@ -767,6 +780,7 @@ declare class Matrix2D {
     static createTranslation(xPosition: number, yPosition: number, result?: Matrix2D): Matrix2D;
     static createRotation(radians: number, result?: Matrix2D): Matrix2D;
     static createScale(xScale: number, yScale: number, result?: Matrix2D): Matrix2D;
+    toEgretMatrix(): egret.Matrix;
 }
 declare class Rectangle {
     x: number;
@@ -822,6 +836,12 @@ declare class Vector2 {
     static transform(position: Vector2, matrix: Matrix2D): Vector2;
     static distance(value1: Vector2, value2: Vector2): number;
     static negate(value: Vector2): Vector2;
+}
+declare class Vector3 {
+    x: number;
+    y: number;
+    z: number;
+    constructor(x: number, y: number, z: number);
 }
 declare class ColliderTriggerHelper {
     private _entity;
@@ -1060,10 +1080,5 @@ declare class Vector2Ext {
     static transformA(sourceArray: Vector2[], sourceIndex: number, matrix: Matrix2D, destinationArray: Vector2[], destinationIndex: number, length: number): void;
     static transformR(position: Vector2, matrix: Matrix2D): Vector2;
     static transform(sourceArray: Vector2[], matrix: Matrix2D, destinationArray: Vector2[]): void;
-}
-declare class WebGLUtils {
-    static getWebGL(): WebGLRenderingContext;
-    static drawUserIndexPrimitives<T>(primitiveType: number, vertexData: T[], vertexOffset: number, numVertices: number, indexData: number[], indexOffset: number, primitiveCount: number): void;
-    private static getElementCountArray;
-    static checkGLError(): void;
+    static round(vec: Vector2): Vector2;
 }

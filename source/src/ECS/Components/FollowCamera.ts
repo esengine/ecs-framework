@@ -55,11 +55,11 @@ class FollowCamera extends Component {
             this.updateFollow();
 
         this.camera.position = Vector2.lerp(this.camera.position, Vector2.add(this.camera.position, this._desiredPositionDelta), this.followLerp);
-        this.camera.entity.transform.roundPosition();
+        this.camera.entity.roundPosition();
 
         if (this.mapLockEnabled){
             this.camera.position = this.clampToMapSize(this.camera.position);
-            this.camera.entity.transform.roundPosition();
+            this.camera.entity.roundPosition();
         }
     }
 
@@ -74,8 +74,8 @@ class FollowCamera extends Component {
         this._desiredPositionDelta.x = this._desiredPositionDelta.y = 0;
 
         if (this._cameraStyle == CameraStyle.lockOn){
-            let targetX = this._targetEntity.transform.position.x;
-            let targetY = this._targetEntity.transform.position.y;
+            let targetX = this._targetEntity.position.x;
+            let targetY = this._targetEntity.position.y;
 
             if (this._worldSpaceDeadZone.x > targetX)
                 this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;

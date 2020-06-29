@@ -1,12 +1,10 @@
-class Entity {
+class Entity extends egret.DisplayObjectContainer {
     private static _idGenerator: number;
 
     public name: string;
     public readonly id: number;
     /** 当前实体所属的场景 */
     public scene: Scene;
-    /** 封装实体的位置/旋转/缩放，并允许设置一个高层结构 */
-    public readonly transform: Transform;
     /** 当前附加到此实体的所有组件的列表 */
     public readonly components: ComponentList;
     private _updateOrder: number = 0;
@@ -16,92 +14,26 @@ class Entity {
 
     public componentBits: BitSet;
 
-    public get parent(){
-        return this.transform.parent;
-    }
-
-    public set parent(value: Transform){
-        this.transform.setParent(value);
+    public get isDestoryed(){
+        return this._isDestoryed;
     }
 
     public get position(){
-        return this.transform.position;
+        return new Vector2(this.x, this.y);
     }
 
     public set position(value: Vector2){
-        this.transform.setPosition(value);
-    }
-
-    public get localPosition(){
-        return this.transform.localPosition;
-    }
-
-    public set localPosition(value: Vector2){
-        this.transform.setLocalPosition(value);
-    }
-
-    public get rotation(){
-        return this.transform.rotation;
-    }
-
-    public set rotation(value: number){
-        this.transform.setRotation(value);
-    }
-
-    public get rotationDegrees(){
-        return this.transform.rotationDegrees;
-    }
-
-    public set rotationDegrees(value: number){
-        this.transform.setRotationDegrees(value);
-    }
-
-    public get localRotation(){
-        return this.transform.localRotation;
-    }
-
-    public set localRotation(value: number){
-        this.transform.setLocalRotation(value);
-    }
-
-    public get localRotationDegrees(){
-        return this.transform.localRotationDegrees;
-    }
-
-    public set localRotationDegrees(value: number){
-        this.transform.setLocalRotationDegrees(value);
+        this.x = value.x;
+        this.y = value.y;
     }
 
     public get scale(){
-        return this.transform.scale;
+        return new Vector2(this.scaleX, this.scaleY);
     }
 
     public set scale(value: Vector2){
-        this.transform.setScale(value);
-    }
-
-    public get localScale(){
-        return this.transform.scale;
-    }
-
-    public set localScale(value: Vector2){
-        this.transform.setScale(value);
-    }
-
-    public get worldInverseTransform(){
-        return this.transform.worldInverseTransform;
-    }
-
-    public get localToWorldTransform(){
-        return this.transform.localToWorldTransform;
-    }
-
-    public get worldToLocalTransform(){
-        return this.transform.worldToLocalTransform;
-    }
-
-    public get isDestoryed(){
-        return this._isDestoryed;
+        this.scaleX = value.x;
+        this.scaleY = value.y;
     }
 
     public get enabled(){
@@ -136,8 +68,8 @@ class Entity {
     }
 
     constructor(name: string){
+        super();
         this.name = name;
-        this.transform = new Transform(this);
         this.components = new ComponentList(this);
         this.id = Entity._idGenerator ++;
 
@@ -150,6 +82,10 @@ class Entity {
 
     public set updateOrder(value: number){
         this.setUpdateOrder(value);
+    }
+
+    public roundPosition(){
+        this.position = Vector2Ext.round(this.position);
     }
 
     public setUpdateOrder(updateOrder: number){
@@ -182,8 +118,8 @@ class Entity {
         newScene.entities.add(this);
         this.components.registerAllComponents();
 
-        for (let i = 0; i < this.transform.childCount; i ++){
-            this.transform.getChild(i).entity.attachToScene(newScene);
+        for (let i = 0; i < this.numChildren; i ++){
+            (this.getChildAt(i) as Component).entity.attachToScene(newScene);
         }
     }
 
@@ -191,13 +127,14 @@ class Entity {
         this.scene.entities.remove(this);
         this.components.deregisterAllComponents();
 
-        for (let i = 0; i < this.transform.childCount; i ++)
-            this.transform.getChild(i).entity.detachFromScene();
+        for (let i = 0; i < this.numChildren; i ++)
+            (this.getChildAt(i) as Component).entity.detachFromScene();
     }
 
     public addComponent<T extends Component>(component: T): T{
         component.entity = this;
         this.components.add(component);
+        this.addChild(component);
         component.initialize();
         return component;
     }
@@ -260,14 +197,14 @@ class Entity {
         this.components.onEntityTransformChanged(comp);
     }
 
-    public destory(){
+    public destroy(){
         this._isDestoryed = true;
         this.scene.entities.remove(this);
-        this.transform.parent = null;
+        this.removeChildren();
 
-        for (let i = this.transform.childCount - 1; i >= 0; i --){
-            let child = this.transform.getChild(i);
-            child.entity.destory();
+        for (let i = this.numChildren - 1; i >= 0; i --){
+            let child = this.getChildAt(i);
+            (child as Component).entity.destroy();
         }
     }
 }

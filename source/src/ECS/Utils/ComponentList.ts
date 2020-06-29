@@ -102,6 +102,9 @@ class ComponentList {
     }
 
     private handleRemove(component: Component){
+        if (component instanceof RenderableComponent)
+            this._entity.scene.renderableComponents.remove(component);
+
         this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
         this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
 

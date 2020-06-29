@@ -6,9 +6,6 @@ class Scene extends egret.DisplayObjectContainer {
    public readonly content: ContentManager;
    public enablePostProcessing = true;
 
-   private _projectionMatrix: Matrix2D;
-   private _transformMatrix: Matrix2D;
-   private _matrixTransformMatrix: Matrix2D;
    private _renderers: Renderer[] = [];
    private _postProcessors: PostProcessor[] = [];
    private _didSceneBegin;
@@ -17,7 +14,6 @@ class Scene extends egret.DisplayObjectContainer {
 
    constructor() {
       super();
-      this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
       this.entityProcessors = new EntityProcessorList();
       this.renderableComponents = new RenderableComponentList();
       this.entities = new EntityList(this);
@@ -29,23 +25,24 @@ class Scene extends egret.DisplayObjectContainer {
 
    public createEntity(name: string) {
       let entity = new Entity(name);
-      entity.transform.position = new Vector2(0, 0);
+      entity.position = new Vector2(0, 0);
       return this.addEntity(entity);
    }
 
    public addEntity(entity: Entity) {
       this.entities.add(entity);
       entity.scene = this;
+      this.addChild(entity);
 
-      for (let i = 0; i < entity.transform.childCount; i++)
-         this.addEntity(entity.transform.getChild(i).entity);
+      for (let i = 0; i < entity.numChildren; i++)
+         this.addEntity((entity.getChildAt(i) as Component).entity);
 
       return entity;
    }
 
    public destroyAllEntities() {
       for (let i = 0; i < this.entities.count; i++) {
-         this.entities.buffer[i].destory();
+         this.entities.buffer[i].destroy();
       }
    }
 
@@ -134,6 +131,7 @@ class Scene extends egret.DisplayObjectContainer {
       }
 
       this.entities.removeAllEntities();
+      this.removeChildren();
 
       Physics.clear();
 

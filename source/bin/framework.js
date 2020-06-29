@@ -737,18 +737,14 @@ var DebugDefaults = (function () {
     DebugDefaults.verletConstraintEdge = 0x433E36;
     return DebugDefaults;
 }());
-var Component = (function () {
+var Component = (function (_super) {
+    __extends(Component, _super);
     function Component() {
-        this._enabled = true;
-        this.updateInterval = 1;
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this._enabled = true;
+        _this.updateInterval = 1;
+        return _this;
     }
-    Object.defineProperty(Component.prototype, "transform", {
-        get: function () {
-            return this.entity.transform;
-        },
-        enumerable: true,
-        configurable: true
-    });
     Object.defineProperty(Component.prototype, "enabled", {
         get: function () {
             return this.entity ? this.entity.enabled && this._enabled : this._enabled;
@@ -814,132 +810,45 @@ var Component = (function () {
         this.entity.scene.entityProcessors.onComponentRemoved(this.entity);
     };
     return Component;
-}());
-var Entity = (function () {
+}(egret.DisplayObjectContainer));
+var Entity = (function (_super) {
+    __extends(Entity, _super);
     function Entity(name) {
-        this._updateOrder = 0;
-        this._enabled = true;
-        this._tag = 0;
-        this.name = name;
-        this.transform = new Transform(this);
-        this.components = new ComponentList(this);
-        this.id = Entity._idGenerator++;
-        this.componentBits = new BitSet();
+        var _this = _super.call(this) || this;
+        _this._updateOrder = 0;
+        _this._enabled = true;
+        _this._tag = 0;
+        _this.name = name;
+        _this.components = new ComponentList(_this);
+        _this.id = Entity._idGenerator++;
+        _this.componentBits = new BitSet();
+        return _this;
     }
-    Object.defineProperty(Entity.prototype, "parent", {
+    Object.defineProperty(Entity.prototype, "isDestoryed", {
         get: function () {
-            return this.transform.parent;
-        },
-        set: function (value) {
-            this.transform.setParent(value);
+            return this._isDestoryed;
         },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(Entity.prototype, "position", {
         get: function () {
-            return this.transform.position;
+            return new Vector2(this.x, this.y);
         },
         set: function (value) {
-            this.transform.setPosition(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "localPosition", {
-        get: function () {
-            return this.transform.localPosition;
-        },
-        set: function (value) {
-            this.transform.setLocalPosition(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "rotation", {
-        get: function () {
-            return this.transform.rotation;
-        },
-        set: function (value) {
-            this.transform.setRotation(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "rotationDegrees", {
-        get: function () {
-            return this.transform.rotationDegrees;
-        },
-        set: function (value) {
-            this.transform.setRotationDegrees(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "localRotation", {
-        get: function () {
-            return this.transform.localRotation;
-        },
-        set: function (value) {
-            this.transform.setLocalRotation(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "localRotationDegrees", {
-        get: function () {
-            return this.transform.localRotationDegrees;
-        },
-        set: function (value) {
-            this.transform.setLocalRotationDegrees(value);
+            this.x = value.x;
+            this.y = value.y;
         },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(Entity.prototype, "scale", {
         get: function () {
-            return this.transform.scale;
+            return new Vector2(this.scaleX, this.scaleY);
         },
         set: function (value) {
-            this.transform.setScale(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "localScale", {
-        get: function () {
-            return this.transform.scale;
-        },
-        set: function (value) {
-            this.transform.setScale(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "worldInverseTransform", {
-        get: function () {
-            return this.transform.worldInverseTransform;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "localToWorldTransform", {
-        get: function () {
-            return this.transform.localToWorldTransform;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "worldToLocalTransform", {
-        get: function () {
-            return this.transform.worldToLocalTransform;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Entity.prototype, "isDestoryed", {
-        get: function () {
-            return this._isDestoryed;
+            this.scaleX = value.x;
+            this.scaleY = value.y;
         },
         enumerable: true,
         configurable: true
@@ -989,6 +898,9 @@ var Entity = (function () {
         enumerable: true,
         configurable: true
     });
+    Entity.prototype.roundPosition = function () {
+        this.position = Vector2Ext.round(this.position);
+    };
     Entity.prototype.setUpdateOrder = function (updateOrder) {
         if (this._updateOrder != updateOrder) {
             this._updateOrder = updateOrder;
@@ -1013,19 +925,20 @@ var Entity = (function () {
         this.scene = newScene;
         newScene.entities.add(this);
         this.components.registerAllComponents();
-        for (var i = 0; i < this.transform.childCount; i++) {
-            this.transform.getChild(i).entity.attachToScene(newScene);
+        for (var i = 0; i < this.numChildren; i++) {
+            this.getChildAt(i).entity.attachToScene(newScene);
         }
     };
     Entity.prototype.detachFromScene = function () {
         this.scene.entities.remove(this);
         this.components.deregisterAllComponents();
-        for (var i = 0; i < this.transform.childCount; i++)
-            this.transform.getChild(i).entity.detachFromScene();
+        for (var i = 0; i < this.numChildren; i++)
+            this.getChildAt(i).entity.detachFromScene();
     };
     Entity.prototype.addComponent = function (component) {
         component.entity = this;
         this.components.add(component);
+        this.addChild(component);
         component.initialize();
         return component;
     };
@@ -1073,17 +986,17 @@ var Entity = (function () {
     Entity.prototype.onTransformChanged = function (comp) {
         this.components.onEntityTransformChanged(comp);
     };
-    Entity.prototype.destory = function () {
+    Entity.prototype.destroy = function () {
         this._isDestoryed = true;
         this.scene.entities.remove(this);
-        this.transform.parent = null;
-        for (var i = this.transform.childCount - 1; i >= 0; i--) {
-            var child = this.transform.getChild(i);
-            child.entity.destory();
+        this.removeChildren();
+        for (var i = this.numChildren - 1; i >= 0; i--) {
+            var child = this.getChildAt(i);
+            child.entity.destroy();
         }
     };
     return Entity;
-}());
+}(egret.DisplayObjectContainer));
 var Scene = (function (_super) {
     __extends(Scene, _super);
     function Scene() {
@@ -1091,7 +1004,6 @@ var Scene = (function (_super) {
         _this.enablePostProcessing = true;
         _this._renderers = [];
         _this._postProcessors = [];
-        _this._projectionMatrix = new Matrix2D(0, 0, 0, 0, 0, 0);
         _this.entityProcessors = new EntityProcessorList();
         _this.renderableComponents = new RenderableComponentList();
         _this.entities = new EntityList(_this);
@@ -1102,19 +1014,20 @@ var Scene = (function (_super) {
     }
     Scene.prototype.createEntity = function (name) {
         var entity = new Entity(name);
-        entity.transform.position = new Vector2(0, 0);
+        entity.position = new Vector2(0, 0);
         return this.addEntity(entity);
     };
     Scene.prototype.addEntity = function (entity) {
         this.entities.add(entity);
         entity.scene = this;
-        for (var i = 0; i < entity.transform.childCount; i++)
-            this.addEntity(entity.transform.getChild(i).entity);
+        this.addChild(entity);
+        for (var i = 0; i < entity.numChildren; i++)
+            this.addEntity(entity.getChildAt(i).entity);
         return entity;
     };
     Scene.prototype.destroyAllEntities = function () {
         for (var i = 0; i < this.entities.count; i++) {
-            this.entities.buffer[i].destory();
+            this.entities.buffer[i].destroy();
         }
     };
     Scene.prototype.findEntity = function (name) {
@@ -1178,6 +1091,7 @@ var Scene = (function (_super) {
             this._postProcessors[i].unload();
         }
         this.entities.removeAllEntities();
+        this.removeChildren();
         Physics.clear();
         this.camera.destory();
         this.camera = null;
@@ -1275,7 +1189,7 @@ var SceneManager = (function () {
                 SceneManager._scene.end();
                 for (var i = 0; i < SceneManager._scene.entities.buffer.length; i++) {
                     var entity = SceneManager._scene.entities.buffer[i];
-                    entity.destory();
+                    entity.destroy();
                 }
                 SceneManager._scene = SceneManager._nextScene;
                 SceneManager._nextScene = null;
@@ -1632,14 +1546,12 @@ var Camera = (function (_super) {
         _this._origin = Vector2.zero;
         _this._transformMatrix = new Matrix2D();
         _this._inverseTransformMatrix = new Matrix2D();
-        _this._projectionMatrix = new Matrix2D();
         _this._minimumZoom = 0.3;
         _this._maximumZoom = 3;
         _this._areMatrixesDirty = true;
         _this._inset = new CameraInset();
         _this._bounds = new Rectangle();
         _this._areBoundsDirty = true;
-        _this._isProjectionMatrixDirty = true;
         _this.setZoom(0);
         return _this;
     }
@@ -1651,7 +1563,7 @@ var Camera = (function (_super) {
                 var stage = this.stage;
                 var topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
                 var bottomRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, stage.stageHeight - this._inset.bottom));
-                if (this.entity.transform.rotation != 0) {
+                if (this.entity.rotation != 0) {
                     var topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));
                     var bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left, stage.stageHeight - this._inset.bottom));
                     var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
@@ -1723,10 +1635,10 @@ var Camera = (function (_super) {
     });
     Object.defineProperty(Camera.prototype, "position", {
         get: function () {
-            return this.entity.transform.position;
+            return this.entity.position;
         },
         set: function (value) {
-            this.entity.transform.position = value;
+            this.entity.position = value;
         },
         enumerable: true,
         configurable: true
@@ -1750,10 +1662,9 @@ var Camera = (function (_super) {
         configurable: true
     });
     Camera.prototype.onSceneSizeChanged = function (newWidth, newHeight) {
-        this._isProjectionMatrixDirty = true;
         var oldOrigin = this._origin;
         this.origin = new Vector2(newWidth / 2, newHeight / 2);
-        this.entity.transform.position = Vector2.add(this.entity.transform.position, Vector2.subtract(this._origin, oldOrigin));
+        this.entity.position = Vector2.add(this.entity.position, Vector2.subtract(this._origin, oldOrigin));
     };
     Camera.prototype.setMinimumZoom = function (minZoom) {
         if (this._zoom < minZoom)
@@ -1782,7 +1693,7 @@ var Camera = (function (_super) {
         return this;
     };
     Camera.prototype.setPosition = function (position) {
-        this.entity.transform.setPosition(position);
+        this.entity.position = position;
         return this;
     };
     Camera.prototype.forceMatrixUpdate = function () {
@@ -1792,12 +1703,12 @@ var Camera = (function (_super) {
         if (!this._areMatrixesDirty)
             return;
         var tempMat;
-        this._transformMatrix = Matrix2D.createTranslation(-this.entity.transform.position.x, -this.entity.transform.position.y);
+        this._transformMatrix = Matrix2D.createTranslation(-this.entity.position.x, -this.entity.position.y);
         if (this._zoom != 1) {
             tempMat = Matrix2D.createScale(this._zoom, this._zoom);
             this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
         }
-        if (this.entity.transform.rotation != 0) {
+        if (this.entity.rotation != 0) {
             tempMat = Matrix2D.createRotation(this.entity.rotation);
             this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
         }
@@ -1877,10 +1788,10 @@ var FollowCamera = (function (_super) {
         if (this._targetEntity)
             this.updateFollow();
         this.camera.position = Vector2.lerp(this.camera.position, Vector2.add(this.camera.position, this._desiredPositionDelta), this.followLerp);
-        this.camera.entity.transform.roundPosition();
+        this.camera.entity.roundPosition();
         if (this.mapLockEnabled) {
             this.camera.position = this.clampToMapSize(this.camera.position);
-            this.camera.entity.transform.roundPosition();
+            this.camera.entity.roundPosition();
         }
     };
     FollowCamera.prototype.clampToMapSize = function (position) {
@@ -1891,8 +1802,8 @@ var FollowCamera = (function (_super) {
     FollowCamera.prototype.updateFollow = function () {
         this._desiredPositionDelta.x = this._desiredPositionDelta.y = 0;
         if (this._cameraStyle == CameraStyle.lockOn) {
-            var targetX = this._targetEntity.transform.position.x;
-            var targetY = this._targetEntity.transform.position.y;
+            var targetX = this._targetEntity.position.x;
+            var targetY = this._targetEntity.position.y;
             if (this._worldSpaceDeadZone.x > targetX)
                 this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;
             else if (this._worldSpaceDeadZone.x < targetX)
@@ -2026,11 +1937,7 @@ var RenderableComponent = (function (_super) {
     });
     Object.defineProperty(RenderableComponent.prototype, "bounds", {
         get: function () {
-            if (this._areBoundsDirty) {
-                this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new Vector2(0, 0), this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
-                this._areBoundsDirty = false;
-            }
-            return this._bounds;
+            return new Rectangle(this.getBounds().x, this.getBounds().y, this.getBounds().width, this.getBounds().height);
         },
         enumerable: true,
         configurable: true
@@ -2084,37 +1991,6 @@ var SpriteRenderer = (function (_super) {
     function SpriteRenderer() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    Object.defineProperty(SpriteRenderer.prototype, "bounds", {
-        get: function () {
-            if (this._areBoundsDirty) {
-                if (this._sprite) {
-                    this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this._sprite.texture2D.textureWidth, this._sprite.texture2D.textureHeight);
-                    this._areBoundsDirty = false;
-                }
-            }
-            return this._bounds;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(SpriteRenderer.prototype, "sprite", {
-        get: function () {
-            return this._sprite;
-        },
-        set: function (value) {
-            this.setSprite(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    SpriteRenderer.prototype.setSprite = function (sprite) {
-        this._sprite = sprite;
-        if (this._sprite)
-            this._origin = sprite.origin;
-        this._bitmap = new egret.Bitmap(sprite.texture2D);
-        this.scene.addChild(this._bitmap);
-        return this;
-    };
     Object.defineProperty(SpriteRenderer.prototype, "origin", {
         get: function () {
             return this._origin;
@@ -2132,6 +2008,10 @@ var SpriteRenderer = (function (_super) {
         }
         return this;
     };
+    SpriteRenderer.prototype.setSprite = function (sprite) {
+        this.removeChildren();
+        this.addChild(new egret.Bitmap(sprite.texture2D));
+    };
     SpriteRenderer.prototype.setColor = function (color) {
         var colorMatrix = [
             1, 0, 0, 0, 0,
@@ -2143,28 +2023,19 @@ var SpriteRenderer = (function (_super) {
         colorMatrix[6] = Math.floor(color / 256 % 256) / 255;
         colorMatrix[12] = color % 256 / 255;
         var colorFilter = new egret.ColorMatrixFilter(colorMatrix);
-        this._bitmap.filters = [colorFilter];
+        this.filters = [colorFilter];
     };
     SpriteRenderer.prototype.isVisibleFromCamera = function (camera) {
         var topLeft = camera.screenToWorldPoint(new Vector2(0, 0));
         this.isVisible = new Rectangle(topLeft.x, topLeft.y, this.stage.stageWidth, this.stage.stageHeight).intersects(this.bounds);
-        this._bitmap.visible = this.isVisible;
+        this.visible = this.isVisible;
         return this.isVisible;
     };
     SpriteRenderer.prototype.render = function (camera) {
-        if (!this.sprite)
-            return;
-        this._bitmap.x = this.entity.transform.position.x - camera.transform.position.x + camera.origin.x;
-        this._bitmap.y = this.entity.transform.position.y - camera.transform.position.y + camera.origin.y;
-        this._bitmap.rotation = this.entity.transform.rotation + camera.transform.rotation;
-        this._bitmap.anchorOffsetX = this._origin.x;
-        this._bitmap.anchorOffsetY = this._origin.y;
-        this._bitmap.scaleX = this.entity.transform.scale.x * camera.transform.scale.x;
-        this._bitmap.scaleY = this.entity.transform.scale.y * camera.transform.scale.y;
     };
     SpriteRenderer.prototype.onRemovedFromEntity = function () {
-        if (this._bitmap)
-            this.scene.removeChild(this._bitmap);
+        if (this.parent)
+            this.parent.removeChild(this);
     };
     return SpriteRenderer;
 }(RenderableComponent));
@@ -2207,7 +2078,7 @@ var Mover = (function (_super) {
         return collisionResult;
     };
     Mover.prototype.applyMovement = function (motion) {
-        this.entity.transform.position = Vector2.add(this.entity.transform.position, motion);
+        this.entity.position = Vector2.add(this.entity.position, motion);
         if (this._triggerHelper)
             this._triggerHelper.update();
     };
@@ -2292,13 +2163,13 @@ var Collider = (function (_super) {
             var renderable = this.entity.getComponent(RenderableComponent);
             if (renderable) {
                 var renderbaleBounds = renderable.bounds;
-                var width = renderbaleBounds.width / this.entity.transform.scale.x;
-                var height = renderbaleBounds.height / this.entity.transform.scale.y;
+                var width = renderbaleBounds.width / this.entity.scale.x;
+                var height = renderbaleBounds.height / this.entity.scale.y;
                 if (this instanceof BoxCollider) {
                     var boxCollider = this;
                     boxCollider.width = width;
                     boxCollider.height = height;
-                    this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.transform.position);
+                    this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.position);
                 }
             }
         }
@@ -2672,6 +2543,8 @@ var ComponentList = (function () {
         }
     };
     ComponentList.prototype.handleRemove = function (component) {
+        if (component instanceof RenderableComponent)
+            this._entity.scene.renderableComponents.remove(component);
         this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
         this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
         component.onRemovedFromEntity();
@@ -3004,6 +2877,74 @@ var Time = (function () {
     Time._lastTime = 0;
     return Time;
 }());
+var GraphicsCapabilities = (function () {
+    function GraphicsCapabilities() {
+    }
+    GraphicsCapabilities.prototype.initialize = function (device) {
+        this.platformInitialize(device);
+    };
+    GraphicsCapabilities.prototype.platformInitialize = function (device) {
+        var gl = new egret.sys.RenderBuffer().context.getInstance();
+        this.supportsNonPowerOfTwo = false;
+        this.supportsTextureFilterAnisotropic = gl.getExtension("EXT_texture_filter_anisotropic") != null;
+        this.supportsDepth24 = true;
+        this.supportsPackedDepthStencil = true;
+        this.supportsDepthNonLinear = false;
+        this.supportsTextureMaxLevel = true;
+        this.supportsS3tc = gl.getExtension("WEBGL_compressed_texture_s3tc") != null ||
+            gl.getExtension("WEBGL_compressed_texture_s3tc_srgb") != null;
+        this.supportsDxt1 = this.supportsS3tc;
+        this.supportsPvrtc = false;
+        this.supportsAtitc = gl.getExtension("WEBGL_compressed_texture_astc") != null;
+        this.supportsFramebufferObjectARB = false;
+    };
+    return GraphicsCapabilities;
+}());
+var GraphicsDevice = (function () {
+    function GraphicsDevice() {
+        this.graphicsCapabilities = new GraphicsCapabilities();
+        this.graphicsCapabilities.initialize(this);
+    }
+    return GraphicsDevice;
+}());
+var Viewport = (function () {
+    function Viewport(x, y, width, height) {
+        this._x = x;
+        this._y = y;
+        this._width = width;
+        this._height = height;
+        this._minDepth = 0;
+        this._maxDepth = 1;
+    }
+    Object.defineProperty(Viewport.prototype, "aspectRatio", {
+        get: function () {
+            if ((this._height != 0) && (this._width != 0))
+                return (this._width / this._height);
+            return 0;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Viewport.prototype, "bounds", {
+        get: function () {
+            return new Rectangle(this._x, this._y, this._width, this._height);
+        },
+        set: function (value) {
+            this._x = value.x;
+            this._y = value.y;
+            this._width = value.width;
+            this._height = value.height;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    return Viewport;
+}());
+var GraphicsResource = (function () {
+    function GraphicsResource() {
+    }
+    return GraphicsResource;
+}());
 var GaussianBlurEffect = (function (_super) {
     __extends(GaussianBlurEffect, _super);
     function GaussianBlurEffect() {
@@ -3152,11 +3093,6 @@ var Renderer = (function () {
     }
     Renderer.prototype.onAddedToScene = function (scene) { };
     Renderer.prototype.beginRender = function (cam) {
-        cam.transform.updateTransform();
-        var entities = SceneManager.scene.entities;
-        for (var i = 0; i < entities.buffer.length; i++) {
-            entities.buffer[i].transform.updateTransform();
-        }
     };
     Renderer.prototype.unload = function () { };
     Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
@@ -3203,7 +3139,7 @@ var PolyLight = (function (_super) {
     Object.defineProperty(PolyLight.prototype, "bounds", {
         get: function () {
             if (this._areBoundsDirty) {
-                this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new Vector2(this._radius), Vector2.one, 0, this._radius * 2, this._radius * 2);
+                this._bounds.calculateBounds(this.entity.position, this._localOffset, new Vector2(this._radius), Vector2.one, 0, this._radius * 2, this._radius * 2);
                 this._areBoundsDirty = false;
             }
             return this._bounds;
@@ -3602,6 +3538,10 @@ var Matrix2D = (function () {
         result.m32 = 0;
         return result;
     };
+    Matrix2D.prototype.toEgretMatrix = function () {
+        var matrix = new egret.Matrix(this.m11, this.m12, this.m21, this.m22, this.m31, this.m32);
+        return matrix;
+    };
     Matrix2D._identity = new Matrix2D(1, 0, 0, 1, 0, 0);
     return Matrix2D;
 }());
@@ -3900,6 +3840,14 @@ var Vector2 = (function () {
     Vector2.unitVector2 = new Vector2(1, 1);
     Vector2.zeroVector2 = new Vector2(0, 0);
     return Vector2;
+}());
+var Vector3 = (function () {
+    function Vector3(x, y, z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+    return Vector3;
 }());
 var ColliderTriggerHelper = (function () {
     function ColliderTriggerHelper(entity) {
@@ -4292,28 +4240,28 @@ var Polygon = (function (_super) {
             var hasUnitScale = true;
             var tempMat = void 0;
             var combinedMatrix = Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
-            if (collider.entity.transform.scale != Vector2.one) {
-                tempMat = Matrix2D.createScale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
+            if (collider.entity.scale != Vector2.one) {
+                tempMat = Matrix2D.createScale(collider.entity.scale.x, collider.entity.scale.y);
                 combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
                 hasUnitScale = false;
-                var scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.transform.scale);
+                var scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.scale);
                 this.center = scaledOffset;
             }
-            if (collider.entity.transform.rotation != 0) {
-                tempMat = Matrix2D.createRotation(collider.entity.transform.rotation);
+            if (collider.entity.rotation != 0) {
+                tempMat = Matrix2D.createRotation(collider.entity.rotation);
                 combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
                 var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
-                var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.transform.scale)).length();
-                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
+                var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
+                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
             }
             tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
             combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
             Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
-            this.isUnrotated = collider.entity.transform.rotation == 0;
+            this.isUnrotated = collider.entity.rotation == 0;
             if (collider._isRotationDirty)
                 this._areEdgeNormalsDirty = true;
         }
-        this.position = Vector2.add(collider.entity.transform.position, this.center);
+        this.position = Vector2.add(collider.entity.position, this.center);
         this.bounds = Rectangle.rectEncompassingPoints(this.points);
         this.bounds.location = Vector2.add(this.bounds.location, this.position);
     };
@@ -4382,17 +4330,17 @@ var Circle = (function (_super) {
     Circle.prototype.recalculateBounds = function (collider) {
         this.center = collider.localOffset;
         if (collider.shouldColliderScaleAndRotationWithTransform) {
-            var scale = collider.entity.transform.scale;
+            var scale = collider.entity.scale;
             var hasUnitScale = scale.x == 1 && scale.y == 1;
             var maxScale = Math.max(scale.x, scale.y);
             this.radius = this._originalRadius * maxScale;
-            if (collider.entity.transform.rotation != 0) {
+            if (collider.entity.rotation != 0) {
                 var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
-                var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.transform.scale)).length();
-                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
+                var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
+                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
             }
         }
-        this.position = Vector2.add(collider.entity.transform.position, this.center);
+        this.position = Vector2.add(collider.entity.position, this.center);
         this.bounds = new Rectangle(this.position.x - this.radius, this.position.y - this.radius, this.radius * 2, this.radius * 2);
     };
     Circle.prototype.overlaps = function (other) {
@@ -5166,45 +5114,8 @@ var Vector2Ext = (function () {
     Vector2Ext.transform = function (sourceArray, matrix, destinationArray) {
         this.transformA(sourceArray, 0, matrix, destinationArray, 0, sourceArray.length);
     };
+    Vector2Ext.round = function (vec) {
+        return new Vector2(Math.round(vec.x), Math.round(vec.y));
+    };
     return Vector2Ext;
-}());
-var WebGLUtils = (function () {
-    function WebGLUtils() {
-    }
-    WebGLUtils.getWebGL = function () {
-        if (egret.WebGLUtils.checkCanUseWebGL())
-            return document.querySelector("canvas").getContext("webgl");
-        throw new Error("cannot get webgl");
-    };
-    WebGLUtils.drawUserIndexPrimitives = function (primitiveType, vertexData, vertexOffset, numVertices, indexData, indexOffset, primitiveCount) {
-        var GL = this.getWebGL();
-        GL.bindBuffer(GL.ARRAY_BUFFER, 0);
-        this.checkGLError();
-        GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, 0);
-        this.checkGLError();
-        GL.drawElements(primitiveType, this.getElementCountArray(primitiveType, primitiveCount), GL.UNSIGNED_SHORT, indexOffset * 2);
-        this.checkGLError();
-    };
-    WebGLUtils.getElementCountArray = function (primitiveType, primitiveCount) {
-        var GL = this.getWebGL();
-        switch (primitiveType) {
-            case GL.LINES:
-                return primitiveCount * 2;
-            case GL.LINE_STRIP:
-                return primitiveCount + 1;
-            case GL.TRIANGLES:
-                return primitiveCount * 3;
-            case GL.TRIANGLE_STRIP:
-                return primitiveCount + 2;
-        }
-        throw new Error("not support");
-    };
-    WebGLUtils.checkGLError = function () {
-        var GL = this.getWebGL();
-        var error = GL.getError();
-        if (error != GL.NO_ERROR) {
-            throw new Error("GL.GetError() returned" + error);
-        }
-    };
-    return WebGLUtils;
 }());

@@ -50,7 +50,7 @@ class SceneManager {
 
                 for (let i = 0; i < SceneManager._scene.entities.buffer.length; i++) {
                     let entity = SceneManager._scene.entities.buffer[i];
-                    entity.destory();
+                    entity.destroy();
                 }
 
                 SceneManager._scene = SceneManager._nextScene;

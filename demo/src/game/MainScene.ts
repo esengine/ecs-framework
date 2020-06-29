@@ -1,5 +1,5 @@
 class MainScene extends Scene {
-    constructor(){
+    constructor() {
         super();
 
         // this.addEntityProcessor(new SpawnerSystem(new Matcher()));
@@ -8,45 +8,34 @@ class MainScene extends Scene {
         this.breadthfirstTest();
     }
 
-    public onStart(){
-        this.content.load("http://www.hyuan.org/123.jpeg", false).then((data)=>{
+    public onStart() {
+        this.content.load("http://www.hyuan.org/123.jpeg", false).then((data) => {
             console.log(data);
+            let bgSprite = new Sprite(data);
+            let bg = this.createEntity("bg");
+            bg.position = new Vector2(0, 0);
+            bg.addComponent(new SpriteRenderer()).setSprite(bgSprite);
+
+            for (let i = 0; i < 20; i++) {
+                let sprite = new Sprite(RES.getRes("checkbox_select_disabled_png"));
+                let player2 = this.createEntity("player2");
+                player2.addComponent(new SpriteRenderer()).setSprite(sprite);
+                player2.position = new Vector2(Math.random() * 100 * i, Math.random() * 100 * i);
+                player2.addComponent(new BoxCollider());
+            }
+
+            let button = new eui.Button();
+            button.label = "切换场景";
+            this.addChild(button);
+            button.addEventListener(egret.TouchEvent.TOUCH_TAP, () => {
+                SceneManager.startSceneTransition(new FadeTransition(() => {
+                    return new MainScene();
+                }));
+            }, this);
         });
-
-        this.camera.setZoom(0.5);
-
-        let bgSprite = new Sprite(RES.getRes("bg_jpg"));
-        let bg = this.createEntity("bg");
-        bg.position = new Vector2(0, 0);
-        bg.addComponent(new SpriteRenderer()).setSprite(bgSprite);
-
-        for (let i = 0; i < 20; i ++){
-            let sprite = new Sprite(RES.getRes("checkbox_select_disabled_png"));
-            let player2 = this.createEntity("player2");
-            player2.addComponent(new SpriteRenderer()).setSprite(sprite);
-            player2.position = new Vector2(Math.random() * 100 * i, Math.random() * 100 * i);
-            player2.addComponent(new BoxCollider());
-        }
-
-        let button = new eui.Button();
-        button.label = "切换场景";
-        this.addChild(button);
-        button.addEventListener(egret.TouchEvent.TOUCH_TAP, ()=>{
-            SceneManager.startSceneTransition(new WindTransition(()=>{
-                return new MainScene();
-            }));
-        }, this);
-
-        let cancel = new eui.Button();
-        cancel.label = "打开高斯模糊";
-        cancel.y = 100;
-        this.addChild(cancel);
-        cancel.addEventListener(egret.TouchEvent.TOUCH_TAP, ()=>{
-            this.addPostProcessor(new GaussianBlurPostProcessor());
-        }, this);
     }
 
-    public breadthfirstTest(){
+    public breadthfirstTest() {
         let graph = new UnweightedGraph<string>();
 
         graph.addEdgesForNode("a", ["b"]); // a->b
@@ -60,7 +49,7 @@ class MainScene extends Scene {
         console.log(path);
     }
 
-    public dijkstraTest(){
+    public dijkstraTest() {
         let graph = new WeightedGridGraph(20, 20);
 
         graph.weightedNodes.push(new Point(3, 3));
@@ -72,7 +61,7 @@ class MainScene extends Scene {
         console.log(path);
     }
 
-    public astarTest(){
+    public astarTest() {
         let graph = new AstarGridGraph(20, 20);
 
         graph.weightedNodes.push(new Point(3, 3));

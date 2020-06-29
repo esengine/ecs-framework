@@ -196,4 +196,9 @@ class Matrix2D {
 
         return result;
     }
+
+    public toEgretMatrix(): egret.Matrix{
+        let matrix = new egret.Matrix(this.m11, this.m12, this.m21, this.m22, this.m31, this.m32);
+        return matrix;
+    }
 }
