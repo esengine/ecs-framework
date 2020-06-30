@@ -23,6 +23,15 @@ class MainScene extends Scene {
             player2.addComponent(new BoxCollider());
         }
 
+        let pool = new ComponentPool<SimplePooled>(SimplePooled);
+        let c1 = pool.obtain();
+        let c2 = pool.obtain();
+        pool.free(c1);
+        let c1b = pool.obtain();
+
+        console.log(c1 != c2);
+        console.log(c1 == c1b);
+
         let button = new eui.Button();
         button.label = "切换场景";
         this.addChild(button);

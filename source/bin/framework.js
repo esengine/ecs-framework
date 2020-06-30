@@ -1782,6 +1782,25 @@ var CameraInset = (function () {
     }
     return CameraInset;
 }());
+var ComponentPool = (function () {
+    function ComponentPool(typeClass) {
+        this._type = typeClass;
+        this._cache = [];
+    }
+    ComponentPool.prototype.obtain = function () {
+        try {
+            return this._cache.length > 0 ? this._cache.shift() : new this._type();
+        }
+        catch (err) {
+            throw new Error(this._type + err);
+        }
+    };
+    ComponentPool.prototype.free = function (component) {
+        component.reset();
+        this._cache.push(component);
+    };
+    return ComponentPool;
+}());
 var FollowCamera = (function (_super) {
     __extends(FollowCamera, _super);
     function FollowCamera(targetEntity, cameraStyle) {
@@ -1937,6 +1956,13 @@ var PolygonMesh = (function (_super) {
     }
     return PolygonMesh;
 }(Mesh));
+var PooledComponent = (function (_super) {
+    __extends(PooledComponent, _super);
+    function PooledComponent() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    return PooledComponent;
+}(Component));
 var RenderableComponent = (function (_super) {
     __extends(RenderableComponent, _super);
     function RenderableComponent() {
@@ -3236,8 +3262,17 @@ var SceneTransition = (function () {
     SceneTransition.prototype.render = function () {
     };
     SceneTransition.prototype.onBeginTransition = function () {
-        this.loadNextScene();
-        this.transitionComplete();
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4, this.loadNextScene()];
+                    case 1:
+                        _a.sent();
+                        this.transitionComplete();
+                        return [2];
+                }
+            });
+        });
     };
     SceneTransition.prototype.transitionComplete = function () {
         SceneManager.sceneTransition = null;
@@ -3291,25 +3326,30 @@ var FadeTransition = (function (_super) {
         return _this;
     }
     FadeTransition.prototype.onBeginTransition = function () {
-        var _this = this;
-        this._mask.graphics.beginFill(this.fadeToColor, 1);
-        this._mask.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
-        this._mask.graphics.endFill();
-        SceneManager.stage.addChild(this._mask);
-        egret.Tween.get(this).to({ _alpha: 1 }, this.fadeOutDuration * 1000, this.fadeEaseType)
-            .call(function () { return __awaiter(_this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var _this = this;
             return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4, this.loadNextScene()];
-                    case 1:
-                        _a.sent();
-                        return [2];
-                }
-            });
-        }); }).wait(this.delayBeforeFadeInDuration).call(function () {
-            egret.Tween.get(_this).to({ _alpha: 0 }, _this.fadeOutDuration * 1000, _this.fadeEaseType).call(function () {
-                _this.transitionComplete();
-                SceneManager.stage.removeChild(_this._mask);
+                this._mask.graphics.beginFill(this.fadeToColor, 1);
+                this._mask.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+                this._mask.graphics.endFill();
+                SceneManager.stage.addChild(this._mask);
+                egret.Tween.get(this).to({ _alpha: 1 }, this.fadeOutDuration * 1000, this.fadeEaseType)
+                    .call(function () { return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0: return [4, this.loadNextScene()];
+                            case 1:
+                                _a.sent();
+                                return [2];
+                        }
+                    });
+                }); }).wait(this.delayBeforeFadeInDuration).call(function () {
+                    egret.Tween.get(_this).to({ _alpha: 0 }, _this.fadeOutDuration * 1000, _this.fadeEaseType).call(function () {
+                        _this.transitionComplete();
+                        SceneManager.stage.removeChild(_this._mask);
+                    });
+                });
+                return [2];
             });
         });
     };
@@ -3378,11 +3418,19 @@ var WindTransition = (function (_super) {
         configurable: true
     });
     WindTransition.prototype.onBeginTransition = function () {
-        var _this = this;
-        this.loadNextScene();
-        this.tickEffectProgressProperty(this._windEffect, this.duration, this.easeType).then(function () {
-            _this.transitionComplete();
-            SceneManager.stage.removeChild(_this._mask);
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        this.loadNextScene();
+                        return [4, this.tickEffectProgressProperty(this._windEffect, this.duration, this.easeType)];
+                    case 1:
+                        _a.sent();
+                        this.transitionComplete();
+                        SceneManager.stage.removeChild(this._mask);
+                        return [2];
+                }
+            });
         });
     };
     return WindTransition;

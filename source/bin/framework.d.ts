@@ -343,6 +343,13 @@ declare class CameraInset {
     top: number;
     bottom: number;
 }
+declare class ComponentPool<T extends PooledComponent> {
+    private _cache;
+    private _type;
+    constructor(typeClass: any);
+    obtain(): T;
+    free(component: T): void;
+}
 declare class FollowCamera extends Component {
     camera: Camera;
     followLerp: number;
@@ -385,6 +392,9 @@ declare class VertexPosition {
 }
 declare class PolygonMesh extends Mesh {
     constructor(points: Vector2[], arePointsCCW?: boolean);
+}
+declare abstract class PooledComponent extends Component {
+    abstract reset(): any;
 }
 declare abstract class RenderableComponent extends Component implements IRenderable {
     private _isVisible;
@@ -711,7 +721,7 @@ declare abstract class SceneTransition {
     constructor(sceneLoadAction: Function);
     preRender(): void;
     render(): void;
-    onBeginTransition(): void;
+    onBeginTransition(): Promise<void>;
     protected transitionComplete(): void;
     protected loadNextScene(): Promise<void>;
     tickEffectProgressProperty(filter: egret.CustomFilter, duration: number, easeType: Function, reverseDirection?: boolean): Promise<{}>;
@@ -724,7 +734,7 @@ declare class FadeTransition extends SceneTransition {
     private _mask;
     private _alpha;
     constructor(sceneLoadAction: Function);
-    onBeginTransition(): void;
+    onBeginTransition(): Promise<void>;
     render(): void;
 }
 declare class WindTransition extends SceneTransition {
@@ -735,7 +745,7 @@ declare class WindTransition extends SceneTransition {
     size: number;
     easeType: (t: number) => number;
     constructor(sceneLoadAction: Function);
-    onBeginTransition(): void;
+    onBeginTransition(): Promise<void>;
 }
 declare class BaseView extends egret.DisplayObjectContainer {
     protected _data: any;
