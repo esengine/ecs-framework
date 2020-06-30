@@ -1,4 +1,12 @@
 # egret-framework
+
+
+[![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/esengine/egret-framework.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/esengine/egret-framework/context:javascript)
+
+```
+[![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/esengine/egret-framework.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/esengine/egret-framework/context:javascript)
+```
+
 这是一套用于egret的游戏框架，里面包含ECS框架用于管理场景实体，MVC框架用于管理ui界面（fairygui），一些常用2D碰撞检测及A*寻路。如果您还需要包含其他的AI系统可以查看作者其他库（行为树、简易FSM、实用AI）。
 
 ## 当前版本功能
