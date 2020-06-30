@@ -50,7 +50,7 @@ abstract class SceneTransition {
         }
     }
 
-    protected loadNextScene() {
+    protected async loadNextScene() {
         if (this.onScreenObscured)
             this.onScreenObscured();
 
@@ -58,7 +58,7 @@ abstract class SceneTransition {
             this.isNewSceneLoaded = true;
         }
 
-        SceneManager.scene = this.sceneLoadAction();
+        SceneManager.scene = await this.sceneLoadAction();
         this.isNewSceneLoaded = true;
     }
 

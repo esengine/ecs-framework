@@ -145,7 +145,7 @@ class Scene extends egret.DisplayObjectContainer {
       this.unload();
    }
 
-   protected onStart() {
+   protected async onStart() {
 
    }
 

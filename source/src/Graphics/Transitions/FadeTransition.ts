@@ -19,8 +19,8 @@ class FadeTransition extends SceneTransition {
         SceneManager.stage.addChild(this._mask);
 
         egret.Tween.get(this).to({ _alpha: 1}, this.fadeOutDuration * 1000, this.fadeEaseType)
-            .call(() => {
-                this.loadNextScene();
+            .call(async () => {
+                await this.loadNextScene();
             }).wait(this.delayBeforeFadeInDuration).call(() => {
                 egret.Tween.get(this).to({ _alpha: 0 }, this.fadeOutDuration * 1000, this.fadeEaseType).call(() => {
                     this.transitionComplete();

@@ -220,7 +220,7 @@ declare class Scene extends egret.DisplayObjectContainer {
     removeRenderer(renderer: Renderer): void;
     begin(): void;
     end(): void;
-    protected onStart(): void;
+    protected onStart(): Promise<void>;
     protected onActive(): void;
     protected onDeactive(): void;
     protected unload(): void;
@@ -713,7 +713,7 @@ declare abstract class SceneTransition {
     render(): void;
     onBeginTransition(): void;
     protected transitionComplete(): void;
-    protected loadNextScene(): void;
+    protected loadNextScene(): Promise<void>;
     tickEffectProgressProperty(filter: egret.CustomFilter, duration: number, easeType: Function, reverseDirection?: boolean): Promise<{}>;
 }
 declare class FadeTransition extends SceneTransition {
@@ -736,6 +736,31 @@ declare class WindTransition extends SceneTransition {
     easeType: (t: number) => number;
     constructor(sceneLoadAction: Function);
     onBeginTransition(): void;
+}
+declare class BaseView extends egret.DisplayObjectContainer {
+    protected _data: any;
+    protected init(): void;
+    show(data?: any): void;
+    refreshData(data?: any): void;
+    refreshView(): void;
+    close(): void;
+    destroy(): void;
+}
+declare class BaseFuiView extends BaseView {
+    protected _name: string;
+    constructor(name: string);
+}
+declare class BaseSingle {
+    private static _instance;
+    static getInstance<T>(): T;
+    protected clearFuiObj(obj: fairygui.GObject): boolean;
+}
+declare class ViewManager extends BaseSingle {
+    private _openDic;
+    refreshView(viewClass: any, data?: any): void;
+    openView(viewClass: any, data?: any, complete?: Function): void;
+    getView<T>(viewClass: any): T;
+    existView(viewClass: any): boolean;
 }
 declare class Flags {
     static isFlagSet(self: number, flag: number): boolean;
@@ -990,9 +1015,11 @@ declare class NumberDictionary {
     tryGetValue(x: number, y: number): Collider[];
     clear(): void;
 }
+declare class fui {
+}
 declare class ContentManager {
     protected loadedAssets: Map<string, any>;
-    load(name: string, local?: boolean): Promise<any>;
+    loadRes(name: string, local?: boolean): Promise<any>;
     dispose(): void;
 }
 declare class Emitter<T> {
