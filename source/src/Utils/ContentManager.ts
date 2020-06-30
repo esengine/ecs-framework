@@ -1,8 +1,10 @@
+declare class fui {}
+
 class ContentManager {
     protected loadedAssets: Map<string, any> = new Map<string, any>();
 
     /** 异步加载资源 */
-    public load(name: string, local: boolean = true): Promise<any> {
+    public loadRes(name: string, local: boolean = true): Promise<any> {
         return new Promise((resolve, reject) => {
             let res = this.loadedAssets.get(name);
             if (res) {
@@ -30,7 +32,7 @@ class ContentManager {
         })
     }
 
-    public dispose(){
+    public dispose() {
         this.loadedAssets.forEach(value => {
             let assetsToRemove = value;
             assetsToRemove.dispose();
