@@ -37,8 +37,8 @@ abstract class SceneTransition {
 
     }
 
-    public onBeginTransition() {
-        this.loadNextScene();
+    public async onBeginTransition() {
+        await this.loadNextScene();
         this.transitionComplete();
     }
 

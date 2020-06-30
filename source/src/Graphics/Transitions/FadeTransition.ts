@@ -12,7 +12,7 @@ class FadeTransition extends SceneTransition {
         this._mask = new egret.Shape();
     }
 
-    public onBeginTransition() {
+    public async onBeginTransition() {
         this._mask.graphics.beginFill(this.fadeToColor, 1);
         this._mask.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
         this._mask.graphics.endFill();

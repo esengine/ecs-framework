@@ -56,11 +56,10 @@ class WindTransition extends SceneTransition {
         SceneManager.stage.addChild(this._mask);
     }
 
-    public onBeginTransition() {
+    public async onBeginTransition() {
         this.loadNextScene();
-        this.tickEffectProgressProperty(this._windEffect, this.duration, this.easeType).then(()=>{
-            this.transitionComplete();
-            SceneManager.stage.removeChild(this._mask);
-        }); 
+        await this.tickEffectProgressProperty(this._windEffect, this.duration, this.easeType);
+        this.transitionComplete();
+        SceneManager.stage.removeChild(this._mask); 
     }
 }
