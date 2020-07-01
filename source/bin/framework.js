@@ -2294,6 +2294,33 @@ var EntityProcessingSystem = (function (_super) {
     };
     return EntityProcessingSystem;
 }(EntitySystem));
+var PassiveSystem = (function (_super) {
+    __extends(PassiveSystem, _super);
+    function PassiveSystem() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    PassiveSystem.prototype.onChanged = function (entity) {
+    };
+    PassiveSystem.prototype.process = function (entities) {
+        this.begin();
+        this.end();
+    };
+    return PassiveSystem;
+}(EntitySystem));
+var ProcessingSystem = (function (_super) {
+    __extends(ProcessingSystem, _super);
+    function ProcessingSystem() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    ProcessingSystem.prototype.onChanged = function (entity) {
+    };
+    ProcessingSystem.prototype.process = function (entities) {
+        this.begin();
+        this.processSystem();
+        this.end();
+    };
+    return ProcessingSystem;
+}(EntitySystem));
 var BitSet = (function () {
     function BitSet(nbits) {
         if (nbits === void 0) { nbits = 64; }
@@ -2765,6 +2792,15 @@ var Matcher = (function () {
     Matcher.empty = function () {
         return new Matcher();
     };
+    Matcher.prototype.getAllSet = function () {
+        return this.allSet;
+    };
+    Matcher.prototype.getExclusionSet = function () {
+        return this.exclusionSet;
+    };
+    Matcher.prototype.getOneSet = function () {
+        return this.oneSet;
+    };
     Matcher.prototype.IsIntersted = function (e) {
         if (!this.allSet.isEmpty()) {
             for (var i = this.allSet.nextSetBit(0); i >= 0; i = this.allSet.nextSetBit(i + 1)) {
@@ -2777,6 +2813,39 @@ var Matcher = (function () {
         if (!this.oneSet.isEmpty() && !this.oneSet.intersects(e.componentBits))
             return false;
         return true;
+    };
+    Matcher.prototype.all = function () {
+        var _this = this;
+        var types = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            types[_i] = arguments[_i];
+        }
+        types.forEach(function (type) {
+            _this.allSet.set(ComponentTypeManager.getIndexFor(type));
+        });
+        return this;
+    };
+    Matcher.prototype.exclude = function () {
+        var _this = this;
+        var types = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            types[_i] = arguments[_i];
+        }
+        types.forEach(function (type) {
+            _this.exclusionSet.set(ComponentTypeManager.getIndexFor(type));
+        });
+        return this;
+    };
+    Matcher.prototype.one = function () {
+        var _this = this;
+        var types = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            types[_i] = arguments[_i];
+        }
+        types.forEach(function (type) {
+            _this.oneSet.set(ComponentTypeManager.getIndexFor(type));
+        });
+        return this;
     };
     return Matcher;
 }());

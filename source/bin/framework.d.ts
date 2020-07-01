@@ -485,6 +485,15 @@ declare abstract class EntityProcessingSystem extends EntitySystem {
     protected process(entities: Entity[]): void;
     protected lateProcess(entities: Entity[]): void;
 }
+declare abstract class PassiveSystem extends EntitySystem {
+    onChanged(entity: Entity): void;
+    protected process(entities: Entity[]): void;
+}
+declare abstract class ProcessingSystem extends EntitySystem {
+    onChanged(entity: Entity): void;
+    protected process(entities: Entity[]): void;
+    abstract processSystem(): any;
+}
 declare class BitSet {
     private static LONG_MASK;
     private _bits;
@@ -568,7 +577,13 @@ declare class Matcher {
     protected exclusionSet: BitSet;
     protected oneSet: BitSet;
     static empty(): Matcher;
+    getAllSet(): BitSet;
+    getExclusionSet(): BitSet;
+    getOneSet(): BitSet;
     IsIntersted(e: Entity): boolean;
+    all(...types: any[]): Matcher;
+    exclude(...types: any[]): this;
+    one(...types: any[]): this;
 }
 declare class RenderableComponentList {
     private _components;
