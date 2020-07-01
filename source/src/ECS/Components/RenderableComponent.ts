@@ -1,7 +1,7 @@
 /** 
  * 所有可渲染组件的基类 
  */
-abstract class RenderableComponent extends Component implements IRenderable {
+abstract class RenderableComponent extends PooledComponent implements IRenderable {
     private _isVisible: boolean;
     protected _areBoundsDirty = true;
     protected _bounds: Rectangle = new Rectangle();
@@ -49,7 +49,7 @@ abstract class RenderableComponent extends Component implements IRenderable {
     public abstract render(camera: Camera);
 
     public isVisibleFromCamera(camera: Camera): boolean{
-        this.isVisible = camera.bounds.intersects(this.bounds);
+        this.isVisible = camera.getBounds().intersects(this.getBounds());
         return this.isVisible;
     }
 

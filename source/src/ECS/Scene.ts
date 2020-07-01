@@ -18,6 +18,8 @@ class Scene extends egret.DisplayObjectContainer {
       this.renderableComponents = new RenderableComponentList();
       this.entities = new EntityList(this);
       this.content = new ContentManager();
+      this.width = SceneManager.stage.stageWidth;
+      this.height = SceneManager.stage.stageHeight;
 
       this.addEventListener(egret.Event.ACTIVATE, this.onActive, this);
       this.addEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
@@ -135,7 +137,6 @@ class Scene extends egret.DisplayObjectContainer {
 
       Physics.clear();
 
-      this.camera.destory();
       this.camera = null;
       this.content.dispose();
 
@@ -191,9 +192,6 @@ class Scene extends egret.DisplayObjectContainer {
 
    public render() {
       for (let i = 0; i < this._renderers.length; i++) {
-         if (this._renderers[i].camera)
-            this._renderers[i].camera.forceMatrixUpdate();
-         this.camera.forceMatrixUpdate();
          this._renderers[i].render(this);
       }
    }

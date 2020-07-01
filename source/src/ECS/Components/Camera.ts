@@ -2,48 +2,29 @@
 class Camera extends Component {
     private _zoom;
     private _origin: Vector2 = Vector2.zero;
-    private _transformMatrix: Matrix2D = new Matrix2D();
-    private _inverseTransformMatrix = new Matrix2D();
 
     private _minimumZoom = 0.3;
     private _maximumZoom = 3;
-    private _areMatrixesDirty = true;
-    private _inset: CameraInset = new CameraInset();
-    private _bounds: Rectangle = new Rectangle();
-    private _areBoundsDirty = true;
 
-    public get bounds(){
-        if (this._areMatrixesDirty)
-            this.updateMatrixes();
-
-        if (this._areBoundsDirty){
-            let stage = this.stage;
-            let topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
-            let bottomRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, stage.stageHeight - this._inset.bottom));
-
-            if (this.entity.rotation != 0){
-                let topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));
-                let bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left, stage.stageHeight - this._inset.bottom));
-
-                let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                let minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-                let maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-
-                this._bounds.location = new Vector2(minX, minY);
-                this._bounds.width = maxX - minX;
-                this._bounds.height = maxY - minY;
-            }else{
-                this._bounds.location = topLeft;
-                this._bounds.width = bottomRight.x - topLeft.x;
-                this._bounds.height = bottomRight.y - topLeft.y;
-            }
-
-            this._areBoundsDirty = false;
-        }
-
-        return this._bounds;
-    }
+    /** 
+     * 如果相机模式为cameraWindow 则会进行缓动移动 
+     * 该值为移动速度 
+     */
+    public followLerp = 0.1;
+    public deadzone: Rectangle = new Rectangle();
+    /** 锁定偏移量 默认中心 */
+    public focusOffset: Vector2 = new Vector2();
+    /** 是否地图锁定 如果锁定则需要设置mapSize属性 */
+    public mapLockEnabled: boolean = false;
+    /** 设置地图大小 默认从0 0左上角开始 只需要输入地图宽高 */
+    public mapSize: Vector2 = new Vector2();
+    /** 跟随的实体 设置后镜头将锁定目标为中心 */
+    public targetEntity: Entity;
+    private _worldSpaceDeadZone: Rectangle = new Rectangle();
+    private _desiredPositionDelta: Vector2 = new Vector2();
+    private _targetCollider: Collider;
+    /** 相机模式 */
+    public cameraStyle: CameraStyle = CameraStyle.lockOn;
 
     public get zoom(){
         if (this._zoom == 0)
@@ -82,7 +63,6 @@ class Camera extends Component {
     public set origin(value: Vector2){
         if (this._origin != value){
             this._origin = value;
-            this._areMatrixesDirty = true;
         }
     }
 
@@ -94,21 +74,11 @@ class Camera extends Component {
         this.entity.position = value;
     }
 
-    public get transformMatrix(){
-        if (this._areBoundsDirty)
-            this.updateMatrixes();
-        return this._transformMatrix;
-    }
-
-    public get inverseTransformMatrix(){
-        if (this._areBoundsDirty)
-            this.updateMatrixes();
-        return this._inverseTransformMatrix;
-    }
-
     constructor() {
         super();
 
+        this.width = SceneManager.stage.stageWidth;
+        this.height = SceneManager.stage.stageHeight;
         this.setZoom(0);
     }
 
@@ -135,7 +105,7 @@ class Camera extends Component {
         return this;
     }
 
-    public setZoom(zoom: number){
+    public setZoom(zoom: number): Camera{
         let newZoom = MathHelper.clamp(zoom, -1, 1);
         if (newZoom == 0){
             this._zoom = 1;
@@ -145,8 +115,13 @@ class Camera extends Component {
             this._zoom = MathHelper.map(newZoom, 0, 1, 1, this._maximumZoom);
         }
 
-        this._areMatrixesDirty = true;
+        SceneManager.scene.scaleX = this._zoom;
+        SceneManager.scene.scaleY = this._zoom;
+        return this;
+    }
 
+    public setRotation(rotation: number): Camera {
+        SceneManager.scene.rotation = rotation;
         return this;
     }
 
@@ -156,57 +131,91 @@ class Camera extends Component {
         return this;
     }
 
-    public forceMatrixUpdate(){
-        this._areMatrixesDirty = true;
-    }
+    public follow(targetEntity: Entity, cameraStyle: CameraStyle = CameraStyle.cameraWindow){
+        this.targetEntity = targetEntity;
+        this.cameraStyle = cameraStyle;
+        let cameraBounds = new Rectangle(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
 
-    protected updateMatrixes(){
-        if (!this._areMatrixesDirty)
-            return;
-
-        let tempMat: Matrix2D;
-        this._transformMatrix = Matrix2D.createTranslation(-this.entity.position.x, -this.entity.position.y);
-        if (this._zoom != 1){
-            tempMat = Matrix2D.createScale(this._zoom, this._zoom);
-            this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
+        switch (this.cameraStyle){
+            case CameraStyle.cameraWindow:
+                let w = cameraBounds.width / 6;
+                let h = cameraBounds.height / 3;
+                this.deadzone = new Rectangle((cameraBounds.width - w) / 2, (cameraBounds.height - h) / 2, w, h);
+                break;
+            case CameraStyle.lockOn:
+                this.deadzone = new Rectangle(cameraBounds.width / 2, cameraBounds.height / 2, 10, 10);
+                break;
         }
+    }
 
-        if (this.entity.rotation != 0){
-            tempMat = Matrix2D.createRotation(this.entity.rotation);
-            this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
+    public update(){
+        let cameraBounds = new Rectangle(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        let halfScreen = Vector2.multiply(new Vector2(cameraBounds.width, cameraBounds.height), new Vector2(0.5));
+        this._worldSpaceDeadZone.x = this.position.x - halfScreen.x + this.deadzone.x + this.focusOffset.x;
+        this._worldSpaceDeadZone.y = this.position.y - halfScreen.y + this.deadzone.y + this.focusOffset.y;
+        this._worldSpaceDeadZone.width = this.deadzone.width;
+        this._worldSpaceDeadZone.height = this.deadzone.height;
+
+        if (this.targetEntity)
+            this.updateFollow();
+
+        this.position = Vector2.lerp(this.position, Vector2.add(this.position, this._desiredPositionDelta), this.followLerp);
+        this.entity.roundPosition();
+
+        if (this.mapLockEnabled){
+            this.position = this.clampToMapSize(this.position);
+            this.entity.roundPosition();
         }
-
-        tempMat = Matrix2D.createTranslation(this._origin.x, this._origin.y, tempMat);
-        this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
-
-        this._inverseTransformMatrix = Matrix2D.invert(this._transformMatrix);
-
-        this._areBoundsDirty = true;
-        this._areMatrixesDirty = false;
     }
 
-    public screenToWorldPoint(screenPosition: Vector2){
-        this.updateMatrixes();
-        return Vector2Ext.transformR(screenPosition, this._inverseTransformMatrix);
+    private clampToMapSize(position: Vector2){
+        let cameraBounds = new Rectangle(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        let halfScreen = Vector2.multiply(new Vector2(cameraBounds.width, cameraBounds.height), new Vector2(0.5));
+        let cameraMax = new Vector2(this.mapSize.x - halfScreen.x, this.mapSize.y - halfScreen.y);
+
+        return Vector2.clamp(position, halfScreen, cameraMax);
     }
 
-    public worldToScreenPoint(worldPosition: Vector2){
-        this.updateMatrixes();
-        return Vector2Ext.transformR(worldPosition, this._transformMatrix);
-    }
+    private updateFollow(){
+        this._desiredPositionDelta.x = this._desiredPositionDelta.y = 0;
 
-    public onEntityTransformChanged(comp: ComponentTransform){
-        this._areMatrixesDirty = true;
-    }
+        if (this.cameraStyle == CameraStyle.lockOn){
+            let targetX = this.targetEntity.position.x;
+            let targetY = this.targetEntity.position.y;
 
-    public destory() {
+            if (this._worldSpaceDeadZone.x > targetX)
+                this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;
+            else if(this._worldSpaceDeadZone.x < targetX)
+                this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;
 
+            if (this._worldSpaceDeadZone.y < targetY)
+                this._desiredPositionDelta.y = targetY - this._worldSpaceDeadZone.y;
+            else if(this._worldSpaceDeadZone.y > targetY)
+                this._desiredPositionDelta.y = targetY - this._worldSpaceDeadZone.y;
+        } else {
+            if (!this._targetCollider){
+                this._targetCollider = this.targetEntity.getComponent<Collider>(Collider);
+                if (!this._targetCollider)
+                    return;
+            }
+
+            let targetBounds = this.targetEntity.getComponent<Collider>(Collider).bounds;
+            if (!this._worldSpaceDeadZone.containsRect(targetBounds)){
+                if (this._worldSpaceDeadZone.left > targetBounds.left)
+                    this._desiredPositionDelta.x = targetBounds.left - this._worldSpaceDeadZone.left;
+                else if(this._worldSpaceDeadZone.right < targetBounds.right)
+                    this._desiredPositionDelta.x = targetBounds.right - this._worldSpaceDeadZone.right;
+
+                if (this._worldSpaceDeadZone.bottom < targetBounds.bottom)
+                    this._desiredPositionDelta.y = targetBounds.bottom - this._worldSpaceDeadZone.bottom;
+                else if(this._worldSpaceDeadZone.top > targetBounds.top)
+                    this._desiredPositionDelta.y = targetBounds.top - this._worldSpaceDeadZone.top;
+            }
+        }
     }
 }
 
-class CameraInset {
-    public left = 0;
-    public right = 0;
-    public top = 0;
-    public bottom = 0;
+enum CameraStyle {
+    lockOn,
+    cameraWindow,
 }

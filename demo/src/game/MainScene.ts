@@ -9,19 +9,23 @@ class MainScene extends Scene {
     }
 
     public async onStart() {
-        let data = await this.content.loadRes("http://www.hyuan.org/123.jpeg", false);
-        let bgSprite = new Sprite(data);
+        let sprite = new Sprite(RES.getRes("checkbox_select_disabled_png"));
         let bg = this.createEntity("bg");
-        bg.position = new Vector2(0, 0);
-        bg.addComponent(new SpriteRenderer()).setSprite(bgSprite);
+        bg.addComponent(new SpriteRenderer()).setSprite(sprite).setColor(0xff0000);
+        bg.addComponent(new PlayerController());
+        bg.addComponent(new Mover());
+        // bg.addComponent(new BoxCollider());
+        bg.position = new Vector2(Math.random() * 200, Math.random() * 200);
 
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 100; i++) {
             let sprite = new Sprite(RES.getRes("checkbox_select_disabled_png"));
             let player2 = this.createEntity("player2");
             player2.addComponent(new SpriteRenderer()).setSprite(sprite);
             player2.position = new Vector2(Math.random() * 100 * i, Math.random() * 100 * i);
             player2.addComponent(new BoxCollider());
         }
+
+        this.camera.follow(bg, CameraStyle.lockOn);
 
         let pool = new ComponentPool<SimplePooled>(SimplePooled);
         let c1 = pool.obtain();

@@ -25,20 +25,6 @@ abstract class Component extends egret.DisplayObjectContainer {
         return this;
     }
 
-    public get stage(){
-        if (!this.entity)
-            return null;
-
-        return this.entity.stage;
-    }
-
-    public get scene(){
-        if (!this.entity)
-            return null;
-
-        return this.entity.scene;
-    }
-
     public initialize(){
 
     }

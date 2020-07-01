@@ -1,6 +1,7 @@
 class Entity extends egret.DisplayObjectContainer {
     private static _idGenerator: number;
 
+    private _position: Vector2 = Vector2.zero;
     public name: string;
     public readonly id: number;
     /** 当前实体所属的场景 */
@@ -19,12 +20,11 @@ class Entity extends egret.DisplayObjectContainer {
     }
 
     public get position(){
-        return new Vector2(this.x, this.y);
+        return this._position;
     }
 
     public set position(value: Vector2){
-        this.x = value.x;
-        this.y = value.y;
+        this._position = value;
     }
 
     public get scale(){

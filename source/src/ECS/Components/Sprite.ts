@@ -4,10 +4,10 @@ class Sprite {
     public readonly center: Vector2;
     public origin: Vector2;
     public readonly uvs: Rectangle = new Rectangle();
-    
+
     constructor(texture: egret.Texture, 
-        sourceRect: Rectangle = new Rectangle(texture.textureWidth, texture.textureHeight), 
-        origin: Vector2 = sourceRect.getHalfSize()){
+        sourceRect: Rectangle = new Rectangle(0, 0, texture.textureWidth, texture.textureHeight), 
+        origin: Vector2 = sourceRect.getHalfSize()) {
         this.texture2D = texture;
         this.sourceRect = sourceRect;
         this.center = new Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);

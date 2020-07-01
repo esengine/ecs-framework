@@ -145,8 +145,6 @@ declare abstract class Component extends egret.DisplayObjectContainer {
     updateInterval: number;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
-    readonly stage: egret.Stage;
-    readonly scene: Scene;
     initialize(): void;
     onAddedToEntity(): void;
     onRemovedFromEntity(): void;
@@ -160,6 +158,7 @@ declare abstract class Component extends egret.DisplayObjectContainer {
 }
 declare class Entity extends egret.DisplayObjectContainer {
     private static _idGenerator;
+    private _position;
     name: string;
     readonly id: number;
     scene: Scene;
@@ -308,62 +307,30 @@ declare class Transform {
 declare class Camera extends Component {
     private _zoom;
     private _origin;
-    private _transformMatrix;
-    private _inverseTransformMatrix;
     private _minimumZoom;
     private _maximumZoom;
-    private _areMatrixesDirty;
-    private _inset;
-    private _bounds;
-    private _areBoundsDirty;
-    readonly bounds: Rectangle;
-    zoom: number;
-    minimumZoom: number;
-    maximumZoom: number;
-    origin: Vector2;
-    position: Vector2;
-    readonly transformMatrix: Matrix2D;
-    readonly inverseTransformMatrix: Matrix2D;
-    constructor();
-    onSceneSizeChanged(newWidth: number, newHeight: number): void;
-    setMinimumZoom(minZoom: number): Camera;
-    setMaximumZoom(maxZoom: number): Camera;
-    setZoom(zoom: number): this;
-    setPosition(position: Vector2): this;
-    forceMatrixUpdate(): void;
-    protected updateMatrixes(): void;
-    screenToWorldPoint(screenPosition: Vector2): Vector2;
-    worldToScreenPoint(worldPosition: Vector2): Vector2;
-    onEntityTransformChanged(comp: ComponentTransform): void;
-    destory(): void;
-}
-declare class CameraInset {
-    left: number;
-    right: number;
-    top: number;
-    bottom: number;
-}
-declare class ComponentPool<T extends PooledComponent> {
-    private _cache;
-    private _type;
-    constructor(typeClass: any);
-    obtain(): T;
-    free(component: T): void;
-}
-declare class FollowCamera extends Component {
-    camera: Camera;
     followLerp: number;
     deadzone: Rectangle;
     focusOffset: Vector2;
     mapLockEnabled: boolean;
     mapSize: Vector2;
-    private _targetEntity;
-    private _cameraStyle;
+    targetEntity: Entity;
     private _worldSpaceDeadZone;
     private _desiredPositionDelta;
     private _targetCollider;
-    constructor(targetEntity: Entity, cameraStyle?: CameraStyle);
-    onAddedToEntity(): void;
+    cameraStyle: CameraStyle;
+    zoom: number;
+    minimumZoom: number;
+    maximumZoom: number;
+    origin: Vector2;
+    position: Vector2;
+    constructor();
+    onSceneSizeChanged(newWidth: number, newHeight: number): void;
+    setMinimumZoom(minZoom: number): Camera;
+    setMaximumZoom(maxZoom: number): Camera;
+    setZoom(zoom: number): Camera;
+    setRotation(rotation: number): Camera;
+    setPosition(position: Vector2): this;
     follow(targetEntity: Entity, cameraStyle?: CameraStyle): void;
     update(): void;
     private clampToMapSize;
@@ -372,6 +339,13 @@ declare class FollowCamera extends Component {
 declare enum CameraStyle {
     lockOn = 0,
     cameraWindow = 1
+}
+declare class ComponentPool<T extends PooledComponent> {
+    private _cache;
+    private _type;
+    constructor(typeClass: any);
+    obtain(): T;
+    free(component: T): void;
 }
 declare class Mesh extends Component {
     private _verts;
@@ -396,7 +370,7 @@ declare class PolygonMesh extends Mesh {
 declare abstract class PooledComponent extends Component {
     abstract reset(): any;
 }
-declare abstract class RenderableComponent extends Component implements IRenderable {
+declare abstract class RenderableComponent extends PooledComponent implements IRenderable {
     private _isVisible;
     protected _areBoundsDirty: boolean;
     protected _bounds: Rectangle;
@@ -427,13 +401,16 @@ declare class Sprite {
 }
 declare class SpriteRenderer extends RenderableComponent {
     private _origin;
+    private _bitmap;
+    private _sprite;
     origin: Vector2;
     setOrigin(origin: Vector2): this;
-    setSprite(sprite: Sprite): void;
-    setColor(color: number): void;
+    setSprite(sprite: Sprite): SpriteRenderer;
+    setColor(color: number): SpriteRenderer;
     isVisibleFromCamera(camera: Camera): boolean;
     render(camera: Camera): void;
     onRemovedFromEntity(): void;
+    reset(): void;
 }
 interface ITriggerListener {
     onTriggerEnter(other: Collider, local: Collider): any;
@@ -703,12 +680,12 @@ declare class PolyLight extends RenderableComponent {
     protected _radius: number;
     private _lightEffect;
     private _indices;
-    readonly bounds: Rectangle;
     radius: number;
     constructor(radius: number, color: number, power: number);
     private computeTriangleIndices;
     setRadius(radius: number): void;
     render(camera: Camera): void;
+    reset(): void;
 }
 declare abstract class SceneTransition {
     private _hasPreviousSceneRender;

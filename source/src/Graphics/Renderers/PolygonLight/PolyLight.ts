@@ -4,16 +4,6 @@ class PolyLight extends RenderableComponent {
     private _lightEffect; 
     private _indices: number[] = [];
 
-    public get bounds(){
-        if (this._areBoundsDirty){
-            this._bounds.calculateBounds(this.entity.position, this._localOffset, new Vector2(this._radius),
-                Vector2.one, 0, this._radius * 2, this._radius * 2);
-            this._areBoundsDirty = false;
-        }
-
-        return this._bounds;
-    }
-
     public get radius(){
         return this._radius;
     }
@@ -48,5 +38,9 @@ class PolyLight extends RenderableComponent {
     }
 
     public render(camera: Camera) {
+    }
+
+    public reset(){
+        
     }
 }

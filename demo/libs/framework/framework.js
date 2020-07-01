@@ -802,24 +802,6 @@ var Component = (function (_super) {
         }
         return this;
     };
-    Object.defineProperty(Component.prototype, "stage", {
-        get: function () {
-            if (!this.entity)
-                return null;
-            return this.entity.stage;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Component.prototype, "scene", {
-        get: function () {
-            if (!this.entity)
-                return null;
-            return this.entity.scene;
-        },
-        enumerable: true,
-        configurable: true
-    });
     Component.prototype.initialize = function () {
     };
     Component.prototype.onAddedToEntity = function () {
@@ -850,6 +832,7 @@ var Entity = (function (_super) {
     __extends(Entity, _super);
     function Entity(name) {
         var _this = _super.call(this) || this;
+        _this._position = Vector2.zero;
         _this._updateOrder = 0;
         _this._enabled = true;
         _this._tag = 0;
@@ -868,11 +851,10 @@ var Entity = (function (_super) {
     });
     Object.defineProperty(Entity.prototype, "position", {
         get: function () {
-            return new Vector2(this.x, this.y);
+            return this._position;
         },
         set: function (value) {
-            this.x = value.x;
-            this.y = value.y;
+            this._position = value;
         },
         enumerable: true,
         configurable: true
@@ -1043,6 +1025,8 @@ var Scene = (function (_super) {
         _this.renderableComponents = new RenderableComponentList();
         _this.entities = new EntityList(_this);
         _this.content = new ContentManager();
+        _this.width = SceneManager.stage.stageWidth;
+        _this.height = SceneManager.stage.stageHeight;
         _this.addEventListener(egret.Event.ACTIVATE, _this.onActive, _this);
         _this.addEventListener(egret.Event.DEACTIVATE, _this.onDeactive, _this);
         return _this;
@@ -1128,7 +1112,6 @@ var Scene = (function (_super) {
         this.entities.removeAllEntities();
         this.removeChildren();
         Physics.clear();
-        this.camera.destory();
         this.camera = null;
         this.content.dispose();
         if (this.entityProcessors)
@@ -1170,9 +1153,6 @@ var Scene = (function (_super) {
     };
     Scene.prototype.render = function () {
         for (var i = 0; i < this._renderers.length; i++) {
-            if (this._renderers[i].camera)
-                this._renderers[i].camera.forceMatrixUpdate();
-            this.camera.forceMatrixUpdate();
             this._renderers[i].render(this);
         }
     };
@@ -1584,48 +1564,21 @@ var Camera = (function (_super) {
     function Camera() {
         var _this = _super.call(this) || this;
         _this._origin = Vector2.zero;
-        _this._transformMatrix = new Matrix2D();
-        _this._inverseTransformMatrix = new Matrix2D();
         _this._minimumZoom = 0.3;
         _this._maximumZoom = 3;
-        _this._areMatrixesDirty = true;
-        _this._inset = new CameraInset();
-        _this._bounds = new Rectangle();
-        _this._areBoundsDirty = true;
+        _this.followLerp = 0.1;
+        _this.deadzone = new Rectangle();
+        _this.focusOffset = new Vector2();
+        _this.mapLockEnabled = false;
+        _this.mapSize = new Vector2();
+        _this._worldSpaceDeadZone = new Rectangle();
+        _this._desiredPositionDelta = new Vector2();
+        _this.cameraStyle = CameraStyle.lockOn;
+        _this.width = SceneManager.stage.stageWidth;
+        _this.height = SceneManager.stage.stageHeight;
         _this.setZoom(0);
         return _this;
     }
-    Object.defineProperty(Camera.prototype, "bounds", {
-        get: function () {
-            if (this._areMatrixesDirty)
-                this.updateMatrixes();
-            if (this._areBoundsDirty) {
-                var stage = this.stage;
-                var topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
-                var bottomRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, stage.stageHeight - this._inset.bottom));
-                if (this.entity.rotation != 0) {
-                    var topRight = this.screenToWorldPoint(new Vector2(stage.stageWidth - this._inset.right, this._inset.top));
-                    var bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left, stage.stageHeight - this._inset.bottom));
-                    var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                    var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                    var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-                    var maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-                    this._bounds.location = new Vector2(minX, minY);
-                    this._bounds.width = maxX - minX;
-                    this._bounds.height = maxY - minY;
-                }
-                else {
-                    this._bounds.location = topLeft;
-                    this._bounds.width = bottomRight.x - topLeft.x;
-                    this._bounds.height = bottomRight.y - topLeft.y;
-                }
-                this._areBoundsDirty = false;
-            }
-            return this._bounds;
-        },
-        enumerable: true,
-        configurable: true
-    });
     Object.defineProperty(Camera.prototype, "zoom", {
         get: function () {
             if (this._zoom == 0)
@@ -1667,7 +1620,6 @@ var Camera = (function (_super) {
         set: function (value) {
             if (this._origin != value) {
                 this._origin = value;
-                this._areMatrixesDirty = true;
             }
         },
         enumerable: true,
@@ -1679,24 +1631,6 @@ var Camera = (function (_super) {
         },
         set: function (value) {
             this.entity.position = value;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Camera.prototype, "transformMatrix", {
-        get: function () {
-            if (this._areBoundsDirty)
-                this.updateMatrixes();
-            return this._transformMatrix;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Camera.prototype, "inverseTransformMatrix", {
-        get: function () {
-            if (this._areBoundsDirty)
-                this.updateMatrixes();
-            return this._inverseTransformMatrix;
         },
         enumerable: true,
         configurable: true
@@ -1729,59 +1663,96 @@ var Camera = (function (_super) {
         else {
             this._zoom = MathHelper.map(newZoom, 0, 1, 1, this._maximumZoom);
         }
-        this._areMatrixesDirty = true;
+        SceneManager.scene.scaleX = this._zoom;
+        SceneManager.scene.scaleY = this._zoom;
+        return this;
+    };
+    Camera.prototype.setRotation = function (rotation) {
+        SceneManager.scene.rotation = rotation;
         return this;
     };
     Camera.prototype.setPosition = function (position) {
         this.entity.position = position;
         return this;
     };
-    Camera.prototype.forceMatrixUpdate = function () {
-        this._areMatrixesDirty = true;
-    };
-    Camera.prototype.updateMatrixes = function () {
-        if (!this._areMatrixesDirty)
-            return;
-        var tempMat;
-        this._transformMatrix = Matrix2D.createTranslation(-this.entity.position.x, -this.entity.position.y);
-        if (this._zoom != 1) {
-            tempMat = Matrix2D.createScale(this._zoom, this._zoom);
-            this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
+    Camera.prototype.follow = function (targetEntity, cameraStyle) {
+        if (cameraStyle === void 0) { cameraStyle = CameraStyle.cameraWindow; }
+        this.targetEntity = targetEntity;
+        this.cameraStyle = cameraStyle;
+        var cameraBounds = new Rectangle(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        switch (this.cameraStyle) {
+            case CameraStyle.cameraWindow:
+                var w = cameraBounds.width / 6;
+                var h = cameraBounds.height / 3;
+                this.deadzone = new Rectangle((cameraBounds.width - w) / 2, (cameraBounds.height - h) / 2, w, h);
+                break;
+            case CameraStyle.lockOn:
+                this.deadzone = new Rectangle(cameraBounds.width / 2, cameraBounds.height / 2, 10, 10);
+                break;
         }
-        if (this.entity.rotation != 0) {
-            tempMat = Matrix2D.createRotation(this.entity.rotation);
-            this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
+    };
+    Camera.prototype.update = function () {
+        var cameraBounds = new Rectangle(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        var halfScreen = Vector2.multiply(new Vector2(cameraBounds.width, cameraBounds.height), new Vector2(0.5));
+        this._worldSpaceDeadZone.x = this.position.x - halfScreen.x + this.deadzone.x + this.focusOffset.x;
+        this._worldSpaceDeadZone.y = this.position.y - halfScreen.y + this.deadzone.y + this.focusOffset.y;
+        this._worldSpaceDeadZone.width = this.deadzone.width;
+        this._worldSpaceDeadZone.height = this.deadzone.height;
+        if (this.targetEntity)
+            this.updateFollow();
+        this.position = Vector2.lerp(this.position, Vector2.add(this.position, this._desiredPositionDelta), this.followLerp);
+        this.entity.roundPosition();
+        if (this.mapLockEnabled) {
+            this.position = this.clampToMapSize(this.position);
+            this.entity.roundPosition();
         }
-        tempMat = Matrix2D.createTranslation(this._origin.x, this._origin.y, tempMat);
-        this._transformMatrix = Matrix2D.multiply(this._transformMatrix, tempMat);
-        this._inverseTransformMatrix = Matrix2D.invert(this._transformMatrix);
-        this._areBoundsDirty = true;
-        this._areMatrixesDirty = false;
     };
-    Camera.prototype.screenToWorldPoint = function (screenPosition) {
-        this.updateMatrixes();
-        return Vector2Ext.transformR(screenPosition, this._inverseTransformMatrix);
+    Camera.prototype.clampToMapSize = function (position) {
+        var cameraBounds = new Rectangle(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        var halfScreen = Vector2.multiply(new Vector2(cameraBounds.width, cameraBounds.height), new Vector2(0.5));
+        var cameraMax = new Vector2(this.mapSize.x - halfScreen.x, this.mapSize.y - halfScreen.y);
+        return Vector2.clamp(position, halfScreen, cameraMax);
     };
-    Camera.prototype.worldToScreenPoint = function (worldPosition) {
-        this.updateMatrixes();
-        return Vector2Ext.transformR(worldPosition, this._transformMatrix);
-    };
-    Camera.prototype.onEntityTransformChanged = function (comp) {
-        this._areMatrixesDirty = true;
-    };
-    Camera.prototype.destory = function () {
+    Camera.prototype.updateFollow = function () {
+        this._desiredPositionDelta.x = this._desiredPositionDelta.y = 0;
+        if (this.cameraStyle == CameraStyle.lockOn) {
+            var targetX = this.targetEntity.position.x;
+            var targetY = this.targetEntity.position.y;
+            if (this._worldSpaceDeadZone.x > targetX)
+                this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;
+            else if (this._worldSpaceDeadZone.x < targetX)
+                this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;
+            if (this._worldSpaceDeadZone.y < targetY)
+                this._desiredPositionDelta.y = targetY - this._worldSpaceDeadZone.y;
+            else if (this._worldSpaceDeadZone.y > targetY)
+                this._desiredPositionDelta.y = targetY - this._worldSpaceDeadZone.y;
+        }
+        else {
+            if (!this._targetCollider) {
+                this._targetCollider = this.targetEntity.getComponent(Collider);
+                if (!this._targetCollider)
+                    return;
+            }
+            var targetBounds = this.targetEntity.getComponent(Collider).bounds;
+            if (!this._worldSpaceDeadZone.containsRect(targetBounds)) {
+                if (this._worldSpaceDeadZone.left > targetBounds.left)
+                    this._desiredPositionDelta.x = targetBounds.left - this._worldSpaceDeadZone.left;
+                else if (this._worldSpaceDeadZone.right < targetBounds.right)
+                    this._desiredPositionDelta.x = targetBounds.right - this._worldSpaceDeadZone.right;
+                if (this._worldSpaceDeadZone.bottom < targetBounds.bottom)
+                    this._desiredPositionDelta.y = targetBounds.bottom - this._worldSpaceDeadZone.bottom;
+                else if (this._worldSpaceDeadZone.top > targetBounds.top)
+                    this._desiredPositionDelta.y = targetBounds.top - this._worldSpaceDeadZone.top;
+            }
+        }
     };
     return Camera;
 }(Component));
-var CameraInset = (function () {
-    function CameraInset() {
-        this.left = 0;
-        this.right = 0;
-        this.top = 0;
-        this.bottom = 0;
-    }
-    return CameraInset;
-}());
+var CameraStyle;
+(function (CameraStyle) {
+    CameraStyle[CameraStyle["lockOn"] = 0] = "lockOn";
+    CameraStyle[CameraStyle["cameraWindow"] = 1] = "cameraWindow";
+})(CameraStyle || (CameraStyle = {}));
 var ComponentPool = (function () {
     function ComponentPool(typeClass) {
         this._type = typeClass;
@@ -1801,103 +1772,6 @@ var ComponentPool = (function () {
     };
     return ComponentPool;
 }());
-var FollowCamera = (function (_super) {
-    __extends(FollowCamera, _super);
-    function FollowCamera(targetEntity, cameraStyle) {
-        if (cameraStyle === void 0) { cameraStyle = CameraStyle.lockOn; }
-        var _this = _super.call(this) || this;
-        _this.followLerp = 0.1;
-        _this.deadzone = new Rectangle();
-        _this.focusOffset = new Vector2();
-        _this.mapSize = new Vector2();
-        _this._worldSpaceDeadZone = new Rectangle();
-        _this._desiredPositionDelta = new Vector2();
-        _this._targetEntity = targetEntity;
-        _this._cameraStyle = cameraStyle;
-        _this.camera = null;
-        return _this;
-    }
-    FollowCamera.prototype.onAddedToEntity = function () {
-        if (!this.camera)
-            this.camera = this.entity.scene.camera;
-        this.follow(this._targetEntity, this._cameraStyle);
-    };
-    FollowCamera.prototype.follow = function (targetEntity, cameraStyle) {
-        if (cameraStyle === void 0) { cameraStyle = CameraStyle.cameraWindow; }
-        this._targetEntity = targetEntity;
-        this._cameraStyle = cameraStyle;
-        var cameraBounds = this.camera.bounds;
-        switch (this._cameraStyle) {
-            case CameraStyle.cameraWindow:
-                var w = cameraBounds.width / 6;
-                var h = cameraBounds.height / 3;
-                this.deadzone = new Rectangle((cameraBounds.width - w) / 2, (cameraBounds.height - h) / 2, w, h);
-                break;
-            case CameraStyle.lockOn:
-                this.deadzone = new Rectangle(cameraBounds.width / 2, cameraBounds.height / 2, 10, 10);
-                break;
-        }
-    };
-    FollowCamera.prototype.update = function () {
-        var halfScreen = Vector2.multiply(this.camera.bounds.size, new Vector2(0.5));
-        this._worldSpaceDeadZone.x = this.camera.position.x - halfScreen.x + this.deadzone.x + this.focusOffset.x;
-        this._worldSpaceDeadZone.y = this.camera.position.y - halfScreen.y + this.deadzone.y + this.focusOffset.y;
-        this._worldSpaceDeadZone.width = this.deadzone.width;
-        this._worldSpaceDeadZone.height = this.deadzone.height;
-        if (this._targetEntity)
-            this.updateFollow();
-        this.camera.position = Vector2.lerp(this.camera.position, Vector2.add(this.camera.position, this._desiredPositionDelta), this.followLerp);
-        this.camera.entity.roundPosition();
-        if (this.mapLockEnabled) {
-            this.camera.position = this.clampToMapSize(this.camera.position);
-            this.camera.entity.roundPosition();
-        }
-    };
-    FollowCamera.prototype.clampToMapSize = function (position) {
-        var halfScreen = Vector2.multiply(new Vector2(this.camera.bounds.width, this.camera.bounds.height), new Vector2(0.5));
-        var cameraMax = new Vector2(this.mapSize.x - halfScreen.x, this.mapSize.y - halfScreen.y);
-        return Vector2.clamp(position, halfScreen, cameraMax);
-    };
-    FollowCamera.prototype.updateFollow = function () {
-        this._desiredPositionDelta.x = this._desiredPositionDelta.y = 0;
-        if (this._cameraStyle == CameraStyle.lockOn) {
-            var targetX = this._targetEntity.position.x;
-            var targetY = this._targetEntity.position.y;
-            if (this._worldSpaceDeadZone.x > targetX)
-                this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;
-            else if (this._worldSpaceDeadZone.x < targetX)
-                this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;
-            if (this._worldSpaceDeadZone.y < targetY)
-                this._desiredPositionDelta.y = targetY - this._worldSpaceDeadZone.y;
-            else if (this._worldSpaceDeadZone.y > targetY)
-                this._desiredPositionDelta.y = targetY - this._worldSpaceDeadZone.y;
-        }
-        else {
-            if (!this._targetCollider) {
-                this._targetCollider = this._targetEntity.getComponent(Collider);
-                if (!this._targetCollider)
-                    return;
-            }
-            var targetBounds = this._targetEntity.getComponent(Collider).bounds;
-            if (!this._worldSpaceDeadZone.containsRect(targetBounds)) {
-                if (this._worldSpaceDeadZone.left > targetBounds.left)
-                    this._desiredPositionDelta.x = targetBounds.left - this._worldSpaceDeadZone.left;
-                else if (this._worldSpaceDeadZone.right < targetBounds.right)
-                    this._desiredPositionDelta.x = targetBounds.right - this._worldSpaceDeadZone.right;
-                if (this._worldSpaceDeadZone.bottom < targetBounds.bottom)
-                    this._desiredPositionDelta.y = targetBounds.bottom - this._worldSpaceDeadZone.bottom;
-                else if (this._worldSpaceDeadZone.top > targetBounds.top)
-                    this._desiredPositionDelta.y = targetBounds.top - this._worldSpaceDeadZone.top;
-            }
-        }
-    };
-    return FollowCamera;
-}(Component));
-var CameraStyle;
-(function (CameraStyle) {
-    CameraStyle[CameraStyle["lockOn"] = 0] = "lockOn";
-    CameraStyle[CameraStyle["cameraWindow"] = 1] = "cameraWindow";
-})(CameraStyle || (CameraStyle = {}));
 var Mesh = (function (_super) {
     __extends(Mesh, _super);
     function Mesh() {
@@ -2017,14 +1891,14 @@ var RenderableComponent = (function (_super) {
     RenderableComponent.prototype.onBecameVisible = function () { };
     RenderableComponent.prototype.onBecameInvisible = function () { };
     RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
-        this.isVisible = camera.bounds.intersects(this.bounds);
+        this.isVisible = camera.getBounds().intersects(this.getBounds());
         return this.isVisible;
     };
     RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
         this._areBoundsDirty = true;
     };
     return RenderableComponent;
-}(Component));
+}(PooledComponent));
 var ScreenSpaceCamera = (function (_super) {
     __extends(ScreenSpaceCamera, _super);
     function ScreenSpaceCamera() {
@@ -2036,7 +1910,7 @@ var ScreenSpaceCamera = (function (_super) {
 }(Camera));
 var Sprite = (function () {
     function Sprite(texture, sourceRect, origin) {
-        if (sourceRect === void 0) { sourceRect = new Rectangle(texture.textureWidth, texture.textureHeight); }
+        if (sourceRect === void 0) { sourceRect = new Rectangle(0, 0, texture.textureWidth, texture.textureHeight); }
         if (origin === void 0) { origin = sourceRect.getHalfSize(); }
         this.uvs = new Rectangle();
         this.texture2D = texture;
@@ -2070,13 +1944,17 @@ var SpriteRenderer = (function (_super) {
     SpriteRenderer.prototype.setOrigin = function (origin) {
         if (this._origin != origin) {
             this._origin = origin;
-            this._areBoundsDirty = true;
         }
         return this;
     };
     SpriteRenderer.prototype.setSprite = function (sprite) {
         this.removeChildren();
-        this.addChild(new egret.Bitmap(sprite.texture2D));
+        this._sprite = sprite;
+        if (this._sprite)
+            this._origin = this._sprite.origin;
+        this._bitmap = new egret.Bitmap(sprite.texture2D);
+        this.addChild(this._bitmap);
+        return this;
     };
     SpriteRenderer.prototype.setColor = function (color) {
         var colorMatrix = [
@@ -2090,18 +1968,22 @@ var SpriteRenderer = (function (_super) {
         colorMatrix[12] = color % 256 / 255;
         var colorFilter = new egret.ColorMatrixFilter(colorMatrix);
         this.filters = [colorFilter];
+        return this;
     };
     SpriteRenderer.prototype.isVisibleFromCamera = function (camera) {
-        var topLeft = camera.screenToWorldPoint(new Vector2(0, 0));
-        this.isVisible = new Rectangle(topLeft.x, topLeft.y, this.stage.stageWidth, this.stage.stageHeight).intersects(this.bounds);
+        this.isVisible = new Rectangle(0, 0, this.stage.stageWidth, this.stage.stageHeight).intersects(this.bounds);
         this.visible = this.isVisible;
         return this.isVisible;
     };
     SpriteRenderer.prototype.render = function (camera) {
+        this.x = this.entity.position.x - this.origin.x - camera.position.x + camera.origin.x;
+        this.y = this.entity.position.y - this.origin.y - camera.position.y + camera.origin.y;
     };
     SpriteRenderer.prototype.onRemovedFromEntity = function () {
         if (this.parent)
             this.parent.removeChild(this);
+    };
+    SpriteRenderer.prototype.reset = function () {
     };
     return SpriteRenderer;
 }(RenderableComponent));
@@ -3202,17 +3084,6 @@ var PolyLight = (function (_super) {
         _this.computeTriangleIndices();
         return _this;
     }
-    Object.defineProperty(PolyLight.prototype, "bounds", {
-        get: function () {
-            if (this._areBoundsDirty) {
-                this._bounds.calculateBounds(this.entity.position, this._localOffset, new Vector2(this._radius), Vector2.one, 0, this._radius * 2, this._radius * 2);
-                this._areBoundsDirty = false;
-            }
-            return this._bounds;
-        },
-        enumerable: true,
-        configurable: true
-    });
     Object.defineProperty(PolyLight.prototype, "radius", {
         get: function () {
             return this._radius;
@@ -3239,6 +3110,8 @@ var PolyLight = (function (_super) {
         }
     };
     PolyLight.prototype.render = function (camera) {
+    };
+    PolyLight.prototype.reset = function () {
     };
     return PolyLight;
 }(RenderableComponent));
