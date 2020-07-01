@@ -104,23 +104,6 @@ abstract class Collider extends Component{
         this._isParentEntityAddedToScene = false;
     }
 
-    public onEntityTransformChanged(comp: ComponentTransform){
-        switch (comp){
-            case ComponentTransform.position:
-                this._isPositionDirty = true;
-                break;
-            case ComponentTransform.scale:
-                this._isPositionDirty = true;
-                break;
-            case ComponentTransform.rotation:
-                this._isRotationDirty = true;
-                break;
-        }
-
-        if (this._isColliderRegistered)
-            Physics.updateCollider(this);
-    }
-
     public onEnabled(){
         this.registerColliderWithPhysicsSystem();
         this._isPositionDirty = this._isRotationDirty = true;

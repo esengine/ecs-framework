@@ -45,10 +45,6 @@ abstract class Component extends egret.DisplayObjectContainer {
 
     }
 
-    public onEntityTransformChanged(comp: ComponentTransform){
-        
-    }
-
     public update(){
 
     }

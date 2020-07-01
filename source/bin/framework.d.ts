@@ -150,7 +150,6 @@ declare abstract class Component extends egret.DisplayObjectContainer {
     onRemovedFromEntity(): void;
     onEnabled(): void;
     onDisabled(): void;
-    onEntityTransformChanged(comp: ComponentTransform): void;
     update(): void;
     debugRender(): void;
     registerComponent(): void;
@@ -193,7 +192,6 @@ declare class Entity extends egret.DisplayObjectContainer {
     update(): void;
     onAddedToScene(): void;
     onRemovedFromScene(): void;
-    onTransformChanged(comp: ComponentTransform): void;
     destroy(): void;
 }
 declare class Scene extends egret.DisplayObjectContainer {
@@ -240,70 +238,6 @@ declare class SceneManager {
     static render(): void;
     static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
 }
-declare enum DirtyType {
-    clean = 0,
-    positionDirty = 1,
-    scaleDirty = 2,
-    rotationDirty = 3
-}
-declare enum ComponentTransform {
-    position = 0,
-    scale = 1,
-    rotation = 2
-}
-declare class Transform {
-    readonly entity: Entity;
-    private _children;
-    private _parent;
-    private _localPosition;
-    private _localRotation;
-    private _localScale;
-    private _translationMatrix;
-    private _rotationMatrix;
-    private _scaleMatrix;
-    private _worldTransform;
-    private _worldToLocalTransform;
-    private _worldInverseTransform;
-    private _rotation;
-    private _position;
-    private _scale;
-    private _localTransform;
-    private _hierachyDirty;
-    private _localDirty;
-    private _localPositionDirty;
-    private _localScaleDirty;
-    private _localRotationDirty;
-    private _positionDirty;
-    private _worldToLocalDirty;
-    private _worldInverseDirty;
-    readonly childCount: number;
-    constructor(entity: Entity);
-    getChild(index: number): Transform;
-    readonly worldInverseTransform: Matrix2D;
-    readonly localToWorldTransform: Matrix2D;
-    readonly worldToLocalTransform: Matrix2D;
-    parent: Transform;
-    setParent(parent: Transform): this;
-    rotation: number;
-    localRotation: number;
-    position: Vector2;
-    localPosition: Vector2;
-    scale: Vector2;
-    localScale: Vector2;
-    rotationDegrees: number;
-    localRotationDegrees: number;
-    setLocalScale(scale: Vector2): this;
-    setScale(scale: Vector2): this;
-    setLocalRotationDegrees(degrees: number): this;
-    setLocalRotation(radians: number): this;
-    setRotation(radians: number): this;
-    setRotationDegrees(degrees: number): this;
-    setLocalPosition(localPosition: Vector2): this;
-    setPosition(position: Vector2): this;
-    setDirty(dirtyFlagType: DirtyType): void;
-    roundPosition(): void;
-    updateTransform(): void;
-}
 declare class Camera extends Component {
     private _zoom;
     private _origin;
@@ -347,26 +281,6 @@ declare class ComponentPool<T extends PooledComponent> {
     obtain(): T;
     free(component: T): void;
 }
-declare class Mesh extends Component {
-    private _verts;
-    private _primitiveCount;
-    private _triangles;
-    private _topLeftVertPosition;
-    private _width;
-    private _height;
-    initialize(): void;
-    setVertPosition(positions: Vector2[]): this;
-    setTriangles(triangles: number[]): this;
-    recalculateBounds(): this;
-    render(): void;
-}
-declare class VertexPosition {
-    position: Vector2;
-    constructor(position: Vector2);
-}
-declare class PolygonMesh extends Mesh {
-    constructor(points: Vector2[], arePointsCCW?: boolean);
-}
 declare abstract class PooledComponent extends Component {
     abstract reset(): any;
 }
@@ -386,10 +300,15 @@ declare abstract class RenderableComponent extends PooledComponent implements IR
     protected onBecameInvisible(): void;
     abstract render(camera: Camera): any;
     isVisibleFromCamera(camera: Camera): boolean;
-    onEntityTransformChanged(comp: ComponentTransform): void;
 }
-declare class ScreenSpaceCamera extends Camera {
-    protected updateMatrixes(): void;
+declare class Mesh extends RenderableComponent {
+    private _mesh;
+    constructor();
+    setTexture(texture: egret.Texture): Mesh;
+    onAddedToEntity(): void;
+    onRemovedFromEntity(): void;
+    render(camera: Camera): void;
+    reset(): void;
 }
 declare class Sprite {
     texture2D: egret.Texture;
@@ -446,7 +365,6 @@ declare abstract class Collider extends Component {
     collidesWith(collider: Collider, motion: Vector2): CollisionResult;
     onAddedToEntity(): void;
     onRemovedFromEntity(): void;
-    onEntityTransformChanged(comp: ComponentTransform): void;
     onEnabled(): void;
     onDisabled(): void;
 }
@@ -528,7 +446,6 @@ declare class ComponentList {
     getComponent<T extends Component>(type: any, onlyReturnInitializedComponents: boolean): T;
     getComponents(typeName: string | any, components?: any): any;
     update(): void;
-    onEntityTransformChanged(comp: any): void;
 }
 declare class ComponentTypeManager {
     private static _componentTypesMask;
@@ -632,8 +549,6 @@ declare class Viewport {
     bounds: Rectangle;
     constructor(x: number, y: number, width: number, height: number);
 }
-declare abstract class GraphicsResource {
-}
 declare class GaussianBlurEffect extends egret.CustomFilter {
     private static blur_frag;
     constructor();
@@ -655,16 +570,6 @@ declare class PostProcessor {
     onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
     protected drawFullscreenQuad(): void;
     unload(): void;
-}
-declare class BloomSettings {
-    readonly threshold: any;
-    readonly blurAmount: any;
-    readonly intensity: any;
-    readonly baseIntensity: any;
-    readonly saturation: any;
-    readonly baseStaturation: any;
-    constructor(bloomThreshold: number, blurAmount: number, bloomIntensity: number, baseIntensity: number, bloomSaturation: number, baseSaturation: number);
-    static presetSettings: BloomSettings[];
 }
 declare class GaussianBlurPostProcessor extends PostProcessor {
     onAddedToScene(scene: Scene): void;
