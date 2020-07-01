@@ -1,3 +1,4 @@
+///<reference path="./PooledComponent.ts" />
 /** 
  * 所有可渲染组件的基类 
  */
@@ -51,9 +52,5 @@ abstract class RenderableComponent extends PooledComponent implements IRenderabl
     public isVisibleFromCamera(camera: Camera): boolean{
         this.isVisible = camera.getBounds().intersects(this.getBounds());
         return this.isVisible;
-    }
-
-    public onEntityTransformChanged(comp: ComponentTransform){
-        this._areBoundsDirty = true;
     }
 }

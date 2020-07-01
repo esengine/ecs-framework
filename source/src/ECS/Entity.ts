@@ -193,10 +193,6 @@ class Entity extends egret.DisplayObjectContainer {
             this.components.removeAllComponents();
     }
 
-    public onTransformChanged(comp: ComponentTransform){
-        this.components.onEntityTransformChanged(comp);
-    }
-
     public destroy(){
         this._isDestoryed = true;
         this.scene.entities.remove(this);
