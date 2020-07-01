@@ -1,0 +1,10 @@
+---
+image: restyled/restyler-prettier:v2.0.2-1
+command:
+- prettier
+- "--write"
+arguments: []
+include:
+- "**/*.js"
+- "**/*.jsx"
+interpreters: []
