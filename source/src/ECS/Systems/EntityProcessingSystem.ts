@@ -7,12 +7,21 @@ abstract class EntityProcessingSystem extends EntitySystem {
         super(matcher);
     }
 
+   
+    /**
+     * 处理特定的实体 
+     * @param entity 
+     */
     public abstract processEntity(entity: Entity);
 
     public lateProcessEntity(entity: Entity) {
 
     }
 
+    /**
+     * 遍历这个系统的所有实体并逐个处理它们
+     * @param entities 
+     */
     protected process(entities: Entity[]) {
         entities.forEach(entity => this.processEntity(entity));
     }
