@@ -1609,8 +1609,8 @@ var SpriteRenderer = (function (_super) {
         this._sprite = sprite;
         if (this._sprite)
             this._origin = this._sprite.origin;
-        this._bitmap = new egret.Bitmap(sprite.texture2D);
-        this.addChild(this._bitmap);
+        this.bitmap = new egret.Bitmap(sprite.texture2D);
+        this.addChild(this.bitmap);
         return this;
     };
     SpriteRenderer.prototype.setColor = function (color) {
@@ -1738,6 +1738,46 @@ var State;
     State[State["paused"] = 2] = "paused";
     State[State["completed"] = 3] = "completed";
 })(State || (State = {}));
+var TiledSpriteRenderer = (function (_super) {
+    __extends(TiledSpriteRenderer, _super);
+    function TiledSpriteRenderer(sprite) {
+        var _this = _super.call(this) || this;
+        _this.setSprite(sprite);
+        _this.sourceRect = sprite.sourceRect;
+        return _this;
+    }
+    Object.defineProperty(TiledSpriteRenderer.prototype, "scrollX", {
+        get: function () {
+            return this.sourceRect.x;
+        },
+        set: function (value) {
+            this.sourceRect.x = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(TiledSpriteRenderer.prototype, "scrollY", {
+        get: function () {
+            return this.sourceRect.y;
+        },
+        set: function (value) {
+            this.sourceRect.y = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    TiledSpriteRenderer.prototype.render = function (camera) {
+        if (!this.sprite)
+            return;
+        _super.prototype.render.call(this, camera);
+        var renderTexture = new egret.RenderTexture();
+        var targetTexture = new egret.Bitmap(this.sprite.texture2D);
+        var clipBounds = new egret.Rectangle(this.sourceRect.x, this.sourceRect.y, this.sourceRect.width, this.sourceRect.height);
+        renderTexture.drawToTexture(targetTexture, clipBounds);
+        this.bitmap.texture = renderTexture;
+    };
+    return TiledSpriteRenderer;
+}(SpriteRenderer));
 var Mover = (function (_super) {
     __extends(Mover, _super);
     function Mover() {

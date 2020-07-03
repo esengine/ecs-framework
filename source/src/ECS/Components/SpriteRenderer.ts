@@ -1,7 +1,7 @@
 class SpriteRenderer extends RenderableComponent {
     private _origin: Vector2;
-    private _bitmap: egret.Bitmap;
     private _sprite: Sprite;
+    protected bitmap: egret.Bitmap;
 
     public get origin(){
         return this._origin;
@@ -28,8 +28,8 @@ class SpriteRenderer extends RenderableComponent {
         this.removeChildren();
         this._sprite = sprite;
         if (this._sprite) this._origin = this._sprite.origin;
-        this._bitmap = new egret.Bitmap(sprite.texture2D);
-        this.addChild(this._bitmap);
+        this.bitmap = new egret.Bitmap(sprite.texture2D);
+        this.addChild(this.bitmap);
 
         return this;
     }
