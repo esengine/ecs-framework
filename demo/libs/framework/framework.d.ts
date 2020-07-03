@@ -143,6 +143,7 @@ declare abstract class Component extends egret.DisplayObjectContainer {
     entity: Entity;
     private _enabled;
     updateInterval: number;
+    userData: any;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
     initialize(): void;
@@ -318,18 +319,57 @@ declare class Sprite {
     readonly uvs: Rectangle;
     constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
 }
+declare class SpriteAnimation {
+    readonly sprites: Sprite[];
+    readonly frameRate: number;
+    constructor(sprites: Sprite[], frameRate: number);
+}
 declare class SpriteRenderer extends RenderableComponent {
     private _origin;
     private _bitmap;
     private _sprite;
     origin: Vector2;
     setOrigin(origin: Vector2): this;
+    sprite: Sprite;
     setSprite(sprite: Sprite): SpriteRenderer;
     setColor(color: number): SpriteRenderer;
     isVisibleFromCamera(camera: Camera): boolean;
     render(camera: Camera): void;
     onRemovedFromEntity(): void;
     reset(): void;
+}
+declare class SpriteAnimator extends SpriteRenderer {
+    onAnimationCompletedEvent: Function;
+    speed: number;
+    animationState: State;
+    currentAnimation: SpriteAnimation;
+    currentAnimationName: string;
+    currentFrame: number;
+    readonly isRunning: boolean;
+    private _animations;
+    private _elapsedTime;
+    private _loopMode;
+    constructor(sprite?: Sprite);
+    addAnimation(name: string, animation: SpriteAnimation): SpriteAnimator;
+    play(name: string, loopMode?: LoopMode): void;
+    isAnimationActive(name: string): boolean;
+    pause(): void;
+    unPause(): void;
+    stop(): void;
+    update(): void;
+}
+declare enum LoopMode {
+    loop = 0,
+    once = 1,
+    clampForever = 2,
+    pingPong = 3,
+    pingPongOnce = 4
+}
+declare enum State {
+    none = 0,
+    running = 1,
+    paused = 2,
+    completed = 3
 }
 interface ITriggerListener {
     onTriggerEnter(other: Collider, local: Collider): any;
@@ -643,31 +683,6 @@ declare class WindTransition extends SceneTransition {
     easeType: (t: number) => number;
     constructor(sceneLoadAction: Function);
     onBeginTransition(): Promise<void>;
-}
-declare class BaseView extends egret.DisplayObjectContainer {
-    protected _data: any;
-    protected init(): void;
-    show(data?: any): void;
-    refreshData(data?: any): void;
-    refreshView(): void;
-    close(): void;
-    destroy(): void;
-}
-declare class BaseFuiView extends BaseView {
-    protected _name: string;
-    constructor(name: string);
-}
-declare class BaseSingle {
-    private static _instance;
-    static getInstance<T>(): T;
-    protected clearFuiObj(obj: fairygui.GObject): boolean;
-}
-declare class ViewManager extends BaseSingle {
-    private _openDic;
-    refreshView(viewClass: any, data?: any): void;
-    openView(viewClass: any, data?: any, complete?: Function): void;
-    getView<T>(viewClass: any): T;
-    existView(viewClass: any): boolean;
 }
 declare class Flags {
     static isFlagSet(self: number, flag: number): boolean;

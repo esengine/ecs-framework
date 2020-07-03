@@ -1566,6 +1566,13 @@ var Sprite = (function () {
     }
     return Sprite;
 }());
+var SpriteAnimation = (function () {
+    function SpriteAnimation(sprites, frameRate) {
+        this.sprites = sprites;
+        this.frameRate = frameRate;
+    }
+    return SpriteAnimation;
+}());
 var SpriteRenderer = (function (_super) {
     __extends(SpriteRenderer, _super);
     function SpriteRenderer() {
@@ -1587,6 +1594,16 @@ var SpriteRenderer = (function (_super) {
         }
         return this;
     };
+    Object.defineProperty(SpriteRenderer.prototype, "sprite", {
+        get: function () {
+            return this._sprite;
+        },
+        set: function (value) {
+            this.setSprite(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
     SpriteRenderer.prototype.setSprite = function (sprite) {
         this.removeChildren();
         this._sprite = sprite;
@@ -1627,6 +1644,100 @@ var SpriteRenderer = (function (_super) {
     };
     return SpriteRenderer;
 }(RenderableComponent));
+var SpriteAnimator = (function (_super) {
+    __extends(SpriteAnimator, _super);
+    function SpriteAnimator(sprite) {
+        var _this = _super.call(this) || this;
+        _this.speed = 1;
+        _this.animationState = State.none;
+        _this._animations = new Map();
+        _this._elapsedTime = 0;
+        if (sprite)
+            _this.setSprite(sprite);
+        return _this;
+    }
+    Object.defineProperty(SpriteAnimator.prototype, "isRunning", {
+        get: function () {
+            return this.animationState == State.running;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    SpriteAnimator.prototype.addAnimation = function (name, animation) {
+        if (!this.sprite && animation.sprites.length > 0)
+            this.setSprite(animation.sprites[0]);
+        this._animations[name] = animation;
+        return this;
+    };
+    SpriteAnimator.prototype.play = function (name, loopMode) {
+        if (loopMode === void 0) { loopMode = null; }
+        this.currentAnimation = this._animations[name];
+        this.currentAnimationName = name;
+        this.currentFrame = 0;
+        this.animationState = State.running;
+        this.sprite = this.currentAnimation.sprites[0];
+        this._elapsedTime = 0;
+        this._loopMode = loopMode ? loopMode : LoopMode.loop;
+    };
+    SpriteAnimator.prototype.isAnimationActive = function (name) {
+        return this.currentAnimation && this.currentAnimationName == name;
+    };
+    SpriteAnimator.prototype.pause = function () {
+        this.animationState = State.paused;
+    };
+    SpriteAnimator.prototype.unPause = function () {
+        this.animationState = State.running;
+    };
+    SpriteAnimator.prototype.stop = function () {
+        this.currentAnimation = null;
+        this.currentAnimationName = null;
+        this.currentFrame = 0;
+        this.animationState = State.none;
+    };
+    SpriteAnimator.prototype.update = function () {
+        if (this.animationState != State.running || !this.currentAnimation)
+            return;
+        var animation = this.currentAnimation;
+        var secondsPerFrame = 1 / (animation.frameRate * this.speed);
+        var iterationDuration = secondsPerFrame * animation.sprites.length;
+        this._elapsedTime += Time.deltaTime;
+        var time = Math.abs(this._elapsedTime);
+        if (this._loopMode == LoopMode.once && time > iterationDuration ||
+            this._loopMode == LoopMode.pingPongOnce && time > iterationDuration * 2) {
+            this.animationState = State.completed;
+            this._elapsedTime = 0;
+            this.currentFrame = 0;
+            this.sprite = animation.sprites[this.currentFrame];
+            return;
+        }
+        var i = Math.floor(time / secondsPerFrame);
+        var n = animation.sprites.length;
+        if (n > 2 && (this._loopMode == LoopMode.pingPong || this._loopMode == LoopMode.pingPongOnce)) {
+            var maxIndex = n - 1;
+            this.currentFrame = maxIndex - Math.abs(maxIndex - i % (maxIndex * 2));
+        }
+        else {
+            this.currentFrame = i % n;
+        }
+        this.sprite = animation.sprites[this.currentFrame];
+    };
+    return SpriteAnimator;
+}(SpriteRenderer));
+var LoopMode;
+(function (LoopMode) {
+    LoopMode[LoopMode["loop"] = 0] = "loop";
+    LoopMode[LoopMode["once"] = 1] = "once";
+    LoopMode[LoopMode["clampForever"] = 2] = "clampForever";
+    LoopMode[LoopMode["pingPong"] = 3] = "pingPong";
+    LoopMode[LoopMode["pingPongOnce"] = 4] = "pingPongOnce";
+})(LoopMode || (LoopMode = {}));
+var State;
+(function (State) {
+    State[State["none"] = 0] = "none";
+    State[State["running"] = 1] = "running";
+    State[State["paused"] = 2] = "paused";
+    State[State["completed"] = 3] = "completed";
+})(State || (State = {}));
 var Mover = (function (_super) {
     __extends(Mover, _super);
     function Mover() {
@@ -2968,103 +3079,6 @@ var WindTransition = (function (_super) {
     };
     return WindTransition;
 }(SceneTransition));
-var BaseView = (function (_super) {
-    __extends(BaseView, _super);
-    function BaseView() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    BaseView.prototype.init = function () {
-    };
-    BaseView.prototype.show = function (data) {
-    };
-    BaseView.prototype.refreshData = function (data) {
-        this._data = data;
-    };
-    BaseView.prototype.refreshView = function () {
-    };
-    BaseView.prototype.close = function () {
-    };
-    BaseView.prototype.destroy = function () {
-        if (this.parent) {
-            this.parent.removeChild(this);
-        }
-        while (this.numChildren > 0) {
-            this.removeChildAt(0);
-        }
-    };
-    return BaseView;
-}(egret.DisplayObjectContainer));
-var BaseFuiView = (function (_super) {
-    __extends(BaseFuiView, _super);
-    function BaseFuiView(name) {
-        var _this = _super.call(this) || this;
-        _this.name = name;
-        return _this;
-    }
-    return BaseFuiView;
-}(BaseView));
-var BaseSingle = (function () {
-    function BaseSingle() {
-    }
-    BaseSingle.getInstance = function () {
-        if (this._instance == null) {
-            this._instance = new this();
-        }
-        return this._instance;
-    };
-    BaseSingle.prototype.clearFuiObj = function (obj) {
-        if (obj) {
-            egret.Tween.removeTweens(obj.displayObject);
-            if (obj.displayObject && obj.displayObject.parent) {
-                obj.displayObject.parent.removeChild(obj.displayObject);
-            }
-            obj.dispose();
-            obj = null;
-            return true;
-        }
-        return false;
-    };
-    return BaseSingle;
-}());
-var ViewManager = (function (_super) {
-    __extends(ViewManager, _super);
-    function ViewManager() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this._openDic = [];
-        return _this;
-    }
-    ViewManager.prototype.refreshView = function (viewClass, data) {
-        var view = this.getView(viewClass);
-        if (view) {
-            view.refreshData(data);
-            view.refreshView();
-        }
-    };
-    ViewManager.prototype.openView = function (viewClass, data, complete) {
-        var newView = this.getView(viewClass);
-        if (!newView) {
-            newView = new viewClass();
-        }
-        if (this.existView(viewClass)) {
-            newView.refreshData(data);
-            newView.refreshView();
-            return;
-        }
-        this._openDic.push(newView);
-    };
-    ViewManager.prototype.getView = function (viewClass) {
-        var result = this._openDic.firstOrDefault(function (a) {
-            return a instanceof viewClass;
-        });
-        return result;
-    };
-    ViewManager.prototype.existView = function (viewClass) {
-        return this._openDic.findIndex(function (a) {
-            return a instanceof viewClass;
-        }) != -1;
-    };
-    return ViewManager;
-}(BaseSingle));
 var Flags = (function () {
     function Flags() {
     }
