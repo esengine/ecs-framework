@@ -326,8 +326,8 @@ declare class SpriteAnimation {
 }
 declare class SpriteRenderer extends RenderableComponent {
     private _origin;
-    private _bitmap;
     private _sprite;
+    protected bitmap: egret.Bitmap;
     origin: Vector2;
     setOrigin(origin: Vector2): this;
     sprite: Sprite;
@@ -370,6 +370,13 @@ declare enum State {
     running = 1,
     paused = 2,
     completed = 3
+}
+declare class TiledSpriteRenderer extends SpriteRenderer {
+    protected sourceRect: Rectangle;
+    scrollX: number;
+    scrollY: number;
+    constructor(sprite: Sprite);
+    render(camera: Camera): void;
 }
 interface ITriggerListener {
     onTriggerEnter(other: Collider, local: Collider): any;
