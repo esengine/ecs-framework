@@ -1,7 +1,7 @@
 {
 	"groups": [
 		{
-			"keys": "checkbox_select_disabled_png,checkbox_select_down_png,checkbox_select_up_png,checkbox_unselect_png,selected_png,border_png,header_png,radiobutton_select_disabled_png,radiobutton_select_down_png,radiobutton_select_up_png,radiobutton_unselect_png,roundthumb_png,thumb_png,track_png,tracklight_png,handle_png,off_png,on_png,button_down_png,button_up_png,thumb_pb_png,track_pb_png,track_sb_png,bg_jpg,egret_icon_png,description_json,isometric_grass_and_water_json,isometric_grass_and_water_png",
+			"keys": "checkbox_select_disabled_png,checkbox_select_down_png,checkbox_select_up_png,checkbox_unselect_png,selected_png,border_png,header_png,radiobutton_select_disabled_png,radiobutton_select_down_png,radiobutton_select_up_png,radiobutton_unselect_png,roundthumb_png,thumb_png,track_png,tracklight_png,handle_png,off_png,on_png,button_down_png,button_up_png,thumb_pb_png,track_pb_png,track_sb_png,bg_jpg,egret_icon_png,description_json",
 			"name": "preload"
 		}
 	],
@@ -132,19 +132,19 @@
 			"name": "egret_icon_png"
 		},
 		{
-			"name": "description_json",
+			"url": "config/description.json",
 			"type": "json",
-			"url": "config/description.json"
+			"name": "description_json"
 		},
 		{
-			"name": "isometric_grass_and_water_json",
+			"url": "assets/isometric_grass_and_water.json",
 			"type": "json",
-			"url": "assets/isometric_grass_and_water.json"
+			"name": "isometric_grass_and_water_json"
 		},
 		{
-			"name": "isometric_grass_and_water_png",
+			"url": "assets/isometric_grass_and_water.png",
 			"type": "image",
-			"url": "assets/isometric_grass_and_water.png"
+			"name": "isometric_grass_and_water_png"
 		}
 	]
 }
