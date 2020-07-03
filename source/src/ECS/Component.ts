@@ -2,6 +2,8 @@ abstract class Component extends egret.DisplayObjectContainer {
     public entity: Entity;
     private _enabled: boolean = true;
     public updateInterval: number = 1;
+    /** 允许用户为实体存入信息 */
+    public userData: any;
 
     public get enabled(){
         return this.entity ? this.entity.enabled && this._enabled : this._enabled;

@@ -132,9 +132,19 @@
 			"name": "egret_icon_png"
 		},
 		{
-			"name": "description_json",
+			"url": "config/description.json",
 			"type": "json",
-			"url": "config/description.json"
+			"name": "description_json"
+		},
+		{
+			"url": "assets/isometric_grass_and_water.json",
+			"type": "json",
+			"name": "isometric_grass_and_water_json"
+		},
+		{
+			"url": "assets/isometric_grass_and_water.png",
+			"type": "image",
+			"name": "isometric_grass_and_water_png"
 		}
 	]
 }

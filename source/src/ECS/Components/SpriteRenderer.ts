@@ -15,6 +15,14 @@ class SpriteRenderer extends RenderableComponent {
         }
         return this;
     }
+    /** 应该由这个精灵显示的精灵。当设置时，精灵的原点也被设置为匹配精灵.origin。 */
+    public get sprite(): Sprite{
+        return this._sprite;
+    }
+    /** 应该由这个精灵显示的精灵。当设置时，精灵的原点也被设置为匹配精灵.origin。 */
+    public set sprite(value: Sprite){
+        this.setSprite(value);
+    }
 
     public setSprite(sprite: Sprite): SpriteRenderer{
         this.removeChildren();
