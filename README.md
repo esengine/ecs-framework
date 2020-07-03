@@ -22,10 +22,8 @@
 - [x] Dijkstra 寻路算法
 - [x] 事件处理器
 
-## 计划列表
-
-- [ ] ECS
-  - [ ] 组件列表
+- [x] ECS
+  - [x] 组件列表
     - [x] 碰撞组件
     - [x] 移动组件
     - [ ] 刚体组件
@@ -37,16 +35,14 @@
     - [ ] 相机震动组件
     - [ ] 霓虹灯组件
     - [x] 跟随相机组件
-  - [ ] 系统列表
-    - [ ] 被动系统
-    - [ ] 协调系统
-- [ ] 简易MVC框架
+  - [x] 系统列表
+    - [x] 被动系统
+    - [x] 协调系统
 - [ ] 数学库
   - [ ] 贝塞尔曲线
   - [ ] 快速随机数类
-  - [ ] 浮点助手类
-- [ ] 高性能数组
 
 ## 作者其他库（egret）
 
-- [x] [行为树/实用AI 系统](https://github.com/esengine/egret-BehaviourTree-ai)
+- [行为树/实用AI 系统](https://github.com/esengine/egret-BehaviourTree-ai)
+
