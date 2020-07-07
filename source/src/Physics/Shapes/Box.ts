@@ -25,6 +25,22 @@ class Box extends Polygon {
      * 
      * @param other 
      */
+    public overlaps(other: Shape){
+        if (this.isUnrotated){
+            if (other instanceof Box && other.isUnrotated)
+                return this.bounds.intersects(other.bounds);
+
+            if (other instanceof Circle)
+                return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
+        }
+
+        return super.overlaps(other);
+    }
+
+    /**
+     * 
+     * @param other 
+     */
     public collidesWithShape(other: Shape){
         if (this.isUnrotated && other instanceof Box && other.isUnrotated){
             return ShapeCollisions.boxToBox(this, other);

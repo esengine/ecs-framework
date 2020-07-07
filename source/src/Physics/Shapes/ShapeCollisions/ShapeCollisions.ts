@@ -270,9 +270,11 @@ class ShapeCollisions {
             
             result.normal = new Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
             result.normal.normalize();
+
+            return result;
         }
 
-        return result;
+        return null;
     }
 
     private static minkowskiDifference(first: Box, second: Box){

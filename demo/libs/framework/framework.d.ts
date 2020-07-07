@@ -385,7 +385,10 @@ interface ITriggerListener {
 declare class Mover extends Component {
     private _triggerHelper;
     onAddedToEntity(): void;
-    calculateMovement(motion: Vector2): CollisionResult;
+    calculateMovement(motion: Vector2): {
+        collisionResult: CollisionResult;
+        motion: Vector2;
+    };
     applyMovement(motion: Vector2): void;
     move(motion: Vector2): CollisionResult;
 }
@@ -839,8 +842,14 @@ declare class Physics {
     static reset(): void;
     static clear(): void;
     static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
-    static boxcastBroadphase(rect: Rectangle, layerMask?: number): Collider[];
-    static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Collider[];
+    static boxcastBroadphase(rect: Rectangle, layerMask?: number): {
+        colliders: Collider[];
+        rect: Rectangle;
+    };
+    static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): {
+        tempHashSet: Collider[];
+        bounds: Rectangle;
+    };
     static addCollider(collider: Collider): void;
     static removeCollider(collider: Collider): void;
     static updateCollider(collider: Collider): void;
@@ -885,6 +894,7 @@ declare class Box extends Polygon {
     height: number;
     constructor(width: number, height: number);
     private static buildBox;
+    overlaps(other: Shape): any;
     collidesWithShape(other: Shape): any;
     updateBox(width: number, height: number): void;
     containsPoint(point: Vector2): boolean;
@@ -934,7 +944,10 @@ declare class SpatialHash {
     register(collider: Collider): void;
     clear(): void;
     overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: any): number;
-    aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
+    aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): {
+        tempHashSet: Collider[];
+        bounds: Rectangle;
+    };
     private cellAtPosition;
     private cellCoords;
 }

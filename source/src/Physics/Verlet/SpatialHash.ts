@@ -63,7 +63,9 @@ class SpatialHash {
         this._overlapTestCircle.position = circleCenter;
         
         let resultCounter = 0;
-        let potentials = this.aabbBroadphase(bounds, null, layerMask);
+        let aabbBroadphaseResult = this.aabbBroadphase(bounds, null, layerMask);
+        bounds = aabbBroadphaseResult.bounds;
+        let potentials = aabbBroadphaseResult.tempHashSet;
         for (let i = 0; i < potentials.length; i++) {
             let collider = potentials[i];
             if (collider instanceof BoxCollider) {
@@ -106,7 +108,7 @@ class SpatialHash {
             }
         }
 
-        return this._tempHashSet;
+        return {tempHashSet: this._tempHashSet, bounds: bounds};
     }
 
     private cellAtPosition(x: number, y: number, createCellIfEmpty: boolean = false) {

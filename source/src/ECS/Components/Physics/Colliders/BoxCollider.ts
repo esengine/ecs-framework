@@ -43,6 +43,7 @@ class BoxCollider extends Collider {
     constructor(){
         super();
 
+        // 我们在这里插入一个1x1框作为占位符，直到碰撞器在下一阵被添加到实体并可以获得更精确的自动调整大小数据
         this.shape = new Box(1, 1);
         this._colliderRequiresAutoSizing = true;
     }

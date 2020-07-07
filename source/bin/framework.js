@@ -1799,7 +1799,9 @@ var Mover = (function (_super) {
             var bounds = collider.bounds;
             bounds.x += motion.x;
             bounds.y += motion.y;
-            var neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
+            var boxcastResult = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
+            bounds = boxcastResult.bounds;
+            var neighbors = boxcastResult.tempHashSet;
             for (var j = 0; j < neighbors.length; j++) {
                 var neighbor = neighbors[j];
                 if (neighbor.isTrigger)
@@ -1814,7 +1816,7 @@ var Mover = (function (_super) {
             }
         }
         ListPool.free(colliders);
-        return collisionResult;
+        return { collisionResult: collisionResult, motion: motion };
     };
     Mover.prototype.applyMovement = function (motion) {
         this.entity.position = Vector2.add(this.entity.position, motion);
@@ -1822,7 +1824,9 @@ var Mover = (function (_super) {
             this._triggerHelper.update();
     };
     Mover.prototype.move = function (motion) {
-        var collisionResult = this.calculateMovement(motion);
+        var movementResult = this.calculateMovement(motion);
+        var collisionResult = movementResult.collisionResult;
+        motion = movementResult.motion;
         this.applyMovement(motion);
         return collisionResult;
     };
@@ -3679,7 +3683,9 @@ var ColliderTriggerHelper = (function () {
         var colliders = this._entity.getComponents(Collider);
         for (var i = 0; i < colliders.length; i++) {
             var collider = colliders[i];
-            var neighbors = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
+            var boxcastResult = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
+            collider.bounds = boxcastResult.rect;
+            var neighbors = boxcastResult.colliders;
             var _loop_5 = function (j) {
                 var neighbor = neighbors[j];
                 if (!collider.isTrigger && !neighbor.isTrigger)
@@ -3899,7 +3905,8 @@ var Physics = (function () {
     };
     Physics.boxcastBroadphase = function (rect, layerMask) {
         if (layerMask === void 0) { layerMask = this.allLayers; }
-        return this._spatialHash.aabbBroadphase(rect, null, layerMask);
+        var boxcastResult = this._spatialHash.aabbBroadphase(rect, null, layerMask);
+        return { colliders: boxcastResult.tempHashSet, rect: boxcastResult.bounds };
     };
     Physics.boxcastBroadphaseExcludingSelf = function (collider, rect, layerMask) {
         if (layerMask === void 0) { layerMask = this.allLayers; }
@@ -4103,6 +4110,15 @@ var Box = (function (_super) {
         verts[2] = new Vector2(halfWidth, halfHeight);
         verts[3] = new Vector2(-halfWidth, halfHeight);
         return verts;
+    };
+    Box.prototype.overlaps = function (other) {
+        if (this.isUnrotated) {
+            if (other instanceof Box && other.isUnrotated)
+                return this.bounds.intersects(other.bounds);
+            if (other instanceof Circle)
+                return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
+        }
+        return _super.prototype.overlaps.call(this, other);
     };
     Box.prototype.collidesWithShape = function (other) {
         if (this.isUnrotated && other instanceof Box && other.isUnrotated) {
@@ -4367,8 +4383,9 @@ var ShapeCollisions = (function () {
                 return false;
             result.normal = new Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
             result.normal.normalize();
+            return result;
         }
-        return result;
+        return null;
     };
     ShapeCollisions.minkowskiDifference = function (first, second) {
         var positionOffset = Vector2.subtract(first.position, Vector2.add(first.bounds.location, Vector2.divide(first.bounds.size, new Vector2(2))));
@@ -4428,7 +4445,9 @@ var SpatialHash = (function () {
         this._overlapTestCircle.radius = radius;
         this._overlapTestCircle.position = circleCenter;
         var resultCounter = 0;
-        var potentials = this.aabbBroadphase(bounds, null, layerMask);
+        var aabbBroadphaseResult = this.aabbBroadphase(bounds, null, layerMask);
+        bounds = aabbBroadphaseResult.bounds;
+        var potentials = aabbBroadphaseResult.tempHashSet;
         for (var i = 0; i < potentials.length; i++) {
             var collider = potentials[i];
             if (collider instanceof BoxCollider) {
@@ -4463,7 +4482,7 @@ var SpatialHash = (function () {
                 }
             }
         }
-        return this._tempHashSet;
+        return { tempHashSet: this._tempHashSet, bounds: bounds };
     };
     SpatialHash.prototype.cellAtPosition = function (x, y, createCellIfEmpty) {
         if (createCellIfEmpty === void 0) { createCellIfEmpty = false; }

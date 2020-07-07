@@ -18,7 +18,8 @@ class Physics {
     }
 
     public static boxcastBroadphase(rect: Rectangle, layerMask: number = this.allLayers){
-        return this._spatialHash.aabbBroadphase(rect, null, layerMask);
+        let boxcastResult = this._spatialHash.aabbBroadphase(rect, null, layerMask);
+        return {colliders: boxcastResult.tempHashSet, rect: boxcastResult.bounds};
     }
 
     public static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask = this.allLayers){

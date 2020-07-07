@@ -22,7 +22,9 @@ class Mover extends Component {
             let bounds = collider.bounds;
             bounds.x += motion.x;
             bounds.y += motion.y;
-            let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
+            let boxcastResult = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
+            bounds = boxcastResult.bounds;
+            let neighbors = boxcastResult.tempHashSet;
 
             for (let j = 0; j < neighbors.length; j ++){
                 let neighbor = neighbors[j];
@@ -42,7 +44,7 @@ class Mover extends Component {
 
         ListPool.free(colliders);
 
-        return collisionResult;
+        return {collisionResult: collisionResult, motion: motion};
     }
 
     public applyMovement(motion: Vector2){
@@ -53,7 +55,9 @@ class Mover extends Component {
     }
 
     public move(motion: Vector2){
-        let collisionResult = this.calculateMovement(motion);
+        let movementResult = this.calculateMovement(motion);
+        let collisionResult = movementResult.collisionResult;
+        motion = movementResult.motion;
 
         this.applyMovement(motion);
 
