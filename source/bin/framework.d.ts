@@ -743,6 +743,7 @@ declare class Rectangle {
     height: number;
     private _tempMat;
     private _transformMat;
+    readonly max: Vector2;
     readonly left: number;
     readonly right: number;
     readonly top: number;
@@ -760,6 +761,7 @@ declare class Rectangle {
         res: Vector2;
         edgeNormal: Vector2;
     };
+    getClosestPointOnBoundsToOrigin(): Vector2;
     calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
     static rectEncompassingPoints(points: Vector2[]): Rectangle;
 }
@@ -883,6 +885,7 @@ declare class Box extends Polygon {
     height: number;
     constructor(width: number, height: number);
     private static buildBox;
+    collidesWithShape(other: Shape): any;
     updateBox(width: number, height: number): void;
     containsPoint(point: Vector2): boolean;
 }
@@ -915,6 +918,8 @@ declare class ShapeCollisions {
     static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
     static pointToPoly(point: Vector2, poly: Polygon): CollisionResult;
     static circleToCircle(first: Circle, second: Circle): CollisionResult;
+    static boxToBox(first: Box, second: Box): false | CollisionResult;
+    private static minkowskiDifference;
 }
 declare class SpatialHash {
     gridBounds: Rectangle;

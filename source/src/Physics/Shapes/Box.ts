@@ -21,6 +21,20 @@ class Box extends Polygon {
         return verts;
     }
 
+    /**
+     * 
+     * @param other 
+     */
+    public collidesWithShape(other: Shape){
+        if (this.isUnrotated && other instanceof Box && other.isUnrotated){
+            return ShapeCollisions.boxToBox(this, other);
+        }
+
+        // TODO: 让 minkowski 运行于 cricleToBox
+
+        return super.collidesWithShape(other);
+    }
+
     public updateBox(width: number, height: number){
         this.width = width;
         this.height = height;

@@ -252,4 +252,34 @@ class ShapeCollisions {
 
         return null;
     }
+
+    /**
+     * 
+     * @param first 
+     * @param second 
+     */
+    public static boxToBox(first: Box, second: Box){
+        let result = new CollisionResult();
+
+        let minkowskiDiff = this.minkowskiDifference(first, second);
+        if (minkowskiDiff.contains(new Vector2(0, 0))){
+            result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
+
+            if (result.minimumTranslationVector == Vector2.zero)
+                return false;
+            
+            result.normal = new Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
+            result.normal.normalize();
+        }
+
+        return result;
+    }
+
+    private static minkowskiDifference(first: Box, second: Box){
+        let positionOffset = Vector2.subtract(first.position, Vector2.add(first.bounds.location, Vector2.divide(first.bounds.size, new Vector2(2))));
+        let topLeft = Vector2.subtract(Vector2.add(first.bounds.location, positionOffset), second.bounds.max);
+        let fullSize = Vector2.add(first.bounds.size, second.bounds.size);
+
+        return new Rectangle(topLeft.x, topLeft.y, fullSize.x, fullSize.y)
+    }
 }

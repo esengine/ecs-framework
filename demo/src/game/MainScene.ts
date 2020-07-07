@@ -14,7 +14,7 @@ class MainScene extends Scene {
         bg.addComponent(new SpriteRenderer()).setSprite(sprite).setColor(0xff0000);
         bg.addComponent(new PlayerController());
         bg.addComponent(new Mover());
-        // bg.addComponent(new BoxCollider());
+        bg.addComponent(new BoxCollider());
         bg.position = new Vector2(Math.random() * 200, Math.random() * 200);
 
         for (let i = 0; i < 100; i++) {

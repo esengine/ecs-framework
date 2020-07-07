@@ -7,6 +7,13 @@ class Rectangle {
     private _tempMat: Matrix2D;
     private _transformMat: Matrix2D;
 
+    /**
+     * 获取矩形的最大点，即右下角
+     */
+    public get max(){
+        return new Vector2(this.right, this.bottom);
+    }
+
     public get left() {
         return this.x;
     }
@@ -122,6 +129,32 @@ class Rectangle {
         }
 
         return { res: res, edgeNormal: edgeNormal };
+    }
+
+    public getClosestPointOnBoundsToOrigin(){
+        let max = this.max;
+        let minDist = Math.abs(this.location.x);
+        let boundsPoint = new Vector2(this.location.x, 0);
+
+        if (Math.abs(max.x) < minDist){
+            minDist = Math.abs(max.x);
+            boundsPoint.x = max.x;
+            boundsPoint.y = 0;
+        }
+        
+        if (Math.abs(max.y) < minDist){
+            minDist = Math.abs(max.y);
+            boundsPoint.x = 0;
+            boundsPoint.y = max.y;
+        }
+
+        if (Math.abs(this.location.y) < minDist){
+            minDist = Math.abs(this.location.y);
+            boundsPoint.x = 0;
+            boundsPoint.y = this.location.y;
+        }
+
+        return boundsPoint;
     }
 
     public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2,

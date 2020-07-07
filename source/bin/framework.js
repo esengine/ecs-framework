@@ -3343,6 +3343,13 @@ var Rectangle = (function () {
         this.width = width ? width : 0;
         this.height = height ? height : 0;
     }
+    Object.defineProperty(Rectangle.prototype, "max", {
+        get: function () {
+            return new Vector2(this.right, this.bottom);
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Rectangle.prototype, "left", {
         get: function () {
             return this.x;
@@ -3465,6 +3472,27 @@ var Rectangle = (function () {
             }
         }
         return { res: res, edgeNormal: edgeNormal };
+    };
+    Rectangle.prototype.getClosestPointOnBoundsToOrigin = function () {
+        var max = this.max;
+        var minDist = Math.abs(this.location.x);
+        var boundsPoint = new Vector2(this.location.x, 0);
+        if (Math.abs(max.x) < minDist) {
+            minDist = Math.abs(max.x);
+            boundsPoint.x = max.x;
+            boundsPoint.y = 0;
+        }
+        if (Math.abs(max.y) < minDist) {
+            minDist = Math.abs(max.y);
+            boundsPoint.x = 0;
+            boundsPoint.y = max.y;
+        }
+        if (Math.abs(this.location.y) < minDist) {
+            minDist = Math.abs(this.location.y);
+            boundsPoint.x = 0;
+            boundsPoint.y = this.location.y;
+        }
+        return boundsPoint;
     };
     Rectangle.prototype.calculateBounds = function (parentPosition, position, origin, scale, rotation, width, height) {
         if (rotation == 0) {
@@ -4076,6 +4104,12 @@ var Box = (function (_super) {
         verts[3] = new Vector2(-halfWidth, halfHeight);
         return verts;
     };
+    Box.prototype.collidesWithShape = function (other) {
+        if (this.isUnrotated && other instanceof Box && other.isUnrotated) {
+            return ShapeCollisions.boxToBox(this, other);
+        }
+        return _super.prototype.collidesWithShape.call(this, other);
+    };
     Box.prototype.updateBox = function (width, height) {
         this.width = width;
         this.height = height;
@@ -4147,6 +4181,9 @@ var Circle = (function (_super) {
 }(Shape));
 var CollisionResult = (function () {
     function CollisionResult() {
+        this.minimumTranslationVector = Vector2.zero;
+        this.normal = Vector2.zero;
+        this.point = Vector2.zero;
     }
     CollisionResult.prototype.invertResult = function () {
         this.minimumTranslationVector = Vector2.negate(this.minimumTranslationVector);
@@ -4320,6 +4357,24 @@ var ShapeCollisions = (function () {
             return result;
         }
         return null;
+    };
+    ShapeCollisions.boxToBox = function (first, second) {
+        var result = new CollisionResult();
+        var minkowskiDiff = this.minkowskiDifference(first, second);
+        if (minkowskiDiff.contains(new Vector2(0, 0))) {
+            result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
+            if (result.minimumTranslationVector == Vector2.zero)
+                return false;
+            result.normal = new Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
+            result.normal.normalize();
+        }
+        return result;
+    };
+    ShapeCollisions.minkowskiDifference = function (first, second) {
+        var positionOffset = Vector2.subtract(first.position, Vector2.add(first.bounds.location, Vector2.divide(first.bounds.size, new Vector2(2))));
+        var topLeft = Vector2.subtract(Vector2.add(first.bounds.location, positionOffset), second.bounds.max);
+        var fullSize = Vector2.add(first.bounds.size, second.bounds.size);
+        return new Rectangle(topLeft.x, topLeft.y, fullSize.x, fullSize.y);
     };
     return ShapeCollisions;
 }());
