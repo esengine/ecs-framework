@@ -15,13 +15,13 @@ class MainScene extends Scene {
         bg.addComponent(new PlayerController());
         bg.addComponent(new Mover());
         bg.addComponent(new BoxCollider());
-        bg.position = new Vector2(30, 30);
+        bg.position = new Vector2(300, 300);
 
         for (let i = 0; i < 1; i++) {
             let sprite = new Sprite(RES.getRes("checkbox_select_disabled_png"));
             let player2 = this.createEntity("player2");
             player2.addComponent(new SpriteRenderer()).setSprite(sprite);
-            player2.position = new Vector2(10, 10);
+            player2.position = new Vector2(200, 200);
             player2.addComponent(new BoxCollider());
         }
 

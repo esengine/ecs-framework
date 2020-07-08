@@ -43,6 +43,15 @@ class Vector2Ext {
         return vec;
     }
 
+    /**
+     * 通过指定的矩阵对Vector2的数组中的向量应用变换，并将结果放置在另一个数组中。
+     * @param sourceArray 
+     * @param sourceIndex 
+     * @param matrix 
+     * @param destinationArray 
+     * @param destinationIndex 
+     * @param length 
+     */
     public static transformA(sourceArray: Vector2[], sourceIndex: number, matrix: Matrix2D,
         destinationArray: Vector2[], destinationIndex: number, length: number) {
             for (let i = 0; i < length; i ++){
@@ -60,6 +69,12 @@ class Vector2Ext {
         return new Vector2(x, y);
     }
 
+    /**
+     * 通过指定的矩阵对Vector2的数组中的所有向量应用变换，并将结果放到另一个数组中。
+     * @param sourceArray 
+     * @param matrix 
+     * @param destinationArray 
+     */
     public static transform(sourceArray: Vector2[], matrix: Matrix2D, destinationArray: Vector2[]) {
         this.transformA(sourceArray, 0, matrix, destinationArray, 0, sourceArray.length);
     }

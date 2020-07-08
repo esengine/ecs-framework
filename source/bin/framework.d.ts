@@ -176,12 +176,12 @@ declare abstract class Component extends egret.DisplayObjectContainer {
     onDisabled(): void;
     update(): void;
     debugRender(): void;
+    onEntityTransformChanged(comp: TransformComponent): void;
     registerComponent(): void;
     deregisterComponent(): void;
 }
 declare class Entity extends egret.DisplayObjectContainer {
     private static _idGenerator;
-    private _position;
     name: string;
     readonly id: number;
     scene: Scene;
@@ -194,6 +194,7 @@ declare class Entity extends egret.DisplayObjectContainer {
     readonly isDestoryed: boolean;
     position: Vector2;
     scale: Vector2;
+    rotation: number;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
     tag: number;
@@ -210,6 +211,7 @@ declare class Entity extends egret.DisplayObjectContainer {
     getOrCreateComponent<T extends Component>(type: T): T;
     getComponent<T extends Component>(type: any): T;
     getComponents(typeName: string | any, componentList?: any): any;
+    private onEntityTransformChanged;
     removeComponentForType<T extends Component>(type: any): boolean;
     removeComponent(component: Component): void;
     removeAllComponents(): void;
@@ -217,6 +219,11 @@ declare class Entity extends egret.DisplayObjectContainer {
     onAddedToScene(): void;
     onRemovedFromScene(): void;
     destroy(): void;
+}
+declare enum TransformComponent {
+    rotation = 0,
+    scale = 1,
+    position = 2
 }
 declare class Scene extends egret.DisplayObjectContainer {
     camera: Camera;
@@ -267,6 +274,7 @@ declare class Camera extends Component {
     private _origin;
     private _minimumZoom;
     private _maximumZoom;
+    private _position;
     followLerp: number;
     deadzone: Rectangle;
     focusOffset: Vector2;
@@ -282,6 +290,8 @@ declare class Camera extends Component {
     maximumZoom: number;
     origin: Vector2;
     position: Vector2;
+    x: number;
+    y: number;
     constructor();
     onSceneSizeChanged(newWidth: number, newHeight: number): void;
     setMinimumZoom(minZoom: number): Camera;
@@ -348,11 +358,8 @@ declare class SpriteAnimation {
     constructor(sprites: Sprite[], frameRate: number);
 }
 declare class SpriteRenderer extends RenderableComponent {
-    private _origin;
     private _sprite;
     protected bitmap: egret.Bitmap;
-    origin: Vector2;
-    setOrigin(origin: Vector2): this;
     sprite: Sprite;
     setSprite(sprite: Sprite): SpriteRenderer;
     setColor(color: number): SpriteRenderer;
@@ -420,11 +427,9 @@ declare abstract class Collider extends Component {
     physicsLayer: number;
     isTrigger: boolean;
     registeredPhysicsBounds: Rectangle;
-    shouldColliderScaleAndRotationWithTransform: boolean;
+    shouldColliderScaleAndRotateWithTransform: boolean;
     collidesWithLayers: number;
     _localOffsetLength: number;
-    _isPositionDirty: boolean;
-    _isRotationDirty: boolean;
     protected _isParentEntityAddedToScene: any;
     protected _colliderRequiresAutoSizing: any;
     protected _localOffset: Vector2;
@@ -440,7 +445,7 @@ declare abstract class Collider extends Component {
     onRemovedFromEntity(): void;
     onEnabled(): void;
     onDisabled(): void;
-    update(): void;
+    onEntityTransformChanged(comp: TransformComponent): void;
 }
 declare class BoxCollider extends Collider {
     width: number;
@@ -516,6 +521,7 @@ declare class ComponentList {
     deregisterAllComponents(): void;
     registerAllComponents(): void;
     updateLists(): void;
+    onEntityTransformChanged(comp: TransformComponent): void;
     private handleRemove;
     getComponent<T extends Component>(type: any, onlyReturnInitializedComponents: boolean): T;
     getComponents(typeName: string | any, components?: any): any;
@@ -758,29 +764,19 @@ declare class Matrix2D {
     static multiplyTranslation(matrix: Matrix2D, x: number, y: number): Matrix2D;
     determinant(): number;
     static invert(matrix: Matrix2D, result?: Matrix2D): Matrix2D;
-    static createTranslation(xPosition: number, yPosition: number, result?: Matrix2D): Matrix2D;
+    static createTranslation(xPosition: number, yPosition: number): Matrix2D;
+    static createTranslationVector(position: Vector2): Matrix2D;
     static createRotation(radians: number, result?: Matrix2D): Matrix2D;
     static createScale(xScale: number, yScale: number, result?: Matrix2D): Matrix2D;
     toEgretMatrix(): egret.Matrix;
 }
-declare class Rectangle {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    private _tempMat;
-    private _transformMat;
+declare class Rectangle extends egret.Rectangle {
     readonly max: Vector2;
-    readonly left: number;
-    readonly right: number;
-    readonly top: number;
-    readonly bottom: number;
     readonly center: Vector2;
     location: Vector2;
     size: Vector2;
-    constructor(x?: number, y?: number, width?: number, height?: number);
-    intersects(value: Rectangle): boolean;
-    contains(value: Vector2): boolean;
+    intersects(value: egret.Rectangle): boolean;
+    containsInVec(value: Vector2): boolean;
     containsRect(value: Rectangle): boolean;
     getHalfSize(): Vector2;
     static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
@@ -789,7 +785,6 @@ declare class Rectangle {
         edgeNormal: Vector2;
     };
     getClosestPointOnBoundsToOrigin(): Vector2;
-    calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
     static rectEncompassingPoints(points: Vector2[]): Rectangle;
 }
 declare class Vector3 {

@@ -917,6 +917,8 @@ var Component = (function (_super) {
     };
     Component.prototype.debugRender = function () {
     };
+    Component.prototype.onEntityTransformChanged = function (comp) {
+    };
     Component.prototype.registerComponent = function () {
         this.entity.componentBits.set(ComponentTypeManager.getIndexFor(this), false);
         this.entity.scene.entityProcessors.onComponentAdded(this.entity);
@@ -931,7 +933,6 @@ var Entity = (function (_super) {
     __extends(Entity, _super);
     function Entity(name) {
         var _this = _super.call(this) || this;
-        _this._position = Vector2.zero;
         _this._updateOrder = 0;
         _this._enabled = true;
         _this._tag = 0;
@@ -950,10 +951,12 @@ var Entity = (function (_super) {
     });
     Object.defineProperty(Entity.prototype, "position", {
         get: function () {
-            return this._position;
+            return new Vector2(this.x, this.y);
         },
         set: function (value) {
-            this._position = value;
+            this.$setX(value.x);
+            this.$setY(value.y);
+            this.onEntityTransformChanged(TransformComponent.position);
         },
         enumerable: true,
         configurable: true
@@ -963,8 +966,17 @@ var Entity = (function (_super) {
             return new Vector2(this.scaleX, this.scaleY);
         },
         set: function (value) {
-            this.scaleX = value.x;
-            this.scaleY = value.y;
+            this.$setScaleX(value.x);
+            this.$setScaleY(value.y);
+            this.onEntityTransformChanged(TransformComponent.scale);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "rotation", {
+        set: function (value) {
+            this.$setRotation(value);
+            this.onEntityTransformChanged(TransformComponent.rotation);
         },
         enumerable: true,
         configurable: true
@@ -1074,6 +1086,9 @@ var Entity = (function (_super) {
     Entity.prototype.getComponents = function (typeName, componentList) {
         return this.components.getComponents(typeName, componentList);
     };
+    Entity.prototype.onEntityTransformChanged = function (comp) {
+        this.components.onEntityTransformChanged(comp);
+    };
     Entity.prototype.removeComponentForType = function (type) {
         var comp = this.getComponent(type);
         if (comp) {
@@ -1110,6 +1125,12 @@ var Entity = (function (_super) {
     };
     return Entity;
 }(egret.DisplayObjectContainer));
+var TransformComponent;
+(function (TransformComponent) {
+    TransformComponent[TransformComponent["rotation"] = 0] = "rotation";
+    TransformComponent[TransformComponent["scale"] = 1] = "scale";
+    TransformComponent[TransformComponent["position"] = 2] = "position";
+})(TransformComponent || (TransformComponent = {}));
 var Scene = (function (_super) {
     __extends(Scene, _super);
     function Scene() {
@@ -1354,6 +1375,7 @@ var Camera = (function (_super) {
         _this._origin = Vector2.zero;
         _this._minimumZoom = 0.3;
         _this._maximumZoom = 3;
+        _this._position = Vector2.zero;
         _this.followLerp = 0.1;
         _this.deadzone = new Rectangle();
         _this.focusOffset = new Vector2();
@@ -1415,10 +1437,30 @@ var Camera = (function (_super) {
     });
     Object.defineProperty(Camera.prototype, "position", {
         get: function () {
-            return this.entity.position;
+            return this._position;
         },
         set: function (value) {
-            this.entity.position = value;
+            this._position = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Camera.prototype, "x", {
+        get: function () {
+            return this._position.x;
+        },
+        set: function (value) {
+            this._position.x = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Camera.prototype, "y", {
+        get: function () {
+            return this._position.y;
+        },
+        set: function (value) {
+            this._position.y = value;
         },
         enumerable: true,
         configurable: true
@@ -1681,22 +1723,6 @@ var SpriteRenderer = (function (_super) {
     function SpriteRenderer() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    Object.defineProperty(SpriteRenderer.prototype, "origin", {
-        get: function () {
-            return this._origin;
-        },
-        set: function (value) {
-            this.setOrigin(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    SpriteRenderer.prototype.setOrigin = function (origin) {
-        if (this._origin != origin) {
-            this._origin = origin;
-        }
-        return this;
-    };
     Object.defineProperty(SpriteRenderer.prototype, "sprite", {
         get: function () {
             return this._sprite;
@@ -1710,8 +1736,10 @@ var SpriteRenderer = (function (_super) {
     SpriteRenderer.prototype.setSprite = function (sprite) {
         this.removeChildren();
         this._sprite = sprite;
-        if (this._sprite)
-            this._origin = this._sprite.origin;
+        if (this._sprite) {
+            this.anchorOffsetX = this._sprite.origin.x / this._sprite.sourceRect.width;
+            this.anchorOffsetY = this._sprite.origin.y / this._sprite.sourceRect.height;
+        }
         this.bitmap = new egret.Bitmap(sprite.texture2D);
         this.addChild(this.bitmap);
         return this;
@@ -1736,8 +1764,8 @@ var SpriteRenderer = (function (_super) {
         return this.isVisible;
     };
     SpriteRenderer.prototype.render = function (camera) {
-        this.x = this.entity.position.x - this.origin.x - camera.position.x + camera.origin.x;
-        this.y = this.entity.position.y - this.origin.y - camera.position.y + camera.origin.y;
+        this.x = -camera.position.x + camera.origin.x;
+        this.y = -camera.position.y + camera.origin.y;
     };
     SpriteRenderer.prototype.onRemovedFromEntity = function () {
         if (this.parent)
@@ -1940,27 +1968,23 @@ var Collider = (function (_super) {
     function Collider() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.physicsLayer = 1 << 0;
-        _this.shouldColliderScaleAndRotationWithTransform = true;
+        _this.registeredPhysicsBounds = new Rectangle();
+        _this.shouldColliderScaleAndRotateWithTransform = true;
         _this.collidesWithLayers = Physics.allLayers;
-        _this._isPositionDirty = true;
-        _this._isRotationDirty = true;
         _this._localOffset = new Vector2(0, 0);
         return _this;
     }
     Object.defineProperty(Collider.prototype, "bounds", {
         get: function () {
-            if (this._isPositionDirty || this._isRotationDirty) {
-                this.shape.recalculateBounds(this);
-                this._isPositionDirty = this._isRotationDirty = false;
-            }
-            return this.shape.bounds;
+            var bds = this.entity.getBounds();
+            return new Rectangle(bds.x, bds.y, bds.width, bds.height);
         },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(Collider.prototype, "localOffset", {
         get: function () {
-            return this._localOffset;
+            return new Vector2(this.x, this.y);
         },
         set: function (value) {
             this.setLocalOffset(value);
@@ -1971,9 +1995,9 @@ var Collider = (function (_super) {
     Collider.prototype.setLocalOffset = function (offset) {
         if (this._localOffset != offset) {
             this.unregisterColliderWithPhysicsSystem();
-            this._localOffset = offset;
+            this.$setX(offset.x);
+            this.$setY(offset.y);
             this._localOffsetLength = this._localOffset.length();
-            this._isPositionDirty = true;
             this.registerColliderWithPhysicsSystem();
         }
     };
@@ -2006,17 +2030,15 @@ var Collider = (function (_super) {
             if (!(this instanceof BoxCollider)) {
                 console.error("Only box and circle colliders can be created automatically");
             }
-            var renderable = this.entity.getComponent(RenderableComponent);
-            if (renderable) {
-                var renderbaleBounds = renderable.bounds;
-                var width = renderbaleBounds.width / this.entity.scale.x;
-                var height = renderbaleBounds.height / this.entity.scale.y;
-                if (this instanceof BoxCollider) {
-                    var boxCollider = this;
-                    boxCollider.width = width;
-                    boxCollider.height = height;
-                    this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.position);
-                }
+            var bounds = this.entity.getBounds();
+            var renderbaleBounds = new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height);
+            var width = renderbaleBounds.width / this.entity.scale.x;
+            var height = renderbaleBounds.height / this.entity.scale.y;
+            if (this instanceof BoxCollider) {
+                var boxCollider = this;
+                boxCollider.width = width;
+                boxCollider.height = height;
+                this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.position);
             }
         }
         this._isParentEntityAddedToScene = true;
@@ -2028,17 +2050,13 @@ var Collider = (function (_super) {
     };
     Collider.prototype.onEnabled = function () {
         this.registerColliderWithPhysicsSystem();
-        this._isPositionDirty = this._isRotationDirty = true;
     };
     Collider.prototype.onDisabled = function () {
         this.unregisterColliderWithPhysicsSystem();
     };
-    Collider.prototype.update = function () {
-        var spriteRenderer = this.entity.getComponent(SpriteRenderer);
-        if (spriteRenderer) {
-            this.bounds.x = spriteRenderer.x;
-            this.bounds.y = spriteRenderer.y;
-        }
+    Collider.prototype.onEntityTransformChanged = function (comp) {
+        if (this._isColliderRegistered)
+            Physics.updateCollider(this);
     };
     return Collider;
 }(Component));
@@ -2065,7 +2083,6 @@ var BoxCollider = (function (_super) {
         var box = this.shape;
         if (width != box.width) {
             box.updateBox(width, box.height);
-            this._isPositionDirty = true;
             if (this.entity && this._isParentEntityAddedToScene)
                 Physics.updateCollider(this);
         }
@@ -2086,7 +2103,6 @@ var BoxCollider = (function (_super) {
         var box = this.shape;
         if (height != box.height) {
             box.updateBox(box.width, height);
-            this._isPositionDirty = true;
             if (this.entity && this._isParentEntityAddedToScene)
                 Physics.updateCollider(this);
         }
@@ -2096,7 +2112,6 @@ var BoxCollider = (function (_super) {
         var box = this.shape;
         if (width != box.width || height != box.height) {
             box.updateBox(width, height);
-            this._isPositionDirty = true;
             if (this.entity && this._isParentEntityAddedToScene)
                 Physics.updateCollider(this);
         }
@@ -2405,6 +2420,16 @@ var ComponentList = (function () {
                 }
             }
             this._tempBufferList.length = 0;
+        }
+    };
+    ComponentList.prototype.onEntityTransformChanged = function (comp) {
+        for (var i = 0; i < this._components.length; i++) {
+            if (this._components[i].enabled)
+                this._components[i].onEntityTransformChanged(comp);
+        }
+        for (var i = 0; i < this._componentsToAdd.length; i++) {
+            if (this._componentsToAdd[i].enabled)
+                this._componentsToAdd[i].onEntityTransformChanged(comp);
         }
     };
     ComponentList.prototype.handleRemove = function (component) {
@@ -3413,8 +3438,8 @@ var Matrix2D = (function () {
         result.m32 = -(matrix.m32 * matrix.m11 - matrix.m31 * matrix.m12) * det;
         return result;
     };
-    Matrix2D.createTranslation = function (xPosition, yPosition, result) {
-        result = result ? result : new Matrix2D();
+    Matrix2D.createTranslation = function (xPosition, yPosition) {
+        var result = new Matrix2D();
         result.m11 = 1;
         result.m12 = 0;
         result.m21 = 0;
@@ -3422,6 +3447,9 @@ var Matrix2D = (function () {
         result.m31 = xPosition;
         result.m32 = yPosition;
         return result;
+    };
+    Matrix2D.createTranslationVector = function (position) {
+        return this.createTranslation(position.x, position.y);
     };
     Matrix2D.createRotation = function (radians, result) {
         result = new Matrix2D();
@@ -3450,44 +3478,14 @@ var Matrix2D = (function () {
     Matrix2D._identity = new Matrix2D(1, 0, 0, 1, 0, 0);
     return Matrix2D;
 }());
-var Rectangle = (function () {
-    function Rectangle(x, y, width, height) {
-        this.x = x ? x : 0;
-        this.y = y ? y : 0;
-        this.width = width ? width : 0;
-        this.height = height ? height : 0;
+var Rectangle = (function (_super) {
+    __extends(Rectangle, _super);
+    function Rectangle() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
     Object.defineProperty(Rectangle.prototype, "max", {
         get: function () {
             return new Vector2(this.right, this.bottom);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Rectangle.prototype, "left", {
-        get: function () {
-            return this.x;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Rectangle.prototype, "right", {
-        get: function () {
-            return this.x + this.width;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Rectangle.prototype, "top", {
-        get: function () {
-            return this.y;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Rectangle.prototype, "bottom", {
-        get: function () {
-            return this.y + this.height;
         },
         enumerable: true,
         configurable: true
@@ -3527,7 +3525,7 @@ var Rectangle = (function () {
             value.top < this.bottom &&
             this.top < value.bottom;
     };
-    Rectangle.prototype.contains = function (value) {
+    Rectangle.prototype.containsInVec = function (value) {
         return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
             (this.y <= value.y)) &&
             (value.y < (this.y + this.height)));
@@ -3544,11 +3542,11 @@ var Rectangle = (function () {
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     };
     Rectangle.prototype.getClosestPointOnRectangleBorderToPoint = function (point) {
-        var edgeNormal = new Vector2(0, 0);
-        var res = new Vector2(0, 0);
+        var edgeNormal = Vector2.zero;
+        var res = new Vector2();
         res.x = MathHelper.clamp(point.x, this.left, this.right);
         res.y = MathHelper.clamp(point.y, this.top, this.bottom);
-        if (this.contains(res)) {
+        if (this.containsInVec(res)) {
             var dl = res.x - this.left;
             var dr = this.right - res.x;
             var dt = res.y - this.top;
@@ -3572,18 +3570,14 @@ var Rectangle = (function () {
             }
         }
         else {
-            if (res.x == this.left) {
+            if (res.x == this.left)
                 edgeNormal.x = -1;
-            }
-            if (res.x == this.right) {
+            if (res.x == this.right)
                 edgeNormal.x = 1;
-            }
-            if (res.y == this.top) {
+            if (res.y == this.top)
                 edgeNormal.y = -1;
-            }
-            if (res.y == this.bottom) {
+            if (res.y == this.bottom)
                 edgeNormal.y = 1;
-            }
         }
         return { res: res, edgeNormal: edgeNormal };
     };
@@ -3608,40 +3602,6 @@ var Rectangle = (function () {
         }
         return boundsPoint;
     };
-    Rectangle.prototype.calculateBounds = function (parentPosition, position, origin, scale, rotation, width, height) {
-        if (rotation == 0) {
-            this.x = parentPosition.x + position.x - origin.x * scale.x;
-            this.y = parentPosition.y + position.y - origin.y * scale.y;
-            this.width = width * scale.x;
-            this.height = height * scale.y;
-        }
-        else {
-            var worldPosX = parentPosition.x + position.x;
-            var worldPosY = parentPosition.y + position.y;
-            this._transformMat = Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
-            this._tempMat = Matrix2D.createScale(scale.x, scale.y);
-            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
-            this._tempMat = Matrix2D.createRotation(rotation);
-            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
-            this._tempMat = Matrix2D.createTranslation(worldPosX, worldPosY);
-            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
-            var topLeft = new Vector2(worldPosX, worldPosY);
-            var topRight = new Vector2(worldPosX + width, worldPosY);
-            var bottomLeft = new Vector2(worldPosX, worldPosY + height);
-            var bottomRight = new Vector2(worldPosX + width, worldPosY + height);
-            topLeft = Vector2Ext.transformR(topLeft, this._transformMat);
-            topRight = Vector2Ext.transformR(topRight, this._transformMat);
-            bottomLeft = Vector2Ext.transformR(bottomLeft, this._transformMat);
-            bottomRight = Vector2Ext.transformR(bottomRight, this._transformMat);
-            var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-            var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-            var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-            var maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-            this.location = new Vector2(minX, minY);
-            this.width = maxX - minX;
-            this.height = maxY - minY;
-        }
-    };
     Rectangle.rectEncompassingPoints = function (points) {
         var minX = Number.POSITIVE_INFINITY;
         var minY = Number.POSITIVE_INFINITY;
@@ -3649,23 +3609,19 @@ var Rectangle = (function () {
         var maxY = Number.NEGATIVE_INFINITY;
         for (var i = 0; i < points.length; i++) {
             var pt = points[i];
-            if (pt.x < minX) {
+            if (pt.x < minX)
                 minX = pt.x;
-            }
-            if (pt.x > maxX) {
+            if (pt.x > maxX)
                 maxX = pt.x;
-            }
-            if (pt.y < minY) {
+            if (pt.y < minY)
                 minY = pt.y;
-            }
-            if (pt.y > maxY) {
+            if (pt.y > maxY)
                 maxY = pt.y;
-            }
         }
         return this.fromMinMax(minX, minY, maxX, maxY);
     };
     return Rectangle;
-}());
+}(egret.Rectangle));
 var Vector3 = (function () {
     function Vector3(x, y, z) {
         this.x = x;
@@ -4064,7 +4020,7 @@ var Polygon = (function (_super) {
     };
     Polygon.prototype.recalculateBounds = function (collider) {
         this.center = collider.localOffset;
-        if (collider.shouldColliderScaleAndRotationWithTransform) {
+        if (collider.shouldColliderScaleAndRotateWithTransform) {
             var hasUnitScale = true;
             var tempMat = void 0;
             var combinedMatrix = Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
@@ -4076,7 +4032,7 @@ var Polygon = (function (_super) {
                 this.center = scaledOffset;
             }
             if (collider.entity.rotation != 0) {
-                tempMat = Matrix2D.createRotation(collider.entity.rotation);
+                tempMat = Matrix2D.createRotation(collider.entity.rotation, tempMat);
                 combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
                 var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
                 var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
@@ -4086,8 +4042,6 @@ var Polygon = (function (_super) {
             combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
             Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
             this.isUnrotated = collider.entity.rotation == 0;
-            if (collider._isRotationDirty)
-                this._areEdgeNormalsDirty = true;
         }
         this.position = Vector2.add(collider.entity.position, this.center);
         this.bounds = Rectangle.rectEncompassingPoints(this.points);
@@ -4142,7 +4096,7 @@ var Box = (function (_super) {
     };
     Box.prototype.containsPoint = function (point) {
         if (this.isUnrotated)
-            return this.bounds.contains(point);
+            return this.bounds.containsInVec(point);
         return _super.prototype.containsPoint.call(this, point);
     };
     return Box;
@@ -4172,7 +4126,7 @@ var Circle = (function (_super) {
     };
     Circle.prototype.recalculateBounds = function (collider) {
         this.center = collider.localOffset;
-        if (collider.shouldColliderScaleAndRotationWithTransform) {
+        if (collider.shouldColliderScaleAndRotateWithTransform) {
             var scale = collider.entity.scale;
             var hasUnitScale = scale.x == 1 && scale.y == 1;
             var maxScale = Math.max(scale.x, scale.y);
@@ -4379,7 +4333,7 @@ var ShapeCollisions = (function () {
     ShapeCollisions.boxToBox = function (first, second) {
         var result = new CollisionResult();
         var minkowskiDiff = this.minkowskiDifference(first, second);
-        if (minkowskiDiff.contains(new Vector2(0, 0))) {
+        if (minkowskiDiff.containsInVec(new Vector2(0, 0))) {
             result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
             if (result.minimumTranslationVector.x == 0 && result.minimumTranslationVector.y == 0)
                 return null;
@@ -4401,6 +4355,7 @@ var SpatialHash = (function () {
     function SpatialHash(cellSize) {
         if (cellSize === void 0) { cellSize = 100; }
         this.gridBounds = new Rectangle();
+        this._overlapTestCircle = new Circle(0);
         this._tempHashSet = [];
         this._cellDict = new NumberDictionary();
         this._cellSize = cellSize;
@@ -4426,10 +4381,10 @@ var SpatialHash = (function () {
         collider.registeredPhysicsBounds = bounds;
         var p1 = this.cellCoords(bounds.x, bounds.y);
         var p2 = this.cellCoords(bounds.right, bounds.bottom);
-        if (!this.gridBounds.contains(new Vector2(p1.x, p1.y))) {
+        if (!this.gridBounds.containsInVec(new Vector2(p1.x, p1.y))) {
             this.gridBounds = RectangleExt.union(this.gridBounds, p1);
         }
-        if (!this.gridBounds.contains(new Vector2(p2.x, p2.y))) {
+        if (!this.gridBounds.containsInVec(new Vector2(p2.x, p2.y))) {
             this.gridBounds = RectangleExt.union(this.gridBounds, p2);
         }
         for (var x = p1.x; x <= p2.x; x++) {

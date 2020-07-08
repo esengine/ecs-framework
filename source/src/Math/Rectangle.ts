@@ -1,43 +1,21 @@
-class Rectangle {
-    public x: number;
-    public y: number;
-    public width: number;
-    public height: number;
-
-    private _tempMat: Matrix2D;
-    private _transformMat: Matrix2D;
-
+class Rectangle extends egret.Rectangle {
     /**
      * 获取矩形的最大点，即右下角
      */
-    public get max(){
+    public get max() {
         return new Vector2(this.right, this.bottom);
     }
 
-    public get left() {
-        return this.x;
-    }
-
-    public get right() {
-        return this.x + this.width;
-    }
-
-    public get top() {
-        return this.y;
-    }
-
-    public get bottom() {
-        return this.y + this.height;
-    }
-
+    /** 中心点坐标 */
     public get center() {
         return new Vector2(this.x + (this.width / 2), this.y + (this.height / 2));
     }
 
+    /** 左上角的坐标 */
     public get location() {
         return new Vector2(this.x, this.y);
     }
-
+    /** 左上角的坐标 */
     public set location(value: Vector2) {
         this.x = value.x;
         this.y = value.y;
@@ -52,48 +30,66 @@ class Rectangle {
         this.height = value.y;
     }
 
-    constructor(x?: number, y?: number, width?: number, height?: number) {
-        this.x = x ? x : 0;
-        this.y = y ? y : 0;
-        this.width = width ? width : 0;
-        this.height = height ? height : 0;
-    }
-
-    public intersects(value: Rectangle) {
+    /**
+     * 是否与另一个矩形相交
+     * @param value 
+     */
+    public intersects(value: egret.Rectangle) {
         return value.left < this.right &&
             this.left < value.right &&
             value.top < this.bottom &&
             this.top < value.bottom;
     }
 
-    public contains(value: Vector2) {
+    /**
+     * 判断点是否在矩形内
+     * @param value 
+     */
+    public containsInVec(value: Vector2) {
         return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
             (this.y <= value.y)) &&
             (value.y < (this.y + this.height)));
     }
 
+    /**
+     * 获取所提供的矩形是否在此矩形的边界内
+     * @param value 
+     */
     public containsRect(value: Rectangle) {
         return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
             (this.y <= value.y)) &&
             (value.y < (this.y + this.height)));
     }
 
-    public getHalfSize(){
+    public getHalfSize() {
         return new Vector2(this.width * 0.5, this.height * 0.5);
     }
 
+    /**
+     * 创建一个矩形的最小/最大点(左上角，右下角的点)
+     * @param minX 
+     * @param minY 
+     * @param maxX 
+     * @param maxY 
+     */
     public static fromMinMax(minX: number, minY: number, maxX: number, maxY: number) {
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     }
 
+    /**
+     * 获取矩形边界上与给定点最近的点
+     * @param point 
+     */
     public getClosestPointOnRectangleBorderToPoint(point: Vector2): { res: Vector2, edgeNormal: Vector2 } {
-        let edgeNormal = new Vector2(0, 0);
+        let edgeNormal = Vector2.zero;
 
-        let res = new Vector2(0, 0);
+        // 对于每个轴，如果点在盒子外面
+        let res = new Vector2();
         res.x = MathHelper.clamp(point.x, this.left, this.right);
         res.y = MathHelper.clamp(point.y, this.top, this.bottom);
 
-        if (this.contains(res)) {
+        // 如果点在矩形内，我们需要推res到边界，因为它将在矩形内
+        if (this.containsInVec(res)) {
             let dl = res.x - this.left;
             let dr = this.right - res.x;
             let dt = res.y - this.top;
@@ -114,41 +110,36 @@ class Rectangle {
                 edgeNormal.x = 1;
             }
         } else {
-            if (res.x == this.left) {
-                edgeNormal.x = -1;
-            }
-            if (res.x == this.right) {
-                edgeNormal.x = 1;
-            }
-            if (res.y == this.top) {
-                edgeNormal.y = -1;
-            }
-            if (res.y == this.bottom) {
-                edgeNormal.y = 1;
-            }
+            if (res.x == this.left) edgeNormal.x = -1;
+            if (res.x == this.right) edgeNormal.x = 1;
+            if (res.y == this.top) edgeNormal.y = -1;
+            if (res.y == this.bottom) edgeNormal.y = 1;
         }
 
         return { res: res, edgeNormal: edgeNormal };
     }
 
-    public getClosestPointOnBoundsToOrigin(){
+    /**
+     * 
+     */
+    public getClosestPointOnBoundsToOrigin() {
         let max = this.max;
         let minDist = Math.abs(this.location.x);
         let boundsPoint = new Vector2(this.location.x, 0);
 
-        if (Math.abs(max.x) < minDist){
+        if (Math.abs(max.x) < minDist) {
             minDist = Math.abs(max.x);
             boundsPoint.x = max.x;
             boundsPoint.y = 0;
         }
-        
-        if (Math.abs(max.y) < minDist){
+
+        if (Math.abs(max.y) < minDist) {
             minDist = Math.abs(max.y);
             boundsPoint.x = 0;
             boundsPoint.y = max.y;
         }
 
-        if (Math.abs(this.location.y) < minDist){
+        if (Math.abs(this.location.y) < minDist) {
             minDist = Math.abs(this.location.y);
             boundsPoint.x = 0;
             boundsPoint.y = this.location.y;
@@ -156,52 +147,13 @@ class Rectangle {
 
         return boundsPoint;
     }
-
-    public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2,
-        rotation: number, width: number, height: number) {
-        if (rotation == 0) {
-            this.x = parentPosition.x + position.x - origin.x * scale.x;
-            this.y = parentPosition.y + position.y - origin.y * scale.y;
-            this.width = width * scale.x;
-            this.height = height * scale.y;
-        } else {
-            let worldPosX = parentPosition.x + position.x;
-            let worldPosY = parentPosition.y + position.y;
-
-            this._transformMat = Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
-            this._tempMat = Matrix2D.createScale(scale.x, scale.y);
-            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
-            this._tempMat = Matrix2D.createRotation(rotation);
-            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
-            this._tempMat = Matrix2D.createTranslation(worldPosX, worldPosY);
-            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
-
-            let topLeft = new Vector2(worldPosX, worldPosY);
-            let topRight = new Vector2(worldPosX + width, worldPosY);
-            let bottomLeft = new Vector2(worldPosX, worldPosY + height);
-            let bottomRight = new Vector2(worldPosX + width, worldPosY + height);
-
-            topLeft = Vector2Ext.transformR(topLeft, this._transformMat);
-            topRight = Vector2Ext.transformR(topRight, this._transformMat);
-            bottomLeft = Vector2Ext.transformR(bottomLeft, this._transformMat);
-            bottomRight = Vector2Ext.transformR(bottomRight, this._transformMat);
-
-            let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-            let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-            let minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-            let maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-
-            this.location = new Vector2(minX, minY);
-            this.width = maxX - minX;
-            this.height = maxY - minY;
-        }
-    }
-
+   
     /**
      * 给定多边形的点，计算边界
      * @param points 
      */
     public static rectEncompassingPoints(points: Vector2[]) {
+        // 我们需要求出x/y的最小值/最大值
         let minX = Number.POSITIVE_INFINITY;
         let minY = Number.POSITIVE_INFINITY;
         let maxX = Number.NEGATIVE_INFINITY;
@@ -210,19 +162,11 @@ class Rectangle {
         for (let i = 0; i < points.length; i++) {
             let pt = points[i];
 
-            if (pt.x < minX) {
-                minX = pt.x;
-            }
-            if (pt.x > maxX) {
-                maxX = pt.x;
-            }
+            if (pt.x < minX) minX = pt.x;
+            if (pt.x > maxX) maxX = pt.x;
 
-            if (pt.y < minY) {
-                minY = pt.y;
-            }
-            if (pt.y > maxY) {
-                maxY = pt.y;
-            }
+            if (pt.y < minY) minY = pt.y;
+            if (pt.y > maxY) maxY = pt.y;
         }
 
         return this.fromMinMax(minX, minY, maxX, maxY);

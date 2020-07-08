@@ -32,7 +32,7 @@ class Circle extends Shape {
     public recalculateBounds(collider: Collider) {
         this.center = collider.localOffset;
 
-        if (collider.shouldColliderScaleAndRotationWithTransform) {
+        if (collider.shouldColliderScaleAndRotateWithTransform) {
             let scale = collider.entity.scale;
             let hasUnitScale = scale.x == 1 && scale.y == 1;
             let maxScale = Math.max(scale.x, scale.y);

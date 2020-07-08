@@ -1,25 +1,12 @@
 class SpriteRenderer extends RenderableComponent {
-    private _origin: Vector2;
     private _sprite: Sprite;
     protected bitmap: egret.Bitmap;
 
-    public get origin(){
-        return this._origin;
-    }
-    public set origin(value: Vector2){
-        this.setOrigin(value);
-    }
-    public setOrigin(origin: Vector2){
-        if (this._origin != origin){
-            this._origin = origin;
-        }
-        return this;
-    }
-    /** 应该由这个精灵显示的精灵。当设置时，精灵的原点也被设置为匹配精灵.origin。 */
+    /** 应该由这个精灵显示的精灵 */
     public get sprite(): Sprite{
         return this._sprite;
     }
-    /** 应该由这个精灵显示的精灵。当设置时，精灵的原点也被设置为匹配精灵.origin。 */
+    /** 应该由这个精灵显示的精灵 */
     public set sprite(value: Sprite){
         this.setSprite(value);
     }
@@ -27,7 +14,10 @@ class SpriteRenderer extends RenderableComponent {
     public setSprite(sprite: Sprite): SpriteRenderer{
         this.removeChildren();
         this._sprite = sprite;
-        if (this._sprite) this._origin = this._sprite.origin;
+        if (this._sprite) {
+            this.anchorOffsetX = this._sprite.origin.x / this._sprite.sourceRect.width;
+            this.anchorOffsetY = this._sprite.origin.y / this._sprite.sourceRect.height;
+        }
         this.bitmap = new egret.Bitmap(sprite.texture2D);
         this.addChild(this.bitmap);
 
@@ -58,8 +48,8 @@ class SpriteRenderer extends RenderableComponent {
 
     /** 渲染处理 在每个模块中处理各自的渲染逻辑 */
     public render(camera: Camera){
-        this.x = this.entity.position.x - this.origin.x - camera.position.x + camera.origin.x;
-        this.y = this.entity.position.y - this.origin.y - camera.position.y + camera.origin.y;
+        this.x = -camera.position.x + camera.origin.x;
+        this.y = -camera.position.y + camera.origin.y;
     }
 
     public onRemovedFromEntity(){

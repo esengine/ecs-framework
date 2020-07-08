@@ -1,7 +1,6 @@
 class Entity extends egret.DisplayObjectContainer {
     private static _idGenerator: number;
 
-    private _position: Vector2 = Vector2.zero;
     public name: string;
     public readonly id: number;
     /** 当前实体所属的场景 */
@@ -20,11 +19,13 @@ class Entity extends egret.DisplayObjectContainer {
     }
 
     public get position(){
-        return this._position;
+        return new Vector2(this.x, this.y);
     }
 
     public set position(value: Vector2){
-        this._position = value;
+        this.$setX(value.x);
+        this.$setY(value.y);
+        this.onEntityTransformChanged(TransformComponent.position);
     }
 
     public get scale(){
@@ -32,8 +33,14 @@ class Entity extends egret.DisplayObjectContainer {
     }
 
     public set scale(value: Vector2){
-        this.scaleX = value.x;
-        this.scaleY = value.y;
+        this.$setScaleX(value.x);
+        this.$setScaleY(value.y);
+        this.onEntityTransformChanged(TransformComponent.scale);
+    }
+
+    public set rotation(value: number){
+        this.$setRotation(value);
+        this.onEntityTransformChanged(TransformComponent.rotation);
     }
 
     public get enabled(){
@@ -160,6 +167,10 @@ class Entity extends egret.DisplayObjectContainer {
         return this.components.getComponents(typeName, componentList);
     }
 
+    private onEntityTransformChanged(comp: TransformComponent){
+        this.components.onEntityTransformChanged(comp);
+    }
+
     public removeComponentForType<T extends Component>(type){
         let comp = this.getComponent<T>(type);
         if (comp){
@@ -203,4 +214,10 @@ class Entity extends egret.DisplayObjectContainer {
             (child as Component).entity.destroy();
         }
     }
+}
+
+enum TransformComponent {
+    rotation,
+    scale,
+    position
 }
