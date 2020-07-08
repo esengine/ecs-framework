@@ -32,22 +32,22 @@ declare class AStarNode<T> extends PriorityQueueNode {
     data: T;
     constructor(data: T);
 }
-declare class AstarGridGraph implements IAstarGraph<Point> {
-    dirs: Point[];
-    walls: Point[];
-    weightedNodes: Point[];
+declare class AstarGridGraph implements IAstarGraph<Vector2> {
+    dirs: Vector2[];
+    walls: Vector2[];
+    weightedNodes: Vector2[];
     defaultWeight: number;
     weightedNodeWeight: number;
     private _width;
     private _height;
     private _neighbors;
     constructor(width: number, height: number);
-    isNodeInBounds(node: Point): boolean;
-    isNodePassable(node: Point): boolean;
-    search(start: Point, goal: Point): Point[];
-    getNeighbors(node: Point): Point[];
-    cost(from: Point, to: Point): number;
-    heuristic(node: Point, goal: Point): number;
+    isNodeInBounds(node: Vector2): boolean;
+    isNodePassable(node: Vector2): boolean;
+    search(start: Vector2, goal: Vector2): Vector2[];
+    getNeighbors(node: Vector2): Vector2[];
+    cost(from: Vector2, to: Vector2): number;
+    heuristic(node: Vector2, goal: Vector2): number;
 }
 interface IAstarGraph<T> {
     getNeighbors(node: T): Array<T>;
@@ -84,34 +84,57 @@ declare class UnweightedGraph<T> implements IUnweightedGraph<T> {
     addEdgesForNode(node: T, edges: T[]): this;
     getNeighbors(node: T): T[];
 }
-declare class Point {
+declare class Vector2 {
     x: number;
     y: number;
+    private static readonly unitYVector;
+    private static readonly unitXVector;
+    private static readonly unitVector2;
+    private static readonly zeroVector2;
+    static readonly zero: Vector2;
+    static readonly one: Vector2;
+    static readonly unitX: Vector2;
+    static readonly unitY: Vector2;
     constructor(x?: number, y?: number);
+    static add(value1: Vector2, value2: Vector2): Vector2;
+    static divide(value1: Vector2, value2: Vector2): Vector2;
+    static multiply(value1: Vector2, value2: Vector2): Vector2;
+    static subtract(value1: Vector2, value2: Vector2): Vector2;
+    normalize(): void;
+    length(): number;
+    round(): Vector2;
+    static normalize(value: Vector2): Vector2;
+    static dot(value1: Vector2, value2: Vector2): number;
+    static distanceSquared(value1: Vector2, value2: Vector2): number;
+    static clamp(value1: Vector2, min: Vector2, max: Vector2): Vector2;
+    static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
+    static transform(position: Vector2, matrix: Matrix2D): Vector2;
+    static distance(value1: Vector2, value2: Vector2): number;
+    static negate(value: Vector2): Vector2;
 }
-declare class UnweightedGridGraph implements IUnweightedGraph<Point> {
+declare class UnweightedGridGraph implements IUnweightedGraph<Vector2> {
     private static readonly CARDINAL_DIRS;
     private static readonly COMPASS_DIRS;
-    walls: Point[];
+    walls: Vector2[];
     private _width;
     private _hegiht;
     private _dirs;
     private _neighbors;
     constructor(width: number, height: number, allowDiagonalSearch?: boolean);
-    isNodeInBounds(node: Point): boolean;
-    isNodePassable(node: Point): boolean;
-    getNeighbors(node: Point): Point[];
-    search(start: Point, goal: Point): Point[];
+    isNodeInBounds(node: Vector2): boolean;
+    isNodePassable(node: Vector2): boolean;
+    getNeighbors(node: Vector2): Vector2[];
+    search(start: Vector2, goal: Vector2): Vector2[];
 }
 interface IWeightedGraph<T> {
     getNeighbors(node: T): T[];
     cost(from: T, to: T): number;
 }
-declare class WeightedGridGraph implements IWeightedGraph<Point> {
-    static readonly CARDINAL_DIRS: Point[];
+declare class WeightedGridGraph implements IWeightedGraph<Vector2> {
+    static readonly CARDINAL_DIRS: Vector2[];
     private static readonly COMPASS_DIRS;
-    walls: Point[];
-    weightedNodes: Point[];
+    walls: Vector2[];
+    weightedNodes: Vector2[];
     defaultWeight: number;
     weightedNodeWeight: number;
     private _width;
@@ -119,11 +142,11 @@ declare class WeightedGridGraph implements IWeightedGraph<Point> {
     private _dirs;
     private _neighbors;
     constructor(width: number, height: number, allowDiagonalSearch?: boolean);
-    isNodeInBounds(node: Point): boolean;
-    isNodePassable(node: Point): boolean;
-    search(start: Point, goal: Point): Point[];
-    getNeighbors(node: Point): Point[];
-    cost(from: Point, to: Point): number;
+    isNodeInBounds(node: Vector2): boolean;
+    isNodePassable(node: Vector2): boolean;
+    search(start: Vector2, goal: Vector2): Vector2[];
+    getNeighbors(node: Vector2): Vector2[];
+    cost(from: Vector2, to: Vector2): number;
 }
 declare class WeightedNode<T> extends PriorityQueueNode {
     data: T;
@@ -153,12 +176,12 @@ declare abstract class Component extends egret.DisplayObjectContainer {
     onDisabled(): void;
     update(): void;
     debugRender(): void;
+    onEntityTransformChanged(comp: TransformComponent): void;
     registerComponent(): void;
     deregisterComponent(): void;
 }
 declare class Entity extends egret.DisplayObjectContainer {
     private static _idGenerator;
-    private _position;
     name: string;
     readonly id: number;
     scene: Scene;
@@ -171,6 +194,7 @@ declare class Entity extends egret.DisplayObjectContainer {
     readonly isDestoryed: boolean;
     position: Vector2;
     scale: Vector2;
+    rotation: number;
     enabled: boolean;
     setEnabled(isEnabled: boolean): this;
     tag: number;
@@ -187,6 +211,7 @@ declare class Entity extends egret.DisplayObjectContainer {
     getOrCreateComponent<T extends Component>(type: T): T;
     getComponent<T extends Component>(type: any): T;
     getComponents(typeName: string | any, componentList?: any): any;
+    private onEntityTransformChanged;
     removeComponentForType<T extends Component>(type: any): boolean;
     removeComponent(component: Component): void;
     removeAllComponents(): void;
@@ -194,6 +219,11 @@ declare class Entity extends egret.DisplayObjectContainer {
     onAddedToScene(): void;
     onRemovedFromScene(): void;
     destroy(): void;
+}
+declare enum TransformComponent {
+    rotation = 0,
+    scale = 1,
+    position = 2
 }
 declare class Scene extends egret.DisplayObjectContainer {
     camera: Camera;
@@ -244,6 +274,7 @@ declare class Camera extends Component {
     private _origin;
     private _minimumZoom;
     private _maximumZoom;
+    private _position;
     followLerp: number;
     deadzone: Rectangle;
     focusOffset: Vector2;
@@ -259,6 +290,8 @@ declare class Camera extends Component {
     maximumZoom: number;
     origin: Vector2;
     position: Vector2;
+    x: number;
+    y: number;
     constructor();
     onSceneSizeChanged(newWidth: number, newHeight: number): void;
     setMinimumZoom(minZoom: number): Camera;
@@ -312,11 +345,8 @@ declare class Mesh extends RenderableComponent {
     reset(): void;
 }
 declare class SpriteRenderer extends RenderableComponent {
-    private _origin;
     private _sprite;
     protected bitmap: egret.Bitmap;
-    origin: Vector2;
-    setOrigin(origin: Vector2): this;
     sprite: Sprite;
     setSprite(sprite: Sprite): SpriteRenderer;
     setColor(color: number): SpriteRenderer;
@@ -406,11 +436,9 @@ declare abstract class Collider extends Component {
     physicsLayer: number;
     isTrigger: boolean;
     registeredPhysicsBounds: Rectangle;
-    shouldColliderScaleAndRotationWithTransform: boolean;
+    shouldColliderScaleAndRotateWithTransform: boolean;
     collidesWithLayers: number;
     _localOffsetLength: number;
-    _isPositionDirty: boolean;
-    _isRotationDirty: boolean;
     protected _isParentEntityAddedToScene: any;
     protected _colliderRequiresAutoSizing: any;
     protected _localOffset: Vector2;
@@ -426,6 +454,7 @@ declare abstract class Collider extends Component {
     onRemovedFromEntity(): void;
     onEnabled(): void;
     onDisabled(): void;
+    onEntityTransformChanged(comp: TransformComponent): void;
 }
 declare class BoxCollider extends Collider {
     width: number;
@@ -501,6 +530,7 @@ declare class ComponentList {
     deregisterAllComponents(): void;
     registerAllComponents(): void;
     updateLists(): void;
+    onEntityTransformChanged(comp: TransformComponent): void;
     private handleRemove;
     getComponent<T extends Component>(type: any, onlyReturnInitializedComponents: boolean): T;
     getComponents(typeName: string | any, components?: any): any;
@@ -743,67 +773,28 @@ declare class Matrix2D {
     static multiplyTranslation(matrix: Matrix2D, x: number, y: number): Matrix2D;
     determinant(): number;
     static invert(matrix: Matrix2D, result?: Matrix2D): Matrix2D;
-    static createTranslation(xPosition: number, yPosition: number, result?: Matrix2D): Matrix2D;
+    static createTranslation(xPosition: number, yPosition: number): Matrix2D;
+    static createTranslationVector(position: Vector2): Matrix2D;
     static createRotation(radians: number, result?: Matrix2D): Matrix2D;
     static createScale(xScale: number, yScale: number, result?: Matrix2D): Matrix2D;
     toEgretMatrix(): egret.Matrix;
 }
-declare class Rectangle {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    private _tempMat;
-    private _transformMat;
+declare class Rectangle extends egret.Rectangle {
     readonly max: Vector2;
-    readonly left: number;
-    readonly right: number;
-    readonly top: number;
-    readonly bottom: number;
     readonly center: Vector2;
     location: Vector2;
     size: Vector2;
-    constructor(x?: number, y?: number, width?: number, height?: number);
-    intersects(value: Rectangle): boolean;
-    contains(value: Vector2): boolean;
+    intersects(value: egret.Rectangle): boolean;
+    containsInVec(value: Vector2): boolean;
     containsRect(value: Rectangle): boolean;
     getHalfSize(): Vector2;
     static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
-    getClosestPointOnRectangleBorderToPoint(point: Point): {
+    getClosestPointOnRectangleBorderToPoint(point: Vector2): {
         res: Vector2;
         edgeNormal: Vector2;
     };
     getClosestPointOnBoundsToOrigin(): Vector2;
-    calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
     static rectEncompassingPoints(points: Vector2[]): Rectangle;
-}
-declare class Vector2 {
-    x: number;
-    y: number;
-    private static readonly unitYVector;
-    private static readonly unitXVector;
-    private static readonly unitVector2;
-    private static readonly zeroVector2;
-    static readonly zero: Vector2;
-    static readonly one: Vector2;
-    static readonly unitX: Vector2;
-    static readonly unitY: Vector2;
-    constructor(x?: number, y?: number);
-    static add(value1: Vector2, value2: Vector2): Vector2;
-    static divide(value1: Vector2, value2: Vector2): Vector2;
-    static multiply(value1: Vector2, value2: Vector2): Vector2;
-    static subtract(value1: Vector2, value2: Vector2): Vector2;
-    normalize(): void;
-    length(): number;
-    round(): Vector2;
-    static normalize(value: Vector2): Vector2;
-    static dot(value1: Vector2, value2: Vector2): number;
-    static distanceSquared(value1: Vector2, value2: Vector2): number;
-    static clamp(value1: Vector2, min: Vector2, max: Vector2): Vector2;
-    static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
-    static transform(position: Vector2, matrix: Matrix2D): Vector2;
-    static distance(value1: Vector2, value2: Vector2): number;
-    static negate(value: Vector2): Vector2;
 }
 declare class Vector3 {
     x: number;
@@ -937,7 +928,7 @@ declare class ShapeCollisions {
     static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
     static pointToPoly(point: Vector2, poly: Polygon): CollisionResult;
     static circleToCircle(first: Circle, second: Circle): CollisionResult;
-    static boxToBox(first: Box, second: Box): false | CollisionResult;
+    static boxToBox(first: Box, second: Box): CollisionResult;
     private static minkowskiDifference;
 }
 declare class SpatialHash {
@@ -1044,7 +1035,7 @@ declare class Pair<T> {
     equals(other: Pair<T>): boolean;
 }
 declare class RectangleExt {
-    static union(first: Rectangle, point: Point): Rectangle;
+    static union(first: Rectangle, point: Vector2): Rectangle;
     static unionR(value1: Rectangle, value2: Rectangle): Rectangle;
 }
 declare class Triangulator {

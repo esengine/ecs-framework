@@ -28,7 +28,6 @@ abstract class Component extends egret.DisplayObjectContainer {
     }
 
     public initialize(){
-
     }
 
     public onAddedToEntity(){
@@ -53,6 +52,14 @@ abstract class Component extends egret.DisplayObjectContainer {
 
     public debugRender(){
         
+    }
+
+    /**
+     * 当实体的位置改变时调用。这允许组件知道它们由于父实体的移动而移动了。
+     * @param comp 
+     */
+    public onEntityTransformChanged(comp: TransformComponent){
+
     }
 
     /** 内部使用 运行时不应该调用 */

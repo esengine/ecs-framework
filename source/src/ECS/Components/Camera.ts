@@ -6,6 +6,7 @@ class Camera extends Component {
     private _minimumZoom = 0.3;
     private _maximumZoom = 3;
 
+    private _position: Vector2 = Vector2.zero;
     /** 
      * 如果相机模式为cameraWindow 则会进行缓动移动 
      * 该值为移动速度 
@@ -67,11 +68,24 @@ class Camera extends Component {
     }
 
     public get position(){
-        return this.entity.position;
+        return this._position;
     }
 
     public set position(value: Vector2){
-        this.entity.position = value;
+        this._position = value;
+    }
+
+    public get x(){
+        return this._position.x;
+    }
+    public set x(value: number){
+        this._position.x = value;
+    }
+    public get y(){
+        return this._position.y;
+    }
+    public set y(value: number){
+        this._position.y = value;
     }
 
     constructor() {

@@ -101,6 +101,18 @@ class ComponentList {
         }
     }
 
+    public onEntityTransformChanged(comp: TransformComponent){
+        for (let i = 0; i < this._components.length; i ++){
+            if (this._components[i].enabled)
+                this._components[i].onEntityTransformChanged(comp);
+        }
+
+        for (let i = 0; i < this._componentsToAdd.length; i ++){
+            if (this._componentsToAdd[i].enabled)
+                this._componentsToAdd[i].onEntityTransformChanged(comp);
+        }
+    }
+
     private handleRemove(component: Component){
         if (component instanceof RenderableComponent)
             this._entity.scene.renderableComponents.remove(component);

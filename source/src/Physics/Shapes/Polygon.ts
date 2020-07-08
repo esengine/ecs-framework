@@ -103,6 +103,13 @@ class Polygon extends Shape {
         return new Vector2(x / points.length, y / points.length);
     }
 
+    /**
+     * 迭代多边形的所有边，并得到任意边上离点最近的点。
+     * 通过最近点的平方距离和它所在的边的法线返回。
+     * 点应该在多边形的空间中(点-多边形.位置)
+     * @param points 
+     * @param point 
+     */
     public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): { closestPoint, distanceSquared, edgeNormal } {
         let distanceSquared = Number.MAX_VALUE;
         let edgeNormal = new Vector2(0, 0);
@@ -121,6 +128,7 @@ class Polygon extends Shape {
                 distanceSquared = tempDistanceSquared;
                 closestPoint = closest;
 
+                // 求直线的法线
                 let line = Vector2.subtract(points[j], points[i]);
                 edgeNormal.x = -line.y;
                 edgeNormal.y = line.x;
@@ -136,7 +144,13 @@ class Polygon extends Shape {
         return ShapeCollisions.pointToPoly(point, this);
     }
 
+    /**
+     * 本质上，这个算法所做的就是从一个点发射一条射线。
+     * 如果它与奇数条多边形边相交，我们就知道它在多边形内部。
+     * @param point 
+     */
     public containsPoint(point: Vector2) {
+        // 将点归一化到多边形坐标空间中
         point = Vector2.subtract(point, this.position);
 
         let isInside = false;
@@ -168,9 +182,10 @@ class Polygon extends Shape {
     }
 
     public recalculateBounds(collider: Collider) {
+        // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
         this.center = collider.localOffset;
 
-        if (collider.shouldColliderScaleAndRotationWithTransform){
+        if (collider.shouldColliderScaleAndRotateWithTransform){
             let hasUnitScale = true;
             let tempMat: Matrix2D;
             let combinedMatrix = Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
@@ -180,14 +195,18 @@ class Polygon extends Shape {
                 combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
 
                 hasUnitScale = false;
+
+                // 缩放偏移量并将其设置为中心。如果我们有旋转，它会在下面重置
                 let scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.scale);
                 this.center = scaledOffset;
             }
 
             if (collider.entity.rotation != 0){
-                tempMat = Matrix2D.createRotation(collider.entity.rotation);
+                tempMat = Matrix2D.createRotation(collider.entity.rotation, tempMat);
                 combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
 
+                // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动我们的偏移使角度为0
+                // 我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
                 let offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
                 let offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
                 this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
@@ -196,11 +215,9 @@ class Polygon extends Shape {
             tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
             combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
 
+            // 最后变换原始点
             Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
             this.isUnrotated = collider.entity.rotation == 0;
-
-            if (collider._isRotationDirty)
-                this._areEdgeNormalsDirty = true;
         }
 
         this.position = Vector2.add(collider.entity.position, this.center);

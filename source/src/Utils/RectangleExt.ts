@@ -1,5 +1,5 @@
 class RectangleExt {
-    public static union(first: Rectangle, point: Point){
+    public static union(first: Rectangle, point: Vector2){
         let rect = new Rectangle(point.x, point.y, 0, 0);
         return this.unionR(first, rect);
     }

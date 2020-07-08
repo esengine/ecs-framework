@@ -1,4 +1,7 @@
 ///<reference path="./Polygon.ts" />
+/**
+ * 多边形的特殊情况。在进行SAT碰撞检查时，我们只需要检查2个轴而不是8个轴
+ */
 class Box extends Polygon {
     public width: number;
     public height: number;
@@ -9,7 +12,13 @@ class Box extends Polygon {
         this.height = height;
     }
 
+    /**
+     * 在一个盒子的形状中建立多边形需要的点的帮助方法
+     * @param width 
+     * @param height 
+     */
     private static buildBox(width: number, height: number): Vector2[]{
+        // 我们在(0,0)的中心周围创建点
         let halfWidth = width / 2;
         let halfHeight = height / 2;
         let verts = new Array(4);
@@ -21,11 +30,8 @@ class Box extends Polygon {
         return verts;
     }
 
-    /**
-     * 
-     * @param other 
-     */
     public overlaps(other: Shape){
+        // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
         if (this.isUnrotated){
             if (other instanceof Box && other.isUnrotated)
                 return this.bounds.intersects(other.bounds);
@@ -37,11 +43,8 @@ class Box extends Polygon {
         return super.overlaps(other);
     }
 
-    /**
-     * 
-     * @param other 
-     */
     public collidesWithShape(other: Shape){
+        // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
         if (this.isUnrotated && other instanceof Box && other.isUnrotated){
             return ShapeCollisions.boxToBox(this, other);
         }
@@ -51,10 +54,16 @@ class Box extends Polygon {
         return super.collidesWithShape(other);
     }
 
+    /**
+     * 更新框点，重新计算中心，设置宽度/高度
+     * @param width 
+     * @param height 
+     */
     public updateBox(width: number, height: number){
         this.width = width;
         this.height = height;
 
+        // 我们在(0,0)的中心周围创建点
         let halfWidth = width / 2;
         let halfHeight = height / 2;
 
@@ -69,7 +78,7 @@ class Box extends Polygon {
 
     public containsPoint(point: Vector2){
         if (this.isUnrotated)
-            return this.bounds.contains(point);
+            return this.bounds.containsInVec(point);
 
         return super.containsPoint(point);
     }
