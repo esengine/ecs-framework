@@ -86,7 +86,7 @@ class Rectangle {
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     }
 
-    public getClosestPointOnRectangleBorderToPoint(point: Point): { res: Vector2, edgeNormal: Vector2 } {
+    public getClosestPointOnRectangleBorderToPoint(point: Vector2): { res: Vector2, edgeNormal: Vector2 } {
         let edgeNormal = new Vector2(0, 0);
 
         let res = new Vector2(0, 0);

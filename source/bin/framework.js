@@ -361,10 +361,10 @@ var AStarNode = (function (_super) {
 var AstarGridGraph = (function () {
     function AstarGridGraph(width, height) {
         this.dirs = [
-            new Point(1, 0),
-            new Point(0, -1),
-            new Point(-1, 0),
-            new Point(0, 1)
+            new Vector2(1, 0),
+            new Vector2(0, -1),
+            new Vector2(-1, 0),
+            new Vector2(0, 1)
         ];
         this.walls = [];
         this.weightedNodes = [];
@@ -387,7 +387,7 @@ var AstarGridGraph = (function () {
         var _this = this;
         this._neighbors.length = 0;
         this.dirs.forEach(function (dir) {
-            var next = new Point(node.x + dir.x, node.y + dir.y);
+            var next = new Vector2(node.x + dir.x, node.y + dir.y);
             if (_this.isNodeInBounds(next) && _this.isNodePassable(next))
                 _this._neighbors.push(next);
         });
@@ -583,12 +583,113 @@ var UnweightedGraph = (function () {
     };
     return UnweightedGraph;
 }());
-var Point = (function () {
-    function Point(x, y) {
+var Vector2 = (function () {
+    function Vector2(x, y) {
+        this.x = 0;
+        this.y = 0;
         this.x = x ? x : 0;
         this.y = y ? y : this.x;
     }
-    return Point;
+    Object.defineProperty(Vector2, "zero", {
+        get: function () {
+            return Vector2.zeroVector2;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Vector2, "one", {
+        get: function () {
+            return Vector2.unitVector2;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Vector2, "unitX", {
+        get: function () {
+            return Vector2.unitXVector;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Vector2, "unitY", {
+        get: function () {
+            return Vector2.unitYVector;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Vector2.add = function (value1, value2) {
+        var result = new Vector2(0, 0);
+        result.x = value1.x + value2.x;
+        result.y = value1.y + value2.y;
+        return result;
+    };
+    Vector2.divide = function (value1, value2) {
+        var result = new Vector2(0, 0);
+        result.x = value1.x / value2.x;
+        result.y = value1.y / value2.y;
+        return result;
+    };
+    Vector2.multiply = function (value1, value2) {
+        var result = new Vector2(0, 0);
+        result.x = value1.x * value2.x;
+        result.y = value1.y * value2.y;
+        return result;
+    };
+    Vector2.subtract = function (value1, value2) {
+        var result = new Vector2(0, 0);
+        result.x = value1.x - value2.x;
+        result.y = value1.y - value2.y;
+        return result;
+    };
+    Vector2.prototype.normalize = function () {
+        var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
+        this.x *= val;
+        this.y *= val;
+    };
+    Vector2.prototype.length = function () {
+        return Math.sqrt((this.x * this.x) + (this.y * this.y));
+    };
+    Vector2.prototype.round = function () {
+        return new Vector2(Math.round(this.x), Math.round(this.y));
+    };
+    Vector2.normalize = function (value) {
+        var val = 1 / Math.sqrt((value.x * value.x) + (value.y * value.y));
+        value.x *= val;
+        value.y *= val;
+        return value;
+    };
+    Vector2.dot = function (value1, value2) {
+        return (value1.x * value2.x) + (value1.y * value2.y);
+    };
+    Vector2.distanceSquared = function (value1, value2) {
+        var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
+        return (v1 * v1) + (v2 * v2);
+    };
+    Vector2.clamp = function (value1, min, max) {
+        return new Vector2(MathHelper.clamp(value1.x, min.x, max.x), MathHelper.clamp(value1.y, min.y, max.y));
+    };
+    Vector2.lerp = function (value1, value2, amount) {
+        return new Vector2(MathHelper.lerp(value1.x, value2.x, amount), MathHelper.lerp(value1.y, value2.y, amount));
+    };
+    Vector2.transform = function (position, matrix) {
+        return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
+    };
+    Vector2.distance = function (value1, value2) {
+        var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
+        return Math.sqrt((v1 * v1) + (v2 * v2));
+    };
+    Vector2.negate = function (value) {
+        var result = new Vector2();
+        result.x = -value.x;
+        result.y = -value.y;
+        return result;
+    };
+    Vector2.unitYVector = new Vector2(0, 1);
+    Vector2.unitXVector = new Vector2(1, 0);
+    Vector2.unitVector2 = new Vector2(1, 1);
+    Vector2.zeroVector2 = new Vector2(0, 0);
+    return Vector2;
 }());
 var UnweightedGridGraph = (function () {
     function UnweightedGridGraph(width, height, allowDiagonalSearch) {
@@ -609,7 +710,7 @@ var UnweightedGridGraph = (function () {
         var _this = this;
         this._neighbors.length = 0;
         this._dirs.forEach(function (dir) {
-            var next = new Point(node.x + dir.x, node.y + dir.y);
+            var next = new Vector2(node.x + dir.x, node.y + dir.y);
             if (_this.isNodeInBounds(next) && _this.isNodePassable(next))
                 _this._neighbors.push(next);
         });
@@ -619,20 +720,20 @@ var UnweightedGridGraph = (function () {
         return BreadthFirstPathfinder.search(this, start, goal);
     };
     UnweightedGridGraph.CARDINAL_DIRS = [
-        new Point(1, 0),
-        new Point(0, -1),
-        new Point(-1, 0),
-        new Point(0, -1)
+        new Vector2(1, 0),
+        new Vector2(0, -1),
+        new Vector2(-1, 0),
+        new Vector2(0, -1)
     ];
     UnweightedGridGraph.COMPASS_DIRS = [
-        new Point(1, 0),
-        new Point(1, -1),
-        new Point(0, -1),
-        new Point(-1, -1),
-        new Point(-1, 0),
-        new Point(-1, 1),
-        new Point(0, 1),
-        new Point(1, 1),
+        new Vector2(1, 0),
+        new Vector2(1, -1),
+        new Vector2(0, -1),
+        new Vector2(-1, -1),
+        new Vector2(-1, 0),
+        new Vector2(-1, 1),
+        new Vector2(0, 1),
+        new Vector2(1, 1),
     ];
     return UnweightedGridGraph;
 }());
@@ -661,7 +762,7 @@ var WeightedGridGraph = (function () {
         var _this = this;
         this._neighbors.length = 0;
         this._dirs.forEach(function (dir) {
-            var next = new Point(node.x + dir.x, node.y + dir.y);
+            var next = new Vector2(node.x + dir.x, node.y + dir.y);
             if (_this.isNodeInBounds(next) && _this.isNodePassable(next))
                 _this._neighbors.push(next);
         });
@@ -671,20 +772,20 @@ var WeightedGridGraph = (function () {
         return this.weightedNodes.find(function (t) { return JSON.stringify(t) == JSON.stringify(to); }) ? this.weightedNodeWeight : this.defaultWeight;
     };
     WeightedGridGraph.CARDINAL_DIRS = [
-        new Point(1, 0),
-        new Point(0, -1),
-        new Point(-1, 0),
-        new Point(0, 1)
+        new Vector2(1, 0),
+        new Vector2(0, -1),
+        new Vector2(-1, 0),
+        new Vector2(0, 1)
     ];
     WeightedGridGraph.COMPASS_DIRS = [
-        new Point(1, 0),
-        new Point(1, -1),
-        new Point(0, -1),
-        new Point(-1, -1),
-        new Point(-1, 0),
-        new Point(-1, 1),
-        new Point(0, 1),
-        new Point(1, 1),
+        new Vector2(1, 0),
+        new Vector2(1, -1),
+        new Vector2(0, -1),
+        new Vector2(-1, -1),
+        new Vector2(-1, 0),
+        new Vector2(-1, 1),
+        new Vector2(0, 1),
+        new Vector2(1, 1),
     ];
     return WeightedGridGraph;
 }());
@@ -1112,6 +1213,8 @@ var Scene = (function (_super) {
         if (this.entityProcessors)
             this.entityProcessors.end();
         this.unload();
+        if (this.parent)
+            this.parent.removeChild(this);
     };
     Scene.prototype.onStart = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -1929,6 +2032,13 @@ var Collider = (function (_super) {
     };
     Collider.prototype.onDisabled = function () {
         this.unregisterColliderWithPhysicsSystem();
+    };
+    Collider.prototype.update = function () {
+        var spriteRenderer = this.entity.getComponent(SpriteRenderer);
+        if (spriteRenderer) {
+            this.bounds.x = spriteRenderer.x;
+            this.bounds.y = spriteRenderer.y;
+        }
     };
     return Collider;
 }(Component));
@@ -3556,114 +3666,6 @@ var Rectangle = (function () {
     };
     return Rectangle;
 }());
-var Vector2 = (function () {
-    function Vector2(x, y) {
-        this.x = 0;
-        this.y = 0;
-        this.x = x ? x : 0;
-        this.y = y ? y : this.x;
-    }
-    Object.defineProperty(Vector2, "zero", {
-        get: function () {
-            return Vector2.zeroVector2;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Vector2, "one", {
-        get: function () {
-            return Vector2.unitVector2;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Vector2, "unitX", {
-        get: function () {
-            return Vector2.unitXVector;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Vector2, "unitY", {
-        get: function () {
-            return Vector2.unitYVector;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Vector2.add = function (value1, value2) {
-        var result = new Vector2(0, 0);
-        result.x = value1.x + value2.x;
-        result.y = value1.y + value2.y;
-        return result;
-    };
-    Vector2.divide = function (value1, value2) {
-        var result = new Vector2(0, 0);
-        result.x = value1.x / value2.x;
-        result.y = value1.y / value2.y;
-        return result;
-    };
-    Vector2.multiply = function (value1, value2) {
-        var result = new Vector2(0, 0);
-        result.x = value1.x * value2.x;
-        result.y = value1.y * value2.y;
-        return result;
-    };
-    Vector2.subtract = function (value1, value2) {
-        var result = new Vector2(0, 0);
-        result.x = value1.x - value2.x;
-        result.y = value1.y - value2.y;
-        return result;
-    };
-    Vector2.prototype.normalize = function () {
-        var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
-        this.x *= val;
-        this.y *= val;
-    };
-    Vector2.prototype.length = function () {
-        return Math.sqrt((this.x * this.x) + (this.y * this.y));
-    };
-    Vector2.prototype.round = function () {
-        return new Vector2(Math.round(this.x), Math.round(this.y));
-    };
-    Vector2.normalize = function (value) {
-        var val = 1 / Math.sqrt((value.x * value.x) + (value.y * value.y));
-        value.x *= val;
-        value.y *= val;
-        return value;
-    };
-    Vector2.dot = function (value1, value2) {
-        return (value1.x * value2.x) + (value1.y * value2.y);
-    };
-    Vector2.distanceSquared = function (value1, value2) {
-        var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
-        return (v1 * v1) + (v2 * v2);
-    };
-    Vector2.clamp = function (value1, min, max) {
-        return new Vector2(MathHelper.clamp(value1.x, min.x, max.x), MathHelper.clamp(value1.y, min.y, max.y));
-    };
-    Vector2.lerp = function (value1, value2, amount) {
-        return new Vector2(MathHelper.lerp(value1.x, value2.x, amount), MathHelper.lerp(value1.y, value2.y, amount));
-    };
-    Vector2.transform = function (position, matrix) {
-        return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
-    };
-    Vector2.distance = function (value1, value2) {
-        var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
-        return Math.sqrt((v1 * v1) + (v2 * v2));
-    };
-    Vector2.negate = function (value) {
-        var result = new Vector2();
-        result.x = -value.x;
-        result.y = -value.y;
-        return result;
-    };
-    Vector2.unitYVector = new Vector2(0, 1);
-    Vector2.unitXVector = new Vector2(1, 0);
-    Vector2.unitVector2 = new Vector2(1, 1);
-    Vector2.zeroVector2 = new Vector2(0, 0);
-    return Vector2;
-}());
 var Vector3 = (function () {
     function Vector3(x, y, z) {
         this.x = x;
@@ -4254,7 +4256,7 @@ var ShapeCollisions = (function () {
             }
         }
         result.normal = translationAxis;
-        result.minimumTranslationVector = Vector2.multiply(new Vector2(-translationAxis), new Vector2(minIntervalDistance));
+        result.minimumTranslationVector = Vector2.multiply(new Vector2(-translationAxis.x, -translationAxis.y), new Vector2(minIntervalDistance));
         return result;
     };
     ShapeCollisions.intervalDistance = function (minA, maxA, minB, maxB) {
@@ -4379,8 +4381,8 @@ var ShapeCollisions = (function () {
         var minkowskiDiff = this.minkowskiDifference(first, second);
         if (minkowskiDiff.contains(new Vector2(0, 0))) {
             result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
-            if (result.minimumTranslationVector == Vector2.zero)
-                return false;
+            if (result.minimumTranslationVector.x == 0 && result.minimumTranslationVector.y == 0)
+                return null;
             result.normal = new Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
             result.normal.normalize();
             return result;
@@ -4496,7 +4498,7 @@ var SpatialHash = (function () {
         return cell;
     };
     SpatialHash.prototype.cellCoords = function (x, y) {
-        return new Point(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
+        return new Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
     };
     return SpatialHash;
 }());

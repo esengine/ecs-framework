@@ -32,22 +32,22 @@ declare class AStarNode<T> extends PriorityQueueNode {
     data: T;
     constructor(data: T);
 }
-declare class AstarGridGraph implements IAstarGraph<Point> {
-    dirs: Point[];
-    walls: Point[];
-    weightedNodes: Point[];
+declare class AstarGridGraph implements IAstarGraph<Vector2> {
+    dirs: Vector2[];
+    walls: Vector2[];
+    weightedNodes: Vector2[];
     defaultWeight: number;
     weightedNodeWeight: number;
     private _width;
     private _height;
     private _neighbors;
     constructor(width: number, height: number);
-    isNodeInBounds(node: Point): boolean;
-    isNodePassable(node: Point): boolean;
-    search(start: Point, goal: Point): Point[];
-    getNeighbors(node: Point): Point[];
-    cost(from: Point, to: Point): number;
-    heuristic(node: Point, goal: Point): number;
+    isNodeInBounds(node: Vector2): boolean;
+    isNodePassable(node: Vector2): boolean;
+    search(start: Vector2, goal: Vector2): Vector2[];
+    getNeighbors(node: Vector2): Vector2[];
+    cost(from: Vector2, to: Vector2): number;
+    heuristic(node: Vector2, goal: Vector2): number;
 }
 interface IAstarGraph<T> {
     getNeighbors(node: T): Array<T>;
@@ -84,34 +84,57 @@ declare class UnweightedGraph<T> implements IUnweightedGraph<T> {
     addEdgesForNode(node: T, edges: T[]): this;
     getNeighbors(node: T): T[];
 }
-declare class Point {
+declare class Vector2 {
     x: number;
     y: number;
+    private static readonly unitYVector;
+    private static readonly unitXVector;
+    private static readonly unitVector2;
+    private static readonly zeroVector2;
+    static readonly zero: Vector2;
+    static readonly one: Vector2;
+    static readonly unitX: Vector2;
+    static readonly unitY: Vector2;
     constructor(x?: number, y?: number);
+    static add(value1: Vector2, value2: Vector2): Vector2;
+    static divide(value1: Vector2, value2: Vector2): Vector2;
+    static multiply(value1: Vector2, value2: Vector2): Vector2;
+    static subtract(value1: Vector2, value2: Vector2): Vector2;
+    normalize(): void;
+    length(): number;
+    round(): Vector2;
+    static normalize(value: Vector2): Vector2;
+    static dot(value1: Vector2, value2: Vector2): number;
+    static distanceSquared(value1: Vector2, value2: Vector2): number;
+    static clamp(value1: Vector2, min: Vector2, max: Vector2): Vector2;
+    static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
+    static transform(position: Vector2, matrix: Matrix2D): Vector2;
+    static distance(value1: Vector2, value2: Vector2): number;
+    static negate(value: Vector2): Vector2;
 }
-declare class UnweightedGridGraph implements IUnweightedGraph<Point> {
+declare class UnweightedGridGraph implements IUnweightedGraph<Vector2> {
     private static readonly CARDINAL_DIRS;
     private static readonly COMPASS_DIRS;
-    walls: Point[];
+    walls: Vector2[];
     private _width;
     private _hegiht;
     private _dirs;
     private _neighbors;
     constructor(width: number, height: number, allowDiagonalSearch?: boolean);
-    isNodeInBounds(node: Point): boolean;
-    isNodePassable(node: Point): boolean;
-    getNeighbors(node: Point): Point[];
-    search(start: Point, goal: Point): Point[];
+    isNodeInBounds(node: Vector2): boolean;
+    isNodePassable(node: Vector2): boolean;
+    getNeighbors(node: Vector2): Vector2[];
+    search(start: Vector2, goal: Vector2): Vector2[];
 }
 interface IWeightedGraph<T> {
     getNeighbors(node: T): T[];
     cost(from: T, to: T): number;
 }
-declare class WeightedGridGraph implements IWeightedGraph<Point> {
-    static readonly CARDINAL_DIRS: Point[];
+declare class WeightedGridGraph implements IWeightedGraph<Vector2> {
+    static readonly CARDINAL_DIRS: Vector2[];
     private static readonly COMPASS_DIRS;
-    walls: Point[];
-    weightedNodes: Point[];
+    walls: Vector2[];
+    weightedNodes: Vector2[];
     defaultWeight: number;
     weightedNodeWeight: number;
     private _width;
@@ -119,11 +142,11 @@ declare class WeightedGridGraph implements IWeightedGraph<Point> {
     private _dirs;
     private _neighbors;
     constructor(width: number, height: number, allowDiagonalSearch?: boolean);
-    isNodeInBounds(node: Point): boolean;
-    isNodePassable(node: Point): boolean;
-    search(start: Point, goal: Point): Point[];
-    getNeighbors(node: Point): Point[];
-    cost(from: Point, to: Point): number;
+    isNodeInBounds(node: Vector2): boolean;
+    isNodePassable(node: Vector2): boolean;
+    search(start: Vector2, goal: Vector2): Vector2[];
+    getNeighbors(node: Vector2): Vector2[];
+    cost(from: Vector2, to: Vector2): number;
 }
 declare class WeightedNode<T> extends PriorityQueueNode {
     data: T;
@@ -417,6 +440,7 @@ declare abstract class Collider extends Component {
     onRemovedFromEntity(): void;
     onEnabled(): void;
     onDisabled(): void;
+    update(): void;
 }
 declare class BoxCollider extends Collider {
     width: number;
@@ -760,41 +784,13 @@ declare class Rectangle {
     containsRect(value: Rectangle): boolean;
     getHalfSize(): Vector2;
     static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
-    getClosestPointOnRectangleBorderToPoint(point: Point): {
+    getClosestPointOnRectangleBorderToPoint(point: Vector2): {
         res: Vector2;
         edgeNormal: Vector2;
     };
     getClosestPointOnBoundsToOrigin(): Vector2;
     calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
     static rectEncompassingPoints(points: Vector2[]): Rectangle;
-}
-declare class Vector2 {
-    x: number;
-    y: number;
-    private static readonly unitYVector;
-    private static readonly unitXVector;
-    private static readonly unitVector2;
-    private static readonly zeroVector2;
-    static readonly zero: Vector2;
-    static readonly one: Vector2;
-    static readonly unitX: Vector2;
-    static readonly unitY: Vector2;
-    constructor(x?: number, y?: number);
-    static add(value1: Vector2, value2: Vector2): Vector2;
-    static divide(value1: Vector2, value2: Vector2): Vector2;
-    static multiply(value1: Vector2, value2: Vector2): Vector2;
-    static subtract(value1: Vector2, value2: Vector2): Vector2;
-    normalize(): void;
-    length(): number;
-    round(): Vector2;
-    static normalize(value: Vector2): Vector2;
-    static dot(value1: Vector2, value2: Vector2): number;
-    static distanceSquared(value1: Vector2, value2: Vector2): number;
-    static clamp(value1: Vector2, min: Vector2, max: Vector2): Vector2;
-    static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
-    static transform(position: Vector2, matrix: Matrix2D): Vector2;
-    static distance(value1: Vector2, value2: Vector2): number;
-    static negate(value: Vector2): Vector2;
 }
 declare class Vector3 {
     x: number;
@@ -928,7 +924,7 @@ declare class ShapeCollisions {
     static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
     static pointToPoly(point: Vector2, poly: Polygon): CollisionResult;
     static circleToCircle(first: Circle, second: Circle): CollisionResult;
-    static boxToBox(first: Box, second: Box): false | CollisionResult;
+    static boxToBox(first: Box, second: Box): CollisionResult;
     private static minkowskiDifference;
 }
 declare class SpatialHash {
@@ -1035,7 +1031,7 @@ declare class Pair<T> {
     equals(other: Pair<T>): boolean;
 }
 declare class RectangleExt {
-    static union(first: Rectangle, point: Point): Rectangle;
+    static union(first: Rectangle, point: Vector2): Rectangle;
     static unionR(value1: Rectangle, value2: Rectangle): Rectangle;
 }
 declare class Triangulator {

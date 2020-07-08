@@ -122,8 +122,8 @@ class SpatialHash {
         return cell;
     }
 
-    private cellCoords(x: number, y: number): Point {
-        return new Point(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
+    private cellCoords(x: number, y: number): Vector2 {
+        return new Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
     }
 }
 

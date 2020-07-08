@@ -59,7 +59,13 @@ abstract class Collider extends Component{
         return this.shape.overlaps(other.shape);
     }
 
+    /**
+     * 检查这个与运动应用的碰撞器(移动向量)是否与碰撞器碰撞。如果是这样，将返回true，并且结果将填充碰撞数据。
+     * @param collider 
+     * @param motion 
+     */
     public collidesWith(collider: Collider, motion: Vector2){
+        // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
         let oldPosition = this.shape.position;
         this.shape.position = Vector2.add(this.shape.position, motion);
 
@@ -67,6 +73,7 @@ abstract class Collider extends Component{
         if (result)
             result.collider = collider;
 
+        // 将图形位置返回到检查前的位置
         this.shape.position = oldPosition;
 
         return result;
@@ -82,6 +89,7 @@ abstract class Collider extends Component{
             if (renderable){
                 let renderbaleBounds = renderable.bounds;
 
+                // 这里我们需要大小*反尺度，因为当我们自动调整碰撞器的大小时，它需要没有缩放的渲染
                 let width = renderbaleBounds.width / this.entity.scale.x;
                 let height = renderbaleBounds.height / this.entity.scale.y;
 
@@ -90,6 +98,7 @@ abstract class Collider extends Component{
                     boxCollider.width = width;
                     boxCollider.height = height;
 
+                    // 获取渲染的中心，将其转移到本地坐标，并使用它作为碰撞器的localOffset
                     this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.position);
                 }
             }
@@ -111,5 +120,14 @@ abstract class Collider extends Component{
 
     public onDisabled(){
         this.unregisterColliderWithPhysicsSystem();
+    }
+
+    public update(){
+        let spriteRenderer = this.entity.getComponent(SpriteRenderer);
+        // 将显示目标设置为碰撞盒
+        if (spriteRenderer){
+            this.bounds.x = spriteRenderer.x;
+            this.bounds.y = spriteRenderer.y;
+        }
     }
 }
