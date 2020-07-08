@@ -311,19 +311,6 @@ declare class Mesh extends RenderableComponent {
     render(camera: Camera): void;
     reset(): void;
 }
-declare class Sprite {
-    texture2D: egret.Texture;
-    readonly sourceRect: Rectangle;
-    readonly center: Vector2;
-    origin: Vector2;
-    readonly uvs: Rectangle;
-    constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
-}
-declare class SpriteAnimation {
-    readonly sprites: Sprite[];
-    readonly frameRate: number;
-    constructor(sprites: Sprite[], frameRate: number);
-}
 declare class SpriteRenderer extends RenderableComponent {
     private _origin;
     private _sprite;
@@ -337,6 +324,35 @@ declare class SpriteRenderer extends RenderableComponent {
     render(camera: Camera): void;
     onRemovedFromEntity(): void;
     reset(): void;
+}
+declare class TiledSpriteRenderer extends SpriteRenderer {
+    protected sourceRect: Rectangle;
+    protected leftTexture: egret.Bitmap;
+    protected rightTexture: egret.Bitmap;
+    scrollX: number;
+    scrollY: number;
+    constructor(sprite: Sprite);
+    render(camera: Camera): void;
+}
+declare class ScrollingSpriteRenderer extends TiledSpriteRenderer {
+    scrollSpeedX: number;
+    scroolSpeedY: number;
+    private _scrollX;
+    private _scrollY;
+    update(): void;
+}
+declare class Sprite {
+    texture2D: egret.Texture;
+    readonly sourceRect: Rectangle;
+    readonly center: Vector2;
+    origin: Vector2;
+    readonly uvs: Rectangle;
+    constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
+}
+declare class SpriteAnimation {
+    readonly sprites: Sprite[];
+    readonly frameRate: number;
+    constructor(sprites: Sprite[], frameRate: number);
 }
 declare class SpriteAnimator extends SpriteRenderer {
     onAnimationCompletedEvent: Function;
@@ -370,13 +386,6 @@ declare enum State {
     running = 1,
     paused = 2,
     completed = 3
-}
-declare class TiledSpriteRenderer extends SpriteRenderer {
-    protected sourceRect: Rectangle;
-    scrollX: number;
-    scrollY: number;
-    constructor(sprite: Sprite);
-    render(camera: Camera): void;
 }
 interface ITriggerListener {
     onTriggerEnter(other: Collider, local: Collider): any;

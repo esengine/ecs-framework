@@ -1548,31 +1548,6 @@ var Mesh = (function (_super) {
     };
     return Mesh;
 }(RenderableComponent));
-var Sprite = (function () {
-    function Sprite(texture, sourceRect, origin) {
-        if (sourceRect === void 0) { sourceRect = new Rectangle(0, 0, texture.textureWidth, texture.textureHeight); }
-        if (origin === void 0) { origin = sourceRect.getHalfSize(); }
-        this.uvs = new Rectangle();
-        this.texture2D = texture;
-        this.sourceRect = sourceRect;
-        this.center = new Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
-        this.origin = origin;
-        var inverseTexW = 1 / texture.textureWidth;
-        var inverseTexH = 1 / texture.textureHeight;
-        this.uvs.x = sourceRect.x * inverseTexW;
-        this.uvs.y = sourceRect.y * inverseTexH;
-        this.uvs.width = sourceRect.width * inverseTexW;
-        this.uvs.height = sourceRect.height * inverseTexH;
-    }
-    return Sprite;
-}());
-var SpriteAnimation = (function () {
-    function SpriteAnimation(sprites, frameRate) {
-        this.sprites = sprites;
-        this.frameRate = frameRate;
-    }
-    return SpriteAnimation;
-}());
 var SpriteRenderer = (function (_super) {
     __extends(SpriteRenderer, _super);
     function SpriteRenderer() {
@@ -1644,6 +1619,108 @@ var SpriteRenderer = (function (_super) {
     };
     return SpriteRenderer;
 }(RenderableComponent));
+var TiledSpriteRenderer = (function (_super) {
+    __extends(TiledSpriteRenderer, _super);
+    function TiledSpriteRenderer(sprite) {
+        var _this = _super.call(this) || this;
+        _this.leftTexture = new egret.Bitmap();
+        _this.rightTexture = new egret.Bitmap();
+        _this.leftTexture.texture = sprite.texture2D;
+        _this.rightTexture.texture = sprite.texture2D;
+        _this.setSprite(sprite);
+        _this.sourceRect = sprite.sourceRect;
+        return _this;
+    }
+    Object.defineProperty(TiledSpriteRenderer.prototype, "scrollX", {
+        get: function () {
+            return this.sourceRect.x;
+        },
+        set: function (value) {
+            this.sourceRect.x = value;
+            if (this.sourceRect.x < -this.sourceRect.width)
+                this.sourceRect.x = this.sourceRect.width;
+            else if (this.sourceRect.x > this.sourceRect.width)
+                this.sourceRect.x = -this.sourceRect.width;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(TiledSpriteRenderer.prototype, "scrollY", {
+        get: function () {
+            return this.sourceRect.y;
+        },
+        set: function (value) {
+            this.sourceRect.y = value;
+            if (this.sourceRect.y < -this.sourceRect.height)
+                this.sourceRect.y = this.sourceRect.height;
+            else if (this.sourceRect.y > this.sourceRect.height)
+                this.sourceRect.y = -this.sourceRect.height;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    TiledSpriteRenderer.prototype.render = function (camera) {
+        if (!this.sprite)
+            return;
+        _super.prototype.render.call(this, camera);
+        var renderTexture = new egret.RenderTexture();
+        var cacheBitmap = new egret.DisplayObjectContainer();
+        cacheBitmap.removeChildren();
+        cacheBitmap.addChild(this.leftTexture);
+        cacheBitmap.addChild(this.rightTexture);
+        this.leftTexture.x = this.sourceRect.x;
+        this.rightTexture.x = this.sourceRect.x + this.sourceRect.width;
+        this.leftTexture.y = this.sourceRect.y;
+        this.rightTexture.y = this.sourceRect.y;
+        cacheBitmap.cacheAsBitmap = true;
+        renderTexture.drawToTexture(cacheBitmap, new egret.Rectangle(0, 0, this.sourceRect.width, this.sourceRect.height));
+        this.bitmap.texture = renderTexture;
+    };
+    return TiledSpriteRenderer;
+}(SpriteRenderer));
+var ScrollingSpriteRenderer = (function (_super) {
+    __extends(ScrollingSpriteRenderer, _super);
+    function ScrollingSpriteRenderer() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.scrollSpeedX = 15;
+        _this.scroolSpeedY = 0;
+        _this._scrollX = 0;
+        _this._scrollY = 0;
+        return _this;
+    }
+    ScrollingSpriteRenderer.prototype.update = function () {
+        this.scrollX += this.scrollSpeedX * Time.deltaTime;
+        this.scrollY += this.scroolSpeedY * Time.deltaTime;
+        this.sourceRect.x = this._scrollX;
+        this.sourceRect.y = this._scrollY;
+    };
+    return ScrollingSpriteRenderer;
+}(TiledSpriteRenderer));
+var Sprite = (function () {
+    function Sprite(texture, sourceRect, origin) {
+        if (sourceRect === void 0) { sourceRect = new Rectangle(0, 0, texture.textureWidth, texture.textureHeight); }
+        if (origin === void 0) { origin = sourceRect.getHalfSize(); }
+        this.uvs = new Rectangle();
+        this.texture2D = texture;
+        this.sourceRect = sourceRect;
+        this.center = new Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
+        this.origin = origin;
+        var inverseTexW = 1 / texture.textureWidth;
+        var inverseTexH = 1 / texture.textureHeight;
+        this.uvs.x = sourceRect.x * inverseTexW;
+        this.uvs.y = sourceRect.y * inverseTexH;
+        this.uvs.width = sourceRect.width * inverseTexW;
+        this.uvs.height = sourceRect.height * inverseTexH;
+    }
+    return Sprite;
+}());
+var SpriteAnimation = (function () {
+    function SpriteAnimation(sprites, frameRate) {
+        this.sprites = sprites;
+        this.frameRate = frameRate;
+    }
+    return SpriteAnimation;
+}());
 var SpriteAnimator = (function (_super) {
     __extends(SpriteAnimator, _super);
     function SpriteAnimator(sprite) {
@@ -1738,46 +1815,6 @@ var State;
     State[State["paused"] = 2] = "paused";
     State[State["completed"] = 3] = "completed";
 })(State || (State = {}));
-var TiledSpriteRenderer = (function (_super) {
-    __extends(TiledSpriteRenderer, _super);
-    function TiledSpriteRenderer(sprite) {
-        var _this = _super.call(this) || this;
-        _this.setSprite(sprite);
-        _this.sourceRect = sprite.sourceRect;
-        return _this;
-    }
-    Object.defineProperty(TiledSpriteRenderer.prototype, "scrollX", {
-        get: function () {
-            return this.sourceRect.x;
-        },
-        set: function (value) {
-            this.sourceRect.x = value;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(TiledSpriteRenderer.prototype, "scrollY", {
-        get: function () {
-            return this.sourceRect.y;
-        },
-        set: function (value) {
-            this.sourceRect.y = value;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    TiledSpriteRenderer.prototype.render = function (camera) {
-        if (!this.sprite)
-            return;
-        _super.prototype.render.call(this, camera);
-        var renderTexture = new egret.RenderTexture();
-        var targetTexture = new egret.Bitmap(this.sprite.texture2D);
-        var clipBounds = new egret.Rectangle(this.sourceRect.x, this.sourceRect.y, this.sourceRect.width, this.sourceRect.height);
-        renderTexture.drawToTexture(targetTexture, clipBounds);
-        this.bitmap.texture = renderTexture;
-    };
-    return TiledSpriteRenderer;
-}(SpriteRenderer));
 var Mover = (function (_super) {
     __extends(Mover, _super);
     function Mover() {
