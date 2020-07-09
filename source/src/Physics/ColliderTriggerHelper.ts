@@ -1,3 +1,4 @@
+/** 移动器使用的帮助器类，用于管理触发器碰撞器交互并调用itriggerlistener。 */
 class ColliderTriggerHelper {
     private _entity: Entity;
     /** 存储当前帧中发生的所有活动交集对 */
@@ -18,7 +19,9 @@ class ColliderTriggerHelper {
         for (let i = 0; i < colliders.length; i++) {
             let collider = colliders[i];
 
-            let neighbors = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
+            let boxcastResult = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
+            collider.bounds = boxcastResult.rect;
+            let neighbors = boxcastResult.colliders;
             for (let j = 0; j < neighbors.length; j++) {
                 let neighbor = neighbors[j];
                 if (!collider.isTrigger && !neighbor.isTrigger)

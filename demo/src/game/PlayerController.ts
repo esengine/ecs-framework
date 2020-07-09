@@ -37,17 +37,17 @@ class PlayerController extends Component {
             let camera = SceneManager.scene.camera;
             let moveLeft: number = 0;
             let moveRight: number = 0;
-            let speed = 200;
+            let speed = 100;
             let worldPos = Input.touchPosition;
-            if (worldPos.x < this.spriteRenderer.x){
+            if (worldPos.x < this.spriteRenderer.localPosition.x){
                 moveLeft = -1;
-            } else if(worldPos.x > this.spriteRenderer.x){
+            } else if(worldPos.x > this.spriteRenderer.localPosition.x){
                 moveLeft = 1;
             }
 
-            if (worldPos.y < this.spriteRenderer.y){
+            if (worldPos.y < this.spriteRenderer.localPosition.y){
                 moveRight = -1;
-            } else if(worldPos.y > this.spriteRenderer.y){
+            } else if(worldPos.y > this.spriteRenderer.localPosition.y){
                 moveRight = 1;
             }
             this.mover.move(new Vector2(moveLeft * speed * Time.deltaTime, moveRight * speed * Time.deltaTime));

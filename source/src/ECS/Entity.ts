@@ -1,7 +1,6 @@
 class Entity extends egret.DisplayObjectContainer {
     private static _idGenerator: number;
 
-    private _position: Vector2 = Vector2.zero;
     public name: string;
     public readonly id: number;
     /** 当前实体所属的场景 */
@@ -20,11 +19,13 @@ class Entity extends egret.DisplayObjectContainer {
     }
 
     public get position(){
-        return this._position;
+        return new Vector2(this.x, this.y);
     }
 
     public set position(value: Vector2){
-        this._position = value;
+        this.$setX(value.x);
+        this.$setY(value.y);
+        this.onEntityTransformChanged(TransformComponent.position);
     }
 
     public get scale(){
@@ -32,8 +33,18 @@ class Entity extends egret.DisplayObjectContainer {
     }
 
     public set scale(value: Vector2){
-        this.scaleX = value.x;
-        this.scaleY = value.y;
+        this.$setScaleX(value.x);
+        this.$setScaleY(value.y);
+        this.onEntityTransformChanged(TransformComponent.scale);
+    }
+
+    public set rotation(value: number){
+        this.$setRotation(value);
+        this.onEntityTransformChanged(TransformComponent.rotation);
+    }
+
+    public get rotation(){
+        return this.$getRotation();
     }
 
     public get enabled(){
@@ -74,6 +85,11 @@ class Entity extends egret.DisplayObjectContainer {
         this.id = Entity._idGenerator ++;
 
         this.componentBits = new BitSet();
+        this.addEventListener(egret.Event.ADDED_TO_STAGE, this.onAddToStage, this);
+    }
+
+    private onAddToStage(){
+        this.onEntityTransformChanged(TransformComponent.position);
     }
 
     public get updateOrder(){
@@ -160,6 +176,10 @@ class Entity extends egret.DisplayObjectContainer {
         return this.components.getComponents(typeName, componentList);
     }
 
+    private onEntityTransformChanged(comp: TransformComponent){
+        this.components.onEntityTransformChanged(comp);
+    }
+
     public removeComponentForType<T extends Component>(type){
         let comp = this.getComponent<T>(type);
         if (comp){
@@ -195,12 +215,23 @@ class Entity extends egret.DisplayObjectContainer {
 
     public destroy(){
         this._isDestoryed = true;
+        this.removeEventListener(egret.Event.ADDED_TO_STAGE, this.onAddToStage, this);
+
         this.scene.entities.remove(this);
         this.removeChildren();
+
+        if (this.parent)
+            this.parent.removeChild(this);
 
         for (let i = this.numChildren - 1; i >= 0; i --){
             let child = this.getChildAt(i);
             (child as Component).entity.destroy();
         }
     }
+}
+
+enum TransformComponent {
+    rotation,
+    scale,
+    position
 }

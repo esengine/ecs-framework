@@ -62,7 +62,7 @@ abstract class SceneTransition {
         this.isNewSceneLoaded = true;
     }
 
-    public tickEffectProgressProperty(filter: egret.CustomFilter, duration: number, easeType: Function, reverseDirection = false){
+    public tickEffectProgressProperty(filter: egret.CustomFilter, duration: number, easeType: Function, reverseDirection = false): Promise<boolean>{
         return new Promise((resolve)=>{
             let start = reverseDirection ? 1 : 0;
             let end = reverseDirection ? 0 : 1;

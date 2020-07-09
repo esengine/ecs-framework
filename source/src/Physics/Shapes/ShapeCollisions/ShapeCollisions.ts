@@ -15,13 +15,17 @@ class ShapeCollisions {
         let polygonOffset = Vector2.subtract(first.position, second.position);
         let axis: Vector2;
 
+        // 循环穿过两个多边形的所有边
         for (let edgeIndex = 0; edgeIndex < firstEdges.length + secondEdges.length; edgeIndex++) {
+            // 1. 找出当前多边形是否相交
+            // 多边形的归一化轴垂直于缓存给我们的当前边
             if (edgeIndex < firstEdges.length) {
                 axis = firstEdges[edgeIndex];
             } else {
                 axis = secondEdges[edgeIndex - firstEdges.length];
             }
 
+            // 求多边形在当前轴上的投影
             let minA = 0;
             let minB = 0;
             let maxA = 0;
@@ -34,17 +38,24 @@ class ShapeCollisions {
             minB = tb.min;
             maxB = tb.max;
 
+            // 将区间设为第二个多边形的空间。由轴上投影的位置差偏移。
             let relativeIntervalOffset = Vector2.dot(polygonOffset, axis);
             minA += relativeIntervalOffset;
             maxA += relativeIntervalOffset;
 
+            // 检查多边形投影是否正在相交
             intervalDist = this.intervalDistance(minA, maxA, minB, maxB);
             if (intervalDist > 0)
                 isIntersecting = false;
 
+            // 对于多对多数据类型转换，添加一个Vector2?参数称为deltaMovement。为了提高速度，我们这里不使用它
+            // TODO: 现在找出多边形是否会相交。只要检查速度就行了
+
+            // 如果多边形不相交，也不会相交，退出循环
             if (!isIntersecting)
                 return null;
 
+            // 检查当前间隔距离是否为最小值。如果是，则存储间隔距离和当前距离。这将用于计算最小平移向量
             intervalDist = Math.abs(intervalDist);
             if (intervalDist < minIntervalDistance) {
                 minIntervalDistance = intervalDist;
@@ -55,8 +66,9 @@ class ShapeCollisions {
             }
         }
 
+        // 利用最小平移向量对多边形进行推入。
         result.normal = translationAxis;
-        result.minimumTranslationVector = Vector2.multiply(new Vector2(-translationAxis), new Vector2(minIntervalDistance));
+        result.minimumTranslationVector = Vector2.multiply(new Vector2(-translationAxis.x, -translationAxis.y), new Vector2(minIntervalDistance));
 
         return result;
     }
@@ -251,5 +263,40 @@ class ShapeCollisions {
         }
 
         return null;
+    }
+
+    /**
+     * 
+     * @param first 
+     * @param second 
+     */
+    public static boxToBox(first: Box, second: Box){
+        let result = new CollisionResult();
+
+        let minkowskiDiff = this.minkowskiDifference(first, second);
+        if (minkowskiDiff.contains(0, 0)){
+            // 计算MTV。如果它是零，我们就可以称它为非碰撞
+            result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
+
+            if (result.minimumTranslationVector.x == 0 && result.minimumTranslationVector.y == 0)
+                return null;
+            
+            result.normal = new Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
+            result.normal.normalize();
+
+            return result;
+        }
+
+        return null;
+    }
+
+    private static minkowskiDifference(first: Box, second: Box){
+        // 我们需要第一个框的左上角
+        // 碰撞器只会修改运动的位置所以我们需要用位置来计算出运动是什么。
+        let positionOffset = Vector2.subtract(first.position, Vector2.add(first.bounds.location, Vector2.divide(first.bounds.size, new Vector2(2))));
+        let topLeft = Vector2.subtract(Vector2.add(first.bounds.location, positionOffset), second.bounds.max);
+        let fullSize = Vector2.add(first.bounds.size, second.bounds.size);
+
+        return new Rectangle(topLeft.x, topLeft.y, fullSize.x, fullSize.y)
     }
 }
