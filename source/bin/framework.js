@@ -2043,7 +2043,7 @@ var Collider = (function (_super) {
     };
     Collider.prototype.onAddedToEntity = function () {
         if (this._colliderRequiresAutoSizing) {
-            if (!(this instanceof BoxCollider)) {
+            if (!(this instanceof BoxCollider || this instanceof CircleCollider)) {
                 console.error("Only box and circle colliders can be created automatically");
             }
             var renderable = this.entity.getComponent(RenderableComponent);
@@ -2051,7 +2051,12 @@ var Collider = (function (_super) {
                 var bounds = renderable.bounds;
                 var width = bounds.width / this.entity.scale.x;
                 var height = bounds.height / this.entity.scale.y;
-                if (this instanceof BoxCollider) {
+                if (this instanceof CircleCollider) {
+                    var circleCollider = this;
+                    circleCollider.radius = Math.max(width, height) * 0.5;
+                    this.localOffset = bounds.location;
+                }
+                else {
                     var boxCollider = this;
                     boxCollider.width = width;
                     boxCollider.height = height;
@@ -2146,6 +2151,53 @@ var BoxCollider = (function (_super) {
         return this;
     };
     return BoxCollider;
+}(Collider));
+var CircleCollider = (function (_super) {
+    __extends(CircleCollider, _super);
+    function CircleCollider(radius) {
+        var _this = _super.call(this) || this;
+        if (radius)
+            _this._colliderRequiresAutoSizing = true;
+        _this.shape = new Circle(radius ? radius : 1);
+        return _this;
+    }
+    Object.defineProperty(CircleCollider.prototype, "radius", {
+        get: function () {
+            return this.shape.radius;
+        },
+        set: function (value) {
+            this.setRadius(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    CircleCollider.prototype.setRadius = function (radius) {
+        this._colliderRequiresAutoSizing = false;
+        var circle = this.shape;
+        if (radius != circle.radius) {
+            circle.radius = radius;
+            circle._originalRadius = radius;
+            if (this.entity && this._isParentEntityAddedToScene)
+                Physics.updateCollider(this);
+        }
+        return this;
+    };
+    return CircleCollider;
+}(Collider));
+var PolygonCollider = (function (_super) {
+    __extends(PolygonCollider, _super);
+    function PolygonCollider(points) {
+        var _this = _super.call(this) || this;
+        var isPolygonClosed = points[0] == points[points.length - 1];
+        if (isPolygonClosed)
+            points.splice(points.length - 1, 1);
+        var center = Polygon.findPolygonCenter(points);
+        _this.setLocalOffset(center);
+        Polygon.recenterPolygonVerts(points);
+        _this.shape = new Polygon(points);
+        return _this;
+    }
+    return PolygonCollider;
 }(Collider));
 var EntitySystem = (function () {
     function EntitySystem(matcher) {
@@ -3999,6 +4051,11 @@ var Polygon = (function (_super) {
         }
         return new Vector2(x / points.length, y / points.length);
     };
+    Polygon.recenterPolygonVerts = function (points) {
+        var center = this.findPolygonCenter(points);
+        for (var i = 0; i < points.length; i++)
+            points[i] = Vector2.subtract(points[i], center);
+    };
     Polygon.getClosestPointOnPolygonToPoint = function (points, point) {
         var distanceSquared = Number.MAX_VALUE;
         var edgeNormal = new Vector2(0, 0);
@@ -4438,6 +4495,12 @@ var SpatialHash = (function () {
             if (collider instanceof BoxCollider) {
                 results[resultCounter] = collider;
                 resultCounter++;
+            }
+            else if (collider instanceof CircleCollider) {
+                if (collider.shape.overlaps(this._overlapTestCircle)) {
+                    results[resultCounter] = collider;
+                    resultCounter++;
+                }
             }
             else {
                 throw new Error("overlapCircle against this collider type is not implemented!");

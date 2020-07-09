@@ -93,6 +93,10 @@ class Polygon extends Shape {
         throw new Error(`overlaps of Pologon to ${other} are not supported`);
     }
 
+    /**
+     * 找到多边形的中心。注意，这对于正则多边形是准确的。不规则多边形没有中心。
+     * @param points 
+     */
     public static findPolygonCenter(points: Vector2[]) {
         let x = 0, y = 0;
 
@@ -102,6 +106,16 @@ class Polygon extends Shape {
         }
 
         return new Vector2(x / points.length, y / points.length);
+    }
+
+    /**
+     * 重定位多边形的点
+     * @param points 
+     */
+    public static recenterPolygonVerts(points: Vector2[]){
+        let center = this.findPolygonCenter(points);
+        for (let i = 0; i < points.length; i ++)
+            points[i] = Vector2.subtract(points[i], center);
     }
 
     /**

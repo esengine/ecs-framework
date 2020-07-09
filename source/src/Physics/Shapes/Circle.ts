@@ -1,7 +1,7 @@
 ///<reference path="./Shape.ts" />
 class Circle extends Shape {
     public radius: number;
-    private _originalRadius: number;
+    public _originalRadius: number;
     public center = new Vector2();
 
     constructor(radius: number) {

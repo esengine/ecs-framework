@@ -99,7 +99,7 @@ abstract class Collider extends Component {
 
     public onAddedToEntity() {
         if (this._colliderRequiresAutoSizing) {
-            if (!(this instanceof BoxCollider)) {
+            if (!(this instanceof BoxCollider || this instanceof CircleCollider)) {
                 console.error("Only box and circle colliders can be created automatically");
             }
 
@@ -111,12 +111,17 @@ abstract class Collider extends Component {
                 let width = bounds.width / this.entity.scale.x;
                 let height = bounds.height / this.entity.scale.y;
 
-                if (this instanceof BoxCollider) {
-                    let boxCollider = this as BoxCollider;
+                // 圆碰撞器需要特别注意原点
+                if (this instanceof CircleCollider){
+                    let circleCollider = this as CircleCollider;
+                    circleCollider.radius = Math.max(width, height) * 0.5;
+
+                    this.localOffset = bounds.location;
+                } else {
+                    let boxCollider = this;
                     boxCollider.width = width;
                     boxCollider.height = height;
 
-                    // 获取渲染的中心，将其转移到本地坐标，并使用它作为碰撞器的localOffset
                     this.localOffset = bounds.location;
                 }
             } else {
