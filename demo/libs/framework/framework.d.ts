@@ -458,6 +458,14 @@ declare class BoxCollider extends Collider {
     constructor();
     setSize(width: number, height: number): this;
 }
+declare class CircleCollider extends Collider {
+    radius: number;
+    constructor(radius?: number);
+    setRadius(radius: number): CircleCollider;
+}
+declare class PolygonCollider extends Collider {
+    constructor(points: Vector2[]);
+}
 declare class EntitySystem {
     private _scene;
     private _entities;
@@ -873,6 +881,7 @@ declare class Polygon extends Shape {
     recalculateCenterAndEdgeNormals(): void;
     overlaps(other: Shape): any;
     static findPolygonCenter(points: Vector2[]): Vector2;
+    static recenterPolygonVerts(points: Vector2[]): void;
     static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): {
         closestPoint: any;
         distanceSquared: any;
@@ -895,7 +904,7 @@ declare class Box extends Polygon {
 }
 declare class Circle extends Shape {
     radius: number;
-    private _originalRadius;
+    _originalRadius: number;
     center: Vector2;
     constructor(radius: number);
     pointCollidesWithShape(point: Vector2): CollisionResult;

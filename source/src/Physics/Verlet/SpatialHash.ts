@@ -94,10 +94,21 @@ class SpatialHash {
             if (collider instanceof BoxCollider) {
                 results[resultCounter] = collider;
                 resultCounter++;
+            } else if (collider instanceof CircleCollider) {
+                if (collider.shape.overlaps(this._overlapTestCircle)){
+                    results[resultCounter] = collider;
+                    resultCounter ++;
+                }
+            } else if(collider instanceof PolygonCollider) {
+                if (collider.shape.overlaps(this._overlapTestCircle)){
+                    results[resultCounter] = collider;
+                    resultCounter ++;
+                }
             } else {
                 throw new Error("overlapCircle against this collider type is not implemented!");
             }
 
+            // 如果我们所有的结果数据有了则返回
             if (resultCounter == results.length)
                 return resultCounter;
         }
