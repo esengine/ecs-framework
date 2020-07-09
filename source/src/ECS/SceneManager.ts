@@ -81,6 +81,9 @@ class SceneManager {
             }
         } else if (this._scene) {
             this._scene.render();
+
+            Debug.render();
+
             this._scene.postRender();
         }
     }

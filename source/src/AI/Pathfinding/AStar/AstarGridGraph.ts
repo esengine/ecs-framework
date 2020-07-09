@@ -33,13 +33,18 @@ class AstarGridGraph implements IAstarGraph<Vector2> {
     }
 
     /**
-     * 检查节点是否可以通过。墙壁是不可逾越的。
+     * 检查节点是否可以通过。walls是不可逾越的。
      * @param node 
      */
     public isNodePassable(node: Vector2): boolean {
         return !this.walls.firstOrDefault(wall => JSON.stringify(wall) == JSON.stringify(node));
     }
 
+    /**
+     * 调用AStarPathfinder.search的快捷方式
+     * @param start 
+     * @param goal 
+     */
     public search(start: Vector2, goal: Vector2){
         return AStarPathfinder.search(this, start, goal);
     }

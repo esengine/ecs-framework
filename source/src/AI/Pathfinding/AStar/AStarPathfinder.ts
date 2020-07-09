@@ -3,6 +3,12 @@
  * 计算路径给定的IAstarGraph和开始/目标位置
  */
 class AStarPathfinder {
+    /**
+     * 尽可能从开始到目标找到一条路径。如果没有找到路径，则返回null。
+     * @param graph 
+     * @param start 
+     * @param goal 
+     */
     public static search<T>(graph: IAstarGraph<T>, start: T, goal: T){
         let foundPath = false;
         let cameFrom = new Map<T, T>();
@@ -60,6 +66,12 @@ class AStarPathfinder {
         return null;
     }
 
+    /**
+     * 从cameFrom字典重新构造路径
+     * @param cameFrom 
+     * @param start 
+     * @param goal 
+     */
     public static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[]{
         let path = [];
         let current = goal;

@@ -61,6 +61,7 @@ declare class PriorityQueue<T extends PriorityQueueNode> {
     constructor(maxNodes: number);
     clear(): void;
     readonly count: number;
+    readonly maxSize: number;
     contains(node: T): boolean;
     enqueue(node: T, priority: number): void;
     dequeue(): T;
@@ -158,9 +159,34 @@ declare class WeightedPathfinder {
     private static getKey;
     static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[];
 }
+declare class Debug {
+    private static _debugDrawItems;
+    static drawHollowRect(rectanle: Rectangle, color: number, duration?: number): void;
+    static render(): void;
+}
 declare class DebugDefaults {
     static verletParticle: number;
     static verletConstraintEdge: number;
+}
+declare enum DebugDrawType {
+    line = 0,
+    hollowRectangle = 1,
+    pixel = 2,
+    text = 3
+}
+declare class DebugDrawItem {
+    rectangle: Rectangle;
+    color: number;
+    duration: number;
+    drawType: DebugDrawType;
+    text: string;
+    start: Vector2;
+    end: Vector2;
+    x: number;
+    y: number;
+    size: number;
+    constructor(rectangle: Rectangle, color: number, duration: number);
+    draw(shape: egret.Shape): boolean;
 }
 declare abstract class Component extends egret.DisplayObjectContainer {
     entity: Entity;
@@ -754,6 +780,7 @@ declare class MathHelper {
     static clamp(value: number, min: number, max: number): number;
     static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number): Vector2;
     static isEven(value: number): boolean;
+    static angleBetweenVectors(from: Vector2, to: Vector2): number;
 }
 declare class Matrix2D {
     m11: number;
@@ -854,6 +881,7 @@ declare class Physics {
     static addCollider(collider: Collider): void;
     static removeCollider(collider: Collider): void;
     static updateCollider(collider: Collider): void;
+    static debugDraw(secondsToDisplay: any): void;
 }
 declare abstract class Shape {
     bounds: Rectangle;
@@ -954,6 +982,8 @@ declare class SpatialHash {
     };
     private cellAtPosition;
     private cellCoords;
+    debugDraw(secondsToDisplay: number, textScale?: number): void;
+    private debugDrawCellDetails;
 }
 declare class RaycastResultParser {
 }
@@ -972,6 +1002,13 @@ declare class ContentManager {
     protected loadedAssets: Map<string, any>;
     loadRes(name: string, local?: boolean): Promise<any>;
     dispose(): void;
+}
+declare class DrawUtils {
+    static drawLine(shape: egret.Shape, start: Vector2, end: Vector2, color: number, thickness?: number): void;
+    static drawLineAngle(shape: egret.Shape, start: Vector2, radians: number, length: number, color: number, thickness?: number): void;
+    static drawHollowRect(shape: egret.Shape, rect: Rectangle, color: number, thickness?: number): void;
+    static drawHollowRectR(shape: egret.Shape, x: number, y: number, width: number, height: number, color: number, thickness?: number): void;
+    static drawPixel(shape: egret.Shape, position: Vector2, color: number, size?: number): void;
 }
 declare class Emitter<T> {
     private _messageTable;
