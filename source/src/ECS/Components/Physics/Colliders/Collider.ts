@@ -1,4 +1,4 @@
-abstract class Collider extends Component{
+abstract class Collider extends Component {
     /** 对撞机的基本形状 */
     public shape: Shape;
     /** 在处理冲突时，physicsLayer可以用作过滤器。Flags类有帮助位掩码的方法。 */
@@ -24,27 +24,25 @@ abstract class Collider extends Component{
     protected _isColliderRegistered;
 
     public get bounds(): Rectangle {
-        // this.shape.recalculateBounds(this);
-        let bds = this.entity.getBounds();
-        return new Rectangle(bds.x, bds.y, bds.width, bds.height);
+        this.shape.recalculateBounds(this);
+        return this.shape.bounds;
     }
 
-    public get localOffset(){
-        return new Vector2(this.x, this.y);
+    public get localOffset() {
+        return this._localOffset;
     }
 
     /**
      * 将localOffset添加到实体。获取碰撞器的最终位置。这允许您向一个实体添加多个碰撞器并分别定位它们。
      */
-    public set localOffset(value: Vector2){
+    public set localOffset(value: Vector2) {
         this.setLocalOffset(value);
     }
 
-    public setLocalOffset(offset: Vector2){
-        if (this._localOffset != offset){
+    public setLocalOffset(offset: Vector2) {
+        if (this._localOffset != offset) {
             this.unregisterColliderWithPhysicsSystem();
-            this.$setX(offset.x);
-            this.$setY(offset.y);
+            this._localOffset = offset;
             this._localOffsetLength = this._localOffset.length();
             this.registerColliderWithPhysicsSystem();
         }
@@ -53,9 +51,9 @@ abstract class Collider extends Component{
     /**
      * 父实体会在不同的时间调用它(当添加到场景，启用，等等)
      */
-    public registerColliderWithPhysicsSystem(){
+    public registerColliderWithPhysicsSystem() {
         // 如果在将我们添加到实体之前更改了origin等属性，则实体可以为null
-        if (this._isParentEntityAddedToScene && !this._isColliderRegistered){
+        if (this._isParentEntityAddedToScene && !this._isColliderRegistered) {
             Physics.addCollider(this);
             this._isColliderRegistered = true;
         }
@@ -64,8 +62,8 @@ abstract class Collider extends Component{
     /**
      * 父实体会在不同的时候调用它(从场景中移除，禁用，等等)
      */
-    public unregisterColliderWithPhysicsSystem(){
-        if (this._isParentEntityAddedToScene && this._isColliderRegistered){
+    public unregisterColliderWithPhysicsSystem() {
+        if (this._isParentEntityAddedToScene && this._isColliderRegistered) {
             Physics.removeCollider(this);
         }
         this._isColliderRegistered = false;
@@ -75,7 +73,7 @@ abstract class Collider extends Component{
      * 检查这个形状是否与物理系统中的其他对撞机重叠
      * @param other 
      */
-    public overlaps(other: Collider){
+    public overlaps(other: Collider) {
         return this.shape.overlaps(other.shape);
     }
 
@@ -84,7 +82,7 @@ abstract class Collider extends Component{
      * @param collider 
      * @param motion 
      */
-    public collidesWith(collider: Collider, motion: Vector2){
+    public collidesWith(collider: Collider, motion: Vector2) {
         // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
         let oldPosition = this.shape.position;
         this.shape.position = Vector2.add(this.shape.position, motion);
@@ -99,48 +97,60 @@ abstract class Collider extends Component{
         return result;
     }
 
-    public onAddedToEntity(){
-        if (this._colliderRequiresAutoSizing){
-            if (!(this instanceof BoxCollider)){
+    public onAddedToEntity() {
+        if (this._colliderRequiresAutoSizing) {
+            if (!(this instanceof BoxCollider)) {
                 console.error("Only box and circle colliders can be created automatically");
             }
 
-            let bounds = this.entity.getBounds();
-            let renderbaleBounds = new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height);
+            let renderable = this.entity.getComponent<RenderableComponent>(RenderableComponent);
+            if (renderable) {
+                let bounds = renderable.bounds;
 
-            // 这里我们需要大小*反尺度，因为当我们自动调整碰撞器的大小时，它需要没有缩放的渲染
-            let width = renderbaleBounds.width / this.entity.scale.x;
-            let height = renderbaleBounds.height / this.entity.scale.y;
+                // 这里我们需要大小*反尺度，因为当我们自动调整碰撞器的大小时，它需要没有缩放的渲染
+                let width = bounds.width / this.entity.scale.x;
+                let height = bounds.height / this.entity.scale.y;
 
-            if (this instanceof BoxCollider){
-                let boxCollider = this as BoxCollider;
-                boxCollider.width = width;
-                boxCollider.height = height;
+                if (this instanceof BoxCollider) {
+                    let boxCollider = this as BoxCollider;
+                    boxCollider.width = width;
+                    boxCollider.height = height;
 
-                // 获取渲染的中心，将其转移到本地坐标，并使用它作为碰撞器的localOffset
-                this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.position);
+                    // 获取渲染的中心，将其转移到本地坐标，并使用它作为碰撞器的localOffset
+                    this.localOffset = bounds.location;
+                }
+            } else {
+                console.warn("Collider has no shape and no RenderableComponent. Can't figure out how to size it.");
             }
         }
 
         this._isParentEntityAddedToScene = true;
         this.registerColliderWithPhysicsSystem();
     }
-    
-    public onRemovedFromEntity(){
+
+    public onRemovedFromEntity() {
         this.unregisterColliderWithPhysicsSystem();
         this._isParentEntityAddedToScene = false;
     }
 
-    public onEnabled(){
+    public onEnabled() {
         this.registerColliderWithPhysicsSystem();
     }
 
-    public onDisabled(){
+    public onDisabled() {
         this.unregisterColliderWithPhysicsSystem();
     }
 
-    public onEntityTransformChanged(comp: TransformComponent){
+    public onEntityTransformChanged(comp: TransformComponent) {
         if (this._isColliderRegistered)
             Physics.updateCollider(this);
+    }
+
+    public update(){
+        let renderable = this.entity.getComponent<RenderableComponent>(RenderableComponent);
+        if (renderable){
+            this.$setX(renderable.x + this.localOffset.x);
+            this.$setY(renderable.y + this.localOffset.y);
+        }
     }
 }

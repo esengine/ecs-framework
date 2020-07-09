@@ -51,11 +51,11 @@ class SpatialHash {
         let p2 = this.cellCoords(bounds.right, bounds.bottom);
 
         // 更新边界以跟踪网格大小
-        if (!this.gridBounds.containsInVec(new Vector2(p1.x, p1.y))) {
+        if (!this.gridBounds.contains(p1.x, p1.y)) {
             this.gridBounds = RectangleExt.union(this.gridBounds, p1);
         }
 
-        if (!this.gridBounds.containsInVec(new Vector2(p2.x, p2.y))) {
+        if (!this.gridBounds.contains(p2.x, p2.y)) {
             this.gridBounds = RectangleExt.union(this.gridBounds, p2);
         }
 
@@ -190,6 +190,10 @@ class NumberDictionary {
         return Long.fromNumber(x).shiftLeft(32).or(this.intToUint(y)).toString();
     }
 
+    /**
+     * 
+     * @param i 
+     */
     private intToUint(i) {
         if (i >= 0)
             return i;

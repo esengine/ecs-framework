@@ -274,7 +274,7 @@ class ShapeCollisions {
         let result = new CollisionResult();
 
         let minkowskiDiff = this.minkowskiDifference(first, second);
-        if (minkowskiDiff.containsInVec(new Vector2(0, 0))){
+        if (minkowskiDiff.contains(0, 0)){
             // 计算MTV。如果它是零，我们就可以称它为非碰撞
             result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
 

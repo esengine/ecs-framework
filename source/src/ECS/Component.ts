@@ -13,6 +13,10 @@ abstract class Component extends egret.DisplayObjectContainer {
         this.setEnabled(value);
     }
 
+    public get localPosition(){
+        return new Vector2(this.entity.x + this.x, this.entity.y + this.y);
+    }
+
     public setEnabled(isEnabled: boolean){
         if (this._enabled != isEnabled){
             this._enabled = isEnabled;

@@ -78,7 +78,7 @@ class Box extends Polygon {
 
     public containsPoint(point: Vector2){
         if (this.isUnrotated)
-            return this.bounds.containsInVec(point);
+            return this.bounds.contains(point.x, point.y);
 
         return super.containsPoint(point);
     }

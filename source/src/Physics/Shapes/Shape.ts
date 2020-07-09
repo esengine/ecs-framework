@@ -1,7 +1,7 @@
 abstract class Shape {
-    public bounds: Rectangle;
-    public position: Vector2;
-    public center: Vector2;
+    public bounds: Rectangle = new Rectangle();
+    public position: Vector2 = Vector2.zero;
+    public abstract center: Vector2;
 
     public abstract recalculateBounds(collider: Collider);
     public abstract pointCollidesWithShape(point: Vector2): CollisionResult;

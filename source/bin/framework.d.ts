@@ -168,6 +168,7 @@ declare abstract class Component extends egret.DisplayObjectContainer {
     updateInterval: number;
     userData: any;
     enabled: boolean;
+    readonly localPosition: Vector2;
     setEnabled(isEnabled: boolean): this;
     initialize(): void;
     onAddedToEntity(): void;
@@ -200,6 +201,7 @@ declare class Entity extends egret.DisplayObjectContainer {
     tag: number;
     readonly stage: egret.Stage;
     constructor(name: string);
+    private onAddToStage;
     updateOrder: number;
     roundPosition(): void;
     setUpdateOrder(updateOrder: number): this;
@@ -446,6 +448,7 @@ declare abstract class Collider extends Component {
     onEnabled(): void;
     onDisabled(): void;
     onEntityTransformChanged(comp: TransformComponent): void;
+    update(): void;
 }
 declare class BoxCollider extends Collider {
     width: number;
@@ -701,7 +704,7 @@ declare abstract class SceneTransition {
     onBeginTransition(): Promise<void>;
     protected transitionComplete(): void;
     protected loadNextScene(): Promise<void>;
-    tickEffectProgressProperty(filter: egret.CustomFilter, duration: number, easeType: Function, reverseDirection?: boolean): Promise<{}>;
+    tickEffectProgressProperty(filter: egret.CustomFilter, duration: number, easeType: Function, reverseDirection?: boolean): Promise<boolean>;
 }
 declare class FadeTransition extends SceneTransition {
     fadeToColor: number;
@@ -776,7 +779,6 @@ declare class Rectangle extends egret.Rectangle {
     location: Vector2;
     size: Vector2;
     intersects(value: egret.Rectangle): boolean;
-    containsInVec(value: Vector2): boolean;
     containsRect(value: Rectangle): boolean;
     getHalfSize(): Vector2;
     static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
@@ -848,7 +850,7 @@ declare class Physics {
 declare abstract class Shape {
     bounds: Rectangle;
     position: Vector2;
-    center: Vector2;
+    abstract center: Vector2;
     abstract recalculateBounds(collider: Collider): any;
     abstract pointCollidesWithShape(point: Vector2): CollisionResult;
     abstract overlaps(other: Shape): any;
@@ -860,6 +862,7 @@ declare class Polygon extends Shape {
     private _polygonCenter;
     private _areEdgeNormalsDirty;
     protected _originalPoints: Vector2[];
+    center: Vector2;
     _edgeNormals: Vector2[];
     readonly edgeNormals: Vector2[];
     isBox: boolean;
@@ -893,6 +896,7 @@ declare class Box extends Polygon {
 declare class Circle extends Shape {
     radius: number;
     private _originalRadius;
+    center: Vector2;
     constructor(radius: number);
     pointCollidesWithShape(point: Vector2): CollisionResult;
     collidesWithShape(other: Shape): CollisionResult;
@@ -1027,7 +1031,6 @@ declare class Pair<T> {
 }
 declare class RectangleExt {
     static union(first: Rectangle, point: Vector2): Rectangle;
-    static unionR(value1: Rectangle, value2: Rectangle): Rectangle;
 }
 declare class Triangulator {
     triangleIndices: number[];

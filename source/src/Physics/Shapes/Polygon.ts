@@ -5,6 +5,7 @@ class Polygon extends Shape {
     private _polygonCenter: Vector2;
     private _areEdgeNormalsDirty = true;
     protected _originalPoints: Vector2[];
+    public center = new Vector2();
 
     public _edgeNormals: Vector2[];
     public get edgeNormals(){
@@ -183,8 +184,8 @@ class Polygon extends Shape {
 
     public recalculateBounds(collider: Collider) {
         // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
-        this.center = collider.localOffset;
-
+        // this.center = collider.localOffset;
+        let localOffset = collider.localOffset;
         if (collider.shouldColliderScaleAndRotateWithTransform){
             let hasUnitScale = true;
             let tempMat: Matrix2D;
@@ -198,7 +199,7 @@ class Polygon extends Shape {
 
                 // 缩放偏移量并将其设置为中心。如果我们有旋转，它会在下面重置
                 let scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.scale);
-                this.center = scaledOffset;
+                localOffset = scaledOffset;
             }
 
             if (collider.entity.rotation != 0){
@@ -209,7 +210,7 @@ class Polygon extends Shape {
                 // 我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
                 let offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
                 let offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
-                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
+                localOffset = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
             }
 
             tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
@@ -220,8 +221,9 @@ class Polygon extends Shape {
             this.isUnrotated = collider.entity.rotation == 0;
         }
 
-        this.position = Vector2.add(collider.entity.position, this.center);
+        this.position = Vector2.add(collider.entity.position, localOffset);
         this.bounds = Rectangle.rectEncompassingPoints(this.points);
         this.bounds.location = Vector2.add(this.bounds.location, this.position);
+        this.center = localOffset;
     }
 }

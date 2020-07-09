@@ -891,6 +891,13 @@ var Component = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(Component.prototype, "localPosition", {
+        get: function () {
+            return new Vector2(this.entity.x + this.x, this.entity.y + this.y);
+        },
+        enumerable: true,
+        configurable: true
+    });
     Component.prototype.setEnabled = function (isEnabled) {
         if (this._enabled != isEnabled) {
             this._enabled = isEnabled;
@@ -940,6 +947,7 @@ var Entity = (function (_super) {
         _this.components = new ComponentList(_this);
         _this.id = Entity._idGenerator++;
         _this.componentBits = new BitSet();
+        _this.addEventListener(egret.Event.ADDED_TO_STAGE, _this.onAddToStage, _this);
         return _this;
     }
     Object.defineProperty(Entity.prototype, "isDestoryed", {
@@ -974,6 +982,9 @@ var Entity = (function (_super) {
         configurable: true
     });
     Object.defineProperty(Entity.prototype, "rotation", {
+        get: function () {
+            return this.$getRotation();
+        },
         set: function (value) {
             this.$setRotation(value);
             this.onEntityTransformChanged(TransformComponent.rotation);
@@ -1016,6 +1027,9 @@ var Entity = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    Entity.prototype.onAddToStage = function () {
+        this.onEntityTransformChanged(TransformComponent.position);
+    };
     Object.defineProperty(Entity.prototype, "updateOrder", {
         get: function () {
             return this._updateOrder;
@@ -1116,8 +1130,11 @@ var Entity = (function (_super) {
     };
     Entity.prototype.destroy = function () {
         this._isDestoryed = true;
+        this.removeEventListener(egret.Event.ADDED_TO_STAGE, this.onAddToStage, this);
         this.scene.entities.remove(this);
         this.removeChildren();
+        if (this.parent)
+            this.parent.removeChild(this);
         for (var i = this.numChildren - 1; i >= 0; i--) {
             var child = this.getChildAt(i);
             child.entity.destroy();
@@ -1976,15 +1993,15 @@ var Collider = (function (_super) {
     }
     Object.defineProperty(Collider.prototype, "bounds", {
         get: function () {
-            var bds = this.entity.getBounds();
-            return new Rectangle(bds.x, bds.y, bds.width, bds.height);
+            this.shape.recalculateBounds(this);
+            return this.shape.bounds;
         },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(Collider.prototype, "localOffset", {
         get: function () {
-            return new Vector2(this.x, this.y);
+            return this._localOffset;
         },
         set: function (value) {
             this.setLocalOffset(value);
@@ -1995,8 +2012,7 @@ var Collider = (function (_super) {
     Collider.prototype.setLocalOffset = function (offset) {
         if (this._localOffset != offset) {
             this.unregisterColliderWithPhysicsSystem();
-            this.$setX(offset.x);
-            this.$setY(offset.y);
+            this._localOffset = offset;
             this._localOffsetLength = this._localOffset.length();
             this.registerColliderWithPhysicsSystem();
         }
@@ -2030,15 +2046,20 @@ var Collider = (function (_super) {
             if (!(this instanceof BoxCollider)) {
                 console.error("Only box and circle colliders can be created automatically");
             }
-            var bounds = this.entity.getBounds();
-            var renderbaleBounds = new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height);
-            var width = renderbaleBounds.width / this.entity.scale.x;
-            var height = renderbaleBounds.height / this.entity.scale.y;
-            if (this instanceof BoxCollider) {
-                var boxCollider = this;
-                boxCollider.width = width;
-                boxCollider.height = height;
-                this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.position);
+            var renderable = this.entity.getComponent(RenderableComponent);
+            if (renderable) {
+                var bounds = renderable.bounds;
+                var width = bounds.width / this.entity.scale.x;
+                var height = bounds.height / this.entity.scale.y;
+                if (this instanceof BoxCollider) {
+                    var boxCollider = this;
+                    boxCollider.width = width;
+                    boxCollider.height = height;
+                    this.localOffset = bounds.location;
+                }
+            }
+            else {
+                console.warn("Collider has no shape and no RenderableComponent. Can't figure out how to size it.");
             }
         }
         this._isParentEntityAddedToScene = true;
@@ -2057,6 +2078,13 @@ var Collider = (function (_super) {
     Collider.prototype.onEntityTransformChanged = function (comp) {
         if (this._isColliderRegistered)
             Physics.updateCollider(this);
+    };
+    Collider.prototype.update = function () {
+        var renderable = this.entity.getComponent(RenderableComponent);
+        if (renderable) {
+            this.$setX(renderable.x + this.localOffset.x);
+            this.$setY(renderable.y + this.localOffset.y);
+        }
     };
     return Collider;
 }(Component));
@@ -3525,11 +3553,6 @@ var Rectangle = (function (_super) {
             value.top < this.bottom &&
             this.top < value.bottom;
     };
-    Rectangle.prototype.containsInVec = function (value) {
-        return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
-            (this.y <= value.y)) &&
-            (value.y < (this.y + this.height)));
-    };
     Rectangle.prototype.containsRect = function (value) {
         return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
             (this.y <= value.y)) &&
@@ -3546,7 +3569,7 @@ var Rectangle = (function (_super) {
         var res = new Vector2();
         res.x = MathHelper.clamp(point.x, this.left, this.right);
         res.y = MathHelper.clamp(point.y, this.top, this.bottom);
-        if (this.containsInVec(res)) {
+        if (this.contains(res.x, res.y)) {
             var dl = res.x - this.left;
             var dr = this.right - res.x;
             var dt = res.y - this.top;
@@ -3886,6 +3909,8 @@ var Physics = (function () {
 }());
 var Shape = (function () {
     function Shape() {
+        this.bounds = new Rectangle();
+        this.position = Vector2.zero;
     }
     return Shape;
 }());
@@ -3895,6 +3920,7 @@ var Polygon = (function (_super) {
         var _this = _super.call(this) || this;
         _this.isUnrotated = true;
         _this._areEdgeNormalsDirty = true;
+        _this.center = new Vector2();
         _this.setPoints(points);
         _this.isBox = isBox;
         return _this;
@@ -4019,7 +4045,7 @@ var Polygon = (function (_super) {
         return verts;
     };
     Polygon.prototype.recalculateBounds = function (collider) {
-        this.center = collider.localOffset;
+        var localOffset = collider.localOffset;
         if (collider.shouldColliderScaleAndRotateWithTransform) {
             var hasUnitScale = true;
             var tempMat = void 0;
@@ -4029,23 +4055,24 @@ var Polygon = (function (_super) {
                 combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
                 hasUnitScale = false;
                 var scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.scale);
-                this.center = scaledOffset;
+                localOffset = scaledOffset;
             }
             if (collider.entity.rotation != 0) {
                 tempMat = Matrix2D.createRotation(collider.entity.rotation, tempMat);
                 combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
                 var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
                 var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
-                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
+                localOffset = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
             }
             tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
             combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
             Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
             this.isUnrotated = collider.entity.rotation == 0;
         }
-        this.position = Vector2.add(collider.entity.position, this.center);
+        this.position = Vector2.add(collider.entity.position, localOffset);
         this.bounds = Rectangle.rectEncompassingPoints(this.points);
         this.bounds.location = Vector2.add(this.bounds.location, this.position);
+        this.center = localOffset;
     };
     return Polygon;
 }(Shape));
@@ -4096,7 +4123,7 @@ var Box = (function (_super) {
     };
     Box.prototype.containsPoint = function (point) {
         if (this.isUnrotated)
-            return this.bounds.containsInVec(point);
+            return this.bounds.contains(point.x, point.y);
         return _super.prototype.containsPoint.call(this, point);
     };
     return Box;
@@ -4105,6 +4132,7 @@ var Circle = (function (_super) {
     __extends(Circle, _super);
     function Circle(radius) {
         var _this = _super.call(this) || this;
+        _this.center = new Vector2();
         _this.radius = radius;
         _this._originalRadius = radius;
         return _this;
@@ -4333,7 +4361,7 @@ var ShapeCollisions = (function () {
     ShapeCollisions.boxToBox = function (first, second) {
         var result = new CollisionResult();
         var minkowskiDiff = this.minkowskiDifference(first, second);
-        if (minkowskiDiff.containsInVec(new Vector2(0, 0))) {
+        if (minkowskiDiff.contains(0, 0)) {
             result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
             if (result.minimumTranslationVector.x == 0 && result.minimumTranslationVector.y == 0)
                 return null;
@@ -4381,10 +4409,10 @@ var SpatialHash = (function () {
         collider.registeredPhysicsBounds = bounds;
         var p1 = this.cellCoords(bounds.x, bounds.y);
         var p2 = this.cellCoords(bounds.right, bounds.bottom);
-        if (!this.gridBounds.containsInVec(new Vector2(p1.x, p1.y))) {
+        if (!this.gridBounds.contains(p1.x, p1.y)) {
             this.gridBounds = RectangleExt.union(this.gridBounds, p1);
         }
-        if (!this.gridBounds.containsInVec(new Vector2(p2.x, p2.y))) {
+        if (!this.gridBounds.contains(p2.x, p2.y)) {
             this.gridBounds = RectangleExt.union(this.gridBounds, p2);
         }
         for (var x = p1.x; x <= p2.x; x++) {
@@ -4807,15 +4835,8 @@ var RectangleExt = (function () {
     }
     RectangleExt.union = function (first, point) {
         var rect = new Rectangle(point.x, point.y, 0, 0);
-        return this.unionR(first, rect);
-    };
-    RectangleExt.unionR = function (value1, value2) {
-        var result = new Rectangle();
-        result.x = Math.min(value1.x, value2.x);
-        result.y = Math.min(value1.y, value2.y);
-        result.width = Math.max(value1.right, value2.right) - result.x;
-        result.height = Math.max(value1.bottom, value2.bottom) - result.y;
-        return result;
+        var rectResult = first.union(rect);
+        return new Rectangle(rectResult.x, rectResult.y, rectResult.width, rectResult.height);
     };
     return RectangleExt;
 }());

@@ -42,16 +42,6 @@ class Rectangle extends egret.Rectangle {
     }
 
     /**
-     * 判断点是否在矩形内
-     * @param value 
-     */
-    public containsInVec(value: Vector2) {
-        return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
-            (this.y <= value.y)) &&
-            (value.y < (this.y + this.height)));
-    }
-
-    /**
      * 获取所提供的矩形是否在此矩形的边界内
      * @param value 
      */
@@ -89,7 +79,7 @@ class Rectangle extends egret.Rectangle {
         res.y = MathHelper.clamp(point.y, this.top, this.bottom);
 
         // 如果点在矩形内，我们需要推res到边界，因为它将在矩形内
-        if (this.containsInVec(res)) {
+        if (this.contains(res.x, res.y)) {
             let dl = res.x - this.left;
             let dr = this.right - res.x;
             let dt = res.y - this.top;

@@ -43,6 +43,10 @@ class Entity extends egret.DisplayObjectContainer {
         this.onEntityTransformChanged(TransformComponent.rotation);
     }
 
+    public get rotation(){
+        return this.$getRotation();
+    }
+
     public get enabled(){
         return this._enabled;
     }
@@ -81,6 +85,11 @@ class Entity extends egret.DisplayObjectContainer {
         this.id = Entity._idGenerator ++;
 
         this.componentBits = new BitSet();
+        this.addEventListener(egret.Event.ADDED_TO_STAGE, this.onAddToStage, this);
+    }
+
+    private onAddToStage(){
+        this.onEntityTransformChanged(TransformComponent.position);
     }
 
     public get updateOrder(){
@@ -206,8 +215,13 @@ class Entity extends egret.DisplayObjectContainer {
 
     public destroy(){
         this._isDestoryed = true;
+        this.removeEventListener(egret.Event.ADDED_TO_STAGE, this.onAddToStage, this);
+
         this.scene.entities.remove(this);
         this.removeChildren();
+
+        if (this.parent)
+            this.parent.removeChild(this);
 
         for (let i = this.numChildren - 1; i >= 0; i --){
             let child = this.getChildAt(i);
