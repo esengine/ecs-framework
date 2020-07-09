@@ -61,6 +61,7 @@ declare class PriorityQueue<T extends PriorityQueueNode> {
     constructor(maxNodes: number);
     clear(): void;
     readonly count: number;
+    readonly maxSize: number;
     contains(node: T): boolean;
     enqueue(node: T, priority: number): void;
     dequeue(): T;

@@ -418,7 +418,22 @@ var PriorityQueue = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(PriorityQueue.prototype, "maxSize", {
+        get: function () {
+            return this._nodes.length - 1;
+        },
+        enumerable: true,
+        configurable: true
+    });
     PriorityQueue.prototype.contains = function (node) {
+        if (!node) {
+            console.error("node cannot be null");
+            return false;
+        }
+        if (node.queueIndex < 0 || node.queueIndex >= this._nodes.length) {
+            console.error("node.QueueIndex has been corrupted. Did you change it manually? Or add this node to another queue?");
+            return false;
+        }
         return (this._nodes[node.queueIndex] == node);
     };
     PriorityQueue.prototype.enqueue = function (node, priority) {
