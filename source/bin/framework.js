@@ -866,12 +866,68 @@ var WeightedPathfinder = (function () {
     };
     return WeightedPathfinder;
 }());
+var Debug = (function () {
+    function Debug() {
+    }
+    Debug.drawHollowRect = function (rectanle, color, duration) {
+        if (duration === void 0) { duration = 0; }
+        this._debugDrawItems.push(new DebugDrawItem(rectanle, color, duration));
+    };
+    Debug.render = function () {
+        if (this._debugDrawItems.length > 0) {
+            var debugShape = new egret.Shape();
+            if (SceneManager.scene) {
+                SceneManager.scene.addChild(debugShape);
+            }
+            for (var i = this._debugDrawItems.length - 1; i >= 0; i--) {
+                var item = this._debugDrawItems[i];
+                if (item.draw(debugShape))
+                    this._debugDrawItems.removeAt(i);
+            }
+        }
+    };
+    Debug._debugDrawItems = [];
+    return Debug;
+}());
 var DebugDefaults = (function () {
     function DebugDefaults() {
     }
     DebugDefaults.verletParticle = 0xDC345E;
     DebugDefaults.verletConstraintEdge = 0x433E36;
     return DebugDefaults;
+}());
+var DebugDrawType;
+(function (DebugDrawType) {
+    DebugDrawType[DebugDrawType["line"] = 0] = "line";
+    DebugDrawType[DebugDrawType["hollowRectangle"] = 1] = "hollowRectangle";
+    DebugDrawType[DebugDrawType["pixel"] = 2] = "pixel";
+    DebugDrawType[DebugDrawType["text"] = 3] = "text";
+})(DebugDrawType || (DebugDrawType = {}));
+var DebugDrawItem = (function () {
+    function DebugDrawItem(rectangle, color, duration) {
+        this.rectangle = rectangle;
+        this.color = color;
+        this.duration = duration;
+        this.drawType = DebugDrawType.hollowRectangle;
+    }
+    DebugDrawItem.prototype.draw = function (shape) {
+        switch (this.drawType) {
+            case DebugDrawType.line:
+                DrawUtils.drawLine(shape, this.start, this.end, this.color);
+                break;
+            case DebugDrawType.hollowRectangle:
+                DrawUtils.drawHollowRect(shape, this.rectangle, this.color);
+                break;
+            case DebugDrawType.pixel:
+                DrawUtils.drawPixel(shape, new Vector2(this.x, this.y), this.color, this.size);
+                break;
+            case DebugDrawType.text:
+                break;
+        }
+        this.duration -= Time.deltaTime;
+        return this.duration < 0;
+    };
+    return DebugDrawItem;
 }());
 var Component = (function (_super) {
     __extends(Component, _super);
@@ -1372,6 +1428,7 @@ var SceneManager = (function () {
         }
         else if (this._scene) {
             this._scene.render();
+            Debug.render();
             this._scene.postRender();
         }
     };
@@ -3392,6 +3449,9 @@ var MathHelper = (function () {
     MathHelper.isEven = function (value) {
         return value % 2 == 0;
     };
+    MathHelper.angleBetweenVectors = function (from, to) {
+        return Math.atan2(to.y - from.y, to.x - from.x);
+    };
     MathHelper.Epsilon = 0.00001;
     MathHelper.Rad2Deg = 57.29578;
     MathHelper.Deg2Rad = 0.0174532924;
@@ -3955,6 +4015,9 @@ var Physics = (function () {
         this._spatialHash.remove(collider);
         this._spatialHash.register(collider);
     };
+    Physics.debugDraw = function (secondsToDisplay) {
+        this._spatialHash.debugDraw(secondsToDisplay, 2);
+    };
     Physics.spatialHashCellSize = 100;
     Physics.allLayers = -1;
     return Physics;
@@ -4502,6 +4565,12 @@ var SpatialHash = (function () {
                     resultCounter++;
                 }
             }
+            else if (collider instanceof PolygonCollider) {
+                if (collider.shape.overlaps(this._overlapTestCircle)) {
+                    results[resultCounter] = collider;
+                    resultCounter++;
+                }
+            }
             else {
                 throw new Error("overlapCircle against this collider type is not implemented!");
             }
@@ -4545,6 +4614,20 @@ var SpatialHash = (function () {
     };
     SpatialHash.prototype.cellCoords = function (x, y) {
         return new Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
+    };
+    SpatialHash.prototype.debugDraw = function (secondsToDisplay, textScale) {
+        if (textScale === void 0) { textScale = 1; }
+        for (var x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
+            for (var y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
+                var cell = this.cellAtPosition(x, y);
+                if (cell && cell.length > 0)
+                    this.debugDrawCellDetails(x, y, cell.length, secondsToDisplay, textScale);
+            }
+        }
+    };
+    SpatialHash.prototype.debugDrawCellDetails = function (x, y, cellCount, secondsToDisplay, textScale) {
+        if (secondsToDisplay === void 0) { secondsToDisplay = 0.5; }
+        if (textScale === void 0) { textScale = 1; }
     };
     return SpatialHash;
 }());
@@ -4624,6 +4707,52 @@ var ContentManager = (function () {
         this.loadedAssets.clear();
     };
     return ContentManager;
+}());
+var DrawUtils = (function () {
+    function DrawUtils() {
+    }
+    DrawUtils.drawLine = function (shape, start, end, color, thickness) {
+        if (thickness === void 0) { thickness = 1; }
+        this.drawLineAngle(shape, start, MathHelper.angleBetweenVectors(start, end), Vector2.distance(start, end), color, thickness);
+    };
+    DrawUtils.drawLineAngle = function (shape, start, radians, length, color, thickness) {
+        if (thickness === void 0) { thickness = 1; }
+        shape.graphics.beginFill(color);
+        shape.graphics.drawRect(start.x, start.y, 1, 1);
+        shape.graphics.endFill();
+        shape.scaleX = length;
+        shape.scaleY = thickness;
+        shape.$anchorOffsetX = 0;
+        shape.$anchorOffsetY = 0;
+        shape.rotation = radians;
+    };
+    DrawUtils.drawHollowRect = function (shape, rect, color, thickness) {
+        if (thickness === void 0) { thickness = 1; }
+        this.drawHollowRectR(shape, rect.x, rect.y, rect.width, rect.height, color, thickness);
+    };
+    DrawUtils.drawHollowRectR = function (shape, x, y, width, height, color, thickness) {
+        if (thickness === void 0) { thickness = 1; }
+        var tl = new Vector2(x, y).round();
+        var tr = new Vector2(x + width, y).round();
+        var br = new Vector2(x + width, y + height).round();
+        var bl = new Vector2(x, y + height).round();
+        this.drawLine(shape, tl, tr, color, thickness);
+        this.drawLine(shape, tr, br, color, thickness);
+        this.drawLine(shape, br, bl, color, thickness);
+        this.drawLine(shape, bl, tl, color, thickness);
+    };
+    DrawUtils.drawPixel = function (shape, position, color, size) {
+        if (size === void 0) { size = 1; }
+        var destRect = new Rectangle(position.x, position.y, size, size);
+        if (size != 1) {
+            destRect.x -= size * 0.5;
+            destRect.y -= size * 0.5;
+        }
+        shape.graphics.beginFill(color);
+        shape.graphics.drawRect(destRect.x, destRect.y, destRect.width, destRect.height);
+        shape.graphics.endFill();
+    };
+    return DrawUtils;
 }());
 var Emitter = (function () {
     function Emitter() {

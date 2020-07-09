@@ -53,4 +53,12 @@ class Physics {
         this._spatialHash.remove(collider);
         this._spatialHash.register(collider);
     }
+
+    /**
+     * debug绘制空间散列的内容
+     * @param secondsToDisplay 
+     */
+    public static debugDraw(secondsToDisplay){
+        this._spatialHash.debugDraw(secondsToDisplay, 2);
+    }
 }

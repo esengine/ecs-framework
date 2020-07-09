@@ -179,6 +179,25 @@ class SpatialHash {
     private cellCoords(x: number, y: number): Vector2 {
         return new Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
     }
+
+    /**
+     * debug绘制空间散列的内容
+     * @param secondsToDisplay 
+     * @param textScale 
+     */
+    public debugDraw(secondsToDisplay: number, textScale: number = 1){
+        for (let x = this.gridBounds.x; x <= this.gridBounds.right; x ++){
+            for (let y = this.gridBounds.y; y <= this.gridBounds.bottom; y ++){
+                let cell = this.cellAtPosition(x, y);
+                if (cell && cell.length > 0)
+                    this.debugDrawCellDetails(x, y, cell.length, secondsToDisplay, textScale);
+            }
+        }
+    }
+
+    private debugDrawCellDetails(x: number, y: number, cellCount: number, secondsToDisplay = 0.5, textScale = 1){
+        
+    }
 }
 
 class RaycastResultParser {
