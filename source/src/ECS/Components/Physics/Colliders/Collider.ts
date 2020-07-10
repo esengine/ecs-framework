@@ -1,4 +1,4 @@
-abstract class Collider extends Component {
+abstract class Collider extends Component implements IUpdatable {
     /** 对撞机的基本形状 */
     public shape: Shape;
     /** 在处理冲突时，physicsLayer可以用作过滤器。Flags类有帮助位掩码的方法。 */

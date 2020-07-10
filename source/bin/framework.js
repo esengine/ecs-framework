@@ -300,6 +300,7 @@ var AStarPathfinder = (function () {
                 return "break";
             }
             graph.getNeighbors(current.data).forEach(function (next) {
+                console.log(next);
                 var newCost = costSoFar.get(current.data) + graph.cost(current.data, next);
                 if (!_this.hasKey(costSoFar, next) || newCost < costSoFar.get(next)) {
                     costSoFar.set(next, newCost);
@@ -950,6 +951,7 @@ var Component = (function (_super) {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this._enabled = true;
         _this.updateInterval = 1;
+        _this._updateOrder = 0;
         return _this;
     }
     Object.defineProperty(Component.prototype, "enabled", {
@@ -981,6 +983,22 @@ var Component = (function (_super) {
         }
         return this;
     };
+    Object.defineProperty(Component.prototype, "updateOrder", {
+        get: function () {
+            return this._updateOrder;
+        },
+        set: function (value) {
+            this.setUpdateOrder(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Component.prototype.setUpdateOrder = function (updateOrder) {
+        if (this._updateOrder != updateOrder) {
+            this._updateOrder = updateOrder;
+        }
+        return this;
+    };
     Component.prototype.initialize = function () {
     };
     Component.prototype.onAddedToEntity = function () {
@@ -990,8 +1008,6 @@ var Component = (function (_super) {
     Component.prototype.onEnabled = function () {
     };
     Component.prototype.onDisabled = function () {
-    };
-    Component.prototype.update = function () {
     };
     Component.prototype.debugRender = function () {
     };
@@ -2492,6 +2508,7 @@ var ComponentList = (function () {
         this._components = [];
         this._componentsToAdd = [];
         this._componentsToRemove = [];
+        this._updatableComponents = [];
         this._tempBufferList = [];
         this._entity = entity;
     }
@@ -2513,6 +2530,8 @@ var ComponentList = (function () {
         this._componentsToAdd.push(component);
     };
     ComponentList.prototype.remove = function (component) {
+        if (this._componentsToRemove.contains(component))
+            console.warn("You are trying to remove a Component (" + component + ") that you already removed");
         if (this._componentsToAdd.contains(component)) {
             this._componentsToAdd.remove(component);
             return;
@@ -2524,6 +2543,7 @@ var ComponentList = (function () {
             this.handleRemove(this._components[i]);
         }
         this._components.length = 0;
+        this._updatableComponents.length = 0;
         this._componentsToAdd.length = 0;
         this._componentsToRemove.length = 0;
     };
@@ -2532,6 +2552,8 @@ var ComponentList = (function () {
             var component = this._components[i];
             if (component instanceof RenderableComponent)
                 this._entity.scene.renderableComponents.remove(component);
+            if (egret.is(component, "IUpdatable"))
+                this._updatableComponents.remove(component);
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
         }
@@ -2541,6 +2563,8 @@ var ComponentList = (function () {
             var component = this._components[i];
             if (component instanceof RenderableComponent)
                 this._entity.scene.renderableComponents.add(component);
+            if (egret.is(component, "IUpdatable"))
+                this._updatableComponents.push(component);
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
             this._entity.scene.entityProcessors.onComponentAdded(this._entity);
         }
@@ -2558,6 +2582,8 @@ var ComponentList = (function () {
                 var component = this._componentsToAdd[i];
                 if (component instanceof RenderableComponent)
                     this._entity.scene.renderableComponents.add(component);
+                if (egret.is(component, "IUpdatable"))
+                    this._updatableComponents.push(component);
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                 this._components.push(component);
@@ -2587,6 +2613,8 @@ var ComponentList = (function () {
     ComponentList.prototype.handleRemove = function (component) {
         if (component instanceof RenderableComponent)
             this._entity.scene.renderableComponents.remove(component);
+        if (egret.is(component, "IUpdatable"))
+            this._updatableComponents.remove(component);
         this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
         this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
         component.onRemovedFromEntity();
@@ -2640,10 +2668,16 @@ var ComponentList = (function () {
     };
     ComponentList.prototype.update = function () {
         this.updateLists();
-        for (var i = 0; i < this._components.length; i++) {
-            var component = this._components[i];
-            if (component.enabled && (component.updateInterval == 1 || Time.frameCount % component.updateInterval == 0))
-                component.update();
+        for (var i = 0; i < this._updatableComponents.length; i++) {
+            var updatable = this._updatableComponents[i];
+            var updateableComponent = void 0;
+            if (updatable instanceof Component)
+                updateableComponent = updatable;
+            if (updatable.enabled &&
+                updateableComponent.enabled &&
+                (updateableComponent.updateInterval == 1 ||
+                    Time.frameCount % updateableComponent.updateInterval == 0))
+                updatable.update();
         }
     };
     return ComponentList;

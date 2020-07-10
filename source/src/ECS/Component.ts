@@ -4,6 +4,7 @@ abstract class Component extends egret.DisplayObjectContainer {
     public updateInterval: number = 1;
     /** 允许用户为实体存入信息 */
     public userData: any;
+    private _updateOrder = 0;
 
     public get enabled(){
         return this.entity ? this.entity.enabled && this._enabled : this._enabled;
@@ -31,6 +32,22 @@ abstract class Component extends egret.DisplayObjectContainer {
         return this;
     }
 
+    /** 更新此实体上组件的顺序 */
+    public get updateOrder(){
+        return this._updateOrder;
+    }
+    /** 更新此实体上组件的顺序 */
+    public set updateOrder(value: number){
+        this.setUpdateOrder(value);
+    }
+    public setUpdateOrder(updateOrder: number){
+        if (this._updateOrder != updateOrder){
+            this._updateOrder = updateOrder;
+        }
+
+        return this;
+    }
+
     public initialize(){
     }
 
@@ -47,10 +64,6 @@ abstract class Component extends egret.DisplayObjectContainer {
     }
 
     public onDisabled(){
-
-    }
-
-    public update(){
 
     }
 
