@@ -29,6 +29,7 @@ class AStarPathfinder {
             }
 
             graph.getNeighbors(current.data).forEach(next => {
+                console.log(next);
                 let newCost = costSoFar.get(current.data) + graph.cost(current.data, next);
                 if (!this.hasKey(costSoFar, next) || newCost < costSoFar.get(next)){
                     costSoFar.set(next, newCost);

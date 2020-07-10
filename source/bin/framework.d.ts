@@ -193,15 +193,17 @@ declare abstract class Component extends egret.DisplayObjectContainer {
     private _enabled;
     updateInterval: number;
     userData: any;
+    private _updateOrder;
     enabled: boolean;
     readonly localPosition: Vector2;
     setEnabled(isEnabled: boolean): this;
+    updateOrder: number;
+    setUpdateOrder(updateOrder: number): this;
     initialize(): void;
     onAddedToEntity(): void;
     onRemovedFromEntity(): void;
     onEnabled(): void;
     onDisabled(): void;
-    update(): void;
     debugRender(): void;
     onEntityTransformChanged(comp: TransformComponent): void;
     registerComponent(): void;
@@ -253,6 +255,11 @@ declare enum TransformComponent {
     scale = 1,
     position = 2
 }
+interface IUpdatable {
+    enabled: boolean;
+    updateOrder: number;
+    update(): any;
+}
 declare class Scene extends egret.DisplayObjectContainer {
     camera: Camera;
     readonly entities: EntityList;
@@ -297,7 +304,7 @@ declare class SceneManager {
     static render(): void;
     static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
 }
-declare class Camera extends Component {
+declare class Camera extends Component implements IUpdatable {
     private _zoom;
     private _origin;
     private _minimumZoom;
@@ -396,7 +403,7 @@ declare class SpriteRenderer extends RenderableComponent {
     onRemovedFromEntity(): void;
     reset(): void;
 }
-declare class SpriteAnimator extends SpriteRenderer {
+declare class SpriteAnimator extends SpriteRenderer implements IUpdatable {
     onAnimationCompletedEvent: Function;
     speed: number;
     animationState: State;
@@ -450,7 +457,7 @@ declare class Mover extends Component {
     applyMovement(motion: Vector2): void;
     move(motion: Vector2): CollisionResult;
 }
-declare abstract class Collider extends Component {
+declare abstract class Collider extends Component implements IUpdatable {
     shape: Shape;
     physicsLayer: number;
     isTrigger: boolean;
@@ -548,6 +555,7 @@ declare class ComponentList {
     private _components;
     private _componentsToAdd;
     private _componentsToRemove;
+    private _updatableComponents;
     private _tempBufferList;
     constructor(entity: Entity);
     readonly count: number;

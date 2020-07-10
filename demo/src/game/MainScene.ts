@@ -73,14 +73,15 @@ class MainScene extends Scene {
     }
 
     public astarTest() {
-        let graph = new AstarGridGraph(20, 20);
+        let graph = new AstarGridGraph(30, 30);
 
-        graph.weightedNodes.push(new Vector2(3, 3));
-        graph.weightedNodes.push(new Vector2(3, 4));
-        graph.weightedNodes.push(new Vector2(4, 3));
-        graph.weightedNodes.push(new Vector2(4, 4));
+        // graph.weightedNodes.push(new Vector2(3, 3));
+        // graph.weightedNodes.push(new Vector2(3, 4));
+        // graph.weightedNodes.push(new Vector2(4, 3));
+        // graph.weightedNodes.push(new Vector2(4, 4));
 
-        let path = graph.search(new Vector2(3, 4), new Vector2(15, 17));
-        console.log(path);
+        let startTime = egret.getTimer();
+        let path = graph.search(new Vector2(1, 1), new Vector2(29, 29));
+        console.log(egret.getTimer() - startTime);
     }
 }
