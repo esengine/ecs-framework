@@ -125,6 +125,7 @@ class SceneManager {
      * 在一个场景结束后，下一个场景开始之前调用
      */
     public onSceneChanged(){
-        
+        SceneManager.emitter.emit(CoreEvents.SceneChanged);
+        Time.sceneChanged();
     }
 }

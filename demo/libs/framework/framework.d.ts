@@ -661,7 +661,10 @@ declare class Time {
     static timeScale: number;
     static frameCount: number;
     private static _lastTime;
+    static _timeSinceSceneLoad: any;
     static update(currentTime: number): void;
+    static sceneChanged(): void;
+    static checkEvery(interval: number): boolean;
 }
 declare class GraphicsCapabilities {
     supportsTextureFilterAnisotropic: boolean;
@@ -1043,7 +1046,7 @@ declare class Emitter<T> {
     constructor();
     addObserver(eventType: T, handler: Function): void;
     removeObserver(eventType: T, handler: Function): void;
-    emit(eventType: T, data: any): void;
+    emit(eventType: T, data?: any): void;
 }
 declare class GlobalManager {
     static globalManagers: GlobalManager[];

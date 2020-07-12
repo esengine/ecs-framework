@@ -21,7 +21,7 @@ class Emitter<T> {
         this._messageTable.get(eventType).remove(handler);
     }
 
-    public emit(eventType: T, data: any){
+    public emit(eventType: T, data?: any){
         let list: Function[] = this._messageTable.get(eventType);
         if (list){
             for (let i = list.length - 1; i >= 0; i --)

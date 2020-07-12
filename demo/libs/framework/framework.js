@@ -1489,6 +1489,8 @@ var SceneManager = (function () {
             this.activeSceneChanged(current, next);
     };
     SceneManager.prototype.onSceneChanged = function () {
+        SceneManager.emitter.emit(CoreEvents.SceneChanged);
+        Time.sceneChanged();
     };
     return SceneManager;
 }());
@@ -3036,13 +3038,19 @@ var RenderableComponentList = (function () {
 var Time = (function () {
     function Time() {
     }
-    ;
     Time.update = function (currentTime) {
         var dt = (currentTime - this._lastTime) / 1000;
         this.deltaTime = dt * this.timeScale;
         this.unscaledDeltaTime = dt;
+        this._timeSinceSceneLoad += dt;
         this.frameCount++;
         this._lastTime = currentTime;
+    };
+    Time.sceneChanged = function () {
+        this._timeSinceSceneLoad = 0;
+    };
+    Time.checkEvery = function (interval) {
+        return (this._timeSinceSceneLoad / interval) > ((this._timeSinceSceneLoad - this.deltaTime) / interval);
     };
     Time.deltaTime = 0;
     Time.timeScale = 1;
