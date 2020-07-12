@@ -300,6 +300,7 @@ var AStarPathfinder = (function () {
                 return "break";
             }
             graph.getNeighbors(current.data).forEach(function (next) {
+                console.log(next);
                 var newCost = costSoFar.get(current.data) + graph.cost(current.data, next);
                 if (!_this.hasKey(costSoFar, next) || newCost < costSoFar.get(next)) {
                     costSoFar.set(next, newCost);
@@ -361,10 +362,10 @@ var AStarNode = (function (_super) {
 var AstarGridGraph = (function () {
     function AstarGridGraph(width, height) {
         this.dirs = [
-            new Point(1, 0),
-            new Point(0, -1),
-            new Point(-1, 0),
-            new Point(0, 1)
+            new Vector2(1, 0),
+            new Vector2(0, -1),
+            new Vector2(-1, 0),
+            new Vector2(0, 1)
         ];
         this.walls = [];
         this.weightedNodes = [];
@@ -387,7 +388,7 @@ var AstarGridGraph = (function () {
         var _this = this;
         this._neighbors.length = 0;
         this.dirs.forEach(function (dir) {
-            var next = new Point(node.x + dir.x, node.y + dir.y);
+            var next = new Vector2(node.x + dir.x, node.y + dir.y);
             if (_this.isNodeInBounds(next) && _this.isNodePassable(next))
                 _this._neighbors.push(next);
         });
@@ -418,7 +419,22 @@ var PriorityQueue = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(PriorityQueue.prototype, "maxSize", {
+        get: function () {
+            return this._nodes.length - 1;
+        },
+        enumerable: true,
+        configurable: true
+    });
     PriorityQueue.prototype.contains = function (node) {
+        if (!node) {
+            console.error("node cannot be null");
+            return false;
+        }
+        if (node.queueIndex < 0 || node.queueIndex >= this._nodes.length) {
+            console.error("node.QueueIndex has been corrupted. Did you change it manually? Or add this node to another queue?");
+            return false;
+        }
         return (this._nodes[node.queueIndex] == node);
     };
     PriorityQueue.prototype.enqueue = function (node, priority) {
@@ -583,12 +599,113 @@ var UnweightedGraph = (function () {
     };
     return UnweightedGraph;
 }());
-var Point = (function () {
-    function Point(x, y) {
+var Vector2 = (function () {
+    function Vector2(x, y) {
+        this.x = 0;
+        this.y = 0;
         this.x = x ? x : 0;
         this.y = y ? y : this.x;
     }
-    return Point;
+    Object.defineProperty(Vector2, "zero", {
+        get: function () {
+            return Vector2.zeroVector2;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Vector2, "one", {
+        get: function () {
+            return Vector2.unitVector2;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Vector2, "unitX", {
+        get: function () {
+            return Vector2.unitXVector;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Vector2, "unitY", {
+        get: function () {
+            return Vector2.unitYVector;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Vector2.add = function (value1, value2) {
+        var result = new Vector2(0, 0);
+        result.x = value1.x + value2.x;
+        result.y = value1.y + value2.y;
+        return result;
+    };
+    Vector2.divide = function (value1, value2) {
+        var result = new Vector2(0, 0);
+        result.x = value1.x / value2.x;
+        result.y = value1.y / value2.y;
+        return result;
+    };
+    Vector2.multiply = function (value1, value2) {
+        var result = new Vector2(0, 0);
+        result.x = value1.x * value2.x;
+        result.y = value1.y * value2.y;
+        return result;
+    };
+    Vector2.subtract = function (value1, value2) {
+        var result = new Vector2(0, 0);
+        result.x = value1.x - value2.x;
+        result.y = value1.y - value2.y;
+        return result;
+    };
+    Vector2.prototype.normalize = function () {
+        var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
+        this.x *= val;
+        this.y *= val;
+    };
+    Vector2.prototype.length = function () {
+        return Math.sqrt((this.x * this.x) + (this.y * this.y));
+    };
+    Vector2.prototype.round = function () {
+        return new Vector2(Math.round(this.x), Math.round(this.y));
+    };
+    Vector2.normalize = function (value) {
+        var val = 1 / Math.sqrt((value.x * value.x) + (value.y * value.y));
+        value.x *= val;
+        value.y *= val;
+        return value;
+    };
+    Vector2.dot = function (value1, value2) {
+        return (value1.x * value2.x) + (value1.y * value2.y);
+    };
+    Vector2.distanceSquared = function (value1, value2) {
+        var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
+        return (v1 * v1) + (v2 * v2);
+    };
+    Vector2.clamp = function (value1, min, max) {
+        return new Vector2(MathHelper.clamp(value1.x, min.x, max.x), MathHelper.clamp(value1.y, min.y, max.y));
+    };
+    Vector2.lerp = function (value1, value2, amount) {
+        return new Vector2(MathHelper.lerp(value1.x, value2.x, amount), MathHelper.lerp(value1.y, value2.y, amount));
+    };
+    Vector2.transform = function (position, matrix) {
+        return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
+    };
+    Vector2.distance = function (value1, value2) {
+        var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
+        return Math.sqrt((v1 * v1) + (v2 * v2));
+    };
+    Vector2.negate = function (value) {
+        var result = new Vector2();
+        result.x = -value.x;
+        result.y = -value.y;
+        return result;
+    };
+    Vector2.unitYVector = new Vector2(0, 1);
+    Vector2.unitXVector = new Vector2(1, 0);
+    Vector2.unitVector2 = new Vector2(1, 1);
+    Vector2.zeroVector2 = new Vector2(0, 0);
+    return Vector2;
 }());
 var UnweightedGridGraph = (function () {
     function UnweightedGridGraph(width, height, allowDiagonalSearch) {
@@ -609,7 +726,7 @@ var UnweightedGridGraph = (function () {
         var _this = this;
         this._neighbors.length = 0;
         this._dirs.forEach(function (dir) {
-            var next = new Point(node.x + dir.x, node.y + dir.y);
+            var next = new Vector2(node.x + dir.x, node.y + dir.y);
             if (_this.isNodeInBounds(next) && _this.isNodePassable(next))
                 _this._neighbors.push(next);
         });
@@ -619,20 +736,20 @@ var UnweightedGridGraph = (function () {
         return BreadthFirstPathfinder.search(this, start, goal);
     };
     UnweightedGridGraph.CARDINAL_DIRS = [
-        new Point(1, 0),
-        new Point(0, -1),
-        new Point(-1, 0),
-        new Point(0, -1)
+        new Vector2(1, 0),
+        new Vector2(0, -1),
+        new Vector2(-1, 0),
+        new Vector2(0, -1)
     ];
     UnweightedGridGraph.COMPASS_DIRS = [
-        new Point(1, 0),
-        new Point(1, -1),
-        new Point(0, -1),
-        new Point(-1, -1),
-        new Point(-1, 0),
-        new Point(-1, 1),
-        new Point(0, 1),
-        new Point(1, 1),
+        new Vector2(1, 0),
+        new Vector2(1, -1),
+        new Vector2(0, -1),
+        new Vector2(-1, -1),
+        new Vector2(-1, 0),
+        new Vector2(-1, 1),
+        new Vector2(0, 1),
+        new Vector2(1, 1),
     ];
     return UnweightedGridGraph;
 }());
@@ -661,7 +778,7 @@ var WeightedGridGraph = (function () {
         var _this = this;
         this._neighbors.length = 0;
         this._dirs.forEach(function (dir) {
-            var next = new Point(node.x + dir.x, node.y + dir.y);
+            var next = new Vector2(node.x + dir.x, node.y + dir.y);
             if (_this.isNodeInBounds(next) && _this.isNodePassable(next))
                 _this._neighbors.push(next);
         });
@@ -671,20 +788,20 @@ var WeightedGridGraph = (function () {
         return this.weightedNodes.find(function (t) { return JSON.stringify(t) == JSON.stringify(to); }) ? this.weightedNodeWeight : this.defaultWeight;
     };
     WeightedGridGraph.CARDINAL_DIRS = [
-        new Point(1, 0),
-        new Point(0, -1),
-        new Point(-1, 0),
-        new Point(0, 1)
+        new Vector2(1, 0),
+        new Vector2(0, -1),
+        new Vector2(-1, 0),
+        new Vector2(0, 1)
     ];
     WeightedGridGraph.COMPASS_DIRS = [
-        new Point(1, 0),
-        new Point(1, -1),
-        new Point(0, -1),
-        new Point(-1, -1),
-        new Point(-1, 0),
-        new Point(-1, 1),
-        new Point(0, 1),
-        new Point(1, 1),
+        new Vector2(1, 0),
+        new Vector2(1, -1),
+        new Vector2(0, -1),
+        new Vector2(-1, -1),
+        new Vector2(-1, 0),
+        new Vector2(-1, 1),
+        new Vector2(0, 1),
+        new Vector2(1, 1),
     ];
     return WeightedGridGraph;
 }());
@@ -765,6 +882,29 @@ var WeightedPathfinder = (function () {
     };
     return WeightedPathfinder;
 }());
+var Debug = (function () {
+    function Debug() {
+    }
+    Debug.drawHollowRect = function (rectanle, color, duration) {
+        if (duration === void 0) { duration = 0; }
+        this._debugDrawItems.push(new DebugDrawItem(rectanle, color, duration));
+    };
+    Debug.render = function () {
+        if (this._debugDrawItems.length > 0) {
+            var debugShape = new egret.Shape();
+            if (SceneManager.scene) {
+                SceneManager.scene.addChild(debugShape);
+            }
+            for (var i = this._debugDrawItems.length - 1; i >= 0; i--) {
+                var item = this._debugDrawItems[i];
+                if (item.draw(debugShape))
+                    this._debugDrawItems.removeAt(i);
+            }
+        }
+    };
+    Debug._debugDrawItems = [];
+    return Debug;
+}());
 var DebugDefaults = (function () {
     function DebugDefaults() {
     }
@@ -772,12 +912,46 @@ var DebugDefaults = (function () {
     DebugDefaults.verletConstraintEdge = 0x433E36;
     return DebugDefaults;
 }());
+var DebugDrawType;
+(function (DebugDrawType) {
+    DebugDrawType[DebugDrawType["line"] = 0] = "line";
+    DebugDrawType[DebugDrawType["hollowRectangle"] = 1] = "hollowRectangle";
+    DebugDrawType[DebugDrawType["pixel"] = 2] = "pixel";
+    DebugDrawType[DebugDrawType["text"] = 3] = "text";
+})(DebugDrawType || (DebugDrawType = {}));
+var DebugDrawItem = (function () {
+    function DebugDrawItem(rectangle, color, duration) {
+        this.rectangle = rectangle;
+        this.color = color;
+        this.duration = duration;
+        this.drawType = DebugDrawType.hollowRectangle;
+    }
+    DebugDrawItem.prototype.draw = function (shape) {
+        switch (this.drawType) {
+            case DebugDrawType.line:
+                DrawUtils.drawLine(shape, this.start, this.end, this.color);
+                break;
+            case DebugDrawType.hollowRectangle:
+                DrawUtils.drawHollowRect(shape, this.rectangle, this.color);
+                break;
+            case DebugDrawType.pixel:
+                DrawUtils.drawPixel(shape, new Vector2(this.x, this.y), this.color, this.size);
+                break;
+            case DebugDrawType.text:
+                break;
+        }
+        this.duration -= Time.deltaTime;
+        return this.duration < 0;
+    };
+    return DebugDrawItem;
+}());
 var Component = (function (_super) {
     __extends(Component, _super);
     function Component() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this._enabled = true;
         _this.updateInterval = 1;
+        _this._updateOrder = 0;
         return _this;
     }
     Object.defineProperty(Component.prototype, "enabled", {
@@ -786,6 +960,13 @@ var Component = (function (_super) {
         },
         set: function (value) {
             this.setEnabled(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Component.prototype, "localPosition", {
+        get: function () {
+            return new Vector2(this.entity.x + this.x, this.entity.y + this.y);
         },
         enumerable: true,
         configurable: true
@@ -802,6 +983,22 @@ var Component = (function (_super) {
         }
         return this;
     };
+    Object.defineProperty(Component.prototype, "updateOrder", {
+        get: function () {
+            return this._updateOrder;
+        },
+        set: function (value) {
+            this.setUpdateOrder(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Component.prototype.setUpdateOrder = function (updateOrder) {
+        if (this._updateOrder != updateOrder) {
+            this._updateOrder = updateOrder;
+        }
+        return this;
+    };
     Component.prototype.initialize = function () {
     };
     Component.prototype.onAddedToEntity = function () {
@@ -812,9 +1009,9 @@ var Component = (function (_super) {
     };
     Component.prototype.onDisabled = function () {
     };
-    Component.prototype.update = function () {
-    };
     Component.prototype.debugRender = function () {
+    };
+    Component.prototype.onEntityTransformChanged = function (comp) {
     };
     Component.prototype.registerComponent = function () {
         this.entity.componentBits.set(ComponentTypeManager.getIndexFor(this), false);
@@ -830,7 +1027,6 @@ var Entity = (function (_super) {
     __extends(Entity, _super);
     function Entity(name) {
         var _this = _super.call(this) || this;
-        _this._position = Vector2.zero;
         _this._updateOrder = 0;
         _this._enabled = true;
         _this._tag = 0;
@@ -838,6 +1034,7 @@ var Entity = (function (_super) {
         _this.components = new ComponentList(_this);
         _this.id = Entity._idGenerator++;
         _this.componentBits = new BitSet();
+        _this.addEventListener(egret.Event.ADDED_TO_STAGE, _this.onAddToStage, _this);
         return _this;
     }
     Object.defineProperty(Entity.prototype, "isDestoryed", {
@@ -849,10 +1046,12 @@ var Entity = (function (_super) {
     });
     Object.defineProperty(Entity.prototype, "position", {
         get: function () {
-            return this._position;
+            return new Vector2(this.x, this.y);
         },
         set: function (value) {
-            this._position = value;
+            this.$setX(value.x);
+            this.$setY(value.y);
+            this.onEntityTransformChanged(TransformComponent.position);
         },
         enumerable: true,
         configurable: true
@@ -862,8 +1061,20 @@ var Entity = (function (_super) {
             return new Vector2(this.scaleX, this.scaleY);
         },
         set: function (value) {
-            this.scaleX = value.x;
-            this.scaleY = value.y;
+            this.$setScaleX(value.x);
+            this.$setScaleY(value.y);
+            this.onEntityTransformChanged(TransformComponent.scale);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Entity.prototype, "rotation", {
+        get: function () {
+            return this.$getRotation();
+        },
+        set: function (value) {
+            this.$setRotation(value);
+            this.onEntityTransformChanged(TransformComponent.rotation);
         },
         enumerable: true,
         configurable: true
@@ -903,6 +1114,9 @@ var Entity = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    Entity.prototype.onAddToStage = function () {
+        this.onEntityTransformChanged(TransformComponent.position);
+    };
     Object.defineProperty(Entity.prototype, "updateOrder", {
         get: function () {
             return this._updateOrder;
@@ -973,6 +1187,9 @@ var Entity = (function (_super) {
     Entity.prototype.getComponents = function (typeName, componentList) {
         return this.components.getComponents(typeName, componentList);
     };
+    Entity.prototype.onEntityTransformChanged = function (comp) {
+        this.components.onEntityTransformChanged(comp);
+    };
     Entity.prototype.removeComponentForType = function (type) {
         var comp = this.getComponent(type);
         if (comp) {
@@ -1000,8 +1217,11 @@ var Entity = (function (_super) {
     };
     Entity.prototype.destroy = function () {
         this._isDestoryed = true;
+        this.removeEventListener(egret.Event.ADDED_TO_STAGE, this.onAddToStage, this);
         this.scene.entities.remove(this);
         this.removeChildren();
+        if (this.parent)
+            this.parent.removeChild(this);
         for (var i = this.numChildren - 1; i >= 0; i--) {
             var child = this.getChildAt(i);
             child.entity.destroy();
@@ -1009,6 +1229,12 @@ var Entity = (function (_super) {
     };
     return Entity;
 }(egret.DisplayObjectContainer));
+var TransformComponent;
+(function (TransformComponent) {
+    TransformComponent[TransformComponent["rotation"] = 0] = "rotation";
+    TransformComponent[TransformComponent["scale"] = 1] = "scale";
+    TransformComponent[TransformComponent["position"] = 2] = "position";
+})(TransformComponent || (TransformComponent = {}));
 var Scene = (function (_super) {
     __extends(Scene, _super);
     function Scene() {
@@ -1112,6 +1338,8 @@ var Scene = (function (_super) {
         if (this.entityProcessors)
             this.entityProcessors.end();
         this.unload();
+        if (this.parent)
+            this.parent.removeChild(this);
     };
     Scene.prototype.onStart = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -1231,6 +1459,7 @@ var SceneManager = (function () {
         }
         else if (this._scene) {
             this._scene.render();
+            Debug.render();
             this._scene.postRender();
         }
     };
@@ -1251,6 +1480,7 @@ var Camera = (function (_super) {
         _this._origin = Vector2.zero;
         _this._minimumZoom = 0.3;
         _this._maximumZoom = 3;
+        _this._position = Vector2.zero;
         _this.followLerp = 0.1;
         _this.deadzone = new Rectangle();
         _this.focusOffset = new Vector2();
@@ -1312,10 +1542,30 @@ var Camera = (function (_super) {
     });
     Object.defineProperty(Camera.prototype, "position", {
         get: function () {
-            return this.entity.position;
+            return this._position;
         },
         set: function (value) {
-            this.entity.position = value;
+            this._position = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Camera.prototype, "x", {
+        get: function () {
+            return this._position.x;
+        },
+        set: function (value) {
+            this._position.x = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Camera.prototype, "y", {
+        get: function () {
+            return this._position.y;
+        },
+        set: function (value) {
+            this._position.y = value;
         },
         enumerable: true,
         configurable: true
@@ -1553,22 +1803,6 @@ var SpriteRenderer = (function (_super) {
     function SpriteRenderer() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    Object.defineProperty(SpriteRenderer.prototype, "origin", {
-        get: function () {
-            return this._origin;
-        },
-        set: function (value) {
-            this.setOrigin(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    SpriteRenderer.prototype.setOrigin = function (origin) {
-        if (this._origin != origin) {
-            this._origin = origin;
-        }
-        return this;
-    };
     Object.defineProperty(SpriteRenderer.prototype, "sprite", {
         get: function () {
             return this._sprite;
@@ -1582,8 +1816,10 @@ var SpriteRenderer = (function (_super) {
     SpriteRenderer.prototype.setSprite = function (sprite) {
         this.removeChildren();
         this._sprite = sprite;
-        if (this._sprite)
-            this._origin = this._sprite.origin;
+        if (this._sprite) {
+            this.anchorOffsetX = this._sprite.origin.x / this._sprite.sourceRect.width;
+            this.anchorOffsetY = this._sprite.origin.y / this._sprite.sourceRect.height;
+        }
         this.bitmap = new egret.Bitmap(sprite.texture2D);
         this.addChild(this.bitmap);
         return this;
@@ -1608,8 +1844,8 @@ var SpriteRenderer = (function (_super) {
         return this.isVisible;
     };
     SpriteRenderer.prototype.render = function (camera) {
-        this.x = this.entity.position.x - this.origin.x - camera.position.x + camera.origin.x;
-        this.y = this.entity.position.y - this.origin.y - camera.position.y + camera.origin.y;
+        this.x = -camera.position.x + camera.origin.x;
+        this.y = -camera.position.y + camera.origin.y;
     };
     SpriteRenderer.prototype.onRemovedFromEntity = function () {
         if (this.parent)
@@ -1836,7 +2072,9 @@ var Mover = (function (_super) {
             var bounds = collider.bounds;
             bounds.x += motion.x;
             bounds.y += motion.y;
-            var neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
+            var boxcastResult = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
+            bounds = boxcastResult.bounds;
+            var neighbors = boxcastResult.tempHashSet;
             for (var j = 0; j < neighbors.length; j++) {
                 var neighbor = neighbors[j];
                 if (neighbor.isTrigger)
@@ -1851,7 +2089,7 @@ var Mover = (function (_super) {
             }
         }
         ListPool.free(colliders);
-        return collisionResult;
+        return { collisionResult: collisionResult, motion: motion };
     };
     Mover.prototype.applyMovement = function (motion) {
         this.entity.position = Vector2.add(this.entity.position, motion);
@@ -1859,7 +2097,9 @@ var Mover = (function (_super) {
             this._triggerHelper.update();
     };
     Mover.prototype.move = function (motion) {
-        var collisionResult = this.calculateMovement(motion);
+        var movementResult = this.calculateMovement(motion);
+        var collisionResult = movementResult.collisionResult;
+        motion = movementResult.motion;
         this.applyMovement(motion);
         return collisionResult;
     };
@@ -1870,19 +2110,15 @@ var Collider = (function (_super) {
     function Collider() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.physicsLayer = 1 << 0;
-        _this.shouldColliderScaleAndRotationWithTransform = true;
+        _this.registeredPhysicsBounds = new Rectangle();
+        _this.shouldColliderScaleAndRotateWithTransform = true;
         _this.collidesWithLayers = Physics.allLayers;
-        _this._isPositionDirty = true;
-        _this._isRotationDirty = true;
         _this._localOffset = new Vector2(0, 0);
         return _this;
     }
     Object.defineProperty(Collider.prototype, "bounds", {
         get: function () {
-            if (this._isPositionDirty || this._isRotationDirty) {
-                this.shape.recalculateBounds(this);
-                this._isPositionDirty = this._isRotationDirty = false;
-            }
+            this.shape.recalculateBounds(this);
             return this.shape.bounds;
         },
         enumerable: true,
@@ -1903,7 +2139,6 @@ var Collider = (function (_super) {
             this.unregisterColliderWithPhysicsSystem();
             this._localOffset = offset;
             this._localOffsetLength = this._localOffset.length();
-            this._isPositionDirty = true;
             this.registerColliderWithPhysicsSystem();
         }
     };
@@ -1933,20 +2168,28 @@ var Collider = (function (_super) {
     };
     Collider.prototype.onAddedToEntity = function () {
         if (this._colliderRequiresAutoSizing) {
-            if (!(this instanceof BoxCollider)) {
+            if (!(this instanceof BoxCollider || this instanceof CircleCollider)) {
                 console.error("Only box and circle colliders can be created automatically");
             }
             var renderable = this.entity.getComponent(RenderableComponent);
             if (renderable) {
-                var renderbaleBounds = renderable.bounds;
-                var width = renderbaleBounds.width / this.entity.scale.x;
-                var height = renderbaleBounds.height / this.entity.scale.y;
-                if (this instanceof BoxCollider) {
+                var bounds = renderable.bounds;
+                var width = bounds.width / this.entity.scale.x;
+                var height = bounds.height / this.entity.scale.y;
+                if (this instanceof CircleCollider) {
+                    var circleCollider = this;
+                    circleCollider.radius = Math.max(width, height) * 0.5;
+                    this.localOffset = bounds.location;
+                }
+                else {
                     var boxCollider = this;
                     boxCollider.width = width;
                     boxCollider.height = height;
-                    this.localOffset = Vector2.subtract(renderbaleBounds.center, this.entity.position);
+                    this.localOffset = bounds.location;
                 }
+            }
+            else {
+                console.warn("Collider has no shape and no RenderableComponent. Can't figure out how to size it.");
             }
         }
         this._isParentEntityAddedToScene = true;
@@ -1958,10 +2201,20 @@ var Collider = (function (_super) {
     };
     Collider.prototype.onEnabled = function () {
         this.registerColliderWithPhysicsSystem();
-        this._isPositionDirty = this._isRotationDirty = true;
     };
     Collider.prototype.onDisabled = function () {
         this.unregisterColliderWithPhysicsSystem();
+    };
+    Collider.prototype.onEntityTransformChanged = function (comp) {
+        if (this._isColliderRegistered)
+            Physics.updateCollider(this);
+    };
+    Collider.prototype.update = function () {
+        var renderable = this.entity.getComponent(RenderableComponent);
+        if (renderable) {
+            this.$setX(renderable.x + this.localOffset.x);
+            this.$setY(renderable.y + this.localOffset.y);
+        }
     };
     return Collider;
 }(Component));
@@ -1988,7 +2241,6 @@ var BoxCollider = (function (_super) {
         var box = this.shape;
         if (width != box.width) {
             box.updateBox(width, box.height);
-            this._isPositionDirty = true;
             if (this.entity && this._isParentEntityAddedToScene)
                 Physics.updateCollider(this);
         }
@@ -2009,7 +2261,6 @@ var BoxCollider = (function (_super) {
         var box = this.shape;
         if (height != box.height) {
             box.updateBox(box.width, height);
-            this._isPositionDirty = true;
             if (this.entity && this._isParentEntityAddedToScene)
                 Physics.updateCollider(this);
         }
@@ -2019,13 +2270,59 @@ var BoxCollider = (function (_super) {
         var box = this.shape;
         if (width != box.width || height != box.height) {
             box.updateBox(width, height);
-            this._isPositionDirty = true;
             if (this.entity && this._isParentEntityAddedToScene)
                 Physics.updateCollider(this);
         }
         return this;
     };
     return BoxCollider;
+}(Collider));
+var CircleCollider = (function (_super) {
+    __extends(CircleCollider, _super);
+    function CircleCollider(radius) {
+        var _this = _super.call(this) || this;
+        if (radius)
+            _this._colliderRequiresAutoSizing = true;
+        _this.shape = new Circle(radius ? radius : 1);
+        return _this;
+    }
+    Object.defineProperty(CircleCollider.prototype, "radius", {
+        get: function () {
+            return this.shape.radius;
+        },
+        set: function (value) {
+            this.setRadius(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    CircleCollider.prototype.setRadius = function (radius) {
+        this._colliderRequiresAutoSizing = false;
+        var circle = this.shape;
+        if (radius != circle.radius) {
+            circle.radius = radius;
+            circle._originalRadius = radius;
+            if (this.entity && this._isParentEntityAddedToScene)
+                Physics.updateCollider(this);
+        }
+        return this;
+    };
+    return CircleCollider;
+}(Collider));
+var PolygonCollider = (function (_super) {
+    __extends(PolygonCollider, _super);
+    function PolygonCollider(points) {
+        var _this = _super.call(this) || this;
+        var isPolygonClosed = points[0] == points[points.length - 1];
+        if (isPolygonClosed)
+            points.splice(points.length - 1, 1);
+        var center = Polygon.findPolygonCenter(points);
+        _this.setLocalOffset(center);
+        Polygon.recenterPolygonVerts(points);
+        _this.shape = new Polygon(points);
+        return _this;
+    }
+    return PolygonCollider;
 }(Collider));
 var EntitySystem = (function () {
     function EntitySystem(matcher) {
@@ -2248,6 +2545,7 @@ var ComponentList = (function () {
         this._components = [];
         this._componentsToAdd = [];
         this._componentsToRemove = [];
+        this._updatableComponents = [];
         this._tempBufferList = [];
         this._entity = entity;
     }
@@ -2269,6 +2567,8 @@ var ComponentList = (function () {
         this._componentsToAdd.push(component);
     };
     ComponentList.prototype.remove = function (component) {
+        if (this._componentsToRemove.contains(component))
+            console.warn("You are trying to remove a Component (" + component + ") that you already removed");
         if (this._componentsToAdd.contains(component)) {
             this._componentsToAdd.remove(component);
             return;
@@ -2280,6 +2580,7 @@ var ComponentList = (function () {
             this.handleRemove(this._components[i]);
         }
         this._components.length = 0;
+        this._updatableComponents.length = 0;
         this._componentsToAdd.length = 0;
         this._componentsToRemove.length = 0;
     };
@@ -2288,6 +2589,8 @@ var ComponentList = (function () {
             var component = this._components[i];
             if (component instanceof RenderableComponent)
                 this._entity.scene.renderableComponents.remove(component);
+            if (egret.is(component, "IUpdatable"))
+                this._updatableComponents.remove(component);
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
         }
@@ -2297,6 +2600,8 @@ var ComponentList = (function () {
             var component = this._components[i];
             if (component instanceof RenderableComponent)
                 this._entity.scene.renderableComponents.add(component);
+            if (egret.is(component, "IUpdatable"))
+                this._updatableComponents.push(component);
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
             this._entity.scene.entityProcessors.onComponentAdded(this._entity);
         }
@@ -2314,6 +2619,8 @@ var ComponentList = (function () {
                 var component = this._componentsToAdd[i];
                 if (component instanceof RenderableComponent)
                     this._entity.scene.renderableComponents.add(component);
+                if (egret.is(component, "IUpdatable"))
+                    this._updatableComponents.push(component);
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                 this._components.push(component);
@@ -2330,9 +2637,21 @@ var ComponentList = (function () {
             this._tempBufferList.length = 0;
         }
     };
+    ComponentList.prototype.onEntityTransformChanged = function (comp) {
+        for (var i = 0; i < this._components.length; i++) {
+            if (this._components[i].enabled)
+                this._components[i].onEntityTransformChanged(comp);
+        }
+        for (var i = 0; i < this._componentsToAdd.length; i++) {
+            if (this._componentsToAdd[i].enabled)
+                this._componentsToAdd[i].onEntityTransformChanged(comp);
+        }
+    };
     ComponentList.prototype.handleRemove = function (component) {
         if (component instanceof RenderableComponent)
             this._entity.scene.renderableComponents.remove(component);
+        if (egret.is(component, "IUpdatable"))
+            this._updatableComponents.remove(component);
         this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
         this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
         component.onRemovedFromEntity();
@@ -2386,10 +2705,16 @@ var ComponentList = (function () {
     };
     ComponentList.prototype.update = function () {
         this.updateLists();
-        for (var i = 0; i < this._components.length; i++) {
-            var component = this._components[i];
-            if (component.enabled && (component.updateInterval == 1 || Time.frameCount % component.updateInterval == 0))
-                component.update();
+        for (var i = 0; i < this._updatableComponents.length; i++) {
+            var updatable = this._updatableComponents[i];
+            var updateableComponent = void 0;
+            if (updatable instanceof Component)
+                updateableComponent = updatable;
+            if (updatable.enabled &&
+                updateableComponent.enabled &&
+                (updateableComponent.updateInterval == 1 ||
+                    Time.frameCount % updateableComponent.updateInterval == 0))
+                updatable.update();
         }
     };
     return ComponentList;
@@ -3210,6 +3535,9 @@ var MathHelper = (function () {
     MathHelper.isEven = function (value) {
         return value % 2 == 0;
     };
+    MathHelper.angleBetweenVectors = function (from, to) {
+        return Math.atan2(to.y - from.y, to.x - from.x);
+    };
     MathHelper.Epsilon = 0.00001;
     MathHelper.Rad2Deg = 57.29578;
     MathHelper.Deg2Rad = 0.0174532924;
@@ -3336,8 +3664,8 @@ var Matrix2D = (function () {
         result.m32 = -(matrix.m32 * matrix.m11 - matrix.m31 * matrix.m12) * det;
         return result;
     };
-    Matrix2D.createTranslation = function (xPosition, yPosition, result) {
-        result = result ? result : new Matrix2D();
+    Matrix2D.createTranslation = function (xPosition, yPosition) {
+        var result = new Matrix2D();
         result.m11 = 1;
         result.m12 = 0;
         result.m21 = 0;
@@ -3345,6 +3673,9 @@ var Matrix2D = (function () {
         result.m31 = xPosition;
         result.m32 = yPosition;
         return result;
+    };
+    Matrix2D.createTranslationVector = function (position) {
+        return this.createTranslation(position.x, position.y);
     };
     Matrix2D.createRotation = function (radians, result) {
         result = new Matrix2D();
@@ -3373,37 +3704,14 @@ var Matrix2D = (function () {
     Matrix2D._identity = new Matrix2D(1, 0, 0, 1, 0, 0);
     return Matrix2D;
 }());
-var Rectangle = (function () {
-    function Rectangle(x, y, width, height) {
-        this.x = x ? x : 0;
-        this.y = y ? y : 0;
-        this.width = width ? width : 0;
-        this.height = height ? height : 0;
+var Rectangle = (function (_super) {
+    __extends(Rectangle, _super);
+    function Rectangle() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    Object.defineProperty(Rectangle.prototype, "left", {
+    Object.defineProperty(Rectangle.prototype, "max", {
         get: function () {
-            return this.x;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Rectangle.prototype, "right", {
-        get: function () {
-            return this.x + this.width;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Rectangle.prototype, "top", {
-        get: function () {
-            return this.y;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Rectangle.prototype, "bottom", {
-        get: function () {
-            return this.y + this.height;
+            return new Vector2(this.right, this.bottom);
         },
         enumerable: true,
         configurable: true
@@ -3443,11 +3751,6 @@ var Rectangle = (function () {
             value.top < this.bottom &&
             this.top < value.bottom;
     };
-    Rectangle.prototype.contains = function (value) {
-        return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
-            (this.y <= value.y)) &&
-            (value.y < (this.y + this.height)));
-    };
     Rectangle.prototype.containsRect = function (value) {
         return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
             (this.y <= value.y)) &&
@@ -3460,11 +3763,11 @@ var Rectangle = (function () {
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     };
     Rectangle.prototype.getClosestPointOnRectangleBorderToPoint = function (point) {
-        var edgeNormal = new Vector2(0, 0);
-        var res = new Vector2(0, 0);
+        var edgeNormal = Vector2.zero;
+        var res = new Vector2();
         res.x = MathHelper.clamp(point.x, this.left, this.right);
         res.y = MathHelper.clamp(point.y, this.top, this.bottom);
-        if (this.contains(res)) {
+        if (this.contains(res.x, res.y)) {
             var dl = res.x - this.left;
             var dr = this.right - res.x;
             var dt = res.y - this.top;
@@ -3488,54 +3791,37 @@ var Rectangle = (function () {
             }
         }
         else {
-            if (res.x == this.left) {
+            if (res.x == this.left)
                 edgeNormal.x = -1;
-            }
-            if (res.x == this.right) {
+            if (res.x == this.right)
                 edgeNormal.x = 1;
-            }
-            if (res.y == this.top) {
+            if (res.y == this.top)
                 edgeNormal.y = -1;
-            }
-            if (res.y == this.bottom) {
+            if (res.y == this.bottom)
                 edgeNormal.y = 1;
-            }
         }
         return { res: res, edgeNormal: edgeNormal };
     };
-    Rectangle.prototype.calculateBounds = function (parentPosition, position, origin, scale, rotation, width, height) {
-        if (rotation == 0) {
-            this.x = parentPosition.x + position.x - origin.x * scale.x;
-            this.y = parentPosition.y + position.y - origin.y * scale.y;
-            this.width = width * scale.x;
-            this.height = height * scale.y;
+    Rectangle.prototype.getClosestPointOnBoundsToOrigin = function () {
+        var max = this.max;
+        var minDist = Math.abs(this.location.x);
+        var boundsPoint = new Vector2(this.location.x, 0);
+        if (Math.abs(max.x) < minDist) {
+            minDist = Math.abs(max.x);
+            boundsPoint.x = max.x;
+            boundsPoint.y = 0;
         }
-        else {
-            var worldPosX = parentPosition.x + position.x;
-            var worldPosY = parentPosition.y + position.y;
-            this._transformMat = Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
-            this._tempMat = Matrix2D.createScale(scale.x, scale.y);
-            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
-            this._tempMat = Matrix2D.createRotation(rotation);
-            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
-            this._tempMat = Matrix2D.createTranslation(worldPosX, worldPosY);
-            this._transformMat = Matrix2D.multiply(this._transformMat, this._tempMat);
-            var topLeft = new Vector2(worldPosX, worldPosY);
-            var topRight = new Vector2(worldPosX + width, worldPosY);
-            var bottomLeft = new Vector2(worldPosX, worldPosY + height);
-            var bottomRight = new Vector2(worldPosX + width, worldPosY + height);
-            topLeft = Vector2Ext.transformR(topLeft, this._transformMat);
-            topRight = Vector2Ext.transformR(topRight, this._transformMat);
-            bottomLeft = Vector2Ext.transformR(bottomLeft, this._transformMat);
-            bottomRight = Vector2Ext.transformR(bottomRight, this._transformMat);
-            var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-            var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-            var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-            var maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-            this.location = new Vector2(minX, minY);
-            this.width = maxX - minX;
-            this.height = maxY - minY;
+        if (Math.abs(max.y) < minDist) {
+            minDist = Math.abs(max.y);
+            boundsPoint.x = 0;
+            boundsPoint.y = max.y;
         }
+        if (Math.abs(this.location.y) < minDist) {
+            minDist = Math.abs(this.location.y);
+            boundsPoint.x = 0;
+            boundsPoint.y = this.location.y;
+        }
+        return boundsPoint;
     };
     Rectangle.rectEncompassingPoints = function (points) {
         var minX = Number.POSITIVE_INFINITY;
@@ -3544,131 +3830,19 @@ var Rectangle = (function () {
         var maxY = Number.NEGATIVE_INFINITY;
         for (var i = 0; i < points.length; i++) {
             var pt = points[i];
-            if (pt.x < minX) {
+            if (pt.x < minX)
                 minX = pt.x;
-            }
-            if (pt.x > maxX) {
+            if (pt.x > maxX)
                 maxX = pt.x;
-            }
-            if (pt.y < minY) {
+            if (pt.y < minY)
                 minY = pt.y;
-            }
-            if (pt.y > maxY) {
+            if (pt.y > maxY)
                 maxY = pt.y;
-            }
         }
         return this.fromMinMax(minX, minY, maxX, maxY);
     };
     return Rectangle;
-}());
-var Vector2 = (function () {
-    function Vector2(x, y) {
-        this.x = 0;
-        this.y = 0;
-        this.x = x ? x : 0;
-        this.y = y ? y : this.x;
-    }
-    Object.defineProperty(Vector2, "zero", {
-        get: function () {
-            return Vector2.zeroVector2;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Vector2, "one", {
-        get: function () {
-            return Vector2.unitVector2;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Vector2, "unitX", {
-        get: function () {
-            return Vector2.unitXVector;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Vector2, "unitY", {
-        get: function () {
-            return Vector2.unitYVector;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Vector2.add = function (value1, value2) {
-        var result = new Vector2(0, 0);
-        result.x = value1.x + value2.x;
-        result.y = value1.y + value2.y;
-        return result;
-    };
-    Vector2.divide = function (value1, value2) {
-        var result = new Vector2(0, 0);
-        result.x = value1.x / value2.x;
-        result.y = value1.y / value2.y;
-        return result;
-    };
-    Vector2.multiply = function (value1, value2) {
-        var result = new Vector2(0, 0);
-        result.x = value1.x * value2.x;
-        result.y = value1.y * value2.y;
-        return result;
-    };
-    Vector2.subtract = function (value1, value2) {
-        var result = new Vector2(0, 0);
-        result.x = value1.x - value2.x;
-        result.y = value1.y - value2.y;
-        return result;
-    };
-    Vector2.prototype.normalize = function () {
-        var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
-        this.x *= val;
-        this.y *= val;
-    };
-    Vector2.prototype.length = function () {
-        return Math.sqrt((this.x * this.x) + (this.y * this.y));
-    };
-    Vector2.prototype.round = function () {
-        return new Vector2(Math.round(this.x), Math.round(this.y));
-    };
-    Vector2.normalize = function (value) {
-        var val = 1 / Math.sqrt((value.x * value.x) + (value.y * value.y));
-        value.x *= val;
-        value.y *= val;
-        return value;
-    };
-    Vector2.dot = function (value1, value2) {
-        return (value1.x * value2.x) + (value1.y * value2.y);
-    };
-    Vector2.distanceSquared = function (value1, value2) {
-        var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
-        return (v1 * v1) + (v2 * v2);
-    };
-    Vector2.clamp = function (value1, min, max) {
-        return new Vector2(MathHelper.clamp(value1.x, min.x, max.x), MathHelper.clamp(value1.y, min.y, max.y));
-    };
-    Vector2.lerp = function (value1, value2, amount) {
-        return new Vector2(MathHelper.lerp(value1.x, value2.x, amount), MathHelper.lerp(value1.y, value2.y, amount));
-    };
-    Vector2.transform = function (position, matrix) {
-        return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
-    };
-    Vector2.distance = function (value1, value2) {
-        var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
-        return Math.sqrt((v1 * v1) + (v2 * v2));
-    };
-    Vector2.negate = function (value) {
-        var result = new Vector2();
-        result.x = -value.x;
-        result.y = -value.y;
-        return result;
-    };
-    Vector2.unitYVector = new Vector2(0, 1);
-    Vector2.unitXVector = new Vector2(1, 0);
-    Vector2.unitVector2 = new Vector2(1, 1);
-    Vector2.zeroVector2 = new Vector2(0, 0);
-    return Vector2;
-}());
+}(egret.Rectangle));
 var Vector3 = (function () {
     function Vector3(x, y, z) {
         this.x = x;
@@ -3688,7 +3862,9 @@ var ColliderTriggerHelper = (function () {
         var colliders = this._entity.getComponents(Collider);
         for (var i = 0; i < colliders.length; i++) {
             var collider = colliders[i];
-            var neighbors = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
+            var boxcastResult = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
+            collider.bounds = boxcastResult.rect;
+            var neighbors = boxcastResult.colliders;
             var _loop_5 = function (j) {
                 var neighbor = neighbors[j];
                 if (!collider.isTrigger && !neighbor.isTrigger)
@@ -3908,7 +4084,8 @@ var Physics = (function () {
     };
     Physics.boxcastBroadphase = function (rect, layerMask) {
         if (layerMask === void 0) { layerMask = this.allLayers; }
-        return this._spatialHash.aabbBroadphase(rect, null, layerMask);
+        var boxcastResult = this._spatialHash.aabbBroadphase(rect, null, layerMask);
+        return { colliders: boxcastResult.tempHashSet, rect: boxcastResult.bounds };
     };
     Physics.boxcastBroadphaseExcludingSelf = function (collider, rect, layerMask) {
         if (layerMask === void 0) { layerMask = this.allLayers; }
@@ -3924,12 +4101,17 @@ var Physics = (function () {
         this._spatialHash.remove(collider);
         this._spatialHash.register(collider);
     };
+    Physics.debugDraw = function (secondsToDisplay) {
+        this._spatialHash.debugDraw(secondsToDisplay, 2);
+    };
     Physics.spatialHashCellSize = 100;
     Physics.allLayers = -1;
     return Physics;
 }());
 var Shape = (function () {
     function Shape() {
+        this.bounds = new Rectangle();
+        this.position = Vector2.zero;
     }
     return Shape;
 }());
@@ -3939,6 +4121,7 @@ var Polygon = (function (_super) {
         var _this = _super.call(this) || this;
         _this.isUnrotated = true;
         _this._areEdgeNormalsDirty = true;
+        _this.center = new Vector2();
         _this.setPoints(points);
         _this.isBox = isBox;
         return _this;
@@ -4017,6 +4200,11 @@ var Polygon = (function (_super) {
         }
         return new Vector2(x / points.length, y / points.length);
     };
+    Polygon.recenterPolygonVerts = function (points) {
+        var center = this.findPolygonCenter(points);
+        for (var i = 0; i < points.length; i++)
+            points[i] = Vector2.subtract(points[i], center);
+    };
     Polygon.getClosestPointOnPolygonToPoint = function (points, point) {
         var distanceSquared = Number.MAX_VALUE;
         var edgeNormal = new Vector2(0, 0);
@@ -4063,8 +4251,8 @@ var Polygon = (function (_super) {
         return verts;
     };
     Polygon.prototype.recalculateBounds = function (collider) {
-        this.center = collider.localOffset;
-        if (collider.shouldColliderScaleAndRotationWithTransform) {
+        var localOffset = collider.localOffset;
+        if (collider.shouldColliderScaleAndRotateWithTransform) {
             var hasUnitScale = true;
             var tempMat = void 0;
             var combinedMatrix = Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
@@ -4073,25 +4261,24 @@ var Polygon = (function (_super) {
                 combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
                 hasUnitScale = false;
                 var scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.scale);
-                this.center = scaledOffset;
+                localOffset = scaledOffset;
             }
             if (collider.entity.rotation != 0) {
-                tempMat = Matrix2D.createRotation(collider.entity.rotation);
+                tempMat = Matrix2D.createRotation(collider.entity.rotation, tempMat);
                 combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
                 var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
                 var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
-                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
+                localOffset = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
             }
             tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
             combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
             Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
             this.isUnrotated = collider.entity.rotation == 0;
-            if (collider._isRotationDirty)
-                this._areEdgeNormalsDirty = true;
         }
-        this.position = Vector2.add(collider.entity.position, this.center);
+        this.position = Vector2.add(collider.entity.position, localOffset);
         this.bounds = Rectangle.rectEncompassingPoints(this.points);
         this.bounds.location = Vector2.add(this.bounds.location, this.position);
+        this.center = localOffset;
     };
     return Polygon;
 }(Shape));
@@ -4113,6 +4300,21 @@ var Box = (function (_super) {
         verts[3] = new Vector2(-halfWidth, halfHeight);
         return verts;
     };
+    Box.prototype.overlaps = function (other) {
+        if (this.isUnrotated) {
+            if (other instanceof Box && other.isUnrotated)
+                return this.bounds.intersects(other.bounds);
+            if (other instanceof Circle)
+                return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
+        }
+        return _super.prototype.overlaps.call(this, other);
+    };
+    Box.prototype.collidesWithShape = function (other) {
+        if (this.isUnrotated && other instanceof Box && other.isUnrotated) {
+            return ShapeCollisions.boxToBox(this, other);
+        }
+        return _super.prototype.collidesWithShape.call(this, other);
+    };
     Box.prototype.updateBox = function (width, height) {
         this.width = width;
         this.height = height;
@@ -4127,7 +4329,7 @@ var Box = (function (_super) {
     };
     Box.prototype.containsPoint = function (point) {
         if (this.isUnrotated)
-            return this.bounds.contains(point);
+            return this.bounds.contains(point.x, point.y);
         return _super.prototype.containsPoint.call(this, point);
     };
     return Box;
@@ -4136,6 +4338,7 @@ var Circle = (function (_super) {
     __extends(Circle, _super);
     function Circle(radius) {
         var _this = _super.call(this) || this;
+        _this.center = new Vector2();
         _this.radius = radius;
         _this._originalRadius = radius;
         return _this;
@@ -4157,7 +4360,7 @@ var Circle = (function (_super) {
     };
     Circle.prototype.recalculateBounds = function (collider) {
         this.center = collider.localOffset;
-        if (collider.shouldColliderScaleAndRotationWithTransform) {
+        if (collider.shouldColliderScaleAndRotateWithTransform) {
             var scale = collider.entity.scale;
             var hasUnitScale = scale.x == 1 && scale.y == 1;
             var maxScale = Math.max(scale.x, scale.y);
@@ -4184,6 +4387,9 @@ var Circle = (function (_super) {
 }(Shape));
 var CollisionResult = (function () {
     function CollisionResult() {
+        this.minimumTranslationVector = Vector2.zero;
+        this.normal = Vector2.zero;
+        this.point = Vector2.zero;
     }
     CollisionResult.prototype.invertResult = function () {
         this.minimumTranslationVector = Vector2.negate(this.minimumTranslationVector);
@@ -4238,7 +4444,7 @@ var ShapeCollisions = (function () {
             }
         }
         result.normal = translationAxis;
-        result.minimumTranslationVector = Vector2.multiply(new Vector2(-translationAxis), new Vector2(minIntervalDistance));
+        result.minimumTranslationVector = Vector2.multiply(new Vector2(-translationAxis.x, -translationAxis.y), new Vector2(minIntervalDistance));
         return result;
     };
     ShapeCollisions.intervalDistance = function (minA, maxA, minB, maxB) {
@@ -4358,12 +4564,32 @@ var ShapeCollisions = (function () {
         }
         return null;
     };
+    ShapeCollisions.boxToBox = function (first, second) {
+        var result = new CollisionResult();
+        var minkowskiDiff = this.minkowskiDifference(first, second);
+        if (minkowskiDiff.contains(0, 0)) {
+            result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
+            if (result.minimumTranslationVector.x == 0 && result.minimumTranslationVector.y == 0)
+                return null;
+            result.normal = new Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
+            result.normal.normalize();
+            return result;
+        }
+        return null;
+    };
+    ShapeCollisions.minkowskiDifference = function (first, second) {
+        var positionOffset = Vector2.subtract(first.position, Vector2.add(first.bounds.location, Vector2.divide(first.bounds.size, new Vector2(2))));
+        var topLeft = Vector2.subtract(Vector2.add(first.bounds.location, positionOffset), second.bounds.max);
+        var fullSize = Vector2.add(first.bounds.size, second.bounds.size);
+        return new Rectangle(topLeft.x, topLeft.y, fullSize.x, fullSize.y);
+    };
     return ShapeCollisions;
 }());
 var SpatialHash = (function () {
     function SpatialHash(cellSize) {
         if (cellSize === void 0) { cellSize = 100; }
         this.gridBounds = new Rectangle();
+        this._overlapTestCircle = new Circle(0);
         this._tempHashSet = [];
         this._cellDict = new NumberDictionary();
         this._cellSize = cellSize;
@@ -4389,10 +4615,10 @@ var SpatialHash = (function () {
         collider.registeredPhysicsBounds = bounds;
         var p1 = this.cellCoords(bounds.x, bounds.y);
         var p2 = this.cellCoords(bounds.right, bounds.bottom);
-        if (!this.gridBounds.contains(new Vector2(p1.x, p1.y))) {
+        if (!this.gridBounds.contains(p1.x, p1.y)) {
             this.gridBounds = RectangleExt.union(this.gridBounds, p1);
         }
-        if (!this.gridBounds.contains(new Vector2(p2.x, p2.y))) {
+        if (!this.gridBounds.contains(p2.x, p2.y)) {
             this.gridBounds = RectangleExt.union(this.gridBounds, p2);
         }
         for (var x = p1.x; x <= p2.x; x++) {
@@ -4410,12 +4636,26 @@ var SpatialHash = (function () {
         this._overlapTestCircle.radius = radius;
         this._overlapTestCircle.position = circleCenter;
         var resultCounter = 0;
-        var potentials = this.aabbBroadphase(bounds, null, layerMask);
+        var aabbBroadphaseResult = this.aabbBroadphase(bounds, null, layerMask);
+        bounds = aabbBroadphaseResult.bounds;
+        var potentials = aabbBroadphaseResult.tempHashSet;
         for (var i = 0; i < potentials.length; i++) {
             var collider = potentials[i];
             if (collider instanceof BoxCollider) {
                 results[resultCounter] = collider;
                 resultCounter++;
+            }
+            else if (collider instanceof CircleCollider) {
+                if (collider.shape.overlaps(this._overlapTestCircle)) {
+                    results[resultCounter] = collider;
+                    resultCounter++;
+                }
+            }
+            else if (collider instanceof PolygonCollider) {
+                if (collider.shape.overlaps(this._overlapTestCircle)) {
+                    results[resultCounter] = collider;
+                    resultCounter++;
+                }
             }
             else {
                 throw new Error("overlapCircle against this collider type is not implemented!");
@@ -4445,7 +4685,7 @@ var SpatialHash = (function () {
                 }
             }
         }
-        return this._tempHashSet;
+        return { tempHashSet: this._tempHashSet, bounds: bounds };
     };
     SpatialHash.prototype.cellAtPosition = function (x, y, createCellIfEmpty) {
         if (createCellIfEmpty === void 0) { createCellIfEmpty = false; }
@@ -4459,7 +4699,21 @@ var SpatialHash = (function () {
         return cell;
     };
     SpatialHash.prototype.cellCoords = function (x, y) {
-        return new Point(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
+        return new Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
+    };
+    SpatialHash.prototype.debugDraw = function (secondsToDisplay, textScale) {
+        if (textScale === void 0) { textScale = 1; }
+        for (var x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
+            for (var y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
+                var cell = this.cellAtPosition(x, y);
+                if (cell && cell.length > 0)
+                    this.debugDrawCellDetails(x, y, cell.length, secondsToDisplay, textScale);
+            }
+        }
+    };
+    SpatialHash.prototype.debugDrawCellDetails = function (x, y, cellCount, secondsToDisplay, textScale) {
+        if (secondsToDisplay === void 0) { secondsToDisplay = 0.5; }
+        if (textScale === void 0) { textScale = 1; }
     };
     return SpatialHash;
 }());
@@ -4539,6 +4793,52 @@ var ContentManager = (function () {
         this.loadedAssets.clear();
     };
     return ContentManager;
+}());
+var DrawUtils = (function () {
+    function DrawUtils() {
+    }
+    DrawUtils.drawLine = function (shape, start, end, color, thickness) {
+        if (thickness === void 0) { thickness = 1; }
+        this.drawLineAngle(shape, start, MathHelper.angleBetweenVectors(start, end), Vector2.distance(start, end), color, thickness);
+    };
+    DrawUtils.drawLineAngle = function (shape, start, radians, length, color, thickness) {
+        if (thickness === void 0) { thickness = 1; }
+        shape.graphics.beginFill(color);
+        shape.graphics.drawRect(start.x, start.y, 1, 1);
+        shape.graphics.endFill();
+        shape.scaleX = length;
+        shape.scaleY = thickness;
+        shape.$anchorOffsetX = 0;
+        shape.$anchorOffsetY = 0;
+        shape.rotation = radians;
+    };
+    DrawUtils.drawHollowRect = function (shape, rect, color, thickness) {
+        if (thickness === void 0) { thickness = 1; }
+        this.drawHollowRectR(shape, rect.x, rect.y, rect.width, rect.height, color, thickness);
+    };
+    DrawUtils.drawHollowRectR = function (shape, x, y, width, height, color, thickness) {
+        if (thickness === void 0) { thickness = 1; }
+        var tl = new Vector2(x, y).round();
+        var tr = new Vector2(x + width, y).round();
+        var br = new Vector2(x + width, y + height).round();
+        var bl = new Vector2(x, y + height).round();
+        this.drawLine(shape, tl, tr, color, thickness);
+        this.drawLine(shape, tr, br, color, thickness);
+        this.drawLine(shape, br, bl, color, thickness);
+        this.drawLine(shape, bl, tl, color, thickness);
+    };
+    DrawUtils.drawPixel = function (shape, position, color, size) {
+        if (size === void 0) { size = 1; }
+        var destRect = new Rectangle(position.x, position.y, size, size);
+        if (size != 1) {
+            destRect.x -= size * 0.5;
+            destRect.y -= size * 0.5;
+        }
+        shape.graphics.beginFill(color);
+        shape.graphics.drawRect(destRect.x, destRect.y, destRect.width, destRect.height);
+        shape.graphics.endFill();
+    };
+    return DrawUtils;
 }());
 var Emitter = (function () {
     function Emitter() {
@@ -4813,15 +5113,8 @@ var RectangleExt = (function () {
     }
     RectangleExt.union = function (first, point) {
         var rect = new Rectangle(point.x, point.y, 0, 0);
-        return this.unionR(first, rect);
-    };
-    RectangleExt.unionR = function (value1, value2) {
-        var result = new Rectangle();
-        result.x = Math.min(value1.x, value2.x);
-        result.y = Math.min(value1.y, value2.y);
-        result.width = Math.max(value1.right, value2.right) - result.x;
-        result.height = Math.max(value1.bottom, value2.bottom) - result.y;
-        return result;
+        var rectResult = first.union(rect);
+        return new Rectangle(rectResult.x, rectResult.y, rectResult.width, rectResult.height);
     };
     return RectangleExt;
 }());

@@ -18,11 +18,11 @@ class MainScene extends Scene {
         // bg.addComponent(new BoxCollider());
         bg.position = new Vector2(Math.random() * 200, Math.random() * 200);
 
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 20; i++) {
             let sprite = new Sprite(RES.getRes("checkbox_select_disabled_png"));
             let player2 = this.createEntity("player2");
             player2.addComponent(new SpriteRenderer()).setSprite(sprite);
-            player2.position = new Vector2(Math.random() * 100 * i, Math.random() * 100 * i);
+            player2.position = new Vector2(Math.random() * 1000, Math.random() * 1000);
             player2.addComponent(new BoxCollider());
         }
 
@@ -64,24 +64,25 @@ class MainScene extends Scene {
     public dijkstraTest() {
         let graph = new WeightedGridGraph(20, 20);
 
-        graph.weightedNodes.push(new Point(3, 3));
-        graph.weightedNodes.push(new Point(3, 4));
-        graph.weightedNodes.push(new Point(4, 3));
-        graph.weightedNodes.push(new Point(4, 4));
+        graph.weightedNodes.push(new Vector2(3, 3));
+        graph.weightedNodes.push(new Vector2(3, 4));
+        graph.weightedNodes.push(new Vector2(4, 3));
+        graph.weightedNodes.push(new Vector2(4, 4));
 
-        let path = graph.search(new Point(3, 4), new Point(15, 17));
+        let path = graph.search(new Vector2(3, 4), new Vector2(15, 17));
         console.log(path);
     }
 
     public astarTest() {
-        let graph = new AstarGridGraph(20, 20);
+        let graph = new AstarGridGraph(30, 30);
 
-        graph.weightedNodes.push(new Point(3, 3));
-        graph.weightedNodes.push(new Point(3, 4));
-        graph.weightedNodes.push(new Point(4, 3));
-        graph.weightedNodes.push(new Point(4, 4));
+        // graph.weightedNodes.push(new Vector2(3, 3));
+        // graph.weightedNodes.push(new Vector2(3, 4));
+        // graph.weightedNodes.push(new Vector2(4, 3));
+        // graph.weightedNodes.push(new Vector2(4, 4));
 
-        let path = graph.search(new Point(3, 4), new Point(15, 17));
-        console.log(path);
+        let startTime = egret.getTimer();
+        let path = graph.search(new Vector2(1, 1), new Vector2(29, 29));
+        console.log(egret.getTimer() - startTime);
     }
 }

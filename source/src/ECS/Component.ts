@@ -4,6 +4,7 @@ abstract class Component extends egret.DisplayObjectContainer {
     public updateInterval: number = 1;
     /** 允许用户为实体存入信息 */
     public userData: any;
+    private _updateOrder = 0;
 
     public get enabled(){
         return this.entity ? this.entity.enabled && this._enabled : this._enabled;
@@ -11,6 +12,10 @@ abstract class Component extends egret.DisplayObjectContainer {
 
     public set enabled(value: boolean){
         this.setEnabled(value);
+    }
+
+    public get localPosition(){
+        return new Vector2(this.entity.x + this.x, this.entity.y + this.y);
     }
 
     public setEnabled(isEnabled: boolean){
@@ -27,8 +32,23 @@ abstract class Component extends egret.DisplayObjectContainer {
         return this;
     }
 
-    public initialize(){
+    /** 更新此实体上组件的顺序 */
+    public get updateOrder(){
+        return this._updateOrder;
+    }
+    /** 更新此实体上组件的顺序 */
+    public set updateOrder(value: number){
+        this.setUpdateOrder(value);
+    }
+    public setUpdateOrder(updateOrder: number){
+        if (this._updateOrder != updateOrder){
+            this._updateOrder = updateOrder;
+        }
 
+        return this;
+    }
+
+    public initialize(){
     }
 
     public onAddedToEntity(){
@@ -47,12 +67,16 @@ abstract class Component extends egret.DisplayObjectContainer {
 
     }
 
-    public update(){
-
-    }
-
     public debugRender(){
         
+    }
+
+    /**
+     * 当实体的位置改变时调用。这允许组件知道它们由于父实体的移动而移动了。
+     * @param comp 
+     */
+    public onEntityTransformChanged(comp: TransformComponent){
+
     }
 
     /** 内部使用 运行时不应该调用 */

@@ -155,8 +155,13 @@ class Matrix2D {
         return result;
     }
 
-    public static createTranslation(xPosition: number, yPosition: number, result?: Matrix2D){
-        result = result ? result : new Matrix2D();
+    /**
+     * 创建一个新的tranlation
+     * @param xPosition 
+     * @param yPosition 
+     */
+    public static createTranslation(xPosition: number, yPosition: number){
+        let result = new Matrix2D();
         
         result.m11 = 1;
         result.m12 = 0;
@@ -168,6 +173,14 @@ class Matrix2D {
         result.m32 = yPosition;
 
         return result;
+    }
+
+    /**
+     * 根据position 创建一个translation
+     * @param position 
+     */
+    public static createTranslationVector(position: Vector2){
+        return this.createTranslation(position.x, position.y);
     }
 
     public static createRotation(radians: number, result?: Matrix2D){

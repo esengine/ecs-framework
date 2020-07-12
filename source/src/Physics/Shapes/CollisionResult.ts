@@ -1,8 +1,8 @@
 class CollisionResult {
     public collider: Collider;
-    public minimumTranslationVector: Vector2;
-    public normal: Vector2;
-    public point: Vector2;
+    public minimumTranslationVector: Vector2 = Vector2.zero;
+    public normal: Vector2 = Vector2.zero;
+    public point: Vector2 = Vector2.zero;
 
     public invertResult(){
         this.minimumTranslationVector = Vector2.negate(this.minimumTranslationVector);

@@ -50,7 +50,15 @@ class MathHelper {
         return new Vector2(Math.cos(radians) * radians + circleCenter.x, Math.sin(radians) * radians + circleCenter.y);
     }
 
+    /**
+     * 如果值为偶数，返回true
+     * @param value 
+     */
     public static isEven(value: number){
         return value % 2 == 0;
+    }
+
+    public static angleBetweenVectors(from: Vector2, to: Vector2){
+        return Math.atan2(to.y - from.y, to.x - from.x);
     }
 }

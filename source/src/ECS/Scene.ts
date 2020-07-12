@@ -144,6 +144,9 @@ class Scene extends egret.DisplayObjectContainer {
          this.entityProcessors.end();
 
       this.unload();
+      
+      if (this.parent)
+         this.parent.removeChild(this);
    }
 
    protected async onStart() {

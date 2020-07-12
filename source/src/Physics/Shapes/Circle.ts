@@ -1,7 +1,8 @@
 ///<reference path="./Shape.ts" />
 class Circle extends Shape {
     public radius: number;
-    private _originalRadius: number;
+    public _originalRadius: number;
+    public center = new Vector2();
 
     constructor(radius: number) {
         super();
@@ -32,7 +33,7 @@ class Circle extends Shape {
     public recalculateBounds(collider: Collider) {
         this.center = collider.localOffset;
 
-        if (collider.shouldColliderScaleAndRotationWithTransform) {
+        if (collider.shouldColliderScaleAndRotateWithTransform) {
             let scale = collider.entity.scale;
             let hasUnitScale = scale.x == 1 && scale.y == 1;
             let maxScale = Math.max(scale.x, scale.y);

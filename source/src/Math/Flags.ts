@@ -10,7 +10,7 @@ class Flags {
      * @param self 
      * @param flag 
      */
-    public static isFlagSet(self: number, flag: number){
+    public static isFlagSet(self: number, flag: number): boolean{
         return (self & flag) != 0;
     }
 
@@ -19,7 +19,7 @@ class Flags {
      * @param self 
      * @param flag 
      */
-    public static isUnshiftedFlagSet(self: number, flag: number){
+    public static isUnshiftedFlagSet(self: number, flag: number): boolean{
         flag = 1 << flag;
         return (self & flag) != 0;
     }
