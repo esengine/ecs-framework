@@ -1044,9 +1044,14 @@ declare class DrawUtils {
 declare class Emitter<T> {
     private _messageTable;
     constructor();
-    addObserver(eventType: T, handler: Function): void;
+    addObserver(eventType: T, handler: Function, context: any): void;
     removeObserver(eventType: T, handler: Function): void;
     emit(eventType: T, data?: any): void;
+}
+declare class FuncPack {
+    func: Function;
+    context: any;
+    constructor(func: Function, context: any);
 }
 declare class GlobalManager {
     static globalManagers: GlobalManager[];

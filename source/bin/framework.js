@@ -4880,7 +4880,7 @@ var Emitter = (function () {
     function Emitter() {
         this._messageTable = new Map();
     }
-    Emitter.prototype.addObserver = function (eventType, handler) {
+    Emitter.prototype.addObserver = function (eventType, handler, context) {
         var list = this._messageTable.get(eventType);
         if (!list) {
             list = [];
@@ -4888,7 +4888,7 @@ var Emitter = (function () {
         }
         if (list.contains(handler))
             console.warn("您试图添加相同的观察者两次");
-        list.push(handler);
+        list.push(new FuncPack(handler, context));
     };
     Emitter.prototype.removeObserver = function (eventType, handler) {
         this._messageTable.get(eventType).remove(handler);
@@ -4897,10 +4897,17 @@ var Emitter = (function () {
         var list = this._messageTable.get(eventType);
         if (list) {
             for (var i = list.length - 1; i >= 0; i--)
-                list[i](data);
+                list[i].func.call(list[i].context, data);
         }
     };
     return Emitter;
+}());
+var FuncPack = (function () {
+    function FuncPack(func, context) {
+        this.func = func;
+        this.context = context;
+    }
+    return FuncPack;
 }());
 var GlobalManager = (function () {
     function GlobalManager() {
