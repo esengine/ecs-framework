@@ -1023,6 +1023,10 @@ var Component = (function (_super) {
     };
     return Component;
 }(egret.DisplayObjectContainer));
+var CoreEvents;
+(function (CoreEvents) {
+    CoreEvents[CoreEvents["SceneChanged"] = 0] = "SceneChanged";
+})(CoreEvents || (CoreEvents = {}));
 var Entity = (function (_super) {
     __extends(Entity, _super);
     function Entity(name) {
@@ -1393,9 +1397,19 @@ var Scene = (function (_super) {
 var SceneManager = (function () {
     function SceneManager(stage) {
         stage.addEventListener(egret.Event.ENTER_FRAME, SceneManager.update, this);
+        SceneManager._instnace = this;
+        SceneManager.emitter = new Emitter();
+        SceneManager.content = new ContentManager();
         SceneManager.stage = stage;
         SceneManager.initialize(stage);
     }
+    Object.defineProperty(SceneManager, "Instance", {
+        get: function () {
+            return this._instnace;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(SceneManager, "scene", {
         get: function () {
             return this._scene;
@@ -1406,10 +1420,12 @@ var SceneManager = (function () {
             if (this._scene == null) {
                 this._scene = value;
                 this._scene.begin();
+                SceneManager.Instance.onSceneChanged();
             }
             else {
                 this._nextScene = value;
             }
+            this.registerActiveSceneChanged(this._scene, this._nextScene);
         },
         enumerable: true,
         configurable: true
@@ -1430,12 +1446,9 @@ var SceneManager = (function () {
             }
             if (SceneManager._nextScene) {
                 SceneManager._scene.end();
-                for (var i = 0; i < SceneManager._scene.entities.buffer.length; i++) {
-                    var entity = SceneManager._scene.entities.buffer[i];
-                    entity.destroy();
-                }
                 SceneManager._scene = SceneManager._nextScene;
                 SceneManager._nextScene = null;
+                SceneManager._instnace.onSceneChanged();
                 SceneManager._scene.begin();
             }
         }
@@ -1470,6 +1483,12 @@ var SceneManager = (function () {
         }
         this.sceneTransition = sceneTransition;
         return sceneTransition;
+    };
+    SceneManager.registerActiveSceneChanged = function (current, next) {
+        if (this.activeSceneChanged)
+            this.activeSceneChanged(current, next);
+    };
+    SceneManager.prototype.onSceneChanged = function () {
     };
     return SceneManager;
 }());
@@ -1873,10 +1892,6 @@ var TiledSpriteRenderer = (function (_super) {
         },
         set: function (value) {
             this.sourceRect.x = value;
-            if (this.sourceRect.x < -this.sourceRect.width)
-                this.sourceRect.x = this.sourceRect.width;
-            else if (this.sourceRect.x > this.sourceRect.width)
-                this.sourceRect.x = -this.sourceRect.width;
         },
         enumerable: true,
         configurable: true
@@ -1887,10 +1902,6 @@ var TiledSpriteRenderer = (function (_super) {
         },
         set: function (value) {
             this.sourceRect.y = value;
-            if (this.sourceRect.y < -this.sourceRect.height)
-                this.sourceRect.y = this.sourceRect.height;
-            else if (this.sourceRect.y > this.sourceRect.height)
-                this.sourceRect.y = -this.sourceRect.height;
         },
         enumerable: true,
         configurable: true
@@ -1925,10 +1936,27 @@ var ScrollingSpriteRenderer = (function (_super) {
         return _this;
     }
     ScrollingSpriteRenderer.prototype.update = function () {
-        this.scrollX += this.scrollSpeedX * Time.deltaTime;
-        this.scrollY += this.scroolSpeedY * Time.deltaTime;
+        this._scrollX += this.scrollSpeedX * Time.deltaTime;
+        this._scrollY += this.scroolSpeedY * Time.deltaTime;
         this.sourceRect.x = this._scrollX;
         this.sourceRect.y = this._scrollY;
+    };
+    ScrollingSpriteRenderer.prototype.render = function (camera) {
+        if (!this.sprite)
+            return;
+        _super.prototype.render.call(this, camera);
+        var renderTexture = new egret.RenderTexture();
+        var cacheBitmap = new egret.DisplayObjectContainer();
+        cacheBitmap.removeChildren();
+        cacheBitmap.addChild(this.leftTexture);
+        cacheBitmap.addChild(this.rightTexture);
+        this.leftTexture.x = this.sourceRect.x;
+        this.rightTexture.x = this.sourceRect.x - this.sourceRect.width;
+        this.leftTexture.y = this.sourceRect.y;
+        this.rightTexture.y = this.sourceRect.y;
+        cacheBitmap.cacheAsBitmap = true;
+        renderTexture.drawToTexture(cacheBitmap, new egret.Rectangle(0, 0, this.sourceRect.width, this.sourceRect.height));
+        this.bitmap.texture = renderTexture;
     };
     return ScrollingSpriteRenderer;
 }(TiledSpriteRenderer));
@@ -5095,6 +5123,47 @@ var ListPool = (function () {
     ListPool._objectQueue = [];
     return ListPool;
 }());
+var THREAD_ID = Math.floor(Math.random() * 1000) + "-" + Date.now();
+var setItem = egret.localStorage.setItem.bind(localStorage);
+var getItem = egret.localStorage.getItem.bind(localStorage);
+var removeItem = egret.localStorage.removeItem.bind(localStorage);
+var nextTick = function (fn) {
+    setTimeout(fn, 0);
+};
+var LockUtils = (function () {
+    function LockUtils(key) {
+        this._keyX = "mutex_key_" + key + "_X";
+        this._keyY = "mutex_key_" + key + "_Y";
+    }
+    LockUtils.prototype.lock = function () {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            var fn = function () {
+                setItem(_this._keyX, THREAD_ID);
+                if (!getItem(_this._keyY) === null) {
+                    nextTick(fn);
+                }
+                setItem(_this._keyY, THREAD_ID);
+                if (getItem(_this._keyX) !== THREAD_ID) {
+                    setTimeout(function () {
+                        if (getItem(_this._keyY) !== THREAD_ID) {
+                            nextTick(fn);
+                            return;
+                        }
+                        resolve();
+                        removeItem(_this._keyY);
+                    }, 10);
+                }
+                else {
+                    resolve();
+                    removeItem(_this._keyY);
+                }
+            };
+            fn();
+        });
+    };
+    return LockUtils;
+}());
 var Pair = (function () {
     function Pair(first, second) {
         this.first = first;
@@ -5239,4 +5308,424 @@ var Vector2Ext = (function () {
         return new Vector2(Math.round(vec.x), Math.round(vec.y));
     };
     return Vector2Ext;
+}());
+var Layout = (function () {
+    function Layout() {
+        this.clientArea = new Rectangle(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+        this.safeArea = this.clientArea;
+    }
+    Layout.prototype.place = function (size, horizontalMargin, verticalMargine, alignment) {
+        var rc = new Rectangle(0, 0, size.x, size.y);
+        if ((alignment & Alignment.left) != 0) {
+            rc.x = this.clientArea.x + (this.clientArea.width * horizontalMargin);
+        }
+        else if ((alignment & Alignment.right) != 0) {
+            rc.x = this.clientArea.x + (this.clientArea.width * (1 - horizontalMargin)) - rc.width;
+        }
+        else if ((alignment & Alignment.horizontalCenter) != 0) {
+            rc.x = this.clientArea.x + (this.clientArea.width - rc.width) / 2 + (horizontalMargin * this.clientArea.width);
+        }
+        else {
+        }
+        if ((alignment & Alignment.top) != 0) {
+            rc.y = this.clientArea.y + (this.clientArea.height * verticalMargine);
+        }
+        else if ((alignment & Alignment.bottom) != 0) {
+            rc.y = this.clientArea.y + (this.clientArea.height * (1 - verticalMargine)) - rc.height;
+        }
+        else if ((alignment & Alignment.verticalCenter) != 0) {
+            rc.y = this.clientArea.y + (this.clientArea.height - rc.height) / 2 + (verticalMargine * this.clientArea.height);
+        }
+        else {
+        }
+        if (rc.left < this.safeArea.left)
+            rc.x = this.safeArea.left;
+        if (rc.right > this.safeArea.right)
+            rc.x = this.safeArea.right - rc.width;
+        if (rc.top < this.safeArea.top)
+            rc.y = this.safeArea.top;
+        if (rc.bottom > this.safeArea.bottom)
+            rc.y = this.safeArea.bottom - rc.height;
+        return rc;
+    };
+    return Layout;
+}());
+var Alignment;
+(function (Alignment) {
+    Alignment[Alignment["none"] = 0] = "none";
+    Alignment[Alignment["left"] = 1] = "left";
+    Alignment[Alignment["right"] = 2] = "right";
+    Alignment[Alignment["horizontalCenter"] = 4] = "horizontalCenter";
+    Alignment[Alignment["top"] = 8] = "top";
+    Alignment[Alignment["bottom"] = 16] = "bottom";
+    Alignment[Alignment["verticalCenter"] = 32] = "verticalCenter";
+    Alignment[Alignment["topLeft"] = 9] = "topLeft";
+    Alignment[Alignment["topRight"] = 10] = "topRight";
+    Alignment[Alignment["topCenter"] = 12] = "topCenter";
+    Alignment[Alignment["bottomLeft"] = 17] = "bottomLeft";
+    Alignment[Alignment["bottomRight"] = 18] = "bottomRight";
+    Alignment[Alignment["bottomCenter"] = 20] = "bottomCenter";
+    Alignment[Alignment["centerLeft"] = 33] = "centerLeft";
+    Alignment[Alignment["centerRight"] = 34] = "centerRight";
+    Alignment[Alignment["center"] = 36] = "center";
+})(Alignment || (Alignment = {}));
+var stopwatch;
+(function (stopwatch) {
+    var Stopwatch = (function () {
+        function Stopwatch(getSystemTime) {
+            if (getSystemTime === void 0) { getSystemTime = _defaultSystemTimeGetter; }
+            this.getSystemTime = getSystemTime;
+            this._stopDuration = 0;
+            this._completeSlices = [];
+        }
+        Stopwatch.prototype.getState = function () {
+            if (this._startSystemTime === undefined) {
+                return State.IDLE;
+            }
+            else if (this._stopSystemTime === undefined) {
+                return State.RUNNING;
+            }
+            else {
+                return State.STOPPED;
+            }
+        };
+        Stopwatch.prototype.isIdle = function () {
+            return this.getState() === State.IDLE;
+        };
+        Stopwatch.prototype.isRunning = function () {
+            return this.getState() === State.RUNNING;
+        };
+        Stopwatch.prototype.isStopped = function () {
+            return this.getState() === State.STOPPED;
+        };
+        Stopwatch.prototype.slice = function () {
+            return this.recordPendingSlice();
+        };
+        Stopwatch.prototype.getCompletedSlices = function () {
+            return Array.from(this._completeSlices);
+        };
+        Stopwatch.prototype.getCompletedAndPendingSlices = function () {
+            return this._completeSlices.concat([this.getPendingSlice()]);
+        };
+        Stopwatch.prototype.getPendingSlice = function () {
+            return this.calculatePendingSlice();
+        };
+        Stopwatch.prototype.getTime = function () {
+            return this.caculateStopwatchTime();
+        };
+        Stopwatch.prototype.calculatePendingSlice = function (endStopwatchTime) {
+            if (this._pendingSliceStartStopwatchTime === undefined) {
+                return Object.freeze({ startTime: 0, endTime: 0, duration: 0 });
+            }
+            if (endStopwatchTime === undefined) {
+                endStopwatchTime = this.getTime();
+            }
+            return Object.freeze({
+                startTime: this._pendingSliceStartStopwatchTime,
+                endTime: endStopwatchTime,
+                duration: endStopwatchTime - this._pendingSliceStartStopwatchTime
+            });
+        };
+        Stopwatch.prototype.caculateStopwatchTime = function (endSystemTime) {
+            if (this._startSystemTime === undefined)
+                return 0;
+            if (endSystemTime === undefined)
+                endSystemTime = this.getSystemTimeOfCurrentStopwatchTime();
+            return endSystemTime - this._startSystemTime - this._stopDuration;
+        };
+        Stopwatch.prototype.getSystemTimeOfCurrentStopwatchTime = function () {
+            return this._stopSystemTime === undefined ? this.getSystemTime() : this._stopSystemTime;
+        };
+        Stopwatch.prototype.reset = function () {
+            this._startSystemTime = this._pendingSliceStartStopwatchTime = this._stopSystemTime = undefined;
+            this._stopDuration = 0;
+            this._completeSlices = [];
+        };
+        Stopwatch.prototype.start = function (forceReset) {
+            if (forceReset === void 0) { forceReset = false; }
+            if (forceReset) {
+                this.reset();
+            }
+            if (this._stopSystemTime !== undefined) {
+                var systemNow = this.getSystemTime();
+                var stopDuration = systemNow - this._stopSystemTime;
+                this._stopDuration += stopDuration;
+                this._stopSystemTime = undefined;
+            }
+            else if (this._startSystemTime === undefined) {
+                var systemNow = this.getSystemTime();
+                this._startSystemTime = systemNow;
+                this._pendingSliceStartStopwatchTime = 0;
+            }
+        };
+        Stopwatch.prototype.stop = function (recordPendingSlice) {
+            if (recordPendingSlice === void 0) { recordPendingSlice = false; }
+            if (this._startSystemTime === undefined) {
+                return 0;
+            }
+            var systemTimeOfStopwatchTime = this.getSystemTimeOfCurrentStopwatchTime();
+            if (recordPendingSlice) {
+                this.recordPendingSlice(this.caculateStopwatchTime(systemTimeOfStopwatchTime));
+            }
+            this._stopSystemTime = systemTimeOfStopwatchTime;
+            return this.getTime();
+        };
+        Stopwatch.prototype.recordPendingSlice = function (endStopwatchTime) {
+            if (this._pendingSliceStartStopwatchTime !== undefined) {
+                if (endStopwatchTime === undefined) {
+                    endStopwatchTime = this.getTime();
+                }
+                var slice = this.calculatePendingSlice(endStopwatchTime);
+                this._pendingSliceStartStopwatchTime = slice.endTime;
+                this._completeSlices.push(slice);
+                return slice;
+            }
+            else {
+                return this.calculatePendingSlice();
+            }
+        };
+        return Stopwatch;
+    }());
+    stopwatch.Stopwatch = Stopwatch;
+    var State;
+    (function (State) {
+        State["IDLE"] = "IDLE";
+        State["RUNNING"] = "RUNNING";
+        State["STOPPED"] = "STOPPED";
+    })(State || (State = {}));
+    function setDefaultSystemTimeGetter(systemTimeGetter) {
+        if (systemTimeGetter === void 0) { systemTimeGetter = Date.now; }
+        _defaultSystemTimeGetter = systemTimeGetter;
+    }
+    stopwatch.setDefaultSystemTimeGetter = setDefaultSystemTimeGetter;
+    var _defaultSystemTimeGetter = Date.now;
+})(stopwatch || (stopwatch = {}));
+var TimeRuler = (function () {
+    function TimeRuler() {
+        this._frameKey = 'frame';
+        this._logKey = 'log';
+        this.markers = [];
+        this.stopwacth = new stopwatch.Stopwatch();
+        this._markerNameToIdMap = new Map();
+        this.showLog = false;
+        TimeRuler.Instance = this;
+        this._logs = new Array(2);
+        for (var i = 0; i < this._logs.length; ++i)
+            this._logs[i] = new FrameLog();
+        this.sampleFrames = this.targetSampleFrames = 1;
+        this.width = SceneManager.stage.stageWidth * 0.8;
+        this.onGraphicsDeviceReset();
+    }
+    TimeRuler.prototype.onGraphicsDeviceReset = function () {
+        var layout = new Layout();
+        this._position = layout.place(new Vector2(this.width, TimeRuler.barHeight), 0, 0.01, Alignment.bottomCenter).location;
+    };
+    TimeRuler.prototype.startFrame = function () {
+        var _this = this;
+        var lock = new LockUtils(this._frameKey);
+        lock.lock().then(function () {
+            _this._updateCount = parseInt(egret.localStorage.getItem(_this._frameKey), 10);
+            var count = _this._updateCount;
+            count += 1;
+            egret.localStorage.setItem(_this._frameKey, count.toString());
+            if (_this.enabled && (1 < count && count < TimeRuler.maxSampleFrames))
+                return;
+            _this._prevLog = _this._logs[_this.frameCount++ & 0x1];
+            _this._curLog = _this._logs[_this.frameCount & 0x1];
+            var endFrameTime = _this.stopwacth.getTime();
+            for (var barIndex = 0; barIndex < _this._prevLog.bars.length; ++barIndex) {
+                var prevBar = _this._prevLog.bars[barIndex];
+                var nextBar = _this._curLog.bars[barIndex];
+                for (var nest = 0; nest < prevBar.nestCount; ++nest) {
+                    var markerIdx = prevBar.markerNests[nest];
+                    prevBar.markers[markerIdx].endTime = endFrameTime;
+                    nextBar.markerNests[nest] = nest;
+                    nextBar.markers[nest].markerId = prevBar.markers[markerIdx].markerId;
+                    nextBar.markers[nest].beginTime = 0;
+                    nextBar.markers[nest].endTime = -1;
+                    nextBar.markers[nest].color = prevBar.markers[markerIdx].color;
+                }
+                for (var markerIdx = 0; markerIdx < prevBar.markCount; ++markerIdx) {
+                    var duration = prevBar.markers[markerIdx].endTime - prevBar.markers[markerIdx].beginTime;
+                    var markerId = prevBar.markers[markerIdx].markerId;
+                    var m = _this.markers[markerId];
+                    m.logs[barIndex].color = prevBar.markers[markerIdx].color;
+                    if (!m.logs[barIndex].initialized) {
+                        m.logs[barIndex].min = duration;
+                        m.logs[barIndex].max = duration;
+                        m.logs[barIndex].avg = duration;
+                        m.logs[barIndex].initialized = true;
+                    }
+                    else {
+                        m.logs[barIndex].min = Math.min(m.logs[barIndex].min, duration);
+                        m.logs[barIndex].max = Math.min(m.logs[barIndex].max, duration);
+                        m.logs[barIndex].avg += duration;
+                        m.logs[barIndex].avg *= 0.5;
+                        if (m.logs[barIndex].samples++ >= TimeRuler.logSnapDuration) {
+                            m.logs[barIndex].snapMin = m.logs[barIndex].min;
+                            m.logs[barIndex].snapMax = m.logs[barIndex].max;
+                            m.logs[barIndex].snapAvg = m.logs[barIndex].avg;
+                            m.logs[barIndex].samples = 0;
+                        }
+                    }
+                }
+                nextBar.markCount = prevBar.nestCount;
+                nextBar.nestCount = prevBar.nestCount;
+            }
+            _this.stopwacth.reset();
+            _this.stopwacth.start();
+        });
+    };
+    TimeRuler.prototype.beginMark = function (markerName, color, barIndex) {
+        var _this = this;
+        if (barIndex === void 0) { barIndex = 0; }
+        var lock = new LockUtils(this._frameKey);
+        lock.lock().then(function () {
+            if (barIndex < 0 || barIndex >= TimeRuler.maxBars)
+                throw new Error("barIndex argument out of range");
+            var bar = _this._curLog.bars[barIndex];
+            if (bar.markCount >= TimeRuler.maxSamples) {
+                throw new Error("exceeded sample count. either set larger number to timeruler.maxsaple or lower sample count");
+            }
+            if (bar.nestCount >= TimeRuler.maxNestCall) {
+                throw new Error("exceeded nest count. either set larger number to timeruler.maxnestcall or lower nest calls");
+            }
+            var markerId = _this._markerNameToIdMap.get(markerName);
+            if (!markerId) {
+                markerId = _this.markers.length;
+                _this._markerNameToIdMap.set(markerName, markerId);
+            }
+            bar.markerNests[bar.nestCount++] = bar.markCount;
+            bar.markers[bar.markCount].markerId = markerId;
+            bar.markers[bar.markCount].color = color;
+            bar.markers[bar.markCount].beginTime = _this.stopwacth.getTime();
+            bar.markers[bar.markCount].endTime = -1;
+        });
+    };
+    TimeRuler.prototype.endMark = function (markerName, barIndex) {
+        var _this = this;
+        if (barIndex === void 0) { barIndex = 0; }
+        var lock = new LockUtils(this._frameKey);
+        lock.lock().then(function () {
+            if (barIndex < 0 || barIndex >= TimeRuler.maxBars)
+                throw new Error("barIndex argument out of range");
+            var bar = _this._curLog.bars[barIndex];
+            if (bar.nestCount <= 0) {
+                throw new Error("call beginMark method before calling endMark method");
+            }
+            var markerId = _this._markerNameToIdMap.get(markerName);
+            if (!markerId) {
+                throw new Error("Marker " + markerName + " is not registered. Make sure you specifed same name as you used for beginMark method");
+            }
+            var markerIdx = bar.markerNests[--bar.nestCount];
+            if (bar.markers[markerIdx].markerId != markerId) {
+                throw new Error("Incorrect call order of beginMark/endMark method. beginMark(A), beginMark(B), endMark(B), endMark(A) But you can't called it like beginMark(A), beginMark(B), endMark(A), endMark(B).");
+            }
+            bar.markers[markerIdx].endTime = _this.stopwacth.getTime();
+        });
+    };
+    TimeRuler.prototype.getAverageTime = function (barIndex, markerName) {
+        if (barIndex < 0 || barIndex >= TimeRuler.maxBars) {
+            throw new Error("barIndex argument out of range");
+        }
+        var result = 0;
+        var markerId = this._markerNameToIdMap.get(markerName);
+        if (markerId) {
+            result = this.markers[markerId].logs[barIndex].avg;
+        }
+        return result;
+    };
+    TimeRuler.prototype.resetLog = function () {
+        var _this = this;
+        var lock = new LockUtils(this._logKey);
+        lock.lock().then(function () {
+            var count = parseInt(egret.localStorage.getItem(_this._logKey), 10);
+            count += 1;
+            egret.localStorage.setItem(_this._logKey, count.toString());
+            _this.markers.forEach(function (markerInfo) {
+                for (var i = 0; i < markerInfo.logs.length; ++i) {
+                    markerInfo.logs[i].initialized = false;
+                    markerInfo.logs[i].snapMin = 0;
+                    markerInfo.logs[i].snapMax = 0;
+                    markerInfo.logs[i].snapAvg = 0;
+                    markerInfo.logs[i].min = 0;
+                    markerInfo.logs[i].max = 0;
+                    markerInfo.logs[i].avg = 0;
+                    markerInfo.logs[i].samples = 0;
+                }
+            });
+        });
+    };
+    TimeRuler.prototype.render = function (position, width) {
+        if (position === void 0) { position = this._position; }
+        if (width === void 0) { width = this.width; }
+        egret.localStorage.setItem(this._frameKey, "0");
+        if (!this.showLog)
+            return;
+        var height = 0;
+        var maxTime = 0;
+        this._prevLog.bars.forEach(function (bar) {
+            if (bar.markCount > 0) {
+                height += TimeRuler.barHeight + TimeRuler.barPadding * 2;
+                maxTime = Math.max(maxTime, bar.markers[bar.markCount - 1].endTime);
+            }
+        });
+        var frameSpan = 1 / 60 * 1000;
+        var sampleSpan = this.sampleFrames * frameSpan;
+        if (maxTime > sampleSpan) {
+            this._frameAdjust = Math.max(0, this._frameAdjust) + 1;
+        }
+        else {
+            this._frameAdjust = Math.min(0, this._frameAdjust) - 1;
+        }
+        if (Math.max(this._frameAdjust) > TimeRuler.autoAdjustDelay) {
+            this.sampleFrames = Math.min(TimeRuler.maxSampleFrames, this.sampleFrames);
+            this.sampleFrames = Math.max(this.targetSampleFrames, (maxTime / frameSpan) + 1);
+            this._frameAdjust = 0;
+        }
+        var msToPs = width / sampleSpan;
+        var startY = position.y - (height - TimeRuler.barHeight);
+        var y = startY;
+    };
+    TimeRuler.maxBars = 0;
+    TimeRuler.maxSamples = 256;
+    TimeRuler.maxNestCall = 32;
+    TimeRuler.barHeight = 8;
+    TimeRuler.maxSampleFrames = 4;
+    TimeRuler.logSnapDuration = 120;
+    TimeRuler.barPadding = 2;
+    TimeRuler.autoAdjustDelay = 30;
+    return TimeRuler;
+}());
+var FrameLog = (function () {
+    function FrameLog() {
+        this.bars = new Array(TimeRuler.maxBars);
+        for (var i = 0; i < TimeRuler.maxBars; ++i)
+            this.bars[i] = new MarkerCollection();
+    }
+    return FrameLog;
+}());
+var MarkerCollection = (function () {
+    function MarkerCollection() {
+        this.markers = new Array(TimeRuler.maxSamples);
+        this.markerNests = new Array(TimeRuler.maxNestCall);
+    }
+    return MarkerCollection;
+}());
+var Marker = (function () {
+    function Marker() {
+    }
+    return Marker;
+}());
+var MarkerInfo = (function () {
+    function MarkerInfo(name) {
+        this.logs = new Array(TimeRuler.maxBars);
+        this.name = name;
+    }
+    return MarkerInfo;
+}());
+var MarkerLog = (function () {
+    function MarkerLog() {
+    }
+    return MarkerLog;
 }());

@@ -209,6 +209,9 @@ declare abstract class Component extends egret.DisplayObjectContainer {
     registerComponent(): void;
     deregisterComponent(): void;
 }
+declare enum CoreEvents {
+    SceneChanged = 0
+}
 declare class Entity extends egret.DisplayObjectContainer {
     private static _idGenerator;
     name: string;
@@ -297,12 +300,19 @@ declare class SceneManager {
     private static _nextScene;
     static sceneTransition: SceneTransition;
     static stage: egret.Stage;
+    static activeSceneChanged: Function;
+    static emitter: Emitter<CoreEvents>;
+    static content: ContentManager;
+    private static _instnace;
+    static readonly Instance: SceneManager;
     constructor(stage: egret.Stage);
     static scene: Scene;
     static initialize(stage: egret.Stage): void;
     static update(): void;
     static render(): void;
     static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
+    static registerActiveSceneChanged(current: Scene, next: Scene): void;
+    onSceneChanged(): void;
 }
 declare class Camera extends Component implements IUpdatable {
     private _zoom;
@@ -379,6 +389,34 @@ declare class Mesh extends RenderableComponent {
     render(camera: Camera): void;
     reset(): void;
 }
+declare class SpriteRenderer extends RenderableComponent {
+    private _sprite;
+    protected bitmap: egret.Bitmap;
+    sprite: Sprite;
+    setSprite(sprite: Sprite): SpriteRenderer;
+    setColor(color: number): SpriteRenderer;
+    isVisibleFromCamera(camera: Camera): boolean;
+    render(camera: Camera): void;
+    onRemovedFromEntity(): void;
+    reset(): void;
+}
+declare class TiledSpriteRenderer extends SpriteRenderer {
+    protected sourceRect: Rectangle;
+    protected leftTexture: egret.Bitmap;
+    protected rightTexture: egret.Bitmap;
+    scrollX: number;
+    scrollY: number;
+    constructor(sprite: Sprite);
+    render(camera: Camera): void;
+}
+declare class ScrollingSpriteRenderer extends TiledSpriteRenderer {
+    scrollSpeedX: number;
+    scroolSpeedY: number;
+    private _scrollX;
+    private _scrollY;
+    update(): void;
+    render(camera: Camera): void;
+}
 declare class Sprite {
     texture2D: egret.Texture;
     readonly sourceRect: Rectangle;
@@ -391,17 +429,6 @@ declare class SpriteAnimation {
     readonly sprites: Sprite[];
     readonly frameRate: number;
     constructor(sprites: Sprite[], frameRate: number);
-}
-declare class SpriteRenderer extends RenderableComponent {
-    private _sprite;
-    protected bitmap: egret.Bitmap;
-    sprite: Sprite;
-    setSprite(sprite: Sprite): SpriteRenderer;
-    setColor(color: number): SpriteRenderer;
-    isVisibleFromCamera(camera: Camera): boolean;
-    render(camera: Camera): void;
-    onRemovedFromEntity(): void;
-    reset(): void;
 }
 declare class SpriteAnimator extends SpriteRenderer implements IUpdatable {
     onAnimationCompletedEvent: Function;
@@ -435,13 +462,6 @@ declare enum State {
     running = 1,
     paused = 2,
     completed = 3
-}
-declare class TiledSpriteRenderer extends SpriteRenderer {
-    protected sourceRect: Rectangle;
-    scrollX: number;
-    scrollY: number;
-    constructor(sprite: Sprite);
-    render(camera: Camera): void;
 }
 interface ITriggerListener {
     onTriggerEnter(other: Collider, local: Collider): any;
@@ -1076,6 +1096,17 @@ declare class ListPool {
     static obtain<T>(): Array<T>;
     static free<T>(obj: Array<T>): void;
 }
+declare const THREAD_ID: string;
+declare const setItem: any;
+declare const getItem: any;
+declare const removeItem: any;
+declare const nextTick: (fn: any) => void;
+declare class LockUtils {
+    private _keyX;
+    private _keyY;
+    constructor(key: any);
+    lock(): Promise<{}>;
+}
 declare class Pair<T> {
     first: T;
     second: T;
@@ -1103,4 +1134,135 @@ declare class Vector2Ext {
     static transformR(position: Vector2, matrix: Matrix2D): Vector2;
     static transform(sourceArray: Vector2[], matrix: Matrix2D, destinationArray: Vector2[]): void;
     static round(vec: Vector2): Vector2;
+}
+declare class Layout {
+    clientArea: Rectangle;
+    safeArea: Rectangle;
+    constructor();
+    place(size: Vector2, horizontalMargin: number, verticalMargine: number, alignment: Alignment): Rectangle;
+}
+declare enum Alignment {
+    none = 0,
+    left = 1,
+    right = 2,
+    horizontalCenter = 4,
+    top = 8,
+    bottom = 16,
+    verticalCenter = 32,
+    topLeft = 9,
+    topRight = 10,
+    topCenter = 12,
+    bottomLeft = 17,
+    bottomRight = 18,
+    bottomCenter = 20,
+    centerLeft = 33,
+    centerRight = 34,
+    center = 36
+}
+declare namespace stopwatch {
+    class Stopwatch {
+        private readonly getSystemTime;
+        private _startSystemTime;
+        private _stopSystemTime;
+        private _stopDuration;
+        private _pendingSliceStartStopwatchTime;
+        private _completeSlices;
+        constructor(getSystemTime?: GetTimeFunc);
+        getState(): State;
+        isIdle(): boolean;
+        isRunning(): boolean;
+        isStopped(): boolean;
+        slice(): Slice;
+        getCompletedSlices(): Slice[];
+        getCompletedAndPendingSlices(): Slice[];
+        getPendingSlice(): Slice;
+        getTime(): number;
+        private calculatePendingSlice;
+        private caculateStopwatchTime;
+        private getSystemTimeOfCurrentStopwatchTime;
+        reset(): void;
+        start(forceReset?: boolean): void;
+        stop(recordPendingSlice?: boolean): number;
+        private recordPendingSlice;
+    }
+    type GetTimeFunc = () => number;
+    enum State {
+        IDLE = "IDLE",
+        RUNNING = "RUNNING",
+        STOPPED = "STOPPED"
+    }
+    function setDefaultSystemTimeGetter(systemTimeGetter?: GetTimeFunc): void;
+    interface Slice {
+        readonly startTime: number;
+        readonly endTime: number;
+        readonly duration: number;
+    }
+}
+declare class TimeRuler {
+    static readonly maxBars: number;
+    static readonly maxSamples: number;
+    static readonly maxNestCall: number;
+    static readonly barHeight: number;
+    static readonly maxSampleFrames: number;
+    static readonly logSnapDuration: number;
+    static readonly barPadding: number;
+    static readonly autoAdjustDelay: number;
+    static Instance: TimeRuler;
+    private _frameKey;
+    private _logKey;
+    private _logs;
+    private sampleFrames;
+    targetSampleFrames: number;
+    width: number;
+    enabled: true;
+    private _position;
+    private _prevLog;
+    private _curLog;
+    private frameCount;
+    private markers;
+    private stopwacth;
+    private _markerNameToIdMap;
+    private _updateCount;
+    showLog: boolean;
+    private _frameAdjust;
+    constructor();
+    private onGraphicsDeviceReset;
+    startFrame(): void;
+    beginMark(markerName: string, color: number, barIndex?: number): void;
+    endMark(markerName: string, barIndex?: number): void;
+    getAverageTime(barIndex: number, markerName: string): number;
+    resetLog(): void;
+    render(position?: Vector2, width?: number): void;
+}
+declare class FrameLog {
+    bars: MarkerCollection[];
+    constructor();
+}
+declare class MarkerCollection {
+    markers: Marker[];
+    markCount: number;
+    markerNests: number[];
+    nestCount: number;
+}
+declare class Marker {
+    markerId: number;
+    beginTime: number;
+    endTime: number;
+    color: number;
+}
+declare class MarkerInfo {
+    name: string;
+    logs: MarkerLog[];
+    constructor(name: any);
+}
+declare class MarkerLog {
+    snapMin: number;
+    snapMax: number;
+    snapAvg: number;
+    min: number;
+    max: number;
+    avg: number;
+    samples: number;
+    color: number;
+    initialized: boolean;
 }

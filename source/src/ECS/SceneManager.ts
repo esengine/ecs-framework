@@ -4,9 +4,24 @@ class SceneManager {
     private static _nextScene: Scene;
     public static sceneTransition: SceneTransition;
     public static stage: egret.Stage;
+    /** 订阅此事件以在活动场景发生更改时得到通知。 */
+    public static activeSceneChanged: Function;
+    /** 核心发射器。只发出核心级别的事件 */
+    public static emitter: Emitter<CoreEvents>;
+    /** 全局内容管理器加载任何应该停留在场景之间的资产 */
+    public static content: ContentManager;
+    /** 简化对内部类的全局内容实例的访问 */
+    private static _instnace: SceneManager;
+    public static get Instance(){
+        return this._instnace;
+    }
 
     constructor(stage: egret.Stage) {
         stage.addEventListener(egret.Event.ENTER_FRAME, SceneManager.update, this);
+
+        SceneManager._instnace = this;
+        SceneManager.emitter = new Emitter<CoreEvents>();
+        SceneManager.content = new ContentManager();
 
         SceneManager.stage = stage;
         SceneManager.initialize(stage);
@@ -22,9 +37,12 @@ class SceneManager {
         if (this._scene == null) {
             this._scene = value;
             this._scene.begin();
+            SceneManager.Instance.onSceneChanged();
         } else {
             this._nextScene = value;
         }
+
+        this.registerActiveSceneChanged(this._scene, this._nextScene);
     }
 
     public static initialize(stage: egret.Stage) {
@@ -48,13 +66,9 @@ class SceneManager {
             if (SceneManager._nextScene) {
                 SceneManager._scene.end();
 
-                for (let i = 0; i < SceneManager._scene.entities.buffer.length; i++) {
-                    let entity = SceneManager._scene.entities.buffer[i];
-                    entity.destroy();
-                }
-
                 SceneManager._scene = SceneManager._nextScene;
                 SceneManager._nextScene = null;
+                SceneManager._instnace.onSceneChanged();
 
                 SceneManager._scene.begin();
             }
@@ -100,5 +114,17 @@ class SceneManager {
 
         this.sceneTransition = sceneTransition;
         return sceneTransition;
+    }
+
+    public static registerActiveSceneChanged(current: Scene, next: Scene){
+        if (this.activeSceneChanged)
+            this.activeSceneChanged(current, next);
+    }
+
+    /**
+     * 在一个场景结束后，下一个场景开始之前调用
+     */
+    public onSceneChanged(){
+        
     }
 }
