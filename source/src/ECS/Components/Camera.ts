@@ -1,5 +1,4 @@
-///<reference path="../Component.ts"/>
-class Camera extends Component implements IUpdatable {
+class Camera extends Component {
     private _zoom;
     private _origin: Vector2 = Vector2.zero;
 

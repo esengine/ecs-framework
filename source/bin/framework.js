@@ -1011,6 +1011,8 @@ var Component = (function (_super) {
     };
     Component.prototype.debugRender = function () {
     };
+    Component.prototype.update = function () {
+    };
     Component.prototype.onEntityTransformChanged = function (comp) {
     };
     Component.prototype.registerComponent = function () {
@@ -2575,7 +2577,6 @@ var ComponentList = (function () {
         this._components = [];
         this._componentsToAdd = [];
         this._componentsToRemove = [];
-        this._updatableComponents = [];
         this._tempBufferList = [];
         this._entity = entity;
     }
@@ -2610,7 +2611,6 @@ var ComponentList = (function () {
             this.handleRemove(this._components[i]);
         }
         this._components.length = 0;
-        this._updatableComponents.length = 0;
         this._componentsToAdd.length = 0;
         this._componentsToRemove.length = 0;
     };
@@ -2619,8 +2619,6 @@ var ComponentList = (function () {
             var component = this._components[i];
             if (component instanceof RenderableComponent)
                 this._entity.scene.renderableComponents.remove(component);
-            if (egret.is(component, "IUpdatable"))
-                this._updatableComponents.remove(component);
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
         }
@@ -2630,8 +2628,6 @@ var ComponentList = (function () {
             var component = this._components[i];
             if (component instanceof RenderableComponent)
                 this._entity.scene.renderableComponents.add(component);
-            if (egret.is(component, "IUpdatable"))
-                this._updatableComponents.push(component);
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
             this._entity.scene.entityProcessors.onComponentAdded(this._entity);
         }
@@ -2649,8 +2645,6 @@ var ComponentList = (function () {
                 var component = this._componentsToAdd[i];
                 if (component instanceof RenderableComponent)
                     this._entity.scene.renderableComponents.add(component);
-                if (egret.is(component, "IUpdatable"))
-                    this._updatableComponents.push(component);
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                 this._components.push(component);
@@ -2680,8 +2674,6 @@ var ComponentList = (function () {
     ComponentList.prototype.handleRemove = function (component) {
         if (component instanceof RenderableComponent)
             this._entity.scene.renderableComponents.remove(component);
-        if (egret.is(component, "IUpdatable"))
-            this._updatableComponents.remove(component);
         this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
         this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
         component.onRemovedFromEntity();
@@ -2735,8 +2727,8 @@ var ComponentList = (function () {
     };
     ComponentList.prototype.update = function () {
         this.updateLists();
-        for (var i = 0; i < this._updatableComponents.length; i++) {
-            var updatable = this._updatableComponents[i];
+        for (var i = 0; i < this._components.length; i++) {
+            var updatable = this._components[i];
             var updateableComponent = void 0;
             if (updatable instanceof Component)
                 updateableComponent = updatable;

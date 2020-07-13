@@ -205,6 +205,7 @@ declare abstract class Component extends egret.DisplayObjectContainer {
     onEnabled(): void;
     onDisabled(): void;
     debugRender(): void;
+    update(): void;
     onEntityTransformChanged(comp: TransformComponent): void;
     registerComponent(): void;
     deregisterComponent(): void;
@@ -258,11 +259,6 @@ declare enum TransformComponent {
     scale = 1,
     position = 2
 }
-interface IUpdatable {
-    enabled: boolean;
-    updateOrder: number;
-    update(): any;
-}
 declare class Scene extends egret.DisplayObjectContainer {
     camera: Camera;
     readonly entities: EntityList;
@@ -314,7 +310,7 @@ declare class SceneManager {
     static registerActiveSceneChanged(current: Scene, next: Scene): void;
     onSceneChanged(): void;
 }
-declare class Camera extends Component implements IUpdatable {
+declare class Camera extends Component {
     private _zoom;
     private _origin;
     private _minimumZoom;
@@ -430,7 +426,7 @@ declare class SpriteAnimation {
     readonly frameRate: number;
     constructor(sprites: Sprite[], frameRate: number);
 }
-declare class SpriteAnimator extends SpriteRenderer implements IUpdatable {
+declare class SpriteAnimator extends SpriteRenderer {
     onAnimationCompletedEvent: Function;
     speed: number;
     animationState: State;
@@ -477,7 +473,7 @@ declare class Mover extends Component {
     applyMovement(motion: Vector2): void;
     move(motion: Vector2): CollisionResult;
 }
-declare abstract class Collider extends Component implements IUpdatable {
+declare abstract class Collider extends Component {
     shape: Shape;
     physicsLayer: number;
     isTrigger: boolean;
@@ -575,7 +571,6 @@ declare class ComponentList {
     private _components;
     private _componentsToAdd;
     private _componentsToRemove;
-    private _updatableComponents;
     private _tempBufferList;
     constructor(entity: Entity);
     readonly count: number;

@@ -1,4 +1,4 @@
-class SpriteRenderer extends RenderableComponent {
+class SpriteRenderer extends RenderableComponent{
     private _sprite: Sprite;
     protected bitmap: egret.Bitmap;
 

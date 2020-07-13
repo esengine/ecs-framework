@@ -1,5 +1,5 @@
 ///<reference path="./SpriteRenderer.ts" />
-class SpriteAnimator extends SpriteRenderer implements IUpdatable {
+class SpriteAnimator extends SpriteRenderer {
     /** 在动画完成时触发，包括动画名称; */
     public onAnimationCompletedEvent: Function;
     /** 动画播放速度 */

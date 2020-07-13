@@ -71,6 +71,10 @@ abstract class Component extends egret.DisplayObjectContainer {
         
     }
 
+    public update(){
+        
+    }
+
     /**
      * 当实体的位置改变时调用。这允许组件知道它们由于父实体的移动而移动了。
      * @param comp 

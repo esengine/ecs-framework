@@ -15,7 +15,7 @@ class MainScene extends Scene {
         bg.addComponent(new PlayerController());
         bg.addComponent(new Mover());
         bg.addComponent(new ScrollingSpriteRenderer(sprite));
-        // bg.addComponent(new BoxCollider());
+        bg.addComponent(new BoxCollider());
         bg.position = new Vector2(Math.random() * 200, Math.random() * 200);
 
         for (let i = 0; i < 20; i++) {

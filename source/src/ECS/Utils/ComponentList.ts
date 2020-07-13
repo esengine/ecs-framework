@@ -6,8 +6,6 @@ class ComponentList {
     private _componentsToAdd: Component[] = [];
     /** 标记要删除此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工 */
     private _componentsToRemove: Component[] = [];
-    /** 需要调用更新的所有组件的列表 */
-    private _updatableComponents: IUpdatable[] = [];
     private _tempBufferList: Component[] = [];
 
     constructor(entity: Entity) {
@@ -48,7 +46,6 @@ class ComponentList {
         }
 
         this._components.length = 0;
-        this._updatableComponents.length = 0;
         this._componentsToAdd.length = 0;
         this._componentsToRemove.length = 0;
     }
@@ -61,10 +58,6 @@ class ComponentList {
             if (component instanceof RenderableComponent)
                 this._entity.scene.renderableComponents.remove(component);
 
-            // 处理IUpdatable
-            if (egret.is(component, "IUpdatable"))
-                this._updatableComponents.remove(component);
-
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
         }
@@ -76,9 +69,6 @@ class ComponentList {
 
             if (component instanceof RenderableComponent)
                 this._entity.scene.renderableComponents.add(component);
-
-            if (egret.is(component, "IUpdatable"))
-                this._updatableComponents.push(component as any);
 
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
             this._entity.scene.entityProcessors.onComponentAdded(this._entity);
@@ -103,9 +93,6 @@ class ComponentList {
                 let component = this._componentsToAdd[i];
                 if (component instanceof RenderableComponent)
                     this._entity.scene.renderableComponents.add(component);
-
-                if (egret.is(component, "IUpdatable"))
-                    this._updatableComponents.push(component as any);
 
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
@@ -147,9 +134,6 @@ class ComponentList {
     private handleRemove(component: Component) {
         if (component instanceof RenderableComponent)
             this._entity.scene.renderableComponents.remove(component);
-
-        if (egret.is(component, "IUpdatable"))
-            this._updatableComponents.remove(component);
 
         this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
         this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
@@ -224,8 +208,8 @@ class ComponentList {
 
     public update() {
         this.updateLists();
-        for (let i = 0; i < this._updatableComponents.length; i++) {
-            let updatable = this._updatableComponents[i];
+        for (let i = 0; i < this._components.length; i++) {
+            let updatable = this._components[i];
             let updateableComponent;
             if (updatable instanceof Component)
                 updateableComponent = updatable as Component;
