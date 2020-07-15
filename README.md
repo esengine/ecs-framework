@@ -42,7 +42,3 @@
 
 - [行为树/实用AI 系统](https://github.com/esengine/egret-BehaviourTree-ai)
 
-## QQ群交流
-
-1105070703
-
