@@ -4885,7 +4885,8 @@ var Emitter = (function () {
     Emitter.prototype.removeObserver = function (eventType, handler) {
         var messageData = this._messageTable.get(eventType);
         var index = messageData.findIndex(function (data) { return data.func == handler; });
-        messageData.removeAt(index);
+        if (index != -1)
+            messageData.removeAt(index);
     };
     Emitter.prototype.emit = function (eventType, data) {
         var list = this._messageTable.get(eventType);

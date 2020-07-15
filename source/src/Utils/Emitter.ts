@@ -34,7 +34,8 @@ class Emitter<T> {
     public removeObserver(eventType: T, handler: Function){
         let messageData = this._messageTable.get(eventType);
         let index = messageData.findIndex(data => data.func == handler);
-        messageData.removeAt(index);
+        if (index != -1)
+            messageData.removeAt(index);
     }
 
     /**
