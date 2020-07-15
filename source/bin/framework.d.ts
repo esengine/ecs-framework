@@ -8,7 +8,7 @@ declare interface Array<T> {
     findAll(predicate: Function): Array<T>;
     contains(value: any): boolean;
     removeAll(predicate: Function): void;
-    remove(element: any): boolean;
+    remove(element: T): boolean;
     removeAt(index: any): void;
     removeRange(index: any, count: any): void;
     select(selector: Function): Array<T>;

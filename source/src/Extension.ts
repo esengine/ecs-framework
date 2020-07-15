@@ -48,7 +48,7 @@ declare interface Array<T> {
      * 移除数组元素
      * @param element 数组元素
      */
-    remove(element): boolean;
+    remove(element: T): boolean;
     /**
      * 移除特定索引数组元素
      * @param index 索引

@@ -45,6 +45,13 @@ class MainScene extends Scene {
                 return new MainScene();
             }));
         }, this);
+
+        Main.emitter.addObserver(CoreEmitterType.Update, this.handleFuncTest, this);
+    }
+
+    /** 测试Emitter */
+    private handleFuncTest(){
+        Main.emitter.removeObserver(CoreEmitterType.Update, this.handleFuncTest);
     }
 
     public breadthfirstTest() {
