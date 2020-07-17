@@ -1082,6 +1082,16 @@ declare class ArrayUtils {
     static equals(ary1: number[], ary2: number[]): Boolean;
     static insert(ary: any[], index: number, value: any): any;
 }
+declare class Base64Utils {
+    private static _keyNum;
+    private static _keyStr;
+    private static _keyAll;
+    static encode: (input: any) => string;
+    private static _utf8_encode;
+    static decode(input: any, isNotStr?: boolean): string;
+    private static _utf8_decode;
+    private static getConfKey;
+}
 declare class ContentManager {
     protected loadedAssets: Map<string, any>;
     loadRes(name: string, local?: boolean): Promise<any>;
