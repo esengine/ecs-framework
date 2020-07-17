@@ -1,5 +1,3 @@
-declare class fui {}
-
 class ContentManager {
     protected loadedAssets: Map<string, any> = new Map<string, any>();
 
@@ -29,7 +27,7 @@ class ContentManager {
                     reject(err);
                 });
             }
-        })
+        });
     }
 
     public dispose() {

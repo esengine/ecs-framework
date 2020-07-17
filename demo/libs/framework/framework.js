@@ -300,7 +300,6 @@ var AStarPathfinder = (function () {
                 return "break";
             }
             graph.getNeighbors(current.data).forEach(function (next) {
-                console.log(next);
                 var newCost = costSoFar.get(current.data) + graph.cost(current.data, next);
                 if (!_this.hasKey(costSoFar, next) || newCost < costSoFar.get(next)) {
                     costSoFar.set(next, newCost);
@@ -3040,6 +3039,25 @@ var Matcher = (function () {
     };
     return Matcher;
 }());
+var ObjectUtils = (function () {
+    function ObjectUtils() {
+    }
+    ObjectUtils.clone = function (p, c) {
+        if (c === void 0) { c = null; }
+        var c = c || {};
+        for (var i in p) {
+            if (typeof p[i] === 'object') {
+                c[i] = p[i] instanceof Array ? [] : {};
+                this.clone(p[i], c[i]);
+            }
+            else {
+                c[i] = p[i];
+            }
+        }
+        return c;
+    };
+    return ObjectUtils;
+}());
 var RenderableComponentList = (function () {
     function RenderableComponentList() {
         this._components = [];
@@ -3068,6 +3086,276 @@ var RenderableComponentList = (function () {
     };
     return RenderableComponentList;
 }());
+var StringUtils = (function () {
+    function StringUtils() {
+    }
+    StringUtils.matchChineseWord = function (str) {
+        var patternA = /[\u4E00-\u9FA5]+/gim;
+        return str.match(patternA);
+    };
+    StringUtils.lTrim = function (target) {
+        var startIndex = 0;
+        while (this.isWhiteSpace(target.charAt(startIndex))) {
+            startIndex++;
+        }
+        return target.slice(startIndex, target.length);
+    };
+    StringUtils.rTrim = function (target) {
+        var endIndex = target.length - 1;
+        while (this.isWhiteSpace(target.charAt(endIndex))) {
+            endIndex--;
+        }
+        return target.slice(0, endIndex + 1);
+    };
+    StringUtils.trim = function (target) {
+        if (target == null) {
+            return null;
+        }
+        return this.rTrim(this.lTrim(target));
+    };
+    StringUtils.isWhiteSpace = function (str) {
+        if (str == " " || str == "\t" || str == "\r" || str == "\n")
+            return true;
+        return false;
+    };
+    StringUtils.replaceMatch = function (mainStr, targetStr, replaceStr, caseMark) {
+        if (caseMark === void 0) { caseMark = false; }
+        var len = mainStr.length;
+        var tempStr = "";
+        var isMatch = false;
+        var tempTarget = caseMark == true ? targetStr.toLowerCase() : targetStr;
+        for (var i = 0; i < len; i++) {
+            isMatch = false;
+            if (mainStr.charAt(i) == tempTarget.charAt(0)) {
+                if (mainStr.substr(i, tempTarget.length) == tempTarget) {
+                    isMatch = true;
+                }
+            }
+            if (isMatch) {
+                tempStr += replaceStr;
+                i = i + tempTarget.length - 1;
+            }
+            else {
+                tempStr += mainStr.charAt(i);
+            }
+        }
+        return tempStr;
+    };
+    StringUtils.htmlSpecialChars = function (str, reversion) {
+        if (reversion === void 0) { reversion = false; }
+        var len = this.specialSigns.length;
+        for (var i = 0; i < len; i += 2) {
+            var from = void 0;
+            var to = void 0;
+            from = this.specialSigns[i];
+            to = this.specialSigns[i + 1];
+            if (reversion) {
+                var temp = from;
+                from = to;
+                to = temp;
+            }
+            str = this.replaceMatch(str, from, to);
+        }
+        return str;
+    };
+    StringUtils.zfill = function (str, width) {
+        if (width === void 0) { width = 2; }
+        if (!str) {
+            return str;
+        }
+        width = Math.floor(width);
+        var slen = str.length;
+        if (slen >= width) {
+            return str;
+        }
+        var negative = false;
+        if (str.substr(0, 1) == '-') {
+            negative = true;
+            str = str.substr(1);
+        }
+        var len = width - slen;
+        for (var i = 0; i < len; i++) {
+            str = '0' + str;
+        }
+        if (negative) {
+            str = '-' + str;
+        }
+        return str;
+    };
+    StringUtils.reverse = function (str) {
+        if (str.length > 1)
+            return this.reverse(str.substring(1)) + str.substring(0, 1);
+        else
+            return str;
+    };
+    StringUtils.cutOff = function (str, start, len, order) {
+        if (order === void 0) { order = true; }
+        start = Math.floor(start);
+        len = Math.floor(len);
+        var length = str.length;
+        if (start > length)
+            start = length;
+        var s = start;
+        var e = start + len;
+        var newStr;
+        if (order) {
+            newStr = str.substring(0, s) + str.substr(e, length);
+        }
+        else {
+            s = length - 1 - start - len;
+            e = s + len;
+            newStr = str.substring(0, s + 1) + str.substr(e + 1, length);
+        }
+        return newStr;
+    };
+    StringUtils.strReplace = function (str, rStr) {
+        var i = 0, len = rStr.length;
+        for (; i < len; i++) {
+            if (rStr[i] == null || rStr[i] == "") {
+                rStr[i] = "无";
+            }
+            str = str.replace("{" + i + "}", rStr[i]);
+        }
+        return str;
+    };
+    StringUtils.specialSigns = [
+        '&', '&amp;',
+        '<', '&lt;',
+        '>', '&gt;',
+        '"', '&quot;',
+        "'", '&apos;',
+        '®', '&reg;',
+        '©', '&copy;',
+        '™', '&trade;',
+    ];
+    return StringUtils;
+}());
+var TextureUtils = (function () {
+    function TextureUtils() {
+    }
+    TextureUtils.convertImageToCanvas = function (texture, rect) {
+        if (!this.sharedCanvas) {
+            this.sharedCanvas = egret.sys.createCanvas();
+            this.sharedContext = this.sharedCanvas.getContext("2d");
+        }
+        var w = texture.$getTextureWidth();
+        var h = texture.$getTextureHeight();
+        if (!rect) {
+            rect = egret.$TempRectangle;
+            rect.x = 0;
+            rect.y = 0;
+            rect.width = w;
+            rect.height = h;
+        }
+        rect.x = Math.min(rect.x, w - 1);
+        rect.y = Math.min(rect.y, h - 1);
+        rect.width = Math.min(rect.width, w - rect.x);
+        rect.height = Math.min(rect.height, h - rect.y);
+        var iWidth = Math.floor(rect.width);
+        var iHeight = Math.floor(rect.height);
+        var surface = this.sharedCanvas;
+        surface["style"]["width"] = iWidth + "px";
+        surface["style"]["height"] = iHeight + "px";
+        this.sharedCanvas.width = iWidth;
+        this.sharedCanvas.height = iHeight;
+        if (egret.Capabilities.renderMode == "webgl") {
+            var renderTexture = void 0;
+            if (!texture.$renderBuffer) {
+                if (egret.sys.systemRenderer["renderClear"]) {
+                    egret.sys.systemRenderer["renderClear"]();
+                }
+                renderTexture = new egret.RenderTexture();
+                renderTexture.drawToTexture(new egret.Bitmap(texture));
+            }
+            else {
+                renderTexture = texture;
+            }
+            var pixels = renderTexture.$renderBuffer.getPixels(rect.x, rect.y, iWidth, iHeight);
+            var x = 0;
+            var y = 0;
+            for (var i = 0; i < pixels.length; i += 4) {
+                this.sharedContext.fillStyle =
+                    'rgba(' + pixels[i]
+                        + ',' + pixels[i + 1]
+                        + ',' + pixels[i + 2]
+                        + ',' + (pixels[i + 3] / 255) + ')';
+                this.sharedContext.fillRect(x, y, 1, 1);
+                x++;
+                if (x == iWidth) {
+                    x = 0;
+                    y++;
+                }
+            }
+            if (!texture.$renderBuffer) {
+                renderTexture.dispose();
+            }
+            return surface;
+        }
+        else {
+            var bitmapData = texture;
+            var offsetX = Math.round(bitmapData.$offsetX);
+            var offsetY = Math.round(bitmapData.$offsetY);
+            var bitmapWidth = bitmapData.$bitmapWidth;
+            var bitmapHeight = bitmapData.$bitmapHeight;
+            var $TextureScaleFactor = SceneManager.stage.textureScaleFactor;
+            this.sharedContext.drawImage(bitmapData.$bitmapData.source, bitmapData.$bitmapX + rect.x / $TextureScaleFactor, bitmapData.$bitmapY + rect.y / $TextureScaleFactor, bitmapWidth * rect.width / w, bitmapHeight * rect.height / h, offsetX, offsetY, rect.width, rect.height);
+            return surface;
+        }
+    };
+    TextureUtils.toDataURL = function (type, texture, rect, encoderOptions) {
+        try {
+            var surface = this.convertImageToCanvas(texture, rect);
+            var result = surface.toDataURL(type, encoderOptions);
+            return result;
+        }
+        catch (e) {
+            egret.$error(1033);
+        }
+        return null;
+    };
+    TextureUtils.eliFoTevas = function (type, texture, filePath, rect, encoderOptions) {
+        var surface = this.convertImageToCanvas(texture, rect);
+        var result = surface.toTempFilePathSync({
+            fileType: type.indexOf("png") >= 0 ? "png" : "jpg"
+        });
+        wx.getFileSystemManager().saveFile({
+            tempFilePath: result,
+            filePath: wx.env.USER_DATA_PATH + "/" + filePath,
+            success: function (res) {
+            }
+        });
+        return result;
+    };
+    TextureUtils.getPixel32 = function (texture, x, y) {
+        egret.$warn(1041, "getPixel32", "getPixels");
+        return texture.getPixels(x, y);
+    };
+    TextureUtils.getPixels = function (texture, x, y, width, height) {
+        if (width === void 0) { width = 1; }
+        if (height === void 0) { height = 1; }
+        if (egret.Capabilities.renderMode == "webgl") {
+            var renderTexture = void 0;
+            if (!texture.$renderBuffer) {
+                renderTexture = new egret.RenderTexture();
+                renderTexture.drawToTexture(new egret.Bitmap(texture));
+            }
+            else {
+                renderTexture = texture;
+            }
+            var pixels = renderTexture.$renderBuffer.getPixels(x, y, width, height);
+            return pixels;
+        }
+        try {
+            var surface = this.convertImageToCanvas(texture);
+            var result = this.sharedContext.getImageData(x, y, width, height).data;
+            return result;
+        }
+        catch (e) {
+            egret.$error(1039);
+        }
+    };
+    return TextureUtils;
+}());
 var Time = (function () {
     function Time() {
     }
@@ -3091,29 +3379,189 @@ var Time = (function () {
     Time._lastTime = 0;
     return Time;
 }());
-var GraphicsCapabilities = (function () {
+var TimeUtils = (function () {
+    function TimeUtils() {
+    }
+    TimeUtils.monthId = function (d) {
+        if (d === void 0) { d = null; }
+        d = d ? d : new Date();
+        var y = d.getFullYear();
+        var m = d.getMonth() + 1;
+        var g = m < 10 ? "0" : "";
+        return parseInt(y + g + m);
+    };
+    TimeUtils.dateId = function (t) {
+        if (t === void 0) { t = null; }
+        t = t ? t : new Date();
+        var m = t.getMonth() + 1;
+        var a = m < 10 ? "0" : "";
+        var d = t.getDate();
+        var b = d < 10 ? "0" : "";
+        return parseInt(t.getFullYear() + a + m + b + d);
+    };
+    TimeUtils.weekId = function (d, first) {
+        if (d === void 0) { d = null; }
+        if (first === void 0) { first = true; }
+        d = d ? d : new Date();
+        var c = new Date();
+        c.setTime(d.getTime());
+        c.setDate(1);
+        c.setMonth(0);
+        var year = c.getFullYear();
+        var firstDay = c.getDay();
+        if (firstDay == 0) {
+            firstDay = 7;
+        }
+        var max = false;
+        if (firstDay <= 4) {
+            max = firstDay > 1;
+            c.setDate(c.getDate() - (firstDay - 1));
+        }
+        else {
+            c.setDate(c.getDate() + 7 - firstDay + 1);
+        }
+        var num = this.diffDay(d, c, false);
+        if (num < 0) {
+            c.setDate(1);
+            c.setMonth(0);
+            c.setDate(c.getDate() - 1);
+            return this.weekId(c, false);
+        }
+        var week = num / 7;
+        var weekIdx = Math.floor(week) + 1;
+        if (weekIdx == 53) {
+            c.setTime(d.getTime());
+            c.setDate(c.getDate() - 1);
+            var endDay = c.getDay();
+            if (endDay == 0) {
+                endDay = 7;
+            }
+            if (first && (!max || endDay < 4)) {
+                c.setFullYear(c.getFullYear() + 1);
+                c.setDate(1);
+                c.setMonth(0);
+                return this.weekId(c, false);
+            }
+        }
+        var g = weekIdx > 9 ? "" : "0";
+        var s = year + "00" + g + weekIdx;
+        return parseInt(s);
+    };
+    TimeUtils.diffDay = function (a, b, fixOne) {
+        if (fixOne === void 0) { fixOne = false; }
+        var x = (a.getTime() - b.getTime()) / 86400000;
+        return fixOne ? Math.ceil(x) : Math.floor(x);
+    };
+    TimeUtils.getFirstDayOfWeek = function (d) {
+        d = d ? d : new Date();
+        var day = d.getDay() || 7;
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1 - day, 0, 0, 0, 0);
+    };
+    TimeUtils.getFirstOfDay = function (d) {
+        d = d ? d : new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    };
+    TimeUtils.getNextFirstOfDay = function (d) {
+        return new Date(this.getFirstOfDay(d).getTime() + 86400000);
+    };
+    TimeUtils.formatDate = function (date) {
+        var y = date.getFullYear();
+        var m = date.getMonth() + 1;
+        m = m < 10 ? '0' + m : m;
+        var d = date.getDate();
+        d = d < 10 ? ('0' + d) : d;
+        return y + '-' + m + '-' + d;
+    };
+    TimeUtils.formatDateTime = function (date) {
+        var y = date.getFullYear();
+        var m = date.getMonth() + 1;
+        m = m < 10 ? ('0' + m) : m;
+        var d = date.getDate();
+        d = d < 10 ? ('0' + d) : d;
+        var h = date.getHours();
+        var i = date.getMinutes();
+        i = i < 10 ? ('0' + i) : i;
+        var s = date.getSeconds();
+        s = s < 10 ? ('0' + s) : s;
+        return y + '-' + m + '-' + d + ' ' + h + ':' + i + ":" + s;
+    };
+    TimeUtils.parseDate = function (s) {
+        var t = Date.parse(s);
+        if (!isNaN(t)) {
+            return new Date(Date.parse(s.replace(/-/g, "/")));
+        }
+        else {
+            return new Date();
+        }
+    };
+    TimeUtils.secondToTime = function (time, partition, showHour) {
+        if (time === void 0) { time = 0; }
+        if (partition === void 0) { partition = ":"; }
+        if (showHour === void 0) { showHour = true; }
+        var hours = Math.floor(time / 3600);
+        var minutes = Math.floor(time % 3600 / 60);
+        var seconds = Math.floor(time % 3600 % 60);
+        var h = hours.toString();
+        var m = minutes.toString();
+        var s = seconds.toString();
+        if (hours < 10)
+            h = "0" + h;
+        if (minutes < 10)
+            m = "0" + m;
+        if (seconds < 10)
+            s = "0" + s;
+        var timeStr;
+        if (showHour)
+            timeStr = h + partition + m + partition + s;
+        else
+            timeStr = m + partition + s;
+        return timeStr;
+    };
+    TimeUtils.timeToMillisecond = function (time, partition) {
+        if (partition === void 0) { partition = ":"; }
+        var _ary = time.split(partition);
+        var timeNum = 0;
+        var len = _ary.length;
+        for (var i = 0; i < len; i++) {
+            var n = _ary[i];
+            timeNum += n * Math.pow(60, (len - 1 - i));
+        }
+        timeNum *= 1000;
+        return timeNum.toString();
+    };
+    return TimeUtils;
+}());
+var GraphicsCapabilities = (function (_super) {
+    __extends(GraphicsCapabilities, _super);
     function GraphicsCapabilities() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
     GraphicsCapabilities.prototype.initialize = function (device) {
         this.platformInitialize(device);
     };
     GraphicsCapabilities.prototype.platformInitialize = function (device) {
-        var gl = new egret.sys.RenderBuffer().context.getInstance();
-        this.supportsNonPowerOfTwo = false;
-        this.supportsTextureFilterAnisotropic = gl.getExtension("EXT_texture_filter_anisotropic") != null;
-        this.supportsDepth24 = true;
-        this.supportsPackedDepthStencil = true;
-        this.supportsDepthNonLinear = false;
-        this.supportsTextureMaxLevel = true;
-        this.supportsS3tc = gl.getExtension("WEBGL_compressed_texture_s3tc") != null ||
-            gl.getExtension("WEBGL_compressed_texture_s3tc_srgb") != null;
-        this.supportsDxt1 = this.supportsS3tc;
-        this.supportsPvrtc = false;
-        this.supportsAtitc = gl.getExtension("WEBGL_compressed_texture_astc") != null;
-        this.supportsFramebufferObjectARB = false;
+        var capabilities = this;
+        capabilities["isMobile"] = true;
+        var systemInfo = wx.getSystemInfoSync();
+        var systemStr = systemInfo.system.toLowerCase();
+        if (systemStr.indexOf("ios") > -1) {
+            capabilities["os"] = "iOS";
+        }
+        else if (systemStr.indexOf("android") > -1) {
+            capabilities["os"] = "Android";
+        }
+        var language = systemInfo.language;
+        if (language.indexOf('zh') > -1) {
+            language = "zh-CN";
+        }
+        else {
+            language = "en-US";
+        }
+        capabilities["language"] = language;
     };
     return GraphicsCapabilities;
-}());
+}(egret.Capabilities));
 var GraphicsDevice = (function () {
     function GraphicsDevice() {
         this.graphicsCapabilities = new GraphicsCapabilities();
@@ -4876,6 +5324,170 @@ var NumberDictionary = (function () {
     };
     return NumberDictionary;
 }());
+var ArrayUtils = (function () {
+    function ArrayUtils() {
+    }
+    ArrayUtils.bubbleSort = function (ary) {
+        var isExchange = false;
+        for (var i = 0; i < ary.length; i++) {
+            isExchange = false;
+            for (var j = ary.length - 1; j > i; j--) {
+                if (ary[j] < ary[j - 1]) {
+                    var temp = ary[j];
+                    ary[j] = ary[j - 1];
+                    ary[j - 1] = temp;
+                    isExchange = true;
+                }
+            }
+            if (!isExchange)
+                break;
+        }
+    };
+    ArrayUtils.insertionSort = function (ary) {
+        var len = ary.length;
+        for (var i = 1; i < len; i++) {
+            var val = ary[i];
+            for (var j = i; j > 0 && ary[j - 1] > val; j--) {
+                ary[j] = ary[j - 1];
+            }
+            ary[j] = val;
+        }
+    };
+    ArrayUtils.binarySearch = function (ary, value) {
+        var startIndex = 0;
+        var endIndex = ary.length;
+        var sub = (startIndex + endIndex) >> 1;
+        while (startIndex < endIndex) {
+            if (value <= ary[sub])
+                endIndex = sub;
+            else if (value >= ary[sub])
+                startIndex = sub + 1;
+            sub = (startIndex + endIndex) >> 1;
+        }
+        if (ary[startIndex] == value)
+            return startIndex;
+        return -1;
+    };
+    ArrayUtils.findElementIndex = function (ary, num) {
+        var len = ary.length;
+        for (var i = 0; i < len; ++i) {
+            if (ary[i] == num)
+                return i;
+        }
+        return null;
+    };
+    ArrayUtils.getMaxElementIndex = function (ary) {
+        var matchIndex = 0;
+        var len = ary.length;
+        for (var j = 1; j < len; j++) {
+            if (ary[j] > ary[matchIndex])
+                matchIndex = j;
+        }
+        return matchIndex;
+    };
+    ArrayUtils.getMinElementIndex = function (ary) {
+        var matchIndex = 0;
+        var len = ary.length;
+        for (var j = 1; j < len; j++) {
+            if (ary[j] < ary[matchIndex])
+                matchIndex = j;
+        }
+        return matchIndex;
+    };
+    ArrayUtils.getUniqueAry = function (ary) {
+        var uAry = [];
+        var newAry = [];
+        var count = ary.length;
+        for (var i = 0; i < count; ++i) {
+            var value = ary[i];
+            if (uAry.indexOf(value) == -1)
+                uAry.push(value);
+        }
+        count = uAry.length;
+        for (var i = count - 1; i >= 0; --i) {
+            newAry.unshift(uAry[i]);
+        }
+        return newAry;
+    };
+    ArrayUtils.getDifferAry = function (aryA, aryB) {
+        aryA = this.getUniqueAry(aryA);
+        aryB = this.getUniqueAry(aryB);
+        var ary = aryA.concat(aryB);
+        var uObj = new Object();
+        var newAry = [];
+        var count = ary.length;
+        for (var j = 0; j < count; ++j) {
+            if (!uObj[ary[j]]) {
+                uObj[ary[j]] = new Object();
+                uObj[ary[j]].count = 0;
+                uObj[ary[j]].key = ary[j];
+                uObj[ary[j]].count++;
+            }
+            else {
+                if (uObj[ary[j]] instanceof Object) {
+                    uObj[ary[j]].count++;
+                }
+            }
+        }
+        for (var i in uObj) {
+            if (uObj[i].count != 2) {
+                newAry.unshift(uObj[i].key);
+            }
+        }
+        return newAry;
+    };
+    ArrayUtils.swap = function (array, index1, index2) {
+        var temp = array[index1];
+        array[index1] = array[index2];
+        array[index2] = temp;
+    };
+    ArrayUtils.clearList = function (ary) {
+        if (!ary)
+            return;
+        var length = ary.length;
+        for (var i = length - 1; i >= 0; i -= 1) {
+            ary.splice(i, 1);
+        }
+    };
+    ArrayUtils.cloneList = function (ary) {
+        if (!ary)
+            return null;
+        return ary.slice(0, ary.length);
+    };
+    ArrayUtils.equals = function (ary1, ary2) {
+        if (ary1 == ary2)
+            return true;
+        var length = ary1.length;
+        if (length != ary2.length)
+            return false;
+        while (length--) {
+            if (ary1[length] != ary2[length])
+                return false;
+        }
+        return true;
+    };
+    ArrayUtils.insert = function (ary, index, value) {
+        if (!ary)
+            return null;
+        var length = ary.length;
+        if (index > length)
+            index = length;
+        if (index < 0)
+            index = 0;
+        if (index == length)
+            ary.push(value);
+        else if (index == 0)
+            ary.unshift(value);
+        else {
+            for (var i = length - 1; i >= index; i -= 1) {
+                ary[i + 1] = ary[i];
+            }
+            ary[index] = value;
+        }
+        return value;
+    };
+    return ArrayUtils;
+}());
 var ContentManager = (function () {
     function ContentManager() {
         this.loadedAssets = new Map();
@@ -5199,6 +5811,206 @@ var Input = (function () {
     Input._totalTouchCount = 0;
     return Input;
 }());
+var KeyboardUtils = (function () {
+    function KeyboardUtils() {
+    }
+    KeyboardUtils.init = function () {
+        this.keyDownDict = {};
+        this.keyUpDict = {};
+        document.addEventListener("keydown", this.onKeyDonwHander);
+        document.addEventListener("keyup", this.onKeyUpHander);
+    };
+    KeyboardUtils.onKeyDonwHander = function (event) {
+        if (!this.keyDownDict)
+            return;
+        var key = this.keyCodeToString(event.keyCode);
+        var o = this.keyDownDict[key];
+        if (o) {
+            var fun = o["fun"];
+            var thisObj = o["thisObj"];
+            var args = o["args"];
+            fun.apply(thisObj, args);
+        }
+    };
+    KeyboardUtils.onKeyUpHander = function (event) {
+        if (!this.keyUpDict)
+            return;
+        var key = this.keyCodeToString(event.keyCode);
+        var o = this.keyUpDict[key];
+        if (o) {
+            var fun = o["fun"];
+            var thisObj = o["thisObj"];
+            var args = o["args"];
+            fun.apply(thisObj, args);
+        }
+    };
+    KeyboardUtils.registerKey = function (key, fun, thisObj, type) {
+        if (type === void 0) { type = 0; }
+        var args = [];
+        for (var _i = 4; _i < arguments.length; _i++) {
+            args[_i - 4] = arguments[_i];
+        }
+        var keyDict = type ? this.keyUpDict : this.keyDownDict;
+        keyDict[key] = { "fun": fun, args: args, "thisObj": thisObj };
+    };
+    KeyboardUtils.unregisterKey = function (key, type) {
+        if (type === void 0) { type = 0; }
+        var keyDict = type ? this.keyUpDict : this.keyDownDict;
+        delete keyDict[key];
+    };
+    KeyboardUtils.keyCodeToString = function (keyCode) {
+        switch (keyCode) {
+            case 8:
+                return this.BACK_SPACE;
+            case 9:
+                return this.TAB;
+            case 13:
+                return this.ENTER;
+            case 16:
+                return this.SHIFT;
+            case 17:
+                return this.CTRL;
+            case 19:
+                return this.PAUSE_BREAK;
+            case 20:
+                return this.CAPS_LOCK;
+            case 27:
+                return this.ESC;
+            case 32:
+                return this.SPACE;
+            case 33:
+                return this.PAGE_UP;
+            case 34:
+                return this.PAGE_DOWN;
+            case 35:
+                return this.END;
+            case 36:
+                return this.HOME;
+            case 37:
+                return this.LEFT;
+            case 38:
+                return this.UP;
+            case 39:
+                return this.RIGHT;
+            case 40:
+                return this.DOWN;
+            case 45:
+                return this.INSERT;
+            case 46:
+                return this.DELETE;
+            case 91:
+                return this.WINDOWS;
+            case 112:
+                return this.F1;
+            case 113:
+                return this.F2;
+            case 114:
+                return this.F3;
+            case 115:
+                return this.F4;
+            case 116:
+                return this.F5;
+            case 117:
+                return this.F6;
+            case 118:
+                return this.F7;
+            case 119:
+                return this.F8;
+            case 120:
+                return this.F9;
+            case 122:
+                return this.F11;
+            case 123:
+                return this.F12;
+            case 144:
+                return this.NUM_LOCK;
+            case 145:
+                return this.SCROLL_LOCK;
+            default:
+                return String.fromCharCode(keyCode);
+        }
+    };
+    KeyboardUtils.destroy = function () {
+        this.keyDownDict = null;
+        this.keyUpDict = null;
+        document.removeEventListener("keydown", this.onKeyDonwHander);
+        document.removeEventListener("keyup", this.onKeyUpHander);
+    };
+    KeyboardUtils.TYPE_KEY_DOWN = 0;
+    KeyboardUtils.TYPE_KEY_UP = 1;
+    KeyboardUtils.A = "A";
+    KeyboardUtils.B = "B";
+    KeyboardUtils.C = "C";
+    KeyboardUtils.D = "D";
+    KeyboardUtils.E = "E";
+    KeyboardUtils.F = "F";
+    KeyboardUtils.G = "G";
+    KeyboardUtils.H = "H";
+    KeyboardUtils.I = "I";
+    KeyboardUtils.J = "J";
+    KeyboardUtils.K = "K";
+    KeyboardUtils.L = "L";
+    KeyboardUtils.M = "M";
+    KeyboardUtils.N = "N";
+    KeyboardUtils.O = "O";
+    KeyboardUtils.P = "P";
+    KeyboardUtils.Q = "Q";
+    KeyboardUtils.R = "R";
+    KeyboardUtils.S = "S";
+    KeyboardUtils.T = "T";
+    KeyboardUtils.U = "U";
+    KeyboardUtils.V = "V";
+    KeyboardUtils.W = "W";
+    KeyboardUtils.X = "X";
+    KeyboardUtils.Y = "Y";
+    KeyboardUtils.Z = "Z";
+    KeyboardUtils.ESC = "Esc";
+    KeyboardUtils.F1 = "F1";
+    KeyboardUtils.F2 = "F2";
+    KeyboardUtils.F3 = "F3";
+    KeyboardUtils.F4 = "F4";
+    KeyboardUtils.F5 = "F5";
+    KeyboardUtils.F6 = "F6";
+    KeyboardUtils.F7 = "F7";
+    KeyboardUtils.F8 = "F8";
+    KeyboardUtils.F9 = "F9";
+    KeyboardUtils.F10 = "F10";
+    KeyboardUtils.F11 = "F11";
+    KeyboardUtils.F12 = "F12";
+    KeyboardUtils.NUM_1 = "1";
+    KeyboardUtils.NUM_2 = "2";
+    KeyboardUtils.NUM_3 = "3";
+    KeyboardUtils.NUM_4 = "4";
+    KeyboardUtils.NUM_5 = "5";
+    KeyboardUtils.NUM_6 = "6";
+    KeyboardUtils.NUM_7 = "7";
+    KeyboardUtils.NUM_8 = "8";
+    KeyboardUtils.NUM_9 = "9";
+    KeyboardUtils.NUM_0 = "0";
+    KeyboardUtils.TAB = "Tab";
+    KeyboardUtils.CTRL = "Ctrl";
+    KeyboardUtils.ALT = "Alt";
+    KeyboardUtils.SHIFT = "Shift";
+    KeyboardUtils.CAPS_LOCK = "Caps Lock";
+    KeyboardUtils.ENTER = "Enter";
+    KeyboardUtils.SPACE = "Space";
+    KeyboardUtils.BACK_SPACE = "Back Space";
+    KeyboardUtils.INSERT = "Insert";
+    KeyboardUtils.DELETE = "Page Down";
+    KeyboardUtils.HOME = "Home";
+    KeyboardUtils.END = "Page Down";
+    KeyboardUtils.PAGE_UP = "Page Up";
+    KeyboardUtils.PAGE_DOWN = "Page Down";
+    KeyboardUtils.LEFT = "Left";
+    KeyboardUtils.RIGHT = "Right";
+    KeyboardUtils.UP = "Up";
+    KeyboardUtils.DOWN = "Down";
+    KeyboardUtils.PAUSE_BREAK = "Pause Break";
+    KeyboardUtils.NUM_LOCK = "Num Lock";
+    KeyboardUtils.SCROLL_LOCK = "Scroll Lock";
+    KeyboardUtils.WINDOWS = "Windows";
+    return KeyboardUtils;
+}());
 var ListPool = (function () {
     function ListPool() {
     }
@@ -5282,6 +6094,73 @@ var Pair = (function () {
         return this.first == other.first && this.second == other.second;
     };
     return Pair;
+}());
+var RandomUtils = (function () {
+    function RandomUtils() {
+    }
+    RandomUtils.randrange = function (start, stop, step) {
+        if (step === void 0) { step = 1; }
+        if (step == 0)
+            throw new Error('step 不能为 0');
+        var width = stop - start;
+        if (width == 0)
+            throw new Error('没有可用的范围(' + start + ',' + stop + ')');
+        if (width < 0)
+            width = start - stop;
+        var n = Math.floor((width + step - 1) / step);
+        return Math.floor(this.random() * n) * step + Math.min(start, stop);
+    };
+    RandomUtils.randint = function (a, b) {
+        a = Math.floor(a);
+        b = Math.floor(b);
+        if (a > b)
+            a++;
+        else
+            b++;
+        return this.randrange(a, b);
+    };
+    RandomUtils.randnum = function (a, b) {
+        return this.random() * (b - a) + a;
+    };
+    RandomUtils.shuffle = function (array) {
+        array.sort(this._randomCompare);
+        return array;
+    };
+    RandomUtils._randomCompare = function (a, b) {
+        return (this.random() > .5) ? 1 : -1;
+    };
+    RandomUtils.choice = function (sequence) {
+        if (!sequence.hasOwnProperty("length"))
+            throw new Error('无法对此对象执行此操作');
+        var index = Math.floor(this.random() * sequence.length);
+        if (sequence instanceof String)
+            return String(sequence).charAt(index);
+        else
+            return sequence[index];
+    };
+    RandomUtils.sample = function (sequence, num) {
+        var len = sequence.length;
+        if (num <= 0 || len < num)
+            throw new Error("采样数量不够");
+        var selected = [];
+        var indices = [];
+        for (var i = 0; i < num; i++) {
+            var index = Math.floor(this.random() * len);
+            while (indices.indexOf(index) >= 0)
+                index = Math.floor(this.random() * len);
+            selected.push(sequence[index]);
+            indices.push(index);
+        }
+        return selected;
+    };
+    RandomUtils.random = function () {
+        return Math.random();
+    };
+    RandomUtils.boolean = function (chance) {
+        if (chance === void 0) { chance = .5; }
+        return (this.random() < chance) ? true : false;
+    };
+    return RandomUtils;
 }());
 var RectangleExt = (function () {
     function RectangleExt() {

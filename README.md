@@ -30,7 +30,7 @@
   - [x] 简易2d 向量类
   - [x] 掩码实用类
   - [x] 贝塞尔曲线
-  - [ ] 快速随机数类
+  - [x] 快速随机数类
 - [x] BreadthFirst 寻路算法
 - [x] Dijkstra 寻路算法
 - [x] 事件处理器
@@ -51,10 +51,10 @@ Scene是ecs包含系统和实体最外面的容器。
 
 ## 组件(Component)
 组件应该只包含数据而没有逻辑代码。对数据进行逻辑是系统的工作。
-  
+
 ## 系统（System）
 ecs中的系统会不断的更新实体。系统使用过滤器选择某些实体，然后仅更新那些选择的实体。
-  
+
 ## 作者其他库（egret）
 
 - [行为树/实用AI 系统](https://github.com/esengine/egret-BehaviourTree-ai)

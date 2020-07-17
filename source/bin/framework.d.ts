@@ -649,6 +649,9 @@ declare class Matcher {
     exclude(...types: any[]): this;
     one(...types: any[]): this;
 }
+declare class ObjectUtils {
+    static clone<T>(p: any, c?: T): T;
+}
 declare class RenderableComponentList {
     private _components;
     readonly count: number;
@@ -656,6 +659,29 @@ declare class RenderableComponentList {
     add(component: IRenderable): void;
     remove(component: IRenderable): void;
     updateList(): void;
+}
+declare class StringUtils {
+    static matchChineseWord(str: string): string[];
+    static lTrim(target: string): string;
+    static rTrim(target: string): string;
+    static trim(target: string): string;
+    static isWhiteSpace(str: string): boolean;
+    static replaceMatch(mainStr: string, targetStr: string, replaceStr: string, caseMark?: boolean): string;
+    private static specialSigns;
+    static htmlSpecialChars(str: string, reversion?: boolean): string;
+    static zfill(str: string, width?: number): string;
+    static reverse(str: string): string;
+    static cutOff(str: string, start: number, len: number, order?: boolean): string;
+    static strReplace(str: string, rStr: string[]): string;
+}
+declare class TextureUtils {
+    static sharedCanvas: HTMLCanvasElement;
+    static sharedContext: CanvasRenderingContext2D;
+    static convertImageToCanvas(texture: egret.Texture, rect?: egret.Rectangle): HTMLCanvasElement;
+    static toDataURL(type: string, texture: egret.Texture, rect?: egret.Rectangle, encoderOptions?: any): string;
+    static eliFoTevas(type: string, texture: egret.Texture, filePath: string, rect?: egret.Rectangle, encoderOptions?: any): void;
+    static getPixel32(texture: egret.Texture, x: number, y: number): number[];
+    static getPixels(texture: egret.Texture, x: number, y: number, width?: number, height?: number): number[];
 }
 declare class Time {
     static unscaledDeltaTime: any;
@@ -668,18 +694,21 @@ declare class Time {
     static sceneChanged(): void;
     static checkEvery(interval: number): boolean;
 }
-declare class GraphicsCapabilities {
-    supportsTextureFilterAnisotropic: boolean;
-    supportsNonPowerOfTwo: boolean;
-    supportsDepth24: boolean;
-    supportsPackedDepthStencil: boolean;
-    supportsDepthNonLinear: boolean;
-    supportsTextureMaxLevel: boolean;
-    supportsS3tc: boolean;
-    supportsDxt1: boolean;
-    supportsPvrtc: boolean;
-    supportsAtitc: boolean;
-    supportsFramebufferObjectARB: boolean;
+declare class TimeUtils {
+    static monthId(d?: Date): number;
+    static dateId(t?: Date): number;
+    static weekId(d?: Date, first?: boolean): number;
+    static diffDay(a: Date, b: Date, fixOne?: boolean): number;
+    static getFirstDayOfWeek(d?: Date): Date;
+    static getFirstOfDay(d?: Date): Date;
+    static getNextFirstOfDay(d?: Date): Date;
+    static formatDate(date: Date): string;
+    static formatDateTime(date: Date): string;
+    static parseDate(s: string): Date;
+    static secondToTime(time?: number, partition?: string, showHour?: boolean): string;
+    static timeToMillisecond(time: string, partition?: string): string;
+}
+declare class GraphicsCapabilities extends egret.Capabilities {
     initialize(device: GraphicsDevice): void;
     private platformInitialize;
 }
@@ -1038,7 +1067,20 @@ declare class NumberDictionary {
     tryGetValue(x: number, y: number): Collider[];
     clear(): void;
 }
-declare class fui {
+declare class ArrayUtils {
+    static bubbleSort(ary: number[]): void;
+    static insertionSort(ary: number[]): void;
+    static binarySearch(ary: number[], value: number): number;
+    static findElementIndex(ary: any[], num: any): any;
+    static getMaxElementIndex(ary: number[]): number;
+    static getMinElementIndex(ary: number[]): number;
+    static getUniqueAry(ary: number[]): number[];
+    static getDifferAry(aryA: number[], aryB: number[]): number[];
+    static swap(array: any[], index1: number, index2: number): void;
+    static clearList(ary: any[]): void;
+    static cloneList(ary: any[]): any[];
+    static equals(ary1: number[], ary2: number[]): Boolean;
+    static insert(ary: any[], index: number, value: any): any;
 }
 declare class ContentManager {
     protected loadedAssets: Map<string, any>;
@@ -1107,6 +1149,90 @@ declare class Input {
     private static setpreviousTouchState;
     static scaledPosition(position: Vector2): Vector2;
 }
+declare class KeyboardUtils {
+    static TYPE_KEY_DOWN: number;
+    static TYPE_KEY_UP: number;
+    private static keyDownDict;
+    private static keyUpDict;
+    static A: string;
+    static B: string;
+    static C: string;
+    static D: string;
+    static E: string;
+    static F: string;
+    static G: string;
+    static H: string;
+    static I: string;
+    static J: string;
+    static K: string;
+    static L: string;
+    static M: string;
+    static N: string;
+    static O: string;
+    static P: string;
+    static Q: string;
+    static R: string;
+    static S: string;
+    static T: string;
+    static U: string;
+    static V: string;
+    static W: string;
+    static X: string;
+    static Y: string;
+    static Z: string;
+    static ESC: string;
+    static F1: string;
+    static F2: string;
+    static F3: string;
+    static F4: string;
+    static F5: string;
+    static F6: string;
+    static F7: string;
+    static F8: string;
+    static F9: string;
+    static F10: string;
+    static F11: string;
+    static F12: string;
+    static NUM_1: string;
+    static NUM_2: string;
+    static NUM_3: string;
+    static NUM_4: string;
+    static NUM_5: string;
+    static NUM_6: string;
+    static NUM_7: string;
+    static NUM_8: string;
+    static NUM_9: string;
+    static NUM_0: string;
+    static TAB: string;
+    static CTRL: string;
+    static ALT: string;
+    static SHIFT: string;
+    static CAPS_LOCK: string;
+    static ENTER: string;
+    static SPACE: string;
+    static BACK_SPACE: string;
+    static INSERT: string;
+    static DELETE: string;
+    static HOME: string;
+    static END: string;
+    static PAGE_UP: string;
+    static PAGE_DOWN: string;
+    static LEFT: string;
+    static RIGHT: string;
+    static UP: string;
+    static DOWN: string;
+    static PAUSE_BREAK: string;
+    static NUM_LOCK: string;
+    static SCROLL_LOCK: string;
+    static WINDOWS: string;
+    static init(): void;
+    private static onKeyDonwHander;
+    private static onKeyUpHander;
+    static registerKey(key: string, fun: Function, thisObj: any, type?: number, ...args: any[]): void;
+    static unregisterKey(key: string, type?: number): void;
+    private static keyCodeToString;
+    static destroy(): void;
+}
 declare class ListPool {
     private static readonly _objectQueue;
     static warmCache(cacheCount: number): void;
@@ -1132,6 +1258,17 @@ declare class Pair<T> {
     constructor(first: T, second: T);
     clear(): void;
     equals(other: Pair<T>): boolean;
+}
+declare class RandomUtils {
+    static randrange(start: number, stop: number, step?: number): number;
+    static randint(a: number, b: number): number;
+    static randnum(a: number, b: number): number;
+    static shuffle(array: any[]): any[];
+    private static _randomCompare;
+    static choice(sequence: any): any;
+    static sample(sequence: any[], num: number): any[];
+    static random(): number;
+    static boolean(chance?: number): boolean;
 }
 declare class RectangleExt {
     static union(first: Rectangle, point: Vector2): Rectangle;
