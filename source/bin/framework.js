@@ -2137,6 +2137,47 @@ var Mover = (function (_super) {
     };
     return Mover;
 }(Component));
+var ProjectileMover = (function (_super) {
+    __extends(ProjectileMover, _super);
+    function ProjectileMover() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this._tempTriggerList = [];
+        return _this;
+    }
+    ProjectileMover.prototype.onAddedToEntity = function () {
+        this._collider = this.entity.getComponent(Collider);
+        if (!this._collider)
+            console.warn("ProjectileMover has no Collider. ProjectilMover requires a Collider!");
+    };
+    ProjectileMover.prototype.move = function (motion) {
+        if (!this._collider)
+            return false;
+        var didCollide = false;
+        this.entity.position = Vector2.add(this.entity.position, motion);
+        var neighbors = Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers);
+        for (var i = 0; i < neighbors.colliders.length; i++) {
+            var neighbor = neighbors.colliders[i];
+            if (this._collider.overlaps(neighbor)) {
+                didCollide = true;
+                this.notifyTriggerListeners(this._collider, neighbor);
+            }
+        }
+        return didCollide;
+    };
+    ProjectileMover.prototype.notifyTriggerListeners = function (self, other) {
+        other.entity.getComponents("ITriggerListener", this._tempTriggerList);
+        for (var i = 0; i < this._tempTriggerList.length; i++) {
+            this._tempTriggerList[i].onTriggerEnter(self, other);
+        }
+        this._tempTriggerList.length = 0;
+        this.entity.getComponents("ITriggerListener", this._tempTriggerList);
+        for (var i = 0; i < this._tempTriggerList.length; i++) {
+            this._tempTriggerList[i].onTriggerEnter(other, self);
+        }
+        this._tempTriggerList.length = 0;
+    };
+    return ProjectileMover;
+}(Component));
 var Collider = (function (_super) {
     __extends(Collider, _super);
     function Collider() {
@@ -3509,6 +3550,54 @@ var WindTransition = (function (_super) {
     };
     return WindTransition;
 }(SceneTransition));
+var Bezier = (function () {
+    function Bezier() {
+    }
+    Bezier.getPoint = function (p0, p1, p2, t) {
+        t = MathHelper.clamp01(t);
+        var oneMinusT = 1 - t;
+        return Vector2.add(Vector2.add(Vector2.multiply(new Vector2(oneMinusT * oneMinusT), p0), Vector2.multiply(new Vector2(2 * oneMinusT * t), p1)), Vector2.multiply(new Vector2(t * t), p2));
+    };
+    Bezier.getFirstDerivative = function (p0, p1, p2, t) {
+        return Vector2.add(Vector2.multiply(new Vector2(2 * (1 - t)), Vector2.subtract(p1, p0)), Vector2.multiply(new Vector2(2 * t), Vector2.subtract(p2, p1)));
+    };
+    Bezier.getFirstDerivativeThree = function (start, firstControlPoint, secondControlPoint, end, t) {
+        t = MathHelper.clamp01(t);
+        var oneMunusT = 1 - t;
+        return Vector2.add(Vector2.add(Vector2.multiply(new Vector2(3 * oneMunusT * oneMunusT), Vector2.subtract(firstControlPoint, start)), Vector2.multiply(new Vector2(6 * oneMunusT * t), Vector2.subtract(secondControlPoint, firstControlPoint))), Vector2.multiply(new Vector2(3 * t * t), Vector2.subtract(end, secondControlPoint)));
+    };
+    Bezier.getPointThree = function (start, firstControlPoint, secondControlPoint, end, t) {
+        t = MathHelper.clamp01(t);
+        var oneMunusT = 1 - t;
+        return Vector2.add(Vector2.add(Vector2.add(Vector2.multiply(new Vector2(oneMunusT * oneMunusT * oneMunusT), start), Vector2.multiply(new Vector2(3 * oneMunusT * oneMunusT * t), firstControlPoint)), Vector2.multiply(new Vector2(3 * oneMunusT * t * t), secondControlPoint)), Vector2.multiply(new Vector2(t * t * t), end));
+    };
+    Bezier.getOptimizedDrawingPoints = function (start, firstCtrlPoint, secondCtrlPoint, end, distanceTolerance) {
+        if (distanceTolerance === void 0) { distanceTolerance = 1; }
+        var points = ListPool.obtain();
+        points.push(start);
+        this.recursiveGetOptimizedDrawingPoints(start, firstCtrlPoint, secondCtrlPoint, end, points, distanceTolerance);
+        points.push(end);
+        return points;
+    };
+    Bezier.recursiveGetOptimizedDrawingPoints = function (start, firstCtrlPoint, secondCtrlPoint, end, points, distanceTolerance) {
+        var pt12 = Vector2.divide(Vector2.add(start, firstCtrlPoint), new Vector2(2));
+        var pt23 = Vector2.divide(Vector2.add(firstCtrlPoint, secondCtrlPoint), new Vector2(2));
+        var pt34 = Vector2.divide(Vector2.add(secondCtrlPoint, end), new Vector2(2));
+        var pt123 = Vector2.divide(Vector2.add(pt12, pt23), new Vector2(2));
+        var pt234 = Vector2.divide(Vector2.add(pt23, pt34), new Vector2(2));
+        var pt1234 = Vector2.divide(Vector2.add(pt123, pt234), new Vector2(2));
+        var deltaLine = Vector2.subtract(end, start);
+        var d2 = Math.abs(((firstCtrlPoint.x, end.x) * deltaLine.y - (firstCtrlPoint.y - end.y) * deltaLine.x));
+        var d3 = Math.abs(((secondCtrlPoint.x - end.x) * deltaLine.y - (secondCtrlPoint.y - end.y) * deltaLine.x));
+        if ((d2 + d3) * (d2 + d3) < distanceTolerance * (deltaLine.x * deltaLine.x + deltaLine.y * deltaLine.y)) {
+            points.push(pt1234);
+            return;
+        }
+        this.recursiveGetOptimizedDrawingPoints(start, pt12, pt123, pt1234, points, distanceTolerance);
+        this.recursiveGetOptimizedDrawingPoints(pt1234, pt234, pt34, end, points, distanceTolerance);
+    };
+    return Bezier;
+}());
 var Flags = (function () {
     function Flags() {
     }
@@ -3562,6 +3651,13 @@ var MathHelper = (function () {
     };
     MathHelper.isEven = function (value) {
         return value % 2 == 0;
+    };
+    MathHelper.clamp01 = function (value) {
+        if (value < 0)
+            return 0;
+        if (value > 1)
+            return 1;
+        return value;
     };
     MathHelper.angleBetweenVectors = function (from, to) {
         return Math.atan2(to.y - from.y, to.x - from.x);

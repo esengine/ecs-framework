@@ -58,6 +58,20 @@ class MathHelper {
         return value % 2 == 0;
     }
 
+    /**
+     * 数值限定在0-1之间
+     * @param value 
+     */
+    public static clamp01(value: number){
+        if (value < 0)
+            return 0;
+
+        if (value > 1)
+            return 1;
+
+        return value;
+    }
+
     public static angleBetweenVectors(from: Vector2, to: Vector2){
         return Math.atan2(to.y - from.y, to.x - from.x);
     }

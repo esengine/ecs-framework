@@ -23,11 +23,12 @@ class Mover extends Component {
             return null;
         }
 
+        // 移动所有的非触发碰撞器并获得最近的碰撞
         let colliders: Collider[] = this.entity.getComponents(Collider);
         for (let i = 0; i < colliders.length; i ++){
             let collider = colliders[i];
 
-            // 不检测触发器
+            // 不检测触发器 在我们移动后会重新访问它
             if (collider.isTrigger)
                 continue;
 
@@ -63,13 +64,23 @@ class Mover extends Component {
         return {collisionResult: collisionResult, motion: motion};
     }
 
+    /**
+     *  将calculatemomovement应用到实体并更新triggerHelper
+     * @param motion 
+     */
     public applyMovement(motion: Vector2){
+        // 移动实体到它的新位置，如果我们有一个碰撞，否则移动全部数量。当碰撞发生时，运动被更新
         this.entity.position = Vector2.add(this.entity.position, motion);
 
+        // 对所有是触发器的碰撞器与所有宽相位碰撞器进行重叠检查。任何重叠都会导致触发事件。
         if (this._triggerHelper)
             this._triggerHelper.update();
     }
 
+    /**
+     * 通过调用calculateMovement和applyMovement来移动考虑碰撞的实体;
+     * @param motion 
+     */
     public move(motion: Vector2){
         let movementResult = this.calculateMovement(motion);
         let collisionResult = movementResult.collisionResult;

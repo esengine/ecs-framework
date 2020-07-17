@@ -473,6 +473,13 @@ declare class Mover extends Component {
     applyMovement(motion: Vector2): void;
     move(motion: Vector2): CollisionResult;
 }
+declare class ProjectileMover extends Component {
+    private _tempTriggerList;
+    private _collider;
+    onAddedToEntity(): void;
+    move(motion: Vector2): boolean;
+    private notifyTriggerListeners;
+}
 declare abstract class Collider extends Component {
     shape: Shape;
     physicsLayer: number;
@@ -787,6 +794,14 @@ declare class WindTransition extends SceneTransition {
     constructor(sceneLoadAction: Function);
     onBeginTransition(): Promise<void>;
 }
+declare class Bezier {
+    static getPoint(p0: Vector2, p1: Vector2, p2: Vector2, t: number): Vector2;
+    static getFirstDerivative(p0: Vector2, p1: Vector2, p2: Vector2, t: number): Vector2;
+    static getFirstDerivativeThree(start: Vector2, firstControlPoint: Vector2, secondControlPoint: Vector2, end: Vector2, t: number): Vector2;
+    static getPointThree(start: Vector2, firstControlPoint: Vector2, secondControlPoint: Vector2, end: Vector2, t: number): Vector2;
+    static getOptimizedDrawingPoints(start: Vector2, firstCtrlPoint: Vector2, secondCtrlPoint: Vector2, end: Vector2, distanceTolerance?: number): Vector2[];
+    private static recursiveGetOptimizedDrawingPoints;
+}
 declare class Flags {
     static isFlagSet(self: number, flag: number): boolean;
     static isUnshiftedFlagSet(self: number, flag: number): boolean;
@@ -806,6 +821,7 @@ declare class MathHelper {
     static clamp(value: number, min: number, max: number): number;
     static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number): Vector2;
     static isEven(value: number): boolean;
+    static clamp01(value: number): number;
     static angleBetweenVectors(from: Vector2, to: Vector2): number;
 }
 declare class Matrix2D {
