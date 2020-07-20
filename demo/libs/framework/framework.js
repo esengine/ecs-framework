@@ -2007,6 +2007,13 @@ var SpriteAnimator = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(SpriteAnimator.prototype, "animations", {
+        get: function () {
+            return this._animations;
+        },
+        enumerable: true,
+        configurable: true
+    });
     SpriteAnimator.prototype.addAnimation = function (name, animation) {
         if (!this.sprite && animation.sprites.length > 0)
             this.setSprite(animation.sprites[0]);

@@ -17,6 +17,10 @@ class SpriteAnimator extends SpriteRenderer {
         return this.animationState == State.running;
     }
 
+    /** 提供对可用动画列表的访问 */
+    public get animations(){
+        return this._animations;
+    }
     private _animations: Map<string, SpriteAnimation> = new Map<string, SpriteAnimation>();
     private _elapsedTime: number = 0;
     private _loopMode: LoopMode;

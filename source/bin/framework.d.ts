@@ -434,6 +434,7 @@ declare class SpriteAnimator extends SpriteRenderer {
     currentAnimationName: string;
     currentFrame: number;
     readonly isRunning: boolean;
+    readonly animations: Map<string, SpriteAnimation>;
     private _animations;
     private _elapsedTime;
     private _loopMode;
