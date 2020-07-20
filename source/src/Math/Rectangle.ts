@@ -137,6 +137,18 @@ class Rectangle extends egret.Rectangle {
 
         return boundsPoint;
     }
+
+    /**
+     * 将egret矩形转化为Rectangle
+     * @param rect 
+     */
+    public setEgretRect(rect: egret.Rectangle): Rectangle{
+        this.x = rect.x;
+        this.y = rect.y;
+        this.width = rect.width;
+        this.height = rect.height;
+        return this;
+    }
    
     /**
      * 给定多边形的点，计算边界

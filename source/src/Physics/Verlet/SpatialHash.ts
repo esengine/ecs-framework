@@ -209,26 +209,15 @@ class RaycastResultParser {
  * 它的主要目的是将int、int x、y坐标散列到单个Uint32键中，使用O(1)查找。
  */
 class NumberDictionary {
-    private _store: Map<number, Collider[]> = new Map<number, Collider[]>();
+    private _store: Map<string, Collider[]> = new Map<string, Collider[]>();
 
     /**
      * 根据x和y值计算并返回散列键
      * @param x 
      * @param y 
      */
-    private getKey(x: number, y: number): number {
-        return Long.fromNumber(x).shiftLeft(32).or(this.intToUint(y)).toString();
-    }
-
-    /**
-     * 
-     * @param i 
-     */
-    private intToUint(i) {
-        if (i >= 0)
-            return i;
-        else
-            return 4294967296 + i;
+    private getKey(x: number, y: number): string {
+        return Long.fromNumber(x).shiftLeft(32).or(Long.fromNumber(y, false)).toString();
     }
 
     public add(x: number, y: number, list: Collider[]) {

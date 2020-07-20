@@ -4,6 +4,10 @@ class Circle extends Shape {
     public _originalRadius: number;
     public center = new Vector2();
 
+    public get bounds(){
+        return new Rectangle().setEgretRect(this.getBounds());
+    }
+
     constructor(radius: number) {
         super();
         this.radius = radius;
@@ -15,7 +19,7 @@ class Circle extends Shape {
     }
 
     public collidesWithShape(other: Shape): CollisionResult {
-        if (other instanceof Box && (other as Box).isUnrotated) {
+        if (other instanceof Box) {
             return ShapeCollisions.circleToBox(this, other);
         }
 
@@ -30,28 +34,8 @@ class Circle extends Shape {
         throw new Error(`Collisions of Circle to ${other} are not supported`);
     }
 
-    public recalculateBounds(collider: Collider) {
-        this.center = collider.localOffset;
-
-        if (collider.shouldColliderScaleAndRotateWithTransform) {
-            let scale = collider.entity.scale;
-            let hasUnitScale = scale.x == 1 && scale.y == 1;
-            let maxScale = Math.max(scale.x, scale.y);
-            this.radius = this._originalRadius * maxScale;
-
-            if (collider.entity.rotation != 0) {
-                let offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
-                let offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
-                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
-            }
-        }
-
-        this.position = Vector2.add(collider.entity.position, this.center);
-        this.bounds = new Rectangle(this.position.x - this.radius, this.position.y - this.radius, this.radius * 2, this.radius * 2);
-    }
-
     public overlaps(other: Shape){
-        if (other instanceof Box && (other as Box).isUnrotated)
+        if (other instanceof Box)
             return Collisions.isRectToCircle(other.bounds, this.position, this.radius);
 
         if (other instanceof Circle)

@@ -78,7 +78,7 @@ class Collisions {
         return Vector2.distanceSquared(circleCenter, point) < radius * radius;
     }
 
-    public static isRectToCircle(rect: Rectangle, cPosition: Vector2, cRadius: number): boolean {
+    public static isRectToCircle(rect: egret.Rectangle, cPosition: Vector2, cRadius: number): boolean {
         let ew = rect.width * 0.5;
         let eh = rect.height * 0.5;
         let vx = Math.max(0, Math.max(cPosition.x - rect.x) - ew);

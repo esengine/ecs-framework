@@ -24,8 +24,9 @@ abstract class Collider extends Component {
     protected _isColliderRegistered;
 
     public get bounds(): Rectangle {
-        this.shape.recalculateBounds(this);
-        return this.shape.bounds;
+        let shapeBounds = this.shape.bounds;
+        let colliderBuonds = new Rectangle(this.x + this.localOffset.x, this.y + this.localOffset.y, shapeBounds.width, shapeBounds.height);
+        return colliderBuonds;
     }
 
     public get localOffset() {
@@ -118,9 +119,8 @@ abstract class Collider extends Component {
 
                     this.localOffset = bounds.location;
                 } else {
-                    let boxCollider = this;
-                    boxCollider.width = width;
-                    boxCollider.height = height;
+                    this.width = width;
+                    this.height = height;
 
                     this.localOffset = bounds.location;
                 }

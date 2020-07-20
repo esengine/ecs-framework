@@ -894,6 +894,7 @@ declare class Rectangle extends egret.Rectangle {
         edgeNormal: Vector2;
     };
     getClosestPointOnBoundsToOrigin(): Vector2;
+    setEgretRect(rect: egret.Rectangle): Rectangle;
     static rectEncompassingPoints(points: Vector2[]): Rectangle;
 }
 declare class Vector3 {
@@ -930,7 +931,7 @@ declare class Collisions {
     static isCircleToCircle(circleCenter1: Vector2, circleRadius1: number, circleCenter2: Vector2, circleRadius2: number): boolean;
     static isCircleToLine(circleCenter: Vector2, radius: number, lineFrom: Vector2, lineTo: Vector2): boolean;
     static isCircleToPoint(circleCenter: Vector2, radius: number, point: Vector2): boolean;
-    static isRectToCircle(rect: Rectangle, cPosition: Vector2, cRadius: number): boolean;
+    static isRectToCircle(rect: egret.Rectangle, cPosition: Vector2, cRadius: number): boolean;
     static isRectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2): boolean;
     static isRectToPoint(rX: number, rY: number, rW: number, rH: number, point: Vector2): boolean;
     static getSector(rX: number, rY: number, rW: number, rH: number, point: Vector2): PointSectors;
@@ -955,22 +956,21 @@ declare class Physics {
     static updateCollider(collider: Collider): void;
     static debugDraw(secondsToDisplay: any): void;
 }
-declare abstract class Shape {
-    bounds: Rectangle;
+declare abstract class Shape extends egret.DisplayObject {
+    abstract bounds: Rectangle;
     position: Vector2;
     abstract center: Vector2;
-    abstract recalculateBounds(collider: Collider): any;
     abstract pointCollidesWithShape(point: Vector2): CollisionResult;
     abstract overlaps(other: Shape): any;
     abstract collidesWithShape(other: Shape): CollisionResult;
 }
 declare class Polygon extends Shape {
     points: Vector2[];
-    isUnrotated: boolean;
     private _polygonCenter;
     private _areEdgeNormalsDirty;
     protected _originalPoints: Vector2[];
     center: Vector2;
+    readonly bounds: Rectangle;
     _edgeNormals: Vector2[];
     readonly edgeNormals: Vector2[];
     isBox: boolean;
@@ -990,11 +990,8 @@ declare class Polygon extends Shape {
     pointCollidesWithShape(point: Vector2): CollisionResult;
     containsPoint(point: Vector2): boolean;
     static buildSymmertricalPolygon(vertCount: number, radius: number): any[];
-    recalculateBounds(collider: Collider): void;
 }
 declare class Box extends Polygon {
-    width: number;
-    height: number;
     constructor(width: number, height: number);
     private static buildBox;
     overlaps(other: Shape): any;
@@ -1006,10 +1003,10 @@ declare class Circle extends Shape {
     radius: number;
     _originalRadius: number;
     center: Vector2;
+    readonly bounds: Rectangle;
     constructor(radius: number);
     pointCollidesWithShape(point: Vector2): CollisionResult;
     collidesWithShape(other: Shape): CollisionResult;
-    recalculateBounds(collider: Collider): void;
     overlaps(other: Shape): any;
 }
 declare class CollisionResult {
@@ -1062,7 +1059,6 @@ declare class RaycastResultParser {
 declare class NumberDictionary {
     private _store;
     private getKey;
-    private intToUint;
     add(x: number, y: number, list: Collider[]): void;
     remove(obj: Collider): void;
     tryGetValue(x: number, y: number): Collider[];

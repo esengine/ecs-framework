@@ -2197,8 +2197,9 @@ var Collider = (function (_super) {
     }
     Object.defineProperty(Collider.prototype, "bounds", {
         get: function () {
-            this.shape.recalculateBounds(this);
-            return this.shape.bounds;
+            var shapeBounds = this.shape.bounds;
+            var colliderBuonds = new Rectangle(this.x + this.localOffset.x, this.y + this.localOffset.y, shapeBounds.width, shapeBounds.height);
+            return colliderBuonds;
         },
         enumerable: true,
         configurable: true
@@ -2261,9 +2262,8 @@ var Collider = (function (_super) {
                     this.localOffset = bounds.location;
                 }
                 else {
-                    var boxCollider = this;
-                    boxCollider.width = width;
-                    boxCollider.height = height;
+                    this.width = width;
+                    this.height = height;
                     this.localOffset = bounds.location;
                 }
             }
@@ -4402,6 +4402,13 @@ var Rectangle = (function (_super) {
         }
         return boundsPoint;
     };
+    Rectangle.prototype.setEgretRect = function (rect) {
+        this.x = rect.x;
+        this.y = rect.y;
+        this.width = rect.width;
+        this.height = rect.height;
+        return this;
+    };
     Rectangle.rectEncompassingPoints = function (points) {
         var minX = Number.POSITIVE_INFINITY;
         var minY = Number.POSITIVE_INFINITY;
@@ -4687,24 +4694,32 @@ var Physics = (function () {
     Physics.allLayers = -1;
     return Physics;
 }());
-var Shape = (function () {
+var Shape = (function (_super) {
+    __extends(Shape, _super);
     function Shape() {
-        this.bounds = new Rectangle();
-        this.position = Vector2.zero;
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.position = Vector2.zero;
+        return _this;
     }
     return Shape;
-}());
+}(egret.DisplayObject));
 var Polygon = (function (_super) {
     __extends(Polygon, _super);
     function Polygon(points, isBox) {
         var _this = _super.call(this) || this;
-        _this.isUnrotated = true;
         _this._areEdgeNormalsDirty = true;
         _this.center = new Vector2();
         _this.setPoints(points);
         _this.isBox = isBox;
         return _this;
     }
+    Object.defineProperty(Polygon.prototype, "bounds", {
+        get: function () {
+            return new Rectangle(0, 0, this.width, this.height);
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Polygon.prototype, "edgeNormals", {
         get: function () {
             if (this._areEdgeNormalsDirty)
@@ -4829,36 +4844,6 @@ var Polygon = (function (_super) {
         }
         return verts;
     };
-    Polygon.prototype.recalculateBounds = function (collider) {
-        var localOffset = collider.localOffset;
-        if (collider.shouldColliderScaleAndRotateWithTransform) {
-            var hasUnitScale = true;
-            var tempMat = void 0;
-            var combinedMatrix = Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
-            if (collider.entity.scale != Vector2.one) {
-                tempMat = Matrix2D.createScale(collider.entity.scale.x, collider.entity.scale.y);
-                combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
-                hasUnitScale = false;
-                var scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.scale);
-                localOffset = scaledOffset;
-            }
-            if (collider.entity.rotation != 0) {
-                tempMat = Matrix2D.createRotation(collider.entity.rotation, tempMat);
-                combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
-                var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
-                var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
-                localOffset = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
-            }
-            tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
-            combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
-            Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
-            this.isUnrotated = collider.entity.rotation == 0;
-        }
-        this.position = Vector2.add(collider.entity.position, localOffset);
-        this.bounds = Rectangle.rectEncompassingPoints(this.points);
-        this.bounds.location = Vector2.add(this.bounds.location, this.position);
-        this.center = localOffset;
-    };
     return Polygon;
 }(Shape));
 var Box = (function (_super) {
@@ -4880,16 +4865,14 @@ var Box = (function (_super) {
         return verts;
     };
     Box.prototype.overlaps = function (other) {
-        if (this.isUnrotated) {
-            if (other instanceof Box && other.isUnrotated)
-                return this.bounds.intersects(other.bounds);
-            if (other instanceof Circle)
-                return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
-        }
+        if (other instanceof Box)
+            return this.bounds.intersects(other.bounds);
+        if (other instanceof Circle)
+            return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
         return _super.prototype.overlaps.call(this, other);
     };
     Box.prototype.collidesWithShape = function (other) {
-        if (this.isUnrotated && other instanceof Box && other.isUnrotated) {
+        if (other instanceof Box) {
             return ShapeCollisions.boxToBox(this, other);
         }
         return _super.prototype.collidesWithShape.call(this, other);
@@ -4907,9 +4890,7 @@ var Box = (function (_super) {
             this._originalPoints[i] = this.points[i];
     };
     Box.prototype.containsPoint = function (point) {
-        if (this.isUnrotated)
-            return this.bounds.contains(point.x, point.y);
-        return _super.prototype.containsPoint.call(this, point);
+        return this.bounds.contains(point.x, point.y);
     };
     return Box;
 }(Polygon));
@@ -4922,11 +4903,18 @@ var Circle = (function (_super) {
         _this._originalRadius = radius;
         return _this;
     }
+    Object.defineProperty(Circle.prototype, "bounds", {
+        get: function () {
+            return new Rectangle().setEgretRect(this.getBounds());
+        },
+        enumerable: true,
+        configurable: true
+    });
     Circle.prototype.pointCollidesWithShape = function (point) {
         return ShapeCollisions.pointToCircle(point, this);
     };
     Circle.prototype.collidesWithShape = function (other) {
-        if (other instanceof Box && other.isUnrotated) {
+        if (other instanceof Box) {
             return ShapeCollisions.circleToBox(this, other);
         }
         if (other instanceof Circle) {
@@ -4937,24 +4925,8 @@ var Circle = (function (_super) {
         }
         throw new Error("Collisions of Circle to " + other + " are not supported");
     };
-    Circle.prototype.recalculateBounds = function (collider) {
-        this.center = collider.localOffset;
-        if (collider.shouldColliderScaleAndRotateWithTransform) {
-            var scale = collider.entity.scale;
-            var hasUnitScale = scale.x == 1 && scale.y == 1;
-            var maxScale = Math.max(scale.x, scale.y);
-            this.radius = this._originalRadius * maxScale;
-            if (collider.entity.rotation != 0) {
-                var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
-                var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
-                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
-            }
-        }
-        this.position = Vector2.add(collider.entity.position, this.center);
-        this.bounds = new Rectangle(this.position.x - this.radius, this.position.y - this.radius, this.radius * 2, this.radius * 2);
-    };
     Circle.prototype.overlaps = function (other) {
-        if (other instanceof Box && other.isUnrotated)
+        if (other instanceof Box)
             return Collisions.isRectToCircle(other.bounds, this.position, this.radius);
         if (other instanceof Circle)
             return Collisions.isCircleToCircle(this.position, this.radius, other.position, other.radius);
@@ -5306,13 +5278,7 @@ var NumberDictionary = (function () {
         this._store = new Map();
     }
     NumberDictionary.prototype.getKey = function (x, y) {
-        return Long.fromNumber(x).shiftLeft(32).or(this.intToUint(y)).toString();
-    };
-    NumberDictionary.prototype.intToUint = function (i) {
-        if (i >= 0)
-            return i;
-        else
-            return 4294967296 + i;
+        return Long.fromNumber(x).shiftLeft(32).or(Long.fromNumber(y, false)).toString();
     };
     NumberDictionary.prototype.add = function (x, y, list) {
         this._store.set(this.getKey(x, y), list);
@@ -6296,8 +6262,12 @@ var RectangleExt = (function () {
     }
     RectangleExt.union = function (first, point) {
         var rect = new Rectangle(point.x, point.y, 0, 0);
-        var rectResult = first.union(rect);
-        return new Rectangle(rectResult.x, rectResult.y, rectResult.width, rectResult.height);
+        var result = new Rectangle();
+        result.x = Math.min(first.x, rect.x);
+        result.y = Math.min(first.y, rect.y);
+        result.width = Math.max(first.right, rect.right) - result.x;
+        result.height = Math.max(first.bottom, result.bottom) - result.y;
+        return result;
     };
     return RectangleExt;
 }());

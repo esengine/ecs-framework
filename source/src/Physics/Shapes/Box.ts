@@ -3,9 +3,6 @@
  * 多边形的特殊情况。在进行SAT碰撞检查时，我们只需要检查2个轴而不是8个轴
  */
 class Box extends Polygon {
-    public width: number;
-    public height: number;
-
     constructor(width: number, height: number){
         super(Box.buildBox(width, height), true);
         this.width = width;
@@ -32,20 +29,18 @@ class Box extends Polygon {
 
     public overlaps(other: Shape){
         // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
-        if (this.isUnrotated){
-            if (other instanceof Box && other.isUnrotated)
-                return this.bounds.intersects(other.bounds);
+        if (other instanceof Box)
+            return this.bounds.intersects(other.bounds);
 
-            if (other instanceof Circle)
-                return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
-        }
+        if (other instanceof Circle)
+            return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
 
         return super.overlaps(other);
     }
 
     public collidesWithShape(other: Shape){
         // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
-        if (this.isUnrotated && other instanceof Box && other.isUnrotated){
+        if (other instanceof Box){
             return ShapeCollisions.boxToBox(this, other);
         }
 
@@ -76,10 +71,11 @@ class Box extends Polygon {
             this._originalPoints[i] = this.points[i];
     }
 
+    /**
+     * 
+     * @param point 
+     */
     public containsPoint(point: Vector2){
-        if (this.isUnrotated)
-            return this.bounds.contains(point.x, point.y);
-
-        return super.containsPoint(point);
+        return this.bounds.contains(point.x, point.y);
     }
 }
