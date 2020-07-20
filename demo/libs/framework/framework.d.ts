@@ -1301,6 +1301,9 @@ declare class Vector2Ext {
     static transform(sourceArray: Vector2[], matrix: Matrix2D, destinationArray: Vector2[]): void;
     static round(vec: Vector2): Vector2;
 }
+declare class WebGLUtils {
+    static getContext(): CanvasRenderingContext2D;
+}
 declare class Layout {
     clientArea: Rectangle;
     safeArea: Rectangle;

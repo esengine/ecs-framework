@@ -164,8 +164,8 @@ class Camera extends Component {
     public update(){
         let cameraBounds = new Rectangle(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
         let halfScreen = Vector2.multiply(new Vector2(cameraBounds.width, cameraBounds.height), new Vector2(0.5));
-        this._worldSpaceDeadZone.x = this.position.x - halfScreen.x + this.deadzone.x + this.focusOffset.x;
-        this._worldSpaceDeadZone.y = this.position.y - halfScreen.y + this.deadzone.y + this.focusOffset.y;
+        this._worldSpaceDeadZone.x = this.position.x - halfScreen.x * SceneManager.scene.scaleX  + this.deadzone.x + this.focusOffset.x;
+        this._worldSpaceDeadZone.y = this.position.y - halfScreen.y * SceneManager.scene.scaleY + this.deadzone.y + this.focusOffset.y;
         this._worldSpaceDeadZone.width = this.deadzone.width;
         this._worldSpaceDeadZone.height = this.deadzone.height;
 

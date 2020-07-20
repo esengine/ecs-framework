@@ -1651,8 +1651,8 @@ var Camera = (function (_super) {
     Camera.prototype.update = function () {
         var cameraBounds = new Rectangle(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
         var halfScreen = Vector2.multiply(new Vector2(cameraBounds.width, cameraBounds.height), new Vector2(0.5));
-        this._worldSpaceDeadZone.x = this.position.x - halfScreen.x + this.deadzone.x + this.focusOffset.x;
-        this._worldSpaceDeadZone.y = this.position.y - halfScreen.y + this.deadzone.y + this.focusOffset.y;
+        this._worldSpaceDeadZone.x = this.position.x - halfScreen.x * SceneManager.scene.scaleX + this.deadzone.x + this.focusOffset.x;
+        this._worldSpaceDeadZone.y = this.position.y - halfScreen.y * SceneManager.scene.scaleY + this.deadzone.y + this.focusOffset.y;
         this._worldSpaceDeadZone.width = this.deadzone.width;
         this._worldSpaceDeadZone.height = this.deadzone.height;
         if (this.targetEntity)
@@ -2156,7 +2156,7 @@ var ProjectileMover = (function (_super) {
         var neighbors = Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers);
         for (var i = 0; i < neighbors.colliders.length; i++) {
             var neighbor = neighbors.colliders[i];
-            if (this._collider.overlaps(neighbor)) {
+            if (this._collider.overlaps(neighbor) && neighbor.enabled) {
                 didCollide = true;
                 this.notifyTriggerListeners(this._collider, neighbor);
             }
@@ -6415,6 +6415,15 @@ var Vector2Ext = (function () {
         return new Vector2(Math.round(vec.x), Math.round(vec.y));
     };
     return Vector2Ext;
+}());
+var WebGLUtils = (function () {
+    function WebGLUtils() {
+    }
+    WebGLUtils.getContext = function () {
+        var canvas = document.getElementsByTagName('canvas')[0];
+        return canvas.getContext('2d');
+    };
+    return WebGLUtils;
 }());
 var Layout = (function () {
     function Layout() {
