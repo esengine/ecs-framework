@@ -3,7 +3,7 @@
  */
 class TimeRuler {
     /** 最大条数 8 */
-    public static readonly maxBars = 0;
+    public static readonly maxBars = 8;
     /**  */
     public static readonly maxSamples = 256;
     /** 每条的最大嵌套调用 */
@@ -78,6 +78,8 @@ class TimeRuler {
         let lock = new LockUtils(this._frameKey);
         lock.lock().then(() => {
             this._updateCount = parseInt(egret.localStorage.getItem(this._frameKey), 10);
+            if (isNaN(this._updateCount))
+                this._updateCount = 0;
             let count = this._updateCount;
             count += 1;
             egret.localStorage.setItem(this._frameKey, count.toString());
@@ -163,7 +165,7 @@ class TimeRuler {
 
             // 获取注册的标记
             let markerId = this._markerNameToIdMap.get(markerName);
-            if (!markerId) {
+            if (isNaN(markerId)) {
                 // 如果此标记未注册，则注册此标记。
                 markerId = this.markers.length;
                 this._markerNameToIdMap.set(markerName, markerId);
@@ -194,7 +196,7 @@ class TimeRuler {
             }
 
             let markerId = this._markerNameToIdMap.get(markerName);
-            if (!markerId) {
+            if (isNaN(markerId)) {
                 throw new Error(`Marker ${markerName} is not registered. Make sure you specifed same name as you used for beginMark method`);
             }
 
@@ -298,8 +300,7 @@ class FrameLog {
 
     constructor() {
         this.bars = new Array<MarkerCollection>(TimeRuler.maxBars);
-        for (let i = 0; i < TimeRuler.maxBars; ++i)
-            this.bars[i] = new MarkerCollection();
+        this.bars.fill(new MarkerCollection(), 0, TimeRuler.maxBars);
     }
 }
 
@@ -308,16 +309,21 @@ class FrameLog {
  */
 class MarkerCollection {
     public markers: Marker[] = new Array<Marker>(TimeRuler.maxSamples);
-    public markCount: number;
+    public markCount: number = 0;
     public markerNests: number[] = new Array<number>(TimeRuler.maxNestCall);
-    public nestCount: number;
+    public nestCount: number = 0;
+
+    constructor(){
+        this.markers.fill(new Marker(), 0, TimeRuler.maxSamples);
+        this.markerNests.fill(0, 0, TimeRuler.maxNestCall);
+    }
 }
 
 class Marker {
-    public markerId: number;
-    public beginTime: number;
-    public endTime: number;
-    public color: number;
+    public markerId: number = 0;
+    public beginTime: number = 0;
+    public endTime: number = 0;
+    public color: number = 0x000000;
 }
 
 class MarkerInfo {
@@ -326,17 +332,18 @@ class MarkerInfo {
 
     constructor(name) {
         this.name = name;
+        this.logs.fill(new MarkerLog(), 0, TimeRuler.maxBars);
     }
 }
 
 class MarkerLog {
-    public snapMin: number;
-    public snapMax: number;
-    public snapAvg: number;
-    public min: number;
-    public max: number;
-    public avg: number;
-    public samples: number;
-    public color: number;
-    public initialized: boolean;
+    public snapMin: number = 0;
+    public snapMax: number = 0;
+    public snapAvg: number = 0;
+    public min: number = 0;
+    public max: number = 0;
+    public avg: number = 0;
+    public samples: number = 0;
+    public color: number = 0x000000;
+    public initialized: boolean = false;
 }

@@ -3,6 +3,9 @@ class Circle extends Shape {
     public radius: number;
     public _originalRadius: number;
     public center = new Vector2();
+    public get position(){
+        return new Vector2(this.parent.x, this.parent.y);
+    }
 
     public get bounds(){
         return new Rectangle().setEgretRect(this.getBounds());

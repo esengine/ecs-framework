@@ -63,7 +63,8 @@ class SpatialHash {
             for (let y = p1.y; y <= p2.y; y++) {
                 // 如果没有单元格，我们需要创建它
                 let c = this.cellAtPosition(x, y, true);
-                c.push(collider);
+                if (c.indexOf(collider) == -1)
+                    c.push(collider);
             }
         }
     }
@@ -83,7 +84,7 @@ class SpatialHash {
         let bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
 
         this._overlapTestCircle.radius = radius;
-        this._overlapTestCircle.position = circleCenter;
+        // this._overlapTestCircle.position = circleCenter;
         
         let resultCounter = 0;
         let aabbBroadphaseResult = this.aabbBroadphase(bounds, null, layerMask);

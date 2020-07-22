@@ -1,6 +1,14 @@
 abstract class Collider extends Component {
     /** 对撞机的基本形状 */
     public shape: Shape;
+    protected _localOffset: Vector2 = Vector2.zero;
+    public get localOffset(){
+        return this._localOffset;
+    }
+    public set localOffset(){
+
+    }
+    public _localOffsetLength: number;
     /** 在处理冲突时，physicsLayer可以用作过滤器。Flags类有帮助位掩码的方法。 */
     public physicsLayer = 1 << 0;
     /** 如果这个碰撞器是一个触发器，它将不会引起碰撞，但它仍然会触发事件 */
@@ -15,38 +23,32 @@ abstract class Collider extends Component {
     /** 默认为所有层。 */
     public collidesWithLayers = Physics.allLayers;
 
-    public _localOffsetLength: number;
     /** 标记来跟踪我们的实体是否被添加到场景中 */
     protected _isParentEntityAddedToScene;
     protected _colliderRequiresAutoSizing;
-    protected _localOffset: Vector2 = new Vector2(0, 0);
     /** 标记来记录我们是否注册了物理系统 */
     protected _isColliderRegistered;
 
     public get bounds(): Rectangle {
         let shapeBounds = this.shape.bounds;
-        let colliderBuonds = new Rectangle(this.x + this.localOffset.x, this.y + this.localOffset.y, shapeBounds.width, shapeBounds.height);
+        let colliderBuonds = new Rectangle(this.entity.x, this.entity.y, shapeBounds.width, shapeBounds.height);
         return colliderBuonds;
     }
 
-    public get localOffset() {
-        return this._localOffset;
-    }
-
     /**
-     * 将localOffset添加到实体。获取碰撞器的最终位置。这允许您向一个实体添加多个碰撞器并分别定位它们。
+     * 将localOffset添加到实体。获取碰撞器的最终位置。
+     * 这允许您向一个实体添加多个碰撞器并分别定位它们。
+     * @param offset 
      */
-    public set localOffset(value: Vector2) {
-        this.setLocalOffset(value);
-    }
-
-    public setLocalOffset(offset: Vector2) {
-        if (this._localOffset != offset) {
+    public setLocalOffset(offset: Vector2): Collider{
+        if (this._localOffset != offset){
             this.unregisterColliderWithPhysicsSystem();
             this._localOffset = offset;
             this._localOffsetLength = this._localOffset.length();
             this.registerColliderWithPhysicsSystem();
         }
+
+        return this;
     }
 
     /**
@@ -85,15 +87,15 @@ abstract class Collider extends Component {
      */
     public collidesWith(collider: Collider, motion: Vector2) {
         // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
-        let oldPosition = this.shape.position;
-        this.shape.position = Vector2.add(this.shape.position, motion);
+        let oldPosition = this.entity.position;
+        this.entity.position = Vector2.add(this.entity.position, motion);
 
         let result = this.shape.collidesWithShape(collider.shape);
         if (result)
             result.collider = collider;
 
         // 将图形位置返回到检查前的位置
-        this.shape.position = oldPosition;
+        this.entity.position = oldPosition;
 
         return result;
     }
@@ -111,19 +113,17 @@ abstract class Collider extends Component {
                 // 这里我们需要大小*反尺度，因为当我们自动调整碰撞器的大小时，它需要没有缩放的渲染
                 let width = bounds.width / this.entity.scale.x;
                 let height = bounds.height / this.entity.scale.y;
-
                 // 圆碰撞器需要特别注意原点
                 if (this instanceof CircleCollider){
                     let circleCollider = this as CircleCollider;
                     circleCollider.radius = Math.max(width, height) * 0.5;
-
-                    this.localOffset = bounds.location;
                 } else {
                     this.width = width;
                     this.height = height;
-
-                    this.localOffset = bounds.location;
                 }
+                
+                // 获取渲染的中心，将其转移到本地坐标，并使用它作为碰撞器的localOffset
+                this.localOffset = Vector2.subtract(bounds.center, this.entity.position);
             } else {
                 console.warn("Collider has no shape and no RenderableComponent. Can't figure out how to size it.");
             }
@@ -154,8 +154,8 @@ abstract class Collider extends Component {
     public update(){
         let renderable = this.entity.getComponent<RenderableComponent>(RenderableComponent);
         if (renderable){
-            this.$setX(renderable.x + this.localOffset.x);
-            this.$setY(renderable.y + this.localOffset.y);
+            this.$setX(renderable.x);
+            this.$setY(renderable.y);
         }
     }
 }

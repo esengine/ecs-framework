@@ -1,17 +1,17 @@
-class SpriteRenderer extends RenderableComponent{
+class SpriteRenderer extends RenderableComponent {
     private _sprite: Sprite;
     protected bitmap: egret.Bitmap;
 
     /** 应该由这个精灵显示的精灵 */
-    public get sprite(): Sprite{
+    public get sprite(): Sprite {
         return this._sprite;
     }
     /** 应该由这个精灵显示的精灵 */
-    public set sprite(value: Sprite){
+    public set sprite(value: Sprite) {
         this.setSprite(value);
     }
 
-    public setSprite(sprite: Sprite): SpriteRenderer{
+    public setSprite(sprite: Sprite): SpriteRenderer {
         this.removeChildren();
         this._sprite = sprite;
         if (this._sprite) {
@@ -24,7 +24,7 @@ class SpriteRenderer extends RenderableComponent{
         return this;
     }
 
-    public setColor(color: number): SpriteRenderer{
+    public setColor(color: number): SpriteRenderer {
         let colorMatrix = [
             1, 0, 0, 0, 0,
             0, 1, 0, 0, 0,
@@ -40,23 +40,27 @@ class SpriteRenderer extends RenderableComponent{
         return this;
     }
 
-    public isVisibleFromCamera(camera: Camera): boolean{
+    public isVisibleFromCamera(camera: Camera): boolean {
         this.isVisible = new Rectangle(0, 0, this.stage.stageWidth, this.stage.stageHeight).intersects(this.bounds);
         this.visible = this.isVisible;
         return this.isVisible;
     }
 
     /** 渲染处理 在每个模块中处理各自的渲染逻辑 */
-    public render(camera: Camera){
-        this.x = -camera.position.x + camera.origin.x;
-        this.y = -camera.position.y + camera.origin.y;
+    public render(camera: Camera) {
+        if (this.x != -camera.position.x + camera.origin.x ||
+            this.y != -camera.position.y + camera.origin.y) {
+            this.x = -camera.position.x + camera.origin.x;
+            this.y = -camera.position.y + camera.origin.y;
+            this.entity.onEntityTransformChanged(TransformComponent.position);
+        }
     }
 
-    public onRemovedFromEntity(){
+    public onRemovedFromEntity() {
         if (this.parent)
             this.parent.removeChild(this);
     }
 
-    public reset(){
+    public reset() {
     }
 }

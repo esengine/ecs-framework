@@ -1403,6 +1403,7 @@ var SceneManager = (function () {
         SceneManager.content = new ContentManager();
         SceneManager.stage = stage;
         SceneManager.initialize(stage);
+        SceneManager.timerRuler = new TimeRuler();
     }
     Object.defineProperty(SceneManager, "Instance", {
         get: function () {
@@ -1435,6 +1436,7 @@ var SceneManager = (function () {
         Input.initialize(stage);
     };
     SceneManager.update = function () {
+        SceneManager.startDebugUpdate();
         Time.update(egret.getTimer());
         if (SceneManager._scene) {
             for (var i = GlobalManager.globalManagers.length - 1; i >= 0; i--) {
@@ -1453,6 +1455,7 @@ var SceneManager = (function () {
                 SceneManager._scene.begin();
             }
         }
+        SceneManager.endDebugUpdate();
         SceneManager.render();
     };
     SceneManager.render = function () {
@@ -1492,6 +1495,13 @@ var SceneManager = (function () {
     SceneManager.prototype.onSceneChanged = function () {
         SceneManager.emitter.emit(CoreEvents.SceneChanged);
         Time.sceneChanged();
+    };
+    SceneManager.startDebugUpdate = function () {
+        TimeRuler.Instance.startFrame();
+        TimeRuler.Instance.beginMark("update", 0x00FF00);
+    };
+    SceneManager.endDebugUpdate = function () {
+        TimeRuler.Instance.endMark("update");
     };
     return SceneManager;
 }());
@@ -1866,8 +1876,12 @@ var SpriteRenderer = (function (_super) {
         return this.isVisible;
     };
     SpriteRenderer.prototype.render = function (camera) {
-        this.x = -camera.position.x + camera.origin.x;
-        this.y = -camera.position.y + camera.origin.y;
+        if (this.x != -camera.position.x + camera.origin.x ||
+            this.y != -camera.position.y + camera.origin.y) {
+            this.x = -camera.position.x + camera.origin.x;
+            this.y = -camera.position.y + camera.origin.y;
+            this.entity.onEntityTransformChanged(TransformComponent.position);
+        }
     };
     SpriteRenderer.prototype.onRemovedFromEntity = function () {
         if (this.parent)
@@ -2192,36 +2206,17 @@ var Collider = (function (_super) {
         _this.registeredPhysicsBounds = new Rectangle();
         _this.shouldColliderScaleAndRotateWithTransform = true;
         _this.collidesWithLayers = Physics.allLayers;
-        _this._localOffset = new Vector2(0, 0);
         return _this;
     }
     Object.defineProperty(Collider.prototype, "bounds", {
         get: function () {
             var shapeBounds = this.shape.bounds;
-            var colliderBuonds = new Rectangle(this.x + this.localOffset.x, this.y + this.localOffset.y, shapeBounds.width, shapeBounds.height);
+            var colliderBuonds = new Rectangle(this.entity.x, this.entity.y, shapeBounds.width, shapeBounds.height);
             return colliderBuonds;
         },
         enumerable: true,
         configurable: true
     });
-    Object.defineProperty(Collider.prototype, "localOffset", {
-        get: function () {
-            return this._localOffset;
-        },
-        set: function (value) {
-            this.setLocalOffset(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Collider.prototype.setLocalOffset = function (offset) {
-        if (this._localOffset != offset) {
-            this.unregisterColliderWithPhysicsSystem();
-            this._localOffset = offset;
-            this._localOffsetLength = this._localOffset.length();
-            this.registerColliderWithPhysicsSystem();
-        }
-    };
     Collider.prototype.registerColliderWithPhysicsSystem = function () {
         if (this._isParentEntityAddedToScene && !this._isColliderRegistered) {
             Physics.addCollider(this);
@@ -2238,12 +2233,12 @@ var Collider = (function (_super) {
         return this.shape.overlaps(other.shape);
     };
     Collider.prototype.collidesWith = function (collider, motion) {
-        var oldPosition = this.shape.position;
-        this.shape.position = Vector2.add(this.shape.position, motion);
+        var oldPosition = this.entity.position;
+        this.entity.position = Vector2.add(this.entity.position, motion);
         var result = this.shape.collidesWithShape(collider.shape);
         if (result)
             result.collider = collider;
-        this.shape.position = oldPosition;
+        this.entity.position = oldPosition;
         return result;
     };
     Collider.prototype.onAddedToEntity = function () {
@@ -2259,13 +2254,12 @@ var Collider = (function (_super) {
                 if (this instanceof CircleCollider) {
                     var circleCollider = this;
                     circleCollider.radius = Math.max(width, height) * 0.5;
-                    this.localOffset = bounds.location;
                 }
                 else {
                     this.width = width;
                     this.height = height;
-                    this.localOffset = bounds.location;
                 }
+                this.addChild(this.shape);
             }
             else {
                 console.warn("Collider has no shape and no RenderableComponent. Can't figure out how to size it.");
@@ -2277,6 +2271,7 @@ var Collider = (function (_super) {
     Collider.prototype.onRemovedFromEntity = function () {
         this.unregisterColliderWithPhysicsSystem();
         this._isParentEntityAddedToScene = false;
+        this.removeChild(this.shape);
     };
     Collider.prototype.onEnabled = function () {
         this.registerColliderWithPhysicsSystem();
@@ -2291,8 +2286,8 @@ var Collider = (function (_super) {
     Collider.prototype.update = function () {
         var renderable = this.entity.getComponent(RenderableComponent);
         if (renderable) {
-            this.$setX(renderable.x + this.localOffset.x);
-            this.$setY(renderable.y + this.localOffset.y);
+            this.$setX(renderable.x);
+            this.$setY(renderable.y);
         }
     };
     return Collider;
@@ -2395,8 +2390,6 @@ var PolygonCollider = (function (_super) {
         var isPolygonClosed = points[0] == points[points.length - 1];
         if (isPolygonClosed)
             points.splice(points.length - 1, 1);
-        var center = Polygon.findPolygonCenter(points);
-        _this.setLocalOffset(center);
         Polygon.recenterPolygonVerts(points);
         _this.shape = new Polygon(points);
         return _this;
@@ -4697,9 +4690,7 @@ var Physics = (function () {
 var Shape = (function (_super) {
     __extends(Shape, _super);
     function Shape() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this.position = Vector2.zero;
-        return _this;
+        return _super !== null && _super.apply(this, arguments) || this;
     }
     return Shape;
 }(egret.DisplayObject));
@@ -4713,9 +4704,16 @@ var Polygon = (function (_super) {
         _this.isBox = isBox;
         return _this;
     }
+    Object.defineProperty(Polygon.prototype, "position", {
+        get: function () {
+            return new Vector2(this.parent.x, this.parent.y);
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Polygon.prototype, "bounds", {
         get: function () {
-            return new Rectangle(0, 0, this.width, this.height);
+            return new Rectangle(this.x, this.y, this.width, this.height);
         },
         enumerable: true,
         configurable: true
@@ -4903,6 +4901,13 @@ var Circle = (function (_super) {
         _this._originalRadius = radius;
         return _this;
     }
+    Object.defineProperty(Circle.prototype, "position", {
+        get: function () {
+            return new Vector2(this.parent.x, this.parent.y);
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Circle.prototype, "bounds", {
         get: function () {
             return new Rectangle().setEgretRect(this.getBounds());
@@ -5175,7 +5180,8 @@ var SpatialHash = (function () {
         for (var x = p1.x; x <= p2.x; x++) {
             for (var y = p1.y; y <= p2.y; y++) {
                 var c = this.cellAtPosition(x, y, true);
-                c.push(collider);
+                if (c.indexOf(collider) == -1)
+                    c.push(collider);
             }
         }
     };
@@ -5185,7 +5191,6 @@ var SpatialHash = (function () {
     SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
         var bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
         this._overlapTestCircle.radius = radius;
-        this._overlapTestCircle.position = circleCenter;
         var resultCounter = 0;
         var aabbBroadphaseResult = this.aabbBroadphase(bounds, null, layerMask);
         bounds = aabbBroadphaseResult.bounds;
@@ -6618,6 +6623,8 @@ var TimeRuler = (function () {
         var lock = new LockUtils(this._frameKey);
         lock.lock().then(function () {
             _this._updateCount = parseInt(egret.localStorage.getItem(_this._frameKey), 10);
+            if (isNaN(_this._updateCount))
+                _this._updateCount = 0;
             var count = _this._updateCount;
             count += 1;
             egret.localStorage.setItem(_this._frameKey, count.toString());
@@ -6684,7 +6691,7 @@ var TimeRuler = (function () {
                 throw new Error("exceeded nest count. either set larger number to timeruler.maxnestcall or lower nest calls");
             }
             var markerId = _this._markerNameToIdMap.get(markerName);
-            if (!markerId) {
+            if (isNaN(markerId)) {
                 markerId = _this.markers.length;
                 _this._markerNameToIdMap.set(markerName, markerId);
             }
@@ -6707,7 +6714,7 @@ var TimeRuler = (function () {
                 throw new Error("call beginMark method before calling endMark method");
             }
             var markerId = _this._markerNameToIdMap.get(markerName);
-            if (!markerId) {
+            if (isNaN(markerId)) {
                 throw new Error("Marker " + markerName + " is not registered. Make sure you specifed same name as you used for beginMark method");
             }
             var markerIdx = bar.markerNests[--bar.nestCount];
@@ -6780,7 +6787,7 @@ var TimeRuler = (function () {
         var startY = position.y - (height - TimeRuler.barHeight);
         var y = startY;
     };
-    TimeRuler.maxBars = 0;
+    TimeRuler.maxBars = 8;
     TimeRuler.maxSamples = 256;
     TimeRuler.maxNestCall = 32;
     TimeRuler.barHeight = 8;
@@ -6793,20 +6800,27 @@ var TimeRuler = (function () {
 var FrameLog = (function () {
     function FrameLog() {
         this.bars = new Array(TimeRuler.maxBars);
-        for (var i = 0; i < TimeRuler.maxBars; ++i)
-            this.bars[i] = new MarkerCollection();
+        this.bars.fill(new MarkerCollection(), 0, TimeRuler.maxBars);
     }
     return FrameLog;
 }());
 var MarkerCollection = (function () {
     function MarkerCollection() {
         this.markers = new Array(TimeRuler.maxSamples);
+        this.markCount = 0;
         this.markerNests = new Array(TimeRuler.maxNestCall);
+        this.nestCount = 0;
+        this.markers.fill(new Marker(), 0, TimeRuler.maxSamples);
+        this.markerNests.fill(0, 0, TimeRuler.maxNestCall);
     }
     return MarkerCollection;
 }());
 var Marker = (function () {
     function Marker() {
+        this.markerId = 0;
+        this.beginTime = 0;
+        this.endTime = 0;
+        this.color = 0x000000;
     }
     return Marker;
 }());
@@ -6814,11 +6828,21 @@ var MarkerInfo = (function () {
     function MarkerInfo(name) {
         this.logs = new Array(TimeRuler.maxBars);
         this.name = name;
+        this.logs.fill(new MarkerLog(), 0, TimeRuler.maxBars);
     }
     return MarkerInfo;
 }());
 var MarkerLog = (function () {
     function MarkerLog() {
+        this.snapMin = 0;
+        this.snapMax = 0;
+        this.snapAvg = 0;
+        this.min = 0;
+        this.max = 0;
+        this.avg = 0;
+        this.samples = 0;
+        this.color = 0x000000;
+        this.initialized = false;
     }
     return MarkerLog;
 }());

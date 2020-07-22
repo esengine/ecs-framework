@@ -1403,6 +1403,7 @@ var SceneManager = (function () {
         SceneManager.content = new ContentManager();
         SceneManager.stage = stage;
         SceneManager.initialize(stage);
+        SceneManager.timerRuler = new TimeRuler();
     }
     Object.defineProperty(SceneManager, "Instance", {
         get: function () {
@@ -1435,6 +1436,7 @@ var SceneManager = (function () {
         Input.initialize(stage);
     };
     SceneManager.update = function () {
+        SceneManager.startDebugUpdate();
         Time.update(egret.getTimer());
         if (SceneManager._scene) {
             for (var i = GlobalManager.globalManagers.length - 1; i >= 0; i--) {
@@ -1453,6 +1455,7 @@ var SceneManager = (function () {
                 SceneManager._scene.begin();
             }
         }
+        SceneManager.endDebugUpdate();
         SceneManager.render();
     };
     SceneManager.render = function () {
@@ -1492,6 +1495,13 @@ var SceneManager = (function () {
     SceneManager.prototype.onSceneChanged = function () {
         SceneManager.emitter.emit(CoreEvents.SceneChanged);
         Time.sceneChanged();
+    };
+    SceneManager.startDebugUpdate = function () {
+        TimeRuler.Instance.startFrame();
+        TimeRuler.Instance.beginMark("update", 0x00FF00);
+    };
+    SceneManager.endDebugUpdate = function () {
+        TimeRuler.Instance.endMark("update");
     };
     return SceneManager;
 }());
@@ -1866,8 +1876,12 @@ var SpriteRenderer = (function (_super) {
         return this.isVisible;
     };
     SpriteRenderer.prototype.render = function (camera) {
-        this.x = -camera.position.x + camera.origin.x;
-        this.y = -camera.position.y + camera.origin.y;
+        if (this.x != -camera.position.x + camera.origin.x ||
+            this.y != -camera.position.y + camera.origin.y) {
+            this.x = -camera.position.x + camera.origin.x;
+            this.y = -camera.position.y + camera.origin.y;
+            this.entity.onEntityTransformChanged(TransformComponent.position);
+        }
     };
     SpriteRenderer.prototype.onRemovedFromEntity = function () {
         if (this.parent)
@@ -2192,35 +2206,17 @@ var Collider = (function (_super) {
         _this.registeredPhysicsBounds = new Rectangle();
         _this.shouldColliderScaleAndRotateWithTransform = true;
         _this.collidesWithLayers = Physics.allLayers;
-        _this._localOffset = new Vector2(0, 0);
         return _this;
     }
     Object.defineProperty(Collider.prototype, "bounds", {
         get: function () {
-            this.shape.recalculateBounds(this);
-            return this.shape.bounds;
+            var shapeBounds = this.shape.bounds;
+            var colliderBuonds = new Rectangle(this.entity.x, this.entity.y, shapeBounds.width, shapeBounds.height);
+            return colliderBuonds;
         },
         enumerable: true,
         configurable: true
     });
-    Object.defineProperty(Collider.prototype, "localOffset", {
-        get: function () {
-            return this._localOffset;
-        },
-        set: function (value) {
-            this.setLocalOffset(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Collider.prototype.setLocalOffset = function (offset) {
-        if (this._localOffset != offset) {
-            this.unregisterColliderWithPhysicsSystem();
-            this._localOffset = offset;
-            this._localOffsetLength = this._localOffset.length();
-            this.registerColliderWithPhysicsSystem();
-        }
-    };
     Collider.prototype.registerColliderWithPhysicsSystem = function () {
         if (this._isParentEntityAddedToScene && !this._isColliderRegistered) {
             Physics.addCollider(this);
@@ -2237,12 +2233,12 @@ var Collider = (function (_super) {
         return this.shape.overlaps(other.shape);
     };
     Collider.prototype.collidesWith = function (collider, motion) {
-        var oldPosition = this.shape.position;
-        this.shape.position = Vector2.add(this.shape.position, motion);
+        var oldPosition = this.entity.position;
+        this.entity.position = Vector2.add(this.entity.position, motion);
         var result = this.shape.collidesWithShape(collider.shape);
         if (result)
             result.collider = collider;
-        this.shape.position = oldPosition;
+        this.entity.position = oldPosition;
         return result;
     };
     Collider.prototype.onAddedToEntity = function () {
@@ -2258,14 +2254,12 @@ var Collider = (function (_super) {
                 if (this instanceof CircleCollider) {
                     var circleCollider = this;
                     circleCollider.radius = Math.max(width, height) * 0.5;
-                    this.localOffset = bounds.location;
                 }
                 else {
-                    var boxCollider = this;
-                    boxCollider.width = width;
-                    boxCollider.height = height;
-                    this.localOffset = bounds.location;
+                    this.width = width;
+                    this.height = height;
                 }
+                this.addChild(this.shape);
             }
             else {
                 console.warn("Collider has no shape and no RenderableComponent. Can't figure out how to size it.");
@@ -2277,6 +2271,7 @@ var Collider = (function (_super) {
     Collider.prototype.onRemovedFromEntity = function () {
         this.unregisterColliderWithPhysicsSystem();
         this._isParentEntityAddedToScene = false;
+        this.removeChild(this.shape);
     };
     Collider.prototype.onEnabled = function () {
         this.registerColliderWithPhysicsSystem();
@@ -2291,8 +2286,8 @@ var Collider = (function (_super) {
     Collider.prototype.update = function () {
         var renderable = this.entity.getComponent(RenderableComponent);
         if (renderable) {
-            this.$setX(renderable.x + this.localOffset.x);
-            this.$setY(renderable.y + this.localOffset.y);
+            this.$setX(renderable.x);
+            this.$setY(renderable.y);
         }
     };
     return Collider;
@@ -2395,8 +2390,6 @@ var PolygonCollider = (function (_super) {
         var isPolygonClosed = points[0] == points[points.length - 1];
         if (isPolygonClosed)
             points.splice(points.length - 1, 1);
-        var center = Polygon.findPolygonCenter(points);
-        _this.setLocalOffset(center);
         Polygon.recenterPolygonVerts(points);
         _this.shape = new Polygon(points);
         return _this;
@@ -4402,6 +4395,13 @@ var Rectangle = (function (_super) {
         }
         return boundsPoint;
     };
+    Rectangle.prototype.setEgretRect = function (rect) {
+        this.x = rect.x;
+        this.y = rect.y;
+        this.width = rect.width;
+        this.height = rect.height;
+        return this;
+    };
     Rectangle.rectEncompassingPoints = function (points) {
         var minX = Number.POSITIVE_INFINITY;
         var minY = Number.POSITIVE_INFINITY;
@@ -4687,24 +4687,37 @@ var Physics = (function () {
     Physics.allLayers = -1;
     return Physics;
 }());
-var Shape = (function () {
+var Shape = (function (_super) {
+    __extends(Shape, _super);
     function Shape() {
-        this.bounds = new Rectangle();
-        this.position = Vector2.zero;
+        return _super !== null && _super.apply(this, arguments) || this;
     }
     return Shape;
-}());
+}(egret.DisplayObject));
 var Polygon = (function (_super) {
     __extends(Polygon, _super);
     function Polygon(points, isBox) {
         var _this = _super.call(this) || this;
-        _this.isUnrotated = true;
         _this._areEdgeNormalsDirty = true;
         _this.center = new Vector2();
         _this.setPoints(points);
         _this.isBox = isBox;
         return _this;
     }
+    Object.defineProperty(Polygon.prototype, "position", {
+        get: function () {
+            return new Vector2(this.parent.x, this.parent.y);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Polygon.prototype, "bounds", {
+        get: function () {
+            return new Rectangle(this.x, this.y, this.width, this.height);
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Polygon.prototype, "edgeNormals", {
         get: function () {
             if (this._areEdgeNormalsDirty)
@@ -4829,36 +4842,6 @@ var Polygon = (function (_super) {
         }
         return verts;
     };
-    Polygon.prototype.recalculateBounds = function (collider) {
-        var localOffset = collider.localOffset;
-        if (collider.shouldColliderScaleAndRotateWithTransform) {
-            var hasUnitScale = true;
-            var tempMat = void 0;
-            var combinedMatrix = Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
-            if (collider.entity.scale != Vector2.one) {
-                tempMat = Matrix2D.createScale(collider.entity.scale.x, collider.entity.scale.y);
-                combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
-                hasUnitScale = false;
-                var scaledOffset = Vector2.multiply(collider.localOffset, collider.entity.scale);
-                localOffset = scaledOffset;
-            }
-            if (collider.entity.rotation != 0) {
-                tempMat = Matrix2D.createRotation(collider.entity.rotation, tempMat);
-                combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
-                var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
-                var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
-                localOffset = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
-            }
-            tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
-            combinedMatrix = Matrix2D.multiply(combinedMatrix, tempMat);
-            Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
-            this.isUnrotated = collider.entity.rotation == 0;
-        }
-        this.position = Vector2.add(collider.entity.position, localOffset);
-        this.bounds = Rectangle.rectEncompassingPoints(this.points);
-        this.bounds.location = Vector2.add(this.bounds.location, this.position);
-        this.center = localOffset;
-    };
     return Polygon;
 }(Shape));
 var Box = (function (_super) {
@@ -4880,16 +4863,14 @@ var Box = (function (_super) {
         return verts;
     };
     Box.prototype.overlaps = function (other) {
-        if (this.isUnrotated) {
-            if (other instanceof Box && other.isUnrotated)
-                return this.bounds.intersects(other.bounds);
-            if (other instanceof Circle)
-                return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
-        }
+        if (other instanceof Box)
+            return this.bounds.intersects(other.bounds);
+        if (other instanceof Circle)
+            return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
         return _super.prototype.overlaps.call(this, other);
     };
     Box.prototype.collidesWithShape = function (other) {
-        if (this.isUnrotated && other instanceof Box && other.isUnrotated) {
+        if (other instanceof Box) {
             return ShapeCollisions.boxToBox(this, other);
         }
         return _super.prototype.collidesWithShape.call(this, other);
@@ -4907,9 +4888,7 @@ var Box = (function (_super) {
             this._originalPoints[i] = this.points[i];
     };
     Box.prototype.containsPoint = function (point) {
-        if (this.isUnrotated)
-            return this.bounds.contains(point.x, point.y);
-        return _super.prototype.containsPoint.call(this, point);
+        return this.bounds.contains(point.x, point.y);
     };
     return Box;
 }(Polygon));
@@ -4922,11 +4901,25 @@ var Circle = (function (_super) {
         _this._originalRadius = radius;
         return _this;
     }
+    Object.defineProperty(Circle.prototype, "position", {
+        get: function () {
+            return new Vector2(this.parent.x, this.parent.y);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Circle.prototype, "bounds", {
+        get: function () {
+            return new Rectangle().setEgretRect(this.getBounds());
+        },
+        enumerable: true,
+        configurable: true
+    });
     Circle.prototype.pointCollidesWithShape = function (point) {
         return ShapeCollisions.pointToCircle(point, this);
     };
     Circle.prototype.collidesWithShape = function (other) {
-        if (other instanceof Box && other.isUnrotated) {
+        if (other instanceof Box) {
             return ShapeCollisions.circleToBox(this, other);
         }
         if (other instanceof Circle) {
@@ -4937,24 +4930,8 @@ var Circle = (function (_super) {
         }
         throw new Error("Collisions of Circle to " + other + " are not supported");
     };
-    Circle.prototype.recalculateBounds = function (collider) {
-        this.center = collider.localOffset;
-        if (collider.shouldColliderScaleAndRotateWithTransform) {
-            var scale = collider.entity.scale;
-            var hasUnitScale = scale.x == 1 && scale.y == 1;
-            var maxScale = Math.max(scale.x, scale.y);
-            this.radius = this._originalRadius * maxScale;
-            if (collider.entity.rotation != 0) {
-                var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
-                var offsetLength = hasUnitScale ? collider._localOffsetLength : (Vector2.multiply(collider.localOffset, collider.entity.scale)).length();
-                this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, MathHelper.toDegrees(collider.entity.rotation) + offsetAngle);
-            }
-        }
-        this.position = Vector2.add(collider.entity.position, this.center);
-        this.bounds = new Rectangle(this.position.x - this.radius, this.position.y - this.radius, this.radius * 2, this.radius * 2);
-    };
     Circle.prototype.overlaps = function (other) {
-        if (other instanceof Box && other.isUnrotated)
+        if (other instanceof Box)
             return Collisions.isRectToCircle(other.bounds, this.position, this.radius);
         if (other instanceof Circle)
             return Collisions.isCircleToCircle(this.position, this.radius, other.position, other.radius);
@@ -5203,7 +5180,8 @@ var SpatialHash = (function () {
         for (var x = p1.x; x <= p2.x; x++) {
             for (var y = p1.y; y <= p2.y; y++) {
                 var c = this.cellAtPosition(x, y, true);
-                c.push(collider);
+                if (c.indexOf(collider) == -1)
+                    c.push(collider);
             }
         }
     };
@@ -5213,7 +5191,6 @@ var SpatialHash = (function () {
     SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
         var bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
         this._overlapTestCircle.radius = radius;
-        this._overlapTestCircle.position = circleCenter;
         var resultCounter = 0;
         var aabbBroadphaseResult = this.aabbBroadphase(bounds, null, layerMask);
         bounds = aabbBroadphaseResult.bounds;
@@ -5306,13 +5283,7 @@ var NumberDictionary = (function () {
         this._store = new Map();
     }
     NumberDictionary.prototype.getKey = function (x, y) {
-        return Long.fromNumber(x).shiftLeft(32).or(this.intToUint(y)).toString();
-    };
-    NumberDictionary.prototype.intToUint = function (i) {
-        if (i >= 0)
-            return i;
-        else
-            return 4294967296 + i;
+        return Long.fromNumber(x).shiftLeft(32).or(Long.fromNumber(y, false)).toString();
     };
     NumberDictionary.prototype.add = function (x, y, list) {
         this._store.set(this.getKey(x, y), list);
@@ -6296,8 +6267,12 @@ var RectangleExt = (function () {
     }
     RectangleExt.union = function (first, point) {
         var rect = new Rectangle(point.x, point.y, 0, 0);
-        var rectResult = first.union(rect);
-        return new Rectangle(rectResult.x, rectResult.y, rectResult.width, rectResult.height);
+        var result = new Rectangle();
+        result.x = Math.min(first.x, rect.x);
+        result.y = Math.min(first.y, rect.y);
+        result.width = Math.max(first.right, rect.right) - result.x;
+        result.height = Math.max(first.bottom, result.bottom) - result.y;
+        return result;
     };
     return RectangleExt;
 }());
@@ -6648,6 +6623,8 @@ var TimeRuler = (function () {
         var lock = new LockUtils(this._frameKey);
         lock.lock().then(function () {
             _this._updateCount = parseInt(egret.localStorage.getItem(_this._frameKey), 10);
+            if (isNaN(_this._updateCount))
+                _this._updateCount = 0;
             var count = _this._updateCount;
             count += 1;
             egret.localStorage.setItem(_this._frameKey, count.toString());
@@ -6714,7 +6691,7 @@ var TimeRuler = (function () {
                 throw new Error("exceeded nest count. either set larger number to timeruler.maxnestcall or lower nest calls");
             }
             var markerId = _this._markerNameToIdMap.get(markerName);
-            if (!markerId) {
+            if (isNaN(markerId)) {
                 markerId = _this.markers.length;
                 _this._markerNameToIdMap.set(markerName, markerId);
             }
@@ -6737,7 +6714,7 @@ var TimeRuler = (function () {
                 throw new Error("call beginMark method before calling endMark method");
             }
             var markerId = _this._markerNameToIdMap.get(markerName);
-            if (!markerId) {
+            if (isNaN(markerId)) {
                 throw new Error("Marker " + markerName + " is not registered. Make sure you specifed same name as you used for beginMark method");
             }
             var markerIdx = bar.markerNests[--bar.nestCount];
@@ -6810,7 +6787,7 @@ var TimeRuler = (function () {
         var startY = position.y - (height - TimeRuler.barHeight);
         var y = startY;
     };
-    TimeRuler.maxBars = 0;
+    TimeRuler.maxBars = 8;
     TimeRuler.maxSamples = 256;
     TimeRuler.maxNestCall = 32;
     TimeRuler.barHeight = 8;
@@ -6823,20 +6800,27 @@ var TimeRuler = (function () {
 var FrameLog = (function () {
     function FrameLog() {
         this.bars = new Array(TimeRuler.maxBars);
-        for (var i = 0; i < TimeRuler.maxBars; ++i)
-            this.bars[i] = new MarkerCollection();
+        this.bars.fill(new MarkerCollection(), 0, TimeRuler.maxBars);
     }
     return FrameLog;
 }());
 var MarkerCollection = (function () {
     function MarkerCollection() {
         this.markers = new Array(TimeRuler.maxSamples);
+        this.markCount = 0;
         this.markerNests = new Array(TimeRuler.maxNestCall);
+        this.nestCount = 0;
+        this.markers.fill(new Marker(), 0, TimeRuler.maxSamples);
+        this.markerNests.fill(0, 0, TimeRuler.maxNestCall);
     }
     return MarkerCollection;
 }());
 var Marker = (function () {
     function Marker() {
+        this.markerId = 0;
+        this.beginTime = 0;
+        this.endTime = 0;
+        this.color = 0x000000;
     }
     return Marker;
 }());
@@ -6844,11 +6828,21 @@ var MarkerInfo = (function () {
     function MarkerInfo(name) {
         this.logs = new Array(TimeRuler.maxBars);
         this.name = name;
+        this.logs.fill(new MarkerLog(), 0, TimeRuler.maxBars);
     }
     return MarkerInfo;
 }());
 var MarkerLog = (function () {
     function MarkerLog() {
+        this.snapMin = 0;
+        this.snapMax = 0;
+        this.snapAvg = 0;
+        this.min = 0;
+        this.max = 0;
+        this.avg = 0;
+        this.samples = 0;
+        this.color = 0x000000;
+        this.initialized = false;
     }
     return MarkerLog;
 }());

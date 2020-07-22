@@ -12,6 +12,7 @@ class SceneManager {
     public static content: ContentManager;
     /** 简化对内部类的全局内容实例的访问 */
     private static _instnace: SceneManager;
+    private static timerRuler: TimeRuler;
     public static get Instance(){
         return this._instnace;
     }
@@ -25,6 +26,7 @@ class SceneManager {
 
         SceneManager.stage = stage;
         SceneManager.initialize(stage);
+        SceneManager.timerRuler = new TimeRuler();
     }
 
     public static get scene() {
@@ -50,6 +52,7 @@ class SceneManager {
     }
 
     public static update() {
+        SceneManager.startDebugUpdate();
         Time.update(egret.getTimer());
 
         if (SceneManager._scene) {
@@ -74,6 +77,7 @@ class SceneManager {
             }
         }
 
+        SceneManager.endDebugUpdate();
         SceneManager.render();
     }
 
@@ -127,5 +131,14 @@ class SceneManager {
     public onSceneChanged(){
         SceneManager.emitter.emit(CoreEvents.SceneChanged);
         Time.sceneChanged();
+    }
+
+    private static startDebugUpdate(){
+        TimeRuler.Instance.startFrame();
+        TimeRuler.Instance.beginMark("update", 0x00FF00);
+    }
+
+    private static endDebugUpdate(){
+        TimeRuler.Instance.endMark("update");
     }
 }

@@ -16,8 +16,6 @@ class PolygonCollider extends Collider {
         if (isPolygonClosed)
             points.splice(points.length - 1, 1);
 
-        let center = Polygon.findPolygonCenter(points);
-        this.setLocalOffset(center);
         Polygon.recenterPolygonVerts(points);
         this.shape = new Polygon(points);
     }

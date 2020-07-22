@@ -36,7 +36,7 @@ class ListPool {
     /**
      * 如果可以的话，从堆栈中弹出一个项
      */
-    public static obtain<T>(): Array<T>{
+    public static obtain<T>(): T[] {
         if (this._objectQueue.length > 0)
             return this._objectQueue.shift();
 

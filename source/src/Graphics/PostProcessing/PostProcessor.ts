@@ -1,5 +1,5 @@
 class PostProcessor {
-    public enable: boolean;
+    public enabled: boolean;
     public effect: egret.Filter;
     public scene: Scene;
     public shape: egret.Shape;
@@ -23,7 +23,7 @@ class PostProcessor {
         "}";
 
     constructor(effect: egret.Filter = null){
-        this.enable = true;
+        this.enabled = true;
         this.effect = effect;
     }
 

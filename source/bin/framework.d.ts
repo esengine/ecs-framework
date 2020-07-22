@@ -245,7 +245,7 @@ declare class Entity extends egret.DisplayObjectContainer {
     getOrCreateComponent<T extends Component>(type: T): T;
     getComponent<T extends Component>(type: any): T;
     getComponents(typeName: string | any, componentList?: any): any;
-    private onEntityTransformChanged;
+    onEntityTransformChanged(comp: TransformComponent): void;
     removeComponentForType<T extends Component>(type: any): boolean;
     removeComponent(component: Component): void;
     removeAllComponents(): void;
@@ -300,6 +300,7 @@ declare class SceneManager {
     static emitter: Emitter<CoreEvents>;
     static content: ContentManager;
     private static _instnace;
+    private static timerRuler;
     static readonly Instance: SceneManager;
     constructor(stage: egret.Stage);
     static scene: Scene;
@@ -309,6 +310,8 @@ declare class SceneManager {
     static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
     static registerActiveSceneChanged(current: Scene, next: Scene): void;
     onSceneChanged(): void;
+    private static startDebugUpdate;
+    private static endDebugUpdate;
 }
 declare class Camera extends Component {
     private _zoom;
@@ -488,14 +491,10 @@ declare abstract class Collider extends Component {
     registeredPhysicsBounds: Rectangle;
     shouldColliderScaleAndRotateWithTransform: boolean;
     collidesWithLayers: number;
-    _localOffsetLength: number;
     protected _isParentEntityAddedToScene: any;
     protected _colliderRequiresAutoSizing: any;
-    protected _localOffset: Vector2;
     protected _isColliderRegistered: any;
     readonly bounds: Rectangle;
-    localOffset: Vector2;
-    setLocalOffset(offset: Vector2): void;
     registerColliderWithPhysicsSystem(): void;
     unregisterColliderWithPhysicsSystem(): void;
     overlaps(other: Collider): any;
@@ -958,8 +957,8 @@ declare class Physics {
 }
 declare abstract class Shape extends egret.DisplayObject {
     abstract bounds: Rectangle;
-    position: Vector2;
     abstract center: Vector2;
+    abstract position: Vector2;
     abstract pointCollidesWithShape(point: Vector2): CollisionResult;
     abstract overlaps(other: Shape): any;
     abstract collidesWithShape(other: Shape): CollisionResult;
@@ -970,6 +969,7 @@ declare class Polygon extends Shape {
     private _areEdgeNormalsDirty;
     protected _originalPoints: Vector2[];
     center: Vector2;
+    readonly position: Vector2;
     readonly bounds: Rectangle;
     _edgeNormals: Vector2[];
     readonly edgeNormals: Vector2[];
@@ -1003,6 +1003,7 @@ declare class Circle extends Shape {
     radius: number;
     _originalRadius: number;
     center: Vector2;
+    readonly position: Vector2;
     readonly bounds: Rectangle;
     constructor(radius: number);
     pointCollidesWithShape(point: Vector2): CollisionResult;
@@ -1409,6 +1410,7 @@ declare class MarkerCollection {
     markCount: number;
     markerNests: number[];
     nestCount: number;
+    constructor();
 }
 declare class Marker {
     markerId: number;

@@ -1,13 +1,22 @@
 ///<reference path="./Shape.ts" />
+/**
+ * 多边形
+ */
 class Polygon extends Shape {
+    /** 组成多边形的点。它们应该是CW和凸的。 */
     public points: Vector2[];
     private _polygonCenter: Vector2;
     private _areEdgeNormalsDirty = true;
     protected _originalPoints: Vector2[];
     public center = new Vector2();
+    /** 
+     * 多边形坐标
+     * 此为内部字段 可访问
+     */
+    public position: Vector2 = Vector2.zero;
 
     public get bounds(){
-        return new Rectangle(0, 0, this.width, this.height);
+        return new Rectangle(this.position.x, this.position.y, 0, 0);
     }
 
     public _edgeNormals: Vector2[];
@@ -156,6 +165,11 @@ class Polygon extends Shape {
         edgeNormal = Vector2.normalize(edgeNormal);
 
         return { closestPoint: closestPoint, distanceSquared: distanceSquared, edgeNormal: edgeNormal };
+    }
+
+    public recalculateBounds(collider: Collider){
+        // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
+        
     }
 
     public pointCollidesWithShape(point: Vector2): CollisionResult {
