@@ -14,7 +14,7 @@ class Sprite {
         this.origin = origin;
 
         let inverseTexW = 1 / texture.textureWidth;
-        let inverseTexH = 1 / texture.textureHeight
+        let inverseTexH = 1 / texture.textureHeight;
 
         this.uvs.x = sourceRect.x * inverseTexW;
         this.uvs.y = sourceRect.y * inverseTexH;

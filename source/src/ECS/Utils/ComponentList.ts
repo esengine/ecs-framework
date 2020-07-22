@@ -1,5 +1,10 @@
+///<reference path="../Components/IUpdatableComparer.ts" />
 module es {
     export class ComponentList {
+        /**
+         * 组件列表的全局updateOrder排序
+         */
+        public static compareUpdatableOrder: IUpdatableComparer = new IUpdatableComparer();
         public _entity: Entity;
 
         /**
@@ -15,6 +20,10 @@ module es {
          */
         public _componentsToRemove: Component[] = [];
         public _tempBufferList: Component[] = [];
+        /**
+         * 用于确定是否需要对该框架中的组件进行排序的标志
+         */
+        public _isComponentListUnsorted: boolean;
 
         constructor(entity: Entity) {
             this._entity = entity;
@@ -28,13 +37,17 @@ module es {
             return this._components;
         }
 
+        public markEntityListUnsorted(){
+            this._isComponentListUnsorted = true;
+        }
+
         public add(component: Component) {
             this._componentsToAdd.push(component);
         }
 
         public remove(component: Component) {
             if (this._componentsToRemove.contains(component))
-                console.warn(`You are trying to remove a Component (${component}) that you already removed`)
+                console.warn(`You are trying to remove a Component (${component}) that you already removed`);
 
             // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
             if (this._componentsToAdd.contains(component)) {
@@ -111,6 +124,7 @@ module es {
 
                 // 在调用onAddedToEntity之前清除，以防添加更多组件
                 this._componentsToAdd.length = 0;
+                this._isComponentListUnsorted = true;
 
                 // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
                 for (let i = 0; i < this._tempBufferList.length; i++) {
@@ -124,6 +138,11 @@ module es {
                 }
 
                 this._tempBufferList.length = 0;
+            }
+
+            if (this._isComponentListUnsorted){
+                this._components.sort(ComponentList.compareUpdatableOrder.compare);
+                this._isComponentListUnsorted = false;
             }
         }
 
@@ -216,7 +235,7 @@ module es {
             }
         }
 
-        public onEntityTransformChanged(comp: Transform.Component) {
+        public onEntityTransformChanged(comp: transform.Component) {
             for (let i = 0; i < this._components.length; i++) {
                 if (this._components[i].enabled)
                     this._components[i].onEntityTransformChanged(comp);

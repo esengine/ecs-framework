@@ -133,7 +133,7 @@ module es {
             this.componentBits = new BitSet();
         }
 
-        public onTransformChanged(comp: Transform.Component) {
+        public onTransformChanged(comp: transform.Component) {
             // 通知我们的子项改变了位置
             this.components.onEntityTransformChanged(comp);
         }

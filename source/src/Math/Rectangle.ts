@@ -138,6 +138,13 @@ class Rectangle extends egret.Rectangle {
         return boundsPoint;
     }
 
+    public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number){
+        this.x = parentPosition.x + position.x - origin.x * scale.x;
+        this.y = parentPosition.y + position.y - origin.y * scale.y;
+        this.width = width * scale.x;
+        this.height = height * scale.y;
+    }
+
     /**
      * 将egret矩形转化为Rectangle
      * @param rect 

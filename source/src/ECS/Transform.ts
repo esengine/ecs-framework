@@ -1,9 +1,22 @@
+module transform {
+    export enum Component {
+        position,
+        scale,
+        rotation,
+    }
+}
+
 module es {
+    export enum DirtyType {
+        clean,
+        positionDirty,
+        scaleDirty,
+        rotationDirty,
+    }
+
     export class Transform {
         /** 与此转换关联的实体 */
         public readonly entity: Entity;
-
-        private _parent: Transform;
         /**
          * 获取此转换的父转换
          */
@@ -38,6 +51,9 @@ module es {
          * 变换在世界空间的缩放
          */
         public scale: Vector2;
+
+        public _parent: Transform;
+        public hierarchyDirty: DirtyType;
         public _children: Transform[];
 
         constructor(entity: Entity) {
@@ -68,6 +84,7 @@ module es {
             }
 
             this._parent = parent;
+            this.setDirty(DirtyType.positionDirty);
 
             return this;
         }
@@ -79,6 +96,7 @@ module es {
          */
         public setPosition(x: number, y: number): Transform {
             this.position = new Vector2(x, y);
+            this.setDirty(DirtyType.positionDirty);
             return this;
         }
 
@@ -88,6 +106,7 @@ module es {
          */
         public setRotation(degrees: number): Transform {
             this.rotation = degrees;
+            this.setDirty(DirtyType.rotationDirty);
             return this;
         }
 
@@ -97,6 +116,7 @@ module es {
          */
         public setScale(scale: Vector2): Transform {
             this.scale = scale;
+            this.setDirty(DirtyType.scaleDirty);
             return this;
         }
 
@@ -117,6 +137,31 @@ module es {
             this.position = this.position.round();
         }
 
+        public setDirty(dirtyFlagType: DirtyType){
+            if ((this.hierarchyDirty & dirtyFlagType) == 0){
+                this.hierarchyDirty |= dirtyFlagType;
+
+                switch (dirtyFlagType) {
+                    case es.DirtyType.positionDirty:
+                        this.entity.onTransformChanged(transform.Component.position);
+                        break;
+                    case es.DirtyType.rotationDirty:
+                        this.entity.onTransformChanged(transform.Component.rotation);
+                        break;
+                    case es.DirtyType.scaleDirty:
+                        this.entity.onTransformChanged(transform.Component.scale);
+                        break;
+                }
+
+                if (!this._children)
+                    this._children = [];
+
+                // 告诉子项发生了变换
+                for (let i = 0; i < this._children.length; i ++)
+                    this._children[i].setDirty(dirtyFlagType);
+            }
+        }
+
         /**
          * 从另一个transform属性进行拷贝
          * @param transform
@@ -125,14 +170,10 @@ module es {
             this.position = transform.position;
             this.rotation = transform.rotation;
             this.scale = transform.scale;
-        }
-    }
-}
 
-module Transform {
-    export enum Component {
-        position,
-        scale,
-        rotation,
+            this.setDirty(DirtyType.positionDirty);
+            this.setDirty(DirtyType.rotationDirty);
+            this.setDirty(DirtyType.scaleDirty);
+        }
     }
 }

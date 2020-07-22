@@ -43,4 +43,17 @@ class DrawUtils {
         shape.graphics.drawRect(destRect.x, destRect.y, destRect.width, destRect.height);
         shape.graphics.endFill();
     }
+
+    public static getColorMatrix(color: number): egret.ColorMatrixFilter{
+        let colorMatrix = [
+            1, 0, 0, 0, 0,
+            0, 1, 0, 0, 0,
+            0, 0, 1, 0, 0,
+            0, 0, 0, 1, 0
+        ];
+        colorMatrix[0] = Math.floor(color / 256 / 256) / 255;
+        colorMatrix[6] = Math.floor(color / 256 % 256) / 255;
+        colorMatrix[12] = color % 256 / 255;
+        return new egret.ColorMatrixFilter(colorMatrix);
+    }
 }
