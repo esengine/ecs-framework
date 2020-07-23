@@ -248,7 +248,6 @@ declare module es {
 }
 declare module es {
     class Core extends egret.DisplayObjectContainer {
-        static activeSceneChanged: Function;
         static emitter: Emitter<CoreEvents>;
         static graphicsDevice: GraphicsDevice;
         static content: ContentManager;
@@ -260,6 +259,7 @@ declare module es {
         _globalManagers: GlobalManager[];
         static scene: Scene;
         constructor();
+        private onAddToStage;
         onOrientationChanged(): void;
         protected onGraphicsDeviceReset(): void;
         protected initialize(): void;
@@ -269,7 +269,6 @@ declare module es {
         endDebugUpdate(): void;
         onSceneChanged(): void;
         static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
-        static registerActiveSceneChanged(current: Scene, next: Scene): void;
         static registerGlobalManager(manager: es.GlobalManager): void;
         static unregisterGlobalManager(manager: es.GlobalManager): void;
         static getGlobalManager<T extends es.GlobalManager>(type: any): T;
@@ -1679,7 +1678,8 @@ declare module es {
         static readonly logSnapDuration: number;
         static readonly barPadding: number;
         static readonly autoAdjustDelay: number;
-        static Instance: TimeRuler;
+        private static _instance;
+        static readonly Instance: TimeRuler;
         private _frameKey;
         private _logKey;
         private _logs;

@@ -1,56 +1,64 @@
-class PlayerController extends Component {
-    private down: boolean = false;
-    private touchPoint: Vector2 = Vector2.zero;
-    private mover: Mover;
-    private spriteRenderer: SpriteRenderer;
+module component {
+    import Component = es.Component;
+    import Vector2 = es.Vector2;
+    import Mover = es.Mover;
+    import SpriteRenderer = es.SpriteRenderer;
+    import Time = es.Time;
+    import Input = es.Input;
 
-    public onAddedToEntity(){
-        this.entity.scene.stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
-        this.entity.scene.stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchBegin, this);
-        this.entity.scene.stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
-    }
+    export class PlayerController extends Component {
+        private down: boolean = false;
+        private touchPoint: Vector2 = Vector2.zero;
+        private mover: Mover;
+        private spriteRenderer: SpriteRenderer;
 
-    private touchBegin(evt: egret.TouchEvent){
-        this.down = true;
-        this.touchPoint = new Vector2(evt.stageX, evt.stageY);
-    }
+        public onAddedToEntity(){
+            this.entity.scene.stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
+            this.entity.scene.stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchBegin, this);
+            this.entity.scene.stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
+        }
 
-    private touchEnd(evt: egret.TouchEvent){
-        this.down = false;
-        this.touchPoint = new Vector2(evt.stageX, evt.stageY);
-    }
+        private touchBegin(evt: egret.TouchEvent){
+            this.down = true;
+            this.touchPoint = new Vector2(evt.stageX, evt.stageY);
+        }
 
-    public update(){
-        if (!this.mover)
-            this.mover = this.entity.getComponent<Mover>(Mover);
+        private touchEnd(evt: egret.TouchEvent){
+            this.down = false;
+            this.touchPoint = new Vector2(evt.stageX, evt.stageY);
+        }
 
-        if (!this.spriteRenderer)
-            this.spriteRenderer = this.entity.getComponent<SpriteRenderer>(SpriteRenderer);
+        public update(){
+            if (!this.mover)
+                this.mover = this.entity.getComponent<Mover>(Mover);
 
-        if (!this.mover)
-            return;
+            if (!this.spriteRenderer)
+                this.spriteRenderer = this.entity.getComponent<SpriteRenderer>(SpriteRenderer);
 
-        if (!SpriteRenderer)
-            return;
+            if (!this.mover)
+                return;
 
-        if (this.down){
-            let camera = SceneManager.scene.camera;
-            let moveLeft: number = 0;
-            let moveRight: number = 0;
-            let speed = 100;
-            let worldPos = Input.touchPosition;
-            if (worldPos.x < this.spriteRenderer.localPosition.x){
-                moveLeft = -1;
-            } else if(worldPos.x > this.spriteRenderer.localPosition.x){
-                moveLeft = 1;
+            if (!SpriteRenderer)
+                return;
+
+            if (this.down){
+                let moveLeft: number = 0;
+                let moveRight: number = 0;
+                let speed = 100;
+                let worldPos = Input.touchPosition;
+                if (worldPos.x < this.spriteRenderer.transform.position.x){
+                    moveLeft = -1;
+                } else if(worldPos.x > this.spriteRenderer.transform.position.x){
+                    moveLeft = 1;
+                }
+
+                if (worldPos.y < this.spriteRenderer.transform.position.y){
+                    moveRight = -1;
+                } else if(worldPos.y > this.spriteRenderer.transform.position.y){
+                    moveRight = 1;
+                }
+                this.mover.move(new Vector2(moveLeft * speed * Time.deltaTime, moveRight * speed * Time.deltaTime));
             }
-
-            if (worldPos.y < this.spriteRenderer.localPosition.y){
-                moveRight = -1;
-            } else if(worldPos.y > this.spriteRenderer.localPosition.y){
-                moveRight = 1;
-            }
-            this.mover.move(new Vector2(moveLeft * speed * Time.deltaTime, moveRight * speed * Time.deltaTime));
         }
     }
 }

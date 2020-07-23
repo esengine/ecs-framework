@@ -4,10 +4,6 @@ module es {
      */
     export class Core extends egret.DisplayObjectContainer {
         /**
-         * 订阅此事件以在活动场景发生更改时得到通知。
-         */
-        public static activeSceneChanged: Function;
-        /**
          * 核心发射器。只发出核心级别的事件
          */
         public static emitter: Emitter<CoreEvents>;
@@ -44,6 +40,8 @@ module es {
          * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
          */
         public static get scene() {
+            if (!this._instance)
+                return null;
             return this._instance._scene;
         }
 
@@ -64,8 +62,6 @@ module es {
             } else {
                 this._instance._nextScene = value;
             }
-
-            this.registerActiveSceneChanged(this._instance._scene, this._instance._nextScene);
         }
 
         constructor() {
@@ -73,14 +69,20 @@ module es {
 
             Core._instance = this;
             Core.emitter = new Emitter<CoreEvents>();
-            Core.graphicsDevice = new GraphicsDevice();
             Core.content = new ContentManager();
 
-            this.addEventListener(egret.Event.ADDED_TO_STAGE, this.initialize, this);
+            this.addEventListener(egret.Event.ADDED_TO_STAGE, this.onAddToStage, this);
+        }
+
+        private onAddToStage(){
+            Core.graphicsDevice = new GraphicsDevice();
+
             this.addEventListener(egret.Event.RESIZE, this.onGraphicsDeviceReset, this);
             this.addEventListener(egret.StageOrientationEvent.ORIENTATION_CHANGE, this.onOrientationChanged, this);
             this.addEventListener(egret.Event.ENTER_FRAME, this.update, this);
             this.addEventListener(egret.Event.RENDER, this.draw, this);
+
+            this.initialize();
         }
 
         public onOrientationChanged(){
@@ -188,11 +190,6 @@ module es {
 
             this._instance._sceneTransition = sceneTransition;
             return sceneTransition;
-        }
-
-        public static registerActiveSceneChanged(current: Scene, next: Scene){
-            if (this.activeSceneChanged)
-                this.activeSceneChanged(current, next);
         }
 
         /**

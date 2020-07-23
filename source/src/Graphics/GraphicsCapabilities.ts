@@ -6,6 +6,8 @@ module es {
         }
 
         private platformInitialize(device: GraphicsDevice){
+            if (GraphicsCapabilities.runtimeType != egret.RuntimeType.WXGAME)
+                return;
             let capabilities = this;
             capabilities["isMobile"] = true;
 

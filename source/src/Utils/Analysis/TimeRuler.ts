@@ -17,7 +17,12 @@ module es {
         public static readonly logSnapDuration = 120;
         public static readonly barPadding = 2;
         public static readonly autoAdjustDelay = 30;
-        public static Instance: TimeRuler;
+        private static _instance;
+        public static get Instance(): TimeRuler{
+            if (!this._instance)
+                this._instance = new TimeRuler();
+            return this._instance;
+        }
         private _frameKey = 'frame';
         private _logKey = 'log';
 
@@ -56,7 +61,6 @@ module es {
         private _frameAdjust: number;
 
         constructor() {
-            TimeRuler.Instance = this;
             this._logs = new Array<FrameLog>(2);
             for (let i = 0; i < this._logs.length; ++i)
                 this._logs[i] = new FrameLog();

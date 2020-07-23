@@ -1105,13 +1105,8 @@ var es;
             _this._globalManagers = [];
             Core._instance = _this;
             Core.emitter = new es.Emitter();
-            Core.graphicsDevice = new es.GraphicsDevice();
             Core.content = new es.ContentManager();
-            _this.addEventListener(egret.Event.ADDED_TO_STAGE, _this.initialize, _this);
-            _this.addEventListener(egret.Event.RESIZE, _this.onGraphicsDeviceReset, _this);
-            _this.addEventListener(egret.StageOrientationEvent.ORIENTATION_CHANGE, _this.onOrientationChanged, _this);
-            _this.addEventListener(egret.Event.ENTER_FRAME, _this.update, _this);
-            _this.addEventListener(egret.Event.RENDER, _this.draw, _this);
+            _this.addEventListener(egret.Event.ADDED_TO_STAGE, _this.onAddToStage, _this);
             return _this;
         }
         Object.defineProperty(Core, "Instance", {
@@ -1123,6 +1118,8 @@ var es;
         });
         Object.defineProperty(Core, "scene", {
             get: function () {
+                if (!this._instance)
+                    return null;
                 return this._instance._scene;
             },
             set: function (value) {
@@ -1138,11 +1135,18 @@ var es;
                 else {
                     this._instance._nextScene = value;
                 }
-                this.registerActiveSceneChanged(this._instance._scene, this._instance._nextScene);
             },
             enumerable: true,
             configurable: true
         });
+        Core.prototype.onAddToStage = function () {
+            Core.graphicsDevice = new es.GraphicsDevice();
+            this.addEventListener(egret.Event.RESIZE, this.onGraphicsDeviceReset, this);
+            this.addEventListener(egret.StageOrientationEvent.ORIENTATION_CHANGE, this.onOrientationChanged, this);
+            this.addEventListener(egret.Event.ENTER_FRAME, this.update, this);
+            this.addEventListener(egret.Event.RENDER, this.draw, this);
+            this.initialize();
+        };
         Core.prototype.onOrientationChanged = function () {
             Core.emitter.emit(es.CoreEvents.OrientationChanged);
         };
@@ -1227,10 +1231,6 @@ var es;
             }
             this._instance._sceneTransition = sceneTransition;
             return sceneTransition;
-        };
-        Core.registerActiveSceneChanged = function (current, next) {
-            if (this.activeSceneChanged)
-                this.activeSceneChanged(current, next);
         };
         Core.registerGlobalManager = function (manager) {
             this._instance._globalManagers.push(manager);
@@ -4308,6 +4308,8 @@ var es;
             this.platformInitialize(device);
         };
         GraphicsCapabilities.prototype.platformInitialize = function (device) {
+            if (GraphicsCapabilities.runtimeType != egret.RuntimeType.WXGAME)
+                return;
             var capabilities = this;
             capabilities["isMobile"] = true;
             var systemInfo = wx.getSystemInfoSync();
@@ -7570,7 +7572,6 @@ var es;
             this.stopwacth = new stopwatch.Stopwatch();
             this._markerNameToIdMap = new Map();
             this.showLog = false;
-            TimeRuler.Instance = this;
             this._logs = new Array(2);
             for (var i = 0; i < this._logs.length; ++i)
                 this._logs[i] = new FrameLog();
@@ -7579,6 +7580,15 @@ var es;
             es.Core.emitter.addObserver(es.CoreEvents.GraphicsDeviceReset, this.onGraphicsDeviceReset, this);
             this.onGraphicsDeviceReset();
         }
+        Object.defineProperty(TimeRuler, "Instance", {
+            get: function () {
+                if (!this._instance)
+                    this._instance = new TimeRuler();
+                return this._instance;
+            },
+            enumerable: true,
+            configurable: true
+        });
         TimeRuler.prototype.onGraphicsDeviceReset = function () {
             var layout = new es.Layout();
             this._position = layout.place(new es.Vector2(this.width, TimeRuler.barHeight), 0, 0.01, es.Alignment.bottomCenter).location;

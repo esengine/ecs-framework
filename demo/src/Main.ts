@@ -27,43 +27,9 @@
 //
 //////////////////////////////////////////////////////////////////////////////////////
 
-
-import SceneManager = es.SceneManager;
-import Emitter = es.Emitter;
-
-class Main extends SceneManager {
-    public static emitter: Emitter<CoreEmitterType>; 
-    public static manager: SceneManager;
-
-    protected createChildren(): void {
-        super.createChildren();
-
-        egret.lifecycle.addLifecycleListener((context) => {
-            // custom lifecycle plugin
-        })
-
-        egret.lifecycle.onPause = () => {
-            egret.ticker.pause();
-        }
-
-        egret.lifecycle.onResume = () => {
-            egret.ticker.resume();
-        }
-
-        //inject the custom material parser
-        //注入自定义的素材解析器
-        let assetAdapter = new AssetAdapter();
-        egret.registerImplementation("eui.IAssetAdapter", assetAdapter);
-        egret.registerImplementation("eui.IThemeAdapter", new ThemeAdapter());
-
-        Main.manager = new SceneManager(this.stage);
-        Main.emitter = new Emitter<CoreEmitterType>();
-        this.addEventListener(egret.Event.ENTER_FRAME, this.updateFrame, this);
-        this.runGame();
-    }
-
-    private updateFrame(evt: egret.Event){
-        Main.emitter.emit(CoreEmitterType.Update, evt);
+class Main extends es.Core {
+    protected async initialize() {
+        await this.runGame();
     }
 
     private async runGame() {
@@ -71,12 +37,12 @@ class Main extends SceneManager {
         this.createGameScene();
     }
 
+
     private async loadResource() {
         try {
             const loadingView = new LoadingUI();
             this.stage.addChild(loadingView);
             await RES.loadConfig("resource/default.res.json", "resource/");
-            await this.loadTheme();
             await RES.loadGroup("preload", 0, loadingView);
             this.stage.removeChild(loadingView);
         }
@@ -85,27 +51,11 @@ class Main extends SceneManager {
         }
     }
 
-    private loadTheme() {
-        return new Promise((resolve, reject) => {
-            // load skin theme configuration file, you can manually modify the file. And replace the default skin.
-            //加载皮肤主题配置文件,可以手动修改这个文件。替换默认皮肤。
-            let theme = new eui.Theme("resource/default.thm.json", this.stage);
-            theme.addEventListener(eui.UIEvent.COMPLETE, () => {
-                resolve();
-            }, this);
-
-        })
-    }
-
     /**
      * 创建场景界面
      * Create scene interface
      */
     protected createGameScene(): void {
-        SceneManager.scene = new MainScene();
-
-        // Main.emitter.addObserver(CoreEmitterType.Update, ()=>{
-        //     console.log("update emitter");
-        // });
+        es.Core.scene = new scene.MainScene();
     }
 }
