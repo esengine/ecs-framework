@@ -1008,7 +1008,129 @@ declare class Video {
      */
     exitFullScreen(): Promise<void>;
 }
+/**
+ * 相机对象
+ */
+declare class Camera {
+    /**
+     * 相机的左上角横坐标
+     */
+    x: number;
 
+    /**
+     * 相机的左上角纵坐标
+     */
+    y: number;
+
+    /**
+     * 相机的宽度
+     */
+    width: number;
+
+    /**
+     * 相机的高度
+     */
+    height: number;
+
+    /**
+     * 摄像头朝向
+     */
+    devicePosition: "front" | "back";
+
+    /**
+     * 闪光灯状态
+     */
+    flash: "auto" | "on" | "off";
+
+    /**
+     * 帧数据图像尺寸
+     */
+    size: "small" | "medium" | "large";
+
+    /**
+     * 拍照，可指定质量，成功则返回图片
+     * @param quality 图片质量
+     */
+    takePhoto(quality?: "high" | "normal" | "low"): Promise<{
+        /**
+         * 临时图片路径
+         */
+        tempImagePath: string,
+        /**
+         * 图片宽度
+         */
+        width: string,
+        /**
+         * 图片高度
+         */
+        height: string
+    }>;
+
+    /**
+     * 开始录像
+     */
+    startRecord(): Promise<void>;
+
+    /**
+     * 结束录像，成功则返回封面与视频
+     * @param compressed 是否压缩录制视频
+     */
+    stopRecord(compressed: boolean): Promise<{
+        /**
+         * 临时视频路径
+         */
+        tempThumbPath: string,
+        /**
+         * 临时封面路径
+         */
+        tempVideoPath: string
+    }>;
+
+    /**
+     * 监听用户不允许授权使用摄像头的情况
+     * @param callback 回调函数
+     */
+    onAuthCancel(callback: () => void): void;
+
+    /**
+     * 监听摄像头非正常终止事件，如退出后台等情况
+     * @param callback 回调函数
+     */
+    onStop(callback: () => void): void;
+
+    /**
+     * 监听摄像头实时帧数据
+     */
+    onCameraFrame(callback: (res: {
+        /**
+         * 图像数据矩形的宽度
+         */
+        width: number,
+        /**
+         * 图像数据矩形的高度
+         */
+        height: number,
+        /**
+         * 图像像素点数据，一维数组，每四项表示一个像素点的 rgba
+         */
+        data: ArrayBuffer
+    }) => void): void;
+
+    /**
+     * 开启监听帧数据
+     */
+    listenFrameChange(): void;
+
+    /**
+     * 关闭监听帧数据
+     */
+    closeFrameChange(): void;
+
+    /**
+     * 销毁相机
+     */
+    destroy(): void;
+}
 /**
  * banner 广告组件。banner 广告组件是一个原生组件，层级比上屏 Canvas 高，会覆盖在上屏 Canvas 上。banner 广告组件默认是隐藏的，需要调用 BannerAd.show() 将其显示。banner 广告会根据开发者设置的宽度进行等比缩放，缩放后的尺寸将通过 BannerAd.onResize() 事件中提供。
  */

@@ -36,7 +36,7 @@ module es {
        */
       public static createWithDefaultRenderer(){
          let scene = new Scene();
-         scene.addRenderer(new DefaultRenderer())；
+         scene.addRenderer(new DefaultRenderer());
          return scene;
       }
 

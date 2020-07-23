@@ -160,7 +160,7 @@ module es {
             this.updateLists();
 
             for (let i = 0; i < this._entities.length; i ++){
-                this._entities[i]._isDestoryed = true;
+                this._entities[i]._isDestroyed = true;
                 this._entities[i].onRemovedFromScene();
                 this._entities[i].scene = null;
             }

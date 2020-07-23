@@ -1,10 +1,12 @@
-class GraphicsDevice {
-    private viewport: Viewport;
+module es {
+    export class GraphicsDevice {
+        private viewport: Viewport;
 
-    public graphicsCapabilities: GraphicsCapabilities;
+        public graphicsCapabilities: GraphicsCapabilities;
 
-    constructor(){
-        this.graphicsCapabilities = new GraphicsCapabilities();
-        this.graphicsCapabilities.initialize(this);
+        constructor(){
+            this.graphicsCapabilities = new GraphicsCapabilities();
+            this.graphicsCapabilities.initialize(this);
+        }
     }
 }
