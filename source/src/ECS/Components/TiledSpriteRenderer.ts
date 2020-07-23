@@ -1,57 +1,57 @@
 ///<reference path="./SpriteRenderer.ts" />
-/**
- * 滚动由两张图片组合而成
- */
-class TiledSpriteRenderer extends SpriteRenderer {
-    protected sourceRect: Rectangle;
-    protected leftTexture: egret.Bitmap;
-    protected rightTexture: egret.Bitmap;
+module es {
+    /**
+     * 滚动由两张图片组合而成
+     */
+    export class TiledSpriteRenderer extends SpriteRenderer {
+        protected sourceRect: Rectangle;
+        protected leftTexture: egret.Bitmap;
+        protected rightTexture: egret.Bitmap;
 
-    public get scrollX() {
-        return this.sourceRect.x;
-    }
-    public set scrollX(value: number) {
-        this.sourceRect.x = value;
-    }
-    public get scrollY() {
-        return this.sourceRect.y;
-    }
-    public set scrollY(value: number) {
-        this.sourceRect.y = value;
-    }
+        public get scrollX() {
+            return this.sourceRect.x;
+        }
+        public set scrollX(value: number) {
+            this.sourceRect.x = value;
+        }
+        public get scrollY() {
+            return this.sourceRect.y;
+        }
+        public set scrollY(value: number) {
+            this.sourceRect.y = value;
+        }
 
-    constructor(sprite: Sprite) {
-        super();
+        constructor(sprite: Sprite) {
+            super(sprite);
 
-        this.leftTexture = new egret.Bitmap();
-        this.rightTexture = new egret.Bitmap();
-        this.leftTexture.texture = sprite.texture2D;
-        this.rightTexture.texture = sprite.texture2D;
-        
-        this.setSprite(sprite);
-        this.sourceRect = sprite.sourceRect;
-    }
+            this.leftTexture = new egret.Bitmap();
+            this.rightTexture = new egret.Bitmap();
+            this.leftTexture.texture = sprite.texture2D;
+            this.rightTexture.texture = sprite.texture2D;
 
-    public render(camera: Camera) {
-        if (!this.sprite)
-            return;
+            this.setSprite(sprite);
+            this.sourceRect = sprite.sourceRect;
+        }
 
-        super.render(camera);
+        public render(camera: es.Camera) {
+            if (!this.sprite)
+                return;
 
-        let renderTexture = new egret.RenderTexture();
-        let cacheBitmap = new egret.DisplayObjectContainer();
-        cacheBitmap.removeChildren();
-        cacheBitmap.addChild(this.leftTexture);
-        cacheBitmap.addChild(this.rightTexture);
+            super.render(camera);
 
-        this.leftTexture.x = this.sourceRect.x;
-        this.rightTexture.x = this.sourceRect.x - this.sourceRect.width;
-        this.leftTexture.y = this.sourceRect.y;
-        this.rightTexture.y = this.sourceRect.y;
+            let renderTexture = new egret.RenderTexture();
+            let cacheBitmap = new egret.DisplayObjectContainer();
+            cacheBitmap.removeChildren();
+            cacheBitmap.addChild(this.leftTexture);
+            cacheBitmap.addChild(this.rightTexture);
 
-        cacheBitmap.cacheAsBitmap = true;
-        renderTexture.drawToTexture(cacheBitmap, new egret.Rectangle(0, 0, this.sourceRect.width, this.sourceRect.height));
+            this.leftTexture.x = this.sourceRect.x;
+            this.rightTexture.x = this.sourceRect.x - this.sourceRect.width;
+            this.leftTexture.y = this.sourceRect.y;
+            this.rightTexture.y = this.sourceRect.y;
 
-        this.bitmap.texture = renderTexture;
+            cacheBitmap.cacheAsBitmap = true;
+            renderTexture.drawToTexture(cacheBitmap, new egret.Rectangle(0, 0, this.sourceRect.width, this.sourceRect.height));
+        }
     }
 }

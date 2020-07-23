@@ -55,18 +55,20 @@ module es {
 
         public overlaps(other: Shape){
             // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
-            if (other instanceof Box)
-                return this.bounds.intersects(other.bounds);
+            if (this.isUnrotated){
+                if (other instanceof Box)
+                    return this.bounds.intersects(other.bounds);
 
-            if (other instanceof Circle)
-                return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
+                if (other instanceof Circle)
+                    return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
+            }
 
             return super.overlaps(other);
         }
 
         public collidesWithShape(other: Shape){
             // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
-            if (other instanceof Box){
+            if (other instanceof Box && (other as Box).isUnrotated){
                 return ShapeCollisions.boxToBox(this, other);
             }
 
@@ -75,14 +77,11 @@ module es {
             return super.collidesWithShape(other);
         }
 
-
-
-        /**
-         *
-         * @param point
-         */
         public containsPoint(point: Vector2){
-            return this.bounds.contains(point.x, point.y);
+            if (this.isUnrotated)
+                return this.bounds.contains(point.x, point.y);
+
+            return super.containsPoint(point);
         }
     }
 }

@@ -1,8 +1,8 @@
 module es {
     export class SpriteRenderer extends RenderableComponent {
-        public get bounds(){
-            if (this._areBoundsDirty){
-                if (this._sprite){
+        public get bounds() {
+            if (this._areBoundsDirty) {
+                if (this._sprite) {
                     this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin,
                         this.entity.transform.scale, this.entity.transform.rotation, this._sprite.sourceRect.width,
                         this._sprite.sourceRect.height);
@@ -16,7 +16,7 @@ module es {
         /**
          * 精灵的原点。这是在设置精灵时自动设置的
          */
-        public get origin(): Vector2{
+        public get origin(): Vector2 {
             return this._origin;
         }
 
@@ -24,7 +24,7 @@ module es {
          * 精灵的原点。这是在设置精灵时自动设置的
          * @param value
          */
-        public set origin(value: Vector2){
+        public set origin(value: Vector2) {
             this.setOrigin(value);
         }
 
@@ -32,7 +32,7 @@ module es {
          * 用归一化方法设置原点
          * x/y 均为 0-1
          */
-        public get originNormalized(): Vector2{
+        public get originNormalized(): Vector2 {
             return new Vector2(this._origin.x / this.width * this.entity.transform.scale.x,
                 this._origin.y / this.height * this.entity.transform.scale.y);
         }
@@ -42,7 +42,7 @@ module es {
          * x/y 均为 0-1
          * @param value
          */
-        public set originNormalized(value: Vector2){
+        public set originNormalized(value: Vector2) {
             this.setOrigin(new Vector2(value.x * this.width / this.entity.transform.scale.x,
                 value.y * this.height / this.entity.transform.scale.y));
         }
@@ -67,11 +67,11 @@ module es {
         protected _origin: Vector2;
         protected _sprite: Sprite;
 
-        constructor(sprite: Sprite | egret.Texture) {
+        constructor(sprite: Sprite | egret.Texture = null) {
             super();
             if (sprite instanceof Sprite)
                 this.setSprite(sprite);
-            else if(sprite instanceof  egret.Texture)
+            else if (sprite instanceof egret.Texture)
                 this.setSprite(new Sprite(sprite));
         }
 
@@ -92,8 +92,8 @@ module es {
          * 设置可渲染的原点
          * @param origin
          */
-        public setOrigin(origin: Vector2): SpriteRenderer{
-            if (this._origin != origin){
+        public setOrigin(origin: Vector2): SpriteRenderer {
+            if (this._origin != origin) {
                 this._origin = origin;
                 this._areBoundsDirty = true;
             }
@@ -106,7 +106,7 @@ module es {
          * x/y 均为 0-1
          * @param value
          */
-        public setOriginNormalized(value: Vector2): SpriteRenderer{
+        public setOriginNormalized(value: Vector2): SpriteRenderer {
             this.setOrigin(new Vector2(value.x * this.width / this.entity.transform.scale.x,
                 value.y * this.height / this.entity.transform.scale.y));
             return this;
