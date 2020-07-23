@@ -105,15 +105,15 @@ module es {
             if (this._areBoundsDirty){
                 // 旋转或非旋转的边界都需要左上角和右下角
                 let topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
-                let bottomRight = this.screenToWorldPoint(new Vector2(SceneManager.stage.stageWidth - this._inset.right,
-                    SceneManager.stage.stageHeight - this._inset.bottom));
+                let bottomRight = this.screenToWorldPoint(new Vector2(Core.graphicsDevice.viewport.width - this._inset.right,
+                    Core.graphicsDevice.viewport.height - this._inset.bottom));
 
                 if (this.entity.transform.rotation != 0){
                     // 特别注意旋转的边界。我们需要找到绝对的最小/最大值并从中创建边界
-                    let topRight = this.screenToWorldPoint(new Vector2(SceneManager.stage.stageWidth - this._inset.right,
+                    let topRight = this.screenToWorldPoint(new Vector2(Core.graphicsDevice.viewport.width - this._inset.right,
                         this._inset.top));
                     let bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left,
-                        SceneManager.stage.stageHeight - this._inset.bottom));
+                        Core.graphicsDevice.viewport.height - this._inset.bottom));
 
                     let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
                     let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
@@ -386,8 +386,8 @@ module es {
 
         public update() {
             let halfScreen = Vector2.multiply(new Vector2(this.bounds.width, this.bounds.height), new Vector2(0.5));
-            this._worldSpaceDeadZone.x = this.position.x - halfScreen.x * SceneManager.scene.scaleX + this.deadzone.x + this.focusOffset.x;
-            this._worldSpaceDeadZone.y = this.position.y - halfScreen.y * SceneManager.scene.scaleY + this.deadzone.y + this.focusOffset.y;
+            this._worldSpaceDeadZone.x = this.position.x - halfScreen.x * Core.scene.scaleX + this.deadzone.x + this.focusOffset.x;
+            this._worldSpaceDeadZone.y = this.position.y - halfScreen.y * Core.scene.scaleY + this.deadzone.y + this.focusOffset.y;
             this._worldSpaceDeadZone.width = this.deadzone.width;
             this._worldSpaceDeadZone.height = this.deadzone.height;
 

@@ -7,7 +7,7 @@ module es {
         public safeArea: Rectangle;
 
         constructor(){
-            this.clientArea = new Rectangle(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+            this.clientArea = new Rectangle(0, 0, Core.graphicsDevice.viewport.width, Core.graphicsDevice.viewport.height);
             this.safeArea = this.clientArea;
         }
 

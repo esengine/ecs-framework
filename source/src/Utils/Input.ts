@@ -18,7 +18,6 @@ module es {
 
     export class Input {
         private static _init: boolean = false;
-        private static _stage: egret.Stage;
         private static _previousTouchState: TouchState = new TouchState();
         private static _gameTouchs: TouchState[] = [];
         private static _resolutionOffset: Vector2 = new Vector2();
@@ -33,13 +32,13 @@ module es {
         }
         /** 获取最大触摸数 */
         public static get maxSupportedTouch(){
-            return this._stage.maxTouches;
+            return Core._instance.stage.maxTouches;
         }
         /**
          * 设置最大触摸数
          */
         public static set maxSupportedTouch(value: number){
-            this._stage.maxTouches = value;
+            Core._instance.stage.maxTouches = value;
             this.initTouchCache();
         }
         /** 获取缩放值 默认为1 */
@@ -68,17 +67,16 @@ module es {
             return delta;
         }
 
-        public static initialize(stage: egret.Stage){
+        public static initialize(){
             if (this._init)
                 return;
 
             this._init = true;
-            this._stage = stage;
-            this._stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
-            this._stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
-            this._stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
-            this._stage.addEventListener(egret.TouchEvent.TOUCH_CANCEL, this.touchEnd, this);
-            this._stage.addEventListener(egret.TouchEvent.TOUCH_RELEASE_OUTSIDE, this.touchEnd, this);
+            Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
+            Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
+            Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
+            Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_CANCEL, this.touchEnd, this);
+            Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_RELEASE_OUTSIDE, this.touchEnd, this);
 
             this.initTouchCache();
         }

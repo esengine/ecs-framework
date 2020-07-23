@@ -9,8 +9,8 @@ module es {
         public static render(){
             if (this._debugDrawItems.length > 0){
                 let debugShape = new egret.Shape();
-                if (SceneManager.scene){
-                    SceneManager.scene.addChild(debugShape);
+                if (Core.scene){
+                    Core.scene.addChild(debugShape);
                 }
 
                 for (let i = this._debugDrawItems.length - 1; i >= 0; i --){

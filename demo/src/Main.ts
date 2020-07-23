@@ -28,7 +28,10 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 
-class Main extends eui.UILayer {
+import SceneManager = es.SceneManager;
+import Emitter = es.Emitter;
+
+class Main extends SceneManager {
     public static emitter: Emitter<CoreEmitterType>; 
     public static manager: SceneManager;
 

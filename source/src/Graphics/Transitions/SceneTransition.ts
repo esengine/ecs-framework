@@ -44,7 +44,7 @@ module es {
         }
 
         protected transitionComplete() {
-            SceneManager.sceneTransition = null;
+            Core._instance._sceneTransition = null;
 
             if (this.onTransitionCompleted) {
                 this.onTransitionCompleted();
@@ -59,7 +59,7 @@ module es {
                 this.isNewSceneLoaded = true;
             }
 
-            SceneManager.scene = await this.sceneLoadAction();
+            Core.scene = await this.sceneLoadAction();
             this.isNewSceneLoaded = true;
         }
 

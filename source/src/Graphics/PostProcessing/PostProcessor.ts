@@ -32,7 +32,7 @@ module es {
             this.scene = scene;
             this.shape = new egret.Shape();
             this.shape.graphics.beginFill(0xFFFFFF, 1);
-            this.shape.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+            this.shape.graphics.drawRect(0, 0, Core.graphicsDevice.viewport.width, Core.graphicsDevice.viewport.height);
             this.shape.graphics.endFill();
             scene.addChild(this.shape);
         }

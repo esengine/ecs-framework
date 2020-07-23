@@ -48,9 +48,6 @@ module es {
 
          this.entityProcessors = new EntityProcessorList();
 
-         this.width = SceneManager.stage.stageWidth;
-         this.height = SceneManager.stage.stageHeight;
-
          this.initialize();
       }
 
@@ -81,13 +78,6 @@ module es {
       public onDeactive() {}
 
       public async begin() {
-         // 如果是场景转换需要在最顶层
-         if (SceneManager.sceneTransition){
-            SceneManager.stage.addChildAt(this, SceneManager.stage.numChildren - 1);
-         }else{
-            SceneManager.stage.addChild(this);
-         }
-
          if (this._renderers.length == 0) {
             this.addRenderer(new DefaultRenderer());
             console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");

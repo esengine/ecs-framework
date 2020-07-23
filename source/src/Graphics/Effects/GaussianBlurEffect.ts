@@ -66,8 +66,8 @@ module es {
 
         constructor(){
             super(PostProcessor.default_vert, GaussianBlurEffect.blur_frag,{
-                screenWidth: SceneManager.stage.stageWidth,
-                screenHeight: SceneManager.stage.stageHeight
+                screenWidth: Core.graphicsDevice.viewport.width,
+                screenHeight: Core.graphicsDevice.viewport.height
             });
         }
     }

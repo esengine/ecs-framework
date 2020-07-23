@@ -62,7 +62,9 @@ module es {
                 this._logs[i] = new FrameLog();
 
             this.sampleFrames = this.targetSampleFrames = 1;
-            this.width = SceneManager.stage.stageWidth * 0.8;
+            this.width = Core.graphicsDevice.viewport.width * 0.8;
+
+            es.Core.emitter.addObserver(CoreEvents.GraphicsDeviceReset, this.onGraphicsDeviceReset, this);
             this.onGraphicsDeviceReset();
         }
 

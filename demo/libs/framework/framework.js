@@ -955,8 +955,8 @@ var es;
         Debug.render = function () {
             if (this._debugDrawItems.length > 0) {
                 var debugShape = new egret.Shape();
-                if (es.SceneManager.scene) {
-                    es.SceneManager.scene.addChild(debugShape);
+                if (es.Core.scene) {
+                    es.Core.scene.addChild(debugShape);
                 }
                 for (var i = this._debugDrawItems.length - 1; i >= 0; i--) {
                     var item = this._debugDrawItems[i];
@@ -1098,9 +1098,166 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Core = (function (_super) {
+        __extends(Core, _super);
+        function Core() {
+            var _this = _super.call(this) || this;
+            _this._globalManagers = [];
+            Core._instance = _this;
+            Core.emitter = new es.Emitter();
+            Core.graphicsDevice = new es.GraphicsDevice();
+            Core.content = new es.ContentManager();
+            _this.addEventListener(egret.Event.ADDED_TO_STAGE, _this.initialize, _this);
+            _this.addEventListener(egret.Event.RESIZE, _this.onGraphicsDeviceReset, _this);
+            _this.addEventListener(egret.StageOrientationEvent.ORIENTATION_CHANGE, _this.onOrientationChanged, _this);
+            _this.addEventListener(egret.Event.ENTER_FRAME, _this.update, _this);
+            _this.addEventListener(egret.Event.RENDER, _this.draw, _this);
+            return _this;
+        }
+        Object.defineProperty(Core, "Instance", {
+            get: function () {
+                return this._instance;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Core, "scene", {
+            get: function () {
+                return this._instance._scene;
+            },
+            set: function (value) {
+                if (!value) {
+                    console.error("场景不能为空");
+                    return;
+                }
+                if (this._instance._scene == null) {
+                    this._instance._scene = value;
+                    this._instance._scene.begin();
+                    Core.Instance.onSceneChanged();
+                }
+                else {
+                    this._instance._nextScene = value;
+                }
+                this.registerActiveSceneChanged(this._instance._scene, this._instance._nextScene);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Core.prototype.onOrientationChanged = function () {
+            Core.emitter.emit(es.CoreEvents.OrientationChanged);
+        };
+        Core.prototype.onGraphicsDeviceReset = function () {
+            Core.emitter.emit(es.CoreEvents.GraphicsDeviceReset);
+        };
+        Core.prototype.initialize = function () {
+        };
+        Core.prototype.update = function () {
+            this.startDebugUpdate();
+            es.Time.update(egret.getTimer());
+            if (this._scene) {
+                for (var i = this._globalManagers.length - 1; i >= 0; i--) {
+                    if (this._globalManagers[i].enabled)
+                        this._globalManagers[i].update();
+                }
+                if (!this._sceneTransition ||
+                    (this._sceneTransition && (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
+                    this._scene.update();
+                }
+                if (this._nextScene) {
+                    this._scene.end();
+                    this._scene = this._nextScene;
+                    this._nextScene = null;
+                    this.onSceneChanged();
+                    this._scene.begin();
+                }
+            }
+            this.endDebugUpdate();
+        };
+        Core.prototype.draw = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            if (!this._sceneTransition) return [3, 4];
+                            this._sceneTransition.preRender();
+                            if (!(this._scene && !this._sceneTransition.hasPreviousSceneRender)) return [3, 2];
+                            this._scene.render();
+                            this._scene.postRender();
+                            return [4, this._sceneTransition.onBeginTransition()];
+                        case 1:
+                            _a.sent();
+                            return [3, 3];
+                        case 2:
+                            if (this._sceneTransition) {
+                                if (this._scene && this._sceneTransition.isNewSceneLoaded) {
+                                    this._scene.render();
+                                    this._scene.postRender();
+                                }
+                                this._sceneTransition.render();
+                            }
+                            _a.label = 3;
+                        case 3: return [3, 5];
+                        case 4:
+                            if (this._scene) {
+                                this._scene.render();
+                                es.Debug.render();
+                                this._scene.postRender();
+                            }
+                            _a.label = 5;
+                        case 5: return [2];
+                    }
+                });
+            });
+        };
+        Core.prototype.startDebugUpdate = function () {
+            es.TimeRuler.Instance.startFrame();
+            es.TimeRuler.Instance.beginMark("update", 0x00FF00);
+        };
+        Core.prototype.endDebugUpdate = function () {
+            es.TimeRuler.Instance.endMark("update");
+        };
+        Core.prototype.onSceneChanged = function () {
+            Core.emitter.emit(es.CoreEvents.SceneChanged);
+            es.Time.sceneChanged();
+        };
+        Core.startSceneTransition = function (sceneTransition) {
+            if (this._instance._sceneTransition) {
+                console.warn("在前一个场景完成之前，不能开始一个新的场景转换。");
+                return;
+            }
+            this._instance._sceneTransition = sceneTransition;
+            return sceneTransition;
+        };
+        Core.registerActiveSceneChanged = function (current, next) {
+            if (this.activeSceneChanged)
+                this.activeSceneChanged(current, next);
+        };
+        Core.registerGlobalManager = function (manager) {
+            this._instance._globalManagers.push(manager);
+            manager.enabled = true;
+        };
+        Core.unregisterGlobalManager = function (manager) {
+            this._instance._globalManagers.remove(manager);
+            manager.enabled = false;
+        };
+        Core.getGlobalManager = function (type) {
+            for (var i = 0; i < this._instance._globalManagers.length; i++) {
+                if (this._instance._globalManagers[i] instanceof type)
+                    return this._instance._globalManagers[i];
+            }
+            return null;
+        };
+        return Core;
+    }(egret.DisplayObjectContainer));
+    es.Core = Core;
+})(es || (es = {}));
+var es;
+(function (es) {
     var CoreEvents;
     (function (CoreEvents) {
-        CoreEvents[CoreEvents["SceneChanged"] = 0] = "SceneChanged";
+        CoreEvents[CoreEvents["GraphicsDeviceReset"] = 0] = "GraphicsDeviceReset";
+        CoreEvents[CoreEvents["SceneChanged"] = 1] = "SceneChanged";
+        CoreEvents[CoreEvents["OrientationChanged"] = 2] = "OrientationChanged";
     })(CoreEvents = es.CoreEvents || (es.CoreEvents = {}));
 })(es || (es = {}));
 var es;
@@ -1347,8 +1504,6 @@ var es;
             _this.renderableComponents = new es.RenderableComponentList();
             _this.content = new es.ContentManager();
             _this.entityProcessors = new es.EntityProcessorList();
-            _this.width = es.SceneManager.stage.stageWidth;
-            _this.height = es.SceneManager.stage.stageHeight;
             _this.initialize();
             return _this;
         }
@@ -1369,12 +1524,6 @@ var es;
         Scene.prototype.begin = function () {
             return __awaiter(this, void 0, void 0, function () {
                 return __generator(this, function (_a) {
-                    if (es.SceneManager.sceneTransition) {
-                        es.SceneManager.stage.addChildAt(this, es.SceneManager.stage.numChildren - 1);
-                    }
-                    else {
-                        es.SceneManager.stage.addChild(this);
-                    }
                     if (this._renderers.length == 0) {
                         this.addRenderer(new es.DefaultRenderer());
                         console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
@@ -1527,120 +1676,6 @@ var es;
         return Scene;
     }(egret.DisplayObjectContainer));
     es.Scene = Scene;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var SceneManager = (function () {
-        function SceneManager(stage) {
-            stage.addEventListener(egret.Event.ENTER_FRAME, SceneManager.update, this);
-            SceneManager._instnace = this;
-            SceneManager.emitter = new es.Emitter();
-            SceneManager.content = new es.ContentManager();
-            SceneManager.stage = stage;
-            SceneManager.initialize(stage);
-            SceneManager.timerRuler = new es.TimeRuler();
-        }
-        Object.defineProperty(SceneManager, "Instance", {
-            get: function () {
-                return this._instnace;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(SceneManager, "scene", {
-            get: function () {
-                return this._scene;
-            },
-            set: function (value) {
-                if (!value)
-                    throw new Error("场景不能为空");
-                if (this._scene == null) {
-                    this._scene = value;
-                    this._scene.begin();
-                    SceneManager.Instance.onSceneChanged();
-                }
-                else {
-                    this._nextScene = value;
-                }
-                this.registerActiveSceneChanged(this._scene, this._nextScene);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        SceneManager.initialize = function (stage) {
-            es.Input.initialize(stage);
-        };
-        SceneManager.update = function () {
-            SceneManager.startDebugUpdate();
-            es.Time.update(egret.getTimer());
-            if (SceneManager._scene) {
-                for (var i = es.GlobalManager.globalManagers.length - 1; i >= 0; i--) {
-                    if (es.GlobalManager.globalManagers[i].enabled)
-                        es.GlobalManager.globalManagers[i].update();
-                }
-                if (!SceneManager.sceneTransition ||
-                    (SceneManager.sceneTransition && (!SceneManager.sceneTransition.loadsNewScene || SceneManager.sceneTransition.isNewSceneLoaded))) {
-                    SceneManager._scene.update();
-                }
-                if (SceneManager._nextScene) {
-                    SceneManager._scene.end();
-                    SceneManager._scene = SceneManager._nextScene;
-                    SceneManager._nextScene = null;
-                    SceneManager._instnace.onSceneChanged();
-                    SceneManager._scene.begin();
-                }
-            }
-            SceneManager.endDebugUpdate();
-            SceneManager.render();
-        };
-        SceneManager.render = function () {
-            if (this.sceneTransition) {
-                this.sceneTransition.preRender();
-                if (this._scene && !this.sceneTransition.hasPreviousSceneRender) {
-                    this._scene.render();
-                    this._scene.postRender();
-                    this.sceneTransition.onBeginTransition();
-                }
-                else if (this.sceneTransition) {
-                    if (this._scene && this.sceneTransition.isNewSceneLoaded) {
-                        this._scene.render();
-                        this._scene.postRender();
-                    }
-                    this.sceneTransition.render();
-                }
-            }
-            else if (this._scene) {
-                this._scene.render();
-                es.Debug.render();
-                this._scene.postRender();
-            }
-        };
-        SceneManager.startSceneTransition = function (sceneTransition) {
-            if (this.sceneTransition) {
-                console.warn("在前一个场景完成之前，不能开始一个新的场景转换。");
-                return;
-            }
-            this.sceneTransition = sceneTransition;
-            return sceneTransition;
-        };
-        SceneManager.registerActiveSceneChanged = function (current, next) {
-            if (this.activeSceneChanged)
-                this.activeSceneChanged(current, next);
-        };
-        SceneManager.prototype.onSceneChanged = function () {
-            SceneManager.emitter.emit(es.CoreEvents.SceneChanged);
-            es.Time.sceneChanged();
-        };
-        SceneManager.startDebugUpdate = function () {
-            es.TimeRuler.Instance.startFrame();
-            es.TimeRuler.Instance.beginMark("update", 0x00FF00);
-        };
-        SceneManager.endDebugUpdate = function () {
-            es.TimeRuler.Instance.endMark("update");
-        };
-        return SceneManager;
-    }());
-    es.SceneManager = SceneManager;
 })(es || (es = {}));
 var transform;
 (function (transform) {
@@ -1851,10 +1886,10 @@ var es;
                     this.updateMatrixes();
                 if (this._areBoundsDirty) {
                     var topLeft = this.screenToWorldPoint(new es.Vector2(this._inset.left, this._inset.top));
-                    var bottomRight = this.screenToWorldPoint(new es.Vector2(es.SceneManager.stage.stageWidth - this._inset.right, es.SceneManager.stage.stageHeight - this._inset.bottom));
+                    var bottomRight = this.screenToWorldPoint(new es.Vector2(es.Core.graphicsDevice.viewport.width - this._inset.right, es.Core.graphicsDevice.viewport.height - this._inset.bottom));
                     if (this.entity.transform.rotation != 0) {
-                        var topRight = this.screenToWorldPoint(new es.Vector2(es.SceneManager.stage.stageWidth - this._inset.right, this._inset.top));
-                        var bottomLeft = this.screenToWorldPoint(new es.Vector2(this._inset.left, es.SceneManager.stage.stageHeight - this._inset.bottom));
+                        var topRight = this.screenToWorldPoint(new es.Vector2(es.Core.graphicsDevice.viewport.width - this._inset.right, this._inset.top));
+                        var bottomLeft = this.screenToWorldPoint(new es.Vector2(this._inset.left, es.Core.graphicsDevice.viewport.height - this._inset.bottom));
                         var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
                         var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
                         var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
@@ -2008,8 +2043,8 @@ var es;
         };
         Camera.prototype.update = function () {
             var halfScreen = es.Vector2.multiply(new es.Vector2(this.bounds.width, this.bounds.height), new es.Vector2(0.5));
-            this._worldSpaceDeadZone.x = this.position.x - halfScreen.x * es.SceneManager.scene.scaleX + this.deadzone.x + this.focusOffset.x;
-            this._worldSpaceDeadZone.y = this.position.y - halfScreen.y * es.SceneManager.scene.scaleY + this.deadzone.y + this.focusOffset.y;
+            this._worldSpaceDeadZone.x = this.position.x - halfScreen.x * es.Core.scene.scaleX + this.deadzone.x + this.focusOffset.x;
+            this._worldSpaceDeadZone.y = this.position.y - halfScreen.y * es.Core.scene.scaleY + this.deadzone.y + this.focusOffset.y;
             this._worldSpaceDeadZone.width = this.deadzone.width;
             this._worldSpaceDeadZone.height = this.deadzone.height;
             if (this._targetEntity)
@@ -4021,7 +4056,7 @@ var es;
                 var offsetY = Math.round(bitmapData.$offsetY);
                 var bitmapWidth = bitmapData.$bitmapWidth;
                 var bitmapHeight = bitmapData.$bitmapHeight;
-                var $TextureScaleFactor = es.SceneManager.stage.textureScaleFactor;
+                var $TextureScaleFactor = es.Core._instance.stage.textureScaleFactor;
                 this.sharedContext.drawImage(bitmapData.$bitmapData.source, bitmapData.$bitmapX + rect.x / $TextureScaleFactor, bitmapData.$bitmapY + rect.y / $TextureScaleFactor, bitmapWidth * rect.width / w, bitmapHeight * rect.height / h, offsetX, offsetY, rect.width, rect.height);
                 return surface;
             }
@@ -4300,9 +4335,20 @@ var es;
 (function (es) {
     var GraphicsDevice = (function () {
         function GraphicsDevice() {
+            this.setup();
             this.graphicsCapabilities = new es.GraphicsCapabilities();
             this.graphicsCapabilities.initialize(this);
         }
+        Object.defineProperty(GraphicsDevice.prototype, "viewport", {
+            get: function () {
+                return this._viewport;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        GraphicsDevice.prototype.setup = function () {
+            this._viewport = new es.Viewport(0, 0, es.Core._instance.stage.stageWidth, es.Core._instance.stage.stageHeight);
+        };
         return GraphicsDevice;
     }());
     es.GraphicsDevice = GraphicsDevice;
@@ -4318,6 +4364,26 @@ var es;
             this._minDepth = 0;
             this._maxDepth = 1;
         }
+        Object.defineProperty(Viewport.prototype, "height", {
+            get: function () {
+                return this._height;
+            },
+            set: function (value) {
+                this._height = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Viewport.prototype, "width", {
+            get: function () {
+                return this._width;
+            },
+            set: function (value) {
+                this._width = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Viewport.prototype, "aspectRatio", {
             get: function () {
                 if ((this._height != 0) && (this._width != 0))
@@ -4350,8 +4416,8 @@ var es;
         __extends(GaussianBlurEffect, _super);
         function GaussianBlurEffect() {
             return _super.call(this, es.PostProcessor.default_vert, GaussianBlurEffect.blur_frag, {
-                screenWidth: es.SceneManager.stage.stageWidth,
-                screenHeight: es.SceneManager.stage.stageHeight
+                screenWidth: es.Core.graphicsDevice.viewport.width,
+                screenHeight: es.Core.graphicsDevice.viewport.height
             }) || this;
         }
         GaussianBlurEffect.blur_frag = "precision mediump float;\n" +
@@ -4435,7 +4501,7 @@ var es;
             this.scene = scene;
             this.shape = new egret.Shape();
             this.shape.graphics.beginFill(0xFFFFFF, 1);
-            this.shape.graphics.drawRect(0, 0, es.SceneManager.stage.stageWidth, es.SceneManager.stage.stageHeight);
+            this.shape.graphics.drawRect(0, 0, es.Core.graphicsDevice.viewport.width, es.Core.graphicsDevice.viewport.height);
             this.shape.graphics.endFill();
             scene.addChild(this.shape);
         };
@@ -4614,7 +4680,7 @@ var es;
             });
         };
         SceneTransition.prototype.transitionComplete = function () {
-            es.SceneManager.sceneTransition = null;
+            es.Core._instance._sceneTransition = null;
             if (this.onTransitionCompleted) {
                 this.onTransitionCompleted();
             }
@@ -4630,7 +4696,7 @@ var es;
                             if (!this.loadsNewScene) {
                                 this.isNewSceneLoaded = true;
                             }
-                            _a = es.SceneManager;
+                            _a = es.Core;
                             return [4, this.sceneLoadAction()];
                         case 1:
                             _a.scene = _b.sent();
@@ -4673,9 +4739,8 @@ var es;
                 var _this = this;
                 return __generator(this, function (_a) {
                     this._mask.graphics.beginFill(this.fadeToColor, 1);
-                    this._mask.graphics.drawRect(0, 0, es.SceneManager.stage.stageWidth, es.SceneManager.stage.stageHeight);
+                    this._mask.graphics.drawRect(0, 0, es.Core.graphicsDevice.viewport.width, es.Core.graphicsDevice.viewport.height);
                     this._mask.graphics.endFill();
-                    es.SceneManager.stage.addChild(this._mask);
                     egret.Tween.get(this).to({ _alpha: 1 }, this.fadeOutDuration * 1000, this.fadeEaseType)
                         .call(function () { return __awaiter(_this, void 0, void 0, function () {
                         return __generator(this, function (_a) {
@@ -4689,7 +4754,6 @@ var es;
                     }); }).wait(this.delayBeforeFadeInDuration).call(function () {
                         egret.Tween.get(_this).to({ _alpha: 0 }, _this.fadeOutDuration * 1000, _this.fadeEaseType).call(function () {
                             _this.transitionComplete();
-                            es.SceneManager.stage.removeChild(_this._mask);
                         });
                     });
                     return [2];
@@ -4699,7 +4763,7 @@ var es;
         FadeTransition.prototype.render = function () {
             this._mask.graphics.clear();
             this._mask.graphics.beginFill(this.fadeToColor, this._alpha);
-            this._mask.graphics.drawRect(0, 0, es.SceneManager.stage.stageWidth, es.SceneManager.stage.stageHeight);
+            this._mask.graphics.drawRect(0, 0, es.Core.graphicsDevice.viewport.width, es.Core.graphicsDevice.viewport.height);
             this._mask.graphics.endFill();
         };
         return FadeTransition;
@@ -4744,10 +4808,9 @@ var es;
             });
             _this._mask = new egret.Shape();
             _this._mask.graphics.beginFill(0xFFFFFF, 1);
-            _this._mask.graphics.drawRect(0, 0, es.SceneManager.stage.stageWidth, es.SceneManager.stage.stageHeight);
+            _this._mask.graphics.drawRect(0, 0, es.Core.graphicsDevice.viewport.width, es.Core.graphicsDevice.viewport.height);
             _this._mask.graphics.endFill();
             _this._mask.filters = [_this._windEffect];
-            es.SceneManager.stage.addChild(_this._mask);
             return _this;
         }
         Object.defineProperty(WindTransition.prototype, "windSegments", {
@@ -4774,7 +4837,6 @@ var es;
                         case 1:
                             _a.sent();
                             this.transitionComplete();
-                            es.SceneManager.stage.removeChild(this._mask);
                             return [2];
                     }
                 });
@@ -6625,22 +6687,6 @@ var es;
         GlobalManager.prototype.onEnabled = function () { };
         GlobalManager.prototype.onDisabled = function () { };
         GlobalManager.prototype.update = function () { };
-        GlobalManager.registerGlobalManager = function (manager) {
-            this.globalManagers.push(manager);
-            manager.enabled = true;
-        };
-        GlobalManager.unregisterGlobalManager = function (manager) {
-            this.globalManagers.remove(manager);
-            manager.enabled = false;
-        };
-        GlobalManager.getGlobalManager = function (type) {
-            for (var i = 0; i < this.globalManagers.length; i++) {
-                if (this.globalManagers[i] instanceof type)
-                    return this.globalManagers[i];
-            }
-            return null;
-        };
-        GlobalManager.globalManagers = [];
         return GlobalManager;
     }());
     es.GlobalManager = GlobalManager;
@@ -6684,10 +6730,10 @@ var es;
         });
         Object.defineProperty(Input, "maxSupportedTouch", {
             get: function () {
-                return this._stage.maxTouches;
+                return es.Core._instance.stage.maxTouches;
             },
             set: function (value) {
-                this._stage.maxTouches = value;
+                es.Core._instance.stage.maxTouches = value;
                 this.initTouchCache();
             },
             enumerable: true,
@@ -6725,16 +6771,15 @@ var es;
             enumerable: true,
             configurable: true
         });
-        Input.initialize = function (stage) {
+        Input.initialize = function () {
             if (this._init)
                 return;
             this._init = true;
-            this._stage = stage;
-            this._stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
-            this._stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
-            this._stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
-            this._stage.addEventListener(egret.TouchEvent.TOUCH_CANCEL, this.touchEnd, this);
-            this._stage.addEventListener(egret.TouchEvent.TOUCH_RELEASE_OUTSIDE, this.touchEnd, this);
+            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
+            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
+            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
+            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_CANCEL, this.touchEnd, this);
+            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_RELEASE_OUTSIDE, this.touchEnd, this);
             this.initTouchCache();
         };
         Input.initTouchCache = function () {
@@ -7324,7 +7369,7 @@ var es;
 (function (es) {
     var Layout = (function () {
         function Layout() {
-            this.clientArea = new es.Rectangle(0, 0, es.SceneManager.stage.stageWidth, es.SceneManager.stage.stageHeight);
+            this.clientArea = new es.Rectangle(0, 0, es.Core.graphicsDevice.viewport.width, es.Core.graphicsDevice.viewport.height);
             this.safeArea = this.clientArea;
         }
         Layout.prototype.place = function (size, horizontalMargin, verticalMargine, alignment) {
@@ -7530,7 +7575,8 @@ var es;
             for (var i = 0; i < this._logs.length; ++i)
                 this._logs[i] = new FrameLog();
             this.sampleFrames = this.targetSampleFrames = 1;
-            this.width = es.SceneManager.stage.stageWidth * 0.8;
+            this.width = es.Core.graphicsDevice.viewport.width * 0.8;
+            es.Core.emitter.addObserver(es.CoreEvents.GraphicsDeviceReset, this.onGraphicsDeviceReset, this);
             this.onGraphicsDeviceReset();
         }
         TimeRuler.prototype.onGraphicsDeviceReset = function () {

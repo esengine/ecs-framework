@@ -247,8 +247,39 @@ declare module es {
     }
 }
 declare module es {
+    class Core extends egret.DisplayObjectContainer {
+        static activeSceneChanged: Function;
+        static emitter: Emitter<CoreEvents>;
+        static graphicsDevice: GraphicsDevice;
+        static content: ContentManager;
+        static readonly Instance: Core;
+        static _instance: Core;
+        _scene: Scene;
+        _nextScene: Scene;
+        _sceneTransition: SceneTransition;
+        _globalManagers: GlobalManager[];
+        static scene: Scene;
+        constructor();
+        onOrientationChanged(): void;
+        protected onGraphicsDeviceReset(): void;
+        protected initialize(): void;
+        protected update(): void;
+        draw(): Promise<void>;
+        startDebugUpdate(): void;
+        endDebugUpdate(): void;
+        onSceneChanged(): void;
+        static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
+        static registerActiveSceneChanged(current: Scene, next: Scene): void;
+        static registerGlobalManager(manager: es.GlobalManager): void;
+        static unregisterGlobalManager(manager: es.GlobalManager): void;
+        static getGlobalManager<T extends es.GlobalManager>(type: any): T;
+    }
+}
+declare module es {
     enum CoreEvents {
-        SceneChanged = 0
+        GraphicsDeviceReset = 0,
+        SceneChanged = 1,
+        OrientationChanged = 2
     }
 }
 declare module es {
@@ -338,30 +369,6 @@ declare module es {
         addEntityProcessor(processor: EntitySystem): EntitySystem;
         removeEntityProcessor(processor: EntitySystem): void;
         getEntityProcessor<T extends EntitySystem>(): T;
-    }
-}
-declare module es {
-    class SceneManager {
-        private static _scene;
-        private static _nextScene;
-        static sceneTransition: SceneTransition;
-        static stage: egret.Stage;
-        static activeSceneChanged: Function;
-        static emitter: Emitter<CoreEvents>;
-        static content: ContentManager;
-        private static _instnace;
-        private static timerRuler;
-        static readonly Instance: SceneManager;
-        constructor(stage: egret.Stage);
-        static scene: Scene;
-        static initialize(stage: egret.Stage): void;
-        static update(): void;
-        static render(): void;
-        static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
-        static registerActiveSceneChanged(current: Scene, next: Scene): void;
-        onSceneChanged(): void;
-        private static startDebugUpdate;
-        private static endDebugUpdate;
     }
 }
 declare module transform {
@@ -942,9 +949,11 @@ declare module es {
 }
 declare module es {
     class GraphicsDevice {
-        private viewport;
+        private _viewport;
+        readonly viewport: Viewport;
         graphicsCapabilities: GraphicsCapabilities;
         constructor();
+        private setup;
     }
 }
 declare module es {
@@ -955,6 +964,8 @@ declare module es {
         private _height;
         private _minDepth;
         private _maxDepth;
+        height: number;
+        width: number;
         readonly aspectRatio: number;
         bounds: Rectangle;
         constructor(x: number, y: number, width: number, height: number);
@@ -1398,16 +1409,12 @@ declare module es {
 }
 declare module es {
     class GlobalManager {
-        static globalManagers: GlobalManager[];
-        private _enabled;
         enabled: boolean;
         setEnabled(isEnabled: boolean): void;
+        _enabled: boolean;
         onEnabled(): void;
         onDisabled(): void;
         update(): void;
-        static registerGlobalManager(manager: GlobalManager): void;
-        static unregisterGlobalManager(manager: GlobalManager): void;
-        static getGlobalManager<T extends GlobalManager>(type: any): T;
     }
 }
 declare module es {
@@ -1421,7 +1428,6 @@ declare module es {
     }
     class Input {
         private static _init;
-        private static _stage;
         private static _previousTouchState;
         private static _gameTouchs;
         private static _resolutionOffset;
@@ -1434,7 +1440,7 @@ declare module es {
         static readonly totalTouchCount: number;
         static readonly gameTouchs: TouchState[];
         static readonly touchPositionDelta: Vector2;
-        static initialize(stage: egret.Stage): void;
+        static initialize(): void;
         private static initTouchCache;
         private static touchBegin;
         private static touchMove;

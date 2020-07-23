@@ -51,17 +51,15 @@ module es {
 
             this._mask = new egret.Shape();
             this._mask.graphics.beginFill(0xFFFFFF, 1);
-            this._mask.graphics.drawRect(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+            this._mask.graphics.drawRect(0, 0, Core.graphicsDevice.viewport.width, Core.graphicsDevice.viewport.height);
             this._mask.graphics.endFill();
             this._mask.filters = [this._windEffect];
-            SceneManager.stage.addChild(this._mask);
         }
 
         public async onBeginTransition() {
             this.loadNextScene();
             await this.tickEffectProgressProperty(this._windEffect, this.duration, this.easeType);
             this.transitionComplete();
-            SceneManager.stage.removeChild(this._mask);
         }
     }
 }
