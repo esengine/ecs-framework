@@ -36,6 +36,46 @@ module es {
 
         /**
          *
+         * @param value
+         */
+        public add(value: Vector2): Vector2{
+            this.x += value.x;
+            this.y += value.y;
+            return this;
+        }
+
+        /**
+         *
+         * @param value
+         */
+        public divide(value: Vector2): Vector2{
+            this.x /= value.x;
+            this.y /= value.y;
+            return this;
+        }
+
+        /**
+         *
+         * @param value
+         */
+        public multiply(value: Vector2): Vector2{
+            this.x *= value.x;
+            this.y *= value.y;
+            return this;
+        }
+
+        /**
+         *
+         * @param value
+         */
+        public subtract(value: Vector2){
+            this.x -= value.x;
+            this.y -= value.y;
+            return this;
+        }
+
+        /**
+         *
          * @param value1
          * @param value2
          */

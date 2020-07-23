@@ -4,6 +4,13 @@ module es {
         cameraWindow,
     }
 
+    export class CameraInset {
+        public left: number;
+        public right: number;
+        public top: number;
+        public bottom: number;
+    }
+
     export class Camera extends Component {
         /**
          * 对entity.transform.position的快速访问
@@ -89,10 +96,61 @@ module es {
         }
 
         /**
-         * 相机的边框
+         * 相机的世界-空间边界
          */
         public get bounds(){
-            return new Rectangle(0, 0, SceneManager.stage.stageWidth, SceneManager.stage.stageHeight);
+            if (this._areMatrixedDirty)
+                this.updateMatrixes();
+
+            if (this._areBoundsDirty){
+                // 旋转或非旋转的边界都需要左上角和右下角
+                let topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
+                let bottomRight = this.screenToWorldPoint(new Vector2(SceneManager.stage.stageWidth - this._inset.right,
+                    SceneManager.stage.stageHeight - this._inset.bottom));
+
+                if (this.entity.transform.rotation != 0){
+                    // 特别注意旋转的边界。我们需要找到绝对的最小/最大值并从中创建边界
+                    let topRight = this.screenToWorldPoint(new Vector2(SceneManager.stage.stageWidth - this._inset.right,
+                        this._inset.top));
+                    let bottomLeft = this.screenToWorldPoint(new Vector2(this._inset.left,
+                        SceneManager.stage.stageHeight - this._inset.bottom));
+
+                    let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                    let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                    let minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                    let maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+
+                    this._bounds.location = new Vector2(minX, minY);
+                    this._bounds.width = maxX - minX;
+                    this._bounds.height = maxX - minY;
+                } else {
+                    this._bounds.location = topLeft;
+                    this._bounds.width = bottomRight.x - topLeft.x;
+                    this._bounds.height = bottomRight.y - topLeft.y;
+                }
+
+                this._areBoundsDirty = false;
+            }
+
+            return this._bounds;
+        }
+
+        /**
+         * 用于从世界坐标转换到屏幕
+         */
+        public get transformMatrix(): Matrix2D {
+            if (this._areMatrixedDirty)
+                this.updateMatrixes();
+            return this._transformMatrix;
+        }
+
+        /**
+         * 用于从屏幕坐标到世界的转换
+         */
+        public get inverseTransformMatrix(): Matrix2D {
+            if (this._areMatrixedDirty)
+                this.updateMatrixes();
+            return this._inverseTransformMatrix;
         }
 
         public get origin() {
@@ -102,13 +160,23 @@ module es {
         public set origin(value: Vector2) {
             if (this._origin != value) {
                 this._origin = value;
+                this._areMatrixedDirty = true;
             }
         }
 
-        private _zoom;
-        private _minimumZoom = 0.3;
-        private _maximumZoom = 3;
-        private _origin: Vector2 = Vector2.zero;
+        public _zoom;
+        public _minimumZoom = 0.3;
+        public _maximumZoom = 3;
+        public _bounds: Rectangle;
+        public _inset: CameraInset;
+        public _transformMatrix: Matrix2D = new Matrix2D().identity();
+        public _inverseTransformMatrix: Matrix2D = new Matrix2D().identity();
+        public _origin: Vector2 = Vector2.zero;
+
+        public _areMatrixedDirty: boolean = true;
+        public _areBoundsDirty: boolean = true;
+        public _isProjectionMatrixDirty = true;
+
         /**
          * 如果相机模式为cameraWindow 则会进行缓动移动
          * 该值为移动速度
@@ -158,6 +226,50 @@ module es {
             this.entity.transform.position = Vector2.add(this.entity.transform.position, Vector2.subtract(this._origin, oldOrigin));
         }
 
+        protected updateMatrixes(){
+            if (!this._areMatrixedDirty)
+                return;
+
+            let tempMat: Matrix2D;
+            this._transformMatrix = Matrix2D.create().translate(-this.entity.transform.position.x, -this.entity.transform.position.y);
+
+            if (this._zoom != 1){
+                tempMat = Matrix2D.create().scale(this._zoom, this._zoom);
+                this._transformMatrix = this._transformMatrix.multiply(tempMat);
+            }
+
+            if (this.entity.transform.rotation != 0){
+                tempMat = Matrix2D.create().rotate(this.entity.transform.rotation);
+                this._transformMatrix = this._transformMatrix.multiply(tempMat);
+            }
+
+            tempMat = Matrix2D.create().translate(this._origin.x, this._origin.y);
+            this._transformMatrix =this._transformMatrix.multiply(tempMat);
+
+            this._inverseTransformMatrix = this._transformMatrix.invert();
+
+            // 无论何时矩阵改变边界都是无效的
+            this._areBoundsDirty = true;
+            this._areMatrixedDirty = false;
+        }
+
+        /**
+         * 设置用于从视口边缘插入摄像机边界的量
+         * @param left
+         * @param right
+         * @param top
+         * @param bottom
+         */
+        public setInset(left: number, right: number, top: number, bottom: number): Camera {
+            this._inset = new CameraInset();
+            this._inset.left = left;
+            this._inset.right = right;
+            this._inset.top = top;
+            this._inset.bottom = bottom;
+            this._areBoundsDirty = true;
+            return this;
+        }
+
         /**
          * 对entity.transform.setPosition快速访问
          * @param position
@@ -190,9 +302,8 @@ module es {
             } else {
                 this._zoom = MathHelper.map(newZoom, 0, 1, 1, this._maximumZoom);
             }
+            this._areMatrixedDirty = true;
 
-            SceneManager.scene.scaleX = this._zoom;
-            SceneManager.scene.scaleY = this._zoom;
             return this;
         }
 
@@ -201,6 +312,11 @@ module es {
          * @param minZoom
          */
         public setMinimumZoom(minZoom: number): Camera {
+            if (minZoom <= 0) {
+                console.error("minimumZoom must be greater than zero");
+                return;
+            }
+
             if (this._zoom < minZoom)
                 this._zoom = this.minimumZoom;
 
@@ -225,12 +341,43 @@ module es {
             return this;
         }
 
+        public onEntityTransformChanged(comp: transform.Component) {
+            this._areMatrixedDirty = true;
+        }
+
         public zoomIn(deltaZoom: number) {
             this.zoom += deltaZoom;
         }
 
         public zoomOut(deltaZoom: number) {
             this.zoom -= deltaZoom;
+        }
+
+        /**
+         * 将一个点从世界坐标转换到屏幕
+         * @param worldPosition
+         */
+        public worldToScreenPoint(worldPosition: Vector2): Vector2{
+            this.updateMatrixes();
+            worldPosition = Vector2.transform(worldPosition, this._transformMatrix);
+            return worldPosition;
+        }
+
+        /**
+         * 将点从屏幕坐标转换为世界坐标
+         * @param screenPosition
+         */
+        public screenToWorldPoint(screenPosition: Vector2): Vector2{
+            this.updateMatrixes();
+            screenPosition = Vector2.transform(screenPosition, this._inverseTransformMatrix);
+            return screenPosition;
+        }
+
+        /**
+         * 返回鼠标在世界空间中的位置
+         */
+        public mouseToWorldPoint(): Vector2{
+            return this.screenToWorldPoint(Input.touchPosition);
         }
 
         public onAddedToEntity() {

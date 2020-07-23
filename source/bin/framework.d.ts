@@ -114,6 +114,10 @@ declare module es {
         static readonly unitX: Vector2;
         static readonly unitY: Vector2;
         constructor(x?: number, y?: number);
+        add(value: Vector2): Vector2;
+        divide(value: Vector2): Vector2;
+        multiply(value: Vector2): Vector2;
+        subtract(value: Vector2): this;
         static add(value1: Vector2, value2: Vector2): Vector2;
         static divide(value1: Vector2, value2: Vector2): Vector2;
         static multiply(value1: Vector2, value2: Vector2): Vector2;
@@ -401,6 +405,12 @@ declare module es {
         lockOn = 0,
         cameraWindow = 1
     }
+    class CameraInset {
+        left: number;
+        right: number;
+        top: number;
+        bottom: number;
+    }
     class Camera extends Component {
         position: Vector2;
         rotation: number;
@@ -408,11 +418,20 @@ declare module es {
         minimumZoom: number;
         maximumZoom: number;
         readonly bounds: Rectangle;
+        readonly transformMatrix: Matrix2D;
+        readonly inverseTransformMatrix: Matrix2D;
         origin: Vector2;
-        private _zoom;
-        private _minimumZoom;
-        private _maximumZoom;
-        private _origin;
+        _zoom: any;
+        _minimumZoom: number;
+        _maximumZoom: number;
+        _bounds: Rectangle;
+        _inset: CameraInset;
+        _transformMatrix: Matrix2D;
+        _inverseTransformMatrix: Matrix2D;
+        _origin: Vector2;
+        _areMatrixedDirty: boolean;
+        _areBoundsDirty: boolean;
+        _isProjectionMatrixDirty: boolean;
         followLerp: number;
         deadzone: Rectangle;
         focusOffset: Vector2;
@@ -425,13 +444,19 @@ declare module es {
         _worldSpaceDeadZone: Rectangle;
         constructor(targetEntity?: Entity, cameraStyle?: CameraStyle);
         onSceneSizeChanged(newWidth: number, newHeight: number): void;
+        protected updateMatrixes(): void;
+        setInset(left: number, right: number, top: number, bottom: number): Camera;
         setPosition(position: Vector2): this;
         setRotation(rotation: number): Camera;
         setZoom(zoom: number): Camera;
         setMinimumZoom(minZoom: number): Camera;
         setMaximumZoom(maxZoom: number): Camera;
+        onEntityTransformChanged(comp: transform.Component): void;
         zoomIn(deltaZoom: number): void;
         zoomOut(deltaZoom: number): void;
+        worldToScreenPoint(worldPosition: Vector2): Vector2;
+        screenToWorldPoint(screenPosition: Vector2): Vector2;
+        mouseToWorldPoint(): Vector2;
         onAddedToEntity(): void;
         update(): void;
         clampToMapSize(position: Vector2): Vector2;
@@ -626,6 +651,8 @@ declare module es {
         _localOffsetLength: number;
         protected _isParentEntityAddedToScene: any;
         protected _isColliderRegistered: any;
+        _isPositionDirty: boolean;
+        _isRotationDirty: boolean;
         setLocalOffset(offset: Vector2): Collider;
         setShouldColliderScaleAndRotateWithTransform(shouldColliderScaleAndRotationWithTransform: boolean): Collider;
         onAddedToEntity(): void;
@@ -637,6 +664,7 @@ declare module es {
         unregisterColliderWithPhysicsSystem(): void;
         overlaps(other: Collider): any;
         collidesWith(collider: Collider, motion: Vector2): CollisionResult;
+        clone(): Component;
     }
 }
 declare module es {
@@ -1079,31 +1107,24 @@ declare module es {
     }
 }
 declare module es {
-    class Matrix2D {
+    class Matrix2D extends egret.Matrix {
         m11: number;
         m12: number;
         m21: number;
         m22: number;
         m31: number;
         m32: number;
-        private static _identity;
-        static readonly identity: Matrix2D;
-        constructor(m11?: number, m12?: number, m21?: number, m22?: number, m31?: number, m32?: number);
-        translation: Vector2;
-        rotation: number;
-        rotationDegrees: number;
-        scale: Vector2;
-        static add(matrix1: Matrix2D, matrix2: Matrix2D): Matrix2D;
-        static divide(matrix1: Matrix2D, matrix2: Matrix2D): Matrix2D;
-        static multiply(matrix1: Matrix2D, matrix2: Matrix2D): Matrix2D;
-        static multiplyTranslation(matrix: Matrix2D, x: number, y: number): Matrix2D;
+        static create(): Matrix2D;
+        identity(): Matrix2D;
+        translate(dx: number, dy: number): Matrix2D;
+        scale(sx: number, sy: number): Matrix2D;
+        rotate(angle: number): Matrix2D;
+        invert(): Matrix2D;
+        add(matrix: Matrix2D): Matrix2D;
+        substract(matrix: Matrix2D): Matrix2D;
+        divide(matrix: Matrix2D): Matrix2D;
+        multiply(matrix: Matrix2D): Matrix2D;
         determinant(): number;
-        static invert(matrix: Matrix2D, result?: Matrix2D): Matrix2D;
-        static createTranslation(xPosition: number, yPosition: number): Matrix2D;
-        static createTranslationVector(position: Vector2): Matrix2D;
-        static createRotation(radians: number, result?: Matrix2D): Matrix2D;
-        static createScale(xScale: number, yScale: number, result?: Matrix2D): Matrix2D;
-        toEgretMatrix(): egret.Matrix;
     }
 }
 declare module es {
@@ -1202,6 +1223,7 @@ declare module es {
         abstract pointCollidesWithShape(point: Vector2): CollisionResult;
         abstract overlaps(other: Shape): any;
         abstract collidesWithShape(other: Shape): CollisionResult;
+        clone(): Shape;
     }
 }
 declare module es {

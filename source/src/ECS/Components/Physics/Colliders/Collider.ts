@@ -4,11 +4,12 @@ module es {
          * 对撞机的基本形状
          */
         public shape: Shape;
+
         /**
          * 将localOffset添加到实体。获取碰撞器几何图形的最终位置。
          * 允许向一个实体添加多个碰撞器并分别定位，还允许你设置缩放/旋转
          */
-        public get localOffset(): Vector2{
+        public get localOffset(): Vector2 {
             return this._localOffset;
         }
 
@@ -17,21 +18,21 @@ module es {
          * 允许向一个实体添加多个碰撞器并分别定位，还允许你设置缩放/旋转
          * @param value
          */
-        public set localOffset(value: Vector2){
+        public set localOffset(value: Vector2) {
             this.setLocalOffset(value);
         }
 
         /**
          * 镖师碰撞器的绝对位置
          */
-        public get absolutePosition(): Vector2{
+        public get absolutePosition(): Vector2 {
             return Vector2.add(this.entity.transform.position, this._localOffset);
         }
 
         /**
          * 封装变换。如果碰撞器没和实体一起旋转 则返回transform.rotation
          */
-        public get rotation(): number{
+        public get rotation(): number {
             if (this.shouldColliderScaleAndRotateWithTransform && this.entity)
                 return this.entity.transform.rotation;
 
@@ -58,7 +59,10 @@ module es {
         public shouldColliderScaleAndRotateWithTransform = true;
 
         public get bounds(): Rectangle {
-            this.shape.recalculateBounds(this);
+            if (this._isPositionDirty || this._isRotationDirty){
+                this.shape.recalculateBounds(this);
+                this._isPositionDirty = this._isRotationDirty = false;
+            }
 
             return this.shape.bounds;
         }
@@ -81,16 +85,20 @@ module es {
          */
         protected _isColliderRegistered;
 
+        public _isPositionDirty: boolean = true;
+        public _isRotationDirty: boolean = true;
+
         /**
          * 将localOffset添加到实体。获取碰撞器的最终位置。
          * 这允许您向一个实体添加多个碰撞器并分别定位它们。
          * @param offset
          */
-        public setLocalOffset(offset: Vector2): Collider{
-            if (this._localOffset != offset){
+        public setLocalOffset(offset: Vector2): Collider {
+            if (this._localOffset != offset) {
                 this.unregisterColliderWithPhysicsSystem();
                 this._localOffset = offset;
                 this._localOffsetLength = this._localOffset.length();
+                this._isPositionDirty = true;
                 this.registerColliderWithPhysicsSystem();
             }
 
@@ -103,6 +111,7 @@ module es {
          */
         public setShouldColliderScaleAndRotateWithTransform(shouldColliderScaleAndRotationWithTransform: boolean): Collider {
             this.shouldColliderScaleAndRotateWithTransform = shouldColliderScaleAndRotationWithTransform;
+            this._isPositionDirty = this._isRotationDirty = true;
             return this;
         }
 
@@ -121,7 +130,7 @@ module es {
                     let width = bounds.width / this.entity.scale.x;
                     let height = bounds.height / this.entity.scale.y;
                     // 圆碰撞器需要特别注意原点
-                    if (this instanceof CircleCollider){
+                    if (this instanceof CircleCollider) {
                         let circleCollider = this as CircleCollider;
                         circleCollider.radius = Math.max(width, height) * 0.5;
                     } else {
@@ -146,12 +155,25 @@ module es {
         }
 
         public onEntityTransformChanged(comp: transform.Component) {
+            switch (comp) {
+                case transform.Component.position:
+                    this._isPositionDirty = true;
+                    break;
+                case transform.Component.scale:
+                    this._isPositionDirty = true;
+                    break;
+                case transform.Component.rotation:
+                    this._isRotationDirty = true;
+                    break;
+            }
+
             if (this._isColliderRegistered)
                 Physics.updateCollider(this);
         }
 
         public onEnabled() {
             this.registerColliderWithPhysicsSystem();
+            this._isPositionDirty = this._isRotationDirty = true;
         }
 
         public onDisabled() {
@@ -205,6 +227,16 @@ module es {
             this.entity.position = oldPosition;
 
             return result;
+        }
+
+        public clone(): Component{
+            let collider = ObjectUtils.clone<Collider>(this);
+            collider.entity = null;
+
+            if (this.shape)
+                collider.shape = this.shape.clone();
+
+            return collider;
         }
     }
 }

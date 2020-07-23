@@ -19,5 +19,9 @@ module es {
         public abstract pointCollidesWithShape(point: Vector2): CollisionResult;
         public abstract overlaps(other: Shape);
         public abstract collidesWithShape(other: Shape): CollisionResult;
+
+        public clone(): Shape{
+            return ObjectUtils.clone<Shape>(this);
+        }
     }
 }

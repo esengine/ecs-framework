@@ -177,7 +177,43 @@ module es {
             this.center = collider.localOffset;
 
             if (collider.shouldColliderScaleAndRotateWithTransform){
+                let hasUnitScale = true;
+                let tempMat: Matrix2D;
+                let combinedMatrix = Matrix2D.create().translate(-this._polygonCenter.x, -this._polygonCenter.y);
+
+                if (collider.entity.transform.scale != Vector2.zero){
+                    tempMat = Matrix2D.create().scale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
+                    combinedMatrix = combinedMatrix.multiply(tempMat);
+                    hasUnitScale = false;
+
+                    // 缩放偏移量并将其设置为中心。如果我们有旋转，它会在下面重置
+                    this.center = Vector2.multiply(collider.localOffset, collider.entity.transform.scale);
+                }
+
+                if (collider.entity.transform.rotation != 0){
+                    tempMat = Matrix2D.create().rotate(collider.entity.transform.rotation);
+                    combinedMatrix = combinedMatrix.multiply(tempMat);
+
+                    // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动
+                    // 我们的偏移使角度为0我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
+                    let offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x);
+                    let offsetLength = hasUnitScale ? collider._localOffsetLength :
+                        Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
+                    this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength,
+                        collider.entity.transform.rotation + offsetAngle);
+                }
+
+                tempMat = Matrix2D.create().translate(this._polygonCenter.x, this._polygonCenter.y);
+                combinedMatrix = combinedMatrix.multiply(tempMat);
+
+                // 最后变换原始点
+                Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
+
                 this.isUnrotated = collider.entity.transform.rotation == 0;
+
+                // 如果旋转的话，我们只需要重建边的法线
+                if (collider._isRotationDirty)
+                    this._areEdgeNormalsDirty = true;
             }
 
             this.position = Vector2.add(collider.entity.transform.position, this.center);

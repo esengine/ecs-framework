@@ -660,6 +660,26 @@ var es;
             enumerable: true,
             configurable: true
         });
+        Vector2.prototype.add = function (value) {
+            this.x += value.x;
+            this.y += value.y;
+            return this;
+        };
+        Vector2.prototype.divide = function (value) {
+            this.x /= value.x;
+            this.y /= value.y;
+            return this;
+        };
+        Vector2.prototype.multiply = function (value) {
+            this.x *= value.x;
+            this.y *= value.y;
+            return this;
+        };
+        Vector2.prototype.subtract = function (value) {
+            this.x -= value.x;
+            this.y -= value.y;
+            return this;
+        };
         Vector2.add = function (value1, value2) {
             var result = new Vector2(0, 0);
             result.x = value1.x + value2.x;
@@ -1739,6 +1759,12 @@ var es;
         CameraStyle[CameraStyle["lockOn"] = 0] = "lockOn";
         CameraStyle[CameraStyle["cameraWindow"] = 1] = "cameraWindow";
     })(CameraStyle = es.CameraStyle || (es.CameraStyle = {}));
+    var CameraInset = (function () {
+        function CameraInset() {
+        }
+        return CameraInset;
+    }());
+    es.CameraInset = CameraInset;
     var Camera = (function (_super) {
         __extends(Camera, _super);
         function Camera(targetEntity, cameraStyle) {
@@ -1747,7 +1773,12 @@ var es;
             var _this = _super.call(this) || this;
             _this._minimumZoom = 0.3;
             _this._maximumZoom = 3;
+            _this._transformMatrix = new es.Matrix2D().identity();
+            _this._inverseTransformMatrix = new es.Matrix2D().identity();
             _this._origin = es.Vector2.zero;
+            _this._areMatrixedDirty = true;
+            _this._areBoundsDirty = true;
+            _this._isProjectionMatrixDirty = true;
             _this.followLerp = 0.1;
             _this.deadzone = new es.Rectangle();
             _this.focusOffset = new es.Vector2();
@@ -1816,7 +1847,48 @@ var es;
         });
         Object.defineProperty(Camera.prototype, "bounds", {
             get: function () {
-                return new es.Rectangle(0, 0, es.SceneManager.stage.stageWidth, es.SceneManager.stage.stageHeight);
+                if (this._areMatrixedDirty)
+                    this.updateMatrixes();
+                if (this._areBoundsDirty) {
+                    var topLeft = this.screenToWorldPoint(new es.Vector2(this._inset.left, this._inset.top));
+                    var bottomRight = this.screenToWorldPoint(new es.Vector2(es.SceneManager.stage.stageWidth - this._inset.right, es.SceneManager.stage.stageHeight - this._inset.bottom));
+                    if (this.entity.transform.rotation != 0) {
+                        var topRight = this.screenToWorldPoint(new es.Vector2(es.SceneManager.stage.stageWidth - this._inset.right, this._inset.top));
+                        var bottomLeft = this.screenToWorldPoint(new es.Vector2(this._inset.left, es.SceneManager.stage.stageHeight - this._inset.bottom));
+                        var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                        var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                        var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                        var maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                        this._bounds.location = new es.Vector2(minX, minY);
+                        this._bounds.width = maxX - minX;
+                        this._bounds.height = maxX - minY;
+                    }
+                    else {
+                        this._bounds.location = topLeft;
+                        this._bounds.width = bottomRight.x - topLeft.x;
+                        this._bounds.height = bottomRight.y - topLeft.y;
+                    }
+                    this._areBoundsDirty = false;
+                }
+                return this._bounds;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "transformMatrix", {
+            get: function () {
+                if (this._areMatrixedDirty)
+                    this.updateMatrixes();
+                return this._transformMatrix;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "inverseTransformMatrix", {
+            get: function () {
+                if (this._areMatrixedDirty)
+                    this.updateMatrixes();
+                return this._inverseTransformMatrix;
             },
             enumerable: true,
             configurable: true
@@ -1828,6 +1900,7 @@ var es;
             set: function (value) {
                 if (this._origin != value) {
                     this._origin = value;
+                    this._areMatrixedDirty = true;
                 }
             },
             enumerable: true,
@@ -1837,6 +1910,34 @@ var es;
             var oldOrigin = this._origin;
             this.origin = new es.Vector2(newWidth / 2, newHeight / 2);
             this.entity.transform.position = es.Vector2.add(this.entity.transform.position, es.Vector2.subtract(this._origin, oldOrigin));
+        };
+        Camera.prototype.updateMatrixes = function () {
+            if (!this._areMatrixedDirty)
+                return;
+            var tempMat;
+            this._transformMatrix = es.Matrix2D.create().translate(-this.entity.transform.position.x, -this.entity.transform.position.y);
+            if (this._zoom != 1) {
+                tempMat = es.Matrix2D.create().scale(this._zoom, this._zoom);
+                this._transformMatrix = this._transformMatrix.multiply(tempMat);
+            }
+            if (this.entity.transform.rotation != 0) {
+                tempMat = es.Matrix2D.create().rotate(this.entity.transform.rotation);
+                this._transformMatrix = this._transformMatrix.multiply(tempMat);
+            }
+            tempMat = es.Matrix2D.create().translate(this._origin.x, this._origin.y);
+            this._transformMatrix = this._transformMatrix.multiply(tempMat);
+            this._inverseTransformMatrix = this._transformMatrix.invert();
+            this._areBoundsDirty = true;
+            this._areMatrixedDirty = false;
+        };
+        Camera.prototype.setInset = function (left, right, top, bottom) {
+            this._inset = new CameraInset();
+            this._inset.left = left;
+            this._inset.right = right;
+            this._inset.top = top;
+            this._inset.bottom = bottom;
+            this._areBoundsDirty = true;
+            return this;
         };
         Camera.prototype.setPosition = function (position) {
             this.entity.transform.setPosition(position.x, position.y);
@@ -1857,11 +1958,14 @@ var es;
             else {
                 this._zoom = es.MathHelper.map(newZoom, 0, 1, 1, this._maximumZoom);
             }
-            es.SceneManager.scene.scaleX = this._zoom;
-            es.SceneManager.scene.scaleY = this._zoom;
+            this._areMatrixedDirty = true;
             return this;
         };
         Camera.prototype.setMinimumZoom = function (minZoom) {
+            if (minZoom <= 0) {
+                console.error("minimumZoom must be greater than zero");
+                return;
+            }
             if (this._zoom < minZoom)
                 this._zoom = this.minimumZoom;
             this._minimumZoom = minZoom;
@@ -1877,11 +1981,27 @@ var es;
             this._maximumZoom = maxZoom;
             return this;
         };
+        Camera.prototype.onEntityTransformChanged = function (comp) {
+            this._areMatrixedDirty = true;
+        };
         Camera.prototype.zoomIn = function (deltaZoom) {
             this.zoom += deltaZoom;
         };
         Camera.prototype.zoomOut = function (deltaZoom) {
             this.zoom -= deltaZoom;
+        };
+        Camera.prototype.worldToScreenPoint = function (worldPosition) {
+            this.updateMatrixes();
+            worldPosition = es.Vector2.transform(worldPosition, this._transformMatrix);
+            return worldPosition;
+        };
+        Camera.prototype.screenToWorldPoint = function (screenPosition) {
+            this.updateMatrixes();
+            screenPosition = es.Vector2.transform(screenPosition, this._inverseTransformMatrix);
+            return screenPosition;
+        };
+        Camera.prototype.mouseToWorldPoint = function () {
+            return this.screenToWorldPoint(es.Input.touchPosition);
         };
         Camera.prototype.onAddedToEntity = function () {
             this.follow(this._targetEntity, this._cameraStyle);
@@ -2560,6 +2680,8 @@ var es;
             _this.shouldColliderScaleAndRotateWithTransform = true;
             _this.registeredPhysicsBounds = new es.Rectangle();
             _this._localOffset = es.Vector2.zero;
+            _this._isPositionDirty = true;
+            _this._isRotationDirty = true;
             return _this;
         }
         Object.defineProperty(Collider.prototype, "localOffset", {
@@ -2590,7 +2712,10 @@ var es;
         });
         Object.defineProperty(Collider.prototype, "bounds", {
             get: function () {
-                this.shape.recalculateBounds(this);
+                if (this._isPositionDirty || this._isRotationDirty) {
+                    this.shape.recalculateBounds(this);
+                    this._isPositionDirty = this._isRotationDirty = false;
+                }
                 return this.shape.bounds;
             },
             enumerable: true,
@@ -2601,12 +2726,14 @@ var es;
                 this.unregisterColliderWithPhysicsSystem();
                 this._localOffset = offset;
                 this._localOffsetLength = this._localOffset.length();
+                this._isPositionDirty = true;
                 this.registerColliderWithPhysicsSystem();
             }
             return this;
         };
         Collider.prototype.setShouldColliderScaleAndRotateWithTransform = function (shouldColliderScaleAndRotationWithTransform) {
             this.shouldColliderScaleAndRotateWithTransform = shouldColliderScaleAndRotationWithTransform;
+            this._isPositionDirty = this._isRotationDirty = true;
             return this;
         };
         Collider.prototype.onAddedToEntity = function () {
@@ -2642,11 +2769,23 @@ var es;
             this._isParentEntityAddedToScene = false;
         };
         Collider.prototype.onEntityTransformChanged = function (comp) {
+            switch (comp) {
+                case transform.Component.position:
+                    this._isPositionDirty = true;
+                    break;
+                case transform.Component.scale:
+                    this._isPositionDirty = true;
+                    break;
+                case transform.Component.rotation:
+                    this._isRotationDirty = true;
+                    break;
+            }
             if (this._isColliderRegistered)
                 es.Physics.updateCollider(this);
         };
         Collider.prototype.onEnabled = function () {
             this.registerColliderWithPhysicsSystem();
+            this._isPositionDirty = this._isRotationDirty = true;
         };
         Collider.prototype.onDisabled = function () {
             this.unregisterColliderWithPhysicsSystem();
@@ -2674,6 +2813,13 @@ var es;
                 result.collider = collider;
             this.entity.position = oldPosition;
             return result;
+        };
+        Collider.prototype.clone = function () {
+            var collider = ObjectUtils.clone(this);
+            collider.entity = null;
+            if (this.shape)
+                collider.shape = this.shape.clone();
+            return collider;
         };
         return Collider;
     }(es.Component));
@@ -4769,167 +4915,141 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Matrix2D = (function () {
-        function Matrix2D(m11, m12, m21, m22, m31, m32) {
-            this.m11 = 0;
-            this.m12 = 0;
-            this.m21 = 0;
-            this.m22 = 0;
-            this.m31 = 0;
-            this.m32 = 0;
-            this.m11 = m11 ? m11 : 1;
-            this.m12 = m12 ? m12 : 0;
-            this.m21 = m21 ? m21 : 0;
-            this.m22 = m22 ? m22 : 1;
-            this.m31 = m31 ? m31 : 0;
-            this.m32 = m32 ? m32 : 0;
+    var Matrix2D = (function (_super) {
+        __extends(Matrix2D, _super);
+        function Matrix2D() {
+            return _super !== null && _super.apply(this, arguments) || this;
         }
-        Object.defineProperty(Matrix2D, "identity", {
+        Object.defineProperty(Matrix2D.prototype, "m11", {
             get: function () {
-                return Matrix2D._identity;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Matrix2D.prototype, "translation", {
-            get: function () {
-                return new es.Vector2(this.m31, this.m32);
+                return this.a;
             },
             set: function (value) {
-                this.m31 = value.x;
-                this.m32 = value.y;
+                this.a = value;
             },
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(Matrix2D.prototype, "rotation", {
+        Object.defineProperty(Matrix2D.prototype, "m12", {
             get: function () {
-                return Math.atan2(this.m21, this.m11);
+                return this.b;
             },
             set: function (value) {
-                var val1 = Math.cos(value);
-                var val2 = Math.sin(value);
-                this.m11 = val1;
-                this.m12 = val2;
-                this.m21 = -val2;
-                this.m22 = val1;
+                this.b = value;
             },
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(Matrix2D.prototype, "rotationDegrees", {
+        Object.defineProperty(Matrix2D.prototype, "m21", {
             get: function () {
-                return es.MathHelper.toDegrees(this.rotation);
+                return this.c;
             },
             set: function (value) {
-                this.rotation = es.MathHelper.toRadians(value);
+                this.c = value;
             },
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(Matrix2D.prototype, "scale", {
+        Object.defineProperty(Matrix2D.prototype, "m22", {
             get: function () {
-                return new es.Vector2(this.m11, this.m22);
+                return this.d;
             },
             set: function (value) {
-                this.m11 = value.x;
-                this.m12 = value.y;
+                this.d = value;
             },
             enumerable: true,
             configurable: true
         });
-        Matrix2D.add = function (matrix1, matrix2) {
-            matrix1.m11 += matrix2.m11;
-            matrix1.m12 += matrix2.m12;
-            matrix1.m21 += matrix2.m21;
-            matrix1.m22 += matrix2.m22;
-            matrix1.m31 += matrix2.m31;
-            matrix1.m32 += matrix2.m32;
-            return matrix1;
+        Object.defineProperty(Matrix2D.prototype, "m31", {
+            get: function () {
+                return this.tx;
+            },
+            set: function (value) {
+                this.tx = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Matrix2D.prototype, "m32", {
+            get: function () {
+                return this.ty;
+            },
+            set: function (value) {
+                this.ty = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Matrix2D.create = function () {
+            return egret.Matrix.create();
         };
-        Matrix2D.divide = function (matrix1, matrix2) {
-            matrix1.m11 /= matrix2.m11;
-            matrix1.m12 /= matrix2.m12;
-            matrix1.m21 /= matrix2.m21;
-            matrix1.m22 /= matrix2.m22;
-            matrix1.m31 /= matrix2.m31;
-            matrix1.m32 /= matrix2.m32;
-            return matrix1;
+        Matrix2D.prototype.identity = function () {
+            _super.prototype.identity.call(this);
+            return this;
         };
-        Matrix2D.multiply = function (matrix1, matrix2) {
-            var result = new Matrix2D();
-            var m11 = (matrix1.m11 * matrix2.m11) + (matrix1.m12 * matrix2.m21);
-            var m12 = (matrix1.m11 * matrix2.m12) + (matrix1.m12 * matrix2.m22);
-            var m21 = (matrix1.m21 * matrix2.m11) + (matrix1.m22 * matrix2.m21);
-            var m22 = (matrix1.m21 * matrix2.m12) + (matrix1.m22 * matrix2.m22);
-            var m31 = (matrix1.m31 * matrix2.m11) + (matrix1.m32 * matrix2.m21) + matrix2.m31;
-            var m32 = (matrix1.m31 * matrix2.m12) + (matrix1.m32 * matrix2.m22) + matrix2.m32;
-            result.m11 = m11;
-            result.m12 = m12;
-            result.m21 = m21;
-            result.m22 = m22;
-            result.m31 = m31;
-            result.m32 = m32;
-            return result;
+        Matrix2D.prototype.translate = function (dx, dy) {
+            _super.prototype.translate.call(this, dx, dy);
+            return this;
         };
-        Matrix2D.multiplyTranslation = function (matrix, x, y) {
-            var trans = Matrix2D.createTranslation(x, y);
-            return Matrix2D.multiply(matrix, trans);
+        Matrix2D.prototype.scale = function (sx, sy) {
+            _super.prototype.scale.call(this, sx, sy);
+            return this;
+        };
+        Matrix2D.prototype.rotate = function (angle) {
+            _super.prototype.rotate.call(this, angle);
+            return this;
+        };
+        Matrix2D.prototype.invert = function () {
+            _super.prototype.invert.call(this);
+            return this;
+        };
+        Matrix2D.prototype.add = function (matrix) {
+            this.m11 += matrix.m11;
+            this.m12 += matrix.m12;
+            this.m21 += matrix.m21;
+            this.m22 += matrix.m22;
+            this.m31 += matrix.m31;
+            this.m32 += matrix.m32;
+            return this;
+        };
+        Matrix2D.prototype.substract = function (matrix) {
+            this.m11 -= matrix.m11;
+            this.m12 -= matrix.m12;
+            this.m21 -= matrix.m21;
+            this.m22 -= matrix.m22;
+            this.m31 -= matrix.m31;
+            this.m32 -= matrix.m32;
+            return this;
+        };
+        Matrix2D.prototype.divide = function (matrix) {
+            this.m11 /= matrix.m11;
+            this.m12 /= matrix.m12;
+            this.m21 /= matrix.m21;
+            this.m22 /= matrix.m22;
+            this.m31 /= matrix.m31;
+            this.m32 /= matrix.m32;
+            return this;
+        };
+        Matrix2D.prototype.multiply = function (matrix) {
+            var m11 = (this.m11 * matrix.m11) + (this.m12 * matrix.m21);
+            var m12 = (this.m11 * matrix.m12) + (this.m12 * matrix.m22);
+            var m21 = (this.m21 * matrix.m11) + (this.m22 * matrix.m21);
+            var m22 = (this.m21 * matrix.m12) + (this.m22 * matrix.m22);
+            var m31 = (this.m31 * matrix.m11) + (this.m32 * matrix.m21) + matrix.m31;
+            var m32 = (this.m31 * matrix.m12) + (this.m32 * matrix.m22) + matrix.m32;
+            this.m11 = m11;
+            this.m12 = m12;
+            this.m21 = m21;
+            this.m22 = m22;
+            this.m31 = m31;
+            this.m32 = m32;
+            return this;
         };
         Matrix2D.prototype.determinant = function () {
             return this.m11 * this.m22 - this.m12 * this.m21;
         };
-        Matrix2D.invert = function (matrix, result) {
-            if (result === void 0) { result = new Matrix2D(); }
-            var det = 1 / matrix.determinant();
-            result.m11 = matrix.m22 * det;
-            result.m12 = -matrix.m12 * det;
-            result.m21 = -matrix.m21 * det;
-            result.m22 = matrix.m11 * det;
-            result.m31 = (matrix.m32 * matrix.m21 - matrix.m31 * matrix.m22) * det;
-            result.m32 = -(matrix.m32 * matrix.m11 - matrix.m31 * matrix.m12) * det;
-            return result;
-        };
-        Matrix2D.createTranslation = function (xPosition, yPosition) {
-            var result = new Matrix2D();
-            result.m11 = 1;
-            result.m12 = 0;
-            result.m21 = 0;
-            result.m22 = 1;
-            result.m31 = xPosition;
-            result.m32 = yPosition;
-            return result;
-        };
-        Matrix2D.createTranslationVector = function (position) {
-            return this.createTranslation(position.x, position.y);
-        };
-        Matrix2D.createRotation = function (radians, result) {
-            result = new Matrix2D();
-            var val1 = Math.cos(radians);
-            var val2 = Math.sin(radians);
-            result.m11 = val1;
-            result.m12 = val2;
-            result.m21 = -val2;
-            result.m22 = val1;
-            return result;
-        };
-        Matrix2D.createScale = function (xScale, yScale, result) {
-            if (result === void 0) { result = new Matrix2D(); }
-            result.m11 = xScale;
-            result.m12 = 0;
-            result.m21 = 0;
-            result.m22 = yScale;
-            result.m31 = 0;
-            result.m32 = 0;
-            return result;
-        };
-        Matrix2D.prototype.toEgretMatrix = function () {
-            var matrix = new egret.Matrix(this.m11, this.m12, this.m21, this.m22, this.m31, this.m32);
-            return matrix;
-        };
-        Matrix2D._identity = new Matrix2D(1, 0, 0, 1, 0, 0);
         return Matrix2D;
-    }());
+    }(egret.Matrix));
     es.Matrix2D = Matrix2D;
 })(es || (es = {}));
 var es;
@@ -5374,6 +5494,9 @@ var es;
     var Shape = (function () {
         function Shape() {
         }
+        Shape.prototype.clone = function () {
+            return ObjectUtils.clone(this);
+        };
         return Shape;
     }());
     es.Shape = Shape;
@@ -5473,7 +5596,29 @@ var es;
         Polygon.prototype.recalculateBounds = function (collider) {
             this.center = collider.localOffset;
             if (collider.shouldColliderScaleAndRotateWithTransform) {
+                var hasUnitScale = true;
+                var tempMat = void 0;
+                var combinedMatrix = es.Matrix2D.create().translate(-this._polygonCenter.x, -this._polygonCenter.y);
+                if (collider.entity.transform.scale != es.Vector2.zero) {
+                    tempMat = es.Matrix2D.create().scale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
+                    combinedMatrix = combinedMatrix.multiply(tempMat);
+                    hasUnitScale = false;
+                    this.center = es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale);
+                }
+                if (collider.entity.transform.rotation != 0) {
+                    tempMat = es.Matrix2D.create().rotate(collider.entity.transform.rotation);
+                    combinedMatrix = combinedMatrix.multiply(tempMat);
+                    var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x);
+                    var offsetLength = hasUnitScale ? collider._localOffsetLength :
+                        es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
+                    this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotation + offsetAngle);
+                }
+                tempMat = es.Matrix2D.create().translate(this._polygonCenter.x, this._polygonCenter.y);
+                combinedMatrix = combinedMatrix.multiply(tempMat);
+                es.Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
                 this.isUnrotated = collider.entity.transform.rotation == 0;
+                if (collider._isRotationDirty)
+                    this._areEdgeNormalsDirty = true;
             }
             this.position = es.Vector2.add(collider.entity.transform.position, this.center);
             this.bounds = es.Rectangle.rectEncompassingPoints(this.points);
