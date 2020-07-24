@@ -162,8 +162,7 @@ module es {
 
                     // 求直线的法线
                     let line = Vector2.subtract(points[j], points[i]);
-                    edgeNormal.x = -line.y;
-                    edgeNormal.y = line.x;
+                    edgeNormal = new Vector2(-line.y, line.x);
                 }
             }
 
@@ -196,7 +195,7 @@ module es {
 
                     // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动
                     // 我们的偏移使角度为0我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
-                    let offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x);
+                    let offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
                     let offsetLength = hasUnitScale ? collider._localOffsetLength :
                         Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
                     this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength,

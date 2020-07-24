@@ -1156,26 +1156,37 @@ var es;
         Core.prototype.initialize = function () {
         };
         Core.prototype.update = function () {
-            this.startDebugUpdate();
-            es.Time.update(egret.getTimer());
-            if (this._scene) {
-                for (var i = this._globalManagers.length - 1; i >= 0; i--) {
-                    if (this._globalManagers[i].enabled)
-                        this._globalManagers[i].update();
-                }
-                if (!this._sceneTransition ||
-                    (this._sceneTransition && (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
-                    this._scene.update();
-                }
-                if (this._nextScene) {
-                    this._scene.end();
-                    this._scene = this._nextScene;
-                    this._nextScene = null;
-                    this.onSceneChanged();
-                    this._scene.begin();
-                }
-            }
-            this.endDebugUpdate();
+            return __awaiter(this, void 0, void 0, function () {
+                var i;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            this.startDebugUpdate();
+                            es.Time.update(egret.getTimer());
+                            if (!this._scene) return [3, 2];
+                            for (i = this._globalManagers.length - 1; i >= 0; i--) {
+                                if (this._globalManagers[i].enabled)
+                                    this._globalManagers[i].update();
+                            }
+                            if (!this._sceneTransition ||
+                                (this._sceneTransition && (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
+                                this._scene.update();
+                            }
+                            if (!this._nextScene) return [3, 2];
+                            this._scene.end();
+                            this._scene = this._nextScene;
+                            this._nextScene = null;
+                            this.onSceneChanged();
+                            return [4, this._scene.begin()];
+                        case 1:
+                            _a.sent();
+                            _a.label = 2;
+                        case 2:
+                            this.endDebugUpdate();
+                            return [2];
+                    }
+                });
+            });
         };
         Core.prototype.draw = function () {
             return __awaiter(this, void 0, void 0, function () {
@@ -1338,6 +1349,16 @@ var es;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Entity.prototype, "localPosition", {
+            get: function () {
+                return this.transform.localPosition;
+            },
+            set: function (value) {
+                this.transform.setLocalPosition(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Entity.prototype, "rotation", {
             get: function () {
                 return this.transform.rotation;
@@ -1348,12 +1369,73 @@ var es;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Entity.prototype, "rotationDegrees", {
+            get: function () {
+                return this.transform.rotationDegrees;
+            },
+            set: function (value) {
+                this.transform.setRotationDegrees(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Entity.prototype, "localRotation", {
+            get: function () {
+                return this.transform.localRotation;
+            },
+            set: function (value) {
+                this.transform.setLocalRotation(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Entity.prototype, "localRotationDegrees", {
+            get: function () {
+                return this.transform.localRotationDegrees;
+            },
+            set: function (value) {
+                this.transform.setLocalRotationDegrees(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(Entity.prototype, "scale", {
             get: function () {
                 return this.transform.scale;
             },
             set: function (value) {
                 this.transform.setScale(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Entity.prototype, "localScale", {
+            get: function () {
+                return this.transform.localScale;
+            },
+            set: function (value) {
+                this.transform.setLocalScale(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Entity.prototype, "worldInverseTransform", {
+            get: function () {
+                return this.transform.worldInverseTransform;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Entity.prototype, "localToWorldTransform", {
+            get: function () {
+                return this.transform.localToWorldTransform;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Entity.prototype, "worldToLocalTransform", {
+            get: function () {
+                return this.transform.worldToLocalTransform;
             },
             enumerable: true,
             configurable: true
@@ -1385,6 +1467,8 @@ var es;
             if (this._updateOrder != updateOrder) {
                 this._updateOrder = updateOrder;
                 if (this.scene) {
+                    this.scene.entities.markEntityListUnsorted();
+                    this.scene.entities.markTagUnsorted(this.tag);
                 }
                 return this;
             }
@@ -1483,6 +1567,12 @@ var es;
             for (var i = 0; i < this.components.count; i++) {
                 this.removeComponent(this.components.buffer[i]);
             }
+        };
+        Entity.prototype.compareTo = function (other) {
+            var compare = this._updateOrder - other._updateOrder;
+            if (compare == 0)
+                compare = this.id - other.id;
+            return compare;
         };
         Entity.prototype.toString = function () {
             return "[Entity: name: " + this.name + ", tag: " + this.tag + ", enabled: " + this.enabled + ", depth: " + this.updateOrder + "]";
@@ -1697,6 +1787,9 @@ var es;
     })(DirtyType = es.DirtyType || (es.DirtyType = {}));
     var Transform = (function () {
         function Transform(entity) {
+            this._worldTransform = es.Matrix2D.create().identity();
+            this._worldToLocalTransform = es.Matrix2D.create().identity();
+            this._worldInverseTransform = es.Matrix2D.create().identity();
             this.entity = entity;
             this.scale = es.Vector2.one;
             this._children = [];
@@ -1718,6 +1811,139 @@ var es;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Transform.prototype, "position", {
+            get: function () {
+                this.updateTransform();
+                if (this._positionDirty) {
+                    if (!this.parent) {
+                        this._position = this._localPosition;
+                    }
+                    else {
+                        this.parent.updateTransform();
+                        this._position = es.Vector2Ext.transformR(this._localPosition, this.parent._worldTransform);
+                    }
+                    this._positionDirty = false;
+                }
+                return this._position;
+            },
+            set: function (value) {
+                this.setPosition(value.x, value.y);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Transform.prototype, "localPosition", {
+            get: function () {
+                this.updateTransform();
+                return this._localPosition;
+            },
+            set: function (value) {
+                this.setLocalPosition(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Transform.prototype, "rotation", {
+            get: function () {
+                this.updateTransform();
+                return this._rotation;
+            },
+            set: function (value) {
+                this.setRotation(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Transform.prototype, "rotationDegrees", {
+            get: function () {
+                return es.MathHelper.toDegrees(this._rotation);
+            },
+            set: function (value) {
+                this.setRotation(es.MathHelper.toRadians(value));
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Transform.prototype, "localRotation", {
+            get: function () {
+                this.updateTransform();
+                return this._localRotation;
+            },
+            set: function (value) {
+                this.setLocalRotation(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Transform.prototype, "localRotationDegrees", {
+            get: function () {
+                return es.MathHelper.toDegrees(this._localRotation);
+            },
+            set: function (value) {
+                this.localRotation = es.MathHelper.toRadians(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Transform.prototype, "scale", {
+            get: function () {
+                this.updateTransform();
+                return this._scale;
+            },
+            set: function (value) {
+                this.setScale(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Transform.prototype, "localScale", {
+            get: function () {
+                this.updateTransform();
+                return this._localScale;
+            },
+            set: function (value) {
+                this.setLocalScale(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Transform.prototype, "worldInverseTransform", {
+            get: function () {
+                this.updateTransform();
+                if (this._worldInverseDirty) {
+                    this._worldInverseTransform = this._worldTransform.invert();
+                    this._worldInverseDirty = false;
+                }
+                return this._worldInverseTransform;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Transform.prototype, "localToWorldTransform", {
+            get: function () {
+                this.updateTransform();
+                return this._worldTransform;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Transform.prototype, "worldToLocalTransform", {
+            get: function () {
+                if (this._worldToLocalDirty) {
+                    if (!this.parent) {
+                        this._worldToLocalTransform = es.Matrix2D.create().identity();
+                    }
+                    else {
+                        this.parent.updateTransform();
+                        this._worldToLocalTransform = this.parent._worldTransform.invert();
+                    }
+                    this._worldToLocalDirty = false;
+                }
+                return this._worldToLocalTransform;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Transform.prototype.getChild = function (index) {
             return this._children[index];
         };
@@ -1733,27 +1959,110 @@ var es;
             return this;
         };
         Transform.prototype.setPosition = function (x, y) {
-            this.position = new es.Vector2(x, y);
+            var position = new es.Vector2(x, y);
+            if (position == this._position)
+                return this;
+            this._position = position;
+            if (this.parent) {
+                this.localPosition = es.Vector2Ext.transformR(this._position, this._worldToLocalTransform);
+            }
+            else {
+                this.localPosition = position;
+            }
+            this._positionDirty = false;
+            return this;
+        };
+        Transform.prototype.setLocalPosition = function (localPosition) {
+            if (localPosition == this._localPosition)
+                return this;
+            this._localPosition = localPosition;
+            this._localDirty = this._positionDirty = this._localPositionDirty = this._localRotationDirty = this._localScaleDirty = true;
             this.setDirty(DirtyType.positionDirty);
             return this;
         };
-        Transform.prototype.setRotation = function (degrees) {
-            this.rotation = degrees;
-            this.setDirty(DirtyType.rotationDirty);
+        Transform.prototype.setRotation = function (radians) {
+            this._rotation = radians;
+            if (this.parent) {
+                this.localRotation = this.parent.rotation + radians;
+            }
+            else {
+                this.localRotation = radians;
+            }
             return this;
         };
-        Transform.prototype.setScale = function (scale) {
-            this.scale = scale;
-            this.setDirty(DirtyType.scaleDirty);
-            return this;
+        Transform.prototype.setRotationDegrees = function (degrees) {
+            return this.setRotation(es.MathHelper.toRadians(degrees));
         };
         Transform.prototype.lookAt = function (pos) {
             var sign = this.position.x > pos.x ? -1 : 1;
             var vectorToAlignTo = es.Vector2.normalize(es.Vector2.subtract(this.position, pos));
             this.rotation = sign * Math.acos(es.Vector2.dot(vectorToAlignTo, es.Vector2.unitY));
         };
+        Transform.prototype.setLocalRotation = function (radians) {
+            this._localRotation = radians;
+            this._localDirty = this._positionDirty = this._localPositionDirty = this._localRotationDirty = this._localScaleDirty = true;
+            this.setDirty(DirtyType.rotationDirty);
+            return this;
+        };
+        Transform.prototype.setLocalRotationDegrees = function (degrees) {
+            return this.setLocalRotation(es.MathHelper.toRadians(degrees));
+        };
+        Transform.prototype.setScale = function (scale) {
+            this._scale = scale;
+            if (this.parent) {
+                this.localScale = es.Vector2.divide(scale, this.parent._scale);
+            }
+            else {
+                this.localScale = scale;
+            }
+            return this;
+        };
+        Transform.prototype.setLocalScale = function (scale) {
+            this._localScale = scale;
+            this._localDirty = this._positionDirty = this._localScaleDirty = true;
+            this.setDirty(DirtyType.scaleDirty);
+            return this;
+        };
         Transform.prototype.roundPosition = function () {
-            this.position = this.position.round();
+            this.position = this._position.round();
+        };
+        Transform.prototype.updateTransform = function () {
+            if (this.hierarchyDirty != DirtyType.clean) {
+                if (this.parent)
+                    this.parent.updateTransform();
+                if (this._localDirty) {
+                    if (this._localPositionDirty) {
+                        this._translationMatrix = es.Matrix2D.create().translate(this._localPosition.x, this._localPosition.y);
+                        this._localPositionDirty = false;
+                    }
+                    if (this._localRotationDirty) {
+                        this._rotationMatrix = es.Matrix2D.create().rotate(this._localRotation);
+                        this._localRotationDirty = false;
+                    }
+                    if (this._localScaleDirty) {
+                        this._scaleMatrix = es.Matrix2D.create().scale(this._localScale.x, this._localScale.y);
+                        this._localScaleDirty = false;
+                    }
+                    this._localTransform = this._scaleMatrix.multiply(this._rotationMatrix);
+                    this._localTransform = this._localTransform.multiply(this._translationMatrix);
+                    if (!this.parent) {
+                        this._worldTransform = this._localTransform;
+                        this._rotation = this._localRotation;
+                        this._scale = this._localScale;
+                        this._worldInverseDirty = true;
+                    }
+                    this._localDirty = false;
+                }
+                if (this.parent) {
+                    this._worldTransform = this._localTransform.multiply(this.parent._worldTransform);
+                    this._rotation = this._localRotation + this.parent._rotation;
+                    this._scale = es.Vector2.multiply(this.parent._scale, this._localScale);
+                    this._worldInverseDirty = true;
+                }
+                this._worldToLocalDirty = true;
+                this._positionDirty = true;
+                this.hierarchyDirty = DirtyType.clean;
+            }
         };
         Transform.prototype.setDirty = function (dirtyFlagType) {
             if ((this.hierarchyDirty & dirtyFlagType) == 0) {
@@ -1776,12 +2085,18 @@ var es;
             }
         };
         Transform.prototype.copyFrom = function (transform) {
-            this.position = transform.position;
-            this.rotation = transform.rotation;
-            this.scale = transform.scale;
+            this._position = transform.position;
+            this._localPosition = transform._localPosition;
+            this._rotation = transform._rotation;
+            this._localRotation = transform._localRotation;
+            this._scale = transform._scale;
+            this._localScale = transform._localScale;
             this.setDirty(DirtyType.positionDirty);
             this.setDirty(DirtyType.rotationDirty);
             this.setDirty(DirtyType.scaleDirty);
+        };
+        Transform.prototype.toString = function () {
+            return "[Transform: parent: " + this.parent + ", position: " + this.position + ", rotation: " + this.rotation + ",\n                scale: " + this.scale + ", localPosition: " + this._localPosition + ", localRotation: " + this._localRotation + ",\n                localScale: " + this._localScale + "]";
         };
         return Transform;
     }());
@@ -3432,12 +3747,12 @@ var es;
 (function (es) {
     var EntityList = (function () {
         function EntityList(scene) {
-            this._entitiesToRemove = [];
-            this._entitiesToAdded = [];
-            this._tempEntityList = [];
             this._entities = [];
+            this._entitiesToAdded = [];
+            this._entitiesToRemove = [];
             this._entityDict = new Map();
             this._unsortedTags = [];
+            this._tempEntityList = [];
             this.scene = scene;
         }
         Object.defineProperty(EntityList.prototype, "count", {
@@ -3454,17 +3769,113 @@ var es;
             enumerable: true,
             configurable: true
         });
+        EntityList.prototype.markEntityListUnsorted = function () {
+            this._isEntityListUnsorted = true;
+        };
+        EntityList.prototype.markTagUnsorted = function (tag) {
+            this._unsortedTags.push(tag);
+        };
         EntityList.prototype.add = function (entity) {
             if (this._entitiesToAdded.indexOf(entity) == -1)
                 this._entitiesToAdded.push(entity);
         };
         EntityList.prototype.remove = function (entity) {
+            if (!this._entitiesToRemove.contains(entity)) {
+                console.warn("You are trying to remove an entity (" + entity.name + ") that you already removed");
+                return;
+            }
             if (this._entitiesToAdded.contains(entity)) {
                 this._entitiesToAdded.remove(entity);
                 return;
             }
             if (!this._entitiesToRemove.contains(entity))
                 this._entitiesToRemove.push(entity);
+        };
+        EntityList.prototype.removeAllEntities = function () {
+            this._unsortedTags.length = 0;
+            this._entitiesToAdded.length = 0;
+            this._isEntityListUnsorted = false;
+            this.updateLists();
+            for (var i = 0; i < this._entities.length; i++) {
+                this._entities[i]._isDestroyed = true;
+                this._entities[i].onRemovedFromScene();
+                this._entities[i].scene = null;
+            }
+            this._entities.length = 0;
+            this._entityDict.clear();
+        };
+        EntityList.prototype.contains = function (entity) {
+            return this._entities.contains(entity) || this._entitiesToAdded.contains(entity);
+        };
+        EntityList.prototype.getTagList = function (tag) {
+            var list = this._entityDict.get(tag);
+            if (!list) {
+                list = [];
+                this._entityDict.set(tag, list);
+            }
+            return this._entityDict.get(tag);
+        };
+        EntityList.prototype.addToTagList = function (entity) {
+            var list = this.getTagList(entity.tag);
+            if (!list.contains(entity)) {
+                list.push(entity);
+                this._unsortedTags.push(entity.tag);
+            }
+        };
+        EntityList.prototype.removeFromTagList = function (entity) {
+            var list = this._entityDict.get(entity.tag);
+            if (list) {
+                list.remove(entity);
+            }
+        };
+        EntityList.prototype.update = function () {
+            for (var i = 0; i < this._entities.length; i++) {
+                var entity = this._entities[i];
+                if (entity.enabled && (entity.updateInterval == 1 || es.Time.frameCount % entity.updateInterval == 0))
+                    entity.update();
+            }
+        };
+        EntityList.prototype.updateLists = function () {
+            var _this = this;
+            if (this._entitiesToRemove.length > 0) {
+                var temp = this._entitiesToRemove;
+                this._entitiesToRemove = this._tempEntityList;
+                this._tempEntityList = temp;
+                this._tempEntityList.forEach(function (entity) {
+                    _this.removeFromTagList(entity);
+                    _this._entities.remove(entity);
+                    entity.onRemovedFromScene();
+                    entity.scene = null;
+                    _this.scene.entityProcessors.onEntityRemoved(entity);
+                });
+                this._tempEntityList.length = 0;
+            }
+            if (this._entitiesToAdded.length > 0) {
+                var temp = this._entitiesToAdded;
+                this._entitiesToAdded = this._tempEntityList;
+                this._tempEntityList = temp;
+                this._tempEntityList.forEach(function (entity) {
+                    if (!_this._entities.contains(entity)) {
+                        _this._entities.push(entity);
+                        entity.scene = _this.scene;
+                        _this.addToTagList(entity);
+                        _this.scene.entityProcessors.onEntityAdded(entity);
+                    }
+                });
+                this._tempEntityList.forEach(function (entity) { return entity.onAddedToScene(); });
+                this._tempEntityList.length = 0;
+                this._isEntityListUnsorted = true;
+            }
+            if (this._isEntityListUnsorted) {
+                this._entities.sort();
+                this._isEntityListUnsorted = false;
+            }
+            if (this._unsortedTags.length > 0) {
+                this._unsortedTags.forEach(function (tag) {
+                    _this._entityDict.get(tag).sort();
+                });
+                this._unsortedTags.length = 0;
+            }
         };
         EntityList.prototype.findEntity = function (name) {
             for (var i = 0; i < this._entities.length; i++) {
@@ -3522,79 +3933,6 @@ var es;
                     entity.getComponents(type, comps);
             }
             return comps;
-        };
-        EntityList.prototype.getTagList = function (tag) {
-            var list = this._entityDict.get(tag);
-            if (!list) {
-                list = [];
-                this._entityDict.set(tag, list);
-            }
-            return this._entityDict.get(tag);
-        };
-        EntityList.prototype.addToTagList = function (entity) {
-            var list = this.getTagList(entity.tag);
-            if (!list.contains(entity)) {
-                list.push(entity);
-                this._unsortedTags.push(entity.tag);
-            }
-        };
-        EntityList.prototype.removeFromTagList = function (entity) {
-            var list = this._entityDict.get(entity.tag);
-            if (list) {
-                list.remove(entity);
-            }
-        };
-        EntityList.prototype.update = function () {
-            for (var i = 0; i < this._entities.length; i++) {
-                var entity = this._entities[i];
-                if (entity.enabled)
-                    entity.update();
-            }
-        };
-        EntityList.prototype.removeAllEntities = function () {
-            this._entitiesToAdded.length = 0;
-            this.updateLists();
-            for (var i = 0; i < this._entities.length; i++) {
-                this._entities[i]._isDestroyed = true;
-                this._entities[i].onRemovedFromScene();
-                this._entities[i].scene = null;
-            }
-            this._entities.length = 0;
-            this._entityDict.clear();
-        };
-        EntityList.prototype.updateLists = function () {
-            var _this = this;
-            if (this._entitiesToRemove.length > 0) {
-                var temp = this._entitiesToRemove;
-                this._entitiesToRemove = this._tempEntityList;
-                this._tempEntityList = temp;
-                this._tempEntityList.forEach(function (entity) {
-                    _this._entities.remove(entity);
-                    entity.scene = null;
-                    _this.scene.entityProcessors.onEntityRemoved(entity);
-                });
-                this._tempEntityList.length = 0;
-            }
-            if (this._entitiesToAdded.length > 0) {
-                var temp = this._entitiesToAdded;
-                this._entitiesToAdded = this._tempEntityList;
-                this._tempEntityList = temp;
-                this._tempEntityList.forEach(function (entity) {
-                    if (!_this._entities.contains(entity)) {
-                        _this._entities.push(entity);
-                        entity.scene = _this.scene;
-                        _this.scene.entityProcessors.onEntityAdded(entity);
-                    }
-                });
-                this._tempEntityList.forEach(function (entity) { return entity.onAddedToScene(); });
-                this._tempEntityList.length = 0;
-            }
-            if (this._unsortedTags.length > 0) {
-                this._unsortedTags.forEach(function (tag) {
-                    _this._entityDict.get(tag).sort();
-                });
-                this._unsortedTags.length = 0;
-            }
         };
         return EntityList;
     }());
@@ -5650,8 +5988,7 @@ var es;
                     distanceSquared = tempDistanceSquared;
                     closestPoint = closest;
                     var line = es.Vector2.subtract(points[j], points[i]);
-                    edgeNormal.x = -line.y;
-                    edgeNormal.y = line.x;
+                    edgeNormal = new es.Vector2(-line.y, line.x);
                 }
             }
             edgeNormal = es.Vector2.normalize(edgeNormal);
@@ -5672,7 +6009,7 @@ var es;
                 if (collider.entity.transform.rotation != 0) {
                     tempMat = es.Matrix2D.create().rotate(collider.entity.transform.rotation);
                     combinedMatrix = combinedMatrix.multiply(tempMat);
-                    var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x);
+                    var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * es.MathHelper.Rad2Deg;
                     var offsetLength = hasUnitScale ? collider._localOffsetLength :
                         es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
                     this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotation + offsetAngle);

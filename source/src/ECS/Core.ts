@@ -99,7 +99,7 @@ module es {
         protected initialize(){
         }
 
-        protected update() {
+        protected async update() {
             this.startDebugUpdate();
 
             // 更新我们所有的系统管理器
@@ -127,7 +127,7 @@ module es {
                     this._nextScene = null;
                     this.onSceneChanged();
 
-                    this._scene.begin();
+                    await this._scene.begin();
                 }
             }
 

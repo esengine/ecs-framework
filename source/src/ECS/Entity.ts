@@ -107,6 +107,14 @@ module es {
             this.transform.setPosition(value.x, value.y);
         }
 
+        public get localPosition(): Vector2 {
+            return this.transform.localPosition;
+        }
+
+        public set localPosition(value: Vector2){
+            this.transform.setLocalPosition(value);
+        }
+
         public get rotation(): number {
             return this.transform.rotation;
         }
@@ -115,6 +123,29 @@ module es {
             this.transform.setRotation(value);
         }
 
+        public get rotationDegrees(): number {
+            return this.transform.rotationDegrees;
+        }
+
+        public set rotationDegrees(value: number){
+            this.transform.setRotationDegrees(value);
+        }
+
+        public get localRotation(): number {
+            return this.transform.localRotation;
+        }
+
+        public set localRotation(value: number){
+            this.transform.setLocalRotation(value);
+        }
+
+        public get localRotationDegrees(): number {
+            return this.transform.localRotationDegrees;
+        }
+
+        public set localRotationDegrees(value: number){
+            this.transform.setLocalRotationDegrees(value);
+        }
 
         public get scale(): Vector2 {
             return this.transform.scale;
@@ -122,6 +153,26 @@ module es {
 
         public set scale(value: Vector2) {
             this.transform.setScale(value);
+        }
+
+        public get localScale(): Vector2 {
+            return this.transform.localScale;
+        }
+
+        public set localScale(value: Vector2){
+            this.transform.setLocalScale(value);
+        }
+
+        public get worldInverseTransform(): Matrix2D {
+            return this.transform.worldInverseTransform;
+        }
+
+        public get localToWorldTransform(): Matrix2D {
+            return this.transform.localToWorldTransform;
+        }
+
+        public get worldToLocalTransform(): Matrix2D {
+            return this.transform.worldToLocalTransform;
         }
 
         constructor(name: string) {
@@ -180,8 +231,8 @@ module es {
             if (this._updateOrder != updateOrder) {
                 this._updateOrder = updateOrder;
                 if (this.scene) {
-                    // TODO: markEntityListSorted
-                    // markTagUnsorted
+                    this.scene.entities.markEntityListUnsorted();
+                    this.scene.entities.markTagUnsorted(this.tag);
                 }
 
                 return this;
@@ -368,6 +419,13 @@ module es {
             for (let i = 0; i < this.components.count; i++) {
                 this.removeComponent(this.components.buffer[i]);
             }
+        }
+
+        public compareTo(other: Entity): number {
+            let compare = this._updateOrder - other._updateOrder;
+            if (compare == 0)
+                compare = this.id - other.id;
+            return compare;
         }
 
         public toString(): string {

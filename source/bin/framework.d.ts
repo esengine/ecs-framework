@@ -263,7 +263,7 @@ declare module es {
         onOrientationChanged(): void;
         protected onGraphicsDeviceReset(): void;
         protected initialize(): void;
-        protected update(): void;
+        protected update(): Promise<void>;
         draw(): Promise<void>;
         startDebugUpdate(): void;
         endDebugUpdate(): void;
@@ -302,8 +302,16 @@ declare module es {
         parent: Transform;
         readonly childCount: number;
         position: Vector2;
+        localPosition: Vector2;
         rotation: number;
+        rotationDegrees: number;
+        localRotation: number;
+        localRotationDegrees: number;
         scale: Vector2;
+        localScale: Vector2;
+        readonly worldInverseTransform: Matrix2D;
+        readonly localToWorldTransform: Matrix2D;
+        readonly worldToLocalTransform: Matrix2D;
         constructor(name: string);
         onTransformChanged(comp: transform.Component): void;
         setTag(tag: number): Entity;
@@ -325,6 +333,7 @@ declare module es {
         removeComponent(component: Component): void;
         removeComponentForType<T extends Component>(type: any): boolean;
         removeAllComponents(): void;
+        compareTo(other: Entity): number;
         toString(): string;
     }
 }
@@ -389,21 +398,56 @@ declare module es {
         parent: Transform;
         readonly childCount: number;
         position: Vector2;
+        localPosition: Vector2;
         rotation: number;
+        rotationDegrees: number;
+        localRotation: number;
+        localRotationDegrees: number;
         scale: Vector2;
+        localScale: Vector2;
+        readonly worldInverseTransform: Matrix2D;
+        readonly localToWorldTransform: Matrix2D;
+        readonly worldToLocalTransform: Matrix2D;
         _parent: Transform;
         hierarchyDirty: DirtyType;
+        _localDirty: boolean;
+        _localPositionDirty: boolean;
+        _localScaleDirty: boolean;
+        _localRotationDirty: boolean;
+        _positionDirty: boolean;
+        _worldToLocalDirty: boolean;
+        _worldInverseDirty: boolean;
+        _localTransform: Matrix2D;
+        _worldTransform: Matrix2D;
+        _worldToLocalTransform: Matrix2D;
+        _worldInverseTransform: Matrix2D;
+        _rotationMatrix: Matrix2D;
+        _translationMatrix: Matrix2D;
+        _scaleMatrix: Matrix2D;
+        _position: Vector2;
+        _scale: Vector2;
+        _rotation: number;
+        _localPosition: Vector2;
+        _localScale: Vector2;
+        _localRotation: number;
         _children: Transform[];
         constructor(entity: Entity);
         getChild(index: number): Transform;
         setParent(parent: Transform): Transform;
         setPosition(x: number, y: number): Transform;
-        setRotation(degrees: number): Transform;
-        setScale(scale: Vector2): Transform;
+        setLocalPosition(localPosition: Vector2): Transform;
+        setRotation(radians: number): Transform;
+        setRotationDegrees(degrees: number): Transform;
         lookAt(pos: Vector2): void;
+        setLocalRotation(radians: number): this;
+        setLocalRotationDegrees(degrees: number): Transform;
+        setScale(scale: Vector2): Transform;
+        setLocalScale(scale: Vector2): Transform;
         roundPosition(): void;
+        updateTransform(): void;
         setDirty(dirtyFlagType: DirtyType): void;
         copyFrom(transform: Transform): void;
+        toString(): string;
     }
 }
 declare module es {
@@ -796,28 +840,32 @@ declare module es {
 declare module es {
     class EntityList {
         scene: Scene;
-        private _entitiesToRemove;
-        private _entitiesToAdded;
-        private _tempEntityList;
-        private _entities;
-        private _entityDict;
-        private _unsortedTags;
+        _entities: Entity[];
+        _entitiesToAdded: Entity[];
+        _entitiesToRemove: Entity[];
+        _isEntityListUnsorted: boolean;
+        _entityDict: Map<number, Entity[]>;
+        _unsortedTags: number[];
+        _tempEntityList: Entity[];
         constructor(scene: Scene);
         readonly count: number;
         readonly buffer: Entity[];
+        markEntityListUnsorted(): void;
+        markTagUnsorted(tag: number): void;
         add(entity: Entity): void;
         remove(entity: Entity): void;
+        removeAllEntities(): void;
+        contains(entity: Entity): boolean;
+        getTagList(tag: number): Entity[];
+        addToTagList(entity: Entity): void;
+        removeFromTagList(entity: Entity): void;
+        update(): void;
+        updateLists(): void;
         findEntity(name: string): Entity;
         entitiesWithTag(tag: number): Entity[];
         entitiesOfType<T extends Entity>(type: any): T[];
         findComponentOfType<T extends Component>(type: any): T;
         findComponentsOfType<T extends Component>(type: any): T[];
-        getTagList(tag: number): Entity[];
-        addToTagList(entity: Entity): void;
-        removeFromTagList(entity: Entity): void;
-        update(): void;
-        removeAllEntities(): void;
-        updateLists(): void;
     }
 }
 declare module es {
