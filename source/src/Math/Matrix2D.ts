@@ -1,4 +1,5 @@
 module es {
+    export var matrixPool = [];
     /**
      * 表示右手3 * 3的浮点矩阵，可以存储平移、缩放和旋转信息。
      */
@@ -40,32 +41,66 @@ module es {
             this.ty = value;
         }
 
+        /**
+         * 从对象池中取出或创建一个新的Matrix对象。
+         */
         public static create(): Matrix2D{
-            return egret.Matrix.create() as Matrix2D;
+            let matrix = matrixPool.pop();
+            if (!matrix)
+                matrix = new Matrix2D();
+            return matrix;
         }
 
         public identity(): Matrix2D{
-            super.identity();
+            this.a = this.d = 1;
+            this.b = this.c = this.tx = this.ty = 0;
             return this;
         }
 
         public translate(dx: number, dy: number): Matrix2D {
-            super.translate(dx, dy);
+            this.tx += dx;
+            this.ty += dy;
             return this;
         }
 
         public scale(sx: number, sy: number): Matrix2D {
-            super.scale(sx, sy);
+            if (sx !== 1){
+                this.a *= sx;
+                this.c *= sx;
+                this.tx *= sx;
+            }
+            if (sy !== 1){
+                this.b *= sy;
+                this.d *= sy;
+                this.ty *= sy;
+            }
             return this;
         }
 
         public rotate(angle: number): Matrix2D {
-            super.rotate(angle);
+            angle = +angle;
+            if (angle !== 0) {
+                angle = angle / DEG_TO_RAD;
+                let u = Math.cos(angle);
+                let v = Math.sin(angle);
+                let ta = this.a;
+                let tb = this.b;
+                let tc = this.c;
+                let td = this.d;
+                let ttx = this.tx;
+                let tty = this.ty;
+                this.a = ta * u - tb * v;
+                this.b = ta * v + tb * u;
+                this.c = tc * u - td * v;
+                this.d = tc * v + td * u;
+                this.tx = ttx * u - tty * v;
+                this.ty = ttx * v + tty * u;
+            }
             return this;
         }
 
         public invert(): Matrix2D {
-            super.invert();
+            this.$invertInto(this);
             return this;
         }
 
@@ -136,6 +171,12 @@ module es {
 
         public determinant(){
             return this.m11 * this.m22 - this.m12 * this.m21;
+        }
+
+        public release(matrix: Matrix2D) {
+            if (!matrix)
+                return;
+            matrixPool.push(matrix);
         }
     }
 }

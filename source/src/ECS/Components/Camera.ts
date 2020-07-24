@@ -5,10 +5,10 @@ module es {
     }
 
     export class CameraInset {
-        public left: number;
-        public right: number;
-        public top: number;
-        public bottom: number;
+        public left: number = 0;
+        public right: number = 0;
+        public top: number = 0;
+        public bottom: number = 0;
     }
 
     export class Camera extends Component {
@@ -167,8 +167,8 @@ module es {
         public _zoom;
         public _minimumZoom = 0.3;
         public _maximumZoom = 3;
-        public _bounds: Rectangle;
-        public _inset: CameraInset;
+        public _bounds: Rectangle = new Rectangle();
+        public _inset: CameraInset = new CameraInset();
         public _transformMatrix: Matrix2D = new Matrix2D().identity();
         public _inverseTransformMatrix: Matrix2D = new Matrix2D().identity();
         public _origin: Vector2 = Vector2.zero;
@@ -190,7 +190,7 @@ module es {
         /**
          * 相机聚焦于屏幕中心的偏移
          */
-        public focusOffset: Vector2 = new Vector2();
+        public focusOffset: Vector2 = Vector2.zero;
         /**
          * 如果为true 相机位置则不会超出地图矩形（0, 0, mapwidth, mapheight）
          */
@@ -198,7 +198,7 @@ module es {
         /**
          * 當前地圖映射的寬度和高度
          */
-        public mapSize: Vector2 = new Vector2();
+        public mapSize: Vector2 = Vector2.zero;
 
         public _targetEntity: Entity;
         public _targetCollider: Collider;

@@ -220,7 +220,7 @@ module es {
         /**
          * 值会根据位置、旋转和比例自动重新计算
          */
-        public _localTransform: Matrix2D;
+        public _localTransform: Matrix2D = Matrix2D.create();
         /**
          * 值将自动从本地和父矩阵重新计算。
          */
@@ -228,17 +228,17 @@ module es {
         public _worldToLocalTransform = Matrix2D.create().identity();
         public _worldInverseTransform = Matrix2D.create().identity();
 
-        public _rotationMatrix: Matrix2D;
-        public _translationMatrix: Matrix2D;
-        public _scaleMatrix: Matrix2D;
+        public _rotationMatrix: Matrix2D = Matrix2D.create();
+        public _translationMatrix: Matrix2D = Matrix2D.create();
+        public _scaleMatrix: Matrix2D = Matrix2D.create();
 
-        public _position: Vector2;
-        public _scale: Vector2;
-        public _rotation: number;
+        public _position: Vector2 = Vector2.zero;
+        public _scale: Vector2 = Vector2.one;
+        public _rotation: number = 0;
 
-        public _localPosition: Vector2;
-        public _localScale: Vector2;
-        public _localRotation: number;
+        public _localPosition: Vector2 = Vector2.zero;
+        public _localScale: Vector2 = Vector2.one;
+        public _localRotation: number = 0;
 
         public _children: Transform[];
 

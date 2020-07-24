@@ -1129,6 +1129,7 @@ var es;
                 }
                 if (this._instance._scene == null) {
                     this._instance._scene = value;
+                    this._instance.addChild(value);
                     this._instance._scene.begin();
                     Core.Instance.onSceneChanged();
                 }
@@ -1161,7 +1162,6 @@ var es;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
-                            this.startDebugUpdate();
                             es.Time.update(egret.getTimer());
                             if (!this._scene) return [3, 2];
                             for (i = this._globalManagers.length - 1; i >= 0; i--) {
@@ -1173,17 +1173,17 @@ var es;
                                 this._scene.update();
                             }
                             if (!this._nextScene) return [3, 2];
+                            this.removeChild(this._scene);
                             this._scene.end();
                             this._scene = this._nextScene;
                             this._nextScene = null;
                             this.onSceneChanged();
+                            this.addChild(this._scene);
                             return [4, this._scene.begin()];
                         case 1:
                             _a.sent();
                             _a.label = 2;
-                        case 2:
-                            this.endDebugUpdate();
-                            return [2];
+                        case 2: return [2];
                     }
                 });
             });
@@ -1787,9 +1787,19 @@ var es;
     })(DirtyType = es.DirtyType || (es.DirtyType = {}));
     var Transform = (function () {
         function Transform(entity) {
+            this._localTransform = es.Matrix2D.create();
             this._worldTransform = es.Matrix2D.create().identity();
             this._worldToLocalTransform = es.Matrix2D.create().identity();
             this._worldInverseTransform = es.Matrix2D.create().identity();
+            this._rotationMatrix = es.Matrix2D.create();
+            this._translationMatrix = es.Matrix2D.create();
+            this._scaleMatrix = es.Matrix2D.create();
+            this._position = es.Vector2.zero;
+            this._scale = es.Vector2.one;
+            this._rotation = 0;
+            this._localPosition = es.Vector2.zero;
+            this._localScale = es.Vector2.one;
+            this._localRotation = 0;
             this.entity = entity;
             this.scale = es.Vector2.one;
             this._children = [];
@@ -2111,6 +2121,10 @@ var es;
     })(CameraStyle = es.CameraStyle || (es.CameraStyle = {}));
     var CameraInset = (function () {
         function CameraInset() {
+            this.left = 0;
+            this.right = 0;
+            this.top = 0;
+            this.bottom = 0;
         }
         return CameraInset;
     }());
@@ -2123,6 +2137,8 @@ var es;
             var _this = _super.call(this) || this;
             _this._minimumZoom = 0.3;
             _this._maximumZoom = 3;
+            _this._bounds = new es.Rectangle();
+            _this._inset = new CameraInset();
             _this._transformMatrix = new es.Matrix2D().identity();
             _this._inverseTransformMatrix = new es.Matrix2D().identity();
             _this._origin = es.Vector2.zero;
@@ -2131,9 +2147,9 @@ var es;
             _this._isProjectionMatrixDirty = true;
             _this.followLerp = 0.1;
             _this.deadzone = new es.Rectangle();
-            _this.focusOffset = new es.Vector2();
+            _this.focusOffset = es.Vector2.zero;
             _this.mapLockEnabled = false;
-            _this.mapSize = new es.Vector2();
+            _this.mapSize = es.Vector2.zero;
             _this._desiredPositionDelta = new es.Vector2();
             _this._worldSpaceDeadZone = new es.Rectangle();
             _this._targetEntity = targetEntity;
@@ -5317,6 +5333,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    es.matrixPool = [];
     var Matrix2D = (function (_super) {
         __extends(Matrix2D, _super);
         function Matrix2D() {
@@ -5383,26 +5400,57 @@ var es;
             configurable: true
         });
         Matrix2D.create = function () {
-            return egret.Matrix.create();
+            var matrix = es.matrixPool.pop();
+            if (!matrix)
+                matrix = new Matrix2D();
+            return matrix;
         };
         Matrix2D.prototype.identity = function () {
-            _super.prototype.identity.call(this);
+            this.a = this.d = 1;
+            this.b = this.c = this.tx = this.ty = 0;
             return this;
         };
         Matrix2D.prototype.translate = function (dx, dy) {
-            _super.prototype.translate.call(this, dx, dy);
+            this.tx += dx;
+            this.ty += dy;
             return this;
         };
         Matrix2D.prototype.scale = function (sx, sy) {
-            _super.prototype.scale.call(this, sx, sy);
+            if (sx !== 1) {
+                this.a *= sx;
+                this.c *= sx;
+                this.tx *= sx;
+            }
+            if (sy !== 1) {
+                this.b *= sy;
+                this.d *= sy;
+                this.ty *= sy;
+            }
             return this;
         };
         Matrix2D.prototype.rotate = function (angle) {
-            _super.prototype.rotate.call(this, angle);
+            angle = +angle;
+            if (angle !== 0) {
+                angle = angle / DEG_TO_RAD;
+                var u = Math.cos(angle);
+                var v = Math.sin(angle);
+                var ta = this.a;
+                var tb = this.b;
+                var tc = this.c;
+                var td = this.d;
+                var ttx = this.tx;
+                var tty = this.ty;
+                this.a = ta * u - tb * v;
+                this.b = ta * v + tb * u;
+                this.c = tc * u - td * v;
+                this.d = tc * v + td * u;
+                this.tx = ttx * u - tty * v;
+                this.ty = ttx * v + tty * u;
+            }
             return this;
         };
         Matrix2D.prototype.invert = function () {
-            _super.prototype.invert.call(this);
+            this.$invertInto(this);
             return this;
         };
         Matrix2D.prototype.add = function (matrix) {
@@ -5449,6 +5497,11 @@ var es;
         };
         Matrix2D.prototype.determinant = function () {
             return this.m11 * this.m22 - this.m12 * this.m21;
+        };
+        Matrix2D.prototype.release = function (matrix) {
+            if (!matrix)
+                return;
+            es.matrixPool.push(matrix);
         };
         return Matrix2D;
     }(egret.Matrix));

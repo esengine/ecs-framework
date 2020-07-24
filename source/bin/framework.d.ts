@@ -1165,6 +1165,7 @@ declare module es {
     }
 }
 declare module es {
+    var matrixPool: any[];
     class Matrix2D extends egret.Matrix {
         m11: number;
         m12: number;
@@ -1183,6 +1184,7 @@ declare module es {
         divide(matrix: Matrix2D): Matrix2D;
         multiply(matrix: Matrix2D): Matrix2D;
         determinant(): number;
+        release(matrix: Matrix2D): void;
     }
 }
 declare module es {

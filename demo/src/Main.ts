@@ -28,23 +28,25 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 class Main extends es.Core {
-    protected async initialize() {
-        await this.runGame();
+    protected initialize() {
+        this.runGame();
     }
 
-    private async runGame() {
-        await this.loadResource();
+    private runGame() {
+        this.loadResource();
         this.createGameScene();
     }
 
 
-    private async loadResource() {
+    private loadResource() {
         try {
             const loadingView = new LoadingUI();
             this.stage.addChild(loadingView);
-            await RES.loadConfig("resource/default.res.json", "resource/");
-            await RES.loadGroup("preload", 0, loadingView);
-            this.stage.removeChild(loadingView);
+            RES.loadConfig("resource/default.res.json", "resource/").then(()=>{
+                RES.loadGroup("preload", 0, loadingView).then(()=>{
+                    this.stage.removeChild(loadingView);
+                });
+            });
         }
         catch (e) {
             console.error(e);

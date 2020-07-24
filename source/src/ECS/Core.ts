@@ -57,6 +57,7 @@ module es {
 
             if (this._instance._scene == null) {
                 this._instance._scene = value;
+                this._instance.addChild(value);
                 this._instance._scene.begin();
                 Core.Instance.onSceneChanged();
             } else {
@@ -100,7 +101,7 @@ module es {
         }
 
         protected async update() {
-            this.startDebugUpdate();
+            // this.startDebugUpdate();
 
             // 更新我们所有的系统管理器
             Time.update(egret.getTimer());
@@ -121,17 +122,19 @@ module es {
                 }
 
                 if (this._nextScene) {
+                    this.removeChild(this._scene);
                     this._scene.end();
 
                     this._scene = this._nextScene;
                     this._nextScene = null;
                     this.onSceneChanged();
 
+                    this.addChild(this._scene);
                     await this._scene.begin();
                 }
             }
 
-            this.endDebugUpdate();
+            // this.endDebugUpdate();
         }
 
         public async draw() {
