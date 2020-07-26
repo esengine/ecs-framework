@@ -34,23 +34,22 @@ class Main extends es.Core {
 
     private runGame() {
         this.loadResource();
-        this.createGameScene();
     }
 
 
     private loadResource() {
-        try {
-            const loadingView = new LoadingUI();
-            this.stage.addChild(loadingView);
-            RES.loadConfig("resource/default.res.json", "resource/").then(()=>{
-                RES.loadGroup("preload", 0, loadingView).then(()=>{
-                    this.stage.removeChild(loadingView);
-                });
+        const loadingView = new LoadingUI();
+        this.stage.addChild(loadingView);
+        RES.loadConfig("resource/default.res.json", "resource/").then(()=>{
+            RES.loadGroup("preload", 0, loadingView).then(()=>{
+                this.stage.removeChild(loadingView);
+                this.createGameScene();
+            }).catch(err => {
+                console.error(err);
             });
-        }
-        catch (e) {
-            console.error(e);
-        }
+        }).catch(err =>{
+            console.error(err);
+        });
     }
 
     /**

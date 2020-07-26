@@ -166,7 +166,7 @@ module es {
         }
 
         public toString(){
-            return `[RenderableComponent] ${this}, renderLayer: ${this.renderLayer}`;
+            return `[RenderableComponent] renderLayer: ${this.renderLayer}`;
         }
     }
 }

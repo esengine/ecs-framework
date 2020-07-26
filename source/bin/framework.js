@@ -2597,7 +2597,7 @@ var es;
             return this;
         };
         RenderableComponent.prototype.toString = function () {
-            return "[RenderableComponent] " + this + ", renderLayer: " + this.renderLayer;
+            return "[RenderableComponent] renderLayer: " + this.renderLayer;
         };
         return RenderableComponent;
     }(es.Component));
