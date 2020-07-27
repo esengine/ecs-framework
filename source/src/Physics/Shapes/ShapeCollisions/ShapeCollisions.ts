@@ -154,16 +154,19 @@ module es {
         public static circleToBox(circle: Circle, box: Box, result: CollisionResult): boolean {
             let closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
 
+            // 处理那些中心在盒子里的圆，因为比较好操作，
             if (box.containsPoint(circle.position)) {
                 result.point = closestPointOnBounds;
 
-                let safePlace = Vector2.add(closestPointOnBounds, Vector2.subtract(result.normal, new Vector2(circle.radius)));
+                // 计算mtv。找到安全的，没有碰撞的位置，然后从那里得到mtv
+                let safePlace = Vector2.add(closestPointOnBounds, Vector2.multiply(result.normal, new Vector2(circle.radius)));
                 result.minimumTranslationVector = Vector2.subtract(circle.position, safePlace);
 
                 return true;
             }
 
             let sqrDistance = Vector2.distanceSquared(closestPointOnBounds, circle.position);
+            // 看盒子上的点与圆的距离是否小于半径
             if (sqrDistance == 0) {
                 result.minimumTranslationVector = Vector2.multiply(result.normal, new Vector2(circle.radius));
             } else if (sqrDistance <= circle.radius * circle.radius) {
@@ -171,7 +174,7 @@ module es {
                 let depth = result.normal.length() - circle.radius;
 
                 result.point = closestPointOnBounds;
-                Vector2Ext.normalize(result.normal);
+                result.normal = Vector2Ext.normalize(result.normal);
                 result.minimumTranslationVector = Vector2.multiply(new Vector2(depth), result.normal);
 
                 return true;

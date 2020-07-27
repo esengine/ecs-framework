@@ -124,22 +124,21 @@ module es {
 
                 let renderable = this.entity.getComponent<RenderableComponent>(RenderableComponent);
                 if (renderable) {
-                    let bounds = renderable.bounds;
+                    let renderableBounds = renderable.bounds;
 
                     // 这里我们需要大小*反尺度，因为当我们自动调整碰撞器的大小时，它需要没有缩放的渲染
-                    let width = bounds.width / this.entity.scale.x;
-                    let height = bounds.height / this.entity.scale.y;
+                    let width = renderableBounds.width / this.entity.scale.x;
+                    let height = renderableBounds.height / this.entity.scale.y;
                     // 圆碰撞器需要特别注意原点
                     if (this instanceof CircleCollider) {
-                        let circleCollider = this as CircleCollider;
-                        circleCollider.radius = Math.max(width, height) * 0.5;
+                        this.radius = Math.max(width, height) * 0.5;
                     } else {
                         this.width = width;
                         this.height = height;
                     }
 
                     // 获取渲染的中心，将其转移到本地坐标，并使用它作为碰撞器的localOffset
-                    this.localOffset = Vector2.subtract(bounds.center, this.entity.transform.position);
+                    this.localOffset = Vector2.subtract(renderableBounds.center, this.entity.transform.position);
                 } else {
                     console.warn("Collider has no shape and no RenderableComponent. Can't figure out how to size it.");
                 }
@@ -218,7 +217,7 @@ module es {
         public collidesWith(collider: Collider, motion: Vector2, result: CollisionResult): boolean {
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
             let oldPosition = this.entity.position;
-            this.entity.position.add(motion);
+            this.entity.position = this.entity.position.add(motion);
 
             let didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)

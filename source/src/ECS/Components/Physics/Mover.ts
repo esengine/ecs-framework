@@ -47,7 +47,7 @@ module es {
                     let _internalcollisionResult: CollisionResult = new CollisionResult();
                     if (collider.collidesWith(neighbor, motion, _internalcollisionResult)){
                         // 如果碰撞 则退回之前的移动量
-                        motion.subtract(_internalcollisionResult.minimumTranslationVector);
+                        motion = motion.subtract(_internalcollisionResult.minimumTranslationVector);
 
                         // 如果我们碰到多个对象，为了简单起见，只取第一个。
                         if (_internalcollisionResult.collider != null){

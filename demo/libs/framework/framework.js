@@ -2733,6 +2733,8 @@ var es;
         };
         SpriteRenderer.prototype.render = function (camera) {
             this.sync(camera);
+            this.displayObject.x = this.entity.position.x - this.origin.x + this.localOffset.x - camera.position.x + camera.origin.x;
+            this.displayObject.y = this.entity.position.y - this.origin.y + this.localOffset.y - camera.position.y + camera.origin.y;
         };
         return SpriteRenderer;
     }(es.RenderableComponent));
@@ -2995,7 +2997,7 @@ var es;
                         continue;
                     var _internalcollisionResult = new es.CollisionResult();
                     if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
-                        motion.subtract(_internalcollisionResult.minimumTranslationVector);
+                        motion = motion.subtract(_internalcollisionResult.minimumTranslationVector);
                         if (_internalcollisionResult.collider != null) {
                             collisionResult = _internalcollisionResult;
                         }
@@ -3139,18 +3141,17 @@ var es;
                 }
                 var renderable = this.entity.getComponent(es.RenderableComponent);
                 if (renderable) {
-                    var bounds = renderable.bounds;
-                    var width = bounds.width / this.entity.scale.x;
-                    var height = bounds.height / this.entity.scale.y;
+                    var renderableBounds = renderable.bounds;
+                    var width = renderableBounds.width / this.entity.scale.x;
+                    var height = renderableBounds.height / this.entity.scale.y;
                     if (this instanceof es.CircleCollider) {
-                        var circleCollider = this;
-                        circleCollider.radius = Math.max(width, height) * 0.5;
+                        this.radius = Math.max(width, height) * 0.5;
                     }
                     else {
                         this.width = width;
                         this.height = height;
                     }
-                    this.localOffset = es.Vector2.subtract(bounds.center, this.entity.transform.position);
+                    this.localOffset = es.Vector2.subtract(renderableBounds.center, this.entity.transform.position);
                 }
                 else {
                     console.warn("Collider has no shape and no RenderableComponent. Can't figure out how to size it.");
@@ -3202,7 +3203,7 @@ var es;
         };
         Collider.prototype.collidesWith = function (collider, motion, result) {
             var oldPosition = this.entity.position;
-            this.entity.position.add(motion);
+            this.entity.position = this.entity.position.add(motion);
             var didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)
                 result.collider = collider;
@@ -6090,7 +6091,7 @@ var es;
                     edgeNormal = new es.Vector2(-line.y, line.x);
                 }
             }
-            es.Vector2Ext.normalize(edgeNormal);
+            edgeNormal = es.Vector2Ext.normalize(edgeNormal);
             return closestPoint;
         };
         Polygon.prototype.recalculateBounds = function (collider) {
@@ -6122,7 +6123,7 @@ var es;
             }
             this.position = es.Vector2.add(collider.entity.transform.position, this.center);
             this.bounds = es.Rectangle.rectEncompassingPoints(this.points);
-            this.bounds.location = es.Vector2.add(this.bounds.location, this.position);
+            this.bounds.location = this.bounds.location.add(this.position);
         };
         Polygon.prototype.overlaps = function (other) {
             var result = new es.CollisionResult();
@@ -6394,7 +6395,7 @@ var es;
             var closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
             if (box.containsPoint(circle.position)) {
                 result.point = closestPointOnBounds;
-                var safePlace = es.Vector2.add(closestPointOnBounds, es.Vector2.subtract(result.normal, new es.Vector2(circle.radius)));
+                var safePlace = es.Vector2.add(closestPointOnBounds, es.Vector2.multiply(result.normal, new es.Vector2(circle.radius)));
                 result.minimumTranslationVector = es.Vector2.subtract(circle.position, safePlace);
                 return true;
             }
@@ -6406,7 +6407,7 @@ var es;
                 result.normal = es.Vector2.subtract(circle.position, closestPointOnBounds);
                 var depth = result.normal.length() - circle.radius;
                 result.point = closestPointOnBounds;
-                es.Vector2Ext.normalize(result.normal);
+                result.normal = es.Vector2Ext.normalize(result.normal);
                 result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(depth), result.normal);
                 return true;
             }

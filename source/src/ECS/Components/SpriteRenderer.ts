@@ -121,6 +121,9 @@ module es {
 
         public render(camera: Camera) {
             this.sync(camera);
+
+            this.displayObject.x = this.entity.position.x - this.origin.x + this.localOffset.x - camera.position.x + camera.origin.x;
+            this.displayObject.y = this.entity.position.y - this.origin.y + this.localOffset.y - camera.position.y + camera.origin.y;
         }
     }
 }

@@ -168,7 +168,7 @@ module es {
                 }
             }
 
-            Vector2Ext.normalize(edgeNormal);
+            edgeNormal = Vector2Ext.normalize(edgeNormal);
 
             return closestPoint;
         }
@@ -219,7 +219,7 @@ module es {
 
             this.position = Vector2.add(collider.entity.transform.position, this.center);
             this.bounds = Rectangle.rectEncompassingPoints(this.points);
-            this.bounds.location = Vector2.add(this.bounds.location, this.position);
+            this.bounds.location = this.bounds.location.add(this.position);
         }
 
         public overlaps(other: Shape){
