@@ -214,7 +214,9 @@ Array.prototype.groupBy = function (keySelector) {
             var keys_1 = [];
             return array.reduce(function (groups, element, index) {
                 var key = JSON.stringify(keySelector.call(arguments[1], element, index, array));
-                var index2 = keys_1.findIndex(function (x) { return x === key; });
+                var index2 = keys_1.findIndex(function (x) {
+                    return x === key;
+                });
                 if (index2 < 0) {
                     index2 = keys_1.push(key) - 1;
                 }
@@ -230,7 +232,9 @@ Array.prototype.groupBy = function (keySelector) {
             var keys = [];
             var _loop_1 = function (i, len) {
                 var key = JSON.stringify(keySelector.call(arguments_1[1], array[i], i, array));
-                var index = keys.findIndex(function (x) { return x === key; });
+                var index = keys.findIndex(function (x) {
+                    return x === key;
+                });
                 if (index < 0) {
                     index = keys.push(key) - 1;
                 }
@@ -7056,7 +7060,7 @@ var es;
                 list = [];
                 this._messageTable.set(eventType, list);
             }
-            if (list.contains(handler))
+            if (list.findIndex(function (funcPack) { return funcPack.func == handler; }) != -1)
                 console.warn("您试图添加相同的观察者两次");
             list.push(new FuncPack(handler, context));
         };

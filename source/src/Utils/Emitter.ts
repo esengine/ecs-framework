@@ -36,7 +36,7 @@ module es {
                 this._messageTable.set(eventType, list);
             }
 
-            if (list.contains(handler))
+            if (list.findIndex(funcPack => funcPack.func == handler) != -1)
                 console.warn("您试图添加相同的观察者两次");
             list.push(new FuncPack(handler, context));
         }
