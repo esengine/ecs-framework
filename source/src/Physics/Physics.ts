@@ -17,15 +17,37 @@ module es {
             this._spatialHash.clear();
         }
 
+        /**
+         * 获取位于指定圆内的所有碰撞器
+         * @param center
+         * @param randius
+         * @param results
+         * @param layerMask
+         */
         public static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask = -1){
+            if (results.length == 0){
+                console.error("An empty results array was passed in. No results will ever be returned.");
+                return;
+            }
+
             return this._spatialHash.overlapCircle(center, randius, results, layerMask);
         }
 
+        /**
+         * 返回所有碰撞器与边界相交的碰撞器。bounds。请注意，这是一个broadphase检查，所以它只检查边界，不做单个碰撞到碰撞器的检查!
+         * @param rect
+         * @param layerMask
+         */
         public static boxcastBroadphase(rect: Rectangle, layerMask: number = this.allLayers){
-            let boxcastResult = this._spatialHash.aabbBroadphase(rect, null, layerMask);
-            return {colliders: boxcastResult.tempHashSet, rect: boxcastResult.bounds};
+            return this._spatialHash.aabbBroadphase(rect, null, layerMask);
         }
 
+        /**
+         * 返回所有与边界相交的碰撞器，不包括传入的碰撞器(self)。如果您希望为其他查询自行创建扫过的边界，则此方法非常有用
+         * @param collider
+         * @param rect
+         * @param layerMask
+         */
         public static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask = this.allLayers){
             return this._spatialHash.aabbBroadphase(rect, collider, layerMask);
         }

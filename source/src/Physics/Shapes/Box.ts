@@ -66,15 +66,15 @@ module es {
             return super.overlaps(other);
         }
 
-        public collidesWithShape(other: Shape){
+        public collidesWithShape(other: Shape, result: CollisionResult): boolean{
             // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
             if (other instanceof Box && (other as Box).isUnrotated){
-                return ShapeCollisions.boxToBox(this, other);
+                return ShapeCollisions.boxToBox(this, other, result);
             }
 
             // TODO: 让 minkowski 运行于 cricleToBox
 
-            return super.collidesWithShape(other);
+            return super.collidesWithShape(other, result);
         }
 
         public containsPoint(point: Vector2){

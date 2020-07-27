@@ -28,8 +28,8 @@ module es {
 
             // 获取任何可能在新位置发生碰撞的东西
             let neighbors = Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers);
-            for (let i = 0; i < neighbors.colliders.length; i ++){
-                let neighbor = neighbors.colliders[i];
+            for (let i = 0; i < neighbors.length; i ++){
+                let neighbor = neighbors[i];
                 if (this._collider.overlaps(neighbor) && neighbor.enabled){
                     didCollide = true;
                     this.notifyTriggerListeners(this._collider, neighbor);

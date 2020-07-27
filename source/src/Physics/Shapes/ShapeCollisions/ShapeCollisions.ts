@@ -4,9 +4,9 @@ module es {
          * 检查两个多边形之间的碰撞
          * @param first
          * @param second
+         * @param result
          */
-        public static polygonToPolygon(first: Polygon, second: Polygon) {
-            let result = new CollisionResult();
+        public static polygonToPolygon(first: Polygon, second: Polygon, result: CollisionResult): boolean {
             let isIntersecting = true;
 
             let firstEdges = first.edgeNormals;
@@ -54,7 +54,7 @@ module es {
 
                 // 如果多边形不相交，也不会相交，退出循环
                 if (!isIntersecting)
-                    return null;
+                    return false;
 
                 // 检查当前间隔距离是否为最小值。如果是，则存储间隔距离和当前距离。这将用于计算最小平移向量
                 intervalDist = Math.abs(intervalDist);
@@ -71,7 +71,7 @@ module es {
             result.normal = translationAxis;
             result.minimumTranslationVector = Vector2.multiply(new Vector2(-translationAxis.x, -translationAxis.y), new Vector2(minIntervalDistance));
 
-            return result;
+            return true;
         }
 
         /**
@@ -115,20 +115,17 @@ module es {
          *
          * @param circle
          * @param polygon
+         * @param result
          */
-        public static circleToPolygon(circle: Circle, polygon: Polygon) {
-            let result = new CollisionResult();
-
+        public static circleToPolygon(circle: Circle, polygon: Polygon, result: CollisionResult): boolean {
             let poly2Circle = Vector2.subtract(circle.position, polygon.position);
 
-            let gpp = Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle);
-            let closestPoint: Vector2 = gpp.closestPoint;
-            let distanceSquared: number = gpp.distanceSquared;
-            result.normal = gpp.edgeNormal;
+            let distanceSquared = 0;
+            let closestPoint = Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle, distanceSquared, result.normal);
 
             let circleCenterInsidePoly = polygon.containsPoint(circle.position);
             if (distanceSquared > circle.radius * circle.radius && !circleCenterInsidePoly)
-                return null;
+                return false;
 
             let mtv: Vector2;
             if (circleCenterInsidePoly) {
@@ -145,17 +142,17 @@ module es {
             result.minimumTranslationVector = mtv;
             result.point = Vector2.add(closestPoint, polygon.position);
 
-            return result;
+            return true;
         }
 
         /**
          * 适用于圆心在方框内以及只与方框外圆心重叠的圆。
          * @param circle
          * @param box
+         * @param result
          */
-        public static circleToBox(circle: Circle, box: Box): CollisionResult {
-            let result = new CollisionResult();
-            let closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position).res;
+        public static circleToBox(circle: Circle, box: Box, result: CollisionResult): boolean {
+            let closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
 
             if (box.containsPoint(circle.position)) {
                 result.point = closestPointOnBounds;
@@ -163,7 +160,7 @@ module es {
                 let safePlace = Vector2.add(closestPointOnBounds, Vector2.subtract(result.normal, new Vector2(circle.radius)));
                 result.minimumTranslationVector = Vector2.subtract(circle.position, safePlace);
 
-                return result;
+                return true;
             }
 
             let sqrDistance = Vector2.distanceSquared(closestPointOnBounds, circle.position);
@@ -172,23 +169,24 @@ module es {
             } else if (sqrDistance <= circle.radius * circle.radius) {
                 result.normal = Vector2.subtract(circle.position, closestPointOnBounds);
                 let depth = result.normal.length() - circle.radius;
-                result.normal = Vector2Ext.normalize(result.normal);
+
+                result.point = closestPointOnBounds;
+                Vector2Ext.normalize(result.normal);
                 result.minimumTranslationVector = Vector2.multiply(new Vector2(depth), result.normal);
 
-                return result;
+                return true;
             }
 
-            return null;
+            return false;
         }
 
         /**
          *
          * @param point
          * @param circle
+         * @param result
          */
-        public static pointToCircle(point: Vector2, circle: Circle) {
-            let result = new CollisionResult();
-
+        public static pointToCircle(point: Vector2, circle: Circle, result: CollisionResult): boolean {
             let distanceSquared = Vector2.distanceSquared(point, circle.position);
             let sumOfRadii = 1 + circle.radius;
             let collided = distanceSquared < sumOfRadii * sumOfRadii;
@@ -198,10 +196,10 @@ module es {
                 result.minimumTranslationVector = Vector2.multiply(new Vector2(-depth, -depth), result.normal);
                 result.point = Vector2.add(circle.position, Vector2.multiply(result.normal, new Vector2(circle.radius, circle.radius)));
 
-                return result;
+                return true;
             }
 
-            return null;
+            return false;
         }
 
         /**
@@ -210,7 +208,7 @@ module es {
          * @param lineB
          * @param closestTo
          */
-        public static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2) {
+        public static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2 {
             let v = Vector2.subtract(lineB, lineA);
             let w = Vector2.subtract(closestTo, lineA);
             let t = Vector2.dot(w, v) / Vector2.dot(v, v);
@@ -223,24 +221,20 @@ module es {
          *
          * @param point
          * @param poly
+         * @param result
          */
-        public static pointToPoly(point: Vector2, poly: Polygon) {
-            let result = new CollisionResult();
-
+        public static pointToPoly(point: Vector2, poly: Polygon, result: CollisionResult): boolean {
             if (poly.containsPoint(point)) {
-                let distanceSquared: number;
-                let gpp = Polygon.getClosestPointOnPolygonToPoint(poly.points, Vector2.subtract(point, poly.position));
-                let closestPoint = gpp.closestPoint;
-                distanceSquared = gpp.distanceSquared;
-                result.normal = gpp.edgeNormal;
+                let distanceSquared: number = 0;
+                let closestPoint = Polygon.getClosestPointOnPolygonToPoint(poly.points, Vector2.subtract(point, poly.position), distanceSquared, result.normal);
 
                 result.minimumTranslationVector = Vector2.multiply(result.normal, new Vector2(Math.sqrt(distanceSquared), Math.sqrt(distanceSquared)));
                 result.point = Vector2.add(closestPoint, poly.position);
 
-                return result;
+                return true;
             }
 
-            return null;
+            return false;
         }
 
         /**
@@ -248,9 +242,7 @@ module es {
          * @param first
          * @param second
          */
-        public static circleToCircle(first: Circle, second: Circle){
-            let result = new CollisionResult();
-
+        public static circleToCircle(first: Circle, second: Circle, result: CollisionResult): boolean{
             let distanceSquared = Vector2.distanceSquared(first.position, second.position);
             let sumOfRadii = first.radius + second.radius;
             let collided = distanceSquared < sumOfRadii * sumOfRadii;
@@ -260,35 +252,34 @@ module es {
                 result.minimumTranslationVector = Vector2.multiply(new Vector2(-depth), result.normal);
                 result.point = Vector2.add(second.position, Vector2.multiply(result.normal, new Vector2(second.radius)));
 
-                return result;
+                return true;
             }
 
-            return null;
+            return false;
         }
 
         /**
          *
          * @param first
          * @param second
+         * @param result
          */
-        public static boxToBox(first: Box, second: Box){
-            let result = new CollisionResult();
-
+        public static boxToBox(first: Box, second: Box, result: CollisionResult): boolean{
             let minkowskiDiff = this.minkowskiDifference(first, second);
             if (minkowskiDiff.contains(0, 0)){
                 // 计算MTV。如果它是零，我们就可以称它为非碰撞
                 result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
 
-                if (result.minimumTranslationVector.x == 0 && result.minimumTranslationVector.y == 0)
-                    return null;
+                if (result.minimumTranslationVector.equals(Vector2.zero))
+                    return false;
 
                 result.normal = new Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
                 result.normal.normalize();
 
-                return result;
+                return true;
             }
 
-            return null;
+            return false;
         }
 
         private static minkowskiDifference(first: Box, second: Box){

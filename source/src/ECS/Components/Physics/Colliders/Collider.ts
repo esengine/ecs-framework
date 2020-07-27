@@ -205,7 +205,7 @@ module es {
          * 检查这个形状是否与物理系统中的其他对撞机重叠
          * @param other
          */
-        public overlaps(other: Collider) {
+        public overlaps(other: Collider): boolean {
             return this.shape.overlaps(other.shape);
         }
 
@@ -213,20 +213,21 @@ module es {
          * 检查这个与运动应用的碰撞器(移动向量)是否与碰撞器碰撞。如果是这样，将返回true，并且结果将填充碰撞数据。
          * @param collider
          * @param motion
+         * @param result
          */
-        public collidesWith(collider: Collider, motion: Vector2) {
+        public collidesWith(collider: Collider, motion: Vector2, result: CollisionResult): boolean {
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
             let oldPosition = this.entity.position;
-            this.entity.position = Vector2.add(this.entity.position, motion);
+            this.entity.position.add(motion);
 
-            let result = this.shape.collidesWithShape(collider.shape);
-            if (result)
+            let didCollide = this.shape.collidesWithShape(collider.shape, result);
+            if (didCollide)
                 result.collider = collider;
 
             // 将图形位置返回到检查前的位置
             this.entity.position = oldPosition;
 
-            return result;
+            return didCollide;
         }
 
         public clone(): Component{

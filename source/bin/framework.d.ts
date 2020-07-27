@@ -133,6 +133,7 @@ declare module es {
         static transform(position: Vector2, matrix: Matrix2D): Vector2;
         static distance(value1: Vector2, value2: Vector2): number;
         static negate(value: Vector2): Vector2;
+        equals(other: Vector2): boolean;
     }
 }
 declare module es {
@@ -387,13 +388,14 @@ declare module transform {
     }
 }
 declare module es {
+    import HashObject = egret.HashObject;
     enum DirtyType {
         clean = 0,
         positionDirty = 1,
         scaleDirty = 2,
         rotationDirty = 3
     }
-    class Transform {
+    class Transform extends HashObject {
         readonly entity: Entity;
         parent: Transform;
         readonly childCount: number;
@@ -448,6 +450,7 @@ declare module es {
         setDirty(dirtyFlagType: DirtyType): void;
         copyFrom(transform: Transform): void;
         toString(): string;
+        equals(other: Transform): boolean;
     }
 }
 declare module es {
@@ -536,6 +539,7 @@ declare module es {
 }
 declare module es {
     abstract class RenderableComponent extends Component implements IRenderable {
+        displayObject: egret.DisplayObject;
         readonly width: number;
         readonly height: number;
         readonly bounds: Rectangle;
@@ -556,6 +560,7 @@ declare module es {
         setRenderLayer(renderLayer: number): RenderableComponent;
         setColor(color: number): RenderableComponent;
         setLocalOffset(offset: Vector2): RenderableComponent;
+        sync(camera: Camera): void;
         toString(): string;
     }
 }
@@ -667,12 +672,9 @@ declare module es {
     class Mover extends Component {
         private _triggerHelper;
         onAddedToEntity(): void;
-        calculateMovement(motion: Vector2): {
-            collisionResult: CollisionResult;
-            motion: Vector2;
-        };
+        calculateMovement(motion: Vector2, collisionResult: CollisionResult): boolean;
         applyMovement(motion: Vector2): void;
-        move(motion: Vector2): CollisionResult;
+        move(motion: Vector2, collisionResult: CollisionResult): boolean;
     }
 }
 declare module es {
@@ -712,8 +714,8 @@ declare module es {
         onDisabled(): void;
         registerColliderWithPhysicsSystem(): void;
         unregisterColliderWithPhysicsSystem(): void;
-        overlaps(other: Collider): any;
-        collidesWith(collider: Collider, motion: Vector2): CollisionResult;
+        overlaps(other: Collider): boolean;
+        collidesWith(collider: Collider, motion: Vector2, result: CollisionResult): boolean;
         clone(): Component;
     }
 }
@@ -1054,15 +1056,20 @@ declare module es {
 declare module es {
     abstract class Renderer {
         camera: Camera;
+        readonly renderOrder: number;
+        protected constructor(renderOrder: number, camera?: Camera);
         onAddedToScene(scene: Scene): void;
+        unload(): void;
         protected beginRender(cam: Camera): void;
         abstract render(scene: Scene): any;
-        unload(): void;
         protected renderAfterStateCheck(renderable: IRenderable, cam: Camera): void;
+        onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
+        compareTo(other: Renderer): number;
     }
 }
 declare module es {
     class DefaultRenderer extends Renderer {
+        constructor();
         render(scene: Scene): void;
     }
 }
@@ -1197,10 +1204,7 @@ declare module es {
         containsRect(value: Rectangle): boolean;
         getHalfSize(): Vector2;
         static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
-        getClosestPointOnRectangleBorderToPoint(point: Vector2): {
-            res: Vector2;
-            edgeNormal: Vector2;
-        };
+        getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2;
         getClosestPointOnBoundsToOrigin(): Vector2;
         calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
         setEgretRect(rect: egret.Rectangle): Rectangle;
@@ -1260,14 +1264,8 @@ declare module es {
         static reset(): void;
         static clear(): void;
         static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
-        static boxcastBroadphase(rect: Rectangle, layerMask?: number): {
-            colliders: Collider[];
-            rect: Rectangle;
-        };
-        static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): {
-            tempHashSet: Collider[];
-            bounds: Rectangle;
-        };
+        static boxcastBroadphase(rect: Rectangle, layerMask?: number): Collider[];
+        static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Collider[];
         static addCollider(collider: Collider): void;
         static removeCollider(collider: Collider): void;
         static updateCollider(collider: Collider): void;
@@ -1280,9 +1278,9 @@ declare module es {
         center: Vector2;
         bounds: Rectangle;
         abstract recalculateBounds(collider: Collider): any;
-        abstract pointCollidesWithShape(point: Vector2): CollisionResult;
-        abstract overlaps(other: Shape): any;
-        abstract collidesWithShape(other: Shape): CollisionResult;
+        abstract overlaps(other: Shape): boolean;
+        abstract collidesWithShape(other: Shape, collisionResult: CollisionResult): boolean;
+        abstract pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
         clone(): Shape;
     }
 }
@@ -1303,16 +1301,12 @@ declare module es {
         static buildSymmetricalPolygon(vertCount: number, radius: number): any[];
         static recenterPolygonVerts(points: Vector2[]): void;
         static findPolygonCenter(points: Vector2[]): Vector2;
-        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): {
-            closestPoint: any;
-            distanceSquared: any;
-            edgeNormal: any;
-        };
+        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: number, edgeNormal: Vector2): Vector2;
         recalculateBounds(collider: Collider): void;
         overlaps(other: Shape): any;
-        collidesWithShape(other: Shape): any;
+        collidesWithShape(other: Shape, result: CollisionResult): boolean;
         containsPoint(point: Vector2): boolean;
-        pointCollidesWithShape(point: Vector2): CollisionResult;
+        pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
     }
 }
 declare module es {
@@ -1323,7 +1317,7 @@ declare module es {
         private static buildBox;
         updateBox(width: number, height: number): void;
         overlaps(other: Shape): any;
-        collidesWithShape(other: Shape): any;
+        collidesWithShape(other: Shape, result: CollisionResult): boolean;
         containsPoint(point: Vector2): boolean;
     }
 }
@@ -1334,8 +1328,8 @@ declare module es {
         constructor(radius: number);
         recalculateBounds(collider: es.Collider): void;
         overlaps(other: Shape): any;
-        collidesWithShape(other: Shape): CollisionResult;
-        pointCollidesWithShape(point: Vector2): CollisionResult;
+        collidesWithShape(other: Shape, result: CollisionResult): boolean;
+        pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
     }
 }
 declare module es {
@@ -1349,19 +1343,19 @@ declare module es {
 }
 declare module es {
     class ShapeCollisions {
-        static polygonToPolygon(first: Polygon, second: Polygon): CollisionResult;
+        static polygonToPolygon(first: Polygon, second: Polygon, result: CollisionResult): boolean;
         static intervalDistance(minA: number, maxA: number, minB: number, maxB: any): number;
         static getInterval(axis: Vector2, polygon: Polygon, min: number, max: number): {
             min: number;
             max: number;
         };
-        static circleToPolygon(circle: Circle, polygon: Polygon): CollisionResult;
-        static circleToBox(circle: Circle, box: Box): CollisionResult;
-        static pointToCircle(point: Vector2, circle: Circle): CollisionResult;
+        static circleToPolygon(circle: Circle, polygon: Polygon, result: CollisionResult): boolean;
+        static circleToBox(circle: Circle, box: Box, result: CollisionResult): boolean;
+        static pointToCircle(point: Vector2, circle: Circle, result: CollisionResult): boolean;
         static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
-        static pointToPoly(point: Vector2, poly: Polygon): CollisionResult;
-        static circleToCircle(first: Circle, second: Circle): CollisionResult;
-        static boxToBox(first: Box, second: Box): CollisionResult;
+        static pointToPoly(point: Vector2, poly: Polygon, result: CollisionResult): boolean;
+        static circleToCircle(first: Circle, second: Circle, result: CollisionResult): boolean;
+        static boxToBox(first: Box, second: Box, result: CollisionResult): boolean;
         private static minkowskiDifference;
     }
 }
@@ -1383,10 +1377,7 @@ declare module es {
         clear(): void;
         debugDraw(secondsToDisplay: number, textScale?: number): void;
         private debugDrawCellDetails;
-        aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): {
-            tempHashSet: Collider[];
-            bounds: Rectangle;
-        };
+        aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
         overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: any): number;
     }
     class NumberDictionary {

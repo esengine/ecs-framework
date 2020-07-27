@@ -81,8 +81,8 @@ module es {
             this.addEventListener(egret.Event.RESIZE, this.onGraphicsDeviceReset, this);
             this.addEventListener(egret.StageOrientationEvent.ORIENTATION_CHANGE, this.onOrientationChanged, this);
             this.addEventListener(egret.Event.ENTER_FRAME, this.update, this);
-            this.addEventListener(egret.Event.RENDER, this.draw, this);
 
+            Input.initialize();
             this.initialize();
         }
 
@@ -135,6 +135,8 @@ module es {
             }
 
             // this.endDebugUpdate();
+
+            await this.draw();
         }
 
         public async draw() {

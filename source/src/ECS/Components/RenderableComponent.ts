@@ -5,6 +5,10 @@ module es {
      */
     export abstract class RenderableComponent extends Component implements IRenderable {
         /**
+         * 用于装载egret显示对象
+         */
+        public displayObject: egret.DisplayObject = new egret.DisplayObject();
+        /**
          * renderableComponent的宽度
          * 如果你不重写bounds属性则需要实现这个
          */
@@ -107,6 +111,7 @@ module es {
          * 如果渲染器不适用isVisibleFromCamera进行剔除检查 这些方法不会被调用
          */
         protected onBecameVisible() {
+            this.displayObject.visible = this.isVisible;
         }
 
         /**
@@ -114,6 +119,7 @@ module es {
          * 如果渲染器不适用isVisibleFromCamera进行剔除检查 这些方法不会被调用
          */
         protected onBecameInvisible() {
+            this.displayObject.visible = this.isVisible;
         }
 
         /**
@@ -163,6 +169,17 @@ module es {
             }
 
             return this;
+        }
+
+        /**
+         * 进行状态同步
+         */
+        public sync(camera: Camera){
+            this.displayObject.x = this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x;
+            this.displayObject.y = this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y;
+            this.displayObject.scaleX = this.entity.scale.x;
+            this.displayObject.scaleY = this.entity.scale.y;
+            this.displayObject.rotation = this.entity.rotation;
         }
 
         public toString(){

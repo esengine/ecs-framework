@@ -7,6 +7,8 @@ module transform {
 }
 
 module es {
+    import HashObject = egret.HashObject;
+
     export enum DirtyType {
         clean,
         positionDirty,
@@ -14,7 +16,7 @@ module es {
         rotationDirty,
     }
 
-    export class Transform {
+    export class Transform extends HashObject {
         /** 与此转换关联的实体 */
         public readonly entity: Entity;
         /**
@@ -243,6 +245,7 @@ module es {
         public _children: Transform[];
 
         constructor(entity: Entity) {
+            super();
             this.entity = entity;
             this.scale = Vector2.one;
             this._children = [];
@@ -261,7 +264,7 @@ module es {
          * @param parent
          */
         public setParent(parent: Transform): Transform {
-            if (this._parent == parent)
+            if (this._parent.equals(parent))
                 return this;
 
             if (!this._parent) {
@@ -282,7 +285,7 @@ module es {
          */
         public setPosition(x: number, y: number): Transform {
             let position = new Vector2(x, y);
-            if (position == this._position)
+            if (position.equals(this._position))
                 return this;
 
             this._position = position;
@@ -301,7 +304,7 @@ module es {
          * @param localPosition
          */
         public setLocalPosition(localPosition: Vector2): Transform {
-            if (localPosition == this._localPosition)
+            if (localPosition.equals(this._localPosition))
                 return this;
 
             this._localPosition = localPosition;
@@ -492,6 +495,10 @@ module es {
             return `[Transform: parent: ${this.parent}, position: ${this.position}, rotation: ${this.rotation},
                 scale: ${this.scale}, localPosition: ${this._localPosition}, localRotation: ${this._localRotation},
                 localScale: ${this._localScale}]`;
+        }
+
+        public equals(other: Transform){
+            return other.hashCode == this.hashCode;
         }
     }
 }

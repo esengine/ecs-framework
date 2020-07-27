@@ -144,7 +144,7 @@ module es {
          * @param excludeCollider
          * @param layerMask
          */
-        public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number) {
+        public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number) : Collider[]{
             this._tempHashSet.length = 0;
 
             let p1 = this.cellCoords(bounds.x, bounds.y);
@@ -172,7 +172,7 @@ module es {
                 }
             }
 
-            return {tempHashSet: this._tempHashSet, bounds: bounds};
+            return this._tempHashSet;
         }
 
         /**
@@ -182,16 +182,14 @@ module es {
          * @param results
          * @param layerMask
          */
-        public overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask) {
+        public overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask): number {
             let bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
 
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
 
             let resultCounter = 0;
-            let aabbBroadphaseResult = this.aabbBroadphase(bounds, null, layerMask);
-            bounds = aabbBroadphaseResult.bounds;
-            let potentials = aabbBroadphaseResult.tempHashSet;
+            let potentials = this.aabbBroadphase(bounds, null, layerMask);
             for (let i = 0; i < potentials.length; i++) {
                 let collider = potentials[i];
                 if (collider instanceof BoxCollider) {

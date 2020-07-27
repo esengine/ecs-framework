@@ -122,7 +122,7 @@ module es {
 
                     this._bounds.location = new Vector2(minX, minY);
                     this._bounds.width = maxX - minX;
-                    this._bounds.height = maxX - minY;
+                    this._bounds.height = maxY - minY;
                 } else {
                     this._bounds.location = topLeft;
                     this._bounds.width = bottomRight.x - topLeft.x;

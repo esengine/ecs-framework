@@ -735,7 +735,7 @@ var es;
             return new Vector2(es.MathHelper.lerp(value1.x, value2.x, amount), es.MathHelper.lerp(value1.y, value2.y, amount));
         };
         Vector2.transform = function (position, matrix) {
-            return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
+            return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31, (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32);
         };
         Vector2.distance = function (value1, value2) {
             var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
@@ -746,6 +746,9 @@ var es;
             result.x = -value.x;
             result.y = -value.y;
             return result;
+        };
+        Vector2.prototype.equals = function (other) {
+            return other.x == this.x && other.y == this.y;
         };
         Vector2.unitYVector = new Vector2(0, 1);
         Vector2.unitXVector = new Vector2(1, 0);
@@ -1145,7 +1148,7 @@ var es;
             this.addEventListener(egret.Event.RESIZE, this.onGraphicsDeviceReset, this);
             this.addEventListener(egret.StageOrientationEvent.ORIENTATION_CHANGE, this.onOrientationChanged, this);
             this.addEventListener(egret.Event.ENTER_FRAME, this.update, this);
-            this.addEventListener(egret.Event.RENDER, this.draw, this);
+            es.Input.initialize();
             this.initialize();
         };
         Core.prototype.onOrientationChanged = function () {
@@ -1183,7 +1186,10 @@ var es;
                         case 1:
                             _a.sent();
                             _a.label = 2;
-                        case 2: return [2];
+                        case 2: return [4, this.draw()];
+                        case 3:
+                            _a.sent();
+                            return [2];
                     }
                 });
             });
@@ -1778,6 +1784,7 @@ var transform;
 })(transform || (transform = {}));
 var es;
 (function (es) {
+    var HashObject = egret.HashObject;
     var DirtyType;
     (function (DirtyType) {
         DirtyType[DirtyType["clean"] = 0] = "clean";
@@ -1785,24 +1792,27 @@ var es;
         DirtyType[DirtyType["scaleDirty"] = 2] = "scaleDirty";
         DirtyType[DirtyType["rotationDirty"] = 3] = "rotationDirty";
     })(DirtyType = es.DirtyType || (es.DirtyType = {}));
-    var Transform = (function () {
+    var Transform = (function (_super) {
+        __extends(Transform, _super);
         function Transform(entity) {
-            this._localTransform = es.Matrix2D.create();
-            this._worldTransform = es.Matrix2D.create().identity();
-            this._worldToLocalTransform = es.Matrix2D.create().identity();
-            this._worldInverseTransform = es.Matrix2D.create().identity();
-            this._rotationMatrix = es.Matrix2D.create();
-            this._translationMatrix = es.Matrix2D.create();
-            this._scaleMatrix = es.Matrix2D.create();
-            this._position = es.Vector2.zero;
-            this._scale = es.Vector2.one;
-            this._rotation = 0;
-            this._localPosition = es.Vector2.zero;
-            this._localScale = es.Vector2.one;
-            this._localRotation = 0;
-            this.entity = entity;
-            this.scale = es.Vector2.one;
-            this._children = [];
+            var _this = _super.call(this) || this;
+            _this._localTransform = es.Matrix2D.create();
+            _this._worldTransform = es.Matrix2D.create().identity();
+            _this._worldToLocalTransform = es.Matrix2D.create().identity();
+            _this._worldInverseTransform = es.Matrix2D.create().identity();
+            _this._rotationMatrix = es.Matrix2D.create();
+            _this._translationMatrix = es.Matrix2D.create();
+            _this._scaleMatrix = es.Matrix2D.create();
+            _this._position = es.Vector2.zero;
+            _this._scale = es.Vector2.one;
+            _this._rotation = 0;
+            _this._localPosition = es.Vector2.zero;
+            _this._localScale = es.Vector2.one;
+            _this._localRotation = 0;
+            _this.entity = entity;
+            _this.scale = es.Vector2.one;
+            _this._children = [];
+            return _this;
         }
         Object.defineProperty(Transform.prototype, "parent", {
             get: function () {
@@ -1958,7 +1968,7 @@ var es;
             return this._children[index];
         };
         Transform.prototype.setParent = function (parent) {
-            if (this._parent == parent)
+            if (this._parent.equals(parent))
                 return this;
             if (!this._parent) {
                 this._parent._children.remove(this);
@@ -1970,7 +1980,7 @@ var es;
         };
         Transform.prototype.setPosition = function (x, y) {
             var position = new es.Vector2(x, y);
-            if (position == this._position)
+            if (position.equals(this._position))
                 return this;
             this._position = position;
             if (this.parent) {
@@ -1983,7 +1993,7 @@ var es;
             return this;
         };
         Transform.prototype.setLocalPosition = function (localPosition) {
-            if (localPosition == this._localPosition)
+            if (localPosition.equals(this._localPosition))
                 return this;
             this._localPosition = localPosition;
             this._localDirty = this._positionDirty = this._localPositionDirty = this._localRotationDirty = this._localScaleDirty = true;
@@ -2108,8 +2118,11 @@ var es;
         Transform.prototype.toString = function () {
             return "[Transform: parent: " + this.parent + ", position: " + this.position + ", rotation: " + this.rotation + ",\n                scale: " + this.scale + ", localPosition: " + this._localPosition + ", localRotation: " + this._localRotation + ",\n                localScale: " + this._localScale + "]";
         };
+        Transform.prototype.equals = function (other) {
+            return other.hashCode == this.hashCode;
+        };
         return Transform;
-    }());
+    }(HashObject));
     es.Transform = Transform;
 })(es || (es = {}));
 var es;
@@ -2227,7 +2240,7 @@ var es;
                         var maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
                         this._bounds.location = new es.Vector2(minX, minY);
                         this._bounds.width = maxX - minX;
-                        this._bounds.height = maxX - minY;
+                        this._bounds.height = maxY - minY;
                     }
                     else {
                         this._bounds.location = topLeft;
@@ -2499,6 +2512,7 @@ var es;
         __extends(RenderableComponent, _super);
         function RenderableComponent() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.displayObject = new egret.DisplayObject();
             _this.color = 0x000000;
             _this._localOffset = es.Vector2.zero;
             _this._renderLayer = 0;
@@ -2570,8 +2584,10 @@ var es;
             this._areBoundsDirty = true;
         };
         RenderableComponent.prototype.onBecameVisible = function () {
+            this.displayObject.visible = this.isVisible;
         };
         RenderableComponent.prototype.onBecameInvisible = function () {
+            this.displayObject.visible = this.isVisible;
         };
         RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
             this.isVisible = camera.bounds.intersects(this.bounds);
@@ -2595,6 +2611,13 @@ var es;
                 this._localOffset = offset;
             }
             return this;
+        };
+        RenderableComponent.prototype.sync = function (camera) {
+            this.displayObject.x = this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x;
+            this.displayObject.y = this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y;
+            this.displayObject.scaleX = this.entity.scale.x;
+            this.displayObject.scaleY = this.entity.scale.y;
+            this.displayObject.rotation = this.entity.rotation;
         };
         RenderableComponent.prototype.toString = function () {
             return "[RenderableComponent] renderLayer: " + this.renderLayer;
@@ -2626,6 +2649,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Bitmap = egret.Bitmap;
     var SpriteRenderer = (function (_super) {
         __extends(SpriteRenderer, _super);
         function SpriteRenderer(sprite) {
@@ -2644,8 +2668,8 @@ var es;
                         this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this._sprite.sourceRect.width, this._sprite.sourceRect.height);
                         this._areBoundsDirty = false;
                     }
-                    return this._bounds;
                 }
+                return this._bounds;
             },
             enumerable: true,
             configurable: true
@@ -2684,12 +2708,17 @@ var es;
             this._sprite = sprite;
             if (this._sprite) {
                 this._origin = this._sprite.origin;
+                this.displayObject.anchorOffsetX = this._origin.x;
+                this.displayObject.anchorOffsetY = this._origin.y;
             }
+            this.displayObject = new Bitmap(sprite.texture2D);
             return this;
         };
         SpriteRenderer.prototype.setOrigin = function (origin) {
             if (this._origin != origin) {
                 this._origin = origin;
+                this.displayObject.anchorOffsetX = this._origin.x;
+                this.displayObject.anchorOffsetY = this._origin.y;
                 this._areBoundsDirty = true;
             }
             return this;
@@ -2699,6 +2728,7 @@ var es;
             return this;
         };
         SpriteRenderer.prototype.render = function (camera) {
+            this.sync(camera);
         };
         return SpriteRenderer;
     }(es.RenderableComponent));
@@ -2942,10 +2972,9 @@ var es;
         Mover.prototype.onAddedToEntity = function () {
             this._triggerHelper = new es.ColliderTriggerHelper(this.entity);
         };
-        Mover.prototype.calculateMovement = function (motion) {
-            var collisionResult = new es.CollisionResult();
+        Mover.prototype.calculateMovement = function (motion, collisionResult) {
             if (!this.entity.getComponent(es.Collider) || !this._triggerHelper) {
-                return null;
+                return false;
             }
             var colliders = this.entity.getComponents(es.Collider);
             for (var i = 0; i < colliders.length; i++) {
@@ -2955,36 +2984,32 @@ var es;
                 var bounds = collider.bounds;
                 bounds.x += motion.x;
                 bounds.y += motion.y;
-                var boxcastResult = es.Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
-                bounds = boxcastResult.bounds;
-                var neighbors = boxcastResult.tempHashSet;
+                var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
                 for (var j = 0; j < neighbors.length; j++) {
                     var neighbor = neighbors[j];
                     if (neighbor.isTrigger)
                         continue;
-                    var _internalcollisionResult = collider.collidesWith(neighbor, motion);
-                    if (_internalcollisionResult) {
-                        motion = es.Vector2.subtract(motion, _internalcollisionResult.minimumTranslationVector);
-                        if (_internalcollisionResult.collider) {
+                    var _internalcollisionResult = new es.CollisionResult();
+                    if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
+                        motion.subtract(_internalcollisionResult.minimumTranslationVector);
+                        if (_internalcollisionResult.collider != null) {
                             collisionResult = _internalcollisionResult;
                         }
                     }
                 }
             }
             es.ListPool.free(colliders);
-            return { collisionResult: collisionResult, motion: motion };
+            return collisionResult.collider != null;
         };
         Mover.prototype.applyMovement = function (motion) {
             this.entity.position = es.Vector2.add(this.entity.position, motion);
             if (this._triggerHelper)
                 this._triggerHelper.update();
         };
-        Mover.prototype.move = function (motion) {
-            var movementResult = this.calculateMovement(motion);
-            var collisionResult = movementResult.collisionResult;
-            motion = movementResult.motion;
+        Mover.prototype.move = function (motion, collisionResult) {
+            this.calculateMovement(motion, collisionResult);
             this.applyMovement(motion);
-            return collisionResult;
+            return collisionResult.collider != null;
         };
         return Mover;
     }(es.Component));
@@ -3010,8 +3035,8 @@ var es;
             var didCollide = false;
             this.entity.position = es.Vector2.add(this.entity.position, motion);
             var neighbors = es.Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers);
-            for (var i = 0; i < neighbors.colliders.length; i++) {
-                var neighbor = neighbors.colliders[i];
+            for (var i = 0; i < neighbors.length; i++) {
+                var neighbor = neighbors[i];
                 if (this._collider.overlaps(neighbor) && neighbor.enabled) {
                     didCollide = true;
                     this.notifyTriggerListeners(this._collider, neighbor);
@@ -3171,14 +3196,14 @@ var es;
         Collider.prototype.overlaps = function (other) {
             return this.shape.overlaps(other.shape);
         };
-        Collider.prototype.collidesWith = function (collider, motion) {
+        Collider.prototype.collidesWith = function (collider, motion, result) {
             var oldPosition = this.entity.position;
-            this.entity.position = es.Vector2.add(this.entity.position, motion);
-            var result = this.shape.collidesWithShape(collider.shape);
-            if (result)
+            this.entity.position.add(motion);
+            var didCollide = this.shape.collidesWithShape(collider.shape, result);
+            if (didCollide)
                 result.collider = collider;
             this.entity.position = oldPosition;
-            return result;
+            return didCollide;
         };
         Collider.prototype.clone = function () {
             var collider = ObjectUtils.clone(this);
@@ -3601,8 +3626,10 @@ var es;
         ComponentList.prototype.deregisterAllComponents = function () {
             for (var i = 0; i < this._components.length; i++) {
                 var component = this._components[i];
-                if (component instanceof es.RenderableComponent)
+                if (component instanceof es.RenderableComponent) {
+                    this._entity.scene.removeChild(component.displayObject);
                     this._entity.scene.renderableComponents.remove(component);
+                }
                 this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component), false);
                 this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             }
@@ -3610,8 +3637,10 @@ var es;
         ComponentList.prototype.registerAllComponents = function () {
             for (var i = 0; i < this._components.length; i++) {
                 var component = this._components[i];
-                if (component instanceof es.RenderableComponent)
+                if (component instanceof es.RenderableComponent) {
+                    this._entity.scene.addChild(component.displayObject);
                     this._entity.scene.renderableComponents.add(component);
+                }
                 this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
             }
@@ -3627,8 +3656,10 @@ var es;
             if (this._componentsToAdd.length > 0) {
                 for (var i = 0, count = this._componentsToAdd.length; i < count; i++) {
                     var component = this._componentsToAdd[i];
-                    if (component instanceof es.RenderableComponent)
+                    if (component instanceof es.RenderableComponent) {
+                        this._entity.scene.addChild(component.displayObject);
                         this._entity.scene.renderableComponents.add(component);
+                    }
                     this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component));
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                     this._components.push(component);
@@ -3651,8 +3682,10 @@ var es;
             }
         };
         ComponentList.prototype.handleRemove = function (component) {
-            if (component instanceof es.RenderableComponent)
+            if (component instanceof es.RenderableComponent) {
+                this._entity.scene.removeChild(component.displayObject);
                 this._entity.scene.renderableComponents.remove(component);
+            }
             this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             component.onRemovedFromEntity();
@@ -4909,14 +4942,22 @@ var es;
 var es;
 (function (es) {
     var Renderer = (function () {
-        function Renderer() {
+        function Renderer(renderOrder, camera) {
+            if (camera === void 0) { camera = null; }
+            this.renderOrder = 0;
+            this.camera = camera;
+            this.renderOrder = renderOrder;
         }
         Renderer.prototype.onAddedToScene = function (scene) { };
-        Renderer.prototype.beginRender = function (cam) {
-        };
         Renderer.prototype.unload = function () { };
+        Renderer.prototype.beginRender = function (cam) { };
         Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
             renderable.render(cam);
+        };
+        Renderer.prototype.onSceneBackBufferSizeChanged = function (newWidth, newHeight) {
+        };
+        Renderer.prototype.compareTo = function (other) {
+            return this.renderOrder - other.renderOrder;
         };
         return Renderer;
     }());
@@ -4927,7 +4968,7 @@ var es;
     var DefaultRenderer = (function (_super) {
         __extends(DefaultRenderer, _super);
         function DefaultRenderer() {
-            return _super !== null && _super.apply(this, arguments) || this;
+            return _super.call(this, 0, null) || this;
         }
         DefaultRenderer.prototype.render = function (scene) {
             var cam = this.camera ? this.camera : scene.camera;
@@ -5567,8 +5608,8 @@ var es;
         Rectangle.fromMinMax = function (minX, minY, maxX, maxY) {
             return new Rectangle(minX, minY, maxX - minX, maxY - minY);
         };
-        Rectangle.prototype.getClosestPointOnRectangleBorderToPoint = function (point) {
-            var edgeNormal = es.Vector2.zero;
+        Rectangle.prototype.getClosestPointOnRectangleBorderToPoint = function (point, edgeNormal) {
+            edgeNormal = es.Vector2.zero;
             var res = new es.Vector2();
             res.x = es.MathHelper.clamp(point.x, this.left, this.right);
             res.y = es.MathHelper.clamp(point.y, this.top, this.bottom);
@@ -5605,7 +5646,7 @@ var es;
                 if (res.y == this.bottom)
                     edgeNormal.y = 1;
             }
-            return { res: res, edgeNormal: edgeNormal };
+            return res;
         };
         Rectangle.prototype.getClosestPointOnBoundsToOrigin = function () {
             var max = this.max;
@@ -5688,9 +5729,7 @@ var es;
             var colliders = this._entity.getComponents(es.Collider);
             for (var i = 0; i < colliders.length; i++) {
                 var collider = colliders[i];
-                var boxcastResult = es.Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-                collider.bounds = boxcastResult.rect;
-                var neighbors = boxcastResult.colliders;
+                var neighbors = es.Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
                 var _loop_5 = function (j) {
                     var neighbor = neighbors[j];
                     if (!collider.isTrigger && !neighbor.isTrigger)
@@ -5914,12 +5953,15 @@ var es;
         };
         Physics.overlapCircleAll = function (center, randius, results, layerMask) {
             if (layerMask === void 0) { layerMask = -1; }
+            if (results.length == 0) {
+                console.error("An empty results array was passed in. No results will ever be returned.");
+                return;
+            }
             return this._spatialHash.overlapCircle(center, randius, results, layerMask);
         };
         Physics.boxcastBroadphase = function (rect, layerMask) {
             if (layerMask === void 0) { layerMask = this.allLayers; }
-            var boxcastResult = this._spatialHash.aabbBroadphase(rect, null, layerMask);
-            return { colliders: boxcastResult.tempHashSet, rect: boxcastResult.bounds };
+            return this._spatialHash.aabbBroadphase(rect, null, layerMask);
         };
         Physics.boxcastBroadphaseExcludingSelf = function (collider, rect, layerMask) {
             if (layerMask === void 0) { layerMask = this.allLayers; }
@@ -6026,9 +6068,9 @@ var es;
             }
             return new es.Vector2(x / points.length, y / points.length);
         };
-        Polygon.getClosestPointOnPolygonToPoint = function (points, point) {
-            var distanceSquared = Number.MAX_VALUE;
-            var edgeNormal = new es.Vector2(0, 0);
+        Polygon.getClosestPointOnPolygonToPoint = function (points, point, distanceSquared, edgeNormal) {
+            distanceSquared = Number.MAX_VALUE;
+            edgeNormal = new es.Vector2(0, 0);
             var closestPoint = new es.Vector2(0, 0);
             var tempDistanceSquared;
             for (var i = 0; i < points.length; i++) {
@@ -6044,8 +6086,8 @@ var es;
                     edgeNormal = new es.Vector2(-line.y, line.x);
                 }
             }
-            edgeNormal = es.Vector2.normalize(edgeNormal);
-            return { closestPoint: closestPoint, distanceSquared: distanceSquared, edgeNormal: edgeNormal };
+            es.Vector2Ext.normalize(edgeNormal);
+            return closestPoint;
         };
         Polygon.prototype.recalculateBounds = function (collider) {
             this.center = collider.localOffset;
@@ -6079,12 +6121,11 @@ var es;
             this.bounds.location = es.Vector2.add(this.bounds.location, this.position);
         };
         Polygon.prototype.overlaps = function (other) {
-            var result;
+            var result = new es.CollisionResult();
             if (other instanceof Polygon)
-                return es.ShapeCollisions.polygonToPolygon(this, other);
+                return es.ShapeCollisions.polygonToPolygon(this, other, result);
             if (other instanceof es.Circle) {
-                result = es.ShapeCollisions.circleToPolygon(other, this);
-                if (result) {
+                if (es.ShapeCollisions.circleToPolygon(other, this, result)) {
                     result.invertResult();
                     return true;
                 }
@@ -6092,18 +6133,16 @@ var es;
             }
             throw new Error("overlaps of Pologon to " + other + " are not supported");
         };
-        Polygon.prototype.collidesWithShape = function (other) {
-            var result = new es.CollisionResult();
+        Polygon.prototype.collidesWithShape = function (other, result) {
             if (other instanceof Polygon) {
-                return es.ShapeCollisions.polygonToPolygon(this, other);
+                return es.ShapeCollisions.polygonToPolygon(this, other, result);
             }
             if (other instanceof es.Circle) {
-                result = es.ShapeCollisions.circleToPolygon(other, this);
-                if (result) {
+                if (es.ShapeCollisions.circleToPolygon(other, this, result)) {
                     result.invertResult();
-                    return result;
+                    return true;
                 }
-                return null;
+                return false;
             }
             throw new Error("overlaps of Polygon to " + other + " are not supported");
         };
@@ -6119,8 +6158,8 @@ var es;
             }
             return isInside;
         };
-        Polygon.prototype.pointCollidesWithShape = function (point) {
-            return es.ShapeCollisions.pointToPoly(point, this);
+        Polygon.prototype.pointCollidesWithShape = function (point, result) {
+            return es.ShapeCollisions.pointToPoly(point, this, result);
         };
         return Polygon;
     }(es.Shape));
@@ -6167,11 +6206,11 @@ var es;
             }
             return _super.prototype.overlaps.call(this, other);
         };
-        Box.prototype.collidesWithShape = function (other) {
+        Box.prototype.collidesWithShape = function (other, result) {
             if (other instanceof Box && other.isUnrotated) {
-                return es.ShapeCollisions.boxToBox(this, other);
+                return es.ShapeCollisions.boxToBox(this, other, result);
             }
-            return _super.prototype.collidesWithShape.call(this, other);
+            return _super.prototype.collidesWithShape.call(this, other, result);
         };
         Box.prototype.containsPoint = function (point) {
             if (this.isUnrotated)
@@ -6209,28 +6248,29 @@ var es;
             this.bounds = new es.Rectangle(this.position.x - this.radius, this.position.y - this.radius, this.radius * 2, this.radius * 2);
         };
         Circle.prototype.overlaps = function (other) {
+            var result = new es.CollisionResult();
             if (other instanceof es.Box && other.isUnrotated)
                 return es.Collisions.isRectToCircle(other.bounds, this.position, this.radius);
             if (other instanceof Circle)
                 return es.Collisions.isCircleToCircle(this.position, this.radius, other.position, other.radius);
             if (other instanceof es.Polygon)
-                return es.ShapeCollisions.circleToPolygon(this, other);
+                return es.ShapeCollisions.circleToPolygon(this, other, result);
             throw new Error("overlaps of circle to " + other + " are not supported");
         };
-        Circle.prototype.collidesWithShape = function (other) {
+        Circle.prototype.collidesWithShape = function (other, result) {
             if (other instanceof es.Box && other.isUnrotated) {
-                return es.ShapeCollisions.circleToBox(this, other);
+                return es.ShapeCollisions.circleToBox(this, other, result);
             }
             if (other instanceof Circle) {
-                return es.ShapeCollisions.circleToCircle(this, other);
+                return es.ShapeCollisions.circleToCircle(this, other, result);
             }
             if (other instanceof es.Polygon) {
-                return es.ShapeCollisions.circleToPolygon(this, other);
+                return es.ShapeCollisions.circleToPolygon(this, other, result);
             }
             throw new Error("Collisions of Circle to " + other + " are not supported");
         };
-        Circle.prototype.pointCollidesWithShape = function (point) {
-            return es.ShapeCollisions.pointToCircle(point, this);
+        Circle.prototype.pointCollidesWithShape = function (point, result) {
+            return es.ShapeCollisions.pointToCircle(point, this, result);
         };
         return Circle;
     }(es.Shape));
@@ -6257,8 +6297,7 @@ var es;
     var ShapeCollisions = (function () {
         function ShapeCollisions() {
         }
-        ShapeCollisions.polygonToPolygon = function (first, second) {
-            var result = new es.CollisionResult();
+        ShapeCollisions.polygonToPolygon = function (first, second, result) {
             var isIntersecting = true;
             var firstEdges = first.edgeNormals;
             var secondEdges = second.edgeNormals;
@@ -6291,7 +6330,7 @@ var es;
                 if (intervalDist > 0)
                     isIntersecting = false;
                 if (!isIntersecting)
-                    return null;
+                    return false;
                 intervalDist = Math.abs(intervalDist);
                 if (intervalDist < minIntervalDistance) {
                     minIntervalDistance = intervalDist;
@@ -6302,7 +6341,7 @@ var es;
             }
             result.normal = translationAxis;
             result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(-translationAxis.x, -translationAxis.y), new es.Vector2(minIntervalDistance));
-            return result;
+            return true;
         };
         ShapeCollisions.intervalDistance = function (minA, maxA, minB, maxB) {
             if (minA < minB)
@@ -6323,16 +6362,13 @@ var es;
             }
             return { min: min, max: max };
         };
-        ShapeCollisions.circleToPolygon = function (circle, polygon) {
-            var result = new es.CollisionResult();
+        ShapeCollisions.circleToPolygon = function (circle, polygon, result) {
             var poly2Circle = es.Vector2.subtract(circle.position, polygon.position);
-            var gpp = es.Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle);
-            var closestPoint = gpp.closestPoint;
-            var distanceSquared = gpp.distanceSquared;
-            result.normal = gpp.edgeNormal;
+            var distanceSquared = 0;
+            var closestPoint = es.Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle, distanceSquared, result.normal);
             var circleCenterInsidePoly = polygon.containsPoint(circle.position);
             if (distanceSquared > circle.radius * circle.radius && !circleCenterInsidePoly)
-                return null;
+                return false;
             var mtv;
             if (circleCenterInsidePoly) {
                 mtv = es.Vector2.multiply(result.normal, new es.Vector2(Math.sqrt(distanceSquared) - circle.radius));
@@ -6348,16 +6384,15 @@ var es;
             }
             result.minimumTranslationVector = mtv;
             result.point = es.Vector2.add(closestPoint, polygon.position);
-            return result;
+            return true;
         };
-        ShapeCollisions.circleToBox = function (circle, box) {
-            var result = new es.CollisionResult();
-            var closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position).res;
+        ShapeCollisions.circleToBox = function (circle, box, result) {
+            var closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
             if (box.containsPoint(circle.position)) {
                 result.point = closestPointOnBounds;
                 var safePlace = es.Vector2.add(closestPointOnBounds, es.Vector2.subtract(result.normal, new es.Vector2(circle.radius)));
                 result.minimumTranslationVector = es.Vector2.subtract(circle.position, safePlace);
-                return result;
+                return true;
             }
             var sqrDistance = es.Vector2.distanceSquared(closestPointOnBounds, circle.position);
             if (sqrDistance == 0) {
@@ -6366,14 +6401,14 @@ var es;
             else if (sqrDistance <= circle.radius * circle.radius) {
                 result.normal = es.Vector2.subtract(circle.position, closestPointOnBounds);
                 var depth = result.normal.length() - circle.radius;
-                result.normal = es.Vector2Ext.normalize(result.normal);
+                result.point = closestPointOnBounds;
+                es.Vector2Ext.normalize(result.normal);
                 result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(depth), result.normal);
-                return result;
+                return true;
             }
-            return null;
+            return false;
         };
-        ShapeCollisions.pointToCircle = function (point, circle) {
-            var result = new es.CollisionResult();
+        ShapeCollisions.pointToCircle = function (point, circle, result) {
             var distanceSquared = es.Vector2.distanceSquared(point, circle.position);
             var sumOfRadii = 1 + circle.radius;
             var collided = distanceSquared < sumOfRadii * sumOfRadii;
@@ -6382,9 +6417,9 @@ var es;
                 var depth = sumOfRadii - Math.sqrt(distanceSquared);
                 result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(-depth, -depth), result.normal);
                 result.point = es.Vector2.add(circle.position, es.Vector2.multiply(result.normal, new es.Vector2(circle.radius, circle.radius)));
-                return result;
+                return true;
             }
-            return null;
+            return false;
         };
         ShapeCollisions.closestPointOnLine = function (lineA, lineB, closestTo) {
             var v = es.Vector2.subtract(lineB, lineA);
@@ -6393,22 +6428,17 @@ var es;
             t = es.MathHelper.clamp(t, 0, 1);
             return es.Vector2.add(lineA, es.Vector2.multiply(v, new es.Vector2(t, t)));
         };
-        ShapeCollisions.pointToPoly = function (point, poly) {
-            var result = new es.CollisionResult();
+        ShapeCollisions.pointToPoly = function (point, poly, result) {
             if (poly.containsPoint(point)) {
-                var distanceSquared = void 0;
-                var gpp = es.Polygon.getClosestPointOnPolygonToPoint(poly.points, es.Vector2.subtract(point, poly.position));
-                var closestPoint = gpp.closestPoint;
-                distanceSquared = gpp.distanceSquared;
-                result.normal = gpp.edgeNormal;
+                var distanceSquared = 0;
+                var closestPoint = es.Polygon.getClosestPointOnPolygonToPoint(poly.points, es.Vector2.subtract(point, poly.position), distanceSquared, result.normal);
                 result.minimumTranslationVector = es.Vector2.multiply(result.normal, new es.Vector2(Math.sqrt(distanceSquared), Math.sqrt(distanceSquared)));
                 result.point = es.Vector2.add(closestPoint, poly.position);
-                return result;
+                return true;
             }
-            return null;
+            return false;
         };
-        ShapeCollisions.circleToCircle = function (first, second) {
-            var result = new es.CollisionResult();
+        ShapeCollisions.circleToCircle = function (first, second, result) {
             var distanceSquared = es.Vector2.distanceSquared(first.position, second.position);
             var sumOfRadii = first.radius + second.radius;
             var collided = distanceSquared < sumOfRadii * sumOfRadii;
@@ -6417,22 +6447,21 @@ var es;
                 var depth = sumOfRadii - Math.sqrt(distanceSquared);
                 result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(-depth), result.normal);
                 result.point = es.Vector2.add(second.position, es.Vector2.multiply(result.normal, new es.Vector2(second.radius)));
-                return result;
+                return true;
             }
-            return null;
+            return false;
         };
-        ShapeCollisions.boxToBox = function (first, second) {
-            var result = new es.CollisionResult();
+        ShapeCollisions.boxToBox = function (first, second, result) {
             var minkowskiDiff = this.minkowskiDifference(first, second);
             if (minkowskiDiff.contains(0, 0)) {
                 result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
-                if (result.minimumTranslationVector.x == 0 && result.minimumTranslationVector.y == 0)
-                    return null;
+                if (result.minimumTranslationVector.equals(es.Vector2.zero))
+                    return false;
                 result.normal = new es.Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
                 result.normal.normalize();
-                return result;
+                return true;
             }
-            return null;
+            return false;
         };
         ShapeCollisions.minkowskiDifference = function (first, second) {
             var positionOffset = es.Vector2.subtract(first.position, es.Vector2.add(first.bounds.location, es.Vector2.divide(first.bounds.size, new es.Vector2(2))));
@@ -6544,16 +6573,14 @@ var es;
                     }
                 }
             }
-            return { tempHashSet: this._tempHashSet, bounds: bounds };
+            return this._tempHashSet;
         };
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
             var resultCounter = 0;
-            var aabbBroadphaseResult = this.aabbBroadphase(bounds, null, layerMask);
-            bounds = aabbBroadphaseResult.bounds;
-            var potentials = aabbBroadphaseResult.tempHashSet;
+            var potentials = this.aabbBroadphase(bounds, null, layerMask);
             for (var i = 0; i < potentials.length; i++) {
                 var collider = potentials[i];
                 if (collider instanceof es.BoxCollider) {

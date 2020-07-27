@@ -141,10 +141,12 @@ module es {
          * 点应该在多边形的空间中(点-多边形.位置)
          * @param points
          * @param point
+         * @param distanceSquared
+         * @param edgeNormal
          */
-        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): { closestPoint, distanceSquared, edgeNormal } {
-            let distanceSquared = Number.MAX_VALUE;
-            let edgeNormal = new Vector2(0, 0);
+        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: number, edgeNormal: Vector2): Vector2 {
+            distanceSquared = Number.MAX_VALUE;
+            edgeNormal = new Vector2(0, 0);
             let closestPoint = new Vector2(0, 0);
 
             let tempDistanceSquared;
@@ -166,9 +168,9 @@ module es {
                 }
             }
 
-            edgeNormal = Vector2.normalize(edgeNormal);
+            Vector2Ext.normalize(edgeNormal);
 
-            return { closestPoint: closestPoint, distanceSquared: distanceSquared, edgeNormal: edgeNormal };
+            return closestPoint;
         }
 
         public recalculateBounds(collider: Collider){
@@ -221,13 +223,12 @@ module es {
         }
 
         public overlaps(other: Shape){
-            let result: CollisionResult;
+            let result: CollisionResult = new CollisionResult();
             if (other instanceof Polygon)
-                return ShapeCollisions.polygonToPolygon(this, other);
+                return ShapeCollisions.polygonToPolygon(this, other, result);
 
             if (other instanceof Circle){
-                result = ShapeCollisions.circleToPolygon(other, this);
-                if (result){
+                if (ShapeCollisions.circleToPolygon(other, this, result)){
                     result.invertResult();
                     return true;
                 }
@@ -238,20 +239,18 @@ module es {
             throw new Error(`overlaps of Pologon to ${other} are not supported`);
         }
 
-        public collidesWithShape(other: Shape){
-            let result = new CollisionResult();
+        public collidesWithShape(other: Shape, result: CollisionResult): boolean{
             if (other instanceof Polygon){
-                return ShapeCollisions.polygonToPolygon(this, other);
+                return ShapeCollisions.polygonToPolygon(this, other, result);
             }
 
             if (other instanceof Circle){
-                result = ShapeCollisions.circleToPolygon(other, this);
-                if (result){
+                if (ShapeCollisions.circleToPolygon(other, this, result)){
                     result.invertResult();
-                    return result;
+                    return true;
                 }
 
-                return null;
+                return false;
             }
 
             throw new Error(`overlaps of Polygon to ${other} are not supported`);
@@ -278,8 +277,8 @@ module es {
             return isInside;
         }
 
-        public pointCollidesWithShape(point: Vector2): CollisionResult {
-            return ShapeCollisions.pointToPoly(point, this);
+        public pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean {
+            return ShapeCollisions.pointToPoly(point, this, result);
         }
     }
 }

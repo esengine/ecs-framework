@@ -5,6 +5,7 @@ module component {
     import SpriteRenderer = es.SpriteRenderer;
     import Time = es.Time;
     import Input = es.Input;
+    import CollisionResult = es.CollisionResult;
 
     export class PlayerController extends Component {
         private down: boolean = false;
@@ -45,7 +46,7 @@ module component {
                 let moveLeft: number = 0;
                 let moveRight: number = 0;
                 let speed = 100;
-                let worldPos = Input.touchPosition;
+                let worldPos = this.entity.scene.camera.mouseToWorldPoint();
                 if (worldPos.x < this.spriteRenderer.transform.position.x){
                     moveLeft = -1;
                 } else if(worldPos.x > this.spriteRenderer.transform.position.x){
@@ -57,7 +58,8 @@ module component {
                 } else if(worldPos.y > this.spriteRenderer.transform.position.y){
                     moveRight = 1;
                 }
-                this.mover.move(new Vector2(moveLeft * speed * Time.deltaTime, moveRight * speed * Time.deltaTime));
+                let collisionResult = new CollisionResult();
+                this.mover.move(new Vector2(moveLeft * speed * Time.deltaTime, moveRight * speed * Time.deltaTime), collisionResult);
             }
         }
     }

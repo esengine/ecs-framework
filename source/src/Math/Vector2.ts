@@ -197,7 +197,8 @@ module es {
          * @param matrix
          */
         public static transform(position: Vector2, matrix: Matrix2D){
-            return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21), (position.x * matrix.m12) + (position.y * matrix.m22));
+            return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31,
+                (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32);
         }
 
         /**
@@ -220,6 +221,10 @@ module es {
             result.y = -value.y;
 
             return result;
+        }
+
+        public equals(other: Vector2){
+            return other.x == this.x && other.y == this.y;
         }
     }
 }

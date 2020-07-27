@@ -1,4 +1,6 @@
 module es {
+    import Bitmap = egret.Bitmap;
+
     export class SpriteRenderer extends RenderableComponent {
         public get bounds() {
             if (this._areBoundsDirty) {
@@ -8,9 +10,9 @@ module es {
                         this._sprite.sourceRect.height);
                     this._areBoundsDirty = false;
                 }
-
-                return this._bounds;
             }
+
+            return this._bounds;
         }
 
         /**
@@ -83,7 +85,10 @@ module es {
             this._sprite = sprite;
             if (this._sprite) {
                 this._origin = this._sprite.origin;
+                this.displayObject.anchorOffsetX = this._origin.x;
+                this.displayObject.anchorOffsetY = this._origin.y;
             }
+            this.displayObject = new Bitmap(sprite.texture2D);
 
             return this;
         }
@@ -95,6 +100,8 @@ module es {
         public setOrigin(origin: Vector2): SpriteRenderer {
             if (this._origin != origin) {
                 this._origin = origin;
+                this.displayObject.anchorOffsetX = this._origin.x;
+                this.displayObject.anchorOffsetY = this._origin.y;
                 this._areBoundsDirty = true;
             }
 
@@ -113,7 +120,7 @@ module es {
         }
 
         public render(camera: Camera) {
-            // TODO: render
+            this.sync(camera);
         }
     }
 }

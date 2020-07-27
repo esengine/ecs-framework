@@ -76,8 +76,11 @@ module es {
                 let component = this._components[i];
 
                 // 处理渲染层列表
-                if (component instanceof RenderableComponent)
+                if (component instanceof RenderableComponent){
+                    this._entity.scene.removeChild(component.displayObject);
                     this._entity.scene.renderableComponents.remove(component);
+                }
+
 
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
                 this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
@@ -88,8 +91,10 @@ module es {
             for (let i = 0; i < this._components.length; i++) {
                 let component = this._components[i];
 
-                if (component instanceof RenderableComponent)
+                if (component instanceof RenderableComponent){
+                    this._entity.scene.addChild(component.displayObject);
                     this._entity.scene.renderableComponents.add(component);
+                }
 
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
@@ -112,8 +117,11 @@ module es {
             if (this._componentsToAdd.length > 0) {
                 for (let i = 0, count = this._componentsToAdd.length; i < count; i++) {
                     let component = this._componentsToAdd[i];
-                    if (component instanceof RenderableComponent)
+                    if (component instanceof RenderableComponent){
+                        this._entity.scene.addChild(component.displayObject);
                         this._entity.scene.renderableComponents.add(component);
+                    }
+
 
                     this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
@@ -148,8 +156,11 @@ module es {
 
         public handleRemove(component: Component) {
             // 处理渲染层列表
-            if (component instanceof RenderableComponent)
+            if (component instanceof RenderableComponent){
+                this._entity.scene.removeChild(component.displayObject);
                 this._entity.scene.renderableComponents.remove(component);
+            }
+
 
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);

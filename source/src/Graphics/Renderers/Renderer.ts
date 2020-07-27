@@ -9,6 +9,15 @@ module es {
          * Renderer子类可以选择调用beginRender时使用的摄像头
          */
         public camera: Camera;
+        /**
+         * 指定场景调用渲染器的顺序
+         */
+        public readonly renderOrder: number = 0;
+
+        protected constructor(renderOrder: number, camera: Camera = null){
+            this.camera = camera;
+            this.renderOrder = renderOrder;
+        }
 
         /**
          * 当渲染器被添加到场景时调用
@@ -16,17 +25,18 @@ module es {
          */
         public onAddedToScene(scene: Scene){}
 
-        protected beginRender(cam: Camera){
-
-        }
+        /**
+         * 当场景结束或渲染器从场景中移除时调用。使用这个进行清理。
+         */
+        public unload(){ }
 
         /**
          *
-         * @param scene
+         * @param cam
          */
-        public abstract render(scene: Scene);
+        protected beginRender(cam: Camera){ }
 
-        public unload(){ }
+        public abstract render(scene: Scene);
 
         /**
          *
@@ -35,6 +45,19 @@ module es {
          */
         protected renderAfterStateCheck(renderable: IRenderable, cam: Camera){
             renderable.render(cam);
+        }
+
+        /**
+         * 当默认场景渲染目标被调整大小和当场景已经开始添加渲染器时调用
+         * @param newWidth
+         * @param newHeight
+         */
+        public onSceneBackBufferSizeChanged(newWidth: number, newHeight: number){
+
+        }
+
+        public compareTo(other: Renderer): number{
+            return this.renderOrder - other.renderOrder;
         }
     }
 }

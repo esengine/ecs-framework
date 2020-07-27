@@ -70,9 +70,10 @@ module es {
         /**
          * 获取矩形边界上与给定点最近的点
          * @param point
+         * @param edgeNormal
          */
-        public getClosestPointOnRectangleBorderToPoint(point: Vector2): { res: Vector2, edgeNormal: Vector2 } {
-            let edgeNormal = Vector2.zero;
+        public getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2 {
+            edgeNormal = Vector2.zero;
 
             // 对于每个轴，如果点在盒子外面
             let res = new Vector2();
@@ -107,7 +108,7 @@ module es {
                 if (res.y == this.bottom) edgeNormal.y = 1;
             }
 
-            return { res: res, edgeNormal: edgeNormal };
+            return res;
         }
 
         /**

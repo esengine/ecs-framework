@@ -1,6 +1,10 @@
 ///<reference path="./Renderer.ts" />
 module es {
     export class DefaultRenderer extends Renderer {
+        constructor(){
+            super(0, null);
+        }
+
         public render(scene: Scene) {
             let cam = this.camera ? this.camera : scene.camera;
             this.beginRender(cam);

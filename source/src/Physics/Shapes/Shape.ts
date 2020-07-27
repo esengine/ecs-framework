@@ -16,9 +16,9 @@ module es {
         public bounds: Rectangle;
 
         public abstract recalculateBounds(collider: Collider);
-        public abstract pointCollidesWithShape(point: Vector2): CollisionResult;
-        public abstract overlaps(other: Shape);
-        public abstract collidesWithShape(other: Shape): CollisionResult;
+        public abstract overlaps(other: Shape): boolean;
+        public abstract collidesWithShape(other: Shape, collisionResult: CollisionResult): boolean;
+        public abstract pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
 
         public clone(): Shape{
             return ObjectUtils.clone<Shape>(this);

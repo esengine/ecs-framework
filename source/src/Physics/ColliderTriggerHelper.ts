@@ -22,9 +22,7 @@ module es {
             for (let i = 0; i < colliders.length; i++) {
                 let collider = colliders[i];
 
-                let boxcastResult = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-                collider.bounds = boxcastResult.rect;
-                let neighbors = boxcastResult.colliders;
+                let neighbors = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
                 for (let j = 0; j < neighbors.length; j++) {
                     let neighbor = neighbors[j];
                     if (!collider.isTrigger && !neighbor.isTrigger)

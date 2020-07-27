@@ -16,12 +16,11 @@ module es {
         /**
          * 计算修改运动矢量的运动，以考虑移动时可能发生的碰撞
          * @param motion
+         * @param collisionResult
          */
-        public calculateMovement(motion: Vector2){
-            let collisionResult = new CollisionResult();
-
+        public calculateMovement(motion: Vector2, collisionResult: CollisionResult): boolean{
             if (!this.entity.getComponent(Collider) || !this._triggerHelper){
-                return null;
+                return false;
             }
 
             // 移动所有的非触发碰撞器并获得最近的碰撞
@@ -37,9 +36,7 @@ module es {
                 let bounds = collider.bounds;
                 bounds.x += motion.x;
                 bounds.y += motion.y;
-                let boxcastResult = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
-                bounds = boxcastResult.bounds;
-                let neighbors = boxcastResult.tempHashSet;
+                let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
 
                 for (let j = 0; j < neighbors.length; j ++){
                     let neighbor = neighbors[j];
@@ -47,13 +44,13 @@ module es {
                     if (neighbor.isTrigger)
                         continue;
 
-                    let _internalcollisionResult = collider.collidesWith(neighbor, motion);
-                    if (_internalcollisionResult){
+                    let _internalcollisionResult: CollisionResult = new CollisionResult();
+                    if (collider.collidesWith(neighbor, motion, _internalcollisionResult)){
                         // 如果碰撞 则退回之前的移动量
-                        motion = Vector2.subtract(motion, _internalcollisionResult.minimumTranslationVector);
+                        motion.subtract(_internalcollisionResult.minimumTranslationVector);
 
                         // 如果我们碰到多个对象，为了简单起见，只取第一个。
-                        if (_internalcollisionResult.collider){
+                        if (_internalcollisionResult.collider != null){
                             collisionResult = _internalcollisionResult;
                         }
                     }
@@ -62,7 +59,7 @@ module es {
 
             ListPool.free(colliders);
 
-            return {collisionResult: collisionResult, motion: motion};
+            return collisionResult.collider != null;
         }
 
         /**
@@ -81,15 +78,12 @@ module es {
         /**
          * 通过调用calculateMovement和applyMovement来移动考虑碰撞的实体;
          * @param motion
+         * @param collisionResult
          */
-        public move(motion: Vector2){
-            let movementResult = this.calculateMovement(motion);
-            let collisionResult = movementResult.collisionResult;
-            motion = movementResult.motion;
-
+        public move(motion: Vector2, collisionResult: CollisionResult){
+            this.calculateMovement(motion, collisionResult);
             this.applyMovement(motion);
-
-            return collisionResult;
+            return collisionResult.collider != null;
         }
     }
 }
