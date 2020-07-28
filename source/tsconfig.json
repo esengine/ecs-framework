@@ -11,7 +11,7 @@
       "es5",
       "dom",
       "es2015.promise",
-      "es6"
+      "es6",
   ] ,
   },
   "include": [

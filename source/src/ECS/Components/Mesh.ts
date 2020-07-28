@@ -1,32 +1,24 @@
 ///<reference path="./RenderableComponent.ts" />
-class Mesh extends RenderableComponent {
-    private _mesh: egret.Mesh;
+module es {
+    export class Mesh extends RenderableComponent {
+        private _mesh: egret.Mesh;
 
-    constructor(){
-        super();
+        constructor(){
+            super();
 
-        this._mesh = new egret.Mesh();
-    }
+            this._mesh = new egret.Mesh();
+        }
 
-    public setTexture(texture: egret.Texture): Mesh{
-        this._mesh.texture = texture;
+        public setTexture(texture: egret.Texture): Mesh{
+            this._mesh.texture = texture;
 
-        return this;
-    }
+            return this;
+        }
 
-    public onAddedToEntity(){
-        this.addChild(this._mesh);
-    }
+        public reset() {
+        }
 
-    public onRemovedFromEntity(){
-        this.removeChild(this._mesh);
-    }
-
-    public render(camera: Camera){
-        this.x = this.entity.position.x - camera.position.x + camera.origin.x;
-        this.y = this.entity.position.y - camera.position.y + camera.origin.y;
-    }
-
-    public reset() {
+        render(camera: es.Camera) {
+        }
     }
 }

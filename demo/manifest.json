@@ -11,12 +11,11 @@
 		"libs/long/long.js"
 	],
 	"game": [
-		"bin-debug/game/CoreEmitterType.js",
 		"bin-debug/AssetAdapter.js",
+		"bin-debug/LoadingUI.js",
 		"bin-debug/Main.js",
 		"bin-debug/Platform.js",
 		"bin-debug/ThemeAdapter.js",
-		"bin-debug/LoadingUI.js",
 		"bin-debug/game/MainScene.js",
 		"bin-debug/game/PlayerController.js",
 		"bin-debug/game/SimplePooled.js",
