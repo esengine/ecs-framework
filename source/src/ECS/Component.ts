@@ -12,6 +12,10 @@ module es {
          * 此组件附加的实体
          */
         public entity: Entity;
+        /**
+         * 更新该组件的时间间隔。这与实体的更新间隔无关。
+         */
+        public updateInterval: number = 1;
 
         /**
          * 快速访问 this.entity.transform
@@ -19,6 +23,8 @@ module es {
         public get transform(): Transform {
             return this.entity.transform;
         }
+
+        private _enabled: boolean = true;
 
         /**
          * 如果组件和实体都已启用，则为。当启用该组件时，将调用该组件的生命周期方法。状态的改变会导致调用onEnabled/onDisable。
@@ -35,6 +41,8 @@ module es {
             this.setEnabled(value);
         }
 
+        private _updateOrder = 0;
+
         /** 更新此实体上组件的顺序 */
         public get updateOrder() {
             return this._updateOrder;
@@ -44,14 +52,6 @@ module es {
         public set updateOrder(value: number) {
             this.setUpdateOrder(value);
         }
-
-        /**
-         * 更新该组件的时间间隔。这与实体的更新间隔无关。
-         */
-        public updateInterval: number = 1;
-
-        private _enabled: boolean = true;
-        private _updateOrder = 0;
 
         /**
          * 当此组件已分配其实体，但尚未添加到实体的活动组件列表时调用。有用的东西，如物理组件，需要访问转换来修改碰撞体的属性。

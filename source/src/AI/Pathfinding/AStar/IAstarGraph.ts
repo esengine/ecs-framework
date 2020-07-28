@@ -8,12 +8,14 @@ module es {
          * @param node
          */
         getNeighbors(node: T): Array<T>;
+
         /**
          * 计算从从from到to的成本
          * @param from
          * @param to
          */
         cost(from: T, to: T): number;
+
         /**
          * 计算从node到to的启发式。参见WeightedGridGraph了解常用的Manhatten方法。
          * @param node

@@ -1,5 +1,5 @@
 module es {
-    export interface IWeightedGraph<T>{
+    export interface IWeightedGraph<T> {
         /**
          *
          * @param node

@@ -37,7 +37,7 @@ module es {
             return this._components;
         }
 
-        public markEntityListUnsorted(){
+        public markEntityListUnsorted() {
             this._isComponentListUnsorted = true;
         }
 
@@ -76,7 +76,7 @@ module es {
                 let component = this._components[i];
 
                 // 处理渲染层列表
-                if (component instanceof RenderableComponent){
+                if (component instanceof RenderableComponent) {
                     this._entity.scene.removeChild(component.displayObject);
                     this._entity.scene.renderableComponents.remove(component);
                 }
@@ -91,7 +91,7 @@ module es {
             for (let i = 0; i < this._components.length; i++) {
                 let component = this._components[i];
 
-                if (component instanceof RenderableComponent){
+                if (component instanceof RenderableComponent) {
                     this._entity.scene.addChild(component.displayObject);
                     this._entity.scene.renderableComponents.add(component);
                 }
@@ -117,7 +117,7 @@ module es {
             if (this._componentsToAdd.length > 0) {
                 for (let i = 0, count = this._componentsToAdd.length; i < count; i++) {
                     let component = this._componentsToAdd[i];
-                    if (component instanceof RenderableComponent){
+                    if (component instanceof RenderableComponent) {
                         this._entity.scene.addChild(component.displayObject);
                         this._entity.scene.renderableComponents.add(component);
                     }
@@ -148,7 +148,7 @@ module es {
                 this._tempBufferList.length = 0;
             }
 
-            if (this._isComponentListUnsorted){
+            if (this._isComponentListUnsorted) {
                 this._components.sort(ComponentList.compareUpdatableOrder.compare);
                 this._isComponentListUnsorted = false;
             }
@@ -156,7 +156,7 @@ module es {
 
         public handleRemove(component: Component) {
             // 处理渲染层列表
-            if (component instanceof RenderableComponent){
+            if (component instanceof RenderableComponent) {
                 this._entity.scene.removeChild(component.displayObject);
                 this._entity.scene.renderableComponents.remove(component);
             }

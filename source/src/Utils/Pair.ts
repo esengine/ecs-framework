@@ -6,16 +6,16 @@ module es {
         public first: T;
         public second: T;
 
-        constructor(first: T, second: T){
+        constructor(first: T, second: T) {
             this.first = first;
             this.second = second;
         }
 
-        public clear(){
+        public clear() {
             this.first = this.second = null;
         }
 
-        public equals(other: Pair<T>){
+        public equals(other: Pair<T>) {
             return this.first == other.first && this.second == other.second;
         }
     }

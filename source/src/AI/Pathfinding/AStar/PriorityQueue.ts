@@ -20,15 +20,6 @@ module es {
         }
 
         /**
-         * 从队列中删除每个节点。
-         *  O(n)复杂度 所有尽可能少调用该方法
-         */
-        public clear() {
-            this._nodes.splice(1, this._numNodes);
-            this._numNodes = 0;
-        }
-
-        /**
          * 返回队列中的节点数。
          * O(1)复杂度
          */
@@ -45,17 +36,26 @@ module es {
         }
 
         /**
+         * 从队列中删除每个节点。
+         *  O(n)复杂度 所有尽可能少调用该方法
+         */
+        public clear() {
+            this._nodes.splice(1, this._numNodes);
+            this._numNodes = 0;
+        }
+
+        /**
          * 返回(在O(1)中)给定节点是否在队列中
          * O (1)复杂度
          * @param node
          */
         public contains(node: T): boolean {
-            if (!node){
+            if (!node) {
                 console.error("node cannot be null");
                 return false;
             }
 
-            if (node.queueIndex < 0 || node.queueIndex >= this._nodes.length){
+            if (node.queueIndex < 0 || node.queueIndex >= this._nodes.length) {
                 console.error("node.QueueIndex has been corrupted. Did you change it manually? Or add this node to another queue?");
                 return false;
             }

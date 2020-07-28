@@ -32,13 +32,13 @@ module es {
         private _dirs: Vector2[];
         private _neighbors: Vector2[] = new Array(4);
 
-        constructor(width: number, height: number, allowDiagonalSearch: boolean = false){
+        constructor(width: number, height: number, allowDiagonalSearch: boolean = false) {
             this._width = width;
             this._height = height;
             this._dirs = allowDiagonalSearch ? WeightedGridGraph.COMPASS_DIRS : WeightedGridGraph.CARDINAL_DIRS;
         }
 
-        public isNodeInBounds(node: Vector2){
+        public isNodeInBounds(node: Vector2) {
             return 0 <= node.x && node.x < this._width && 0 <= node.y && node.y < this._height;
         }
 
@@ -46,11 +46,11 @@ module es {
             return !this.walls.firstOrDefault(wall => JSON.stringify(wall) == JSON.stringify(node));
         }
 
-        public search(start: Vector2, goal: Vector2){
+        public search(start: Vector2, goal: Vector2) {
             return WeightedPathfinder.search(this, start, goal);
         }
 
-        public getNeighbors(node: Vector2): Vector2[]{
+        public getNeighbors(node: Vector2): Vector2[] {
             this._neighbors.length = 0;
 
             this._dirs.forEach(dir => {
@@ -62,7 +62,7 @@ module es {
             return this._neighbors;
         }
 
-        public cost(from: Vector2, to: Vector2): number{
+        public cost(from: Vector2, to: Vector2): number {
             return this.weightedNodes.find(t => JSON.stringify(t) == JSON.stringify(to)) ? this.weightedNodeWeight : this.defaultWeight;
         }
     }

@@ -19,6 +19,78 @@ module es {
     export class Transform extends HashObject {
         /** 与此转换关联的实体 */
         public readonly entity: Entity;
+        public hierarchyDirty: DirtyType;
+        public _localDirty: boolean;
+        public _localPositionDirty: boolean;
+        public _localScaleDirty: boolean;
+        public _localRotationDirty: boolean;
+        public _positionDirty: boolean;
+        public _worldToLocalDirty: boolean;
+        public _worldInverseDirty: boolean;
+        /**
+         * 值会根据位置、旋转和比例自动重新计算
+         */
+        public _localTransform: Matrix2D = Matrix2D.create();
+        /**
+         * 值将自动从本地和父矩阵重新计算。
+         */
+        public _worldTransform = Matrix2D.create().identity();
+        public _rotationMatrix: Matrix2D = Matrix2D.create();
+        public _translationMatrix: Matrix2D = Matrix2D.create();
+        public _scaleMatrix: Matrix2D = Matrix2D.create();
+        public _children: Transform[];
+
+        constructor(entity: Entity) {
+            super();
+            this.entity = entity;
+            this.scale = Vector2.one;
+            this._children = [];
+        }
+
+        /**
+         * 这个转换的所有子元素
+         */
+        public get childCount() {
+            return this._children.length;
+        }
+
+        /**
+         * 变换在世界空间的旋转度
+         */
+        public get rotationDegrees(): number {
+            return MathHelper.toDegrees(this._rotation);
+        }
+
+        /**
+         * 变换在世界空间的旋转度
+         * @param value
+         */
+        public set rotationDegrees(value: number) {
+            this.setRotation(MathHelper.toRadians(value));
+        }
+
+        /**
+         * 旋转相对于父变换旋转的角度
+         */
+        public get localRotationDegrees(): number {
+            return MathHelper.toDegrees(this._localRotation);
+        }
+
+        /**
+         * 旋转相对于父变换旋转的角度
+         * @param value
+         */
+        public set localRotationDegrees(value: number) {
+            this.localRotation = MathHelper.toRadians(value);
+        }
+
+        public get localToWorldTransform(): Matrix2D {
+            this.updateTransform();
+            return this._worldTransform;
+        }
+
+        public _parent: Transform;
+
         /**
          * 获取此转换的父转换
          */
@@ -34,22 +106,46 @@ module es {
             this.setParent(value);
         }
 
-        /**
-         * 这个转换的所有子元素
-         */
-        public get childCount() {
-            return this._children.length;
+        public _worldToLocalTransform = Matrix2D.create().identity();
+
+        public get worldToLocalTransform(): Matrix2D {
+            if (this._worldToLocalDirty) {
+                if (!this.parent) {
+                    this._worldToLocalTransform = Matrix2D.create().identity();
+                } else {
+                    this.parent.updateTransform();
+                    this._worldToLocalTransform = this.parent._worldTransform.invert();
+                }
+
+                this._worldToLocalDirty = false;
+            }
+
+            return this._worldToLocalTransform;
         }
+
+        public _worldInverseTransform = Matrix2D.create().identity();
+
+        public get worldInverseTransform(): Matrix2D {
+            this.updateTransform();
+            if (this._worldInverseDirty) {
+                this._worldInverseTransform = this._worldTransform.invert();
+                this._worldInverseDirty = false;
+            }
+
+            return this._worldInverseTransform;
+        }
+
+        public _position: Vector2 = Vector2.zero;
 
         /**
          * 变换在世界空间中的位置
          */
         public get position(): Vector2 {
             this.updateTransform();
-            if (this._positionDirty){
-                if (!this.parent){
+            if (this._positionDirty) {
+                if (!this.parent) {
                     this._position = this._localPosition;
-                }else{
+                } else {
                     this.parent.updateTransform();
                     this._position = Vector2Ext.transformR(this._localPosition, this.parent._worldTransform);
                 }
@@ -64,9 +160,47 @@ module es {
          * 变换在世界空间中的位置
          * @param value
          */
-        public set position(value: Vector2){
+        public set position(value: Vector2) {
             this.setPosition(value.x, value.y);
         }
+
+        public _scale: Vector2 = Vector2.one;
+
+        /**
+         * 变换在世界空间的缩放
+         */
+        public get scale(): Vector2 {
+            this.updateTransform();
+            return this._scale;
+        }
+
+        /**
+         * 变换在世界空间的缩放
+         * @param value
+         */
+        public set scale(value: Vector2) {
+            this.setScale(value);
+        }
+
+        public _rotation: number = 0;
+
+        /**
+         * 在世界空间中以弧度旋转的变换
+         */
+        public get rotation(): number {
+            this.updateTransform();
+            return this._rotation;
+        }
+
+        /**
+         * 变换在世界空间的旋转度
+         * @param value
+         */
+        public set rotation(value: number) {
+            this.setRotation(value);
+        }
+
+        public _localPosition: Vector2 = Vector2.zero;
 
         /**
          * 转换相对于父转换的位置。如果转换没有父元素，则与transform.position相同
@@ -80,87 +214,11 @@ module es {
          * 转换相对于父转换的位置。如果转换没有父元素，则与transform.position相同
          * @param value
          */
-        public set localPosition(value: Vector2){
+        public set localPosition(value: Vector2) {
             this.setLocalPosition(value);
         }
 
-        /**
-         * 在世界空间中以弧度旋转的变换
-         */
-        public get rotation(): number {
-            this.updateTransform();
-            return this._rotation;
-        }
-
-        /**
-         * 变换在世界空间的旋转度
-         */
-        public get rotationDegrees(): number {
-            return MathHelper.toDegrees(this._rotation);
-        }
-
-        /**
-         * 变换在世界空间的旋转度
-         * @param value
-         */
-        public set rotationDegrees(value: number){
-            this.setRotation(MathHelper.toRadians(value));
-        }
-
-        /**
-         * 变换在世界空间的旋转度
-         * @param value
-         */
-        public set rotation(value: number){
-            this.setRotation(value);
-        }
-
-        /**
-         * 相对于父变换的旋转，变换的旋转。如果转换没有父元素，则与transform.rotation相同
-         */
-        public get localRotation(): number {
-            this.updateTransform();
-            return this._localRotation;
-        }
-
-        /**
-         * 相对于父变换的旋转，变换的旋转。如果转换没有父元素，则与transform.rotation相同
-         * @param value
-         */
-        public set localRotation(value: number){
-            this.setLocalRotation(value);
-        }
-
-        /**
-         * 旋转相对于父变换旋转的角度
-         */
-        public get localRotationDegrees(): number {
-            return MathHelper.toDegrees(this._localRotation);
-        }
-
-        /**
-         * 旋转相对于父变换旋转的角度
-         * @param value
-         */
-        public set localRotationDegrees(value: number){
-            this.localRotation = MathHelper.toRadians(value);
-        }
-
-        /**
-         * 变换在世界空间的缩放
-         */
-        public get scale(): Vector2{
-            this.updateTransform();
-            return this._scale;
-        }
-
-        /**
-         * 变换在世界空间的缩放
-         * @param value
-         */
-        public set scale(value: Vector2){
-            this.setScale(value);
-        }
+        public _localScale: Vector2 = Vector2.one;
 
         /**
          * 转换相对于父元素的比例。如果转换没有父元素，则与transform.scale相同
@@ -174,81 +232,26 @@ module es {
          * 转换相对于父元素的比例。如果转换没有父元素，则与transform.scale相同
          * @param value
          */
-        public set localScale(value: Vector2){
+        public set localScale(value: Vector2) {
             this.setLocalScale(value);
         }
 
-        public get worldInverseTransform(): Matrix2D {
-            this.updateTransform();
-            if (this._worldInverseDirty){
-                this._worldInverseTransform = this._worldTransform.invert();
-                this._worldInverseDirty = false;
-            }
-
-            return this._worldInverseTransform;
-        }
-
-        public get localToWorldTransform(): Matrix2D {
-            this.updateTransform();
-            return this._worldTransform;
-        }
-
-        public get worldToLocalTransform(): Matrix2D {
-            if (this._worldToLocalDirty){
-                if (!this.parent){
-                    this._worldToLocalTransform = Matrix2D.create().identity();
-                }else{
-                    this.parent.updateTransform();
-                    this._worldToLocalTransform = this.parent._worldTransform.invert();
-                }
-
-                this._worldToLocalDirty = false;
-            }
-
-            return this._worldToLocalTransform;
-        }
-
-        public _parent: Transform;
-        public hierarchyDirty: DirtyType;
-
-        public _localDirty: boolean;
-        public _localPositionDirty: boolean;
-        public _localScaleDirty: boolean;
-        public _localRotationDirty: boolean;
-        public _positionDirty: boolean;
-        public _worldToLocalDirty: boolean;
-        public _worldInverseDirty: boolean;
-
-        /**
-         * 值会根据位置、旋转和比例自动重新计算
-         */
-        public _localTransform: Matrix2D = Matrix2D.create();
-        /**
-         * 值将自动从本地和父矩阵重新计算。
-         */
-        public _worldTransform = Matrix2D.create().identity();
-        public _worldToLocalTransform = Matrix2D.create().identity();
-        public _worldInverseTransform = Matrix2D.create().identity();
-
-        public _rotationMatrix: Matrix2D = Matrix2D.create();
-        public _translationMatrix: Matrix2D = Matrix2D.create();
-        public _scaleMatrix: Matrix2D = Matrix2D.create();
-
-        public _position: Vector2 = Vector2.zero;
-        public _scale: Vector2 = Vector2.one;
-        public _rotation: number = 0;
-
-        public _localPosition: Vector2 = Vector2.zero;
-        public _localScale: Vector2 = Vector2.one;
         public _localRotation: number = 0;
 
-        public _children: Transform[];
+        /**
+         * 相对于父变换的旋转，变换的旋转。如果转换没有父元素，则与transform.rotation相同
+         */
+        public get localRotation(): number {
+            this.updateTransform();
+            return this._localRotation;
+        }
 
-        constructor(entity: Entity) {
-            super();
-            this.entity = entity;
-            this.scale = Vector2.one;
-            this._children = [];
+        /**
+         * 相对于父变换的旋转，变换的旋转。如果转换没有父元素，则与transform.rotation相同
+         * @param value
+         */
+        public set localRotation(value: number) {
+            this.setLocalRotation(value);
         }
 
         /**
@@ -289,7 +292,7 @@ module es {
                 return this;
 
             this._position = position;
-            if (this.parent){
+            if (this.parent) {
                 this.localPosition = Vector2Ext.transformR(this._position, this._worldToLocalTransform);
             } else {
                 this.localPosition = position;
@@ -321,7 +324,7 @@ module es {
          */
         public setRotation(radians: number): Transform {
             this._rotation = radians;
-            if (this.parent){
+            if (this.parent) {
                 this.localRotation = this.parent.rotation + radians;
             } else {
                 this.localRotation = radians;
@@ -352,7 +355,7 @@ module es {
          * 相对于父变换的旋转设置变换的旋转。如果转换没有父元素，则与transform.rotation相同
          * @param radians
          */
-        public setLocalRotation(radians: number){
+        public setLocalRotation(radians: number) {
             this._localRotation = radians;
             this._localDirty = this._positionDirty = this._localPositionDirty = this._localRotationDirty = this._localScaleDirty = true;
             this.setDirty(DirtyType.rotationDirty);
@@ -374,9 +377,9 @@ module es {
          */
         public setScale(scale: Vector2): Transform {
             this._scale = scale;
-            if (this.parent){
+            if (this.parent) {
                 this.localScale = Vector2.divide(scale, this.parent._scale);
-            }else{
+            } else {
                 this.localScale = scale;
             }
             return this;
@@ -401,23 +404,23 @@ module es {
             this.position = this._position.round();
         }
 
-        public updateTransform(){
-            if (this.hierarchyDirty != DirtyType.clean){
+        public updateTransform() {
+            if (this.hierarchyDirty != DirtyType.clean) {
                 if (this.parent)
                     this.parent.updateTransform();
 
-                if (this._localDirty){
-                    if (this._localPositionDirty){
+                if (this._localDirty) {
+                    if (this._localPositionDirty) {
                         this._translationMatrix = Matrix2D.create().translate(this._localPosition.x, this._localPosition.y);
                         this._localPositionDirty = false;
                     }
 
-                    if (this._localRotationDirty){
+                    if (this._localRotationDirty) {
                         this._rotationMatrix = Matrix2D.create().rotate(this._localRotation);
                         this._localRotationDirty = false;
                     }
 
-                    if (this._localScaleDirty){
+                    if (this._localScaleDirty) {
                         this._scaleMatrix = Matrix2D.create().scale(this._localScale.x, this._localScale.y);
                         this._localScaleDirty = false;
                     }
@@ -425,7 +428,7 @@ module es {
                     this._localTransform = this._scaleMatrix.multiply(this._rotationMatrix);
                     this._localTransform = this._localTransform.multiply(this._translationMatrix);
 
-                    if (!this.parent){
+                    if (!this.parent) {
                         this._worldTransform = this._localTransform;
                         this._rotation = this._localRotation;
                         this._scale = this._localScale;
@@ -435,7 +438,7 @@ module es {
                     this._localDirty = false;
                 }
 
-                if (this.parent){
+                if (this.parent) {
                     this._worldTransform = this._localTransform.multiply(this.parent._worldTransform);
 
                     this._rotation = this._localRotation + this.parent._rotation;
@@ -449,8 +452,8 @@ module es {
             }
         }
 
-        public setDirty(dirtyFlagType: DirtyType){
-            if ((this.hierarchyDirty & dirtyFlagType) == 0){
+        public setDirty(dirtyFlagType: DirtyType) {
+            if ((this.hierarchyDirty & dirtyFlagType) == 0) {
                 this.hierarchyDirty |= dirtyFlagType;
 
                 switch (dirtyFlagType) {
@@ -469,7 +472,7 @@ module es {
                     this._children = [];
 
                 // 告诉子项发生了变换
-                for (let i = 0; i < this._children.length; i ++)
+                for (let i = 0; i < this._children.length; i++)
                     this._children[i].setDirty(dirtyFlagType);
             }
         }
@@ -491,13 +494,13 @@ module es {
             this.setDirty(DirtyType.scaleDirty);
         }
 
-        public toString(): string{
+        public toString(): string {
             return `[Transform: parent: ${this.parent}, position: ${this.position}, rotation: ${this.rotation},
                 scale: ${this.scale}, localPosition: ${this._localPosition}, localRotation: ${this._localRotation},
                 localScale: ${this._localScale}]`;
         }
 
-        public equals(other: Transform){
+        public equals(other: Transform) {
             return other.hashCode == this.hashCode;
         }
     }

@@ -5,7 +5,7 @@ module es {
          * @param first
          * @param point
          */
-        public static union(first: Rectangle, point: Vector2){
+        public static union(first: Rectangle, point: Vector2) {
             let rect = new Rectangle(point.x, point.y, 0, 0);
             // let rectResult = first.union(rect);
             let result = new Rectangle();

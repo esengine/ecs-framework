@@ -8,18 +8,19 @@ module es {
         /** 上下文 */
         public context: any;
 
-        constructor(func: Function, context: any){
+        constructor(func: Function, context: any) {
             this.func = func;
             this.context = context;
         }
     }
+
     /**
      * 用于事件管理
      */
     export class Emitter<T> {
         private _messageTable: Map<T, FuncPack[]>;
 
-        constructor(){
+        constructor() {
             this._messageTable = new Map<T, FuncPack[]>();
         }
 
@@ -29,9 +30,9 @@ module es {
          * @param handler 监听函数
          * @param context 监听上下文
          */
-        public addObserver(eventType: T, handler: Function, context: any){
+        public addObserver(eventType: T, handler: Function, context: any) {
             let list: FuncPack[] = this._messageTable.get(eventType);
-            if (!list){
+            if (!list) {
                 list = [];
                 this._messageTable.set(eventType, list);
             }
@@ -46,7 +47,7 @@ module es {
          * @param eventType 事件类型
          * @param handler 事件函数
          */
-        public removeObserver(eventType: T, handler: Function){
+        public removeObserver(eventType: T, handler: Function) {
             let messageData = this._messageTable.get(eventType);
             let index = messageData.findIndex(data => data.func == handler);
             if (index != -1)
@@ -58,10 +59,10 @@ module es {
          * @param eventType 事件类型
          * @param data 事件数据
          */
-        public emit(eventType: T, data?: any){
+        public emit(eventType: T, data?: any) {
             let list: FuncPack[] = this._messageTable.get(eventType);
-            if (list){
-                for (let i = list.length - 1; i >= 0; i --)
+            if (list) {
+                for (let i = list.length - 1; i >= 0; i--)
                     list[i].func.call(list[i].context, data);
             }
         }

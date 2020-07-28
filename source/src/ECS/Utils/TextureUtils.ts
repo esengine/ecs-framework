@@ -6,15 +6,15 @@ module es {
         public static sharedCanvas: HTMLCanvasElement;
         public static sharedContext: CanvasRenderingContext2D;
 
-        public static convertImageToCanvas(texture: egret.Texture, rect?: egret.Rectangle): HTMLCanvasElement{
-            if (!this.sharedCanvas){
+        public static convertImageToCanvas(texture: egret.Texture, rect?: egret.Rectangle): HTMLCanvasElement {
+            if (!this.sharedCanvas) {
                 this.sharedCanvas = egret.sys.createCanvas();
                 this.sharedContext = this.sharedCanvas.getContext("2d");
             }
 
             let w = texture.$getTextureWidth();
             let h = texture.$getTextureHeight();
-            if (!rect){
+            if (!rect) {
                 rect = egret.$TempRectangle;
                 rect.x = 0;
                 rect.y = 0;
@@ -44,8 +44,7 @@ module es {
                     }
                     renderTexture = new egret.RenderTexture();
                     renderTexture.drawToTexture(new egret.Bitmap(texture));
-                }
-                else {
+                } else {
                     renderTexture = <egret.RenderTexture>texture;
                 }
                 //从RenderTexture中读取像素数据，填入canvas
@@ -71,8 +70,7 @@ module es {
                 }
 
                 return surface;
-            }
-            else {
+            } else {
                 let bitmapData = texture;
                 let offsetX: number = Math.round(bitmapData.$offsetX);
                 let offsetY: number = Math.round(bitmapData.$offsetY);
@@ -90,8 +88,7 @@ module es {
                 let surface = this.convertImageToCanvas(texture, rect);
                 let result = surface.toDataURL(type, encoderOptions);
                 return result;
-            }
-            catch (e) {
+            } catch (e) {
                 egret.$error(1033);
             }
             return null;
@@ -117,7 +114,7 @@ module es {
                 success: function (res) {
                     //todo
                 }
-            })
+            });
 
             return result;
         }
@@ -135,8 +132,7 @@ module es {
                 if (!(<egret.RenderTexture>texture).$renderBuffer) {
                     renderTexture = new egret.RenderTexture();
                     renderTexture.drawToTexture(new egret.Bitmap(texture));
-                }
-                else {
+                } else {
                     renderTexture = <egret.RenderTexture>texture;
                 }
                 //从RenderTexture中读取像素数据
@@ -147,8 +143,7 @@ module es {
                 let surface = this.convertImageToCanvas(texture);
                 let result = this.sharedContext.getImageData(x, y, width, height).data;
                 return <number[]><any>result;
-            }
-            catch (e) {
+            } catch (e) {
                 egret.$error(1039);
             }
         }

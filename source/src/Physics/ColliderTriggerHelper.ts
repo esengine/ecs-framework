@@ -50,8 +50,8 @@ module es {
             this.checkForExitedColliders();
         }
 
-        private checkForExitedColliders(){
-            for (let i = 0; i < this._activeTriggerIntersections.length; i ++){
+        private checkForExitedColliders() {
+            for (let i = 0; i < this._activeTriggerIntersections.length; i++) {
                 let index = this._previousTriggerIntersections.findIndex(value => {
                     if (value.first == this._activeTriggerIntersections[i].first && value.second == this._activeTriggerIntersections[i].second)
                         return true;
@@ -62,12 +62,12 @@ module es {
                     this._previousTriggerIntersections.removeAt(index);
             }
 
-            for (let i = 0; i < this._previousTriggerIntersections.length; i ++){
+            for (let i = 0; i < this._previousTriggerIntersections.length; i++) {
                 this.notifyTriggerListeners(this._previousTriggerIntersections[i], false)
             }
             this._previousTriggerIntersections.length = 0;
-            for (let i = 0; i < this._activeTriggerIntersections.length; i ++){
-                if (!this._previousTriggerIntersections.contains(this._activeTriggerIntersections[i])){
+            for (let i = 0; i < this._activeTriggerIntersections.length; i++) {
+                if (!this._previousTriggerIntersections.contains(this._activeTriggerIntersections[i])) {
                     this._previousTriggerIntersections.push(this._activeTriggerIntersections[i]);
                 }
             }
@@ -76,8 +76,8 @@ module es {
 
         private notifyTriggerListeners(collisionPair: Pair<Collider>, isEntering: boolean) {
             collisionPair.first.entity.getComponents("ITriggerListener", this._tempTriggerList);
-            for (let i = 0; i < this._tempTriggerList.length; i ++){
-                if (isEntering){
+            for (let i = 0; i < this._tempTriggerList.length; i++) {
+                if (isEntering) {
                     this._tempTriggerList[i].onTriggerEnter(collisionPair.second, collisionPair.first);
                 } else {
                     this._tempTriggerList[i].onTriggerExit(collisionPair.second, collisionPair.first);
@@ -85,10 +85,10 @@ module es {
 
                 this._tempTriggerList.length = 0;
 
-                if (collisionPair.second.entity){
+                if (collisionPair.second.entity) {
                     collisionPair.second.entity.getComponents("ITriggerListener", this._tempTriggerList);
-                    for (let i = 0; i < this._tempTriggerList.length; i ++){
-                        if (isEntering){
+                    for (let i = 0; i < this._tempTriggerList.length; i++) {
+                        if (isEntering) {
                             this._tempTriggerList[i].onTriggerEnter(collisionPair.first, collisionPair.second);
                         } else {
                             this._tempTriggerList[i].onTriggerExit(collisionPair.first, collisionPair.second);

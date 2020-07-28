@@ -4,7 +4,7 @@ class Base64Utils {
     private static _keyAll = Base64Utils._keyNum + Base64Utils._keyStr;
     /**
      * 加密
-     * @param input 
+     * @param input
      */
     public static encode = function (input) {
         let output = "";
@@ -29,32 +29,12 @@ class Base64Utils {
                 this._keyAll.charAt(enc3) + this._keyAll.charAt(enc4);
         }
         return this._keyStr.charAt(Math.floor((Math.random() * this._keyStr.length))) + output;
-    }
-
-    private static _utf8_encode(string) {
-        string = string.replace(/\r\n/g, "\n");
-        let utftext = "";
-        for (let n = 0; n < string.length; n++) {
-            let c = string.charCodeAt(n);
-            if (c < 128) {
-                utftext += String.fromCharCode(c);
-            } else if ((c > 127) && (c < 2048)) {
-                utftext += String.fromCharCode((c >> 6) | 192);
-                utftext += String.fromCharCode((c & 63) | 128);
-            } else {
-                utftext += String.fromCharCode((c >> 12) | 224);
-                utftext += String.fromCharCode(((c >> 6) & 63) | 128);
-                utftext += String.fromCharCode((c & 63) | 128);
-            }
-
-        }
-        return utftext;
-    }
+    };
 
     /**
      * 解码
-     * @param input 
-     * @param isNotStr 
+     * @param input
+     * @param isNotStr
      */
     public static decode(input, isNotStr: boolean = true) {
         let output = "";
@@ -90,6 +70,26 @@ class Base64Utils {
         }
         output = this._utf8_decode(output);
         return output;
+    }
+
+    private static _utf8_encode(string) {
+        string = string.replace(/\r\n/g, "\n");
+        let utftext = "";
+        for (let n = 0; n < string.length; n++) {
+            let c = string.charCodeAt(n);
+            if (c < 128) {
+                utftext += String.fromCharCode(c);
+            } else if ((c > 127) && (c < 2048)) {
+                utftext += String.fromCharCode((c >> 6) | 192);
+                utftext += String.fromCharCode((c & 63) | 128);
+            } else {
+                utftext += String.fromCharCode((c >> 12) | 224);
+                utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+                utftext += String.fromCharCode((c & 63) | 128);
+            }
+
+        }
+        return utftext;
     }
 
     private static _utf8_decode(utftext) {

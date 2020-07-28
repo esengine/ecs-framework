@@ -2,6 +2,7 @@ module es {
     export class Rectangle extends egret.Rectangle {
         public _tempMat: Matrix2D;
         public _transformMat: Matrix2D;
+
         /**
          * 获取矩形的最大点，即右下角
          */
@@ -18,6 +19,7 @@ module es {
         public get location() {
             return new Vector2(this.x, this.y);
         }
+
         /** 左上角的坐标 */
         public set location(value: Vector2) {
             this.x = value.x;
@@ -31,6 +33,41 @@ module es {
         public set size(value: Vector2) {
             this.width = value.x;
             this.height = value.y;
+        }
+
+        /**
+         * 创建一个矩形的最小/最大点(左上角，右下角的点)
+         * @param minX
+         * @param minY
+         * @param maxX
+         * @param maxY
+         */
+        public static fromMinMax(minX: number, minY: number, maxX: number, maxY: number) {
+            return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+        }
+
+        /**
+         * 给定多边形的点，计算边界
+         * @param points
+         */
+        public static rectEncompassingPoints(points: Vector2[]) {
+            // 我们需要求出x/y的最小值/最大值
+            let minX = Number.POSITIVE_INFINITY;
+            let minY = Number.POSITIVE_INFINITY;
+            let maxX = Number.NEGATIVE_INFINITY;
+            let maxY = Number.NEGATIVE_INFINITY;
+
+            for (let i = 0; i < points.length; i++) {
+                let pt = points[i];
+
+                if (pt.x < minX) minX = pt.x;
+                if (pt.x > maxX) maxX = pt.x;
+
+                if (pt.y < minY) minY = pt.y;
+                if (pt.y > maxY) maxY = pt.y;
+            }
+
+            return this.fromMinMax(minX, minY, maxX, maxY);
         }
 
         /**
@@ -56,17 +93,6 @@ module es {
 
         public getHalfSize() {
             return new Vector2(this.width * 0.5, this.height * 0.5);
-        }
-
-        /**
-         * 创建一个矩形的最小/最大点(左上角，右下角的点)
-         * @param minX
-         * @param minY
-         * @param maxX
-         * @param maxY
-         */
-        public static fromMinMax(minX: number, minY: number, maxX: number, maxY: number) {
-            return new Rectangle(minX, minY, maxX - minX, maxY - minY);
         }
 
         /**
@@ -142,8 +168,8 @@ module es {
             return boundsPoint;
         }
 
-        public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number){
-            if (rotation == 0){
+        public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number) {
+            if (rotation == 0) {
                 this.x = parentPosition.x + position.x - origin.x * scale.x;
                 this.y = parentPosition.y + position.y - origin.y * scale.y;
                 this.width = width * scale.x;
@@ -182,30 +208,6 @@ module es {
                 this.width = maxX - minX;
                 this.height = maxY - minY;
             }
-        }
-
-        /**
-         * 给定多边形的点，计算边界
-         * @param points
-         */
-        public static rectEncompassingPoints(points: Vector2[]) {
-            // 我们需要求出x/y的最小值/最大值
-            let minX = Number.POSITIVE_INFINITY;
-            let minY = Number.POSITIVE_INFINITY;
-            let maxX = Number.NEGATIVE_INFINITY;
-            let maxY = Number.NEGATIVE_INFINITY;
-
-            for (let i = 0; i < points.length; i++) {
-                let pt = points[i];
-
-                if (pt.x < minX) minX = pt.x;
-                if (pt.x > maxX) maxX = pt.x;
-
-                if (pt.y < minY) minY = pt.y;
-                if (pt.y > maxY) maxY = pt.y;
-            }
-
-            return this.fromMinMax(minX, minY, maxX, maxY);
         }
     }
 }

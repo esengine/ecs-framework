@@ -2,14 +2,14 @@ module es {
     export class WeightedNode<T> extends PriorityQueueNode {
         public data: T;
 
-        constructor(data: T){
+        constructor(data: T) {
             super();
             this.data = data;
         }
     }
 
     export class WeightedPathfinder {
-        public static search<T>(graph: IWeightedGraph<T>, start: T, goal: T){
+        public static search<T>(graph: IWeightedGraph<T>, start: T, goal: T) {
             let foundPath = false;
 
             let cameFrom = new Map<T, T>();
@@ -21,17 +21,17 @@ module es {
 
             costSoFar.set(start, 0);
 
-            while (frontier.count > 0){
+            while (frontier.count > 0) {
                 let current = frontier.dequeue();
 
-                if (JSON.stringify(current.data) == JSON.stringify(goal)){
+                if (JSON.stringify(current.data) == JSON.stringify(goal)) {
                     foundPath = true;
                     break;
                 }
 
                 graph.getNeighbors(current.data).forEach(next => {
                     let newCost = costSoFar.get(current.data) + graph.cost(current.data, next);
-                    if (!this.hasKey(costSoFar, next) || newCost < costSoFar.get(next)){
+                    if (!this.hasKey(costSoFar, next) || newCost < costSoFar.get(next)) {
                         costSoFar.set(next, newCost);
                         let priprity = newCost;
                         frontier.enqueue(new WeightedNode<T>(next), priprity);
@@ -43,7 +43,22 @@ module es {
             return foundPath ? this.recontructPath(cameFrom, start, goal) : null;
         }
 
-        private static hasKey<T>(map: Map<T, number>, compareKey: T){
+        public static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[] {
+            let path = [];
+            let current = goal;
+            path.push(goal);
+
+            while (current != start) {
+                current = this.getKey(cameFrom, current);
+                path.push(current);
+            }
+
+            path.reverse();
+
+            return path;
+        }
+
+        private static hasKey<T>(map: Map<T, number>, compareKey: T) {
             let iterator = map.keys();
             let r: IteratorResult<T>;
             while (r = iterator.next() , !r.done) {
@@ -54,7 +69,7 @@ module es {
             return false;
         }
 
-        private static getKey<T>(map: Map<T, T>, compareKey: T){
+        private static getKey<T>(map: Map<T, T>, compareKey: T) {
             let iterator = map.keys();
             let valueIterator = map.values();
             let r: IteratorResult<T>;
@@ -65,21 +80,6 @@ module es {
             }
 
             return null;
-        }
-
-        public static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[]{
-            let path = [];
-            let current = goal;
-            path.push(goal);
-
-            while (current != start){
-                current = this.getKey(cameFrom, current);
-                path.push(current);
-            }
-
-            path.reverse();
-
-            return path;
         }
     }
 }

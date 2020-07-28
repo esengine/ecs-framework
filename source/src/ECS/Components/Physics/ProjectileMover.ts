@@ -7,7 +7,7 @@ module es {
         private _tempTriggerList: ITriggerListener[] = [];
         private _collider: Collider;
 
-        public onAddedToEntity(){
+        public onAddedToEntity() {
             this._collider = this.entity.getComponent<Collider>(Collider);
             if (!this._collider)
                 console.warn("ProjectileMover has no Collider. ProjectilMover requires a Collider!");
@@ -17,7 +17,7 @@ module es {
          * 移动考虑碰撞的实体
          * @param motion
          */
-        public move(motion: Vector2): boolean{
+        public move(motion: Vector2): boolean {
             if (!this._collider)
                 return false;
 
@@ -28,9 +28,9 @@ module es {
 
             // 获取任何可能在新位置发生碰撞的东西
             let neighbors = Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers);
-            for (let i = 0; i < neighbors.length; i ++){
+            for (let i = 0; i < neighbors.length; i++) {
                 let neighbor = neighbors[i];
-                if (this._collider.overlaps(neighbor) && neighbor.enabled){
+                if (this._collider.overlaps(neighbor) && neighbor.enabled) {
                     didCollide = true;
                     this.notifyTriggerListeners(this._collider, neighbor);
                 }
@@ -39,17 +39,17 @@ module es {
             return didCollide;
         }
 
-        private notifyTriggerListeners(self: Collider, other: Collider){
+        private notifyTriggerListeners(self: Collider, other: Collider) {
             // 通知我们重叠的碰撞器实体上的任何侦听器
             other.entity.getComponents("ITriggerListener", this._tempTriggerList);
-            for (let i = 0; i < this._tempTriggerList.length; i ++){
+            for (let i = 0; i < this._tempTriggerList.length; i++) {
                 this._tempTriggerList[i].onTriggerEnter(self, other);
             }
             this._tempTriggerList.length = 0;
 
             // 通知此实体上的任何侦听器
             this.entity.getComponents("ITriggerListener", this._tempTriggerList);
-            for (let i = 0; i < this._tempTriggerList.length; i ++){
+            for (let i = 0; i < this._tempTriggerList.length; i++) {
                 this._tempTriggerList[i].onTriggerEnter(other, self);
             }
             this._tempTriggerList.length = 0;

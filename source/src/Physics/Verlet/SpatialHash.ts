@@ -31,33 +31,6 @@ module es {
         }
 
         /**
-         * 获取单元格的x,y值作为世界空间的x,y值
-         * @param x
-         * @param y
-         */
-        private cellCoords(x: number, y: number): Vector2 {
-            return new Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
-        }
-
-        /**
-         * 获取世界空间x,y值的单元格。
-         * 如果单元格为空且createCellIfEmpty为true，则会创建一个新的单元格
-         * @param x
-         * @param y
-         * @param createCellIfEmpty
-         */
-        private cellAtPosition(x: number, y: number, createCellIfEmpty: boolean = false) {
-            let cell: Collider[] = this._cellDict.tryGetValue(x, y);
-            if (!cell) {
-                if (createCellIfEmpty) {
-                    cell = [];
-                    this._cellDict.add(x, y, cell);
-                }
-            }
-            return cell;
-        }
-
-        /**
          * 将对象添加到SpatialHash
          * @param collider
          */
@@ -111,11 +84,11 @@ module es {
          * 使用蛮力方法从SpatialHash中删除对象
          * @param obj
          */
-        public removeWithBruteForce(obj: Collider){
+        public removeWithBruteForce(obj: Collider) {
             this._cellDict.remove(obj);
         }
 
-        public clear(){
+        public clear() {
             this._cellDict.clear();
         }
 
@@ -124,18 +97,14 @@ module es {
          * @param secondsToDisplay
          * @param textScale
          */
-        public debugDraw(secondsToDisplay: number, textScale: number = 1){
-            for (let x = this.gridBounds.x; x <= this.gridBounds.right; x ++){
-                for (let y = this.gridBounds.y; y <= this.gridBounds.bottom; y ++){
+        public debugDraw(secondsToDisplay: number, textScale: number = 1) {
+            for (let x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
+                for (let y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
                     let cell = this.cellAtPosition(x, y);
                     if (cell && cell.length > 0)
                         this.debugDrawCellDetails(x, y, cell.length, secondsToDisplay, textScale);
                 }
             }
-        }
-
-        private debugDrawCellDetails(x: number, y: number, cellCount: number, secondsToDisplay = 0.5, textScale = 1){
-
         }
 
         /**
@@ -144,7 +113,7 @@ module es {
          * @param excludeCollider
          * @param layerMask
          */
-        public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number) : Collider[]{
+        public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[] {
             this._tempHashSet.length = 0;
 
             let p1 = this.cellCoords(bounds.x, bounds.y);
@@ -164,7 +133,7 @@ module es {
                         if (collider == excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer))
                             continue;
 
-                        if (bounds.intersects(collider.bounds)){
+                        if (bounds.intersects(collider.bounds)) {
                             if (this._tempHashSet.indexOf(collider) == -1)
                                 this._tempHashSet.push(collider);
                         }
@@ -196,14 +165,14 @@ module es {
                     results[resultCounter] = collider;
                     resultCounter++;
                 } else if (collider instanceof CircleCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)){
+                    if (collider.shape.overlaps(this._overlapTestCircle)) {
                         results[resultCounter] = collider;
-                        resultCounter ++;
+                        resultCounter++;
                     }
-                } else if(collider instanceof PolygonCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)){
+                } else if (collider instanceof PolygonCollider) {
+                    if (collider.shape.overlaps(this._overlapTestCircle)) {
                         results[resultCounter] = collider;
-                        resultCounter ++;
+                        resultCounter++;
                     }
                 } else {
                     throw new Error("overlapCircle against this collider type is not implemented!");
@@ -216,6 +185,37 @@ module es {
 
             return resultCounter;
         }
+
+        /**
+         * 获取单元格的x,y值作为世界空间的x,y值
+         * @param x
+         * @param y
+         */
+        private cellCoords(x: number, y: number): Vector2 {
+            return new Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
+        }
+
+        /**
+         * 获取世界空间x,y值的单元格。
+         * 如果单元格为空且createCellIfEmpty为true，则会创建一个新的单元格
+         * @param x
+         * @param y
+         * @param createCellIfEmpty
+         */
+        private cellAtPosition(x: number, y: number, createCellIfEmpty: boolean = false) {
+            let cell: Collider[] = this._cellDict.tryGetValue(x, y);
+            if (!cell) {
+                if (createCellIfEmpty) {
+                    cell = [];
+                    this._cellDict.add(x, y, cell);
+                }
+            }
+            return cell;
+        }
+
+        private debugDrawCellDetails(x: number, y: number, cellCount: number, secondsToDisplay = 0.5, textScale = 1) {
+
+        }
     }
 
     /**
@@ -224,15 +224,6 @@ module es {
      */
     export class NumberDictionary {
         public _store: Map<string, Collider[]> = new Map<string, Collider[]>();
-
-        /**
-         * 根据x和y值计算并返回散列键
-         * @param x
-         * @param y
-         */
-        private getKey(x: number, y: number): string {
-            return Long.fromNumber(x).shiftLeft(32).or(Long.fromNumber(y, true)).toString();
-        }
 
         public add(x: number, y: number, list: Collider[]) {
             this._store.set(this.getKey(x, y), list);
@@ -258,6 +249,15 @@ module es {
          */
         public clear() {
             this._store.clear();
+        }
+
+        /**
+         * 根据x和y值计算并返回散列键
+         * @param x
+         * @param y
+         */
+        private getKey(x: number, y: number): string {
+            return Long.fromNumber(x).shiftLeft(32).or(Long.fromNumber(y, true)).toString();
         }
     }
 

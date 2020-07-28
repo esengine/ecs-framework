@@ -309,7 +309,7 @@ Array.prototype.groupBy = function (keySelector) {
         if (typeof (array.reduce) === "function") {
             let keys = [];
             return array.reduce(function (groups, element, index) {
-                let key = JSON.stringify(keySelector.call(arguments[1], element, index, array))
+                let key = JSON.stringify(keySelector.call(arguments[1], element, index, array));
                 let index2 = keys.findIndex(function (x) {
                     return x === key;
                 });

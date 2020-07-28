@@ -1,10 +1,5 @@
 module es {
     export class PostProcessor {
-        public enabled: boolean;
-        public effect: egret.Filter;
-        public scene: Scene;
-        public shape: egret.Shape;
-
         public static default_vert = "attribute vec2 aVertexPosition;\n" +
             "attribute vec2 aTextureCoord;\n" +
             "attribute vec2 aColor;\n" +
@@ -22,13 +17,17 @@ module es {
             "vTextureCoord = aTextureCoord;\n" +
             "vColor = vec4(aColor.x, aColor.x, aColor.x, aColor.x);\n" +
             "}";
+        public enabled: boolean;
+        public effect: egret.Filter;
+        public scene: Scene;
+        public shape: egret.Shape;
 
-        constructor(effect: egret.Filter = null){
+        constructor(effect: egret.Filter = null) {
             this.enabled = true;
             this.effect = effect;
         }
 
-        public onAddedToScene(scene: Scene){
+        public onAddedToScene(scene: Scene) {
             this.scene = scene;
             this.shape = new egret.Shape();
             this.shape.graphics.beginFill(0xFFFFFF, 1);
@@ -37,24 +36,25 @@ module es {
             scene.addChild(this.shape);
         }
 
-        public process(){
+        public process() {
             this.drawFullscreenQuad();
         }
 
-        public onSceneBackBufferSizeChanged(newWidth: number, newHeight: number){}
-
-        protected drawFullscreenQuad(){
-            this.scene.filters = [this.effect];
-            // this.shape.filters = [this.effect];
+        public onSceneBackBufferSizeChanged(newWidth: number, newHeight: number) {
         }
 
-        public unload(){
-            if (this.effect){
+        public unload() {
+            if (this.effect) {
                 this.effect = null;
             }
 
             this.scene.removeChild(this.shape);
             this.scene = null;
+        }
+
+        protected drawFullscreenQuad() {
+            this.scene.filters = [this.effect];
+            // this.shape.filters = [this.effect];
         }
     }
 }

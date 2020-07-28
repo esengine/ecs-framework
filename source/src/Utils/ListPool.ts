@@ -9,10 +9,10 @@ module es {
          * 预热缓存，使用最大的cacheCount对象填充缓存
          * @param cacheCount
          */
-        public static warmCache(cacheCount: number){
+        public static warmCache(cacheCount: number) {
             cacheCount -= this._objectQueue.length;
-            if (cacheCount > 0){
-                for (let i = 0; i < cacheCount; i ++){
+            if (cacheCount > 0) {
+                for (let i = 0; i < cacheCount; i++) {
                     this._objectQueue.unshift([]);
                 }
             }
@@ -22,7 +22,7 @@ module es {
          * 将缓存修剪为cacheCount项目
          * @param cacheCount
          */
-        public static trimCache(cacheCount){
+        public static trimCache(cacheCount) {
             while (cacheCount > this._objectQueue.length)
                 this._objectQueue.shift();
         }
@@ -30,7 +30,7 @@ module es {
         /**
          * 清除缓存
          */
-        public static clearCache(){
+        public static clearCache() {
             this._objectQueue.length = 0;
         }
 
@@ -48,7 +48,7 @@ module es {
          * 将项推回堆栈
          * @param obj
          */
-        public static free<T>(obj: Array<T>){
+        public static free<T>(obj: Array<T>) {
             this._objectQueue.unshift(obj);
             obj.length = 0;
         }

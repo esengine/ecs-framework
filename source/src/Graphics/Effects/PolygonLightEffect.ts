@@ -29,7 +29,7 @@ module es {
             "gl_FragColor = c;\n" +
             "}";
 
-        constructor(){
+        constructor() {
             super(PolygonLightEffect.vertSrc, PolygonLightEffect.fragmentSrc);
         }
     }

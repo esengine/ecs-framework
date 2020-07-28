@@ -4,12 +4,6 @@ class KeyboardUtils {
      */
     public static TYPE_KEY_DOWN: number = 0;
     public static TYPE_KEY_UP: number = 1;
-
-    //存放按下注册数据的字典
-    private static keyDownDict: Object;
-    //存放按起注册数据的字典
-    private static keyUpDict: Object;
-
     /**
      * 键值字符串枚举
      */
@@ -39,7 +33,6 @@ class KeyboardUtils {
     public static X: string = "X";
     public static Y: string = "Y";
     public static Z: string = "Z";
-
     public static ESC: string = "Esc";
     public static F1: string = "F1";
     public static F2: string = "F2";
@@ -53,7 +46,6 @@ class KeyboardUtils {
     public static F10: string = "F10";
     public static F11: string = "F11";
     public static F12: string = "F12";
-
     public static NUM_1: string = "1";
     public static NUM_2: string = "2";
     public static NUM_3: string = "3";
@@ -64,7 +56,6 @@ class KeyboardUtils {
     public static NUM_8: string = "8";
     public static NUM_9: string = "9";
     public static NUM_0: string = "0";
-
     public static TAB: string = "Tab";
     public static CTRL: string = "Ctrl";
     public static ALT: string = "Alt";
@@ -73,31 +64,61 @@ class KeyboardUtils {
     public static ENTER: string = "Enter";
     public static SPACE: string = "Space";
     public static BACK_SPACE: string = "Back Space";
-
     public static INSERT: string = "Insert";
     public static DELETE: string = "Page Down";
     public static HOME: string = "Home";
     public static END: string = "Page Down";
     public static PAGE_UP: string = "Page Up";
     public static PAGE_DOWN: string = "Page Down";
-
     public static LEFT: string = "Left";
     public static RIGHT: string = "Right";
     public static UP: string = "Up";
     public static DOWN: string = "Down";
-
     public static PAUSE_BREAK: string = "Pause Break";
     public static NUM_LOCK: string = "Num Lock";
     public static SCROLL_LOCK: string = "Scroll Lock";
-
     public static WINDOWS: string = "Windows";
-
+    //存放按下注册数据的字典
+    private static keyDownDict: Object;
+    //存放按起注册数据的字典
+    private static keyUpDict: Object;
 
     public static init(): void {
         this.keyDownDict = {};
         this.keyUpDict = {};
         document.addEventListener("keydown", this.onKeyDonwHander);
         document.addEventListener("keyup", this.onKeyUpHander);
+    }
+
+    /**
+     * 注册按键
+     * @param    key        键值
+     * @param    fun        回调方法
+     * @param    type    按键类型 TYPE_KEY_DOWN、TYPE_KEY_UP
+     */
+    public static registerKey(key: string, fun: Function, thisObj: any, type: number = 0, ...args): void {
+        var keyDict: Object = type ? this.keyUpDict : this.keyDownDict;
+        keyDict[key] = {"fun": fun, args: args, "thisObj": thisObj};
+    }
+
+    /**
+     * 注销按键
+     * @param    key        键值
+     * @param    type    注销的类型
+     */
+    public static unregisterKey(key: string, type: number = 0): void {
+        var keyDict: Object = type ? this.keyUpDict : this.keyDownDict;
+        delete keyDict[key];
+    }
+
+    /**
+     * 销毁方法
+     */
+    public static destroy(): void {
+        this.keyDownDict = null;
+        this.keyUpDict = null;
+        document.removeEventListener("keydown", this.onKeyDonwHander);
+        document.removeEventListener("keyup", this.onKeyUpHander);
     }
 
     private static onKeyDonwHander(event: KeyboardEvent): void {
@@ -112,7 +133,6 @@ class KeyboardUtils {
         }
     }
 
-
     private static onKeyUpHander(event: KeyboardEvent): void {
         if (!this.keyUpDict) return;
         var key: string = this.keyCodeToString(event.keyCode);
@@ -125,33 +145,10 @@ class KeyboardUtils {
         }
     }
 
-
-    /**
-     * 注册按键
-     * @param	key		键值
-     * @param	fun		回调方法
-     * @param	type	按键类型 TYPE_KEY_DOWN、TYPE_KEY_UP
-     */
-    public static registerKey(key: string, fun: Function, thisObj: any, type: number = 0, ...args): void {
-        var keyDict: Object = type ? this.keyUpDict : this.keyDownDict;
-        keyDict[key] = { "fun": fun, args: args, "thisObj": thisObj };
-    }
-
-    /**
-     * 注销按键
-     * @param	key		键值
-     * @param	type	注销的类型
-     */
-    public static unregisterKey(key: string, type: number = 0): void {
-        var keyDict: Object = type ? this.keyUpDict : this.keyDownDict;
-        delete keyDict[key];
-    }
-
-
     /**
      * 根据keyCode或charCode获取相应的字符串代号
-     * @param	keyCode
-     * @return	键盘所指字符串代号
+     * @param    keyCode
+     * @return    键盘所指字符串代号
      */
     private static keyCodeToString(keyCode: number): string {
         switch (keyCode) {
@@ -224,16 +221,5 @@ class KeyboardUtils {
             default:
                 return String.fromCharCode(keyCode);
         }
-    }
-
-
-    /**
-    * 销毁方法
-    */
-    public static destroy(): void {
-        this.keyDownDict = null;
-        this.keyUpDict = null;
-        document.removeEventListener("keydown", this.onKeyDonwHander);
-        document.removeEventListener("keyup", this.onKeyUpHander);
     }
 }

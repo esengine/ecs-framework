@@ -9,19 +9,7 @@ module es {
          * 保持顺时针与凸边形
          */
         public points: Vector2[];
-
-        /**
-         * 边缘法线用于SAT碰撞检测。缓存它们用于避免squareRoots
-         * box只有两个边缘 因为其他两边是平行的
-         */
-        public get edgeNormals(){
-            if (this._areEdgeNormalsDirty)
-                this.buildEdgeNormals();
-            return this._edgeNormals;
-        }
-
         public _areEdgeNormalsDirty = true;
-        public _edgeNormals: Vector2[];
         /**
          * 多边形的原始数据
          */
@@ -39,60 +27,24 @@ module es {
          * @param points
          * @param isBox
          */
-        constructor(points: Vector2[], isBox?: boolean){
+        constructor(points: Vector2[], isBox?: boolean) {
             super();
 
             this.setPoints(points);
             this.isBox = isBox;
         }
 
-        /**
-         * 重置点并重新计算中心和边缘法线
-         * @param points
-         */
-        public setPoints(points: Vector2[]) {
-            this.points = points;
-            this.recalculateCenterAndEdgeNormals();
-
-            this._originalPoints = [];
-            for (let i = 0; i < this.points.length; i ++){
-                this._originalPoints.push(this.points[i]);
-            }
-        }
+        public _edgeNormals: Vector2[];
 
         /**
-         * 重新计算多边形中心
-         * 如果点数改变必须调用该方法
+         * 边缘法线用于SAT碰撞检测。缓存它们用于避免squareRoots
+         * box只有两个边缘 因为其他两边是平行的
          */
-        public recalculateCenterAndEdgeNormals() {
-            this._polygonCenter = Polygon.findPolygonCenter(this.points);
-            this._areEdgeNormalsDirty = true;
+        public get edgeNormals() {
+            if (this._areEdgeNormalsDirty)
+                this.buildEdgeNormals();
+            return this._edgeNormals;
         }
-
-        /**
-         * 建立多边形边缘法线
-         * 它们仅由edgeNormals getter惰性创建和更新
-         */
-        public buildEdgeNormals(){
-            // 对于box 我们只需要两条边，因为另外两条边是平行的
-            let totalEdges = this.isBox ? 2 : this.points.length;
-            if (this._edgeNormals == null || this._edgeNormals.length != totalEdges)
-                this._edgeNormals = new Array(totalEdges);
-
-            let p2: Vector2;
-            for (let i = 0; i < totalEdges; i ++){
-                let p1 = this.points[i];
-                if (i + 1 >= this.points.length)
-                    p2 = this.points[0];
-                else
-                    p2 = this.points[i + 1];
-
-                let perp = Vector2Ext.perpendicular(p1, p2);
-                perp = Vector2.normalize(perp);
-                this._edgeNormals[i] = perp;
-            }
-        }
-
 
         /**
          * 建立一个对称的多边形(六边形，八角形，n角形)并返回点
@@ -114,9 +66,9 @@ module es {
          * 重定位多边形的点
          * @param points
          */
-        public static recenterPolygonVerts(points: Vector2[]){
+        public static recenterPolygonVerts(points: Vector2[]) {
             let center = this.findPolygonCenter(points);
-            for (let i = 0; i < points.length; i ++)
+            for (let i = 0; i < points.length; i++)
                 points[i] = Vector2.subtract(points[i], center);
         }
 
@@ -173,16 +125,63 @@ module es {
             return closestPoint;
         }
 
-        public recalculateBounds(collider: Collider){
+        /**
+         * 重置点并重新计算中心和边缘法线
+         * @param points
+         */
+        public setPoints(points: Vector2[]) {
+            this.points = points;
+            this.recalculateCenterAndEdgeNormals();
+
+            this._originalPoints = [];
+            for (let i = 0; i < this.points.length; i++) {
+                this._originalPoints.push(this.points[i]);
+            }
+        }
+
+        /**
+         * 重新计算多边形中心
+         * 如果点数改变必须调用该方法
+         */
+        public recalculateCenterAndEdgeNormals() {
+            this._polygonCenter = Polygon.findPolygonCenter(this.points);
+            this._areEdgeNormalsDirty = true;
+        }
+
+        /**
+         * 建立多边形边缘法线
+         * 它们仅由edgeNormals getter惰性创建和更新
+         */
+        public buildEdgeNormals() {
+            // 对于box 我们只需要两条边，因为另外两条边是平行的
+            let totalEdges = this.isBox ? 2 : this.points.length;
+            if (this._edgeNormals == null || this._edgeNormals.length != totalEdges)
+                this._edgeNormals = new Array(totalEdges);
+
+            let p2: Vector2;
+            for (let i = 0; i < totalEdges; i++) {
+                let p1 = this.points[i];
+                if (i + 1 >= this.points.length)
+                    p2 = this.points[0];
+                else
+                    p2 = this.points[i + 1];
+
+                let perp = Vector2Ext.perpendicular(p1, p2);
+                perp = Vector2.normalize(perp);
+                this._edgeNormals[i] = perp;
+            }
+        }
+
+        public recalculateBounds(collider: Collider) {
             // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
             this.center = collider.localOffset;
 
-            if (collider.shouldColliderScaleAndRotateWithTransform){
+            if (collider.shouldColliderScaleAndRotateWithTransform) {
                 let hasUnitScale = true;
                 let tempMat: Matrix2D;
                 let combinedMatrix = Matrix2D.create().translate(-this._polygonCenter.x, -this._polygonCenter.y);
 
-                if (collider.entity.transform.scale != Vector2.zero){
+                if (collider.entity.transform.scale != Vector2.zero) {
                     tempMat = Matrix2D.create().scale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
                     combinedMatrix = combinedMatrix.multiply(tempMat);
                     hasUnitScale = false;
@@ -191,7 +190,7 @@ module es {
                     this.center = Vector2.multiply(collider.localOffset, collider.entity.transform.scale);
                 }
 
-                if (collider.entity.transform.rotation != 0){
+                if (collider.entity.transform.rotation != 0) {
                     tempMat = Matrix2D.create().rotate(collider.entity.transform.rotation);
                     combinedMatrix = combinedMatrix.multiply(tempMat);
 
@@ -222,13 +221,13 @@ module es {
             this.bounds.location = this.bounds.location.add(this.position);
         }
 
-        public overlaps(other: Shape){
+        public overlaps(other: Shape) {
             let result: CollisionResult = new CollisionResult();
             if (other instanceof Polygon)
                 return ShapeCollisions.polygonToPolygon(this, other, result);
 
-            if (other instanceof Circle){
-                if (ShapeCollisions.circleToPolygon(other, this, result)){
+            if (other instanceof Circle) {
+                if (ShapeCollisions.circleToPolygon(other, this, result)) {
                     result.invertResult();
                     return true;
                 }
@@ -239,13 +238,13 @@ module es {
             throw new Error(`overlaps of Pologon to ${other} are not supported`);
         }
 
-        public collidesWithShape(other: Shape, result: CollisionResult): boolean{
-            if (other instanceof Polygon){
+        public collidesWithShape(other: Shape, result: CollisionResult): boolean {
+            if (other instanceof Polygon) {
                 return ShapeCollisions.polygonToPolygon(this, other, result);
             }
 
-            if (other instanceof Circle){
-                if (ShapeCollisions.circleToPolygon(other, this, result)){
+            if (other instanceof Circle) {
+                if (ShapeCollisions.circleToPolygon(other, this, result)) {
                     result.invertResult();
                     return true;
                 }

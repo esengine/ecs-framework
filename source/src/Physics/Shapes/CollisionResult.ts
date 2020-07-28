@@ -5,7 +5,7 @@ module es {
         public normal: Vector2 = Vector2.zero;
         public point: Vector2 = Vector2.zero;
 
-        public invertResult(){
+        public invertResult() {
             this.minimumTranslationVector = Vector2.negate(this.minimumTranslationVector);
             this.normal = Vector2.negate(this.normal);
         }

@@ -6,7 +6,7 @@ module es {
         private _scrollX = 0;
         private _scrollY = 0;
 
-        public update(){
+        public update() {
             this._scrollX += this.scrollSpeedX * Time.deltaTime;
             this._scrollY += this.scroolSpeedY * Time.deltaTime;
             this.sourceRect.x = this._scrollX;

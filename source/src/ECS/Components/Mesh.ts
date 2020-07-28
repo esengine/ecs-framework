@@ -3,13 +3,13 @@ module es {
     export class Mesh extends RenderableComponent {
         private _mesh: egret.Mesh;
 
-        constructor(){
+        constructor() {
             super();
 
             this._mesh = new egret.Mesh();
         }
 
-        public setTexture(texture: egret.Texture): Mesh{
+        public setTexture(texture: egret.Texture): Mesh {
             this._mesh.texture = texture;
 
             return this;

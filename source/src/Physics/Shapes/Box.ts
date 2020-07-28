@@ -7,7 +7,7 @@ module es {
         public width: number;
         public height: number;
 
-        constructor(width: number, height: number){
+        constructor(width: number, height: number) {
             super(Box.buildBox(width, height), true);
             this.width = width;
             this.height = height;
@@ -18,7 +18,7 @@ module es {
          * @param width
          * @param height
          */
-        private static buildBox(width: number, height: number): Vector2[]{
+        private static buildBox(width: number, height: number): Vector2[] {
             // 我们在(0,0)的中心周围创建点
             let halfWidth = width / 2;
             let halfHeight = height / 2;
@@ -36,7 +36,7 @@ module es {
          * @param width
          * @param height
          */
-        public updateBox(width: number, height: number){
+        public updateBox(width: number, height: number) {
             this.width = width;
             this.height = height;
 
@@ -49,13 +49,13 @@ module es {
             this.points[2] = new Vector2(halfWidth, halfHeight);
             this.points[3] = new Vector2(-halfWidth, halfHeight);
 
-            for (let i = 0; i < this.points.length; i ++)
+            for (let i = 0; i < this.points.length; i++)
                 this._originalPoints[i] = this.points[i];
         }
 
-        public overlaps(other: Shape){
+        public overlaps(other: Shape) {
             // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
-            if (this.isUnrotated){
+            if (this.isUnrotated) {
                 if (other instanceof Box)
                     return this.bounds.intersects(other.bounds);
 
@@ -66,9 +66,9 @@ module es {
             return super.overlaps(other);
         }
 
-        public collidesWithShape(other: Shape, result: CollisionResult): boolean{
+        public collidesWithShape(other: Shape, result: CollisionResult): boolean {
             // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
-            if (other instanceof Box && (other as Box).isUnrotated){
+            if (other instanceof Box && (other as Box).isUnrotated) {
                 return ShapeCollisions.boxToBox(this, other, result);
             }
 
@@ -77,7 +77,7 @@ module es {
             return super.collidesWithShape(other, result);
         }
 
-        public containsPoint(point: Vector2){
+        public containsPoint(point: Vector2) {
             if (this.isUnrotated)
                 return this.bounds.contains(point.x, point.y);
 

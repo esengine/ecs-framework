@@ -22,6 +22,31 @@ module es {
          * 当前附加到此实体的所有组件的列表
          */
         public readonly components: ComponentList;
+        /**
+         * 指定应该调用这个entity update方法的频率。1表示每一帧，2表示每一帧，以此类推
+         */
+        public updateInterval: number = 1;
+        public componentBits: BitSet;
+
+        constructor(name: string) {
+            this.components = new ComponentList(this);
+            this.transform = new Transform(this);
+            this.name = name;
+            this.id = Entity._idGenerator++;
+
+            this.componentBits = new BitSet();
+        }
+
+        public _isDestroyed: boolean;
+
+        /**
+         * 如果调用了destroy，那么在下一次处理实体之前这将一直为true
+         */
+        public get isDestroyed() {
+            return this._isDestroyed;
+        }
+
+        private _tag: number = 0;
 
         /**
          * 你可以随意使用。稍后可以使用它来查询场景中具有特定标记的所有实体
@@ -38,10 +63,7 @@ module es {
             this.setTag(value);
         }
 
-        /**
-         * 指定应该调用这个entity update方法的频率。1表示每一帧，2表示每一帧，以此类推
-         */
-        public updateInterval: number = 1;
+        private _enabled: boolean = true;
 
         /**
          * 启用/禁用实体。当禁用碰撞器从物理系统和组件中移除时，方法将不会被调用
@@ -58,6 +80,8 @@ module es {
             this.setEnabled(value);
         }
 
+        private _updateOrder: number = 0;
+
         /**
          * 更新此实体的顺序。updateOrder还用于对scene.entities上的标签列表进行排序
          */
@@ -72,20 +96,6 @@ module es {
         public set updateOrder(value: number) {
             this.setUpdateOrder(value);
         }
-
-        public _isDestroyed: boolean;
-        /**
-         * 如果调用了destroy，那么在下一次处理实体之前这将一直为true
-         */
-        public get isDestroyed() {
-            return this._isDestroyed;
-        }
-
-        public componentBits: BitSet;
-
-        private _tag: number = 0;
-        private _enabled: boolean = true;
-        private _updateOrder: number = 0;
 
         public get parent(): Transform {
             return this.transform.parent;
@@ -111,7 +121,7 @@ module es {
             return this.transform.localPosition;
         }
 
-        public set localPosition(value: Vector2){
+        public set localPosition(value: Vector2) {
             this.transform.setLocalPosition(value);
         }
 
@@ -127,7 +137,7 @@ module es {
             return this.transform.rotationDegrees;
         }
 
-        public set rotationDegrees(value: number){
+        public set rotationDegrees(value: number) {
             this.transform.setRotationDegrees(value);
         }
 
@@ -135,7 +145,7 @@ module es {
             return this.transform.localRotation;
         }
 
-        public set localRotation(value: number){
+        public set localRotation(value: number) {
             this.transform.setLocalRotation(value);
         }
 
@@ -143,7 +153,7 @@ module es {
             return this.transform.localRotationDegrees;
         }
 
-        public set localRotationDegrees(value: number){
+        public set localRotationDegrees(value: number) {
             this.transform.setLocalRotationDegrees(value);
         }
 
@@ -159,7 +169,7 @@ module es {
             return this.transform.localScale;
         }
 
-        public set localScale(value: Vector2){
+        public set localScale(value: Vector2) {
             this.transform.setLocalScale(value);
         }
 
@@ -173,15 +183,6 @@ module es {
 
         public get worldToLocalTransform(): Matrix2D {
             return this.transform.worldToLocalTransform;
-        }
-
-        constructor(name: string) {
-            this.components = new ComponentList(this);
-            this.transform = new Transform(this);
-            this.name = name;
-            this.id = Entity._idGenerator++;
-
-            this.componentBits = new BitSet();
         }
 
         public onTransformChanged(comp: transform.Component) {
@@ -291,32 +292,6 @@ module es {
             entity.transform.position = position;
 
             return entity;
-        }
-
-        /**
-         * 将实体的属性、组件和碰撞器复制到此实例
-         * @param entity
-         */
-        protected copyFrom(entity: Entity) {
-            this.tag = entity.tag;
-            this.updateInterval = entity.updateInterval;
-            this.updateOrder = entity.updateOrder;
-            this.enabled = entity.enabled;
-
-            this.transform.scale = entity.transform.scale;
-            this.transform.rotation = entity.transform.rotation;
-
-            for (let i = 0; i < entity.components.count; i++)
-                this.addComponent(entity.components.buffer[i].clone());
-            for (let i = 0; i < entity.components._componentsToAdd.length; i++)
-                this.addComponent(entity.components._componentsToAdd[i].clone());
-
-            for (let i = 0; i < entity.transform.childCount; i++) {
-                let child = entity.transform.getChild(i).entity;
-                let childClone = child.clone();
-                childClone.transform.copyFrom(child.transform);
-                childClone.transform.parent = this.transform;
-            }
         }
 
         /**
@@ -430,6 +405,32 @@ module es {
 
         public toString(): string {
             return `[Entity: name: ${this.name}, tag: ${this.tag}, enabled: ${this.enabled}, depth: ${this.updateOrder}]`;
+        }
+
+        /**
+         * 将实体的属性、组件和碰撞器复制到此实例
+         * @param entity
+         */
+        protected copyFrom(entity: Entity) {
+            this.tag = entity.tag;
+            this.updateInterval = entity.updateInterval;
+            this.updateOrder = entity.updateOrder;
+            this.enabled = entity.enabled;
+
+            this.transform.scale = entity.transform.scale;
+            this.transform.rotation = entity.transform.rotation;
+
+            for (let i = 0; i < entity.components.count; i++)
+                this.addComponent(entity.components.buffer[i].clone());
+            for (let i = 0; i < entity.components._componentsToAdd.length; i++)
+                this.addComponent(entity.components._componentsToAdd[i].clone());
+
+            for (let i = 0; i < entity.transform.childCount; i++) {
+                let child = entity.transform.getChild(i).entity;
+                let childClone = child.clone();
+                childClone.transform.copyFrom(child.transform);
+                childClone.transform.parent = this.transform;
+            }
         }
     }
 }

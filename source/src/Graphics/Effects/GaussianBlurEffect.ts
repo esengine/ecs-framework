@@ -64,8 +64,8 @@ module es {
             "gl_FragColor = vec4(final_colour/(z*z), 1.0);\n" +
             "}";
 
-        constructor(){
-            super(PostProcessor.default_vert, GaussianBlurEffect.blur_frag,{
+        constructor() {
+            super(PostProcessor.default_vert, GaussianBlurEffect.blur_frag, {
                 screenWidth: Core.graphicsDevice.viewport.width,
                 screenHeight: Core.graphicsDevice.viewport.height
             });

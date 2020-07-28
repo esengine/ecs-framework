@@ -55,7 +55,7 @@ module es {
          */
         public static transformA(sourceArray: Vector2[], sourceIndex: number, matrix: Matrix2D,
                                  destinationArray: Vector2[], destinationIndex: number, length: number) {
-            for (let i = 0; i < length; i ++){
+            for (let i = 0; i < length; i++) {
                 let position = sourceArray[sourceIndex + i];
                 let destination = destinationArray[destinationIndex + i];
                 destination.x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
@@ -64,7 +64,7 @@ module es {
             }
         }
 
-        public static transformR(position: Vector2, matrix: Matrix2D){
+        public static transformR(position: Vector2, matrix: Matrix2D) {
             let x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
             let y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
             return new Vector2(x, y);
@@ -80,7 +80,7 @@ module es {
             this.transformA(sourceArray, 0, matrix, destinationArray, 0, sourceArray.length);
         }
 
-        public static round(vec: Vector2){
+        public static round(vec: Vector2) {
             return new Vector2(Math.round(vec.x), Math.round(vec.y));
         }
     }

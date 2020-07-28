@@ -1,9 +1,23 @@
 class StringUtils {
     /**
-    * 匹配中文字符
-    * @param    str	需要匹配的字符串
-    * @return
-    */
+     * 特殊符号字符串
+     */
+    private static specialSigns: string[] = [
+        '&', '&amp;',
+        '<', '&lt;',
+        '>', '&gt;',
+        '"', '&quot;',
+        "'", '&apos;',
+        '®', '&reg;',
+        '©', '&copy;',
+        '™', '&trade;',
+    ];
+
+    /**
+     * 匹配中文字符
+     * @param    str    需要匹配的字符串
+     * @return
+     */
     public static matchChineseWord(str: string): string[] {
         //中文字符的unicode值[\u4E00-\u9FA5]
         let patternA: RegExp = /[\u4E00-\u9FA5]+/gim;
@@ -12,7 +26,7 @@ class StringUtils {
 
     /**
      * 去除字符串左端的空白字符
-     * @param    target		目标字符串
+     * @param    target        目标字符串
      * @return
      */
     public static lTrim(target: string): string {
@@ -25,7 +39,7 @@ class StringUtils {
 
     /**
      * 去除字符串右端的空白字符
-     * @param    target		目标字符串
+     * @param    target        目标字符串
      * @return
      */
     public static rTrim(target: string): string {
@@ -35,7 +49,6 @@ class StringUtils {
         }
         return target.slice(0, endIndex + 1);
     }
-
 
     /**
      * 返回一个去除2段空白字符的字符串
@@ -69,7 +82,7 @@ class StringUtils {
      * @return  返回执行替换后的字符串
      */
     public static replaceMatch(mainStr: string, targetStr: string,
-        replaceStr: string, caseMark: boolean = false): string {
+                               replaceStr: string, caseMark: boolean = false): string {
         let len: number = mainStr.length;
         let tempStr: string = "";
         let isMatch: boolean = false;
@@ -84,35 +97,18 @@ class StringUtils {
             if (isMatch) {
                 tempStr += replaceStr;
                 i = i + tempTarget.length - 1;
-            }
-            else {
+            } else {
                 tempStr += mainStr.charAt(i);
             }
         }
         return tempStr;
     }
 
-
-    /**
-     * 特殊符号字符串
-     */
-    private static specialSigns: string[] = [
-        '&', '&amp;',
-        '<', '&lt;',
-        '>', '&gt;',
-        '"', '&quot;',
-        "'", '&apos;',
-        '®', '&reg;',
-        '©', '&copy;',
-        '™', '&trade;',
-    ];
-
-
     /**
      * 用html实体换掉字符窜中的特殊字符
-     * @param 	str		        需要替换的字符串
-     * @param 	reversion		是否翻转替换：将转义符号替换为正常的符号
-     * @return 	换掉特殊字符后的字符串
+     * @param    str                需要替换的字符串
+     * @param    reversion        是否翻转替换：将转义符号替换为正常的符号
+     * @return    换掉特殊字符后的字符串
      */
     public static htmlSpecialChars(str: string, reversion: boolean = false): string {
         let len: number = this.specialSigns.length;
@@ -133,27 +129,27 @@ class StringUtils {
 
 
     /**
-    * 给数字字符前面添 "0"
-    * 
-    * <pre> 
-    * 
-    * trace( StringFormat.zfill('1') );
-    * // 01
-    * 
-    * trace( StringFormat.zfill('16', 5) );
-    * // 00016
-    * 
-    * trace( StringFormat.zfill('-3', 3) );
-    * // -03
-    * 
-    * </pre>
-    * 
-    * @param str 要进行处理的字符串
-    * @param width 处理后字符串的长度，
-    *              如果str.length >= width，将不做任何处理直接返回原始的str。
-    * @return 
-    * 
-    */
+     * 给数字字符前面添 "0"
+     *
+     * <pre>
+     *
+     * trace( StringFormat.zfill('1') );
+     * // 01
+     *
+     * trace( StringFormat.zfill('16', 5) );
+     * // 00016
+     *
+     * trace( StringFormat.zfill('-3', 3) );
+     * // -03
+     *
+     * </pre>
+     *
+     * @param str 要进行处理的字符串
+     * @param width 处理后字符串的长度，
+     *              如果str.length >= width，将不做任何处理直接返回原始的str。
+     * @return
+     *
+     */
     public static zfill(str: string, width: number = 2): string {
         if (!str) {
             return str;
@@ -185,7 +181,7 @@ class StringUtils {
 
     /**
      * 翻转字符串
-     * @param	str 字符串
+     * @param    str 字符串
      * @return  翻转后的字符串
      */
     public static reverse(str: string): string {
@@ -198,14 +194,14 @@ class StringUtils {
 
     /**
      * 截断某段字符串
-     * @param	str		目标字符串
-     * @param	start	需要截断的起始索引
-     * @param	len		截断长度
-     * @param	order	顺序，true从字符串头部开始计算，false从字符串尾巴开始结算。
-     * @return	截断后的字符串
+     * @param    str        目标字符串
+     * @param    start    需要截断的起始索引
+     * @param    len        截断长度
+     * @param    order    顺序，true从字符串头部开始计算，false从字符串尾巴开始结算。
+     * @return    截断后的字符串
      */
     public static cutOff(str: string, start: number,
-        len: number, order: boolean = true): string {
+                         len: number, order: boolean = true): string {
         start = Math.floor(start);
         len = Math.floor(len);
         let length: number = str.length;
@@ -215,8 +211,7 @@ class StringUtils {
         let newStr: string;
         if (order) {
             newStr = str.substring(0, s) + str.substr(e, length);
-        }
-        else {
+        } else {
             s = length - 1 - start - len;
             e = s + len;
             newStr = str.substring(0, s + 1) + str.substr(e + 1, length);

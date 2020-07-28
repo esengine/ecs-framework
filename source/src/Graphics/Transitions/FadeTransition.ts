@@ -18,17 +18,17 @@ module es {
             this._mask.graphics.drawRect(0, 0, Core.graphicsDevice.viewport.width, Core.graphicsDevice.viewport.height);
             this._mask.graphics.endFill();
 
-            egret.Tween.get(this).to({ _alpha: 1}, this.fadeOutDuration * 1000, this.fadeEaseType)
+            egret.Tween.get(this).to({_alpha: 1}, this.fadeOutDuration * 1000, this.fadeEaseType)
                 .call(async () => {
                     await this.loadNextScene();
                 }).wait(this.delayBeforeFadeInDuration).call(() => {
-                egret.Tween.get(this).to({ _alpha: 0 }, this.fadeOutDuration * 1000, this.fadeEaseType).call(() => {
+                egret.Tween.get(this).to({_alpha: 0}, this.fadeOutDuration * 1000, this.fadeEaseType).call(() => {
                     this.transitionComplete();
                 });
             });
         }
 
-        public render(){
+        public render() {
             this._mask.graphics.clear();
             this._mask.graphics.beginFill(this.fadeToColor, this._alpha);
             this._mask.graphics.drawRect(0, 0, Core.graphicsDevice.viewport.width, Core.graphicsDevice.viewport.height);

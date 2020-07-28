@@ -4,23 +4,40 @@ module es {
          * 对撞机的基本形状
          */
         public shape: Shape;
-
         /**
-         * 将localOffset添加到实体。获取碰撞器几何图形的最终位置。
-         * 允许向一个实体添加多个碰撞器并分别定位，还允许你设置缩放/旋转
+         * 如果这个碰撞器是一个触发器，它将不会引起碰撞，但它仍然会触发事件
          */
-        public get localOffset(): Vector2 {
-            return this._localOffset;
-        }
-
+        public isTrigger: boolean;
         /**
-         * 将localOffset添加到实体。获取碰撞器几何图形的最终位置。
-         * 允许向一个实体添加多个碰撞器并分别定位，还允许你设置缩放/旋转
-         * @param value
+         * 在处理冲突时，physicsLayer可以用作过滤器。Flags类有帮助位掩码的方法
          */
-        public set localOffset(value: Vector2) {
-            this.setLocalOffset(value);
-        }
+        public physicsLayer = 1 << 0;
+        /**
+         * 碰撞器在使用移动器移动时应该碰撞的层
+         * 默认为所有层
+         */
+        public collidesWithLayers = Physics.allLayers;
+        /**
+         * 如果为true，碰撞器将根据附加的变换缩放和旋转
+         */
+        public shouldColliderScaleAndRotateWithTransform = true;
+        /**
+         * 这个对撞机在物理系统注册时的边界。
+         * 存储这个允许我们始终能够安全地从物理系统中移除对撞机，即使它在试图移除它之前已经被移动了。
+         */
+        public registeredPhysicsBounds: Rectangle = new Rectangle();
+        public _localOffsetLength: number;
+        public _isPositionDirty: boolean = true;
+        public _isRotationDirty: boolean = true;
+        protected _colliderRequiresAutoSizing;
+        /**
+         * 标记来跟踪我们的实体是否被添加到场景中
+         */
+        protected _isParentEntityAddedToScene;
+        /**
+         * 标记来记录我们是否注册了物理系统
+         */
+        protected _isColliderRegistered;
 
         /**
          * 镖师碰撞器的绝对位置
@@ -39,27 +56,8 @@ module es {
             return 0;
         }
 
-        /**
-         * 如果这个碰撞器是一个触发器，它将不会引起碰撞，但它仍然会触发事件
-         */
-        public isTrigger: boolean;
-        /**
-         * 在处理冲突时，physicsLayer可以用作过滤器。Flags类有帮助位掩码的方法
-         */
-        public physicsLayer = 1 << 0;
-        /**
-         * 碰撞器在使用移动器移动时应该碰撞的层
-         * 默认为所有层
-         */
-        public collidesWithLayers = Physics.allLayers;
-
-        /**
-         * 如果为true，碰撞器将根据附加的变换缩放和旋转
-         */
-        public shouldColliderScaleAndRotateWithTransform = true;
-
         public get bounds(): Rectangle {
-            if (this._isPositionDirty || this._isRotationDirty){
+            if (this._isPositionDirty || this._isRotationDirty) {
                 this.shape.recalculateBounds(this);
                 this._isPositionDirty = this._isRotationDirty = false;
             }
@@ -67,26 +65,24 @@ module es {
             return this.shape.bounds;
         }
 
-        /**
-         * 这个对撞机在物理系统注册时的边界。
-         * 存储这个允许我们始终能够安全地从物理系统中移除对撞机，即使它在试图移除它之前已经被移动了。
-         */
-        public registeredPhysicsBounds: Rectangle = new Rectangle();
-        protected _colliderRequiresAutoSizing;
         protected _localOffset: Vector2 = Vector2.zero;
-        public _localOffsetLength: number;
 
         /**
-         * 标记来跟踪我们的实体是否被添加到场景中
+         * 将localOffset添加到实体。获取碰撞器几何图形的最终位置。
+         * 允许向一个实体添加多个碰撞器并分别定位，还允许你设置缩放/旋转
          */
-        protected _isParentEntityAddedToScene;
-        /**
-         * 标记来记录我们是否注册了物理系统
-         */
-        protected _isColliderRegistered;
+        public get localOffset(): Vector2 {
+            return this._localOffset;
+        }
 
-        public _isPositionDirty: boolean = true;
-        public _isRotationDirty: boolean = true;
+        /**
+         * 将localOffset添加到实体。获取碰撞器几何图形的最终位置。
+         * 允许向一个实体添加多个碰撞器并分别定位，还允许你设置缩放/旋转
+         * @param value
+         */
+        public set localOffset(value: Vector2) {
+            this.setLocalOffset(value);
+        }
 
         /**
          * 将localOffset添加到实体。获取碰撞器的最终位置。
@@ -229,7 +225,7 @@ module es {
             return didCollide;
         }
 
-        public clone(): Component{
+        public clone(): Component {
             let collider = ObjectUtils.clone<Collider>(this);
             collider.entity = null;
 

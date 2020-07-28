@@ -11,7 +11,7 @@ module es {
          * @param self
          * @param flag
          */
-        public static isFlagSet(self: number, flag: number): boolean{
+        public static isFlagSet(self: number, flag: number): boolean {
             return (self & flag) != 0;
         }
 
@@ -20,7 +20,7 @@ module es {
          * @param self
          * @param flag
          */
-        public static isUnshiftedFlagSet(self: number, flag: number): boolean{
+        public static isUnshiftedFlagSet(self: number, flag: number): boolean {
             flag = 1 << flag;
             return (self & flag) != 0;
         }
@@ -30,7 +30,7 @@ module es {
          * @param self
          * @param flag
          */
-        public static setFlagExclusive(self: number, flag: number){
+        public static setFlagExclusive(self: number, flag: number) {
             return 1 << flag;
         }
 
@@ -39,7 +39,7 @@ module es {
          * @param self
          * @param flag
          */
-        public static setFlag(self: number, flag: number){
+        public static setFlag(self: number, flag: number) {
             return (self | 1 << flag);
         }
 
@@ -48,7 +48,7 @@ module es {
          * @param self
          * @param flag
          */
-        public static unsetFlag(self: number, flag: number){
+        public static unsetFlag(self: number, flag: number) {
             flag = 1 << flag;
             return (self & (~flag));
         }
@@ -57,7 +57,7 @@ module es {
          * 反转数值集合位
          * @param self
          */
-        public static invertFlags(self: number){
+        public static invertFlags(self: number) {
             return ~self;
         }
     }

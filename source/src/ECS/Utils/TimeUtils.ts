@@ -1,9 +1,9 @@
 class TimeUtils {
     /**
-		 * 计算月份ID
-		 * @param d 指定计算日期
-		 * @returns 月ID
-		 */
+     * 计算月份ID
+     * @param d 指定计算日期
+     * @returns 月ID
+     */
     public static monthId(d: Date = null): number {
         d = d ? d : new Date();
         let y = d.getFullYear();
@@ -35,7 +35,8 @@ class TimeUtils {
         d = d ? d : new Date();
         let c: Date = new Date();
         c.setTime(d.getTime());
-        c.setDate(1); c.setMonth(0);//当年第一天
+        c.setDate(1);
+        c.setMonth(0);//当年第一天
 
         let year: number = c.getFullYear();
         let firstDay: number = c.getDay();
@@ -51,7 +52,8 @@ class TimeUtils {
         }
         let num: number = this.diffDay(d, c, false);
         if (num < 0) {
-            c.setDate(1); c.setMonth(0);//当年第一天
+            c.setDate(1);
+            c.setMonth(0);//当年第一天
             c.setDate(c.getDate() - 1);
             return this.weekId(c, false);
         }
@@ -66,7 +68,8 @@ class TimeUtils {
             }
             if (first && (!max || endDay < 4)) {
                 c.setFullYear(c.getFullYear() + 1);
-                c.setDate(1); c.setMonth(0);//当年第一天
+                c.setDate(1);
+                c.setMonth(0);//当年第一天
                 return this.weekId(c, false);
             }
         }
@@ -151,9 +154,9 @@ class TimeUtils {
 
     /**
      * 秒数转换为时间形式。
-     * @param	time 秒数
-     * @param	partition 分隔符
-     * @param	showHour  是否显示小时
+     * @param    time 秒数
+     * @param    partition 分隔符
+     * @param    showHour  是否显示小时
      * @return  返回一个以分隔符分割的时, 分, 秒
      *
      * 比如: time = 4351; secondToTime(time)返回字符串01:12:31;

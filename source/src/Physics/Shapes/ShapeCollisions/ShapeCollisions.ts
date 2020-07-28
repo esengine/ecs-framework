@@ -108,7 +108,7 @@ module es {
                 }
             }
 
-            return { min: min, max: max };
+            return {min: min, max: max};
         }
 
         /**
@@ -245,11 +245,11 @@ module es {
          * @param first
          * @param second
          */
-        public static circleToCircle(first: Circle, second: Circle, result: CollisionResult): boolean{
+        public static circleToCircle(first: Circle, second: Circle, result: CollisionResult): boolean {
             let distanceSquared = Vector2.distanceSquared(first.position, second.position);
             let sumOfRadii = first.radius + second.radius;
             let collided = distanceSquared < sumOfRadii * sumOfRadii;
-            if (collided){
+            if (collided) {
                 result.normal = Vector2.normalize(Vector2.subtract(first.position, second.position));
                 let depth = sumOfRadii - Math.sqrt(distanceSquared);
                 result.minimumTranslationVector = Vector2.multiply(new Vector2(-depth), result.normal);
@@ -267,9 +267,9 @@ module es {
          * @param second
          * @param result
          */
-        public static boxToBox(first: Box, second: Box, result: CollisionResult): boolean{
+        public static boxToBox(first: Box, second: Box, result: CollisionResult): boolean {
             let minkowskiDiff = this.minkowskiDifference(first, second);
-            if (minkowskiDiff.contains(0, 0)){
+            if (minkowskiDiff.contains(0, 0)) {
                 // 计算MTV。如果它是零，我们就可以称它为非碰撞
                 result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
 
@@ -285,7 +285,7 @@ module es {
             return false;
         }
 
-        private static minkowskiDifference(first: Box, second: Box){
+        private static minkowskiDifference(first: Box, second: Box) {
             // 我们需要第一个框的左上角
             // 碰撞器只会修改运动的位置所以我们需要用位置来计算出运动是什么。
             let positionOffset = Vector2.subtract(first.position, Vector2.add(first.bounds.location, Vector2.divide(first.bounds.size, new Vector2(2))));

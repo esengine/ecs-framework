@@ -1,20 +1,14 @@
 module es {
     export class WindTransition extends SceneTransition {
+        public duration = 1;
+        public easeType = egret.Ease.quadOut;
         private _mask: egret.Shape;
         private _windEffect: egret.CustomFilter;
 
-        public duration = 1;
-        public set windSegments(value: number) {
-            this._windEffect.uniforms._windSegments = value;
-        }
-        public set size(value: number) {
-            this._windEffect.uniforms._size = value;
-        }
-        public easeType = egret.Ease.quadOut;
         constructor(sceneLoadAction: Function) {
             super(sceneLoadAction);
 
-            let vertexSrc =  "attribute vec2 aVertexPosition;\n" +
+            let vertexSrc = "attribute vec2 aVertexPosition;\n" +
                 "attribute vec2 aTextureCoord;\n" +
 
                 "uniform vec2 projectionVector;\n" +
@@ -54,6 +48,14 @@ module es {
             this._mask.graphics.drawRect(0, 0, Core.graphicsDevice.viewport.width, Core.graphicsDevice.viewport.height);
             this._mask.graphics.endFill();
             this._mask.filters = [this._windEffect];
+        }
+
+        public set windSegments(value: number) {
+            this._windEffect.uniforms._windSegments = value;
+        }
+
+        public set size(value: number) {
+            this._windEffect.uniforms._size = value;
         }
 
         public async onBeginTransition() {

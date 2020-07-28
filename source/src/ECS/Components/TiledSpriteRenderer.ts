@@ -8,19 +8,6 @@ module es {
         protected leftTexture: egret.Bitmap;
         protected rightTexture: egret.Bitmap;
 
-        public get scrollX() {
-            return this.sourceRect.x;
-        }
-        public set scrollX(value: number) {
-            this.sourceRect.x = value;
-        }
-        public get scrollY() {
-            return this.sourceRect.y;
-        }
-        public set scrollY(value: number) {
-            this.sourceRect.y = value;
-        }
-
         constructor(sprite: Sprite) {
             super(sprite);
 
@@ -31,6 +18,22 @@ module es {
 
             this.setSprite(sprite);
             this.sourceRect = sprite.sourceRect;
+        }
+
+        public get scrollX() {
+            return this.sourceRect.x;
+        }
+
+        public set scrollX(value: number) {
+            this.sourceRect.x = value;
+        }
+
+        public get scrollY() {
+            return this.sourceRect.y;
+        }
+
+        public set scrollY(value: number) {
+            this.sourceRect.y = value;
         }
 
         public render(camera: es.Camera) {

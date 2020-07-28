@@ -40,7 +40,7 @@ module es {
      * 用于排序IRenderables的比较器
      */
     export class RenderableComparer {
-        public compare(self: IRenderable, other: IRenderable){
+        public compare(self: IRenderable, other: IRenderable) {
             return other.renderLayer - self.renderLayer;
         }
     }

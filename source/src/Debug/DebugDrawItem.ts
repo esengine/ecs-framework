@@ -18,15 +18,15 @@ module es {
         public y: number;
         public size: number;
 
-        constructor(rectangle: Rectangle, color: number, duration: number){
+        constructor(rectangle: Rectangle, color: number, duration: number) {
             this.rectangle = rectangle;
             this.color = color;
             this.duration = duration;
             this.drawType = DebugDrawType.hollowRectangle;
         }
 
-        public draw(shape: egret.Shape): boolean{
-            switch (this.drawType){
+        public draw(shape: egret.Shape): boolean {
+            switch (this.drawType) {
                 case DebugDrawType.line:
                     DrawUtils.drawLine(shape, this.start, this.end, this.color);
                     break;

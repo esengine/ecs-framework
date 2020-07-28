@@ -45,6 +45,12 @@ module es {
          * 当前动画的精灵数组中当前帧的索引
          */
         public currentFrame: number;
+        public _elapsedTime: number = 0;
+        public _loopMode: LoopMode;
+
+        constructor(sprite?: Sprite) {
+            super(sprite);
+        }
 
         /**
          * 检查当前动画是否正在运行
@@ -53,17 +59,11 @@ module es {
             return this.animationState == State.running;
         }
 
+        private _animations: Map<string, SpriteAnimation> = new Map<string, SpriteAnimation>();
+
         /** 提供对可用动画列表的访问 */
         public get animations() {
             return this._animations;
-        }
-
-        private _animations: Map<string, SpriteAnimation> = new Map<string, SpriteAnimation>();
-        public _elapsedTime: number = 0;
-        public _loopMode: LoopMode;
-
-        constructor(sprite?: Sprite) {
-            super(sprite);
         }
 
         public update() {

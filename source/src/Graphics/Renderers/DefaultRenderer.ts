@@ -1,7 +1,7 @@
 ///<reference path="./Renderer.ts" />
 module es {
     export class DefaultRenderer extends Renderer {
-        constructor(){
+        constructor() {
             super(0, null);
         }
 
@@ -9,7 +9,7 @@ module es {
             let cam = this.camera ? this.camera : scene.camera;
             this.beginRender(cam);
 
-            for (let i = 0; i < scene.renderableComponents.count; i++){
+            for (let i = 0; i < scene.renderableComponents.count; i++) {
                 let renderable = scene.renderableComponents.buffer[i];
                 if (renderable.enabled && renderable.isVisibleFromCamera(cam))
                     this.renderAfterStateCheck(renderable, cam);

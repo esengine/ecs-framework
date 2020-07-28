@@ -6,12 +6,12 @@ module es {
     export class UnweightedGraph<T> implements IUnweightedGraph<T> {
         public edges: Map<T, T[]> = new Map<T, T[]>();
 
-        public addEdgesForNode(node: T, edges: T[]){
+        public addEdgesForNode(node: T, edges: T[]) {
             this.edges.set(node, edges);
             return this;
         }
 
-        public getNeighbors(node: T){
+        public getNeighbors(node: T) {
             return this.edges.get(node);
         }
     }

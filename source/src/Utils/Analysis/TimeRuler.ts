@@ -18,23 +18,19 @@ module es {
         public static readonly barPadding = 2;
         public static readonly autoAdjustDelay = 30;
         private static _instance;
-        public static get Instance(): TimeRuler{
-            if (!this._instance)
-                this._instance = new TimeRuler();
-            return this._instance;
-        }
-        private _frameKey = 'frame';
-        private _logKey = 'log';
-
-        /** 每帧的日志 */
-        private _logs: FrameLog[];
-        /** 当前显示帧计数 */
-        private sampleFrames: number;
         /** 获取/设置目标样本帧。 */
         public targetSampleFrames: number;
         /** 获取/设置计时器标尺宽度。 */
         public width: number;
         public enabled: true;
+        /**  */
+        public showLog = false;
+        private _frameKey = 'frame';
+        private _logKey = 'log';
+        /** 每帧的日志 */
+        private _logs: FrameLog[];
+        /** 当前显示帧计数 */
+        private sampleFrames: number;
         /** TimerRuler画的位置。 */
         private _position: Vector2;
         /** 上一帧日志 */
@@ -56,8 +52,6 @@ module es {
          * 为此，我们只需一直跟踪StartFrame调用的次数，直到Draw被调用。
          */
         private _updateCount: number;
-        /**  */
-        public showLog = false;
         private _frameAdjust: number;
 
         constructor() {
@@ -72,9 +66,10 @@ module es {
             this.onGraphicsDeviceReset();
         }
 
-        private onGraphicsDeviceReset() {
-            let layout = new Layout();
-            this._position = layout.place(new Vector2(this.width, TimeRuler.barHeight), 0, 0.01, Alignment.bottomCenter).location;
+        public static get Instance(): TimeRuler {
+            if (!this._instance)
+                this._instance = new TimeRuler();
+            return this._instance;
         }
 
         /**
@@ -244,7 +239,7 @@ module es {
                 count += 1;
                 egret.localStorage.setItem(this._logKey, count.toString());
                 this.markers.forEach(markerInfo => {
-                    for (let i = 0; i < markerInfo.logs.length; ++i){
+                    for (let i = 0; i < markerInfo.logs.length; ++i) {
                         markerInfo.logs[i].initialized = false;
                         markerInfo.logs[i].snapMin = 0;
                         markerInfo.logs[i].snapMax = 0;
@@ -260,7 +255,7 @@ module es {
             });
         }
 
-        public render(position: Vector2 = this._position, width: number = this.width){
+        public render(position: Vector2 = this._position, width: number = this.width) {
             egret.localStorage.setItem(this._frameKey, "0");
 
             if (!this.showLog)
@@ -269,22 +264,22 @@ module es {
             let height = 0;
             let maxTime = 0;
             this._prevLog.bars.forEach(bar => {
-                if (bar.markCount > 0){
+                if (bar.markCount > 0) {
                     height += TimeRuler.barHeight + TimeRuler.barPadding * 2;
                     maxTime = Math.max(maxTime, bar.markers[bar.markCount - 1].endTime);
                 }
-            })
+            });
 
             const frameSpan = 1 / 60 * 1000;
             let sampleSpan = this.sampleFrames * frameSpan;
 
-            if (maxTime > sampleSpan){
+            if (maxTime > sampleSpan) {
                 this._frameAdjust = Math.max(0, this._frameAdjust) + 1;
-            }else{
+            } else {
                 this._frameAdjust = Math.min(0, this._frameAdjust) - 1;
             }
 
-            if (Math.max(this._frameAdjust) > TimeRuler.autoAdjustDelay){
+            if (Math.max(this._frameAdjust) > TimeRuler.autoAdjustDelay) {
                 this.sampleFrames = Math.min(TimeRuler.maxSampleFrames, this.sampleFrames);
                 this.sampleFrames = Math.max(this.targetSampleFrames, (maxTime / frameSpan) + 1);
 
@@ -296,6 +291,11 @@ module es {
             let y = startY;
 
             // TODO: draw
+        }
+
+        private onGraphicsDeviceReset() {
+            let layout = new Layout();
+            this._position = layout.place(new Vector2(this.width, TimeRuler.barHeight), 0, 0.01, Alignment.bottomCenter).location;
         }
     }
 
@@ -320,7 +320,7 @@ module es {
         public markerNests: number[] = new Array<number>(TimeRuler.maxNestCall);
         public nestCount: number = 0;
 
-        constructor(){
+        constructor() {
             this.markers.fill(new Marker(), 0, TimeRuler.maxSamples);
             this.markerNests.fill(0, 0, TimeRuler.maxNestCall);
         }

@@ -20,7 +20,7 @@ module es {
         private _height;
         private _neighbors: Vector2[] = new Array(4);
 
-        constructor(width: number, height: number){
+        constructor(width: number, height: number) {
             this._width = width;
             this._height = height;
         }
@@ -46,7 +46,7 @@ module es {
          * @param start
          * @param goal
          */
-        public search(start: Vector2, goal: Vector2){
+        public search(start: Vector2, goal: Vector2) {
             return AStarPathfinder.search(this, start, goal);
         }
 
@@ -63,7 +63,7 @@ module es {
         }
 
         public cost(from: Vector2, to: Vector2): number {
-            return this.weightedNodes.find((p)=> JSON.stringify(p) == JSON.stringify(to)) ? this.weightedNodeWeight : this.defaultWeight;
+            return this.weightedNodes.find((p) => JSON.stringify(p) == JSON.stringify(to)) ? this.weightedNodeWeight : this.defaultWeight;
         }
 
         public heuristic(node: Vector2, goal: Vector2) {

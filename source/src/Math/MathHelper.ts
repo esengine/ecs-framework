@@ -8,7 +8,7 @@ module es {
          * 将弧度转换成角度。
          * @param radians 用弧度表示的角
          */
-        public static toDegrees(radians: number){
+        public static toDegrees(radians: number) {
             return radians * 57.295779513082320876798154814105;
         }
 
@@ -16,7 +16,7 @@ module es {
          * 将角度转换为弧度
          * @param degrees
          */
-        public static toRadians(degrees: number){
+        public static toRadians(degrees: number) {
             return degrees * 0.017453292519943295769236907684886;
         }
 
@@ -28,15 +28,15 @@ module es {
          * @param rightMin
          * @param rightMax
          */
-        public static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number){
+        public static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number) {
             return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
         }
 
-        public static lerp(value1: number, value2: number, amount: number){
+        public static lerp(value1: number, value2: number, amount: number) {
             return value1 + (value2 - value1) * amount;
         }
 
-        public static clamp(value: number, min: number, max: number){
+        public static clamp(value: number, min: number, max: number) {
             if (value < min)
                 return min;
 
@@ -46,7 +46,7 @@ module es {
             return value;
         }
 
-        public static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number){
+        public static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number) {
             let radians = MathHelper.toRadians(angleInDegrees);
             return new Vector2(Math.cos(radians) * radians + circleCenter.x, Math.sin(radians) * radians + circleCenter.y);
         }
@@ -55,7 +55,7 @@ module es {
          * 如果值为偶数，返回true
          * @param value
          */
-        public static isEven(value: number){
+        public static isEven(value: number) {
             return value % 2 == 0;
         }
 
@@ -63,7 +63,7 @@ module es {
          * 数值限定在0-1之间
          * @param value
          */
-        public static clamp01(value: number){
+        public static clamp01(value: number) {
             if (value < 0)
                 return 0;
 
@@ -73,7 +73,7 @@ module es {
             return value;
         }
 
-        public static angleBetweenVectors(from: Vector2, to: Vector2){
+        public static angleBetweenVectors(from: Vector2, to: Vector2) {
             return Math.atan2(to.y - from.y, to.x - from.x);
         }
     }

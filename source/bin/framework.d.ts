@@ -27,9 +27,9 @@ declare module es {
 declare module es {
     class AStarPathfinder {
         static search<T>(graph: IAstarGraph<T>, start: T, goal: T): T[];
+        static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[];
         private static hasKey;
         private static getKey;
-        static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[];
     }
     class AStarNode<T> extends PriorityQueueNode {
         data: T;
@@ -68,9 +68,9 @@ declare module es {
         private _nodes;
         private _numNodesEverEnqueued;
         constructor(maxNodes: number);
-        clear(): void;
         readonly count: number;
         readonly maxSize: number;
+        clear(): void;
         contains(node: T): boolean;
         enqueue(node: T, priority: number): void;
         dequeue(): T;
@@ -103,28 +103,21 @@ declare module es {
 }
 declare module es {
     class Vector2 {
-        x: number;
-        y: number;
         private static readonly unitYVector;
         private static readonly unitXVector;
         private static readonly unitVector2;
         private static readonly zeroVector2;
+        x: number;
+        y: number;
+        constructor(x?: number, y?: number);
         static readonly zero: Vector2;
         static readonly one: Vector2;
         static readonly unitX: Vector2;
         static readonly unitY: Vector2;
-        constructor(x?: number, y?: number);
-        add(value: Vector2): Vector2;
-        divide(value: Vector2): Vector2;
-        multiply(value: Vector2): Vector2;
-        subtract(value: Vector2): this;
         static add(value1: Vector2, value2: Vector2): Vector2;
         static divide(value1: Vector2, value2: Vector2): Vector2;
         static multiply(value1: Vector2, value2: Vector2): Vector2;
         static subtract(value1: Vector2, value2: Vector2): Vector2;
-        normalize(): void;
-        length(): number;
-        round(): Vector2;
         static normalize(value: Vector2): Vector2;
         static dot(value1: Vector2, value2: Vector2): number;
         static distanceSquared(value1: Vector2, value2: Vector2): number;
@@ -133,6 +126,13 @@ declare module es {
         static transform(position: Vector2, matrix: Matrix2D): Vector2;
         static distance(value1: Vector2, value2: Vector2): number;
         static negate(value: Vector2): Vector2;
+        add(value: Vector2): Vector2;
+        divide(value: Vector2): Vector2;
+        multiply(value: Vector2): Vector2;
+        subtract(value: Vector2): this;
+        normalize(): void;
+        length(): number;
+        round(): Vector2;
         equals(other: Vector2): boolean;
     }
 }
@@ -185,9 +185,9 @@ declare module es {
     }
     class WeightedPathfinder {
         static search<T>(graph: IWeightedGraph<T>, start: T, goal: T): T[];
+        static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[];
         private static hasKey;
         private static getKey;
-        static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[];
     }
 }
 declare module es {
@@ -228,12 +228,12 @@ declare module es {
 declare module es {
     abstract class Component {
         entity: Entity;
-        readonly transform: Transform;
-        enabled: boolean;
-        updateOrder: number;
         updateInterval: number;
+        readonly transform: Transform;
         private _enabled;
+        enabled: boolean;
         private _updateOrder;
+        updateOrder: number;
         initialize(): void;
         onAddedToEntity(): void;
         onRemovedFromEntity(): void;
@@ -252,27 +252,27 @@ declare module es {
         static emitter: Emitter<CoreEvents>;
         static graphicsDevice: GraphicsDevice;
         static content: ContentManager;
-        static readonly Instance: Core;
         static _instance: Core;
-        _scene: Scene;
         _nextScene: Scene;
         _sceneTransition: SceneTransition;
         _globalManagers: GlobalManager[];
-        static scene: Scene;
         constructor();
-        private onAddToStage;
-        onOrientationChanged(): void;
-        protected onGraphicsDeviceReset(): void;
-        protected initialize(): void;
-        protected update(): Promise<void>;
-        draw(): Promise<void>;
-        startDebugUpdate(): void;
-        endDebugUpdate(): void;
-        onSceneChanged(): void;
+        static readonly Instance: Core;
+        _scene: Scene;
+        static scene: Scene;
         static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
         static registerGlobalManager(manager: es.GlobalManager): void;
         static unregisterGlobalManager(manager: es.GlobalManager): void;
         static getGlobalManager<T extends es.GlobalManager>(type: any): T;
+        onOrientationChanged(): void;
+        draw(): Promise<void>;
+        startDebugUpdate(): void;
+        endDebugUpdate(): void;
+        onSceneChanged(): void;
+        protected onGraphicsDeviceReset(): void;
+        protected initialize(): void;
+        protected update(): Promise<void>;
+        private onAddToStage;
     }
 }
 declare module es {
@@ -290,16 +290,17 @@ declare module es {
         readonly id: number;
         readonly transform: Transform;
         readonly components: ComponentList;
-        tag: number;
         updateInterval: number;
-        enabled: boolean;
-        updateOrder: number;
+        componentBits: BitSet;
+        constructor(name: string);
         _isDestroyed: boolean;
         readonly isDestroyed: boolean;
-        componentBits: BitSet;
         private _tag;
+        tag: number;
         private _enabled;
+        enabled: boolean;
         private _updateOrder;
+        updateOrder: number;
         parent: Transform;
         readonly childCount: number;
         position: Vector2;
@@ -313,7 +314,6 @@ declare module es {
         readonly worldInverseTransform: Matrix2D;
         readonly localToWorldTransform: Matrix2D;
         readonly worldToLocalTransform: Matrix2D;
-        constructor(name: string);
         onTransformChanged(comp: transform.Component): void;
         setTag(tag: number): Entity;
         setEnabled(isEnabled: boolean): this;
@@ -322,7 +322,6 @@ declare module es {
         detachFromScene(): void;
         attachToScene(newScene: Scene): void;
         clone(position?: Vector2): Entity;
-        protected copyFrom(entity: Entity): void;
         onAddedToScene(): void;
         onRemovedFromScene(): void;
         update(): void;
@@ -336,6 +335,7 @@ declare module es {
         removeAllComponents(): void;
         compareTo(other: Entity): number;
         toString(): string;
+        protected copyFrom(entity: Entity): void;
     }
 }
 declare module es {
@@ -349,8 +349,8 @@ declare module es {
         _renderers: Renderer[];
         readonly _postProcessors: PostProcessor[];
         _didSceneBegin: any;
-        static createWithDefaultRenderer(): Scene;
         constructor();
+        static createWithDefaultRenderer(): Scene;
         initialize(): void;
         onStart(): Promise<void>;
         unload(): void;
@@ -397,20 +397,6 @@ declare module es {
     }
     class Transform extends HashObject {
         readonly entity: Entity;
-        parent: Transform;
-        readonly childCount: number;
-        position: Vector2;
-        localPosition: Vector2;
-        rotation: number;
-        rotationDegrees: number;
-        localRotation: number;
-        localRotationDegrees: number;
-        scale: Vector2;
-        localScale: Vector2;
-        readonly worldInverseTransform: Matrix2D;
-        readonly localToWorldTransform: Matrix2D;
-        readonly worldToLocalTransform: Matrix2D;
-        _parent: Transform;
         hierarchyDirty: DirtyType;
         _localDirty: boolean;
         _localPositionDirty: boolean;
@@ -421,19 +407,33 @@ declare module es {
         _worldInverseDirty: boolean;
         _localTransform: Matrix2D;
         _worldTransform: Matrix2D;
-        _worldToLocalTransform: Matrix2D;
-        _worldInverseTransform: Matrix2D;
         _rotationMatrix: Matrix2D;
         _translationMatrix: Matrix2D;
         _scaleMatrix: Matrix2D;
-        _position: Vector2;
-        _scale: Vector2;
-        _rotation: number;
-        _localPosition: Vector2;
-        _localScale: Vector2;
-        _localRotation: number;
         _children: Transform[];
         constructor(entity: Entity);
+        readonly childCount: number;
+        rotationDegrees: number;
+        localRotationDegrees: number;
+        readonly localToWorldTransform: Matrix2D;
+        _parent: Transform;
+        parent: Transform;
+        _worldToLocalTransform: Matrix2D;
+        readonly worldToLocalTransform: Matrix2D;
+        _worldInverseTransform: Matrix2D;
+        readonly worldInverseTransform: Matrix2D;
+        _position: Vector2;
+        position: Vector2;
+        _scale: Vector2;
+        scale: Vector2;
+        _rotation: number;
+        rotation: number;
+        _localPosition: Vector2;
+        localPosition: Vector2;
+        _localScale: Vector2;
+        localScale: Vector2;
+        _localRotation: number;
+        localRotation: number;
         getChild(index: number): Transform;
         setParent(parent: Transform): Transform;
         setPosition(x: number, y: number): Transform;
@@ -465,23 +465,7 @@ declare module es {
         bottom: number;
     }
     class Camera extends Component {
-        position: Vector2;
-        rotation: number;
-        zoom: number;
-        minimumZoom: number;
-        maximumZoom: number;
-        readonly bounds: Rectangle;
-        readonly transformMatrix: Matrix2D;
-        readonly inverseTransformMatrix: Matrix2D;
-        origin: Vector2;
-        _zoom: any;
-        _minimumZoom: number;
-        _maximumZoom: number;
-        _bounds: Rectangle;
         _inset: CameraInset;
-        _transformMatrix: Matrix2D;
-        _inverseTransformMatrix: Matrix2D;
-        _origin: Vector2;
         _areMatrixedDirty: boolean;
         _areBoundsDirty: boolean;
         _isProjectionMatrixDirty: boolean;
@@ -496,8 +480,23 @@ declare module es {
         _cameraStyle: CameraStyle;
         _worldSpaceDeadZone: Rectangle;
         constructor(targetEntity?: Entity, cameraStyle?: CameraStyle);
+        position: Vector2;
+        rotation: number;
+        _zoom: any;
+        zoom: number;
+        _minimumZoom: number;
+        minimumZoom: number;
+        _maximumZoom: number;
+        maximumZoom: number;
+        _bounds: Rectangle;
+        readonly bounds: Rectangle;
+        _transformMatrix: Matrix2D;
+        readonly transformMatrix: Matrix2D;
+        _inverseTransformMatrix: Matrix2D;
+        readonly inverseTransformMatrix: Matrix2D;
+        _origin: Vector2;
+        origin: Vector2;
         onSceneSizeChanged(newWidth: number, newHeight: number): void;
-        protected updateMatrixes(): void;
         setInset(left: number, right: number, top: number, bottom: number): Camera;
         setPosition(position: Vector2): this;
         setRotation(rotation: number): Camera;
@@ -516,6 +515,7 @@ declare module es {
         updateFollow(): void;
         follow(targetEntity: Entity, cameraStyle?: CameraStyle): void;
         setCenteredDeadzone(width: number, height: number): void;
+        protected updateMatrixes(): void;
     }
 }
 declare module es {
@@ -540,28 +540,28 @@ declare module es {
 declare module es {
     abstract class RenderableComponent extends Component implements IRenderable {
         displayObject: egret.DisplayObject;
+        color: number;
+        protected _areBoundsDirty: boolean;
         readonly width: number;
         readonly height: number;
-        readonly bounds: Rectangle;
-        renderLayer: number;
-        color: number;
-        localOffset: Vector2;
-        isVisible: boolean;
         protected _localOffset: Vector2;
+        localOffset: Vector2;
         protected _renderLayer: number;
+        renderLayer: number;
         protected _bounds: Rectangle;
+        readonly bounds: Rectangle;
         private _isVisible;
-        protected _areBoundsDirty: boolean;
+        isVisible: boolean;
         onEntityTransformChanged(comp: transform.Component): void;
         abstract render(camera: Camera): any;
-        protected onBecameVisible(): void;
-        protected onBecameInvisible(): void;
         isVisibleFromCamera(camera: Camera): boolean;
         setRenderLayer(renderLayer: number): RenderableComponent;
         setColor(color: number): RenderableComponent;
         setLocalOffset(offset: Vector2): RenderableComponent;
         sync(camera: Camera): void;
         toString(): string;
+        protected onBecameVisible(): void;
+        protected onBecameInvisible(): void;
     }
 }
 declare module es {
@@ -575,13 +575,13 @@ declare module es {
 }
 declare module es {
     class SpriteRenderer extends RenderableComponent {
-        readonly bounds: Rectangle;
-        origin: Vector2;
-        originNormalized: Vector2;
-        sprite: Sprite;
-        protected _origin: Vector2;
-        protected _sprite: Sprite;
         constructor(sprite?: Sprite | egret.Texture);
+        readonly bounds: Rectangle;
+        originNormalized: Vector2;
+        protected _origin: Vector2;
+        origin: Vector2;
+        protected _sprite: Sprite;
+        sprite: Sprite;
         setSprite(sprite: Sprite): SpriteRenderer;
         setOrigin(origin: Vector2): SpriteRenderer;
         setOriginNormalized(value: Vector2): SpriteRenderer;
@@ -593,9 +593,9 @@ declare module es {
         protected sourceRect: Rectangle;
         protected leftTexture: egret.Bitmap;
         protected rightTexture: egret.Bitmap;
+        constructor(sprite: Sprite);
         scrollX: number;
         scrollY: number;
-        constructor(sprite: Sprite);
         render(camera: es.Camera): void;
     }
 }
@@ -647,12 +647,12 @@ declare module es {
         currentAnimation: SpriteAnimation;
         currentAnimationName: string;
         currentFrame: number;
-        readonly isRunning: boolean;
-        readonly animations: Map<string, SpriteAnimation>;
-        private _animations;
         _elapsedTime: number;
         _loopMode: LoopMode;
         constructor(sprite?: Sprite);
+        readonly isRunning: boolean;
+        private _animations;
+        readonly animations: Map<string, SpriteAnimation>;
         update(): void;
         addAnimation(name: string, animation: SpriteAnimation): SpriteAnimator;
         play(name: string, loopMode?: LoopMode): void;
@@ -689,22 +689,22 @@ declare module es {
 declare module es {
     abstract class Collider extends Component {
         shape: Shape;
-        localOffset: Vector2;
-        readonly absolutePosition: Vector2;
-        readonly rotation: number;
         isTrigger: boolean;
         physicsLayer: number;
         collidesWithLayers: number;
         shouldColliderScaleAndRotateWithTransform: boolean;
-        readonly bounds: Rectangle;
         registeredPhysicsBounds: Rectangle;
-        protected _colliderRequiresAutoSizing: any;
-        protected _localOffset: Vector2;
         _localOffsetLength: number;
-        protected _isParentEntityAddedToScene: any;
-        protected _isColliderRegistered: any;
         _isPositionDirty: boolean;
         _isRotationDirty: boolean;
+        protected _colliderRequiresAutoSizing: any;
+        protected _isParentEntityAddedToScene: any;
+        protected _isColliderRegistered: any;
+        readonly absolutePosition: Vector2;
+        readonly rotation: number;
+        readonly bounds: Rectangle;
+        protected _localOffset: Vector2;
+        localOffset: Vector2;
         setLocalOffset(offset: Vector2): Collider;
         setShouldColliderScaleAndRotateWithTransform(shouldColliderScaleAndRotationWithTransform: boolean): Collider;
         onAddedToEntity(): void;
@@ -721,9 +721,9 @@ declare module es {
 }
 declare module es {
     class BoxCollider extends Collider {
+        constructor();
         width: number;
         height: number;
-        constructor();
         setSize(width: number, height: number): this;
         setWidth(width: number): BoxCollider;
         setHeight(height: number): void;
@@ -732,8 +732,8 @@ declare module es {
 }
 declare module es {
     class CircleCollider extends Collider {
-        radius: number;
         constructor(radius?: number);
+        radius: number;
         setRadius(radius: number): CircleCollider;
         toString(): string;
     }
@@ -745,12 +745,12 @@ declare module es {
 }
 declare module es {
     class EntitySystem {
-        private _scene;
         private _entities;
+        constructor(matcher?: Matcher);
+        private _scene;
+        scene: Scene;
         private _matcher;
         readonly matcher: Matcher;
-        scene: Scene;
-        constructor(matcher?: Matcher);
         initialize(): void;
         onChanged(entity: Entity): void;
         add(entity: Entity): void;
@@ -783,8 +783,8 @@ declare module es {
 declare module es {
     abstract class ProcessingSystem extends EntitySystem {
         onChanged(entity: Entity): void;
-        protected process(entities: Entity[]): void;
         abstract processSystem(): any;
+        protected process(entities: Entity[]): void;
     }
 }
 declare module es {
@@ -796,12 +796,12 @@ declare module es {
         andNot(bs: BitSet): void;
         cardinality(): number;
         clear(pos?: number): void;
-        private ensure;
         get(pos: number): boolean;
         intersects(set: BitSet): boolean;
         isEmpty(): boolean;
         nextSetBit(from: number): number;
         set(pos: number, value?: boolean): void;
+        private ensure;
     }
 }
 declare module es {
@@ -879,13 +879,13 @@ declare module es {
         onComponentRemoved(entity: Entity): void;
         onEntityAdded(entity: Entity): void;
         onEntityRemoved(entity: Entity): void;
-        protected notifyEntityChanged(entity: Entity): void;
-        protected removeFromProcessors(entity: Entity): void;
         begin(): void;
         update(): void;
         lateUpdate(): void;
         end(): void;
         getProcessor<T extends EntitySystem>(): T;
+        protected notifyEntityChanged(entity: Entity): void;
+        protected removeFromProcessors(entity: Entity): void;
     }
 }
 declare module es {
@@ -939,13 +939,13 @@ declare module es {
     }
 }
 declare class StringUtils {
+    private static specialSigns;
     static matchChineseWord(str: string): string[];
     static lTrim(target: string): string;
     static rTrim(target: string): string;
     static trim(target: string): string;
     static isWhiteSpace(str: string): boolean;
     static replaceMatch(mainStr: string, targetStr: string, replaceStr: string, caseMark?: boolean): string;
-    private static specialSigns;
     static htmlSpecialChars(str: string, reversion?: boolean): string;
     static zfill(str: string, width?: number): string;
     static reverse(str: string): string;
@@ -969,8 +969,8 @@ declare module es {
         static deltaTime: number;
         static timeScale: number;
         static frameCount: number;
-        private static _lastTime;
         static _timeSinceSceneLoad: any;
+        private static _lastTime;
         static update(currentTime: number): void;
         static sceneChanged(): void;
         static checkEvery(interval: number): boolean;
@@ -998,10 +998,10 @@ declare module es {
 }
 declare module es {
     class GraphicsDevice {
-        private _viewport;
-        readonly viewport: Viewport;
         graphicsCapabilities: GraphicsCapabilities;
         constructor();
+        private _viewport;
+        readonly viewport: Viewport;
         private setup;
     }
 }
@@ -1009,15 +1009,15 @@ declare module es {
     class Viewport {
         private _x;
         private _y;
-        private _width;
-        private _height;
         private _minDepth;
         private _maxDepth;
-        height: number;
+        constructor(x: number, y: number, width: number, height: number);
+        private _width;
         width: number;
+        private _height;
+        height: number;
         readonly aspectRatio: number;
         bounds: Rectangle;
-        constructor(x: number, y: number, width: number, height: number);
     }
 }
 declare module es {
@@ -1035,17 +1035,17 @@ declare module es {
 }
 declare module es {
     class PostProcessor {
+        static default_vert: string;
         enabled: boolean;
         effect: egret.Filter;
         scene: Scene;
         shape: egret.Shape;
-        static default_vert: string;
         constructor(effect?: egret.Filter);
         onAddedToScene(scene: Scene): void;
         process(): void;
         onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
-        protected drawFullscreenQuad(): void;
         unload(): void;
+        protected drawFullscreenQuad(): void;
     }
 }
 declare module es {
@@ -1060,11 +1060,11 @@ declare module es {
         protected constructor(renderOrder: number, camera?: Camera);
         onAddedToScene(scene: Scene): void;
         unload(): void;
-        protected beginRender(cam: Camera): void;
         abstract render(scene: Scene): any;
-        protected renderAfterStateCheck(renderable: IRenderable, cam: Camera): void;
         onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
         compareTo(other: Renderer): number;
+        protected beginRender(cam: Camera): void;
+        protected renderAfterStateCheck(renderable: IRenderable, cam: Camera): void;
     }
 }
 declare module es {
@@ -1081,33 +1081,33 @@ declare module es {
 declare module es {
     class PolyLight extends RenderableComponent {
         power: number;
-        protected _radius: number;
         private _lightEffect;
         private _indices;
-        radius: number;
         constructor(radius: number, color: number, power: number);
-        private computeTriangleIndices;
+        protected _radius: number;
+        radius: number;
         setRadius(radius: number): void;
         render(camera: Camera): void;
         reset(): void;
+        private computeTriangleIndices;
     }
 }
 declare module es {
     abstract class SceneTransition {
-        private _hasPreviousSceneRender;
         loadsNewScene: boolean;
         isNewSceneLoaded: boolean;
-        protected sceneLoadAction: Function;
         onScreenObscured: Function;
         onTransitionCompleted: Function;
-        readonly hasPreviousSceneRender: boolean;
+        protected sceneLoadAction: Function;
         constructor(sceneLoadAction: Function);
+        private _hasPreviousSceneRender;
+        readonly hasPreviousSceneRender: boolean;
         preRender(): void;
         render(): void;
         onBeginTransition(): Promise<void>;
+        tickEffectProgressProperty(filter: egret.CustomFilter, duration: number, easeType: Function, reverseDirection?: boolean): Promise<boolean>;
         protected transitionComplete(): void;
         protected loadNextScene(): Promise<void>;
-        tickEffectProgressProperty(filter: egret.CustomFilter, duration: number, easeType: Function, reverseDirection?: boolean): Promise<boolean>;
     }
 }
 declare module es {
@@ -1125,13 +1125,13 @@ declare module es {
 }
 declare module es {
     class WindTransition extends SceneTransition {
+        duration: number;
+        easeType: (t: number) => number;
         private _mask;
         private _windEffect;
-        duration: number;
+        constructor(sceneLoadAction: Function);
         windSegments: number;
         size: number;
-        easeType: (t: number) => number;
-        constructor(sceneLoadAction: Function);
         onBeginTransition(): Promise<void>;
     }
 }
@@ -1202,14 +1202,14 @@ declare module es {
         readonly center: Vector2;
         location: Vector2;
         size: Vector2;
+        static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
+        static rectEncompassingPoints(points: Vector2[]): Rectangle;
         intersects(value: egret.Rectangle): boolean;
         containsRect(value: Rectangle): boolean;
         getHalfSize(): Vector2;
-        static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
         getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2;
         getClosestPointOnBoundsToOrigin(): Vector2;
         calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
-        static rectEncompassingPoints(points: Vector2[]): Rectangle;
     }
 }
 declare module es {
@@ -1259,9 +1259,9 @@ declare module es {
 }
 declare module es {
     class Physics {
-        private static _spatialHash;
         static spatialHashCellSize: number;
         static readonly allLayers: number;
+        private static _spatialHash;
         static reset(): void;
         static clear(): void;
         static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
@@ -1288,21 +1288,21 @@ declare module es {
 declare module es {
     class Polygon extends Shape {
         points: Vector2[];
-        readonly edgeNormals: Vector2[];
         _areEdgeNormalsDirty: boolean;
-        _edgeNormals: Vector2[];
         _originalPoints: Vector2[];
         _polygonCenter: Vector2;
         isBox: boolean;
         isUnrotated: boolean;
         constructor(points: Vector2[], isBox?: boolean);
-        setPoints(points: Vector2[]): void;
-        recalculateCenterAndEdgeNormals(): void;
-        buildEdgeNormals(): void;
+        _edgeNormals: Vector2[];
+        readonly edgeNormals: Vector2[];
         static buildSymmetricalPolygon(vertCount: number, radius: number): any[];
         static recenterPolygonVerts(points: Vector2[]): void;
         static findPolygonCenter(points: Vector2[]): Vector2;
         static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: number, edgeNormal: Vector2): Vector2;
+        setPoints(points: Vector2[]): void;
+        recalculateCenterAndEdgeNormals(): void;
+        buildEdgeNormals(): void;
         recalculateBounds(collider: Collider): void;
         overlaps(other: Shape): any;
         collidesWithShape(other: Shape, result: CollisionResult): boolean;
@@ -1370,24 +1370,24 @@ declare module es {
         _cellDict: NumberDictionary;
         _tempHashSet: Collider[];
         constructor(cellSize?: number);
-        private cellCoords;
-        private cellAtPosition;
         register(collider: Collider): void;
         remove(collider: Collider): void;
         removeWithBruteForce(obj: Collider): void;
         clear(): void;
         debugDraw(secondsToDisplay: number, textScale?: number): void;
-        private debugDrawCellDetails;
         aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
         overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: any): number;
+        private cellCoords;
+        private cellAtPosition;
+        private debugDrawCellDetails;
     }
     class NumberDictionary {
         _store: Map<string, Collider[]>;
-        private getKey;
         add(x: number, y: number, list: Collider[]): void;
         remove(obj: Collider): void;
         tryGetValue(x: number, y: number): Collider[];
         clear(): void;
+        private getKey;
     }
     class RaycastResultParser {
     }
@@ -1412,8 +1412,8 @@ declare class Base64Utils {
     private static _keyStr;
     private static _keyAll;
     static encode: (input: any) => string;
-    private static _utf8_encode;
     static decode(input: any, isNotStr?: boolean): string;
+    private static _utf8_encode;
     private static _utf8_decode;
     private static getConfKey;
 }
@@ -1450,9 +1450,9 @@ declare module es {
 }
 declare module es {
     class GlobalManager {
+        _enabled: boolean;
         enabled: boolean;
         setEnabled(isEnabled: boolean): void;
-        _enabled: boolean;
         onEnabled(): void;
         onDisabled(): void;
         update(): void;
@@ -1470,31 +1470,29 @@ declare module es {
     class Input {
         private static _init;
         private static _previousTouchState;
-        private static _gameTouchs;
         private static _resolutionOffset;
-        private static _resolutionScale;
         private static _touchIndex;
+        private static _gameTouchs;
+        static readonly gameTouchs: TouchState[];
+        private static _resolutionScale;
+        static readonly resolutionScale: Vector2;
         private static _totalTouchCount;
+        static readonly totalTouchCount: number;
         static readonly touchPosition: Vector2;
         static maxSupportedTouch: number;
-        static readonly resolutionScale: Vector2;
-        static readonly totalTouchCount: number;
-        static readonly gameTouchs: TouchState[];
         static readonly touchPositionDelta: Vector2;
         static initialize(): void;
+        static scaledPosition(position: Vector2): Vector2;
         private static initTouchCache;
         private static touchBegin;
         private static touchMove;
         private static touchEnd;
         private static setpreviousTouchState;
-        static scaledPosition(position: Vector2): Vector2;
     }
 }
 declare class KeyboardUtils {
     static TYPE_KEY_DOWN: number;
     static TYPE_KEY_UP: number;
-    private static keyDownDict;
-    private static keyUpDict;
     static A: string;
     static B: string;
     static C: string;
@@ -1566,13 +1564,15 @@ declare class KeyboardUtils {
     static NUM_LOCK: string;
     static SCROLL_LOCK: string;
     static WINDOWS: string;
+    private static keyDownDict;
+    private static keyUpDict;
     static init(): void;
-    private static onKeyDonwHander;
-    private static onKeyUpHander;
     static registerKey(key: string, fun: Function, thisObj: any, type?: number, ...args: any[]): void;
     static unregisterKey(key: string, type?: number): void;
-    private static keyCodeToString;
     static destroy(): void;
+    private static onKeyDonwHander;
+    private static onKeyUpHander;
+    private static keyCodeToString;
 }
 declare module es {
     class ListPool {
@@ -1609,11 +1609,11 @@ declare class RandomUtils {
     static randint(a: number, b: number): number;
     static randnum(a: number, b: number): number;
     static shuffle(array: any[]): any[];
-    private static _randomCompare;
     static choice(sequence: any): any;
     static sample(sequence: any[], num: number): any[];
     static random(): number;
     static boolean(chance?: number): boolean;
+    private static _randomCompare;
 }
 declare module es {
     class RectangleExt {
@@ -1625,9 +1625,9 @@ declare module es {
         triangleIndices: number[];
         private _triPrev;
         private _triNext;
+        static testPointTriangle(point: Vector2, a: Vector2, b: Vector2, c: Vector2): boolean;
         triangulate(points: Vector2[], arePointsCCW?: boolean): void;
         private initialize;
-        static testPointTriangle(point: Vector2, a: Vector2, b: Vector2, c: Vector2): boolean;
     }
 }
 declare module es {
@@ -1689,12 +1689,12 @@ declare namespace stopwatch {
         getCompletedAndPendingSlices(): Slice[];
         getPendingSlice(): Slice;
         getTime(): number;
-        private calculatePendingSlice;
-        private caculateStopwatchTime;
-        private getSystemTimeOfCurrentStopwatchTime;
         reset(): void;
         start(forceReset?: boolean): void;
         stop(recordPendingSlice?: boolean): number;
+        private calculatePendingSlice;
+        private caculateStopwatchTime;
+        private getSystemTimeOfCurrentStopwatchTime;
         private recordPendingSlice;
     }
     type GetTimeFunc = () => number;
@@ -1721,14 +1721,14 @@ declare module es {
         static readonly barPadding: number;
         static readonly autoAdjustDelay: number;
         private static _instance;
-        static readonly Instance: TimeRuler;
+        targetSampleFrames: number;
+        width: number;
+        enabled: true;
+        showLog: boolean;
         private _frameKey;
         private _logKey;
         private _logs;
         private sampleFrames;
-        targetSampleFrames: number;
-        width: number;
-        enabled: true;
         private _position;
         private _prevLog;
         private _curLog;
@@ -1737,16 +1737,16 @@ declare module es {
         private stopwacth;
         private _markerNameToIdMap;
         private _updateCount;
-        showLog: boolean;
         private _frameAdjust;
         constructor();
-        private onGraphicsDeviceReset;
+        static readonly Instance: TimeRuler;
         startFrame(): void;
         beginMark(markerName: string, color: number, barIndex?: number): void;
         endMark(markerName: string, barIndex?: number): void;
         getAverageTime(barIndex: number, markerName: string): number;
         resetLog(): void;
         render(position?: Vector2, width?: number): void;
+        private onGraphicsDeviceReset;
     }
     class FrameLog {
         bars: MarkerCollection[];

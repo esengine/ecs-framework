@@ -1,11 +1,11 @@
 module es {
     /** 各种辅助方法来辅助绘图 */
     export class DrawUtils {
-        public static drawLine(shape: egret.Shape, start: Vector2, end: Vector2, color: number, thickness: number = 1){
+        public static drawLine(shape: egret.Shape, start: Vector2, end: Vector2, color: number, thickness: number = 1) {
             this.drawLineAngle(shape, start, MathHelper.angleBetweenVectors(start, end), Vector2.distance(start, end), color, thickness);
         }
 
-        public static drawLineAngle(shape: egret.Shape, start: Vector2, radians: number, length: number, color: number, thickness = 1){
+        public static drawLineAngle(shape: egret.Shape, start: Vector2, radians: number, length: number, color: number, thickness = 1) {
             shape.graphics.beginFill(color);
             shape.graphics.drawRect(start.x, start.y, 1, 1);
             shape.graphics.endFill();
@@ -17,11 +17,11 @@ module es {
             shape.rotation = radians;
         }
 
-        public static drawHollowRect(shape: egret.Shape, rect: Rectangle, color: number, thickness = 1){
+        public static drawHollowRect(shape: egret.Shape, rect: Rectangle, color: number, thickness = 1) {
             this.drawHollowRectR(shape, rect.x, rect.y, rect.width, rect.height, color, thickness);
         }
 
-        public static drawHollowRectR(shape: egret.Shape, x: number, y: number, width: number, height: number, color: number, thickness = 1){
+        public static drawHollowRectR(shape: egret.Shape, x: number, y: number, width: number, height: number, color: number, thickness = 1) {
             let tl = new Vector2(x, y).round();
             let tr = new Vector2(x + width, y).round();
             let br = new Vector2(x + width, y + height).round();
@@ -33,9 +33,9 @@ module es {
             this.drawLine(shape, bl, tl, color, thickness);
         }
 
-        public static drawPixel(shape: egret.Shape, position: Vector2, color: number, size: number = 1){
+        public static drawPixel(shape: egret.Shape, position: Vector2, color: number, size: number = 1) {
             let destRect = new Rectangle(position.x, position.y, size, size);
-            if (size != 1){
+            if (size != 1) {
                 destRect.x -= size * 0.5;
                 destRect.y -= size * 0.5;
             }
@@ -45,7 +45,7 @@ module es {
             shape.graphics.endFill();
         }
 
-        public static getColorMatrix(color: number): egret.ColorMatrixFilter{
+        public static getColorMatrix(color: number): egret.ColorMatrixFilter {
             let colorMatrix = [
                 1, 0, 0, 0, 0,
                 0, 1, 0, 0, 0,

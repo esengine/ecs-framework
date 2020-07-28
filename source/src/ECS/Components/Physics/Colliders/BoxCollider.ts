@@ -1,26 +1,10 @@
 ///<reference path="./Collider.ts" />
 module es {
     export class BoxCollider extends Collider {
-        public get width(){
-            return (this.shape as Box).width;
-        }
-
-        public set width(value: number){
-            this.setWidth(value);
-        }
-
-        public get height(){
-            return (this.shape as Box).height;
-        }
-
-        public set height(value: number){
-            this.setHeight(value);
-        }
-
         /**
          * 零参数构造函数要求RenderableComponent在实体上，这样碰撞器可以在实体被添加到场景时调整自身的大小。
          */
-        constructor(){
+        constructor() {
             super();
 
             // 我们在这里插入一个1x1框作为占位符，直到碰撞器在下一阵被添加到实体并可以获得更精确的自动调整大小数据
@@ -28,15 +12,31 @@ module es {
             this._colliderRequiresAutoSizing = true;
         }
 
+        public get width() {
+            return (this.shape as Box).width;
+        }
+
+        public set width(value: number) {
+            this.setWidth(value);
+        }
+
+        public get height() {
+            return (this.shape as Box).height;
+        }
+
+        public set height(value: number) {
+            this.setHeight(value);
+        }
+
         /**
          * 设置BoxCollider的大小
          * @param width
          * @param height
          */
-        public setSize(width: number, height: number){
+        public setSize(width: number, height: number) {
             this._colliderRequiresAutoSizing = false;
             let box = this.shape as Box;
-            if (width != box.width || height != box.height){
+            if (width != box.width || height != box.height) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(width, height);
                 if (this.entity && this._isParentEntityAddedToScene)
@@ -50,10 +50,10 @@ module es {
          * 设置BoxCollider的宽度
          * @param width
          */
-        public setWidth(width: number): BoxCollider{
+        public setWidth(width: number): BoxCollider {
             this._colliderRequiresAutoSizing = false;
             let box = this.shape as Box;
-            if (width != box.width){
+            if (width != box.width) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(width, box.height);
                 if (this.entity && this._isParentEntityAddedToScene)
@@ -67,10 +67,10 @@ module es {
          * 设置BoxCollider的高度
          * @param height
          */
-        public setHeight(height: number){
+        public setHeight(height: number) {
             this._colliderRequiresAutoSizing = false;
             let box = this.shape as Box;
-            if (height != box.height){
+            if (height != box.height) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(box.width, height);
                 if (this.entity && this._isParentEntityAddedToScene)
@@ -78,7 +78,7 @@ module es {
             }
         }
 
-        public toString(){
+        public toString() {
             return `[BoxCollider: bounds: ${this.bounds}]`;
         }
     }

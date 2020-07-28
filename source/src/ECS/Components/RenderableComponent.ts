@@ -9,6 +9,12 @@ module es {
          */
         public displayObject: egret.DisplayObject = new egret.DisplayObject();
         /**
+         * 用于着色器处理精灵
+         */
+        public color: number = 0x000000;
+        protected _areBoundsDirty = true;
+
+        /**
          * renderableComponent的宽度
          * 如果你不重写bounds属性则需要实现这个
          */
@@ -24,11 +30,43 @@ module es {
             return this.bounds.height;
         }
 
+        protected _localOffset: Vector2 = Vector2.zero;
+
+        /**
+         * 从父实体的偏移量。用于向需要特定定位的实体
+         */
+        public get localOffset(): Vector2 {
+            return this._localOffset;
+        }
+
+        /**
+         * 从父实体的偏移量。用于向需要特定定位的实体
+         * @param value
+         */
+        public set localOffset(value: Vector2) {
+            this.setLocalOffset(value);
+        }
+
+        protected _renderLayer: number = 0;
+
+        /**
+         * 较低的渲染层在前面，较高的在后面
+         */
+        public get renderLayer(): number {
+            return this._renderLayer;
+        }
+
+        public set renderLayer(value: number) {
+
+        }
+
+        protected _bounds: Rectangle = new Rectangle();
+
         /**
          * 这个物体的AABB, 用于相机剔除
          */
         public get bounds(): Rectangle {
-            if (this._areBoundsDirty){
+            if (this._areBoundsDirty) {
                 this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, Vector2.zero,
                     this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
                 this._areBoundsDirty = false;
@@ -37,36 +75,7 @@ module es {
             return this._bounds;
         }
 
-        /**
-         * 较低的渲染层在前面，较高的在后面
-         */
-        public get renderLayer(): number{
-            return this._renderLayer;
-        }
-
-        public set renderLayer(value: number){
-
-        }
-
-        /**
-         * 用于着色器处理精灵
-         */
-        public color: number = 0x000000;
-
-        /**
-         * 从父实体的偏移量。用于向需要特定定位的实体
-         */
-        public get localOffset(): Vector2{
-            return this._localOffset;
-        }
-
-        /**
-         * 从父实体的偏移量。用于向需要特定定位的实体
-         * @param value
-         */
-        public set localOffset(value: Vector2){
-            this.setLocalOffset(value);
-        }
+        private _isVisible: boolean;
 
         /**
          * 可渲染的可见性。状态的改变会调用onBecameVisible/onBecameInvisible方法
@@ -80,7 +89,7 @@ module es {
          * @param value
          */
         public set isVisible(value: boolean) {
-            if (this._isVisible != value){
+            if (this._isVisible != value) {
                 this._isVisible = value;
 
                 if (this._isVisible)
@@ -89,12 +98,6 @@ module es {
                     this.onBecameInvisible();
             }
         }
-
-        protected _localOffset: Vector2 = Vector2.zero;
-        protected _renderLayer: number = 0;
-        protected _bounds: Rectangle = new Rectangle();
-        private _isVisible: boolean;
-        protected _areBoundsDirty = true;
 
         public onEntityTransformChanged(comp: transform.Component) {
             this._areBoundsDirty = true;
@@ -105,22 +108,6 @@ module es {
          * @param camera
          */
         public abstract render(camera: Camera);
-
-        /**
-         * 当renderableComponent进入相机框架时调用
-         * 如果渲染器不适用isVisibleFromCamera进行剔除检查 这些方法不会被调用
-         */
-        protected onBecameVisible() {
-            this.displayObject.visible = this.isVisible;
-        }
-
-        /**
-         * 当renderableComponent离开相机框架时调用
-         * 如果渲染器不适用isVisibleFromCamera进行剔除检查 这些方法不会被调用
-         */
-        protected onBecameInvisible() {
-            this.displayObject.visible = this.isVisible;
-        }
 
         /**
          * 如果renderableComponent的边界与camera.bounds相交 返回true
@@ -137,8 +124,8 @@ module es {
          * 较低的渲染层在前面，较高的在后面
          * @param renderLayer
          */
-        public setRenderLayer(renderLayer: number): RenderableComponent{
-            if (renderLayer != this._renderLayer){
+        public setRenderLayer(renderLayer: number): RenderableComponent {
+            if (renderLayer != this._renderLayer) {
                 let oldRenderLayer = this._renderLayer;
                 this._renderLayer = renderLayer;
 
@@ -154,7 +141,7 @@ module es {
          * 用于着色器处理精灵
          * @param color
          */
-        public setColor(color: number): RenderableComponent{
+        public setColor(color: number): RenderableComponent {
             this.color = color;
             return this;
         }
@@ -163,8 +150,8 @@ module es {
          * 从父实体的偏移量。用于向需要特定定位的实体
          * @param offset
          */
-        public setLocalOffset(offset: Vector2): RenderableComponent{
-            if (this._localOffset != offset){
+        public setLocalOffset(offset: Vector2): RenderableComponent {
+            if (this._localOffset != offset) {
                 this._localOffset = offset;
             }
 
@@ -174,7 +161,7 @@ module es {
         /**
          * 进行状态同步
          */
-        public sync(camera: Camera){
+        public sync(camera: Camera) {
             this.displayObject.x = this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x;
             this.displayObject.y = this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y;
             this.displayObject.scaleX = this.entity.scale.x;
@@ -182,8 +169,24 @@ module es {
             this.displayObject.rotation = this.entity.rotation;
         }
 
-        public toString(){
+        public toString() {
             return `[RenderableComponent] renderLayer: ${this.renderLayer}`;
+        }
+
+        /**
+         * 当renderableComponent进入相机框架时调用
+         * 如果渲染器不适用isVisibleFromCamera进行剔除检查 这些方法不会被调用
+         */
+        protected onBecameVisible() {
+            this.displayObject.visible = this.isVisible;
+        }
+
+        /**
+         * 当renderableComponent离开相机框架时调用
+         * 如果渲染器不适用isVisibleFromCamera进行剔除检查 这些方法不会被调用
+         */
+        protected onBecameInvisible() {
+            this.displayObject.visible = this.isVisible;
         }
     }
 }

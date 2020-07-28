@@ -9,7 +9,7 @@ module es {
     export class Mover extends Component {
         private _triggerHelper: ColliderTriggerHelper;
 
-        public onAddedToEntity(){
+        public onAddedToEntity() {
             this._triggerHelper = new ColliderTriggerHelper(this.entity);
         }
 
@@ -18,14 +18,14 @@ module es {
          * @param motion
          * @param collisionResult
          */
-        public calculateMovement(motion: Vector2, collisionResult: CollisionResult): boolean{
-            if (!this.entity.getComponent(Collider) || !this._triggerHelper){
+        public calculateMovement(motion: Vector2, collisionResult: CollisionResult): boolean {
+            if (!this.entity.getComponent(Collider) || !this._triggerHelper) {
                 return false;
             }
 
             // 移动所有的非触发碰撞器并获得最近的碰撞
             let colliders: Collider[] = this.entity.getComponents(Collider);
-            for (let i = 0; i < colliders.length; i ++){
+            for (let i = 0; i < colliders.length; i++) {
                 let collider = colliders[i];
 
                 // 不检测触发器 在我们移动后会重新访问它
@@ -38,19 +38,19 @@ module es {
                 bounds.y += motion.y;
                 let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
 
-                for (let j = 0; j < neighbors.length; j ++){
+                for (let j = 0; j < neighbors.length; j++) {
                     let neighbor = neighbors[j];
                     // 不检测触发器
                     if (neighbor.isTrigger)
                         continue;
 
                     let _internalcollisionResult: CollisionResult = new CollisionResult();
-                    if (collider.collidesWith(neighbor, motion, _internalcollisionResult)){
+                    if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
                         // 如果碰撞 则退回之前的移动量
                         motion = motion.subtract(_internalcollisionResult.minimumTranslationVector);
 
                         // 如果我们碰到多个对象，为了简单起见，只取第一个。
-                        if (_internalcollisionResult.collider != null){
+                        if (_internalcollisionResult.collider != null) {
                             collisionResult = _internalcollisionResult;
                         }
                     }
@@ -66,7 +66,7 @@ module es {
          *  将calculatemomovement应用到实体并更新triggerHelper
          * @param motion
          */
-        public applyMovement(motion: Vector2){
+        public applyMovement(motion: Vector2) {
             // 移动实体到它的新位置，如果我们有一个碰撞，否则移动全部数量。当碰撞发生时，运动被更新
             this.entity.position = Vector2.add(this.entity.position, motion);
 
@@ -80,7 +80,7 @@ module es {
          * @param motion
          * @param collisionResult
          */
-        public move(motion: Vector2, collisionResult: CollisionResult){
+        public move(motion: Vector2, collisionResult: CollisionResult) {
             this.calculateMovement(motion, collisionResult);
             this.applyMovement(motion);
             return collisionResult.collider != null;

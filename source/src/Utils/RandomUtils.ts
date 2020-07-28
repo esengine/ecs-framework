@@ -43,36 +43,32 @@ class RandomUtils {
     }
 
     /**
-    * 返回 a - b之间的随机数，不包括  Math.max(a, b)
-    * @param a
-    * @param b
-    * @return 假设 a < b, [a, b)
-    */
+     * 返回 a - b之间的随机数，不包括  Math.max(a, b)
+     * @param a
+     * @param b
+     * @return 假设 a < b, [a, b)
+     */
     public static randnum(a: number, b: number): number {
         return this.random() * (b - a) + a;
     }
 
     /**
-    * 打乱数组
-    * @param array
-    * @return
-    */
+     * 打乱数组
+     * @param array
+     * @return
+     */
     public static shuffle(array: any[]): any[] {
         array.sort(this._randomCompare);
         return array;
     }
 
-    private static _randomCompare(a: Object, b: Object): number {
-        return (this.random() > .5) ? 1 : -1;
-    }
-
     /**
-    * 从序列中随机取一个元素
-    * @param sequence 可以是 数组、 vector，等只要是有length属性，并且可以用数字索引获取元素的对象，
-    *                 另外，字符串也是允许的。
-    * @return 序列中的某一个元素
-    *
-    */
+     * 从序列中随机取一个元素
+     * @param sequence 可以是 数组、 vector，等只要是有length属性，并且可以用数字索引获取元素的对象，
+     *                 另外，字符串也是允许的。
+     * @return 序列中的某一个元素
+     *
+     */
     public static choice(sequence: any): any {
         if (!sequence.hasOwnProperty("length"))
             throw new Error('无法对此对象执行此操作');
@@ -82,7 +78,6 @@ class RandomUtils {
         else
             return sequence[index];
     }
-
 
     /**
      * 对列表中的元素进行随机采æ ?
@@ -125,10 +120,14 @@ class RandomUtils {
 
     /**
      * 计算概率
-     * @param	chance 概率
+     * @param    chance 概率
      * @return
      */
     public static boolean(chance: number = .5): boolean {
         return (this.random() < chance) ? true : false;
+    }
+
+    private static _randomCompare(a: Object, b: Object): number {
+        return (this.random() > .5) ? 1 : -1;
     }
 }

@@ -12,6 +12,46 @@ module es {
     }
 
     export class Camera extends Component {
+        public _inset: CameraInset = new CameraInset();
+        public _areMatrixedDirty: boolean = true;
+        public _areBoundsDirty: boolean = true;
+        public _isProjectionMatrixDirty = true;
+        /**
+         * 如果相机模式为cameraWindow 则会进行缓动移动
+         * 该值为移动速度
+         */
+        public followLerp = 0.1;
+        /**
+         * 在cameraWindow模式下，宽度/高度被用做边界框，允许在不移动相机的情况下移动
+         * 在lockOn模式下，只使用deadZone的x/y值 你可以通过直接setCenteredDeadzone重写它来自定义deadZone
+         */
+        public deadzone: Rectangle = new Rectangle();
+        /**
+         * 相机聚焦于屏幕中心的偏移
+         */
+        public focusOffset: Vector2 = Vector2.zero;
+        /**
+         * 如果为true 相机位置则不会超出地图矩形（0, 0, mapwidth, mapheight）
+         */
+        public mapLockEnabled: boolean = false;
+        /**
+         * 當前地圖映射的寬度和高度
+         */
+        public mapSize: Vector2 = Vector2.zero;
+        public _targetEntity: Entity;
+        public _targetCollider: Collider;
+        public _desiredPositionDelta: Vector2 = new Vector2();
+        public _cameraStyle: CameraStyle;
+        public _worldSpaceDeadZone: Rectangle = new Rectangle();
+
+        constructor(targetEntity: Entity = null, cameraStyle: CameraStyle = CameraStyle.lockOn) {
+            super();
+
+            this._targetEntity = targetEntity;
+            this._cameraStyle = cameraStyle;
+            this.setZoom(0);
+        }
+
         /**
          * 对entity.transform.position的快速访问
          */
@@ -42,6 +82,8 @@ module es {
             this.entity.transform.rotation = value;
         }
 
+        public _zoom;
+
         /**
          * 缩放值应该在-1和1之间、然后将该值从minimumZoom转换为maximumZoom。
          * 允许你设置适当的最小/最大值，然后使用更直观的-1到1的映射来更改缩放
@@ -65,6 +107,8 @@ module es {
             this.setZoom(value);
         }
 
+        public _minimumZoom = 0.3;
+
         /**
          * 相机变焦可以达到的最小非缩放值（0-number.max）。默认为0.3
          */
@@ -79,6 +123,8 @@ module es {
         public set minimumZoom(value: number) {
             this.setMinimumZoom(value);
         }
+
+        public _maximumZoom = 3;
 
         /**
          * 相机变焦可以达到的最大非缩放值（0-number.max）。默认为3
@@ -95,20 +141,22 @@ module es {
             this.setMaximumZoom(value);
         }
 
+        public _bounds: Rectangle = new Rectangle();
+
         /**
          * 相机的世界-空间边界
          */
-        public get bounds(){
+        public get bounds() {
             if (this._areMatrixedDirty)
                 this.updateMatrixes();
 
-            if (this._areBoundsDirty){
+            if (this._areBoundsDirty) {
                 // 旋转或非旋转的边界都需要左上角和右下角
                 let topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
                 let bottomRight = this.screenToWorldPoint(new Vector2(Core.graphicsDevice.viewport.width - this._inset.right,
                     Core.graphicsDevice.viewport.height - this._inset.bottom));
 
-                if (this.entity.transform.rotation != 0){
+                if (this.entity.transform.rotation != 0) {
                     // 特别注意旋转的边界。我们需要找到绝对的最小/最大值并从中创建边界
                     let topRight = this.screenToWorldPoint(new Vector2(Core.graphicsDevice.viewport.width - this._inset.right,
                         this._inset.top));
@@ -135,6 +183,8 @@ module es {
             return this._bounds;
         }
 
+        public _transformMatrix: Matrix2D = new Matrix2D().identity();
+
         /**
          * 用于从世界坐标转换到屏幕
          */
@@ -144,6 +194,8 @@ module es {
             return this._transformMatrix;
         }
 
+        public _inverseTransformMatrix: Matrix2D = new Matrix2D().identity();
+
         /**
          * 用于从屏幕坐标到世界的转换
          */
@@ -152,6 +204,8 @@ module es {
                 this.updateMatrixes();
             return this._inverseTransformMatrix;
         }
+
+        public _origin: Vector2 = Vector2.zero;
 
         public get origin() {
             return this._origin;
@@ -164,56 +218,6 @@ module es {
             }
         }
 
-        public _zoom;
-        public _minimumZoom = 0.3;
-        public _maximumZoom = 3;
-        public _bounds: Rectangle = new Rectangle();
-        public _inset: CameraInset = new CameraInset();
-        public _transformMatrix: Matrix2D = new Matrix2D().identity();
-        public _inverseTransformMatrix: Matrix2D = new Matrix2D().identity();
-        public _origin: Vector2 = Vector2.zero;
-
-        public _areMatrixedDirty: boolean = true;
-        public _areBoundsDirty: boolean = true;
-        public _isProjectionMatrixDirty = true;
-
-        /**
-         * 如果相机模式为cameraWindow 则会进行缓动移动
-         * 该值为移动速度
-         */
-        public followLerp = 0.1;
-        /**
-         * 在cameraWindow模式下，宽度/高度被用做边界框，允许在不移动相机的情况下移动
-         * 在lockOn模式下，只使用deadZone的x/y值 你可以通过直接setCenteredDeadzone重写它来自定义deadZone
-         */
-        public deadzone: Rectangle = new Rectangle();
-        /**
-         * 相机聚焦于屏幕中心的偏移
-         */
-        public focusOffset: Vector2 = Vector2.zero;
-        /**
-         * 如果为true 相机位置则不会超出地图矩形（0, 0, mapwidth, mapheight）
-         */
-        public mapLockEnabled: boolean = false;
-        /**
-         * 當前地圖映射的寬度和高度
-         */
-        public mapSize: Vector2 = Vector2.zero;
-
-        public _targetEntity: Entity;
-        public _targetCollider: Collider;
-        public _desiredPositionDelta: Vector2 = new Vector2();
-        public _cameraStyle: CameraStyle;
-        public _worldSpaceDeadZone: Rectangle = new Rectangle();
-
-        constructor(targetEntity: Entity = null, cameraStyle: CameraStyle = CameraStyle.lockOn) {
-            super();
-
-            this._targetEntity = targetEntity;
-            this._cameraStyle = cameraStyle;
-            this.setZoom(0);
-        }
-
         /**
          * 当场景渲染目标的大小发生变化时，我们会更新相机的原点并调整它的位置以保持它原来的位置
          * @param newWidth
@@ -224,33 +228,6 @@ module es {
             this.origin = new Vector2(newWidth / 2, newHeight / 2);
 
             this.entity.transform.position = Vector2.add(this.entity.transform.position, Vector2.subtract(this._origin, oldOrigin));
-        }
-
-        protected updateMatrixes(){
-            if (!this._areMatrixedDirty)
-                return;
-
-            let tempMat: Matrix2D;
-            this._transformMatrix = Matrix2D.create().translate(-this.entity.transform.position.x, -this.entity.transform.position.y);
-
-            if (this._zoom != 1){
-                tempMat = Matrix2D.create().scale(this._zoom, this._zoom);
-                this._transformMatrix = this._transformMatrix.multiply(tempMat);
-            }
-
-            if (this.entity.transform.rotation != 0){
-                tempMat = Matrix2D.create().rotate(this.entity.transform.rotation);
-                this._transformMatrix = this._transformMatrix.multiply(tempMat);
-            }
-
-            tempMat = Matrix2D.create().translate(this._origin.x, this._origin.y);
-            this._transformMatrix =this._transformMatrix.multiply(tempMat);
-
-            this._inverseTransformMatrix = this._transformMatrix.invert();
-
-            // 无论何时矩阵改变边界都是无效的
-            this._areBoundsDirty = true;
-            this._areMatrixedDirty = false;
         }
 
         /**
@@ -357,7 +334,7 @@ module es {
          * 将一个点从世界坐标转换到屏幕
          * @param worldPosition
          */
-        public worldToScreenPoint(worldPosition: Vector2): Vector2{
+        public worldToScreenPoint(worldPosition: Vector2): Vector2 {
             this.updateMatrixes();
             worldPosition = Vector2.transform(worldPosition, this._transformMatrix);
             return worldPosition;
@@ -367,7 +344,7 @@ module es {
          * 将点从屏幕坐标转换为世界坐标
          * @param screenPosition
          */
-        public screenToWorldPoint(screenPosition: Vector2): Vector2{
+        public screenToWorldPoint(screenPosition: Vector2): Vector2 {
             this.updateMatrixes();
             screenPosition = Vector2.transform(screenPosition, this._inverseTransformMatrix);
             return screenPosition;
@@ -376,7 +353,7 @@ module es {
         /**
          * 返回鼠标在世界空间中的位置
          */
-        public mouseToWorldPoint(): Vector2{
+        public mouseToWorldPoint(): Vector2 {
             return this.screenToWorldPoint(Input.touchPosition);
         }
 
@@ -475,6 +452,33 @@ module es {
          */
         public setCenteredDeadzone(width: number, height: number) {
             this.deadzone = new Rectangle((this.bounds.width - width) / 2, (this.bounds.height - height) / 2, width, height);
+        }
+
+        protected updateMatrixes() {
+            if (!this._areMatrixedDirty)
+                return;
+
+            let tempMat: Matrix2D;
+            this._transformMatrix = Matrix2D.create().translate(-this.entity.transform.position.x, -this.entity.transform.position.y);
+
+            if (this._zoom != 1) {
+                tempMat = Matrix2D.create().scale(this._zoom, this._zoom);
+                this._transformMatrix = this._transformMatrix.multiply(tempMat);
+            }
+
+            if (this.entity.transform.rotation != 0) {
+                tempMat = Matrix2D.create().rotate(this.entity.transform.rotation);
+                this._transformMatrix = this._transformMatrix.multiply(tempMat);
+            }
+
+            tempMat = Matrix2D.create().translate(this._origin.x, this._origin.y);
+            this._transformMatrix = this._transformMatrix.multiply(tempMat);
+
+            this._inverseTransformMatrix = this._transformMatrix.invert();
+
+            // 无论何时矩阵改变边界都是无效的
+            this._areBoundsDirty = true;
+            this._areMatrixedDirty = false;
         }
     }
 }

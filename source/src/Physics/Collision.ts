@@ -88,42 +88,42 @@ module es {
             return vx * vx + vy * vy < cRadius * cRadius;
         }
 
-        public static isRectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2){
+        public static isRectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2) {
             let fromSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineFrom);
             let toSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineTo);
 
-            if (fromSector == PointSectors.center || toSector == PointSectors.center){
+            if (fromSector == PointSectors.center || toSector == PointSectors.center) {
                 return true;
-            } else if((fromSector & toSector) != 0){
+            } else if ((fromSector & toSector) != 0) {
                 return false;
-            } else{
+            } else {
                 let both = fromSector | toSector;
                 // 线对边进行检查
                 let edgeFrom: Vector2;
                 let edgeTo: Vector2;
 
-                if ((both & PointSectors.top) != 0){
+                if ((both & PointSectors.top) != 0) {
                     edgeFrom = new Vector2(rect.x, rect.y);
                     edgeTo = new Vector2(rect.x + rect.width, rect.y);
                     if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
                         return true;
                 }
 
-                if ((both & PointSectors.bottom) != 0){
+                if ((both & PointSectors.bottom) != 0) {
                     edgeFrom = new Vector2(rect.x, rect.y + rect.height);
                     edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
                     if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
                         return true;
                 }
 
-                if ((both & PointSectors.left) != 0){
+                if ((both & PointSectors.left) != 0) {
                     edgeFrom = new Vector2(rect.x, rect.y);
                     edgeTo = new Vector2(rect.x, rect.y + rect.height);
                     if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
                         return true;
                 }
 
-                if ((both & PointSectors.right) != 0){
+                if ((both & PointSectors.right) != 0) {
                     edgeFrom = new Vector2(rect.x + rect.width, rect.y);
                     edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
                     if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))

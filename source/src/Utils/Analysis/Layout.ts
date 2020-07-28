@@ -6,30 +6,30 @@ module es {
         public clientArea: Rectangle;
         public safeArea: Rectangle;
 
-        constructor(){
+        constructor() {
             this.clientArea = new Rectangle(0, 0, Core.graphicsDevice.viewport.width, Core.graphicsDevice.viewport.height);
             this.safeArea = this.clientArea;
         }
 
-        public place(size: Vector2, horizontalMargin: number, verticalMargine: number, alignment: Alignment){
+        public place(size: Vector2, horizontalMargin: number, verticalMargine: number, alignment: Alignment) {
             let rc = new Rectangle(0, 0, size.x, size.y);
-            if ((alignment & Alignment.left) != 0){
+            if ((alignment & Alignment.left) != 0) {
                 rc.x = this.clientArea.x + (this.clientArea.width * horizontalMargin);
-            }else if((alignment & Alignment.right) != 0){
+            } else if ((alignment & Alignment.right) != 0) {
                 rc.x = this.clientArea.x + (this.clientArea.width * (1 - horizontalMargin)) - rc.width;
-            } else if((alignment & Alignment.horizontalCenter) != 0){
+            } else if ((alignment & Alignment.horizontalCenter) != 0) {
                 rc.x = this.clientArea.x + (this.clientArea.width - rc.width) / 2 + (horizontalMargin * this.clientArea.width);
-            }else{
+            } else {
 
             }
 
-            if ((alignment & Alignment.top) != 0){
+            if ((alignment & Alignment.top) != 0) {
                 rc.y = this.clientArea.y + (this.clientArea.height * verticalMargine);
-            }else if((alignment & Alignment.bottom) != 0){
+            } else if ((alignment & Alignment.bottom) != 0) {
                 rc.y = this.clientArea.y + (this.clientArea.height * (1 - verticalMargine)) - rc.height;
-            } else if((alignment & Alignment.verticalCenter) != 0){
+            } else if ((alignment & Alignment.verticalCenter) != 0) {
                 rc.y = this.clientArea.y + (this.clientArea.height - rc.height) / 2 + (verticalMargine * this.clientArea.height);
-            }else{
+            } else {
 
             }
 

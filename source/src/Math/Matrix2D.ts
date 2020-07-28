@@ -1,57 +1,69 @@
 module es {
     export var matrixPool = [];
+
     /**
      * 表示右手3 * 3的浮点矩阵，可以存储平移、缩放和旋转信息。
      */
-    export class Matrix2D extends egret.Matrix{
-        public get m11(): number{
+    export class Matrix2D extends egret.Matrix {
+        public get m11(): number {
             return this.a;
         }
-        public set m11(value: number){
+
+        public set m11(value: number) {
             this.a = value;
         }
-        public get m12(): number{
+
+        public get m12(): number {
             return this.b;
         }
-        public set m12(value: number){
+
+        public set m12(value: number) {
             this.b = value;
         }
-        public get m21(): number{
+
+        public get m21(): number {
             return this.c;
         }
-        public set m21(value: number){
+
+        public set m21(value: number) {
             this.c = value;
         }
-        public get m22(): number{
+
+        public get m22(): number {
             return this.d;
         }
-        public set m22(value: number){
+
+        public set m22(value: number) {
             this.d = value;
         }
+
         public get m31(): number {
             return this.tx;
         }
-        public set m31(value: number){
+
+        public set m31(value: number) {
             this.tx = value;
         }
-        public get m32(): number{
+
+        public get m32(): number {
             return this.ty;
         }
-        public set m32(value: number){
+
+        public set m32(value: number) {
             this.ty = value;
         }
 
         /**
          * 从对象池中取出或创建一个新的Matrix对象。
          */
-        public static create(): Matrix2D{
+        public static create(): Matrix2D {
             let matrix = matrixPool.pop();
             if (!matrix)
                 matrix = new Matrix2D();
             return matrix;
         }
 
-        public identity(): Matrix2D{
+        public identity(): Matrix2D {
             this.a = this.d = 1;
             this.b = this.c = this.tx = this.ty = 0;
             return this;
@@ -64,12 +76,12 @@ module es {
         }
 
         public scale(sx: number, sy: number): Matrix2D {
-            if (sx !== 1){
+            if (sx !== 1) {
                 this.a *= sx;
                 this.c *= sx;
                 this.tx *= sx;
             }
-            if (sy !== 1){
+            if (sy !== 1) {
                 this.b *= sy;
                 this.d *= sy;
                 this.ty *= sy;
@@ -108,7 +120,7 @@ module es {
          * 创建一个新的matrix, 它包含两个矩阵的和。
          * @param matrix
          */
-        public add(matrix: Matrix2D): Matrix2D{
+        public add(matrix: Matrix2D): Matrix2D {
             this.m11 += matrix.m11;
             this.m12 += matrix.m12;
 
@@ -134,7 +146,7 @@ module es {
             return this;
         }
 
-        public divide(matrix: Matrix2D): Matrix2D{
+        public divide(matrix: Matrix2D): Matrix2D {
             this.m11 /= matrix.m11;
             this.m12 /= matrix.m12;
 
@@ -147,15 +159,15 @@ module es {
             return this;
         }
 
-        public multiply(matrix: Matrix2D): Matrix2D{
-            let m11 = ( this.m11 * matrix.m11 ) + ( this.m12 * matrix.m21 );
-            let m12 = ( this.m11 * matrix.m12 ) + ( this.m12 * matrix.m22 );
+        public multiply(matrix: Matrix2D): Matrix2D {
+            let m11 = (this.m11 * matrix.m11) + (this.m12 * matrix.m21);
+            let m12 = (this.m11 * matrix.m12) + (this.m12 * matrix.m22);
 
-            let m21 = ( this.m21 * matrix.m11 ) + ( this.m22 * matrix.m21 );
-            let m22 = ( this.m21 * matrix.m12 ) + ( this.m22 * matrix.m22 );
+            let m21 = (this.m21 * matrix.m11) + (this.m22 * matrix.m21);
+            let m22 = (this.m21 * matrix.m12) + (this.m22 * matrix.m22);
 
-            let m31 = ( this.m31 * matrix.m11 ) + ( this.m32 * matrix.m21 ) + matrix.m31;
-            let m32 = ( this.m31 * matrix.m12 ) + ( this.m32 * matrix.m22 ) + matrix.m32;
+            let m31 = (this.m31 * matrix.m11) + (this.m32 * matrix.m21) + matrix.m31;
+            let m32 = (this.m31 * matrix.m12) + (this.m32 * matrix.m22) + matrix.m32;
 
             this.m11 = m11;
             this.m12 = m12;
@@ -169,7 +181,7 @@ module es {
             return this;
         }
 
-        public determinant(){
+        public determinant() {
             return this.m11 * this.m22 - this.m12 * this.m21;
         }
 
