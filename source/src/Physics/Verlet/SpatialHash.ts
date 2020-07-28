@@ -231,7 +231,7 @@ module es {
          * @param y
          */
         private getKey(x: number, y: number): string {
-            return Long.fromNumber(x).shiftLeft(32).or(Long.fromNumber(y, false)).toString();
+            return Long.fromNumber(x).shiftLeft(32).or(Long.fromNumber(y, true)).toString();
         }
 
         public add(x: number, y: number, list: Collider[]) {

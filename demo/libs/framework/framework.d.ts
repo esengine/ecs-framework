@@ -1196,6 +1196,8 @@ declare module es {
 }
 declare module es {
     class Rectangle extends egret.Rectangle {
+        _tempMat: Matrix2D;
+        _transformMat: Matrix2D;
         readonly max: Vector2;
         readonly center: Vector2;
         location: Vector2;
@@ -1207,7 +1209,6 @@ declare module es {
         getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2;
         getClosestPointOnBoundsToOrigin(): Vector2;
         calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
-        setEgretRect(rect: egret.Rectangle): Rectangle;
         static rectEncompassingPoints(points: Vector2[]): Rectangle;
     }
 }

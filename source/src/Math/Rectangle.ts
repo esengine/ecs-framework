@@ -1,5 +1,7 @@
 module es {
     export class Rectangle extends egret.Rectangle {
+        public _tempMat: Matrix2D;
+        public _transformMat: Matrix2D;
         /**
          * 获取矩形的最大点，即右下角
          */
@@ -141,22 +143,45 @@ module es {
         }
 
         public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number){
-            this.x = parentPosition.x + position.x - origin.x * scale.x;
-            this.y = parentPosition.y + position.y - origin.y * scale.y;
-            this.width = width * scale.x;
-            this.height = height * scale.y;
-        }
+            if (rotation == 0){
+                this.x = parentPosition.x + position.x - origin.x * scale.x;
+                this.y = parentPosition.y + position.y - origin.y * scale.y;
+                this.width = width * scale.x;
+                this.height = height * scale.y;
+            } else {
+                // 特别注意旋转的边界。我们需要找到绝对的最小/最大值并从中创建边界
+                let worldPosX = parentPosition.x + position.x;
+                let worldPosY = parentPosition.y + position.y;
 
-        /**
-         * 将egret矩形转化为Rectangle
-         * @param rect
-         */
-        public setEgretRect(rect: egret.Rectangle): Rectangle{
-            this.x = rect.x;
-            this.y = rect.y;
-            this.width = rect.width;
-            this.height = rect.height;
-            return this;
+                // 将参考点设置为世界参考
+                this._transformMat = Matrix2D.create().translate(-worldPosX - origin.x, -worldPosY - origin.y);
+                this._tempMat = Matrix2D.create().scale(scale.x, scale.y);
+                this._transformMat = this._transformMat.multiply(this._tempMat);
+                this._tempMat = Matrix2D.create().rotate(rotation);
+                this._transformMat = this._transformMat.multiply(this._tempMat);
+                this._tempMat = Matrix2D.create().translate(worldPosX, worldPosY);
+                this._transformMat = this._transformMat.multiply(this._tempMat);
+
+                // TODO: 这有点傻。我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角
+                let topLeft = new Vector2(worldPosX, worldPosY);
+                let topRight = new Vector2(worldPosX + width, worldPosY);
+                let bottomLeft = new Vector2(worldPosX, worldPosY + height);
+                let bottomRight = new Vector2(worldPosX + width, worldPosY + height);
+
+                topLeft = Vector2Ext.transformR(topLeft, this._transformMat);
+                topRight = Vector2Ext.transformR(topRight, this._transformMat);
+                bottomLeft = Vector2Ext.transformR(bottomLeft, this._transformMat);
+                bottomRight = Vector2Ext.transformR(bottomRight, this._transformMat);
+
+                let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                let minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                let maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+
+                this.location = new Vector2(minX, minY);
+                this.width = maxX - minX;
+                this.height = maxY - minY;
+            }
         }
 
         /**

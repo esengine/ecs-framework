@@ -5675,17 +5675,38 @@ var es;
             return boundsPoint;
         };
         Rectangle.prototype.calculateBounds = function (parentPosition, position, origin, scale, rotation, width, height) {
-            this.x = parentPosition.x + position.x - origin.x * scale.x;
-            this.y = parentPosition.y + position.y - origin.y * scale.y;
-            this.width = width * scale.x;
-            this.height = height * scale.y;
-        };
-        Rectangle.prototype.setEgretRect = function (rect) {
-            this.x = rect.x;
-            this.y = rect.y;
-            this.width = rect.width;
-            this.height = rect.height;
-            return this;
+            if (rotation == 0) {
+                this.x = parentPosition.x + position.x - origin.x * scale.x;
+                this.y = parentPosition.y + position.y - origin.y * scale.y;
+                this.width = width * scale.x;
+                this.height = height * scale.y;
+            }
+            else {
+                var worldPosX = parentPosition.x + position.x;
+                var worldPosY = parentPosition.y + position.y;
+                this._transformMat = es.Matrix2D.create().translate(-worldPosX - origin.x, -worldPosY - origin.y);
+                this._tempMat = es.Matrix2D.create().scale(scale.x, scale.y);
+                this._transformMat = this._transformMat.multiply(this._tempMat);
+                this._tempMat = es.Matrix2D.create().rotate(rotation);
+                this._transformMat = this._transformMat.multiply(this._tempMat);
+                this._tempMat = es.Matrix2D.create().translate(worldPosX, worldPosY);
+                this._transformMat = this._transformMat.multiply(this._tempMat);
+                var topLeft = new es.Vector2(worldPosX, worldPosY);
+                var topRight = new es.Vector2(worldPosX + width, worldPosY);
+                var bottomLeft = new es.Vector2(worldPosX, worldPosY + height);
+                var bottomRight = new es.Vector2(worldPosX + width, worldPosY + height);
+                topLeft = es.Vector2Ext.transformR(topLeft, this._transformMat);
+                topRight = es.Vector2Ext.transformR(topRight, this._transformMat);
+                bottomLeft = es.Vector2Ext.transformR(bottomLeft, this._transformMat);
+                bottomRight = es.Vector2Ext.transformR(bottomRight, this._transformMat);
+                var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                var maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                this.location = new es.Vector2(minX, minY);
+                this.width = maxX - minX;
+                this.height = maxY - minY;
+            }
         };
         Rectangle.rectEncompassingPoints = function (points) {
             var minX = Number.POSITIVE_INFINITY;
@@ -6620,7 +6641,7 @@ var es;
             this._store = new Map();
         }
         NumberDictionary.prototype.getKey = function (x, y) {
-            return Long.fromNumber(x).shiftLeft(32).or(Long.fromNumber(y, false)).toString();
+            return Long.fromNumber(x).shiftLeft(32).or(Long.fromNumber(y, true)).toString();
         };
         NumberDictionary.prototype.add = function (x, y, list) {
             this._store.set(this.getKey(x, y), list);

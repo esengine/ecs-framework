@@ -19,11 +19,11 @@ module scene {
             bg.addComponent(new es.BoxCollider());
             bg.position = new es.Vector2(Math.random() * 200, Math.random() * 200);
 
-            for (let i = 0; i < 1; i++) {
+            for (let i = 0; i < 20; i++) {
                 let sprite = new es.Sprite(RES.getRes("checkbox_select_disabled_png"));
                 let player2 = this.createEntity("player2");
                 player2.addComponent(new es.SpriteRenderer()).setSprite(sprite);
-                player2.position = new es.Vector2(Math.random() * 100, Math.random() * 100);
+                player2.position = new es.Vector2(Math.random() * 1000, Math.random() * 1000);
                 player2.addComponent(new es.BoxCollider());
             }
 
