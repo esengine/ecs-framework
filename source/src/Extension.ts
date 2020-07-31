@@ -3,55 +3,55 @@ declare interface Array<T> {
      * 获取满足表达式的数组元素索引
      * @param predicate 表达式
      */
-    findIndex(predicate: Function): number;
+    findIndex(predicate: (c: T)=>boolean): number;
 
     /**
      * 是否存在满足表达式的数组元素
      * @param predicate 表达式
      */
-    any(predicate: Function): boolean;
+    any(predicate: (c: T) => boolean): boolean;
 
     /**
      * 获取满足表达式的第一个或默认数组元素
      * @param predicate 表达式
      */
-    firstOrDefault(predicate: Function): T;
+    firstOrDefault(predicate: (c: T)=>boolean): T;
 
     /**
      * 获取满足表达式的第一个数组元素
      * @param predicate 表达式
      */
-    find(predicate: Function): T;
+    find(predicate: (c: T) => boolean): T;
 
     /**
      * 筛选满足表达式的数组元素
      * @param predicate 表达式
      */
-    where(predicate: Function): Array<T>;
+    where(predicate: (c: T) => boolean): Array<T>;
 
     /**
      * 获取满足表达式的数组元素的计数
      * @param predicate 表达式
      */
-    count(predicate: Function): number;
+    count(predicate: (c: T) => boolean): number;
 
     /**
      * 获取满足表达式的数组元素的数组
      * @param predicate 表达式
      */
-    findAll(predicate: Function): Array<T>;
+    findAll(predicate: (c: T) => boolean): Array<T>;
 
     /**
      * 是否有获取满足表达式的数组元素
      * @param value 值
      */
-    contains(value): boolean;
+    contains(value: T): boolean;
 
     /**
      * 移除满足表达式的数组元素
      * @param predicate 表达式
      */
-    removeAll(predicate: Function): void;
+    removeAll(predicate: (c: T) => boolean): void;
 
     /**
      * 移除数组元素
@@ -63,14 +63,14 @@ declare interface Array<T> {
      * 移除特定索引数组元素
      * @param index 索引
      */
-    removeAt(index): void;
+    removeAt(index: number): void;
 
     /**
      * 移除范围数组元素
      * @param index 开始索引
      * @param count 删除的个数
      */
-    removeRange(index, count): void;
+    removeRange(index: number, count: number): void;
 
     /**
      * 获取通过选择器转换的数组
@@ -102,7 +102,7 @@ declare interface Array<T> {
      * 求和
      * @param selector  选择器
      */
-    sum(selector);
+    sum(selector: Function): number;
 }
 
 Array.prototype.findIndex = function (predicate) {
@@ -189,6 +189,11 @@ Array.prototype.findAll = function (predicate) {
 Array.prototype.contains = function (value) {
     function contains(array, value) {
         for (let i = 0, len = array.length; i < len; i++) {
+            if (array[i] instanceof egret.HashObject && value instanceof egret.HashObject){
+                if ((array[i] as egret.HashObject).hashCode == (value as egret.HashObject).hashCode)
+                    return true;
+            }
+
             if (array[i] == value) {
                 return true;
             }

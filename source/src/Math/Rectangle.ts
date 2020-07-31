@@ -81,6 +81,51 @@ module es {
                 this.top < value.bottom;
         }
 
+        public rayIntersects(ray: Ray2D): number{
+            let distance = 0;
+            let maxValue = Number.MAX_VALUE;
+
+            if (Math.abs(ray.direction.x) < 1E-06){
+                if ((ray.start.x < this.x) || (ray.start.x > this.x + this.width))
+                    return distance;
+            }else{
+                let num11 = 1 / ray.direction.x;
+                let num8 = (this.x - ray.start.x) * num11;
+                let num7 = (this.x + this.width - ray.start.x) * num11;
+                if (num8 > num7){
+                    let num14 = num8;
+                    num8 = num7;
+                    num7 = num14;
+                }
+
+                distance = Math.max(num8, distance);
+                maxValue = Math.min(num7, maxValue);
+                if (distance > maxValue)
+                    return distance;
+            }
+
+            if (Math.abs(ray.direction.y) < 1E-06){
+                if ((ray.start.y < this.y) || (ray.start.y > this.y + this.height))
+                    return distance;
+            }else{
+                let num10 = 1 / ray.direction.y;
+                let num6 = (this.y - ray.start.y) * num10;
+                let num5 = (this.y + this.height - ray.start.y) * num10;
+                if (num6 > num5){
+                    let num13 = num6;
+                    num6 = num5;
+                    num5 = num13;
+                }
+
+                distance = Math.max(num6, distance);
+                maxValue = Math.max(num5, maxValue);
+                if (distance > maxValue)
+                    return distance;
+            }
+
+            return distance;
+        }
+
         /**
          * 获取所提供的矩形是否在此矩形的边界内
          * @param value
