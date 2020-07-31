@@ -744,6 +744,7 @@ var es;
             var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
             this.x *= val;
             this.y *= val;
+            return this;
         };
         Vector2.prototype.length = function () {
             return Math.sqrt((this.x * this.x) + (this.y * this.y));
@@ -5639,6 +5640,9 @@ var es;
                 (this.y <= value.y)) &&
                 (value.y < (this.y + this.height)));
         };
+        Rectangle.prototype.contains = function (x, y) {
+            return ((((this.x <= x) && (x < (this.x + this.width))) && (this.y <= y)) && (y < (this.y + this.height)));
+        };
         Rectangle.prototype.getHalfSize = function () {
             return new es.Vector2(this.width * 0.5, this.height * 0.5);
         };
@@ -6025,6 +6029,37 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var RaycastHit = (function () {
+        function RaycastHit(collider, fraction, distance, point, normal) {
+            this.fraction = 0;
+            this.distance = 0;
+            this.point = es.Vector2.zero;
+            this.normal = es.Vector2.zero;
+            this.collider = collider;
+            this.fraction = fraction;
+            this.distance = distance;
+            this.point = point;
+            this.centroid = es.Vector2.zero;
+        }
+        RaycastHit.prototype.setValues = function (collider, fraction, distance, point) {
+            this.collider = collider;
+            this.fraction = fraction;
+            this.distance = distance;
+            this.point = point;
+        };
+        RaycastHit.prototype.reset = function () {
+            this.collider = null;
+            this.fraction = this.distance = 0;
+        };
+        RaycastHit.prototype.toString = function () {
+            return "[RaycastHit] fraction: " + this.fraction + ", distance: " + this.distance + ", normal: " + this.normal + ", centroid: " + this.centroid + ", point: " + this.point;
+        };
+        return RaycastHit;
+    }());
+    es.RaycastHit = RaycastHit;
+})(es || (es = {}));
+var es;
+(function (es) {
     var Shape = (function () {
         function Shape() {
         }
@@ -6056,48 +6091,6 @@ var es;
             enumerable: true,
             configurable: true
         });
-        Polygon.buildSymmetricalPolygon = function (vertCount, radius) {
-            var verts = new Array(vertCount);
-            for (var i = 0; i < vertCount; i++) {
-                var a = 2 * Math.PI * (i / vertCount);
-                verts[i] = new es.Vector2(Math.cos(a), Math.sin(a) * radius);
-            }
-            return verts;
-        };
-        Polygon.recenterPolygonVerts = function (points) {
-            var center = this.findPolygonCenter(points);
-            for (var i = 0; i < points.length; i++)
-                points[i] = es.Vector2.subtract(points[i], center);
-        };
-        Polygon.findPolygonCenter = function (points) {
-            var x = 0, y = 0;
-            for (var i = 0; i < points.length; i++) {
-                x += points[i].x;
-                y += points[i].y;
-            }
-            return new es.Vector2(x / points.length, y / points.length);
-        };
-        Polygon.getClosestPointOnPolygonToPoint = function (points, point, distanceSquared, edgeNormal) {
-            distanceSquared = Number.MAX_VALUE;
-            edgeNormal = new es.Vector2(0, 0);
-            var closestPoint = new es.Vector2(0, 0);
-            var tempDistanceSquared;
-            for (var i = 0; i < points.length; i++) {
-                var j = i + 1;
-                if (j == points.length)
-                    j = 0;
-                var closest = es.ShapeCollisions.closestPointOnLine(points[i], points[j], point);
-                tempDistanceSquared = es.Vector2.distanceSquared(point, closest);
-                if (tempDistanceSquared < distanceSquared) {
-                    distanceSquared = tempDistanceSquared;
-                    closestPoint = closest;
-                    var line = es.Vector2.subtract(points[j], points[i]);
-                    edgeNormal = new es.Vector2(-line.y, line.x);
-                }
-            }
-            edgeNormal = es.Vector2Ext.normalize(edgeNormal);
-            return closestPoint;
-        };
         Polygon.prototype.setPoints = function (points) {
             this.points = points;
             this.recalculateCenterAndEdgeNormals();
@@ -6124,6 +6117,68 @@ var es;
                 var perp = es.Vector2Ext.perpendicular(p1, p2);
                 perp = es.Vector2.normalize(perp);
                 this._edgeNormals[i] = perp;
+            }
+        };
+        Polygon.buildSymmetricalPolygon = function (vertCount, radius) {
+            var verts = new Array(vertCount);
+            for (var i = 0; i < vertCount; i++) {
+                var a = 2 * Math.PI * (i / vertCount);
+                verts[i] = es.Vector2.multiply(new es.Vector2(Math.cos(a), Math.sin(a)), new es.Vector2(radius));
+            }
+            return verts;
+        };
+        Polygon.recenterPolygonVerts = function (points) {
+            var center = this.findPolygonCenter(points);
+            for (var i = 0; i < points.length; i++)
+                points[i] = es.Vector2.subtract(points[i], center);
+        };
+        Polygon.findPolygonCenter = function (points) {
+            var x = 0, y = 0;
+            for (var i = 0; i < points.length; i++) {
+                x += points[i].x;
+                y += points[i].y;
+            }
+            return new es.Vector2(x / points.length, y / points.length);
+        };
+        Polygon.getFarthestPointInDirection = function (points, direction) {
+            var index = 0;
+            var maxDot = es.Vector2.dot(points[index], direction);
+            for (var i = 1; i < points.length; i++) {
+                var dot = es.Vector2.dot(points[i], direction);
+                if (dot > maxDot) {
+                    maxDot = dot;
+                    index = i;
+                }
+            }
+            return points[index];
+        };
+        Polygon.getClosestPointOnPolygonToPoint = function (points, point, distanceSquared, edgeNormal) {
+            distanceSquared = Number.MAX_VALUE;
+            edgeNormal = new es.Vector2(0, 0);
+            var closestPoint = new es.Vector2(0, 0);
+            var tempDistanceSquared;
+            for (var i = 0; i < points.length; i++) {
+                var j = i + 1;
+                if (j == points.length)
+                    j = 0;
+                var closest = es.ShapeCollisions.closestPointOnLine(points[i], points[j], point);
+                tempDistanceSquared = es.Vector2.distanceSquared(point, closest);
+                if (tempDistanceSquared < distanceSquared) {
+                    distanceSquared = tempDistanceSquared;
+                    closestPoint = closest;
+                    var line = es.Vector2.subtract(points[j], points[i]);
+                    edgeNormal = new es.Vector2(-line.y, line.x);
+                }
+            }
+            es.Vector2Ext.normalize(edgeNormal);
+            return closestPoint;
+        };
+        Polygon.rotatePolygonVerts = function (radians, originalPoints, rotatedPoints) {
+            var cos = Math.cos(radians);
+            var sin = Math.sign(radians);
+            for (var i = 0; i < originalPoints.length; i++) {
+                var position = originalPoints[i];
+                rotatedPoints[i] = new es.Vector2(position.x * cos + position.y * -sin, position.x * sin + position.y * cos);
             }
         };
         Polygon.prototype.recalculateBounds = function (collider) {
@@ -6236,7 +6291,7 @@ var es;
         };
         Box.prototype.overlaps = function (other) {
             if (this.isUnrotated) {
-                if (other instanceof Box)
+                if (other instanceof Box && other.isUnrotated)
                     return this.bounds.intersects(other.bounds);
                 if (other instanceof es.Circle)
                     return es.Collisions.isRectToCircle(this.bounds, other.position, other.radius);
@@ -6253,6 +6308,11 @@ var es;
             if (this.isUnrotated)
                 return this.bounds.contains(point.x, point.y);
             return _super.prototype.containsPoint.call(this, point);
+        };
+        Box.prototype.pointCollidesWithShape = function (point, result) {
+            if (this.isUnrotated)
+                return es.ShapeCollisions.pointToBox(point, this, result);
+            return _super.prototype.pointCollidesWithShape.call(this, point, result);
         };
         return Box;
     }(es.Polygon));
@@ -6317,13 +6377,26 @@ var es;
 (function (es) {
     var CollisionResult = (function () {
         function CollisionResult() {
-            this.minimumTranslationVector = es.Vector2.zero;
             this.normal = es.Vector2.zero;
+            this.minimumTranslationVector = es.Vector2.zero;
             this.point = es.Vector2.zero;
         }
+        CollisionResult.prototype.removeHorizontal = function (deltaMovement) {
+            if (Math.sign(this.normal.x) != Math.sign(deltaMovement.x) || (deltaMovement.x == 0 && this.normal.x != 0)) {
+                var responseDistance = this.minimumTranslationVector.length();
+                var fix = responseDistance / this.normal.y;
+                if (Math.abs(this.normal.x) != 1 && Math.abs(fix) < Math.abs(deltaMovement.y * 3)) {
+                    this.minimumTranslationVector = new es.Vector2(0, -fix);
+                }
+            }
+        };
         CollisionResult.prototype.invertResult = function () {
             this.minimumTranslationVector = es.Vector2.negate(this.minimumTranslationVector);
             this.normal = es.Vector2.negate(this.normal);
+            return this;
+        };
+        CollisionResult.prototype.toString = function () {
+            return "[CollisionResult] normal: " + this.normal + ", minimumTranslationVector: " + this.minimumTranslationVector;
         };
         return CollisionResult;
     }());
@@ -6458,6 +6531,14 @@ var es;
             }
             return false;
         };
+        ShapeCollisions.pointToBox = function (point, box, result) {
+            if (box.containsPoint(point)) {
+                result.point = box.bounds.getClosestPointOnRectangleBorderToPoint(point, result.normal);
+                result.minimumTranslationVector = es.Vector2.subtract(point, result.point);
+                return true;
+            }
+            return false;
+        };
         ShapeCollisions.closestPointOnLine = function (lineA, lineB, closestTo) {
             var v = es.Vector2.subtract(lineB, lineA);
             var w = es.Vector2.subtract(closestTo, lineA);
@@ -6495,7 +6576,7 @@ var es;
                 if (result.minimumTranslationVector.equals(es.Vector2.zero))
                     return false;
                 result.normal = new es.Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
-                result.normal.normalize();
+                result.normal = result.normal.normalize();
                 return true;
             }
             return false;

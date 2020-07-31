@@ -71,7 +71,7 @@ module es {
         }
 
         /**
-         * 是否与另一个矩形相交
+         * 如果其他相交矩形返回true
          * @param value
          */
         public intersects(value: egret.Rectangle) {
@@ -89,6 +89,10 @@ module es {
             return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
                 (this.y <= value.y)) &&
                 (value.y < (this.y + this.height)));
+        }
+
+        public contains(x: number, y: number): boolean{
+            return ((((this.x <= x) && (x < (this.x + this.width))) && (this.y <= y)) && (y < (this.y + this.height)));
         }
 
         public getHalfSize() {

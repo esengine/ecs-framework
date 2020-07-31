@@ -56,7 +56,7 @@ module es {
         public overlaps(other: Shape) {
             // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
             if (this.isUnrotated) {
-                if (other instanceof Box)
+                if (other instanceof Box && other.isUnrotated)
                     return this.bounds.intersects(other.bounds);
 
                 if (other instanceof Circle)
@@ -82,6 +82,13 @@ module es {
                 return this.bounds.contains(point.x, point.y);
 
             return super.containsPoint(point);
+        }
+
+        public pointCollidesWithShape(point: es.Vector2, result: es.CollisionResult): boolean {
+            if (this.isUnrotated)
+                return ShapeCollisions.pointToBox(point, this, result);
+
+            return super.pointCollidesWithShape(point, result);
         }
     }
 }

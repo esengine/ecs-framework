@@ -47,85 +47,6 @@ module es {
         }
 
         /**
-         * 建立一个对称的多边形(六边形，八角形，n角形)并返回点
-         * @param vertCount
-         * @param radius
-         */
-        public static buildSymmetricalPolygon(vertCount: number, radius: number) {
-            let verts = new Array(vertCount);
-
-            for (let i = 0; i < vertCount; i++) {
-                let a = 2 * Math.PI * (i / vertCount);
-                verts[i] = new Vector2(Math.cos(a), Math.sin(a) * radius);
-            }
-
-            return verts;
-        }
-
-        /**
-         * 重定位多边形的点
-         * @param points
-         */
-        public static recenterPolygonVerts(points: Vector2[]) {
-            let center = this.findPolygonCenter(points);
-            for (let i = 0; i < points.length; i++)
-                points[i] = Vector2.subtract(points[i], center);
-        }
-
-        /**
-         * 找到多边形的中心。注意，这对于正则多边形是准确的。不规则多边形没有中心。
-         * @param points
-         */
-        public static findPolygonCenter(points: Vector2[]) {
-            let x = 0, y = 0;
-
-            for (let i = 0; i < points.length; i++) {
-                x += points[i].x;
-                y += points[i].y;
-            }
-
-            return new Vector2(x / points.length, y / points.length);
-        }
-
-        /**
-         * 迭代多边形的所有边，并得到任意边上离点最近的点。
-         * 通过最近点的平方距离和它所在的边的法线返回。
-         * 点应该在多边形的空间中(点-多边形.位置)
-         * @param points
-         * @param point
-         * @param distanceSquared
-         * @param edgeNormal
-         */
-        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: number, edgeNormal: Vector2): Vector2 {
-            distanceSquared = Number.MAX_VALUE;
-            edgeNormal = new Vector2(0, 0);
-            let closestPoint = new Vector2(0, 0);
-
-            let tempDistanceSquared;
-            for (let i = 0; i < points.length; i++) {
-                let j = i + 1;
-                if (j == points.length)
-                    j = 0;
-
-                let closest = ShapeCollisions.closestPointOnLine(points[i], points[j], point);
-                tempDistanceSquared = Vector2.distanceSquared(point, closest);
-
-                if (tempDistanceSquared < distanceSquared) {
-                    distanceSquared = tempDistanceSquared;
-                    closestPoint = closest;
-
-                    // 求直线的法线
-                    let line = Vector2.subtract(points[j], points[i]);
-                    edgeNormal = new Vector2(-line.y, line.x);
-                }
-            }
-
-            edgeNormal = Vector2Ext.normalize(edgeNormal);
-
-            return closestPoint;
-        }
-
-        /**
          * 重置点并重新计算中心和边缘法线
          * @param points
          */
@@ -169,6 +90,121 @@ module es {
                 let perp = Vector2Ext.perpendicular(p1, p2);
                 perp = Vector2.normalize(perp);
                 this._edgeNormals[i] = perp;
+            }
+        }
+
+        /**
+         * 建立一个对称的多边形(六边形，八角形，n角形)并返回点
+         * @param vertCount
+         * @param radius
+         */
+        public static buildSymmetricalPolygon(vertCount: number, radius: number) {
+            let verts = new Array(vertCount);
+
+            for (let i = 0; i < vertCount; i++) {
+                let a = 2 * Math.PI * (i / vertCount);
+                verts[i] = Vector2.multiply(new Vector2(Math.cos(a), Math.sin(a)), new Vector2(radius));
+            }
+
+            return verts;
+        }
+
+        /**
+         * 重定位多边形的点
+         * @param points
+         */
+        public static recenterPolygonVerts(points: Vector2[]) {
+            let center = this.findPolygonCenter(points);
+            for (let i = 0; i < points.length; i++)
+                points[i] = Vector2.subtract(points[i], center);
+        }
+
+        /**
+         * 找到多边形的中心。注意，这对于正则多边形是准确的。不规则多边形没有中心。
+         * @param points
+         */
+        public static findPolygonCenter(points: Vector2[]) {
+            let x = 0, y = 0;
+
+            for (let i = 0; i < points.length; i++) {
+                x += points[i].x;
+                y += points[i].y;
+            }
+
+            return new Vector2(x / points.length, y / points.length);
+        }
+
+        /**
+         * 不知道辅助顶点，所以取每个顶点，如果你知道辅助顶点，执行climbing算法
+         * @param points
+         * @param direction
+         */
+        public static getFarthestPointInDirection(points: Vector2[], direction: Vector2): Vector2{
+            let index = 0;
+            let maxDot = Vector2.dot(points[index], direction);
+
+            for (let i = 1; i < points.length; i ++){
+                let dot = Vector2.dot(points[i], direction);
+                if (dot > maxDot){
+                    maxDot = dot;
+                    index = i;
+                }
+            }
+
+            return points[index];
+        }
+
+        /**
+         * 迭代多边形的所有边，并得到任意边上离点最近的点。
+         * 通过最近点的平方距离和它所在的边的法线返回。
+         * 点应该在多边形的空间中(点-多边形.位置)
+         * @param points
+         * @param point
+         * @param distanceSquared
+         * @param edgeNormal
+         */
+        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: number, edgeNormal: Vector2): Vector2 {
+            distanceSquared = Number.MAX_VALUE;
+            edgeNormal = new Vector2(0, 0);
+            let closestPoint = new Vector2(0, 0);
+
+            let tempDistanceSquared;
+            for (let i = 0; i < points.length; i++) {
+                let j = i + 1;
+                if (j == points.length)
+                    j = 0;
+
+                let closest = ShapeCollisions.closestPointOnLine(points[i], points[j], point);
+                tempDistanceSquared = Vector2.distanceSquared(point, closest);
+
+                if (tempDistanceSquared < distanceSquared) {
+                    distanceSquared = tempDistanceSquared;
+                    closestPoint = closest;
+
+                    // 求直线的法线
+                    let line = Vector2.subtract(points[j], points[i]);
+                    edgeNormal = new Vector2(-line.y, line.x);
+                }
+            }
+
+            Vector2Ext.normalize(edgeNormal);
+
+            return closestPoint;
+        }
+
+        /**
+         * 旋转原始点并复制旋转的值到旋转的点
+         * @param radians
+         * @param originalPoints
+         * @param rotatedPoints
+         */
+        public static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints){
+            let cos = Math.cos(radians);
+            let sin = Math.sign(radians);
+
+            for (let i = 0; i < originalPoints.length; i ++){
+                let position = originalPoints[i];
+                rotatedPoints[i] = new Vector2(position.x * cos + position.y * -sin, position.x * sin + position.y * cos);
             }
         }
 

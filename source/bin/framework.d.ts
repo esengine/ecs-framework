@@ -130,7 +130,7 @@ declare module es {
         divide(value: Vector2): Vector2;
         multiply(value: Vector2): Vector2;
         subtract(value: Vector2): this;
-        normalize(): void;
+        normalize(): this;
         length(): number;
         round(): Vector2;
         equals(other: Vector2): boolean;
@@ -1206,6 +1206,7 @@ declare module es {
         static rectEncompassingPoints(points: Vector2[]): Rectangle;
         intersects(value: egret.Rectangle): boolean;
         containsRect(value: Rectangle): boolean;
+        contains(x: number, y: number): boolean;
         getHalfSize(): Vector2;
         getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2;
         getClosestPointOnBoundsToOrigin(): Vector2;
@@ -1274,6 +1275,20 @@ declare module es {
     }
 }
 declare module es {
+    class RaycastHit {
+        collider: Collider;
+        fraction: number;
+        distance: number;
+        point: Vector2;
+        normal: Vector2;
+        centroid: Vector2;
+        constructor(collider: Collider, fraction: number, distance: number, point: Vector2, normal: Vector2);
+        setValues(collider: Collider, fraction: number, distance: number, point: Vector2): void;
+        reset(): void;
+        toString(): string;
+    }
+}
+declare module es {
     abstract class Shape {
         position: Vector2;
         center: Vector2;
@@ -1296,13 +1311,15 @@ declare module es {
         constructor(points: Vector2[], isBox?: boolean);
         _edgeNormals: Vector2[];
         readonly edgeNormals: Vector2[];
-        static buildSymmetricalPolygon(vertCount: number, radius: number): any[];
-        static recenterPolygonVerts(points: Vector2[]): void;
-        static findPolygonCenter(points: Vector2[]): Vector2;
-        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: number, edgeNormal: Vector2): Vector2;
         setPoints(points: Vector2[]): void;
         recalculateCenterAndEdgeNormals(): void;
         buildEdgeNormals(): void;
+        static buildSymmetricalPolygon(vertCount: number, radius: number): any[];
+        static recenterPolygonVerts(points: Vector2[]): void;
+        static findPolygonCenter(points: Vector2[]): Vector2;
+        static getFarthestPointInDirection(points: Vector2[], direction: Vector2): Vector2;
+        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: number, edgeNormal: Vector2): Vector2;
+        static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints: any): void;
         recalculateBounds(collider: Collider): void;
         overlaps(other: Shape): any;
         collidesWithShape(other: Shape, result: CollisionResult): boolean;
@@ -1320,6 +1337,7 @@ declare module es {
         overlaps(other: Shape): any;
         collidesWithShape(other: Shape, result: CollisionResult): boolean;
         containsPoint(point: Vector2): boolean;
+        pointCollidesWithShape(point: es.Vector2, result: es.CollisionResult): boolean;
     }
 }
 declare module es {
@@ -1336,10 +1354,12 @@ declare module es {
 declare module es {
     class CollisionResult {
         collider: Collider;
-        minimumTranslationVector: Vector2;
         normal: Vector2;
+        minimumTranslationVector: Vector2;
         point: Vector2;
-        invertResult(): void;
+        removeHorizontal(deltaMovement: Vector2): void;
+        invertResult(): this;
+        toString(): string;
     }
 }
 declare module es {
@@ -1353,6 +1373,7 @@ declare module es {
         static circleToPolygon(circle: Circle, polygon: Polygon, result: CollisionResult): boolean;
         static circleToBox(circle: Circle, box: Box, result: CollisionResult): boolean;
         static pointToCircle(point: Vector2, circle: Circle, result: CollisionResult): boolean;
+        static pointToBox(point: Vector2, box: Box, result: CollisionResult): boolean;
         static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
         static pointToPoly(point: Vector2, poly: Polygon, result: CollisionResult): boolean;
         static circleToCircle(first: Circle, second: Circle, result: CollisionResult): boolean;

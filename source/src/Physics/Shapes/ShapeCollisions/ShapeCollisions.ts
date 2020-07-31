@@ -205,6 +205,18 @@ module es {
             return false;
         }
 
+        public static pointToBox(point: Vector2, box: Box, result: CollisionResult){
+            if (box.containsPoint(point)){
+                // 在方框的空间里找到点
+                result.point = box.bounds.getClosestPointOnRectangleBorderToPoint(point, result.normal);
+                result.minimumTranslationVector = Vector2.subtract(point, result.point);
+
+                return true;
+            }
+
+            return false;
+        }
+
         /**
          *
          * @param lineA
@@ -277,7 +289,7 @@ module es {
                     return false;
 
                 result.normal = new Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
-                result.normal.normalize();
+                result.normal = result.normal.normalize();
 
                 return true;
             }
@@ -285,7 +297,7 @@ module es {
             return false;
         }
 
-        private static minkowskiDifference(first: Box, second: Box) {
+        private static minkowskiDifference(first: Box, second: Box): Rectangle {
             // 我们需要第一个框的左上角
             // 碰撞器只会修改运动的位置所以我们需要用位置来计算出运动是什么。
             let positionOffset = Vector2.subtract(first.position, Vector2.add(first.bounds.location, Vector2.divide(first.bounds.size, new Vector2(2))));
