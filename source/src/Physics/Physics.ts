@@ -9,6 +9,10 @@ module es {
          * raycast是否检测配置为触发器的碰撞器
          */
         public static raycastsHitTriggers: boolean = false;
+        /**
+         * 在碰撞器中开始的射线/直线是否强制转换检测到那些碰撞器
+         */
+        public static raycastsStartInColliders = false;
 
         public static reset() {
             this._spatialHash = new SpatialHash(this.spatialHashCellSize);

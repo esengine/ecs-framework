@@ -219,6 +219,13 @@ module es {
             return Math.sqrt((this.x * this.x) + (this.y * this.y));
         }
 
+        /**
+         * 返回其长度的平方
+         */
+        public lengthSquared(): number {
+            return (this.x * this.x) + (this.y * this.y);
+        }
+
         /** 对x和y值四舍五入 */
         public round(): Vector2 {
             return new Vector2(Math.round(this.x), Math.round(this.y));

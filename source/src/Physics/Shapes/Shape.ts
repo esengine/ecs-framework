@@ -21,6 +21,10 @@ module es {
 
         public abstract collidesWithShape(other: Shape, collisionResult: CollisionResult): boolean;
 
+        public abstract collidesWithLine(start: Vector2, end: Vector2, hit: RaycastHit): boolean;
+
+        public abstract containsPoint(point: Vector2);
+
         public abstract pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
 
         public clone(): Shape {

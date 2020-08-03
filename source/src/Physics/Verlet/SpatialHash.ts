@@ -274,7 +274,7 @@ module es {
         public _ray: Ray2D;
         public _layerMask: number;
 
-        public start(ray: Ray2D, hits: RaycastHit[], layerMask: number){
+        public start(ray: Ray2D, hits: RaycastHit[], layerMask: number) {
             this._ray = ray;
             this._hits = hits;
             this._layerMask = layerMask;
@@ -287,9 +287,9 @@ module es {
          * @param cellY
          * @param cell
          */
-        public checkRayIntersection(cellX: number, cellY: number, cell: Collider[]): boolean{
-            let fraction: number;
-            for (let i = 0; i < cell.length; i ++) {
+        public checkRayIntersection(cellX: number, cellY: number, cell: Collider[]): boolean {
+            let fraction: number = 0;
+            for (let i = 0; i < cell.length; i++) {
                 let potential = cell[i];
 
                 // 管理我们已经处理过的碰撞器
@@ -309,8 +309,42 @@ module es {
                 // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
                 // 在做形状测试之前先做一个边界检查
                 let colliderBounds = potential.bounds;
-                if (colliderBounds.)
+                let fraction = colliderBounds.rayIntersects(this._ray);
+                if (fraction <= 1) {
+                    if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
+                        // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
+                        if (!Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
+                            continue;
+
+                        // TODO: 确保碰撞点在当前单元格中，如果它没有保存它以供以后计算
+
+                        this._tempHit.collider = potential;
+                        this._cellHits.push(this._tempHit);
+                    }
+                }
             }
+
+            if (this._cellHits.length == 0)
+                return false;
+
+            // 所有处理单元完成。对结果进行排序并将命中结果打包到结果数组中
+            this._cellHits.sort(RaycastResultParser.compareRaycastHits);
+            for (let i = 0; i < this._cellHits.length; i ++){
+                this._hits[this.hitCounter] = this._cellHits[i];
+
+                // 增加命中计数器，如果它已经达到数组大小的限制，我们就完成了
+                this.hitCounter ++;
+                if (this.hitCounter == this._hits.length)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public reset(){
+            this._hits = null;
+            this._checkedColliders.length = 0;
+            this._cellHits.length = 0;
         }
     }
 }

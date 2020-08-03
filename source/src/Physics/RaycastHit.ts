@@ -45,6 +45,13 @@ module es {
             this.point = point;
         }
 
+        public setValuesNonCollider(fraction: number, distance: number, point: Vector2, normal: Vector2){
+            this.fraction = fraction;
+            this.distance = distance;
+            this.point = point;
+            this.normal = normal;
+        }
+
         public reset(){
             this.collider = null;
             this.fraction = this.distance = 0;

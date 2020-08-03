@@ -291,6 +291,10 @@ module es {
             throw new Error(`overlaps of Polygon to ${other} are not supported`);
         }
 
+        public collidesWithLine(start: es.Vector2, end: es.Vector2, hit: es.RaycastHit): boolean {
+            return ShapeCollisions.lineToPoly(start, end, this, hit);
+        }
+
         /**
          * 本质上，这个算法所做的就是从一个点发射一条射线。
          * 如果它与奇数条多边形边相交，我们就知道它在多边形内部。

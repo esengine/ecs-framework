@@ -1,21 +1,21 @@
 declare interface Array<T> {
-    findIndex(predicate: Function): number;
-    any(predicate: Function): boolean;
-    firstOrDefault(predicate: Function): T;
-    find(predicate: Function): T;
-    where(predicate: Function): Array<T>;
-    count(predicate: Function): number;
-    findAll(predicate: Function): Array<T>;
-    contains(value: any): boolean;
-    removeAll(predicate: Function): void;
+    findIndex(predicate: (c: T) => boolean): number;
+    any(predicate: (c: T) => boolean): boolean;
+    firstOrDefault(predicate: (c: T) => boolean): T;
+    find(predicate: (c: T) => boolean): T;
+    where(predicate: (c: T) => boolean): Array<T>;
+    count(predicate: (c: T) => boolean): number;
+    findAll(predicate: (c: T) => boolean): Array<T>;
+    contains(value: T): boolean;
+    removeAll(predicate: (c: T) => boolean): void;
     remove(element: T): boolean;
-    removeAt(index: any): void;
-    removeRange(index: any, count: any): void;
+    removeAt(index: number): void;
+    removeRange(index: number, count: number): void;
     select(selector: Function): Array<T>;
     orderBy(keySelector: Function, comparer: Function): Array<T>;
     orderByDescending(keySelector: Function, comparer: Function): Array<T>;
     groupBy(keySelector: Function): Array<T>;
-    sum(selector: any): any;
+    sum(selector: Function): number;
 }
 declare module es {
     class PriorityQueueNode {
@@ -132,6 +132,7 @@ declare module es {
         subtract(value: Vector2): this;
         normalize(): this;
         length(): number;
+        lengthSquared(): number;
         round(): Vector2;
         equals(other: Vector2): boolean;
     }
@@ -226,7 +227,7 @@ declare module es {
     }
 }
 declare module es {
-    abstract class Component {
+    abstract class Component extends egret.HashObject {
         entity: Entity;
         updateInterval: number;
         readonly transform: Transform;
@@ -1205,6 +1206,7 @@ declare module es {
         static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
         static rectEncompassingPoints(points: Vector2[]): Rectangle;
         intersects(value: egret.Rectangle): boolean;
+        rayIntersects(ray: Ray2D): number;
         containsRect(value: Rectangle): boolean;
         contains(x: number, y: number): boolean;
         getHalfSize(): Vector2;
@@ -1263,6 +1265,8 @@ declare module es {
         static spatialHashCellSize: number;
         static readonly allLayers: number;
         private static _spatialHash;
+        static raycastsHitTriggers: boolean;
+        static raycastsStartInColliders: boolean;
         static reset(): void;
         static clear(): void;
         static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
@@ -1275,6 +1279,14 @@ declare module es {
     }
 }
 declare module es {
+    class Ray2D {
+        start: Vector2;
+        end: Vector2;
+        direction: Vector2;
+        constructor(position: Vector2, end: Vector2);
+    }
+}
+declare module es {
     class RaycastHit {
         collider: Collider;
         fraction: number;
@@ -1284,6 +1296,7 @@ declare module es {
         centroid: Vector2;
         constructor(collider: Collider, fraction: number, distance: number, point: Vector2, normal: Vector2);
         setValues(collider: Collider, fraction: number, distance: number, point: Vector2): void;
+        setValuesNonCollider(fraction: number, distance: number, point: Vector2, normal: Vector2): void;
         reset(): void;
         toString(): string;
     }
@@ -1296,6 +1309,8 @@ declare module es {
         abstract recalculateBounds(collider: Collider): any;
         abstract overlaps(other: Shape): boolean;
         abstract collidesWithShape(other: Shape, collisionResult: CollisionResult): boolean;
+        abstract collidesWithLine(start: Vector2, end: Vector2, hit: RaycastHit): boolean;
+        abstract containsPoint(point: Vector2): any;
         abstract pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
         clone(): Shape;
     }
@@ -1323,6 +1338,7 @@ declare module es {
         recalculateBounds(collider: Collider): void;
         overlaps(other: Shape): any;
         collidesWithShape(other: Shape, result: CollisionResult): boolean;
+        collidesWithLine(start: es.Vector2, end: es.Vector2, hit: es.RaycastHit): boolean;
         containsPoint(point: Vector2): boolean;
         pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
     }
@@ -1348,6 +1364,8 @@ declare module es {
         recalculateBounds(collider: es.Collider): void;
         overlaps(other: Shape): any;
         collidesWithShape(other: Shape, result: CollisionResult): boolean;
+        collidesWithLine(start: es.Vector2, end: es.Vector2, hit: es.RaycastHit): boolean;
+        containsPoint(point: es.Vector2): boolean;
         pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
     }
 }
@@ -1360,6 +1378,11 @@ declare module es {
         removeHorizontal(deltaMovement: Vector2): void;
         invertResult(): this;
         toString(): string;
+    }
+}
+declare module es {
+    class RealtimeCollisions {
+        static intersectMovingCircleToBox(s: Circle, b: Box, movement: Vector2): number;
     }
 }
 declare module es {
@@ -1379,6 +1402,10 @@ declare module es {
         static circleToCircle(first: Circle, second: Circle, result: CollisionResult): boolean;
         static boxToBox(first: Box, second: Box, result: CollisionResult): boolean;
         private static minkowskiDifference;
+        static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit: RaycastHit): boolean;
+        static lineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2, intersection: Vector2): boolean;
+        static lineToCircle(start: Vector2, end: Vector2, s: Circle, hit: RaycastHit): boolean;
+        static boxToBoxCast(first: Box, second: Box, movement: Vector2, hit: RaycastHit): boolean;
     }
 }
 declare module es {
@@ -1411,6 +1438,17 @@ declare module es {
         private getKey;
     }
     class RaycastResultParser {
+        hitCounter: number;
+        static compareRaycastHits: (a: RaycastHit, b: RaycastHit) => number;
+        _hits: RaycastHit[];
+        _tempHit: RaycastHit;
+        _checkedColliders: Collider[];
+        _cellHits: RaycastHit[];
+        _ray: Ray2D;
+        _layerMask: number;
+        start(ray: Ray2D, hits: RaycastHit[], layerMask: number): void;
+        checkRayIntersection(cellX: number, cellY: number, cell: Collider[]): boolean;
+        reset(): void;
     }
 }
 declare class ArrayUtils {

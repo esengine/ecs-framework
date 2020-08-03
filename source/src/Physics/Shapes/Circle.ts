@@ -63,6 +63,18 @@ module es {
             throw new Error(`Collisions of Circle to ${other} are not supported`);
         }
 
+        public collidesWithLine(start: es.Vector2, end: es.Vector2, hit: es.RaycastHit): boolean {
+            return ShapeCollisions.lineToCircle(start, end, this, hit);
+        }
+
+        /**
+         * 获取所提供的点是否在此范围内
+         * @param point
+         */
+        public containsPoint(point: es.Vector2) {
+            return (Vector2.subtract(point, this.position)).lengthSquared() <= this.radius * this.radius;
+        }
+
         public pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean {
             return ShapeCollisions.pointToCircle(point, this, result);
         }
