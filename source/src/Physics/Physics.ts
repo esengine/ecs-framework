@@ -5,6 +5,10 @@ module es {
         /** 接受layerMask的所有方法的默认值 */
         public static readonly allLayers: number = -1;
         private static _spatialHash: SpatialHash;
+        /**
+         * raycast是否检测配置为触发器的碰撞器
+         */
+        public static raycastsHitTriggers: boolean = false;
 
         public static reset() {
             this._spatialHash = new SpatialHash(this.spatialHashCellSize);

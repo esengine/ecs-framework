@@ -7,7 +7,7 @@ module es {
      *  删除执行顺序
      *      - onRemovedFromEntity
      */
-    export abstract class Component {
+    export abstract class Component extends egret.HashObject {
         /**
          * 此组件附加的实体
          */

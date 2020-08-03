@@ -52,8 +52,8 @@ module es {
             for (let x = p1.x; x <= p2.x; x++) {
                 for (let y = p1.y; y <= p2.y; y++) {
                     // 如果没有单元格，我们需要创建它
-                    let c = this.cellAtPosition(x, y, true);
-                    if (c.indexOf(collider) == -1)
+                    let c: Collider[] = this.cellAtPosition(x, y, true);
+                    if (!c.firstOrDefault(c => c.hashCode == collider.hashCode))
                         c.push(collider);
                 }
             }
@@ -134,7 +134,7 @@ module es {
                             continue;
 
                         if (bounds.intersects(collider.bounds)) {
-                            if (this._tempHashSet.indexOf(collider) == -1)
+                            if (!this._tempHashSet.firstOrDefault(c => c.hashCode == collider.hashCode))
                                 this._tempHashSet.push(collider);
                         }
                     }
@@ -202,7 +202,7 @@ module es {
          * @param y
          * @param createCellIfEmpty
          */
-        private cellAtPosition(x: number, y: number, createCellIfEmpty: boolean = false) {
+        private cellAtPosition(x: number, y: number, createCellIfEmpty: boolean = false): Collider[] {
             let cell: Collider[] = this._cellDict.tryGetValue(x, y);
             if (!cell) {
                 if (createCellIfEmpty) {
@@ -262,6 +262,55 @@ module es {
     }
 
     export class RaycastResultParser {
+        public hitCounter: number;
+        public static compareRaycastHits = (a: RaycastHit, b: RaycastHit) => {
+            return a.distance - b.distance;
+        };
 
+        public _hits: RaycastHit[];
+        public _tempHit: RaycastHit;
+        public _checkedColliders: Collider[] = [];
+        public _cellHits: RaycastHit[] = [];
+        public _ray: Ray2D;
+        public _layerMask: number;
+
+        public start(ray: Ray2D, hits: RaycastHit[], layerMask: number){
+            this._ray = ray;
+            this._hits = hits;
+            this._layerMask = layerMask;
+            this.hitCounter = 0;
+        }
+
+        /**
+         * 如果hits数组被填充，返回true。单元格不能为空!
+         * @param cellX
+         * @param cellY
+         * @param cell
+         */
+        public checkRayIntersection(cellX: number, cellY: number, cell: Collider[]): boolean{
+            let fraction: number;
+            for (let i = 0; i < cell.length; i ++) {
+                let potential = cell[i];
+
+                // 管理我们已经处理过的碰撞器
+                if (this._checkedColliders.contains(potential))
+                    continue;
+
+                this._checkedColliders.push(potential);
+                // 只有当我们被设置为这样做时才会点击触发器
+                if (potential.isTrigger && !Physics.raycastsHitTriggers)
+                    continue;
+
+                // 确保碰撞器在图层蒙版上
+                if (!Flags.isFlagSet(this._layerMask, potential.physicsLayer))
+                    continue;
+
+                // TODO: rayIntersects的性能够吗?需要测试它。Collisions.rectToLine可能更快
+                // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
+                // 在做形状测试之前先做一个边界检查
+                let colliderBounds = potential.bounds;
+                if (colliderBounds.)
+            }
+        }
     }
 }

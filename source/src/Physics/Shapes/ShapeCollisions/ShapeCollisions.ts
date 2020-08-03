@@ -1,4 +1,9 @@
 module es {
+    /**
+     * 各种形状的碰撞例程
+     * 大多数人都希望第一个形状位于第二个形状的空间内(即shape1)
+     * pos应该设置为shape1。pos - shape2.pos)。
+     */
     export class ShapeCollisions {
         /**
          * 检查两个多边形之间的碰撞
@@ -305,6 +310,46 @@ module es {
             let fullSize = Vector2.add(first.bounds.size, second.bounds.size);
 
             return new Rectangle(topLeft.x, topLeft.y, fullSize.x, fullSize.y)
+        }
+
+        /**
+         * 用second检查被deltaMovement移动的框的结果
+         * @param first
+         * @param second
+         * @param movement
+         * @param hit
+         */
+        public static boxToBoxCast(first: Box, second: Box, movement: Vector2, hit: RaycastHit): boolean{
+            // 首先，我们检查是否有重叠。如果有重叠，我们就不做扫描测试
+            let minkowskiDiff = this.minkowskiDifference(first, second);
+            if (minkowskiDiff.contains(0, 0)){
+                // 计算MTV。如果它是零，我们就可以称它为非碰撞
+                let mtv = minkowskiDiff.getClosestPointOnBoundsToOrigin();
+                if (mtv.equals(Vector2.zero))
+                    return false;
+
+                hit.normal = new Vector2(-mtv.x);
+                hit.normal = hit.normal.normalize();
+                hit.distance = 0;
+                hit.fraction = 0;
+
+                return true;
+            }else{
+                // 射线投射移动矢量
+                let ray = new Ray2D(Vector2.zero, new Vector2(-movement.x));
+                let fraction: number = minkowskiDiff.rayIntersects(ray);
+                if (fraction <= 1){
+                    hit.fraction = fraction;
+                    hit.distance = movement.length() * fraction;
+                    hit.normal = new Vector2(-movement.x);
+                    hit.normal = hit.normal.normalize();
+                    hit.centroid = Vector2.add(first.bounds.center, Vector2.multiply(movement, new Vector2(fraction)));
+
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
