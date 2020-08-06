@@ -15,7 +15,7 @@ module es {
          */
         constructor(x?: number, y?: number) {
             this.x = x ? x : 0;
-            this.y = y ? y : this.x;
+            this.y = y != undefined ? y : this.x;
         }
 
         public static get zero() {

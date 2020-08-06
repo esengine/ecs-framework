@@ -638,7 +638,7 @@ var es;
             this.x = 0;
             this.y = 0;
             this.x = x ? x : 0;
-            this.y = y ? y : this.x;
+            this.y = y != undefined ? y : this.x;
         }
         Object.defineProperty(Vector2, "zero", {
             get: function () {
