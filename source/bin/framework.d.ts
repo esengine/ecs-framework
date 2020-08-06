@@ -1644,13 +1644,13 @@ declare module es {
     }
 }
 declare const THREAD_ID: string;
-declare const setItem: any;
-declare const getItem: any;
-declare const removeItem: any;
 declare const nextTick: (fn: any) => void;
 declare class LockUtils {
     private _keyX;
     private _keyY;
+    private setItem;
+    private getItem;
+    private removeItem;
     constructor(key: any);
     lock(): Promise<{}>;
 }

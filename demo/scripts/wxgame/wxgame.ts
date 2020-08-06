@@ -44,6 +44,9 @@ export class WxgamePlugin implements plugins.Command {
                 if (filename == 'main.js') {
                     content += "\n;window.Main = Main;"
                 }
+                if (filename == 'libs/long/long.js' || filename == 'libs/long/long.min.js'){
+                    content += "window.Long = long;"
+                }
                 this.md5Obj[path.basename(filename)] = this.md5(content)
                 file.contents = new Buffer(content);
             }

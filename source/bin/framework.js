@@ -7884,9 +7884,6 @@ var es;
     es.ListPool = ListPool;
 })(es || (es = {}));
 var THREAD_ID = Math.floor(Math.random() * 1000) + "-" + Date.now();
-var setItem = egret.localStorage.setItem.bind(localStorage);
-var getItem = egret.localStorage.getItem.bind(localStorage);
-var removeItem = egret.localStorage.removeItem.bind(localStorage);
 var nextTick = function (fn) {
     setTimeout(fn, 0);
 };
@@ -7894,29 +7891,32 @@ var LockUtils = (function () {
     function LockUtils(key) {
         this._keyX = "mutex_key_" + key + "_X";
         this._keyY = "mutex_key_" + key + "_Y";
+        this.setItem = egret.localStorage.setItem.bind(localStorage);
+        this.getItem = egret.localStorage.getItem.bind(localStorage);
+        this.removeItem = egret.localStorage.removeItem.bind(localStorage);
     }
     LockUtils.prototype.lock = function () {
         var _this = this;
         return new Promise(function (resolve, reject) {
             var fn = function () {
-                setItem(_this._keyX, THREAD_ID);
-                if (!getItem(_this._keyY) === null) {
+                _this.setItem(_this._keyX, THREAD_ID);
+                if (!_this.getItem(_this._keyY) === null) {
                     nextTick(fn);
                 }
-                setItem(_this._keyY, THREAD_ID);
-                if (getItem(_this._keyX) !== THREAD_ID) {
+                _this.setItem(_this._keyY, THREAD_ID);
+                if (_this.getItem(_this._keyX) !== THREAD_ID) {
                     setTimeout(function () {
-                        if (getItem(_this._keyY) !== THREAD_ID) {
+                        if (_this.getItem(_this._keyY) !== THREAD_ID) {
                             nextTick(fn);
                             return;
                         }
                         resolve();
-                        removeItem(_this._keyY);
+                        _this.removeItem(_this._keyY);
                     }, 10);
                 }
                 else {
                     resolve();
-                    removeItem(_this._keyY);
+                    _this.removeItem(_this._keyY);
                 }
             };
             fn();
