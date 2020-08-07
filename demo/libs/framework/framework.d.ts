@@ -591,12 +591,16 @@ declare module es {
 }
 declare module es {
     class TiledSpriteRenderer extends SpriteRenderer {
-        protected sourceRect: Rectangle;
-        protected leftTexture: egret.Bitmap;
-        protected rightTexture: egret.Bitmap;
-        constructor(sprite: Sprite);
+        readonly bounds: Rectangle;
         scrollX: number;
         scrollY: number;
+        textureScale: Vector2;
+        width: number;
+        height: number;
+        protected _sourceRect: Rectangle;
+        protected _textureScale: Vector2;
+        protected _inverseTexScale: Vector2;
+        constructor(sprite: Sprite);
         render(camera: es.Camera): void;
     }
 }
@@ -604,10 +608,11 @@ declare module es {
     class ScrollingSpriteRenderer extends TiledSpriteRenderer {
         scrollSpeedX: number;
         scroolSpeedY: number;
+        textureScale: Vector2;
         private _scrollX;
         private _scrollY;
+        constructor(sprite: Sprite);
         update(): void;
-        render(camera: Camera): void;
     }
 }
 declare module es {
