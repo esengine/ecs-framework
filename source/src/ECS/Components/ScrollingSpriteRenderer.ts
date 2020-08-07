@@ -29,10 +29,18 @@ module es {
         }
 
         public update() {
+            if (!this.sprite)
+                return;
+
             this._scrollX += this.scrollSpeedX * Time.deltaTime;
             this._scrollY += this.scroolSpeedY * Time.deltaTime;
-            this._sourceRect.x = this._scrollX;
-            this._sourceRect.y = this._scrollY;
+            let newRectangle: egret.Rectangle = this.displayObject.scrollRect;
+            if (!this.displayObject.scrollRect){
+                newRectangle = new egret.Rectangle();
+            }
+            newRectangle.x = this._scrollX;
+            newRectangle.y = this._scrollY;
+            this.displayObject.scrollRect = newRectangle;
         }
     }
 }

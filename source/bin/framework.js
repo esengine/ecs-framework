@@ -2874,10 +2874,17 @@ var es;
             configurable: true
         });
         ScrollingSpriteRenderer.prototype.update = function () {
+            if (!this.sprite)
+                return;
             this._scrollX += this.scrollSpeedX * es.Time.deltaTime;
             this._scrollY += this.scroolSpeedY * es.Time.deltaTime;
-            this._sourceRect.x = this._scrollX;
-            this._sourceRect.y = this._scrollY;
+            var newRectangle = this.displayObject.scrollRect;
+            if (!this.displayObject.scrollRect) {
+                newRectangle = new egret.Rectangle();
+            }
+            newRectangle.x = this._scrollX;
+            newRectangle.y = this._scrollY;
+            this.displayObject.scrollRect = newRectangle;
         };
         return ScrollingSpriteRenderer;
     }(es.TiledSpriteRenderer));
