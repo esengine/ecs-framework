@@ -609,8 +609,12 @@ declare module es {
         scrollSpeedX: number;
         scroolSpeedY: number;
         textureScale: Vector2;
+        scrollWidth: number;
+        scrollHeight: number;
         private _scrollX;
         private _scrollY;
+        private _scrollWidth;
+        private _scrollHeight;
         constructor(sprite: Sprite);
         update(): void;
     }

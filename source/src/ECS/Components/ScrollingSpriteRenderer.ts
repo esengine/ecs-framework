@@ -1,5 +1,7 @@
 ///<reference path="./TiledSpriteRenderer.ts"/>
 module es {
+    import Bitmap = egret.Bitmap;
+
     export class ScrollingSpriteRenderer extends TiledSpriteRenderer {
         /**
          *  x自动滚动速度(以像素/s为单位)
@@ -21,11 +23,32 @@ module es {
             this._inverseTexScale = new Vector2(1 / this._textureScale.x, 1 / this._textureScale.y);
         }
 
+        public set scrollWidth(value: number){
+            this._scrollWidth = value;
+        }
+
+        public get scrollWidth(){
+            return this._scrollWidth;
+        }
+
+        public set scrollHeight(value: number){
+            this._scrollHeight = value;
+        }
+
+        public get scrollHeight(){
+            return this._scrollHeight;
+        }
+
         private _scrollX = 0;
         private _scrollY = 0;
+        private _scrollWidth = 0;
+        private _scrollHeight = 0;
 
         constructor(sprite: Sprite) {
             super(sprite);
+
+            this._scrollWidth = this.width;
+            this._scrollHeight = this.height;
         }
 
         public update() {
@@ -34,13 +57,11 @@ module es {
 
             this._scrollX += this.scrollSpeedX * Time.deltaTime;
             this._scrollY += this.scroolSpeedY * Time.deltaTime;
-            let newRectangle: egret.Rectangle = this.displayObject.scrollRect;
-            if (!this.displayObject.scrollRect){
-                newRectangle = new egret.Rectangle();
-            }
-            newRectangle.x = this._scrollX;
-            newRectangle.y = this._scrollY;
-            this.displayObject.scrollRect = newRectangle;
+
+            this._sourceRect.x = this._scrollX;
+            this._sourceRect.y = this._scrollY;
+            this._sourceRect.width = this._scrollWidth + this._scrollX;
+            this._sourceRect.height = this._scrollHeight + this._scrollY;
         }
     }
 }

@@ -2764,7 +2764,6 @@ var es;
         __extends(TiledSpriteRenderer, _super);
         function TiledSpriteRenderer(sprite) {
             var _this = _super.call(this, sprite) || this;
-            _this._sourceRect = new es.Rectangle();
             _this._textureScale = es.Vector2.one;
             _this._inverseTexScale = es.Vector2.one;
             _this._sourceRect = sprite.sourceRect;
@@ -2841,10 +2840,11 @@ var es;
             configurable: true
         });
         TiledSpriteRenderer.prototype.render = function (camera) {
+            _super.prototype.render.call(this, camera);
             var bitmap = this.displayObject;
             bitmap.width = this.width;
             bitmap.height = this.height;
-            _super.prototype.render.call(this, camera);
+            bitmap.scrollRect = this._sourceRect;
         };
         return TiledSpriteRenderer;
     }(es.SpriteRenderer));
@@ -2860,6 +2860,10 @@ var es;
             _this.scroolSpeedY = 0;
             _this._scrollX = 0;
             _this._scrollY = 0;
+            _this._scrollWidth = 0;
+            _this._scrollHeight = 0;
+            _this._scrollWidth = _this.width;
+            _this._scrollHeight = _this.height;
             return _this;
         }
         Object.defineProperty(ScrollingSpriteRenderer.prototype, "textureScale", {
@@ -2873,18 +2877,35 @@ var es;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(ScrollingSpriteRenderer.prototype, "scrollWidth", {
+            get: function () {
+                return this._scrollWidth;
+            },
+            set: function (value) {
+                this._scrollWidth = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ScrollingSpriteRenderer.prototype, "scrollHeight", {
+            get: function () {
+                return this._scrollHeight;
+            },
+            set: function (value) {
+                this._scrollHeight = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
         ScrollingSpriteRenderer.prototype.update = function () {
             if (!this.sprite)
                 return;
             this._scrollX += this.scrollSpeedX * es.Time.deltaTime;
             this._scrollY += this.scroolSpeedY * es.Time.deltaTime;
-            var newRectangle = this.displayObject.scrollRect;
-            if (!this.displayObject.scrollRect) {
-                newRectangle = new egret.Rectangle();
-            }
-            newRectangle.x = this._scrollX;
-            newRectangle.y = this._scrollY;
-            this.displayObject.scrollRect = newRectangle;
+            this._sourceRect.x = this._scrollX;
+            this._sourceRect.y = this._scrollY;
+            this._sourceRect.width = this._scrollWidth + this._scrollX;
+            this._sourceRect.height = this._scrollHeight + this._scrollY;
         };
         return ScrollingSpriteRenderer;
     }(es.TiledSpriteRenderer));

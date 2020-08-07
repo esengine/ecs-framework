@@ -89,7 +89,7 @@ module es {
             this._sourceRect.height = value;
         }
 
-        protected _sourceRect: Rectangle = new Rectangle();
+        protected _sourceRect: Rectangle;
         protected _textureScale = Vector2.one;
         protected _inverseTexScale = Vector2.one;
 
@@ -97,17 +97,17 @@ module es {
             super(sprite);
 
             this._sourceRect = sprite.sourceRect;
-
             let bitmap = this.displayObject as Bitmap;
             bitmap.$fillMode = egret.BitmapFillMode.REPEAT;
         }
 
         public render(camera: es.Camera) {
+            super.render(camera);
+
             let bitmap = this.displayObject as Bitmap;
             bitmap.width = this.width;
             bitmap.height = this.height;
-
-            super.render(camera);
+            bitmap.scrollRect = this._sourceRect;
         }
     }
 }
