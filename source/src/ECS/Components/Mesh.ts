@@ -11,6 +11,7 @@ module es {
 
         public setTexture(texture: egret.Texture): Mesh {
             this._mesh.texture = texture;
+            this._mesh.$renderNode = new egret.sys.RenderNode();
 
             return this;
         }
