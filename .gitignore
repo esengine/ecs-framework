@@ -1,3 +1,6 @@
 /source/node_modules
 /demo/bin-debug
 /demo/bin-release
+/.idea
+/.vscode
+/demo_wxgame

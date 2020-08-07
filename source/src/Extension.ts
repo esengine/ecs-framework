@@ -3,90 +3,106 @@ declare interface Array<T> {
      * 获取满足表达式的数组元素索引
      * @param predicate 表达式
      */
-    findIndex(predicate: Function): number;
+    findIndex(predicate: (c: T)=>boolean): number;
+
     /**
      * 是否存在满足表达式的数组元素
      * @param predicate 表达式
      */
-    any(predicate: Function): boolean;
+    any(predicate: (c: T) => boolean): boolean;
+
     /**
      * 获取满足表达式的第一个或默认数组元素
      * @param predicate 表达式
      */
-    firstOrDefault(predicate: Function): T;
+    firstOrDefault(predicate: (c: T)=>boolean): T;
+
     /**
      * 获取满足表达式的第一个数组元素
      * @param predicate 表达式
      */
-    find(predicate: Function): T;
+    find(predicate: (c: T) => boolean): T;
+
     /**
      * 筛选满足表达式的数组元素
      * @param predicate 表达式
      */
-    where(predicate: Function): Array<T>;
+    where(predicate: (c: T) => boolean): Array<T>;
+
     /**
      * 获取满足表达式的数组元素的计数
      * @param predicate 表达式
      */
-    count(predicate: Function): number;
+    count(predicate: (c: T) => boolean): number;
+
     /**
      * 获取满足表达式的数组元素的数组
      * @param predicate 表达式
      */
-    findAll(predicate: Function): Array<T>;
+    findAll(predicate: (c: T) => boolean): Array<T>;
+
     /**
      * 是否有获取满足表达式的数组元素
      * @param value 值
      */
-    contains(value): boolean;
+    contains(value: T): boolean;
+
     /**
      * 移除满足表达式的数组元素
      * @param predicate 表达式
      */
-    removeAll(predicate: Function): void;
+    removeAll(predicate: (c: T) => boolean): void;
+
     /**
      * 移除数组元素
      * @param element 数组元素
      */
-    remove(element): boolean;
+    remove(element: T): boolean;
+
     /**
      * 移除特定索引数组元素
      * @param index 索引
      */
-    removeAt(index): void;
+    removeAt(index: number): void;
+
     /**
      * 移除范围数组元素
      * @param index 开始索引
      * @param count 删除的个数
      */
-    removeRange(index, count): void;
+    removeRange(index: number, count: number): void;
+
     /**
      * 获取通过选择器转换的数组
      * @param selector 选择器
      */
     select(selector: Function): Array<T>;
+
     /**
      * 排序（升序）
      * @param keySelector key选择器
      * @param comparer 比较器
      */
     orderBy(keySelector: Function, comparer: Function): Array<T>;
+
     /**
      * 排序（降序）
      * @param keySelector key选择器
      * @param comparer 比较器
      */
     orderByDescending(keySelector: Function, comparer: Function): Array<T>;
+
     /**
      * 分组
      * @param keySelector key选择器
      */
     groupBy(keySelector: Function): Array<T>;
+
     /**
      * 求和
      * @param selector  选择器
      */
-    sum(selector);
+    sum(selector: Function): number;
 }
 
 Array.prototype.findIndex = function (predicate) {
@@ -101,7 +117,7 @@ Array.prototype.findIndex = function (predicate) {
     }
 
     return findIndex(this, predicate);
-}
+};
 
 Array.prototype.any = function (predicate) {
     function any(array, predicate) {
@@ -109,7 +125,7 @@ Array.prototype.any = function (predicate) {
     }
 
     return any(this, predicate);
-}
+};
 
 Array.prototype.firstOrDefault = function (predicate) {
     function firstOrDefault(array, predicate) {
@@ -118,7 +134,7 @@ Array.prototype.firstOrDefault = function (predicate) {
     }
 
     return firstOrDefault(this, predicate);
-}
+};
 
 Array.prototype.find = function (predicate) {
     function find(array, predicate) {
@@ -126,7 +142,7 @@ Array.prototype.find = function (predicate) {
     }
 
     return find(this, predicate);
-}
+};
 
 Array.prototype.where = function (predicate) {
     function where(array, predicate) {
@@ -138,8 +154,7 @@ Array.prototype.where = function (predicate) {
 
                 return ret;
             }, []);
-        }
-        else {
+        } else {
             let ret = [];
             for (let i = 0, len = array.length; i < len; i++) {
                 let element = array[i];
@@ -153,7 +168,7 @@ Array.prototype.where = function (predicate) {
     }
 
     return where(this, predicate);
-}
+};
 
 Array.prototype.count = function (predicate) {
     function count(array, predicate) {
@@ -161,7 +176,7 @@ Array.prototype.count = function (predicate) {
     }
 
     return count(this, predicate);
-}
+};
 
 Array.prototype.findAll = function (predicate) {
     function findAll(array, predicate) {
@@ -169,11 +184,16 @@ Array.prototype.findAll = function (predicate) {
     }
 
     return findAll(this, predicate);
-}
+};
 
 Array.prototype.contains = function (value) {
     function contains(array, value) {
         for (let i = 0, len = array.length; i < len; i++) {
+            if (array[i] instanceof egret.HashObject && value instanceof egret.HashObject){
+                if ((array[i] as egret.HashObject).hashCode == (value as egret.HashObject).hashCode)
+                    return true;
+            }
+
             if (array[i] == value) {
                 return true;
             }
@@ -183,7 +203,7 @@ Array.prototype.contains = function (value) {
     }
 
     return contains(this, value);
-}
+};
 
 Array.prototype.removeAll = function (predicate) {
     function removeAll(array, predicate) {
@@ -198,7 +218,7 @@ Array.prototype.removeAll = function (predicate) {
     }
 
     removeAll(this, predicate);
-}
+};
 
 Array.prototype.remove = function (element) {
     function remove(array, element) {
@@ -209,14 +229,13 @@ Array.prototype.remove = function (element) {
         if (index >= 0) {
             array.splice(index, 1);
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
 
     return remove(this, element);
-}
+};
 
 Array.prototype.removeAt = function (index) {
     function removeAt(array, index) {
@@ -224,7 +243,7 @@ Array.prototype.removeAt = function (index) {
     }
 
     return removeAt(this, index);
-}
+};
 
 Array.prototype.removeRange = function (index, count) {
     function removeRange(array, index, count) {
@@ -232,7 +251,7 @@ Array.prototype.removeRange = function (index, count) {
     }
 
     return removeRange(this, index, count);
-}
+};
 
 Array.prototype.select = function (selector) {
     function select(array, selector) {
@@ -241,8 +260,7 @@ Array.prototype.select = function (selector) {
                 ret.push(selector.call(arguments[2], element, index, array));
                 return ret;
             }, []);
-        }
-        else {
+        } else {
             let ret = [];
             for (let i = 0, len = array.length; i < len; i++) {
                 ret.push(selector.call(arguments[2], array[i], i, array))
@@ -253,17 +271,16 @@ Array.prototype.select = function (selector) {
     }
 
     return select(this, selector);
-}
+};
 
 Array.prototype.orderBy = function (keySelector, comparer) {
     function orderBy(array, keySelector, comparer) {
         array.sort(function (x, y) {
-            let v1 = keySelector(x)
-            let v2 = keySelector(y)
+            let v1 = keySelector(x);
+            let v2 = keySelector(y);
             if (comparer) {
                 return comparer(v1, v2);
-            }
-            else {
+            } else {
                 return (v1 > v2) ? 1 : -1;
             }
         });
@@ -272,17 +289,16 @@ Array.prototype.orderBy = function (keySelector, comparer) {
     }
 
     return orderBy(this, keySelector, comparer);
-}
+};
 
 Array.prototype.orderByDescending = function (keySelector, comparer) {
     function orderByDescending(array, keySelector, comparer) {
         array.sort(function (x, y) {
-            let v1 = keySelector(x)
-            let v2 = keySelector(y)
+            let v1 = keySelector(x);
+            let v2 = keySelector(y);
             if (comparer) {
                 return -comparer(v1, v2);
-            }
-            else {
+            } else {
                 return (v1 < v2) ? 1 : -1;
             }
         });
@@ -291,15 +307,17 @@ Array.prototype.orderByDescending = function (keySelector, comparer) {
     }
 
     return orderByDescending(this, keySelector, comparer);
-}
+};
 
 Array.prototype.groupBy = function (keySelector) {
     function groupBy(array, keySelector) {
         if (typeof (array.reduce) === "function") {
             let keys = [];
             return array.reduce(function (groups, element, index) {
-                let key = JSON.stringify(keySelector.call(arguments[1], element, index, array))
-                let index2 = keys.findIndex(function (x) { return x === key });
+                let key = JSON.stringify(keySelector.call(arguments[1], element, index, array));
+                let index2 = keys.findIndex(function (x) {
+                    return x === key;
+                });
 
                 if (index2 < 0) {
                     index2 = keys.push(key) - 1;
@@ -312,13 +330,14 @@ Array.prototype.groupBy = function (keySelector) {
                 groups[index2].push(element);
                 return groups;
             }, []);
-        }
-        else {
+        } else {
             let groups = [];
             let keys = [];
             for (let i = 0, len = array.length; i < len; i++) {
                 let key = JSON.stringify(keySelector.call(arguments[1], array[i], i, array));
-                let index = keys.findIndex(function (x) { return x === key });
+                let index = keys.findIndex(function (x) {
+                    return x === key;
+                });
 
                 if (index < 0) {
                     index = keys.push(key) - 1;
@@ -336,7 +355,7 @@ Array.prototype.groupBy = function (keySelector) {
     }
 
     return groupBy(this, keySelector);
-}
+};
 
 Array.prototype.sum = function (selector) {
     function sum(array, selector) {
@@ -345,17 +364,14 @@ Array.prototype.sum = function (selector) {
             if (i == 0) {
                 if (selector) {
                     ret = selector.call(arguments[2], array[i], i, array);
+                } else {
+                    ret = array[i];
                 }
-                else {
-                    ret = array[i]
-                }
-            }
-            else {
+            } else {
                 if (selector) {
                     ret += selector.call(arguments[2], array[i], i, array);
-                }
-                else {
-                    ret += array[i]
+                } else {
+                    ret += array[i];
                 }
             }
         }
@@ -364,4 +380,4 @@ Array.prototype.sum = function (selector) {
     }
 
     return sum(this, selector);
-}
+};

@@ -1,46 +1,55 @@
-class GlobalManager {
-    public static globalManagers: GlobalManager[] = [];
-    private _enabled: boolean;
+module es {
+    export class GlobalManager {
+        public _enabled: boolean;
 
-    public get enabled(){
-        return this._enabled;
-    }
-    public set enabled(value: boolean){
-        this.setEnabled(value);
-    }
-    public setEnabled(isEnabled: boolean){
-        if (this._enabled != isEnabled){
-            this._enabled = isEnabled;
-            if (this._enabled){
-                this.onEnabled();
-            } else {
-                this.onDisabled();
+        /**
+         * 如果true则启用了GlobalManager。
+         * 状态的改变会导致调用OnEnabled/OnDisable
+         */
+        public get enabled() {
+            return this._enabled;
+        }
+
+        /**
+         * 如果true则启用了GlobalManager。
+         * 状态的改变会导致调用OnEnabled/OnDisable
+         * @param value
+         */
+        public set enabled(value: boolean) {
+            this.setEnabled(value);
+        }
+
+        /**
+         * 启用/禁用这个GlobalManager
+         * @param isEnabled
+         */
+        public setEnabled(isEnabled: boolean) {
+            if (this._enabled != isEnabled) {
+                this._enabled = isEnabled;
+                if (this._enabled) {
+                    this.onEnabled();
+                } else {
+                    this.onDisabled();
+                }
             }
         }
-    }
 
-    public onEnabled(){}
-
-    public onDisabled(){}
-
-    public update(){}
-
-    public static registerGlobalManager(manager: GlobalManager){
-        this.globalManagers.push(manager);
-        manager.enabled = true;
-    }
-
-    public static unregisterGlobalManager(manager: GlobalManager){
-        this.globalManagers.remove(manager);
-        manager.enabled = false;
-    }
-
-    public static getGlobalManager<T extends GlobalManager>(type){
-        for (let i = 0; i < this.globalManagers.length; i ++){
-            if (this.globalManagers[i] instanceof type)
-                return this.globalManagers[i] as T;
+        /**
+         * 此GlobalManager启用时调用
+         */
+        public onEnabled() {
         }
 
-        return null;
+        /**
+         * 此GlobalManager禁用时调用
+         */
+        public onDisabled() {
+        }
+
+        /**
+         * 在frame .update之前调用每一帧
+         */
+        public update() {
+        }
     }
 }

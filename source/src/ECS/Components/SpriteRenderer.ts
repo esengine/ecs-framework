@@ -1,62 +1,131 @@
-class SpriteRenderer extends RenderableComponent {
-    private _sprite: Sprite;
-    protected bitmap: egret.Bitmap;
+module es {
+    import Bitmap = egret.Bitmap;
 
-    /** 应该由这个精灵显示的精灵 */
-    public get sprite(): Sprite{
-        return this._sprite;
-    }
-    /** 应该由这个精灵显示的精灵 */
-    public set sprite(value: Sprite){
-        this.setSprite(value);
-    }
-
-    public setSprite(sprite: Sprite): SpriteRenderer{
-        this.removeChildren();
-        this._sprite = sprite;
-        if (this._sprite) {
-            this.anchorOffsetX = this._sprite.origin.x / this._sprite.sourceRect.width;
-            this.anchorOffsetY = this._sprite.origin.y / this._sprite.sourceRect.height;
+    export class SpriteRenderer extends RenderableComponent {
+        constructor(sprite: Sprite | egret.Texture = null) {
+            super();
+            if (sprite instanceof Sprite)
+                this.setSprite(sprite);
+            else if (sprite instanceof egret.Texture)
+                this.setSprite(new Sprite(sprite));
         }
-        this.bitmap = new egret.Bitmap(sprite.texture2D);
-        this.addChild(this.bitmap);
 
-        return this;
-    }
+        public get bounds() {
+            if (this._areBoundsDirty) {
+                if (this._sprite) {
+                    this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin,
+                        this.entity.transform.scale, this.entity.transform.rotation, this._sprite.sourceRect.width,
+                        this._sprite.sourceRect.height);
+                    this._areBoundsDirty = false;
+                }
+            }
 
-    public setColor(color: number): SpriteRenderer{
-        let colorMatrix = [
-            1, 0, 0, 0, 0,
-            0, 1, 0, 0, 0,
-            0, 0, 1, 0, 0,
-            0, 0, 0, 1, 0
-        ];
-        colorMatrix[0] = Math.floor(color / 256 / 256) / 255;
-        colorMatrix[6] = Math.floor(color / 256 % 256) / 255;
-        colorMatrix[12] = color % 256 / 255;
-        let colorFilter = new egret.ColorMatrixFilter(colorMatrix);
-        this.filters = [colorFilter];
+            return this._bounds;
+        }
 
-        return this;
-    }
+        /**
+         * 用归一化方法设置原点
+         * x/y 均为 0-1
+         */
+        public get originNormalized(): Vector2 {
+            return new Vector2(this._origin.x / this.width * this.entity.transform.scale.x,
+                this._origin.y / this.height * this.entity.transform.scale.y);
+        }
 
-    public isVisibleFromCamera(camera: Camera): boolean{
-        this.isVisible = new Rectangle(0, 0, this.stage.stageWidth, this.stage.stageHeight).intersects(this.bounds);
-        this.visible = this.isVisible;
-        return this.isVisible;
-    }
+        /**
+         * 用归一化方法设置原点
+         * x/y 均为 0-1
+         * @param value
+         */
+        public set originNormalized(value: Vector2) {
+            this.setOrigin(new Vector2(value.x * this.width / this.entity.transform.scale.x,
+                value.y * this.height / this.entity.transform.scale.y));
+        }
 
-    /** 渲染处理 在每个模块中处理各自的渲染逻辑 */
-    public render(camera: Camera){
-        this.x = -camera.position.x + camera.origin.x;
-        this.y = -camera.position.y + camera.origin.y;
-    }
+        protected _origin: Vector2;
 
-    public onRemovedFromEntity(){
-        if (this.parent)
-            this.parent.removeChild(this);
-    }
+        /**
+         * 精灵的原点。这是在设置精灵时自动设置的
+         */
+        public get origin(): Vector2 {
+            return this._origin;
+        }
 
-    public reset(){
+        /**
+         * 精灵的原点。这是在设置精灵时自动设置的
+         * @param value
+         */
+        public set origin(value: Vector2) {
+            this.setOrigin(value);
+        }
+
+        protected _sprite: Sprite;
+
+        /**
+         * 应该由这个精灵显示的精灵
+         * 当设置时，精灵的原点也被设置为精灵的origin
+         */
+        public get sprite(): Sprite {
+            return this._sprite;
+        }
+
+        /**
+         * 应该由这个精灵显示的精灵
+         * 当设置时，精灵的原点也被设置为精灵的origin
+         * @param value
+         */
+        public set sprite(value: Sprite) {
+            this.setSprite(value);
+        }
+
+        /**
+         * 设置精灵并更新精灵的原点以匹配sprite.origin
+         * @param sprite
+         */
+        public setSprite(sprite: Sprite): SpriteRenderer {
+            this._sprite = sprite;
+            if (this._sprite) {
+                this._origin = this._sprite.origin;
+                this.displayObject.anchorOffsetX = this._origin.x;
+                this.displayObject.anchorOffsetY = this._origin.y;
+            }
+            this.displayObject = new Bitmap(sprite.texture2D);
+
+            return this;
+        }
+
+        /**
+         * 设置可渲染的原点
+         * @param origin
+         */
+        public setOrigin(origin: Vector2): SpriteRenderer {
+            if (this._origin != origin) {
+                this._origin = origin;
+                this.displayObject.anchorOffsetX = this._origin.x;
+                this.displayObject.anchorOffsetY = this._origin.y;
+                this._areBoundsDirty = true;
+            }
+
+            return this;
+        }
+
+        /**
+         * 用归一化方法设置原点
+         * x/y 均为 0-1
+         * @param value
+         */
+        public setOriginNormalized(value: Vector2): SpriteRenderer {
+            this.setOrigin(new Vector2(value.x * this.width / this.entity.transform.scale.x,
+                value.y * this.height / this.entity.transform.scale.y));
+            return this;
+        }
+
+        public render(camera: Camera) {
+            this.sync(camera);
+
+            this.displayObject.x = this.entity.position.x - this.origin.x + this.localOffset.x - camera.position.x + camera.origin.x;
+            this.displayObject.y = this.entity.position.y - this.origin.y + this.localOffset.y - camera.position.y + camera.origin.y;
+        }
     }
 }
+

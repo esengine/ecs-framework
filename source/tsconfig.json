@@ -12,7 +12,7 @@
       "dom",
       "es2015.promise",
       "es6"
-  ] ,
+    ]
   },
   "include": [
     "src",
