@@ -125,6 +125,7 @@ declare module es {
         static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
         static transform(position: Vector2, matrix: Matrix2D): Vector2;
         static distance(value1: Vector2, value2: Vector2): number;
+        static angle(from: Vector2, to: Vector2): number;
         static negate(value: Vector2): Vector2;
         add(value: Vector2): Vector2;
         divide(value: Vector2): Vector2;
@@ -597,9 +598,12 @@ declare module es {
         textureScale: Vector2;
         width: number;
         height: number;
+        gapXY: Vector2;
         protected _sourceRect: Rectangle;
         protected _textureScale: Vector2;
         protected _inverseTexScale: Vector2;
+        private _gapX;
+        private _gapY;
         constructor(sprite: Sprite);
         render(camera: es.Camera): void;
     }

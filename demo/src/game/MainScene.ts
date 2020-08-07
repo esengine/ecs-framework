@@ -15,7 +15,7 @@ module scene {
             bg.addComponent(new es.SpriteRenderer()).setSprite(sprite).setColor(0xff0000);
             bg.addComponent(new component.PlayerController());
             bg.addComponent(new es.Mover());
-            bg.addComponent(new es.ScrollingSpriteRenderer(sprite));
+            bg.addComponent(new es.ScrollingSpriteRenderer(sprite)).gapXY = new es.Vector2(10, 0);
             bg.addComponent(new es.BoxCollider());
             bg.position = new es.Vector2(Math.random() * 200, Math.random() * 200);
 
