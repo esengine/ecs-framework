@@ -58,7 +58,7 @@ module es {
 
         public addToRenderLayerList(component: IRenderable, renderLayer: number) {
             let list = this.componentsWithRenderLayer(renderLayer);
-            if (!list.contains(component)) {
+            if (list.contains(component)) {
                 console.warn("组件呈现层列表已经包含此组件");
                 return;
             }
@@ -96,6 +96,7 @@ module es {
                 }
 
                 this._unsortedRenderLayers.length = 0;
+                this.updateEgretList();
             }
         }
 

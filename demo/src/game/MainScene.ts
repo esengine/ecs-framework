@@ -26,7 +26,7 @@ module scene {
 
             for (let i = 0; i < 20; i++) {
                 let sprite = new es.Sprite(RES.getRes("checkbox_select_disabled_png"));
-                let player2 = this.createEntity("player2");
+                let player2 = this.createEntity("bg");
                 player2.addComponent(new es.SpriteRenderer()).setSprite(sprite).setRenderLayer(i);
                 player2.position = new es.Vector2(30 * i, 30 * i);
                 // player2.addComponent(new es.BoxCollider());

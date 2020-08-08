@@ -4324,7 +4324,7 @@ var es;
         };
         RenderableComponentList.prototype.addToRenderLayerList = function (component, renderLayer) {
             var list = this.componentsWithRenderLayer(renderLayer);
-            if (!list.contains(component)) {
+            if (list.contains(component)) {
                 console.warn("组件呈现层列表已经包含此组件");
                 return;
             }
@@ -4353,6 +4353,7 @@ var es;
                     }
                 }
                 this._unsortedRenderLayers.length = 0;
+                this.updateEgretList();
             }
         };
         RenderableComponentList.prototype.updateEgretList = function () {
