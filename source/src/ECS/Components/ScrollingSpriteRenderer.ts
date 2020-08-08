@@ -60,8 +60,8 @@ module es {
 
             this._sourceRect.x = this._scrollX;
             this._sourceRect.y = this._scrollY;
-            this._sourceRect.width = this._scrollWidth + this._scrollX;
-            this._sourceRect.height = this._scrollHeight + this._scrollY;
+            this._sourceRect.width = this._scrollWidth + Math.abs(this._scrollX);
+            this._sourceRect.height = this._scrollHeight + Math.abs(this._scrollY);
         }
     }
 }

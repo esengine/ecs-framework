@@ -14,8 +14,10 @@ module scene {
             this.createEntityAsync("bg").then(bg => {
                 bg.addComponent(new component.PlayerController());
                 bg.addComponent(new es.Mover());
-                bg.addComponent(new es.SpriteRenderer(sprite));
-                bg.addComponent(new es.BoxCollider());
+                let spriteRenderer = bg.addComponent(new es.ScrollingSpriteRenderer(sprite));
+                spriteRenderer.setRenderLayer(4);
+                spriteRenderer.scrollX = -30;
+                // bg.addComponent(new es.BoxCollider());
 
                 this.camera.follow(bg, es.CameraStyle.lockOn);
             });
@@ -25,9 +27,9 @@ module scene {
             for (let i = 0; i < 20; i++) {
                 let sprite = new es.Sprite(RES.getRes("checkbox_select_disabled_png"));
                 let player2 = this.createEntity("player2");
-                player2.addComponent(new es.SpriteRenderer()).setSprite(sprite);
-                player2.position = new es.Vector2(Math.random() * 1000, Math.random() * 1000);
-                player2.addComponent(new es.BoxCollider());
+                player2.addComponent(new es.SpriteRenderer()).setSprite(sprite).setRenderLayer(i);
+                player2.position = new es.Vector2(30 * i, 30 * i);
+                // player2.addComponent(new es.BoxCollider());
             }
 
 
