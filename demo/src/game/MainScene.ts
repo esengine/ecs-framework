@@ -14,22 +14,19 @@ module scene {
             this.createEntityAsync("bg").then(bg => {
                 bg.addComponent(new component.PlayerController());
                 bg.addComponent(new es.Mover());
-                bg.addComponent(new es.ScrollingSpriteRenderer(sprite)).setGapXY(new es.Vector2(10, 0));
+                bg.addComponent(new es.SpriteRenderer(sprite)).setOrigin(sprite.sourceRect.getHalfSize());
                 bg.addComponent(new es.BoxCollider());
-                bg.position = new es.Vector2(Math.random() * 200, Math.random() * 200);
-                
-                this.camera.follow(bg, es.CameraStyle.lockOn);
             });
-            // bg.addComponent(new es.SpriteRenderer()).setSprite(sprite).setColor(0xff0000);
+            // // bg.addComponent(new es.SpriteRenderer()).setSprite(sprite).setColor(0xff0000);
            
 
-            for (let i = 0; i < 20; i++) {
-                let sprite = new es.Sprite(RES.getRes("checkbox_select_disabled_png"));
-                let player2 = this.createEntity("player2");
-                player2.addComponent(new es.SpriteRenderer()).setSprite(sprite);
-                player2.position = new es.Vector2(Math.random() * 1000, Math.random() * 1000);
-                player2.addComponent(new es.BoxCollider());
-            }
+            // for (let i = 0; i < 20; i++) {
+            //     let sprite = new es.Sprite(RES.getRes("checkbox_select_disabled_png"));
+            //     let player2 = this.createEntity("player2");
+            //     player2.addComponent(new es.SpriteRenderer()).setSprite(sprite);
+            //     player2.position = new es.Vector2(Math.random() * 1000, Math.random() * 1000);
+            //     player2.addComponent(new es.BoxCollider());
+            // }
 
 
             let pool = new es.ComponentPool<component.SimplePooled>(component.SimplePooled);
