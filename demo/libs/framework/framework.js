@@ -1603,6 +1603,7 @@ var es;
                 childClone.transform.parent = this.transform;
             }
         };
+        Entity._idGenerator = 0;
         return Entity;
     }());
     es.Entity = Entity;
@@ -1755,9 +1756,15 @@ var es;
             var entity = new es.Entity(name);
             return this.addEntity(entity);
         };
+        Scene.prototype.createEntityAsync = function (name) {
+            var _this = this;
+            return new Promise(function (resolve) {
+                resolve(_this.createEntity(name));
+            });
+        };
         Scene.prototype.addEntity = function (entity) {
             if (this.entities.buffer.contains(entity))
-                console.warn("You are attempting to add the same entity to a scene twice: " + entity);
+                console.warn("\u60A8\u8BD5\u56FE\u5C06\u540C\u4E00\u5B9E\u4F53\u6DFB\u52A0\u5230\u573A\u666F\u4E24\u6B21: " + entity);
             this.entities.add(entity);
             entity.scene = this;
             for (var i = 0; i < entity.transform.childCount; i++)

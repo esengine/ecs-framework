@@ -370,6 +370,7 @@ declare module es {
         getPostProcessor<T extends PostProcessor>(type: any): T;
         removePostProcessor(postProcessor: PostProcessor): void;
         createEntity(name: string): Entity;
+        createEntityAsync(name: string): Promise<Entity>;
         addEntity(entity: Entity): Entity;
         destroyAllEntities(): void;
         findEntity(name: string): Entity;
