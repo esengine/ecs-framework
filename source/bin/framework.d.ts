@@ -605,6 +605,7 @@ declare module es {
         private _gapX;
         private _gapY;
         constructor(sprite: Sprite);
+        setGapXY(value: Vector2): TiledSpriteRenderer;
         render(camera: es.Camera): void;
     }
 }

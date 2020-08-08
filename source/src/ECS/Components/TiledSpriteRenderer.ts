@@ -95,11 +95,6 @@ module es {
         }
 
         public set gapXY(value: Vector2){
-            if (value.x < 0 || value.y < 0){
-                console.error("间隔必须为正数");
-                return;
-            }
-
             this._gapX = value.x;
             this._gapY = value.y;
 
@@ -111,7 +106,11 @@ module es {
             newRectangle.height += this._gapY;
             renderTexture.drawToTexture(this.displayObject, newRectangle);
 
-            this.displayObject = new Bitmap(renderTexture);
+            if (!this.displayObject){
+                this.displayObject = new Bitmap(renderTexture);
+            }else{
+                (this.displayObject as Bitmap).texture = renderTexture;
+            }
         }
 
         protected _sourceRect: Rectangle;
@@ -126,6 +125,15 @@ module es {
             this._sourceRect = sprite.sourceRect;
             let bitmap = this.displayObject as Bitmap;
             bitmap.$fillMode = egret.BitmapFillMode.REPEAT;
+        }
+
+        /**
+         * 设置间隔
+         * @param value
+         */
+        public setGapXY(value: Vector2): TiledSpriteRenderer {
+            this.gapXY = value;
+            return this;
         }
 
         public render(camera: es.Camera) {

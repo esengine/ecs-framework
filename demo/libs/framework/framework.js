@@ -2853,10 +2853,6 @@ var es;
                 return new es.Vector2(this._gapX, this._gapY);
             },
             set: function (value) {
-                if (value.x < 0 || value.y < 0) {
-                    console.error("间隔必须为正数");
-                    return;
-                }
                 this._gapX = value.x;
                 this._gapY = value.y;
                 var renderTexture = new RenderTexture();
@@ -2866,11 +2862,20 @@ var es;
                 newRectangle.width += this._gapX;
                 newRectangle.height += this._gapY;
                 renderTexture.drawToTexture(this.displayObject, newRectangle);
-                this.displayObject = new Bitmap(renderTexture);
+                if (!this.displayObject) {
+                    this.displayObject = new Bitmap(renderTexture);
+                }
+                else {
+                    this.displayObject.texture = renderTexture;
+                }
             },
             enumerable: true,
             configurable: true
         });
+        TiledSpriteRenderer.prototype.setGapXY = function (value) {
+            this.gapXY = value;
+            return this;
+        };
         TiledSpriteRenderer.prototype.render = function (camera) {
             _super.prototype.render.call(this, camera);
             var bitmap = this.displayObject;
