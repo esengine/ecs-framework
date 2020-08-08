@@ -1,6 +1,6 @@
 module es {
     export class Entity {
-        public static _idGenerator: number;
+        public static _idGenerator: number = 0;
 
         /**
          * 当前实体所属的场景

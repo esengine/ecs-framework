@@ -263,12 +263,22 @@ module es {
         }
 
         /**
+         * 将实体添加到此场景，并返回它
+         * @param name
+         */
+        public createEntityAsync(name: string): Promise<Entity> {
+            return new Promise<Entity>(resolve => {
+                resolve(this.createEntity(name));
+            });
+        }
+
+        /**
          * 在场景的实体列表中添加一个实体
          * @param entity
          */
         public addEntity(entity: Entity) {
             if (this.entities.buffer.contains(entity))
-                console.warn(`You are attempting to add the same entity to a scene twice: ${entity}`);
+                console.warn(`您试图将同一实体添加到场景两次: ${entity}`);
             this.entities.add(entity);
             entity.scene = this;
 
