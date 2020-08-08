@@ -1,6 +1,7 @@
 ///<reference path="./SpriteRenderer.ts" />
 module es {
     import Bitmap = egret.Bitmap;
+    import RenderTexture = egret.RenderTexture;
 
     /**
      * 滚动由两张图片组合而成
@@ -89,9 +90,34 @@ module es {
             this._sourceRect.height = value;
         }
 
+        public get gapXY(): Vector2{
+            return new Vector2(this._gapX, this._gapY);
+        }
+
+        public set gapXY(value: Vector2){
+            this._gapX = value.x;
+            this._gapY = value.y;
+
+            let renderTexture = new RenderTexture();
+            let newRectangle = this.sprite.sourceRect;
+            newRectangle.x = 0;
+            newRectangle.y = 0;
+            newRectangle.width += this._gapX;
+            newRectangle.height += this._gapY;
+            renderTexture.drawToTexture(this.displayObject, newRectangle);
+
+            if (!this.displayObject){
+                this.displayObject = new Bitmap(renderTexture);
+            }else{
+                (this.displayObject as Bitmap).texture = renderTexture;
+            }
+        }
+
         protected _sourceRect: Rectangle;
         protected _textureScale = Vector2.one;
         protected _inverseTexScale = Vector2.one;
+        private _gapX = 0;
+        private _gapY = 0;
 
         constructor(sprite: Sprite) {
             super(sprite);
@@ -99,6 +125,15 @@ module es {
             this._sourceRect = sprite.sourceRect;
             let bitmap = this.displayObject as Bitmap;
             bitmap.$fillMode = egret.BitmapFillMode.REPEAT;
+        }
+
+        /**
+         * 设置间隔
+         * @param value
+         */
+        public setGapXY(value: Vector2): TiledSpriteRenderer {
+            this.gapXY = value;
+            return this;
         }
 
         public render(camera: es.Camera) {

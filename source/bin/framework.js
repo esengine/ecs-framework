@@ -718,6 +718,11 @@ var es;
             var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
             return Math.sqrt((v1 * v1) + (v2 * v2));
         };
+        Vector2.angle = function (from, to) {
+            from = Vector2.normalize(from);
+            to = Vector2.normalize(to);
+            return Math.acos(es.MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
+        };
         Vector2.negate = function (value) {
             var result = new Vector2();
             result.x = -value.x;
@@ -2760,12 +2765,16 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Bitmap = egret.Bitmap;
+    var RenderTexture = egret.RenderTexture;
     var TiledSpriteRenderer = (function (_super) {
         __extends(TiledSpriteRenderer, _super);
         function TiledSpriteRenderer(sprite) {
             var _this = _super.call(this, sprite) || this;
             _this._textureScale = es.Vector2.one;
             _this._inverseTexScale = es.Vector2.one;
+            _this._gapX = 0;
+            _this._gapY = 0;
             _this._sourceRect = sprite.sourceRect;
             var bitmap = _this.displayObject;
             bitmap.$fillMode = egret.BitmapFillMode.REPEAT;
@@ -2839,6 +2848,34 @@ var es;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(TiledSpriteRenderer.prototype, "gapXY", {
+            get: function () {
+                return new es.Vector2(this._gapX, this._gapY);
+            },
+            set: function (value) {
+                this._gapX = value.x;
+                this._gapY = value.y;
+                var renderTexture = new RenderTexture();
+                var newRectangle = this.sprite.sourceRect;
+                newRectangle.x = 0;
+                newRectangle.y = 0;
+                newRectangle.width += this._gapX;
+                newRectangle.height += this._gapY;
+                renderTexture.drawToTexture(this.displayObject, newRectangle);
+                if (!this.displayObject) {
+                    this.displayObject = new Bitmap(renderTexture);
+                }
+                else {
+                    this.displayObject.texture = renderTexture;
+                }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        TiledSpriteRenderer.prototype.setGapXY = function (value) {
+            this.gapXY = value;
+            return this;
+        };
         TiledSpriteRenderer.prototype.render = function (camera) {
             _super.prototype.render.call(this, camera);
             var bitmap = this.displayObject;

@@ -155,6 +155,17 @@ module es {
         }
 
         /**
+         * 返回两个向量之间的角度，单位是度数
+         * @param from
+         * @param to
+         */
+        public static angle(from: Vector2, to: Vector2): number{
+            from = Vector2.normalize(from);
+            to = Vector2.normalize(to);
+            return Math.acos(MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * MathHelper.Rad2Deg;
+        }
+
+        /**
          * 矢量反演的结果
          * @param value
          */
