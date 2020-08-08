@@ -57,7 +57,7 @@ module es {
         }
 
         public set renderLayer(value: number) {
-
+            this.setRenderLayer(value);
         }
 
         protected _bounds: Rectangle = new Rectangle();

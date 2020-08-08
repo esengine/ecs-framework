@@ -152,7 +152,7 @@ module es {
 
         public render() {
             if (this._renderers.length == 0) {
-                console.error("there are no renderers in the scene!");
+                console.error("场景中没有渲染器!");
                 return;
             }
 

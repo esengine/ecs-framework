@@ -951,6 +951,7 @@ declare module es {
         addToRenderLayerList(component: IRenderable, renderLayer: number): void;
         componentsWithRenderLayer(renderLayer: number): IRenderable[];
         updateList(): void;
+        private updateEgretList;
     }
 }
 declare class StringUtils {

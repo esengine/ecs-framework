@@ -1694,7 +1694,7 @@ var es;
         };
         Scene.prototype.render = function () {
             if (this._renderers.length == 0) {
-                console.error("there are no renderers in the scene!");
+                console.error("场景中没有渲染器!");
                 return;
             }
             for (var i = 0; i < this._renderers.length; i++) {
@@ -2575,6 +2575,7 @@ var es;
                 return this._renderLayer;
             },
             set: function (value) {
+                this.setRenderLayer(value);
             },
             enumerable: true,
             configurable: true
@@ -4317,7 +4318,7 @@ var es;
         RenderableComponentList.prototype.addToRenderLayerList = function (component, renderLayer) {
             var list = this.componentsWithRenderLayer(renderLayer);
             if (!list.contains(component)) {
-                console.warn("Component renderLayer list already contains this component");
+                console.warn("组件呈现层列表已经包含此组件");
                 return;
             }
             list.push(component);
@@ -4335,6 +4336,7 @@ var es;
             if (this._componentsNeedSort) {
                 this._components.sort(RenderableComponentList.compareUpdatableOrder.compare);
                 this._componentsNeedSort = false;
+                this.updateEgretList();
             }
             if (this._unsortedRenderLayers.length > 0) {
                 for (var i = 0, count = this._unsortedRenderLayers.length; i < count; i++) {
@@ -4344,6 +4346,22 @@ var es;
                     }
                 }
                 this._unsortedRenderLayers.length = 0;
+            }
+        };
+        RenderableComponentList.prototype.updateEgretList = function () {
+            var scene = es.Core._instance._scene;
+            if (!scene)
+                return;
+            var _loop_5 = function (i) {
+                var component = this_1._components[i];
+                var egretDisplayObject = scene.$children.find(function (a) { return a.hashCode == component.displayObject.hashCode; });
+                var displayIndex = scene.getChildIndex(egretDisplayObject);
+                if (displayIndex != i)
+                    scene.swapChildrenAt(displayIndex, i);
+            };
+            var this_1 = this;
+            for (var i = 0; i < this._components.length; i++) {
+                _loop_5(i);
             }
         };
         RenderableComponentList.compareUpdatableOrder = new es.RenderableComparer();
@@ -5921,26 +5939,26 @@ var es;
             for (var i = 0; i < colliders.length; i++) {
                 var collider = colliders[i];
                 var neighbors = es.Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-                var _loop_5 = function (j) {
+                var _loop_6 = function (j) {
                     var neighbor = neighbors[j];
                     if (!collider.isTrigger && !neighbor.isTrigger)
                         return "continue";
                     if (collider.overlaps(neighbor)) {
                         var pair_1 = new es.Pair(collider, neighbor);
-                        var shouldReportTriggerEvent = this_1._activeTriggerIntersections.findIndex(function (value) {
+                        var shouldReportTriggerEvent = this_2._activeTriggerIntersections.findIndex(function (value) {
                             return value.first == pair_1.first && value.second == pair_1.second;
-                        }) == -1 && this_1._previousTriggerIntersections.findIndex(function (value) {
+                        }) == -1 && this_2._previousTriggerIntersections.findIndex(function (value) {
                             return value.first == pair_1.first && value.second == pair_1.second;
                         }) == -1;
                         if (shouldReportTriggerEvent)
-                            this_1.notifyTriggerListeners(pair_1, true);
-                        if (!this_1._activeTriggerIntersections.contains(pair_1))
-                            this_1._activeTriggerIntersections.push(pair_1);
+                            this_2.notifyTriggerListeners(pair_1, true);
+                        if (!this_2._activeTriggerIntersections.contains(pair_1))
+                            this_2._activeTriggerIntersections.push(pair_1);
                     }
                 };
-                var this_1 = this;
+                var this_2 = this;
                 for (var j = 0; j < neighbors.length; j++) {
-                    _loop_5(j);
+                    _loop_6(j);
                 }
             }
             es.ListPool.free(colliders);
@@ -5948,18 +5966,18 @@ var es;
         };
         ColliderTriggerHelper.prototype.checkForExitedColliders = function () {
             var _this = this;
-            var _loop_6 = function (i) {
-                var index = this_2._previousTriggerIntersections.findIndex(function (value) {
+            var _loop_7 = function (i) {
+                var index = this_3._previousTriggerIntersections.findIndex(function (value) {
                     if (value.first == _this._activeTriggerIntersections[i].first && value.second == _this._activeTriggerIntersections[i].second)
                         return true;
                     return false;
                 });
                 if (index != -1)
-                    this_2._previousTriggerIntersections.removeAt(index);
+                    this_3._previousTriggerIntersections.removeAt(index);
             };
-            var this_2 = this;
+            var this_3 = this;
             for (var i = 0; i < this._activeTriggerIntersections.length; i++) {
-                _loop_6(i);
+                _loop_7(i);
             }
             for (var i = 0; i < this._previousTriggerIntersections.length; i++) {
                 this.notifyTriggerListeners(this._previousTriggerIntersections[i], false);
@@ -6937,7 +6955,7 @@ var es;
                 for (var y = p1.y; y <= p2.y; y++) {
                     var cell = this.cellAtPosition(x, y);
                     if (!cell)
-                        console.error("removing Collider [" + collider + "] from a cell that it is not present in");
+                        console.log("\u4ECE\u4E0D\u5B58\u5728\u78B0\u649E\u5668\u7684\u5355\u5143\u683C\u4E2D\u79FB\u9664\u78B0\u649E\u5668: [" + collider + "]");
                     else
                         cell.remove(collider);
                 }
@@ -6968,18 +6986,18 @@ var es;
                     var cell = this.cellAtPosition(x, y);
                     if (!cell)
                         continue;
-                    var _loop_7 = function (i) {
+                    var _loop_8 = function (i) {
                         var collider = cell[i];
                         if (collider == excludeCollider || !es.Flags.isFlagSet(layerMask, collider.physicsLayer))
                             return "continue";
                         if (bounds.intersects(collider.bounds)) {
-                            if (!this_3._tempHashSet.firstOrDefault(function (c) { return c.hashCode == collider.hashCode; }))
-                                this_3._tempHashSet.push(collider);
+                            if (!this_4._tempHashSet.firstOrDefault(function (c) { return c.hashCode == collider.hashCode; }))
+                                this_4._tempHashSet.push(collider);
                         }
                     };
-                    var this_3 = this;
+                    var this_4 = this;
                     for (var i = 0; i < cell.length; i++) {
-                        _loop_7(i);
+                        _loop_8(i);
                     }
                 }
             }
