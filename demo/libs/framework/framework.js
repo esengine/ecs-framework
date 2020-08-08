@@ -2189,7 +2189,7 @@ var es;
             _this.deadzone = new es.Rectangle();
             _this.focusOffset = es.Vector2.zero;
             _this.mapLockEnabled = false;
-            _this.mapSize = es.Vector2.zero;
+            _this.mapSize = new es.Rectangle();
             _this._desiredPositionDelta = new es.Vector2();
             _this._worldSpaceDeadZone = new es.Rectangle();
             _this._minimumZoom = 0.3;
@@ -2415,8 +2415,8 @@ var es;
             }
         };
         Camera.prototype.clampToMapSize = function (position) {
-            var halfScreen = es.Vector2.multiply(new es.Vector2(this.bounds.width, this.bounds.height), new es.Vector2(0.5));
-            var cameraMax = new es.Vector2(this.mapSize.x - halfScreen.x, this.mapSize.y - halfScreen.y);
+            var halfScreen = es.Vector2.multiply(new es.Vector2(this.bounds.width, this.bounds.height), new es.Vector2(0.5)).add(new es.Vector2(this.mapSize.x, this.mapSize.y));
+            var cameraMax = new es.Vector2(this.mapSize.width - halfScreen.x, this.mapSize.height - halfScreen.y);
             return es.Vector2.clamp(position, halfScreen, cameraMax);
         };
         Camera.prototype.updateFollow = function () {

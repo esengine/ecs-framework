@@ -476,7 +476,7 @@ declare module es {
         deadzone: Rectangle;
         focusOffset: Vector2;
         mapLockEnabled: boolean;
-        mapSize: Vector2;
+        mapSize: Rectangle;
         _targetEntity: Entity;
         _targetCollider: Collider;
         _desiredPositionDelta: Vector2;

@@ -37,7 +37,7 @@ module es {
         /**
          * 當前地圖映射的寬度和高度
          */
-        public mapSize: Vector2 = Vector2.zero;
+        public mapSize: Rectangle = new Rectangle();
         public _targetEntity: Entity;
         public _targetCollider: Collider;
         public _desiredPositionDelta: Vector2 = new Vector2();
@@ -385,8 +385,8 @@ module es {
          * @param position
          */
         public clampToMapSize(position: Vector2) {
-            let halfScreen = Vector2.multiply(new Vector2(this.bounds.width, this.bounds.height), new Vector2(0.5));
-            let cameraMax = new Vector2(this.mapSize.x - halfScreen.x, this.mapSize.y - halfScreen.y);
+            let halfScreen = Vector2.multiply(new Vector2(this.bounds.width, this.bounds.height), new Vector2(0.5)).add(new Vector2(this.mapSize.x, this.mapSize.y));
+            let cameraMax = new Vector2(this.mapSize.width - halfScreen.x, this.mapSize.height - halfScreen.y);
 
             return Vector2.clamp(position, halfScreen, cameraMax);
         }
