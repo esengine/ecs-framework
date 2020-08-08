@@ -73,7 +73,7 @@ module es {
                     // 单元格应该始终存在，因为这个碰撞器应该在所有查询的单元格中
                     let cell = this.cellAtPosition(x, y);
                     if (!cell)
-                        console.error(`removing Collider [${collider}] from a cell that it is not present in`);
+                        console.log(`从不存在碰撞器的单元格中移除碰撞器: [${collider}]`);
                     else
                         cell.remove(collider);
                 }

@@ -59,7 +59,7 @@ module es {
         public addToRenderLayerList(component: IRenderable, renderLayer: number) {
             let list = this.componentsWithRenderLayer(renderLayer);
             if (!list.contains(component)) {
-                console.warn("Component renderLayer list already contains this component");
+                console.warn("组件呈现层列表已经包含此组件");
                 return;
             }
 
@@ -84,6 +84,7 @@ module es {
             if (this._componentsNeedSort) {
                 this._components.sort(RenderableComponentList.compareUpdatableOrder.compare);
                 this._componentsNeedSort = false;
+                this.updateEgretList();
             }
 
             if (this._unsortedRenderLayers.length > 0) {
@@ -95,6 +96,19 @@ module es {
                 }
 
                 this._unsortedRenderLayers.length = 0;
+            }
+        }
+
+        private updateEgretList(){
+            let scene = Core._instance._scene;
+            if (!scene)
+                return;
+
+            for (let i = 0 ; i < this._components.length; i ++){
+                let component = this._components[i] as RenderableComponent;
+                let egretDisplayObject = scene.$children.find(a => {return a.hashCode == component.displayObject.hashCode});
+                let displayIndex = scene.getChildIndex(egretDisplayObject);
+                if (displayIndex != i) scene.swapChildrenAt(displayIndex, i);
             }
         }
     }
