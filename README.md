@@ -5,6 +5,47 @@ Cegret-framework
 
 这是一套用于egret的游戏框架，里面包含ECS框架用于管理场景实体，一些常用2D碰撞检测及A*寻路。如果您还需要包含其他的AI系统可以查看作者其他库（行为树、简易FSM、实用AI）。
 
+## 入门教程
+
+[Getting Start](https://github.com/esengine/egret-framework/wiki/Getting-Start)
+
+打开白鹭工程 替换 `Main.ts` 文件内容
+
+```ts
+class Main extends es.Core {
+    /** 
+     * 由监听事件 egret.Event.ADDED_TO_STAGE后触发的事件
+     */
+    protected initialize() {
+        // 初始化游戏逻辑
+    }
+    
+    /**
+    * 由监听事件 egret.Event.ENTER_FRAME后触发的事件
+    */
+    protected async update(){
+        // 如果需要更新方法 不能删除super.update()
+        // 会导致框架内所有组件及实体无法更新
+        super.update();
+        
+        // 更新逻辑
+    }
+    
+    /**
+    * 在update方法执行完毕后执行 draw方法
+    */
+    public async draw(){
+        // 如果需要绘制方法 不能删除super.draw()
+        // 会导致框架内所有渲染组件位置无法更新
+        super.draw();
+        
+        // 绘制逻辑
+    }
+}
+```
+
+
+
 ## 版本计划功能
 
 - [x] 简易ECS框架
@@ -29,7 +70,7 @@ Cegret-framework
   - [x] string扩展
   - [x] texture扩展
   - [x] time扩展
-  - [x] array扩展（Extension）
+  - [x] [array扩展（Extension）](https://github.com/esengine/egret-framework/wiki/Array-%E6%89%A9%E5%B1%95%E8%AF%B4%E6%98%8E)
   - [x] base64扩展
   - [x] Stopwatch计数器
   - [x] Input输入帮助
