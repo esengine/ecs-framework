@@ -1,4 +1,4 @@
-# egret-framework
+Cegret-framework
 
 
 [![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/esengine/egret-framework.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/esengine/egret-framework/context:javascript)
@@ -11,26 +11,59 @@
   - [x] 组件列表
     - [x] 碰撞组件
     - [x] 移动组件
-    - [ ] 刚体组件
-    - [ ] 点光源/灯光组件
-    - [ ] 阴影组件
-    - [ ] 轨迹组件
-    - [ ] 滚动组件
-    - [ ] 网格弹簧组件
-    - [ ] 相机震动组件
-    - [ ] 霓虹灯组件
-    - [x] 跟随相机组件
+    - [x] 滚动精灵组件
+    - [x] 平铺精灵组件
+    - [x] 序列帧动画组件
+    - [x] 相机震动组件
+    - [x] 相机组件
+    - [x] 组件池
+    - [x] 基础碰撞组件（矩形、圆形、多边形碰撞）
+    - [x] 场景组件
   - [x] 系统列表
     - [x] 被动系统
     - [x] 协调系统
+    - [x] 实体系统
+    - [x] 实体解析系统
+- [x] 扩展库
+  - [x] object扩展
+  - [x] string扩展
+  - [x] texture扩展
+  - [x] time扩展
+  - [x] array扩展（Extension）
+  - [x] base64扩展
+  - [x] Stopwatch计数器
+  - [x] Input输入帮助
+  - [x] Keyboard键盘帮助
+  - [x] List池对象
+  - [x] Lock锁帮助
+  - [x] Emitter事件发射器
+  - [x] Random随机类帮助
+  - [x] Rectangle矩形帮助类
+  - [x] Vector2向量帮助类
+  - [x] Content资源管理器
+  - [x] 全局管理器
+  - [x] 向量集Bitset
+- [x] 图形帮助
+  - [x] 场景过渡
+  - [x] 后处理器
+  - [x] 场景渲染器
+  - [x] 特效组
 - [x] A*寻路(AStar)
 - [x] 常用碰撞检测
 - [x] 数学库
-  - [x] 简易矩阵类
-  - [x] 简易2d 向量类
-  - [x] 掩码实用类
-  - [x] 贝塞尔曲线
-  - [x] 快速随机数类
+  - [x] 矩形类（Rectangle）
+  - [x] 简易2D矩阵类（Matrix2D）
+  - [x] 简易2d 向量类（Vector2）
+  - [x] 数学扩展库（MathHelper）
+  - [x] 掩码实用类（Flags）
+  - [x] 贝塞尔曲线（Bezier）
+- [x] 物理系统（简易）
+  - [x] Collision碰撞检测
+  - [x] ColliderTrigger帮助
+  - [x] Ray2D射线检测
+  - [x] ShapeCollision 多种形状检测
+  - [x] RealtimeCollisions 实时碰撞检测
+  - [x] SpatialHash 网格检测
 - [x] BreadthFirst 寻路算法
 - [x] Dijkstra 寻路算法
 - [x] 事件处理器

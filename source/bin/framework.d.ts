@@ -348,6 +348,7 @@ declare module es {
         readonly entities: EntityList;
         readonly renderableComponents: RenderableComponentList;
         readonly entityProcessors: EntityProcessorList;
+        readonly _sceneComponents: SceneComponent[];
         _renderers: Renderer[];
         readonly _postProcessors: PostProcessor[];
         _didSceneBegin: any;
@@ -363,6 +364,10 @@ declare module es {
         update(): void;
         render(): void;
         postRender(): void;
+        addSceneComponent<T extends SceneComponent>(component: T): T;
+        getSceneComponent<T extends SceneComponent>(type: any): T;
+        getOrCreateSceneComponent<T extends SceneComponent>(type: any): T;
+        removeSceneComponent(component: SceneComponent): void;
         addRenderer<T extends Renderer>(renderer: T): T;
         getRenderer<T extends Renderer>(type: any): T;
         removeRenderer(renderer: Renderer): void;
@@ -522,6 +527,16 @@ declare module es {
     }
 }
 declare module es {
+    class CameraShake extends Component {
+        _shakeDirection: Vector2;
+        _shakeOffset: Vector2;
+        _shakeIntensity: number;
+        _shakeDegredation: number;
+        shake(shakeIntensify?: number, shakeDegredation?: number, shakeDirection?: Vector2): void;
+        update(): void;
+    }
+}
+declare module es {
     class ComponentPool<T extends PooledComponent> {
         private _cache;
         private _type;
@@ -568,12 +583,18 @@ declare module es {
     }
 }
 declare module es {
-    class Mesh extends RenderableComponent {
-        private _mesh;
-        constructor();
-        setTexture(texture: egret.Texture): Mesh;
-        reset(): void;
-        render(camera: es.Camera): void;
+    class SceneComponent {
+        scene: Scene;
+        enabled: boolean;
+        updateOrder: number;
+        _enabled: boolean;
+        onEnabled(): void;
+        onDisabled(): void;
+        onRemovedFromScene(): void;
+        update(): void;
+        setEnabled(isEnabled: boolean): SceneComponent;
+        setUpdateOrder(updateOrder: number): this;
+        compareTo(other: SceneComponent): number;
     }
 }
 declare module es {

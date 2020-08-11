@@ -1615,6 +1615,7 @@ var es;
         function Scene() {
             var _this = _super.call(this) || this;
             _this.enablePostProcessing = true;
+            _this._sceneComponents = [];
             _this._renderers = [];
             _this._postProcessors = [];
             _this.entities = new es.EntityList(_this);
@@ -1676,6 +1677,10 @@ var es;
             }
             this.entities.removeAllEntities();
             this.removeChildren();
+            for (var i = 0; i < this._sceneComponents.length; i++) {
+                this._sceneComponents[i].onRemovedFromScene();
+            }
+            this._sceneComponents.length = 0;
             this.camera = null;
             this.content.dispose();
             if (this.entityProcessors)
@@ -1686,6 +1691,10 @@ var es;
         };
         Scene.prototype.update = function () {
             this.entities.updateLists();
+            for (var i = this._sceneComponents.length - 1; i >= 0; i--) {
+                if (this._sceneComponents[i].enabled)
+                    this._sceneComponents[i].update();
+            }
             if (this.entityProcessors)
                 this.entityProcessors.update();
             this.entities.update();
@@ -1710,6 +1719,35 @@ var es;
                     }
                 }
             }
+        };
+        Scene.prototype.addSceneComponent = function (component) {
+            component.scene = this;
+            component.onEnabled();
+            this._sceneComponents.push(component);
+            this._sceneComponents.sort(component.compareTo);
+            return component;
+        };
+        Scene.prototype.getSceneComponent = function (type) {
+            for (var i = 0; i < this._sceneComponents.length; i++) {
+                var component = this._sceneComponents[i];
+                if (component instanceof type)
+                    return component;
+            }
+            return null;
+        };
+        Scene.prototype.getOrCreateSceneComponent = function (type) {
+            var comp = this.getSceneComponent(type);
+            if (comp == null)
+                comp = this.addSceneComponent(new type());
+            return comp;
+        };
+        Scene.prototype.removeSceneComponent = function (component) {
+            if (!this._sceneComponents.contains(component)) {
+                console.warn("SceneComponent" + component + "\u4E0D\u5728SceneComponents\u5217\u8868\u4E2D!");
+                return;
+            }
+            this._sceneComponents.remove(component);
+            component.onRemovedFromScene();
         };
         Scene.prototype.addRenderer = function (renderer) {
             this._renderers.push(renderer);
@@ -2495,6 +2533,55 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var CameraShake = (function (_super) {
+        __extends(CameraShake, _super);
+        function CameraShake() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this._shakeDirection = es.Vector2.zero;
+            _this._shakeOffset = es.Vector2.zero;
+            _this._shakeIntensity = 0;
+            _this._shakeDegredation = 0.95;
+            return _this;
+        }
+        CameraShake.prototype.shake = function (shakeIntensify, shakeDegredation, shakeDirection) {
+            if (shakeIntensify === void 0) { shakeIntensify = 15; }
+            if (shakeDegredation === void 0) { shakeDegredation = 0.9; }
+            if (shakeDirection === void 0) { shakeDirection = es.Vector2.zero; }
+            this.enabled = true;
+            if (this._shakeIntensity < shakeIntensify) {
+                this._shakeDirection = shakeDirection;
+                this._shakeIntensity = shakeIntensify;
+                if (shakeDegredation < 0 || shakeDegredation >= 1) {
+                    shakeDegredation = 0.95;
+                }
+                this._shakeDegredation = shakeDegredation;
+            }
+        };
+        CameraShake.prototype.update = function () {
+            if (Math.abs(this._shakeIntensity) > 0) {
+                this._shakeOffset = this._shakeDirection;
+                if (this._shakeOffset.x != 0 || this._shakeOffset.y != 0) {
+                    this._shakeOffset.normalize();
+                }
+                else {
+                    this._shakeOffset.x = this._shakeOffset.x + Math.random() - 0.5;
+                    this._shakeOffset.y = this._shakeOffset.y + Math.random() - 0.5;
+                }
+                this._shakeOffset.multiply(new es.Vector2(this._shakeIntensity));
+                this._shakeIntensity *= -this._shakeDegredation;
+                if (Math.abs(this._shakeIntensity) <= 0.01) {
+                    this._shakeIntensity = 0;
+                    this.enabled = false;
+                }
+            }
+            this.entity.scene.camera.position.add(this._shakeOffset);
+        };
+        return CameraShake;
+    }(es.Component));
+    es.CameraShake = CameraShake;
+})(es || (es = {}));
+var es;
+(function (es) {
     var ComponentPool = (function () {
         function ComponentPool(typeClass) {
             this._type = typeClass;
@@ -2662,25 +2749,52 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Mesh = (function (_super) {
-        __extends(Mesh, _super);
-        function Mesh() {
-            var _this = _super.call(this) || this;
-            _this._mesh = new egret.Mesh();
-            return _this;
+    var SceneComponent = (function () {
+        function SceneComponent() {
+            this.updateOrder = 0;
+            this._enabled = true;
         }
-        Mesh.prototype.setTexture = function (texture) {
-            this._mesh.texture = texture;
-            this._mesh.$renderNode = new egret.sys.RenderNode();
+        Object.defineProperty(SceneComponent.prototype, "enabled", {
+            get: function () {
+                return this._enabled;
+            },
+            set: function (value) {
+                this.setEnabled(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        SceneComponent.prototype.onEnabled = function () {
+        };
+        SceneComponent.prototype.onDisabled = function () {
+        };
+        SceneComponent.prototype.onRemovedFromScene = function () {
+        };
+        SceneComponent.prototype.update = function () {
+        };
+        SceneComponent.prototype.setEnabled = function (isEnabled) {
+            if (this._enabled != isEnabled) {
+                this._enabled = isEnabled;
+                if (this._enabled) {
+                }
+                else {
+                }
+            }
             return this;
         };
-        Mesh.prototype.reset = function () {
+        SceneComponent.prototype.setUpdateOrder = function (updateOrder) {
+            if (this.updateOrder != updateOrder) {
+                this.updateOrder = updateOrder;
+                es.Core.scene._sceneComponents.sort(this.compareTo);
+            }
+            return this;
         };
-        Mesh.prototype.render = function (camera) {
+        SceneComponent.prototype.compareTo = function (other) {
+            return this.updateOrder - other.updateOrder;
         };
-        return Mesh;
-    }(es.RenderableComponent));
-    es.Mesh = Mesh;
+        return SceneComponent;
+    }());
+    es.SceneComponent = SceneComponent;
 })(es || (es = {}));
 var es;
 (function (es) {

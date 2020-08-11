@@ -27,6 +27,7 @@ module es {
          */
         public readonly entityProcessors: EntityProcessorList;
 
+        public readonly _sceneComponents: SceneComponent[] = [];
         public _renderers: Renderer[] = [];
         public readonly _postProcessors: PostProcessor[] = [];
         public _didSceneBegin;
@@ -120,6 +121,11 @@ module es {
             this.entities.removeAllEntities();
             this.removeChildren();
 
+            for (let i = 0; i < this._sceneComponents.length; i ++){
+                this._sceneComponents[i].onRemovedFromScene();
+            }
+            this._sceneComponents.length = 0;
+
             this.camera = null;
             this.content.dispose();
 
@@ -135,6 +141,11 @@ module es {
         public update() {
             // 更新我们的列表，以防它们有任何变化
             this.entities.updateLists();
+
+            for (let i = this._sceneComponents.length - 1; i >= 0; i --){
+                if (this._sceneComponents[i].enabled)
+                    this._sceneComponents[i].update();
+            }
 
             // 更新我们的实体解析器
             if (this.entityProcessors)
@@ -173,6 +184,58 @@ module es {
                     }
                 }
             }
+        }
+
+        /**
+         * 向组件列表添加并返回SceneComponent
+         * @param component
+         */
+        public addSceneComponent<T extends SceneComponent>(component: T): T {
+            component.scene = this;
+            component.onEnabled();
+            this._sceneComponents.push(component);
+            this._sceneComponents.sort(component.compareTo);
+            return component;
+        }
+
+        /**
+         * 获取类型为T的第一个SceneComponent并返回它。如果没有找到组件，则返回null。
+         * @param type
+         */
+        public getSceneComponent<T extends SceneComponent>(type){
+            for (let i = 0; i < this._sceneComponents.length; i ++){
+                let component = this._sceneComponents[i];
+                if (component instanceof type)
+                    return component as T;
+            }
+
+            return null;
+        }
+
+        /**
+         * 获取类型为T的第一个SceneComponent并返回它。如果没有找到SceneComponent，则将创建SceneComponent。
+         * @param type
+         */
+        public getOrCreateSceneComponent<T extends SceneComponent>(type){
+            let comp = this.getSceneComponent<T>(type);
+            if (comp == null)
+                comp = this.addSceneComponent<T>(new type());
+
+            return comp;
+        }
+
+        /**
+         * 从SceneComponents列表中删除一个SceneComponent
+         * @param component
+         */
+        public removeSceneComponent(component: SceneComponent){
+            if (!this._sceneComponents.contains(component)){
+                console.warn(`SceneComponent${component}不在SceneComponents列表中!`);
+                return;
+            }
+
+            this._sceneComponents.remove(component);
+            component.onRemovedFromScene();
         }
 
         /**
