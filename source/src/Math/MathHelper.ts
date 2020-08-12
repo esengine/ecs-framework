@@ -3,6 +3,10 @@ module es {
         public static readonly Epsilon: number = 0.00001;
         public static readonly Rad2Deg = 57.29578;
         public static readonly Deg2Rad = 0.0174532924;
+        /**
+         * 表示pi除以2的值(1.57079637)
+         */
+        public static readonly PiOver2 = Math.PI / 2;
 
         /**
          * 将弧度转换成角度。

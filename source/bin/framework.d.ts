@@ -726,6 +726,31 @@ declare module es {
     }
 }
 declare module es {
+    class TiledMapRenderer extends RenderableComponent {
+        tiledMap: TmxMap;
+        physicsLayer: number;
+        layerIndicesToRender: number[];
+        readonly width: number;
+        readonly height: number;
+        collisionLayer: TmxLayer;
+        _shouldCreateColliders: boolean;
+        _colliders: Collider[];
+        constructor(tiledMap: TmxMap, collisionLayerName?: string, shouldCreateColliders?: boolean);
+        setLayerToRender(layerName: string): void;
+        setLayersToRender(...layerNames: string[]): void;
+        private getLayerIndex;
+        getRowAtWorldPosition(yPos: number): number;
+        getColumnAtWorldPosition(xPos: number): number;
+        onEntityTransformChanged(comp: transform.Component): void;
+        onAddedToEntity(): void;
+        onRemovedFromEntity(): void;
+        update(): void;
+        render(camera: es.Camera): void;
+        addColliders(): void;
+        removeColliders(): void;
+    }
+}
+declare module es {
     interface ITriggerListener {
         onTriggerEnter(other: Collider, local: Collider): any;
         onTriggerExit(other: Collider, local: Collider): any;
@@ -787,6 +812,7 @@ declare module es {
         constructor();
         width: number;
         height: number;
+        createBoxRect(x: number, y: number, width: number, height: number): BoxCollider;
         setSize(width: number, height: number): this;
         setWidth(width: number): BoxCollider;
         setHeight(height: number): void;
@@ -1224,6 +1250,7 @@ declare module es {
         static readonly Epsilon: number;
         static readonly Rad2Deg: number;
         static readonly Deg2Rad: number;
+        static readonly PiOver2: number;
         static toDegrees(radians: number): number;
         static toRadians(degrees: number): number;
         static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number;
@@ -1568,6 +1595,9 @@ declare module es {
         height: number;
         tiles: TmxLayerTile[];
         getTileWithGid(gid: number): TmxLayerTile;
+        getTile(x: number, y: number): TmxLayerTile;
+        getCollisionRectangles(): Rectangle[];
+        findBoundsRect(startX: number, endX: number, startY: number, checkedIndexes?: boolean[]): Rectangle;
     }
     class TmxLayerTile {
         static readonly FLIPPED_HORIZONTALLY_FLAG: number;
@@ -1638,6 +1668,9 @@ declare module es {
         maxTileHeight: number;
         readonly requiresLargeTileCulling: boolean;
         getTilesetForTileGid(gid: number): TmxTileset;
+        worldToTilePositionX(x: number, clampToTilemapBounds?: boolean): number;
+        worldToTilePositionY(y: number, clampToTilemapBounds?: boolean): number;
+        getLayer(name: string): ITmxLayer;
         update(): void;
         _isDisposed: any;
         dispose(disposing?: boolean): void;
@@ -1690,6 +1723,8 @@ declare module es {
         tile: TmxLayerTile;
         visible: boolean;
         text: TmxText;
+        points: Vector2[];
+        properties: Map<string, string>;
     }
     class TmxText {
         fontFamily: string;
@@ -1732,6 +1767,16 @@ declare module es {
         top = 0,
         center = 1,
         bottom = 2
+    }
+}
+declare module es {
+    class TiledRendering {
+        static renderMap(map: TmxMap, position: Vector2, scale: Vector2, layerDepth: number): void;
+        static renderLayer(layer: TmxLayer, position: Vector2, scale: Vector2, layerDepth: number): void;
+        static renderImageLayer(layer: TmxImageLayer, position: Vector2, scale: Vector2, layerDepth: number): void;
+        static renderObjectGroup(objGroup: TmxObjectGroup, position: Vector2, scale: Vector2, layerDepth: number): void;
+        static renderGroup(group: TmxGroup, position: Vector2, scale: Vector2, layerDepth: number): void;
+        static renderTile(tile: TmxLayerTile, position: Vector2, scale: Vector2, tileWidth: number, tileHeight: number, color: Color, layerDepth: number): void;
     }
 }
 declare module es {
@@ -1814,6 +1859,18 @@ declare class Base64Utils {
     private static _utf8_encode;
     private static _utf8_decode;
     private static getConfKey;
+}
+declare module es {
+    class Color {
+        private _packedValue;
+        constructor(r: number, g: number, b: number, alpha: number);
+        b: number;
+        g: number;
+        r: number;
+        a: number;
+        packedValue: number;
+        equals(other: Color): boolean;
+    }
 }
 declare module es {
     class ContentManager {

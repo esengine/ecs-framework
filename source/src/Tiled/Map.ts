@@ -68,6 +68,38 @@ module es {
         }
 
         /**
+         * 转换从世界平铺位置获取tilemap边界
+         * @param x
+         * @param clampToTilemapBounds
+         */
+        public worldToTilePositionX(x: number, clampToTilemapBounds = true){
+            let tileX = Math.floor(x / this.tileWidth);
+            if (!clampToTilemapBounds)
+                return tileX;
+            return MathHelper.clamp(tileX, 0, this.width - 1);
+        }
+
+        /**
+         * 转换从世界平铺位置获取tilemap边界
+         * @param y
+         * @param clampToTilemapBounds
+         */
+        public worldToTilePositionY(y: number, clampToTilemapBounds = true){
+            let tileY = Math.floor(y / this.tileHeight);
+            if (!clampToTilemapBounds)
+                return tileY;
+            return MathHelper.clamp(tileY, 0, this.height - 1);
+        }
+
+        /**
+         * 按名称获取平铺层
+         * @param name
+         */
+        public getLayer(name: string): ITmxLayer {
+            return this.layers.get(name);
+        }
+
+        /**
          * 更新他们的动画tile
          */
         public update(){

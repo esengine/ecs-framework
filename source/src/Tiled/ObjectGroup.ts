@@ -25,6 +25,8 @@ module es {
         public tile: TmxLayerTile;
         public visible: boolean;
         public text: TmxText;
+        public points: Vector2[];
+        public properties: Map<string, string>;
     }
 
     export class TmxText {

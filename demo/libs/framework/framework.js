@@ -3287,6 +3287,120 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var TiledMapRenderer = (function (_super) {
+        __extends(TiledMapRenderer, _super);
+        function TiledMapRenderer(tiledMap, collisionLayerName, shouldCreateColliders) {
+            if (collisionLayerName === void 0) { collisionLayerName = null; }
+            if (shouldCreateColliders === void 0) { shouldCreateColliders = true; }
+            var _this = _super.call(this) || this;
+            _this.physicsLayer = 1 << 0;
+            _this.tiledMap = tiledMap;
+            _this._shouldCreateColliders = shouldCreateColliders;
+            if (collisionLayerName) {
+                _this.collisionLayer = tiledMap.tileLayers.get(collisionLayerName);
+            }
+            return _this;
+        }
+        Object.defineProperty(TiledMapRenderer.prototype, "width", {
+            get: function () {
+                return this.tiledMap.width * this.tiledMap.tileWidth;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(TiledMapRenderer.prototype, "height", {
+            get: function () {
+                return this.tiledMap.height * this.tiledMap.tileHeight;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        TiledMapRenderer.prototype.setLayerToRender = function (layerName) {
+            this.layerIndicesToRender = [];
+            this.layerIndicesToRender[0] = this.getLayerIndex(layerName);
+        };
+        TiledMapRenderer.prototype.setLayersToRender = function () {
+            var layerNames = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                layerNames[_i] = arguments[_i];
+            }
+            this.layerIndicesToRender = [];
+            for (var i = 0; i < layerNames.length; i++)
+                this.layerIndicesToRender[i] = this.getLayerIndex(layerNames[i]);
+        };
+        TiledMapRenderer.prototype.getLayerIndex = function (layerName) {
+            var index = 0;
+            var layerType = this.tiledMap.getLayer(layerName);
+            for (var layer in this.tiledMap.layers) {
+                if (this.tiledMap.layers.hasOwnProperty(layer) &&
+                    this.tiledMap.layers.get(layer) == layerType) {
+                    return index;
+                }
+            }
+            return -1;
+        };
+        TiledMapRenderer.prototype.getRowAtWorldPosition = function (yPos) {
+            yPos -= this.entity.transform.position.y + this._localOffset.y;
+            return this.tiledMap.worldToTilePositionY(yPos);
+        };
+        TiledMapRenderer.prototype.getColumnAtWorldPosition = function (xPos) {
+            xPos -= this.entity.transform.position.x + this._localOffset.x;
+            return this.tiledMap.worldToTilePositionX(xPos);
+        };
+        TiledMapRenderer.prototype.onEntityTransformChanged = function (comp) {
+            if (this._shouldCreateColliders && comp == transform.Component.position) {
+                this.removeColliders();
+                this.addColliders();
+            }
+        };
+        TiledMapRenderer.prototype.onAddedToEntity = function () {
+            this.addColliders();
+        };
+        TiledMapRenderer.prototype.onRemovedFromEntity = function () {
+            this.removeColliders();
+        };
+        TiledMapRenderer.prototype.update = function () {
+            this.tiledMap.update();
+        };
+        TiledMapRenderer.prototype.render = function (camera) {
+            if (!this.layerIndicesToRender) {
+                es.TiledRendering.renderMap(this.tiledMap, es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer);
+            }
+            else {
+                for (var i = 0; i < this.tiledMap.layers.size; i++) {
+                    if (this.tiledMap.layers.get(i.toString()).visible && this.layerIndicesToRender.contains(i))
+                        es.TiledRendering.renderLayer(this.tiledMap.layers.get(i.toString()), es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer);
+                }
+            }
+        };
+        TiledMapRenderer.prototype.addColliders = function () {
+            if (!this.collisionLayer || !this._shouldCreateColliders)
+                return;
+            var collisionRects = this.collisionLayer.getCollisionRectangles();
+            this._colliders = [];
+            for (var i = 0; i < collisionRects.length; i++) {
+                var collider = new es.BoxCollider().createBoxRect(collisionRects[i].x + this._localOffset.x, collisionRects[i].y + this._localOffset.y, collisionRects[i].width, collisionRects[i].height);
+                collider.physicsLayer = this.physicsLayer;
+                collider.entity = this.entity;
+                this._colliders[i] = collider;
+                es.Physics.addCollider(collider);
+            }
+        };
+        TiledMapRenderer.prototype.removeColliders = function () {
+            if (this._colliders == null)
+                return;
+            for (var _i = 0, _a = this._colliders; _i < _a.length; _i++) {
+                var collider = _a[_i];
+                es.Physics.removeCollider(collider);
+            }
+            this._colliders = null;
+        };
+        return TiledMapRenderer;
+    }(es.RenderableComponent));
+    es.TiledMapRenderer = TiledMapRenderer;
+})(es || (es = {}));
+var es;
+(function (es) {
     var Mover = (function (_super) {
         __extends(Mover, _super);
         function Mover() {
@@ -3568,6 +3682,12 @@ var es;
             enumerable: true,
             configurable: true
         });
+        BoxCollider.prototype.createBoxRect = function (x, y, width, height) {
+            this._localOffset = new es.Vector2(x + width / 2, y + width / 2);
+            this.shape = new es.Box(width, height);
+            this._colliderRequiresAutoSizing = false;
+            return this;
+        };
         BoxCollider.prototype.setSize = function (width, height) {
             this._colliderRequiresAutoSizing = false;
             var box = this.shape;
@@ -5719,6 +5839,7 @@ var es;
         MathHelper.Epsilon = 0.00001;
         MathHelper.Rad2Deg = 57.29578;
         MathHelper.Deg2Rad = 0.0174532924;
+        MathHelper.PiOver2 = Math.PI / 2;
         return MathHelper;
     }());
     es.MathHelper = MathHelper;
@@ -7381,6 +7502,55 @@ var es;
             }
             return null;
         };
+        TmxLayer.prototype.getTile = function (x, y) {
+            return this.tiles[x + y * this.width];
+        };
+        TmxLayer.prototype.getCollisionRectangles = function () {
+            var checkedIndexes = [];
+            var rectangles = [];
+            var startCol = -1;
+            var index = -1;
+            for (var y = 0; y < this.map.height; y++) {
+                for (var x = 0; x < this.map.width; x++) {
+                    index = y * this.map.width + x;
+                    var tile = this.getTile(x, y);
+                    if (tile && !checkedIndexes[index]) {
+                        if (startCol < 0)
+                            startCol = x;
+                        checkedIndexes[index] = true;
+                    }
+                    else if (tile || checkedIndexes[index]) {
+                        if (startCol >= 0) {
+                            rectangles.push(this.findBoundsRect(startCol, x, y, checkedIndexes));
+                            startCol = -1;
+                        }
+                    }
+                }
+                if (startCol >= 0) {
+                    rectangles.push(this.findBoundsRect(startCol, this.map.width, y, checkedIndexes));
+                    startCol = -1;
+                }
+            }
+            return rectangles;
+        };
+        TmxLayer.prototype.findBoundsRect = function (startX, endX, startY, checkedIndexes) {
+            var index = -1;
+            for (var y = startY + 1; y < this.map.height; y++) {
+                for (var x = startX; x < endX; x++) {
+                    index = y * this.map.width + x;
+                    var tile = this.getTile(x, y);
+                    if (tile || checkedIndexes[index]) {
+                        for (var _x = startX; _x < x; _x++) {
+                            index = y * this.map.width + _x;
+                            checkedIndexes[index] = false;
+                        }
+                        return new es.Rectangle(startX * this.map.tileWidth, startY * this.map.tileHeight, (endX - startX) * this.map.tileWidth, (y - startY) * this.map.tileHeight);
+                    }
+                    checkedIndexes[index] = true;
+                }
+            }
+            return new es.Rectangle(startX * this.map.tileWidth, startY * this.map.tileHeight, (endX - startX) * this.map.tileWidth, (this.map.height - startY) * this.map.tileHeight);
+        };
         return TmxLayer;
     }());
     es.TmxLayer = TmxLayer;
@@ -7518,6 +7688,23 @@ var es;
             }
             console.error("tile gid" + gid + "\u672A\u5728\u4EFB\u4F55tileset\u4E2D\u627E\u5230");
         };
+        TmxMap.prototype.worldToTilePositionX = function (x, clampToTilemapBounds) {
+            if (clampToTilemapBounds === void 0) { clampToTilemapBounds = true; }
+            var tileX = Math.floor(x / this.tileWidth);
+            if (!clampToTilemapBounds)
+                return tileX;
+            return es.MathHelper.clamp(tileX, 0, this.width - 1);
+        };
+        TmxMap.prototype.worldToTilePositionY = function (y, clampToTilemapBounds) {
+            if (clampToTilemapBounds === void 0) { clampToTilemapBounds = true; }
+            var tileY = Math.floor(y / this.tileHeight);
+            if (!clampToTilemapBounds)
+                return tileY;
+            return es.MathHelper.clamp(tileY, 0, this.height - 1);
+        };
+        TmxMap.prototype.getLayer = function (name) {
+            return this.layers.get(name);
+        };
         TmxMap.prototype.update = function () {
             this.tilesets.forEach(function (tileset) { tileset.update(); });
         };
@@ -7617,6 +7804,144 @@ var es;
         TmxVerticalAlignment[TmxVerticalAlignment["center"] = 1] = "center";
         TmxVerticalAlignment[TmxVerticalAlignment["bottom"] = 2] = "bottom";
     })(TmxVerticalAlignment = es.TmxVerticalAlignment || (es.TmxVerticalAlignment = {}));
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TiledRendering = (function () {
+        function TiledRendering() {
+        }
+        TiledRendering.renderMap = function (map, position, scale, layerDepth) {
+            var _this = this;
+            map.layers.forEach(function (layer) {
+                if (layer instanceof es.TmxLayer && layer.visible) {
+                    _this.renderLayer(layer, position, scale, layerDepth);
+                }
+                else if (layer instanceof es.TmxImageLayer && layer.visible) {
+                    _this.renderImageLayer(layer, position, scale, layerDepth);
+                }
+                else if (layer instanceof es.TmxGroup && layer.visible) {
+                    _this.renderGroup(layer, position, scale, layerDepth);
+                }
+                else if (layer instanceof es.TmxObjectGroup && layer.visible) {
+                    _this.renderObjectGroup(layer, position, scale, layerDepth);
+                }
+            });
+        };
+        TiledRendering.renderLayer = function (layer, position, scale, layerDepth) {
+            if (!layer.visible)
+                return;
+            var tileWidth = layer.map.tileWidth * scale.x;
+            var tileHeight = layer.map.tileHeight * scale.y;
+            var color = new es.Color(0, 0, 0, layer.opacity * 255);
+            for (var i = 0; i < layer.tiles.length; i++) {
+                var tile = layer.tiles[i];
+                if (!tile)
+                    continue;
+                this.renderTile(tile, position, scale, tileWidth, tileHeight, color, layerDepth);
+            }
+        };
+        TiledRendering.renderImageLayer = function (layer, position, scale, layerDepth) {
+            if (!layer.visible)
+                return;
+            var color = new es.Color(0, 0, 0, layer.opacity * 255);
+            var pos = es.Vector2.add(position, new es.Vector2(layer.offsetX, layer.offsetY).multiply(scale));
+        };
+        TiledRendering.renderObjectGroup = function (objGroup, position, scale, layerDepth) {
+            if (!objGroup.visible)
+                return;
+            for (var object in objGroup.objects) {
+                var obj = objGroup.objects.get(object);
+                if (!obj.visible)
+                    continue;
+                var pos = es.Vector2.add(position, new es.Vector2(obj.x, obj.y).multiply(scale));
+                switch (obj.objectType) {
+                    case es.TmxObjectType.basic:
+                        break;
+                    case es.TmxObjectType.point:
+                        var size = objGroup.map.tileWidth * 0.5;
+                        pos.x -= size * 0.5;
+                        pos.y -= size * 0.5;
+                        break;
+                    case es.TmxObjectType.tile:
+                        var tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
+                        var sourceRect = tileset.tileRegions[obj.tile.gid];
+                        pos.y -= obj.tile.tilesetTile.image.height;
+                        break;
+                    case es.TmxObjectType.ellipse:
+                        pos = new es.Vector2(obj.x + obj.width * 0.5, obj.y + obj.height * 0.5).multiply(scale);
+                        break;
+                    case es.TmxObjectType.polygon:
+                    case es.TmxObjectType.polyline:
+                        var points = [];
+                        for (var i = 0; i < obj.points.length; i++)
+                            points[i] = es.Vector2.multiply(obj.points[i], scale);
+                        break;
+                    case es.TmxObjectType.text:
+                        break;
+                    default:
+                        break;
+                }
+            }
+        };
+        TiledRendering.renderGroup = function (group, position, scale, layerDepth) {
+            var _this = this;
+            if (!group.visible)
+                return;
+            group.layers.forEach(function (layer) {
+                if (layer instanceof es.TmxGroup) {
+                    _this.renderGroup(layer, position, scale, layerDepth);
+                }
+                if (layer instanceof es.TmxObjectGroup) {
+                    _this.renderObjectGroup(layer, position, scale, layerDepth);
+                }
+                if (layer instanceof es.TmxLayer) {
+                    _this.renderLayer(layer, position, scale, layerDepth);
+                }
+                if (layer instanceof es.TmxImageLayer) {
+                    _this.renderImageLayer(layer, position, scale, layerDepth);
+                }
+            });
+        };
+        TiledRendering.renderTile = function (tile, position, scale, tileWidth, tileHeight, color, layerDepth) {
+            var gid = tile.gid;
+            var tilesetTile = tile.tilesetTile;
+            if (tilesetTile && tilesetTile.animationFrames.length > 0)
+                gid = tilesetTile.currentAnimationFrameGid;
+            var sourceRect = tile.tileset.tileRegions.get(gid);
+            var tx = tile.x * tileWidth;
+            var ty = tile.y * tileHeight;
+            var rotation = 0;
+            if (tile.diagonalFlip) {
+                if (tile.horizontalFlip && tile.verticalFlip) {
+                    rotation = es.MathHelper.PiOver2;
+                    tx += tileHeight + (sourceRect.height * scale.y - tileHeight);
+                    ty -= (sourceRect.width * scale.x - tileWidth);
+                }
+                else if (tile.horizontalFlip) {
+                    rotation = -es.MathHelper.PiOver2;
+                    ty += tileHeight;
+                }
+                else if (tile.verticalFlip) {
+                    rotation = es.MathHelper.PiOver2;
+                    tx += tileWidth + (sourceRect.height * scale.y - tileHeight);
+                    ty += (tileWidth - sourceRect.width * scale.x);
+                }
+                else {
+                    rotation = -es.MathHelper.PiOver2;
+                    ty += tileHeight;
+                }
+            }
+            if (rotation == 0)
+                ty += (tileHeight - sourceRect.height * scale.y);
+            var pos = new es.Vector2(tx, ty).add(position);
+            if (tile.tileset.image) {
+            }
+            else {
+            }
+        };
+        return TiledRendering;
+    }());
+    es.TiledRendering = TiledRendering;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -7981,6 +8306,78 @@ var Base64Utils = (function () {
     };
     return Base64Utils;
 }());
+var es;
+(function (es) {
+    var Color = (function () {
+        function Color(r, g, b, alpha) {
+            if (((r | g | b | alpha) & 0xFFFFFF00) != 0) {
+                var clampedR = es.MathHelper.clamp(r, 0, 255);
+                var clampedG = es.MathHelper.clamp(g, 0, 255);
+                var clampedB = es.MathHelper.clamp(b, 0, 255);
+                var clampedA = es.MathHelper.clamp(alpha, 0, 255);
+                this._packedValue = (clampedA << 24) | (clampedB << 16) | (clampedG << 8) | (clampedR);
+            }
+            else {
+                this._packedValue = (alpha << 24) | (b << 16) | (g << 8) | r;
+            }
+        }
+        Object.defineProperty(Color.prototype, "b", {
+            get: function () {
+                return this._packedValue >> 16;
+            },
+            set: function (value) {
+                this._packedValue = (this._packedValue & 0xff00ffff) | (value << 16);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Color.prototype, "g", {
+            get: function () {
+                return this._packedValue >> 8;
+            },
+            set: function (value) {
+                this._packedValue = (this._packedValue & 0xffff00ff) | (value << 8);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Color.prototype, "r", {
+            get: function () {
+                return this._packedValue;
+            },
+            set: function (value) {
+                this._packedValue = (this._packedValue & 0xffffff00) | value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Color.prototype, "a", {
+            get: function () {
+                return this._packedValue >> 24;
+            },
+            set: function (value) {
+                this._packedValue = (this._packedValue & 0x00ffffff) | (value << 24);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Color.prototype, "packedValue", {
+            get: function () {
+                return this._packedValue;
+            },
+            set: function (value) {
+                this._packedValue = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Color.prototype.equals = function (other) {
+            return this._packedValue == other._packedValue;
+        };
+        return Color;
+    }());
+    es.Color = Color;
+})(es || (es = {}));
 var es;
 (function (es) {
     var ContentManager = (function () {
