@@ -76,5 +76,18 @@ module es {
         public static angleBetweenVectors(from: Vector2, to: Vector2) {
             return Math.atan2(to.y - from.y, to.x - from.x);
         }
+
+        /**
+         * 增加t并确保它总是大于或等于0并且小于长度
+         * @param t
+         * @param length
+         */
+        public static incrementWithWrap(t: number, length: number){
+            t ++;
+            if (t == length)
+                return 0;
+
+            return t;
+        }
     }
 }

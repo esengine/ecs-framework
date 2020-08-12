@@ -3208,6 +3208,85 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var CollisionState = (function () {
+        function CollisionState() {
+        }
+        Object.defineProperty(CollisionState.prototype, "hasCollision", {
+            get: function () {
+                return this.below || this.right || this.left || this.above;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        CollisionState.prototype.reset = function () {
+            this.becameGroundedThisFrame = this.isGroundedOnOnewayPlatform = this.right = this.left = this.above = this.below = false;
+            this.slopAngle = 0;
+        };
+        CollisionState.prototype.toString = function () {
+            return "[CollisionState] r: " + this.right + ", l: " + this.left + ", a: " + this.above + ", b: " + this.below + ", angle: " + this.slopAngle + ", wasGroundedLastFrame: " + this.wasGroundedLastFrame + ", becameGroundedThisFrame: " + this.becameGroundedThisFrame;
+        };
+        return CollisionState;
+    }());
+    es.CollisionState = CollisionState;
+    var TiledMapMover = (function (_super) {
+        __extends(TiledMapMover, _super);
+        function TiledMapMover() {
+            var _this = _super.call(this) || this;
+            _this.colliderHorizontalInset = 2;
+            _this.colliderVerticalInset = 6;
+            return _this;
+        }
+        TiledMapMover.prototype.testCollisions = function (motion, boxColliderBounds, collisionState) {
+            this._boxColliderBounds = boxColliderBounds;
+            collisionState.wasGroundedLastFrame = collisionState.below;
+            collisionState.reset();
+            var motionX = motion.x;
+            var motionY = motion.y;
+            if (motionX != 0) {
+                var direction = motionX > 0 ? es.Edge.right : es.Edge.left;
+                var sweptBounds = this.collisionRectForSide(direction, motionX);
+                var collisionResponse = 0;
+                if (this.testMapCollision(sweptBounds, direction, collisionState, collisionResponse)) {
+                    motion.x = collisionResponse - es.RectangleExt.getSide(boxColliderBounds, direction);
+                    collisionState.left = direction == es.Edge.left;
+                    collisionState.right = direction == es.Edge.right;
+                    collisionState._movementRemainderX.reset();
+                }
+                else {
+                    collisionState.left = false;
+                    collisionState.right = false;
+                }
+            }
+        };
+        TiledMapMover.prototype.testMapCollision = function (collisionRect, direction, collisionState, collisionResponse) {
+            var side = es.EdgeExt.oppositeEdge(direction);
+            var perpindicularPosition = es.EdgeExt.isVertical(side) ? collisionRect.center.x : collisionRect.center.y;
+            var leadingPosition = es.RectangleExt.getSide(collisionRect, direction);
+            var shouldTestSlopes = es.EdgeExt.isVertical(side);
+        };
+        TiledMapMover.prototype.collisionRectForSide = function (side, motion) {
+            var bounds;
+            if (es.EdgeExt.isHorizontal(side)) {
+                bounds = es.RectangleExt.getRectEdgePortion(this._boxColliderBounds, side);
+            }
+            else {
+                bounds = es.RectangleExt.getHalfRect(this._boxColliderBounds, side);
+            }
+            if (es.EdgeExt.isVertical(side)) {
+                es.RectangleExt.contract(bounds, this.colliderHorizontalInset, 0);
+            }
+            else {
+                es.RectangleExt.contract(bounds, 0, this.colliderVerticalInset);
+            }
+            es.RectangleExt.expandSide(bounds, side, motion);
+            return bounds;
+        };
+        return TiledMapMover;
+    }(es.Component));
+    es.TiledMapMover = TiledMapMover;
+})(es || (es = {}));
+var es;
+(function (es) {
     var Mover = (function (_super) {
         __extends(Mover, _super);
         function Mover() {
@@ -5631,6 +5710,12 @@ var es;
         MathHelper.angleBetweenVectors = function (from, to) {
             return Math.atan2(to.y - from.y, to.x - from.x);
         };
+        MathHelper.incrementWithWrap = function (t, length) {
+            t++;
+            if (t == length)
+                return 0;
+            return t;
+        };
         MathHelper.Epsilon = 0.00001;
         MathHelper.Rad2Deg = 57.29578;
         MathHelper.Deg2Rad = 0.0174532924;
@@ -7259,6 +7344,357 @@ var es;
     }());
     es.RaycastResultParser = RaycastResultParser;
 })(es || (es = {}));
+var es;
+(function (es) {
+    var TmxGroup = (function () {
+        function TmxGroup() {
+        }
+        return TmxGroup;
+    }());
+    es.TmxGroup = TmxGroup;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TmxImageLayer = (function () {
+        function TmxImageLayer() {
+        }
+        return TmxImageLayer;
+    }());
+    es.TmxImageLayer = TmxImageLayer;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TmxLayer = (function () {
+        function TmxLayer() {
+        }
+        Object.defineProperty(TmxLayer.prototype, "offset", {
+            get: function () {
+                return new es.Vector2(this.offsetX, this.offsetY);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        TmxLayer.prototype.getTileWithGid = function (gid) {
+            for (var i = 0; i < this.tiles.length; i++) {
+                if (this.tiles[i] && this.tiles[i].gid == gid)
+                    return this.tiles[i];
+            }
+            return null;
+        };
+        return TmxLayer;
+    }());
+    es.TmxLayer = TmxLayer;
+    var TmxLayerTile = (function () {
+        function TmxLayerTile(map, id, x, y) {
+            this.x = x;
+            this.y = y;
+            var rawGid = id;
+            var flip;
+            flip = (rawGid & TmxLayerTile.FLIPPED_HORIZONTALLY_FLAG) != 0;
+            this.horizontalFlip = flip;
+            flip = (rawGid & TmxLayerTile.FLIPPED_VERTICALLY_FLAG) != 0;
+            this.verticalFlip = flip;
+            flip = (rawGid & TmxLayerTile.FLIPPED_DIAGONALLY_FLAG) != 0;
+            this.diagonalFlip = flip;
+            rawGid &= ~(TmxLayerTile.FLIPPED_HORIZONTALLY_FLAG | TmxLayerTile.FLIPPED_VERTICALLY_FLAG | TmxLayerTile.FLIPPED_DIAGONALLY_FLAG);
+            this.gid = rawGid;
+            this.tileset = map.getTilesetForTileGid(this.gid);
+        }
+        Object.defineProperty(TmxLayerTile.prototype, "position", {
+            get: function () {
+                return new es.Vector2(this.x, this.y);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(TmxLayerTile.prototype, "tilesetTile", {
+            get: function () {
+                if (this._tilesetTileIndex == undefined) {
+                    this._tilesetTileIndex = -1;
+                    if (this.tileset.firstGid <= this.gid) {
+                        var tilesetTile = this.tileset.tiles.get(this.gid - this.tileset.firstGid);
+                        if (tilesetTile) {
+                            this._tilesetTileIndex = this.gid - this.tileset.firstGid;
+                        }
+                    }
+                }
+                if (this._tilesetTileIndex < 0)
+                    return null;
+                return this.tileset.tiles.get(this._tilesetTileIndex);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        TmxLayerTile.FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
+        TmxLayerTile.FLIPPED_VERTICALLY_FLAG = 0x40000000;
+        TmxLayerTile.FLIPPED_DIAGONALLY_FLAG = 0x20000000;
+        return TmxLayerTile;
+    }());
+    es.TmxLayerTile = TmxLayerTile;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TmxDocument = (function () {
+        function TmxDocument() {
+            this.TmxDirectory = "";
+        }
+        return TmxDocument;
+    }());
+    es.TmxDocument = TmxDocument;
+    var TmxList = (function (_super) {
+        __extends(TmxList, _super);
+        function TmxList() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this._nameCount = new Map();
+            return _this;
+        }
+        TmxList.prototype.add = function (t) {
+            var tName = t.name;
+            if (this.has(tName))
+                this._nameCount.set(tName, this._nameCount.get(tName) + 1);
+            else
+                this._nameCount.set(tName, 0);
+        };
+        TmxList.prototype.getKeyForItem = function (item) {
+            var name = item.name;
+            var count = this._nameCount.get(name);
+            var dupes = 0;
+            while (this.has(name)) {
+                name = name + es.Enumerable.repeat("_", dupes).toString() + count.toString();
+                dupes++;
+            }
+            return name;
+        };
+        return TmxList;
+    }(Map));
+    es.TmxList = TmxList;
+    var TmxImage = (function () {
+        function TmxImage() {
+        }
+        TmxImage.prototype.dispose = function () {
+            if (this.texture) {
+                this.texture.dispose();
+                this.texture = null;
+            }
+        };
+        return TmxImage;
+    }());
+    es.TmxImage = TmxImage;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TmxMap = (function (_super) {
+        __extends(TmxMap, _super);
+        function TmxMap() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        Object.defineProperty(TmxMap.prototype, "worldWidth", {
+            get: function () {
+                return this.width * this.tileWidth;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(TmxMap.prototype, "worldHeight", {
+            get: function () {
+                return this.height * this.tileHeight;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(TmxMap.prototype, "requiresLargeTileCulling", {
+            get: function () {
+                return this.maxTileHeight > this.tileHeight || this.maxTileWidth > this.tileWidth;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        TmxMap.prototype.getTilesetForTileGid = function (gid) {
+            if (gid == 0)
+                return null;
+            for (var i = this.tilesets.size - 1; i >= 0; i--) {
+                if (this.tilesets.get(i.toString()).firstGid <= gid)
+                    return this.tilesets.get(i.toString());
+            }
+            console.error("tile gid" + gid + "\u672A\u5728\u4EFB\u4F55tileset\u4E2D\u627E\u5230");
+        };
+        TmxMap.prototype.update = function () {
+            this.tilesets.forEach(function (tileset) { tileset.update(); });
+        };
+        TmxMap.prototype.dispose = function (disposing) {
+            if (disposing === void 0) { disposing = true; }
+            if (!this._isDisposed) {
+                if (disposing) {
+                    this.tilesets.forEach(function (tileset) { if (tileset.image)
+                        tileset.image.dispose(); });
+                    this.imageLayers.forEach(function (layer) { if (layer.image)
+                        layer.image.dispose(); });
+                }
+                this._isDisposed = true;
+            }
+        };
+        return TmxMap;
+    }(es.TmxDocument));
+    es.TmxMap = TmxMap;
+    var OrientationType;
+    (function (OrientationType) {
+        OrientationType[OrientationType["unknown"] = 0] = "unknown";
+        OrientationType[OrientationType["orthogonal"] = 1] = "orthogonal";
+        OrientationType[OrientationType["isometric"] = 2] = "isometric";
+        OrientationType[OrientationType["staggered"] = 3] = "staggered";
+        OrientationType[OrientationType["hexagonal"] = 4] = "hexagonal";
+    })(OrientationType = es.OrientationType || (es.OrientationType = {}));
+    var StaggerAxisType;
+    (function (StaggerAxisType) {
+        StaggerAxisType[StaggerAxisType["x"] = 0] = "x";
+        StaggerAxisType[StaggerAxisType["y"] = 1] = "y";
+    })(StaggerAxisType = es.StaggerAxisType || (es.StaggerAxisType = {}));
+    var StaggerIndexType;
+    (function (StaggerIndexType) {
+        StaggerIndexType[StaggerIndexType["odd"] = 0] = "odd";
+        StaggerIndexType[StaggerIndexType["even"] = 1] = "even";
+    })(StaggerIndexType = es.StaggerIndexType || (es.StaggerIndexType = {}));
+    var RenderOrderType;
+    (function (RenderOrderType) {
+        RenderOrderType[RenderOrderType["rightDown"] = 0] = "rightDown";
+        RenderOrderType[RenderOrderType["rightUp"] = 1] = "rightUp";
+        RenderOrderType[RenderOrderType["leftDown"] = 2] = "leftDown";
+        RenderOrderType[RenderOrderType["leftUp"] = 3] = "leftUp";
+    })(RenderOrderType = es.RenderOrderType || (es.RenderOrderType = {}));
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TmxObjectGroup = (function () {
+        function TmxObjectGroup() {
+        }
+        return TmxObjectGroup;
+    }());
+    es.TmxObjectGroup = TmxObjectGroup;
+    var TmxObject = (function () {
+        function TmxObject() {
+        }
+        return TmxObject;
+    }());
+    es.TmxObject = TmxObject;
+    var TmxText = (function () {
+        function TmxText() {
+        }
+        return TmxText;
+    }());
+    es.TmxText = TmxText;
+    var TmxAlignment = (function () {
+        function TmxAlignment() {
+        }
+        return TmxAlignment;
+    }());
+    es.TmxAlignment = TmxAlignment;
+    var TmxObjectType;
+    (function (TmxObjectType) {
+        TmxObjectType[TmxObjectType["basic"] = 0] = "basic";
+        TmxObjectType[TmxObjectType["point"] = 1] = "point";
+        TmxObjectType[TmxObjectType["tile"] = 2] = "tile";
+        TmxObjectType[TmxObjectType["ellipse"] = 3] = "ellipse";
+        TmxObjectType[TmxObjectType["polygon"] = 4] = "polygon";
+        TmxObjectType[TmxObjectType["polyline"] = 5] = "polyline";
+        TmxObjectType[TmxObjectType["text"] = 6] = "text";
+    })(TmxObjectType = es.TmxObjectType || (es.TmxObjectType = {}));
+    var DrawOrderType;
+    (function (DrawOrderType) {
+        DrawOrderType[DrawOrderType["unkownOrder"] = -1] = "unkownOrder";
+        DrawOrderType[DrawOrderType["TopDown"] = 0] = "TopDown";
+        DrawOrderType[DrawOrderType["IndexOrder"] = 1] = "IndexOrder";
+    })(DrawOrderType = es.DrawOrderType || (es.DrawOrderType = {}));
+    var TmxHorizontalAlignment;
+    (function (TmxHorizontalAlignment) {
+        TmxHorizontalAlignment[TmxHorizontalAlignment["left"] = 0] = "left";
+        TmxHorizontalAlignment[TmxHorizontalAlignment["center"] = 1] = "center";
+        TmxHorizontalAlignment[TmxHorizontalAlignment["right"] = 2] = "right";
+        TmxHorizontalAlignment[TmxHorizontalAlignment["justify"] = 3] = "justify";
+    })(TmxHorizontalAlignment = es.TmxHorizontalAlignment || (es.TmxHorizontalAlignment = {}));
+    var TmxVerticalAlignment;
+    (function (TmxVerticalAlignment) {
+        TmxVerticalAlignment[TmxVerticalAlignment["top"] = 0] = "top";
+        TmxVerticalAlignment[TmxVerticalAlignment["center"] = 1] = "center";
+        TmxVerticalAlignment[TmxVerticalAlignment["bottom"] = 2] = "bottom";
+    })(TmxVerticalAlignment = es.TmxVerticalAlignment || (es.TmxVerticalAlignment = {}));
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TmxTileset = (function (_super) {
+        __extends(TmxTileset, _super);
+        function TmxTileset() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        TmxTileset.prototype.update = function () {
+            this.tiles.forEach(function (value) {
+                value.updateAnimatedTiles();
+            });
+        };
+        return TmxTileset;
+    }(es.TmxDocument));
+    es.TmxTileset = TmxTileset;
+    var TmxTileOffset = (function () {
+        function TmxTileOffset() {
+        }
+        return TmxTileOffset;
+    }());
+    es.TmxTileOffset = TmxTileOffset;
+    var TmxTerrain = (function () {
+        function TmxTerrain() {
+        }
+        return TmxTerrain;
+    }());
+    es.TmxTerrain = TmxTerrain;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TmxTilesetTile = (function () {
+        function TmxTilesetTile() {
+        }
+        Object.defineProperty(TmxTilesetTile.prototype, "currentAnimationFrameGid", {
+            get: function () {
+                return this.animationFrames[this._animationCurrentFrame].gid + this.tileset.firstGid;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        TmxTilesetTile.prototype.processProperties = function () {
+            var value;
+            value = this.properties.get("engine.isDestructable");
+            if (value)
+                this.isDestructable = Boolean(value);
+            value = this.properties.get("engine:isSlope");
+            if (value)
+                this.isSlope = Boolean(value);
+            value = this.properties.get("engine:isOneWayPlatform");
+            if (value)
+                this.isOneWayPlatform = Boolean(value);
+            value = this.properties.get("engine:slopeTopLeft");
+            if (value)
+                this.slopeTopLeft = Number(value);
+            value = this.properties.get("engine:slopeTopRight");
+            if (value)
+                this.slopeTopRight = Number(value);
+        };
+        TmxTilesetTile.prototype.updateAnimatedTiles = function () {
+            if (this.animationFrames.length == 0)
+                return;
+            this._animationElapsedTime += es.Time.deltaTime;
+            if (this._animationElapsedTime > this.animationFrames[this._animationCurrentFrame].duration) {
+                this._animationCurrentFrame = es.MathHelper.incrementWithWrap(this._animationCurrentFrame, this.animationFrames.length);
+                this._animationElapsedTime = 0;
+            }
+        };
+        return TmxTilesetTile;
+    }());
+    es.TmxTilesetTile = TmxTilesetTile;
+    var TmxAnimationFrame = (function () {
+        function TmxAnimationFrame() {
+        }
+        return TmxAnimationFrame;
+    }());
+    es.TmxAnimationFrame = TmxAnimationFrame;
+})(es || (es = {}));
 var ArrayUtils = (function () {
     function ArrayUtils() {
     }
@@ -7655,6 +8091,33 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var EdgeExt = (function () {
+        function EdgeExt() {
+        }
+        EdgeExt.oppositeEdge = function (self) {
+            switch (self) {
+                case es.Edge.bottom:
+                    return es.Edge.top;
+                case es.Edge.top:
+                    return es.Edge.bottom;
+                case es.Edge.left:
+                    return es.Edge.right;
+                case es.Edge.right:
+                    return es.Edge.left;
+            }
+        };
+        EdgeExt.isHorizontal = function (self) {
+            return self == es.Edge.right || self == es.Edge.left;
+        };
+        EdgeExt.isVertical = function (self) {
+            return self == es.Edge.top || self == es.Edge.bottom;
+        };
+        return EdgeExt;
+    }());
+    es.EdgeExt = EdgeExt;
+})(es || (es = {}));
+var es;
+(function (es) {
     var FuncPack = (function () {
         function FuncPack(func, context) {
             this.func = func;
@@ -7693,6 +8156,32 @@ var es;
         return Emitter;
     }());
     es.Emitter = Emitter;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Edge;
+    (function (Edge) {
+        Edge[Edge["top"] = 0] = "top";
+        Edge[Edge["bottom"] = 1] = "bottom";
+        Edge[Edge["left"] = 2] = "left";
+        Edge[Edge["right"] = 3] = "right";
+    })(Edge = es.Edge || (es.Edge = {}));
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Enumerable = (function () {
+        function Enumerable() {
+        }
+        Enumerable.repeat = function (element, count) {
+            var result = [];
+            while (count--) {
+                result.push(element);
+            }
+            return result;
+        };
+        return Enumerable;
+    }());
+    es.Enumerable = Enumerable;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -8252,6 +8741,18 @@ var es;
     var RectangleExt = (function () {
         function RectangleExt() {
         }
+        RectangleExt.getSide = function (rect, edge) {
+            switch (edge) {
+                case es.Edge.top:
+                    return rect.top;
+                case es.Edge.bottom:
+                    return rect.bottom;
+                case es.Edge.left:
+                    return rect.left;
+                case es.Edge.right:
+                    return rect.right;
+            }
+        };
         RectangleExt.union = function (first, point) {
             var rect = new es.Rectangle(point.x, point.y, 0, 0);
             var result = new es.Rectangle();
@@ -8261,9 +8762,77 @@ var es;
             result.height = Math.max(first.bottom, result.bottom) - result.y;
             return result;
         };
+        RectangleExt.getHalfRect = function (rect, edge) {
+            switch (edge) {
+                case es.Edge.top:
+                    return new es.Rectangle(rect.x, rect.y, rect.width, rect.height / 2);
+                case es.Edge.bottom:
+                    return new es.Rectangle(rect.x, rect.y + rect.height / 2, rect.width, rect.height / 2);
+                case es.Edge.left:
+                    return new es.Rectangle(rect.x, rect.y, rect.width / 2, rect.height);
+                case es.Edge.right:
+                    return new es.Rectangle(rect.x + rect.width / 2, rect.y, rect.width / 2, rect.height);
+            }
+        };
+        RectangleExt.getRectEdgePortion = function (rect, edge, size) {
+            if (size === void 0) { size = 1; }
+            switch (edge) {
+                case es.Edge.top:
+                    return new es.Rectangle(rect.x, rect.y, rect.width, size);
+                case es.Edge.bottom:
+                    return new es.Rectangle(rect.x, rect.y + rect.height - size, rect.width, size);
+                case es.Edge.left:
+                    return new es.Rectangle(rect.x, rect.y, size, rect.height);
+                case es.Edge.right:
+                    return new es.Rectangle(rect.x + rect.width - size, rect.y, size, rect.height);
+            }
+        };
+        RectangleExt.expandSide = function (rect, edge, amount) {
+            amount = Math.abs(amount);
+            switch (edge) {
+                case es.Edge.top:
+                    rect.y -= amount;
+                    rect.height += amount;
+                    break;
+                case es.Edge.bottom:
+                    rect.height += amount;
+                    break;
+                case es.Edge.left:
+                    rect.x -= amount;
+                    rect.width += amount;
+                    break;
+                case es.Edge.right:
+                    rect.width += amount;
+                    break;
+            }
+        };
+        RectangleExt.contract = function (rect, horizontalAmount, verticalAmount) {
+            rect.x += horizontalAmount;
+            rect.y += verticalAmount;
+            rect.width -= horizontalAmount * 2;
+            rect.height -= verticalAmount * 2;
+        };
         return RectangleExt;
     }());
     es.RectangleExt = RectangleExt;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var SubpixelNumber = (function () {
+        function SubpixelNumber() {
+        }
+        SubpixelNumber.prototype.update = function (amount) {
+            this.remainder += amount;
+            var motion = Math.trunc(this.remainder);
+            this.remainder -= motion;
+            return motion;
+        };
+        SubpixelNumber.prototype.reset = function () {
+            this.remainder = 0;
+        };
+        return SubpixelNumber;
+    }());
+    es.SubpixelNumber = SubpixelNumber;
 })(es || (es = {}));
 var es;
 (function (es) {

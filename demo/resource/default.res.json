@@ -145,6 +145,11 @@
 			"url": "assets/isometric_grass_and_water.png",
 			"type": "image",
 			"name": "isometric_grass_and_water_png"
+		},
+		{
+			"url": "assets/000010000.img.json",
+			"type": "json",
+			"name": "000010000.img_json"
 		}
 	]
 }

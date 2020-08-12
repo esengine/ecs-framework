@@ -700,6 +700,32 @@ declare module es {
     }
 }
 declare module es {
+    class CollisionState {
+        right: boolean;
+        left: boolean;
+        above: boolean;
+        below: boolean;
+        becameGroundedThisFrame: boolean;
+        wasGroundedLastFrame: boolean;
+        isGroundedOnOnewayPlatform: boolean;
+        slopAngle: number;
+        readonly hasCollision: boolean;
+        _movementRemainderX: SubpixelNumber;
+        _movementRemainderY: SubpixelNumber;
+        reset(): void;
+        toString(): string;
+    }
+    class TiledMapMover extends Component {
+        colliderHorizontalInset: number;
+        colliderVerticalInset: number;
+        _boxColliderBounds: Rectangle;
+        constructor();
+        testCollisions(motion: Vector2, boxColliderBounds: Rectangle, collisionState: CollisionState): void;
+        testMapCollision(collisionRect: Rectangle, direction: Edge, collisionState: CollisionState, collisionResponse: number): void;
+        collisionRectForSide(side: Edge, motion: number): Rectangle;
+    }
+}
+declare module es {
     interface ITriggerListener {
         onTriggerEnter(other: Collider, local: Collider): any;
         onTriggerExit(other: Collider, local: Collider): any;
@@ -1207,6 +1233,7 @@ declare module es {
         static isEven(value: number): boolean;
         static clamp01(value: number): number;
         static angleBetweenVectors(from: Vector2, to: Vector2): number;
+        static incrementWithWrap(t: number, length: number): number;
     }
 }
 declare module es {
@@ -1488,6 +1515,281 @@ declare module es {
         reset(): void;
     }
 }
+declare module es {
+    class TmxGroup implements ITmxLayer {
+        map: TmxMap;
+        offsetX: number;
+        offsetY: number;
+        opacity: number;
+        properties: Map<string, string>;
+        visible: boolean;
+        name: string;
+        layers: TmxList<any>;
+        tileLayers: TmxList<TmxLayer>;
+        objectGroups: TmxList<TmxObjectGroup>;
+        imageLayers: TmxList<TmxImageLayer>;
+        groups: TmxList<TmxGroup>;
+    }
+}
+declare module es {
+    interface ITmxLayer {
+        offsetX: number;
+        offsetY: number;
+        opacity: number;
+        visible: boolean;
+        properties: Map<string, string>;
+    }
+}
+declare module es {
+    class TmxImageLayer implements ITmxLayer {
+        map: TmxMap;
+        name: string;
+        offsetX: number;
+        offsetY: number;
+        opacity: number;
+        properties: Map<string, string>;
+        visible: boolean;
+        width?: number;
+        height?: number;
+        image: TmxImage;
+    }
+}
+declare module es {
+    class TmxLayer implements ITmxLayer {
+        map: TmxMap;
+        name: string;
+        opacity: number;
+        offsetX: number;
+        offsetY: number;
+        properties: Map<string, string>;
+        visible: boolean;
+        readonly offset: Vector2;
+        width: number;
+        height: number;
+        tiles: TmxLayerTile[];
+        getTileWithGid(gid: number): TmxLayerTile;
+    }
+    class TmxLayerTile {
+        static readonly FLIPPED_HORIZONTALLY_FLAG: number;
+        static readonly FLIPPED_VERTICALLY_FLAG: number;
+        static readonly FLIPPED_DIAGONALLY_FLAG: number;
+        tileset: TmxTileset;
+        gid: number;
+        x: number;
+        y: number;
+        readonly position: Vector2;
+        horizontalFlip: boolean;
+        verticalFlip: boolean;
+        diagonalFlip: boolean;
+        _tilesetTileIndex?: number;
+        readonly tilesetTile: TmxTilesetTile;
+        constructor(map: TmxMap, id: number, x: number, y: number);
+    }
+}
+declare module es {
+    class TmxDocument {
+        TmxDirectory: string;
+        constructor();
+    }
+    interface ITmxElement {
+        name: string;
+    }
+    class TmxList<T extends ITmxElement> extends Map<string, T> {
+        _nameCount: Map<string, number>;
+        add(t: T): void;
+        protected getKeyForItem(item: T): string;
+    }
+    class TmxImage {
+        texture: egret.Texture;
+        source: string;
+        format: string;
+        data: any;
+        trans: number;
+        width: number;
+        height: number;
+        dispose(): void;
+    }
+}
+declare module es {
+    class TmxMap extends TmxDocument {
+        version: string;
+        tiledVersion: string;
+        width: number;
+        height: number;
+        readonly worldWidth: number;
+        readonly worldHeight: number;
+        tileWidth: number;
+        tileHeight: number;
+        hexSideLength?: number;
+        orientation: OrientationType;
+        staggerAxis: StaggerAxisType;
+        staggerIndex: StaggerIndexType;
+        renderOrder: RenderOrderType;
+        backgroundColor: number;
+        nextObjectID?: number;
+        layers: TmxList<any>;
+        tilesets: TmxList<TmxTileset>;
+        tileLayers: TmxList<TmxLayer>;
+        objectGroups: TmxList<TmxObjectGroup>;
+        imageLayers: TmxList<TmxImageLayer>;
+        groups: TmxList<TmxGroup>;
+        properties: Map<string, string>;
+        maxTileWidth: number;
+        maxTileHeight: number;
+        readonly requiresLargeTileCulling: boolean;
+        getTilesetForTileGid(gid: number): TmxTileset;
+        update(): void;
+        _isDisposed: any;
+        dispose(disposing?: boolean): void;
+    }
+    enum OrientationType {
+        unknown = 0,
+        orthogonal = 1,
+        isometric = 2,
+        staggered = 3,
+        hexagonal = 4
+    }
+    enum StaggerAxisType {
+        x = 0,
+        y = 1
+    }
+    enum StaggerIndexType {
+        odd = 0,
+        even = 1
+    }
+    enum RenderOrderType {
+        rightDown = 0,
+        rightUp = 1,
+        leftDown = 2,
+        leftUp = 3
+    }
+}
+declare module es {
+    class TmxObjectGroup implements ITmxLayer {
+        map: TmxMap;
+        name: string;
+        opacity: number;
+        visible: boolean;
+        offsetX: number;
+        offsetY: number;
+        color: number;
+        drawOrder: DrawOrderType;
+        objects: TmxList<TmxObject>;
+        properties: Map<string, string>;
+    }
+    class TmxObject implements ITmxElement {
+        id: number;
+        name: string;
+        objectType: TmxObjectType;
+        type: string;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        rotation: number;
+        tile: TmxLayerTile;
+        visible: boolean;
+        text: TmxText;
+    }
+    class TmxText {
+        fontFamily: string;
+        pixelSize: number;
+        wrap: boolean;
+        color: number;
+        bold: boolean;
+        italic: boolean;
+        underline: boolean;
+        strikeout: boolean;
+        kerning: boolean;
+        alignment: TmxAlignment;
+        value: string;
+    }
+    class TmxAlignment {
+        horizontal: TmxHorizontalAlignment;
+        vertical: TmxVerticalAlignment;
+    }
+    enum TmxObjectType {
+        basic = 0,
+        point = 1,
+        tile = 2,
+        ellipse = 3,
+        polygon = 4,
+        polyline = 5,
+        text = 6
+    }
+    enum DrawOrderType {
+        unkownOrder = -1,
+        TopDown = 0,
+        IndexOrder = 1
+    }
+    enum TmxHorizontalAlignment {
+        left = 0,
+        center = 1,
+        right = 2,
+        justify = 3
+    }
+    enum TmxVerticalAlignment {
+        top = 0,
+        center = 1,
+        bottom = 2
+    }
+}
+declare module es {
+    class TmxTileset extends TmxDocument implements ITmxElement {
+        map: TmxMap;
+        firstGid: number;
+        name: any;
+        tileWidth: number;
+        tileHeight: number;
+        spacing: number;
+        margin: number;
+        columns?: number;
+        tileCount?: number;
+        tiles: Map<number, TmxTilesetTile>;
+        tileOffset: TmxTileOffset;
+        properties: Map<string, string>;
+        image: TmxImage;
+        terrains: TmxList<TmxTerrain>;
+        tileRegions: Map<number, Rectangle>;
+        update(): void;
+    }
+    class TmxTileOffset {
+        x: number;
+        y: number;
+    }
+    class TmxTerrain implements ITmxElement {
+        name: any;
+        tile: number;
+        properties: Map<string, string>;
+    }
+}
+declare module es {
+    class TmxTilesetTile {
+        tileset: TmxTileset;
+        id: number;
+        terrainEdges: TmxTerrain[];
+        probability: number;
+        type: string;
+        properties: Map<string, string>;
+        image: TmxImage;
+        objectGroups: TmxList<TmxObjectGroup>;
+        animationFrames: TmxAnimationFrame[];
+        readonly currentAnimationFrameGid: number;
+        _animationElapsedTime: number;
+        _animationCurrentFrame: number;
+        isDestructable: boolean;
+        isSlope: boolean;
+        isOneWayPlatform: boolean;
+        slopeTopLeft: number;
+        slopeTopRight: number;
+        processProperties(): void;
+        updateAnimatedTiles(): void;
+    }
+    class TmxAnimationFrame {
+        gid: number;
+        duration: number;
+    }
+}
 declare class ArrayUtils {
     static bubbleSort(ary: number[]): void;
     static insertionSort(ary: number[]): void;
@@ -1531,6 +1833,13 @@ declare module es {
     }
 }
 declare module es {
+    class EdgeExt {
+        static oppositeEdge(self: Edge): Edge;
+        static isHorizontal(self: Edge): boolean;
+        static isVertical(self: Edge): boolean;
+    }
+}
+declare module es {
     class FuncPack {
         func: Function;
         context: any;
@@ -1542,6 +1851,19 @@ declare module es {
         addObserver(eventType: T, handler: Function, context: any): void;
         removeObserver(eventType: T, handler: Function): void;
         emit(eventType: T, data?: any): void;
+    }
+}
+declare module es {
+    enum Edge {
+        top = 0,
+        bottom = 1,
+        left = 2,
+        right = 3
+    }
+}
+declare module es {
+    class Enumerable {
+        static repeat<T>(element: T, count: number): any[];
     }
 }
 declare module es {
@@ -1713,7 +2035,19 @@ declare class RandomUtils {
 }
 declare module es {
     class RectangleExt {
+        static getSide(rect: Rectangle, edge: Edge): number;
         static union(first: Rectangle, point: Vector2): Rectangle;
+        static getHalfRect(rect: Rectangle, edge: Edge): Rectangle;
+        static getRectEdgePortion(rect: Rectangle, edge: Edge, size?: number): Rectangle;
+        static expandSide(rect: Rectangle, edge: Edge, amount: number): void;
+        static contract(rect: Rectangle, horizontalAmount: any, verticalAmount: any): void;
+    }
+}
+declare module es {
+    class SubpixelNumber {
+        remainder: number;
+        update(amount: number): number;
+        reset(): void;
     }
 }
 declare module es {

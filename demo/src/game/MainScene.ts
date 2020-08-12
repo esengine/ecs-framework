@@ -22,7 +22,6 @@ module scene {
                 this.camera.follow(bg, es.CameraStyle.lockOn);
             });
             // // bg.addComponent(new es.SpriteRenderer()).setSprite(sprite).setColor(0xff0000);
-           
 
             for (let i = 0; i < 20; i++) {
                 let sprite = new es.Sprite(RES.getRes("checkbox_select_disabled_png"));
