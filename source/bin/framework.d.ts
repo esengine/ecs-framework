@@ -348,6 +348,7 @@ declare module es {
         readonly entities: EntityList;
         readonly renderableComponents: RenderableComponentList;
         readonly entityProcessors: EntityProcessorList;
+        _screenshotRequestCallback: Function;
         readonly _sceneComponents: SceneComponent[];
         _renderers: Renderer[];
         readonly _postProcessors: PostProcessor[];
@@ -364,6 +365,7 @@ declare module es {
         update(): void;
         render(): void;
         postRender(): void;
+        requestScreenshot(callback: Function): void;
         addSceneComponent<T extends SceneComponent>(component: T): T;
         getSceneComponent<T extends SceneComponent>(type: any): T;
         getOrCreateSceneComponent<T extends SceneComponent>(type: any): T;

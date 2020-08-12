@@ -27,6 +27,8 @@ module es {
          */
         public readonly entityProcessors: EntityProcessorList;
 
+        public _screenshotRequestCallback: Function;
+
         public readonly _sceneComponents: SceneComponent[] = [];
         public _renderers: Renderer[] = [];
         public readonly _postProcessors: PostProcessor[] = [];
@@ -121,7 +123,7 @@ module es {
             this.entities.removeAllEntities();
             this.removeChildren();
 
-            for (let i = 0; i < this._sceneComponents.length; i ++){
+            for (let i = 0; i < this._sceneComponents.length; i++) {
                 this._sceneComponents[i].onRemovedFromScene();
             }
             this._sceneComponents.length = 0;
@@ -142,7 +144,7 @@ module es {
             // 更新我们的列表，以防它们有任何变化
             this.entities.updateLists();
 
-            for (let i = this._sceneComponents.length - 1; i >= 0; i --){
+            for (let i = this._sceneComponents.length - 1; i >= 0; i--) {
                 if (this._sceneComponents[i].enabled)
                     this._sceneComponents[i].update();
             }
@@ -184,6 +186,22 @@ module es {
                     }
                 }
             }
+
+            // 如果我们有一个屏幕截图请求处理它之前，最后渲染到backbuffer
+            if (this._screenshotRequestCallback){
+                let tex = new egret.RenderTexture();
+                tex.drawToTexture(this, new Rectangle(0, 0, this.stage.stageWidth, this.stage.stageHeight));
+                this._screenshotRequestCallback(tex);
+                this._screenshotRequestCallback = null;
+            }
+        }
+
+        /**
+         * 在下一次绘制完成后，会进行场景全屏截图
+         * @param callback
+         */
+        public requestScreenshot(callback: Function){
+            this._screenshotRequestCallback = callback;
         }
 
         /**
@@ -202,8 +220,8 @@ module es {
          * 获取类型为T的第一个SceneComponent并返回它。如果没有找到组件，则返回null。
          * @param type
          */
-        public getSceneComponent<T extends SceneComponent>(type){
-            for (let i = 0; i < this._sceneComponents.length; i ++){
+        public getSceneComponent<T extends SceneComponent>(type) {
+            for (let i = 0; i < this._sceneComponents.length; i++) {
                 let component = this._sceneComponents[i];
                 if (component instanceof type)
                     return component as T;
@@ -216,7 +234,7 @@ module es {
          * 获取类型为T的第一个SceneComponent并返回它。如果没有找到SceneComponent，则将创建SceneComponent。
          * @param type
          */
-        public getOrCreateSceneComponent<T extends SceneComponent>(type){
+        public getOrCreateSceneComponent<T extends SceneComponent>(type) {
             let comp = this.getSceneComponent<T>(type);
             if (comp == null)
                 comp = this.addSceneComponent<T>(new type());
@@ -228,8 +246,8 @@ module es {
          * 从SceneComponents列表中删除一个SceneComponent
          * @param component
          */
-        public removeSceneComponent(component: SceneComponent){
-            if (!this._sceneComponents.contains(component)){
+        public removeSceneComponent(component: SceneComponent) {
+            if (!this._sceneComponents.contains(component)) {
                 console.warn(`SceneComponent${component}不在SceneComponents列表中!`);
                 return;
             }

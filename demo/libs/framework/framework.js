@@ -1719,6 +1719,15 @@ var es;
                     }
                 }
             }
+            if (this._screenshotRequestCallback) {
+                var tex = new egret.RenderTexture();
+                tex.drawToTexture(this, new es.Rectangle(0, 0, this.stage.stageWidth, this.stage.stageHeight));
+                this._screenshotRequestCallback(tex);
+                this._screenshotRequestCallback = null;
+            }
+        };
+        Scene.prototype.requestScreenshot = function (callback) {
+            this._screenshotRequestCallback = callback;
         };
         Scene.prototype.addSceneComponent = function (component) {
             component.scene = this;
