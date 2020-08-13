@@ -93,6 +93,8 @@ module es {
         }
 
         public render(camera: es.Camera) {
+            this.sync(camera);
+
             if (!this.layerIndicesToRender) {
                 TiledRendering.renderMap(this.tiledMap, this.displayObject as egret.DisplayObjectContainer, Vector2.add(this.entity.transform.position, this._localOffset),
                     this.transform.scale, this.renderLayer);

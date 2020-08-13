@@ -2,12 +2,12 @@ module es {
     import Bitmap = egret.Bitmap;
 
     export class TiledMapLoader {
-        public static loadTmxMap(map: TmxMap, filePath: string){
+        public static loadTmxMap(map: TmxMap, filePath: string) {
             let xMap = RES.getRes(filePath);
             return this.loadTmxMapData(map, xMap);
         }
 
-        public static async loadTmxMapData(map: TmxMap, xMap: any){
+        public static async loadTmxMapData(map: TmxMap, xMap: any) {
             map.version = xMap["version"];
             map.tiledVersion = xMap["tiledversion"];
             map.width = xMap["width"];
@@ -31,7 +31,7 @@ module es {
             map.maxTileHeight = map.tileHeight;
 
             map.tilesets = [];
-            for (let e of xMap["tilesets"]){
+            for (let e of xMap["tilesets"]) {
                 let tileset = await this.parseTmxTileset(map, e);
                 map.tilesets.push(tileset);
 
@@ -44,7 +44,7 @@ module es {
             map.imageLayers = [];
             map.groups = [];
 
-            this.parseLayers(map, xMap, map, map.width, map.height, map.tmxDirectory);
+            this.parseLayers(map, xMap, map, map.width, map.height);
 
             return map;
         }
@@ -56,16 +56,140 @@ module es {
          * @param map
          * @param width
          * @param height
-         * @param tmxDirectory
          */
-        public static parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number, tmxDirectory: string){
+        public static async parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number) {
+            for (let i in xEle) {
+                let layer: ITmxLayer;
+                switch (i) {
+                    case "layers":
+                        let tileLayer = this.loadTmxLayer(new TmxLayer(), map, xEle[i], width, height);
+                        layer = tileLayer;
 
+                        if (container instanceof TmxMap || container instanceof TmxGroup)
+                            container.tileLayers.push(tileLayer);
+                        break;
+                    case "objectgroups":
+                        let objectgroup = this.loadTmxObjectGroup(new TmxObjectGroup(), map, xEle[i]);
+                        layer = objectgroup;
+
+                        if (container instanceof TmxMap || container instanceof TmxGroup)
+                            container.objectGroups.push(objectgroup);
+                        break;
+                    case "imagelayer":
+                        let imagelayer = await this.loadTmxImageLayer(new TmxImageLayer(), map, xEle[i]);
+                        layer = imagelayer;
+
+                        if (container instanceof TmxMap || container instanceof TmxGroup)
+                            container.imageLayers.push(imagelayer);
+                        break;
+                    case "group":
+                        let newGroup = this.loadTmxGroup(new TmxGroup(), map, xEle[i], width, height);
+                        layer = newGroup;
+
+                        if (container instanceof TmxMap || container instanceof TmxGroup)
+                            container.groups.push(newGroup);
+                        break;
+                    default:
+                        throw new Error("无效的操作");
+                }
+
+                if (container instanceof TmxMap || container instanceof TmxGroup)
+                    container.layers.push(layer);
+            }
         }
 
-        private static updateMaxTileSizes(tileset: TmxTileset){
+        public static loadTmxGroup(group: TmxGroup, map: TmxMap, xGroup: any, width: number, height: number) {
+            group.map = map;
+            group.name = xGroup["name"] != undefined ? xGroup["name"] : "";
+            group.opacity = xGroup["opacity"] != undefined ? xGroup["opacity"] : 1;
+            group.visible = xGroup["visible"] != undefined ? xGroup["visible"] : true;
+            group.offsetX = xGroup["offsetx"] != undefined ? xGroup["offsetx"] : 0;
+            group.offsetY = xGroup["offsety"] != undefined ? xGroup["offsety"] : 0;
+            group.properties = this.parsePropertyDict(xGroup["properties"]);
+            group.layers = [];
+            group.tileLayers = [];
+            group.objectGroups = [];
+            group.imageLayers = [];
+            group.groups = [];
+
+            this.parseLayers(group, xGroup, map, width, height);
+            return group;
+        }
+
+        public static async loadTmxImageLayer(layer: TmxImageLayer, map: TmxMap, xImageLayer: any) {
+            layer.map = map;
+            layer.name = xImageLayer["name"];
+            layer.width = xImageLayer["width"];
+            layer.height = xImageLayer["height"];
+            layer.visible = xImageLayer["visible"] != undefined ? xImageLayer["visible"] : true;
+            layer.opacity = xImageLayer["opacity"] != undefined ? xImageLayer["opacity"] : 1;
+            layer.offsetX = xImageLayer["offsetx"] != undefined ? xImageLayer["offsetx"] : 0;
+            layer.offsetY = xImageLayer["offsety"] != undefined ? xImageLayer["offsety"] : 0;
+
+            let xImage = xImageLayer["image"];
+            if (xImage) {
+                layer.image = await this.loadTmxImage(new TmxImage(), xImage);
+            }
+            layer.properties = this.parsePropertyDict(xImageLayer["properties"]);
+            return layer;
+        }
+
+        public static loadTmxLayer(layer: TmxLayer, map: TmxMap, xLayer: any, width: number, height: number) {
+            layer.map = map;
+            layer.name = xLayer["name"];
+            layer.opacity = xLayer["opacity"] != undefined ? xLayer["opacity"] : 1;
+            layer.visible = xLayer["visible"] != undefined ? xLayer["visible"] : true;
+            layer.offsetX = xLayer["offsetx"] != undefined ? xLayer["offsetx"] : 0;
+            layer.offsetY = xLayer["offsety"] != undefined ? xLayer["offsety"] : 0;
+            // TODO: 传入的宽度/高度是否与TMX层?
+            layer.width = xLayer["width"];
+            layer.height = xLayer["height"];
+
+            let xData = xLayer["data"];
+            let encoding = xData["encoding"];
+
+            layer.tiles = new Array<TmxLayerTile>(width * height);
+            if (encoding == "base64") {
+                let br = TmxUtils.decode(xData, encoding, xData["compression"]);
+                let index = 0;
+                for (let j = 0; j < height; j++) {
+                    for (let i = 0; i < width; i++) {
+                        let gid = br[index];
+                        layer.tiles[index++] = gid != 0 ? new TmxLayerTile(map, gid, i, j) : null;
+                    }
+                }
+            } else if (encoding == "csv") {
+                let csvData = TmxUtils.decode(xData, encoding, xData["compression"]);
+                let k = 0;
+                for (let s of csvData) {
+                    let gid = s;
+                    let x = k % width;
+                    let y = k / width;
+
+                    layer.tiles[k++] = gid != 0 ? new TmxLayerTile(map, gid, x, y) : null;
+                }
+            } else if (!encoding) {
+                let k = 0;
+                for (let e of xData["tile"]) {
+                    let gid = e["gid"] != undefined ? e["gid"] : 0;
+                    let x = k % width;
+                    let y = k / width;
+
+                    layer.tiles[k++] = gid != 0 ? new TmxLayerTile(map, gid, x, y) : null;
+                }
+            } else {
+                throw new Error("TmxLayer:未知编码");
+            }
+
+            layer.properties = TiledMapLoader.parsePropertyDict(xLayer["properties"]);
+
+            return layer;
+        }
+
+        private static updateMaxTileSizes(tileset: TmxTileset) {
             // 必须迭代字典，因为tile.gid可以是任意顺序的的任何数字
             tileset.tiles.forEach(tile => {
-                if (tile.image){
+                if (tile.image) {
                     if (tile.image.width > tileset.map.maxTileWidth)
                         tileset.map.maxTileWidth = tile.image.width;
                     if (tile.image.height > tileset.map.maxTileHeight)
@@ -81,7 +205,7 @@ module es {
             });
         }
 
-        public static parseOrientationType(type: string){
+        public static parseOrientationType(type: string) {
             if (type == "unknown")
                 return OrientationType.unknown;
             if (type == "orthogonal")
@@ -96,19 +220,19 @@ module es {
             return OrientationType.unknown;
         }
 
-        public static parseStaggerAxisType(type: string){
+        public static parseStaggerAxisType(type: string) {
             if (type == "y")
                 return StaggerAxisType.y;
             return StaggerAxisType.x;
         }
 
-        public static parseStaggerIndexType(type: string){
+        public static parseStaggerIndexType(type: string) {
             if (type == "even")
                 return StaggerIndexType.even;
             return StaggerIndexType.odd;
         }
 
-        public static parseRenderOrderType(type: string){
+        public static parseRenderOrderType(type: string) {
             if (type == "right-up")
                 return RenderOrderType.rightUp;
             if (type == "left-down")
@@ -123,7 +247,7 @@ module es {
                 return null;
 
             let dict = new Map<string, string>();
-            for (let p of prop["property"]){
+            for (let p of prop["property"]) {
                 let pname = p["name"];
                 let valueAttr = p["value"];
                 let pval = valueAttr ? valueAttr : p;
@@ -133,14 +257,14 @@ module es {
             return dict;
         }
 
-        public static async parseTmxTileset(map: TmxMap, xTileset: any){
+        public static async parseTmxTileset(map: TmxMap, xTileset: any) {
             // firstgid总是在TMX中，而不是在TSX中
             let xFirstGid = xTileset["firstgid"];
             let firstGid = xFirstGid;
             let source = xTileset["image"];
 
             // 如果是嵌入式TmxTileset，即不是外部的，source将为null
-            if (!source){
+            if (!source) {
                 source = "resource/assets/" + source;
                 // 其他所有内容都在TSX文件中
                 let xDocTileset = await RES.getResByUrl(source, null, this, RES.ResourceItem.TYPE_IMAGE);
@@ -153,7 +277,7 @@ module es {
         }
 
         public static async loadTmxTileset(tileset: TmxTileset, map: TmxMap, xTileset: any,
-                                     firstGid: number){
+                                           firstGid: number) {
             tileset.map = map;
             tileset.firstGid = firstGid;
 
@@ -171,14 +295,14 @@ module es {
                 tileset.image = await this.loadTmxImage(new TmxImage(), xTileset);
 
             let xTerrainType = xTileset["terraintypes"];
-            if (xTerrainType){
+            if (xTerrainType) {
                 tileset.terrains = [];
                 for (let e of xTerrainType["terrains"])
                     tileset.terrains.push(this.parseTmxTerrain(e));
             }
 
             tileset.tiles = new Map<number, TmxTilesetTile>();
-            for (let xTile of xTileset["tiles"]){
+            for (let xTile of xTileset["tiles"]) {
                 let tile = await this.loadTmxTilesetTile(new TmxTilesetTile(), tileset, xTile, tileset.terrains);
                 tileset.tiles[tile.id] = tile;
             }
@@ -188,18 +312,18 @@ module es {
             // 缓存我们的源矩形为每个瓷砖，所以我们不必每次我们渲染计算他们。
             // 如果我们有一个image，这是一个普通的tileset，否则它是一个image tileset
             tileset.tileRegions = new Map<number, Rectangle>();
-            if (tileset.image){
+            if (tileset.image) {
                 let id = firstGid;
-                for (let y = tileset.margin; y < tileset.image.height - tileset.margin; y += tileset.tileHeight + tileset.spacing){
+                for (let y = tileset.margin; y < tileset.image.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
                     let column = 0;
-                    for (let x = tileset.margin; x < tileset.image.width - tileset.margin; x += tileset.tileWidth + tileset.spacing){
+                    for (let x = tileset.margin; x < tileset.image.width - tileset.margin; x += tileset.tileWidth + tileset.spacing) {
                         tileset.tileRegions.set(id++, new Rectangle(x, y, tileset.tileWidth, tileset.tileHeight));
 
                         if (++column >= tileset.columns)
                             break;
                     }
                 }
-            }else{
+            } else {
                 tileset.tiles.forEach(tile => {
                     tileset.tileRegions.set(firstGid + tile.id, new Rectangle(0, 0, tile.image.width, tile.image.height));
                 });
@@ -208,7 +332,7 @@ module es {
             return tileset;
         }
 
-        public static async loadTmxTilesetTile(tile: TmxTilesetTile, tileset: TmxTileset, xTile: any, terrains: TmxTerrain[]){
+        public static async loadTmxTilesetTile(tile: TmxTilesetTile, tileset: TmxTileset, xTile: any, terrains: TmxTerrain[]) {
             tile.tileset = tileset;
             tile.id = xTile["id"];
 
@@ -216,7 +340,7 @@ module es {
             tile.probability = xTile["probability"] != undefined ? xTile["probability"] : 1;
             tile.type = xTile["type"];
             let xImage = xTile["image"];
-            if (xImage){
+            if (xImage) {
                 tile.image = await this.loadTmxImage(new TmxImage(), xImage);
             }
 
@@ -226,7 +350,7 @@ module es {
                     tile.objectGroups.push(this.loadTmxObjectGroup(new TmxObjectGroup(), tileset.map, e));
 
             tile.animationFrames = [];
-            if (xTile["animation"]){
+            if (xTile["animation"]) {
                 for (let e of xTile["animation"]["frame"])
                     tile.animationFrames.push(this.loadTmxAnimationFrame(new TmxAnimationFrame(), e));
             }
@@ -237,7 +361,7 @@ module es {
             return tile;
         }
 
-        public static loadTmxAnimationFrame(frame: TmxAnimationFrame, xFrame: any){
+        public static loadTmxAnimationFrame(frame: TmxAnimationFrame, xFrame: any) {
             frame.gid = xFrame["tileid"];
             frame.duration = xFrame["duration"] / 1000;
 
@@ -269,7 +393,7 @@ module es {
             return group;
         }
 
-        public static loadTmxObject(obj: TmxObject, map: TmxMap, xObject: any){
+        public static loadTmxObject(obj: TmxObject, map: TmxMap, xObject: any) {
             obj.id = xObject["id"] != undefined ? xObject["id"] : 0;
             obj.name = xObject["name"] != undefined ? xObject["name"] : "";
             obj.x = xObject["x"];
@@ -288,23 +412,23 @@ module es {
             let xText = xObject["text"];
             let xPoint = xObject["point"];
 
-            if (xGid){
+            if (xGid) {
                 obj.tile = new TmxLayerTile(map, xGid, Math.round(obj.x), Math.round(obj.y));
                 obj.objectType = TmxObjectType.tile;
-            }else if(xEllipse){
+            } else if (xEllipse) {
                 obj.objectType = TmxObjectType.ellipse;
-            } else if(xPolygon){
+            } else if (xPolygon) {
                 obj.points = this.parsePoints(xPolygon);
                 obj.objectType = TmxObjectType.polygon;
-            }else if(xPolyline){
+            } else if (xPolyline) {
                 obj.points = this.parsePoints(xPolyline);
                 obj.objectType = TmxObjectType.polyline;
-            }else if(xText){
+            } else if (xText) {
                 obj.text = this.loadTmxText(new TmxText(), xText);
                 obj.objectType = TmxObjectType.text;
-            }else if(xPoint){
+            } else if (xPoint) {
                 obj.objectType = TmxObjectType.point;
-            }else{
+            } else {
                 obj.objectType = TmxObjectType.basic;
             }
 
@@ -312,7 +436,7 @@ module es {
             return obj;
         }
 
-        public static loadTmxText(text: TmxText, xText: any){
+        public static loadTmxText(text: TmxText, xText: any) {
             text.fontFamily = xText["fontfamily"] != undefined ? xText["fontfamily"] : "sans-serif";
             text.pixelSize = xText["pixelsize"] != undefined ? xText["pixelsize"] : 16;
             text.wrap = xText["wrap"] != undefined ? xText["wrap"] : false;
@@ -328,7 +452,7 @@ module es {
             return text;
         }
 
-        public static loadTmxAlignment(alignment: TmxAlignment, xText: any){
+        public static loadTmxAlignment(alignment: TmxAlignment, xText: any) {
             function firstLetterToUpperCase(str: string) {
                 if (!str || str == "")
                     return str;
@@ -344,18 +468,18 @@ module es {
             return alignment;
         }
 
-        public static parsePoints(xPoints: any){
+        public static parsePoints(xPoints: any) {
             let pointString: string = xPoints["points"];
             let pointStringPair = pointString.split(' ');
             let points = [];
 
             let index = 0;
             for (let s of pointStringPair)
-                points[index ++] = this.parsePoint(s);
+                points[index++] = this.parsePoint(s);
             return points;
         }
 
-        public static parsePoint(s: string){
+        public static parsePoint(s: string) {
             let pt = s.split(',');
             let x = Number(pt[0]);
             let y = Number(pt[1]);
@@ -363,7 +487,7 @@ module es {
         }
 
 
-        public static parseTmxTerrain(xTerrain: any){
+        public static parseTmxTerrain(xTerrain: any) {
             let terrain = new TmxTerrain();
             terrain.name = xTerrain["name"];
             terrain.tile = xTerrain["tile"];
@@ -372,9 +496,9 @@ module es {
             return terrain;
         }
 
-        public static parseTmxTileOffset(xTileOffset: any){
+        public static parseTmxTileOffset(xTileOffset: any) {
             let tmxTileOffset = new TmxTileOffset();
-            if (!xTileOffset){
+            if (!xTileOffset) {
                 tmxTileOffset.x = 0;
                 tmxTileOffset.y = 0;
                 return tmxTileOffset;
@@ -385,12 +509,12 @@ module es {
             return tmxTileOffset;
         }
 
-        public static async loadTmxImage(image: TmxImage, xImage: any){
+        public static async loadTmxImage(image: TmxImage, xImage: any) {
             let xSource = xImage["image"];
             if (xSource) {
                 image.source = "resource/assets/" + xSource;
                 image.bitmap = new Bitmap(await RES.getResByUrl(image.source, null, this, RES.ResourceItem.TYPE_IMAGE));
-            }else {
+            } else {
                 image.format = xImage["format"];
                 let xData = xImage["data"];
                 image.data = TmxUtils.decode(xData, xData["encoding"], xData["compression"]);

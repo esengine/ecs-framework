@@ -1657,7 +1657,7 @@ declare module es {
         layers: ITmxLayer[];
         tilesets: TmxTileset[];
         tileLayers: TmxLayer[];
-        objectGroups: TmxLayer[];
+        objectGroups: TmxObjectGroup[];
         imageLayers: TmxImageLayer[];
         groups: TmxGroup[];
         properties: Map<string, string>;
@@ -1773,7 +1773,10 @@ declare module es {
     class TiledMapLoader {
         static loadTmxMap(map: TmxMap, filePath: string): Promise<TmxMap>;
         static loadTmxMapData(map: TmxMap, xMap: any): Promise<TmxMap>;
-        static parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number, tmxDirectory: string): void;
+        static parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number): Promise<void>;
+        static loadTmxGroup(group: TmxGroup, map: TmxMap, xGroup: any, width: number, height: number): TmxGroup;
+        static loadTmxImageLayer(layer: TmxImageLayer, map: TmxMap, xImageLayer: any): Promise<TmxImageLayer>;
+        static loadTmxLayer(layer: TmxLayer, map: TmxMap, xLayer: any, width: number, height: number): TmxLayer;
         private static updateMaxTileSizes;
         static parseOrientationType(type: string): OrientationType;
         static parseStaggerAxisType(type: string): StaggerAxisType;

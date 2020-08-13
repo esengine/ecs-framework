@@ -29,7 +29,7 @@ module es {
         public layers: ITmxLayer[];
         public tilesets: TmxTileset[];
         public tileLayers: TmxLayer[];
-        public objectGroups: TmxLayer[];
+        public objectGroups: TmxObjectGroup[];
         public imageLayers: TmxImageLayer[];
         public groups: TmxGroup[];
         public properties: Map<string, string>;

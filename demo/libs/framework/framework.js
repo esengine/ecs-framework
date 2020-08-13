@@ -3365,6 +3365,7 @@ var es;
             this.tiledMap.update();
         };
         TiledMapRenderer.prototype.render = function (camera) {
+            this.sync(camera);
             if (!this.layerIndicesToRender) {
                 es.TiledRendering.renderMap(this.tiledMap, this.displayObject, es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer);
             }
@@ -7842,13 +7843,165 @@ var es;
                             map.objectGroups = [];
                             map.imageLayers = [];
                             map.groups = [];
-                            this.parseLayers(map, xMap, map, map.width, map.height, map.tmxDirectory);
+                            this.parseLayers(map, xMap, map, map.width, map.height);
                             return [2, map];
                     }
                 });
             });
         };
-        TiledMapLoader.parseLayers = function (container, xEle, map, width, height, tmxDirectory) {
+        TiledMapLoader.parseLayers = function (container, xEle, map, width, height) {
+            return __awaiter(this, void 0, void 0, function () {
+                var _a, _b, _i, i, layer, _c, tileLayer, objectgroup, imagelayer, newGroup;
+                return __generator(this, function (_d) {
+                    switch (_d.label) {
+                        case 0:
+                            _a = [];
+                            for (_b in xEle)
+                                _a.push(_b);
+                            _i = 0;
+                            _d.label = 1;
+                        case 1:
+                            if (!(_i < _a.length)) return [3, 10];
+                            i = _a[_i];
+                            layer = void 0;
+                            _c = i;
+                            switch (_c) {
+                                case "layers": return [3, 2];
+                                case "objectgroups": return [3, 3];
+                                case "imagelayer": return [3, 4];
+                                case "group": return [3, 6];
+                            }
+                            return [3, 7];
+                        case 2:
+                            tileLayer = this.loadTmxLayer(new es.TmxLayer(), map, xEle[i], width, height);
+                            layer = tileLayer;
+                            if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
+                                container.tileLayers.push(tileLayer);
+                            return [3, 8];
+                        case 3:
+                            objectgroup = this.loadTmxObjectGroup(new es.TmxObjectGroup(), map, xEle[i]);
+                            layer = objectgroup;
+                            if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
+                                container.objectGroups.push(objectgroup);
+                            return [3, 8];
+                        case 4: return [4, this.loadTmxImageLayer(new es.TmxImageLayer(), map, xEle[i])];
+                        case 5:
+                            imagelayer = _d.sent();
+                            layer = imagelayer;
+                            if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
+                                container.imageLayers.push(imagelayer);
+                            return [3, 8];
+                        case 6:
+                            newGroup = this.loadTmxGroup(new es.TmxGroup(), map, xEle[i], width, height);
+                            layer = newGroup;
+                            if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
+                                container.groups.push(newGroup);
+                            return [3, 8];
+                        case 7: throw new Error("无效的操作");
+                        case 8:
+                            if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
+                                container.layers.push(layer);
+                            _d.label = 9;
+                        case 9:
+                            _i++;
+                            return [3, 1];
+                        case 10: return [2];
+                    }
+                });
+            });
+        };
+        TiledMapLoader.loadTmxGroup = function (group, map, xGroup, width, height) {
+            group.map = map;
+            group.name = xGroup["name"] != undefined ? xGroup["name"] : "";
+            group.opacity = xGroup["opacity"] != undefined ? xGroup["opacity"] : 1;
+            group.visible = xGroup["visible"] != undefined ? xGroup["visible"] : true;
+            group.offsetX = xGroup["offsetx"] != undefined ? xGroup["offsetx"] : 0;
+            group.offsetY = xGroup["offsety"] != undefined ? xGroup["offsety"] : 0;
+            group.properties = this.parsePropertyDict(xGroup["properties"]);
+            group.layers = [];
+            group.tileLayers = [];
+            group.objectGroups = [];
+            group.imageLayers = [];
+            group.groups = [];
+            this.parseLayers(group, xGroup, map, width, height);
+            return group;
+        };
+        TiledMapLoader.loadTmxImageLayer = function (layer, map, xImageLayer) {
+            return __awaiter(this, void 0, void 0, function () {
+                var xImage, _a;
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0:
+                            layer.map = map;
+                            layer.name = xImageLayer["name"];
+                            layer.width = xImageLayer["width"];
+                            layer.height = xImageLayer["height"];
+                            layer.visible = xImageLayer["visible"] != undefined ? xImageLayer["visible"] : true;
+                            layer.opacity = xImageLayer["opacity"] != undefined ? xImageLayer["opacity"] : 1;
+                            layer.offsetX = xImageLayer["offsetx"] != undefined ? xImageLayer["offsetx"] : 0;
+                            layer.offsetY = xImageLayer["offsety"] != undefined ? xImageLayer["offsety"] : 0;
+                            xImage = xImageLayer["image"];
+                            if (!xImage) return [3, 2];
+                            _a = layer;
+                            return [4, this.loadTmxImage(new es.TmxImage(), xImage)];
+                        case 1:
+                            _a.image = _b.sent();
+                            _b.label = 2;
+                        case 2:
+                            layer.properties = this.parsePropertyDict(xImageLayer["properties"]);
+                            return [2, layer];
+                    }
+                });
+            });
+        };
+        TiledMapLoader.loadTmxLayer = function (layer, map, xLayer, width, height) {
+            layer.map = map;
+            layer.name = xLayer["name"];
+            layer.opacity = xLayer["opacity"] != undefined ? xLayer["opacity"] : 1;
+            layer.visible = xLayer["visible"] != undefined ? xLayer["visible"] : true;
+            layer.offsetX = xLayer["offsetx"] != undefined ? xLayer["offsetx"] : 0;
+            layer.offsetY = xLayer["offsety"] != undefined ? xLayer["offsety"] : 0;
+            layer.width = xLayer["width"];
+            layer.height = xLayer["height"];
+            var xData = xLayer["data"];
+            var encoding = xData["encoding"];
+            layer.tiles = new Array(width * height);
+            if (encoding == "base64") {
+                var br = es.TmxUtils.decode(xData, encoding, xData["compression"]);
+                var index = 0;
+                for (var j = 0; j < height; j++) {
+                    for (var i = 0; i < width; i++) {
+                        var gid = br[index];
+                        layer.tiles[index++] = gid != 0 ? new es.TmxLayerTile(map, gid, i, j) : null;
+                    }
+                }
+            }
+            else if (encoding == "csv") {
+                var csvData = es.TmxUtils.decode(xData, encoding, xData["compression"]);
+                var k = 0;
+                for (var _i = 0, csvData_1 = csvData; _i < csvData_1.length; _i++) {
+                    var s = csvData_1[_i];
+                    var gid = s;
+                    var x = k % width;
+                    var y = k / width;
+                    layer.tiles[k++] = gid != 0 ? new es.TmxLayerTile(map, gid, x, y) : null;
+                }
+            }
+            else if (!encoding) {
+                var k = 0;
+                for (var _a = 0, _b = xData["tile"]; _a < _b.length; _a++) {
+                    var e = _b[_a];
+                    var gid = e["gid"] != undefined ? e["gid"] : 0;
+                    var x = k % width;
+                    var y = k / width;
+                    layer.tiles[k++] = gid != 0 ? new es.TmxLayerTile(map, gid, x, y) : null;
+                }
+            }
+            else {
+                throw new Error("TmxLayer:未知编码");
+            }
+            layer.properties = TiledMapLoader.parsePropertyDict(xLayer["properties"]);
+            return layer;
         };
         TiledMapLoader.updateMaxTileSizes = function (tileset) {
             tileset.tiles.forEach(function (tile) {
