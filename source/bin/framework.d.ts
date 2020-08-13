@@ -995,6 +995,7 @@ declare module es {
 }
 declare class ObjectUtils {
     static clone<T>(p: any, c?: T): T;
+    static elements(p: {}): any[];
 }
 declare module es {
     interface IRenderable {

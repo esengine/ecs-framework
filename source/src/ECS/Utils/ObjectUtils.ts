@@ -16,4 +16,13 @@ class ObjectUtils {
         }
         return c;
     }
+
+    public static elements(p: {}){
+        let c = [];
+        for (let i in p){
+            c.push(p[i]);
+        }
+
+        return c;
+    }
 }

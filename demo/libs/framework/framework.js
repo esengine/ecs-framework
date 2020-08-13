@@ -4579,6 +4579,13 @@ var ObjectUtils = (function () {
         }
         return c;
     };
+    ObjectUtils.elements = function (p) {
+        var c = [];
+        for (var i in p) {
+            c.push(p[i]);
+        }
+        return c;
+    };
     return ObjectUtils;
 }());
 var es;
@@ -7851,48 +7858,47 @@ var es;
         };
         TiledMapLoader.parseLayers = function (container, xEle, map, width, height) {
             return __awaiter(this, void 0, void 0, function () {
-                var _a, _b, _i, i, layer, _c, tileLayer, objectgroup, imagelayer, newGroup;
-                return __generator(this, function (_d) {
-                    switch (_d.label) {
+                var _i, _a, e, layer, _b, tileLayer, objectgroup, imagelayer, newGroup;
+                return __generator(this, function (_c) {
+                    switch (_c.label) {
                         case 0:
-                            _a = [];
-                            for (_b in xEle)
-                                _a.push(_b);
-                            _i = 0;
-                            _d.label = 1;
+                            _i = 0, _a = ObjectUtils.elements(xEle).where(function (x) {
+                                return x.name == "layer" || x.name == "objectgroup" || x.name == "imagelayer" || x.name == "group";
+                            });
+                            _c.label = 1;
                         case 1:
                             if (!(_i < _a.length)) return [3, 10];
-                            i = _a[_i];
+                            e = _a[_i];
                             layer = void 0;
-                            _c = i;
-                            switch (_c) {
-                                case "layers": return [3, 2];
-                                case "objectgroups": return [3, 3];
+                            _b = e.name;
+                            switch (_b) {
+                                case "layer": return [3, 2];
+                                case "objectgroup": return [3, 3];
                                 case "imagelayer": return [3, 4];
                                 case "group": return [3, 6];
                             }
                             return [3, 7];
                         case 2:
-                            tileLayer = this.loadTmxLayer(new es.TmxLayer(), map, xEle[i], width, height);
+                            tileLayer = this.loadTmxLayer(new es.TmxLayer(), map, e, width, height);
                             layer = tileLayer;
                             if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
                                 container.tileLayers.push(tileLayer);
                             return [3, 8];
                         case 3:
-                            objectgroup = this.loadTmxObjectGroup(new es.TmxObjectGroup(), map, xEle[i]);
+                            objectgroup = this.loadTmxObjectGroup(new es.TmxObjectGroup(), map, e);
                             layer = objectgroup;
                             if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
                                 container.objectGroups.push(objectgroup);
                             return [3, 8];
-                        case 4: return [4, this.loadTmxImageLayer(new es.TmxImageLayer(), map, xEle[i])];
+                        case 4: return [4, this.loadTmxImageLayer(new es.TmxImageLayer(), map, e)];
                         case 5:
-                            imagelayer = _d.sent();
+                            imagelayer = _c.sent();
                             layer = imagelayer;
                             if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
                                 container.imageLayers.push(imagelayer);
                             return [3, 8];
                         case 6:
-                            newGroup = this.loadTmxGroup(new es.TmxGroup(), map, xEle[i], width, height);
+                            newGroup = this.loadTmxGroup(new es.TmxGroup(), map, e, width, height);
                             layer = newGroup;
                             if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
                                 container.groups.push(newGroup);
@@ -7901,7 +7907,7 @@ var es;
                         case 8:
                             if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
                                 container.layers.push(layer);
-                            _d.label = 9;
+                            _c.label = 9;
                         case 9:
                             _i++;
                             return [3, 1];

@@ -58,32 +58,34 @@ module es {
          * @param height
          */
         public static async parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number) {
-            for (let i in xEle) {
+            for (let e of ObjectUtils.elements(xEle).where(x => {
+                return x.name == "layer" || x.name == "objectgroup" || x.name == "imagelayer" || x.name == "group"
+            })) {
                 let layer: ITmxLayer;
-                switch (i) {
-                    case "layers":
-                        let tileLayer = this.loadTmxLayer(new TmxLayer(), map, xEle[i], width, height);
+                switch (e.name) {
+                    case "layer":
+                        let tileLayer = this.loadTmxLayer(new TmxLayer(), map, e, width, height);
                         layer = tileLayer;
 
                         if (container instanceof TmxMap || container instanceof TmxGroup)
                             container.tileLayers.push(tileLayer);
                         break;
-                    case "objectgroups":
-                        let objectgroup = this.loadTmxObjectGroup(new TmxObjectGroup(), map, xEle[i]);
+                    case "objectgroup":
+                        let objectgroup = this.loadTmxObjectGroup(new TmxObjectGroup(), map, e);
                         layer = objectgroup;
 
                         if (container instanceof TmxMap || container instanceof TmxGroup)
                             container.objectGroups.push(objectgroup);
                         break;
                     case "imagelayer":
-                        let imagelayer = await this.loadTmxImageLayer(new TmxImageLayer(), map, xEle[i]);
+                        let imagelayer = await this.loadTmxImageLayer(new TmxImageLayer(), map, e);
                         layer = imagelayer;
 
                         if (container instanceof TmxMap || container instanceof TmxGroup)
                             container.imageLayers.push(imagelayer);
                         break;
                     case "group":
-                        let newGroup = this.loadTmxGroup(new TmxGroup(), map, xEle[i], width, height);
+                        let newGroup = this.loadTmxGroup(new TmxGroup(), map, e, width, height);
                         layer = newGroup;
 
                         if (container instanceof TmxMap || container instanceof TmxGroup)
