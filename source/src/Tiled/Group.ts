@@ -7,10 +7,10 @@ module es {
         public properties: Map<string, string>;
         public visible: boolean;
         public name: string;
-        public layers: TmxList<any>;
-        public tileLayers: TmxList<TmxLayer>;
-        public objectGroups: TmxList<TmxObjectGroup>;
-        public imageLayers: TmxList<TmxImageLayer>;
-        public groups: TmxList<TmxGroup>;
+        public layers: ITmxLayer[];
+        public tileLayers: TmxLayer[];
+        public objectGroups: TmxObjectGroup[];
+        public imageLayers: TmxImageLayer[];
+        public groups: TmxGroup[];
     }
 }

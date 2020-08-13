@@ -7,7 +7,7 @@ module es {
         public type: string;
         public properties: Map<string, string>;
         public image: TmxImage;
-        public objectGroups: TmxList<TmxObjectGroup>;
+        public objectGroups: TmxObjectGroup[];
         public animationFrames: TmxAnimationFrame[];
 
         // TODO: 为什么动画瓷砖需要添加firstGid

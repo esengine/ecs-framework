@@ -1284,6 +1284,7 @@ var es;
             es.Input.initialize();
             this.initialize();
         };
+        Core.debugRenderEndabled = false;
         return Core;
     }(egret.DisplayObjectContainer));
     es.Core = Core;
@@ -3296,8 +3297,9 @@ var es;
             _this.physicsLayer = 1 << 0;
             _this.tiledMap = tiledMap;
             _this._shouldCreateColliders = shouldCreateColliders;
+            _this.displayObject = new egret.DisplayObjectContainer();
             if (collisionLayerName) {
-                _this.collisionLayer = tiledMap.tileLayers.get(collisionLayerName);
+                _this.collisionLayer = tiledMap.tileLayers[collisionLayerName];
             }
             return _this;
         }
@@ -3333,7 +3335,7 @@ var es;
             var layerType = this.tiledMap.getLayer(layerName);
             for (var layer in this.tiledMap.layers) {
                 if (this.tiledMap.layers.hasOwnProperty(layer) &&
-                    this.tiledMap.layers.get(layer) == layerType) {
+                    this.tiledMap.layers[layer] == layerType) {
                     return index;
                 }
             }
@@ -3364,12 +3366,12 @@ var es;
         };
         TiledMapRenderer.prototype.render = function (camera) {
             if (!this.layerIndicesToRender) {
-                es.TiledRendering.renderMap(this.tiledMap, es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer);
+                es.TiledRendering.renderMap(this.tiledMap, this.displayObject, es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer);
             }
             else {
-                for (var i = 0; i < this.tiledMap.layers.size; i++) {
-                    if (this.tiledMap.layers.get(i.toString()).visible && this.layerIndicesToRender.contains(i))
-                        es.TiledRendering.renderLayer(this.tiledMap.layers.get(i.toString()), es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer);
+                for (var i = 0; i < this.tiledMap.layers.length; i++) {
+                    if (this.tiledMap.layers[i].visible && this.layerIndicesToRender.contains(i))
+                        es.TiledRendering.renderLayer(this.tiledMap.layers[i], this.displayObject, es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer);
                 }
             }
         };
@@ -7606,45 +7608,25 @@ var es;
 (function (es) {
     var TmxDocument = (function () {
         function TmxDocument() {
-            this.TmxDirectory = "";
+            this.tmxDirectory = "";
         }
         return TmxDocument;
     }());
     es.TmxDocument = TmxDocument;
-    var TmxList = (function (_super) {
-        __extends(TmxList, _super);
-        function TmxList() {
-            var _this = _super !== null && _super.apply(this, arguments) || this;
-            _this._nameCount = new Map();
-            return _this;
-        }
-        TmxList.prototype.add = function (t) {
-            var tName = t.name;
-            if (this.has(tName))
-                this._nameCount.set(tName, this._nameCount.get(tName) + 1);
-            else
-                this._nameCount.set(tName, 0);
-        };
-        TmxList.prototype.getKeyForItem = function (item) {
-            var name = item.name;
-            var count = this._nameCount.get(name);
-            var dupes = 0;
-            while (this.has(name)) {
-                name = name + es.Enumerable.repeat("_", dupes).toString() + count.toString();
-                dupes++;
-            }
-            return name;
-        };
-        return TmxList;
-    }(Map));
-    es.TmxList = TmxList;
     var TmxImage = (function () {
         function TmxImage() {
         }
+        Object.defineProperty(TmxImage.prototype, "texture", {
+            get: function () {
+                return this.bitmap.texture;
+            },
+            enumerable: true,
+            configurable: true
+        });
         TmxImage.prototype.dispose = function () {
-            if (this.texture) {
+            if (this.bitmap) {
                 this.texture.dispose();
-                this.texture = null;
+                this.bitmap = null;
             }
         };
         return TmxImage;
@@ -7682,9 +7664,9 @@ var es;
         TmxMap.prototype.getTilesetForTileGid = function (gid) {
             if (gid == 0)
                 return null;
-            for (var i = this.tilesets.size - 1; i >= 0; i--) {
-                if (this.tilesets.get(i.toString()).firstGid <= gid)
-                    return this.tilesets.get(i.toString());
+            for (var i = this.tilesets.length - 1; i >= 0; i--) {
+                if (this.tilesets[i].firstGid <= gid)
+                    return this.tilesets[i];
             }
             console.error("tile gid" + gid + "\u672A\u5728\u4EFB\u4F55tileset\u4E2D\u627E\u5230");
         };
@@ -7703,7 +7685,7 @@ var es;
             return es.MathHelper.clamp(tileY, 0, this.height - 1);
         };
         TmxMap.prototype.getLayer = function (name) {
-            return this.layers.get(name);
+            return this.layers[name];
         };
         TmxMap.prototype.update = function () {
             this.tilesets.forEach(function (tileset) { tileset.update(); });
@@ -7759,6 +7741,8 @@ var es;
     es.TmxObjectGroup = TmxObjectGroup;
     var TmxObject = (function () {
         function TmxObject() {
+            this.shape = new egret.Shape();
+            this.textField = new egret.TextField();
         }
         return TmxObject;
     }());
@@ -7807,102 +7791,561 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Bitmap = egret.Bitmap;
+    var TiledMapLoader = (function () {
+        function TiledMapLoader() {
+        }
+        TiledMapLoader.loadTmxMap = function (map, filePath) {
+            var xMap = RES.getRes(filePath);
+            return this.loadTmxMapData(map, xMap);
+        };
+        TiledMapLoader.loadTmxMapData = function (map, xMap) {
+            return __awaiter(this, void 0, void 0, function () {
+                var _i, _a, e, tileset;
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0:
+                            map.version = xMap["version"];
+                            map.tiledVersion = xMap["tiledversion"];
+                            map.width = xMap["width"];
+                            map.height = xMap["height"];
+                            map.tileWidth = xMap["tilewidth"];
+                            map.tileHeight = xMap["tileheight"];
+                            map.hexSideLength = xMap["hexsidelength"];
+                            map.orientation = this.parseOrientationType(xMap["orientation"]);
+                            map.staggerAxis = this.parseStaggerAxisType(xMap["staggeraxis"]);
+                            map.staggerIndex = this.parseStaggerIndexType(xMap["staggerindex"]);
+                            map.renderOrder = this.parseRenderOrderType(xMap["renderorder"]);
+                            map.nextObjectID = xMap["nextobjectid"];
+                            map.backgroundColor = es.TmxUtils.color16ToUnit(xMap["color"]);
+                            map.properties = this.parsePropertyDict(xMap["properties"]);
+                            map.maxTileWidth = map.tileWidth;
+                            map.maxTileHeight = map.tileHeight;
+                            map.tilesets = [];
+                            _i = 0, _a = xMap["tilesets"];
+                            _b.label = 1;
+                        case 1:
+                            if (!(_i < _a.length)) return [3, 4];
+                            e = _a[_i];
+                            return [4, this.parseTmxTileset(map, e)];
+                        case 2:
+                            tileset = _b.sent();
+                            map.tilesets.push(tileset);
+                            this.updateMaxTileSizes(tileset);
+                            _b.label = 3;
+                        case 3:
+                            _i++;
+                            return [3, 1];
+                        case 4:
+                            map.layers = [];
+                            map.tileLayers = [];
+                            map.objectGroups = [];
+                            map.imageLayers = [];
+                            map.groups = [];
+                            this.parseLayers(map, xMap, map, map.width, map.height, map.tmxDirectory);
+                            return [2, map];
+                    }
+                });
+            });
+        };
+        TiledMapLoader.parseLayers = function (container, xEle, map, width, height, tmxDirectory) {
+        };
+        TiledMapLoader.updateMaxTileSizes = function (tileset) {
+            tileset.tiles.forEach(function (tile) {
+                if (tile.image) {
+                    if (tile.image.width > tileset.map.maxTileWidth)
+                        tileset.map.maxTileWidth = tile.image.width;
+                    if (tile.image.height > tileset.map.maxTileHeight)
+                        tileset.map.maxTileHeight = tile.image.height;
+                }
+            });
+            tileset.tileRegions.forEach(function (region) {
+                var width = region.width;
+                var height = region.height;
+                if (width > tileset.map.maxTileWidth)
+                    tileset.map.maxTileWidth = width;
+                if (width > tileset.map.maxTileHeight)
+                    tileset.map.maxTileHeight = height;
+            });
+        };
+        TiledMapLoader.parseOrientationType = function (type) {
+            if (type == "unknown")
+                return es.OrientationType.unknown;
+            if (type == "orthogonal")
+                return es.OrientationType.orthogonal;
+            if (type == "isometric")
+                return es.OrientationType.isometric;
+            if (type == "staggered")
+                return es.OrientationType.staggered;
+            if (type == "hexagonal")
+                return es.OrientationType.hexagonal;
+            return es.OrientationType.unknown;
+        };
+        TiledMapLoader.parseStaggerAxisType = function (type) {
+            if (type == "y")
+                return es.StaggerAxisType.y;
+            return es.StaggerAxisType.x;
+        };
+        TiledMapLoader.parseStaggerIndexType = function (type) {
+            if (type == "even")
+                return es.StaggerIndexType.even;
+            return es.StaggerIndexType.odd;
+        };
+        TiledMapLoader.parseRenderOrderType = function (type) {
+            if (type == "right-up")
+                return es.RenderOrderType.rightUp;
+            if (type == "left-down")
+                return es.RenderOrderType.leftDown;
+            if (type == "left-up")
+                return es.RenderOrderType.leftUp;
+            return es.RenderOrderType.rightDown;
+        };
+        TiledMapLoader.parsePropertyDict = function (prop) {
+            if (!prop)
+                return null;
+            var dict = new Map();
+            for (var _i = 0, _a = prop["property"]; _i < _a.length; _i++) {
+                var p = _a[_i];
+                var pname = p["name"];
+                var valueAttr = p["value"];
+                var pval = valueAttr ? valueAttr : p;
+                dict.set(pname, pval);
+            }
+            return dict;
+        };
+        TiledMapLoader.parseTmxTileset = function (map, xTileset) {
+            return __awaiter(this, void 0, void 0, function () {
+                var xFirstGid, firstGid, source, xDocTileset, tileset;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            xFirstGid = xTileset["firstgid"];
+                            firstGid = xFirstGid;
+                            source = xTileset["image"];
+                            if (!!source) return [3, 2];
+                            source = "resource/assets/" + source;
+                            return [4, RES.getResByUrl(source, null, this, RES.ResourceItem.TYPE_IMAGE)];
+                        case 1:
+                            xDocTileset = _a.sent();
+                            tileset = this.loadTmxTileset(new es.TmxTileset(), map, xDocTileset["tileset"], firstGid);
+                            return [2, tileset];
+                        case 2: return [2, this.loadTmxTileset(new es.TmxTileset(), map, xTileset, firstGid)];
+                    }
+                });
+            });
+        };
+        TiledMapLoader.loadTmxTileset = function (tileset, map, xTileset, firstGid) {
+            return __awaiter(this, void 0, void 0, function () {
+                var xImage, _a, xTerrainType, _i, _b, e, _c, _d, xTile, tile, id, y, column, x;
+                return __generator(this, function (_e) {
+                    switch (_e.label) {
+                        case 0:
+                            tileset.map = map;
+                            tileset.firstGid = firstGid;
+                            tileset.name = xTileset["name"];
+                            tileset.tileWidth = xTileset["tilewidth"];
+                            tileset.tileHeight = xTileset["tileheight"];
+                            tileset.spacing = xTileset["spacing"] != undefined ? xTileset["spacing"] : 0;
+                            tileset.margin = xTileset["margin"] != undefined ? xTileset["margin"] : 0;
+                            tileset.columns = xTileset["columns"];
+                            tileset.tileCount = xTileset["tilecount"];
+                            tileset.tileOffset = this.parseTmxTileOffset(xTileset["tileoffset"]);
+                            xImage = xTileset["image"];
+                            if (!xImage) return [3, 2];
+                            _a = tileset;
+                            return [4, this.loadTmxImage(new es.TmxImage(), xTileset)];
+                        case 1:
+                            _a.image = _e.sent();
+                            _e.label = 2;
+                        case 2:
+                            xTerrainType = xTileset["terraintypes"];
+                            if (xTerrainType) {
+                                tileset.terrains = [];
+                                for (_i = 0, _b = xTerrainType["terrains"]; _i < _b.length; _i++) {
+                                    e = _b[_i];
+                                    tileset.terrains.push(this.parseTmxTerrain(e));
+                                }
+                            }
+                            tileset.tiles = new Map();
+                            _c = 0, _d = xTileset["tiles"];
+                            _e.label = 3;
+                        case 3:
+                            if (!(_c < _d.length)) return [3, 6];
+                            xTile = _d[_c];
+                            return [4, this.loadTmxTilesetTile(new es.TmxTilesetTile(), tileset, xTile, tileset.terrains)];
+                        case 4:
+                            tile = _e.sent();
+                            tileset.tiles[tile.id] = tile;
+                            _e.label = 5;
+                        case 5:
+                            _c++;
+                            return [3, 3];
+                        case 6:
+                            tileset.properties = this.parsePropertyDict(xTileset["properties"]);
+                            tileset.tileRegions = new Map();
+                            if (tileset.image) {
+                                id = firstGid;
+                                for (y = tileset.margin; y < tileset.image.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
+                                    column = 0;
+                                    for (x = tileset.margin; x < tileset.image.width - tileset.margin; x += tileset.tileWidth + tileset.spacing) {
+                                        tileset.tileRegions.set(id++, new es.Rectangle(x, y, tileset.tileWidth, tileset.tileHeight));
+                                        if (++column >= tileset.columns)
+                                            break;
+                                    }
+                                }
+                            }
+                            else {
+                                tileset.tiles.forEach(function (tile) {
+                                    tileset.tileRegions.set(firstGid + tile.id, new es.Rectangle(0, 0, tile.image.width, tile.image.height));
+                                });
+                            }
+                            return [2, tileset];
+                    }
+                });
+            });
+        };
+        TiledMapLoader.loadTmxTilesetTile = function (tile, tileset, xTile, terrains) {
+            return __awaiter(this, void 0, void 0, function () {
+                var xImage, _a, _i, _b, e, _c, _d, e;
+                return __generator(this, function (_e) {
+                    switch (_e.label) {
+                        case 0:
+                            tile.tileset = tileset;
+                            tile.id = xTile["id"];
+                            tile.terrainEdges = xTile["terrain"];
+                            tile.probability = xTile["probability"] != undefined ? xTile["probability"] : 1;
+                            tile.type = xTile["type"];
+                            xImage = xTile["image"];
+                            if (!xImage) return [3, 2];
+                            _a = tile;
+                            return [4, this.loadTmxImage(new es.TmxImage(), xImage)];
+                        case 1:
+                            _a.image = _e.sent();
+                            _e.label = 2;
+                        case 2:
+                            tile.objectGroups = [];
+                            if (xTile["objectgroup"])
+                                for (_i = 0, _b = xTile["objectgroup"]; _i < _b.length; _i++) {
+                                    e = _b[_i];
+                                    tile.objectGroups.push(this.loadTmxObjectGroup(new es.TmxObjectGroup(), tileset.map, e));
+                                }
+                            tile.animationFrames = [];
+                            if (xTile["animation"]) {
+                                for (_c = 0, _d = xTile["animation"]["frame"]; _c < _d.length; _c++) {
+                                    e = _d[_c];
+                                    tile.animationFrames.push(this.loadTmxAnimationFrame(new es.TmxAnimationFrame(), e));
+                                }
+                            }
+                            tile.properties = this.parsePropertyDict(xTile["properties"]);
+                            if (tile.properties)
+                                tile.processProperties();
+                            return [2, tile];
+                    }
+                });
+            });
+        };
+        TiledMapLoader.loadTmxAnimationFrame = function (frame, xFrame) {
+            frame.gid = xFrame["tileid"];
+            frame.duration = xFrame["duration"] / 1000;
+            return frame;
+        };
+        TiledMapLoader.loadTmxObjectGroup = function (group, map, xObjectGroup) {
+            group.map = map;
+            group.name = xObjectGroup["name"] != undefined ? xObjectGroup["name"] : "";
+            group.color = es.TmxUtils.color16ToUnit(xObjectGroup["color"]);
+            group.opacity = xObjectGroup["opacity"] != undefined ? xObjectGroup["opacity"] : 1;
+            group.visible = xObjectGroup["visible"] != undefined ? xObjectGroup["visible"] : true;
+            group.offsetX = xObjectGroup["offsetx"] != undefined ? xObjectGroup["offsetx"] : 0;
+            group.offsetY = xObjectGroup["offsety"] != undefined ? xObjectGroup["offsety"] : 0;
+            var drawOrderDict = new Map();
+            drawOrderDict.set("unknown", es.DrawOrderType.unkownOrder);
+            drawOrderDict.set("topdown", es.DrawOrderType.IndexOrder);
+            drawOrderDict.set("index", es.DrawOrderType.TopDown);
+            var drawOrderValue = xObjectGroup["draworder"];
+            if (drawOrderValue)
+                group.drawOrder = drawOrderDict[drawOrderValue];
+            group.objects = [];
+            for (var _i = 0, _a = xObjectGroup["object"]; _i < _a.length; _i++) {
+                var e = _a[_i];
+                group.objects.push(this.loadTmxObject(new es.TmxObject(), map, e));
+            }
+            group.properties = this.parsePropertyDict(xObjectGroup["properties"]);
+            return group;
+        };
+        TiledMapLoader.loadTmxObject = function (obj, map, xObject) {
+            obj.id = xObject["id"] != undefined ? xObject["id"] : 0;
+            obj.name = xObject["name"] != undefined ? xObject["name"] : "";
+            obj.x = xObject["x"];
+            obj.y = xObject["y"];
+            obj.width = xObject["width"] != undefined ? xObject["width"] : 0;
+            obj.height = xObject["height"] != undefined ? xObject["height"] : 0;
+            obj.type = xObject["type"] != undefined ? xObject["type"] : "";
+            obj.visible = xObject["visible"] != undefined ? xObject["visible"] : true;
+            obj.rotation = xObject["rotation"] != undefined ? xObject["rotation"] : 0;
+            var xGid = xObject["gid"];
+            var xEllipse = xObject["ellipse"];
+            var xPolygon = xObject["polygon"];
+            var xPolyline = xObject["polyline"];
+            var xText = xObject["text"];
+            var xPoint = xObject["point"];
+            if (xGid) {
+                obj.tile = new es.TmxLayerTile(map, xGid, Math.round(obj.x), Math.round(obj.y));
+                obj.objectType = es.TmxObjectType.tile;
+            }
+            else if (xEllipse) {
+                obj.objectType = es.TmxObjectType.ellipse;
+            }
+            else if (xPolygon) {
+                obj.points = this.parsePoints(xPolygon);
+                obj.objectType = es.TmxObjectType.polygon;
+            }
+            else if (xPolyline) {
+                obj.points = this.parsePoints(xPolyline);
+                obj.objectType = es.TmxObjectType.polyline;
+            }
+            else if (xText) {
+                obj.text = this.loadTmxText(new es.TmxText(), xText);
+                obj.objectType = es.TmxObjectType.text;
+            }
+            else if (xPoint) {
+                obj.objectType = es.TmxObjectType.point;
+            }
+            else {
+                obj.objectType = es.TmxObjectType.basic;
+            }
+            obj.properties = this.parsePropertyDict(xObject["properties"]);
+            return obj;
+        };
+        TiledMapLoader.loadTmxText = function (text, xText) {
+            text.fontFamily = xText["fontfamily"] != undefined ? xText["fontfamily"] : "sans-serif";
+            text.pixelSize = xText["pixelsize"] != undefined ? xText["pixelsize"] : 16;
+            text.wrap = xText["wrap"] != undefined ? xText["wrap"] : false;
+            text.color = es.TmxUtils.color16ToUnit(xText["color"]);
+            text.bold = xText["bold"] ? xText["bold"] : false;
+            text.italic = xText["italic"] ? xText["italic"] : false;
+            text.underline = xText["underline"] ? xText["underline"] : false;
+            text.strikeout = xText["strikeout"] ? xText["strikeout"] : false;
+            text.kerning = xText["kerning"] ? xText["kerning"] : true;
+            text.alignment = this.loadTmxAlignment(new es.TmxAlignment(), xText);
+            text.value = xText;
+            return text;
+        };
+        TiledMapLoader.loadTmxAlignment = function (alignment, xText) {
+            function firstLetterToUpperCase(str) {
+                if (!str || str == "")
+                    return str;
+                return str[0].toString().toUpperCase() + str.substr(1);
+            }
+            var xHorizontal = xText["halign"] != undefined ? xText["halign"] : "left";
+            alignment.horizontal = es.TmxHorizontalAlignment[firstLetterToUpperCase(xHorizontal)];
+            var xVertical = xText["valign"] != undefined ? xText["valign"] : "top";
+            alignment.vertical = es.TmxVerticalAlignment[firstLetterToUpperCase((xVertical))];
+            return alignment;
+        };
+        TiledMapLoader.parsePoints = function (xPoints) {
+            var pointString = xPoints["points"];
+            var pointStringPair = pointString.split(' ');
+            var points = [];
+            var index = 0;
+            for (var _i = 0, pointStringPair_1 = pointStringPair; _i < pointStringPair_1.length; _i++) {
+                var s = pointStringPair_1[_i];
+                points[index++] = this.parsePoint(s);
+            }
+            return points;
+        };
+        TiledMapLoader.parsePoint = function (s) {
+            var pt = s.split(',');
+            var x = Number(pt[0]);
+            var y = Number(pt[1]);
+            return new es.Vector2(x, y);
+        };
+        TiledMapLoader.parseTmxTerrain = function (xTerrain) {
+            var terrain = new es.TmxTerrain();
+            terrain.name = xTerrain["name"];
+            terrain.tile = xTerrain["tile"];
+            terrain.properties = this.parsePropertyDict(xTerrain["properties"]);
+            return terrain;
+        };
+        TiledMapLoader.parseTmxTileOffset = function (xTileOffset) {
+            var tmxTileOffset = new es.TmxTileOffset();
+            if (!xTileOffset) {
+                tmxTileOffset.x = 0;
+                tmxTileOffset.y = 0;
+                return tmxTileOffset;
+            }
+            tmxTileOffset.x = xTileOffset["x"];
+            tmxTileOffset.y = xTileOffset["y"];
+            return tmxTileOffset;
+        };
+        TiledMapLoader.loadTmxImage = function (image, xImage) {
+            return __awaiter(this, void 0, void 0, function () {
+                var xSource, _a, _b, xData;
+                return __generator(this, function (_c) {
+                    switch (_c.label) {
+                        case 0:
+                            xSource = xImage["image"];
+                            if (!xSource) return [3, 2];
+                            image.source = "resource/assets/" + xSource;
+                            _a = image;
+                            _b = Bitmap.bind;
+                            return [4, RES.getResByUrl(image.source, null, this, RES.ResourceItem.TYPE_IMAGE)];
+                        case 1:
+                            _a.bitmap = new (_b.apply(Bitmap, [void 0, _c.sent()]))();
+                            return [3, 3];
+                        case 2:
+                            image.format = xImage["format"];
+                            xData = xImage["data"];
+                            image.data = es.TmxUtils.decode(xData, xData["encoding"], xData["compression"]);
+                            _c.label = 3;
+                        case 3:
+                            image.trans = es.TmxUtils.color16ToUnit(xImage["trans"]);
+                            image.width = xImage["width"] != undefined ? xImage["width"] : 0;
+                            image.height = xImage["height"] != undefined ? xImage["height"] : 0;
+                            return [2, image];
+                    }
+                });
+            });
+        };
+        return TiledMapLoader;
+    }());
+    es.TiledMapLoader = TiledMapLoader;
+})(es || (es = {}));
+var es;
+(function (es) {
     var TiledRendering = (function () {
         function TiledRendering() {
         }
-        TiledRendering.renderMap = function (map, position, scale, layerDepth) {
+        TiledRendering.renderMap = function (map, container, position, scale, layerDepth) {
             var _this = this;
             map.layers.forEach(function (layer) {
                 if (layer instanceof es.TmxLayer && layer.visible) {
-                    _this.renderLayer(layer, position, scale, layerDepth);
+                    _this.renderLayer(layer, container, position, scale, layerDepth);
                 }
                 else if (layer instanceof es.TmxImageLayer && layer.visible) {
-                    _this.renderImageLayer(layer, position, scale, layerDepth);
+                    _this.renderImageLayer(layer, container, position, scale, layerDepth);
                 }
                 else if (layer instanceof es.TmxGroup && layer.visible) {
-                    _this.renderGroup(layer, position, scale, layerDepth);
+                    _this.renderGroup(layer, container, position, scale, layerDepth);
                 }
                 else if (layer instanceof es.TmxObjectGroup && layer.visible) {
-                    _this.renderObjectGroup(layer, position, scale, layerDepth);
+                    _this.renderObjectGroup(layer, container, position, scale, layerDepth);
                 }
             });
         };
-        TiledRendering.renderLayer = function (layer, position, scale, layerDepth) {
+        TiledRendering.renderLayer = function (layer, container, position, scale, layerDepth) {
             if (!layer.visible)
                 return;
             var tileWidth = layer.map.tileWidth * scale.x;
             var tileHeight = layer.map.tileHeight * scale.y;
-            var color = new es.Color(0, 0, 0, layer.opacity * 255);
+            var color = es.DrawUtils.getColorMatrix(0x000000);
             for (var i = 0; i < layer.tiles.length; i++) {
                 var tile = layer.tiles[i];
                 if (!tile)
                     continue;
-                this.renderTile(tile, position, scale, tileWidth, tileHeight, color, layerDepth);
+                this.renderTile(tile, container, position, scale, tileWidth, tileHeight, color, layerDepth);
             }
         };
-        TiledRendering.renderImageLayer = function (layer, position, scale, layerDepth) {
+        TiledRendering.renderImageLayer = function (layer, container, position, scale, layerDepth) {
             if (!layer.visible)
                 return;
-            var color = new es.Color(0, 0, 0, layer.opacity * 255);
+            var color = es.DrawUtils.getColorMatrix(0x000000);
             var pos = es.Vector2.add(position, new es.Vector2(layer.offsetX, layer.offsetY).multiply(scale));
+            if (!layer.image.bitmap.parent)
+                container.addChild(layer.image.bitmap);
+            layer.image.bitmap.x = pos.x;
+            layer.image.bitmap.y = pos.y;
+            layer.image.bitmap.scaleX = scale.x;
+            layer.image.bitmap.scaleY = scale.y;
+            layer.image.bitmap.filters = [color];
         };
-        TiledRendering.renderObjectGroup = function (objGroup, position, scale, layerDepth) {
+        TiledRendering.renderObjectGroup = function (objGroup, container, position, scale, layerDepth) {
             if (!objGroup.visible)
                 return;
             for (var object in objGroup.objects) {
-                var obj = objGroup.objects.get(object);
+                var obj = objGroup.objects[object];
                 if (!obj.visible)
                     continue;
+                if (!es.Core.debugRenderEndabled) {
+                    if (obj.objectType != es.TmxObjectType.tile && obj.objectType != es.TmxObjectType.text)
+                        continue;
+                }
                 var pos = es.Vector2.add(position, new es.Vector2(obj.x, obj.y).multiply(scale));
                 switch (obj.objectType) {
                     case es.TmxObjectType.basic:
+                        if (!obj.shape.parent)
+                            container.addChild(obj.shape);
+                        var rect = new es.Rectangle(pos.x, pos.y, obj.width * scale.x, obj.height * scale.y);
+                        es.DrawUtils.drawHollowRect(obj.shape, rect, objGroup.color);
                         break;
                     case es.TmxObjectType.point:
                         var size = objGroup.map.tileWidth * 0.5;
                         pos.x -= size * 0.5;
                         pos.y -= size * 0.5;
+                        if (!obj.shape.parent)
+                            container.addChild(obj.shape);
+                        es.DrawUtils.drawPixel(obj.shape, pos, objGroup.color, size);
                         break;
                     case es.TmxObjectType.tile:
                         var tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
                         var sourceRect = tileset.tileRegions[obj.tile.gid];
                         pos.y -= obj.tile.tilesetTile.image.height;
+                        if (!obj.tile.tilesetTile.image.bitmap)
+                            container.addChild(obj.tile.tilesetTile.image.bitmap);
+                        obj.tile.tilesetTile.image.bitmap.x = pos.x;
+                        obj.tile.tilesetTile.image.bitmap.y = pos.y;
+                        obj.tile.tilesetTile.image.bitmap.filters = [];
+                        obj.tile.tilesetTile.image.bitmap.rotation = 0;
+                        obj.tile.tilesetTile.image.bitmap.scaleX = scale.x;
+                        obj.tile.tilesetTile.image.bitmap.scaleY = scale.y;
                         break;
                     case es.TmxObjectType.ellipse:
                         pos = new es.Vector2(obj.x + obj.width * 0.5, obj.y + obj.height * 0.5).multiply(scale);
+                        if (!obj.shape.parent)
+                            container.addChild(obj.shape);
+                        es.DrawUtils.drawCircle(obj.shape, pos, obj.width * 0.5, objGroup.color);
                         break;
                     case es.TmxObjectType.polygon:
                     case es.TmxObjectType.polyline:
                         var points = [];
                         for (var i = 0; i < obj.points.length; i++)
                             points[i] = es.Vector2.multiply(obj.points[i], scale);
+                        es.DrawUtils.drawPoints(obj.shape, pos, points, objGroup.color, obj.objectType == es.TmxObjectType.polygon);
                         break;
                     case es.TmxObjectType.text:
+                        if (!obj.textField.parent)
+                            container.addChild(obj.textField);
+                        es.DrawUtils.drawString(obj.textField, obj.text.value, pos, obj.text.color, es.MathHelper.toRadians(obj.rotation), es.Vector2.zero, 1);
                         break;
                     default:
+                        if (es.Core.debugRenderEndabled) {
+                            if (!obj.textField.parent)
+                                container.addChild(obj.textField);
+                            es.DrawUtils.drawString(obj.textField, obj.name + "(" + obj.type + ")", es.Vector2.subtract(pos, new es.Vector2(0, 15)), 0xffffff, 0, es.Vector2.zero, 1);
+                        }
                         break;
                 }
             }
         };
-        TiledRendering.renderGroup = function (group, position, scale, layerDepth) {
+        TiledRendering.renderGroup = function (group, container, position, scale, layerDepth) {
             var _this = this;
             if (!group.visible)
                 return;
             group.layers.forEach(function (layer) {
                 if (layer instanceof es.TmxGroup) {
-                    _this.renderGroup(layer, position, scale, layerDepth);
+                    _this.renderGroup(layer, container, position, scale, layerDepth);
                 }
                 if (layer instanceof es.TmxObjectGroup) {
-                    _this.renderObjectGroup(layer, position, scale, layerDepth);
+                    _this.renderObjectGroup(layer, container, position, scale, layerDepth);
                 }
                 if (layer instanceof es.TmxLayer) {
-                    _this.renderLayer(layer, position, scale, layerDepth);
+                    _this.renderLayer(layer, container, position, scale, layerDepth);
                 }
                 if (layer instanceof es.TmxImageLayer) {
-                    _this.renderImageLayer(layer, position, scale, layerDepth);
+                    _this.renderImageLayer(layer, container, position, scale, layerDepth);
                 }
             });
         };
-        TiledRendering.renderTile = function (tile, position, scale, tileWidth, tileHeight, color, layerDepth) {
+        TiledRendering.renderTile = function (tile, container, position, scale, tileWidth, tileHeight, color, layerDepth) {
             var gid = tile.gid;
             var tilesetTile = tile.tilesetTile;
             if (tilesetTile && tilesetTile.animationFrames.length > 0)
@@ -7935,8 +8378,24 @@ var es;
                 ty += (tileHeight - sourceRect.height * scale.y);
             var pos = new es.Vector2(tx, ty).add(position);
             if (tile.tileset.image) {
+                if (!tile.tilesetTile.image.bitmap.parent)
+                    container.addChild(tile.tilesetTile.image.bitmap);
+                tile.tilesetTile.image.bitmap.x = pos.x;
+                tile.tilesetTile.image.bitmap.y = pos.y;
+                tile.tilesetTile.image.bitmap.scaleX = scale.x;
+                tile.tilesetTile.image.bitmap.scaleY = scale.y;
+                tile.tilesetTile.image.bitmap.rotation = rotation;
+                tile.tilesetTile.image.bitmap.filters = [color];
             }
             else {
+                if (!tilesetTile.image.bitmap)
+                    container.addChild(tilesetTile.image.bitmap);
+                tilesetTile.image.bitmap.x = pos.x;
+                tilesetTile.image.bitmap.y = pos.y;
+                tilesetTile.image.bitmap.scaleX = scale.x;
+                tilesetTile.image.bitmap.scaleY = scale.y;
+                tilesetTile.image.bitmap.rotation = rotation;
+                tilesetTile.image.bitmap.filters = [color];
             }
         };
         return TiledRendering;
@@ -8019,6 +8478,41 @@ var es;
         return TmxAnimationFrame;
     }());
     es.TmxAnimationFrame = TmxAnimationFrame;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TmxUtils = (function () {
+        function TmxUtils() {
+        }
+        TmxUtils.decode = function (data, encoding, compression) {
+            compression = compression || "none";
+            encoding = encoding || "none";
+            var text = data.children[0].text;
+            switch (encoding) {
+                case "base64":
+                    var decoded = es.Base64Utils.decodeBase64AsArray(text, 4);
+                    return (compression === "none") ? decoded : es.Base64Utils.decompress(text, decoded, compression);
+                case "csv":
+                    return es.Base64Utils.decodeCSV(text);
+                case "none":
+                    var datas = [];
+                    for (var i = 0; i < data.children.length; i++) {
+                        datas[i] = +data.children[i].attributes.gid;
+                    }
+                    return datas;
+                default:
+                    throw new Error("未定义的编码:" + encoding);
+            }
+        };
+        TmxUtils.color16ToUnit = function ($color) {
+            if (!$color)
+                return 0x000000;
+            var colorStr = "0x" + $color.slice(1);
+            return parseInt(colorStr, 16);
+        };
+        return TmxUtils;
+    }());
+    es.TmxUtils = TmxUtils;
 })(es || (es = {}));
 var ArrayUtils = (function () {
     function ArrayUtils() {
@@ -8184,128 +8678,103 @@ var ArrayUtils = (function () {
     };
     return ArrayUtils;
 }());
-var Base64Utils = (function () {
-    function Base64Utils() {
-    }
-    Base64Utils.decode = function (input, isNotStr) {
-        if (isNotStr === void 0) { isNotStr = true; }
-        var output = "";
-        var chr1, chr2, chr3;
-        var enc1, enc2, enc3, enc4;
-        var i = 0;
-        input = this.getConfKey(input);
-        input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
-        while (i < input.length) {
-            enc1 = this._keyAll.indexOf(input.charAt(i++));
-            enc2 = this._keyAll.indexOf(input.charAt(i++));
-            enc3 = this._keyAll.indexOf(input.charAt(i++));
-            enc4 = this._keyAll.indexOf(input.charAt(i++));
-            chr1 = (enc1 << 2) | (enc2 >> 4);
-            chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-            chr3 = ((enc3 & 3) << 6) | enc4;
-            output = output + String.fromCharCode(chr1);
-            if (enc3 != 64) {
-                if (chr2 == 0) {
-                    if (isNotStr)
-                        output = output + String.fromCharCode(chr2);
-                }
-                else {
-                    output = output + String.fromCharCode(chr2);
-                }
-            }
-            if (enc4 != 64) {
-                if (chr3 == 0) {
-                    if (isNotStr)
-                        output = output + String.fromCharCode(chr3);
-                }
-                else {
-                    output = output + String.fromCharCode(chr3);
-                }
-            }
+var es;
+(function (es) {
+    var Base64Utils = (function () {
+        function Base64Utils() {
         }
-        output = this._utf8_decode(output);
-        return output;
-    };
-    Base64Utils._utf8_encode = function (string) {
-        string = string.replace(/\r\n/g, "\n");
-        var utftext = "";
-        for (var n = 0; n < string.length; n++) {
-            var c = string.charCodeAt(n);
-            if (c < 128) {
-                utftext += String.fromCharCode(c);
-            }
-            else if ((c > 127) && (c < 2048)) {
-                utftext += String.fromCharCode((c >> 6) | 192);
-                utftext += String.fromCharCode((c & 63) | 128);
+        Object.defineProperty(Base64Utils, "nativeBase64", {
+            get: function () {
+                return (typeof (window.atob) === "function");
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Base64Utils.decode = function (input) {
+            input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+            if (this.nativeBase64) {
+                return window.atob(input);
             }
             else {
-                utftext += String.fromCharCode((c >> 12) | 224);
-                utftext += String.fromCharCode(((c >> 6) & 63) | 128);
-                utftext += String.fromCharCode((c & 63) | 128);
+                var output = [], chr1, chr2, chr3, enc1, enc2, enc3, enc4, i = 0;
+                while (i < input.length) {
+                    enc1 = this._keyStr.indexOf(input.charAt(i++));
+                    enc2 = this._keyStr.indexOf(input.charAt(i++));
+                    enc3 = this._keyStr.indexOf(input.charAt(i++));
+                    enc4 = this._keyStr.indexOf(input.charAt(i++));
+                    chr1 = (enc1 << 2) | (enc2 >> 4);
+                    chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+                    chr3 = ((enc3 & 3) << 6) | enc4;
+                    output.push(String.fromCharCode(chr1));
+                    if (enc3 !== 64) {
+                        output.push(String.fromCharCode(chr2));
+                    }
+                    if (enc4 !== 64) {
+                        output.push(String.fromCharCode(chr3));
+                    }
+                }
+                output = output.join("");
+                return output;
             }
-        }
-        return utftext;
-    };
-    Base64Utils._utf8_decode = function (utftext) {
-        var string = "";
-        var i = 0;
-        var c = 0;
-        var c1 = 0;
-        var c2 = 0;
-        var c3 = 0;
-        while (i < utftext.length) {
-            c = utftext.charCodeAt(i);
-            if (c < 128) {
-                string += String.fromCharCode(c);
-                i++;
-            }
-            else if ((c > 191) && (c < 224)) {
-                c2 = utftext.charCodeAt(i + 1);
-                string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
-                i += 2;
+        };
+        Base64Utils.encode = function (input) {
+            input = input.replace(/\r\n/g, "\n");
+            if (this.nativeBase64) {
+                window.btoa(input);
             }
             else {
-                c2 = utftext.charCodeAt(i + 1);
-                c3 = utftext.charCodeAt(i + 2);
-                string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
-                i += 3;
+                var output = [], chr1, chr2, chr3, enc1, enc2, enc3, enc4, i = 0;
+                while (i < input.length) {
+                    chr1 = input.charCodeAt(i++);
+                    chr2 = input.charCodeAt(i++);
+                    chr3 = input.charCodeAt(i++);
+                    enc1 = chr1 >> 2;
+                    enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+                    enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+                    enc4 = chr3 & 63;
+                    if (isNaN(chr2)) {
+                        enc3 = enc4 = 64;
+                    }
+                    else if (isNaN(chr3)) {
+                        enc4 = 64;
+                    }
+                    output.push(this._keyStr.charAt(enc1));
+                    output.push(this._keyStr.charAt(enc2));
+                    output.push(this._keyStr.charAt(enc3));
+                    output.push(this._keyStr.charAt(enc4));
+                }
+                output = output.join("");
+                return output;
             }
-        }
-        return string;
-    };
-    Base64Utils.getConfKey = function (key) {
-        return key.slice(1, key.length);
-    };
-    Base64Utils._keyNum = "0123456789+/";
-    Base64Utils._keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    Base64Utils._keyAll = Base64Utils._keyNum + Base64Utils._keyStr;
-    Base64Utils.encode = function (input) {
-        var output = "";
-        var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
-        var i = 0;
-        input = this._utf8_encode(input);
-        while (i < input.length) {
-            chr1 = input.charCodeAt(i++);
-            chr2 = input.charCodeAt(i++);
-            chr3 = input.charCodeAt(i++);
-            enc1 = chr1 >> 2;
-            enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
-            enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
-            enc4 = chr3 & 63;
-            if (isNaN(chr2)) {
-                enc3 = enc4 = 64;
+        };
+        Base64Utils.decodeBase64AsArray = function (input, bytes) {
+            bytes = bytes || 1;
+            var dec = Base64Utils.decode(input), i, j, len;
+            var ar = new Uint32Array(dec.length / bytes);
+            for (i = 0, len = dec.length / bytes; i < len; i++) {
+                ar[i] = 0;
+                for (j = bytes - 1; j >= 0; --j) {
+                    ar[i] += dec.charCodeAt((i * bytes) + j) << (j << 3);
+                }
             }
-            else if (isNaN(chr3)) {
-                enc4 = 64;
+            return ar;
+        };
+        Base64Utils.decompress = function (data, decoded, compression) {
+            throw new Error("GZIP/ZLIB compressed TMX Tile Map not supported!");
+        };
+        Base64Utils.decodeCSV = function (input) {
+            var entries = input.replace("\n", "").trim().split(",");
+            var result = [];
+            for (var i = 0; i < entries.length; i++) {
+                result.push(+entries[i]);
             }
-            output = output +
-                this._keyAll.charAt(enc1) + this._keyAll.charAt(enc2) +
-                this._keyAll.charAt(enc3) + this._keyAll.charAt(enc4);
-        }
-        return this._keyStr.charAt(Math.floor((Math.random() * this._keyStr.length))) + output;
-    };
-    return Base64Utils;
-}());
+            return result;
+        };
+        Base64Utils._keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+        return Base64Utils;
+    }());
+    es.Base64Utils = Base64Utils;
+})(es || (es = {}));
 var es;
 (function (es) {
     var Color = (function () {
@@ -8432,6 +8901,23 @@ var es;
         DrawUtils.drawLine = function (shape, start, end, color, thickness) {
             if (thickness === void 0) { thickness = 1; }
             this.drawLineAngle(shape, start, es.MathHelper.angleBetweenVectors(start, end), es.Vector2.distance(start, end), color, thickness);
+        };
+        DrawUtils.drawCircle = function (shape, position, radius, color) {
+            shape.graphics.beginFill(color);
+            shape.graphics.drawCircle(position.x, position.y, radius);
+            shape.graphics.endFill();
+        };
+        DrawUtils.drawPoints = function (shape, position, points, color, closePoly, thickness) {
+            if (closePoly === void 0) { closePoly = true; }
+            if (thickness === void 0) { thickness = 1; }
+            if (points.length < 2)
+                return;
+            for (var i = 1; i < points.length; i++)
+                this.drawLine(shape, es.Vector2.add(position, points[i - 1]), es.Vector2.add(position, points[i]), color, thickness);
+            if (closePoly)
+                this.drawLine(shape, es.Vector2.add(position, points[points.length - 1]), es.Vector2.add(position, points[0]), color, thickness);
+        };
+        DrawUtils.drawString = function (textField, text, position, color, rotation, origin, scale) {
         };
         DrawUtils.drawLineAngle = function (shape, start, radians, length, color, thickness) {
             if (thickness === void 0) { thickness = 1; }

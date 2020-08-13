@@ -8,6 +8,10 @@ module es {
          */
         public static emitter: Emitter<CoreEvents>;
         /**
+         * 是否启用调试渲染
+         */
+        public static debugRenderEndabled = false;
+        /**
          * 全局访问图形设备
          */
         public static graphicsDevice: GraphicsDevice;

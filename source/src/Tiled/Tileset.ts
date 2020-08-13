@@ -13,7 +13,7 @@ module es {
         public tileOffset: TmxTileOffset;
         public properties: Map<string, string>;
         public image: TmxImage;
-        public terrains: TmxList<TmxTerrain>;
+        public terrains: TmxTerrain[];
         /**
          * 为每个块缓存源矩形
          */

@@ -5,6 +5,29 @@ module es {
             this.drawLineAngle(shape, start, MathHelper.angleBetweenVectors(start, end), Vector2.distance(start, end), color, thickness);
         }
 
+        public static drawCircle(shape: egret.Shape, position: Vector2, radius: number, color: number){
+            shape.graphics.beginFill(color);
+            shape.graphics.drawCircle(position.x, position.y, radius);
+            shape.graphics.endFill();
+        }
+
+        public static drawPoints(shape: egret.Shape, position: Vector2, points: Vector2[], color: number,
+                                 closePoly: boolean = true, thickness: number = 1){
+            if (points.length < 2)
+                return;
+
+            for (let i = 1; i < points.length; i ++)
+                this.drawLine(shape, Vector2.add(position, points[i - 1]), Vector2.add(position, points[i]), color, thickness);
+
+            if (closePoly)
+                this.drawLine(shape, Vector2.add(position, points[points.length - 1]), Vector2.add(position, points[0]), color, thickness);
+        }
+
+        public static drawString(textField: egret.TextField, text: string, position: Vector2, color: number, rotation: number,
+                                 origin: Vector2, scale: number){
+
+        }
+
         public static drawLineAngle(shape: egret.Shape, start: Vector2, radians: number, length: number, color: number, thickness = 1) {
             shape.graphics.beginFill(color);
             shape.graphics.drawRect(start.x, start.y, 1, 1);

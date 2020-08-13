@@ -1,124 +1,134 @@
-class Base64Utils {
-    private static _keyNum = "0123456789+/";
-    private static _keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    private static _keyAll = Base64Utils._keyNum + Base64Utils._keyStr;
-    /**
-     * 加密
-     * @param input
-     */
-    public static encode = function (input) {
-        let output = "";
-        let chr1, chr2, chr3, enc1, enc2, enc3, enc4;
-        let i = 0;
-        input = this._utf8_encode(input);
-        while (i < input.length) {
-            chr1 = input.charCodeAt(i++);
-            chr2 = input.charCodeAt(i++);
-            chr3 = input.charCodeAt(i++);
-            enc1 = chr1 >> 2;
-            enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
-            enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
-            enc4 = chr3 & 63;
-            if (isNaN(chr2)) {
-                enc3 = enc4 = 64;
-            } else if (isNaN(chr3)) {
-                enc4 = 64;
-            }
-            output = output +
-                this._keyAll.charAt(enc1) + this._keyAll.charAt(enc2) +
-                this._keyAll.charAt(enc3) + this._keyAll.charAt(enc4);
-        }
-        return this._keyStr.charAt(Math.floor((Math.random() * this._keyStr.length))) + output;
-    };
+module es{
+    export class Base64Utils {
+        private static _keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
 
-    /**
-     * 解码
-     * @param input
-     * @param isNotStr
-     */
-    public static decode(input, isNotStr: boolean = true) {
-        let output = "";
-        let chr1, chr2, chr3;
-        let enc1, enc2, enc3, enc4;
-        let i = 0;
-        input = this.getConfKey(input);
-        input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
-        while (i < input.length) {
-            enc1 = this._keyAll.indexOf(input.charAt(i++));
-            enc2 = this._keyAll.indexOf(input.charAt(i++));
-            enc3 = this._keyAll.indexOf(input.charAt(i++));
-            enc4 = this._keyAll.indexOf(input.charAt(i++));
-            chr1 = (enc1 << 2) | (enc2 >> 4);
-            chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-            chr3 = ((enc3 & 3) << 6) | enc4;
-            output = output + String.fromCharCode(chr1);
-            if (enc3 != 64) {
-                if (chr2 == 0) {
-                    if (isNotStr) output = output + String.fromCharCode(chr2);
-                } else {
-                    output = output + String.fromCharCode(chr2);
+        /**
+         * 判断是否原生支持Base64位解析
+         */
+        static get nativeBase64() {
+            return (typeof (window.atob) === "function");
+        }
+
+
+        /**
+         * 解码
+         * @param input
+         */
+        static decode(input:string): string {
+            input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+
+            if (this.nativeBase64) {
+                return window.atob(input);
+            } else {
+                var output: any = [], chr1: number, chr2: number, chr3: number, enc1: number, enc2: number, enc3: number, enc4: number, i: number = 0;
+
+                while (i < input.length) {
+                    enc1 = this._keyStr.indexOf(input.charAt(i++));
+                    enc2 = this._keyStr.indexOf(input.charAt(i++));
+                    enc3 = this._keyStr.indexOf(input.charAt(i++));
+                    enc4 = this._keyStr.indexOf(input.charAt(i++));
+
+                    chr1 = (enc1 << 2) | (enc2 >> 4);
+                    chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+                    chr3 = ((enc3 & 3) << 6) | enc4;
+
+                    output.push(String.fromCharCode(chr1));
+
+                    if (enc3 !== 64) {
+                        output.push(String.fromCharCode(chr2));
+                    }
+                    if (enc4 !== 64) {
+                        output.push(String.fromCharCode(chr3));
+                    }
+                }
+
+                output = output.join("");
+                return output;
+            }
+        }
+
+
+        /**
+         * 编码
+         * @param input
+         */
+        static encode(input:string): string {
+            input = input.replace(/\r\n/g, "\n");
+            if (this.nativeBase64) {
+                window.btoa(input);
+            } else {
+                var output: any = [], chr1: number, chr2: number, chr3: number, enc1: number, enc2: number, enc3: number, enc4: number, i: number = 0;
+                while (i < input.length) {
+                    chr1 = input.charCodeAt(i++);
+                    chr2 = input.charCodeAt(i++);
+                    chr3 = input.charCodeAt(i++);
+
+                    enc1 = chr1 >> 2;
+                    enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+                    enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+                    enc4 = chr3 & 63;
+
+                    if (isNaN(chr2)) {
+                        enc3 = enc4 = 64;
+                    } else if (isNaN(chr3)) {
+                        enc4 = 64;
+                    }
+
+                    output.push(this._keyStr.charAt(enc1));
+                    output.push(this._keyStr.charAt(enc2));
+                    output.push(this._keyStr.charAt(enc3));
+                    output.push(this._keyStr.charAt(enc4));
+                }
+
+                output = output.join("");
+                return output;
+            }
+        }
+
+
+        /**
+         * 解析Base64格式数据
+         * @param input
+         * @param bytes
+         */
+        static decodeBase64AsArray(input: string, bytes: number): Uint32Array {
+            bytes = bytes || 1;
+
+            var dec = Base64Utils.decode(input), i, j, len;
+            var ar: Uint32Array = new Uint32Array(dec.length / bytes);
+
+            for (i = 0, len = dec.length / bytes; i < len; i++) {
+                ar[i] = 0;
+                for (j = bytes - 1; j >= 0; --j) {
+                    ar[i] += dec.charCodeAt((i * bytes) + j) << (j << 3);
                 }
             }
-
-            if (enc4 != 64) {
-                if (chr3 == 0) {
-                    if (isNotStr) output = output + String.fromCharCode(chr3);
-                } else {
-                    output = output + String.fromCharCode(chr3);
-                }
-            }
+            return ar;
         }
-        output = this._utf8_decode(output);
-        return output;
-    }
 
-    private static _utf8_encode(string) {
-        string = string.replace(/\r\n/g, "\n");
-        let utftext = "";
-        for (let n = 0; n < string.length; n++) {
-            let c = string.charCodeAt(n);
-            if (c < 128) {
-                utftext += String.fromCharCode(c);
-            } else if ((c > 127) && (c < 2048)) {
-                utftext += String.fromCharCode((c >> 6) | 192);
-                utftext += String.fromCharCode((c & 63) | 128);
-            } else {
-                utftext += String.fromCharCode((c >> 12) | 224);
-                utftext += String.fromCharCode(((c >> 6) & 63) | 128);
-                utftext += String.fromCharCode((c & 63) | 128);
-            }
-
+        /**
+         * 暂时不支持
+         * @param data
+         * @param decoded
+         * @param compression
+         * @private
+         */
+        static decompress(data: string, decoded: any, compression: string): any {
+            throw new Error("GZIP/ZLIB compressed TMX Tile Map not supported!");
         }
-        return utftext;
-    }
 
-    private static _utf8_decode(utftext) {
-        let string = "";
-        let i = 0;
-        let c = 0;
-        let c1 = 0;
-        let c2 = 0;
-        let c3 = 0;
-        while (i < utftext.length) {
-            c = utftext.charCodeAt(i);
-            if (c < 128) {
-                string += String.fromCharCode(c);
-                i++;
-            } else if ((c > 191) && (c < 224)) {
-                c2 = utftext.charCodeAt(i + 1);
-                string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
-                i += 2;
-            } else {
-                c2 = utftext.charCodeAt(i + 1);
-                c3 = utftext.charCodeAt(i + 2);
-                string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
-                i += 3;
+        /**
+         * 解析csv数据
+         * @param input
+         */
+        static decodeCSV(input: string): Array<number> {
+            var entries: Array<any> = input.replace("\n", "").trim().split(",");
+
+            var result:Array<number> = [];
+            for (var i:number = 0; i < entries.length; i++) {
+                result.push(+entries[i]);
             }
+            return result;
         }
-        return string;
-    }
-
-    private static getConfKey(key): string {
-        return key.slice(1, key.length);
     }
 }

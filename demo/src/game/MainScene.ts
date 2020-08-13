@@ -31,6 +31,10 @@ module scene {
                 // player2.addComponent(new es.BoxCollider());
             }
 
+            let map = new es.TmxMap();
+            let mapData = await es.TiledMapLoader.loadTmxMap(map, "isometric_grass_and_water_json");
+            console.log(mapData);
+
 
             let pool = new es.ComponentPool<component.SimplePooled>(component.SimplePooled);
             let c1 = pool.obtain();

@@ -252,6 +252,7 @@ declare module es {
 declare module es {
     class Core extends egret.DisplayObjectContainer {
         static emitter: Emitter<CoreEvents>;
+        static debugRenderEndabled: boolean;
         static graphicsDevice: GraphicsDevice;
         static content: ContentManager;
         static _instance: Core;
@@ -1551,11 +1552,11 @@ declare module es {
         properties: Map<string, string>;
         visible: boolean;
         name: string;
-        layers: TmxList<any>;
-        tileLayers: TmxList<TmxLayer>;
-        objectGroups: TmxList<TmxObjectGroup>;
-        imageLayers: TmxList<TmxImageLayer>;
-        groups: TmxList<TmxGroup>;
+        layers: ITmxLayer[];
+        tileLayers: TmxLayer[];
+        objectGroups: TmxObjectGroup[];
+        imageLayers: TmxImageLayer[];
+        groups: TmxGroup[];
     }
 }
 declare module es {
@@ -1618,19 +1619,15 @@ declare module es {
 }
 declare module es {
     class TmxDocument {
-        TmxDirectory: string;
+        tmxDirectory: string;
         constructor();
     }
     interface ITmxElement {
         name: string;
     }
-    class TmxList<T extends ITmxElement> extends Map<string, T> {
-        _nameCount: Map<string, number>;
-        add(t: T): void;
-        protected getKeyForItem(item: T): string;
-    }
     class TmxImage {
-        texture: egret.Texture;
+        bitmap: egret.Bitmap;
+        readonly texture: egret.Texture;
         source: string;
         format: string;
         data: any;
@@ -1657,12 +1654,12 @@ declare module es {
         renderOrder: RenderOrderType;
         backgroundColor: number;
         nextObjectID?: number;
-        layers: TmxList<any>;
-        tilesets: TmxList<TmxTileset>;
-        tileLayers: TmxList<TmxLayer>;
-        objectGroups: TmxList<TmxObjectGroup>;
-        imageLayers: TmxList<TmxImageLayer>;
-        groups: TmxList<TmxGroup>;
+        layers: ITmxLayer[];
+        tilesets: TmxTileset[];
+        tileLayers: TmxLayer[];
+        objectGroups: TmxLayer[];
+        imageLayers: TmxImageLayer[];
+        groups: TmxGroup[];
         properties: Map<string, string>;
         maxTileWidth: number;
         maxTileHeight: number;
@@ -1707,12 +1704,14 @@ declare module es {
         offsetY: number;
         color: number;
         drawOrder: DrawOrderType;
-        objects: TmxList<TmxObject>;
+        objects: TmxObject[];
         properties: Map<string, string>;
     }
     class TmxObject implements ITmxElement {
         id: number;
         name: string;
+        shape: egret.Shape;
+        textField: egret.TextField;
         objectType: TmxObjectType;
         type: string;
         x: number;
@@ -1725,6 +1724,7 @@ declare module es {
         text: TmxText;
         points: Vector2[];
         properties: Map<string, string>;
+        constructor();
     }
     class TmxText {
         fontFamily: string;
@@ -1770,13 +1770,39 @@ declare module es {
     }
 }
 declare module es {
+    class TiledMapLoader {
+        static loadTmxMap(map: TmxMap, filePath: string): Promise<TmxMap>;
+        static loadTmxMapData(map: TmxMap, xMap: any): Promise<TmxMap>;
+        static parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number, tmxDirectory: string): void;
+        private static updateMaxTileSizes;
+        static parseOrientationType(type: string): OrientationType;
+        static parseStaggerAxisType(type: string): StaggerAxisType;
+        static parseStaggerIndexType(type: string): StaggerIndexType;
+        static parseRenderOrderType(type: string): RenderOrderType;
+        static parsePropertyDict(prop: any): Map<string, string>;
+        static parseTmxTileset(map: TmxMap, xTileset: any): Promise<TmxTileset>;
+        static loadTmxTileset(tileset: TmxTileset, map: TmxMap, xTileset: any, firstGid: number): Promise<TmxTileset>;
+        static loadTmxTilesetTile(tile: TmxTilesetTile, tileset: TmxTileset, xTile: any, terrains: TmxTerrain[]): Promise<TmxTilesetTile>;
+        static loadTmxAnimationFrame(frame: TmxAnimationFrame, xFrame: any): TmxAnimationFrame;
+        static loadTmxObjectGroup(group: TmxObjectGroup, map: TmxMap, xObjectGroup: any): TmxObjectGroup;
+        static loadTmxObject(obj: TmxObject, map: TmxMap, xObject: any): TmxObject;
+        static loadTmxText(text: TmxText, xText: any): TmxText;
+        static loadTmxAlignment(alignment: TmxAlignment, xText: any): TmxAlignment;
+        static parsePoints(xPoints: any): any[];
+        static parsePoint(s: string): Vector2;
+        static parseTmxTerrain(xTerrain: any): TmxTerrain;
+        static parseTmxTileOffset(xTileOffset: any): TmxTileOffset;
+        static loadTmxImage(image: TmxImage, xImage: any): Promise<TmxImage>;
+    }
+}
+declare module es {
     class TiledRendering {
-        static renderMap(map: TmxMap, position: Vector2, scale: Vector2, layerDepth: number): void;
-        static renderLayer(layer: TmxLayer, position: Vector2, scale: Vector2, layerDepth: number): void;
-        static renderImageLayer(layer: TmxImageLayer, position: Vector2, scale: Vector2, layerDepth: number): void;
-        static renderObjectGroup(objGroup: TmxObjectGroup, position: Vector2, scale: Vector2, layerDepth: number): void;
-        static renderGroup(group: TmxGroup, position: Vector2, scale: Vector2, layerDepth: number): void;
-        static renderTile(tile: TmxLayerTile, position: Vector2, scale: Vector2, tileWidth: number, tileHeight: number, color: Color, layerDepth: number): void;
+        static renderMap(map: TmxMap, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number): void;
+        static renderLayer(layer: TmxLayer, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number): void;
+        static renderImageLayer(layer: TmxImageLayer, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number): void;
+        static renderObjectGroup(objGroup: TmxObjectGroup, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number): void;
+        static renderGroup(group: TmxGroup, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number): void;
+        static renderTile(tile: TmxLayerTile, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, tileWidth: number, tileHeight: number, color: egret.ColorMatrixFilter, layerDepth: number): void;
     }
 }
 declare module es {
@@ -1794,7 +1820,7 @@ declare module es {
         tileOffset: TmxTileOffset;
         properties: Map<string, string>;
         image: TmxImage;
-        terrains: TmxList<TmxTerrain>;
+        terrains: TmxTerrain[];
         tileRegions: Map<number, Rectangle>;
         update(): void;
     }
@@ -1817,7 +1843,7 @@ declare module es {
         type: string;
         properties: Map<string, string>;
         image: TmxImage;
-        objectGroups: TmxList<TmxObjectGroup>;
+        objectGroups: TmxObjectGroup[];
         animationFrames: TmxAnimationFrame[];
         readonly currentAnimationFrameGid: number;
         _animationElapsedTime: number;
@@ -1835,6 +1861,12 @@ declare module es {
         duration: number;
     }
 }
+declare module es {
+    class TmxUtils {
+        static decode(data: any, encoding: any, compression: string): Array<number>;
+        static color16ToUnit($color: string): number;
+    }
+}
 declare class ArrayUtils {
     static bubbleSort(ary: number[]): void;
     static insertionSort(ary: number[]): void;
@@ -1850,15 +1882,16 @@ declare class ArrayUtils {
     static equals(ary1: number[], ary2: number[]): Boolean;
     static insert(ary: any[], index: number, value: any): any;
 }
-declare class Base64Utils {
-    private static _keyNum;
-    private static _keyStr;
-    private static _keyAll;
-    static encode: (input: any) => string;
-    static decode(input: any, isNotStr?: boolean): string;
-    private static _utf8_encode;
-    private static _utf8_decode;
-    private static getConfKey;
+declare module es {
+    class Base64Utils {
+        private static _keyStr;
+        static readonly nativeBase64: boolean;
+        static decode(input: string): string;
+        static encode(input: string): string;
+        static decodeBase64AsArray(input: string, bytes: number): Uint32Array;
+        static decompress(data: string, decoded: any, compression: string): any;
+        static decodeCSV(input: string): Array<number>;
+    }
 }
 declare module es {
     class Color {
@@ -1882,6 +1915,9 @@ declare module es {
 declare module es {
     class DrawUtils {
         static drawLine(shape: egret.Shape, start: Vector2, end: Vector2, color: number, thickness?: number): void;
+        static drawCircle(shape: egret.Shape, position: Vector2, radius: number, color: number): void;
+        static drawPoints(shape: egret.Shape, position: Vector2, points: Vector2[], color: number, closePoly?: boolean, thickness?: number): void;
+        static drawString(textField: egret.TextField, text: string, position: Vector2, color: number, rotation: number, origin: Vector2, scale: number): void;
         static drawLineAngle(shape: egret.Shape, start: Vector2, radians: number, length: number, color: number, thickness?: number): void;
         static drawHollowRect(shape: egret.Shape, rect: Rectangle, color: number, thickness?: number): void;
         static drawHollowRectR(shape: egret.Shape, x: number, y: number, width: number, height: number, color: number, thickness?: number): void;

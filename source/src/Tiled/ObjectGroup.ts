@@ -8,13 +8,15 @@ module es {
         public offsetY: number;
         public color: number;
         public drawOrder: DrawOrderType;
-        public objects: TmxList<TmxObject>;
+        public objects: TmxObject[];
         public properties: Map<string, string>;
     }
 
     export class TmxObject implements ITmxElement {
         public id: number;
         public name: string;
+        public shape: egret.Shape;
+        public textField: egret.TextField;
         public objectType: TmxObjectType;
         public type: string;
         public x: number;
@@ -27,6 +29,11 @@ module es {
         public text: TmxText;
         public points: Vector2[];
         public properties: Map<string, string>;
+
+        constructor(){
+            this.shape = new egret.Shape();
+            this.textField = new egret.TextField();
+        }
     }
 
     export class TmxText {

@@ -26,12 +26,12 @@ module es {
          * 包含所有的ITmxLayers，不管它们的具体类型是什么。
          * 注意，TmxGroup中的层将不在此列表中。TmxGroup管理自己的层列表。
          */
-        public layers: TmxList<any>;
-        public tilesets: TmxList<TmxTileset>;
-        public tileLayers: TmxList<TmxLayer>;
-        public objectGroups: TmxList<TmxObjectGroup>;
-        public imageLayers: TmxList<TmxImageLayer>;
-        public groups: TmxList<TmxGroup>;
+        public layers: ITmxLayer[];
+        public tilesets: TmxTileset[];
+        public tileLayers: TmxLayer[];
+        public objectGroups: TmxLayer[];
+        public imageLayers: TmxImageLayer[];
+        public groups: TmxGroup[];
         public properties: Map<string, string>;
 
         /**
@@ -59,9 +59,9 @@ module es {
             if (gid == 0)
                 return null;
 
-            for (let i = this.tilesets.size - 1; i >= 0; i --){
-                if (this.tilesets.get(i.toString()).firstGid <= gid)
-                    return this.tilesets.get(i.toString());
+            for (let i = this.tilesets.length - 1; i >= 0; i --){
+                if (this.tilesets[i].firstGid <= gid)
+                    return this.tilesets[i];
             }
 
             console.error(`tile gid${gid}未在任何tileset中找到`);
@@ -96,7 +96,7 @@ module es {
          * @param name
          */
         public getLayer(name: string): ITmxLayer {
-            return this.layers.get(name);
+            return this.layers[name];
         }
 
         /**
