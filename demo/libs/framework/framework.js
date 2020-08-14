@@ -3372,7 +3372,7 @@ var es;
             else {
                 for (var i = 0; i < this.tiledMap.layers.length; i++) {
                     if (this.tiledMap.layers[i].visible && this.layerIndicesToRender.contains(i))
-                        es.TiledRendering.renderLayer(this.tiledMap.layers[i], this.displayObject, es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer);
+                        es.TiledRendering.renderLayerRenderCamera(this.tiledMap.layers[i], this.displayObject, es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer, camera.bounds);
                 }
             }
         };
@@ -7632,16 +7632,9 @@ var es;
     var TmxImage = (function () {
         function TmxImage() {
         }
-        Object.defineProperty(TmxImage.prototype, "texture", {
-            get: function () {
-                return this.bitmap.texture;
-            },
-            enumerable: true,
-            configurable: true
-        });
         TmxImage.prototype.dispose = function () {
             if (this.bitmap) {
-                this.texture.dispose();
+                this.bitmap.dispose();
                 this.bitmap = null;
             }
         };
@@ -7807,7 +7800,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Bitmap = egret.Bitmap;
     var TiledMapLoader = (function () {
         function TiledMapLoader() {
         }
@@ -8070,12 +8062,14 @@ var es;
             if (!prop)
                 return null;
             var dict = new Map();
-            for (var _i = 0, _a = prop["property"]; _i < _a.length; _i++) {
-                var p = _a[_i];
+            for (var _i = 0, prop_1 = prop; _i < prop_1.length; _i++) {
+                var p = prop_1[_i];
                 var pname = p["name"];
                 var valueAttr = p["value"];
-                var pval = valueAttr ? valueAttr : p;
-                dict.set(pname, pval);
+                if (p["type"] == "color")
+                    dict.set(pname, es.TmxUtils.color16ToUnit(valueAttr).toString());
+                else
+                    dict.set(pname, valueAttr);
             }
             return dict;
         };
@@ -8151,9 +8145,9 @@ var es;
                             tileset.tileRegions = new Map();
                             if (tileset.image && tileset.image.bitmap) {
                                 id = firstGid;
-                                for (y = tileset.margin; y < tileset.image.bitmap.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
+                                for (y = tileset.margin; y < tileset.image.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
                                     column = 0;
-                                    for (x = tileset.margin; x < tileset.image.bitmap.width - tileset.margin; x += tileset.tileWidth + tileset.spacing) {
+                                    for (x = tileset.margin; x < tileset.image.width - tileset.margin; x += tileset.tileWidth + tileset.spacing) {
                                         tileset.tileRegions.set(id++, new es.Rectangle(x, y, tileset.tileWidth, tileset.tileHeight));
                                         if (++column >= tileset.columns)
                                             break;
@@ -8162,7 +8156,7 @@ var es;
                             }
                             else {
                                 tileset.tiles.forEach(function (tile) {
-                                    tileset.tileRegions.set(firstGid + tile.id, new es.Rectangle(0, 0, tile.image.bitmap.width, tile.image.bitmap.height));
+                                    tileset.tileRegions.set(firstGid + tile.id, new es.Rectangle(0, 0, tile.image.width, tile.image.height));
                                 });
                             }
                             return [2, tileset];
@@ -8345,28 +8339,28 @@ var es;
         };
         TiledMapLoader.loadTmxImage = function (image, xImage) {
             return __awaiter(this, void 0, void 0, function () {
-                var xSource, _a, _b, xData;
-                return __generator(this, function (_c) {
-                    switch (_c.label) {
+                var xSource, _a, _b, _c, xData;
+                return __generator(this, function (_d) {
+                    switch (_d.label) {
                         case 0:
                             xSource = xImage["image"];
                             if (!xSource) return [3, 2];
                             image.source = "resource/assets/" + xSource;
                             _a = image;
-                            _b = Bitmap.bind;
+                            _c = (_b = egret.SpriteSheet).bind;
                             return [4, RES.getResByUrl(image.source, null, this, RES.ResourceItem.TYPE_IMAGE)];
                         case 1:
-                            _a.bitmap = new (_b.apply(Bitmap, [void 0, _c.sent()]))();
+                            _a.bitmap = new (_c.apply(_b, [void 0, _d.sent()]))();
                             return [3, 3];
                         case 2:
                             image.format = xImage["format"];
                             xData = xImage["data"];
                             image.data = es.TmxUtils.decode(xData, xData["encoding"], xData["compression"]);
-                            _c.label = 3;
+                            _d.label = 3;
                         case 3:
                             image.trans = es.TmxUtils.color16ToUnit(xImage["trans"]);
-                            image.width = xImage["width"] != undefined ? xImage["width"] : 0;
-                            image.height = xImage["height"] != undefined ? xImage["height"] : 0;
+                            image.width = xImage["imagewidth"] != undefined ? xImage["imagewidth"] : 0;
+                            image.height = xImage["imageheight"] != undefined ? xImage["imageheight"] : 0;
                             return [2, image];
                     }
                 });
@@ -8378,6 +8372,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Bitmap = egret.Bitmap;
     var TiledRendering = (function () {
         function TiledRendering() {
         }
@@ -8403,7 +8398,7 @@ var es;
                 return;
             var tileWidth = layer.map.tileWidth * scale.x;
             var tileHeight = layer.map.tileHeight * scale.y;
-            var color = es.DrawUtils.getColorMatrix(0x000000);
+            var color = es.DrawUtils.getColorMatrix(0xFFFFFF);
             for (var i = 0; i < layer.tiles.length; i++) {
                 var tile = layer.tiles[i];
                 if (!tile)
@@ -8411,18 +8406,61 @@ var es;
                 this.renderTile(tile, container, position, scale, tileWidth, tileHeight, color, layerDepth);
             }
         };
+        TiledRendering.renderLayerRenderCamera = function (layer, container, position, scale, layerDepth, camerClipBounds) {
+            if (layer instanceof es.TmxLayer && layer.visible) {
+                this.renderLayerCamera(layer, container, position, scale, layerDepth, camerClipBounds);
+            }
+            else if (layer instanceof es.TmxImageLayer && layer.visible) {
+                this.renderImageLayer(layer, container, position, scale, layerDepth);
+            }
+            else if (layer instanceof es.TmxGroup && layer.visible) {
+                this.renderGroup(layer, container, position, scale, layerDepth);
+            }
+            else if (layer instanceof es.TmxObjectGroup && layer.visible) {
+                this.renderObjectGroup(layer, container, position, scale, layerDepth);
+            }
+        };
+        TiledRendering.renderLayerCamera = function (layer, container, position, scale, layerDepth, camerClipBounds) {
+            if (!layer.visible)
+                return;
+            position = position.add(layer.offset);
+            camerClipBounds.location = camerClipBounds.location.subtract(position);
+            var tileWidth = layer.map.tileWidth * scale.x;
+            var tileHeight = layer.map.tileHeight * scale.y;
+            var minX, minY, maxX, maxY = 0;
+            if (layer.map.requiresLargeTileCulling) {
+                minX = layer.map.worldToTilePositionX(camerClipBounds.left - (layer.map.maxTileWidth * scale.x - tileWidth));
+                minY = layer.map.worldToTilePositionY(camerClipBounds.top - (layer.map.maxTileHeight * scale.y - tileHeight));
+                maxX = layer.map.worldToTilePositionX(camerClipBounds.right + (layer.map.maxTileWidth * scale.x - tileWidth));
+                maxY = layer.map.worldToTilePositionY(camerClipBounds.bottom + (layer.map.maxTileHeight * scale.y - tileHeight));
+            }
+            else {
+                minX = layer.map.worldToTilePositionX(camerClipBounds.left);
+                minY = layer.map.worldToTilePositionY(camerClipBounds.top);
+                maxX = layer.map.worldToTilePositionX(camerClipBounds.right);
+                maxY = layer.map.worldToTilePositionY(camerClipBounds.bottom);
+            }
+            var color = es.DrawUtils.getColorMatrix(0xFFFFFF);
+            for (var y = minY; y <= maxY; y++) {
+                for (var x = minX; x <= maxX; x++) {
+                    var tile = layer.getTile(x, y);
+                    if (tile)
+                        this.renderTile(tile, container, position, scale, tileWidth, tileHeight, color, layerDepth);
+                }
+            }
+        };
         TiledRendering.renderImageLayer = function (layer, container, position, scale, layerDepth) {
             if (!layer.visible)
                 return;
-            var color = es.DrawUtils.getColorMatrix(0x000000);
+            var color = es.DrawUtils.getColorMatrix(0xFFFFFF);
             var pos = es.Vector2.add(position, new es.Vector2(layer.offsetX, layer.offsetY).multiply(scale));
-            if (!layer.image.bitmap.parent)
-                container.addChild(layer.image.bitmap);
-            layer.image.bitmap.x = pos.x;
-            layer.image.bitmap.y = pos.y;
-            layer.image.bitmap.scaleX = scale.x;
-            layer.image.bitmap.scaleY = scale.y;
-            layer.image.bitmap.filters = [color];
+            if (!layer.image.texture.parent)
+                container.addChild(layer.image.texture);
+            layer.image.texture.x = pos.x;
+            layer.image.texture.y = pos.y;
+            layer.image.texture.scaleX = scale.x;
+            layer.image.texture.scaleY = scale.y;
+            layer.image.texture.filters = [color];
         };
         TiledRendering.renderObjectGroup = function (objGroup, container, position, scale, layerDepth) {
             if (!objGroup.visible)
@@ -8455,14 +8493,14 @@ var es;
                         var tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
                         var sourceRect = tileset.tileRegions[obj.tile.gid];
                         pos.y -= obj.tile.tilesetTile.image.height;
-                        if (!obj.tile.tilesetTile.image.bitmap)
-                            container.addChild(obj.tile.tilesetTile.image.bitmap);
-                        obj.tile.tilesetTile.image.bitmap.x = pos.x;
-                        obj.tile.tilesetTile.image.bitmap.y = pos.y;
-                        obj.tile.tilesetTile.image.bitmap.filters = [];
-                        obj.tile.tilesetTile.image.bitmap.rotation = 0;
-                        obj.tile.tilesetTile.image.bitmap.scaleX = scale.x;
-                        obj.tile.tilesetTile.image.bitmap.scaleY = scale.y;
+                        if (!obj.tile.tilesetTile.image.texture)
+                            container.addChild(obj.tile.tilesetTile.image.texture);
+                        obj.tile.tilesetTile.image.texture.x = pos.x;
+                        obj.tile.tilesetTile.image.texture.y = pos.y;
+                        obj.tile.tilesetTile.image.texture.filters = [];
+                        obj.tile.tilesetTile.image.texture.rotation = 0;
+                        obj.tile.tilesetTile.image.texture.scaleX = scale.x;
+                        obj.tile.tilesetTile.image.texture.scaleY = scale.y;
                         break;
                     case es.TmxObjectType.ellipse:
                         pos = new es.Vector2(obj.x + obj.width * 0.5, obj.y + obj.height * 0.5).multiply(scale);
@@ -8522,21 +8560,21 @@ var es;
             var rotation = 0;
             if (tile.diagonalFlip) {
                 if (tile.horizontalFlip && tile.verticalFlip) {
-                    rotation = es.MathHelper.PiOver2;
+                    rotation = es.MathHelper.toDegrees(es.MathHelper.PiOver2);
                     tx += tileHeight + (sourceRect.height * scale.y - tileHeight);
                     ty -= (sourceRect.width * scale.x - tileWidth);
                 }
                 else if (tile.horizontalFlip) {
-                    rotation = -es.MathHelper.PiOver2;
+                    rotation = es.MathHelper.toDegrees(-es.MathHelper.PiOver2);
                     ty += tileHeight;
                 }
                 else if (tile.verticalFlip) {
-                    rotation = es.MathHelper.PiOver2;
+                    rotation = es.MathHelper.toDegrees(es.MathHelper.PiOver2);
                     tx += tileWidth + (sourceRect.height * scale.y - tileHeight);
                     ty += (tileWidth - sourceRect.width * scale.x);
                 }
                 else {
-                    rotation = -es.MathHelper.PiOver2;
+                    rotation = es.MathHelper.toDegrees(-es.MathHelper.PiOver2);
                     ty += tileHeight;
                 }
             }
@@ -8544,25 +8582,33 @@ var es;
                 ty += (tileHeight - sourceRect.height * scale.y);
             var pos = new es.Vector2(tx, ty).add(position);
             if (tile.tileset.image) {
-                if (!tile.tileset.image.bitmap.parent)
-                    container.addChild(tile.tileset.image.bitmap);
-                tile.tileset.image.bitmap.x = pos.x;
-                tile.tileset.image.bitmap.y = pos.y;
-                tile.tileset.image.bitmap.scaleX = scale.x;
-                tile.tileset.image.bitmap.scaleY = scale.y;
-                tile.tileset.image.bitmap.rotation = rotation;
-                tile.tileset.image.bitmap.filters = [color];
+                if (!tile.tileset.image.bitmap.getTexture(gid.toString())) {
+                    tile.tileset.image.texture = new Bitmap(tile.tileset.image.bitmap.createTexture(gid.toString(), sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height));
+                    container.addChild(tile.tileset.image.texture);
+                }
+                tile.tileset.image.texture.x = pos.x;
+                tile.tileset.image.texture.y = pos.y;
+                tile.tileset.image.texture.scaleX = scale.x;
+                tile.tileset.image.texture.scaleY = scale.y;
+                tile.tileset.image.texture.rotation = rotation;
+                tile.tileset.image.texture.anchorOffsetX = 0;
+                tile.tileset.image.texture.anchorOffsetY = 0;
+                tile.tileset.image.texture.filters = [color];
             }
             else {
-                if (tilesetTile.image.bitmap) {
-                    if (!tilesetTile.image.bitmap.parent)
-                        container.addChild(tilesetTile.image.bitmap);
-                    tilesetTile.image.bitmap.x = pos.x;
-                    tilesetTile.image.bitmap.y = pos.y;
-                    tilesetTile.image.bitmap.scaleX = scale.x;
-                    tilesetTile.image.bitmap.scaleY = scale.y;
-                    tilesetTile.image.bitmap.rotation = rotation;
-                    tilesetTile.image.bitmap.filters = [color];
+                if (tilesetTile.image.texture) {
+                    if (!tilesetTile.image.bitmap.getTexture(gid.toString())) {
+                        tilesetTile.image.texture = new Bitmap(tilesetTile.image.bitmap.createTexture(gid.toString(), sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height));
+                        container.addChild(tilesetTile.image.texture);
+                    }
+                    tilesetTile.image.texture.x = pos.x;
+                    tilesetTile.image.texture.y = pos.y;
+                    tilesetTile.image.texture.scaleX = scale.x;
+                    tilesetTile.image.texture.scaleY = scale.y;
+                    tilesetTile.image.texture.rotation = rotation;
+                    tilesetTile.image.texture.anchorOffsetX = 0;
+                    tilesetTile.image.texture.anchorOffsetY = 0;
+                    tilesetTile.image.texture.filters = [color];
                 }
             }
         };
@@ -8673,7 +8719,7 @@ var es;
         };
         TmxUtils.color16ToUnit = function ($color) {
             if (!$color)
-                return 0x000000;
+                return 0xFFFFFF;
             var colorStr = "0x" + $color.slice(1);
             return parseInt(colorStr, 16);
         };

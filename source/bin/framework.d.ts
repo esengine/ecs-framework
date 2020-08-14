@@ -1627,8 +1627,8 @@ declare module es {
         name: string;
     }
     class TmxImage {
-        bitmap: egret.Bitmap;
-        readonly texture: egret.Texture;
+        texture: egret.Bitmap;
+        bitmap: egret.SpriteSheet;
         source: string;
         format: string;
         data: any;
@@ -1803,6 +1803,8 @@ declare module es {
     class TiledRendering {
         static renderMap(map: TmxMap, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number): void;
         static renderLayer(layer: TmxLayer, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number): void;
+        static renderLayerRenderCamera(layer: ITmxLayer, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number, camerClipBounds: Rectangle): void;
+        static renderLayerCamera(layer: TmxLayer, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number, camerClipBounds: Rectangle): void;
         static renderImageLayer(layer: TmxImageLayer, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number): void;
         static renderObjectGroup(objGroup: TmxObjectGroup, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number): void;
         static renderGroup(group: TmxGroup, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number): void;

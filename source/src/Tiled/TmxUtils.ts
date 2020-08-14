@@ -41,7 +41,7 @@ module es {
          */
         static color16ToUnit($color:string): number {
             if (!$color)
-                return 0x000000;
+                return 0xFFFFFF;
             var colorStr: string = "0x" + $color.slice(1);
             return parseInt(colorStr, 16);
         }

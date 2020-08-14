@@ -249,12 +249,14 @@ module es {
                 return null;
 
             let dict = new Map<string, string>();
-            for (let p of prop["property"]) {
+            for (let p of prop) {
                 let pname = p["name"];
                 let valueAttr = p["value"];
-                let pval = valueAttr ? valueAttr : p;
 
-                dict.set(pname, pval);
+                if (p["type"] == "color")
+                    dict.set(pname, TmxUtils.color16ToUnit(valueAttr).toString());
+                else
+                    dict.set(pname, valueAttr);
             }
             return dict;
         }
@@ -316,9 +318,9 @@ module es {
             tileset.tileRegions = new Map<number, Rectangle>();
             if (tileset.image && tileset.image.bitmap) {
                 let id = firstGid;
-                for (let y = tileset.margin; y < tileset.image.bitmap.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
+                for (let y = tileset.margin; y < tileset.image.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
                     let column = 0;
-                    for (let x = tileset.margin; x < tileset.image.bitmap.width - tileset.margin; x += tileset.tileWidth + tileset.spacing) {
+                    for (let x = tileset.margin; x < tileset.image.width - tileset.margin; x += tileset.tileWidth + tileset.spacing) {
                         tileset.tileRegions.set(id++, new Rectangle(x, y, tileset.tileWidth, tileset.tileHeight));
 
                         if (++column >= tileset.columns)
@@ -327,7 +329,7 @@ module es {
                 }
             } else {
                 tileset.tiles.forEach(tile => {
-                    tileset.tileRegions.set(firstGid + tile.id, new Rectangle(0, 0, tile.image.bitmap.width, tile.image.bitmap.height));
+                    tileset.tileRegions.set(firstGid + tile.id, new Rectangle(0, 0, tile.image.width, tile.image.height));
                 });
             }
 
@@ -515,7 +517,7 @@ module es {
             let xSource = xImage["image"];
             if (xSource) {
                 image.source = "resource/assets/" + xSource;
-                image.bitmap = new Bitmap(await RES.getResByUrl(image.source, null, this, RES.ResourceItem.TYPE_IMAGE));
+                image.bitmap = new egret.SpriteSheet(await RES.getResByUrl(image.source, null, this, RES.ResourceItem.TYPE_IMAGE));
             } else {
                 image.format = xImage["format"];
                 let xData = xImage["data"];
@@ -523,8 +525,8 @@ module es {
             }
 
             image.trans = TmxUtils.color16ToUnit(xImage["trans"]);
-            image.width = xImage["width"] != undefined ? xImage["width"] : 0;
-            image.height = xImage["height"] != undefined ? xImage["height"] : 0;
+            image.width = xImage["imagewidth"] != undefined ? xImage["imagewidth"] : 0;
+            image.height = xImage["imageheight"] != undefined ? xImage["imageheight"] : 0;
 
             return image;
         }

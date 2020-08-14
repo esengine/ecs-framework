@@ -31,7 +31,7 @@ module scene {
                 // player2.addComponent(new es.BoxCollider());
             }
 
-            let mapData = await es.TiledMapLoader.loadTmxMap(new es.TmxMap(), "isometric_grass_and_water_json");
+            let mapData = await es.TiledMapLoader.loadTmxMap(new es.TmxMap(), "orthogonal-outside_json");
             let map = this.createEntity("map");
             map.addComponent(new es.TiledMapRenderer(mapData));
             console.log(mapData);

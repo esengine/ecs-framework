@@ -101,8 +101,8 @@ module es {
             } else {
                 for (let i = 0; i < this.tiledMap.layers.length; i++) {
                     if (this.tiledMap.layers[i].visible && this.layerIndicesToRender.contains(i))
-                        TiledRendering.renderLayer(this.tiledMap.layers[i] as TmxLayer, this.displayObject as egret.DisplayObjectContainer, Vector2.add(this.entity.transform.position, this._localOffset),
-                            this.transform.scale, this.renderLayer);
+                        TiledRendering.renderLayerRenderCamera(this.tiledMap.layers[i] as TmxLayer, this.displayObject as egret.DisplayObjectContainer, Vector2.add(this.entity.transform.position, this._localOffset),
+                            this.transform.scale, this.renderLayer, camera.bounds);
                 }
             }
         }

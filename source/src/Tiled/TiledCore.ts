@@ -40,10 +40,8 @@ module es {
     // }
 
     export class TmxImage {
-        public bitmap: egret.Bitmap;
-        public get texture(): egret.Texture{
-            return this.bitmap.texture;
-        }
+        public texture: egret.Bitmap;
+        public bitmap: egret.SpriteSheet;
         public source: string;
         public format: string;
         public data: any;
@@ -53,7 +51,7 @@ module es {
 
         public dispose(){
             if (this.bitmap){
-                this.texture.dispose();
+                this.bitmap.dispose();
                 this.bitmap = null;
             }
         }
