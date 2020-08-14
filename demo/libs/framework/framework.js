@@ -8874,3 +8874,441 @@ var es;
     }());
     es.MarkerLog = MarkerLog;
 })(es || (es = {}));
+var es;
+(function (es) {
+    var Bitmap = egret.Bitmap;
+    var AssetPacker = (function () {
+        function AssetPacker() {
+            this.itemsToRaster = [];
+            this.useCache = false;
+            this.cacheName = "";
+            this._sprites = new Map();
+            this.allow4096Textures = false;
+        }
+        AssetPacker.prototype.addTextureToPack = function (texture, customID) {
+            this.itemsToRaster.push(new es.TextureToPack(texture, customID));
+        };
+        AssetPacker.prototype.process = function (allow4096Textures) {
+            if (allow4096Textures === void 0) { allow4096Textures = false; }
+            return __awaiter(this, void 0, void 0, function () {
+                var cacheExist;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            this.allow4096Textures = allow4096Textures;
+                            if (!this.useCache) return [3, 2];
+                            if (this.cacheName == "") {
+                                console.error("未指定缓存名称");
+                                return [2];
+                            }
+                            return [4, RES.getResByUrl(this.cacheName)];
+                        case 1:
+                            cacheExist = _a.sent();
+                            if (!cacheExist)
+                                this.createPack();
+                            else
+                                this.loadPack();
+                            return [3, 3];
+                        case 2:
+                            this.createPack();
+                            _a.label = 3;
+                        case 3: return [2];
+                    }
+                });
+            });
+        };
+        AssetPacker.prototype.loadPack = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                var loaderTexture;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4, RES.getResByUrl(this.cacheName)];
+                        case 1:
+                            loaderTexture = _a.sent();
+                            if (this.onProcessCompleted)
+                                this.onProcessCompleted();
+                            return [2, loaderTexture];
+                    }
+                });
+            });
+        };
+        AssetPacker.prototype.createPack = function () {
+            var textures = [];
+            var images = [];
+            for (var _i = 0, _a = this.itemsToRaster; _i < _a.length; _i++) {
+                var itemToRaster = _a[_i];
+                textures.push(new Bitmap(itemToRaster.texture));
+                images.push(itemToRaster.id);
+            }
+            var textureSize = this.allow4096Textures ? 4096 : 2048;
+            var rectangles = [];
+            for (var i = 0; i < textures.length; i++) {
+                if (textures[i].width > textureSize || textures[i].height > textureSize) {
+                    throw new Error("一个纹理的大小比图集的大小大");
+                }
+                else {
+                    rectangles.push(new es.Rectangle(0, 0, textures[i].width, textures[i].height));
+                }
+            }
+            var padding = 1;
+            var numSpriteSheet = 0;
+            while (rectangles.length > 0) {
+                var texture = new egret.RenderTexture();
+                var packer = new es.RectanglePacker(textureSize, textureSize, padding);
+                for (var i = 0; i < rectangles.length; i++)
+                    packer.insertRectangle(Math.floor(rectangles[i].width), Math.floor(rectangles[i].height), i);
+                packer.packRectangles();
+                if (packer.rectangleCount > 0) {
+                    var rect = new es.IntegerRectangle();
+                    var textureAssets = [];
+                    var garbageRect = [];
+                    var garabeTextures = [];
+                    var garbageImages = [];
+                    for (var j = 0; j < packer.rectangleCount; j++) {
+                        rect = packer.getRectangle(j, rect);
+                        var index = packer.getRectangleId(j);
+                        texture.drawToTexture(textures[index], new es.Rectangle(rect.x, rect.y, rect.width, rect.height));
+                        var textureAsset = new es.TextureAsset();
+                        textureAsset.x = rect.x;
+                        textureAsset.y = rect.y;
+                        textureAsset.width = rect.width;
+                        textureAsset.height = rect.height;
+                        textureAsset.name = images[index];
+                        textureAssets.push(textureAsset);
+                        garbageRect.push(rectangles[index]);
+                        garabeTextures.push(textures[index].texture);
+                        garbageImages.push(images[index]);
+                    }
+                    for (var _b = 0, garbageRect_1 = garbageRect; _b < garbageRect_1.length; _b++) {
+                        var garbage = garbageRect_1[_b];
+                        rectangles.remove(garbage);
+                    }
+                    var _loop_9 = function (garbage) {
+                        textures.removeAll(function (a) { return a.texture.hashCode == garbage.hashCode; });
+                    };
+                    for (var _c = 0, garabeTextures_1 = garabeTextures; _c < garabeTextures_1.length; _c++) {
+                        var garbage = garabeTextures_1[_c];
+                        _loop_9(garbage);
+                    }
+                    for (var _d = 0, garbageImages_1 = garbageImages; _d < garbageImages_1.length; _d++) {
+                        var garbage = garbageImages_1[_d];
+                        images.remove(garbage);
+                    }
+                    if (this.cacheName != "") {
+                        texture.saveToFile("image/png", this.cacheName);
+                        ++numSpriteSheet;
+                    }
+                    for (var _e = 0, textureAssets_1 = textureAssets; _e < textureAssets_1.length; _e++) {
+                        var textureAsset = textureAssets_1[_e];
+                        this._sprites.set(textureAsset.name, texture);
+                    }
+                }
+            }
+            if (this.onProcessCompleted)
+                this.onProcessCompleted();
+        };
+        AssetPacker.prototype.dispose = function () {
+            this._sprites.forEach(function (asset, name) {
+                asset.dispose();
+                RES.destroyRes(name);
+            });
+            this._sprites.clear();
+        };
+        AssetPacker.prototype.getTexture = function (id) {
+            return this._sprites.get(id);
+        };
+        return AssetPacker;
+    }());
+    es.AssetPacker = AssetPacker;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var IntegerRectangle = (function (_super) {
+        __extends(IntegerRectangle, _super);
+        function IntegerRectangle() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return IntegerRectangle;
+    }(es.Rectangle));
+    es.IntegerRectangle = IntegerRectangle;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var RectanglePacker = (function () {
+        function RectanglePacker(width, height, padding) {
+            if (padding === void 0) { padding = 0; }
+            this._width = 0;
+            this._height = 0;
+            this._padding = 8;
+            this._packedWidth = 0;
+            this._packedHeight = 0;
+            this._insertList = [];
+            this._insertedRectangles = [];
+            this._freeAreas = [];
+            this._newFreeAreas = [];
+            this._sortableSizeStack = [];
+            this._rectangleStack = [];
+            this._outsideRectangle = new es.IntegerRectangle(width + 1, height + 1, 0, 0);
+            this.reset(width, height, padding);
+        }
+        Object.defineProperty(RectanglePacker.prototype, "rectangleCount", {
+            get: function () {
+                return this._insertedRectangles.length;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RectanglePacker.prototype, "packedWidth", {
+            get: function () {
+                return this._packedWidth;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RectanglePacker.prototype, "packedHeight", {
+            get: function () {
+                return this._packedHeight;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RectanglePacker.prototype, "padding", {
+            get: function () {
+                return this._padding;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RectanglePacker.prototype.reset = function (width, height, padding) {
+            if (padding === void 0) { padding = 0; }
+            while (this._insertedRectangles.length > 0)
+                this.freeRectangle(this._insertedRectangles.pop());
+            while (this._freeAreas.length > 0)
+                this.freeRectangle(this._freeAreas.pop());
+            this._width = width;
+            this._height = height;
+            this._packedWidth = 0;
+            this._packedHeight = 0;
+            this._freeAreas.push(this.allocateRectangle(0, 0, this._width, this._height));
+            while (this._insertedRectangles.length > 0)
+                this.freeSize(this._insertList.pop());
+            this._padding = padding;
+        };
+        RectanglePacker.prototype.insertRectangle = function (width, height, id) {
+            var sortableSize = this.allocateSize(width, height, id);
+            this._insertList.push(sortableSize);
+        };
+        RectanglePacker.prototype.packRectangles = function (sort) {
+            if (sort === void 0) { sort = true; }
+            if (sort)
+                this._insertList.sort(function (emp1, emp2) {
+                    return emp1.width - emp2.width;
+                });
+            while (this._insertList.length > 0) {
+                var sortableSize = this._insertList.pop();
+                var width = sortableSize.width;
+                var height = sortableSize.height;
+                var index = this.getFreeAreaIndex(width, height);
+                if (index >= 0) {
+                    var freeArea = this._freeAreas[index];
+                    var target = this.allocateRectangle(freeArea.x, freeArea.y, width, height);
+                    target.id = sortableSize.id;
+                    this.generateNewFreeAreas(target, this._freeAreas, this._newFreeAreas);
+                    while (this._newFreeAreas.length > 0)
+                        this._freeAreas.push(this._newFreeAreas.pop());
+                    this._insertedRectangles.push(target);
+                    if (target.right > this._packedWidth)
+                        this._packedWidth = target.right;
+                    if (target.bottom > this._packedHeight)
+                        this._packedHeight = target.bottom;
+                }
+                this.freeSize(sortableSize);
+            }
+            return this.rectangleCount;
+        };
+        RectanglePacker.prototype.getRectangle = function (index, rectangle) {
+            var inserted = this._insertedRectangles[index];
+            rectangle.x = inserted.x;
+            rectangle.y = inserted.y;
+            rectangle.width = inserted.width;
+            rectangle.height = inserted.height;
+            return rectangle;
+        };
+        RectanglePacker.prototype.getRectangleId = function (index) {
+            var inserted = this._insertedRectangles[index];
+            return inserted.id;
+        };
+        RectanglePacker.prototype.generateNewFreeAreas = function (target, areas, results) {
+            var x = target.x;
+            var y = target.y;
+            var right = target.right + 1 + this._padding;
+            var bottom = target.bottom + 1 + this._padding;
+            var targetWithPadding = null;
+            if (this._padding == 0)
+                targetWithPadding = target;
+            for (var i = areas.length - 1; i >= 0; i--) {
+                var area = areas[i];
+                if (!(x >= area.right || right <= area.x || y >= area.bottom || bottom <= area.y)) {
+                    if (targetWithPadding == null)
+                        targetWithPadding = this.allocateRectangle(target.x, target.y, target.width + this._padding, target.height + this._padding);
+                    this.generateDividedAreas(targetWithPadding, area, results);
+                    var topOfStack = areas.pop();
+                    if (i < areas.length) {
+                        areas[i] = topOfStack;
+                    }
+                }
+            }
+            if (targetWithPadding != null && targetWithPadding != target)
+                this.freeRectangle(targetWithPadding);
+            this.filterSelfSubAreas(results);
+        };
+        RectanglePacker.prototype.filterSelfSubAreas = function (areas) {
+            for (var i = areas.length - 1; i >= 0; i--) {
+                var filtered = areas[i];
+                for (var j = areas.length - 1; j >= 0; j--) {
+                    if (i != j) {
+                        var area = areas[j];
+                        if (filtered.x >= area.x && filtered.y >= area.y && filtered.right <= area.right && filtered.bottom <= area.bottom) {
+                            this.freeRectangle(filtered);
+                            var topOfStack = areas.pop();
+                            if (i < areas.length) {
+                                areas[i] = topOfStack;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        };
+        RectanglePacker.prototype.generateDividedAreas = function (divider, area, results) {
+            var count = 0;
+            var rightDelta = area.right - divider.right;
+            if (rightDelta > 0) {
+                results.push(this.allocateRectangle(divider.right, area.y, rightDelta, area.height));
+                count++;
+            }
+            var leftDelta = divider.x - area.x;
+            if (leftDelta > 0) {
+                results.push(this.allocateRectangle(area.x, area.y, leftDelta, area.height));
+                count++;
+            }
+            var bottomDelta = area.bottom - divider.bottom;
+            if (bottomDelta > 0) {
+                results.push(this.allocateRectangle(area.x, divider.bottom, area.width, bottomDelta));
+                count++;
+            }
+            var topDelta = divider.y - area.y;
+            if (topDelta > 0) {
+                results.push(this.allocateRectangle(area.x, area.y, area.width, topDelta));
+                count++;
+            }
+            if (count == 0 && (divider.width < area.width || divider.height < area.height)) {
+                results.push(area);
+            }
+            else {
+                this.freeRectangle(area);
+            }
+        };
+        RectanglePacker.prototype.getFreeAreaIndex = function (width, height) {
+            var best = this._outsideRectangle;
+            var index = -1;
+            var paddedWidth = width + this._padding;
+            var paddedHeight = height + this._padding;
+            var count = this._freeAreas.length;
+            for (var i = count - 1; i >= 0; i--) {
+                var free = this._freeAreas[i];
+                if (free.x < this._packedWidth || free.y < this.packedHeight) {
+                    if (free.x < best.x && paddedWidth <= free.width && paddedHeight <= free.height) {
+                        index = i;
+                        if ((paddedWidth == free.width && free.width <= free.height && free.right < this._width) ||
+                            (paddedHeight == free.height && free.height <= free.width)) {
+                            break;
+                        }
+                        best = free;
+                    }
+                }
+                else {
+                    if (free.x < best.x && width <= free.width && height <= free.height) {
+                        index = i;
+                        if ((width == free.width && free.width <= free.height && free.right < this._width) ||
+                            (height == free.height && free.height <= free.width)) {
+                            break;
+                        }
+                        best = free;
+                    }
+                }
+            }
+            return index;
+        };
+        RectanglePacker.prototype.allocateSize = function (width, height, id) {
+            if (this._sortableSizeStack.length > 0) {
+                var size = this._sortableSizeStack.pop();
+                size.width = width;
+                size.height = height;
+                size.id = id;
+                return size;
+            }
+            return new es.SortableSize(width, height, id);
+        };
+        RectanglePacker.prototype.freeSize = function (size) {
+            this._sortableSizeStack.push(size);
+        };
+        RectanglePacker.prototype.allocateRectangle = function (x, y, width, height) {
+            if (this._rectangleStack.length > 0) {
+                var rectangle = this._rectangleStack.pop();
+                rectangle.x = x;
+                rectangle.y = y;
+                rectangle.width = width;
+                rectangle.height = height;
+                rectangle.right = x + width;
+                rectangle.bottom = y + height;
+                return rectangle;
+            }
+            return new es.IntegerRectangle(x, y, width, height);
+        };
+        RectanglePacker.prototype.freeRectangle = function (rectangle) {
+            this._rectangleStack.push(rectangle);
+        };
+        return RectanglePacker;
+    }());
+    es.RectanglePacker = RectanglePacker;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var SortableSize = (function () {
+        function SortableSize(width, height, id) {
+            this.width = width;
+            this.height = height;
+            this.id = id;
+        }
+        return SortableSize;
+    }());
+    es.SortableSize = SortableSize;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TextureAssets = (function () {
+        function TextureAssets(assets) {
+            this.assets = assets;
+        }
+        return TextureAssets;
+    }());
+    es.TextureAssets = TextureAssets;
+    var TextureAsset = (function () {
+        function TextureAsset() {
+        }
+        return TextureAsset;
+    }());
+    es.TextureAsset = TextureAsset;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TextureToPack = (function () {
+        function TextureToPack(texture, id) {
+            this.texture = texture;
+            this.id = id;
+        }
+        return TextureToPack;
+    }());
+    es.TextureToPack = TextureToPack;
+})(es || (es = {}));
