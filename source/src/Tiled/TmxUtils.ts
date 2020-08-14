@@ -12,19 +12,18 @@ module es {
         static decode(data: any, encoding: any, compression: string): Array<number> {
             compression = compression || "none";
             encoding = encoding || "none";
-            var text:string=data.children[0].text;
             switch (encoding) {
                 case "base64":
-                    var decoded = Base64Utils.decodeBase64AsArray(text, 4);
-                    return (compression === "none") ? decoded : Base64Utils.decompress(text, decoded, compression);
+                    var decoded = Base64Utils.decodeBase64AsArray(data, 4);
+                    return (compression === "none") ? decoded : Base64Utils.decompress(data, decoded, compression);
 
                 case "csv":
-                    return Base64Utils.decodeCSV(text);
+                    return Base64Utils.decodeCSV(data);
 
                 case "none":
                     var datas: Array<number> = [];
-                    for (var i: number = 0; i < data.children.length; i++) {
-                        datas[i] = +data.children[i].attributes.gid;
+                    for (var i: number = 0; i < data.length; i++) {
+                        datas[i] = +data[i].gid;
                     }
                     return datas;
 

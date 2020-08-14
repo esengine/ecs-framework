@@ -188,23 +188,26 @@ module es {
 
             let pos = new Vector2(tx, ty).add(position);
             if (tile.tileset.image) {
-                if (!tile.tilesetTile.image.bitmap.parent)
-                    container.addChild(tile.tilesetTile.image.bitmap);
-                tile.tilesetTile.image.bitmap.x = pos.x;
-                tile.tilesetTile.image.bitmap.y = pos.y;
-                tile.tilesetTile.image.bitmap.scaleX = scale.x;
-                tile.tilesetTile.image.bitmap.scaleY = scale.y;
-                tile.tilesetTile.image.bitmap.rotation = rotation;
-                tile.tilesetTile.image.bitmap.filters = [color];
+                if (!tile.tileset.image.bitmap.parent)
+                    container.addChild(tile.tileset.image.bitmap);
+                tile.tileset.image.bitmap.x = pos.x;
+                tile.tileset.image.bitmap.y = pos.y;
+                tile.tileset.image.bitmap.scaleX = scale.x;
+                tile.tileset.image.bitmap.scaleY = scale.y;
+                tile.tileset.image.bitmap.rotation = rotation;
+                tile.tileset.image.bitmap.filters = [color];
             } else {
-                if (!tilesetTile.image.bitmap)
-                    container.addChild(tilesetTile.image.bitmap);
-                tilesetTile.image.bitmap.x = pos.x;
-                tilesetTile.image.bitmap.y = pos.y;
-                tilesetTile.image.bitmap.scaleX = scale.x;
-                tilesetTile.image.bitmap.scaleY = scale.y;
-                tilesetTile.image.bitmap.rotation = rotation;
-                tilesetTile.image.bitmap.filters = [color];
+                if (tilesetTile.image.bitmap){
+                    if (!tilesetTile.image.bitmap.parent)
+                        container.addChild(tilesetTile.image.bitmap);
+
+                    tilesetTile.image.bitmap.x = pos.x;
+                    tilesetTile.image.bitmap.y = pos.y;
+                    tilesetTile.image.bitmap.scaleX = scale.x;
+                    tilesetTile.image.bitmap.scaleY = scale.y;
+                    tilesetTile.image.bitmap.rotation = rotation;
+                    tilesetTile.image.bitmap.filters = [color];
+                }
             }
         }
     }

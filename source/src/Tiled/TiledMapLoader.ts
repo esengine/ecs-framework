@@ -59,11 +59,11 @@ module es {
          */
         public static async parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number) {
             for (let e of ObjectUtils.elements(xEle).where(x => {
-                return x.name == "layer" || x.name == "objectgroup" || x.name == "imagelayer" || x.name == "group"
+                return x.type == "tilelayer" || x.name == "objectgroup" || x.name == "imagelayer" || x.name == "group"
             })) {
                 let layer: ITmxLayer;
-                switch (e.name) {
-                    case "layer":
+                switch (e.type) {
+                    case "tilelayer":
                         let tileLayer = this.loadTmxLayer(new TmxLayer(), map, e, width, height);
                         layer = tileLayer;
 
@@ -148,11 +148,11 @@ module es {
             layer.height = xLayer["height"];
 
             let xData = xLayer["data"];
-            let encoding = xData["encoding"];
+            let encoding = xData["encoding"] != undefined ? xData["encoding"] : "csv";
 
             layer.tiles = new Array<TmxLayerTile>(width * height);
             if (encoding == "base64") {
-                let br = TmxUtils.decode(xData, encoding, xData["compression"]);
+                let br = TmxUtils.decode(xData.toString(), encoding, xData["compression"]);
                 let index = 0;
                 for (let j = 0; j < height; j++) {
                     for (let i = 0; i < width; i++) {
@@ -161,9 +161,9 @@ module es {
                     }
                 }
             } else if (encoding == "csv") {
-                let csvData = TmxUtils.decode(xData, encoding, xData["compression"]);
+                // let csvData = TmxUtils.decode(xData.toString(), encoding, xData["compression"]);
                 let k = 0;
-                for (let s of csvData) {
+                for (let s of xData) {
                     let gid = s;
                     let x = k % width;
                     let y = k / width;
@@ -314,11 +314,11 @@ module es {
             // 缓存我们的源矩形为每个瓷砖，所以我们不必每次我们渲染计算他们。
             // 如果我们有一个image，这是一个普通的tileset，否则它是一个image tileset
             tileset.tileRegions = new Map<number, Rectangle>();
-            if (tileset.image) {
+            if (tileset.image && tileset.image.bitmap) {
                 let id = firstGid;
-                for (let y = tileset.margin; y < tileset.image.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
+                for (let y = tileset.margin; y < tileset.image.bitmap.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
                     let column = 0;
-                    for (let x = tileset.margin; x < tileset.image.width - tileset.margin; x += tileset.tileWidth + tileset.spacing) {
+                    for (let x = tileset.margin; x < tileset.image.bitmap.width - tileset.margin; x += tileset.tileWidth + tileset.spacing) {
                         tileset.tileRegions.set(id++, new Rectangle(x, y, tileset.tileWidth, tileset.tileHeight));
 
                         if (++column >= tileset.columns)
@@ -327,7 +327,7 @@ module es {
                 }
             } else {
                 tileset.tiles.forEach(tile => {
-                    tileset.tileRegions.set(firstGid + tile.id, new Rectangle(0, 0, tile.image.width, tile.image.height));
+                    tileset.tileRegions.set(firstGid + tile.id, new Rectangle(0, 0, tile.image.bitmap.width, tile.image.bitmap.height));
                 });
             }
 

@@ -20,7 +20,13 @@ class ObjectUtils {
     public static elements(p: {}){
         let c = [];
         for (let i in p){
-            c.push(p[i]);
+            if (Array.isArray(p[i])){
+                for (let v of p[i]){
+                    c.push(v);
+                }
+            }else{
+                c.push(p[i]);
+            }
         }
 
         return c;

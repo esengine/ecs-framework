@@ -4582,7 +4582,15 @@ var ObjectUtils = (function () {
     ObjectUtils.elements = function (p) {
         var c = [];
         for (var i in p) {
-            c.push(p[i]);
+            if (Array.isArray(p[i])) {
+                for (var _i = 0, _a = p[i]; _i < _a.length; _i++) {
+                    var v = _a[_i];
+                    c.push(v);
+                }
+            }
+            else {
+                c.push(p[i]);
+            }
         }
         return c;
     };
@@ -7863,16 +7871,16 @@ var es;
                     switch (_c.label) {
                         case 0:
                             _i = 0, _a = ObjectUtils.elements(xEle).where(function (x) {
-                                return x.name == "layer" || x.name == "objectgroup" || x.name == "imagelayer" || x.name == "group";
+                                return x.type == "tilelayer" || x.name == "objectgroup" || x.name == "imagelayer" || x.name == "group";
                             });
                             _c.label = 1;
                         case 1:
                             if (!(_i < _a.length)) return [3, 10];
                             e = _a[_i];
                             layer = void 0;
-                            _b = e.name;
+                            _b = e.type;
                             switch (_b) {
-                                case "layer": return [3, 2];
+                                case "tilelayer": return [3, 2];
                                 case "objectgroup": return [3, 3];
                                 case "imagelayer": return [3, 4];
                                 case "group": return [3, 6];
@@ -7970,10 +7978,10 @@ var es;
             layer.width = xLayer["width"];
             layer.height = xLayer["height"];
             var xData = xLayer["data"];
-            var encoding = xData["encoding"];
+            var encoding = xData["encoding"] != undefined ? xData["encoding"] : "csv";
             layer.tiles = new Array(width * height);
             if (encoding == "base64") {
-                var br = es.TmxUtils.decode(xData, encoding, xData["compression"]);
+                var br = es.TmxUtils.decode(xData.toString(), encoding, xData["compression"]);
                 var index = 0;
                 for (var j = 0; j < height; j++) {
                     for (var i = 0; i < width; i++) {
@@ -7983,10 +7991,9 @@ var es;
                 }
             }
             else if (encoding == "csv") {
-                var csvData = es.TmxUtils.decode(xData, encoding, xData["compression"]);
                 var k = 0;
-                for (var _i = 0, csvData_1 = csvData; _i < csvData_1.length; _i++) {
-                    var s = csvData_1[_i];
+                for (var _i = 0, xData_1 = xData; _i < xData_1.length; _i++) {
+                    var s = xData_1[_i];
                     var gid = s;
                     var x = k % width;
                     var y = k / width;
@@ -8142,11 +8149,11 @@ var es;
                         case 6:
                             tileset.properties = this.parsePropertyDict(xTileset["properties"]);
                             tileset.tileRegions = new Map();
-                            if (tileset.image) {
+                            if (tileset.image && tileset.image.bitmap) {
                                 id = firstGid;
-                                for (y = tileset.margin; y < tileset.image.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
+                                for (y = tileset.margin; y < tileset.image.bitmap.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
                                     column = 0;
-                                    for (x = tileset.margin; x < tileset.image.width - tileset.margin; x += tileset.tileWidth + tileset.spacing) {
+                                    for (x = tileset.margin; x < tileset.image.bitmap.width - tileset.margin; x += tileset.tileWidth + tileset.spacing) {
                                         tileset.tileRegions.set(id++, new es.Rectangle(x, y, tileset.tileWidth, tileset.tileHeight));
                                         if (++column >= tileset.columns)
                                             break;
@@ -8155,7 +8162,7 @@ var es;
                             }
                             else {
                                 tileset.tiles.forEach(function (tile) {
-                                    tileset.tileRegions.set(firstGid + tile.id, new es.Rectangle(0, 0, tile.image.width, tile.image.height));
+                                    tileset.tileRegions.set(firstGid + tile.id, new es.Rectangle(0, 0, tile.image.bitmap.width, tile.image.bitmap.height));
                                 });
                             }
                             return [2, tileset];
@@ -8537,24 +8544,26 @@ var es;
                 ty += (tileHeight - sourceRect.height * scale.y);
             var pos = new es.Vector2(tx, ty).add(position);
             if (tile.tileset.image) {
-                if (!tile.tilesetTile.image.bitmap.parent)
-                    container.addChild(tile.tilesetTile.image.bitmap);
-                tile.tilesetTile.image.bitmap.x = pos.x;
-                tile.tilesetTile.image.bitmap.y = pos.y;
-                tile.tilesetTile.image.bitmap.scaleX = scale.x;
-                tile.tilesetTile.image.bitmap.scaleY = scale.y;
-                tile.tilesetTile.image.bitmap.rotation = rotation;
-                tile.tilesetTile.image.bitmap.filters = [color];
+                if (!tile.tileset.image.bitmap.parent)
+                    container.addChild(tile.tileset.image.bitmap);
+                tile.tileset.image.bitmap.x = pos.x;
+                tile.tileset.image.bitmap.y = pos.y;
+                tile.tileset.image.bitmap.scaleX = scale.x;
+                tile.tileset.image.bitmap.scaleY = scale.y;
+                tile.tileset.image.bitmap.rotation = rotation;
+                tile.tileset.image.bitmap.filters = [color];
             }
             else {
-                if (!tilesetTile.image.bitmap)
-                    container.addChild(tilesetTile.image.bitmap);
-                tilesetTile.image.bitmap.x = pos.x;
-                tilesetTile.image.bitmap.y = pos.y;
-                tilesetTile.image.bitmap.scaleX = scale.x;
-                tilesetTile.image.bitmap.scaleY = scale.y;
-                tilesetTile.image.bitmap.rotation = rotation;
-                tilesetTile.image.bitmap.filters = [color];
+                if (tilesetTile.image.bitmap) {
+                    if (!tilesetTile.image.bitmap.parent)
+                        container.addChild(tilesetTile.image.bitmap);
+                    tilesetTile.image.bitmap.x = pos.x;
+                    tilesetTile.image.bitmap.y = pos.y;
+                    tilesetTile.image.bitmap.scaleX = scale.x;
+                    tilesetTile.image.bitmap.scaleY = scale.y;
+                    tilesetTile.image.bitmap.rotation = rotation;
+                    tilesetTile.image.bitmap.filters = [color];
+                }
             }
         };
         return TiledRendering;
@@ -8646,17 +8655,16 @@ var es;
         TmxUtils.decode = function (data, encoding, compression) {
             compression = compression || "none";
             encoding = encoding || "none";
-            var text = data.children[0].text;
             switch (encoding) {
                 case "base64":
-                    var decoded = es.Base64Utils.decodeBase64AsArray(text, 4);
-                    return (compression === "none") ? decoded : es.Base64Utils.decompress(text, decoded, compression);
+                    var decoded = es.Base64Utils.decodeBase64AsArray(data, 4);
+                    return (compression === "none") ? decoded : es.Base64Utils.decompress(data, decoded, compression);
                 case "csv":
-                    return es.Base64Utils.decodeCSV(text);
+                    return es.Base64Utils.decodeCSV(data);
                 case "none":
                     var datas = [];
-                    for (var i = 0; i < data.children.length; i++) {
-                        datas[i] = +data.children[i].attributes.gid;
+                    for (var i = 0; i < data.length; i++) {
+                        datas[i] = +data[i].gid;
                     }
                     return datas;
                 default:
