@@ -8522,13 +8522,13 @@ var es;
                             obj.shape.x = obj.x;
                             obj.shape.y = obj.y;
                             container.addChild(obj.shape);
+                            obj.shape.graphics.clear();
+                            obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                            obj.shape.graphics.beginFill(0x979798, 0.5);
+                            obj.shape.graphics.drawRect(0, 0, obj.width * scale.x, obj.height * scale.y);
+                            obj.shape.graphics.endFill();
+                            debugRender(obj, pos);
                         }
-                        obj.shape.graphics.clear();
-                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
-                        obj.shape.graphics.beginFill(0x979798, 0.5);
-                        obj.shape.graphics.drawRect(0, 0, obj.width * scale.x, obj.height * scale.y);
-                        obj.shape.graphics.endFill();
-                        debugRender(obj, pos);
                         break;
                     case es.TmxObjectType.point:
                         var size = objGroup.map.tileWidth * 0.5;
@@ -8538,13 +8538,13 @@ var es;
                             obj.shape.x = pos.x;
                             obj.shape.y = pos.y;
                             container.addChild(obj.shape);
+                            obj.shape.graphics.clear();
+                            obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                            obj.shape.graphics.beginFill(0x979798, 0.5);
+                            obj.shape.graphics.drawCircle(0, 0, 1);
+                            obj.shape.graphics.endFill();
+                            debugRender(obj, pos);
                         }
-                        obj.shape.graphics.clear();
-                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
-                        obj.shape.graphics.beginFill(0x979798, 0.5);
-                        obj.shape.graphics.drawCircle(0, 0, 1);
-                        obj.shape.graphics.endFill();
-                        debugRender(obj, pos);
                         break;
                     case es.TmxObjectType.tile:
                         var tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
@@ -8593,8 +8593,8 @@ var es;
                                 tileset.image.texture.anchorOffsetX = 0;
                             if (tileset.image.texture.anchorOffsetY != 0)
                                 tileset.image.texture.anchorOffsetY = 0;
+                            debugRender(obj, pos);
                         }
-                        debugRender(obj, pos);
                         break;
                     case es.TmxObjectType.ellipse:
                         pos = new es.Vector2(obj.x + obj.width * 0.5, obj.y + obj.height * 0.5).multiply(scale);
@@ -8602,13 +8602,13 @@ var es;
                             obj.shape.x = pos.x;
                             obj.shape.y = pos.y;
                             container.addChild(obj.shape);
+                            obj.shape.graphics.clear();
+                            obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                            obj.shape.graphics.beginFill(0x979798, 0.5);
+                            obj.shape.graphics.drawCircle(0, 0, obj.width * 0.5);
+                            obj.shape.graphics.endFill();
+                            debugRender(obj, pos);
                         }
-                        obj.shape.graphics.clear();
-                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
-                        obj.shape.graphics.beginFill(0x979798, 0.5);
-                        obj.shape.graphics.drawCircle(0, 0, obj.width * 0.5);
-                        obj.shape.graphics.endFill();
-                        debugRender(obj, pos);
                         break;
                     case es.TmxObjectType.polygon:
                     case es.TmxObjectType.polyline:
@@ -8619,27 +8619,27 @@ var es;
                             obj.shape.x = pos.x;
                             obj.shape.y = pos.y;
                             container.addChild(obj.shape);
+                            obj.shape.graphics.clear();
+                            obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                            for (var i = 0; i < points.length; i++) {
+                                obj.shape.graphics.lineTo(points[i].x, points[i].y);
+                            }
+                            obj.shape.graphics.endFill();
+                            debugRender(obj, pos);
                         }
-                        obj.shape.graphics.clear();
-                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
-                        for (var i = 0; i < points.length; i++) {
-                            obj.shape.graphics.lineTo(points[i].x, points[i].y);
-                        }
-                        obj.shape.graphics.endFill();
-                        debugRender(obj, pos);
                         break;
                     case es.TmxObjectType.text:
                         if (!obj.textField.parent) {
                             obj.textField.x = pos.x;
                             obj.textField.y = pos.y;
                             container.addChild(obj.textField);
+                            obj.textField.text = obj.text.value;
+                            obj.textField.textColor = obj.text.color;
+                            obj.textField.bold = obj.text.bold != undefined ? obj.text.bold : false;
+                            obj.textField.italic = obj.text.italic != undefined ? obj.text.italic : false;
+                            obj.textField.size = obj.text.pixelSize;
+                            obj.textField.fontFamily = obj.text.fontFamily;
                         }
-                        obj.textField.text = obj.text.value;
-                        obj.textField.textColor = obj.text.color;
-                        obj.textField.bold = obj.text.bold != undefined ? obj.text.bold : false;
-                        obj.textField.italic = obj.text.italic != undefined ? obj.text.italic : false;
-                        obj.textField.size = obj.text.pixelSize;
-                        obj.textField.fontFamily = obj.text.fontFamily;
                         break;
                     default:
                         break;
