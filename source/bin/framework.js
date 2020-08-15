@@ -8494,8 +8494,8 @@ var es;
                     obj.textField.size = 12;
                     obj.textField.fontFamily = "sans-serif";
                     if (obj.shape) {
-                        obj.textField.x = pos.x + (obj.shape.width - obj.textField.width) / 2;
-                        obj.textField.y = pos.y - obj.textField.height - 5;
+                        obj.textField.x = pos.x + (obj.shape.getBounds().width - obj.textField.width) / 2 + obj.shape.getBounds().x;
+                        obj.textField.y = pos.y - obj.textField.height - 5 + obj.shape.getBounds().y;
                     }
                     else {
                         obj.textField.x = pos.x + (obj.width - obj.textField.width) / 2;
