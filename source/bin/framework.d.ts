@@ -349,6 +349,7 @@ declare module es {
         readonly entities: EntityList;
         readonly renderableComponents: RenderableComponentList;
         readonly entityProcessors: EntityProcessorList;
+        _screenshotRequestCallback: Function;
         readonly _sceneComponents: SceneComponent[];
         _renderers: Renderer[];
         readonly _postProcessors: PostProcessor[];
@@ -365,6 +366,7 @@ declare module es {
         update(): void;
         render(): void;
         postRender(): void;
+        requestScreenshot(callback: Function): void;
         addSceneComponent<T extends SceneComponent>(component: T): T;
         getSceneComponent<T extends SceneComponent>(type: any): T;
         getOrCreateSceneComponent<T extends SceneComponent>(type: any): T;
@@ -2303,5 +2305,88 @@ declare module es {
         samples: number;
         color: number;
         initialized: boolean;
+    }
+}
+declare module es {
+    class AssetPacker {
+        protected itemsToRaster: TextureToPack[];
+        onProcessCompleted: Function;
+        useCache: boolean;
+        cacheName: string;
+        protected _sprites: Map<string, egret.Texture>;
+        protected allow4096Textures: boolean;
+        addTextureToPack(texture: egret.Texture, customID: string): void;
+        process(allow4096Textures?: boolean): Promise<void>;
+        protected loadPack(): Promise<any>;
+        protected createPack(): void;
+        dispose(): void;
+        getTexture(id: string): egret.Texture;
+    }
+}
+declare module es {
+    class IntegerRectangle extends Rectangle {
+        id: number;
+    }
+}
+declare module es {
+    class RectanglePacker {
+        private _width;
+        private _height;
+        private _padding;
+        private _packedWidth;
+        private _packedHeight;
+        private _insertList;
+        private _insertedRectangles;
+        private _freeAreas;
+        private _newFreeAreas;
+        private _outsideRectangle;
+        private _sortableSizeStack;
+        private _rectangleStack;
+        readonly rectangleCount: number;
+        readonly packedWidth: number;
+        readonly packedHeight: number;
+        readonly padding: number;
+        constructor(width: number, height: number, padding?: number);
+        reset(width: number, height: number, padding?: number): void;
+        insertRectangle(width: number, height: number, id: number): void;
+        packRectangles(sort?: boolean): number;
+        getRectangle(index: number, rectangle: IntegerRectangle): IntegerRectangle;
+        getRectangleId(index: number): number;
+        private generateNewFreeAreas;
+        private filterSelfSubAreas;
+        private generateDividedAreas;
+        private getFreeAreaIndex;
+        private allocateSize;
+        private freeSize;
+        private allocateRectangle;
+        private freeRectangle;
+    }
+}
+declare module es {
+    class SortableSize {
+        width: number;
+        height: number;
+        id: number;
+        constructor(width: number, height: number, id: number);
+    }
+}
+declare module es {
+    class TextureAssets {
+        assets: TextureAsset[];
+        constructor(assets: TextureAsset[]);
+    }
+    class TextureAsset {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        name: string;
+    }
+}
+declare module es {
+    class TextureToPack {
+        texture: egret.Texture;
+        id: string;
+        constructor(texture: egret.Texture, id: string);
     }
 }
