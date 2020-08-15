@@ -1,6 +1,7 @@
 module es {
     import Bitmap = egret.Bitmap;
 
+
     export class TiledRendering {
         public static renderMap(map: TmxMap, container: egret.DisplayObjectContainer, position: Vector2, scale: Vector2, layerDepth: number) {
             map.layers.forEach(layer => {
@@ -209,47 +210,55 @@ module es {
 
             // 对于y位置，我们需要考虑瓦片是否大于瓦片的高度和移位。
             // tiled使用左下角的坐标系统，而egret则使用左上角的坐标系统
-            let tx = tile.x * tileWidth;
-            let ty = tile.y * tileHeight;
+            let tx = Math.floor(tile.x) * tileWidth;
+            let ty = Math.floor(tile.y) * tileHeight;
             let rotation = 0;
 
-            if (tile.diagonalFlip) {
-                if (tile.horizontalFlip && tile.verticalFlip) {
-                    rotation = MathHelper.toDegrees(MathHelper.PiOver2);
-                    tx += tileHeight + (sourceRect.height * scale.y - tileHeight);
-                    ty -= (sourceRect.width * scale.x - tileWidth);
-                } else if (tile.horizontalFlip) {
-                    rotation = MathHelper.toDegrees(-MathHelper.PiOver2);
-                    ty += tileHeight;
-                } else if (tile.verticalFlip) {
-                    rotation = MathHelper.toDegrees(MathHelper.PiOver2);
-                    tx += tileWidth + (sourceRect.height * scale.y - tileHeight);
-                    ty += (tileWidth - sourceRect.width * scale.x);
-                } else {
-                    rotation = MathHelper.toDegrees(-MathHelper.PiOver2);
-                    ty += tileHeight;
-                }
+            if (tile.horizontalFlip && tile.verticalFlip) {
+                tx += tileHeight + (sourceRect.height * scale.y - tileHeight);
+                ty -= (sourceRect.width * scale.x - tileWidth);
+            } else if (tile.horizontalFlip) {
+                tx += tileWidth + (sourceRect.height * scale.y - tileHeight);
+                ty += tileHeight;
+            } else if (tile.verticalFlip) {
+                ty += (tileWidth - sourceRect.width * scale.x);
+            } else {
+                ty += tileHeight;
+                // ty += (tileHeight - sourceRect.height * scale.y);
             }
-
-            // 如果我们没有旋转(对角线翻转)移动y轴
-            if (rotation == 0)
-                ty += (tileHeight - sourceRect.height * scale.y);
 
             let pos = new Vector2(tx, ty).add(position);
 
             if (tile.tileset.image) {
-                if (!tile.tileset.image.bitmap.getTexture(gid.toString())) {
-                    tile.tileset.image.texture = new Bitmap(tile.tileset.image.bitmap.createTexture(gid.toString(), sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height));
+                if (container){
+                    let texture: egret.Texture = tile.tileset.image.bitmap.getTexture(`${gid}`);
+                    if (!texture) {
+                        texture = tile.tileset.image.bitmap.createTexture(`${gid}`, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
+                    }
+
+                    tile.tileset.image.texture = new Bitmap(texture);
                     container.addChild(tile.tileset.image.texture);
+
+                    if (tile.tileset.image.texture.x != pos.x) tile.tileset.image.texture.x = pos.x;
+                    if (tile.tileset.image.texture.y != pos.y) tile.tileset.image.texture.y = pos.y;
+                    if (tile.verticalFlip && tile.horizontalFlip){
+                        tile.tileset.image.texture.scaleX = -1;
+                        tile.tileset.image.texture.scaleY = -1;
+                    }else if (tile.verticalFlip){
+                        tile.tileset.image.texture.scaleX = scale.x;
+                        tile.tileset.image.texture.scaleY = -1;
+                    }else if(tile.horizontalFlip){
+                        tile.tileset.image.texture.scaleX = -1;
+                        tile.tileset.image.texture.scaleY = scale.y;
+                    }else{
+                        tile.tileset.image.texture.scaleX = scale.x;
+                        tile.tileset.image.texture.scaleY = scale.y;
+                    }
+                    if (tile.tileset.image.texture.rotation != rotation) tile.tileset.image.texture.rotation = rotation;
+                    if (tile.tileset.image.texture.anchorOffsetX != 0) tile.tileset.image.texture.anchorOffsetX = 0;
+                    if (tile.tileset.image.texture.anchorOffsetY != 0) tile.tileset.image.texture.anchorOffsetY = 0;
                 }
-                tile.tileset.image.texture.x = pos.x;
-                tile.tileset.image.texture.y = pos.y;
-                tile.tileset.image.texture.scaleX = scale.x;
-                tile.tileset.image.texture.scaleY = scale.y;
-                tile.tileset.image.texture.rotation = rotation;
-                tile.tileset.image.texture.anchorOffsetX = 0;
-                tile.tileset.image.texture.anchorOffsetY = 0;
-                tile.tileset.image.texture.filters = [color];
+                // tile.tileset.image.texture.filters = [color];
             } else {
                 if (tilesetTile.image.texture) {
                     if (!tilesetTile.image.bitmap.getTexture(gid.toString())) {

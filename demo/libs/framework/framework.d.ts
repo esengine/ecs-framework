@@ -731,6 +731,7 @@ declare module es {
         tiledMap: TmxMap;
         physicsLayer: number;
         layerIndicesToRender: number[];
+        private toContainer;
         readonly width: number;
         readonly height: number;
         collisionLayer: TmxLayer;
@@ -1604,7 +1605,6 @@ declare module es {
     class TmxLayerTile {
         static readonly FLIPPED_HORIZONTALLY_FLAG: number;
         static readonly FLIPPED_VERTICALLY_FLAG: number;
-        static readonly FLIPPED_DIAGONALLY_FLAG: number;
         tileset: TmxTileset;
         gid: number;
         x: number;
@@ -1612,7 +1612,6 @@ declare module es {
         readonly position: Vector2;
         horizontalFlip: boolean;
         verticalFlip: boolean;
-        diagonalFlip: boolean;
         _tilesetTileIndex?: number;
         readonly tilesetTile: TmxTilesetTile;
         constructor(map: TmxMap, id: number, x: number, y: number);

@@ -298,17 +298,15 @@ module es {
             if (xImage)
                 tileset.image = await this.loadTmxImage(new TmxImage(), xTileset);
 
-            let xTerrainType = xTileset["terraintypes"];
-            if (xTerrainType) {
-                tileset.terrains = [];
-                for (let e of xTerrainType["terrains"])
+            tileset.terrains = [];
+            if (xTileset["terrains"])
+                for (let e of xTileset["terrains"])
                     tileset.terrains.push(this.parseTmxTerrain(e));
-            }
 
             tileset.tiles = new Map<number, TmxTilesetTile>();
             for (let xTile of xTileset["tiles"]) {
                 let tile = await this.loadTmxTilesetTile(new TmxTilesetTile(), tileset, xTile, tileset.terrains);
-                tileset.tiles[tile.id] = tile;
+                tileset.tiles.set(tile.id, tile);
             }
 
             tileset.properties = this.parsePropertyDict(xTileset["properties"]);
@@ -340,7 +338,15 @@ module es {
             tile.tileset = tileset;
             tile.id = xTile["id"];
 
-            tile.terrainEdges = xTile["terrain"];
+            let strTerrain = xTile["terrain"];
+            if (strTerrain){
+                tile.terrainEdges = new Array(4);
+                let index = 0;
+                for (let v of strTerrain){
+                    let edge: TmxTerrain = terrains[v];
+                    tile.terrainEdges[index ++] = edge;
+                }
+            }
             tile.probability = xTile["probability"] != undefined ? xTile["probability"] : 1;
             tile.type = xTile["type"];
             let xImage = xTile["image"];

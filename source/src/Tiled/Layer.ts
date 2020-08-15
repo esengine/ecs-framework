@@ -113,7 +113,7 @@ module es {
     export class TmxLayerTile {
         public static readonly FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
         public static readonly FLIPPED_VERTICALLY_FLAG = 0x40000000;
-        public static readonly FLIPPED_DIAGONALLY_FLAG = 0x20000000;
+        // public static readonly FLIPPED_DIAGONALLY_FLAG = 0x20000000;
 
         public tileset: TmxTileset;
         public gid: number;
@@ -124,7 +124,7 @@ module es {
         }
         public horizontalFlip: boolean;
         public verticalFlip: boolean;
-        public diagonalFlip: boolean;
+        // public diagonalFlip: boolean;
         public _tilesetTileIndex?: number;
 
         /**
@@ -161,11 +161,11 @@ module es {
             flip = (rawGid & TmxLayerTile.FLIPPED_VERTICALLY_FLAG) != 0;
             this.verticalFlip = flip;
 
-            flip = (rawGid & TmxLayerTile.FLIPPED_DIAGONALLY_FLAG) != 0;
-            this.diagonalFlip = flip;
+            // flip = (rawGid & TmxLayerTile.FLIPPED_DIAGONALLY_FLAG) != 0;
+            // this.diagonalFlip = flip;
 
             // 零位标志
-            rawGid &= ~(TmxLayerTile.FLIPPED_HORIZONTALLY_FLAG | TmxLayerTile.FLIPPED_VERTICALLY_FLAG | TmxLayerTile.FLIPPED_DIAGONALLY_FLAG);
+            rawGid &= ~(TmxLayerTile.FLIPPED_HORIZONTALLY_FLAG | TmxLayerTile.FLIPPED_VERTICALLY_FLAG);
 
             // 将GID保存
             this.gid = rawGid;
