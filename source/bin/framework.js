@@ -1020,13 +1020,10 @@ var es;
         DebugDrawItem.prototype.draw = function (shape) {
             switch (this.drawType) {
                 case DebugDrawType.line:
-                    es.DrawUtils.drawLine(shape, this.start, this.end, this.color);
                     break;
                 case DebugDrawType.hollowRectangle:
-                    es.DrawUtils.drawHollowRect(shape, this.rectangle, this.color);
                     break;
                 case DebugDrawType.pixel:
-                    es.DrawUtils.drawPixel(shape, new es.Vector2(this.x, this.y), this.color, this.size);
                     break;
                 case DebugDrawType.text:
                     break;
@@ -2729,11 +2726,17 @@ var es;
             return this;
         };
         RenderableComponent.prototype.sync = function (camera) {
-            this.displayObject.x = this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x;
-            this.displayObject.y = this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y;
-            this.displayObject.scaleX = this.entity.scale.x;
-            this.displayObject.scaleY = this.entity.scale.y;
-            this.displayObject.rotation = this.entity.rotation;
+            var afterPos = new es.Vector2(this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x, this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y);
+            if (this.displayObject.x != afterPos.x)
+                this.displayObject.x = afterPos.x;
+            if (this.displayObject.y != afterPos.y)
+                this.displayObject.y = afterPos.y;
+            if (this.displayObject.scaleX != this.entity.scale.x)
+                this.displayObject.scaleX = this.entity.scale.x;
+            if (this.displayObject.scaleY != this.entity.scale.y)
+                this.displayObject.scaleY = this.entity.scale.y;
+            if (this.displayObject.rotation != this.entity.rotation)
+                this.displayObject.rotation = this.entity.rotation;
         };
         RenderableComponent.prototype.toString = function () {
             return "[RenderableComponent] renderLayer: " + this.renderLayer;
@@ -2879,8 +2882,11 @@ var es;
         };
         SpriteRenderer.prototype.render = function (camera) {
             this.sync(camera);
-            this.displayObject.x = this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x;
-            this.displayObject.y = this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y;
+            var afterPos = new es.Vector2(this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x, this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y);
+            if (this.displayObject.x != afterPos.x)
+                this.displayObject.x = afterPos.x;
+            if (this.displayObject.y != afterPos.y)
+                this.displayObject.y = afterPos.y;
         };
         return SpriteRenderer;
     }(es.RenderableComponent));
@@ -8469,6 +8475,27 @@ var es;
         TiledRendering.renderObjectGroup = function (objGroup, container, position, scale, layerDepth) {
             if (!objGroup.visible)
                 return;
+            function debugRender(obj, pos) {
+                if (!container)
+                    return;
+                if (!es.Core.debugRenderEndabled)
+                    return;
+                if (!obj.textField.parent && obj.name) {
+                    obj.textField.text = obj.name;
+                    obj.textField.size = 12;
+                    obj.textField.fontFamily = "sans-serif";
+                    if (obj.shape) {
+                        obj.textField.x = pos.x + (obj.shape.width - obj.textField.width) / 2;
+                        obj.textField.y = pos.y - obj.textField.height - 5;
+                    }
+                    else {
+                        obj.textField.x = pos.x + (obj.width - obj.textField.width) / 2;
+                        obj.textField.y = pos.y - obj.textField.height - 5;
+                    }
+                    obj.textField.textColor = 0xffffff;
+                    container.addChild(obj.textField);
+                }
+            }
             for (var object in objGroup.objects) {
                 var obj = objGroup.objects[object];
                 if (!obj.visible)
@@ -8480,18 +8507,33 @@ var es;
                 var pos = es.Vector2.add(position, new es.Vector2(obj.x, obj.y).multiply(scale));
                 switch (obj.objectType) {
                     case es.TmxObjectType.basic:
-                        if (!obj.shape.parent)
+                        if (!obj.shape.parent) {
+                            obj.shape.x = obj.x;
+                            obj.shape.y = obj.y;
                             container.addChild(obj.shape);
-                        var rect = new es.Rectangle(pos.x, pos.y, obj.width * scale.x, obj.height * scale.y);
-                        es.DrawUtils.drawHollowRect(obj.shape, rect, objGroup.color);
+                        }
+                        obj.shape.graphics.clear();
+                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                        obj.shape.graphics.beginFill(0x979798, 0.5);
+                        obj.shape.graphics.drawRect(0, 0, obj.width * scale.x, obj.height * scale.y);
+                        obj.shape.graphics.endFill();
+                        debugRender(obj, pos);
                         break;
                     case es.TmxObjectType.point:
                         var size = objGroup.map.tileWidth * 0.5;
                         pos.x -= size * 0.5;
                         pos.y -= size * 0.5;
-                        if (!obj.shape.parent)
+                        if (!obj.shape.parent) {
+                            obj.shape.x = pos.x;
+                            obj.shape.y = pos.y;
                             container.addChild(obj.shape);
-                        es.DrawUtils.drawPixel(obj.shape, pos, objGroup.color, size);
+                        }
+                        obj.shape.graphics.clear();
+                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                        obj.shape.graphics.beginFill(0x979798, 0.5);
+                        obj.shape.graphics.drawCircle(0, 0, 1);
+                        obj.shape.graphics.endFill();
+                        debugRender(obj, pos);
                         break;
                     case es.TmxObjectType.tile:
                         var tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
@@ -8541,31 +8583,54 @@ var es;
                             if (tileset.image.texture.anchorOffsetY != 0)
                                 tileset.image.texture.anchorOffsetY = 0;
                         }
+                        debugRender(obj, pos);
                         break;
                     case es.TmxObjectType.ellipse:
                         pos = new es.Vector2(obj.x + obj.width * 0.5, obj.y + obj.height * 0.5).multiply(scale);
-                        if (!obj.shape.parent)
+                        if (!obj.shape.parent) {
+                            obj.shape.x = pos.x;
+                            obj.shape.y = pos.y;
                             container.addChild(obj.shape);
-                        es.DrawUtils.drawCircle(obj.shape, pos, obj.width * 0.5, objGroup.color);
+                        }
+                        obj.shape.graphics.clear();
+                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                        obj.shape.graphics.beginFill(0x979798, 0.5);
+                        obj.shape.graphics.drawCircle(0, 0, obj.width * 0.5);
+                        obj.shape.graphics.endFill();
+                        debugRender(obj, pos);
                         break;
                     case es.TmxObjectType.polygon:
                     case es.TmxObjectType.polyline:
                         var points = [];
                         for (var i = 0; i < obj.points.length; i++)
                             points[i] = es.Vector2.multiply(obj.points[i], scale);
-                        es.DrawUtils.drawPoints(obj.shape, pos, points, objGroup.color, obj.objectType == es.TmxObjectType.polygon);
+                        if (!obj.shape.parent && points.length > 0) {
+                            obj.shape.x = pos.x;
+                            obj.shape.y = pos.y;
+                            container.addChild(obj.shape);
+                        }
+                        obj.shape.graphics.clear();
+                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                        for (var i = 0; i < points.length; i++) {
+                            obj.shape.graphics.lineTo(points[i].x, points[i].y);
+                        }
+                        obj.shape.graphics.endFill();
+                        debugRender(obj, pos);
                         break;
                     case es.TmxObjectType.text:
-                        if (!obj.textField.parent)
+                        if (!obj.textField.parent) {
+                            obj.textField.x = pos.x;
+                            obj.textField.y = pos.y;
                             container.addChild(obj.textField);
-                        es.DrawUtils.drawString(obj.textField, obj.text.value, pos, obj.text.color, es.MathHelper.toRadians(obj.rotation), es.Vector2.zero, 1);
+                        }
+                        obj.textField.text = obj.text.value;
+                        obj.textField.textColor = obj.text.color;
+                        obj.textField.bold = obj.text.bold != undefined ? obj.text.bold : false;
+                        obj.textField.italic = obj.text.italic != undefined ? obj.text.italic : false;
+                        obj.textField.size = obj.text.pixelSize;
+                        obj.textField.fontFamily = obj.text.fontFamily;
                         break;
                     default:
-                        if (es.Core.debugRenderEndabled) {
-                            if (!obj.textField.parent)
-                                container.addChild(obj.textField);
-                            es.DrawUtils.drawString(obj.textField, obj.name + "(" + obj.type + ")", es.Vector2.subtract(pos, new es.Vector2(0, 15)), 0xffffff, 0, es.Vector2.zero, 1);
-                        }
                         break;
                 }
             }
@@ -8604,13 +8669,12 @@ var es;
             }
             else if (tile.horizontalFlip) {
                 tx += tileWidth + (sourceRect.height * scale.y - tileHeight);
-                ty += tileHeight;
             }
             else if (tile.verticalFlip) {
                 ty += (tileWidth - sourceRect.width * scale.x);
             }
             else {
-                ty += tileHeight;
+                ty += (tileHeight - sourceRect.height * scale.y);
             }
             var pos = new es.Vector2(tx, ty).add(position);
             if (tile.tileset.image) {
@@ -9165,64 +9229,6 @@ var es;
     var DrawUtils = (function () {
         function DrawUtils() {
         }
-        DrawUtils.drawLine = function (shape, start, end, color, thickness) {
-            if (thickness === void 0) { thickness = 1; }
-            this.drawLineAngle(shape, start, es.MathHelper.angleBetweenVectors(start, end), es.Vector2.distance(start, end), color, thickness);
-        };
-        DrawUtils.drawCircle = function (shape, position, radius, color) {
-            shape.graphics.beginFill(color);
-            shape.graphics.drawCircle(position.x, position.y, radius);
-            shape.graphics.endFill();
-        };
-        DrawUtils.drawPoints = function (shape, position, points, color, closePoly, thickness) {
-            if (closePoly === void 0) { closePoly = true; }
-            if (thickness === void 0) { thickness = 1; }
-            if (points.length < 2)
-                return;
-            for (var i = 1; i < points.length; i++)
-                this.drawLine(shape, es.Vector2.add(position, points[i - 1]), es.Vector2.add(position, points[i]), color, thickness);
-            if (closePoly)
-                this.drawLine(shape, es.Vector2.add(position, points[points.length - 1]), es.Vector2.add(position, points[0]), color, thickness);
-        };
-        DrawUtils.drawString = function (textField, text, position, color, rotation, origin, scale) {
-        };
-        DrawUtils.drawLineAngle = function (shape, start, radians, length, color, thickness) {
-            if (thickness === void 0) { thickness = 1; }
-            shape.graphics.beginFill(color);
-            shape.graphics.drawRect(start.x, start.y, 1, 1);
-            shape.graphics.endFill();
-            shape.scaleX = length;
-            shape.scaleY = thickness;
-            shape.$anchorOffsetX = 0;
-            shape.$anchorOffsetY = 0;
-            shape.rotation = radians;
-        };
-        DrawUtils.drawHollowRect = function (shape, rect, color, thickness) {
-            if (thickness === void 0) { thickness = 1; }
-            this.drawHollowRectR(shape, rect.x, rect.y, rect.width, rect.height, color, thickness);
-        };
-        DrawUtils.drawHollowRectR = function (shape, x, y, width, height, color, thickness) {
-            if (thickness === void 0) { thickness = 1; }
-            var tl = new es.Vector2(x, y).round();
-            var tr = new es.Vector2(x + width, y).round();
-            var br = new es.Vector2(x + width, y + height).round();
-            var bl = new es.Vector2(x, y + height).round();
-            this.drawLine(shape, tl, tr, color, thickness);
-            this.drawLine(shape, tr, br, color, thickness);
-            this.drawLine(shape, br, bl, color, thickness);
-            this.drawLine(shape, bl, tl, color, thickness);
-        };
-        DrawUtils.drawPixel = function (shape, position, color, size) {
-            if (size === void 0) { size = 1; }
-            var destRect = new es.Rectangle(position.x, position.y, size, size);
-            if (size != 1) {
-                destRect.x -= size * 0.5;
-                destRect.y -= size * 0.5;
-            }
-            shape.graphics.beginFill(color);
-            shape.graphics.drawRect(destRect.x, destRect.y, destRect.width, destRect.height);
-            shape.graphics.endFill();
-        };
         DrawUtils.getColorMatrix = function (color) {
             var colorMatrix = [
                 1, 0, 0, 0, 0,

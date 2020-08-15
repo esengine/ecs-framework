@@ -162,11 +162,13 @@ module es {
          * 进行状态同步
          */
         public sync(camera: Camera) {
-            this.displayObject.x = this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x;
-            this.displayObject.y = this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y;
-            this.displayObject.scaleX = this.entity.scale.x;
-            this.displayObject.scaleY = this.entity.scale.y;
-            this.displayObject.rotation = this.entity.rotation;
+            let afterPos = new Vector2(this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x,
+                this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y);
+            if (this.displayObject.x != afterPos.x) this.displayObject.x = afterPos.x;
+            if (this.displayObject.y != afterPos.y) this.displayObject.y = afterPos.y;
+            if (this.displayObject.scaleX != this.entity.scale.x) this.displayObject.scaleX = this.entity.scale.x;
+            if (this.displayObject.scaleY != this.entity.scale.y) this.displayObject.scaleY = this.entity.scale.y;
+            if (this.displayObject.rotation != this.entity.rotation) this.displayObject.rotation = this.entity.rotation;
         }
 
         public toString() {

@@ -25,6 +25,8 @@ module scene {
 
                 this.camera.follow(bg, es.CameraStyle.lockOn);
             });
+            
+            es.Core.debugRenderEndabled = true;
             // // bg.addComponent(new es.SpriteRenderer()).setSprite(sprite).setColor(0xff0000);
 
             // for (let i = 0; i < 20; i++) {

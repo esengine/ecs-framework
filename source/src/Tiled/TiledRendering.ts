@@ -101,6 +101,29 @@ module es {
             if (!objGroup.visible)
                 return;
 
+            function debugRender(obj: TmxObject, pos: Vector2){
+                if (!container)
+                    return;
+
+                if (!Core.debugRenderEndabled)
+                    return;
+
+                if (!obj.textField.parent && obj.name){
+                    obj.textField.text = obj.name;
+                    obj.textField.size = 12;
+                    obj.textField.fontFamily = "sans-serif";
+                    if (obj.shape){
+                        obj.textField.x = pos.x + (obj.shape.width - obj.textField.width) / 2;
+                        obj.textField.y = pos.y - obj.textField.height - 5;
+                    }else{
+                        obj.textField.x = pos.x + (obj.width - obj.textField.width) / 2;
+                        obj.textField.y = pos.y - obj.textField.height - 5;
+                    }
+                    obj.textField.textColor = 0xffffff;
+                    container.addChild(obj.textField);
+                }
+            }
+
             for (let object in objGroup.objects) {
                 let obj = objGroup.objects[object];
                 if (!obj.visible)
@@ -115,20 +138,35 @@ module es {
                 let pos = Vector2.add(position, new Vector2(obj.x, obj.y).multiply(scale));
                 switch (obj.objectType) {
                     case TmxObjectType.basic:
-                        if (!obj.shape.parent)
+                        if (!obj.shape.parent){
+                            obj.shape.x = obj.x;
+                            obj.shape.y = obj.y;
                             container.addChild(obj.shape);
+                        }
 
-                        let rect = new Rectangle(pos.x, pos.y, obj.width * scale.x, obj.height * scale.y);
-                        DrawUtils.drawHollowRect(obj.shape, rect, objGroup.color);
+                        obj.shape.graphics.clear();
+                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                        obj.shape.graphics.beginFill(0x979798, 0.5);
+                        obj.shape.graphics.drawRect(0, 0, obj.width * scale.x, obj.height * scale.y);
+                        obj.shape.graphics.endFill();
+                        debugRender(obj, pos);
                         break;
                     case TmxObjectType.point:
                         let size = objGroup.map.tileWidth * 0.5;
                         pos.x -= size * 0.5;
                         pos.y -= size * 0.5;
-                        if (!obj.shape.parent)
+                        if (!obj.shape.parent){
+                            obj.shape.x = pos.x;
+                            obj.shape.y = pos.y;
                             container.addChild(obj.shape);
+                        }
 
-                        DrawUtils.drawPixel(obj.shape, pos, objGroup.color, size);
+                        obj.shape.graphics.clear();
+                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                        obj.shape.graphics.beginFill(0x979798, 0.5);
+                        obj.shape.graphics.drawCircle(0, 0, 1);
+                        obj.shape.graphics.endFill();
+                        debugRender(obj, pos);
                         break;
                     case TmxObjectType.tile:
                         let tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
@@ -175,32 +213,58 @@ module es {
                             if (tileset.image.texture.anchorOffsetX != 0) tileset.image.texture.anchorOffsetX = 0;
                             if (tileset.image.texture.anchorOffsetY != 0) tileset.image.texture.anchorOffsetY = 0;
                         }
+                        debugRender(obj, pos);
                         break;
                     case TmxObjectType.ellipse:
                         pos = new Vector2(obj.x + obj.width * 0.5, obj.y + obj.height * 0.5).multiply(scale);
-                        if (!obj.shape.parent)
+                        if (!obj.shape.parent){
+                            obj.shape.x = pos.x;
+                            obj.shape.y = pos.y;
                             container.addChild(obj.shape);
-                        DrawUtils.drawCircle(obj.shape, pos, obj.width * 0.5, objGroup.color);
+                        }
+
+                        obj.shape.graphics.clear();
+                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                        obj.shape.graphics.beginFill(0x979798, 0.5);
+                        obj.shape.graphics.drawCircle(0, 0, obj.width * 0.5);
+                        obj.shape.graphics.endFill();
+                        debugRender(obj, pos);
                         break;
                     case TmxObjectType.polygon:
                     case TmxObjectType.polyline:
-                        let points = [];
+                        let points: Vector2[] = [];
                         for (let i = 0; i < obj.points.length; i++)
                             points[i] = Vector2.multiply(obj.points[i], scale);
-                        DrawUtils.drawPoints(obj.shape, pos, points, objGroup.color, obj.objectType == TmxObjectType.polygon);
+
+                        if (!obj.shape.parent && points.length > 0){
+                            obj.shape.x = pos.x;
+                            obj.shape.y = pos.y;
+                            container.addChild(obj.shape);
+                        }
+
+                        obj.shape.graphics.clear();
+                        obj.shape.graphics.lineStyle(1, 0xa0a0a4);
+                        for (let i = 0; i < points.length; i ++){
+                            obj.shape.graphics.lineTo(points[i].x, points[i].y);
+                        }
+                        obj.shape.graphics.endFill();
+                        debugRender(obj, pos);
                         break;
                     case TmxObjectType.text:
-                        if (!obj.textField.parent)
+                        if (!obj.textField.parent){
+                            obj.textField.x = pos.x;
+                            obj.textField.y = pos.y;
                             container.addChild(obj.textField);
-                        DrawUtils.drawString(obj.textField, obj.text.value, pos, obj.text.color, MathHelper.toRadians(obj.rotation),
-                            Vector2.zero, 1);
+                        }
+
+                        obj.textField.text = obj.text.value;
+                        obj.textField.textColor = obj.text.color;
+                        obj.textField.bold = obj.text.bold != undefined ? obj.text.bold : false;
+                        obj.textField.italic = obj.text.italic != undefined ? obj.text.italic : false;
+                        obj.textField.size = obj.text.pixelSize;
+                        obj.textField.fontFamily = obj.text.fontFamily;
                         break;
                     default:
-                        if (Core.debugRenderEndabled) {
-                            if (!obj.textField.parent)
-                                container.addChild(obj.textField);
-                            DrawUtils.drawString(obj.textField, `${obj.name}(${obj.type})`, Vector2.subtract(pos, new Vector2(0, 15)), 0xffffff, 0, Vector2.zero, 1);
-                        }
                         break;
                 }
             }
@@ -250,12 +314,10 @@ module es {
                 ty -= (sourceRect.width * scale.x - tileWidth);
             } else if (tile.horizontalFlip) {
                 tx += tileWidth + (sourceRect.height * scale.y - tileHeight);
-                ty += tileHeight;
             } else if (tile.verticalFlip) {
                 ty += (tileWidth - sourceRect.width * scale.x);
             } else {
-                ty += tileHeight;
-                // ty += (tileHeight - sourceRect.height * scale.y);
+                ty += (tileHeight - sourceRect.height * scale.y);
             }
 
             let pos = new Vector2(tx, ty).add(position);

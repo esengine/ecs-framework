@@ -1922,14 +1922,6 @@ declare module es {
 }
 declare module es {
     class DrawUtils {
-        static drawLine(shape: egret.Shape, start: Vector2, end: Vector2, color: number, thickness?: number): void;
-        static drawCircle(shape: egret.Shape, position: Vector2, radius: number, color: number): void;
-        static drawPoints(shape: egret.Shape, position: Vector2, points: Vector2[], color: number, closePoly?: boolean, thickness?: number): void;
-        static drawString(textField: egret.TextField, text: string, position: Vector2, color: number, rotation: number, origin: Vector2, scale: number): void;
-        static drawLineAngle(shape: egret.Shape, start: Vector2, radians: number, length: number, color: number, thickness?: number): void;
-        static drawHollowRect(shape: egret.Shape, rect: Rectangle, color: number, thickness?: number): void;
-        static drawHollowRectR(shape: egret.Shape, x: number, y: number, width: number, height: number, color: number, thickness?: number): void;
-        static drawPixel(shape: egret.Shape, position: Vector2, color: number, size?: number): void;
         static getColorMatrix(color: number): egret.ColorMatrixFilter;
     }
 }
