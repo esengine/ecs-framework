@@ -59,7 +59,7 @@ module es {
          */
         public static async parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number) {
             for (let e of ObjectUtils.elements(xEle).where(x => {
-                return x.type == "tilelayer" || x.name == "objectgroup" || x.name == "imagelayer" || x.name == "group"
+                return x.type == "tilelayer" || x.type == "objectgroup" || x.type == "imagelayer" || x.type == "group"
             })) {
                 let layer: ITmxLayer;
                 switch (e.type) {
@@ -394,10 +394,10 @@ module es {
 
             let drawOrderValue = xObjectGroup["draworder"];
             if (drawOrderValue)
-                group.drawOrder = drawOrderDict[drawOrderValue];
+                group.drawOrder = drawOrderDict.get(drawOrderValue);
 
             group.objects = [];
-            for (let e of xObjectGroup["object"])
+            for (let e of xObjectGroup["objects"])
                 group.objects.push(this.loadTmxObject(new TmxObject(), map, e));
             group.properties = this.parsePropertyDict(xObjectGroup["properties"]);
             return group;
@@ -479,23 +479,17 @@ module es {
         }
 
         public static parsePoints(xPoints: any) {
-            let pointString: string = xPoints["points"];
-            let pointStringPair = pointString.split(' ');
             let points = [];
 
             let index = 0;
-            for (let s of pointStringPair)
+            for (let s of xPoints)
                 points[index++] = this.parsePoint(s);
             return points;
         }
 
-        public static parsePoint(s: string) {
-            let pt = s.split(',');
-            let x = Number(pt[0]);
-            let y = Number(pt[1]);
-            return new Vector2(x, y);
+        public static parsePoint(pt: {x: number, y: number}) {
+            return new Vector2(pt.x, pt.y);
         }
-
 
         public static parseTmxTerrain(xTerrain: any) {
             let terrain = new TmxTerrain();

@@ -7865,7 +7865,7 @@ var es;
                     switch (_c.label) {
                         case 0:
                             _i = 0, _a = ObjectUtils.elements(xEle).where(function (x) {
-                                return x.type == "tilelayer" || x.name == "objectgroup" || x.name == "imagelayer" || x.name == "group";
+                                return x.type == "tilelayer" || x.type == "objectgroup" || x.type == "imagelayer" || x.type == "group";
                             });
                             _c.label = 1;
                         case 1:
@@ -8232,9 +8232,9 @@ var es;
             drawOrderDict.set("index", es.DrawOrderType.TopDown);
             var drawOrderValue = xObjectGroup["draworder"];
             if (drawOrderValue)
-                group.drawOrder = drawOrderDict[drawOrderValue];
+                group.drawOrder = drawOrderDict.get(drawOrderValue);
             group.objects = [];
-            for (var _i = 0, _a = xObjectGroup["object"]; _i < _a.length; _i++) {
+            for (var _i = 0, _a = xObjectGroup["objects"]; _i < _a.length; _i++) {
                 var e = _a[_i];
                 group.objects.push(this.loadTmxObject(new es.TmxObject(), map, e));
             }
@@ -8312,21 +8312,16 @@ var es;
             return alignment;
         };
         TiledMapLoader.parsePoints = function (xPoints) {
-            var pointString = xPoints["points"];
-            var pointStringPair = pointString.split(' ');
             var points = [];
             var index = 0;
-            for (var _i = 0, pointStringPair_1 = pointStringPair; _i < pointStringPair_1.length; _i++) {
-                var s = pointStringPair_1[_i];
+            for (var _i = 0, xPoints_1 = xPoints; _i < xPoints_1.length; _i++) {
+                var s = xPoints_1[_i];
                 points[index++] = this.parsePoint(s);
             }
             return points;
         };
-        TiledMapLoader.parsePoint = function (s) {
-            var pt = s.split(',');
-            var x = Number(pt[0]);
-            var y = Number(pt[1]);
-            return new es.Vector2(x, y);
+        TiledMapLoader.parsePoint = function (pt) {
+            return new es.Vector2(pt.x, pt.y);
         };
         TiledMapLoader.parseTmxTerrain = function (xTerrain) {
             var terrain = new es.TmxTerrain();
@@ -8500,16 +8495,52 @@ var es;
                         break;
                     case es.TmxObjectType.tile:
                         var tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
-                        var sourceRect = tileset.tileRegions[obj.tile.gid];
-                        pos.y -= obj.tile.tilesetTile.image.height;
-                        if (!obj.tile.tilesetTile.image.texture)
-                            container.addChild(obj.tile.tilesetTile.image.texture);
-                        obj.tile.tilesetTile.image.texture.x = pos.x;
-                        obj.tile.tilesetTile.image.texture.y = pos.y;
-                        obj.tile.tilesetTile.image.texture.filters = [];
-                        obj.tile.tilesetTile.image.texture.rotation = 0;
-                        obj.tile.tilesetTile.image.texture.scaleX = scale.x;
-                        obj.tile.tilesetTile.image.texture.scaleY = scale.y;
+                        var sourceRect = tileset.tileRegions.get(obj.tile.gid);
+                        if (obj.tile.horizontalFlip && obj.tile.verticalFlip) {
+                            pos.x += tileset.tileHeight + (sourceRect.height * scale.y - tileset.tileHeight);
+                            pos.y -= (sourceRect.width * scale.x - tileset.tileWidth);
+                        }
+                        else if (obj.tile.horizontalFlip) {
+                            pos.x += tileset.tileWidth + (sourceRect.height * scale.y - tileset.tileHeight);
+                        }
+                        else if (obj.tile.verticalFlip) {
+                            pos.y += (tileset.tileWidth - sourceRect.width * scale.x);
+                        }
+                        else {
+                            pos.y += (tileset.tileHeight - sourceRect.height * scale.y);
+                        }
+                        if (container) {
+                            var texture = tileset.image.bitmap.getTexture("" + obj.tile.gid);
+                            if (!texture) {
+                                texture = tileset.image.bitmap.createTexture("" + obj.tile.gid, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
+                            }
+                            tileset.image.texture = new Bitmap(texture);
+                            container.addChild(tileset.image.texture);
+                            if (tileset.image.texture.x != pos.x)
+                                tileset.image.texture.x = pos.x;
+                            if (tileset.image.texture.y != pos.y)
+                                tileset.image.texture.y = pos.y;
+                            if (obj.tile.verticalFlip && obj.tile.horizontalFlip) {
+                                tileset.image.texture.scaleX = -1;
+                                tileset.image.texture.scaleY = -1;
+                            }
+                            else if (obj.tile.verticalFlip) {
+                                tileset.image.texture.scaleX = scale.x;
+                                tileset.image.texture.scaleY = -1;
+                            }
+                            else if (obj.tile.horizontalFlip) {
+                                tileset.image.texture.scaleX = -1;
+                                tileset.image.texture.scaleY = scale.y;
+                            }
+                            else {
+                                tileset.image.texture.scaleX = scale.x;
+                                tileset.image.texture.scaleY = scale.y;
+                            }
+                            if (tileset.image.texture.anchorOffsetX != 0)
+                                tileset.image.texture.anchorOffsetX = 0;
+                            if (tileset.image.texture.anchorOffsetY != 0)
+                                tileset.image.texture.anchorOffsetY = 0;
+                        }
                         break;
                     case es.TmxObjectType.ellipse:
                         pos = new es.Vector2(obj.x + obj.width * 0.5, obj.y + obj.height * 0.5).multiply(scale);
@@ -8580,7 +8611,6 @@ var es;
             }
             else {
                 ty += tileHeight;
-                // ty += (tileHeight - sourceRect.height * scale.y);
             }
             var pos = new es.Vector2(tx, ty).add(position);
             if (tile.tileset.image) {

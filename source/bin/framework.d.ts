@@ -1792,7 +1792,10 @@ declare module es {
         static loadTmxText(text: TmxText, xText: any): TmxText;
         static loadTmxAlignment(alignment: TmxAlignment, xText: any): TmxAlignment;
         static parsePoints(xPoints: any): any[];
-        static parsePoint(s: string): Vector2;
+        static parsePoint(pt: {
+            x: number;
+            y: number;
+        }): Vector2;
         static parseTmxTerrain(xTerrain: any): TmxTerrain;
         static parseTmxTileOffset(xTileOffset: any): TmxTileOffset;
         static loadTmxImage(image: TmxImage, xImage: any): Promise<TmxImage>;

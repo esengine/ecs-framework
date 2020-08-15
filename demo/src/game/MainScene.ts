@@ -12,15 +12,15 @@ module scene {
         public async onStart() {
             let mapData = await es.TiledMapLoader.loadTmxMap(new es.TmxMap(), "orthogonal-outside_json");
             let map = this.createEntity("map");
-            map.addComponent(new es.TiledMapRenderer(mapData));
+            let tiledMap = map.addComponent(new es.TiledMapRenderer(mapData)).setRenderLayer(1);
             console.log(mapData);
 
             let sprite = new es.Sprite(RES.getRes("checkbox_select_disabled_png"));
             this.createEntityAsync("bg").then(bg => {
                 bg.addComponent(new component.PlayerController());
                 bg.addComponent(new es.Mover());
-                let spriteRenderer = bg.addComponent(new es.ScrollingSpriteRenderer(sprite));
-                spriteRenderer.scrollX = -30;
+                let spriteRenderer = bg.addComponent(new es.ScrollingSpriteRenderer(sprite)).setRenderLayer(0);
+                // spriteRenderer.scrollX = -30;
                 // bg.addComponent(new es.BoxCollider());
 
                 this.camera.follow(bg, es.CameraStyle.lockOn);

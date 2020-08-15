@@ -112,7 +112,6 @@ module es {
                         continue;
                 }
 
-
                 let pos = Vector2.add(position, new Vector2(obj.x, obj.y).multiply(scale));
                 switch (obj.objectType) {
                     case TmxObjectType.basic:
@@ -133,17 +132,49 @@ module es {
                         break;
                     case TmxObjectType.tile:
                         let tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
-                        let sourceRect = tileset.tileRegions[obj.tile.gid];
-                        pos.y -= obj.tile.tilesetTile.image.height;
+                        let sourceRect = tileset.tileRegions.get(obj.tile.gid);
 
-                        if (!obj.tile.tilesetTile.image.texture)
-                            container.addChild(obj.tile.tilesetTile.image.texture);
-                        obj.tile.tilesetTile.image.texture.x = pos.x;
-                        obj.tile.tilesetTile.image.texture.y = pos.y;
-                        obj.tile.tilesetTile.image.texture.filters = [];
-                        obj.tile.tilesetTile.image.texture.rotation = 0;
-                        obj.tile.tilesetTile.image.texture.scaleX = scale.x;
-                        obj.tile.tilesetTile.image.texture.scaleY = scale.y;
+                        if (obj.tile.horizontalFlip && obj.tile.verticalFlip) {
+                            pos.x += tileset.tileHeight + (sourceRect.height * scale.y - tileset.tileHeight);
+                            pos.y -= (sourceRect.width * scale.x - tileset.tileWidth);
+                        }
+                        else if (obj.tile.horizontalFlip) {
+                            pos.x += tileset.tileWidth + (sourceRect.height * scale.y - tileset.tileHeight);
+                        }
+                        else if (obj.tile.verticalFlip) {
+                            pos.y += (tileset.tileWidth - sourceRect.width * scale.x);
+                        }
+                        else {
+                            pos.y += (tileset.tileHeight - sourceRect.height * scale.y);
+                        }
+
+                        if (container){
+                            let texture: egret.Texture = tileset.image.bitmap.getTexture(`${obj.tile.gid}`);
+                            if (!texture) {
+                                texture = tileset.image.bitmap.createTexture(`${obj.tile.gid}`, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
+                            }
+
+                            tileset.image.texture = new Bitmap(texture);
+                            container.addChild(tileset.image.texture);
+
+                            if (tileset.image.texture.x != pos.x) tileset.image.texture.x = pos.x;
+                            if (tileset.image.texture.y != pos.y) tileset.image.texture.y = pos.y;
+                            if (obj.tile.verticalFlip && obj.tile.horizontalFlip){
+                                tileset.image.texture.scaleX = -1;
+                                tileset.image.texture.scaleY = -1;
+                            }else if (obj.tile.verticalFlip){
+                                tileset.image.texture.scaleX = scale.x;
+                                tileset.image.texture.scaleY = -1;
+                            }else if(obj.tile.horizontalFlip){
+                                tileset.image.texture.scaleX = -1;
+                                tileset.image.texture.scaleY = scale.y;
+                            }else{
+                                tileset.image.texture.scaleX = scale.x;
+                                tileset.image.texture.scaleY = scale.y;
+                            }
+                            if (tileset.image.texture.anchorOffsetX != 0) tileset.image.texture.anchorOffsetX = 0;
+                            if (tileset.image.texture.anchorOffsetY != 0) tileset.image.texture.anchorOffsetY = 0;
+                        }
                         break;
                     case TmxObjectType.ellipse:
                         pos = new Vector2(obj.x + obj.width * 0.5, obj.y + obj.height * 0.5).multiply(scale);
