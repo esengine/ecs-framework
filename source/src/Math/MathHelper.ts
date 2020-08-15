@@ -3,6 +3,10 @@ module es {
         public static readonly Epsilon: number = 0.00001;
         public static readonly Rad2Deg = 57.29578;
         public static readonly Deg2Rad = 0.0174532924;
+        /**
+         * 表示pi除以2的值(1.57079637)
+         */
+        public static readonly PiOver2 = Math.PI / 2;
 
         /**
          * 将弧度转换成角度。
@@ -75,6 +79,19 @@ module es {
 
         public static angleBetweenVectors(from: Vector2, to: Vector2) {
             return Math.atan2(to.y - from.y, to.x - from.x);
+        }
+
+        /**
+         * 增加t并确保它总是大于或等于0并且小于长度
+         * @param t
+         * @param length
+         */
+        public static incrementWithWrap(t: number, length: number){
+            t ++;
+            if (t == length)
+                return 0;
+
+            return t;
         }
     }
 }

@@ -123,8 +123,10 @@ module es {
         public render(camera: Camera) {
             this.sync(camera);
 
-            this.displayObject.x = this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x;
-            this.displayObject.y = this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y;
+            let afterPos = new Vector2(this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x,
+                this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y);
+            if (this.displayObject.x != afterPos.x) this.displayObject.x = afterPos.x;
+            if (this.displayObject.y != afterPos.y) this.displayObject.y = afterPos.y;
         }
     }
 }

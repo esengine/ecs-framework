@@ -28,13 +28,13 @@ module es {
         public draw(shape: egret.Shape): boolean {
             switch (this.drawType) {
                 case DebugDrawType.line:
-                    DrawUtils.drawLine(shape, this.start, this.end, this.color);
+                    // DrawUtils.drawLine(shape, this.start, this.end, this.color);
                     break;
                 case DebugDrawType.hollowRectangle:
-                    DrawUtils.drawHollowRect(shape, this.rectangle, this.color);
+                    // DrawUtils.drawHollowRect(shape, this.rectangle, this.color);
                     break;
                 case DebugDrawType.pixel:
-                    DrawUtils.drawPixel(shape, new Vector2(this.x, this.y), this.color, this.size);
+                    // DrawUtils.drawPixel(shape, new Vector2(this.x, this.y), this.color, this.size);
                     break;
                 case DebugDrawType.text:
                     break;

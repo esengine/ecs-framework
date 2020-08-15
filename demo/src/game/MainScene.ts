@@ -10,27 +10,32 @@ module scene {
         }
 
         public async onStart() {
+            let mapData = await es.TiledMapLoader.loadTmxMap(new es.TmxMap(), "orthogonal-outside_json");
+            let map = this.createEntity("map");
+            let tiledMap = map.addComponent(new es.TiledMapRenderer(mapData)).setRenderLayer(1);
+            console.log(mapData);
+
             let sprite = new es.Sprite(RES.getRes("checkbox_select_disabled_png"));
             this.createEntityAsync("bg").then(bg => {
                 bg.addComponent(new component.PlayerController());
                 bg.addComponent(new es.Mover());
-                let spriteRenderer = bg.addComponent(new es.ScrollingSpriteRenderer(sprite));
-                spriteRenderer.setRenderLayer(4);
-                spriteRenderer.scrollX = -30;
+                let spriteRenderer = bg.addComponent(new es.ScrollingSpriteRenderer(sprite)).setRenderLayer(0);
+                // spriteRenderer.scrollX = -30;
                 // bg.addComponent(new es.BoxCollider());
 
                 this.camera.follow(bg, es.CameraStyle.lockOn);
             });
+            
+            es.Core.debugRenderEndabled = true;
             // // bg.addComponent(new es.SpriteRenderer()).setSprite(sprite).setColor(0xff0000);
-           
 
-            for (let i = 0; i < 20; i++) {
-                let sprite = new es.Sprite(RES.getRes("checkbox_select_disabled_png"));
-                let player2 = this.createEntity("bg");
-                player2.addComponent(new es.SpriteRenderer()).setSprite(sprite).setRenderLayer(i);
-                player2.position = new es.Vector2(30 * i, 30 * i);
-                // player2.addComponent(new es.BoxCollider());
-            }
+            // for (let i = 0; i < 20; i++) {
+            //     let sprite = new es.Sprite(RES.getRes("checkbox_select_disabled_png"));
+            //     let player2 = this.createEntity("bg");
+            //     player2.addComponent(new es.SpriteRenderer()).setSprite(sprite).setRenderLayer(i);
+            //     player2.position = new es.Vector2(30 * i, 30 * i);
+            //     // player2.addComponent(new es.BoxCollider());
+            // }
 
 
             let pool = new es.ComponentPool<component.SimplePooled>(component.SimplePooled);

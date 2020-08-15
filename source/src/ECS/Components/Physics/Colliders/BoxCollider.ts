@@ -29,6 +29,20 @@ module es {
         }
 
         /**
+         * 创建一个BoxCollider并使用x/y组件作为localOffset
+         * @param x
+         * @param y
+         * @param width
+         * @param height
+         */
+        public createBoxRect(x: number, y: number, width: number, height: number): BoxCollider{
+            this._localOffset = new Vector2(x + width / 2, y + width / 2);
+            this.shape = new Box(width, height);
+            this._colliderRequiresAutoSizing = false;
+            return this;
+        }
+
+        /**
          * 设置BoxCollider的大小
          * @param width
          * @param height
