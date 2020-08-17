@@ -1775,9 +1775,9 @@ declare module es {
     class TiledMapLoader {
         static loadTmxMap(map: TmxMap, filePath: string): Promise<TmxMap>;
         static loadTmxMapData(map: TmxMap, xMap: any): Promise<TmxMap>;
-        static parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number): Promise<void>;
-        static loadTmxGroup(group: TmxGroup, map: TmxMap, xGroup: any, width: number, height: number): TmxGroup;
-        static loadTmxImageLayer(layer: TmxImageLayer, map: TmxMap, xImageLayer: any): Promise<TmxImageLayer>;
+        static parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number, tmxDirectory: string): Promise<void>;
+        static loadTmxGroup(group: TmxGroup, map: TmxMap, xGroup: any, width: number, height: number, tmxDirectory: string): Promise<TmxGroup>;
+        static loadTmxImageLayer(layer: TmxImageLayer, map: TmxMap, xImageLayer: any, tmxDirectory: string): Promise<TmxImageLayer>;
         static loadTmxLayer(layer: TmxLayer, map: TmxMap, xLayer: any, width: number, height: number): TmxLayer;
         private static updateMaxTileSizes;
         static parseOrientationType(type: string): OrientationType;
@@ -1787,7 +1787,7 @@ declare module es {
         static parsePropertyDict(prop: any): Map<string, string>;
         static parseTmxTileset(map: TmxMap, xTileset: any): Promise<TmxTileset>;
         static loadTmxTileset(tileset: TmxTileset, map: TmxMap, xTileset: any, firstGid: number): Promise<TmxTileset>;
-        static loadTmxTilesetTile(tile: TmxTilesetTile, tileset: TmxTileset, xTile: any, terrains: TmxTerrain[]): Promise<TmxTilesetTile>;
+        static loadTmxTilesetTile(tile: TmxTilesetTile, tileset: TmxTileset, xTile: any, terrains: TmxTerrain[], tmxDirectory: string): Promise<TmxTilesetTile>;
         static loadTmxAnimationFrame(frame: TmxAnimationFrame, xFrame: any): TmxAnimationFrame;
         static loadTmxObjectGroup(group: TmxObjectGroup, map: TmxMap, xObjectGroup: any): TmxObjectGroup;
         static loadTmxObject(obj: TmxObject, map: TmxMap, xObject: any): TmxObject;
@@ -1800,7 +1800,7 @@ declare module es {
         }): Vector2;
         static parseTmxTerrain(xTerrain: any): TmxTerrain;
         static parseTmxTileOffset(xTileOffset: any): TmxTileOffset;
-        static loadTmxImage(image: TmxImage, xImage: any): Promise<TmxImage>;
+        static loadTmxImage(image: TmxImage, xImage: any, tmxDirectory: string): Promise<TmxImage>;
     }
 }
 declare module es {

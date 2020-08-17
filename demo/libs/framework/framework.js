@@ -7641,7 +7641,7 @@ var es;
 (function (es) {
     var TmxDocument = (function () {
         function TmxDocument() {
-            this.tmxDirectory = "";
+            this.tmxDirectory = "resource/assets/";
         }
         return TmxDocument;
     }());
@@ -7867,13 +7867,13 @@ var es;
                             map.objectGroups = [];
                             map.imageLayers = [];
                             map.groups = [];
-                            this.parseLayers(map, xMap, map, map.width, map.height);
+                            this.parseLayers(map, xMap, map, map.width, map.height, map.tmxDirectory);
                             return [2, map];
                     }
                 });
             });
         };
-        TiledMapLoader.parseLayers = function (container, xEle, map, width, height) {
+        TiledMapLoader.parseLayers = function (container, xEle, map, width, height, tmxDirectory) {
             return __awaiter(this, void 0, void 0, function () {
                 var _i, _a, e, layer, _b, tileLayer, objectgroup, imagelayer, newGroup;
                 return __generator(this, function (_c) {
@@ -7884,7 +7884,7 @@ var es;
                             });
                             _c.label = 1;
                         case 1:
-                            if (!(_i < _a.length)) return [3, 10];
+                            if (!(_i < _a.length)) return [3, 11];
                             e = _a[_i];
                             layer = void 0;
                             _b = e.type;
@@ -7894,62 +7894,72 @@ var es;
                                 case "imagelayer": return [3, 4];
                                 case "group": return [3, 6];
                             }
-                            return [3, 7];
+                            return [3, 8];
                         case 2:
                             tileLayer = this.loadTmxLayer(new es.TmxLayer(), map, e, width, height);
                             layer = tileLayer;
                             if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
                                 container.tileLayers.push(tileLayer);
-                            return [3, 8];
+                            return [3, 9];
                         case 3:
                             objectgroup = this.loadTmxObjectGroup(new es.TmxObjectGroup(), map, e);
                             layer = objectgroup;
                             if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
                                 container.objectGroups.push(objectgroup);
-                            return [3, 8];
-                        case 4: return [4, this.loadTmxImageLayer(new es.TmxImageLayer(), map, e)];
+                            return [3, 9];
+                        case 4: return [4, this.loadTmxImageLayer(new es.TmxImageLayer(), map, e, tmxDirectory)];
                         case 5:
                             imagelayer = _c.sent();
                             layer = imagelayer;
                             if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
                                 container.imageLayers.push(imagelayer);
-                            return [3, 8];
-                        case 6:
-                            newGroup = this.loadTmxGroup(new es.TmxGroup(), map, e, width, height);
+                            return [3, 9];
+                        case 6: return [4, this.loadTmxGroup(new es.TmxGroup(), map, e, width, height, tmxDirectory)];
+                        case 7:
+                            newGroup = _c.sent();
                             layer = newGroup;
                             if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
                                 container.groups.push(newGroup);
-                            return [3, 8];
-                        case 7: throw new Error("无效的操作");
-                        case 8:
+                            return [3, 9];
+                        case 8: throw new Error("无效的操作");
+                        case 9:
                             if (container instanceof es.TmxMap || container instanceof es.TmxGroup)
                                 container.layers.push(layer);
-                            _c.label = 9;
-                        case 9:
+                            _c.label = 10;
+                        case 10:
                             _i++;
                             return [3, 1];
-                        case 10: return [2];
+                        case 11: return [2];
                     }
                 });
             });
         };
-        TiledMapLoader.loadTmxGroup = function (group, map, xGroup, width, height) {
-            group.map = map;
-            group.name = xGroup["name"] != undefined ? xGroup["name"] : "";
-            group.opacity = xGroup["opacity"] != undefined ? xGroup["opacity"] : 1;
-            group.visible = xGroup["visible"] != undefined ? xGroup["visible"] : true;
-            group.offsetX = xGroup["offsetx"] != undefined ? xGroup["offsetx"] : 0;
-            group.offsetY = xGroup["offsety"] != undefined ? xGroup["offsety"] : 0;
-            group.properties = this.parsePropertyDict(xGroup["properties"]);
-            group.layers = [];
-            group.tileLayers = [];
-            group.objectGroups = [];
-            group.imageLayers = [];
-            group.groups = [];
-            this.parseLayers(group, xGroup, map, width, height);
-            return group;
+        TiledMapLoader.loadTmxGroup = function (group, map, xGroup, width, height, tmxDirectory) {
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            group.map = map;
+                            group.name = xGroup["name"] != undefined ? xGroup["name"] : "";
+                            group.opacity = xGroup["opacity"] != undefined ? xGroup["opacity"] : 1;
+                            group.visible = xGroup["visible"] != undefined ? xGroup["visible"] : true;
+                            group.offsetX = xGroup["offsetx"] != undefined ? xGroup["offsetx"] : 0;
+                            group.offsetY = xGroup["offsety"] != undefined ? xGroup["offsety"] : 0;
+                            group.properties = this.parsePropertyDict(xGroup["properties"]);
+                            group.layers = [];
+                            group.tileLayers = [];
+                            group.objectGroups = [];
+                            group.imageLayers = [];
+                            group.groups = [];
+                            return [4, this.parseLayers(group, xGroup, map, width, height, tmxDirectory)];
+                        case 1:
+                            _a.sent();
+                            return [2, group];
+                    }
+                });
+            });
         };
-        TiledMapLoader.loadTmxImageLayer = function (layer, map, xImageLayer) {
+        TiledMapLoader.loadTmxImageLayer = function (layer, map, xImageLayer, tmxDirectory) {
             return __awaiter(this, void 0, void 0, function () {
                 var xImage, _a;
                 return __generator(this, function (_b) {
@@ -7966,7 +7976,7 @@ var es;
                             xImage = xImageLayer["image"];
                             if (!xImage) return [3, 2];
                             _a = layer;
-                            return [4, this.loadTmxImage(new es.TmxImage(), xImage)];
+                            return [4, this.loadTmxImage(new es.TmxImage(), xImage, tmxDirectory)];
                         case 1:
                             _a.image = _b.sent();
                             _b.label = 2;
@@ -8100,7 +8110,7 @@ var es;
                             firstGid = xFirstGid;
                             source = xTileset["image"];
                             if (!!source) return [3, 2];
-                            source = "resource/assets/" + source;
+                            source = map.tmxDirectory + source;
                             return [4, RES.getResByUrl(source, null, this, RES.ResourceItem.TYPE_IMAGE)];
                         case 1:
                             xDocTileset = _a.sent();
@@ -8130,7 +8140,7 @@ var es;
                             xImage = xTileset["image"];
                             if (!xImage) return [3, 2];
                             _a = tileset;
-                            return [4, this.loadTmxImage(new es.TmxImage(), xTileset)];
+                            return [4, this.loadTmxImage(new es.TmxImage(), xTileset, map.tmxDirectory)];
                         case 1:
                             _a.image = _e.sent();
                             _e.label = 2;
@@ -8147,7 +8157,7 @@ var es;
                         case 3:
                             if (!(_c < _d.length)) return [3, 6];
                             xTile = _d[_c];
-                            return [4, this.loadTmxTilesetTile(new es.TmxTilesetTile(), tileset, xTile, tileset.terrains)];
+                            return [4, this.loadTmxTilesetTile(new es.TmxTilesetTile(), tileset, xTile, tileset.terrains, map.tmxDirectory)];
                         case 4:
                             tile = _e.sent();
                             tileset.tiles.set(tile.id, tile);
@@ -8179,7 +8189,7 @@ var es;
                 });
             });
         };
-        TiledMapLoader.loadTmxTilesetTile = function (tile, tileset, xTile, terrains) {
+        TiledMapLoader.loadTmxTilesetTile = function (tile, tileset, xTile, terrains, tmxDirectory) {
             return __awaiter(this, void 0, void 0, function () {
                 var strTerrain, index, _i, strTerrain_1, v, edge, xImage, _a, _b, _c, e, _d, _e, e;
                 return __generator(this, function (_f) {
@@ -8202,7 +8212,7 @@ var es;
                             xImage = xTile["image"];
                             if (!xImage) return [3, 2];
                             _a = tile;
-                            return [4, this.loadTmxImage(new es.TmxImage(), xImage)];
+                            return [4, this.loadTmxImage(new es.TmxImage(), xImage, tmxDirectory)];
                         case 1:
                             _a.image = _f.sent();
                             _f.label = 2;
@@ -8356,7 +8366,7 @@ var es;
             tmxTileOffset.y = xTileOffset["y"];
             return tmxTileOffset;
         };
-        TiledMapLoader.loadTmxImage = function (image, xImage) {
+        TiledMapLoader.loadTmxImage = function (image, xImage, tmxDirectory) {
             return __awaiter(this, void 0, void 0, function () {
                 var xSource, _a, _b, _c, xData;
                 return __generator(this, function (_d) {
@@ -8364,7 +8374,7 @@ var es;
                         case 0:
                             xSource = xImage["image"];
                             if (!xSource) return [3, 2];
-                            image.source = "resource/assets/" + xSource;
+                            image.source = tmxDirectory + xSource;
                             _a = image;
                             _c = (_b = egret.SpriteSheet).bind;
                             return [4, RES.getResByUrl(image.source, null, this, RES.ResourceItem.TYPE_IMAGE)];

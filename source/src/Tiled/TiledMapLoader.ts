@@ -44,7 +44,7 @@ module es {
             map.imageLayers = [];
             map.groups = [];
 
-            this.parseLayers(map, xMap, map, map.width, map.height);
+            this.parseLayers(map, xMap, map, map.width, map.height, map.tmxDirectory);
 
             return map;
         }
@@ -56,8 +56,9 @@ module es {
          * @param map
          * @param width
          * @param height
+         * @param tmxDirectory
          */
-        public static async parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number) {
+        public static async parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number, tmxDirectory: string) {
             for (let e of ObjectUtils.elements(xEle).where(x => {
                 return x.type == "tilelayer" || x.type == "objectgroup" || x.type == "imagelayer" || x.type == "group"
             })) {
@@ -78,14 +79,14 @@ module es {
                             container.objectGroups.push(objectgroup);
                         break;
                     case "imagelayer":
-                        let imagelayer = await this.loadTmxImageLayer(new TmxImageLayer(), map, e);
+                        let imagelayer = await this.loadTmxImageLayer(new TmxImageLayer(), map, e, tmxDirectory);
                         layer = imagelayer;
 
                         if (container instanceof TmxMap || container instanceof TmxGroup)
                             container.imageLayers.push(imagelayer);
                         break;
                     case "group":
-                        let newGroup = this.loadTmxGroup(new TmxGroup(), map, e, width, height);
+                        let newGroup = await this.loadTmxGroup(new TmxGroup(), map, e, width, height, tmxDirectory);
                         layer = newGroup;
 
                         if (container instanceof TmxMap || container instanceof TmxGroup)
@@ -100,7 +101,7 @@ module es {
             }
         }
 
-        public static loadTmxGroup(group: TmxGroup, map: TmxMap, xGroup: any, width: number, height: number) {
+        public static async loadTmxGroup(group: TmxGroup, map: TmxMap, xGroup: any, width: number, height: number, tmxDirectory: string) {
             group.map = map;
             group.name = xGroup["name"] != undefined ? xGroup["name"] : "";
             group.opacity = xGroup["opacity"] != undefined ? xGroup["opacity"] : 1;
@@ -114,11 +115,11 @@ module es {
             group.imageLayers = [];
             group.groups = [];
 
-            this.parseLayers(group, xGroup, map, width, height);
+            await this.parseLayers(group, xGroup, map, width, height, tmxDirectory);
             return group;
         }
 
-        public static async loadTmxImageLayer(layer: TmxImageLayer, map: TmxMap, xImageLayer: any) {
+        public static async loadTmxImageLayer(layer: TmxImageLayer, map: TmxMap, xImageLayer: any, tmxDirectory: string) {
             layer.map = map;
             layer.name = xImageLayer["name"];
             layer.width = xImageLayer["width"];
@@ -130,7 +131,7 @@ module es {
 
             let xImage = xImageLayer["image"];
             if (xImage) {
-                layer.image = await this.loadTmxImage(new TmxImage(), xImage);
+                layer.image = await this.loadTmxImage(new TmxImage(), xImage, tmxDirectory);
             }
             layer.properties = this.parsePropertyDict(xImageLayer["properties"]);
             return layer;
@@ -269,7 +270,7 @@ module es {
 
             // 如果是嵌入式TmxTileset，即不是外部的，source将为null
             if (!source) {
-                source = "resource/assets/" + source;
+                source = map.tmxDirectory + source;
                 // 其他所有内容都在TSX文件中
                 let xDocTileset = await RES.getResByUrl(source, null, this, RES.ResourceItem.TYPE_IMAGE);
                 let tileset = this.loadTmxTileset(new TmxTileset(), map, xDocTileset["tileset"], firstGid);
@@ -296,7 +297,7 @@ module es {
 
             let xImage = xTileset["image"];
             if (xImage)
-                tileset.image = await this.loadTmxImage(new TmxImage(), xTileset);
+                tileset.image = await this.loadTmxImage(new TmxImage(), xTileset, map.tmxDirectory);
 
             tileset.terrains = [];
             if (xTileset["terrains"])
@@ -305,7 +306,7 @@ module es {
 
             tileset.tiles = new Map<number, TmxTilesetTile>();
             for (let xTile of xTileset["tiles"]) {
-                let tile = await this.loadTmxTilesetTile(new TmxTilesetTile(), tileset, xTile, tileset.terrains);
+                let tile = await this.loadTmxTilesetTile(new TmxTilesetTile(), tileset, xTile, tileset.terrains, map.tmxDirectory);
                 tileset.tiles.set(tile.id, tile);
             }
 
@@ -334,7 +335,7 @@ module es {
             return tileset;
         }
 
-        public static async loadTmxTilesetTile(tile: TmxTilesetTile, tileset: TmxTileset, xTile: any, terrains: TmxTerrain[]) {
+        public static async loadTmxTilesetTile(tile: TmxTilesetTile, tileset: TmxTileset, xTile: any, terrains: TmxTerrain[], tmxDirectory: string) {
             tile.tileset = tileset;
             tile.id = xTile["id"];
 
@@ -351,7 +352,7 @@ module es {
             tile.type = xTile["type"];
             let xImage = xTile["image"];
             if (xImage) {
-                tile.image = await this.loadTmxImage(new TmxImage(), xImage);
+                tile.image = await this.loadTmxImage(new TmxImage(), xImage, tmxDirectory);
             }
 
             tile.objectGroups = [];
@@ -513,10 +514,10 @@ module es {
             return tmxTileOffset;
         }
 
-        public static async loadTmxImage(image: TmxImage, xImage: any) {
+        public static async loadTmxImage(image: TmxImage, xImage: any, tmxDirectory: string) {
             let xSource = xImage["image"];
             if (xSource) {
-                image.source = "resource/assets/" + xSource;
+                image.source = tmxDirectory + xSource;
                 image.bitmap = new egret.SpriteSheet(await RES.getResByUrl(image.source, null, this, RES.ResourceItem.TYPE_IMAGE));
             } else {
                 image.format = xImage["format"];
