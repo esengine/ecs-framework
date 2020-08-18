@@ -116,7 +116,7 @@ module es {
          * @param camera
          */
         public isVisibleFromCamera(camera: Camera): boolean {
-            this.isVisible = camera.bounds.intersects(this.bounds);
+            this.isVisible = camera.bounds.intersects(this.displayObject.getBounds().union(this.bounds));
             return this.isVisible;
         }
 

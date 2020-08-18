@@ -269,10 +269,12 @@ module es {
             let source = xTileset["image"];
 
             // 如果是嵌入式TmxTileset，即不是外部的，source将为null
-            if (!source) {
+            if (source != undefined) {
                 source = map.tmxDirectory + source;
                 // 其他所有内容都在TSX文件中
-                let xDocTileset = await RES.getResByUrl(source, null, this, RES.ResourceItem.TYPE_IMAGE);
+                let xDocTileset = await RES.getResByUrl(source, null, this, RES.ResourceItem.TYPE_IMAGE).catch(err => {
+                    throw new Error(err);
+                });
                 let tileset = this.loadTmxTileset(new TmxTileset(), map, xDocTileset["tileset"], firstGid);
 
                 return tileset;
@@ -297,7 +299,9 @@ module es {
 
             let xImage = xTileset["image"];
             if (xImage)
-                tileset.image = await this.loadTmxImage(new TmxImage(), xTileset, map.tmxDirectory);
+                tileset.image = await this.loadTmxImage(new TmxImage(), xTileset, map.tmxDirectory).catch(err => {
+                    throw new Error(err);
+                });
 
             tileset.terrains = [];
             if (xTileset["terrains"])
@@ -305,9 +309,12 @@ module es {
                     tileset.terrains.push(this.parseTmxTerrain(e));
 
             tileset.tiles = new Map<number, TmxTilesetTile>();
-            for (let xTile of xTileset["tiles"]) {
-                let tile = await this.loadTmxTilesetTile(new TmxTilesetTile(), tileset, xTile, tileset.terrains, map.tmxDirectory);
-                tileset.tiles.set(tile.id, tile);
+            for (let t in xTileset["tiles"]){
+                if (xTileset["tiles"].hasOwnProperty(t)){
+                    let xTile = xTileset["tiles"][t];
+                    let tile = await this.loadTmxTilesetTile(new TmxTilesetTile(), tileset, xTile, tileset.terrains, map.tmxDirectory);
+                    tileset.tiles.set(tile.id == undefined ? Number(t) + 1 : tile.id, tile);
+                }
             }
 
             tileset.properties = this.parsePropertyDict(xTileset["properties"]);
@@ -315,7 +322,7 @@ module es {
             // 缓存我们的源矩形为每个瓷砖，所以我们不必每次我们渲染计算他们。
             // 如果我们有一个image，这是一个普通的tileset，否则它是一个image tileset
             tileset.tileRegions = new Map<number, Rectangle>();
-            if (tileset.image && tileset.image.bitmap) {
+            if (tileset.image) {
                 let id = firstGid;
                 for (let y = tileset.margin; y < tileset.image.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
                     let column = 0;
@@ -327,8 +334,8 @@ module es {
                     }
                 }
             } else {
-                tileset.tiles.forEach(tile => {
-                    tileset.tileRegions.set(firstGid + tile.id, new Rectangle(0, 0, tile.image.width, tile.image.height));
+                tileset.tiles.forEach((tile, key) => {
+                    tileset.tileRegions.set(key, new Rectangle(0, 0, tile.image.width, tile.image.height));
                 });
             }
 
@@ -516,18 +523,19 @@ module es {
 
         public static async loadTmxImage(image: TmxImage, xImage: any, tmxDirectory: string) {
             let xSource = xImage["image"];
-            if (xSource) {
+            if (xSource != undefined) {
                 image.source = tmxDirectory + xSource;
-                image.bitmap = new egret.SpriteSheet(await RES.getResByUrl(image.source, null, this, RES.ResourceItem.TYPE_IMAGE));
             } else {
-                image.format = xImage["format"];
-                let xData = xImage["data"];
-                image.data = TmxUtils.decode(xData, xData["encoding"], xData["compression"]);
+                image.source = tmxDirectory + xImage;
             }
+            let texture: egret.Texture = await RES.getResByUrl(image.source, null, this, RES.ResourceItem.TYPE_IMAGE).catch(err => {
+                throw new Error(err);
+            });
+            image.bitmap = new egret.SpriteSheet(texture);
 
             image.trans = TmxUtils.color16ToUnit(xImage["trans"]);
-            image.width = xImage["imagewidth"] != undefined ? xImage["imagewidth"] : 0;
-            image.height = xImage["imageheight"] != undefined ? xImage["imageheight"] : 0;
+            image.width = xImage["imagewidth"] != undefined ? xImage["imagewidth"] : texture.textureWidth;
+            image.height = xImage["imageheight"] != undefined ? xImage["imageheight"] : texture.textureHeight;
 
             return image;
         }

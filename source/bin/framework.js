@@ -2712,7 +2712,7 @@ var es;
             this._areBoundsDirty = true;
         };
         RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
-            this.isVisible = camera.bounds.intersects(this.bounds);
+            this.isVisible = camera.bounds.intersects(this.displayObject.getBounds().union(this.bounds));
             return this.isVisible;
         };
         RenderableComponent.prototype.setRenderLayer = function (renderLayer) {
@@ -8109,9 +8109,11 @@ var es;
                             xFirstGid = xTileset["firstgid"];
                             firstGid = xFirstGid;
                             source = xTileset["image"];
-                            if (!!source) return [3, 2];
+                            if (!(source != undefined)) return [3, 2];
                             source = map.tmxDirectory + source;
-                            return [4, RES.getResByUrl(source, null, this, RES.ResourceItem.TYPE_IMAGE)];
+                            return [4, RES.getResByUrl(source, null, this, RES.ResourceItem.TYPE_IMAGE).catch(function (err) {
+                                    throw new Error(err);
+                                })];
                         case 1:
                             xDocTileset = _a.sent();
                             tileset = this.loadTmxTileset(new es.TmxTileset(), map, xDocTileset["tileset"], firstGid);
@@ -8123,9 +8125,9 @@ var es;
         };
         TiledMapLoader.loadTmxTileset = function (tileset, map, xTileset, firstGid) {
             return __awaiter(this, void 0, void 0, function () {
-                var xImage, _a, _i, _b, e, _c, _d, xTile, tile, id, y, column, x;
-                return __generator(this, function (_e) {
-                    switch (_e.label) {
+                var xImage, _a, _i, _b, e, _c, _d, _e, t, xTile, tile, id, y, column, x;
+                return __generator(this, function (_f) {
+                    switch (_f.label) {
                         case 0:
                             tileset.map = map;
                             tileset.firstGid = firstGid;
@@ -8140,10 +8142,12 @@ var es;
                             xImage = xTileset["image"];
                             if (!xImage) return [3, 2];
                             _a = tileset;
-                            return [4, this.loadTmxImage(new es.TmxImage(), xTileset, map.tmxDirectory)];
+                            return [4, this.loadTmxImage(new es.TmxImage(), xTileset, map.tmxDirectory).catch(function (err) {
+                                    throw new Error(err);
+                                })];
                         case 1:
-                            _a.image = _e.sent();
-                            _e.label = 2;
+                            _a.image = _f.sent();
+                            _f.label = 2;
                         case 2:
                             tileset.terrains = [];
                             if (xTileset["terrains"])
@@ -8152,23 +8156,28 @@ var es;
                                     tileset.terrains.push(this.parseTmxTerrain(e));
                                 }
                             tileset.tiles = new Map();
-                            _c = 0, _d = xTileset["tiles"];
-                            _e.label = 3;
+                            _c = [];
+                            for (_d in xTileset["tiles"])
+                                _c.push(_d);
+                            _e = 0;
+                            _f.label = 3;
                         case 3:
-                            if (!(_c < _d.length)) return [3, 6];
-                            xTile = _d[_c];
+                            if (!(_e < _c.length)) return [3, 6];
+                            t = _c[_e];
+                            if (!xTileset["tiles"].hasOwnProperty(t)) return [3, 5];
+                            xTile = xTileset["tiles"][t];
                             return [4, this.loadTmxTilesetTile(new es.TmxTilesetTile(), tileset, xTile, tileset.terrains, map.tmxDirectory)];
                         case 4:
-                            tile = _e.sent();
-                            tileset.tiles.set(tile.id, tile);
-                            _e.label = 5;
+                            tile = _f.sent();
+                            tileset.tiles.set(tile.id == undefined ? Number(t) + 1 : tile.id, tile);
+                            _f.label = 5;
                         case 5:
-                            _c++;
+                            _e++;
                             return [3, 3];
                         case 6:
                             tileset.properties = this.parsePropertyDict(xTileset["properties"]);
                             tileset.tileRegions = new Map();
-                            if (tileset.image && tileset.image.bitmap) {
+                            if (tileset.image) {
                                 id = firstGid;
                                 for (y = tileset.margin; y < tileset.image.height - tileset.margin; y += tileset.tileHeight + tileset.spacing) {
                                     column = 0;
@@ -8180,8 +8189,8 @@ var es;
                                 }
                             }
                             else {
-                                tileset.tiles.forEach(function (tile) {
-                                    tileset.tileRegions.set(firstGid + tile.id, new es.Rectangle(0, 0, tile.image.width, tile.image.height));
+                                tileset.tiles.forEach(function (tile, key) {
+                                    tileset.tileRegions.set(key, new es.Rectangle(0, 0, tile.image.width, tile.image.height));
                                 });
                             }
                             return [2, tileset];
@@ -8368,28 +8377,26 @@ var es;
         };
         TiledMapLoader.loadTmxImage = function (image, xImage, tmxDirectory) {
             return __awaiter(this, void 0, void 0, function () {
-                var xSource, _a, _b, _c, xData;
-                return __generator(this, function (_d) {
-                    switch (_d.label) {
+                var xSource, texture;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
                         case 0:
                             xSource = xImage["image"];
-                            if (!xSource) return [3, 2];
-                            image.source = tmxDirectory + xSource;
-                            _a = image;
-                            _c = (_b = egret.SpriteSheet).bind;
-                            return [4, RES.getResByUrl(image.source, null, this, RES.ResourceItem.TYPE_IMAGE)];
+                            if (xSource != undefined) {
+                                image.source = tmxDirectory + xSource;
+                            }
+                            else {
+                                image.source = tmxDirectory + xImage;
+                            }
+                            return [4, RES.getResByUrl(image.source, null, this, RES.ResourceItem.TYPE_IMAGE).catch(function (err) {
+                                    throw new Error(err);
+                                })];
                         case 1:
-                            _a.bitmap = new (_c.apply(_b, [void 0, _d.sent()]))();
-                            return [3, 3];
-                        case 2:
-                            image.format = xImage["format"];
-                            xData = xImage["data"];
-                            image.data = es.TmxUtils.decode(xData, xData["encoding"], xData["compression"]);
-                            _d.label = 3;
-                        case 3:
+                            texture = _a.sent();
+                            image.bitmap = new egret.SpriteSheet(texture);
                             image.trans = es.TmxUtils.color16ToUnit(xImage["trans"]);
-                            image.width = xImage["imagewidth"] != undefined ? xImage["imagewidth"] : 0;
-                            image.height = xImage["imageheight"] != undefined ? xImage["imageheight"] : 0;
+                            image.width = xImage["imagewidth"] != undefined ? xImage["imagewidth"] : texture.textureWidth;
+                            image.height = xImage["imageheight"] != undefined ? xImage["imageheight"] : texture.textureHeight;
                             return [2, image];
                     }
                 });
@@ -8557,54 +8564,7 @@ var es;
                         }
                         break;
                     case es.TmxObjectType.tile:
-                        var tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
-                        var sourceRect = tileset.tileRegions.get(obj.tile.gid);
-                        if (obj.tile.horizontalFlip && obj.tile.verticalFlip) {
-                            pos.x += tileset.tileHeight + (sourceRect.height * scale.y - tileset.tileHeight);
-                            pos.y -= (sourceRect.width * scale.x - tileset.tileWidth);
-                        }
-                        else if (obj.tile.horizontalFlip) {
-                            pos.x += tileset.tileWidth + (sourceRect.height * scale.y - tileset.tileHeight);
-                        }
-                        else if (obj.tile.verticalFlip) {
-                            pos.y += (tileset.tileWidth - sourceRect.width * scale.x);
-                        }
-                        else {
-                            pos.y += (tileset.tileHeight - sourceRect.height * scale.y);
-                        }
-                        if (container) {
-                            var texture = tileset.image.bitmap.getTexture("" + obj.tile.gid);
-                            if (!texture) {
-                                texture = tileset.image.bitmap.createTexture("" + obj.tile.gid, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
-                            }
-                            tileset.image.texture = new Bitmap(texture);
-                            container.addChild(tileset.image.texture);
-                            if (tileset.image.texture.x != pos.x)
-                                tileset.image.texture.x = pos.x;
-                            if (tileset.image.texture.y != pos.y)
-                                tileset.image.texture.y = pos.y;
-                            if (obj.tile.verticalFlip && obj.tile.horizontalFlip) {
-                                tileset.image.texture.scaleX = -1;
-                                tileset.image.texture.scaleY = -1;
-                            }
-                            else if (obj.tile.verticalFlip) {
-                                tileset.image.texture.scaleX = scale.x;
-                                tileset.image.texture.scaleY = -1;
-                            }
-                            else if (obj.tile.horizontalFlip) {
-                                tileset.image.texture.scaleX = -1;
-                                tileset.image.texture.scaleY = scale.y;
-                            }
-                            else {
-                                tileset.image.texture.scaleX = scale.x;
-                                tileset.image.texture.scaleY = scale.y;
-                            }
-                            if (tileset.image.texture.anchorOffsetX != 0)
-                                tileset.image.texture.anchorOffsetX = 0;
-                            if (tileset.image.texture.anchorOffsetY != 0)
-                                tileset.image.texture.anchorOffsetY = 0;
-                            debugRender(obj, pos);
-                        }
+                        this.renderTilesetTile(objGroup, obj, container, pos, scale, debugRender);
                         break;
                     case es.TmxObjectType.ellipse:
                         pos = new es.Vector2(obj.x + obj.width * 0.5, obj.y + obj.height * 0.5).multiply(scale);
@@ -8653,6 +8613,86 @@ var es;
                         break;
                     default:
                         break;
+                }
+            }
+        };
+        TiledRendering.renderTilesetTile = function (objGroup, obj, container, pos, scale, debugRender) {
+            var tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
+            var sourceRect = tileset.tileRegions.get(obj.tile.gid);
+            if (container) {
+                if (tileset.image) {
+                    if (obj.tile.horizontalFlip && obj.tile.verticalFlip) {
+                        pos.x += tileset.tileHeight + (sourceRect.height * scale.y - tileset.tileHeight);
+                        pos.y -= (sourceRect.width * scale.x - tileset.tileWidth);
+                    }
+                    else if (obj.tile.horizontalFlip) {
+                        pos.x += tileset.tileWidth + (sourceRect.height * scale.y - tileset.tileHeight);
+                    }
+                    else if (obj.tile.verticalFlip) {
+                        pos.y += (tileset.tileWidth - sourceRect.width * scale.x);
+                    }
+                    else {
+                        pos.y += (tileset.tileHeight - sourceRect.height * scale.y);
+                    }
+                    var texture = tileset.image.bitmap.getTexture("" + obj.tile.gid);
+                    if (!texture) {
+                        texture = tileset.image.bitmap.createTexture("" + obj.tile.gid, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
+                    }
+                    tileset.image.texture = new Bitmap(texture);
+                    container.addChild(tileset.image.texture);
+                    tileset.image.texture.x = pos.x;
+                    tileset.image.texture.y = pos.y;
+                    if (obj.tile.verticalFlip && obj.tile.horizontalFlip) {
+                        tileset.image.texture.scaleX = -1;
+                        tileset.image.texture.scaleY = -1;
+                    }
+                    else if (obj.tile.verticalFlip) {
+                        tileset.image.texture.scaleX = scale.x;
+                        tileset.image.texture.scaleY = -1;
+                    }
+                    else if (obj.tile.horizontalFlip) {
+                        tileset.image.texture.scaleX = -1;
+                        tileset.image.texture.scaleY = scale.y;
+                    }
+                    else {
+                        tileset.image.texture.scaleX = scale.x;
+                        tileset.image.texture.scaleY = scale.y;
+                    }
+                    tileset.image.texture.anchorOffsetX = 0;
+                    tileset.image.texture.anchorOffsetY = 0;
+                    debugRender(obj, pos);
+                }
+                else {
+                    var tilesetTile = tileset.tiles.get(obj.tile.gid);
+                    var texture = tilesetTile.image.bitmap.getTexture("" + obj.tile.gid);
+                    if (!texture) {
+                        texture = tilesetTile.image.bitmap.createTexture("" + obj.tile.gid, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
+                    }
+                    pos.y -= obj.height;
+                    tilesetTile.image.texture = new Bitmap(texture);
+                    container.addChild(tilesetTile.image.texture);
+                    tilesetTile.image.texture.width = obj.width;
+                    tilesetTile.image.texture.height = obj.height;
+                    tilesetTile.image.texture.x = pos.x;
+                    tilesetTile.image.texture.y = pos.y;
+                    if (obj.tile.verticalFlip && obj.tile.horizontalFlip) {
+                        tilesetTile.image.texture.scaleX = -1;
+                        tilesetTile.image.texture.scaleY = -1;
+                    }
+                    else if (obj.tile.verticalFlip) {
+                        tilesetTile.image.texture.scaleX = scale.x;
+                        tilesetTile.image.texture.scaleY = -1;
+                    }
+                    else if (obj.tile.horizontalFlip) {
+                        tilesetTile.image.texture.scaleX = -1;
+                        tilesetTile.image.texture.scaleY = scale.y;
+                    }
+                    else {
+                        tilesetTile.image.texture.scaleX = scale.x;
+                        tilesetTile.image.texture.scaleY = scale.y;
+                    }
+                    tilesetTile.image.texture.anchorOffsetX = 0;
+                    tilesetTile.image.texture.anchorOffsetY = 0;
                 }
             }
         };

@@ -171,51 +171,7 @@ module es {
                         }
                         break;
                     case TmxObjectType.tile:
-                        let tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
-                        let sourceRect = tileset.tileRegions.get(obj.tile.gid);
-
-                        if (obj.tile.horizontalFlip && obj.tile.verticalFlip) {
-                            pos.x += tileset.tileHeight + (sourceRect.height * scale.y - tileset.tileHeight);
-                            pos.y -= (sourceRect.width * scale.x - tileset.tileWidth);
-                        }
-                        else if (obj.tile.horizontalFlip) {
-                            pos.x += tileset.tileWidth + (sourceRect.height * scale.y - tileset.tileHeight);
-                        }
-                        else if (obj.tile.verticalFlip) {
-                            pos.y += (tileset.tileWidth - sourceRect.width * scale.x);
-                        }
-                        else {
-                            pos.y += (tileset.tileHeight - sourceRect.height * scale.y);
-                        }
-
-                        if (container){
-                            let texture: egret.Texture = tileset.image.bitmap.getTexture(`${obj.tile.gid}`);
-                            if (!texture) {
-                                texture = tileset.image.bitmap.createTexture(`${obj.tile.gid}`, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
-                            }
-
-                            tileset.image.texture = new Bitmap(texture);
-                            container.addChild(tileset.image.texture);
-
-                            if (tileset.image.texture.x != pos.x) tileset.image.texture.x = pos.x;
-                            if (tileset.image.texture.y != pos.y) tileset.image.texture.y = pos.y;
-                            if (obj.tile.verticalFlip && obj.tile.horizontalFlip){
-                                tileset.image.texture.scaleX = -1;
-                                tileset.image.texture.scaleY = -1;
-                            }else if (obj.tile.verticalFlip){
-                                tileset.image.texture.scaleX = scale.x;
-                                tileset.image.texture.scaleY = -1;
-                            }else if(obj.tile.horizontalFlip){
-                                tileset.image.texture.scaleX = -1;
-                                tileset.image.texture.scaleY = scale.y;
-                            }else{
-                                tileset.image.texture.scaleX = scale.x;
-                                tileset.image.texture.scaleY = scale.y;
-                            }
-                            if (tileset.image.texture.anchorOffsetX != 0) tileset.image.texture.anchorOffsetX = 0;
-                            if (tileset.image.texture.anchorOffsetY != 0) tileset.image.texture.anchorOffsetY = 0;
-                            debugRender(obj, pos);
-                        }
+                        this.renderTilesetTile(objGroup, obj, container, pos, scale, debugRender);
                         break;
                     case TmxObjectType.ellipse:
                         pos = new Vector2(obj.x + obj.width * 0.5, obj.y + obj.height * 0.5).multiply(scale);
@@ -268,6 +224,82 @@ module es {
                         break;
                     default:
                         break;
+                }
+            }
+        }
+
+        private static renderTilesetTile(objGroup: es.TmxObjectGroup, obj, container: egret.DisplayObjectContainer, pos, scale: es.Vector2, debugRender) {
+            let tileset = objGroup.map.getTilesetForTileGid(obj.tile.gid);
+            let sourceRect = tileset.tileRegions.get(obj.tile.gid);
+
+            if (container) {
+                if (tileset.image) {
+                    if (obj.tile.horizontalFlip && obj.tile.verticalFlip) {
+                        pos.x += tileset.tileHeight + (sourceRect.height * scale.y - tileset.tileHeight);
+                        pos.y -= (sourceRect.width * scale.x - tileset.tileWidth);
+                    } else if (obj.tile.horizontalFlip) {
+                        pos.x += tileset.tileWidth + (sourceRect.height * scale.y - tileset.tileHeight);
+                    } else if (obj.tile.verticalFlip) {
+                        pos.y += (tileset.tileWidth - sourceRect.width * scale.x);
+                    } else {
+                        pos.y += (tileset.tileHeight - sourceRect.height * scale.y);
+                    }
+                    let texture: egret.Texture = tileset.image.bitmap.getTexture(`${obj.tile.gid}`);
+                    if (!texture) {
+                        texture = tileset.image.bitmap.createTexture(`${obj.tile.gid}`, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
+                    }
+
+                    tileset.image.texture = new Bitmap(texture);
+                    container.addChild(tileset.image.texture);
+
+                    tileset.image.texture.x = pos.x;
+                    tileset.image.texture.y = pos.y;
+                    if (obj.tile.verticalFlip && obj.tile.horizontalFlip) {
+                        tileset.image.texture.scaleX = -1;
+                        tileset.image.texture.scaleY = -1;
+                    } else if (obj.tile.verticalFlip) {
+                        tileset.image.texture.scaleX = scale.x;
+                        tileset.image.texture.scaleY = -1;
+                    } else if (obj.tile.horizontalFlip) {
+                        tileset.image.texture.scaleX = -1;
+                        tileset.image.texture.scaleY = scale.y;
+                    } else {
+                        tileset.image.texture.scaleX = scale.x;
+                        tileset.image.texture.scaleY = scale.y;
+                    }
+                    tileset.image.texture.anchorOffsetX = 0;
+                    tileset.image.texture.anchorOffsetY = 0;
+                    debugRender(obj, pos);
+                } else {
+                    let tilesetTile = tileset.tiles.get(obj.tile.gid);
+                    let texture: egret.Texture = tilesetTile.image.bitmap.getTexture(`${obj.tile.gid}`);
+                    if (!texture) {
+                        texture = tilesetTile.image.bitmap.createTexture(`${obj.tile.gid}`, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
+                    }
+
+                    pos.y -= obj.height;
+                    tilesetTile.image.texture = new Bitmap(texture);
+                    container.addChild(tilesetTile.image.texture);
+
+                    tilesetTile.image.texture.width = obj.width;
+                    tilesetTile.image.texture.height = obj.height;
+                    tilesetTile.image.texture.x = pos.x;
+                    tilesetTile.image.texture.y = pos.y;
+                    if (obj.tile.verticalFlip && obj.tile.horizontalFlip) {
+                        tilesetTile.image.texture.scaleX = -1;
+                        tilesetTile.image.texture.scaleY = -1;
+                    } else if (obj.tile.verticalFlip) {
+                        tilesetTile.image.texture.scaleX = scale.x;
+                        tilesetTile.image.texture.scaleY = -1;
+                    } else if (obj.tile.horizontalFlip) {
+                        tilesetTile.image.texture.scaleX = -1;
+                        tilesetTile.image.texture.scaleY = scale.y;
+                    } else {
+                        tilesetTile.image.texture.scaleX = scale.x;
+                        tilesetTile.image.texture.scaleY = scale.y;
+                    }
+                    tilesetTile.image.texture.anchorOffsetX = 0;
+                    tilesetTile.image.texture.anchorOffsetY = 0;
                 }
             }
         }
