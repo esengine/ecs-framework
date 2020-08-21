@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<packageDescription id="mk2d64e7">
+  <resources>
+    <component id="r5ro0" name="View_loading.xml" path="/" exported="true"/>
+    <component id="k7mf2" name="pg_loading.xml" path="/组件/"/>
+  </resources>
+  <publish name="" genCode="true"/>
+</packageDescription>

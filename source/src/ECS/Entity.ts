@@ -317,6 +317,13 @@ module es {
         }
 
         /**
+         * 在默认渲染器中，如果Core.debugRenderEnabled为true，则调用。自定义渲染器可以选择是否调用它。
+         */
+        public debugRender(){
+            this.components.debugRender();
+        }
+
+        /**
          * 将组件添加到组件列表中。返回组件。
          * @param component
          */

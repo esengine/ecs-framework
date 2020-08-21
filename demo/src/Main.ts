@@ -27,36 +27,42 @@
 //
 //////////////////////////////////////////////////////////////////////////////////////
 
+import LoadingView = loading.LoadingView;
+
 class Main extends es.Core {
     protected initialize() {
-        this.runGame();
+        try {
+            this.runGame();
+        } catch(err) {
+            console.error(err);
+        }
     }
 
     private runGame() {
+        egret.ImageLoader.crossOrigin = "anonymous";
+        this.initUIConfig();
         this.loadResource();
+        this.initGameControl();
     }
 
+    private initUIConfig(){
+        LayerManager.getInstance().init(this.stage);
+        FguiUtils.packageNamespace = FUI;
+        fairygui.UIConfig.defaultFont = "黑体";
+        fairygui.UIConfig.bringWindowToFrontOnClick = false;
+        this.stage.addChild(fgui.GRoot.inst.displayListContainer);
+    }
 
     private loadResource() {
-        const loadingView = new LoadingUI();
-        this.stage.addChild(loadingView);
         RES.loadConfig("resource/default.res.json", "resource/").then(()=>{
-            RES.loadGroup("preload", 0, loadingView).then(()=>{
-                this.stage.removeChild(loadingView);
-                this.createGameScene();
-            }).catch(err => {
-                console.error(err);
-            });
+            EventManager.getInstance().dispatch(loading.LoadingEvents.OPENVIEW);
         }).catch(err =>{
             console.error(err);
         });
     }
 
-    /**
-     * 创建场景界面
-     * Create scene interface
-     */
-    protected createGameScene(): void {
-        es.Core.scene = new scene.MainScene();
+    private initGameControl(){
+        loading.LoadingControl.getInstance();
+        sc.ScControl.getInstance();
     }
 }

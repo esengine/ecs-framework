@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<packageDescription id="m4sln17a">
+  <resources>
+    <component id="k7mf0" name="View_sc.xml" path="/" exported="true"/>
+    <component id="k7mf2" name="btn_sc.xml" path="/组件/" exported="true"/>
+  </resources>
+  <publish name="" genCode="true"/>
+</packageDescription>

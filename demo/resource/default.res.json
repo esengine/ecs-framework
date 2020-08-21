@@ -1,165 +1,72 @@
 {
 	"groups": [
 		{
-			"keys": "checkbox_select_disabled_png,checkbox_select_down_png,checkbox_select_up_png,checkbox_unselect_png,selected_png,border_png,header_png,radiobutton_select_disabled_png,radiobutton_select_down_png,radiobutton_select_up_png,radiobutton_unselect_png,roundthumb_png,thumb_png,track_png,tracklight_png,handle_png,off_png,on_png,button_down_png,button_up_png,thumb_pb_png,track_pb_png,track_sb_png,bg_jpg,egret_icon_png,description_json,isometric_grass_and_water_json,orthogonal-outside_json,title_json",
+			"keys": "bg_png,bgNorm_png,moon_png,orange_png,moonNorm_png,orangeNorm_png,orthogonal-outside_json",
 			"name": "preload"
+		},
+		{
+			"keys": "loading",
+			"name": "loading"
+		},
+		{
+			"keys": "sc",
+			"name": "sc"
+		},
+		{
+			"keys": "common",
+			"name": "common"
 		}
 	],
 	"resources": [
 		{
-			"url": "assets/CheckBox/checkbox_select_disabled.png",
+			"url": "fgui/loading.fui",
+			"type": "bin",
+			"name": "loading"
+		},
+		{
+			"url": "preload/bg.png",
 			"type": "image",
-			"name": "checkbox_select_disabled_png"
+			"name": "bg_png"
 		},
 		{
-			"url": "assets/CheckBox/checkbox_select_down.png",
+			"url": "preload/bgNorm.png",
 			"type": "image",
-			"name": "checkbox_select_down_png"
+			"name": "bgNorm_png"
 		},
 		{
-			"url": "assets/CheckBox/checkbox_select_up.png",
+			"url": "preload/moon.png",
 			"type": "image",
-			"name": "checkbox_select_up_png"
+			"name": "moon_png"
 		},
 		{
-			"url": "assets/CheckBox/checkbox_unselect.png",
+			"url": "preload/orange.png",
 			"type": "image",
-			"name": "checkbox_unselect_png"
+			"name": "orange_png"
 		},
 		{
-			"url": "assets/ItemRenderer/selected.png",
+			"url": "preload/moonNorm.png",
 			"type": "image",
-			"name": "selected_png"
+			"name": "moonNorm_png"
 		},
 		{
-			"url": "assets/Panel/border.png",
+			"url": "preload/orangeNorm.png",
 			"type": "image",
-			"name": "border_png"
+			"name": "orangeNorm_png"
 		},
 		{
-			"url": "assets/Panel/header.png",
-			"type": "image",
-			"name": "header_png"
+			"url": "fgui/sc.fui",
+			"type": "bin",
+			"name": "sc"
 		},
 		{
-			"url": "assets/RadioButton/radiobutton_select_disabled.png",
-			"type": "image",
-			"name": "radiobutton_select_disabled_png"
+			"url": "fgui/common.fui",
+			"type": "bin",
+			"name": "common"
 		},
 		{
-			"url": "assets/RadioButton/radiobutton_select_down.png",
-			"type": "image",
-			"name": "radiobutton_select_down_png"
-		},
-		{
-			"url": "assets/RadioButton/radiobutton_select_up.png",
-			"type": "image",
-			"name": "radiobutton_select_up_png"
-		},
-		{
-			"url": "assets/RadioButton/radiobutton_unselect.png",
-			"type": "image",
-			"name": "radiobutton_unselect_png"
-		},
-		{
-			"url": "assets/ScrollBar/roundthumb.png",
-			"type": "image",
-			"name": "roundthumb_png"
-		},
-		{
-			"url": "assets/Slider/thumb.png",
-			"type": "image",
-			"name": "thumb_png"
-		},
-		{
-			"url": "assets/Slider/track.png",
-			"type": "image",
-			"name": "track_png"
-		},
-		{
-			"url": "assets/Slider/tracklight.png",
-			"type": "image",
-			"name": "tracklight_png"
-		},
-		{
-			"url": "assets/ToggleSwitch/handle.png",
-			"type": "image",
-			"name": "handle_png"
-		},
-		{
-			"url": "assets/ToggleSwitch/off.png",
-			"type": "image",
-			"name": "off_png"
-		},
-		{
-			"url": "assets/ToggleSwitch/on.png",
-			"type": "image",
-			"name": "on_png"
-		},
-		{
-			"url": "assets/Button/button_down.png",
-			"type": "image",
-			"name": "button_down_png"
-		},
-		{
-			"url": "assets/Button/button_up.png",
-			"type": "image",
-			"name": "button_up_png"
-		},
-		{
-			"url": "assets/ProgressBar/thumb_pb.png",
-			"type": "image",
-			"name": "thumb_pb_png"
-		},
-		{
-			"url": "assets/ProgressBar/track_pb.png",
-			"type": "image",
-			"name": "track_pb_png"
-		},
-		{
-			"url": "assets/ScrollBar/track_sb.png",
-			"type": "image",
-			"name": "track_sb_png"
-		},
-		{
-			"url": "assets/bg.jpg",
-			"type": "image",
-			"name": "bg_jpg"
-		},
-		{
-			"url": "assets/egret_icon.png",
-			"type": "image",
-			"name": "egret_icon_png"
-		},
-		{
-			"url": "config/description.json",
-			"type": "json",
-			"name": "description_json"
-		},
-		{
-			"url": "assets/isometric_grass_and_water.json",
-			"type": "json",
-			"name": "isometric_grass_and_water_json"
-		},
-		{
-			"url": "assets/isometric_grass_and_water.png",
-			"type": "image",
-			"name": "isometric_grass_and_water_png"
-		},
-		{
-			"url": "assets/000010000.img.json",
-			"type": "json",
-			"name": "000010000.img_json"
-		},
-		{
-			"url": "assets/orthogonal-outside.json",
+			"url": "preload/orthogonal-outside.json",
 			"type": "json",
 			"name": "orthogonal-outside_json"
-		},
-		{
-			"url": "assets/title.json",
-			"type": "json",
-			"name": "title_json"
 		}
 	]
 }

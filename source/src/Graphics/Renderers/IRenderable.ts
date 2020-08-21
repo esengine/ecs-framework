@@ -34,6 +34,11 @@ module es {
          * @param camera
          */
         render(camera: Camera);
+
+        /**
+         * 只有在没有碰撞器时才呈现边界。总是在原点上渲染一个正方形。
+         */
+        debugRender();
     }
 
     /**

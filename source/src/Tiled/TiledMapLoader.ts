@@ -1,5 +1,5 @@
 module es {
-    import Bitmap = egret.Bitmap;
+
 
     export class TiledMapLoader {
         public static loadTmxMap(map: TmxMap, filePath: string) {
@@ -266,18 +266,16 @@ module es {
             // firstgid总是在TMX中，而不是在TSX中
             let xFirstGid = xTileset["firstgid"];
             let firstGid = xFirstGid;
-            let source = xTileset["image"];
+            let source = xTileset["source"];
 
             // 如果是嵌入式TmxTileset，即不是外部的，source将为null
             if (source != undefined) {
                 source = map.tmxDirectory + source;
                 // 其他所有内容都在TSX文件中
-                let xDocTileset = await RES.getResByUrl(source, null, this, RES.ResourceItem.TYPE_IMAGE).catch(err => {
+                let xDocTileset = await RES.getResByUrl(source).catch(err => {
                     throw new Error(err);
                 });
-                let tileset = this.loadTmxTileset(new TmxTileset(), map, xDocTileset["tileset"], firstGid);
-
-                return tileset;
+                return this.loadTmxTileset(new TmxTileset(), map, xDocTileset["tileset"], firstGid);
             }
 
             return this.loadTmxTileset(new TmxTileset(), map, xTileset, firstGid);
@@ -299,7 +297,9 @@ module es {
 
             let xImage = xTileset["image"];
             if (xImage)
-                tileset.image = await this.loadTmxImage(new TmxImage(), xTileset, map.tmxDirectory).catch(err => {
+                await this.loadTmxImage(new TmxImage(), xTileset, map.tmxDirectory).then(image => {
+                    tileset.image = image;
+                }).catch(err => {
                     throw new Error(err);
                 });
 

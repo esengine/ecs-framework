@@ -328,6 +328,7 @@ declare module es {
         onAddedToScene(): void;
         onRemovedFromScene(): void;
         update(): void;
+        debugRender(): void;
         addComponent<T extends Component>(component: T): T;
         getComponent<T extends Component>(type: any): T;
         hasComponent<T extends Component>(type: any): boolean;
@@ -923,6 +924,7 @@ declare module es {
         onEntityTransformChanged(comp: transform.Component): void;
         onEntityEnabled(): void;
         onEntityDisabled(): void;
+        debugRender(): void;
     }
 }
 declare module es {
@@ -1008,6 +1010,7 @@ declare module es {
         isVisible: boolean;
         isVisibleFromCamera(camera: Camera): any;
         render(camera: Camera): any;
+        debugRender(): any;
     }
     class RenderableComparer {
         compare(self: IRenderable, other: IRenderable): number;
@@ -1152,6 +1155,9 @@ declare module es {
     abstract class Renderer {
         camera: Camera;
         readonly renderOrder: number;
+        renderTexture: egret.RenderTexture;
+        shouldDebugRender: boolean;
+        readonly wantsToRenderToSceneRenderTarget: boolean;
         protected constructor(renderOrder: number, camera?: Camera);
         onAddedToScene(scene: Scene): void;
         unload(): void;
@@ -1160,6 +1166,7 @@ declare module es {
         compareTo(other: Renderer): number;
         protected beginRender(cam: Camera): void;
         protected renderAfterStateCheck(renderable: IRenderable, cam: Camera): void;
+        protected debugRender(scene: Scene, cam: Camera): void;
     }
 }
 declare module es {
@@ -1169,8 +1176,20 @@ declare module es {
     }
 }
 declare module es {
+    class RenderLayerExcludeRenderer extends Renderer {
+        excludedRenderLayers: number[];
+        constructor(renderOrder: number, ...excludedRenderLayers: number[]);
+        render(scene: es.Scene): void;
+        protected debugRender(scene: es.Scene, cam: es.Camera): void;
+    }
+}
+declare module es {
     class ScreenSpaceRenderer extends Renderer {
+        renderLayers: number[];
+        constructor(renderOrder: number, ...renderLayers: number[]);
         render(scene: Scene): void;
+        protected debugRender(scene: es.Scene, cam: es.Camera): void;
+        onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
     }
 }
 declare module es {

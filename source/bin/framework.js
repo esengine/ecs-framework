@@ -1536,6 +1536,9 @@ var es;
         Entity.prototype.update = function () {
             this.components.update();
         };
+        Entity.prototype.debugRender = function () {
+            this.components.debugRender();
+        };
         Entity.prototype.addComponent = function (component) {
             component.entity = this;
             this.components.add(component);
@@ -2712,6 +2715,8 @@ var es;
             this._areBoundsDirty = true;
         };
         RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
+            if (!camera)
+                return false;
             this.isVisible = camera.bounds.intersects(this.displayObject.getBounds().union(this.bounds));
             return this.isVisible;
         };
@@ -4230,6 +4235,12 @@ var es;
             for (var i = 0; i < this._components.length; i++)
                 this._components[i].onDisabled();
         };
+        ComponentList.prototype.debugRender = function () {
+            for (var i = 0; i < this._components.length; i++) {
+                if (this._components[i].enabled)
+                    this._components[i].debugRender();
+            }
+        };
         ComponentList.compareUpdatableOrder = new es.IUpdatableComparer();
         return ComponentList;
     }());
@@ -5444,9 +5455,17 @@ var es;
         function Renderer(renderOrder, camera) {
             if (camera === void 0) { camera = null; }
             this.renderOrder = 0;
+            this.shouldDebugRender = true;
             this.camera = camera;
             this.renderOrder = renderOrder;
         }
+        Object.defineProperty(Renderer.prototype, "wantsToRenderToSceneRenderTarget", {
+            get: function () {
+                return !!this.renderTexture;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Renderer.prototype.onAddedToScene = function (scene) {
         };
         Renderer.prototype.unload = function () {
@@ -5460,6 +5479,13 @@ var es;
         };
         Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
             renderable.render(cam);
+        };
+        Renderer.prototype.debugRender = function (scene, cam) {
+            for (var i = 0; i < scene.entities.count; i++) {
+                var entity = scene.entities.buffer[i];
+                if (entity.enabled)
+                    entity.debugRender();
+            }
         };
         return Renderer;
     }());
@@ -5487,12 +5513,84 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var RenderLayerExcludeRenderer = (function (_super) {
+        __extends(RenderLayerExcludeRenderer, _super);
+        function RenderLayerExcludeRenderer(renderOrder) {
+            var excludedRenderLayers = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                excludedRenderLayers[_i - 1] = arguments[_i];
+            }
+            var _this = _super.call(this, renderOrder, null) || this;
+            _this.excludedRenderLayers = excludedRenderLayers;
+            return _this;
+        }
+        RenderLayerExcludeRenderer.prototype.render = function (scene) {
+            var cam = this.camera ? this.camera : scene.camera;
+            this.beginRender(cam);
+            for (var i = 0; i < scene.renderableComponents.count; i++) {
+                var renderable = scene.renderableComponents.buffer[i];
+                if (!this.excludedRenderLayers.contains(renderable.renderLayer) && renderable.enabled &&
+                    renderable.isVisibleFromCamera(cam))
+                    this.renderAfterStateCheck(renderable, cam);
+            }
+            if (this.shouldDebugRender && es.Core.debugRenderEndabled)
+                this.debugRender(scene, cam);
+        };
+        RenderLayerExcludeRenderer.prototype.debugRender = function (scene, cam) {
+            for (var i = 0; i < scene.renderableComponents.count; i++) {
+                var renderable = scene.renderableComponents.buffer[i];
+                if (!this.excludedRenderLayers.contains(renderable.renderLayer) && renderable.enabled &&
+                    renderable.isVisibleFromCamera(cam))
+                    renderable.debugRender();
+            }
+            _super.prototype.debugRender.call(this, scene, cam);
+        };
+        return RenderLayerExcludeRenderer;
+    }(es.Renderer));
+    es.RenderLayerExcludeRenderer = RenderLayerExcludeRenderer;
+})(es || (es = {}));
+var es;
+(function (es) {
     var ScreenSpaceRenderer = (function (_super) {
         __extends(ScreenSpaceRenderer, _super);
-        function ScreenSpaceRenderer() {
-            return _super !== null && _super.apply(this, arguments) || this;
+        function ScreenSpaceRenderer(renderOrder) {
+            var renderLayers = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                renderLayers[_i - 1] = arguments[_i];
+            }
+            var _this = _super.call(this, renderOrder, null) || this;
+            renderLayers.sort();
+            renderLayers.reverse();
+            _this.renderLayers = renderLayers;
+            return _this;
         }
         ScreenSpaceRenderer.prototype.render = function (scene) {
+            this.beginRender(this.camera);
+            for (var i = 0; i < this.renderLayers.length; i++) {
+                var renderables = scene.renderableComponents.componentsWithRenderLayer(this.renderLayers[i]);
+                for (var j = 0; j < renderables.length; j++) {
+                    var renderable = renderables[j];
+                    if (renderable.enabled && renderable.isVisibleFromCamera(this.camera))
+                        this.renderAfterStateCheck(renderable, this.camera);
+                }
+            }
+            if (this.shouldDebugRender && es.Core.debugRenderEndabled)
+                this.debugRender(scene, this.camera);
+        };
+        ScreenSpaceRenderer.prototype.debugRender = function (scene, cam) {
+            for (var i = 0; i < this.renderLayers.length; i++) {
+                var renderables = scene.renderableComponents.componentsWithRenderLayer(this.renderLayers[i]);
+                for (var j = 0; j < renderables.length; j++) {
+                    var entity = renderables[j];
+                    if (entity.enabled)
+                        entity.debugRender();
+                }
+            }
+        };
+        ScreenSpaceRenderer.prototype.onSceneBackBufferSizeChanged = function (newWidth, newHeight) {
+            _super.prototype.onSceneBackBufferSizeChanged.call(this, newWidth, newHeight);
+            if (!this.camera)
+                this.camera = es.Core.scene.createEntity("screenspace camera").addComponent(new es.Camera());
         };
         return ScreenSpaceRenderer;
     }(es.Renderer));
@@ -8102,22 +8200,21 @@ var es;
         };
         TiledMapLoader.parseTmxTileset = function (map, xTileset) {
             return __awaiter(this, void 0, void 0, function () {
-                var xFirstGid, firstGid, source, xDocTileset, tileset;
+                var xFirstGid, firstGid, source, xDocTileset;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
                             xFirstGid = xTileset["firstgid"];
                             firstGid = xFirstGid;
-                            source = xTileset["image"];
+                            source = xTileset["source"];
                             if (!(source != undefined)) return [3, 2];
                             source = map.tmxDirectory + source;
-                            return [4, RES.getResByUrl(source, null, this, RES.ResourceItem.TYPE_IMAGE).catch(function (err) {
+                            return [4, RES.getResByUrl(source).catch(function (err) {
                                     throw new Error(err);
                                 })];
                         case 1:
                             xDocTileset = _a.sent();
-                            tileset = this.loadTmxTileset(new es.TmxTileset(), map, xDocTileset["tileset"], firstGid);
-                            return [2, tileset];
+                            return [2, this.loadTmxTileset(new es.TmxTileset(), map, xDocTileset["tileset"], firstGid)];
                         case 2: return [2, this.loadTmxTileset(new es.TmxTileset(), map, xTileset, firstGid)];
                     }
                 });
@@ -8125,9 +8222,9 @@ var es;
         };
         TiledMapLoader.loadTmxTileset = function (tileset, map, xTileset, firstGid) {
             return __awaiter(this, void 0, void 0, function () {
-                var xImage, _a, _i, _b, e, _c, _d, _e, t, xTile, tile, id, y, column, x;
-                return __generator(this, function (_f) {
-                    switch (_f.label) {
+                var xImage, _i, _a, e, _b, _c, _d, t, xTile, tile, id, y, column, x;
+                return __generator(this, function (_e) {
+                    switch (_e.label) {
                         case 0:
                             tileset.map = map;
                             tileset.firstGid = firstGid;
@@ -8141,38 +8238,39 @@ var es;
                             tileset.tileOffset = this.parseTmxTileOffset(xTileset["tileoffset"]);
                             xImage = xTileset["image"];
                             if (!xImage) return [3, 2];
-                            _a = tileset;
-                            return [4, this.loadTmxImage(new es.TmxImage(), xTileset, map.tmxDirectory).catch(function (err) {
+                            return [4, this.loadTmxImage(new es.TmxImage(), xTileset, map.tmxDirectory).then(function (image) {
+                                    tileset.image = image;
+                                }).catch(function (err) {
                                     throw new Error(err);
                                 })];
                         case 1:
-                            _a.image = _f.sent();
-                            _f.label = 2;
+                            _e.sent();
+                            _e.label = 2;
                         case 2:
                             tileset.terrains = [];
                             if (xTileset["terrains"])
-                                for (_i = 0, _b = xTileset["terrains"]; _i < _b.length; _i++) {
-                                    e = _b[_i];
+                                for (_i = 0, _a = xTileset["terrains"]; _i < _a.length; _i++) {
+                                    e = _a[_i];
                                     tileset.terrains.push(this.parseTmxTerrain(e));
                                 }
                             tileset.tiles = new Map();
-                            _c = [];
-                            for (_d in xTileset["tiles"])
-                                _c.push(_d);
-                            _e = 0;
-                            _f.label = 3;
+                            _b = [];
+                            for (_c in xTileset["tiles"])
+                                _b.push(_c);
+                            _d = 0;
+                            _e.label = 3;
                         case 3:
-                            if (!(_e < _c.length)) return [3, 6];
-                            t = _c[_e];
+                            if (!(_d < _b.length)) return [3, 6];
+                            t = _b[_d];
                             if (!xTileset["tiles"].hasOwnProperty(t)) return [3, 5];
                             xTile = xTileset["tiles"][t];
                             return [4, this.loadTmxTilesetTile(new es.TmxTilesetTile(), tileset, xTile, tileset.terrains, map.tmxDirectory)];
                         case 4:
-                            tile = _f.sent();
+                            tile = _e.sent();
                             tileset.tiles.set(tile.id == undefined ? Number(t) + 1 : tile.id, tile);
-                            _f.label = 5;
+                            _e.label = 5;
                         case 5:
-                            _e++;
+                            _d++;
                             return [3, 3];
                         case 6:
                             tileset.properties = this.parsePropertyDict(xTileset["properties"]);

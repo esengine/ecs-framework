@@ -267,5 +267,12 @@ module es {
             for (let i = 0; i < this._components.length; i++)
                 this._components[i].onDisabled();
         }
+
+        public debugRender(){
+            for (let i = 0; i < this._components.length; i ++){
+                if (this._components[i].enabled)
+                    this._components[i].debugRender();
+            }
+        }
     }
 }
