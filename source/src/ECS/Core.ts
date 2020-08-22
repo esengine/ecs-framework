@@ -228,6 +228,7 @@ module es {
             this.addEventListener(egret.Event.ENTER_FRAME, this.update, this);
 
             Input.initialize();
+            KeyboardUtils.init();
             this.initialize();
         }
     }

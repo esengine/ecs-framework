@@ -145,6 +145,73 @@ module es {
         }
 
         /**
+         * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组。
+         * @param start
+         * @param end
+         * @param hits
+         * @param layerMask
+         */
+        public linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number){
+            let ray = new Ray2D(start, end);
+            this._raycastParser.start(ray, hits, layerMask);
+
+            // 在与网格相同的空间中获取起始/结束位置
+            let currentCell = this.cellCoords(start.x, start.y);
+            let lastCell = this.cellCoords(end.x, end.y);
+
+            let stepX = Math.sign(ray.direction.x);
+            let stepY = Math.sign(ray.direction.y);
+
+            // 我们要确保，如果我们在同一行或同一行，我们不会步进不必要的方向
+            if (currentCell.x == lastCell.x) stepX = 0;
+            if (currentCell.y == lastCell.y) stepY = 0;
+
+            // 计算单元边界。当这一步是正的，下一个单元格在这一步之后意味着我们加1。
+            // 如果为负，则单元格在此之前，这种情况下不添加边界
+            let xStep = stepX < 0 ? 0 : stepX;
+            let yStep = stepY < 0 ? 0 : stepY;
+            let nextBoundaryX = (currentCell.x + xStep) * this._cellSize;
+            let nextBoundaryY = (currentCell.y + yStep) * this._cellSize;
+
+            // 确定射线穿过第一个垂直体素边界时的t值。y/horizontal。
+            // 这两个值的最小值将表明我们可以沿着射线走多少，而仍然保持在当前体素中，对于接近vertical/horizontal的射线来说可能是无限的
+            let tMaxX = ray.direction.x != 0 ? (nextBoundaryX - ray.start.x) / ray.direction.x : Number.MAX_VALUE;
+            let tMaxY = ray.direction.y != 0 ? (nextBoundaryY - ray.start.y) / ray.direction.y : Number.MAX_VALUE;
+
+            let tDeltaX = ray.direction.x != 0 ? this._cellSize / (ray.direction.x * stepX) : Number.MAX_VALUE;
+            let tDeltaY = ray.direction.y != 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
+
+            // 开始遍历并返回交叉单元格。
+            let cell = this.cellAtPosition(currentCell.x, currentCell.y);
+
+            if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)){
+                this._raycastParser.reset();
+                return this._raycastParser.hitCounter;
+            }
+
+            while (currentCell.x != lastCell.x || currentCell.y != lastCell.y){
+                if (tMaxX < tMaxY){
+                    currentCell.x = MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX));
+
+                    tMaxX += tDeltaX;
+                }else{
+                    currentCell.y = MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY));
+
+                    tMaxY += tDeltaY;
+                }
+
+                cell = this.cellAtPosition(currentCell.x, currentCell.y);
+                if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)){
+                    this._raycastParser.reset();
+                    return this._raycastParser.hitCounter;
+                }
+            }
+
+            this._raycastParser.reset();
+            return this._raycastParser.hitCounter;
+        }
+
+        /**
          * 获取位于指定圆内的所有碰撞器
          * @param circleCenter
          * @param radius
@@ -268,7 +335,7 @@ module es {
         };
 
         public _hits: RaycastHit[];
-        public _tempHit: RaycastHit;
+        public _tempHit: RaycastHit = new RaycastHit();
         public _checkedColliders: Collider[] = [];
         public _cellHits: RaycastHit[] = [];
         public _ray: Ray2D;

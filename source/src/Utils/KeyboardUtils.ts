@@ -84,10 +84,10 @@ class KeyboardUtils {
     private static keyUpDict: Object;
 
     public static init(): void {
-        this.keyDownDict = {};
-        this.keyUpDict = {};
-        document.addEventListener("keydown", this.onKeyDonwHander);
-        document.addEventListener("keyup", this.onKeyUpHander);
+        KeyboardUtils.keyDownDict = {};
+        KeyboardUtils.keyUpDict = {};
+        document.addEventListener("keydown", KeyboardUtils.onKeyDonwHander);
+        document.addEventListener("keyup", KeyboardUtils.onKeyUpHander);
     }
 
     /**
@@ -115,16 +115,16 @@ class KeyboardUtils {
      * 销毁方法
      */
     public static destroy(): void {
-        this.keyDownDict = null;
-        this.keyUpDict = null;
+        KeyboardUtils.keyDownDict = null;
+        KeyboardUtils.keyUpDict = null;
         document.removeEventListener("keydown", this.onKeyDonwHander);
         document.removeEventListener("keyup", this.onKeyUpHander);
     }
 
     private static onKeyDonwHander(event: KeyboardEvent): void {
-        if (!this.keyDownDict) return;
-        var key: string = this.keyCodeToString(event.keyCode);
-        var o: Object = this.keyDownDict[key];
+        if (!KeyboardUtils.keyDownDict) return;
+        var key: string = KeyboardUtils.keyCodeToString(event.keyCode);
+        var o: Object = KeyboardUtils.keyDownDict[key];
         if (o) {
             var fun: Function = o["fun"];
             var thisObj: any = o["thisObj"];
@@ -134,9 +134,9 @@ class KeyboardUtils {
     }
 
     private static onKeyUpHander(event: KeyboardEvent): void {
-        if (!this.keyUpDict) return;
-        var key: string = this.keyCodeToString(event.keyCode);
-        var o: Object = this.keyUpDict[key];
+        if (!KeyboardUtils.keyUpDict) return;
+        var key: string = KeyboardUtils.keyCodeToString(event.keyCode);
+        var o: Object = KeyboardUtils.keyUpDict[key];
         if (o) {
             var fun: Function = o["fun"];
             var thisObj: any = o["thisObj"];

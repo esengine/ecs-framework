@@ -1279,6 +1279,7 @@ var es;
             this.addEventListener(egret.StageOrientationEvent.ORIENTATION_CHANGE, this.onOrientationChanged, this);
             this.addEventListener(egret.Event.ENTER_FRAME, this.update, this);
             es.Input.initialize();
+            KeyboardUtils.init();
             this.initialize();
         };
         Core.debugRenderEndabled = false;
@@ -5972,6 +5973,11 @@ var es;
                 return 0;
             return t;
         };
+        MathHelper.approach = function (start, end, shift) {
+            if (start < end)
+                return Math.min(start + shift, end);
+            return Math.max(start - shift, end);
+        };
         MathHelper.Epsilon = 0.00001;
         MathHelper.Rad2Deg = 57.29578;
         MathHelper.Deg2Rad = 0.0174532924;
@@ -6615,6 +6621,43 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var RaycastHit = (function () {
+        function RaycastHit(collider, fraction, distance, point, normal) {
+            this.fraction = 0;
+            this.distance = 0;
+            this.point = es.Vector2.zero;
+            this.normal = es.Vector2.zero;
+            this.collider = collider;
+            this.fraction = fraction;
+            this.distance = distance;
+            this.point = point;
+            this.centroid = es.Vector2.zero;
+        }
+        RaycastHit.prototype.setValues = function (collider, fraction, distance, point) {
+            this.collider = collider;
+            this.fraction = fraction;
+            this.distance = distance;
+            this.point = point;
+        };
+        RaycastHit.prototype.setValuesNonCollider = function (fraction, distance, point, normal) {
+            this.fraction = fraction;
+            this.distance = distance;
+            this.point = point;
+            this.normal = normal;
+        };
+        RaycastHit.prototype.reset = function () {
+            this.collider = null;
+            this.fraction = this.distance = 0;
+        };
+        RaycastHit.prototype.toString = function () {
+            return "[RaycastHit] fraction: " + this.fraction + ", distance: " + this.distance + ", normal: " + this.normal + ", centroid: " + this.centroid + ", point: " + this.point;
+        };
+        return RaycastHit;
+    }());
+    es.RaycastHit = RaycastHit;
+})(es || (es = {}));
+var es;
+(function (es) {
     var Physics = (function () {
         function Physics() {
         }
@@ -6650,6 +6693,20 @@ var es;
             this._spatialHash.remove(collider);
             this._spatialHash.register(collider);
         };
+        Physics.linecast = function (start, end, layerMask) {
+            if (layerMask === void 0) { layerMask = Physics.allLayers; }
+            this._hitArray[0].reset();
+            this.linecastAll(start, end, this._hitArray, layerMask);
+            return this._hitArray[0];
+        };
+        Physics.linecastAll = function (start, end, hits, layerMask) {
+            if (layerMask === void 0) { layerMask = Physics.allLayers; }
+            if (hits.length == 0) {
+                console.warn("传入了一个空的hits数组。没有点击会被返回");
+                return 0;
+            }
+            return this._spatialHash.linecast(start, end, hits, layerMask);
+        };
         Physics.debugDraw = function (secondsToDisplay) {
             this._spatialHash.debugDraw(secondsToDisplay, 2);
         };
@@ -6657,6 +6714,9 @@ var es;
         Physics.allLayers = -1;
         Physics.raycastsHitTriggers = false;
         Physics.raycastsStartInColliders = false;
+        Physics._hitArray = [
+            new es.RaycastHit()
+        ];
         return Physics;
     }());
     es.Physics = Physics;
@@ -6672,43 +6732,6 @@ var es;
         return Ray2D;
     }());
     es.Ray2D = Ray2D;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var RaycastHit = (function () {
-        function RaycastHit(collider, fraction, distance, point, normal) {
-            this.fraction = 0;
-            this.distance = 0;
-            this.point = es.Vector2.zero;
-            this.normal = es.Vector2.zero;
-            this.collider = collider;
-            this.fraction = fraction;
-            this.distance = distance;
-            this.point = point;
-            this.centroid = es.Vector2.zero;
-        }
-        RaycastHit.prototype.setValues = function (collider, fraction, distance, point) {
-            this.collider = collider;
-            this.fraction = fraction;
-            this.distance = distance;
-            this.point = point;
-        };
-        RaycastHit.prototype.setValuesNonCollider = function (fraction, distance, point, normal) {
-            this.fraction = fraction;
-            this.distance = distance;
-            this.point = point;
-            this.normal = normal;
-        };
-        RaycastHit.prototype.reset = function () {
-            this.collider = null;
-            this.fraction = this.distance = 0;
-        };
-        RaycastHit.prototype.toString = function () {
-            return "[RaycastHit] fraction: " + this.fraction + ", distance: " + this.distance + ", normal: " + this.normal + ", centroid: " + this.centroid + ", point: " + this.point;
-        };
-        return RaycastHit;
-    }());
-    es.RaycastHit = RaycastHit;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -7467,6 +7490,48 @@ var es;
             }
             return this._tempHashSet;
         };
+        SpatialHash.prototype.linecast = function (start, end, hits, layerMask) {
+            var ray = new es.Ray2D(start, end);
+            this._raycastParser.start(ray, hits, layerMask);
+            var currentCell = this.cellCoords(start.x, start.y);
+            var lastCell = this.cellCoords(end.x, end.y);
+            var stepX = Math.sign(ray.direction.x);
+            var stepY = Math.sign(ray.direction.y);
+            if (currentCell.x == lastCell.x)
+                stepX = 0;
+            if (currentCell.y == lastCell.y)
+                stepY = 0;
+            var xStep = stepX < 0 ? 0 : stepX;
+            var yStep = stepY < 0 ? 0 : stepY;
+            var nextBoundaryX = (currentCell.x + xStep) * this._cellSize;
+            var nextBoundaryY = (currentCell.y + yStep) * this._cellSize;
+            var tMaxX = ray.direction.x != 0 ? (nextBoundaryX - ray.start.x) / ray.direction.x : Number.MAX_VALUE;
+            var tMaxY = ray.direction.y != 0 ? (nextBoundaryY - ray.start.y) / ray.direction.y : Number.MAX_VALUE;
+            var tDeltaX = ray.direction.x != 0 ? this._cellSize / (ray.direction.x * stepX) : Number.MAX_VALUE;
+            var tDeltaY = ray.direction.y != 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
+            var cell = this.cellAtPosition(currentCell.x, currentCell.y);
+            if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
+                this._raycastParser.reset();
+                return this._raycastParser.hitCounter;
+            }
+            while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
+                if (tMaxX < tMaxY) {
+                    currentCell.x = es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX));
+                    tMaxX += tDeltaX;
+                }
+                else {
+                    currentCell.y = es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY));
+                    tMaxY += tDeltaY;
+                }
+                cell = this.cellAtPosition(currentCell.x, currentCell.y);
+                if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
+                    this._raycastParser.reset();
+                    return this._raycastParser.hitCounter;
+                }
+            }
+            this._raycastParser.reset();
+            return this._raycastParser.hitCounter;
+        };
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
@@ -7547,6 +7612,7 @@ var es;
     es.NumberDictionary = NumberDictionary;
     var RaycastResultParser = (function () {
         function RaycastResultParser() {
+            this._tempHit = new es.RaycastHit();
             this._checkedColliders = [];
             this._cellHits = [];
         }
@@ -9696,10 +9762,10 @@ var KeyboardUtils = (function () {
     function KeyboardUtils() {
     }
     KeyboardUtils.init = function () {
-        this.keyDownDict = {};
-        this.keyUpDict = {};
-        document.addEventListener("keydown", this.onKeyDonwHander);
-        document.addEventListener("keyup", this.onKeyUpHander);
+        KeyboardUtils.keyDownDict = {};
+        KeyboardUtils.keyUpDict = {};
+        document.addEventListener("keydown", KeyboardUtils.onKeyDonwHander);
+        document.addEventListener("keyup", KeyboardUtils.onKeyUpHander);
     };
     KeyboardUtils.registerKey = function (key, fun, thisObj, type) {
         if (type === void 0) { type = 0; }
@@ -9716,16 +9782,16 @@ var KeyboardUtils = (function () {
         delete keyDict[key];
     };
     KeyboardUtils.destroy = function () {
-        this.keyDownDict = null;
-        this.keyUpDict = null;
+        KeyboardUtils.keyDownDict = null;
+        KeyboardUtils.keyUpDict = null;
         document.removeEventListener("keydown", this.onKeyDonwHander);
         document.removeEventListener("keyup", this.onKeyUpHander);
     };
     KeyboardUtils.onKeyDonwHander = function (event) {
-        if (!this.keyDownDict)
+        if (!KeyboardUtils.keyDownDict)
             return;
-        var key = this.keyCodeToString(event.keyCode);
-        var o = this.keyDownDict[key];
+        var key = KeyboardUtils.keyCodeToString(event.keyCode);
+        var o = KeyboardUtils.keyDownDict[key];
         if (o) {
             var fun = o["fun"];
             var thisObj = o["thisObj"];
@@ -9734,10 +9800,10 @@ var KeyboardUtils = (function () {
         }
     };
     KeyboardUtils.onKeyUpHander = function (event) {
-        if (!this.keyUpDict)
+        if (!KeyboardUtils.keyUpDict)
             return;
-        var key = this.keyCodeToString(event.keyCode);
-        var o = this.keyUpDict[key];
+        var key = KeyboardUtils.keyCodeToString(event.keyCode);
+        var o = KeyboardUtils.keyUpDict[key];
         if (o) {
             var fun = o["fun"];
             var thisObj = o["thisObj"];

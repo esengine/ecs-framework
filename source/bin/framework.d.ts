@@ -1285,6 +1285,7 @@ declare module es {
         static clamp01(value: number): number;
         static angleBetweenVectors(from: Vector2, to: Vector2): number;
         static incrementWithWrap(t: number, length: number): number;
+        static approach(start: number, end: number, shift: number): number;
     }
 }
 declare module es {
@@ -1376,12 +1377,28 @@ declare module es {
     }
 }
 declare module es {
+    class RaycastHit {
+        collider: Collider;
+        fraction: number;
+        distance: number;
+        point: Vector2;
+        normal: Vector2;
+        centroid: Vector2;
+        constructor(collider?: Collider, fraction?: number, distance?: number, point?: Vector2, normal?: Vector2);
+        setValues(collider: Collider, fraction: number, distance: number, point: Vector2): void;
+        setValuesNonCollider(fraction: number, distance: number, point: Vector2, normal: Vector2): void;
+        reset(): void;
+        toString(): string;
+    }
+}
+declare module es {
     class Physics {
         static spatialHashCellSize: number;
         static readonly allLayers: number;
         private static _spatialHash;
         static raycastsHitTriggers: boolean;
         static raycastsStartInColliders: boolean;
+        static _hitArray: RaycastHit[];
         static reset(): void;
         static clear(): void;
         static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
@@ -1390,6 +1407,8 @@ declare module es {
         static addCollider(collider: Collider): void;
         static removeCollider(collider: Collider): void;
         static updateCollider(collider: Collider): void;
+        static linecast(start: Vector2, end: Vector2, layerMask?: number): RaycastHit;
+        static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask?: number): number;
         static debugDraw(secondsToDisplay: any): void;
     }
 }
@@ -1399,21 +1418,6 @@ declare module es {
         end: Vector2;
         direction: Vector2;
         constructor(position: Vector2, end: Vector2);
-    }
-}
-declare module es {
-    class RaycastHit {
-        collider: Collider;
-        fraction: number;
-        distance: number;
-        point: Vector2;
-        normal: Vector2;
-        centroid: Vector2;
-        constructor(collider: Collider, fraction: number, distance: number, point: Vector2, normal: Vector2);
-        setValues(collider: Collider, fraction: number, distance: number, point: Vector2): void;
-        setValuesNonCollider(fraction: number, distance: number, point: Vector2, normal: Vector2): void;
-        reset(): void;
-        toString(): string;
     }
 }
 declare module es {
@@ -1539,6 +1543,7 @@ declare module es {
         clear(): void;
         debugDraw(secondsToDisplay: number, textScale?: number): void;
         aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
+        linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number): number;
         overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: any): number;
         private cellCoords;
         private cellAtPosition;

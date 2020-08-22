@@ -4,6 +4,7 @@ module sc {
         private _sceneList: SceneData[] = [
             new SceneData("空白场景", samples.BasicScene),
             new SceneData("Tiled Tiles", samples.AnimatedTilesScene),
+            new SceneData("Linecasting", samples.LineCastingScene),
         ];
 
         constructor() {
@@ -32,6 +33,7 @@ module sc {
         private scItemOnClick(evt: egret.Event){
             let data = evt.currentTarget.data;
             es.Core.scene = new data();
+            es.Core.scene.camera.position = es.Vector2.zero;
         }
 
         public destroy() {

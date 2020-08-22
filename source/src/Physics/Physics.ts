@@ -1,3 +1,4 @@
+///<reference path="./RaycastHit.ts" />
 module es {
     export class Physics {
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
@@ -13,6 +14,12 @@ module es {
          * 在碰撞器中开始的射线/直线是否强制转换检测到那些碰撞器
          */
         public static raycastsStartInColliders = false;
+        /**
+         * 我们保留它以避免在每次raycast发生时分配它
+         */
+        public static _hitArray: RaycastHit[] = [
+            new RaycastHit()
+        ];
 
         public static reset() {
             this._spatialHash = new SpatialHash(this.spatialHashCellSize);
@@ -83,6 +90,34 @@ module es {
         public static updateCollider(collider: Collider) {
             this._spatialHash.remove(collider);
             this._spatialHash.register(collider);
+        }
+
+        /**
+         * 返回与layerMask匹配的碰撞器的第一次命中
+         * @param start
+         * @param end
+         * @param layerMask
+         */
+        public static linecast(start: Vector2, end: Vector2, layerMask: number = Physics.allLayers): RaycastHit{
+            this._hitArray[0].reset();
+            this.linecastAll(start, end, this._hitArray, layerMask);
+            return this._hitArray[0];
+        }
+
+        /**
+         * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组
+         * @param start
+         * @param end
+         * @param hits
+         * @param layerMask
+         */
+        public static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number = Physics.allLayers){
+            if (hits.length == 0){
+                console.warn("传入了一个空的hits数组。没有点击会被返回");
+                return 0;
+            }
+
+            return this._spatialHash.linecast(start, end, hits, layerMask);
         }
 
         /**

@@ -30,7 +30,7 @@ module es {
          */
         public centroid: Vector2;
 
-        constructor(collider: Collider, fraction: number, distance: number, point: Vector2, normal: Vector2){
+        constructor(collider?: Collider, fraction?: number, distance?: number, point?: Vector2, normal?: Vector2){
             this.collider = collider;
             this.fraction = fraction;
             this.distance = distance;

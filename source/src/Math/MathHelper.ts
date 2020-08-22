@@ -93,5 +93,18 @@ module es {
 
             return t;
         }
+
+        /**
+         * 由上移量向上移。start可以小于或大于end。例如:开始是2，结束是10，移位是4，结果是6
+         * @param start
+         * @param end
+         * @param shift
+         */
+        public static approach(start: number, end: number, shift: number): number {
+            if (start < end)
+                return Math.min(start + shift, end);
+
+            return Math.max(start - shift, end);
+        }
     }
 }
