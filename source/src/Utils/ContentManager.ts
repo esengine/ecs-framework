@@ -34,7 +34,8 @@ module es {
         public dispose() {
             this.loadedAssets.forEach(value => {
                 let assetsToRemove = value;
-                assetsToRemove.dispose();
+                if (RES.destroyRes(assetsToRemove))
+                    assetsToRemove.dispose();
             });
 
             this.loadedAssets.clear();

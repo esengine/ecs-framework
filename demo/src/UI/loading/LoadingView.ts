@@ -4,7 +4,7 @@ module loading {
 
     export class LoadingView extends BaseView implements RES.PromiseTaskReporter {
         private _ui: FUI.loading.UI_View_loading;
-        private _loadGroup = ["preload", "common"];
+        private _loadGroup = ["preload", "common", "characters"];
         private _maxProgress = 0;
         private _currentProgress = 0;
 

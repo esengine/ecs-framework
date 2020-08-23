@@ -82,7 +82,7 @@ module es {
                 this.animationState = State.completed;
                 this._elapsedTime = 0;
                 this.currentFrame = 0;
-                this.sprite = animation.sprites[this.currentFrame];
+                (this.displayObject as egret.Bitmap).texture = animation.sprites[this.currentFrame].texture2D;
                 return;
             }
 
@@ -97,7 +97,7 @@ module es {
                 this.currentFrame = i % n;
             }
 
-            this.sprite = animation.sprites[this.currentFrame];
+            (this.displayObject as egret.Bitmap).texture = animation.sprites[this.currentFrame].texture2D;
         }
 
         /**
@@ -123,8 +123,7 @@ module es {
             this.currentAnimationName = name;
             this.currentFrame = 0;
             this.animationState = State.running;
-
-            this.sprite = this.currentAnimation.sprites[0];
+            (this.displayObject as egret.Bitmap).texture = this.currentAnimation.sprites[0].texture2D;
             this._elapsedTime = 0;
             this._loopMode = loopMode ? loopMode : LoopMode.loop;
         }

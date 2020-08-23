@@ -15,6 +15,10 @@
 		{
 			"keys": "common",
 			"name": "common"
+		},
+		{
+			"keys": "1_png,2_png,3_png,4_png,5_png,6_png",
+			"name": "characters"
 		}
 	],
 	"resources": [
@@ -67,6 +71,36 @@
 			"url": "preload/orthogonal-outside.json",
 			"type": "json",
 			"name": "orthogonal-outside_json"
+		},
+		{
+			"url": "characters/1.png",
+			"type": "image",
+			"name": "1_png"
+		},
+		{
+			"url": "characters/2.png",
+			"type": "image",
+			"name": "2_png"
+		},
+		{
+			"url": "characters/3.png",
+			"type": "image",
+			"name": "3_png"
+		},
+		{
+			"url": "characters/4.png",
+			"type": "image",
+			"name": "4_png"
+		},
+		{
+			"url": "characters/5.png",
+			"type": "image",
+			"name": "5_png"
+		},
+		{
+			"url": "characters/6.png",
+			"type": "image",
+			"name": "6_png"
 		}
 	]
 }

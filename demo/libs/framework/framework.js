@@ -1255,7 +1255,8 @@ var es;
                                 this._scene.update();
                             }
                             if (!this._nextScene) return [3, 2];
-                            this.removeChild(this._scene);
+                            if (this._scene.parent)
+                                this._scene.parent.removeChild(this._scene);
                             this._scene.end();
                             this._scene = this._nextScene;
                             this._nextScene = null;
@@ -3094,6 +3095,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var SpriteSheet = egret.SpriteSheet;
     var Sprite = (function () {
         function Sprite(texture, sourceRect, origin) {
             if (sourceRect === void 0) { sourceRect = new es.Rectangle(0, 0, texture.textureWidth, texture.textureHeight); }
@@ -3110,6 +3112,28 @@ var es;
             this.uvs.width = sourceRect.width * inverseTexW;
             this.uvs.height = sourceRect.height * inverseTexH;
         }
+        Sprite.spritesFromAtlas = function (texture, cellWidth, cellHeight, cellOffset, maxCellsToInclude) {
+            if (cellOffset === void 0) { cellOffset = 0; }
+            if (maxCellsToInclude === void 0) { maxCellsToInclude = Number.MAX_VALUE; }
+            var sprites = [];
+            var cols = texture.textureWidth / cellWidth;
+            var rows = texture.textureHeight / cellHeight;
+            var i = 0;
+            var spriteSheet = new SpriteSheet(texture);
+            for (var y = 0; y < rows; y++) {
+                for (var x = 0; x < cols; x++) {
+                    if (i++ < cellOffset)
+                        continue;
+                    var texture_1 = spriteSheet.getTexture(y + "_" + x);
+                    if (!texture_1)
+                        texture_1 = spriteSheet.createTexture(y + "_" + x, x * cellWidth, y * cellHeight, cellWidth, cellHeight);
+                    sprites.push(new Sprite(texture_1));
+                    if (sprites.length == maxCellsToInclude)
+                        return sprites;
+                }
+            }
+            return sprites;
+        };
         return Sprite;
     }());
     es.Sprite = Sprite;
@@ -3179,7 +3203,7 @@ var es;
                 this.animationState = State.completed;
                 this._elapsedTime = 0;
                 this.currentFrame = 0;
-                this.sprite = animation.sprites[this.currentFrame];
+                this.displayObject.texture = animation.sprites[this.currentFrame].texture2D;
                 return;
             }
             var i = Math.floor(time / secondsPerFrame);
@@ -3191,7 +3215,7 @@ var es;
             else {
                 this.currentFrame = i % n;
             }
-            this.sprite = animation.sprites[this.currentFrame];
+            this.displayObject.texture = animation.sprites[this.currentFrame].texture2D;
         };
         SpriteAnimator.prototype.addAnimation = function (name, animation) {
             if (!this.sprite && animation.sprites.length > 0)
@@ -3205,7 +3229,7 @@ var es;
             this.currentAnimationName = name;
             this.currentFrame = 0;
             this.animationState = State.running;
-            this.sprite = this.currentAnimation.sprites[0];
+            this.displayObject.texture = this.currentAnimation.sprites[0].texture2D;
             this._elapsedTime = 0;
             this._loopMode = loopMode ? loopMode : LoopMode.loop;
         };
@@ -4154,7 +4178,8 @@ var es;
         };
         ComponentList.prototype.handleRemove = function (component) {
             if (component instanceof es.RenderableComponent) {
-                this._entity.scene.removeChild(component.displayObject);
+                if (component.displayObject.parent)
+                    component.displayObject.parent.removeChild(component.displayObject);
                 this._entity.scene.renderableComponents.remove(component);
             }
             this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component), false);
@@ -4727,7 +4752,7 @@ var es;
                 var component = this_1._components[i];
                 var egretDisplayObject = scene.$children.find(function (a) { return a.hashCode == component.displayObject.hashCode; });
                 var displayIndex = scene.getChildIndex(egretDisplayObject);
-                if (displayIndex != i)
+                if (displayIndex != -1 && displayIndex != i)
                     scene.swapChildrenAt(displayIndex, i);
             };
             var this_1 = this;
@@ -6382,6 +6407,45 @@ var es;
         return Rectangle;
     }(egret.Rectangle));
     es.Rectangle = Rectangle;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var SubpixelFloat = (function () {
+        function SubpixelFloat() {
+            this.remainder = 0;
+        }
+        SubpixelFloat.prototype.update = function (amount) {
+            this.remainder += amount;
+            var motion = Math.trunc(this.remainder);
+            this.remainder -= motion;
+            amount = motion;
+            return amount;
+        };
+        SubpixelFloat.prototype.reset = function () {
+            this.remainder = 0;
+        };
+        return SubpixelFloat;
+    }());
+    es.SubpixelFloat = SubpixelFloat;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var SubpixelVector2 = (function () {
+        function SubpixelVector2() {
+            this._x = new es.SubpixelFloat();
+            this._y = new es.SubpixelFloat();
+        }
+        SubpixelVector2.prototype.update = function (amount) {
+            amount.x = this._x.update(amount.x);
+            amount.y = this._y.update(amount.y);
+        };
+        SubpixelVector2.prototype.reset = function () {
+            this._x.reset();
+            this._y.reset();
+        };
+        return SubpixelVector2;
+    }());
+    es.SubpixelVector2 = SubpixelVector2;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -9441,7 +9505,8 @@ var es;
         ContentManager.prototype.dispose = function () {
             this.loadedAssets.forEach(function (value) {
                 var assetsToRemove = value;
-                assetsToRemove.dispose();
+                if (RES.destroyRes(assetsToRemove))
+                    assetsToRemove.dispose();
             });
             this.loadedAssets.clear();
         };

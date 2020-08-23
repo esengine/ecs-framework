@@ -109,7 +109,7 @@ module es {
                 let component = this._components[i] as RenderableComponent;
                 let egretDisplayObject = scene.$children.find(a => {return a.hashCode == component.displayObject.hashCode});
                 let displayIndex = scene.getChildIndex(egretDisplayObject);
-                if (displayIndex != i) scene.swapChildrenAt(displayIndex, i);
+                if (displayIndex != -1 && displayIndex != i) scene.swapChildrenAt(displayIndex, i);
             }
         }
     }

@@ -203,7 +203,7 @@ module es {
                 }
 
                 if (this._nextScene) {
-                    this.removeChild(this._scene);
+                    if (this._scene.parent) this._scene.parent.removeChild(this._scene);
                     this._scene.end();
 
                     this._scene = this._nextScene;

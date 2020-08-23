@@ -658,6 +658,7 @@ declare module es {
         origin: Vector2;
         readonly uvs: Rectangle;
         constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
+        static spritesFromAtlas(texture: egret.Texture, cellWidth: number, cellHeight: number, cellOffset?: number, maxCellsToInclude?: number): Sprite[];
     }
 }
 declare module es {
@@ -1329,6 +1330,21 @@ declare module es {
         getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2;
         getClosestPointOnBoundsToOrigin(): Vector2;
         calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
+    }
+}
+declare module es {
+    class SubpixelFloat {
+        remainder: number;
+        update(amount: number): number;
+        reset(): void;
+    }
+}
+declare module es {
+    class SubpixelVector2 {
+        _x: SubpixelFloat;
+        _y: SubpixelFloat;
+        update(amount: Vector2): void;
+        reset(): void;
     }
 }
 declare module es {

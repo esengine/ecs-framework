@@ -157,7 +157,8 @@ module es {
         public handleRemove(component: Component) {
             // 处理渲染层列表
             if (component instanceof RenderableComponent) {
-                this._entity.scene.removeChild(component.displayObject);
+                if (component.displayObject.parent)
+                    component.displayObject.parent.removeChild(component.displayObject);
                 this._entity.scene.renderableComponents.remove(component);
             }
 

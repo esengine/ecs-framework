@@ -5,6 +5,7 @@ module sc {
             new SceneData("空白场景", samples.BasicScene),
             new SceneData("Tiled Tiles", samples.AnimatedTilesScene),
             new SceneData("Linecasting", samples.LineCastingScene),
+            new SceneData("Ninja Adventure", samples.NinjaAdventureScene),
         ];
 
         constructor() {
