@@ -1,4 +1,17 @@
+///<reference path="../ECS/Core.ts" />
 module es {
+    export class Colors {
+        public static renderableBounds = 0xffff00;
+        public static renderableCenter = 0x9932CC;
+        public static colliderBounds = 0x555555;
+    }
+
+    export class Size {
+        public static get lineSizeMultiplier(){
+            return Math.max(Math.ceil(Core.scene.x / Core.scene.width), 1);
+        }
+    }
+
     export class Debug {
         private static _debugDrawItems: DebugDrawItem[] = [];
 

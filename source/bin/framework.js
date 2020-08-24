@@ -693,10 +693,11 @@ var es;
             return result;
         };
         Vector2.normalize = function (value) {
-            var val = 1 / Math.sqrt((value.x * value.x) + (value.y * value.y));
-            value.x *= val;
-            value.y *= val;
-            return value;
+            var nValue = new Vector2(value.x, value.y);
+            var val = 1 / Math.sqrt((nValue.x * nValue.x) + (nValue.y * nValue.y));
+            nValue.x *= val;
+            nValue.y *= val;
+            return nValue;
         };
         Vector2.dot = function (value1, value2) {
             return (value1.x * value2.x) + (value1.y * value2.y);
@@ -965,159 +966,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Debug = (function () {
-        function Debug() {
-        }
-        Debug.drawHollowRect = function (rectanle, color, duration) {
-            if (duration === void 0) { duration = 0; }
-            this._debugDrawItems.push(new es.DebugDrawItem(rectanle, color, duration));
-        };
-        Debug.render = function () {
-            if (this._debugDrawItems.length > 0) {
-                var debugShape = new egret.Shape();
-                if (es.Core.scene) {
-                    es.Core.scene.addChild(debugShape);
-                }
-                for (var i = this._debugDrawItems.length - 1; i >= 0; i--) {
-                    var item = this._debugDrawItems[i];
-                    if (item.draw(debugShape))
-                        this._debugDrawItems.removeAt(i);
-                }
-            }
-        };
-        Debug._debugDrawItems = [];
-        return Debug;
-    }());
-    es.Debug = Debug;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var DebugDefaults = (function () {
-        function DebugDefaults() {
-        }
-        DebugDefaults.verletParticle = 0xDC345E;
-        DebugDefaults.verletConstraintEdge = 0x433E36;
-        return DebugDefaults;
-    }());
-    es.DebugDefaults = DebugDefaults;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var DebugDrawType;
-    (function (DebugDrawType) {
-        DebugDrawType[DebugDrawType["line"] = 0] = "line";
-        DebugDrawType[DebugDrawType["hollowRectangle"] = 1] = "hollowRectangle";
-        DebugDrawType[DebugDrawType["pixel"] = 2] = "pixel";
-        DebugDrawType[DebugDrawType["text"] = 3] = "text";
-    })(DebugDrawType = es.DebugDrawType || (es.DebugDrawType = {}));
-    var DebugDrawItem = (function () {
-        function DebugDrawItem(rectangle, color, duration) {
-            this.rectangle = rectangle;
-            this.color = color;
-            this.duration = duration;
-            this.drawType = DebugDrawType.hollowRectangle;
-        }
-        DebugDrawItem.prototype.draw = function (shape) {
-            switch (this.drawType) {
-                case DebugDrawType.line:
-                    break;
-                case DebugDrawType.hollowRectangle:
-                    break;
-                case DebugDrawType.pixel:
-                    break;
-                case DebugDrawType.text:
-                    break;
-            }
-            this.duration -= es.Time.deltaTime;
-            return this.duration < 0;
-        };
-        return DebugDrawItem;
-    }());
-    es.DebugDrawItem = DebugDrawItem;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Component = (function (_super) {
-        __extends(Component, _super);
-        function Component() {
-            var _this = _super !== null && _super.apply(this, arguments) || this;
-            _this.updateInterval = 1;
-            _this._enabled = true;
-            _this._updateOrder = 0;
-            return _this;
-        }
-        Object.defineProperty(Component.prototype, "transform", {
-            get: function () {
-                return this.entity.transform;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Component.prototype, "enabled", {
-            get: function () {
-                return this.entity ? this.entity.enabled && this._enabled : this._enabled;
-            },
-            set: function (value) {
-                this.setEnabled(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Component.prototype, "updateOrder", {
-            get: function () {
-                return this._updateOrder;
-            },
-            set: function (value) {
-                this.setUpdateOrder(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Component.prototype.initialize = function () {
-        };
-        Component.prototype.onAddedToEntity = function () {
-        };
-        Component.prototype.onRemovedFromEntity = function () {
-        };
-        Component.prototype.onEntityTransformChanged = function (comp) {
-        };
-        Component.prototype.debugRender = function () {
-        };
-        Component.prototype.onEnabled = function () {
-        };
-        Component.prototype.onDisabled = function () {
-        };
-        Component.prototype.update = function () {
-        };
-        Component.prototype.setEnabled = function (isEnabled) {
-            if (this._enabled != isEnabled) {
-                this._enabled = isEnabled;
-                if (this._enabled) {
-                    this.onEnabled();
-                }
-                else {
-                    this.onDisabled();
-                }
-            }
-            return this;
-        };
-        Component.prototype.setUpdateOrder = function (updateOrder) {
-            if (this._updateOrder != updateOrder) {
-                this._updateOrder = updateOrder;
-            }
-            return this;
-        };
-        Component.prototype.clone = function () {
-            var component = ObjectUtils.clone(this);
-            component.entity = null;
-            return component;
-        };
-        return Component;
-    }(egret.HashObject));
-    es.Component = Component;
-})(es || (es = {}));
-var es;
-(function (es) {
     var Core = (function (_super) {
         __extends(Core, _super);
         function Core() {
@@ -1287,6 +1135,182 @@ var es;
         return Core;
     }(egret.DisplayObjectContainer));
     es.Core = Core;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Colors = (function () {
+        function Colors() {
+        }
+        Colors.renderableBounds = 0xffff00;
+        Colors.renderableCenter = 0x9932CC;
+        Colors.colliderBounds = 0x555555;
+        return Colors;
+    }());
+    es.Colors = Colors;
+    var Size = (function () {
+        function Size() {
+        }
+        Object.defineProperty(Size, "lineSizeMultiplier", {
+            get: function () {
+                return Math.max(Math.ceil(es.Core.scene.x / es.Core.scene.width), 1);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return Size;
+    }());
+    es.Size = Size;
+    var Debug = (function () {
+        function Debug() {
+        }
+        Debug.drawHollowRect = function (rectanle, color, duration) {
+            if (duration === void 0) { duration = 0; }
+            this._debugDrawItems.push(new es.DebugDrawItem(rectanle, color, duration));
+        };
+        Debug.render = function () {
+            if (this._debugDrawItems.length > 0) {
+                var debugShape = new egret.Shape();
+                if (es.Core.scene) {
+                    es.Core.scene.addChild(debugShape);
+                }
+                for (var i = this._debugDrawItems.length - 1; i >= 0; i--) {
+                    var item = this._debugDrawItems[i];
+                    if (item.draw(debugShape))
+                        this._debugDrawItems.removeAt(i);
+                }
+            }
+        };
+        Debug._debugDrawItems = [];
+        return Debug;
+    }());
+    es.Debug = Debug;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var DebugDefaults = (function () {
+        function DebugDefaults() {
+        }
+        DebugDefaults.verletParticle = 0xDC345E;
+        DebugDefaults.verletConstraintEdge = 0x433E36;
+        return DebugDefaults;
+    }());
+    es.DebugDefaults = DebugDefaults;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var DebugDrawType;
+    (function (DebugDrawType) {
+        DebugDrawType[DebugDrawType["line"] = 0] = "line";
+        DebugDrawType[DebugDrawType["hollowRectangle"] = 1] = "hollowRectangle";
+        DebugDrawType[DebugDrawType["pixel"] = 2] = "pixel";
+        DebugDrawType[DebugDrawType["text"] = 3] = "text";
+    })(DebugDrawType = es.DebugDrawType || (es.DebugDrawType = {}));
+    var DebugDrawItem = (function () {
+        function DebugDrawItem(rectangle, color, duration) {
+            this.rectangle = rectangle;
+            this.color = color;
+            this.duration = duration;
+            this.drawType = DebugDrawType.hollowRectangle;
+        }
+        DebugDrawItem.prototype.draw = function (shape) {
+            switch (this.drawType) {
+                case DebugDrawType.line:
+                    break;
+                case DebugDrawType.hollowRectangle:
+                    break;
+                case DebugDrawType.pixel:
+                    break;
+                case DebugDrawType.text:
+                    break;
+            }
+            this.duration -= es.Time.deltaTime;
+            return this.duration < 0;
+        };
+        return DebugDrawItem;
+    }());
+    es.DebugDrawItem = DebugDrawItem;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Component = (function (_super) {
+        __extends(Component, _super);
+        function Component() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.updateInterval = 1;
+            _this.debugDisplayObject = new egret.DisplayObjectContainer();
+            _this._enabled = true;
+            _this._updateOrder = 0;
+            return _this;
+        }
+        Object.defineProperty(Component.prototype, "transform", {
+            get: function () {
+                return this.entity.transform;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Component.prototype, "enabled", {
+            get: function () {
+                return this.entity ? this.entity.enabled && this._enabled : this._enabled;
+            },
+            set: function (value) {
+                this.setEnabled(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Component.prototype, "updateOrder", {
+            get: function () {
+                return this._updateOrder;
+            },
+            set: function (value) {
+                this.setUpdateOrder(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Component.prototype.initialize = function () {
+        };
+        Component.prototype.onAddedToEntity = function () {
+        };
+        Component.prototype.onRemovedFromEntity = function () {
+        };
+        Component.prototype.onEntityTransformChanged = function (comp) {
+        };
+        Component.prototype.debugRender = function () {
+        };
+        Component.prototype.onEnabled = function () {
+        };
+        Component.prototype.onDisabled = function () {
+        };
+        Component.prototype.update = function () {
+        };
+        Component.prototype.setEnabled = function (isEnabled) {
+            if (this._enabled != isEnabled) {
+                this._enabled = isEnabled;
+                if (this._enabled) {
+                    this.onEnabled();
+                }
+                else {
+                    this.onDisabled();
+                }
+            }
+            return this;
+        };
+        Component.prototype.setUpdateOrder = function (updateOrder) {
+            if (this._updateOrder != updateOrder) {
+                this._updateOrder = updateOrder;
+            }
+            return this;
+        };
+        Component.prototype.clone = function () {
+            var component = ObjectUtils.clone(this);
+            component.entity = null;
+            return component;
+        };
+        return Component;
+    }(egret.HashObject));
+    es.Component = Component;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -2450,7 +2474,7 @@ var es;
             this.follow(this._targetEntity, this._cameraStyle);
         };
         Camera.prototype.update = function () {
-            var halfScreen = es.Vector2.multiply(new es.Vector2(this.bounds.width, this.bounds.height), new es.Vector2(0.5));
+            var halfScreen = es.Vector2.multiply(this.bounds.size, new es.Vector2(0.5));
             this._worldSpaceDeadZone.x = this.position.x - halfScreen.x * es.Core.scene.scaleX + this.deadzone.x + this.focusOffset.x;
             this._worldSpaceDeadZone.y = this.position.y - halfScreen.y * es.Core.scene.scaleY + this.deadzone.y + this.focusOffset.y;
             this._worldSpaceDeadZone.width = this.deadzone.width;
@@ -2465,7 +2489,7 @@ var es;
             }
         };
         Camera.prototype.clampToMapSize = function (position) {
-            var halfScreen = es.Vector2.multiply(new es.Vector2(this.bounds.width, this.bounds.height), new es.Vector2(0.5)).add(new es.Vector2(this.mapSize.x, this.mapSize.y));
+            var halfScreen = es.Vector2.multiply(this.bounds.size, new es.Vector2(0.5)).add(new es.Vector2(this.mapSize.x, this.mapSize.y));
             var cameraMax = new es.Vector2(this.mapSize.width - halfScreen.x, this.mapSize.height - halfScreen.y);
             return es.Vector2.clamp(position, halfScreen, cameraMax);
         };
@@ -2645,8 +2669,11 @@ var es;
         function RenderableComponent() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
             _this.displayObject = new egret.DisplayObject();
+            _this.hollowShape = new egret.Shape();
+            _this.pixelShape = new egret.Shape();
             _this.color = 0x000000;
             _this._areBoundsDirty = true;
+            _this.debugRenderEnabled = true;
             _this._localOffset = es.Vector2.zero;
             _this._renderLayer = 0;
             _this._bounds = new es.Rectangle();
@@ -2716,6 +2743,27 @@ var es;
         RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
             this._areBoundsDirty = true;
         };
+        RenderableComponent.prototype.debugRender = function () {
+            if (!this.debugRenderEnabled)
+                return;
+            if (!this.hollowShape.parent)
+                this.debugDisplayObject.addChild(this.hollowShape);
+            if (!this.pixelShape.parent)
+                this.debugDisplayObject.addChild(this.pixelShape);
+            if (!this.entity.getComponent(es.Collider)) {
+                this.hollowShape.graphics.clear();
+                this.hollowShape.graphics.beginFill(es.Colors.renderableBounds, 0);
+                this.hollowShape.graphics.lineStyle(1, es.Colors.renderableBounds);
+                this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+                this.hollowShape.graphics.endFill();
+            }
+            var pixelPos = es.Vector2.add(this.entity.transform.position, this._localOffset);
+            this.pixelShape.graphics.clear();
+            this.pixelShape.graphics.beginFill(es.Colors.renderableCenter, 0);
+            this.pixelShape.graphics.lineStyle(4, es.Colors.renderableCenter);
+            this.pixelShape.graphics.lineTo(pixelPos.x, pixelPos.y);
+            this.pixelShape.graphics.endFill();
+        };
         RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
             if (!camera)
                 return false;
@@ -2759,9 +2807,11 @@ var es;
         };
         RenderableComponent.prototype.onBecameVisible = function () {
             this.displayObject.visible = this.isVisible;
+            this.debugDisplayObject.visible = this.isVisible;
         };
         RenderableComponent.prototype.onBecameInvisible = function () {
             this.displayObject.visible = this.isVisible;
+            this.debugDisplayObject.visible = this.isVisible;
         };
         return RenderableComponent;
     }(es.Component));
@@ -3711,6 +3761,10 @@ var es;
         __extends(BoxCollider, _super);
         function BoxCollider() {
             var _this = _super.call(this) || this;
+            _this.hollowShape = new egret.Shape();
+            _this.polygonShape = new egret.Shape();
+            _this.pixelShape1 = new egret.Shape();
+            _this.pixelShape2 = new egret.Shape();
             _this.shape = new es.Box(1, 1);
             _this._colliderRequiresAutoSizing = true;
             return _this;
@@ -3769,6 +3823,22 @@ var es;
                 if (this.entity && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
+        };
+        BoxCollider.prototype.debugRender = function () {
+            var poly = this.shape;
+            if (!this.hollowShape.parent)
+                this.debugDisplayObject.addChild(this.hollowShape);
+            if (!this.polygonShape.parent)
+                this.debugDisplayObject.addChild(this.polygonShape);
+            if (!this.pixelShape1.parent)
+                this.debugDisplayObject.addChild(this.pixelShape1);
+            if (!this.pixelShape2.parent)
+                this.debugDisplayObject.addChild(this.pixelShape2);
+            this.hollowShape.graphics.clear();
+            this.hollowShape.graphics.beginFill(es.Colors.colliderBounds, 0);
+            this.hollowShape.graphics.lineStyle(es.Size.lineSizeMultiplier, es.Colors.colliderBounds);
+            this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+            this.hollowShape.graphics.endFill();
         };
         BoxCollider.prototype.toString = function () {
             return "[BoxCollider: bounds: " + this.bounds + "]";
@@ -4122,9 +4192,12 @@ var es;
             for (var i = 0; i < this._components.length; i++) {
                 var component = this._components[i];
                 if (component instanceof es.RenderableComponent) {
-                    this._entity.scene.removeChild(component.displayObject);
+                    if (component.displayObject.parent)
+                        component.displayObject.parent.removeChild(component.displayObject);
                     this._entity.scene.renderableComponents.remove(component);
                 }
+                if (component.debugDisplayObject.parent)
+                    component.debugDisplayObject.parent.removeChild(component.debugDisplayObject);
                 this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component), false);
                 this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             }
@@ -4136,6 +4209,7 @@ var es;
                     this._entity.scene.addChild(component.displayObject);
                     this._entity.scene.renderableComponents.add(component);
                 }
+                this._entity.scene.addChild(component.debugDisplayObject);
                 this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
             }
@@ -4155,6 +4229,7 @@ var es;
                         this._entity.scene.addChild(component.displayObject);
                         this._entity.scene.renderableComponents.add(component);
                     }
+                    this._entity.scene.addChild(component.debugDisplayObject);
                     this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component));
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                     this._components.push(component);
@@ -4182,6 +4257,8 @@ var es;
                     component.displayObject.parent.removeChild(component.displayObject);
                 this._entity.scene.renderableComponents.remove(component);
             }
+            if (component.debugDisplayObject.parent)
+                component.debugDisplayObject.parent.removeChild(component.debugDisplayObject);
             this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             component.onRemovedFromEntity();
@@ -6854,7 +6931,7 @@ var es;
                 else
                     p2 = this.points[i + 1];
                 var perp = es.Vector2Ext.perpendicular(p1, p2);
-                perp = es.Vector2.normalize(perp);
+                es.Vector2Ext.normalize(perp);
                 this._edgeNormals[i] = perp;
             }
         };
@@ -6862,14 +6939,14 @@ var es;
             var verts = new Array(vertCount);
             for (var i = 0; i < vertCount; i++) {
                 var a = 2 * Math.PI * (i / vertCount);
-                verts[i] = es.Vector2.multiply(new es.Vector2(Math.cos(a), Math.sin(a)), new es.Vector2(radius));
+                verts[i] = new es.Vector2(Math.cos(a) * radius, Math.sin(a) * radius);
             }
             return verts;
         };
         Polygon.recenterPolygonVerts = function (points) {
             var center = this.findPolygonCenter(points);
             for (var i = 0; i < points.length; i++)
-                points[i] = es.Vector2.subtract(points[i], center);
+                points[i].subtract(center);
         };
         Polygon.findPolygonCenter = function (points) {
             var x = 0, y = 0;
@@ -6893,7 +6970,8 @@ var es;
         };
         Polygon.getClosestPointOnPolygonToPoint = function (points, point, distanceSquared, edgeNormal) {
             distanceSquared = Number.MAX_VALUE;
-            edgeNormal = new es.Vector2(0, 0);
+            edgeNormal.x = 0;
+            edgeNormal.y = 0;
             var closestPoint = new es.Vector2(0, 0);
             var tempDistanceSquared;
             for (var i = 0; i < points.length; i++) {
@@ -6906,7 +6984,8 @@ var es;
                     distanceSquared = tempDistanceSquared;
                     closestPoint = closest;
                     var line = es.Vector2.subtract(points[j], points[i]);
-                    edgeNormal = new es.Vector2(-line.y, line.x);
+                    edgeNormal.x = -line.y;
+                    edgeNormal.y = line.x;
                 }
             }
             es.Vector2Ext.normalize(edgeNormal);
@@ -7295,7 +7374,7 @@ var es;
                 result.normal = es.Vector2.subtract(circle.position, closestPointOnBounds);
                 var depth = result.normal.length() - circle.radius;
                 result.point = closestPointOnBounds;
-                result.normal = es.Vector2Ext.normalize(result.normal);
+                es.Vector2Ext.normalize(result.normal);
                 result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(depth), result.normal);
                 return true;
             }
@@ -10379,12 +10458,11 @@ var es;
         Vector2Ext.normalize = function (vec) {
             var magnitude = Math.sqrt((vec.x * vec.x) + (vec.y * vec.y));
             if (magnitude > es.MathHelper.Epsilon) {
-                vec = es.Vector2.divide(vec, new es.Vector2(magnitude));
+                vec.divide(new es.Vector2(magnitude));
             }
             else {
                 vec.x = vec.y = 0;
             }
-            return vec;
         };
         Vector2Ext.transformA = function (sourceArray, sourceIndex, matrix, destinationArray, destinationIndex, length) {
             for (var i = 0; i < length; i++) {

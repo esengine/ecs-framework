@@ -32,6 +32,7 @@ import LoadingView = loading.LoadingView;
 class Main extends es.Core {
     protected initialize() {
         try {
+            es.Core.debugRenderEndabled = true;
             this.runGame();
         } catch(err) {
             console.error(err);

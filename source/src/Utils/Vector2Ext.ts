@@ -36,12 +36,10 @@ module es {
         public static normalize(vec: Vector2) {
             let magnitude = Math.sqrt((vec.x * vec.x) + (vec.y * vec.y));
             if (magnitude > MathHelper.Epsilon) {
-                vec = Vector2.divide(vec, new Vector2(magnitude));
+                vec.divide(new Vector2(magnitude));
             } else {
                 vec.x = vec.y = 0;
             }
-
-            return vec;
         }
 
         /**

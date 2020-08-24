@@ -193,6 +193,43 @@ declare module es {
     }
 }
 declare module es {
+    class Core extends egret.DisplayObjectContainer {
+        static emitter: Emitter<CoreEvents>;
+        static debugRenderEndabled: boolean;
+        static graphicsDevice: GraphicsDevice;
+        static content: ContentManager;
+        static _instance: Core;
+        _nextScene: Scene;
+        _sceneTransition: SceneTransition;
+        _globalManagers: GlobalManager[];
+        constructor();
+        static readonly Instance: Core;
+        _scene: Scene;
+        static scene: Scene;
+        static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
+        static registerGlobalManager(manager: es.GlobalManager): void;
+        static unregisterGlobalManager(manager: es.GlobalManager): void;
+        static getGlobalManager<T extends es.GlobalManager>(type: any): T;
+        onOrientationChanged(): void;
+        draw(): Promise<void>;
+        startDebugUpdate(): void;
+        endDebugUpdate(): void;
+        onSceneChanged(): void;
+        protected onGraphicsDeviceReset(): void;
+        protected initialize(): void;
+        protected update(): Promise<void>;
+        private onAddToStage;
+    }
+}
+declare module es {
+    class Colors {
+        static renderableBounds: number;
+        static renderableCenter: number;
+        static colliderBounds: number;
+    }
+    class Size {
+        static readonly lineSizeMultiplier: number;
+    }
     class Debug {
         private static _debugDrawItems;
         static drawHollowRect(rectanle: Rectangle, color: number, duration?: number): void;
@@ -231,6 +268,7 @@ declare module es {
     abstract class Component extends egret.HashObject {
         entity: Entity;
         updateInterval: number;
+        debugDisplayObject: egret.DisplayObjectContainer;
         readonly transform: Transform;
         private _enabled;
         enabled: boolean;
@@ -247,35 +285,6 @@ declare module es {
         setEnabled(isEnabled: boolean): this;
         setUpdateOrder(updateOrder: number): this;
         clone(): Component;
-    }
-}
-declare module es {
-    class Core extends egret.DisplayObjectContainer {
-        static emitter: Emitter<CoreEvents>;
-        static debugRenderEndabled: boolean;
-        static graphicsDevice: GraphicsDevice;
-        static content: ContentManager;
-        static _instance: Core;
-        _nextScene: Scene;
-        _sceneTransition: SceneTransition;
-        _globalManagers: GlobalManager[];
-        constructor();
-        static readonly Instance: Core;
-        _scene: Scene;
-        static scene: Scene;
-        static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
-        static registerGlobalManager(manager: es.GlobalManager): void;
-        static unregisterGlobalManager(manager: es.GlobalManager): void;
-        static getGlobalManager<T extends es.GlobalManager>(type: any): T;
-        onOrientationChanged(): void;
-        draw(): Promise<void>;
-        startDebugUpdate(): void;
-        endDebugUpdate(): void;
-        onSceneChanged(): void;
-        protected onGraphicsDeviceReset(): void;
-        protected initialize(): void;
-        protected update(): Promise<void>;
-        private onAddToStage;
     }
 }
 declare module es {
@@ -562,10 +571,13 @@ declare module es {
 declare module es {
     abstract class RenderableComponent extends Component implements IRenderable {
         displayObject: egret.DisplayObject;
+        hollowShape: egret.Shape;
+        pixelShape: egret.Shape;
         color: number;
         protected _areBoundsDirty: boolean;
         readonly width: number;
         readonly height: number;
+        debugRenderEnabled: boolean;
         protected _localOffset: Vector2;
         localOffset: Vector2;
         protected _renderLayer: number;
@@ -576,6 +588,7 @@ declare module es {
         isVisible: boolean;
         onEntityTransformChanged(comp: transform.Component): void;
         abstract render(camera: Camera): any;
+        debugRender(): void;
         isVisibleFromCamera(camera: Camera): boolean;
         setRenderLayer(renderLayer: number): RenderableComponent;
         setColor(color: number): RenderableComponent;
@@ -782,6 +795,7 @@ declare module es {
 }
 declare module es {
     abstract class Collider extends Component {
+        debug: any;
         shape: Shape;
         isTrigger: boolean;
         physicsLayer: number;
@@ -815,6 +829,10 @@ declare module es {
 }
 declare module es {
     class BoxCollider extends Collider {
+        hollowShape: egret.Shape;
+        polygonShape: egret.Shape;
+        pixelShape1: egret.Shape;
+        pixelShape2: egret.Shape;
         constructor();
         width: number;
         height: number;
@@ -822,6 +840,7 @@ declare module es {
         setSize(width: number, height: number): this;
         setWidth(width: number): BoxCollider;
         setHeight(height: number): void;
+        debugRender(): void;
         toString(): string;
     }
 }
@@ -1468,7 +1487,7 @@ declare module es {
         static recenterPolygonVerts(points: Vector2[]): void;
         static findPolygonCenter(points: Vector2[]): Vector2;
         static getFarthestPointInDirection(points: Vector2[], direction: Vector2): Vector2;
-        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: number, edgeNormal: Vector2): Vector2;
+        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: Number, edgeNormal: Vector2): Vector2;
         static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints: any): void;
         recalculateBounds(collider: Collider): void;
         overlaps(other: Shape): any;
@@ -2201,7 +2220,7 @@ declare module es {
         static isTriangleCCW(a: Vector2, center: Vector2, c: Vector2): boolean;
         static cross(u: Vector2, v: Vector2): number;
         static perpendicular(first: Vector2, second: Vector2): Vector2;
-        static normalize(vec: Vector2): Vector2;
+        static normalize(vec: Vector2): void;
         static transformA(sourceArray: Vector2[], sourceIndex: number, matrix: Matrix2D, destinationArray: Vector2[], destinationIndex: number, length: number): void;
         static transformR(position: Vector2, matrix: Matrix2D): Vector2;
         static transform(sourceArray: Vector2[], matrix: Matrix2D, destinationArray: Vector2[]): void;

@@ -33,8 +33,10 @@ module sc {
 
         private scItemOnClick(evt: egret.Event){
             let data = evt.currentTarget.data;
-            es.Core.scene = new data();
-            es.Core.scene.camera.position = es.Vector2.zero;
+            es.Core.startSceneTransition(new es.FadeTransition(()=>{
+                es.Core.scene.camera.position = es.Vector2.zero;
+                return new data();
+            }));
         }
 
         public destroy() {

@@ -88,10 +88,11 @@ module es {
          * @param value
          */
         public static normalize(value: Vector2) {
-            let val = 1 / Math.sqrt((value.x * value.x) + (value.y * value.y));
-            value.x *= val;
-            value.y *= val;
-            return value;
+            let nValue = new Vector2(value.x, value.y);
+            let val = 1 / Math.sqrt((nValue.x * nValue.x) + (nValue.y * nValue.y));
+            nValue.x *= val;
+            nValue.y *= val;
+            return nValue;
         }
 
         /**

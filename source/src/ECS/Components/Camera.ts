@@ -362,7 +362,7 @@ module es {
         }
 
         public update() {
-            let halfScreen = Vector2.multiply(new Vector2(this.bounds.width, this.bounds.height), new Vector2(0.5));
+            let halfScreen = Vector2.multiply(this.bounds.size, new Vector2(0.5));
             this._worldSpaceDeadZone.x = this.position.x - halfScreen.x * Core.scene.scaleX + this.deadzone.x + this.focusOffset.x;
             this._worldSpaceDeadZone.y = this.position.y - halfScreen.y * Core.scene.scaleY + this.deadzone.y + this.focusOffset.y;
             this._worldSpaceDeadZone.width = this.deadzone.width;
@@ -385,7 +385,7 @@ module es {
          * @param position
          */
         public clampToMapSize(position: Vector2) {
-            let halfScreen = Vector2.multiply(new Vector2(this.bounds.width, this.bounds.height), new Vector2(0.5)).add(new Vector2(this.mapSize.x, this.mapSize.y));
+            let halfScreen = Vector2.multiply(this.bounds.size, new Vector2(0.5)).add(new Vector2(this.mapSize.x, this.mapSize.y));
             let cameraMax = new Vector2(this.mapSize.width - halfScreen.x, this.mapSize.height - halfScreen.y);
 
             return Vector2.clamp(position, halfScreen, cameraMax);

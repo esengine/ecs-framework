@@ -8,6 +8,8 @@ module es {
          * 用于装载egret显示对象
          */
         public displayObject: egret.DisplayObject = new egret.DisplayObject();
+        public hollowShape: egret.Shape = new egret.Shape();
+        public pixelShape: egret.Shape = new egret.Shape();
         /**
          * 用于着色器处理精灵
          */
@@ -30,6 +32,7 @@ module es {
             return this.bounds.height;
         }
 
+        public debugRenderEnabled: boolean = true;
         protected _localOffset: Vector2 = Vector2.zero;
 
         /**
@@ -109,6 +112,32 @@ module es {
          */
         public abstract render(camera: Camera);
 
+        public debugRender() {
+            if (!this.debugRenderEnabled)
+                return;
+
+            if (!this.hollowShape.parent)
+                this.debugDisplayObject.addChild(this.hollowShape);
+
+            if (!this.pixelShape.parent)
+                this.debugDisplayObject.addChild(this.pixelShape);
+
+            if (!this.entity.getComponent(Collider)){
+                this.hollowShape.graphics.clear();
+                this.hollowShape.graphics.beginFill(Colors.renderableBounds, 0);
+                this.hollowShape.graphics.lineStyle(1, Colors.renderableBounds);
+                this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+                this.hollowShape.graphics.endFill();
+            }
+
+            let pixelPos = Vector2.add(this.entity.transform.position, this._localOffset);
+            this.pixelShape.graphics.clear();
+            this.pixelShape.graphics.beginFill(Colors.renderableCenter, 0);
+            this.pixelShape.graphics.lineStyle(4, Colors.renderableCenter);
+            this.pixelShape.graphics.lineTo(pixelPos.x, pixelPos.y);
+            this.pixelShape.graphics.endFill();
+        }
+
         /**
          * 如果renderableComponent的边界与camera.bounds相交 返回true
          * 用于处理isVisible标志的状态开关
@@ -184,6 +213,7 @@ module es {
          */
         protected onBecameVisible() {
             this.displayObject.visible = this.isVisible;
+            this.debugDisplayObject.visible = this.isVisible;
         }
 
         /**
@@ -192,6 +222,7 @@ module es {
          */
         protected onBecameInvisible() {
             this.displayObject.visible = this.isVisible;
+            this.debugDisplayObject.visible = this.isVisible;
         }
     }
 }

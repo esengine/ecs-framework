@@ -77,10 +77,13 @@ module es {
 
                 // 处理渲染层列表
                 if (component instanceof RenderableComponent) {
-                    this._entity.scene.removeChild(component.displayObject);
+                    if (component.displayObject.parent)
+                        component.displayObject.parent.removeChild(component.displayObject);
                     this._entity.scene.renderableComponents.remove(component);
                 }
 
+                if (component.debugDisplayObject.parent)
+                    component.debugDisplayObject.parent.removeChild(component.debugDisplayObject);
 
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
                 this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
@@ -96,6 +99,7 @@ module es {
                     this._entity.scene.renderableComponents.add(component);
                 }
 
+                this._entity.scene.addChild(component.debugDisplayObject);
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
             }
@@ -122,7 +126,7 @@ module es {
                         this._entity.scene.renderableComponents.add(component);
                     }
 
-
+                    this._entity.scene.addChild(component.debugDisplayObject);
                     this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
 
@@ -162,7 +166,8 @@ module es {
                 this._entity.scene.renderableComponents.remove(component);
             }
 
-
+            if (component.debugDisplayObject.parent)
+                component.debugDisplayObject.parent.removeChild(component.debugDisplayObject);
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
 

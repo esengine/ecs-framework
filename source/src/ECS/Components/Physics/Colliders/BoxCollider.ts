@@ -1,6 +1,10 @@
 ///<reference path="./Collider.ts" />
 module es {
     export class BoxCollider extends Collider {
+        public hollowShape: egret.Shape = new egret.Shape();
+        public polygonShape: egret.Shape = new egret.Shape();
+        public pixelShape1: egret.Shape = new egret.Shape();
+        public pixelShape2: egret.Shape = new egret.Shape();
         /**
          * 零参数构造函数要求RenderableComponent在实体上，这样碰撞器可以在实体被添加到场景时调整自身的大小。
          */
@@ -90,6 +94,27 @@ module es {
                 if (this.entity && this._isParentEntityAddedToScene)
                     Physics.updateCollider(this);
             }
+        }
+
+        public debugRender() {
+            let poly = this.shape;
+            if (!this.hollowShape.parent)
+                this.debugDisplayObject.addChild(this.hollowShape);
+
+            if (!this.polygonShape.parent)
+                this.debugDisplayObject.addChild(this.polygonShape);
+
+            if (!this.pixelShape1.parent)
+                this.debugDisplayObject.addChild(this.pixelShape1);
+
+            if (!this.pixelShape2.parent)
+                this.debugDisplayObject.addChild(this.pixelShape2);
+
+            this.hollowShape.graphics.clear();
+            this.hollowShape.graphics.beginFill(Colors.colliderBounds, 0);
+            this.hollowShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderBounds);
+            this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+            this.hollowShape.graphics.endFill();
         }
 
         public toString() {

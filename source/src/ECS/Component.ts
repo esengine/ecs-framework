@@ -16,6 +16,10 @@ module es {
          * 更新该组件的时间间隔。这与实体的更新间隔无关。
          */
         public updateInterval: number = 1;
+        /**
+         * 用于装载debug使用的显示容器
+         */
+        public debugDisplayObject: egret.DisplayObjectContainer = new egret.DisplayObjectContainer();
 
         /**
          * 快速访问 this.entity.transform

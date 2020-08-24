@@ -179,7 +179,7 @@ module es {
                 let depth = result.normal.length() - circle.radius;
 
                 result.point = closestPointOnBounds;
-                result.normal = Vector2Ext.normalize(result.normal);
+                Vector2Ext.normalize(result.normal);
                 result.minimumTranslationVector = Vector2.multiply(new Vector2(depth), result.normal);
 
                 return true;
@@ -261,6 +261,7 @@ module es {
          *
          * @param first
          * @param second
+         * @param result
          */
         public static circleToCircle(first: Circle, second: Circle, result: CollisionResult): boolean {
             let distanceSquared = Vector2.distanceSquared(first.position, second.position);

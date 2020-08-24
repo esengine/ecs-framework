@@ -88,7 +88,7 @@ module es {
                     p2 = this.points[i + 1];
 
                 let perp = Vector2Ext.perpendicular(p1, p2);
-                perp = Vector2.normalize(perp);
+                Vector2Ext.normalize(perp);
                 this._edgeNormals[i] = perp;
             }
         }
@@ -103,7 +103,7 @@ module es {
 
             for (let i = 0; i < vertCount; i++) {
                 let a = 2 * Math.PI * (i / vertCount);
-                verts[i] = Vector2.multiply(new Vector2(Math.cos(a), Math.sin(a)), new Vector2(radius));
+                verts[i] = new Vector2(Math.cos(a) * radius, Math.sin(a) * radius);
             }
 
             return verts;
@@ -116,7 +116,7 @@ module es {
         public static recenterPolygonVerts(points: Vector2[]) {
             let center = this.findPolygonCenter(points);
             for (let i = 0; i < points.length; i++)
-                points[i] = Vector2.subtract(points[i], center);
+                points[i].subtract(center);
         }
 
         /**
@@ -163,9 +163,10 @@ module es {
          * @param distanceSquared
          * @param edgeNormal
          */
-        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: number, edgeNormal: Vector2): Vector2 {
+        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: Number, edgeNormal: Vector2): Vector2 {
             distanceSquared = Number.MAX_VALUE;
-            edgeNormal = new Vector2(0, 0);
+            edgeNormal.x = 0;
+            edgeNormal.y = 0;
             let closestPoint = new Vector2(0, 0);
 
             let tempDistanceSquared;
@@ -183,7 +184,8 @@ module es {
 
                     // 求直线的法线
                     let line = Vector2.subtract(points[j], points[i]);
-                    edgeNormal = new Vector2(-line.y, line.x);
+                    edgeNormal.x = -line.y;
+                    edgeNormal.y = line.x;
                 }
             }
 
