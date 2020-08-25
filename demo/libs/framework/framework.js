@@ -754,7 +754,6 @@ var es;
             var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
             this.x *= val;
             this.y *= val;
-            return this;
         };
         Vector2.prototype.length = function () {
             return Math.sqrt((this.x * this.x) + (this.y * this.y));
@@ -1144,6 +1143,9 @@ var es;
         Colors.renderableBounds = 0xffff00;
         Colors.renderableCenter = 0x9932CC;
         Colors.colliderBounds = 0x555555;
+        Colors.colliderEdge = 0x8B0000;
+        Colors.colliderPosition = 0xFFFF00;
+        Colors.colliderCenter = 0xFF0000;
         return Colors;
     }());
     es.Colors = Colors;
@@ -1905,9 +1907,9 @@ var es;
             var _this = _super.call(this) || this;
             _this._localTransform = es.Matrix2D.create();
             _this._worldTransform = es.Matrix2D.create().identity();
-            _this._rotationMatrix = es.Matrix2D.create();
-            _this._translationMatrix = es.Matrix2D.create();
-            _this._scaleMatrix = es.Matrix2D.create();
+            _this._rotationMatrix = es.Matrix2D.create().identity();
+            _this._translationMatrix = es.Matrix2D.create().identity();
+            _this._scaleMatrix = es.Matrix2D.create().identity();
             _this._worldToLocalTransform = es.Matrix2D.create().identity();
             _this._worldInverseTransform = es.Matrix2D.create().identity();
             _this._position = es.Vector2.zero;
@@ -3839,6 +3841,25 @@ var es;
             this.hollowShape.graphics.lineStyle(es.Size.lineSizeMultiplier, es.Colors.colliderBounds);
             this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
             this.hollowShape.graphics.endFill();
+            this.polygonShape.graphics.clear();
+            if (poly.points.length >= 2) {
+                this.polygonShape.graphics.beginFill(es.Colors.colliderEdge, 0);
+                this.polygonShape.graphics.lineStyle(es.Size.lineSizeMultiplier, es.Colors.colliderEdge);
+                for (var i = 1; i < poly.points.length; i++)
+                    this.polygonShape.graphics.lineTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                this.polygonShape.graphics.lineTo(poly.position.x + poly.points[poly.points.length - 1].x, poly.position.y + poly.points[0].y);
+                this.polygonShape.graphics.endFill();
+            }
+            this.pixelShape1.graphics.clear();
+            this.pixelShape1.graphics.beginFill(es.Colors.colliderPosition, 0);
+            this.pixelShape1.graphics.lineStyle(4 * es.Size.lineSizeMultiplier, es.Colors.colliderPosition);
+            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x, this.entity.transform.position.y);
+            this.pixelShape1.graphics.endFill();
+            this.pixelShape2.graphics.clear();
+            this.pixelShape2.graphics.beginFill(es.Colors.colliderCenter, 0);
+            this.pixelShape2.graphics.lineStyle(2 * es.Size.lineSizeMultiplier, es.Colors.colliderCenter);
+            this.pixelShape2.graphics.lineTo(this.entity.transform.position.x + this.shape.center.x, this.entity.transform.position.y + this.shape.center.y);
+            this.pixelShape2.graphics.endFill();
         };
         BoxCollider.prototype.toString = function () {
             return "[BoxCollider: bounds: " + this.bounds + "]";
@@ -6334,12 +6355,12 @@ var es;
                 value.top < this.bottom &&
                 this.top < value.bottom;
         };
-        Rectangle.prototype.rayIntersects = function (ray) {
-            var distance = 0;
+        Rectangle.prototype.rayIntersects = function (ray, distance) {
+            distance.value = 0;
             var maxValue = Number.MAX_VALUE;
             if (Math.abs(ray.direction.x) < 1E-06) {
                 if ((ray.start.x < this.x) || (ray.start.x > this.x + this.width))
-                    return distance;
+                    return false;
             }
             else {
                 var num11 = 1 / ray.direction.x;
@@ -6350,14 +6371,14 @@ var es;
                     num8 = num7;
                     num7 = num14;
                 }
-                distance = Math.max(num8, distance);
+                distance.value = Math.max(num8, distance.value);
                 maxValue = Math.min(num7, maxValue);
-                if (distance > maxValue)
-                    return distance;
+                if (distance.value > maxValue)
+                    return false;
             }
             if (Math.abs(ray.direction.y) < 1E-06) {
                 if ((ray.start.y < this.y) || (ray.start.y > this.y + this.height))
-                    return distance;
+                    return false;
             }
             else {
                 var num10 = 1 / ray.direction.y;
@@ -6368,12 +6389,12 @@ var es;
                     num6 = num5;
                     num5 = num13;
                 }
-                distance = Math.max(num6, distance);
+                distance.value = Math.max(num6, distance.value);
                 maxValue = Math.max(num5, maxValue);
-                if (distance > maxValue)
-                    return distance;
+                if (distance.value > maxValue)
+                    return false;
             }
-            return distance;
+            return true;
         };
         Rectangle.prototype.containsRect = function (value) {
             return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
@@ -6969,7 +6990,7 @@ var es;
             return points[index];
         };
         Polygon.getClosestPointOnPolygonToPoint = function (points, point, distanceSquared, edgeNormal) {
-            distanceSquared = Number.MAX_VALUE;
+            distanceSquared.value = Number.MAX_VALUE;
             edgeNormal.x = 0;
             edgeNormal.y = 0;
             var closestPoint = new es.Vector2(0, 0);
@@ -6980,8 +7001,8 @@ var es;
                     j = 0;
                 var closest = es.ShapeCollisions.closestPointOnLine(points[i], points[j], point);
                 tempDistanceSquared = es.Vector2.distanceSquared(point, closest);
-                if (tempDistanceSquared < distanceSquared) {
-                    distanceSquared = tempDistanceSquared;
+                if (tempDistanceSquared < distanceSquared.value) {
+                    distanceSquared.value = tempDistanceSquared;
                     closestPoint = closest;
                     var line = es.Vector2.subtract(points[j], points[i]);
                     edgeNormal.x = -line.y;
@@ -7234,14 +7255,13 @@ var es;
     var RealtimeCollisions = (function () {
         function RealtimeCollisions() {
         }
-        RealtimeCollisions.intersectMovingCircleToBox = function (s, b, movement) {
+        RealtimeCollisions.intersectMovingCircleBox = function (s, b, movement, time) {
             var e = b.bounds;
             e.inflate(s.radius, s.radius);
             var ray = new es.Ray2D(es.Vector2.subtract(s.position, movement), s.position);
-            var time = e.rayIntersects(ray);
-            if (time > 1)
-                return time;
-            var point = es.Vector2.add(ray.start, es.Vector2.add(ray.direction, new es.Vector2(time)));
+            if (!e.rayIntersects(ray, time) && time.value > 1)
+                return false;
+            var point = es.Vector2.add(ray.start, es.Vector2.add(ray.direction, new es.Vector2(time.value)));
             var u, v = 0;
             if (point.x < b.bounds.left)
                 u |= 1;
@@ -7256,9 +7276,9 @@ var es;
                 console.log("m == 3. corner " + es.Time.frameCount);
             }
             if ((m & (m - 1)) == 0) {
-                return time;
+                return true;
             }
-            return time;
+            return true;
         };
         return RealtimeCollisions;
     }());
@@ -7336,22 +7356,22 @@ var es;
         };
         ShapeCollisions.circleToPolygon = function (circle, polygon, result) {
             var poly2Circle = es.Vector2.subtract(circle.position, polygon.position);
-            var distanceSquared = 0;
+            var distanceSquared = new es.Ref(0);
             var closestPoint = es.Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle, distanceSquared, result.normal);
             var circleCenterInsidePoly = polygon.containsPoint(circle.position);
-            if (distanceSquared > circle.radius * circle.radius && !circleCenterInsidePoly)
+            if (distanceSquared.value > circle.radius * circle.radius && !circleCenterInsidePoly)
                 return false;
             var mtv;
             if (circleCenterInsidePoly) {
-                mtv = es.Vector2.multiply(result.normal, new es.Vector2(Math.sqrt(distanceSquared) - circle.radius));
+                mtv = es.Vector2.multiply(result.normal, new es.Vector2(Math.sqrt(distanceSquared.value) - circle.radius));
             }
             else {
-                if (distanceSquared == 0) {
+                if (distanceSquared.value == 0) {
                     mtv = es.Vector2.multiply(result.normal, new es.Vector2(circle.radius));
                 }
                 else {
-                    var distance = Math.sqrt(distanceSquared);
-                    mtv = es.Vector2.multiply(new es.Vector2(-es.Vector2.subtract(poly2Circle, closestPoint)), new es.Vector2((circle.radius - distanceSquared) / distance));
+                    var distance = Math.sqrt(distanceSquared.value);
+                    mtv = es.Vector2.multiply(new es.Vector2(-es.Vector2.subtract(poly2Circle, closestPoint)), new es.Vector2((circle.radius - distanceSquared.value) / distance));
                 }
             }
             result.minimumTranslationVector = mtv;
@@ -7410,9 +7430,9 @@ var es;
         };
         ShapeCollisions.pointToPoly = function (point, poly, result) {
             if (poly.containsPoint(point)) {
-                var distanceSquared = 0;
+                var distanceSquared = new es.Ref(0);
                 var closestPoint = es.Polygon.getClosestPointOnPolygonToPoint(poly.points, es.Vector2.subtract(point, poly.position), distanceSquared, result.normal);
-                result.minimumTranslationVector = es.Vector2.multiply(result.normal, new es.Vector2(Math.sqrt(distanceSquared), Math.sqrt(distanceSquared)));
+                result.minimumTranslationVector = es.Vector2.multiply(result.normal, new es.Vector2(Math.sqrt(distanceSquared.value), Math.sqrt(distanceSquared.value)));
                 result.point = es.Vector2.add(closestPoint, poly.position);
                 return true;
             }
@@ -7438,7 +7458,7 @@ var es;
                 if (result.minimumTranslationVector.equals(es.Vector2.zero))
                     return false;
                 result.normal = new es.Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
-                result.normal = result.normal.normalize();
+                result.normal.normalize();
                 return true;
             }
             return false;
@@ -7472,7 +7492,7 @@ var es;
                 }
             }
             if (hasIntersection) {
-                normal = normal.normalize();
+                normal.normalize();
                 var distance = es.Vector2.distance(start, intersectionPoint);
                 hit.setValuesNonCollider(fraction, distance, intersectionPoint, normal);
                 return true;
@@ -7522,20 +7542,20 @@ var es;
                 if (mtv.equals(es.Vector2.zero))
                     return false;
                 hit.normal = new es.Vector2(-mtv.x);
-                hit.normal = hit.normal.normalize();
+                hit.normal.normalize();
                 hit.distance = 0;
                 hit.fraction = 0;
                 return true;
             }
             else {
                 var ray = new es.Ray2D(es.Vector2.zero, new es.Vector2(-movement.x));
-                var fraction = minkowskiDiff.rayIntersects(ray);
-                if (fraction <= 1) {
-                    hit.fraction = fraction;
-                    hit.distance = movement.length() * fraction;
-                    hit.normal = new es.Vector2(-movement.x);
-                    hit.normal = hit.normal.normalize();
-                    hit.centroid = es.Vector2.add(first.bounds.center, es.Vector2.multiply(movement, new es.Vector2(fraction)));
+                var fraction = new es.Ref(0);
+                if (minkowskiDiff.rayIntersects(ray, fraction) && fraction.value <= 1) {
+                    hit.fraction = fraction.value;
+                    hit.distance = movement.length() * fraction.value;
+                    hit.normal = new es.Vector2(-movement.x, -movement.y);
+                    hit.normal.normalize();
+                    hit.centroid = es.Vector2.add(first.bounds.center, es.Vector2.multiply(movement, new es.Vector2(fraction.value)));
                     return true;
                 }
             }
@@ -7766,7 +7786,7 @@ var es;
             this.hitCounter = 0;
         };
         RaycastResultParser.prototype.checkRayIntersection = function (cellX, cellY, cell) {
-            var fraction = 0;
+            var fraction = new es.Ref(0);
             for (var i = 0; i < cell.length; i++) {
                 var potential = cell[i];
                 if (this._checkedColliders.contains(potential))
@@ -7777,8 +7797,7 @@ var es;
                 if (!es.Flags.isFlagSet(this._layerMask, potential.physicsLayer))
                     continue;
                 var colliderBounds = potential.bounds;
-                var fraction_1 = colliderBounds.rayIntersects(this._ray);
-                if (fraction_1 <= 1) {
+                if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1) {
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
                         if (!es.Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
                             continue;
@@ -10340,6 +10359,16 @@ var es;
         return RectangleExt;
     }());
     es.RectangleExt = RectangleExt;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Ref = (function () {
+        function Ref(value) {
+            this.value = value;
+        }
+        return Ref;
+    }());
+    es.Ref = Ref;
 })(es || (es = {}));
 var es;
 (function (es) {

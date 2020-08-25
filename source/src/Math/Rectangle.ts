@@ -81,13 +81,13 @@ module es {
                 this.top < value.bottom;
         }
 
-        public rayIntersects(ray: Ray2D): number{
-            let distance = 0;
+        public rayIntersects(ray: Ray2D, distance: Ref<number>): boolean{
+            distance.value = 0;
             let maxValue = Number.MAX_VALUE;
 
             if (Math.abs(ray.direction.x) < 1E-06){
                 if ((ray.start.x < this.x) || (ray.start.x > this.x + this.width))
-                    return distance;
+                    return false;
             }else{
                 let num11 = 1 / ray.direction.x;
                 let num8 = (this.x - ray.start.x) * num11;
@@ -98,15 +98,15 @@ module es {
                     num7 = num14;
                 }
 
-                distance = Math.max(num8, distance);
+                distance.value = Math.max(num8, distance.value);
                 maxValue = Math.min(num7, maxValue);
-                if (distance > maxValue)
-                    return distance;
+                if (distance.value > maxValue)
+                    return false;
             }
 
             if (Math.abs(ray.direction.y) < 1E-06){
                 if ((ray.start.y < this.y) || (ray.start.y > this.y + this.height))
-                    return distance;
+                    return false;
             }else{
                 let num10 = 1 / ray.direction.y;
                 let num6 = (this.y - ray.start.y) * num10;
@@ -117,13 +117,13 @@ module es {
                     num5 = num13;
                 }
 
-                distance = Math.max(num6, distance);
+                distance.value = Math.max(num6, distance.value);
                 maxValue = Math.max(num5, maxValue);
-                if (distance > maxValue)
-                    return distance;
+                if (distance.value > maxValue)
+                    return false;
             }
 
-            return distance;
+            return true;
         }
 
         /**

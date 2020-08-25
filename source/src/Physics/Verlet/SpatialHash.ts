@@ -355,7 +355,7 @@ module es {
          * @param cell
          */
         public checkRayIntersection(cellX: number, cellY: number, cell: Collider[]): boolean {
-            let fraction: number = 0;
+            let fraction: Ref<number> = new Ref(0);
             for (let i = 0; i < cell.length; i++) {
                 let potential = cell[i];
 
@@ -376,8 +376,7 @@ module es {
                 // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
                 // 在做形状测试之前先做一个边界检查
                 let colliderBounds = potential.bounds;
-                let fraction = colliderBounds.rayIntersects(this._ray);
-                if (fraction <= 1) {
+                if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1){
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
                         // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
                         if (!Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))

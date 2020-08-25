@@ -125,22 +125,22 @@ module es {
         public static circleToPolygon(circle: Circle, polygon: Polygon, result: CollisionResult): boolean {
             let poly2Circle = Vector2.subtract(circle.position, polygon.position);
 
-            let distanceSquared = 0;
+            let distanceSquared = new Ref(0);
             let closestPoint = Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle, distanceSquared, result.normal);
 
             let circleCenterInsidePoly = polygon.containsPoint(circle.position);
-            if (distanceSquared > circle.radius * circle.radius && !circleCenterInsidePoly)
+            if (distanceSquared.value > circle.radius * circle.radius && !circleCenterInsidePoly)
                 return false;
 
             let mtv: Vector2;
             if (circleCenterInsidePoly) {
-                mtv = Vector2.multiply(result.normal, new Vector2(Math.sqrt(distanceSquared) - circle.radius));
+                mtv = Vector2.multiply(result.normal, new Vector2(Math.sqrt(distanceSquared.value) - circle.radius));
             } else {
-                if (distanceSquared == 0) {
+                if (distanceSquared.value == 0) {
                     mtv = Vector2.multiply(result.normal, new Vector2(circle.radius));
                 } else {
-                    let distance = Math.sqrt(distanceSquared);
-                    mtv = Vector2.multiply(new Vector2(-Vector2.subtract(poly2Circle, closestPoint)), new Vector2((circle.radius - distanceSquared) / distance));
+                    let distance = Math.sqrt(distanceSquared.value);
+                    mtv = Vector2.multiply(new Vector2(-Vector2.subtract(poly2Circle, closestPoint)), new Vector2((circle.radius - distanceSquared.value) / distance));
                 }
             }
 
@@ -245,10 +245,10 @@ module es {
          */
         public static pointToPoly(point: Vector2, poly: Polygon, result: CollisionResult): boolean {
             if (poly.containsPoint(point)) {
-                let distanceSquared: number = 0;
+                let distanceSquared = new Ref(0);
                 let closestPoint = Polygon.getClosestPointOnPolygonToPoint(poly.points, Vector2.subtract(point, poly.position), distanceSquared, result.normal);
 
-                result.minimumTranslationVector = Vector2.multiply(result.normal, new Vector2(Math.sqrt(distanceSquared), Math.sqrt(distanceSquared)));
+                result.minimumTranslationVector = Vector2.multiply(result.normal, new Vector2(Math.sqrt(distanceSquared.value), Math.sqrt(distanceSquared.value)));
                 result.point = Vector2.add(closestPoint, poly.position);
 
                 return true;
@@ -295,7 +295,7 @@ module es {
                     return false;
 
                 result.normal = new Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
-                result.normal = result.normal.normalize();
+                result.normal.normalize();
 
                 return true;
             }
@@ -342,7 +342,7 @@ module es {
             }
 
             if (hasIntersection){
-                normal = normal.normalize();
+                normal.normalize();
                 let distance = Vector2.distance(start, intersectionPoint);
                 hit.setValuesNonCollider(fraction, distance, intersectionPoint, normal);
                 return true;
@@ -423,7 +423,7 @@ module es {
                     return false;
 
                 hit.normal = new Vector2(-mtv.x);
-                hit.normal = hit.normal.normalize();
+                hit.normal.normalize();
                 hit.distance = 0;
                 hit.fraction = 0;
 
@@ -431,13 +431,13 @@ module es {
             }else{
                 // 射线投射移动矢量
                 let ray = new Ray2D(Vector2.zero, new Vector2(-movement.x));
-                let fraction: number = minkowskiDiff.rayIntersects(ray);
-                if (fraction <= 1){
-                    hit.fraction = fraction;
-                    hit.distance = movement.length() * fraction;
-                    hit.normal = new Vector2(-movement.x);
-                    hit.normal = hit.normal.normalize();
-                    hit.centroid = Vector2.add(first.bounds.center, Vector2.multiply(movement, new Vector2(fraction)));
+                let fraction = new Ref(0);
+                if (minkowskiDiff.rayIntersects(ray, fraction) && fraction.value <= 1){
+                    hit.fraction = fraction.value;
+                    hit.distance = movement.length() * fraction.value;
+                    hit.normal = new Vector2(-movement.x, -movement.y);
+                    hit.normal.normalize();
+                    hit.centroid = Vector2.add(first.bounds.center, Vector2.multiply(movement, new Vector2(fraction.value)));
 
                     return true;
                 }

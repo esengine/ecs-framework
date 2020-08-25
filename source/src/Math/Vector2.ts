@@ -223,7 +223,6 @@ module es {
             let val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
             this.x *= val;
             this.y *= val;
-            return this;
         }
 
         /** 返回它的长度 */

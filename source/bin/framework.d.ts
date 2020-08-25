@@ -131,7 +131,7 @@ declare module es {
         divide(value: Vector2): Vector2;
         multiply(value: Vector2): Vector2;
         subtract(value: Vector2): this;
-        normalize(): this;
+        normalize(): void;
         length(): number;
         lengthSquared(): number;
         round(): Vector2;
@@ -226,6 +226,9 @@ declare module es {
         static renderableBounds: number;
         static renderableCenter: number;
         static colliderBounds: number;
+        static colliderEdge: number;
+        static colliderPosition: number;
+        static colliderCenter: number;
     }
     class Size {
         static readonly lineSizeMultiplier: number;
@@ -1342,7 +1345,7 @@ declare module es {
         static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
         static rectEncompassingPoints(points: Vector2[]): Rectangle;
         intersects(value: egret.Rectangle): boolean;
-        rayIntersects(ray: Ray2D): number;
+        rayIntersects(ray: Ray2D, distance: Ref<number>): boolean;
         containsRect(value: Rectangle): boolean;
         contains(x: number, y: number): boolean;
         getHalfSize(): Vector2;
@@ -1487,7 +1490,7 @@ declare module es {
         static recenterPolygonVerts(points: Vector2[]): void;
         static findPolygonCenter(points: Vector2[]): Vector2;
         static getFarthestPointInDirection(points: Vector2[], direction: Vector2): Vector2;
-        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: Number, edgeNormal: Vector2): Vector2;
+        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: Ref<number>, edgeNormal: Vector2): Vector2;
         static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints: any): void;
         recalculateBounds(collider: Collider): void;
         overlaps(other: Shape): any;
@@ -1536,7 +1539,7 @@ declare module es {
 }
 declare module es {
     class RealtimeCollisions {
-        static intersectMovingCircleToBox(s: Circle, b: Box, movement: Vector2): number;
+        static intersectMovingCircleBox(s: Circle, b: Box, movement: Vector2, time: Ref<number>): boolean;
     }
 }
 declare module es {
@@ -2196,6 +2199,12 @@ declare module es {
         static getRectEdgePortion(rect: Rectangle, edge: Edge, size?: number): Rectangle;
         static expandSide(rect: Rectangle, edge: Edge, amount: number): void;
         static contract(rect: Rectangle, horizontalAmount: any, verticalAmount: any): void;
+    }
+}
+declare module es {
+    class Ref<T> {
+        value: T;
+        constructor(value: T);
     }
 }
 declare module es {

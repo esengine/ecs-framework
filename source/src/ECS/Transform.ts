@@ -35,9 +35,9 @@ module es {
          * 值将自动从本地和父矩阵重新计算。
          */
         public _worldTransform = Matrix2D.create().identity();
-        public _rotationMatrix: Matrix2D = Matrix2D.create();
-        public _translationMatrix: Matrix2D = Matrix2D.create();
-        public _scaleMatrix: Matrix2D = Matrix2D.create();
+        public _rotationMatrix: Matrix2D = Matrix2D.create().identity();
+        public _translationMatrix: Matrix2D = Matrix2D.create().identity();
+        public _scaleMatrix: Matrix2D = Matrix2D.create().identity();
         public _children: Transform[];
 
         constructor(entity: Entity) {

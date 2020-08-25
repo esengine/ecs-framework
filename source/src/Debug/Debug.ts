@@ -4,6 +4,9 @@ module es {
         public static renderableBounds = 0xffff00;
         public static renderableCenter = 0x9932CC;
         public static colliderBounds = 0x555555;
+        public static colliderEdge = 0x8B0000;
+        public static colliderPosition = 0xFFFF00;
+        public static colliderCenter = 0xFF0000;
     }
 
     export class Size {

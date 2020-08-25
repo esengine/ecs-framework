@@ -163,8 +163,8 @@ module es {
          * @param distanceSquared
          * @param edgeNormal
          */
-        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: Number, edgeNormal: Vector2): Vector2 {
-            distanceSquared = Number.MAX_VALUE;
+        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: Ref<number>, edgeNormal: Vector2): Vector2 {
+            distanceSquared.value = Number.MAX_VALUE;
             edgeNormal.x = 0;
             edgeNormal.y = 0;
             let closestPoint = new Vector2(0, 0);
@@ -178,8 +178,8 @@ module es {
                 let closest = ShapeCollisions.closestPointOnLine(points[i], points[j], point);
                 tempDistanceSquared = Vector2.distanceSquared(point, closest);
 
-                if (tempDistanceSquared < distanceSquared) {
-                    distanceSquared = tempDistanceSquared;
+                if (tempDistanceSquared < distanceSquared.value) {
+                    distanceSquared.value = tempDistanceSquared;
                     closestPoint = closest;
 
                     // 求直线的法线

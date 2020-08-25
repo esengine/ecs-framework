@@ -97,7 +97,7 @@ module es {
         }
 
         public debugRender() {
-            let poly = this.shape;
+            let poly = this.shape as Polygon;
             if (!this.hollowShape.parent)
                 this.debugDisplayObject.addChild(this.hollowShape);
 
@@ -115,6 +115,29 @@ module es {
             this.hollowShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderBounds);
             this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
             this.hollowShape.graphics.endFill();
+
+            this.polygonShape.graphics.clear();
+            if (poly.points.length >= 2){
+                this.polygonShape.graphics.beginFill(Colors.colliderEdge, 0);
+                this.polygonShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderEdge);
+                for (let i = 1; i < poly.points.length; i ++)
+                    this.polygonShape.graphics.lineTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                this.polygonShape.graphics.lineTo(poly.position.x + poly.points[poly.points.length - 1].x, poly.position.y + poly.points[0].y);
+                this.polygonShape.graphics.endFill();
+            }
+
+            this.pixelShape1.graphics.clear();
+            this.pixelShape1.graphics.beginFill(Colors.colliderPosition, 0);
+            this.pixelShape1.graphics.lineStyle(4 * Size.lineSizeMultiplier, Colors.colliderPosition);
+            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x, this.entity.transform.position.y);
+            this.pixelShape1.graphics.endFill();
+
+            this.pixelShape2.graphics.clear();
+            this.pixelShape2.graphics.beginFill(Colors.colliderCenter, 0);
+            this.pixelShape2.graphics.lineStyle(2 * Size.lineSizeMultiplier, Colors.colliderCenter);
+            this.pixelShape2.graphics.lineTo(this.entity.transform.position.x + this.shape.center.x,
+                this.entity.transform.position.y + this.shape.center.y);
+            this.pixelShape2.graphics.endFill();
         }
 
         public toString() {
