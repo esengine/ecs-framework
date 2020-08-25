@@ -1091,6 +1091,7 @@ var es;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
+                            this.startDebugUpdate();
                             es.Time.update(egret.getTimer());
                             if (!this._scene) return [3, 2];
                             for (i = this._globalManagers.length - 1; i >= 0; i--) {
@@ -1113,7 +1114,9 @@ var es;
                         case 1:
                             _a.sent();
                             _a.label = 2;
-                        case 2: return [4, this.draw()];
+                        case 2:
+                            this.endDebugUpdate();
+                            return [4, this.draw()];
                         case 3:
                             _a.sent();
                             return [2];

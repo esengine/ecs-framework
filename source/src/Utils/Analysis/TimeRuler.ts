@@ -23,7 +23,7 @@ module es {
         /** 获取/设置计时器标尺宽度。 */
         public width: number;
         public enabled: true;
-        /**  */
+        /** 获取/设置日志显示或否 */
         public showLog = false;
         private _frameKey = 'frame';
         private _logKey = 'log';
@@ -53,6 +53,14 @@ module es {
          */
         private _updateCount: number;
         private _frameAdjust: number;
+
+        /** 画透明背景 */
+        private _rectShape1: egret.Shape = new egret.Shape();
+        private _rectShape2: egret.Shape = new egret.Shape();
+        private _rectShape3: egret.Shape = new egret.Shape();
+        private _rectShape4: egret.Shape = new egret.Shape();
+        private _rectShape5: egret.Shape = new egret.Shape();
+        private _rectShape6: egret.Shape = new egret.Shape();
 
         constructor() {
             this._logs = new Array<FrameLog>(2);
@@ -290,7 +298,57 @@ module es {
             let startY = position.y - (height - TimeRuler.barHeight);
             let y = startY;
 
-            // TODO: draw
+            // 画透明背景
+            let rc = new Rectangle(position.x, y, width, height);
+            this._rectShape1.graphics.clear();
+            this._rectShape1.graphics.beginFill(0x000000, 128 / 255);
+            this._rectShape1.graphics.drawRect(rc.x, rc.y, rc.width, rc.height);
+            this._rectShape1.graphics.endFill();
+
+            // 为每条线画标记
+            rc.height = TimeRuler.barHeight;
+            this._rectShape2.graphics.clear();
+            for (let bar of this._prevLog.bars){
+                rc.y = y + TimeRuler.barPadding;
+                if (bar.markCount > 0){
+                    for (let j = 0; j < bar.markCount; ++j){
+                        let bt = bar.markers[j].beginTime;
+                        let et = bar.markers[j].endTime;
+                        let sx = Math.floor(position.x + bt * msToPs);
+                        let ex = Math.floor(position.x + et * msToPs);
+                        rc.x = sx;
+                        rc.width = Math.max(ex - sx, 1);
+
+                        this._rectShape2.graphics.beginFill(bar.markers[j].color);
+                        this._rectShape2.graphics.drawRect(rc.x, rc.y, rc.width, rc.height);
+                        this._rectShape2.graphics.endFill();
+                    }
+                }
+
+                y += TimeRuler.barHeight + TimeRuler.barPadding;
+            }
+
+            // 画网格线
+            // 每个网格代表ms
+            rc = new Rectangle(position.x, startY, 1, height);
+            this._rectShape3.graphics.clear();
+            for (let t = 1; t < sampleSpan; t += 1){
+                rc.x = Math.floor(position.x + t * msToPs);
+                this._rectShape3.graphics.beginFill(0x808080);
+                this._rectShape3.graphics.drawRect(rc.x, rc.y, rc.width, rc.height);
+                this._rectShape3.graphics.endFill();
+            }
+
+            // 画frame grid
+            this._rectShape4.graphics.clear();
+            for (let i = 0; i <= this.sampleFrames; ++i){
+                rc.x = Math.floor(position.x + frameSpan * i * msToPs);
+                this._rectShape4.graphics.beginFill(0xFFFFFF);
+                this._rectShape4.graphics.drawRect(rc.x, rc.y, rc.width, rc.height);
+                this._rectShape4.graphics.endFill();
+            }
+
+            // TODO: 绘制字体
         }
 
         private onGraphicsDeviceReset() {
