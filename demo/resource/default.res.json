@@ -23,11 +23,6 @@
 	],
 	"resources": [
 		{
-			"url": "fgui/loading.fui",
-			"type": "bin",
-			"name": "loading"
-		},
-		{
 			"url": "preload/bg.png",
 			"type": "image",
 			"name": "bg_png"
@@ -56,16 +51,6 @@
 			"url": "preload/orangeNorm.png",
 			"type": "image",
 			"name": "orangeNorm_png"
-		},
-		{
-			"url": "fgui/sc.fui",
-			"type": "bin",
-			"name": "sc"
-		},
-		{
-			"url": "fgui/common.fui",
-			"type": "bin",
-			"name": "common"
 		},
 		{
 			"url": "preload/orthogonal-outside.json",
@@ -101,6 +86,21 @@
 			"url": "characters/6.png",
 			"type": "image",
 			"name": "6_png"
+		},
+		{
+			"url": "fgui/common.zip",
+			"type": "bin",
+			"name": "common"
+		},
+		{
+			"url": "fgui/sc.zip",
+			"type": "bin",
+			"name": "sc"
+		},
+		{
+			"url": "fgui/loading.zip",
+			"type": "bin",
+			"name": "loading"
 		}
 	]
 }

@@ -5,6 +5,10 @@ Cegret-framework
 
 这是一套用于egret的游戏框架，里面包含ECS框架用于管理场景实体，一些常用2D碰撞检测及A*寻路。如果您还需要包含其他的AI系统可以查看作者其他库（行为树、简易FSM、实用AI）。
 
+## 在线框架演示
+
+[非完整游戏演示](http://www.hyuan.org/samples)
+
 ## 入门教程
 
 [Getting Start](https://github.com/esengine/egret-framework/wiki/Getting-Start)
