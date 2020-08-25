@@ -148,7 +148,7 @@ module es {
             if (!camera)
                 return false;
 
-            this.isVisible = camera.bounds.intersects(this.displayObject.getBounds().union(this.bounds));
+            this.isVisible = camera.bounds.intersects(this.bounds);
             return this.isVisible;
         }
 

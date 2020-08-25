@@ -2769,7 +2769,7 @@ var es;
         RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
             if (!camera)
                 return false;
-            this.isVisible = camera.bounds.intersects(this.displayObject.getBounds().union(this.bounds));
+            this.isVisible = camera.bounds.intersects(this.bounds);
             return this.isVisible;
         };
         RenderableComponent.prototype.setRenderLayer = function (renderLayer) {
@@ -2950,11 +2950,10 @@ var es;
         };
         SpriteRenderer.prototype.render = function (camera) {
             this.sync(camera);
-            var afterPos = new es.Vector2(this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x, this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y);
-            if (this.displayObject.x != afterPos.x)
-                this.displayObject.x = afterPos.x;
-            if (this.displayObject.y != afterPos.y)
-                this.displayObject.y = afterPos.y;
+            if (this.displayObject.x != this.bounds.x)
+                this.displayObject.x = this.bounds.x;
+            if (this.displayObject.y != this.bounds.y)
+                this.displayObject.y = this.bounds.y;
         };
         return SpriteRenderer;
     }(es.RenderableComponent));
@@ -3845,20 +3844,26 @@ var es;
             if (poly.points.length >= 2) {
                 this.polygonShape.graphics.beginFill(es.Colors.colliderEdge, 0);
                 this.polygonShape.graphics.lineStyle(es.Size.lineSizeMultiplier, es.Colors.colliderEdge);
-                for (var i = 1; i < poly.points.length; i++)
-                    this.polygonShape.graphics.lineTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                for (var i = 1; i < poly.points.length; i++) {
+                    if (i == 1) {
+                        this.polygonShape.graphics.moveTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                    }
+                    else {
+                        this.polygonShape.graphics.lineTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                    }
+                }
                 this.polygonShape.graphics.lineTo(poly.position.x + poly.points[poly.points.length - 1].x, poly.position.y + poly.points[0].y);
                 this.polygonShape.graphics.endFill();
             }
             this.pixelShape1.graphics.clear();
             this.pixelShape1.graphics.beginFill(es.Colors.colliderPosition, 0);
             this.pixelShape1.graphics.lineStyle(4 * es.Size.lineSizeMultiplier, es.Colors.colliderPosition);
-            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x, this.entity.transform.position.y);
+            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x, this.entity.transform.position.y);
             this.pixelShape1.graphics.endFill();
             this.pixelShape2.graphics.clear();
             this.pixelShape2.graphics.beginFill(es.Colors.colliderCenter, 0);
             this.pixelShape2.graphics.lineStyle(2 * es.Size.lineSizeMultiplier, es.Colors.colliderCenter);
-            this.pixelShape2.graphics.lineTo(this.entity.transform.position.x + this.shape.center.x, this.entity.transform.position.y + this.shape.center.y);
+            this.pixelShape2.graphics.moveTo(this.entity.transform.position.x + this.shape.center.x, this.entity.transform.position.y + this.shape.center.y);
             this.pixelShape2.graphics.endFill();
         };
         BoxCollider.prototype.toString = function () {
@@ -8148,9 +8153,9 @@ var es;
         }
         TiledMapLoader.loadTmxMap = function (map, filePath) {
             var xMap = RES.getRes(filePath);
-            return this.loadTmxMapData(map, xMap);
+            return this.loadTmxMapData(map, xMap, RES.getResourceInfo(filePath));
         };
-        TiledMapLoader.loadTmxMapData = function (map, xMap) {
+        TiledMapLoader.loadTmxMapData = function (map, xMap, info) {
             return __awaiter(this, void 0, void 0, function () {
                 var _i, _a, e, tileset;
                 return __generator(this, function (_b) {
@@ -8172,6 +8177,7 @@ var es;
                             map.properties = this.parsePropertyDict(xMap["properties"]);
                             map.maxTileWidth = map.tileWidth;
                             map.maxTileHeight = map.tileHeight;
+                            map.tmxDirectory = info.root + info.url.replace(".", "_").replace(info.name, "");
                             map.tilesets = [];
                             _i = 0, _a = xMap["tilesets"];
                             _b.label = 1;
@@ -8918,7 +8924,12 @@ var es;
                             obj.shape.graphics.clear();
                             obj.shape.graphics.lineStyle(1, 0xa0a0a4);
                             for (var i = 0; i < points.length; i++) {
-                                obj.shape.graphics.lineTo(points[i].x, points[i].y);
+                                if (i == 0) {
+                                    obj.shape.graphics.moveTo(points[i].x, points[i].y);
+                                }
+                                else {
+                                    obj.shape.graphics.lineTo(points[i].x, points[i].y);
+                                }
                             }
                             obj.shape.graphics.endFill();
                             debugRender(obj, pos);

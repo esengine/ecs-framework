@@ -1836,7 +1836,7 @@ declare module es {
 declare module es {
     class TiledMapLoader {
         static loadTmxMap(map: TmxMap, filePath: string): Promise<TmxMap>;
-        static loadTmxMapData(map: TmxMap, xMap: any): Promise<TmxMap>;
+        static loadTmxMapData(map: TmxMap, xMap: any, info: any): Promise<TmxMap>;
         static parseLayers(container: any, xEle: any, map: TmxMap, width: number, height: number, tmxDirectory: string): Promise<void>;
         static loadTmxGroup(group: TmxGroup, map: TmxMap, xGroup: any, width: number, height: number, tmxDirectory: string): Promise<TmxGroup>;
         static loadTmxImageLayer(layer: TmxImageLayer, map: TmxMap, xImageLayer: any, tmxDirectory: string): Promise<TmxImageLayer>;

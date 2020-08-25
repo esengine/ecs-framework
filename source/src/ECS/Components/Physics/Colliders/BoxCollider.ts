@@ -120,8 +120,14 @@ module es {
             if (poly.points.length >= 2){
                 this.polygonShape.graphics.beginFill(Colors.colliderEdge, 0);
                 this.polygonShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderEdge);
-                for (let i = 1; i < poly.points.length; i ++)
-                    this.polygonShape.graphics.lineTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                for (let i = 1; i < poly.points.length; i ++){
+                    if (i == 1){
+                        this.polygonShape.graphics.moveTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                    }else{
+                        this.polygonShape.graphics.lineTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                    }
+                }
+
                 this.polygonShape.graphics.lineTo(poly.position.x + poly.points[poly.points.length - 1].x, poly.position.y + poly.points[0].y);
                 this.polygonShape.graphics.endFill();
             }
@@ -129,13 +135,13 @@ module es {
             this.pixelShape1.graphics.clear();
             this.pixelShape1.graphics.beginFill(Colors.colliderPosition, 0);
             this.pixelShape1.graphics.lineStyle(4 * Size.lineSizeMultiplier, Colors.colliderPosition);
-            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x, this.entity.transform.position.y);
+            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x, this.entity.transform.position.y);
             this.pixelShape1.graphics.endFill();
 
             this.pixelShape2.graphics.clear();
             this.pixelShape2.graphics.beginFill(Colors.colliderCenter, 0);
             this.pixelShape2.graphics.lineStyle(2 * Size.lineSizeMultiplier, Colors.colliderCenter);
-            this.pixelShape2.graphics.lineTo(this.entity.transform.position.x + this.shape.center.x,
+            this.pixelShape2.graphics.moveTo(this.entity.transform.position.x + this.shape.center.x,
                 this.entity.transform.position.y + this.shape.center.y);
             this.pixelShape2.graphics.endFill();
         }

@@ -58,19 +58,19 @@ module samples {
             this._pixelShape1.graphics.clear();
             this._pixelShape1.graphics.beginFill(0xffff00);
             this._pixelShape1.graphics.lineStyle(4, 0xffff00);
-            this._pixelShape1.graphics.lineTo(this._lastPosition.x, this._lastPosition.y);
+            this._pixelShape1.graphics.moveTo(this._lastPosition.x, this._lastPosition.y);
             this._pixelShape1.graphics.endFill();
 
             this._pixelShape2.graphics.clear();
             this._pixelShape2.graphics.beginFill(0xffffff);
             this._pixelShape2.graphics.lineStyle(4, 0xffffff);
-            this._pixelShape2.graphics.lineTo(this.transform.position.x, this.transform.position.y);
+            this._pixelShape2.graphics.moveTo(this.transform.position.x, this.transform.position.y);
             this._pixelShape2.graphics.endFill();
 
             this._lineShape.graphics.clear();
             this._lineShape.graphics.beginFill(0xffffff);
             this._lineShape.graphics.lineStyle(1, 0xffffff);
-            this._lineShape.graphics.lineTo(this._lastPosition.x, this._lastPosition.y);
+            this._lineShape.graphics.moveTo(this._lastPosition.x, this._lastPosition.y);
             this._lineShape.graphics.lineTo(this.transform.position.x, this.transform.position.y);
             this._lineShape.graphics.endFill();
 
@@ -78,7 +78,7 @@ module samples {
             if (this._collisionPosition.x > 0 && this._collisionPosition.y > 0){
                 this._pixelShape3.graphics.beginFill(0xff0000);
                 this._pixelShape3.graphics.lineStyle(10, 0xff0000);
-                this._pixelShape3.graphics.lineTo(this._collisionPosition.x, this._collisionPosition.y);
+                this._pixelShape3.graphics.moveTo(this._collisionPosition.x, this._collisionPosition.y);
                 this._pixelShape3.graphics.endFill();
             }
         }

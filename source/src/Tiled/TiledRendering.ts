@@ -202,7 +202,11 @@ module es {
                             obj.shape.graphics.clear();
                             obj.shape.graphics.lineStyle(1, 0xa0a0a4);
                             for (let i = 0; i < points.length; i ++){
-                                obj.shape.graphics.lineTo(points[i].x, points[i].y);
+                                if (i == 0){
+                                    obj.shape.graphics.moveTo(points[i].x, points[i].y);
+                                }else{
+                                    obj.shape.graphics.lineTo(points[i].x, points[i].y);
+                                }
                             }
                             obj.shape.graphics.endFill();
                             debugRender(obj, pos);

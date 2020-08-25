@@ -4,10 +4,10 @@ module es {
     export class TiledMapLoader {
         public static loadTmxMap(map: TmxMap, filePath: string) {
             let xMap = RES.getRes(filePath);
-            return this.loadTmxMapData(map, xMap);
+            return this.loadTmxMapData(map, xMap, RES.getResourceInfo(filePath));
         }
 
-        public static async loadTmxMapData(map: TmxMap, xMap: any) {
+        public static async loadTmxMapData(map: TmxMap, xMap: any, info: any) {
             map.version = xMap["version"];
             map.tiledVersion = xMap["tiledversion"];
             map.width = xMap["width"];
@@ -29,6 +29,7 @@ module es {
             // 我们保持记录的最大瓷砖大小的情况下，图像tileset随机大小
             map.maxTileWidth = map.tileWidth;
             map.maxTileHeight = map.tileHeight;
+            map.tmxDirectory = info.root + info.url.replace(".", "_").replace(info.name, "");
 
             map.tilesets = [];
             for (let e of xMap["tilesets"]) {
