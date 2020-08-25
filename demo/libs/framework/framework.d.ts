@@ -374,7 +374,7 @@ declare module es {
         unload(): void;
         onActive(): void;
         onDeactive(): void;
-        begin(): Promise<void>;
+        begin(): void;
         end(): void;
         update(): void;
         render(): void;
@@ -1257,6 +1257,7 @@ declare module es {
         private _alpha;
         constructor(sceneLoadAction: Function);
         onBeginTransition(): Promise<void>;
+        protected transitionComplete(): void;
         render(): void;
     }
 }
@@ -1270,6 +1271,7 @@ declare module es {
         windSegments: number;
         size: number;
         onBeginTransition(): Promise<void>;
+        protected transitionComplete(): void;
     }
 }
 declare module es {

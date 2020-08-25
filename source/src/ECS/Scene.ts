@@ -85,7 +85,7 @@ module es {
         public onDeactive() {
         }
 
-        public async begin() {
+        public begin() {
             if (this._renderers.length == 0) {
                 this.addRenderer(new DefaultRenderer());
                 console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");

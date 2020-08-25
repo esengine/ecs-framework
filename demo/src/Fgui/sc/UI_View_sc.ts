@@ -4,6 +4,7 @@ module FUI.sc {
 
 	export class UI_View_sc extends fairygui.GComponent {
 		public m_list_sc:fairygui.GList;
+		public m_combo_transition:fairygui.GComboBox;
 		public static URL:string = "ui://m4sln17ak7mf0";
 
 		public static createInstance():UI_View_sc {
@@ -14,6 +15,7 @@ module FUI.sc {
 			super.constructFromXML(xml);
 
 			this.m_list_sc = <fairygui.GList>(this.getChildAt(0));
+			this.m_combo_transition = <fairygui.GComboBox>(this.getChildAt(1));
 		}
 	}
 }

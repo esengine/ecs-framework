@@ -23,6 +23,7 @@
 		"bin-debug/Fgui/loading/UI_View_loading.js",
 		"bin-debug/Fgui/sc/scBinder.js",
 		"bin-debug/Fgui/sc/UI_btn_sc.js",
+		"bin-debug/Fgui/sc/UI_combo_sc_popup.js",
 		"bin-debug/Fgui/sc/UI_View_sc.js",
 		"bin-debug/Platform.js",
 		"bin-debug/Scenes/Animated Tiles/AnimatedTilesScene.js",

@@ -1675,24 +1675,19 @@ var es;
         Scene.prototype.onDeactive = function () {
         };
         Scene.prototype.begin = function () {
-            return __awaiter(this, void 0, void 0, function () {
-                return __generator(this, function (_a) {
-                    if (this._renderers.length == 0) {
-                        this.addRenderer(new es.DefaultRenderer());
-                        console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
-                    }
-                    this.camera = this.createEntity("camera").getOrCreateComponent(new es.Camera());
-                    es.Physics.reset();
-                    if (this.entityProcessors)
-                        this.entityProcessors.begin();
-                    this.addEventListener(egret.Event.ACTIVATE, this.onActive, this);
-                    this.addEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
-                    this.camera.onSceneSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
-                    this._didSceneBegin = true;
-                    this.onStart();
-                    return [2];
-                });
-            });
+            if (this._renderers.length == 0) {
+                this.addRenderer(new es.DefaultRenderer());
+                console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
+            }
+            this.camera = this.createEntity("camera").getOrCreateComponent(new es.Camera());
+            es.Physics.reset();
+            if (this.entityProcessors)
+                this.entityProcessors.begin();
+            this.addEventListener(egret.Event.ACTIVATE, this.onActive, this);
+            this.addEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
+            this.camera.onSceneSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
+            this._didSceneBegin = true;
+            this.onStart();
         };
         Scene.prototype.end = function () {
             this._didSceneBegin = false;
@@ -5865,6 +5860,8 @@ var es;
             return __awaiter(this, void 0, void 0, function () {
                 var _this = this;
                 return __generator(this, function (_a) {
+                    if (!this._mask.parent)
+                        es.Core.scene.stage.addChild(this._mask);
                     this._mask.graphics.beginFill(this.fadeToColor, 1);
                     this._mask.graphics.drawRect(0, 0, es.Core.graphicsDevice.viewport.width, es.Core.graphicsDevice.viewport.height);
                     this._mask.graphics.endFill();
@@ -5886,6 +5883,11 @@ var es;
                     return [2];
                 });
             });
+        };
+        FadeTransition.prototype.transitionComplete = function () {
+            _super.prototype.transitionComplete.call(this);
+            if (this._mask.parent)
+                this._mask.parent.removeChild(this._mask);
         };
         FadeTransition.prototype.render = function () {
             this._mask.graphics.clear();
@@ -5938,6 +5940,7 @@ var es;
             _this._mask.graphics.drawRect(0, 0, es.Core.graphicsDevice.viewport.width, es.Core.graphicsDevice.viewport.height);
             _this._mask.graphics.endFill();
             _this._mask.filters = [_this._windEffect];
+            es.Core.scene.stage.addChild(_this._mask);
             return _this;
         }
         Object.defineProperty(WindTransition.prototype, "windSegments", {
@@ -5968,6 +5971,11 @@ var es;
                     }
                 });
             });
+        };
+        WindTransition.prototype.transitionComplete = function () {
+            _super.prototype.transitionComplete.call(this);
+            if (this._mask.parent)
+                this._mask.parent.removeChild(this._mask);
         };
         return WindTransition;
     }(es.SceneTransition));

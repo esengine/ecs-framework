@@ -2,5 +2,9 @@
 <component size="640,1136" opaque="false">
   <displayList>
     <list id="n0_k7mf" name="list_sc" xy="0,0" size="211,1136" overflow="scroll" lineGap="20" colGap="11" defaultItem="ui://m4sln17ak7mf2" align="center"/>
+    <component id="n2_jde1" name="combo_transition" src="jde15" fileName="组件/combo_sc.xml" xy="535,4" pivot="0.5,0.5">
+      <ComboBox visibleItemCount="10"/>
+    </component>
+    <text id="n3_jde1" name="n3" xy="424,4" pivot="0.5,0.5" size="105,24" fontSize="16" text="场景切换方式:"/>
   </displayList>
 </component>

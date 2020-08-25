@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="150,200">
+  <displayList>
+    <graph id="n0_jde1" name="n0" xy="0,0" size="150,200" type="rect" lineSize="1" lineColor="#A0A0A0" fillColor="#F0F0F0" touchable="false">
+      <relation target="" sidePair="width,height"/>
+    </graph>
+    <list id="n1_jde1" name="list" xy="0,0" size="150,200" overflow="scroll" defaultItem="ui://m4sln17ajde13">
+      <relation target="" sidePair="width"/>
+    </list>
+  </displayList>
+  <relation target="n1_jde1" sidePair="height"/>
+</component>

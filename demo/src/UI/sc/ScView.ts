@@ -8,6 +8,11 @@ module sc {
             new SceneData("Ninja Adventure", samples.NinjaAdventureScene),
         ];
 
+        private _transitionList: TransitionData[] = [
+            new TransitionData("渐变", es.FadeTransition),
+            new TransitionData("wind", es.WindTransition),
+        ];
+
         constructor() {
             super("sc");
         }
@@ -22,6 +27,11 @@ module sc {
             this._ui.m_list_sc.callbackThisObj = this;
             this._ui.m_list_sc.itemRenderer = this.scItemRender;
             this._ui.m_list_sc.numItems = this._sceneList.length;
+
+            for (let i = 0; i < this._transitionList.length; i ++){
+                this._ui.m_combo_transition.items.push(this._transitionList[i].name);
+            }
+            this._ui.m_combo_transition.selectedIndex = 0;
         }
 
         public scItemRender(index: number, item: FUI.sc.UI_btn_sc){
@@ -33,7 +43,8 @@ module sc {
 
         private scItemOnClick(evt: egret.Event){
             let data = evt.currentTarget.data;
-            es.Core.startSceneTransition(new es.FadeTransition(()=>{
+            let currentTransition = this._transitionList[this._ui.m_combo_transition.selectedIndex].type;
+            es.Core.startSceneTransition(new currentTransition(()=>{
                 es.Core.scene.camera.position = es.Vector2.zero;
                 return new data();
             }));
@@ -49,6 +60,16 @@ module sc {
     }
 
     export class SceneData {
+        public name: string;
+        public type: any;
+
+        constructor(name: string, type: any){
+            this.name = name;
+            this.type = type;
+        }
+    }
+
+    export class TransitionData {
         public name: string;
         public type: any;
 

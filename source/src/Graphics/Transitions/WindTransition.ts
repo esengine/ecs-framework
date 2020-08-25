@@ -48,6 +48,7 @@ module es {
             this._mask.graphics.drawRect(0, 0, Core.graphicsDevice.viewport.width, Core.graphicsDevice.viewport.height);
             this._mask.graphics.endFill();
             this._mask.filters = [this._windEffect];
+            Core.scene.stage.addChild(this._mask);
         }
 
         public set windSegments(value: number) {
@@ -62,6 +63,13 @@ module es {
             this.loadNextScene();
             await this.tickEffectProgressProperty(this._windEffect, this.duration, this.easeType);
             this.transitionComplete();
+        }
+
+        protected transitionComplete() {
+            super.transitionComplete();
+
+            if (this._mask.parent)
+                this._mask.parent.removeChild(this._mask);
         }
     }
 }

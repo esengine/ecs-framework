@@ -3,6 +3,9 @@
   <resources>
     <component id="k7mf0" name="View_sc.xml" path="/" exported="true"/>
     <component id="k7mf2" name="btn_sc.xml" path="/组件/" exported="true"/>
+    <component id="jde13" name="combo_sc_item.xml" path="/组件/"/>
+    <component id="jde14" name="combo_sc_popup.xml" path="/组件/"/>
+    <component id="jde15" name="combo_sc.xml" path="/组件/" exported="true"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

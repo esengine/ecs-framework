@@ -14,6 +14,9 @@ module es {
         }
 
         public async onBeginTransition() {
+            if (!this._mask.parent)
+                Core.scene.stage.addChild(this._mask);
+
             this._mask.graphics.beginFill(this.fadeToColor, 1);
             this._mask.graphics.drawRect(0, 0, Core.graphicsDevice.viewport.width, Core.graphicsDevice.viewport.height);
             this._mask.graphics.endFill();
@@ -26,6 +29,13 @@ module es {
                     this.transitionComplete();
                 });
             });
+        }
+
+        protected transitionComplete(){
+            super.transitionComplete();
+
+            if (this._mask.parent)
+                this._mask.parent.removeChild(this._mask);
         }
 
         public render() {
