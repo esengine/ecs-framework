@@ -25,8 +25,6 @@ module es {
         public enabled: true;
         /** 获取/设置日志显示或否 */
         public showLog = false;
-        private _frameKey = 'frame';
-        private _logKey = 'log';
         /** 每帧的日志 */
         private _logs: FrameLog[];
         /** 当前显示帧计数 */
@@ -85,108 +83,101 @@ module es {
          */
         public startFrame() {
             // 当这个方法被多次调用时，我们跳过重置帧。
-            let lock = new LockUtils(this._frameKey);
-            lock.lock().then(() => {
-                this._updateCount = parseInt(egret.localStorage.getItem(this._frameKey), 10);
-                if (isNaN(this._updateCount))
-                    this._updateCount = 0;
-                let count = this._updateCount;
-                count += 1;
-                egret.localStorage.setItem(this._frameKey, count.toString());
-                if (this.enabled && (1 < count && count < TimeRuler.maxSampleFrames))
-                    return;
+            if (isNaN(this._updateCount))
+                this._updateCount = 0;
+            let count = this._updateCount;
+            count += 1;
+            if (this.enabled && (1 < count && count < TimeRuler.maxSampleFrames))
+                return;
 
-                // 更新当前帧日志。
-                this._prevLog = this._logs[this.frameCount++ & 0x1];
-                this._curLog = this._logs[this.frameCount & 0x1];
+            // 更新当前帧日志。
+            this._prevLog = this._logs[this.frameCount++ & 0x1];
+            this._curLog = this._logs[this.frameCount & 0x1];
 
-                let endFrameTime = this.stopwacth.getTime();
-                // 更新标记并创建日志。
-                for (let barIndex = 0; barIndex < this._prevLog.bars.length; ++barIndex) {
-                    let prevBar = this._prevLog.bars[barIndex];
-                    let nextBar = this._curLog.bars[barIndex];
+            let endFrameTime = this.stopwacth.getTime();
+            // 更新标记并创建日志。
+            for (let barIndex = 0; barIndex < this._prevLog.bars.length; ++barIndex) {
+                let prevBar = this._prevLog.bars[barIndex];
+                let nextBar = this._curLog.bars[barIndex];
 
-                    // 重新打开在前一帧中没有调用结束标记的标记。
-                    for (let nest = 0; nest < prevBar.nestCount; ++nest) {
-                        let markerIdx = prevBar.markerNests[nest];
-                        prevBar.markers[markerIdx].endTime = endFrameTime;
-                        nextBar.markerNests[nest] = nest;
-                        nextBar.markers[nest].markerId = prevBar.markers[markerIdx].markerId;
-                        nextBar.markers[nest].beginTime = 0;
-                        nextBar.markers[nest].endTime = -1;
-                        nextBar.markers[nest].color = prevBar.markers[markerIdx].color;
-                    }
-
-                    // 更新日志标记
-                    for (let markerIdx = 0; markerIdx < prevBar.markCount; ++markerIdx) {
-                        let duration = prevBar.markers[markerIdx].endTime - prevBar.markers[markerIdx].beginTime;
-                        let markerId = prevBar.markers[markerIdx].markerId;
-                        let m = this.markers[markerId];
-
-                        m.logs[barIndex].color = prevBar.markers[markerIdx].color;
-                        if (!m.logs[barIndex].initialized) {
-                            m.logs[barIndex].min = duration;
-                            m.logs[barIndex].max = duration;
-                            m.logs[barIndex].avg = duration;
-                            m.logs[barIndex].initialized = true;
-                        } else {
-                            m.logs[barIndex].min = Math.min(m.logs[barIndex].min, duration);
-                            m.logs[barIndex].max = Math.min(m.logs[barIndex].max, duration);
-                            m.logs[barIndex].avg += duration;
-                            m.logs[barIndex].avg *= 0.5;
-
-                            if (m.logs[barIndex].samples++ >= TimeRuler.logSnapDuration) {
-                                m.logs[barIndex].snapMin = m.logs[barIndex].min;
-                                m.logs[barIndex].snapMax = m.logs[barIndex].max;
-                                m.logs[barIndex].snapAvg = m.logs[barIndex].avg;
-                                m.logs[barIndex].samples = 0;
-                            }
-                        }
-                    }
-
-                    nextBar.markCount = prevBar.nestCount;
-                    nextBar.nestCount = prevBar.nestCount;
+                // 重新打开在前一帧中没有调用结束标记的标记。
+                for (let nest = 0; nest < prevBar.nestCount; ++nest) {
+                    let markerIdx = prevBar.markerNests[nest];
+                    prevBar.markers[markerIdx].endTime = endFrameTime;
+                    nextBar.markerNests[nest] = nest;
+                    nextBar.markers[nest].markerId = prevBar.markers[markerIdx].markerId;
+                    nextBar.markers[nest].beginTime = 0;
+                    nextBar.markers[nest].endTime = -1;
+                    nextBar.markers[nest].color = prevBar.markers[markerIdx].color;
                 }
 
-                this.stopwacth.reset();
-                this.stopwacth.start();
-            });
+                // 更新日志标记
+                for (let markerIdx = 0; markerIdx < prevBar.markCount; ++markerIdx) {
+                    let duration = prevBar.markers[markerIdx].endTime - prevBar.markers[markerIdx].beginTime;
+                    let markerId = prevBar.markers[markerIdx].markerId;
+                    let m = this.markers[markerId];
+
+                    m.logs[barIndex].color = prevBar.markers[markerIdx].color;
+                    if (!m.logs[barIndex].initialized) {
+                        m.logs[barIndex].min = duration;
+                        m.logs[barIndex].max = duration;
+                        m.logs[barIndex].avg = duration;
+                        m.logs[barIndex].initialized = true;
+                    } else {
+                        m.logs[barIndex].min = Math.min(m.logs[barIndex].min, duration);
+                        m.logs[barIndex].max = Math.min(m.logs[barIndex].max, duration);
+                        m.logs[barIndex].avg += duration;
+                        m.logs[barIndex].avg *= 0.5;
+
+                        if (m.logs[barIndex].samples++ >= TimeRuler.logSnapDuration) {
+                            m.logs[barIndex].snapMin = m.logs[barIndex].min;
+                            m.logs[barIndex].snapMax = m.logs[barIndex].max;
+                            m.logs[barIndex].snapAvg = m.logs[barIndex].avg;
+                            m.logs[barIndex].samples = 0;
+                        }
+                    }
+                }
+
+                nextBar.markCount = prevBar.nestCount;
+                nextBar.nestCount = prevBar.nestCount;
+            }
+
+            this.stopwacth.reset();
+            this.stopwacth.start();
         }
 
         /**
          * 开始测量时间。
          * @param markerName
          * @param color
+         * @param barIndex
          */
         public beginMark(markerName: string, color: number, barIndex: number = 0) {
-            let lock = new LockUtils(this._frameKey);
-            lock.lock().then(() => {
-                if (barIndex < 0 || barIndex >= TimeRuler.maxBars)
-                    throw new Error("barIndex argument out of range");
+            if (barIndex < 0 || barIndex >= TimeRuler.maxBars)
+                throw new Error("barIndex argument out of range");
 
-                let bar = this._curLog.bars[barIndex];
-                if (bar.markCount >= TimeRuler.maxSamples) {
-                    throw new Error("exceeded sample count. either set larger number to timeruler.maxsaple or lower sample count");
-                }
+            let bar = this._curLog.bars[barIndex];
+            if (bar.markCount >= TimeRuler.maxSamples) {
+                throw new Error("exceeded sample count. either set larger number to timeruler.maxsaple or lower sample count");
+            }
 
-                if (bar.nestCount >= TimeRuler.maxNestCall) {
-                    throw new Error("exceeded nest count. either set larger number to timeruler.maxnestcall or lower nest calls");
-                }
+            if (bar.nestCount >= TimeRuler.maxNestCall) {
+                throw new Error("exceeded nest count. either set larger number to timeruler.maxnestcall or lower nest calls");
+            }
 
-                // 获取注册的标记
-                let markerId = this._markerNameToIdMap.get(markerName);
-                if (isNaN(markerId)) {
-                    // 如果此标记未注册，则注册此标记。
-                    markerId = this.markers.length;
-                    this._markerNameToIdMap.set(markerName, markerId);
-                }
+            // 获取注册的标记
+            let markerId = this._markerNameToIdMap.get(markerName);
+            if (isNaN(markerId)) {
+                // 如果此标记未注册，则注册此标记。
+                markerId = this.markers.length;
+                this._markerNameToIdMap.set(markerName, markerId);
+            }
 
-                bar.markerNests[bar.nestCount++] = bar.markCount;
-                bar.markers[bar.markCount].markerId = markerId;
-                bar.markers[bar.markCount].color = color;
-                bar.markers[bar.markCount].beginTime = this.stopwacth.getTime();
-                bar.markers[bar.markCount].endTime = -1;
-            });
+            bar.markerNests[bar.nestCount++] = bar.markCount;
+            bar.markers[bar.markCount].markerId = markerId;
+            bar.markers[bar.markCount].color = color;
+            bar.markers[bar.markCount].beginTime = this.stopwacth.getTime();
+            bar.markers[bar.markCount].endTime = -1;
         }
 
         /**
@@ -195,28 +186,25 @@ module es {
          * @param barIndex
          */
         public endMark(markerName: string, barIndex: number = 0) {
-            let lock = new LockUtils(this._frameKey);
-            lock.lock().then(() => {
-                if (barIndex < 0 || barIndex >= TimeRuler.maxBars)
-                    throw new Error("barIndex argument out of range");
+            if (barIndex < 0 || barIndex >= TimeRuler.maxBars)
+                throw new Error("barIndex argument out of range");
 
-                let bar = this._curLog.bars[barIndex];
-                if (bar.nestCount <= 0) {
-                    throw new Error("call beginMark method before calling endMark method");
-                }
+            let bar = this._curLog.bars[barIndex];
+            if (bar.nestCount <= 0) {
+                throw new Error("call beginMark method before calling endMark method");
+            }
 
-                let markerId = this._markerNameToIdMap.get(markerName);
-                if (isNaN(markerId)) {
-                    throw new Error(`Marker ${markerName} is not registered. Make sure you specifed same name as you used for beginMark method`);
-                }
+            let markerId = this._markerNameToIdMap.get(markerName);
+            if (isNaN(markerId)) {
+                throw new Error(`Marker ${markerName} is not registered. Make sure you specifed same name as you used for beginMark method`);
+            }
 
-                let markerIdx = bar.markerNests[--bar.nestCount];
-                if (bar.markers[markerIdx].markerId != markerId) {
-                    throw new Error("Incorrect call order of beginMark/endMark method. beginMark(A), beginMark(B), endMark(B), endMark(A) But you can't called it like beginMark(A), beginMark(B), endMark(A), endMark(B).");
-                }
+            let markerIdx = bar.markerNests[--bar.nestCount];
+            if (bar.markers[markerIdx].markerId != markerId) {
+                throw new Error("Incorrect call order of beginMark/endMark method. beginMark(A), beginMark(B), endMark(B), endMark(A) But you can't called it like beginMark(A), beginMark(B), endMark(A), endMark(B).");
+            }
 
-                bar.markers[markerIdx].endTime = this.stopwacth.getTime();
-            });
+            bar.markers[markerIdx].endTime = this.stopwacth.getTime();
         }
 
         /**
@@ -241,31 +229,23 @@ module es {
          *
          */
         public resetLog() {
-            let lock = new LockUtils(this._logKey);
-            lock.lock().then(() => {
-                let count = parseInt(egret.localStorage.getItem(this._logKey), 10);
-                count += 1;
-                egret.localStorage.setItem(this._logKey, count.toString());
-                this.markers.forEach(markerInfo => {
-                    for (let i = 0; i < markerInfo.logs.length; ++i) {
-                        markerInfo.logs[i].initialized = false;
-                        markerInfo.logs[i].snapMin = 0;
-                        markerInfo.logs[i].snapMax = 0;
-                        markerInfo.logs[i].snapAvg = 0;
+            this.markers.forEach(markerInfo => {
+                for (let i = 0; i < markerInfo.logs.length; ++i) {
+                    markerInfo.logs[i].initialized = false;
+                    markerInfo.logs[i].snapMin = 0;
+                    markerInfo.logs[i].snapMax = 0;
+                    markerInfo.logs[i].snapAvg = 0;
 
-                        markerInfo.logs[i].min = 0;
-                        markerInfo.logs[i].max = 0;
-                        markerInfo.logs[i].avg = 0;
+                    markerInfo.logs[i].min = 0;
+                    markerInfo.logs[i].max = 0;
+                    markerInfo.logs[i].avg = 0;
 
-                        markerInfo.logs[i].samples = 0;
-                    }
-                });
+                    markerInfo.logs[i].samples = 0;
+                }
             });
         }
 
         public render(position: Vector2 = this._position, width: number = this.width) {
-            egret.localStorage.setItem(this._frameKey, "0");
-
             if (!this.showLog)
                 return;
 

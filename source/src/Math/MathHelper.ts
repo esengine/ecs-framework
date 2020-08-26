@@ -50,9 +50,16 @@ module es {
             return value;
         }
 
+        /**
+         * 给定圆心、半径和角度，得到圆周上的一个点。0度是3点钟。
+         * @param circleCenter
+         * @param radius
+         * @param angleInDegrees
+         */
         public static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number) {
             let radians = MathHelper.toRadians(angleInDegrees);
-            return new Vector2(Math.cos(radians) * radians + circleCenter.x, Math.sin(radians) * radians + circleCenter.y);
+            return new Vector2(Math.cos(radians) * radians + circleCenter.x,
+                Math.sin(radians) * radians + circleCenter.y);
         }
 
         /**

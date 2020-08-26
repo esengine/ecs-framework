@@ -29,6 +29,7 @@ module es {
          * 全局访问系统
          */
         public _globalManagers: GlobalManager[] = [];
+        public _timerManager: TimerManager = new TimerManager();
 
         constructor() {
             super();
@@ -38,6 +39,8 @@ module es {
             Core.content = new ContentManager();
 
             this.addEventListener(egret.Event.ADDED_TO_STAGE, this.onAddToStage, this);
+
+            Core.registerGlobalManager(this._timerManager);
         }
 
         /**
@@ -70,8 +73,8 @@ module es {
             }
 
             if (this._instance._scene == null) {
-                this._instance._scene = value;
                 this._instance.addChild(value);
+                this._instance._scene = value;
                 this._instance._scene.begin();
                 Core.Instance.onSceneChanged();
             } else {
@@ -121,6 +124,17 @@ module es {
                     return this._instance._globalManagers[i] as T;
             }
             return null;
+        }
+
+        /**
+         * 调度一个一次性或重复的计时器，该计时器将调用已传递的动作
+         * @param timeInSeconds
+         * @param repeats
+         * @param context
+         * @param onTime
+         */
+        public static schedule(timeInSeconds: number, repeats: boolean = false, context: any = null, onTime: (timer: ITimer)=>void){
+            return this._instance._timerManager.schedule(timeInSeconds, repeats, context, onTime);
         }
 
         public onOrientationChanged() {
@@ -210,8 +224,8 @@ module es {
                     this._nextScene = null;
                     this.onSceneChanged();
 
-                    this.addChild(this._scene);
                     await this._scene.begin();
+                    this.addChild(this._scene);
                 }
             }
 

@@ -1,5 +1,10 @@
 module es {
     export class CircleCollider extends Collider {
+        private rectShape: egret.Shape = new egret.Shape();
+        private circleShape: egret.Shape = new egret.Shape();
+        private pixelShape1: egret.Shape = new egret.Shape();
+        private pixelShape2: egret.Shape = new egret.Shape();
+
         /**
          * 创建一个有半径的圆
          *
@@ -39,6 +44,46 @@ module es {
             }
 
             return this;
+        }
+
+        public debugRender() {
+            if (!this.rectShape.parent)
+                this.debugDisplayObject.addChild(this.rectShape);
+
+            if (!this.circleShape.parent)
+                this.debugDisplayObject.addChild(this.circleShape);
+
+            if (!this.pixelShape1.parent)
+                this.debugDisplayObject.addChild(this.pixelShape1);
+
+            if (!this.pixelShape2.parent)
+                this.debugDisplayObject.addChild(this.pixelShape2);
+
+            this.rectShape.graphics.clear();
+            this.rectShape.graphics.beginFill(Colors.colliderBounds, 0);
+            this.rectShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderBounds);
+            this.rectShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+            this.rectShape.graphics.endFill();
+
+            this.circleShape.graphics.clear();
+            this.circleShape.graphics.beginFill(Colors.colliderEdge, 0);
+            this.circleShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderEdge);
+            this.circleShape.graphics.drawCircle(this.shape.position.x, this.shape.position.y, (this.shape as Circle).radius);
+            this.circleShape.graphics.endFill();
+
+            this.pixelShape1.graphics.clear();
+            this.pixelShape1.graphics.beginFill(Colors.colliderPosition, 0);
+            this.pixelShape1.graphics.lineStyle(4 * Size.lineSizeMultiplier, Colors.colliderPosition);
+            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x, this.entity.transform.position.y);
+            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x, this.entity.transform.position.y);
+            this.pixelShape1.graphics.endFill();
+
+            this.pixelShape2.graphics.clear();
+            this.pixelShape2.graphics.beginFill(Colors.colliderCenter, 0);
+            this.pixelShape2.graphics.lineStyle(2 * Size.lineSizeMultiplier, Colors.colliderCenter);
+            this.pixelShape2.graphics.moveTo(this.shape.position.x, this.shape.position.y);
+            this.pixelShape2.graphics.lineTo(this.shape.position.x, this.shape.position.y);
+            this.pixelShape2.graphics.endFill();
         }
 
         public toString() {

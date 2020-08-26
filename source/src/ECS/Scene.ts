@@ -91,23 +91,33 @@ module es {
                 console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
             }
 
-            this.camera = this.createEntity("camera").getOrCreateComponent(new Camera());
+            let cameraEntity = this.findEntity("camera");
+            if (!cameraEntity)
+                cameraEntity = this.createEntity("camera");
+            this.camera = cameraEntity.getOrCreateComponent(new Camera());
 
             Physics.reset();
+            this.updateResolutionScaler();
 
             if (this.entityProcessors)
                 this.entityProcessors.begin();
 
+            Core.emitter.addObserver(CoreEvents.GraphicsDeviceReset,this.updateResolutionScaler, this);
+            Core.emitter.addObserver(CoreEvents.OrientationChanged, this.updateResolutionScaler, this);
+
             this.addEventListener(egret.Event.ACTIVATE, this.onActive, this);
             this.addEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
-            this.camera.onSceneSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
 
             this._didSceneBegin = true;
             this.onStart();
+
         }
 
         public end() {
             this._didSceneBegin = false;
+
+            Core.emitter.removeObserver(CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler);
+            Core.emitter.removeObserver(CoreEvents.OrientationChanged, this.updateResolutionScaler);
 
             this.removeEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
             this.removeEventListener(egret.Event.ACTIVATE, this.onActive, this);
@@ -138,6 +148,10 @@ module es {
                 this.parent.removeChild(this);
 
             this.unload();
+        }
+
+        public updateResolutionScaler(){
+            this.camera.onSceneRenderTargetSizeChanged(Core.Instance.stage.stageWidth, Core.Instance.stage.stageHeight);
         }
 
         public update() {

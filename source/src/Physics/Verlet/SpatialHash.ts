@@ -311,20 +311,15 @@ module es {
             return this._store.get(this.getKey(x, y));
         }
 
+        public getKey(x: number, y: number){
+            return `${x}_${y}`;
+        }
+
         /**
          * 清除字典数据
          */
         public clear() {
             this._store.clear();
-        }
-
-        /**
-         * 根据x和y值计算并返回散列键
-         * @param x
-         * @param y
-         */
-        private getKey(x: number, y: number): string {
-            return Long.fromNumber(x).shiftLeft(32).or(Long.fromNumber(y, true)).toString();
         }
     }
 

@@ -219,7 +219,7 @@ module es {
                 let tempMat: Matrix2D;
                 let combinedMatrix = Matrix2D.create().translate(-this._polygonCenter.x, -this._polygonCenter.y);
 
-                if (collider.entity.transform.scale != Vector2.zero) {
+                if (collider.entity.transform.scale != Vector2.one) {
                     tempMat = Matrix2D.create().scale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
                     combinedMatrix = combinedMatrix.multiply(tempMat);
                     hasUnitScale = false;
@@ -238,7 +238,7 @@ module es {
                     let offsetLength = hasUnitScale ? collider._localOffsetLength :
                         Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
                     this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength,
-                        collider.entity.transform.rotation + offsetAngle);
+                        collider.entity.transform.rotationDegrees + offsetAngle);
                 }
 
                 tempMat = Matrix2D.create().translate(this._polygonCenter.x, this._polygonCenter.y);
@@ -256,7 +256,7 @@ module es {
 
             this.position = Vector2.add(collider.entity.transform.position, this.center);
             this.bounds = Rectangle.rectEncompassingPoints(this.points);
-            this.bounds.location = this.bounds.location.add(this.position);
+            this.bounds.location.add(this.position);
         }
 
         public overlaps(other: Shape) {
@@ -304,7 +304,7 @@ module es {
          */
         public containsPoint(point: Vector2) {
             // 将点归一化到多边形坐标空间中
-            point = Vector2.subtract(point, this.position);
+            point.subtract(this.position);
 
             let isInside = false;
             for (let i = 0, j = this.points.length - 1; i < this.points.length; j = i++) {

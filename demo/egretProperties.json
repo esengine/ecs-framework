@@ -32,10 +32,6 @@
       "path": "./libs/framework"
     },
     {
-      "name": "long",
-      "path": "./libs/long"
-    },
-    {
       "name": "fairygui",
       "path": "./libs/fairygui"
     }

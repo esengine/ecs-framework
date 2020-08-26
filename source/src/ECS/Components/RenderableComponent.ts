@@ -122,19 +122,20 @@ module es {
             if (!this.pixelShape.parent)
                 this.debugDisplayObject.addChild(this.pixelShape);
 
-            if (!this.entity.getComponent(Collider)){
-                this.hollowShape.graphics.clear();
-                this.hollowShape.graphics.beginFill(Colors.renderableBounds, 0);
-                this.hollowShape.graphics.lineStyle(1, Colors.renderableBounds);
-                this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
-                this.hollowShape.graphics.endFill();
-            }
+            // if (!this.entity.getComponent(Collider)){
+            //     this.hollowShape.graphics.clear();
+            //     this.hollowShape.graphics.beginFill(Colors.renderableBounds, 0);
+            //     this.hollowShape.graphics.lineStyle(1, Colors.renderableBounds);
+            //     this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+            //     this.hollowShape.graphics.endFill();
+            // }
 
             let pixelPos = Vector2.add(this.entity.transform.position, this._localOffset);
             this.pixelShape.graphics.clear();
             this.pixelShape.graphics.beginFill(Colors.renderableCenter, 0);
             this.pixelShape.graphics.lineStyle(4, Colors.renderableCenter);
             this.pixelShape.graphics.lineTo(pixelPos.x, pixelPos.y);
+            this.pixelShape.graphics.moveTo(pixelPos.x, pixelPos.y);
             this.pixelShape.graphics.endFill();
         }
 

@@ -103,10 +103,6 @@ declare module es {
 }
 declare module es {
     class Vector2 {
-        private static readonly unitYVector;
-        private static readonly unitXVector;
-        private static readonly unitVector2;
-        private static readonly zeroVector2;
         x: number;
         y: number;
         constructor(x?: number, y?: number);
@@ -202,6 +198,7 @@ declare module es {
         _nextScene: Scene;
         _sceneTransition: SceneTransition;
         _globalManagers: GlobalManager[];
+        _timerManager: TimerManager;
         constructor();
         static readonly Instance: Core;
         _scene: Scene;
@@ -210,6 +207,7 @@ declare module es {
         static registerGlobalManager(manager: es.GlobalManager): void;
         static unregisterGlobalManager(manager: es.GlobalManager): void;
         static getGlobalManager<T extends es.GlobalManager>(type: any): T;
+        static schedule(timeInSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer) => void): Timer;
         onOrientationChanged(): void;
         draw(): Promise<void>;
         startDebugUpdate(): void;
@@ -376,6 +374,7 @@ declare module es {
         onDeactive(): void;
         begin(): void;
         end(): void;
+        updateResolutionScaler(): void;
         update(): void;
         render(): void;
         postRender(): void;
@@ -478,10 +477,6 @@ declare module es {
     }
 }
 declare module es {
-    enum CameraStyle {
-        lockOn = 0,
-        cameraWindow = 1
-    }
     class CameraInset {
         left: number;
         right: number;
@@ -493,20 +488,11 @@ declare module es {
         _areMatrixedDirty: boolean;
         _areBoundsDirty: boolean;
         _isProjectionMatrixDirty: boolean;
-        followLerp: number;
-        deadzone: Rectangle;
-        focusOffset: Vector2;
-        mapLockEnabled: boolean;
-        mapSize: Rectangle;
-        _targetEntity: Entity;
-        _targetCollider: Collider;
-        _desiredPositionDelta: Vector2;
-        _cameraStyle: CameraStyle;
-        _worldSpaceDeadZone: Rectangle;
-        constructor(targetEntity?: Entity, cameraStyle?: CameraStyle);
+        constructor();
         position: Vector2;
         rotation: number;
-        _zoom: any;
+        rawZoom: number;
+        _zoom: number;
         zoom: number;
         _minimumZoom: number;
         minimumZoom: number;
@@ -520,25 +506,20 @@ declare module es {
         readonly inverseTransformMatrix: Matrix2D;
         _origin: Vector2;
         origin: Vector2;
-        onSceneSizeChanged(newWidth: number, newHeight: number): void;
         setInset(left: number, right: number, top: number, bottom: number): Camera;
         setPosition(position: Vector2): this;
         setRotation(rotation: number): Camera;
         setZoom(zoom: number): Camera;
         setMinimumZoom(minZoom: number): Camera;
         setMaximumZoom(maxZoom: number): Camera;
+        forceMatrixUpdate(): void;
         onEntityTransformChanged(comp: transform.Component): void;
         zoomIn(deltaZoom: number): void;
         zoomOut(deltaZoom: number): void;
         worldToScreenPoint(worldPosition: Vector2): Vector2;
         screenToWorldPoint(screenPosition: Vector2): Vector2;
+        onSceneRenderTargetSizeChanged(newWidth: number, newHeight: number): void;
         mouseToWorldPoint(): Vector2;
-        onAddedToEntity(): void;
-        update(): void;
-        clampToMapSize(position: Vector2): Vector2;
-        updateFollow(): void;
-        follow(targetEntity: Entity, cameraStyle?: CameraStyle): void;
-        setCenteredDeadzone(width: number, height: number): void;
         protected updateMatrixes(): void;
     }
 }
@@ -559,6 +540,35 @@ declare module es {
         constructor(typeClass: any);
         obtain(): T;
         free(component: T): void;
+    }
+}
+declare module es {
+    enum CameraStyle {
+        lockOn = 0,
+        cameraWindow = 1
+    }
+    class FollowCamera extends Component {
+        camera: Camera;
+        followLerp: number;
+        deadzone: Rectangle;
+        focusOffset: Vector2;
+        mapLockEnabled: boolean;
+        mapSize: Rectangle;
+        _targetEntity: Entity;
+        _targetCollider: Collider;
+        _desiredPositionDelta: Vector2;
+        _cameraStyle: CameraStyle;
+        _worldSpaceDeadZone: Rectangle;
+        private rectShape;
+        constructor(targetEntity?: Entity, camera?: Camera, cameraStyle?: CameraStyle);
+        onAddedToEntity(): void;
+        onGraphicsDeviceReset(): void;
+        update(): void;
+        debugRender(): void;
+        clampToMapSize(position: Vector2): Vector2;
+        follow(targetEntity: Entity, cameraStyle?: CameraStyle): void;
+        updateFollow(): void;
+        setCenteredDeadzone(width: number, height: number): void;
     }
 }
 declare module es {
@@ -849,9 +859,14 @@ declare module es {
 }
 declare module es {
     class CircleCollider extends Collider {
+        private rectShape;
+        private circleShape;
+        private pixelShape1;
+        private pixelShape2;
         constructor(radius?: number);
         radius: number;
         setRadius(radius: number): CircleCollider;
+        debugRender(): void;
         toString(): string;
     }
 }
@@ -1594,8 +1609,8 @@ declare module es {
         add(x: number, y: number, list: Collider[]): void;
         remove(obj: Collider): void;
         tryGetValue(x: number, y: number): Collider[];
+        getKey(x: number, y: number): string;
         clear(): void;
-        private getKey;
     }
     class RaycastResultParser {
         hitCounter: number;
@@ -2162,17 +2177,6 @@ declare module es {
         static free<T>(obj: Array<T>): void;
     }
 }
-declare const THREAD_ID: string;
-declare const nextTick: (fn: any) => void;
-declare class LockUtils {
-    private _keyX;
-    private _keyY;
-    private setItem;
-    private getItem;
-    private removeItem;
-    constructor(key: any);
-    lock(): Promise<{}>;
-}
 declare module es {
     class Pair<T> {
         first: T;
@@ -2321,8 +2325,6 @@ declare module es {
         width: number;
         enabled: true;
         showLog: boolean;
-        private _frameKey;
-        private _logKey;
         private _logs;
         private sampleFrames;
         private _position;
@@ -2334,6 +2336,12 @@ declare module es {
         private _markerNameToIdMap;
         private _updateCount;
         private _frameAdjust;
+        private _rectShape1;
+        private _rectShape2;
+        private _rectShape3;
+        private _rectShape4;
+        private _rectShape5;
+        private _rectShape6;
         constructor();
         static readonly Instance: TimeRuler;
         startFrame(): void;
@@ -2459,5 +2467,36 @@ declare module es {
         texture: egret.Texture;
         id: string;
         constructor(texture: egret.Texture, id: string);
+    }
+}
+declare module es {
+    interface ITimer {
+        context: any;
+        stop(): any;
+        reset(): any;
+        getContext<T>(): T;
+    }
+}
+declare module es {
+    class Timer implements ITimer {
+        context: any;
+        _timeInSeconds: number;
+        _repeats: boolean;
+        _onTime: (timer: ITimer) => void;
+        _isDone: boolean;
+        _elapsedTime: number;
+        getContext<T>(): T;
+        reset(): void;
+        stop(): void;
+        tick(): boolean;
+        initialize(timeInsSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer) => void): void;
+        unload(): void;
+    }
+}
+declare module es {
+    class TimerManager extends GlobalManager {
+        _timers: Timer[];
+        update(): void;
+        schedule(timeInSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer) => void): Timer;
     }
 }

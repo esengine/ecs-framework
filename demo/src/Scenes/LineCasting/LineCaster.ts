@@ -10,7 +10,7 @@ module samples {
         private _pixelShape2: egret.Shape;
         private _lineShape: egret.Shape;
         private _pixelShape3: egret.Shape;
-        private _delayTime = 1;
+        private _delayTime = 0.2;
         private _pressTime = 0;
         private _canTouch = true;
 

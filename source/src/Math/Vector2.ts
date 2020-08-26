@@ -1,10 +1,6 @@
 module es {
     /** 2d 向量 */
     export class Vector2 {
-        private static readonly unitYVector = new Vector2(0, 1);
-        private static readonly unitXVector = new Vector2(1, 0);
-        private static readonly unitVector2 = new Vector2(1, 1);
-        private static readonly zeroVector2 = new Vector2(0, 0);
         public x: number = 0;
         public y: number = 0;
 
@@ -19,19 +15,19 @@ module es {
         }
 
         public static get zero() {
-            return Vector2.zeroVector2;
+            return new Vector2(0, 0);
         }
 
         public static get one() {
-            return Vector2.unitVector2;
+            return new Vector2(1, 1);
         }
 
         public static get unitX() {
-            return Vector2.unitXVector;
+            return new Vector2(1, 0);
         }
 
         public static get unitY() {
-            return Vector2.unitYVector;
+            return new Vector2(0, 1);
         }
 
         /**

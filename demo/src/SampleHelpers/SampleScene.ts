@@ -5,7 +5,6 @@ module samples {
 
     export class SampleScene extends es.Scene {
         public static readonly screenSpaceRenderLayer = 999;
-        public canvas: SpriteRenderer;
 
         public static _needsFullRender: boolean;
         public _screenSpaceRenderer: ScreenSpaceRenderer;
@@ -23,13 +22,6 @@ module samples {
 
             if (addExcludeRenderer)
                 this.addRenderer(new RenderLayerExcludeRenderer(0, SampleScene.screenSpaceRenderLayer));
-
-            this.canvas = this.createEntity("ui").addComponent(new SpriteRenderer());
-            this.canvas.renderLayer = SampleScene.screenSpaceRenderLayer;
-            this.setupSceneSelector();
-        }
-
-        public setupSceneSelector(){
         }
     }
 }
