@@ -76,7 +76,7 @@ module es {
         public buildEdgeNormals() {
             // 对于box 我们只需要两条边，因为另外两条边是平行的
             let totalEdges = this.isBox ? 2 : this.points.length;
-            if (this._edgeNormals == null || this._edgeNormals.length != totalEdges)
+            if (this._edgeNormals == undefined || this._edgeNormals.length != totalEdges)
                 this._edgeNormals = new Array(totalEdges);
 
             let p2: Vector2;
@@ -169,7 +169,7 @@ module es {
             edgeNormal.y = 0;
             let closestPoint = new Vector2(0, 0);
 
-            let tempDistanceSquared;
+            let tempDistanceSquared = 0;
             for (let i = 0; i < points.length; i++) {
                 let j = i + 1;
                 if (j == points.length)
@@ -200,9 +200,9 @@ module es {
          * @param originalPoints
          * @param rotatedPoints
          */
-        public static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints){
+        public static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints: Vector2[]){
             let cos = Math.cos(radians);
-            let sin = Math.sign(radians);
+            let sin = Math.sin(radians);
 
             for (let i = 0; i < originalPoints.length; i ++){
                 let position = originalPoints[i];

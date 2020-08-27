@@ -47,7 +47,7 @@ module es {
          * 返回平铺空间中的矩形列表，其中任何非空平铺组合为边界区域
          */
         public getCollisionRectangles(): Rectangle[] {
-            let checkedIndexes = [];
+            let checkedIndexes: boolean[] = new Array(this.tiles.length);
             let rectangles = [];
             let startCol = -1;
             let index = -1;
@@ -55,12 +55,12 @@ module es {
             for (let y = 0; y < this.map.height; y ++){
                 for (let x = 0; x< this.map.width; x ++){
                     index = y * this.map.width + x;
-                    let tile = this.getTile(x,  y);
+                    let tile = this.getTile(x, y);
                     if (tile && !checkedIndexes[index]){
                         if (startCol < 0)
                             startCol = x;
                         checkedIndexes[index] = true;
-                    }else if(tile || checkedIndexes[index]){
+                    }else if(!tile || checkedIndexes[index] == true){
                         if (startCol >= 0){
                             rectangles.push(this.findBoundsRect(startCol, x, y, checkedIndexes));
                             startCol = -1;
@@ -90,7 +90,7 @@ module es {
                 for (let x = startX; x < endX; x ++){
                     index = y * this.map.width + x;
                     let tile = this.getTile(x, y);
-                    if (tile || checkedIndexes[index]){
+                    if (!tile || checkedIndexes[index]){
                         // 再次将我们到目前为止在这一行中访问过的所有内容设置为false，因为它不会包含在矩形中，应该再次进行检查
                         for (let _x = startX; _x < x; _x++){
                             index = y * this.map.width + _x;
@@ -132,7 +132,7 @@ module es {
          * TmxTilesetTile只存在于动态的tiles和带有附加属性的tiles中。
          */
         public get tilesetTile(): TmxTilesetTile {
-            if (this._tilesetTileIndex == undefined){
+            if (!this._tilesetTileIndex){
                 this._tilesetTileIndex = -1;
                 if (this.tileset.firstGid <= this.gid){
                     let tilesetTile = this.tileset.tiles.get(this.gid - this.tileset.firstGid);

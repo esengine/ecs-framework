@@ -200,6 +200,7 @@ module es {
 
             // 更新我们所有的系统管理器
             Time.update(egret.getTimer());
+            Input.update();
 
             if (this._scene) {
                 for (let i = this._globalManagers.length - 1; i >= 0; i--) {

@@ -130,7 +130,7 @@ module es {
                         let collider = cell[i];
 
                         // 如果它是自身或者如果它不匹配我们的层掩码 跳过这个碰撞器
-                        if (collider == excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer))
+                        if (collider == excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer.value))
                             continue;
 
                         if (bounds.intersects(collider.bounds)) {
@@ -364,7 +364,7 @@ module es {
                     continue;
 
                 // 确保碰撞器在图层蒙版上
-                if (!Flags.isFlagSet(this._layerMask, potential.physicsLayer))
+                if (!Flags.isFlagSet(this._layerMask, potential.physicsLayer.value))
                     continue;
 
                 // TODO: rayIntersects的性能够吗?需要测试它。Collisions.rectToLine可能更快

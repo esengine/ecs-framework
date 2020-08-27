@@ -8,12 +8,24 @@ module es {
         /**
          * 零参数构造函数要求RenderableComponent在实体上，这样碰撞器可以在实体被添加到场景时调整自身的大小。
          */
-        constructor() {
+        constructor(x?: number, y?: number, width?: number, height?: number) {
             super();
 
-            // 我们在这里插入一个1x1框作为占位符，直到碰撞器在下一阵被添加到实体并可以获得更精确的自动调整大小数据
-            this.shape = new Box(1, 1);
-            this._colliderRequiresAutoSizing = true;
+            if (x == undefined && y == undefined){
+                if (width == undefined && height == undefined){
+                    // 我们在这里插入一个1x1框作为占位符，直到碰撞器在下一阵被添加到实体并可以获得更精确的自动调整大小数据
+                    this.shape = new Box(1, 1);
+                    this._colliderRequiresAutoSizing = true;
+                }else if (width != undefined && height != undefined){
+                    x = -width / 2;
+                    y = -height / 2;
+                    this._localOffset = new Vector2(x + width / 2, y + height / 2);
+                    this.shape = new Box(width, height);
+                }
+            }else if (x != undefined && y != undefined && width != undefined && height != undefined){
+                this._localOffset = new Vector2(x + width / 2, y + height / 2);
+                this.shape = new Box(width, height);
+            }
         }
 
         public get width() {
@@ -30,20 +42,6 @@ module es {
 
         public set height(value: number) {
             this.setHeight(value);
-        }
-
-        /**
-         * 创建一个BoxCollider并使用x/y组件作为localOffset
-         * @param x
-         * @param y
-         * @param width
-         * @param height
-         */
-        public createBoxRect(x: number, y: number, width: number, height: number): BoxCollider{
-            this._localOffset = new Vector2(x + width / 2, y + width / 2);
-            this.shape = new Box(width, height);
-            this._colliderRequiresAutoSizing = false;
-            return this;
         }
 
         /**
@@ -110,11 +108,11 @@ module es {
             if (!this.pixelShape2.parent)
                 this.debugDisplayObject.addChild(this.pixelShape2);
 
-            // this.hollowShape.graphics.clear();
-            // this.hollowShape.graphics.beginFill(Colors.colliderBounds, 0);
-            // this.hollowShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderBounds);
-            // this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
-            // this.hollowShape.graphics.endFill();
+            this.hollowShape.graphics.clear();
+            this.hollowShape.graphics.beginFill(Colors.colliderBounds, 0);
+            this.hollowShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderBounds);
+            this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+            this.hollowShape.graphics.endFill();
 
             this.polygonShape.graphics.clear();
             if (poly.points.length >= 2){

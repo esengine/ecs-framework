@@ -1,7 +1,7 @@
 {
 	"groups": [
 		{
-			"keys": "bg_png,bgNorm_png,moon_png,orange_png,moonNorm_png,orangeNorm_png,orthogonal-outside_json",
+			"keys": "bg_png,bgNorm_png,moon_png,orange_png,moonNorm_png,orangeNorm_png,tiledMap_json,orthogonal-outside_json,tilemap_json,plume_png",
 			"name": "preload"
 		},
 		{
@@ -53,11 +53,6 @@
 			"name": "orangeNorm_png"
 		},
 		{
-			"url": "preload/orthogonal-outside.json",
-			"type": "json",
-			"name": "orthogonal-outside_json"
-		},
-		{
 			"url": "characters/1.png",
 			"type": "image",
 			"name": "1_png"
@@ -101,6 +96,26 @@
 			"url": "fgui/loading.zip",
 			"type": "bin",
 			"name": "loading"
+		},
+		{
+			"url": "preload/caveman/tiledMap.json",
+			"type": "json",
+			"name": "tiledMap_json"
+		},
+		{
+			"url": "preload/orthogonal/orthogonal-outside.json",
+			"type": "json",
+			"name": "orthogonal-outside_json"
+		},
+		{
+			"url": "preload/ninja/tilemap.json",
+			"type": "json",
+			"name": "tilemap_json"
+		},
+		{
+			"url": "preload/plume.png",
+			"type": "image",
+			"name": "plume_png"
 		}
 	]
 }

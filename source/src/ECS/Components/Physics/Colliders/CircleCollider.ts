@@ -13,11 +13,14 @@ module es {
         constructor(radius?: number) {
             super();
 
-            if (radius)
+            if (radius == undefined){
+                // 我们在这里插入一个1px的圆圈作为占位符
+                // 直到碰撞器被添加到实体并可以获得更精确的自动调整大小数据的下一帧
+                this.shape = new Circle(1);
                 this._colliderRequiresAutoSizing = true;
-            // 我们在这里插入一个1px的圆圈作为占位符
-            // 直到碰撞器被添加到实体并可以获得更精确的自动调整大小数据的下一帧
-            this.shape = new Circle(radius ? radius : 1);
+            }else{
+                this.shape = new Circle(radius);
+            }
         }
 
         public get radius(): number {

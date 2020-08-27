@@ -38,22 +38,6 @@ module samples {
             displayContainer.addChild(this._lineShape);
         }
 
-        public onAddedToEntity(): void {
-            KeyboardUtils.registerKey(KeyboardUtils.SPACE, this.spaceDown, this, KeyboardUtils.TYPE_KEY_DOWN);
-        }
-
-        public onRemovedFromEntity(): void {
-            KeyboardUtils.unregisterKey(KeyboardUtils.SPACE, KeyboardUtils.TYPE_KEY_DOWN);
-        }
-
-        private spaceDown(){
-            let hit = Physics.linecast(this._lastPosition, this.transform.position);
-            if (hit.collider){
-                this._collisionPosition = hit.point;
-            }
-        }
-
-
         public render(camera: es.Camera): any {
             this._pixelShape1.graphics.clear();
             this._pixelShape1.graphics.beginFill(0xffff00);

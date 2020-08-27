@@ -281,20 +281,6 @@ module es {
         }
 
         /**
-         * 创建此实体的深层克隆。子类可以重写此方法来复制任何自定义字段。
-         * 当重写时，应该调用CopyFrom方法，它将为您克隆所有组件、碰撞器和转换子组件。
-         * 注意克隆的实体不会被添加到任何场景中!你必须自己添加它们!
-         * @param position
-         */
-        public clone(position: Vector2 = new Vector2()): Entity {
-            let entity = new Entity(this.name + "(clone)");
-            entity.copyFrom(this);
-            entity.transform.position = position;
-
-            return entity;
-        }
-
-        /**
          * 在提交了所有挂起的实体更改后，将此实体添加到场景时调用
          */
         public onAddedToScene() {
@@ -412,32 +398,6 @@ module es {
 
         public toString(): string {
             return `[Entity: name: ${this.name}, tag: ${this.tag}, enabled: ${this.enabled}, depth: ${this.updateOrder}]`;
-        }
-
-        /**
-         * 将实体的属性、组件和碰撞器复制到此实例
-         * @param entity
-         */
-        protected copyFrom(entity: Entity) {
-            this.tag = entity.tag;
-            this.updateInterval = entity.updateInterval;
-            this.updateOrder = entity.updateOrder;
-            this.enabled = entity.enabled;
-
-            this.transform.scale = entity.transform.scale;
-            this.transform.rotation = entity.transform.rotation;
-
-            for (let i = 0; i < entity.components.count; i++)
-                this.addComponent(entity.components.buffer[i].clone());
-            for (let i = 0; i < entity.components._componentsToAdd.length; i++)
-                this.addComponent(entity.components._componentsToAdd[i].clone());
-
-            for (let i = 0; i < entity.transform.childCount; i++) {
-                let child = entity.transform.getChild(i).entity;
-                let childClone = child.clone();
-                childClone.transform.copyFrom(child.transform);
-                childClone.transform.parent = this.transform;
-            }
         }
     }
 }

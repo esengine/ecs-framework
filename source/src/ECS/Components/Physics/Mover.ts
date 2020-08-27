@@ -36,7 +36,7 @@ module es {
                 let bounds = collider.bounds;
                 bounds.x += motion.x;
                 bounds.y += motion.y;
-                let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
+                let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
 
                 for (let j = 0; j < neighbors.length; j++) {
                     let neighbor = neighbors[j];

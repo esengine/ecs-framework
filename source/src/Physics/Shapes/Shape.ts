@@ -26,9 +26,5 @@ module es {
         public abstract containsPoint(point: Vector2);
 
         public abstract pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
-
-        public clone(): Shape {
-            return ObjectUtils.clone<Shape>(this);
-        }
     }
 }

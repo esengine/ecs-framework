@@ -127,15 +127,5 @@ module es {
 
             return this;
         }
-
-        /**
-         * 创建此组件的克隆
-         */
-        public clone(): Component {
-            let component = ObjectUtils.clone<Component>(this);
-            component.entity = null;
-
-            return component;
-        }
     }
 }

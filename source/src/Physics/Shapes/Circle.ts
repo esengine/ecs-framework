@@ -25,21 +25,21 @@ module es {
                     // 为了处理偏移原点的旋转，我们只需要将圆心围绕(0,0)在一个圆上移动，我们的偏移量就是0角
                     let offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
                     let offsetLength = hasUnitScale ? collider._localOffsetLength : Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
-                    this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, collider.entity.transform.rotation + offsetAngle);
+                    this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
                 }
             }
 
-            this.position = Vector2.add(collider.transform.position, this.center);
+            this.position = Vector2.add(collider.entity.transform.position, this.center);
             this.bounds = new Rectangle(this.position.x - this.radius, this.position.y - this.radius, this.radius * 2, this.radius * 2);
         }
 
         public overlaps(other: Shape) {
             let result: CollisionResult = new CollisionResult();
             if (other instanceof Box && (other as Box).isUnrotated)
-                return Collisions.isRectToCircle(other.bounds, this.position, this.radius);
+                return Collisions.rectToCircle(other.bounds, this.position, this.radius);
 
             if (other instanceof Circle)
-                return Collisions.isCircleToCircle(this.position, this.radius, other.position, (other as Circle).radius);
+                return Collisions.circleToCircle(this.position, this.radius, other.position, (other as Circle).radius);
 
             if (other instanceof Polygon)
                 return ShapeCollisions.circleToPolygon(this, other, result);

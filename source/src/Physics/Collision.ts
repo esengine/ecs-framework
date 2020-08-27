@@ -67,28 +67,51 @@ module es {
             return Vector2.add(lineA, new Vector2(v.x * t, v.y * t));
         }
 
-        public static isCircleToCircle(circleCenter1: Vector2, circleRadius1: number, circleCenter2: Vector2, circleRadius2: number): boolean {
+        public static circleToCircle(circleCenter1: Vector2, circleRadius1: number, circleCenter2: Vector2, circleRadius2: number): boolean {
             return Vector2.distanceSquared(circleCenter1, circleCenter2) < (circleRadius1 + circleRadius2) * (circleRadius1 + circleRadius2);
         }
 
-        public static isCircleToLine(circleCenter: Vector2, radius: number, lineFrom: Vector2, lineTo: Vector2): boolean {
+        public static circleToLine(circleCenter: Vector2, radius: number, lineFrom: Vector2, lineTo: Vector2): boolean {
             return Vector2.distanceSquared(circleCenter, this.closestPointOnLine(lineFrom, lineTo, circleCenter)) < radius * radius;
         }
 
-        public static isCircleToPoint(circleCenter: Vector2, radius: number, point: Vector2): boolean {
+        public static circleToPoint(circleCenter: Vector2, radius: number, point: Vector2): boolean {
             return Vector2.distanceSquared(circleCenter, point) < radius * radius;
         }
 
-        public static isRectToCircle(rect: egret.Rectangle, cPosition: Vector2, cRadius: number): boolean {
-            let ew = rect.width * 0.5;
-            let eh = rect.height * 0.5;
-            let vx = Math.max(0, Math.max(cPosition.x - rect.x) - ew);
-            let vy = Math.max(0, Math.max(cPosition.y - rect.y) - eh);
+        public static rectToCircle(rect: egret.Rectangle, cPosition: Vector2, cRadius: number): boolean {
+            if (this.rectToPoint(rect.x, rect.y, rect.width, rect.height, cPosition))
+                return true;
 
-            return vx * vx + vy * vy < cRadius * cRadius;
+            let edgeFrom: Vector2 = Vector2.zero;
+            let edgeTo: Vector2 = Vector2.zero;
+            let sector = this.getSector(rect.x, rect.y, rect.width, rect.height, cPosition);
+
+            if ((sector & PointSectors.top) != 0){
+                edgeFrom = new Vector2(rect.x, rect.y);
+                edgeTo = new Vector2(rect.x + rect.width, rect.y);
+                if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                    return true;
+            }
+
+            if ((sector & PointSectors.bottom) != 0){
+                edgeFrom = new Vector2(rect.x, rect.y + rect.width);
+                edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
+                if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                    return true;
+            }
+
+            if ((sector & PointSectors.left) != 0){
+                edgeFrom = new Vector2(rect.x + rect.width, rect.y);
+                edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
+                if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                    return true;
+            }
+
+            return false;
         }
 
-        public static isRectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2) {
+        public static rectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2) {
             let fromSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineFrom);
             let toSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineTo);
 
@@ -134,7 +157,7 @@ module es {
             return false;
         }
 
-        public static isRectToPoint(rX: number, rY: number, rW: number, rH: number, point: Vector2) {
+        public static rectToPoint(rX: number, rY: number, rW: number, rH: number, point: Vector2) {
             return point.x >= rX && point.y >= rY && point.x < rX + rW && point.y < rY + rH;
         }
 

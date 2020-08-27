@@ -55,6 +55,8 @@ module es {
             return this._gameTouchs[0].position;
         }
 
+        public static _virtualInputs: VirtualInput[] = [];
+
         /** 获取最大触摸数 */
         public static get maxSupportedTouch() {
             return Core._instance.stage.maxTouches;
@@ -91,9 +93,43 @@ module es {
             this.initTouchCache();
         }
 
+        public static update(){
+            KeyboardUtils.update();
+            for (let i = 0; i < this._virtualInputs.length; i ++)
+                this._virtualInputs[i].update();
+        }
+
         public static scaledPosition(position: Vector2) {
             let scaledPos = new Vector2(position.x - this._resolutionOffset.x, position.y - this._resolutionOffset.y);
             return Vector2.multiply(scaledPos, this.resolutionScale);
+        }
+
+        /**
+         * 只有在当前帧按下并且在上一帧没有按下时才算press
+         * @param key
+         */
+        public static isKeyPressed(key: Keys): boolean{
+            return KeyboardUtils.currentKeys.contains(key) && !KeyboardUtils.previousKeys.contains(key);
+        }
+
+        public static isKeyPressedBoth(keyA: Keys, keyB: Keys){
+            return this.isKeyPressed(keyA) || this.isKeyPressed(keyB);
+        }
+
+        public static isKeyDown(key: Keys): boolean {
+            return KeyboardUtils.currentKeys.contains(key);
+        }
+
+        public static isKeyDownBoth(keyA: Keys, keyB: Keys){
+            return this.isKeyDown(keyA) || this.isKeyDown(keyB);
+        }
+
+        public static isKeyReleased(key: Keys){
+            return !KeyboardUtils.currentKeys.contains(key) && KeyboardUtils.previousKeys.contains(key);
+        }
+
+        public static isKeyReleasedBoth(keyA: Keys, keyB: Keys){
+            return this.isKeyReleased(keyA) || this.isKeyReleased(keyB);
         }
 
         private static initTouchCache() {

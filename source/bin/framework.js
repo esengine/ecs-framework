@@ -1096,6 +1096,7 @@ var es;
                         case 0:
                             this.startDebugUpdate();
                             es.Time.update(egret.getTimer());
+                            es.Input.update();
                             if (!this._scene) return [3, 2];
                             for (i = this._globalManagers.length - 1; i >= 0; i--) {
                                 if (this._globalManagers[i].enabled)
@@ -1310,11 +1311,6 @@ var es;
                 this._updateOrder = updateOrder;
             }
             return this;
-        };
-        Component.prototype.clone = function () {
-            var component = ObjectUtils.clone(this);
-            component.entity = null;
-            return component;
         };
         return Component;
     }(egret.HashObject));
@@ -1554,13 +1550,6 @@ var es;
                 this.transform.getChild(i).entity.attachToScene(newScene);
             }
         };
-        Entity.prototype.clone = function (position) {
-            if (position === void 0) { position = new es.Vector2(); }
-            var entity = new Entity(this.name + "(clone)");
-            entity.copyFrom(this);
-            entity.transform.position = position;
-            return entity;
-        };
         Entity.prototype.onAddedToScene = function () {
         };
         Entity.prototype.onRemovedFromScene = function () {
@@ -1619,24 +1608,6 @@ var es;
         };
         Entity.prototype.toString = function () {
             return "[Entity: name: " + this.name + ", tag: " + this.tag + ", enabled: " + this.enabled + ", depth: " + this.updateOrder + "]";
-        };
-        Entity.prototype.copyFrom = function (entity) {
-            this.tag = entity.tag;
-            this.updateInterval = entity.updateInterval;
-            this.updateOrder = entity.updateOrder;
-            this.enabled = entity.enabled;
-            this.transform.scale = entity.transform.scale;
-            this.transform.rotation = entity.transform.rotation;
-            for (var i = 0; i < entity.components.count; i++)
-                this.addComponent(entity.components.buffer[i].clone());
-            for (var i = 0; i < entity.components._componentsToAdd.length; i++)
-                this.addComponent(entity.components._componentsToAdd[i].clone());
-            for (var i = 0; i < entity.transform.childCount; i++) {
-                var child = entity.transform.getChild(i).entity;
-                var childClone = child.clone();
-                childClone.transform.copyFrom(child.transform);
-                childClone.transform.parent = this.transform;
-            }
         };
         Entity._idGenerator = 0;
         return Entity;
@@ -3264,6 +3235,7 @@ var es;
 (function (es) {
     var SpriteAnimation = (function () {
         function SpriteAnimation(sprites, frameRate) {
+            if (frameRate === void 0) { frameRate = 10; }
             this.sprites = sprites;
             this.frameRate = frameRate;
         }
@@ -3461,13 +3433,13 @@ var es;
             if (collisionLayerName === void 0) { collisionLayerName = null; }
             if (shouldCreateColliders === void 0) { shouldCreateColliders = true; }
             var _this = _super.call(this) || this;
-            _this.physicsLayer = 1 << 0;
+            _this.physicsLayer = new es.Ref(1 << 0);
             _this.toContainer = false;
             _this.tiledMap = tiledMap;
             _this._shouldCreateColliders = shouldCreateColliders;
             _this.displayObject = new egret.DisplayObjectContainer();
             if (collisionLayerName) {
-                _this.collisionLayer = tiledMap.tileLayers[collisionLayerName];
+                _this.collisionLayer = tiledMap.tileLayers.find(function (layer) { return layer.name == collisionLayerName; });
             }
             return _this;
         }
@@ -3554,7 +3526,7 @@ var es;
             var collisionRects = this.collisionLayer.getCollisionRectangles();
             this._colliders = [];
             for (var i = 0; i < collisionRects.length; i++) {
-                var collider = new es.BoxCollider().createBoxRect(collisionRects[i].x + this._localOffset.x, collisionRects[i].y + this._localOffset.y, collisionRects[i].width, collisionRects[i].height);
+                var collider = new es.BoxCollider(collisionRects[i].x + this._localOffset.x, collisionRects[i].y + this._localOffset.y, collisionRects[i].width, collisionRects[i].height);
                 collider.physicsLayer = this.physicsLayer;
                 collider.entity = this.entity;
                 this._colliders[i] = collider;
@@ -3596,7 +3568,7 @@ var es;
                 var bounds = collider.bounds;
                 bounds.x += motion.x;
                 bounds.y += motion.y;
-                var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers);
+                var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
                 for (var j = 0; j < neighbors.length; j++) {
                     var neighbor = neighbors[j];
                     if (neighbor.isTrigger)
@@ -3645,10 +3617,10 @@ var es;
             if (!this._collider)
                 return false;
             var didCollide = false;
-            this.entity.position = es.Vector2.add(this.entity.position, motion);
-            var neighbors = es.Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers);
-            for (var i = 0; i < neighbors.length; i++) {
-                var neighbor = neighbors[i];
+            this.entity.position.add(motion);
+            var neighbors = es.Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers.value);
+            for (var _i = 0, neighbors_1 = neighbors; _i < neighbors_1.length; _i++) {
+                var neighbor = neighbors_1[_i];
                 if (this._collider.overlaps(neighbor) && neighbor.enabled) {
                     didCollide = true;
                     this.notifyTriggerListeners(this._collider, neighbor);
@@ -3678,8 +3650,8 @@ var es;
         __extends(Collider, _super);
         function Collider() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
-            _this.physicsLayer = 1 << 0;
-            _this.collidesWithLayers = es.Physics.allLayers;
+            _this.physicsLayer = new es.Ref(1 << 0);
+            _this.collidesWithLayers = new es.Ref(es.Physics.allLayers);
             _this.shouldColliderScaleAndRotateWithTransform = true;
             _this.registeredPhysicsBounds = new es.Rectangle();
             _this._isPositionDirty = true;
@@ -3748,8 +3720,8 @@ var es;
                 var renderable = this.entity.getComponent(es.RenderableComponent);
                 if (renderable) {
                     var renderableBounds = renderable.bounds;
-                    var width = renderableBounds.width / this.entity.scale.x;
-                    var height = renderableBounds.height / this.entity.scale.y;
+                    var width = renderableBounds.width / this.entity.transform.scale.x;
+                    var height = renderableBounds.height / this.entity.transform.scale.y;
                     if (this instanceof es.CircleCollider) {
                         this.radius = Math.max(width, height) * 0.5;
                     }
@@ -3809,19 +3781,12 @@ var es;
         };
         Collider.prototype.collidesWith = function (collider, motion, result) {
             var oldPosition = this.entity.position;
-            this.entity.position = this.entity.position.add(motion);
+            this.entity.position.add(motion);
             var didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)
                 result.collider = collider;
             this.entity.position = oldPosition;
             return didCollide;
-        };
-        Collider.prototype.clone = function () {
-            var collider = ObjectUtils.clone(this);
-            collider.entity = null;
-            if (this.shape)
-                collider.shape = this.shape.clone();
-            return collider;
         };
         return Collider;
     }(es.Component));
@@ -3831,14 +3796,28 @@ var es;
 (function (es) {
     var BoxCollider = (function (_super) {
         __extends(BoxCollider, _super);
-        function BoxCollider() {
+        function BoxCollider(x, y, width, height) {
             var _this = _super.call(this) || this;
             _this.hollowShape = new egret.Shape();
             _this.polygonShape = new egret.Shape();
             _this.pixelShape1 = new egret.Shape();
             _this.pixelShape2 = new egret.Shape();
-            _this.shape = new es.Box(1, 1);
-            _this._colliderRequiresAutoSizing = true;
+            if (x == undefined && y == undefined) {
+                if (width == undefined && height == undefined) {
+                    _this.shape = new es.Box(1, 1);
+                    _this._colliderRequiresAutoSizing = true;
+                }
+                else if (width != undefined && height != undefined) {
+                    x = -width / 2;
+                    y = -height / 2;
+                    _this._localOffset = new es.Vector2(x + width / 2, y + height / 2);
+                    _this.shape = new es.Box(width, height);
+                }
+            }
+            else if (x != undefined && y != undefined && width != undefined && height != undefined) {
+                _this._localOffset = new es.Vector2(x + width / 2, y + height / 2);
+                _this.shape = new es.Box(width, height);
+            }
             return _this;
         }
         Object.defineProperty(BoxCollider.prototype, "width", {
@@ -3861,12 +3840,6 @@ var es;
             enumerable: true,
             configurable: true
         });
-        BoxCollider.prototype.createBoxRect = function (x, y, width, height) {
-            this._localOffset = new es.Vector2(x + width / 2, y + width / 2);
-            this.shape = new es.Box(width, height);
-            this._colliderRequiresAutoSizing = false;
-            return this;
-        };
         BoxCollider.prototype.setSize = function (width, height) {
             this._colliderRequiresAutoSizing = false;
             var box = this.shape;
@@ -3906,6 +3879,11 @@ var es;
                 this.debugDisplayObject.addChild(this.pixelShape1);
             if (!this.pixelShape2.parent)
                 this.debugDisplayObject.addChild(this.pixelShape2);
+            this.hollowShape.graphics.clear();
+            this.hollowShape.graphics.beginFill(es.Colors.colliderBounds, 0);
+            this.hollowShape.graphics.lineStyle(es.Size.lineSizeMultiplier, es.Colors.colliderBounds);
+            this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+            this.hollowShape.graphics.endFill();
             this.polygonShape.graphics.clear();
             if (poly.points.length >= 2) {
                 this.polygonShape.graphics.beginFill(es.Colors.colliderEdge, 0);
@@ -3951,9 +3929,13 @@ var es;
             _this.circleShape = new egret.Shape();
             _this.pixelShape1 = new egret.Shape();
             _this.pixelShape2 = new egret.Shape();
-            if (radius)
+            if (radius == undefined) {
+                _this.shape = new es.Circle(1);
                 _this._colliderRequiresAutoSizing = true;
-            _this.shape = new es.Circle(radius ? radius : 1);
+            }
+            else {
+                _this.shape = new es.Circle(radius);
+            }
             return _this;
         }
         Object.defineProperty(CircleCollider.prototype, "radius", {
@@ -6155,17 +6137,17 @@ var es;
             return (self & flag) != 0;
         };
         Flags.setFlagExclusive = function (self, flag) {
-            return 1 << flag;
+            self.value = 1 << flag;
         };
         Flags.setFlag = function (self, flag) {
-            return (self | 1 << flag);
+            self.value = (self.value | 1 << flag);
         };
         Flags.unsetFlag = function (self, flag) {
             flag = 1 << flag;
-            return (self & (~flag));
+            self.value = (self.value & (~flag));
         };
         Flags.invertFlags = function (self) {
-            return ~self;
+            self.value = ~self.value;
         };
         return Flags;
     }());
@@ -6828,23 +6810,42 @@ var es;
             t = es.MathHelper.clamp(t, 0, 1);
             return es.Vector2.add(lineA, new es.Vector2(v.x * t, v.y * t));
         };
-        Collisions.isCircleToCircle = function (circleCenter1, circleRadius1, circleCenter2, circleRadius2) {
+        Collisions.circleToCircle = function (circleCenter1, circleRadius1, circleCenter2, circleRadius2) {
             return es.Vector2.distanceSquared(circleCenter1, circleCenter2) < (circleRadius1 + circleRadius2) * (circleRadius1 + circleRadius2);
         };
-        Collisions.isCircleToLine = function (circleCenter, radius, lineFrom, lineTo) {
+        Collisions.circleToLine = function (circleCenter, radius, lineFrom, lineTo) {
             return es.Vector2.distanceSquared(circleCenter, this.closestPointOnLine(lineFrom, lineTo, circleCenter)) < radius * radius;
         };
-        Collisions.isCircleToPoint = function (circleCenter, radius, point) {
+        Collisions.circleToPoint = function (circleCenter, radius, point) {
             return es.Vector2.distanceSquared(circleCenter, point) < radius * radius;
         };
-        Collisions.isRectToCircle = function (rect, cPosition, cRadius) {
-            var ew = rect.width * 0.5;
-            var eh = rect.height * 0.5;
-            var vx = Math.max(0, Math.max(cPosition.x - rect.x) - ew);
-            var vy = Math.max(0, Math.max(cPosition.y - rect.y) - eh);
-            return vx * vx + vy * vy < cRadius * cRadius;
+        Collisions.rectToCircle = function (rect, cPosition, cRadius) {
+            if (this.rectToPoint(rect.x, rect.y, rect.width, rect.height, cPosition))
+                return true;
+            var edgeFrom = es.Vector2.zero;
+            var edgeTo = es.Vector2.zero;
+            var sector = this.getSector(rect.x, rect.y, rect.width, rect.height, cPosition);
+            if ((sector & PointSectors.top) != 0) {
+                edgeFrom = new es.Vector2(rect.x, rect.y);
+                edgeTo = new es.Vector2(rect.x + rect.width, rect.y);
+                if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                    return true;
+            }
+            if ((sector & PointSectors.bottom) != 0) {
+                edgeFrom = new es.Vector2(rect.x, rect.y + rect.width);
+                edgeTo = new es.Vector2(rect.x + rect.width, rect.y + rect.height);
+                if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                    return true;
+            }
+            if ((sector & PointSectors.left) != 0) {
+                edgeFrom = new es.Vector2(rect.x + rect.width, rect.y);
+                edgeTo = new es.Vector2(rect.x + rect.width, rect.y + rect.height);
+                if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                    return true;
+            }
+            return false;
         };
-        Collisions.isRectToLine = function (rect, lineFrom, lineTo) {
+        Collisions.rectToLine = function (rect, lineFrom, lineTo) {
             var fromSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineFrom);
             var toSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineTo);
             if (fromSector == PointSectors.center || toSector == PointSectors.center) {
@@ -6884,7 +6885,7 @@ var es;
             }
             return false;
         };
-        Collisions.isRectToPoint = function (rX, rY, rW, rH, point) {
+        Collisions.rectToPoint = function (rX, rY, rW, rH, point) {
             return point.x >= rX && point.y >= rY && point.x < rX + rW && point.y < rY + rH;
         };
         Collisions.getSector = function (rX, rY, rW, rH, point) {
@@ -7022,9 +7023,6 @@ var es;
     var Shape = (function () {
         function Shape() {
         }
-        Shape.prototype.clone = function () {
-            return ObjectUtils.clone(this);
-        };
         return Shape;
     }());
     es.Shape = Shape;
@@ -7064,7 +7062,7 @@ var es;
         };
         Polygon.prototype.buildEdgeNormals = function () {
             var totalEdges = this.isBox ? 2 : this.points.length;
-            if (this._edgeNormals == null || this._edgeNormals.length != totalEdges)
+            if (this._edgeNormals == undefined || this._edgeNormals.length != totalEdges)
                 this._edgeNormals = new Array(totalEdges);
             var p2;
             for (var i = 0; i < totalEdges; i++) {
@@ -7116,7 +7114,7 @@ var es;
             edgeNormal.x = 0;
             edgeNormal.y = 0;
             var closestPoint = new es.Vector2(0, 0);
-            var tempDistanceSquared;
+            var tempDistanceSquared = 0;
             for (var i = 0; i < points.length; i++) {
                 var j = i + 1;
                 if (j == points.length)
@@ -7136,7 +7134,7 @@ var es;
         };
         Polygon.rotatePolygonVerts = function (radians, originalPoints, rotatedPoints) {
             var cos = Math.cos(radians);
-            var sin = Math.sign(radians);
+            var sin = Math.sin(radians);
             for (var i = 0; i < originalPoints.length; i++) {
                 var position = originalPoints[i];
                 rotatedPoints[i] = new es.Vector2(position.x * cos + position.y * -sin, position.x * sin + position.y * cos);
@@ -7258,7 +7256,7 @@ var es;
                 if (other instanceof Box && other.isUnrotated)
                     return this.bounds.intersects(other.bounds);
                 if (other instanceof es.Circle)
-                    return es.Collisions.isRectToCircle(this.bounds, other.position, other.radius);
+                    return es.Collisions.rectToCircle(this.bounds, other.position, other.radius);
             }
             return _super.prototype.overlaps.call(this, other);
         };
@@ -7302,18 +7300,18 @@ var es;
                 if (collider.entity.transform.rotation != 0) {
                     var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * es.MathHelper.Rad2Deg;
                     var offsetLength = hasUnitScale ? collider._localOffsetLength : es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
-                    this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotation + offsetAngle);
+                    this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
                 }
             }
-            this.position = es.Vector2.add(collider.transform.position, this.center);
+            this.position = es.Vector2.add(collider.entity.transform.position, this.center);
             this.bounds = new es.Rectangle(this.position.x - this.radius, this.position.y - this.radius, this.radius * 2, this.radius * 2);
         };
         Circle.prototype.overlaps = function (other) {
             var result = new es.CollisionResult();
             if (other instanceof es.Box && other.isUnrotated)
-                return es.Collisions.isRectToCircle(other.bounds, this.position, this.radius);
+                return es.Collisions.rectToCircle(other.bounds, this.position, this.radius);
             if (other instanceof Circle)
-                return es.Collisions.isCircleToCircle(this.position, this.radius, other.position, other.radius);
+                return es.Collisions.circleToCircle(this.position, this.radius, other.position, other.radius);
             if (other instanceof es.Polygon)
                 return es.ShapeCollisions.circleToPolygon(this, other, result);
             throw new Error("overlaps of circle to " + other + " are not supported");
@@ -7760,7 +7758,7 @@ var es;
                         continue;
                     var _loop_8 = function (i) {
                         var collider = cell[i];
-                        if (collider == excludeCollider || !es.Flags.isFlagSet(layerMask, collider.physicsLayer))
+                        if (collider == excludeCollider || !es.Flags.isFlagSet(layerMask, collider.physicsLayer.value))
                             return "continue";
                         if (bounds.intersects(collider.bounds)) {
                             if (!this_4._tempHashSet.firstOrDefault(function (c) { return c.hashCode == collider.hashCode; }))
@@ -7916,7 +7914,7 @@ var es;
                 this._checkedColliders.push(potential);
                 if (potential.isTrigger && !es.Physics.raycastsHitTriggers)
                     continue;
-                if (!es.Flags.isFlagSet(this._layerMask, potential.physicsLayer))
+                if (!es.Flags.isFlagSet(this._layerMask, potential.physicsLayer.value))
                     continue;
                 var colliderBounds = potential.bounds;
                 if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1) {
@@ -7992,7 +7990,7 @@ var es;
             return this.tiles[x + y * this.width];
         };
         TmxLayer.prototype.getCollisionRectangles = function () {
-            var checkedIndexes = [];
+            var checkedIndexes = new Array(this.tiles.length);
             var rectangles = [];
             var startCol = -1;
             var index = -1;
@@ -8005,7 +8003,7 @@ var es;
                             startCol = x;
                         checkedIndexes[index] = true;
                     }
-                    else if (tile || checkedIndexes[index]) {
+                    else if (!tile || checkedIndexes[index] == true) {
                         if (startCol >= 0) {
                             rectangles.push(this.findBoundsRect(startCol, x, y, checkedIndexes));
                             startCol = -1;
@@ -8025,7 +8023,7 @@ var es;
                 for (var x = startX; x < endX; x++) {
                     index = y * this.map.width + x;
                     var tile = this.getTile(x, y);
-                    if (tile || checkedIndexes[index]) {
+                    if (!tile || checkedIndexes[index]) {
                         for (var _x = startX; _x < x; _x++) {
                             index = y * this.map.width + _x;
                             checkedIndexes[index] = false;
@@ -8063,7 +8061,7 @@ var es;
         });
         Object.defineProperty(TmxLayerTile.prototype, "tilesetTile", {
             get: function () {
-                if (this._tilesetTileIndex == undefined) {
+                if (!this._tilesetTileIndex) {
                     this._tilesetTileIndex = -1;
                     if (this.tileset.firstGid <= this.gid) {
                         var tilesetTile = this.tileset.tiles.get(this.gid - this.tileset.firstGid);
@@ -9893,364 +9891,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var TouchState = (function () {
-        function TouchState() {
-            this.x = 0;
-            this.y = 0;
-            this.touchPoint = -1;
-            this.touchDown = false;
-        }
-        Object.defineProperty(TouchState.prototype, "position", {
-            get: function () {
-                return new es.Vector2(this.x, this.y);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        TouchState.prototype.reset = function () {
-            this.x = 0;
-            this.y = 0;
-            this.touchDown = false;
-            this.touchPoint = -1;
-        };
-        return TouchState;
-    }());
-    es.TouchState = TouchState;
-    var Input = (function () {
-        function Input() {
-        }
-        Object.defineProperty(Input, "gameTouchs", {
-            get: function () {
-                return this._gameTouchs;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "resolutionScale", {
-            get: function () {
-                return this._resolutionScale;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "totalTouchCount", {
-            get: function () {
-                return this._totalTouchCount;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "touchPosition", {
-            get: function () {
-                if (!this._gameTouchs[0])
-                    return es.Vector2.zero;
-                return this._gameTouchs[0].position;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "maxSupportedTouch", {
-            get: function () {
-                return es.Core._instance.stage.maxTouches;
-            },
-            set: function (value) {
-                es.Core._instance.stage.maxTouches = value;
-                this.initTouchCache();
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "touchPositionDelta", {
-            get: function () {
-                var delta = es.Vector2.subtract(this.touchPosition, this._previousTouchState.position);
-                if (delta.length() > 0) {
-                    this.setpreviousTouchState(this._gameTouchs[0]);
-                }
-                return delta;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Input.initialize = function () {
-            if (this._init)
-                return;
-            this._init = true;
-            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
-            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
-            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
-            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_CANCEL, this.touchEnd, this);
-            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_RELEASE_OUTSIDE, this.touchEnd, this);
-            this.initTouchCache();
-        };
-        Input.scaledPosition = function (position) {
-            var scaledPos = new es.Vector2(position.x - this._resolutionOffset.x, position.y - this._resolutionOffset.y);
-            return es.Vector2.multiply(scaledPos, this.resolutionScale);
-        };
-        Input.initTouchCache = function () {
-            this._totalTouchCount = 0;
-            this._touchIndex = 0;
-            this._gameTouchs.length = 0;
-            for (var i = 0; i < this.maxSupportedTouch; i++) {
-                this._gameTouchs.push(new TouchState());
-            }
-        };
-        Input.touchBegin = function (evt) {
-            if (this._touchIndex < this.maxSupportedTouch) {
-                this._gameTouchs[this._touchIndex].touchPoint = evt.touchPointID;
-                this._gameTouchs[this._touchIndex].touchDown = evt.touchDown;
-                this._gameTouchs[this._touchIndex].x = evt.stageX;
-                this._gameTouchs[this._touchIndex].y = evt.stageY;
-                if (this._touchIndex == 0) {
-                    this.setpreviousTouchState(this._gameTouchs[0]);
-                }
-                this._touchIndex++;
-                this._totalTouchCount++;
-            }
-        };
-        Input.touchMove = function (evt) {
-            if (evt.touchPointID == this._gameTouchs[0].touchPoint) {
-                this.setpreviousTouchState(this._gameTouchs[0]);
-            }
-            var touchIndex = this._gameTouchs.findIndex(function (touch) { return touch.touchPoint == evt.touchPointID; });
-            if (touchIndex != -1) {
-                var touchData = this._gameTouchs[touchIndex];
-                touchData.x = evt.stageX;
-                touchData.y = evt.stageY;
-            }
-        };
-        Input.touchEnd = function (evt) {
-            var touchIndex = this._gameTouchs.findIndex(function (touch) { return touch.touchPoint == evt.touchPointID; });
-            if (touchIndex != -1) {
-                var touchData = this._gameTouchs[touchIndex];
-                touchData.reset();
-                if (touchIndex == 0)
-                    this._previousTouchState.reset();
-                this._totalTouchCount--;
-                if (this.totalTouchCount == 0) {
-                    this._touchIndex = 0;
-                }
-            }
-        };
-        Input.setpreviousTouchState = function (touchState) {
-            this._previousTouchState = new TouchState();
-            this._previousTouchState.x = touchState.position.x;
-            this._previousTouchState.y = touchState.position.y;
-            this._previousTouchState.touchPoint = touchState.touchPoint;
-            this._previousTouchState.touchDown = touchState.touchDown;
-        };
-        Input._init = false;
-        Input._previousTouchState = new TouchState();
-        Input._resolutionOffset = new es.Vector2();
-        Input._touchIndex = 0;
-        Input._gameTouchs = [];
-        Input._resolutionScale = es.Vector2.one;
-        Input._totalTouchCount = 0;
-        return Input;
-    }());
-    es.Input = Input;
-})(es || (es = {}));
-var KeyboardUtils = (function () {
-    function KeyboardUtils() {
-    }
-    KeyboardUtils.init = function () {
-        KeyboardUtils.keyDownDict = {};
-        KeyboardUtils.keyUpDict = {};
-        document.addEventListener("keydown", KeyboardUtils.onKeyDonwHander);
-        document.addEventListener("keyup", KeyboardUtils.onKeyUpHander);
-    };
-    KeyboardUtils.registerKey = function (key, fun, thisObj, type) {
-        if (type === void 0) { type = 0; }
-        var args = [];
-        for (var _i = 4; _i < arguments.length; _i++) {
-            args[_i - 4] = arguments[_i];
-        }
-        var keyDict = type ? this.keyUpDict : this.keyDownDict;
-        keyDict[key] = { "fun": fun, args: args, "thisObj": thisObj };
-    };
-    KeyboardUtils.unregisterKey = function (key, type) {
-        if (type === void 0) { type = 0; }
-        var keyDict = type ? this.keyUpDict : this.keyDownDict;
-        delete keyDict[key];
-    };
-    KeyboardUtils.destroy = function () {
-        KeyboardUtils.keyDownDict = null;
-        KeyboardUtils.keyUpDict = null;
-        document.removeEventListener("keydown", this.onKeyDonwHander);
-        document.removeEventListener("keyup", this.onKeyUpHander);
-    };
-    KeyboardUtils.onKeyDonwHander = function (event) {
-        if (!KeyboardUtils.keyDownDict)
-            return;
-        var key = KeyboardUtils.keyCodeToString(event.keyCode);
-        var o = KeyboardUtils.keyDownDict[key];
-        if (o) {
-            var fun = o["fun"];
-            var thisObj = o["thisObj"];
-            var args = o["args"];
-            fun.apply(thisObj, args);
-        }
-    };
-    KeyboardUtils.onKeyUpHander = function (event) {
-        if (!KeyboardUtils.keyUpDict)
-            return;
-        var key = KeyboardUtils.keyCodeToString(event.keyCode);
-        var o = KeyboardUtils.keyUpDict[key];
-        if (o) {
-            var fun = o["fun"];
-            var thisObj = o["thisObj"];
-            var args = o["args"];
-            fun.apply(thisObj, args);
-        }
-    };
-    KeyboardUtils.keyCodeToString = function (keyCode) {
-        switch (keyCode) {
-            case 8:
-                return this.BACK_SPACE;
-            case 9:
-                return this.TAB;
-            case 13:
-                return this.ENTER;
-            case 16:
-                return this.SHIFT;
-            case 17:
-                return this.CTRL;
-            case 19:
-                return this.PAUSE_BREAK;
-            case 20:
-                return this.CAPS_LOCK;
-            case 27:
-                return this.ESC;
-            case 32:
-                return this.SPACE;
-            case 33:
-                return this.PAGE_UP;
-            case 34:
-                return this.PAGE_DOWN;
-            case 35:
-                return this.END;
-            case 36:
-                return this.HOME;
-            case 37:
-                return this.LEFT;
-            case 38:
-                return this.UP;
-            case 39:
-                return this.RIGHT;
-            case 40:
-                return this.DOWN;
-            case 45:
-                return this.INSERT;
-            case 46:
-                return this.DELETE;
-            case 91:
-                return this.WINDOWS;
-            case 112:
-                return this.F1;
-            case 113:
-                return this.F2;
-            case 114:
-                return this.F3;
-            case 115:
-                return this.F4;
-            case 116:
-                return this.F5;
-            case 117:
-                return this.F6;
-            case 118:
-                return this.F7;
-            case 119:
-                return this.F8;
-            case 120:
-                return this.F9;
-            case 122:
-                return this.F11;
-            case 123:
-                return this.F12;
-            case 144:
-                return this.NUM_LOCK;
-            case 145:
-                return this.SCROLL_LOCK;
-            default:
-                return String.fromCharCode(keyCode);
-        }
-    };
-    KeyboardUtils.TYPE_KEY_DOWN = 0;
-    KeyboardUtils.TYPE_KEY_UP = 1;
-    KeyboardUtils.A = "A";
-    KeyboardUtils.B = "B";
-    KeyboardUtils.C = "C";
-    KeyboardUtils.D = "D";
-    KeyboardUtils.E = "E";
-    KeyboardUtils.F = "F";
-    KeyboardUtils.G = "G";
-    KeyboardUtils.H = "H";
-    KeyboardUtils.I = "I";
-    KeyboardUtils.J = "J";
-    KeyboardUtils.K = "K";
-    KeyboardUtils.L = "L";
-    KeyboardUtils.M = "M";
-    KeyboardUtils.N = "N";
-    KeyboardUtils.O = "O";
-    KeyboardUtils.P = "P";
-    KeyboardUtils.Q = "Q";
-    KeyboardUtils.R = "R";
-    KeyboardUtils.S = "S";
-    KeyboardUtils.T = "T";
-    KeyboardUtils.U = "U";
-    KeyboardUtils.V = "V";
-    KeyboardUtils.W = "W";
-    KeyboardUtils.X = "X";
-    KeyboardUtils.Y = "Y";
-    KeyboardUtils.Z = "Z";
-    KeyboardUtils.ESC = "Esc";
-    KeyboardUtils.F1 = "F1";
-    KeyboardUtils.F2 = "F2";
-    KeyboardUtils.F3 = "F3";
-    KeyboardUtils.F4 = "F4";
-    KeyboardUtils.F5 = "F5";
-    KeyboardUtils.F6 = "F6";
-    KeyboardUtils.F7 = "F7";
-    KeyboardUtils.F8 = "F8";
-    KeyboardUtils.F9 = "F9";
-    KeyboardUtils.F10 = "F10";
-    KeyboardUtils.F11 = "F11";
-    KeyboardUtils.F12 = "F12";
-    KeyboardUtils.NUM_1 = "1";
-    KeyboardUtils.NUM_2 = "2";
-    KeyboardUtils.NUM_3 = "3";
-    KeyboardUtils.NUM_4 = "4";
-    KeyboardUtils.NUM_5 = "5";
-    KeyboardUtils.NUM_6 = "6";
-    KeyboardUtils.NUM_7 = "7";
-    KeyboardUtils.NUM_8 = "8";
-    KeyboardUtils.NUM_9 = "9";
-    KeyboardUtils.NUM_0 = "0";
-    KeyboardUtils.TAB = "Tab";
-    KeyboardUtils.CTRL = "Ctrl";
-    KeyboardUtils.ALT = "Alt";
-    KeyboardUtils.SHIFT = "Shift";
-    KeyboardUtils.CAPS_LOCK = "Caps Lock";
-    KeyboardUtils.ENTER = "Enter";
-    KeyboardUtils.SPACE = "Space";
-    KeyboardUtils.BACK_SPACE = "Back Space";
-    KeyboardUtils.INSERT = "Insert";
-    KeyboardUtils.DELETE = "Page Down";
-    KeyboardUtils.HOME = "Home";
-    KeyboardUtils.END = "Page Down";
-    KeyboardUtils.PAGE_UP = "Page Up";
-    KeyboardUtils.PAGE_DOWN = "Page Down";
-    KeyboardUtils.LEFT = "Left";
-    KeyboardUtils.RIGHT = "Right";
-    KeyboardUtils.UP = "Up";
-    KeyboardUtils.DOWN = "Down";
-    KeyboardUtils.PAUSE_BREAK = "Pause Break";
-    KeyboardUtils.NUM_LOCK = "Num Lock";
-    KeyboardUtils.SCROLL_LOCK = "Scroll Lock";
-    KeyboardUtils.WINDOWS = "Windows";
-    return KeyboardUtils;
-}());
-var es;
-(function (es) {
     var ListPool = (function () {
         function ListPool() {
         }
@@ -11095,6 +10735,651 @@ var es;
         return MarkerLog;
     }());
     es.MarkerLog = MarkerLog;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TouchState = (function () {
+        function TouchState() {
+            this.x = 0;
+            this.y = 0;
+            this.touchPoint = -1;
+            this.touchDown = false;
+        }
+        Object.defineProperty(TouchState.prototype, "position", {
+            get: function () {
+                return new es.Vector2(this.x, this.y);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        TouchState.prototype.reset = function () {
+            this.x = 0;
+            this.y = 0;
+            this.touchDown = false;
+            this.touchPoint = -1;
+        };
+        return TouchState;
+    }());
+    es.TouchState = TouchState;
+    var Input = (function () {
+        function Input() {
+        }
+        Object.defineProperty(Input, "gameTouchs", {
+            get: function () {
+                return this._gameTouchs;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "resolutionScale", {
+            get: function () {
+                return this._resolutionScale;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "totalTouchCount", {
+            get: function () {
+                return this._totalTouchCount;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "touchPosition", {
+            get: function () {
+                if (!this._gameTouchs[0])
+                    return es.Vector2.zero;
+                return this._gameTouchs[0].position;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "maxSupportedTouch", {
+            get: function () {
+                return es.Core._instance.stage.maxTouches;
+            },
+            set: function (value) {
+                es.Core._instance.stage.maxTouches = value;
+                this.initTouchCache();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "touchPositionDelta", {
+            get: function () {
+                var delta = es.Vector2.subtract(this.touchPosition, this._previousTouchState.position);
+                if (delta.length() > 0) {
+                    this.setpreviousTouchState(this._gameTouchs[0]);
+                }
+                return delta;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Input.initialize = function () {
+            if (this._init)
+                return;
+            this._init = true;
+            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
+            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
+            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
+            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_CANCEL, this.touchEnd, this);
+            es.Core._instance.stage.addEventListener(egret.TouchEvent.TOUCH_RELEASE_OUTSIDE, this.touchEnd, this);
+            this.initTouchCache();
+        };
+        Input.update = function () {
+            KeyboardUtils.update();
+            for (var i = 0; i < this._virtualInputs.length; i++)
+                this._virtualInputs[i].update();
+        };
+        Input.scaledPosition = function (position) {
+            var scaledPos = new es.Vector2(position.x - this._resolutionOffset.x, position.y - this._resolutionOffset.y);
+            return es.Vector2.multiply(scaledPos, this.resolutionScale);
+        };
+        Input.isKeyPressed = function (key) {
+            return KeyboardUtils.currentKeys.contains(key) && !KeyboardUtils.previousKeys.contains(key);
+        };
+        Input.isKeyPressedBoth = function (keyA, keyB) {
+            return this.isKeyPressed(keyA) || this.isKeyPressed(keyB);
+        };
+        Input.isKeyDown = function (key) {
+            return KeyboardUtils.currentKeys.contains(key);
+        };
+        Input.isKeyDownBoth = function (keyA, keyB) {
+            return this.isKeyDown(keyA) || this.isKeyDown(keyB);
+        };
+        Input.isKeyReleased = function (key) {
+            return !KeyboardUtils.currentKeys.contains(key) && KeyboardUtils.previousKeys.contains(key);
+        };
+        Input.isKeyReleasedBoth = function (keyA, keyB) {
+            return this.isKeyReleased(keyA) || this.isKeyReleased(keyB);
+        };
+        Input.initTouchCache = function () {
+            this._totalTouchCount = 0;
+            this._touchIndex = 0;
+            this._gameTouchs.length = 0;
+            for (var i = 0; i < this.maxSupportedTouch; i++) {
+                this._gameTouchs.push(new TouchState());
+            }
+        };
+        Input.touchBegin = function (evt) {
+            if (this._touchIndex < this.maxSupportedTouch) {
+                this._gameTouchs[this._touchIndex].touchPoint = evt.touchPointID;
+                this._gameTouchs[this._touchIndex].touchDown = evt.touchDown;
+                this._gameTouchs[this._touchIndex].x = evt.stageX;
+                this._gameTouchs[this._touchIndex].y = evt.stageY;
+                if (this._touchIndex == 0) {
+                    this.setpreviousTouchState(this._gameTouchs[0]);
+                }
+                this._touchIndex++;
+                this._totalTouchCount++;
+            }
+        };
+        Input.touchMove = function (evt) {
+            if (evt.touchPointID == this._gameTouchs[0].touchPoint) {
+                this.setpreviousTouchState(this._gameTouchs[0]);
+            }
+            var touchIndex = this._gameTouchs.findIndex(function (touch) { return touch.touchPoint == evt.touchPointID; });
+            if (touchIndex != -1) {
+                var touchData = this._gameTouchs[touchIndex];
+                touchData.x = evt.stageX;
+                touchData.y = evt.stageY;
+            }
+        };
+        Input.touchEnd = function (evt) {
+            var touchIndex = this._gameTouchs.findIndex(function (touch) { return touch.touchPoint == evt.touchPointID; });
+            if (touchIndex != -1) {
+                var touchData = this._gameTouchs[touchIndex];
+                touchData.reset();
+                if (touchIndex == 0)
+                    this._previousTouchState.reset();
+                this._totalTouchCount--;
+                if (this.totalTouchCount == 0) {
+                    this._touchIndex = 0;
+                }
+            }
+        };
+        Input.setpreviousTouchState = function (touchState) {
+            this._previousTouchState = new TouchState();
+            this._previousTouchState.x = touchState.position.x;
+            this._previousTouchState.y = touchState.position.y;
+            this._previousTouchState.touchPoint = touchState.touchPoint;
+            this._previousTouchState.touchDown = touchState.touchDown;
+        };
+        Input._init = false;
+        Input._previousTouchState = new TouchState();
+        Input._resolutionOffset = new es.Vector2();
+        Input._touchIndex = 0;
+        Input._gameTouchs = [];
+        Input._resolutionScale = es.Vector2.one;
+        Input._totalTouchCount = 0;
+        Input._virtualInputs = [];
+        return Input;
+    }());
+    es.Input = Input;
+})(es || (es = {}));
+var Keys = es.Keys;
+var KeyboardUtils = (function () {
+    function KeyboardUtils() {
+    }
+    KeyboardUtils.init = function () {
+        document.addEventListener("keydown", KeyboardUtils.onKeyDownHandler);
+        document.addEventListener("keyup", KeyboardUtils.onKeyUpHandler);
+    };
+    KeyboardUtils.update = function () {
+        KeyboardUtils.previousKeys.length = 0;
+        for (var _i = 0, _a = KeyboardUtils.currentKeys; _i < _a.length; _i++) {
+            var key = _a[_i];
+            KeyboardUtils.previousKeys.push(key);
+            KeyboardUtils.currentKeys.remove(key);
+        }
+        KeyboardUtils.currentKeys.length = 0;
+        for (var _b = 0, _c = KeyboardUtils.keyStatusKeys; _b < _c.length; _b++) {
+            var key = _c[_b];
+            KeyboardUtils.currentKeys.push(key);
+        }
+    };
+    KeyboardUtils.destroy = function () {
+        KeyboardUtils.currentKeys.length = 0;
+        document.removeEventListener("keyup", KeyboardUtils.onKeyUpHandler);
+        document.removeEventListener("keypress", KeyboardUtils.onKeyDownHandler);
+    };
+    KeyboardUtils.onKeyDownHandler = function (event) {
+        if (!KeyboardUtils.keyStatusKeys.contains(event.keyCode))
+            KeyboardUtils.keyStatusKeys.push(event.keyCode);
+    };
+    KeyboardUtils.onKeyUpHandler = function (event) {
+        if (KeyboardUtils.keyStatusKeys.contains(event.keyCode))
+            KeyboardUtils.keyStatusKeys.remove(event.keyCode);
+    };
+    KeyboardUtils.currentKeys = [];
+    KeyboardUtils.previousKeys = [];
+    KeyboardUtils.keyStatusKeys = [];
+    return KeyboardUtils;
+}());
+var es;
+(function (es) {
+    var Keys;
+    (function (Keys) {
+        Keys[Keys["none"] = 0] = "none";
+        Keys[Keys["back"] = 8] = "back";
+        Keys[Keys["tab"] = 9] = "tab";
+        Keys[Keys["enter"] = 13] = "enter";
+        Keys[Keys["capsLock"] = 20] = "capsLock";
+        Keys[Keys["escape"] = 27] = "escape";
+        Keys[Keys["space"] = 32] = "space";
+        Keys[Keys["pageUp"] = 33] = "pageUp";
+        Keys[Keys["pageDown"] = 34] = "pageDown";
+        Keys[Keys["end"] = 35] = "end";
+        Keys[Keys["home"] = 36] = "home";
+        Keys[Keys["left"] = 37] = "left";
+        Keys[Keys["up"] = 38] = "up";
+        Keys[Keys["right"] = 39] = "right";
+        Keys[Keys["down"] = 40] = "down";
+        Keys[Keys["select"] = 41] = "select";
+        Keys[Keys["print"] = 42] = "print";
+        Keys[Keys["execute"] = 43] = "execute";
+        Keys[Keys["printScreen"] = 44] = "printScreen";
+        Keys[Keys["insert"] = 45] = "insert";
+        Keys[Keys["delete"] = 46] = "delete";
+        Keys[Keys["help"] = 47] = "help";
+        Keys[Keys["d0"] = 48] = "d0";
+        Keys[Keys["d1"] = 49] = "d1";
+        Keys[Keys["d2"] = 50] = "d2";
+        Keys[Keys["d3"] = 51] = "d3";
+        Keys[Keys["d4"] = 52] = "d4";
+        Keys[Keys["d5"] = 53] = "d5";
+        Keys[Keys["d6"] = 54] = "d6";
+        Keys[Keys["d7"] = 55] = "d7";
+        Keys[Keys["d8"] = 56] = "d8";
+        Keys[Keys["d9"] = 57] = "d9";
+        Keys[Keys["a"] = 65] = "a";
+        Keys[Keys["b"] = 66] = "b";
+        Keys[Keys["c"] = 67] = "c";
+        Keys[Keys["d"] = 68] = "d";
+        Keys[Keys["e"] = 69] = "e";
+        Keys[Keys["f"] = 70] = "f";
+        Keys[Keys["g"] = 71] = "g";
+        Keys[Keys["h"] = 72] = "h";
+        Keys[Keys["i"] = 73] = "i";
+        Keys[Keys["j"] = 74] = "j";
+        Keys[Keys["k"] = 75] = "k";
+        Keys[Keys["l"] = 76] = "l";
+        Keys[Keys["m"] = 77] = "m";
+        Keys[Keys["n"] = 78] = "n";
+        Keys[Keys["o"] = 79] = "o";
+        Keys[Keys["p"] = 80] = "p";
+        Keys[Keys["q"] = 81] = "q";
+        Keys[Keys["r"] = 82] = "r";
+        Keys[Keys["s"] = 83] = "s";
+        Keys[Keys["t"] = 84] = "t";
+        Keys[Keys["u"] = 85] = "u";
+        Keys[Keys["v"] = 86] = "v";
+        Keys[Keys["w"] = 87] = "w";
+        Keys[Keys["x"] = 88] = "x";
+        Keys[Keys["y"] = 89] = "y";
+        Keys[Keys["z"] = 90] = "z";
+        Keys[Keys["leftWindows"] = 91] = "leftWindows";
+        Keys[Keys["rightWindows"] = 92] = "rightWindows";
+        Keys[Keys["apps"] = 93] = "apps";
+        Keys[Keys["sleep"] = 95] = "sleep";
+        Keys[Keys["numPad0"] = 96] = "numPad0";
+        Keys[Keys["numPad1"] = 97] = "numPad1";
+        Keys[Keys["numPad2"] = 98] = "numPad2";
+        Keys[Keys["numPad3"] = 99] = "numPad3";
+        Keys[Keys["numPad4"] = 100] = "numPad4";
+        Keys[Keys["numPad5"] = 101] = "numPad5";
+        Keys[Keys["numPad6"] = 102] = "numPad6";
+        Keys[Keys["numPad7"] = 103] = "numPad7";
+        Keys[Keys["numPad8"] = 104] = "numPad8";
+        Keys[Keys["numPad9"] = 105] = "numPad9";
+        Keys[Keys["multiply"] = 106] = "multiply";
+        Keys[Keys["add"] = 107] = "add";
+        Keys[Keys["seperator"] = 108] = "seperator";
+        Keys[Keys["subtract"] = 109] = "subtract";
+        Keys[Keys["decimal"] = 110] = "decimal";
+        Keys[Keys["divide"] = 111] = "divide";
+        Keys[Keys["f1"] = 112] = "f1";
+        Keys[Keys["f2"] = 113] = "f2";
+        Keys[Keys["f3"] = 114] = "f3";
+        Keys[Keys["f4"] = 115] = "f4";
+        Keys[Keys["f5"] = 116] = "f5";
+        Keys[Keys["f6"] = 117] = "f6";
+        Keys[Keys["f7"] = 118] = "f7";
+        Keys[Keys["f8"] = 119] = "f8";
+        Keys[Keys["f9"] = 120] = "f9";
+        Keys[Keys["f10"] = 121] = "f10";
+        Keys[Keys["f11"] = 122] = "f11";
+        Keys[Keys["f12"] = 123] = "f12";
+        Keys[Keys["f13"] = 124] = "f13";
+        Keys[Keys["f14"] = 125] = "f14";
+        Keys[Keys["f15"] = 126] = "f15";
+        Keys[Keys["f16"] = 127] = "f16";
+        Keys[Keys["f17"] = 128] = "f17";
+        Keys[Keys["f18"] = 129] = "f18";
+        Keys[Keys["f19"] = 130] = "f19";
+        Keys[Keys["f20"] = 131] = "f20";
+        Keys[Keys["f21"] = 132] = "f21";
+        Keys[Keys["f22"] = 133] = "f22";
+        Keys[Keys["f23"] = 134] = "f23";
+        Keys[Keys["f24"] = 135] = "f24";
+        Keys[Keys["numLock"] = 144] = "numLock";
+        Keys[Keys["scroll"] = 145] = "scroll";
+        Keys[Keys["leftShift"] = 160] = "leftShift";
+        Keys[Keys["rightShift"] = 161] = "rightShift";
+        Keys[Keys["leftControl"] = 162] = "leftControl";
+        Keys[Keys["rightControl"] = 163] = "rightControl";
+        Keys[Keys["leftAlt"] = 164] = "leftAlt";
+        Keys[Keys["rightAlt"] = 165] = "rightAlt";
+        Keys[Keys["browserBack"] = 166] = "browserBack";
+        Keys[Keys["browserForward"] = 167] = "browserForward";
+    })(Keys = es.Keys || (es.Keys = {}));
+})(es || (es = {}));
+var es;
+(function (es) {
+    var OverlapBehavior;
+    (function (OverlapBehavior) {
+        OverlapBehavior[OverlapBehavior["cancelOut"] = 0] = "cancelOut";
+        OverlapBehavior[OverlapBehavior["takeOlder"] = 1] = "takeOlder";
+        OverlapBehavior[OverlapBehavior["takeNewer"] = 2] = "takeNewer";
+    })(OverlapBehavior = es.OverlapBehavior || (es.OverlapBehavior = {}));
+    var VirtualInput = (function () {
+        function VirtualInput() {
+            es.Input._virtualInputs.push(this);
+        }
+        VirtualInput.prototype.deregister = function () {
+            es.Input._virtualInputs.remove(this);
+        };
+        return VirtualInput;
+    }());
+    es.VirtualInput = VirtualInput;
+    var VirtualInputNode = (function () {
+        function VirtualInputNode() {
+        }
+        VirtualInputNode.prototype.update = function () { };
+        return VirtualInputNode;
+    }());
+    es.VirtualInputNode = VirtualInputNode;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var VirtualIntegerAxis = (function (_super) {
+        __extends(VirtualIntegerAxis, _super);
+        function VirtualIntegerAxis() {
+            var nodes = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                nodes[_i] = arguments[_i];
+            }
+            var _this = _super.call(this) || this;
+            _this.nodes = [];
+            _this.nodes.concat(nodes);
+            return _this;
+        }
+        Object.defineProperty(VirtualIntegerAxis.prototype, "value", {
+            get: function () {
+                for (var i = 0; i < this.nodes.length; i++) {
+                    var val = this.nodes[i].value;
+                    if (val != 0)
+                        return Math.sign(val);
+                }
+                return 0;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        VirtualIntegerAxis.prototype.update = function () {
+            for (var i = 0; i < this.nodes.length; i++)
+                this.nodes[i].update();
+        };
+        VirtualIntegerAxis.prototype.addKeyboardKeys = function (overlapBehavior, negative, positive) {
+            this.nodes.push(new es.KeyboardKeys(overlapBehavior, negative, positive));
+            return this;
+        };
+        return VirtualIntegerAxis;
+    }(es.VirtualInput));
+    es.VirtualIntegerAxis = VirtualIntegerAxis;
+    var VirtualAxisNode = (function (_super) {
+        __extends(VirtualAxisNode, _super);
+        function VirtualAxisNode() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return VirtualAxisNode;
+    }(es.VirtualInputNode));
+    es.VirtualAxisNode = VirtualAxisNode;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var VirtualAxis = (function (_super) {
+        __extends(VirtualAxis, _super);
+        function VirtualAxis() {
+            var nodes = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                nodes[_i] = arguments[_i];
+            }
+            var _this = _super.call(this) || this;
+            _this.nodes = [];
+            _this.nodes.concat(nodes);
+            return _this;
+        }
+        Object.defineProperty(VirtualAxis.prototype, "value", {
+            get: function () {
+                for (var i = 0; i < this.nodes.length; i++) {
+                    var val = this.nodes[i].value;
+                    if (val != 0)
+                        return val;
+                }
+                return 0;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        VirtualAxis.prototype.update = function () {
+            for (var i = 0; i < this.nodes.length; i++)
+                this.nodes[i].update();
+        };
+        return VirtualAxis;
+    }(es.VirtualInput));
+    es.VirtualAxis = VirtualAxis;
+    var KeyboardKeys = (function (_super) {
+        __extends(KeyboardKeys, _super);
+        function KeyboardKeys(overlapBehavior, negative, positive) {
+            var _this = _super.call(this) || this;
+            _this._value = 0;
+            _this.overlapBehavior = overlapBehavior;
+            _this.negative = negative;
+            _this.positive = positive;
+            return _this;
+        }
+        KeyboardKeys.prototype.update = function () {
+            if (es.Input.isKeyDown(this.positive)) {
+                if (es.Input.isKeyDown(this.negative)) {
+                    switch (this.overlapBehavior) {
+                        default:
+                        case es.OverlapBehavior.cancelOut:
+                            this._value = 0;
+                            break;
+                        case es.OverlapBehavior.takeNewer:
+                            if (!this._turned) {
+                                this._value *= -1;
+                                this._turned = true;
+                            }
+                            break;
+                        case es.OverlapBehavior.takeOlder:
+                            break;
+                    }
+                }
+                else {
+                    this._turned = false;
+                    this._value = 1;
+                }
+            }
+            else if (es.Input.isKeyDown(this.negative)) {
+                this._turned = false;
+                this._value = -1;
+            }
+            else {
+                this._turned = false;
+                this._value = 0;
+            }
+        };
+        Object.defineProperty(KeyboardKeys.prototype, "value", {
+            get: function () {
+                return this._value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return KeyboardKeys;
+    }(es.VirtualAxisNode));
+    es.KeyboardKeys = KeyboardKeys;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var VirtualButton = (function (_super) {
+        __extends(VirtualButton, _super);
+        function VirtualButton(bufferTime) {
+            if (bufferTime === void 0) { bufferTime = 0; }
+            var nodes = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                nodes[_i - 1] = arguments[_i];
+            }
+            var _this = _super.call(this) || this;
+            _this.nodes = [];
+            _this.bufferTime = 0;
+            _this.firstRepeatTime = 0;
+            _this.mutiRepeatTime = 0;
+            _this._bufferCounter = 0;
+            _this._repeatCounter = 0;
+            _this.nodes = nodes;
+            _this.bufferTime = bufferTime;
+            return _this;
+        }
+        VirtualButton.prototype.setRepeat = function (firstRepeatTime, mutiRepeatTime) {
+            if (mutiRepeatTime === void 0) { mutiRepeatTime = firstRepeatTime; }
+            this.firstRepeatTime = firstRepeatTime;
+            this.mutiRepeatTime = mutiRepeatTime;
+            this._willRepeat = this.firstRepeatTime > 0;
+            if (!this._willRepeat)
+                this.isRepeating = false;
+        };
+        VirtualButton.prototype.update = function () {
+            this._bufferCounter -= es.Time.unscaledDeltaTime;
+            this.isRepeating = false;
+            var check = false;
+            for (var i = 0; i < this.nodes.length; i++) {
+                this.nodes[i].update();
+                if (this.nodes[i].isPressed) {
+                    this._bufferCounter = this.bufferTime;
+                    check = true;
+                }
+                else if (this.nodes[i].isDown) {
+                    check = true;
+                }
+            }
+            if (!check) {
+                this._repeatCounter = 0;
+                this._bufferCounter = 0;
+            }
+            else if (this._willRepeat) {
+                if (this._repeatCounter == 0) {
+                    this._repeatCounter = this.firstRepeatTime;
+                }
+                else {
+                    this._repeatCounter -= es.Time.unscaledDeltaTime;
+                    if (this._repeatCounter <= 0) {
+                        this.isRepeating = true;
+                        this._repeatCounter = this.mutiRepeatTime;
+                    }
+                }
+            }
+        };
+        Object.defineProperty(VirtualButton.prototype, "isDown", {
+            get: function () {
+                for (var _i = 0, _a = this.nodes; _i < _a.length; _i++) {
+                    var node = _a[_i];
+                    if (node.isDown)
+                        return true;
+                }
+                return false;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(VirtualButton.prototype, "isPressed", {
+            get: function () {
+                if (this._bufferCounter > 0 || this.isRepeating)
+                    return true;
+                for (var _i = 0, _a = this.nodes; _i < _a.length; _i++) {
+                    var node = _a[_i];
+                    if (node.isPressed)
+                        return true;
+                }
+                return false;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(VirtualButton.prototype, "isReleased", {
+            get: function () {
+                for (var _i = 0, _a = this.nodes; _i < _a.length; _i++) {
+                    var node = _a[_i];
+                    if (node.isReleased)
+                        return true;
+                }
+                return false;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        VirtualButton.prototype.consumeBuffer = function () {
+            this._bufferCounter = 0;
+        };
+        VirtualButton.prototype.addKeyboardKey = function (key) {
+            this.nodes.push(new KeyboardKey(key));
+            return this;
+        };
+        return VirtualButton;
+    }(es.VirtualInput));
+    es.VirtualButton = VirtualButton;
+    var Node = (function (_super) {
+        __extends(Node, _super);
+        function Node() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return Node;
+    }(es.VirtualInputNode));
+    es.Node = Node;
+    var KeyboardKey = (function (_super) {
+        __extends(KeyboardKey, _super);
+        function KeyboardKey(key) {
+            var _this = _super.call(this) || this;
+            _this.key = key;
+            return _this;
+        }
+        Object.defineProperty(KeyboardKey.prototype, "isDown", {
+            get: function () {
+                return es.Input.isKeyDown(this.key);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(KeyboardKey.prototype, "isPressed", {
+            get: function () {
+                return es.Input.isKeyPressed(this.key);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(KeyboardKey.prototype, "isReleased", {
+            get: function () {
+                return es.Input.isKeyReleased(this.key);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return KeyboardKey;
+    }(Node));
+    es.KeyboardKey = KeyboardKey;
 })(es || (es = {}));
 var es;
 (function (es) {

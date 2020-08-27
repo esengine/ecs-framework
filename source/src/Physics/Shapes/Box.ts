@@ -60,7 +60,7 @@ module es {
                     return this.bounds.intersects(other.bounds);
 
                 if (other instanceof Circle)
-                    return Collisions.isRectToCircle(this.bounds, other.position, other.radius);
+                    return Collisions.rectToCircle(this.bounds, other.position, other.radius);
             }
 
             return super.overlaps(other);

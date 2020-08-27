@@ -1,7 +1,7 @@
 module es {
     export class TiledMapRenderer extends RenderableComponent {
         public tiledMap: TmxMap;
-        public physicsLayer: number = 1 << 0;
+        public physicsLayer: Ref<number> = new Ref(1 << 0);
         /**
          * 如果空，所有层将被渲染
          */
@@ -27,7 +27,7 @@ module es {
             this.displayObject = new egret.DisplayObjectContainer();
 
             if (collisionLayerName) {
-                this.collisionLayer = tiledMap.tileLayers[collisionLayerName];
+                this.collisionLayer = tiledMap.tileLayers.find(layer => layer.name == collisionLayerName);
             }
         }
 
@@ -123,7 +123,7 @@ module es {
             // 为我们收到的矩形创建碰撞器
             this._colliders = [];
             for (let i = 0; i < collisionRects.length; i++) {
-                let collider = new BoxCollider().createBoxRect(collisionRects[i].x + this._localOffset.x,
+                let collider = new BoxCollider(collisionRects[i].x + this._localOffset.x,
                     collisionRects[i].y + this._localOffset.y, collisionRects[i].width, collisionRects[i].height);
                 collider.physicsLayer = this.physicsLayer;
                 collider.entity = this.entity;

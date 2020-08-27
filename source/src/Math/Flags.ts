@@ -30,8 +30,8 @@ module es {
          * @param self
          * @param flag
          */
-        public static setFlagExclusive(self: number, flag: number) {
-            return 1 << flag;
+        public static setFlagExclusive(self: Ref<number>, flag: number) {
+            self.value = 1 << flag;
         }
 
         /**
@@ -39,8 +39,8 @@ module es {
          * @param self
          * @param flag
          */
-        public static setFlag(self: number, flag: number) {
-            return (self | 1 << flag);
+        public static setFlag(self: Ref<number>, flag: number) {
+            self.value = (self.value | 1 << flag);
         }
 
         /**
@@ -48,17 +48,17 @@ module es {
          * @param self
          * @param flag
          */
-        public static unsetFlag(self: number, flag: number) {
+        public static unsetFlag(self: Ref<number>, flag: number) {
             flag = 1 << flag;
-            return (self & (~flag));
+            self.value = (self.value & (~flag));
         }
 
         /**
          * 反转数值集合位
          * @param self
          */
-        public static invertFlags(self: number) {
-            return ~self;
+        public static invertFlags(self: Ref<number>) {
+            self.value = ~self.value;
         }
     }
 }

@@ -285,7 +285,6 @@ declare module es {
         update(): void;
         setEnabled(isEnabled: boolean): this;
         setUpdateOrder(updateOrder: number): this;
-        clone(): Component;
     }
 }
 declare module es {
@@ -334,7 +333,6 @@ declare module es {
         destroy(): void;
         detachFromScene(): void;
         attachToScene(newScene: Scene): void;
-        clone(position?: Vector2): Entity;
         onAddedToScene(): void;
         onRemovedFromScene(): void;
         update(): void;
@@ -349,7 +347,6 @@ declare module es {
         removeAllComponents(): void;
         compareTo(other: Entity): number;
         toString(): string;
-        protected copyFrom(entity: Entity): void;
     }
 }
 declare module es {
@@ -691,7 +688,7 @@ declare module es {
     class SpriteAnimation {
         readonly sprites: Sprite[];
         readonly frameRate: number;
-        constructor(sprites: Sprite[], frameRate: number);
+        constructor(sprites: Sprite[], frameRate?: number);
     }
 }
 declare module es {
@@ -759,7 +756,7 @@ declare module es {
 declare module es {
     class TiledMapRenderer extends RenderableComponent {
         tiledMap: TmxMap;
-        physicsLayer: number;
+        physicsLayer: Ref<number>;
         layerIndicesToRender: number[];
         private toContainer;
         readonly width: number;
@@ -808,11 +805,10 @@ declare module es {
 }
 declare module es {
     abstract class Collider extends Component {
-        debug: any;
         shape: Shape;
         isTrigger: boolean;
-        physicsLayer: number;
-        collidesWithLayers: number;
+        physicsLayer: Ref<number>;
+        collidesWithLayers: Ref<number>;
         shouldColliderScaleAndRotateWithTransform: boolean;
         registeredPhysicsBounds: Rectangle;
         _localOffsetLength: number;
@@ -837,7 +833,6 @@ declare module es {
         unregisterColliderWithPhysicsSystem(): void;
         overlaps(other: Collider): boolean;
         collidesWith(collider: Collider, motion: Vector2, result: CollisionResult): boolean;
-        clone(): Component;
     }
 }
 declare module es {
@@ -846,10 +841,9 @@ declare module es {
         polygonShape: egret.Shape;
         pixelShape1: egret.Shape;
         pixelShape2: egret.Shape;
-        constructor();
+        constructor(x?: number, y?: number, width?: number, height?: number);
         width: number;
         height: number;
-        createBoxRect(x: number, y: number, width: number, height: number): BoxCollider;
         setSize(width: number, height: number): this;
         setWidth(width: number): BoxCollider;
         setHeight(height: number): void;
@@ -1303,10 +1297,10 @@ declare module es {
     class Flags {
         static isFlagSet(self: number, flag: number): boolean;
         static isUnshiftedFlagSet(self: number, flag: number): boolean;
-        static setFlagExclusive(self: number, flag: number): number;
-        static setFlag(self: number, flag: number): number;
-        static unsetFlag(self: number, flag: number): number;
-        static invertFlags(self: number): number;
+        static setFlagExclusive(self: Ref<number>, flag: number): void;
+        static setFlag(self: Ref<number>, flag: number): void;
+        static unsetFlag(self: Ref<number>, flag: number): void;
+        static invertFlags(self: Ref<number>): void;
     }
 }
 declare module es {
@@ -1422,12 +1416,12 @@ declare module es {
         static isLineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): boolean;
         static lineToLineIntersection(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): Vector2;
         static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
-        static isCircleToCircle(circleCenter1: Vector2, circleRadius1: number, circleCenter2: Vector2, circleRadius2: number): boolean;
-        static isCircleToLine(circleCenter: Vector2, radius: number, lineFrom: Vector2, lineTo: Vector2): boolean;
-        static isCircleToPoint(circleCenter: Vector2, radius: number, point: Vector2): boolean;
-        static isRectToCircle(rect: egret.Rectangle, cPosition: Vector2, cRadius: number): boolean;
-        static isRectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2): boolean;
-        static isRectToPoint(rX: number, rY: number, rW: number, rH: number, point: Vector2): boolean;
+        static circleToCircle(circleCenter1: Vector2, circleRadius1: number, circleCenter2: Vector2, circleRadius2: number): boolean;
+        static circleToLine(circleCenter: Vector2, radius: number, lineFrom: Vector2, lineTo: Vector2): boolean;
+        static circleToPoint(circleCenter: Vector2, radius: number, point: Vector2): boolean;
+        static rectToCircle(rect: egret.Rectangle, cPosition: Vector2, cRadius: number): boolean;
+        static rectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2): boolean;
+        static rectToPoint(rX: number, rY: number, rW: number, rH: number, point: Vector2): boolean;
         static getSector(rX: number, rY: number, rW: number, rH: number, point: Vector2): PointSectors;
     }
 }
@@ -1486,7 +1480,6 @@ declare module es {
         abstract collidesWithLine(start: Vector2, end: Vector2, hit: RaycastHit): boolean;
         abstract containsPoint(point: Vector2): any;
         abstract pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
-        clone(): Shape;
     }
 }
 declare module es {
@@ -1508,7 +1501,7 @@ declare module es {
         static findPolygonCenter(points: Vector2[]): Vector2;
         static getFarthestPointInDirection(points: Vector2[], direction: Vector2): Vector2;
         static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: Ref<number>, edgeNormal: Vector2): Vector2;
-        static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints: any): void;
+        static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints: Vector2[]): void;
         recalculateBounds(collider: Collider): void;
         overlaps(other: Shape): any;
         collidesWithShape(other: Shape, result: CollisionResult): boolean;
@@ -2052,122 +2045,6 @@ declare module es {
     }
 }
 declare module es {
-    class TouchState {
-        x: number;
-        y: number;
-        touchPoint: number;
-        touchDown: boolean;
-        readonly position: Vector2;
-        reset(): void;
-    }
-    class Input {
-        private static _init;
-        private static _previousTouchState;
-        private static _resolutionOffset;
-        private static _touchIndex;
-        private static _gameTouchs;
-        static readonly gameTouchs: TouchState[];
-        private static _resolutionScale;
-        static readonly resolutionScale: Vector2;
-        private static _totalTouchCount;
-        static readonly totalTouchCount: number;
-        static readonly touchPosition: Vector2;
-        static maxSupportedTouch: number;
-        static readonly touchPositionDelta: Vector2;
-        static initialize(): void;
-        static scaledPosition(position: Vector2): Vector2;
-        private static initTouchCache;
-        private static touchBegin;
-        private static touchMove;
-        private static touchEnd;
-        private static setpreviousTouchState;
-    }
-}
-declare class KeyboardUtils {
-    static TYPE_KEY_DOWN: number;
-    static TYPE_KEY_UP: number;
-    static A: string;
-    static B: string;
-    static C: string;
-    static D: string;
-    static E: string;
-    static F: string;
-    static G: string;
-    static H: string;
-    static I: string;
-    static J: string;
-    static K: string;
-    static L: string;
-    static M: string;
-    static N: string;
-    static O: string;
-    static P: string;
-    static Q: string;
-    static R: string;
-    static S: string;
-    static T: string;
-    static U: string;
-    static V: string;
-    static W: string;
-    static X: string;
-    static Y: string;
-    static Z: string;
-    static ESC: string;
-    static F1: string;
-    static F2: string;
-    static F3: string;
-    static F4: string;
-    static F5: string;
-    static F6: string;
-    static F7: string;
-    static F8: string;
-    static F9: string;
-    static F10: string;
-    static F11: string;
-    static F12: string;
-    static NUM_1: string;
-    static NUM_2: string;
-    static NUM_3: string;
-    static NUM_4: string;
-    static NUM_5: string;
-    static NUM_6: string;
-    static NUM_7: string;
-    static NUM_8: string;
-    static NUM_9: string;
-    static NUM_0: string;
-    static TAB: string;
-    static CTRL: string;
-    static ALT: string;
-    static SHIFT: string;
-    static CAPS_LOCK: string;
-    static ENTER: string;
-    static SPACE: string;
-    static BACK_SPACE: string;
-    static INSERT: string;
-    static DELETE: string;
-    static HOME: string;
-    static END: string;
-    static PAGE_UP: string;
-    static PAGE_DOWN: string;
-    static LEFT: string;
-    static RIGHT: string;
-    static UP: string;
-    static DOWN: string;
-    static PAUSE_BREAK: string;
-    static NUM_LOCK: string;
-    static SCROLL_LOCK: string;
-    static WINDOWS: string;
-    private static keyDownDict;
-    private static keyUpDict;
-    static init(): void;
-    static registerKey(key: string, fun: Function, thisObj: any, type?: number, ...args: any[]): void;
-    static unregisterKey(key: string, type?: number): void;
-    static destroy(): void;
-    private static onKeyDonwHander;
-    private static onKeyUpHander;
-    private static keyCodeToString;
-}
-declare module es {
     class ListPool {
         private static readonly _objectQueue;
         static warmCache(cacheCount: number): void;
@@ -2384,6 +2261,250 @@ declare module es {
         samples: number;
         color: number;
         initialized: boolean;
+    }
+}
+declare module es {
+    class TouchState {
+        x: number;
+        y: number;
+        touchPoint: number;
+        touchDown: boolean;
+        readonly position: Vector2;
+        reset(): void;
+    }
+    class Input {
+        private static _init;
+        private static _previousTouchState;
+        private static _resolutionOffset;
+        private static _touchIndex;
+        private static _gameTouchs;
+        static readonly gameTouchs: TouchState[];
+        private static _resolutionScale;
+        static readonly resolutionScale: Vector2;
+        private static _totalTouchCount;
+        static readonly totalTouchCount: number;
+        static readonly touchPosition: Vector2;
+        static _virtualInputs: VirtualInput[];
+        static maxSupportedTouch: number;
+        static readonly touchPositionDelta: Vector2;
+        static initialize(): void;
+        static update(): void;
+        static scaledPosition(position: Vector2): Vector2;
+        static isKeyPressed(key: Keys): boolean;
+        static isKeyPressedBoth(keyA: Keys, keyB: Keys): boolean;
+        static isKeyDown(key: Keys): boolean;
+        static isKeyDownBoth(keyA: Keys, keyB: Keys): boolean;
+        static isKeyReleased(key: Keys): boolean;
+        static isKeyReleasedBoth(keyA: Keys, keyB: Keys): boolean;
+        private static initTouchCache;
+        private static touchBegin;
+        private static touchMove;
+        private static touchEnd;
+        private static setpreviousTouchState;
+    }
+}
+import Keys = es.Keys;
+declare class KeyboardUtils {
+    static currentKeys: Keys[];
+    static previousKeys: Keys[];
+    private static keyStatusKeys;
+    static init(): void;
+    static update(): void;
+    static destroy(): void;
+    private static onKeyDownHandler;
+    private static onKeyUpHandler;
+}
+declare module es {
+    enum Keys {
+        none = 0,
+        back = 8,
+        tab = 9,
+        enter = 13,
+        capsLock = 20,
+        escape = 27,
+        space = 32,
+        pageUp = 33,
+        pageDown = 34,
+        end = 35,
+        home = 36,
+        left = 37,
+        up = 38,
+        right = 39,
+        down = 40,
+        select = 41,
+        print = 42,
+        execute = 43,
+        printScreen = 44,
+        insert = 45,
+        delete = 46,
+        help = 47,
+        d0 = 48,
+        d1 = 49,
+        d2 = 50,
+        d3 = 51,
+        d4 = 52,
+        d5 = 53,
+        d6 = 54,
+        d7 = 55,
+        d8 = 56,
+        d9 = 57,
+        a = 65,
+        b = 66,
+        c = 67,
+        d = 68,
+        e = 69,
+        f = 70,
+        g = 71,
+        h = 72,
+        i = 73,
+        j = 74,
+        k = 75,
+        l = 76,
+        m = 77,
+        n = 78,
+        o = 79,
+        p = 80,
+        q = 81,
+        r = 82,
+        s = 83,
+        t = 84,
+        u = 85,
+        v = 86,
+        w = 87,
+        x = 88,
+        y = 89,
+        z = 90,
+        leftWindows = 91,
+        rightWindows = 92,
+        apps = 93,
+        sleep = 95,
+        numPad0 = 96,
+        numPad1 = 97,
+        numPad2 = 98,
+        numPad3 = 99,
+        numPad4 = 100,
+        numPad5 = 101,
+        numPad6 = 102,
+        numPad7 = 103,
+        numPad8 = 104,
+        numPad9 = 105,
+        multiply = 106,
+        add = 107,
+        seperator = 108,
+        subtract = 109,
+        decimal = 110,
+        divide = 111,
+        f1 = 112,
+        f2 = 113,
+        f3 = 114,
+        f4 = 115,
+        f5 = 116,
+        f6 = 117,
+        f7 = 118,
+        f8 = 119,
+        f9 = 120,
+        f10 = 121,
+        f11 = 122,
+        f12 = 123,
+        f13 = 124,
+        f14 = 125,
+        f15 = 126,
+        f16 = 127,
+        f17 = 128,
+        f18 = 129,
+        f19 = 130,
+        f20 = 131,
+        f21 = 132,
+        f22 = 133,
+        f23 = 134,
+        f24 = 135,
+        numLock = 144,
+        scroll = 145,
+        leftShift = 160,
+        rightShift = 161,
+        leftControl = 162,
+        rightControl = 163,
+        leftAlt = 164,
+        rightAlt = 165,
+        browserBack = 166,
+        browserForward = 167
+    }
+}
+declare module es {
+    enum OverlapBehavior {
+        cancelOut = 0,
+        takeOlder = 1,
+        takeNewer = 2
+    }
+    abstract class VirtualInput {
+        protected constructor();
+        deregister(): void;
+        abstract update(): any;
+    }
+    abstract class VirtualInputNode {
+        update(): void;
+    }
+}
+declare module es {
+    class VirtualIntegerAxis extends VirtualInput {
+        nodes: VirtualAxisNode[];
+        readonly value: number;
+        constructor(...nodes: VirtualAxisNode[]);
+        update(): void;
+        addKeyboardKeys(overlapBehavior: OverlapBehavior, negative: Keys, positive: Keys): this;
+    }
+    abstract class VirtualAxisNode extends VirtualInputNode {
+        abstract value: number;
+    }
+}
+declare module es {
+    class VirtualAxis extends VirtualInput {
+        nodes: VirtualAxisNode[];
+        readonly value: number;
+        constructor(...nodes: VirtualAxisNode[]);
+        update(): void;
+    }
+    class KeyboardKeys extends VirtualAxisNode {
+        overlapBehavior: OverlapBehavior;
+        positive: Keys;
+        negative: Keys;
+        _value: number;
+        _turned: boolean;
+        constructor(overlapBehavior: OverlapBehavior, negative: Keys, positive: Keys);
+        update(): void;
+        readonly value: number;
+    }
+}
+declare module es {
+    class VirtualButton extends VirtualInput {
+        nodes: Node[];
+        bufferTime: number;
+        firstRepeatTime: number;
+        mutiRepeatTime: number;
+        isRepeating: boolean;
+        _bufferCounter: number;
+        _repeatCounter: number;
+        _willRepeat: boolean;
+        constructor(bufferTime?: number, ...nodes: Node[]);
+        setRepeat(firstRepeatTime: number, mutiRepeatTime?: number): void;
+        update(): void;
+        readonly isDown: boolean;
+        readonly isPressed: boolean;
+        readonly isReleased: boolean;
+        consumeBuffer(): void;
+        addKeyboardKey(key: Keys): VirtualButton;
+    }
+    abstract class Node extends VirtualInputNode {
+        abstract isDown: boolean;
+        abstract isPressed: boolean;
+        abstract isReleased: boolean;
+    }
+    class KeyboardKey extends Node {
+        key: Keys;
+        constructor(key: Keys);
+        readonly isDown: boolean;
+        readonly isPressed: boolean;
+        readonly isReleased: boolean;
     }
 }
 declare module es {

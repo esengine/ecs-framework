@@ -1,6 +1,5 @@
 module es {
     export abstract class Collider extends Component {
-        public debug
         /**
          * 对撞机的基本形状
          */
@@ -12,12 +11,12 @@ module es {
         /**
          * 在处理冲突时，physicsLayer可以用作过滤器。Flags类有帮助位掩码的方法
          */
-        public physicsLayer = 1 << 0;
+        public physicsLayer = new Ref(1 << 0);
         /**
          * 碰撞器在使用移动器移动时应该碰撞的层
          * 默认为所有层
          */
-        public collidesWithLayers = Physics.allLayers;
+        public collidesWithLayers: Ref<number> = new Ref(Physics.allLayers);
         /**
          * 如果为true，碰撞器将根据附加的变换缩放和旋转
          */
@@ -124,8 +123,8 @@ module es {
                     let renderableBounds = renderable.bounds;
 
                     // 这里我们需要大小*反尺度，因为当我们自动调整碰撞器的大小时，它需要没有缩放的渲染
-                    let width = renderableBounds.width / this.entity.scale.x;
-                    let height = renderableBounds.height / this.entity.scale.y;
+                    let width = renderableBounds.width / this.entity.transform.scale.x;
+                    let height = renderableBounds.height / this.entity.transform.scale.y;
                     // 圆碰撞器需要特别注意原点
                     if (this instanceof CircleCollider) {
                         this.radius = Math.max(width, height) * 0.5;
@@ -214,7 +213,7 @@ module es {
         public collidesWith(collider: Collider, motion: Vector2, result: CollisionResult): boolean {
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
             let oldPosition = this.entity.position;
-            this.entity.position = this.entity.position.add(motion);
+            this.entity.position.add(motion);
 
             let didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)
@@ -224,16 +223,6 @@ module es {
             this.entity.position = oldPosition;
 
             return didCollide;
-        }
-
-        public clone(): Component {
-            let collider = ObjectUtils.clone<Collider>(this);
-            collider.entity = null;
-
-            if (this.shape)
-                collider.shape = this.shape.clone();
-
-            return collider;
         }
     }
 }
