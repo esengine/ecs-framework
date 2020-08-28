@@ -7146,7 +7146,7 @@ var es;
                 var hasUnitScale = true;
                 var tempMat = void 0;
                 var combinedMatrix = es.Matrix2D.create().translate(-this._polygonCenter.x, -this._polygonCenter.y);
-                if (collider.entity.transform.scale != es.Vector2.one) {
+                if (!collider.entity.transform.scale.equals(es.Vector2.one)) {
                     tempMat = es.Matrix2D.create().scale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
                     combinedMatrix = combinedMatrix.multiply(tempMat);
                     hasUnitScale = false;

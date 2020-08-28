@@ -46,12 +46,13 @@ module samples {
 
             this.camera.entity.addComponent(new FollowCamera(playerEntity));
 
-            let moonTexture = RES.getRes("moon_png");
-            let moonEntity = this.createEntity("moon");
-            moonEntity.position = new es.Vector2(412, 460);
-            moonEntity.addComponent(new SpriteRenderer(moonTexture));
-            moonEntity.addComponent(new ProjectileHitDetector());
-            moonEntity.addComponent(new CircleCollider());
+            this.content.loadRes("moon_png").then(moonTexture => {
+                let moonEntity = this.createEntity("moon");
+                moonEntity.position = new es.Vector2(412, 460);
+                moonEntity.addComponent(new SpriteRenderer(moonTexture));
+                moonEntity.addComponent(new ProjectileHitDetector());
+                moonEntity.addComponent(new CircleCollider());
+            });
         }
 
         /**
@@ -70,13 +71,15 @@ module samples {
             Flags.setFlagExclusive(collider.collidesWithLayers, 0);
             Flags.setFlagExclusive(collider.physicsLayer, 1);
 
-            let texture = RES.getRes("plume_png");
-            let sprites = Sprite.spritesFromAtlas(texture, 16, 16);
-            let animator = entity.addComponent(new SpriteAnimator());
-            animator.renderLayer = 1;
+            this.content.loadRes("plume_png").then(()=>{
+                let texture = RES.getRes("plume_png");
+                let sprites = Sprite.spritesFromAtlas(texture, 16, 16);
+                let animator = entity.addComponent(new SpriteAnimator());
+                animator.renderLayer = 1;
 
-            animator.addAnimation("default", new SpriteAnimation(sprites));
-            animator.play("default");
+                animator.addAnimation("default", new SpriteAnimation(sprites));
+                animator.play("default");
+            });
 
             return entity;
         }

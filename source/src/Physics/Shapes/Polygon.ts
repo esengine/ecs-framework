@@ -219,7 +219,7 @@ module es {
                 let tempMat: Matrix2D;
                 let combinedMatrix = Matrix2D.create().translate(-this._polygonCenter.x, -this._polygonCenter.y);
 
-                if (collider.entity.transform.scale != Vector2.one) {
+                if (!collider.entity.transform.scale.equals(Vector2.one)) {
                     tempMat = Matrix2D.create().scale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
                     combinedMatrix = combinedMatrix.multiply(tempMat);
                     hasUnitScale = false;
