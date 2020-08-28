@@ -198,6 +198,7 @@ declare module es {
         _nextScene: Scene;
         _sceneTransition: SceneTransition;
         _globalManagers: GlobalManager[];
+        _coroutineManager: CoroutineManager;
         _timerManager: TimerManager;
         constructor();
         static readonly Instance: Core;
@@ -207,6 +208,7 @@ declare module es {
         static registerGlobalManager(manager: es.GlobalManager): void;
         static unregisterGlobalManager(manager: es.GlobalManager): void;
         static getGlobalManager<T extends es.GlobalManager>(type: any): T;
+        static startCoroutine(enumerator: IEnumerator): CoroutineImpl;
         static schedule(timeInSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer) => void): Timer;
         onOrientationChanged(): void;
         draw(): Promise<void>;
@@ -2064,6 +2066,19 @@ declare module es {
         equals(other: Pair<T>): boolean;
     }
 }
+declare module es {
+    class Pool<T> {
+        private static _objectQueue;
+        static warmCache(type: any, cacheCount: number): void;
+        static trimCache(cacheCount: number): void;
+        static clearCache(): void;
+        static obtain<T>(type: any): T;
+        static free<T>(obj: T): void;
+    }
+    interface IPoolable {
+        reset(): any;
+    }
+}
 declare class RandomUtils {
     static randrange(start: number, stop: number, step?: number): number;
     static randint(a: number, b: number): number;
@@ -2262,6 +2277,46 @@ declare module es {
         samples: number;
         color: number;
         initialized: boolean;
+    }
+}
+declare module es {
+    interface ICoroutine {
+        stop(): any;
+        setUseUnscaledDeltaTime(useUnscaledDeltaTime: any): ICoroutine;
+    }
+    class Coroutine {
+        static waitForSeconds(seconds: number): WaitForSeconds;
+    }
+    class WaitForSeconds {
+        static waiter: WaitForSeconds;
+        waitTime: number;
+        wait(seconds: number): WaitForSeconds;
+    }
+}
+declare module es {
+    class CoroutineImpl implements ICoroutine, IPoolable {
+        enumerator: IEnumerator;
+        waitTimer: number;
+        isDone: boolean;
+        waitForCoroutine: CoroutineImpl;
+        useUnscaledDeltaTime: boolean;
+        stop(): void;
+        setUseUnscaledDeltaTime(useUnscaledDeltaTime: any): es.ICoroutine;
+        prepareForuse(): void;
+        reset(): void;
+    }
+    interface IEnumerator {
+        current: any;
+        moveNext(): boolean;
+        reset(): any;
+    }
+    class CoroutineManager extends GlobalManager {
+        _isInUpdate: boolean;
+        _unblockedCoroutines: CoroutineImpl[];
+        _shouldRunNextFrame: CoroutineImpl[];
+        startCoroutine(enumerator: IEnumerator): CoroutineImpl;
+        update(): void;
+        tickCoroutine(coroutine: CoroutineImpl): boolean;
     }
 }
 declare module es {

@@ -29,6 +29,7 @@ module es {
          * 全局访问系统
          */
         public _globalManagers: GlobalManager[] = [];
+        public _coroutineManager: CoroutineManager = new CoroutineManager();
         public _timerManager: TimerManager = new TimerManager();
 
         constructor() {
@@ -40,6 +41,7 @@ module es {
 
             this.addEventListener(egret.Event.ADDED_TO_STAGE, this.onAddToStage, this);
 
+            Core.registerGlobalManager(this._coroutineManager);
             Core.registerGlobalManager(this._timerManager);
         }
 
@@ -124,6 +126,15 @@ module es {
                     return this._instance._globalManagers[i] as T;
             }
             return null;
+        }
+
+        /**
+         * 开始了一个协同程序。协程可以使用number延迟几秒，也可以使其他对startCoroutine的调用延迟几秒。
+         * 返回null将使协程在下一帧中被执行。
+         * @param enumerator
+         */
+        public static startCoroutine(enumerator: IEnumerator){
+            return this._instance._coroutineManager.startCoroutine(enumerator);
         }
 
         /**

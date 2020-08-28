@@ -191,11 +191,11 @@ module es {
 
             while (currentCell.x != lastCell.x || currentCell.y != lastCell.y){
                 if (tMaxX < tMaxY){
-                    currentCell.x = MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX));
+                    currentCell.x = Math.floor(MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
 
                     tMaxX += tDeltaX;
                 }else{
-                    currentCell.y = MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY));
+                    currentCell.y = Math.floor(MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
 
                     tMaxY += tDeltaY;
                 }

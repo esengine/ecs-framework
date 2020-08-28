@@ -58,8 +58,8 @@ module es {
             this._scrollX += this.scrollSpeedX * Time.deltaTime;
             this._scrollY += this.scroolSpeedY * Time.deltaTime;
 
-            this._sourceRect.x = this._scrollX;
-            this._sourceRect.y = this._scrollY;
+            this._sourceRect.x = Math.floor(this._scrollX);
+            this._sourceRect.y = Math.floor(this._scrollY);
             this._sourceRect.width = this._scrollWidth + Math.abs(this._scrollX);
             this._sourceRect.height = this._scrollHeight + Math.abs(this._scrollY);
         }

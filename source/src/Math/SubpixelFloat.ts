@@ -16,7 +16,7 @@ module es {
          */
         public update(amount: number){
             this.remainder += amount;
-            let motion = Math.trunc(this.remainder);
+            let motion = Math.floor(Math.trunc(this.remainder));
             this.remainder -= motion;
             amount = motion;
             return amount;

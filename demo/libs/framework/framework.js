@@ -966,11 +966,13 @@ var es;
         function Core() {
             var _this = _super.call(this) || this;
             _this._globalManagers = [];
+            _this._coroutineManager = new es.CoroutineManager();
             _this._timerManager = new es.TimerManager();
             Core._instance = _this;
             Core.emitter = new es.Emitter();
             Core.content = new es.ContentManager();
             _this.addEventListener(egret.Event.ADDED_TO_STAGE, _this.onAddToStage, _this);
+            Core.registerGlobalManager(_this._coroutineManager);
             Core.registerGlobalManager(_this._timerManager);
             return _this;
         }
@@ -1027,6 +1029,9 @@ var es;
                     return this._instance._globalManagers[i];
             }
             return null;
+        };
+        Core.startCoroutine = function (enumerator) {
+            return this._instance._coroutineManager.startCoroutine(enumerator);
         };
         Core.schedule = function (timeInSeconds, repeats, context, onTime) {
             if (repeats === void 0) { repeats = false; }
@@ -3067,8 +3072,8 @@ var es;
             set: function (value) {
                 this._textureScale = value;
                 this._inverseTexScale = new es.Vector2(1 / this._textureScale.x, 1 / this._textureScale.y);
-                this._sourceRect.width = this._sprite.sourceRect.width * this._inverseTexScale.x;
-                this._sourceRect.height = this._sprite.sourceRect.height * this._inverseTexScale.y;
+                this._sourceRect.width = Math.floor(this._sprite.sourceRect.width * this._inverseTexScale.x);
+                this._sourceRect.height = Math.floor(this._sprite.sourceRect.height * this._inverseTexScale.y);
             },
             enumerable: true,
             configurable: true
@@ -3186,8 +3191,8 @@ var es;
                 return;
             this._scrollX += this.scrollSpeedX * es.Time.deltaTime;
             this._scrollY += this.scroolSpeedY * es.Time.deltaTime;
-            this._sourceRect.x = this._scrollX;
-            this._sourceRect.y = this._scrollY;
+            this._sourceRect.x = Math.floor(this._scrollX);
+            this._sourceRect.y = Math.floor(this._scrollY);
             this._sourceRect.width = this._scrollWidth + Math.abs(this._scrollX);
             this._sourceRect.height = this._scrollHeight + Math.abs(this._scrollY);
         };
@@ -5254,7 +5259,7 @@ var es;
             this._timeSinceSceneLoad = 0;
         };
         Time.checkEvery = function (interval) {
-            return (this._timeSinceSceneLoad / interval) > ((this._timeSinceSceneLoad - this.deltaTime) / interval);
+            return Math.floor(this._timeSinceSceneLoad / interval) > Math.floor((this._timeSinceSceneLoad - this.deltaTime) / interval);
         };
         Time.deltaTime = 0;
         Time.timeScale = 1;
@@ -6627,7 +6632,7 @@ var es;
         }
         SubpixelFloat.prototype.update = function (amount) {
             this.remainder += amount;
-            var motion = Math.trunc(this.remainder);
+            var motion = Math.floor(Math.trunc(this.remainder));
             this.remainder -= motion;
             amount = motion;
             return amount;
@@ -7808,11 +7813,11 @@ var es;
             }
             while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
                 if (tMaxX < tMaxY) {
-                    currentCell.x = es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX));
+                    currentCell.x = Math.floor(es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
                     tMaxX += tDeltaX;
                 }
                 else {
-                    currentCell.y = es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY));
+                    currentCell.y = Math.floor(es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
                     tMaxY += tDeltaY;
                 }
                 cell = this.cellAtPosition(currentCell.x, currentCell.y);
@@ -8058,7 +8063,7 @@ var es;
             flip = (rawGid & TmxLayerTile.FLIPPED_VERTICALLY_FLAG) != 0;
             this.verticalFlip = flip;
             rawGid &= ~(TmxLayerTile.FLIPPED_HORIZONTALLY_FLAG | TmxLayerTile.FLIPPED_VERTICALLY_FLAG);
-            this.gid = rawGid;
+            this.gid = Math.floor(rawGid);
             this.tileset = map.getTilesetForTileGid(this.gid);
         }
         Object.defineProperty(TmxLayerTile.prototype, "position", {
@@ -9949,6 +9954,42 @@ var es;
     }());
     es.Pair = Pair;
 })(es || (es = {}));
+var es;
+(function (es) {
+    var Pool = (function () {
+        function Pool() {
+        }
+        Pool.warmCache = function (type, cacheCount) {
+            cacheCount -= this._objectQueue.length;
+            if (cacheCount > 0) {
+                for (var i = 0; i < cacheCount; i++) {
+                    this._objectQueue.unshift(new type());
+                }
+            }
+        };
+        Pool.trimCache = function (cacheCount) {
+            while (cacheCount > this._objectQueue.length)
+                this._objectQueue.shift();
+        };
+        Pool.clearCache = function () {
+            this._objectQueue.length = 0;
+        };
+        Pool.obtain = function (type) {
+            if (this._objectQueue.length > 0)
+                return this._objectQueue.shift();
+            return new type();
+        };
+        Pool.free = function (obj) {
+            this._objectQueue.unshift(obj);
+            if (egret.is(obj, "IPoolable")) {
+                obj["reset"]();
+            }
+        };
+        Pool._objectQueue = new Array(10);
+        return Pool;
+    }());
+    es.Pool = Pool;
+})(es || (es = {}));
 var RandomUtils = (function () {
     function RandomUtils() {
     }
@@ -10476,7 +10517,7 @@ var es;
             for (var i = 0; i < this._logs.length; ++i)
                 this._logs[i] = new FrameLog();
             this.sampleFrames = this.targetSampleFrames = 1;
-            this.width = es.Core.graphicsDevice.viewport.width * 0.8;
+            this.width = Math.floor(es.Core.graphicsDevice.viewport.width * 0.8);
             es.Core.emitter.addObserver(es.CoreEvents.GraphicsDeviceReset, this.onGraphicsDeviceReset, this);
             this.onGraphicsDeviceReset();
         }
@@ -10629,7 +10670,7 @@ var es;
             }
             if (Math.max(this._frameAdjust) > TimeRuler.autoAdjustDelay) {
                 this.sampleFrames = Math.min(TimeRuler.maxSampleFrames, this.sampleFrames);
-                this.sampleFrames = Math.max(this.targetSampleFrames, (maxTime / frameSpan) + 1);
+                this.sampleFrames = Math.max(this.targetSampleFrames, Math.floor(maxTime / frameSpan) + 1);
                 this._frameAdjust = 0;
             }
             var msToPs = width / sampleSpan;
@@ -10745,6 +10786,135 @@ var es;
         return MarkerLog;
     }());
     es.MarkerLog = MarkerLog;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Coroutine = (function () {
+        function Coroutine() {
+        }
+        Coroutine.waitForSeconds = function (seconds) {
+            return WaitForSeconds.waiter.wait(seconds);
+        };
+        return Coroutine;
+    }());
+    es.Coroutine = Coroutine;
+    var WaitForSeconds = (function () {
+        function WaitForSeconds() {
+        }
+        WaitForSeconds.prototype.wait = function (seconds) {
+            WaitForSeconds.waiter.waitTime = seconds;
+            return WaitForSeconds.waiter;
+        };
+        WaitForSeconds.waiter = new WaitForSeconds();
+        return WaitForSeconds;
+    }());
+    es.WaitForSeconds = WaitForSeconds;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var CoroutineImpl = (function () {
+        function CoroutineImpl() {
+            this.useUnscaledDeltaTime = false;
+        }
+        CoroutineImpl.prototype.stop = function () {
+            this.isDone = true;
+        };
+        CoroutineImpl.prototype.setUseUnscaledDeltaTime = function (useUnscaledDeltaTime) {
+            this.useUnscaledDeltaTime = useUnscaledDeltaTime;
+            return this;
+        };
+        CoroutineImpl.prototype.prepareForuse = function () {
+            this.isDone = false;
+        };
+        CoroutineImpl.prototype.reset = function () {
+            this.isDone = true;
+            this.waitTimer = 0;
+            this.waitForCoroutine = null;
+            this.enumerator = null;
+            this.useUnscaledDeltaTime = false;
+        };
+        return CoroutineImpl;
+    }());
+    es.CoroutineImpl = CoroutineImpl;
+    var CoroutineManager = (function (_super) {
+        __extends(CoroutineManager, _super);
+        function CoroutineManager() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this._unblockedCoroutines = [];
+            _this._shouldRunNextFrame = [];
+            return _this;
+        }
+        CoroutineManager.prototype.startCoroutine = function (enumerator) {
+            var coroutine = es.Pool.obtain(CoroutineImpl);
+            coroutine.prepareForuse();
+            coroutine.enumerator = enumerator;
+            var shouldContinueCoroutine = this.tickCoroutine(coroutine);
+            if (!shouldContinueCoroutine)
+                return null;
+            if (this._isInUpdate)
+                this._shouldRunNextFrame.push(coroutine);
+            else
+                this._unblockedCoroutines.push(coroutine);
+            return coroutine;
+        };
+        CoroutineManager.prototype.update = function () {
+            this._isInUpdate = true;
+            for (var i = 0; i < this._unblockedCoroutines.length; i++) {
+                var coroutine = this._unblockedCoroutines[i];
+                if (coroutine.isDone) {
+                    es.Pool.free(coroutine);
+                    continue;
+                }
+                if (coroutine.waitForCoroutine != null) {
+                    if (coroutine.waitForCoroutine.isDone) {
+                        coroutine.waitForCoroutine = null;
+                    }
+                    else {
+                        this._shouldRunNextFrame.push(coroutine);
+                        continue;
+                    }
+                }
+                if (coroutine.waitTimer > 0) {
+                    coroutine.waitTimer -= coroutine.useUnscaledDeltaTime ? es.Time.unscaledDeltaTime : es.Time.deltaTime;
+                    this._shouldRunNextFrame.push(coroutine);
+                    continue;
+                }
+                if (this.tickCoroutine(coroutine))
+                    this._shouldRunNextFrame.push(coroutine);
+            }
+            this._unblockedCoroutines.length = 0;
+            this._unblockedCoroutines.concat(this._shouldRunNextFrame);
+            this._shouldRunNextFrame.length = 0;
+            this._isInUpdate = false;
+        };
+        CoroutineManager.prototype.tickCoroutine = function (coroutine) {
+            if (!coroutine.enumerator.moveNext() || coroutine.isDone) {
+                es.Pool.free(coroutine);
+                return false;
+            }
+            if (coroutine.enumerator.current == null) {
+                return true;
+            }
+            if (coroutine.enumerator.current instanceof es.WaitForSeconds) {
+                coroutine.waitTimer = coroutine.enumerator.current.waitTime;
+                return true;
+            }
+            if (coroutine.enumerator.current instanceof Number) {
+                console.warn("协同程序检查返回一个Number类型，请不要在生产环境使用");
+                coroutine.waitTimer = Number(coroutine.enumerator.current);
+                return true;
+            }
+            if (coroutine.enumerator.current instanceof CoroutineImpl) {
+                coroutine.waitForCoroutine = coroutine.enumerator.current;
+                return true;
+            }
+            else {
+                return true;
+            }
+        };
+        return CoroutineManager;
+    }(es.GlobalManager));
+    es.CoroutineManager = CoroutineManager;
 })(es || (es = {}));
 var es;
 (function (es) {

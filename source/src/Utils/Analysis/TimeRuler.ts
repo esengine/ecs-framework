@@ -66,7 +66,7 @@ module es {
                 this._logs[i] = new FrameLog();
 
             this.sampleFrames = this.targetSampleFrames = 1;
-            this.width = Core.graphicsDevice.viewport.width * 0.8;
+            this.width = Math.floor(Core.graphicsDevice.viewport.width * 0.8);
 
             es.Core.emitter.addObserver(CoreEvents.GraphicsDeviceReset, this.onGraphicsDeviceReset, this);
             this.onGraphicsDeviceReset();
@@ -269,7 +269,7 @@ module es {
 
             if (Math.max(this._frameAdjust) > TimeRuler.autoAdjustDelay) {
                 this.sampleFrames = Math.min(TimeRuler.maxSampleFrames, this.sampleFrames);
-                this.sampleFrames = Math.max(this.targetSampleFrames, (maxTime / frameSpan) + 1);
+                this.sampleFrames = Math.max(this.targetSampleFrames, Math.floor(maxTime / frameSpan) + 1);
 
                 this._frameAdjust = 0;
             }

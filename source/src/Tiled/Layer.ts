@@ -168,7 +168,7 @@ module es {
             rawGid &= ~(TmxLayerTile.FLIPPED_HORIZONTALLY_FLAG | TmxLayerTile.FLIPPED_VERTICALLY_FLAG);
 
             // 将GID保存
-            this.gid = rawGid;
+            this.gid = Math.floor(rawGid);
             this.tileset = map.getTilesetForTileGid(this.gid);
         }
     }

@@ -65,8 +65,8 @@ module es {
 
             // 重新计算我们的inverseTextureScale和源矩形大小
             this._inverseTexScale = new Vector2(1 / this._textureScale.x, 1 / this._textureScale.y);
-            this._sourceRect.width = this._sprite.sourceRect.width * this._inverseTexScale.x;
-            this._sourceRect.height = this._sprite.sourceRect.height * this._inverseTexScale.y;
+            this._sourceRect.width = Math.floor(this._sprite.sourceRect.width * this._inverseTexScale.x);
+            this._sourceRect.height = Math.floor(this._sprite.sourceRect.height * this._inverseTexScale.y);
         }
 
         /**
