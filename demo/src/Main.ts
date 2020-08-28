@@ -33,6 +33,7 @@ class Main extends es.Core {
     protected initialize() {
         try {
             es.Core.debugRenderEndabled = true;
+            es.TimeRuler.Instance.showLog = true;
             this.runGame();
         } catch(err) {
             console.error(err);

@@ -279,7 +279,7 @@ declare module es {
         onAddedToEntity(): void;
         onRemovedFromEntity(): void;
         onEntityTransformChanged(comp: transform.Component): void;
-        debugRender(): void;
+        debugRender(camera: Camera): void;
         onEnabled(): void;
         onDisabled(): void;
         update(): void;
@@ -336,7 +336,7 @@ declare module es {
         onAddedToScene(): void;
         onRemovedFromScene(): void;
         update(): void;
-        debugRender(): void;
+        debugRender(camera: Camera): void;
         addComponent<T extends Component>(component: T): T;
         getComponent<T extends Component>(type: any): T;
         hasComponent<T extends Component>(type: any): boolean;
@@ -561,7 +561,7 @@ declare module es {
         onAddedToEntity(): void;
         onGraphicsDeviceReset(): void;
         update(): void;
-        debugRender(): void;
+        debugRender(camera: Camera): void;
         clampToMapSize(position: Vector2): Vector2;
         follow(targetEntity: Entity, cameraStyle?: CameraStyle): void;
         updateFollow(): void;
@@ -598,12 +598,13 @@ declare module es {
         isVisible: boolean;
         onEntityTransformChanged(comp: transform.Component): void;
         abstract render(camera: Camera): any;
-        debugRender(): void;
+        debugRender(camera: Camera): void;
         isVisibleFromCamera(camera: Camera): boolean;
         setRenderLayer(renderLayer: number): RenderableComponent;
         setColor(color: number): RenderableComponent;
         setLocalOffset(offset: Vector2): RenderableComponent;
         sync(camera: Camera): void;
+        compareTo(other: RenderableComponent): number;
         toString(): string;
         protected onBecameVisible(): void;
         protected onBecameInvisible(): void;
@@ -847,7 +848,7 @@ declare module es {
         setSize(width: number, height: number): this;
         setWidth(width: number): BoxCollider;
         setHeight(height: number): void;
-        debugRender(): void;
+        debugRender(camera: Camera): void;
         toString(): string;
     }
 }
@@ -860,7 +861,7 @@ declare module es {
         constructor(radius?: number);
         radius: number;
         setRadius(radius: number): CircleCollider;
-        debugRender(): void;
+        debugRender(camera: Camera): void;
         toString(): string;
     }
 }
@@ -956,7 +957,7 @@ declare module es {
         onEntityTransformChanged(comp: transform.Component): void;
         onEntityEnabled(): void;
         onEntityDisabled(): void;
-        debugRender(): void;
+        debugRender(camera: Camera): void;
     }
 }
 declare module es {
@@ -1042,7 +1043,7 @@ declare module es {
         isVisible: boolean;
         isVisibleFromCamera(camera: Camera): any;
         render(camera: Camera): any;
-        debugRender(): any;
+        debugRender(camera: Camera): any;
     }
     class RenderableComparer {
         compare(self: IRenderable, other: IRenderable): number;
@@ -2114,7 +2115,7 @@ declare module es {
         static perpendicular(first: Vector2, second: Vector2): Vector2;
         static normalize(vec: Vector2): void;
         static transformA(sourceArray: Vector2[], sourceIndex: number, matrix: Matrix2D, destinationArray: Vector2[], destinationIndex: number, length: number): void;
-        static transformR(position: Vector2, matrix: Matrix2D): Vector2;
+        static transformR(position: Vector2, matrix: Matrix2D, result: Vector2): void;
         static transform(sourceArray: Vector2[], matrix: Matrix2D, destinationArray: Vector2[]): void;
         static round(vec: Vector2): Vector2;
     }

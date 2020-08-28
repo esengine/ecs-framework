@@ -274,10 +274,10 @@ module es {
                 this._components[i].onDisabled();
         }
 
-        public debugRender(){
+        public debugRender(camera: Camera){
             for (let i = 0; i < this._components.length; i ++){
                 if (this._components[i].enabled)
-                    this._components[i].debugRender();
+                    this._components[i].debugRender(camera);
             }
         }
     }

@@ -38,7 +38,7 @@ module es {
         /**
          * 只有在没有碰撞器时才呈现边界。总是在原点上渲染一个正方形。
          */
-        debugRender();
+        debugRender(camera: Camera);
     }
 
     /**

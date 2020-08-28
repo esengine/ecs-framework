@@ -243,10 +243,10 @@ module es {
                 let bottomLeft = new Vector2(worldPosX, worldPosY + height);
                 let bottomRight = new Vector2(worldPosX + width, worldPosY + height);
 
-                topLeft = Vector2Ext.transformR(topLeft, this._transformMat);
-                topRight = Vector2Ext.transformR(topRight, this._transformMat);
-                bottomLeft = Vector2Ext.transformR(bottomLeft, this._transformMat);
-                bottomRight = Vector2Ext.transformR(bottomRight, this._transformMat);
+                Vector2Ext.transformR(topLeft, this._transformMat, topLeft);
+                Vector2Ext.transformR(topRight, this._transformMat, topRight);
+                Vector2Ext.transformR(bottomLeft, this._transformMat, bottomLeft);
+                Vector2Ext.transformR(bottomRight, this._transformMat, bottomRight);
 
                 let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
                 let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);

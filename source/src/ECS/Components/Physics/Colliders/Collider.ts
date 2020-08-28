@@ -136,7 +136,7 @@ module es {
                     // 获取渲染的中心，将其转移到本地坐标，并使用它作为碰撞器的localOffset
                     this.localOffset = Vector2.subtract(renderableBounds.center, this.entity.transform.position);
                 } else {
-                    console.warn("Collider has no shape and no RenderableComponent. Can't figure out how to size it.");
+                    console.warn("碰撞器没有形状和RenderableComponent。不知道如何调整大小.");
                 }
             }
 

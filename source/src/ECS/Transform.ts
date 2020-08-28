@@ -43,7 +43,7 @@ module es {
         constructor(entity: Entity) {
             super();
             this.entity = entity;
-            this.scale = Vector2.one;
+            this.scale = this._localScale = Vector2.one;
             this._children = [];
         }
 
@@ -147,7 +147,7 @@ module es {
                     this._position = this._localPosition;
                 } else {
                     this.parent.updateTransform();
-                    this._position = Vector2Ext.transformR(this._localPosition, this.parent._worldTransform);
+                    Vector2Ext.transformR(this._localPosition, this.parent._worldTransform, this._position);
                 }
 
                 this._positionDirty = false;
@@ -293,7 +293,7 @@ module es {
 
             this._position = position;
             if (this.parent) {
-                this.localPosition = Vector2Ext.transformR(this._position, this._worldToLocalTransform);
+                this.localPosition = Vector2.transform(this._position, this._worldToLocalTransform);
             } else {
                 this.localPosition = position;
             }

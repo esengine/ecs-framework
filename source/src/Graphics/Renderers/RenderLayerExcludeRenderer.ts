@@ -31,7 +31,7 @@ module es {
                 let renderable = scene.renderableComponents.buffer[i];
                 if (!this.excludedRenderLayers.contains(renderable.renderLayer) && renderable.enabled &&
                     renderable.isVisibleFromCamera(cam))
-                    renderable.debugRender();
+                    renderable.debugRender(cam);
             }
 
             super.debugRender(scene, cam);

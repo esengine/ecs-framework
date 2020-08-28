@@ -82,7 +82,7 @@ module es {
             }
         }
 
-        public debugRender() {
+        public debugRender(camera: Camera) {
             if (!this.rectShape)
                 this.debugDisplayObject.addChild(this.rectShape);
 
@@ -90,13 +90,13 @@ module es {
             if (this._cameraStyle == CameraStyle.lockOn){
                 this.rectShape.graphics.beginFill(0x8B0000, 0);
                 this.rectShape.graphics.lineStyle(1, 0x8B0000);
-                this.rectShape.graphics.drawRect(this._worldSpaceDeadZone.x - 5, this._worldSpaceDeadZone.y - 5,
+                this.rectShape.graphics.drawRect(this._worldSpaceDeadZone.x - 5 - camera.bounds.x, this._worldSpaceDeadZone.y - 5 - camera.bounds.y,
                     this._worldSpaceDeadZone.width, this._worldSpaceDeadZone.height);
                 this.rectShape.graphics.endFill();
             } else {
                 this.rectShape.graphics.beginFill(0x8B0000, 0);
                 this.rectShape.graphics.lineStyle(1, 0x8B0000);
-                this.rectShape.graphics.drawRect(this._worldSpaceDeadZone.x, this._worldSpaceDeadZone.y,
+                this.rectShape.graphics.drawRect(this._worldSpaceDeadZone.x - camera.bounds.x, this._worldSpaceDeadZone.y - camera.bounds.y,
                     this._worldSpaceDeadZone.width, this._worldSpaceDeadZone.height);
                 this.rectShape.graphics.endFill();
             }

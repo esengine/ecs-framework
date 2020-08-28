@@ -85,7 +85,7 @@ module es {
         /**
          *
          */
-        public debugRender() {
+        public debugRender(camera: Camera) {
         }
 
         /**

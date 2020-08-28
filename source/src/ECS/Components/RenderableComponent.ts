@@ -112,7 +112,7 @@ module es {
          */
         public abstract render(camera: Camera);
 
-        public debugRender() {
+        public debugRender(camera: Camera) {
             if (!this.debugRenderEnabled)
                 return;
 
@@ -122,20 +122,20 @@ module es {
             if (!this.pixelShape.parent)
                 this.debugDisplayObject.addChild(this.pixelShape);
 
-            // if (!this.entity.getComponent(Collider)){
-            //     this.hollowShape.graphics.clear();
-            //     this.hollowShape.graphics.beginFill(Colors.renderableBounds, 0);
-            //     this.hollowShape.graphics.lineStyle(1, Colors.renderableBounds);
-            //     this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
-            //     this.hollowShape.graphics.endFill();
-            // }
+            if (!this.entity.getComponent(Collider)){
+                this.hollowShape.graphics.clear();
+                this.hollowShape.graphics.beginFill(Colors.renderableBounds, 0);
+                this.hollowShape.graphics.lineStyle(1, Colors.renderableBounds);
+                this.hollowShape.graphics.drawRect(this.bounds.x - camera.bounds.x, this.bounds.y - camera.bounds.y, this.bounds.width, this.bounds.height);
+                this.hollowShape.graphics.endFill();
+            }
 
-            let pixelPos = Vector2.add(this.entity.transform.position, this._localOffset);
+            let pixelPos = Vector2.add(this.entity.transform.position, this._localOffset).subtract(camera.bounds.location);
             this.pixelShape.graphics.clear();
             this.pixelShape.graphics.beginFill(Colors.renderableCenter, 0);
             this.pixelShape.graphics.lineStyle(4, Colors.renderableCenter);
-            this.pixelShape.graphics.lineTo(pixelPos.x, pixelPos.y);
             this.pixelShape.graphics.moveTo(pixelPos.x, pixelPos.y);
+            this.pixelShape.graphics.lineTo(pixelPos.x, pixelPos.y);
             this.pixelShape.graphics.endFill();
         }
 
@@ -195,13 +195,15 @@ module es {
          * 进行状态同步
          */
         public sync(camera: Camera) {
-            let afterPos = new Vector2(this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x,
-                this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y);
-            if (this.displayObject.x != afterPos.x) this.displayObject.x = afterPos.x;
-            if (this.displayObject.y != afterPos.y) this.displayObject.y = afterPos.y;
+            if (this.displayObject.x != this.bounds.x - camera.bounds.y) this.displayObject.x = this.bounds.x - camera.bounds.y;
+            if (this.displayObject.y != this.bounds.y - camera.bounds.y) this.displayObject.y = this.bounds.y - camera.bounds.y;
             if (this.displayObject.scaleX != this.entity.scale.x) this.displayObject.scaleX = this.entity.scale.x;
             if (this.displayObject.scaleY != this.entity.scale.y) this.displayObject.scaleY = this.entity.scale.y;
-            if (this.displayObject.rotation != this.entity.rotation) this.displayObject.rotation = this.entity.rotation;
+            if (this.displayObject.rotation != this.entity.rotationDegrees) this.displayObject.rotation = this.entity.rotationDegrees;
+        }
+
+        public compareTo(other: RenderableComponent){
+            return other.renderLayer - this.renderLayer;
         }
 
         public toString() {

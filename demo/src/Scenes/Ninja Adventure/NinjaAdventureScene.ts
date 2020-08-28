@@ -53,6 +53,8 @@ module samples {
                 moonEntity.addComponent(new ProjectileHitDetector());
                 moonEntity.addComponent(new CircleCollider());
             });
+
+            manager.AlterManager.alter_tips("Ninja 场景加载成功");
         }
 
         /**

@@ -312,7 +312,7 @@ module es {
          */
         public worldToScreenPoint(worldPosition: Vector2): Vector2 {
             this.updateMatrixes();
-            worldPosition = Vector2Ext.transformR(worldPosition, this._transformMatrix);
+            Vector2Ext.transformR(worldPosition, this._transformMatrix, worldPosition);
             return worldPosition;
         }
 
@@ -322,7 +322,7 @@ module es {
          */
         public screenToWorldPoint(screenPosition: Vector2): Vector2 {
             this.updateMatrixes();
-            screenPosition = Vector2Ext.transformR(screenPosition, this._inverseTransformMatrix);
+            Vector2Ext.transformR(screenPosition, this._inverseTransformMatrix, screenPosition);
             return screenPosition;
         }
 
@@ -363,7 +363,7 @@ module es {
                 this._transformMatrix = this._transformMatrix.multiply(tempMat);
             }
 
-            tempMat = Matrix2D.create().translate(this._origin.x, this._origin.y);
+            tempMat = Matrix2D.create().translate(Math.floor(this._origin.x), Math.floor(this._origin.y));
             this._transformMatrix = this._transformMatrix.multiply(tempMat);
 
             this._inverseTransformMatrix = this._transformMatrix.invert();

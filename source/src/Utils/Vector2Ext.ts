@@ -62,10 +62,11 @@ module es {
             }
         }
 
-        public static transformR(position: Vector2, matrix: Matrix2D) {
+        public static transformR(position: Vector2, matrix: Matrix2D, result: Vector2) {
             let x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
             let y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
-            return new Vector2(x, y);
+            result.x = x;
+            result.y = y;
         }
 
         /**

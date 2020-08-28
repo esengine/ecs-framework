@@ -94,7 +94,7 @@ module es {
             }
         }
 
-        public debugRender() {
+        public debugRender(camera: Camera) {
             let poly = this.shape as Polygon;
             if (!this.hollowShape.parent)
                 this.debugDisplayObject.addChild(this.hollowShape);
@@ -111,7 +111,7 @@ module es {
             this.hollowShape.graphics.clear();
             this.hollowShape.graphics.beginFill(Colors.colliderBounds, 0);
             this.hollowShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderBounds);
-            this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+            this.hollowShape.graphics.drawRect(this.bounds.x - camera.bounds.x, this.bounds.y - camera.bounds.y, this.bounds.width, this.bounds.height);
             this.hollowShape.graphics.endFill();
 
             this.polygonShape.graphics.clear();
@@ -120,30 +120,30 @@ module es {
                 this.polygonShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderEdge);
                 for (let i = 0; i < poly.points.length; i ++){
                     if (i == 0){
-                        this.polygonShape.graphics.moveTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                        this.polygonShape.graphics.moveTo(poly.position.x + poly.points[i].x - camera.bounds.x, poly.position.y + poly.points[i].y - camera.bounds.y);
                     }else{
-                        this.polygonShape.graphics.lineTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                        this.polygonShape.graphics.lineTo(poly.position.x + poly.points[i].x - camera.bounds.x, poly.position.y + poly.points[i].y - camera.bounds.y);
                     }
                 }
 
-                this.polygonShape.graphics.lineTo(poly.position.x + poly.points[poly.points.length - 1].x, poly.position.y + poly.points[0].y);
+                this.polygonShape.graphics.lineTo(poly.position.x + poly.points[poly.points.length - 1].x - camera.bounds.x, poly.position.y + poly.points[0].y - camera.bounds.y);
                 this.polygonShape.graphics.endFill();
             }
 
             this.pixelShape1.graphics.clear();
             this.pixelShape1.graphics.beginFill(Colors.colliderPosition, 0);
             this.pixelShape1.graphics.lineStyle(4 * Size.lineSizeMultiplier, Colors.colliderPosition);
-            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x, this.entity.transform.position.y);
-            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x, this.entity.transform.position.y);
+            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x - camera.bounds.x, this.entity.transform.position.y - camera.bounds.y);
+            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x - camera.bounds.x, this.entity.transform.position.y - camera.bounds.y);
             this.pixelShape1.graphics.endFill();
 
             this.pixelShape2.graphics.clear();
             this.pixelShape2.graphics.beginFill(Colors.colliderCenter, 0);
             this.pixelShape2.graphics.lineStyle(2 * Size.lineSizeMultiplier, Colors.colliderCenter);
-            this.pixelShape2.graphics.moveTo(this.entity.transform.position.x + this.shape.center.x,
-                this.entity.transform.position.y + this.shape.center.y);
-            this.pixelShape2.graphics.lineTo(this.entity.transform.position.x + this.shape.center.x,
-                this.entity.transform.position.y + this.shape.center.y);
+            this.pixelShape2.graphics.moveTo(this.entity.transform.position.x + this.shape.center.x - camera.bounds.x,
+                this.entity.transform.position.y + this.shape.center.y - camera.bounds.y);
+            this.pixelShape2.graphics.lineTo(this.entity.transform.position.x + this.shape.center.x - camera.bounds.x,
+                this.entity.transform.position.y + this.shape.center.y - camera.bounds.y);
             this.pixelShape2.graphics.endFill();
         }
 

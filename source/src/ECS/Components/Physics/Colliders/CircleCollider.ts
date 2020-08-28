@@ -49,7 +49,7 @@ module es {
             return this;
         }
 
-        public debugRender() {
+        public debugRender(camera: Camera) {
             if (!this.rectShape.parent)
                 this.debugDisplayObject.addChild(this.rectShape);
 
@@ -65,27 +65,27 @@ module es {
             this.rectShape.graphics.clear();
             this.rectShape.graphics.beginFill(Colors.colliderBounds, 0);
             this.rectShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderBounds);
-            this.rectShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+            this.rectShape.graphics.drawRect(this.bounds.x - camera.bounds.x, this.bounds.y - camera.bounds.y, this.bounds.width, this.bounds.height);
             this.rectShape.graphics.endFill();
 
             this.circleShape.graphics.clear();
             this.circleShape.graphics.beginFill(Colors.colliderEdge, 0);
             this.circleShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderEdge);
-            this.circleShape.graphics.drawCircle(this.shape.position.x, this.shape.position.y, (this.shape as Circle).radius);
+            this.circleShape.graphics.drawCircle(this.shape.position.x - camera.bounds.x, this.shape.position.y - camera.bounds.y, (this.shape as Circle).radius);
             this.circleShape.graphics.endFill();
 
             this.pixelShape1.graphics.clear();
             this.pixelShape1.graphics.beginFill(Colors.colliderPosition, 0);
             this.pixelShape1.graphics.lineStyle(4 * Size.lineSizeMultiplier, Colors.colliderPosition);
-            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x, this.entity.transform.position.y);
-            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x, this.entity.transform.position.y);
+            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x - camera.bounds.x, this.entity.transform.position.y - camera.bounds.y);
+            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x - camera.bounds.y, this.entity.transform.position.y - camera.bounds.y);
             this.pixelShape1.graphics.endFill();
 
             this.pixelShape2.graphics.clear();
             this.pixelShape2.graphics.beginFill(Colors.colliderCenter, 0);
             this.pixelShape2.graphics.lineStyle(2 * Size.lineSizeMultiplier, Colors.colliderCenter);
-            this.pixelShape2.graphics.moveTo(this.shape.position.x, this.shape.position.y);
-            this.pixelShape2.graphics.lineTo(this.shape.position.x, this.shape.position.y);
+            this.pixelShape2.graphics.moveTo(this.shape.position.x - camera.bounds.x, this.shape.position.y - camera.bounds.y);
+            this.pixelShape2.graphics.lineTo(this.shape.position.x - camera.bounds.x, this.shape.position.y - camera.bounds.y);
             this.pixelShape2.graphics.endFill();
         }
 

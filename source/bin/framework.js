@@ -1286,7 +1286,7 @@ var es;
         };
         Component.prototype.onEntityTransformChanged = function (comp) {
         };
-        Component.prototype.debugRender = function () {
+        Component.prototype.debugRender = function (camera) {
         };
         Component.prototype.onEnabled = function () {
         };
@@ -1559,8 +1559,8 @@ var es;
         Entity.prototype.update = function () {
             this.components.update();
         };
-        Entity.prototype.debugRender = function () {
-            this.components.debugRender();
+        Entity.prototype.debugRender = function (camera) {
+            this.components.debugRender(camera);
         };
         Entity.prototype.addComponent = function (component) {
             component.entity = this;
@@ -1719,6 +1719,7 @@ var es;
                 return;
             }
             for (var i = 0; i < this._renderers.length; i++) {
+                this.camera.forceMatrixUpdate();
                 this._renderers[i].render(this);
             }
         };
@@ -1901,7 +1902,7 @@ var es;
             _this._localScale = es.Vector2.one;
             _this._localRotation = 0;
             _this.entity = entity;
-            _this.scale = es.Vector2.one;
+            _this.scale = _this._localScale = es.Vector2.one;
             _this._children = [];
             return _this;
         }
@@ -1988,7 +1989,7 @@ var es;
                     }
                     else {
                         this.parent.updateTransform();
-                        this._position = es.Vector2Ext.transformR(this._localPosition, this.parent._worldTransform);
+                        es.Vector2Ext.transformR(this._localPosition, this.parent._worldTransform, this._position);
                     }
                     this._positionDirty = false;
                 }
@@ -2075,7 +2076,7 @@ var es;
                 return this;
             this._position = position;
             if (this.parent) {
-                this.localPosition = es.Vector2Ext.transformR(this._position, this._worldToLocalTransform);
+                this.localPosition = es.Vector2.transform(this._position, this._worldToLocalTransform);
             }
             else {
                 this.localPosition = position;
@@ -2439,12 +2440,12 @@ var es;
         };
         Camera.prototype.worldToScreenPoint = function (worldPosition) {
             this.updateMatrixes();
-            worldPosition = es.Vector2Ext.transformR(worldPosition, this._transformMatrix);
+            es.Vector2Ext.transformR(worldPosition, this._transformMatrix, worldPosition);
             return worldPosition;
         };
         Camera.prototype.screenToWorldPoint = function (screenPosition) {
             this.updateMatrixes();
-            screenPosition = es.Vector2Ext.transformR(screenPosition, this._inverseTransformMatrix);
+            es.Vector2Ext.transformR(screenPosition, this._inverseTransformMatrix, screenPosition);
             return screenPosition;
         };
         Camera.prototype.onSceneRenderTargetSizeChanged = function (newWidth, newHeight) {
@@ -2469,7 +2470,7 @@ var es;
                 tempMat = es.Matrix2D.create().rotate(this.entity.transform.rotation);
                 this._transformMatrix = this._transformMatrix.multiply(tempMat);
             }
-            tempMat = es.Matrix2D.create().translate(this._origin.x, this._origin.y);
+            tempMat = es.Matrix2D.create().translate(Math.floor(this._origin.x), Math.floor(this._origin.y));
             this._transformMatrix = this._transformMatrix.multiply(tempMat);
             this._inverseTransformMatrix = this._transformMatrix.invert();
             this._areBoundsDirty = true;
@@ -2605,20 +2606,20 @@ var es;
                 this.entity.transform.roundPosition();
             }
         };
-        FollowCamera.prototype.debugRender = function () {
+        FollowCamera.prototype.debugRender = function (camera) {
             if (!this.rectShape)
                 this.debugDisplayObject.addChild(this.rectShape);
             this.rectShape.graphics.clear();
             if (this._cameraStyle == CameraStyle.lockOn) {
                 this.rectShape.graphics.beginFill(0x8B0000, 0);
                 this.rectShape.graphics.lineStyle(1, 0x8B0000);
-                this.rectShape.graphics.drawRect(this._worldSpaceDeadZone.x - 5, this._worldSpaceDeadZone.y - 5, this._worldSpaceDeadZone.width, this._worldSpaceDeadZone.height);
+                this.rectShape.graphics.drawRect(this._worldSpaceDeadZone.x - 5 - camera.bounds.x, this._worldSpaceDeadZone.y - 5 - camera.bounds.y, this._worldSpaceDeadZone.width, this._worldSpaceDeadZone.height);
                 this.rectShape.graphics.endFill();
             }
             else {
                 this.rectShape.graphics.beginFill(0x8B0000, 0);
                 this.rectShape.graphics.lineStyle(1, 0x8B0000);
-                this.rectShape.graphics.drawRect(this._worldSpaceDeadZone.x, this._worldSpaceDeadZone.y, this._worldSpaceDeadZone.width, this._worldSpaceDeadZone.height);
+                this.rectShape.graphics.drawRect(this._worldSpaceDeadZone.x - camera.bounds.x, this._worldSpaceDeadZone.y - camera.bounds.y, this._worldSpaceDeadZone.width, this._worldSpaceDeadZone.height);
                 this.rectShape.graphics.endFill();
             }
         };
@@ -2792,19 +2793,26 @@ var es;
         RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
             this._areBoundsDirty = true;
         };
-        RenderableComponent.prototype.debugRender = function () {
+        RenderableComponent.prototype.debugRender = function (camera) {
             if (!this.debugRenderEnabled)
                 return;
             if (!this.hollowShape.parent)
                 this.debugDisplayObject.addChild(this.hollowShape);
             if (!this.pixelShape.parent)
                 this.debugDisplayObject.addChild(this.pixelShape);
-            var pixelPos = es.Vector2.add(this.entity.transform.position, this._localOffset);
+            if (!this.entity.getComponent(es.Collider)) {
+                this.hollowShape.graphics.clear();
+                this.hollowShape.graphics.beginFill(es.Colors.renderableBounds, 0);
+                this.hollowShape.graphics.lineStyle(1, es.Colors.renderableBounds);
+                this.hollowShape.graphics.drawRect(this.bounds.x - camera.bounds.x, this.bounds.y - camera.bounds.y, this.bounds.width, this.bounds.height);
+                this.hollowShape.graphics.endFill();
+            }
+            var pixelPos = es.Vector2.add(this.entity.transform.position, this._localOffset).subtract(camera.bounds.location);
             this.pixelShape.graphics.clear();
             this.pixelShape.graphics.beginFill(es.Colors.renderableCenter, 0);
             this.pixelShape.graphics.lineStyle(4, es.Colors.renderableCenter);
-            this.pixelShape.graphics.lineTo(pixelPos.x, pixelPos.y);
             this.pixelShape.graphics.moveTo(pixelPos.x, pixelPos.y);
+            this.pixelShape.graphics.lineTo(pixelPos.x, pixelPos.y);
             this.pixelShape.graphics.endFill();
         };
         RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
@@ -2833,17 +2841,19 @@ var es;
             return this;
         };
         RenderableComponent.prototype.sync = function (camera) {
-            var afterPos = new es.Vector2(this.entity.position.x + this.localOffset.x - camera.position.x + camera.origin.x, this.entity.position.y + this.localOffset.y - camera.position.y + camera.origin.y);
-            if (this.displayObject.x != afterPos.x)
-                this.displayObject.x = afterPos.x;
-            if (this.displayObject.y != afterPos.y)
-                this.displayObject.y = afterPos.y;
+            if (this.displayObject.x != this.bounds.x - camera.bounds.y)
+                this.displayObject.x = this.bounds.x - camera.bounds.y;
+            if (this.displayObject.y != this.bounds.y - camera.bounds.y)
+                this.displayObject.y = this.bounds.y - camera.bounds.y;
             if (this.displayObject.scaleX != this.entity.scale.x)
                 this.displayObject.scaleX = this.entity.scale.x;
             if (this.displayObject.scaleY != this.entity.scale.y)
                 this.displayObject.scaleY = this.entity.scale.y;
-            if (this.displayObject.rotation != this.entity.rotation)
-                this.displayObject.rotation = this.entity.rotation;
+            if (this.displayObject.rotation != this.entity.rotationDegrees)
+                this.displayObject.rotation = this.entity.rotationDegrees;
+        };
+        RenderableComponent.prototype.compareTo = function (other) {
+            return other.renderLayer - this.renderLayer;
         };
         RenderableComponent.prototype.toString = function () {
             return "[RenderableComponent] renderLayer: " + this.renderLayer;
@@ -2991,11 +3001,10 @@ var es;
         };
         SpriteRenderer.prototype.render = function (camera) {
             this.sync(camera);
-            var afterPos = new es.Vector2(this.entity.position.x + this.localOffset.x - this.origin.x - camera.position.x + camera.origin.x, this.entity.position.y + this.localOffset.y - this.origin.y - camera.position.y + camera.origin.y);
-            if (this.displayObject.x != afterPos.x)
-                this.displayObject.x = afterPos.x;
-            if (this.displayObject.y != afterPos.y)
-                this.displayObject.y = afterPos.y;
+            if (this.displayObject.x != this.bounds.x - camera.bounds.x)
+                this.displayObject.x = this.bounds.x - camera.bounds.x;
+            if (this.displayObject.y != this.bounds.y - camera.bounds.y)
+                this.displayObject.y = this.bounds.y - camera.bounds.y;
         };
         return SpriteRenderer;
     }(es.RenderableComponent));
@@ -3732,7 +3741,7 @@ var es;
                     this.localOffset = es.Vector2.subtract(renderableBounds.center, this.entity.transform.position);
                 }
                 else {
-                    console.warn("Collider has no shape and no RenderableComponent. Can't figure out how to size it.");
+                    console.warn("碰撞器没有形状和RenderableComponent。不知道如何调整大小.");
                 }
             }
             this._isParentEntityAddedToScene = true;
@@ -3869,7 +3878,7 @@ var es;
                     es.Physics.updateCollider(this);
             }
         };
-        BoxCollider.prototype.debugRender = function () {
+        BoxCollider.prototype.debugRender = function (camera) {
             var poly = this.shape;
             if (!this.hollowShape.parent)
                 this.debugDisplayObject.addChild(this.hollowShape);
@@ -3882,7 +3891,7 @@ var es;
             this.hollowShape.graphics.clear();
             this.hollowShape.graphics.beginFill(es.Colors.colliderBounds, 0);
             this.hollowShape.graphics.lineStyle(es.Size.lineSizeMultiplier, es.Colors.colliderBounds);
-            this.hollowShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+            this.hollowShape.graphics.drawRect(this.bounds.x - camera.bounds.x, this.bounds.y - camera.bounds.y, this.bounds.width, this.bounds.height);
             this.hollowShape.graphics.endFill();
             this.polygonShape.graphics.clear();
             if (poly.points.length >= 2) {
@@ -3890,26 +3899,26 @@ var es;
                 this.polygonShape.graphics.lineStyle(es.Size.lineSizeMultiplier, es.Colors.colliderEdge);
                 for (var i = 0; i < poly.points.length; i++) {
                     if (i == 0) {
-                        this.polygonShape.graphics.moveTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                        this.polygonShape.graphics.moveTo(poly.position.x + poly.points[i].x - camera.bounds.x, poly.position.y + poly.points[i].y - camera.bounds.y);
                     }
                     else {
-                        this.polygonShape.graphics.lineTo(poly.position.x + poly.points[i].x, poly.position.y + poly.points[i].y);
+                        this.polygonShape.graphics.lineTo(poly.position.x + poly.points[i].x - camera.bounds.x, poly.position.y + poly.points[i].y - camera.bounds.y);
                     }
                 }
-                this.polygonShape.graphics.lineTo(poly.position.x + poly.points[poly.points.length - 1].x, poly.position.y + poly.points[0].y);
+                this.polygonShape.graphics.lineTo(poly.position.x + poly.points[poly.points.length - 1].x - camera.bounds.x, poly.position.y + poly.points[0].y - camera.bounds.y);
                 this.polygonShape.graphics.endFill();
             }
             this.pixelShape1.graphics.clear();
             this.pixelShape1.graphics.beginFill(es.Colors.colliderPosition, 0);
             this.pixelShape1.graphics.lineStyle(4 * es.Size.lineSizeMultiplier, es.Colors.colliderPosition);
-            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x, this.entity.transform.position.y);
-            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x, this.entity.transform.position.y);
+            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x - camera.bounds.x, this.entity.transform.position.y - camera.bounds.y);
+            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x - camera.bounds.x, this.entity.transform.position.y - camera.bounds.y);
             this.pixelShape1.graphics.endFill();
             this.pixelShape2.graphics.clear();
             this.pixelShape2.graphics.beginFill(es.Colors.colliderCenter, 0);
             this.pixelShape2.graphics.lineStyle(2 * es.Size.lineSizeMultiplier, es.Colors.colliderCenter);
-            this.pixelShape2.graphics.moveTo(this.entity.transform.position.x + this.shape.center.x, this.entity.transform.position.y + this.shape.center.y);
-            this.pixelShape2.graphics.lineTo(this.entity.transform.position.x + this.shape.center.x, this.entity.transform.position.y + this.shape.center.y);
+            this.pixelShape2.graphics.moveTo(this.entity.transform.position.x + this.shape.center.x - camera.bounds.x, this.entity.transform.position.y + this.shape.center.y - camera.bounds.y);
+            this.pixelShape2.graphics.lineTo(this.entity.transform.position.x + this.shape.center.x - camera.bounds.x, this.entity.transform.position.y + this.shape.center.y - camera.bounds.y);
             this.pixelShape2.graphics.endFill();
         };
         BoxCollider.prototype.toString = function () {
@@ -3959,7 +3968,7 @@ var es;
             }
             return this;
         };
-        CircleCollider.prototype.debugRender = function () {
+        CircleCollider.prototype.debugRender = function (camera) {
             if (!this.rectShape.parent)
                 this.debugDisplayObject.addChild(this.rectShape);
             if (!this.circleShape.parent)
@@ -3971,24 +3980,24 @@ var es;
             this.rectShape.graphics.clear();
             this.rectShape.graphics.beginFill(es.Colors.colliderBounds, 0);
             this.rectShape.graphics.lineStyle(es.Size.lineSizeMultiplier, es.Colors.colliderBounds);
-            this.rectShape.graphics.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+            this.rectShape.graphics.drawRect(this.bounds.x - camera.bounds.x, this.bounds.y - camera.bounds.y, this.bounds.width, this.bounds.height);
             this.rectShape.graphics.endFill();
             this.circleShape.graphics.clear();
             this.circleShape.graphics.beginFill(es.Colors.colliderEdge, 0);
             this.circleShape.graphics.lineStyle(es.Size.lineSizeMultiplier, es.Colors.colliderEdge);
-            this.circleShape.graphics.drawCircle(this.shape.position.x, this.shape.position.y, this.shape.radius);
+            this.circleShape.graphics.drawCircle(this.shape.position.x - camera.bounds.x, this.shape.position.y - camera.bounds.y, this.shape.radius);
             this.circleShape.graphics.endFill();
             this.pixelShape1.graphics.clear();
             this.pixelShape1.graphics.beginFill(es.Colors.colliderPosition, 0);
             this.pixelShape1.graphics.lineStyle(4 * es.Size.lineSizeMultiplier, es.Colors.colliderPosition);
-            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x, this.entity.transform.position.y);
-            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x, this.entity.transform.position.y);
+            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x - camera.bounds.x, this.entity.transform.position.y - camera.bounds.y);
+            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x - camera.bounds.y, this.entity.transform.position.y - camera.bounds.y);
             this.pixelShape1.graphics.endFill();
             this.pixelShape2.graphics.clear();
             this.pixelShape2.graphics.beginFill(es.Colors.colliderCenter, 0);
             this.pixelShape2.graphics.lineStyle(2 * es.Size.lineSizeMultiplier, es.Colors.colliderCenter);
-            this.pixelShape2.graphics.moveTo(this.shape.position.x, this.shape.position.y);
-            this.pixelShape2.graphics.lineTo(this.shape.position.x, this.shape.position.y);
+            this.pixelShape2.graphics.moveTo(this.shape.position.x - camera.bounds.x, this.shape.position.y - camera.bounds.y);
+            this.pixelShape2.graphics.lineTo(this.shape.position.x - camera.bounds.x, this.shape.position.y - camera.bounds.y);
             this.pixelShape2.graphics.endFill();
         };
         CircleCollider.prototype.toString = function () {
@@ -4450,10 +4459,10 @@ var es;
             for (var i = 0; i < this._components.length; i++)
                 this._components[i].onDisabled();
         };
-        ComponentList.prototype.debugRender = function () {
+        ComponentList.prototype.debugRender = function (camera) {
             for (var i = 0; i < this._components.length; i++) {
                 if (this._components[i].enabled)
-                    this._components[i].debugRender();
+                    this._components[i].debugRender(camera);
             }
         };
         ComponentList.compareUpdatableOrder = new es.IUpdatableComparer();
@@ -5699,7 +5708,7 @@ var es;
             for (var i = 0; i < scene.entities.count; i++) {
                 var entity = scene.entities.buffer[i];
                 if (entity.enabled)
-                    entity.debugRender();
+                    entity.debugRender(cam);
             }
         };
         return Renderer;
@@ -5756,7 +5765,7 @@ var es;
                 var renderable = scene.renderableComponents.buffer[i];
                 if (!this.excludedRenderLayers.contains(renderable.renderLayer) && renderable.enabled &&
                     renderable.isVisibleFromCamera(cam))
-                    renderable.debugRender();
+                    renderable.debugRender(cam);
             }
             _super.prototype.debugRender.call(this, scene, cam);
         };
@@ -5798,7 +5807,7 @@ var es;
                 for (var j = 0; j < renderables.length; j++) {
                     var entity = renderables[j];
                     if (entity.enabled)
-                        entity.debugRender();
+                        entity.debugRender(cam);
                 }
             }
         };
@@ -6593,10 +6602,10 @@ var es;
                 var topRight = new es.Vector2(worldPosX + width, worldPosY);
                 var bottomLeft = new es.Vector2(worldPosX, worldPosY + height);
                 var bottomRight = new es.Vector2(worldPosX + width, worldPosY + height);
-                topLeft = es.Vector2Ext.transformR(topLeft, this._transformMat);
-                topRight = es.Vector2Ext.transformR(topRight, this._transformMat);
-                bottomLeft = es.Vector2Ext.transformR(bottomLeft, this._transformMat);
-                bottomRight = es.Vector2Ext.transformR(bottomRight, this._transformMat);
+                es.Vector2Ext.transformR(topLeft, this._transformMat, topLeft);
+                es.Vector2Ext.transformR(topRight, this._transformMat, topRight);
+                es.Vector2Ext.transformR(bottomLeft, this._transformMat, bottomLeft);
+                es.Vector2Ext.transformR(bottomRight, this._transformMat, bottomRight);
                 var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
                 var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
                 var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
@@ -10229,10 +10238,11 @@ var es;
                 destinationArray[destinationIndex + i] = destination;
             }
         };
-        Vector2Ext.transformR = function (position, matrix) {
+        Vector2Ext.transformR = function (position, matrix, result) {
             var x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
             var y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
-            return new es.Vector2(x, y);
+            result.x = x;
+            result.y = y;
         };
         Vector2Ext.transform = function (sourceArray, matrix, destinationArray) {
             this.transformA(sourceArray, 0, matrix, destinationArray, 0, sourceArray.length);

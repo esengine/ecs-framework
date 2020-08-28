@@ -34,7 +34,7 @@ module es {
                 for (let j = 0; j < renderables.length; j ++){
                     let entity = renderables[j];
                     if (entity.enabled)
-                        entity.debugRender();
+                        entity.debugRender(cam);
                 }
             }
         }

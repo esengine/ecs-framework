@@ -184,6 +184,7 @@ module es {
             }
 
             for (let i = 0; i < this._renderers.length; i++) {
+                this.camera.forceMatrixUpdate();
                 this._renderers[i].render(this);
             }
         }
