@@ -12,14 +12,5 @@ module samples {
                 this.camera.entity.addComponent(new es.FollowCamera(moonEntity));
             });
         }
-
-        public update(){
-            super.update();
-            let moonEntity = this.findEntity("moon");
-            if (!moonEntity)
-                return;
-            let spriteRenderer = moonEntity.getComponent<es.SpriteRenderer>(es.SpriteRenderer);
-            console.log(spriteRenderer.bounds, this.camera.bounds);
-        }
     }
 }
