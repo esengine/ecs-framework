@@ -2719,164 +2719,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var RenderableComponent = (function (_super) {
-        __extends(RenderableComponent, _super);
-        function RenderableComponent() {
-            var _this = _super !== null && _super.apply(this, arguments) || this;
-            _this.displayObject = new egret.DisplayObject();
-            _this.hollowShape = new egret.Shape();
-            _this.pixelShape = new egret.Shape();
-            _this.color = 0x000000;
-            _this._areBoundsDirty = true;
-            _this.debugRenderEnabled = true;
-            _this._localOffset = es.Vector2.zero;
-            _this._renderLayer = 0;
-            _this._bounds = new es.Rectangle();
-            return _this;
-        }
-        Object.defineProperty(RenderableComponent.prototype, "width", {
-            get: function () {
-                return this.bounds.width;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(RenderableComponent.prototype, "height", {
-            get: function () {
-                return this.bounds.height;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(RenderableComponent.prototype, "localOffset", {
-            get: function () {
-                return this._localOffset;
-            },
-            set: function (value) {
-                this.setLocalOffset(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(RenderableComponent.prototype, "renderLayer", {
-            get: function () {
-                return this._renderLayer;
-            },
-            set: function (value) {
-                this.setRenderLayer(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(RenderableComponent.prototype, "bounds", {
-            get: function () {
-                if (this._areBoundsDirty) {
-                    this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, es.Vector2.zero, this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
-                    this._areBoundsDirty = false;
-                }
-                return this._bounds;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(RenderableComponent.prototype, "isVisible", {
-            get: function () {
-                return this._isVisible;
-            },
-            set: function (value) {
-                if (this._isVisible != value) {
-                    this._isVisible = value;
-                    if (this._isVisible)
-                        this.onBecameVisible();
-                    else
-                        this.onBecameInvisible();
-                }
-            },
-            enumerable: true,
-            configurable: true
-        });
-        RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
-            this._areBoundsDirty = true;
-        };
-        RenderableComponent.prototype.debugRender = function (camera) {
-            if (!this.debugRenderEnabled)
-                return;
-            if (!this.hollowShape.parent)
-                this.debugDisplayObject.addChild(this.hollowShape);
-            if (!this.pixelShape.parent)
-                this.debugDisplayObject.addChild(this.pixelShape);
-            if (!this.entity.getComponent(es.Collider)) {
-                this.hollowShape.graphics.clear();
-                this.hollowShape.graphics.beginFill(es.Colors.renderableBounds, 0);
-                this.hollowShape.graphics.lineStyle(1, es.Colors.renderableBounds);
-                this.hollowShape.graphics.drawRect(this.bounds.x - camera.bounds.x, this.bounds.y - camera.bounds.y, this.bounds.width, this.bounds.height);
-                this.hollowShape.graphics.endFill();
-            }
-            var pixelPos = es.Vector2.add(this.entity.transform.position, this._localOffset).subtract(camera.bounds.location);
-            this.pixelShape.graphics.clear();
-            this.pixelShape.graphics.beginFill(es.Colors.renderableCenter, 0);
-            this.pixelShape.graphics.lineStyle(4, es.Colors.renderableCenter);
-            this.pixelShape.graphics.moveTo(pixelPos.x, pixelPos.y);
-            this.pixelShape.graphics.lineTo(pixelPos.x, pixelPos.y);
-            this.pixelShape.graphics.endFill();
-        };
-        RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
-            if (!camera)
-                return false;
-            this.isVisible = camera.bounds.intersects(this.bounds);
-            return this.isVisible;
-        };
-        RenderableComponent.prototype.setRenderLayer = function (renderLayer) {
-            if (renderLayer != this._renderLayer) {
-                var oldRenderLayer = this._renderLayer;
-                this._renderLayer = renderLayer;
-                if (this.entity && this.entity.scene)
-                    this.entity.scene.renderableComponents.updateRenderableRenderLayer(this, oldRenderLayer, this._renderLayer);
-            }
-            return this;
-        };
-        RenderableComponent.prototype.setColor = function (color) {
-            this.color = color;
-            return this;
-        };
-        RenderableComponent.prototype.setLocalOffset = function (offset) {
-            if (this._localOffset != offset) {
-                this._localOffset = offset;
-            }
-            return this;
-        };
-        RenderableComponent.prototype.sync = function (camera) {
-            if (this.displayObject.x != this.bounds.x - camera.bounds.y)
-                this.displayObject.x = this.bounds.x - camera.bounds.y;
-            if (this.displayObject.y != this.bounds.y - camera.bounds.y)
-                this.displayObject.y = this.bounds.y - camera.bounds.y;
-            if (this.displayObject.scaleX != this.entity.scale.x)
-                this.displayObject.scaleX = this.entity.scale.x;
-            if (this.displayObject.scaleY != this.entity.scale.y)
-                this.displayObject.scaleY = this.entity.scale.y;
-            if (this.displayObject.rotation != this.entity.rotationDegrees)
-                this.displayObject.rotation = this.entity.rotationDegrees;
-        };
-        RenderableComponent.prototype.compareTo = function (other) {
-            return other.renderLayer - this.renderLayer;
-        };
-        RenderableComponent.prototype.toString = function () {
-            return "[RenderableComponent] renderLayer: " + this.renderLayer;
-        };
-        RenderableComponent.prototype.onBecameVisible = function () {
-            this.displayObject.visible = this.isVisible;
-            this.debugDisplayObject.visible = this.isVisible;
-        };
-        RenderableComponent.prototype.onBecameInvisible = function () {
-            this.displayObject.visible = this.isVisible;
-            this.debugDisplayObject.visible = this.isVisible;
-        };
-        return RenderableComponent;
-    }(es.Component));
-    es.RenderableComponent = RenderableComponent;
-})(es || (es = {}));
-var es;
-(function (es) {
     var SceneComponent = (function () {
         function SceneComponent() {
             this.updateOrder = 0;
@@ -2923,442 +2765,6 @@ var es;
         return SceneComponent;
     }());
     es.SceneComponent = SceneComponent;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Bitmap = egret.Bitmap;
-    var SpriteRenderer = (function (_super) {
-        __extends(SpriteRenderer, _super);
-        function SpriteRenderer(sprite) {
-            if (sprite === void 0) { sprite = null; }
-            var _this = _super.call(this) || this;
-            if (sprite instanceof es.Sprite)
-                _this.setSprite(sprite);
-            else if (sprite instanceof egret.Texture)
-                _this.setSprite(new es.Sprite(sprite));
-            return _this;
-        }
-        Object.defineProperty(SpriteRenderer.prototype, "bounds", {
-            get: function () {
-                if (this._areBoundsDirty) {
-                    if (this._sprite) {
-                        this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this._sprite.sourceRect.width, this._sprite.sourceRect.height);
-                        this._areBoundsDirty = false;
-                    }
-                }
-                return this._bounds;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(SpriteRenderer.prototype, "originNormalized", {
-            get: function () {
-                return new es.Vector2(this._origin.x / this.width * this.entity.transform.scale.x, this._origin.y / this.height * this.entity.transform.scale.y);
-            },
-            set: function (value) {
-                this.setOrigin(new es.Vector2(value.x * this.width / this.entity.transform.scale.x, value.y * this.height / this.entity.transform.scale.y));
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(SpriteRenderer.prototype, "origin", {
-            get: function () {
-                return this._origin;
-            },
-            set: function (value) {
-                this.setOrigin(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(SpriteRenderer.prototype, "sprite", {
-            get: function () {
-                return this._sprite;
-            },
-            set: function (value) {
-                this.setSprite(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        SpriteRenderer.prototype.setSprite = function (sprite) {
-            this._sprite = sprite;
-            if (this._sprite) {
-                this._origin = this._sprite.origin;
-                this.displayObject.anchorOffsetX = this._origin.x;
-                this.displayObject.anchorOffsetY = this._origin.y;
-            }
-            this.displayObject = new Bitmap(sprite.texture2D);
-            return this;
-        };
-        SpriteRenderer.prototype.setOrigin = function (origin) {
-            if (this._origin != origin) {
-                this._origin = origin;
-                this.displayObject.anchorOffsetX = this._origin.x;
-                this.displayObject.anchorOffsetY = this._origin.y;
-                this._areBoundsDirty = true;
-            }
-            return this;
-        };
-        SpriteRenderer.prototype.setOriginNormalized = function (value) {
-            this.setOrigin(new es.Vector2(value.x * this.width / this.entity.transform.scale.x, value.y * this.height / this.entity.transform.scale.y));
-            return this;
-        };
-        SpriteRenderer.prototype.render = function (camera) {
-            this.sync(camera);
-            if (this.displayObject.x != this.bounds.x - camera.bounds.x)
-                this.displayObject.x = this.bounds.x - camera.bounds.x;
-            if (this.displayObject.y != this.bounds.y - camera.bounds.y)
-                this.displayObject.y = this.bounds.y - camera.bounds.y;
-        };
-        return SpriteRenderer;
-    }(es.RenderableComponent));
-    es.SpriteRenderer = SpriteRenderer;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Bitmap = egret.Bitmap;
-    var RenderTexture = egret.RenderTexture;
-    var TiledSpriteRenderer = (function (_super) {
-        __extends(TiledSpriteRenderer, _super);
-        function TiledSpriteRenderer(sprite) {
-            var _this = _super.call(this, sprite) || this;
-            _this._textureScale = es.Vector2.one;
-            _this._inverseTexScale = es.Vector2.one;
-            _this._gapX = 0;
-            _this._gapY = 0;
-            _this._sourceRect = sprite.sourceRect;
-            var bitmap = _this.displayObject;
-            bitmap.$fillMode = egret.BitmapFillMode.REPEAT;
-            return _this;
-        }
-        Object.defineProperty(TiledSpriteRenderer.prototype, "bounds", {
-            get: function () {
-                if (this._areBoundsDirty) {
-                    if (this._sprite) {
-                        this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
-                        this._areBoundsDirty = false;
-                    }
-                }
-                return this._bounds;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TiledSpriteRenderer.prototype, "scrollX", {
-            get: function () {
-                return this._sourceRect.x;
-            },
-            set: function (value) {
-                this._sourceRect.x = value;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TiledSpriteRenderer.prototype, "scrollY", {
-            get: function () {
-                return this._sourceRect.y;
-            },
-            set: function (value) {
-                this._sourceRect.y = value;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TiledSpriteRenderer.prototype, "textureScale", {
-            get: function () {
-                return this._textureScale;
-            },
-            set: function (value) {
-                this._textureScale = value;
-                this._inverseTexScale = new es.Vector2(1 / this._textureScale.x, 1 / this._textureScale.y);
-                this._sourceRect.width = Math.floor(this._sprite.sourceRect.width * this._inverseTexScale.x);
-                this._sourceRect.height = Math.floor(this._sprite.sourceRect.height * this._inverseTexScale.y);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TiledSpriteRenderer.prototype, "width", {
-            get: function () {
-                return this._sourceRect.width;
-            },
-            set: function (value) {
-                this._areBoundsDirty = true;
-                this._sourceRect.width = value;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TiledSpriteRenderer.prototype, "height", {
-            get: function () {
-                return this._sourceRect.height;
-            },
-            set: function (value) {
-                this._areBoundsDirty = true;
-                this._sourceRect.height = value;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TiledSpriteRenderer.prototype, "gapXY", {
-            get: function () {
-                return new es.Vector2(this._gapX, this._gapY);
-            },
-            set: function (value) {
-                this._gapX = value.x;
-                this._gapY = value.y;
-                var renderTexture = new RenderTexture();
-                var newRectangle = this.sprite.sourceRect;
-                newRectangle.x = 0;
-                newRectangle.y = 0;
-                newRectangle.width += this._gapX;
-                newRectangle.height += this._gapY;
-                renderTexture.drawToTexture(this.displayObject, newRectangle);
-                if (!this.displayObject) {
-                    this.displayObject = new Bitmap(renderTexture);
-                }
-                else {
-                    this.displayObject.texture = renderTexture;
-                }
-            },
-            enumerable: true,
-            configurable: true
-        });
-        TiledSpriteRenderer.prototype.setGapXY = function (value) {
-            this.gapXY = value;
-            return this;
-        };
-        TiledSpriteRenderer.prototype.render = function (camera) {
-            _super.prototype.render.call(this, camera);
-            var bitmap = this.displayObject;
-            bitmap.width = this.width;
-            bitmap.height = this.height;
-            bitmap.scrollRect = this._sourceRect;
-        };
-        return TiledSpriteRenderer;
-    }(es.SpriteRenderer));
-    es.TiledSpriteRenderer = TiledSpriteRenderer;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var ScrollingSpriteRenderer = (function (_super) {
-        __extends(ScrollingSpriteRenderer, _super);
-        function ScrollingSpriteRenderer(sprite) {
-            var _this = _super.call(this, sprite) || this;
-            _this.scrollSpeedX = 15;
-            _this.scroolSpeedY = 0;
-            _this._scrollX = 0;
-            _this._scrollY = 0;
-            _this._scrollWidth = 0;
-            _this._scrollHeight = 0;
-            _this._scrollWidth = _this.width;
-            _this._scrollHeight = _this.height;
-            return _this;
-        }
-        Object.defineProperty(ScrollingSpriteRenderer.prototype, "textureScale", {
-            get: function () {
-                return this._textureScale;
-            },
-            set: function (value) {
-                this._textureScale = value;
-                this._inverseTexScale = new es.Vector2(1 / this._textureScale.x, 1 / this._textureScale.y);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(ScrollingSpriteRenderer.prototype, "scrollWidth", {
-            get: function () {
-                return this._scrollWidth;
-            },
-            set: function (value) {
-                this._scrollWidth = value;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(ScrollingSpriteRenderer.prototype, "scrollHeight", {
-            get: function () {
-                return this._scrollHeight;
-            },
-            set: function (value) {
-                this._scrollHeight = value;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        ScrollingSpriteRenderer.prototype.update = function () {
-            if (!this.sprite)
-                return;
-            this._scrollX += this.scrollSpeedX * es.Time.deltaTime;
-            this._scrollY += this.scroolSpeedY * es.Time.deltaTime;
-            this._sourceRect.x = Math.floor(this._scrollX);
-            this._sourceRect.y = Math.floor(this._scrollY);
-            this._sourceRect.width = this._scrollWidth + Math.abs(this._scrollX);
-            this._sourceRect.height = this._scrollHeight + Math.abs(this._scrollY);
-        };
-        return ScrollingSpriteRenderer;
-    }(es.TiledSpriteRenderer));
-    es.ScrollingSpriteRenderer = ScrollingSpriteRenderer;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var SpriteSheet = egret.SpriteSheet;
-    var Sprite = (function () {
-        function Sprite(texture, sourceRect, origin) {
-            if (sourceRect === void 0) { sourceRect = new es.Rectangle(0, 0, texture.textureWidth, texture.textureHeight); }
-            if (origin === void 0) { origin = sourceRect.getHalfSize(); }
-            this.uvs = new es.Rectangle();
-            this.texture2D = texture;
-            this.sourceRect = sourceRect;
-            this.center = new es.Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
-            this.origin = origin;
-            var inverseTexW = 1 / texture.textureWidth;
-            var inverseTexH = 1 / texture.textureHeight;
-            this.uvs.x = sourceRect.x * inverseTexW;
-            this.uvs.y = sourceRect.y * inverseTexH;
-            this.uvs.width = sourceRect.width * inverseTexW;
-            this.uvs.height = sourceRect.height * inverseTexH;
-        }
-        Sprite.spritesFromAtlas = function (texture, cellWidth, cellHeight, cellOffset, maxCellsToInclude) {
-            if (cellOffset === void 0) { cellOffset = 0; }
-            if (maxCellsToInclude === void 0) { maxCellsToInclude = Number.MAX_VALUE; }
-            var sprites = [];
-            var cols = texture.textureWidth / cellWidth;
-            var rows = texture.textureHeight / cellHeight;
-            var i = 0;
-            var spriteSheet = new SpriteSheet(texture);
-            for (var y = 0; y < rows; y++) {
-                for (var x = 0; x < cols; x++) {
-                    if (i++ < cellOffset)
-                        continue;
-                    var texture_1 = spriteSheet.getTexture(y + "_" + x);
-                    if (!texture_1)
-                        texture_1 = spriteSheet.createTexture(y + "_" + x, x * cellWidth, y * cellHeight, cellWidth, cellHeight);
-                    sprites.push(new Sprite(texture_1));
-                    if (sprites.length == maxCellsToInclude)
-                        return sprites;
-                }
-            }
-            return sprites;
-        };
-        return Sprite;
-    }());
-    es.Sprite = Sprite;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var SpriteAnimation = (function () {
-        function SpriteAnimation(sprites, frameRate) {
-            if (frameRate === void 0) { frameRate = 10; }
-            this.sprites = sprites;
-            this.frameRate = frameRate;
-        }
-        return SpriteAnimation;
-    }());
-    es.SpriteAnimation = SpriteAnimation;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var LoopMode;
-    (function (LoopMode) {
-        LoopMode[LoopMode["loop"] = 0] = "loop";
-        LoopMode[LoopMode["once"] = 1] = "once";
-        LoopMode[LoopMode["clampForever"] = 2] = "clampForever";
-        LoopMode[LoopMode["pingPong"] = 3] = "pingPong";
-        LoopMode[LoopMode["pingPongOnce"] = 4] = "pingPongOnce";
-    })(LoopMode = es.LoopMode || (es.LoopMode = {}));
-    var State;
-    (function (State) {
-        State[State["none"] = 0] = "none";
-        State[State["running"] = 1] = "running";
-        State[State["paused"] = 2] = "paused";
-        State[State["completed"] = 3] = "completed";
-    })(State = es.State || (es.State = {}));
-    var SpriteAnimator = (function (_super) {
-        __extends(SpriteAnimator, _super);
-        function SpriteAnimator(sprite) {
-            var _this = _super.call(this, sprite) || this;
-            _this.speed = 1;
-            _this.animationState = State.none;
-            _this._elapsedTime = 0;
-            _this._animations = new Map();
-            return _this;
-        }
-        Object.defineProperty(SpriteAnimator.prototype, "isRunning", {
-            get: function () {
-                return this.animationState == State.running;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(SpriteAnimator.prototype, "animations", {
-            get: function () {
-                return this._animations;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        SpriteAnimator.prototype.update = function () {
-            if (this.animationState != State.running || !this.currentAnimation)
-                return;
-            var animation = this.currentAnimation;
-            var secondsPerFrame = 1 / (animation.frameRate * this.speed);
-            var iterationDuration = secondsPerFrame * animation.sprites.length;
-            this._elapsedTime += es.Time.deltaTime;
-            var time = Math.abs(this._elapsedTime);
-            if (this._loopMode == LoopMode.once && time > iterationDuration ||
-                this._loopMode == LoopMode.pingPongOnce && time > iterationDuration * 2) {
-                this.animationState = State.completed;
-                this._elapsedTime = 0;
-                this.currentFrame = 0;
-                this.displayObject.texture = animation.sprites[this.currentFrame].texture2D;
-                return;
-            }
-            var i = Math.floor(time / secondsPerFrame);
-            var n = animation.sprites.length;
-            if (n > 2 && (this._loopMode == LoopMode.pingPong || this._loopMode == LoopMode.pingPongOnce)) {
-                var maxIndex = n - 1;
-                this.currentFrame = maxIndex - Math.abs(maxIndex - i % (maxIndex * 2));
-            }
-            else {
-                this.currentFrame = i % n;
-            }
-            this.displayObject.texture = animation.sprites[this.currentFrame].texture2D;
-        };
-        SpriteAnimator.prototype.addAnimation = function (name, animation) {
-            if (!this.sprite && animation.sprites.length > 0)
-                this.setSprite(animation.sprites[0]);
-            this._animations[name] = animation;
-            return this;
-        };
-        SpriteAnimator.prototype.play = function (name, loopMode) {
-            if (loopMode === void 0) { loopMode = null; }
-            this.currentAnimation = this._animations[name];
-            this.currentAnimationName = name;
-            this.currentFrame = 0;
-            this.animationState = State.running;
-            this.displayObject.texture = this.currentAnimation.sprites[0].texture2D;
-            this._elapsedTime = 0;
-            this._loopMode = loopMode ? loopMode : LoopMode.loop;
-        };
-        SpriteAnimator.prototype.isAnimationActive = function (name) {
-            return this.currentAnimation && this.currentAnimationName == name;
-        };
-        SpriteAnimator.prototype.pause = function () {
-            this.animationState = State.paused;
-        };
-        SpriteAnimator.prototype.unPause = function () {
-            this.animationState = State.running;
-        };
-        SpriteAnimator.prototype.stop = function () {
-            this.currentAnimation = null;
-            this.currentAnimationName = null;
-            this.currentFrame = 0;
-            this.animationState = State.none;
-        };
-        return SpriteAnimator;
-    }(es.SpriteRenderer));
-    es.SpriteAnimator = SpriteAnimator;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -3438,127 +2844,6 @@ var es;
         return TiledMapMover;
     }(es.Component));
     es.TiledMapMover = TiledMapMover;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var TiledMapRenderer = (function (_super) {
-        __extends(TiledMapRenderer, _super);
-        function TiledMapRenderer(tiledMap, collisionLayerName, shouldCreateColliders) {
-            if (collisionLayerName === void 0) { collisionLayerName = null; }
-            if (shouldCreateColliders === void 0) { shouldCreateColliders = true; }
-            var _this = _super.call(this) || this;
-            _this.physicsLayer = new es.Ref(1 << 0);
-            _this.toContainer = false;
-            _this.tiledMap = tiledMap;
-            _this._shouldCreateColliders = shouldCreateColliders;
-            _this.displayObject = new egret.DisplayObjectContainer();
-            if (collisionLayerName) {
-                _this.collisionLayer = tiledMap.tileLayers.find(function (layer) { return layer.name == collisionLayerName; });
-            }
-            return _this;
-        }
-        Object.defineProperty(TiledMapRenderer.prototype, "width", {
-            get: function () {
-                return this.tiledMap.width * this.tiledMap.tileWidth;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TiledMapRenderer.prototype, "height", {
-            get: function () {
-                return this.tiledMap.height * this.tiledMap.tileHeight;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        TiledMapRenderer.prototype.setLayerToRender = function (layerName) {
-            this.layerIndicesToRender = [];
-            this.layerIndicesToRender[0] = this.getLayerIndex(layerName);
-        };
-        TiledMapRenderer.prototype.setLayersToRender = function () {
-            var layerNames = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                layerNames[_i] = arguments[_i];
-            }
-            this.layerIndicesToRender = [];
-            for (var i = 0; i < layerNames.length; i++)
-                this.layerIndicesToRender[i] = this.getLayerIndex(layerNames[i]);
-        };
-        TiledMapRenderer.prototype.getLayerIndex = function (layerName) {
-            var index = 0;
-            var layerType = this.tiledMap.getLayer(layerName);
-            for (var layer in this.tiledMap.layers) {
-                if (this.tiledMap.layers.hasOwnProperty(layer) &&
-                    this.tiledMap.layers[layer] == layerType) {
-                    return index;
-                }
-            }
-            return -1;
-        };
-        TiledMapRenderer.prototype.getRowAtWorldPosition = function (yPos) {
-            yPos -= this.entity.transform.position.y + this._localOffset.y;
-            return this.tiledMap.worldToTilePositionY(yPos);
-        };
-        TiledMapRenderer.prototype.getColumnAtWorldPosition = function (xPos) {
-            xPos -= this.entity.transform.position.x + this._localOffset.x;
-            return this.tiledMap.worldToTilePositionX(xPos);
-        };
-        TiledMapRenderer.prototype.onEntityTransformChanged = function (comp) {
-            if (this._shouldCreateColliders && comp == transform.Component.position) {
-                this.removeColliders();
-                this.addColliders();
-            }
-        };
-        TiledMapRenderer.prototype.onAddedToEntity = function () {
-            this.addColliders();
-        };
-        TiledMapRenderer.prototype.onRemovedFromEntity = function () {
-            this.removeColliders();
-        };
-        TiledMapRenderer.prototype.update = function () {
-            this.tiledMap.update();
-        };
-        TiledMapRenderer.prototype.render = function (camera) {
-            this.sync(camera);
-            if (!this.layerIndicesToRender) {
-                es.TiledRendering.renderMap(this.tiledMap, !this.toContainer ? this.displayObject : null, es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer);
-            }
-            else {
-                for (var i = 0; i < this.tiledMap.layers.length; i++) {
-                    if (this.tiledMap.layers[i].visible && this.layerIndicesToRender.contains(i))
-                        es.TiledRendering.renderLayerRenderCamera(this.tiledMap.layers[i], !this.toContainer ? this.displayObject : null, es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer, camera.bounds);
-                }
-            }
-            if (!this.toContainer) {
-                this.displayObject.cacheAsBitmap = true;
-                this.toContainer = true;
-            }
-        };
-        TiledMapRenderer.prototype.addColliders = function () {
-            if (!this.collisionLayer || !this._shouldCreateColliders)
-                return;
-            var collisionRects = this.collisionLayer.getCollisionRectangles();
-            this._colliders = [];
-            for (var i = 0; i < collisionRects.length; i++) {
-                var collider = new es.BoxCollider(collisionRects[i].x + this._localOffset.x, collisionRects[i].y + this._localOffset.y, collisionRects[i].width, collisionRects[i].height);
-                collider.physicsLayer = this.physicsLayer;
-                collider.entity = this.entity;
-                this._colliders[i] = collider;
-                es.Physics.addCollider(collider);
-            }
-        };
-        TiledMapRenderer.prototype.removeColliders = function () {
-            if (this._colliders == null)
-                return;
-            for (var _i = 0, _a = this._colliders; _i < _a.length; _i++) {
-                var collider = _a[_i];
-                es.Physics.removeCollider(collider);
-            }
-            this._colliders = null;
-        };
-        return TiledMapRenderer;
-    }(es.RenderableComponent));
-    es.TiledMapRenderer = TiledMapRenderer;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -4030,6 +3315,804 @@ var es;
         return PolygonCollider;
     }(es.Collider));
     es.PolygonCollider = PolygonCollider;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var RenderableComponent = (function (_super) {
+        __extends(RenderableComponent, _super);
+        function RenderableComponent() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.displayObject = new egret.DisplayObject();
+            _this.hollowShape = new egret.Shape();
+            _this.pixelShape = new egret.Shape();
+            _this.color = 0x000000;
+            _this._areBoundsDirty = true;
+            _this.debugRenderEnabled = true;
+            _this._localOffset = es.Vector2.zero;
+            _this._renderLayer = 0;
+            _this._bounds = new es.Rectangle();
+            return _this;
+        }
+        Object.defineProperty(RenderableComponent.prototype, "width", {
+            get: function () {
+                return this.bounds.width;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "height", {
+            get: function () {
+                return this.bounds.height;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "localOffset", {
+            get: function () {
+                return this._localOffset;
+            },
+            set: function (value) {
+                this.setLocalOffset(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "renderLayer", {
+            get: function () {
+                return this._renderLayer;
+            },
+            set: function (value) {
+                this.setRenderLayer(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "bounds", {
+            get: function () {
+                if (this._areBoundsDirty) {
+                    this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, es.Vector2.zero, this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
+                    this._areBoundsDirty = false;
+                }
+                return this._bounds;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "isVisible", {
+            get: function () {
+                return this._isVisible;
+            },
+            set: function (value) {
+                if (this._isVisible != value) {
+                    this._isVisible = value;
+                    if (this._isVisible)
+                        this.onBecameVisible();
+                    else
+                        this.onBecameInvisible();
+                }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
+            this._areBoundsDirty = true;
+        };
+        RenderableComponent.prototype.debugRender = function (camera) {
+            if (!this.debugRenderEnabled)
+                return;
+            if (!this.hollowShape.parent)
+                this.debugDisplayObject.addChild(this.hollowShape);
+            if (!this.pixelShape.parent)
+                this.debugDisplayObject.addChild(this.pixelShape);
+            if (!this.entity.getComponent(es.Collider)) {
+                this.hollowShape.graphics.clear();
+                this.hollowShape.graphics.beginFill(es.Colors.renderableBounds, 0);
+                this.hollowShape.graphics.lineStyle(1, es.Colors.renderableBounds);
+                this.hollowShape.graphics.drawRect(this.bounds.x - camera.bounds.x, this.bounds.y - camera.bounds.y, this.bounds.width, this.bounds.height);
+                this.hollowShape.graphics.endFill();
+            }
+            var pixelPos = es.Vector2.add(this.entity.transform.position, this._localOffset).subtract(camera.bounds.location);
+            this.pixelShape.graphics.clear();
+            this.pixelShape.graphics.beginFill(es.Colors.renderableCenter, 0);
+            this.pixelShape.graphics.lineStyle(4, es.Colors.renderableCenter);
+            this.pixelShape.graphics.moveTo(pixelPos.x, pixelPos.y);
+            this.pixelShape.graphics.lineTo(pixelPos.x, pixelPos.y);
+            this.pixelShape.graphics.endFill();
+        };
+        RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
+            if (!camera)
+                return false;
+            this.isVisible = camera.bounds.intersects(this.bounds);
+            return this.isVisible;
+        };
+        RenderableComponent.prototype.setRenderLayer = function (renderLayer) {
+            if (renderLayer != this._renderLayer) {
+                var oldRenderLayer = this._renderLayer;
+                this._renderLayer = renderLayer;
+                if (this.entity && this.entity.scene)
+                    this.entity.scene.renderableComponents.updateRenderableRenderLayer(this, oldRenderLayer, this._renderLayer);
+            }
+            return this;
+        };
+        RenderableComponent.prototype.setColor = function (color) {
+            this.color = color;
+            return this;
+        };
+        RenderableComponent.prototype.setLocalOffset = function (offset) {
+            if (this._localOffset != offset) {
+                this._localOffset = offset;
+            }
+            return this;
+        };
+        RenderableComponent.prototype.sync = function (camera) {
+            if (this.displayObject.x != this.bounds.x - camera.bounds.y)
+                this.displayObject.x = this.bounds.x - camera.bounds.y;
+            if (this.displayObject.y != this.bounds.y - camera.bounds.y)
+                this.displayObject.y = this.bounds.y - camera.bounds.y;
+            if (this.displayObject.scaleX != this.entity.scale.x)
+                this.displayObject.scaleX = this.entity.scale.x;
+            if (this.displayObject.scaleY != this.entity.scale.y)
+                this.displayObject.scaleY = this.entity.scale.y;
+            if (this.displayObject.rotation != this.entity.rotationDegrees)
+                this.displayObject.rotation = this.entity.rotationDegrees;
+        };
+        RenderableComponent.prototype.compareTo = function (other) {
+            return other.renderLayer - this.renderLayer;
+        };
+        RenderableComponent.prototype.toString = function () {
+            return "[RenderableComponent] renderLayer: " + this.renderLayer;
+        };
+        RenderableComponent.prototype.onBecameVisible = function () {
+            this.displayObject.visible = this.isVisible;
+            this.debugDisplayObject.visible = this.isVisible;
+        };
+        RenderableComponent.prototype.onBecameInvisible = function () {
+            this.displayObject.visible = this.isVisible;
+            this.debugDisplayObject.visible = this.isVisible;
+        };
+        return RenderableComponent;
+    }(es.Component));
+    es.RenderableComponent = RenderableComponent;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Mesh = (function (_super) {
+        __extends(Mesh, _super);
+        function Mesh() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.displayObject = new egret.Mesh();
+            _this._primitiveCount = 0;
+            _this._width = 0;
+            _this._height = 0;
+            _this._triangles = [];
+            _this._verts = [];
+            return _this;
+        }
+        Object.defineProperty(Mesh.prototype, "bounds", {
+            get: function () {
+                if (this._areBoundsDirty) {
+                    this._bounds.calculateBounds(es.Vector2.add(this.entity.transform.position, this._topLeftVertPosition), es.Vector2.zero, es.Vector2.zero, this.entity.transform.scale, this.entity.transform.rotation, this._width, this._height);
+                    this._areBoundsDirty = false;
+                }
+                return this._bounds;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Mesh.prototype.recalculateBounds = function (recalculateUVs) {
+            this._topLeftVertPosition = new es.Vector2(Number.MAX_VALUE, Number.MAX_VALUE);
+            var max = new es.Vector2(Number.MIN_VALUE, Number.MIN_VALUE);
+            for (var i = 0; i < this._verts.length; i++) {
+                this._topLeftVertPosition.x = Math.min(this._topLeftVertPosition.x, this._verts[i].position.x);
+                this._topLeftVertPosition.y = Math.min(this._topLeftVertPosition.y, this._verts[i].position.y);
+                max.x = Math.max(max.x, this._verts[i].position.x);
+                max.y = Math.max(max.y, this._verts[i].position.y);
+            }
+            this._width = max.x - this._topLeftVertPosition.x;
+            this._height = max.y - this._topLeftVertPosition.y;
+            if (recalculateUVs) {
+                for (var i = 0; i < this._verts.length; i++) {
+                    this._verts[i].textureCoordinate.x = (this._verts[i].position.x - this._topLeftVertPosition.x) / this._width;
+                    this._verts[i].textureCoordinate.y = (this._verts[i].position.y - this._topLeftVertPosition.y) / this._height;
+                }
+            }
+            return this;
+        };
+        Mesh.prototype.setTexture = function (texture) {
+            this.displayObject.texture = texture;
+            return this;
+        };
+        Mesh.prototype.setVertPositions = function (positions) {
+            if (this._verts == undefined || this._verts.length != positions.length) {
+                this._verts = new Array(positions.length);
+                this._verts.fill(new VertexPositionColorTexture(), 0, positions.length);
+            }
+            for (var i = 0; i < this._verts.length; i++) {
+                this._verts[i].position = positions[i];
+            }
+            return this;
+        };
+        Mesh.prototype.setTriangles = function (triangles) {
+            if (triangles.length % 3 != 0) {
+                console.error("三角形必须是3的倍数");
+                return;
+            }
+            this._primitiveCount = triangles.length / 3;
+            this._triangles = triangles;
+            return this;
+        };
+        Mesh.prototype.render = function (camera) {
+            var renderNode = this.displayObject.$renderNode;
+            renderNode.imageWidth = this._width;
+            renderNode.imageHeight = this._height;
+            renderNode.vertices = this._triangles;
+        };
+        return Mesh;
+    }(es.RenderableComponent));
+    es.Mesh = Mesh;
+    var VertexPositionColorTexture = (function () {
+        function VertexPositionColorTexture() {
+        }
+        return VertexPositionColorTexture;
+    }());
+    es.VertexPositionColorTexture = VertexPositionColorTexture;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Bitmap = egret.Bitmap;
+    var SpriteRenderer = (function (_super) {
+        __extends(SpriteRenderer, _super);
+        function SpriteRenderer(sprite) {
+            if (sprite === void 0) { sprite = null; }
+            var _this = _super.call(this) || this;
+            if (sprite instanceof es.Sprite)
+                _this.setSprite(sprite);
+            else if (sprite instanceof egret.Texture)
+                _this.setSprite(new es.Sprite(sprite));
+            return _this;
+        }
+        Object.defineProperty(SpriteRenderer.prototype, "bounds", {
+            get: function () {
+                if (this._areBoundsDirty) {
+                    if (this._sprite) {
+                        this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this._sprite.sourceRect.width, this._sprite.sourceRect.height);
+                        this._areBoundsDirty = false;
+                    }
+                }
+                return this._bounds;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(SpriteRenderer.prototype, "originNormalized", {
+            get: function () {
+                return new es.Vector2(this._origin.x / this.width * this.entity.transform.scale.x, this._origin.y / this.height * this.entity.transform.scale.y);
+            },
+            set: function (value) {
+                this.setOrigin(new es.Vector2(value.x * this.width / this.entity.transform.scale.x, value.y * this.height / this.entity.transform.scale.y));
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(SpriteRenderer.prototype, "origin", {
+            get: function () {
+                return this._origin;
+            },
+            set: function (value) {
+                this.setOrigin(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(SpriteRenderer.prototype, "sprite", {
+            get: function () {
+                return this._sprite;
+            },
+            set: function (value) {
+                this.setSprite(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        SpriteRenderer.prototype.setSprite = function (sprite) {
+            this._sprite = sprite;
+            if (this._sprite) {
+                this._origin = this._sprite.origin;
+                this.displayObject.anchorOffsetX = this._origin.x;
+                this.displayObject.anchorOffsetY = this._origin.y;
+            }
+            this.displayObject = new Bitmap(sprite.texture2D);
+            return this;
+        };
+        SpriteRenderer.prototype.setOrigin = function (origin) {
+            if (this._origin != origin) {
+                this._origin = origin;
+                this.displayObject.anchorOffsetX = this._origin.x;
+                this.displayObject.anchorOffsetY = this._origin.y;
+                this._areBoundsDirty = true;
+            }
+            return this;
+        };
+        SpriteRenderer.prototype.setOriginNormalized = function (value) {
+            this.setOrigin(new es.Vector2(value.x * this.width / this.entity.transform.scale.x, value.y * this.height / this.entity.transform.scale.y));
+            return this;
+        };
+        SpriteRenderer.prototype.render = function (camera) {
+            this.sync(camera);
+            if (this.displayObject.x != this.bounds.x - camera.bounds.x)
+                this.displayObject.x = this.bounds.x - camera.bounds.x;
+            if (this.displayObject.y != this.bounds.y - camera.bounds.y)
+                this.displayObject.y = this.bounds.y - camera.bounds.y;
+        };
+        return SpriteRenderer;
+    }(es.RenderableComponent));
+    es.SpriteRenderer = SpriteRenderer;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Bitmap = egret.Bitmap;
+    var RenderTexture = egret.RenderTexture;
+    var TiledSpriteRenderer = (function (_super) {
+        __extends(TiledSpriteRenderer, _super);
+        function TiledSpriteRenderer(sprite) {
+            var _this = _super.call(this, sprite) || this;
+            _this._textureScale = es.Vector2.one;
+            _this._inverseTexScale = es.Vector2.one;
+            _this._gapX = 0;
+            _this._gapY = 0;
+            _this._sourceRect = sprite.sourceRect;
+            var bitmap = _this.displayObject;
+            bitmap.$fillMode = egret.BitmapFillMode.REPEAT;
+            return _this;
+        }
+        Object.defineProperty(TiledSpriteRenderer.prototype, "bounds", {
+            get: function () {
+                if (this._areBoundsDirty) {
+                    if (this._sprite) {
+                        this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
+                        this._areBoundsDirty = false;
+                    }
+                }
+                return this._bounds;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(TiledSpriteRenderer.prototype, "scrollX", {
+            get: function () {
+                return this._sourceRect.x;
+            },
+            set: function (value) {
+                this._sourceRect.x = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(TiledSpriteRenderer.prototype, "scrollY", {
+            get: function () {
+                return this._sourceRect.y;
+            },
+            set: function (value) {
+                this._sourceRect.y = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(TiledSpriteRenderer.prototype, "textureScale", {
+            get: function () {
+                return this._textureScale;
+            },
+            set: function (value) {
+                this._textureScale = value;
+                this._inverseTexScale = new es.Vector2(1 / this._textureScale.x, 1 / this._textureScale.y);
+                this._sourceRect.width = Math.floor(this._sprite.sourceRect.width * this._inverseTexScale.x);
+                this._sourceRect.height = Math.floor(this._sprite.sourceRect.height * this._inverseTexScale.y);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(TiledSpriteRenderer.prototype, "width", {
+            get: function () {
+                return this._sourceRect.width;
+            },
+            set: function (value) {
+                this._areBoundsDirty = true;
+                this._sourceRect.width = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(TiledSpriteRenderer.prototype, "height", {
+            get: function () {
+                return this._sourceRect.height;
+            },
+            set: function (value) {
+                this._areBoundsDirty = true;
+                this._sourceRect.height = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(TiledSpriteRenderer.prototype, "gapXY", {
+            get: function () {
+                return new es.Vector2(this._gapX, this._gapY);
+            },
+            set: function (value) {
+                this._gapX = value.x;
+                this._gapY = value.y;
+                var renderTexture = new RenderTexture();
+                var newRectangle = this.sprite.sourceRect;
+                newRectangle.x = 0;
+                newRectangle.y = 0;
+                newRectangle.width += this._gapX;
+                newRectangle.height += this._gapY;
+                renderTexture.drawToTexture(this.displayObject, newRectangle);
+                if (!this.displayObject) {
+                    this.displayObject = new Bitmap(renderTexture);
+                }
+                else {
+                    this.displayObject.texture = renderTexture;
+                }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        TiledSpriteRenderer.prototype.setGapXY = function (value) {
+            this.gapXY = value;
+            return this;
+        };
+        TiledSpriteRenderer.prototype.render = function (camera) {
+            _super.prototype.render.call(this, camera);
+            var bitmap = this.displayObject;
+            bitmap.width = this.width;
+            bitmap.height = this.height;
+            bitmap.scrollRect = this._sourceRect;
+        };
+        return TiledSpriteRenderer;
+    }(es.SpriteRenderer));
+    es.TiledSpriteRenderer = TiledSpriteRenderer;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var ScrollingSpriteRenderer = (function (_super) {
+        __extends(ScrollingSpriteRenderer, _super);
+        function ScrollingSpriteRenderer(sprite) {
+            var _this = _super.call(this, sprite) || this;
+            _this.scrollSpeedX = 15;
+            _this.scroolSpeedY = 0;
+            _this._scrollX = 0;
+            _this._scrollY = 0;
+            _this._scrollWidth = 0;
+            _this._scrollHeight = 0;
+            _this._scrollWidth = _this.width;
+            _this._scrollHeight = _this.height;
+            return _this;
+        }
+        Object.defineProperty(ScrollingSpriteRenderer.prototype, "textureScale", {
+            get: function () {
+                return this._textureScale;
+            },
+            set: function (value) {
+                this._textureScale = value;
+                this._inverseTexScale = new es.Vector2(1 / this._textureScale.x, 1 / this._textureScale.y);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ScrollingSpriteRenderer.prototype, "scrollWidth", {
+            get: function () {
+                return this._scrollWidth;
+            },
+            set: function (value) {
+                this._scrollWidth = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ScrollingSpriteRenderer.prototype, "scrollHeight", {
+            get: function () {
+                return this._scrollHeight;
+            },
+            set: function (value) {
+                this._scrollHeight = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        ScrollingSpriteRenderer.prototype.update = function () {
+            if (!this.sprite)
+                return;
+            this._scrollX += this.scrollSpeedX * es.Time.deltaTime;
+            this._scrollY += this.scroolSpeedY * es.Time.deltaTime;
+            this._sourceRect.x = Math.floor(this._scrollX);
+            this._sourceRect.y = Math.floor(this._scrollY);
+            this._sourceRect.width = this._scrollWidth + Math.abs(this._scrollX);
+            this._sourceRect.height = this._scrollHeight + Math.abs(this._scrollY);
+        };
+        return ScrollingSpriteRenderer;
+    }(es.TiledSpriteRenderer));
+    es.ScrollingSpriteRenderer = ScrollingSpriteRenderer;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var SpriteSheet = egret.SpriteSheet;
+    var Sprite = (function () {
+        function Sprite(texture, sourceRect, origin) {
+            if (sourceRect === void 0) { sourceRect = new es.Rectangle(0, 0, texture.textureWidth, texture.textureHeight); }
+            if (origin === void 0) { origin = sourceRect.getHalfSize(); }
+            this.uvs = new es.Rectangle();
+            this.texture2D = texture;
+            this.sourceRect = sourceRect;
+            this.center = new es.Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
+            this.origin = origin;
+            var inverseTexW = 1 / texture.textureWidth;
+            var inverseTexH = 1 / texture.textureHeight;
+            this.uvs.x = sourceRect.x * inverseTexW;
+            this.uvs.y = sourceRect.y * inverseTexH;
+            this.uvs.width = sourceRect.width * inverseTexW;
+            this.uvs.height = sourceRect.height * inverseTexH;
+        }
+        Sprite.spritesFromAtlas = function (texture, cellWidth, cellHeight, cellOffset, maxCellsToInclude) {
+            if (cellOffset === void 0) { cellOffset = 0; }
+            if (maxCellsToInclude === void 0) { maxCellsToInclude = Number.MAX_VALUE; }
+            var sprites = [];
+            var cols = texture.textureWidth / cellWidth;
+            var rows = texture.textureHeight / cellHeight;
+            var i = 0;
+            var spriteSheet = new SpriteSheet(texture);
+            for (var y = 0; y < rows; y++) {
+                for (var x = 0; x < cols; x++) {
+                    if (i++ < cellOffset)
+                        continue;
+                    var texture_1 = spriteSheet.getTexture(y + "_" + x);
+                    if (!texture_1)
+                        texture_1 = spriteSheet.createTexture(y + "_" + x, x * cellWidth, y * cellHeight, cellWidth, cellHeight);
+                    sprites.push(new Sprite(texture_1));
+                    if (sprites.length == maxCellsToInclude)
+                        return sprites;
+                }
+            }
+            return sprites;
+        };
+        return Sprite;
+    }());
+    es.Sprite = Sprite;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var SpriteAnimation = (function () {
+        function SpriteAnimation(sprites, frameRate) {
+            if (frameRate === void 0) { frameRate = 10; }
+            this.sprites = sprites;
+            this.frameRate = frameRate;
+        }
+        return SpriteAnimation;
+    }());
+    es.SpriteAnimation = SpriteAnimation;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var LoopMode;
+    (function (LoopMode) {
+        LoopMode[LoopMode["loop"] = 0] = "loop";
+        LoopMode[LoopMode["once"] = 1] = "once";
+        LoopMode[LoopMode["clampForever"] = 2] = "clampForever";
+        LoopMode[LoopMode["pingPong"] = 3] = "pingPong";
+        LoopMode[LoopMode["pingPongOnce"] = 4] = "pingPongOnce";
+    })(LoopMode = es.LoopMode || (es.LoopMode = {}));
+    var State;
+    (function (State) {
+        State[State["none"] = 0] = "none";
+        State[State["running"] = 1] = "running";
+        State[State["paused"] = 2] = "paused";
+        State[State["completed"] = 3] = "completed";
+    })(State = es.State || (es.State = {}));
+    var SpriteAnimator = (function (_super) {
+        __extends(SpriteAnimator, _super);
+        function SpriteAnimator(sprite) {
+            var _this = _super.call(this, sprite) || this;
+            _this.speed = 1;
+            _this.animationState = State.none;
+            _this._elapsedTime = 0;
+            _this._animations = new Map();
+            return _this;
+        }
+        Object.defineProperty(SpriteAnimator.prototype, "isRunning", {
+            get: function () {
+                return this.animationState == State.running;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(SpriteAnimator.prototype, "animations", {
+            get: function () {
+                return this._animations;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        SpriteAnimator.prototype.update = function () {
+            if (this.animationState != State.running || !this.currentAnimation)
+                return;
+            var animation = this.currentAnimation;
+            var secondsPerFrame = 1 / (animation.frameRate * this.speed);
+            var iterationDuration = secondsPerFrame * animation.sprites.length;
+            this._elapsedTime += es.Time.deltaTime;
+            var time = Math.abs(this._elapsedTime);
+            if (this._loopMode == LoopMode.once && time > iterationDuration ||
+                this._loopMode == LoopMode.pingPongOnce && time > iterationDuration * 2) {
+                this.animationState = State.completed;
+                this._elapsedTime = 0;
+                this.currentFrame = 0;
+                this.displayObject.texture = animation.sprites[this.currentFrame].texture2D;
+                return;
+            }
+            var i = Math.floor(time / secondsPerFrame);
+            var n = animation.sprites.length;
+            if (n > 2 && (this._loopMode == LoopMode.pingPong || this._loopMode == LoopMode.pingPongOnce)) {
+                var maxIndex = n - 1;
+                this.currentFrame = maxIndex - Math.abs(maxIndex - i % (maxIndex * 2));
+            }
+            else {
+                this.currentFrame = i % n;
+            }
+            this.displayObject.texture = animation.sprites[this.currentFrame].texture2D;
+        };
+        SpriteAnimator.prototype.addAnimation = function (name, animation) {
+            if (!this.sprite && animation.sprites.length > 0)
+                this.setSprite(animation.sprites[0]);
+            this._animations[name] = animation;
+            return this;
+        };
+        SpriteAnimator.prototype.play = function (name, loopMode) {
+            if (loopMode === void 0) { loopMode = null; }
+            this.currentAnimation = this._animations[name];
+            this.currentAnimationName = name;
+            this.currentFrame = 0;
+            this.animationState = State.running;
+            this.displayObject.texture = this.currentAnimation.sprites[0].texture2D;
+            this._elapsedTime = 0;
+            this._loopMode = loopMode ? loopMode : LoopMode.loop;
+        };
+        SpriteAnimator.prototype.isAnimationActive = function (name) {
+            return this.currentAnimation && this.currentAnimationName == name;
+        };
+        SpriteAnimator.prototype.pause = function () {
+            this.animationState = State.paused;
+        };
+        SpriteAnimator.prototype.unPause = function () {
+            this.animationState = State.running;
+        };
+        SpriteAnimator.prototype.stop = function () {
+            this.currentAnimation = null;
+            this.currentAnimationName = null;
+            this.currentFrame = 0;
+            this.animationState = State.none;
+        };
+        return SpriteAnimator;
+    }(es.SpriteRenderer));
+    es.SpriteAnimator = SpriteAnimator;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TiledMapRenderer = (function (_super) {
+        __extends(TiledMapRenderer, _super);
+        function TiledMapRenderer(tiledMap, collisionLayerName, shouldCreateColliders) {
+            if (collisionLayerName === void 0) { collisionLayerName = null; }
+            if (shouldCreateColliders === void 0) { shouldCreateColliders = true; }
+            var _this = _super.call(this) || this;
+            _this.physicsLayer = new es.Ref(1 << 0);
+            _this.toContainer = false;
+            _this.tiledMap = tiledMap;
+            _this._shouldCreateColliders = shouldCreateColliders;
+            _this.displayObject = new egret.DisplayObjectContainer();
+            if (collisionLayerName) {
+                _this.collisionLayer = tiledMap.tileLayers.find(function (layer) { return layer.name == collisionLayerName; });
+            }
+            return _this;
+        }
+        Object.defineProperty(TiledMapRenderer.prototype, "width", {
+            get: function () {
+                return this.tiledMap.width * this.tiledMap.tileWidth;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(TiledMapRenderer.prototype, "height", {
+            get: function () {
+                return this.tiledMap.height * this.tiledMap.tileHeight;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        TiledMapRenderer.prototype.setLayerToRender = function (layerName) {
+            this.layerIndicesToRender = [];
+            this.layerIndicesToRender[0] = this.getLayerIndex(layerName);
+        };
+        TiledMapRenderer.prototype.setLayersToRender = function () {
+            var layerNames = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                layerNames[_i] = arguments[_i];
+            }
+            this.layerIndicesToRender = [];
+            for (var i = 0; i < layerNames.length; i++)
+                this.layerIndicesToRender[i] = this.getLayerIndex(layerNames[i]);
+        };
+        TiledMapRenderer.prototype.getLayerIndex = function (layerName) {
+            var index = 0;
+            var layerType = this.tiledMap.getLayer(layerName);
+            for (var layer in this.tiledMap.layers) {
+                if (this.tiledMap.layers.hasOwnProperty(layer) &&
+                    this.tiledMap.layers[layer] == layerType) {
+                    return index;
+                }
+            }
+            return -1;
+        };
+        TiledMapRenderer.prototype.getRowAtWorldPosition = function (yPos) {
+            yPos -= this.entity.transform.position.y + this._localOffset.y;
+            return this.tiledMap.worldToTilePositionY(yPos);
+        };
+        TiledMapRenderer.prototype.getColumnAtWorldPosition = function (xPos) {
+            xPos -= this.entity.transform.position.x + this._localOffset.x;
+            return this.tiledMap.worldToTilePositionX(xPos);
+        };
+        TiledMapRenderer.prototype.onEntityTransformChanged = function (comp) {
+            if (this._shouldCreateColliders && comp == transform.Component.position) {
+                this.removeColliders();
+                this.addColliders();
+            }
+        };
+        TiledMapRenderer.prototype.onAddedToEntity = function () {
+            this.addColliders();
+        };
+        TiledMapRenderer.prototype.onRemovedFromEntity = function () {
+            this.removeColliders();
+        };
+        TiledMapRenderer.prototype.update = function () {
+            this.tiledMap.update();
+        };
+        TiledMapRenderer.prototype.render = function (camera) {
+            this.sync(camera);
+            if (!this.layerIndicesToRender) {
+                es.TiledRendering.renderMap(this.tiledMap, !this.toContainer ? this.displayObject : null, es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer);
+            }
+            else {
+                for (var i = 0; i < this.tiledMap.layers.length; i++) {
+                    if (this.tiledMap.layers[i].visible && this.layerIndicesToRender.contains(i))
+                        es.TiledRendering.renderLayerRenderCamera(this.tiledMap.layers[i], !this.toContainer ? this.displayObject : null, es.Vector2.add(this.entity.transform.position, this._localOffset), this.transform.scale, this.renderLayer, camera.bounds);
+                }
+            }
+            if (!this.toContainer) {
+                this.displayObject.cacheAsBitmap = true;
+                this.toContainer = true;
+            }
+        };
+        TiledMapRenderer.prototype.addColliders = function () {
+            if (!this.collisionLayer || !this._shouldCreateColliders)
+                return;
+            var collisionRects = this.collisionLayer.getCollisionRectangles();
+            this._colliders = [];
+            for (var i = 0; i < collisionRects.length; i++) {
+                var collider = new es.BoxCollider(collisionRects[i].x + this._localOffset.x, collisionRects[i].y + this._localOffset.y, collisionRects[i].width, collisionRects[i].height);
+                collider.physicsLayer = this.physicsLayer;
+                collider.entity = this.entity;
+                this._colliders[i] = collider;
+                es.Physics.addCollider(collider);
+            }
+        };
+        TiledMapRenderer.prototype.removeColliders = function () {
+            if (this._colliders == null)
+                return;
+            for (var _i = 0, _a = this._colliders; _i < _a.length; _i++) {
+                var collider = _a[_i];
+                es.Physics.removeCollider(collider);
+            }
+            this._colliders = null;
+        };
+        return TiledMapRenderer;
+    }(es.RenderableComponent));
+    es.TiledMapRenderer = TiledMapRenderer;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -7034,6 +7117,270 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var SpatialHash = (function () {
+        function SpatialHash(cellSize) {
+            if (cellSize === void 0) { cellSize = 100; }
+            this.gridBounds = new es.Rectangle();
+            this._overlapTestCircle = new es.Circle(0);
+            this._cellDict = new NumberDictionary();
+            this._tempHashSet = [];
+            this._cellSize = cellSize;
+            this._inverseCellSize = 1 / this._cellSize;
+            this._raycastParser = new RaycastResultParser();
+        }
+        SpatialHash.prototype.register = function (collider) {
+            var bounds = collider.bounds;
+            collider.registeredPhysicsBounds = bounds;
+            var p1 = this.cellCoords(bounds.x, bounds.y);
+            var p2 = this.cellCoords(bounds.right, bounds.bottom);
+            if (!this.gridBounds.contains(p1.x, p1.y)) {
+                this.gridBounds = es.RectangleExt.union(this.gridBounds, p1);
+            }
+            if (!this.gridBounds.contains(p2.x, p2.y)) {
+                this.gridBounds = es.RectangleExt.union(this.gridBounds, p2);
+            }
+            for (var x = p1.x; x <= p2.x; x++) {
+                for (var y = p1.y; y <= p2.y; y++) {
+                    var c = this.cellAtPosition(x, y, true);
+                    if (!c.firstOrDefault(function (c) { return c.hashCode == collider.hashCode; }))
+                        c.push(collider);
+                }
+            }
+        };
+        SpatialHash.prototype.remove = function (collider) {
+            var bounds = collider.registeredPhysicsBounds;
+            var p1 = this.cellCoords(bounds.x, bounds.y);
+            var p2 = this.cellCoords(bounds.right, bounds.bottom);
+            for (var x = p1.x; x <= p2.x; x++) {
+                for (var y = p1.y; y <= p2.y; y++) {
+                    var cell = this.cellAtPosition(x, y);
+                    if (!cell)
+                        console.log("\u4ECE\u4E0D\u5B58\u5728\u78B0\u649E\u5668\u7684\u5355\u5143\u683C\u4E2D\u79FB\u9664\u78B0\u649E\u5668: [" + collider + "]");
+                    else
+                        cell.remove(collider);
+                }
+            }
+        };
+        SpatialHash.prototype.removeWithBruteForce = function (obj) {
+            this._cellDict.remove(obj);
+        };
+        SpatialHash.prototype.clear = function () {
+            this._cellDict.clear();
+        };
+        SpatialHash.prototype.debugDraw = function (secondsToDisplay, textScale) {
+            if (textScale === void 0) { textScale = 1; }
+            for (var x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
+                for (var y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
+                    var cell = this.cellAtPosition(x, y);
+                    if (cell && cell.length > 0)
+                        this.debugDrawCellDetails(x, y, cell.length, secondsToDisplay, textScale);
+                }
+            }
+        };
+        SpatialHash.prototype.aabbBroadphase = function (bounds, excludeCollider, layerMask) {
+            this._tempHashSet.length = 0;
+            var p1 = this.cellCoords(bounds.x, bounds.y);
+            var p2 = this.cellCoords(bounds.right, bounds.bottom);
+            for (var x = p1.x; x <= p2.x; x++) {
+                for (var y = p1.y; y <= p2.y; y++) {
+                    var cell = this.cellAtPosition(x, y);
+                    if (!cell)
+                        continue;
+                    var _loop_8 = function (i) {
+                        var collider = cell[i];
+                        if (collider == excludeCollider || !es.Flags.isFlagSet(layerMask, collider.physicsLayer.value))
+                            return "continue";
+                        if (bounds.intersects(collider.bounds)) {
+                            if (!this_4._tempHashSet.firstOrDefault(function (c) { return c.hashCode == collider.hashCode; }))
+                                this_4._tempHashSet.push(collider);
+                        }
+                    };
+                    var this_4 = this;
+                    for (var i = 0; i < cell.length; i++) {
+                        _loop_8(i);
+                    }
+                }
+            }
+            return this._tempHashSet;
+        };
+        SpatialHash.prototype.linecast = function (start, end, hits, layerMask) {
+            var ray = new es.Ray2D(start, end);
+            this._raycastParser.start(ray, hits, layerMask);
+            var currentCell = this.cellCoords(start.x, start.y);
+            var lastCell = this.cellCoords(end.x, end.y);
+            var stepX = Math.sign(ray.direction.x);
+            var stepY = Math.sign(ray.direction.y);
+            if (currentCell.x == lastCell.x)
+                stepX = 0;
+            if (currentCell.y == lastCell.y)
+                stepY = 0;
+            var xStep = stepX < 0 ? 0 : stepX;
+            var yStep = stepY < 0 ? 0 : stepY;
+            var nextBoundaryX = (currentCell.x + xStep) * this._cellSize;
+            var nextBoundaryY = (currentCell.y + yStep) * this._cellSize;
+            var tMaxX = ray.direction.x != 0 ? (nextBoundaryX - ray.start.x) / ray.direction.x : Number.MAX_VALUE;
+            var tMaxY = ray.direction.y != 0 ? (nextBoundaryY - ray.start.y) / ray.direction.y : Number.MAX_VALUE;
+            var tDeltaX = ray.direction.x != 0 ? this._cellSize / (ray.direction.x * stepX) : Number.MAX_VALUE;
+            var tDeltaY = ray.direction.y != 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
+            var cell = this.cellAtPosition(currentCell.x, currentCell.y);
+            if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
+                this._raycastParser.reset();
+                return this._raycastParser.hitCounter;
+            }
+            while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
+                if (tMaxX < tMaxY) {
+                    currentCell.x = Math.floor(es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
+                    tMaxX += tDeltaX;
+                }
+                else {
+                    currentCell.y = Math.floor(es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
+                    tMaxY += tDeltaY;
+                }
+                cell = this.cellAtPosition(currentCell.x, currentCell.y);
+                if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
+                    this._raycastParser.reset();
+                    return this._raycastParser.hitCounter;
+                }
+            }
+            this._raycastParser.reset();
+            return this._raycastParser.hitCounter;
+        };
+        SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
+            var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
+            this._overlapTestCircle.radius = radius;
+            this._overlapTestCircle.position = circleCenter;
+            var resultCounter = 0;
+            var potentials = this.aabbBroadphase(bounds, null, layerMask);
+            for (var i = 0; i < potentials.length; i++) {
+                var collider = potentials[i];
+                if (collider instanceof es.BoxCollider) {
+                    results[resultCounter] = collider;
+                    resultCounter++;
+                }
+                else if (collider instanceof es.CircleCollider) {
+                    if (collider.shape.overlaps(this._overlapTestCircle)) {
+                        results[resultCounter] = collider;
+                        resultCounter++;
+                    }
+                }
+                else if (collider instanceof es.PolygonCollider) {
+                    if (collider.shape.overlaps(this._overlapTestCircle)) {
+                        results[resultCounter] = collider;
+                        resultCounter++;
+                    }
+                }
+                else {
+                    throw new Error("overlapCircle against this collider type is not implemented!");
+                }
+                if (resultCounter == results.length)
+                    return resultCounter;
+            }
+            return resultCounter;
+        };
+        SpatialHash.prototype.cellCoords = function (x, y) {
+            return new es.Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
+        };
+        SpatialHash.prototype.cellAtPosition = function (x, y, createCellIfEmpty) {
+            if (createCellIfEmpty === void 0) { createCellIfEmpty = false; }
+            var cell = this._cellDict.tryGetValue(x, y);
+            if (!cell) {
+                if (createCellIfEmpty) {
+                    cell = [];
+                    this._cellDict.add(x, y, cell);
+                }
+            }
+            return cell;
+        };
+        SpatialHash.prototype.debugDrawCellDetails = function (x, y, cellCount, secondsToDisplay, textScale) {
+            if (secondsToDisplay === void 0) { secondsToDisplay = 0.5; }
+            if (textScale === void 0) { textScale = 1; }
+        };
+        return SpatialHash;
+    }());
+    es.SpatialHash = SpatialHash;
+    var NumberDictionary = (function () {
+        function NumberDictionary() {
+            this._store = new Map();
+        }
+        NumberDictionary.prototype.add = function (x, y, list) {
+            this._store.set(this.getKey(x, y), list);
+        };
+        NumberDictionary.prototype.remove = function (obj) {
+            this._store.forEach(function (list) {
+                if (list.contains(obj))
+                    list.remove(obj);
+            });
+        };
+        NumberDictionary.prototype.tryGetValue = function (x, y) {
+            return this._store.get(this.getKey(x, y));
+        };
+        NumberDictionary.prototype.getKey = function (x, y) {
+            return x + "_" + y;
+        };
+        NumberDictionary.prototype.clear = function () {
+            this._store.clear();
+        };
+        return NumberDictionary;
+    }());
+    es.NumberDictionary = NumberDictionary;
+    var RaycastResultParser = (function () {
+        function RaycastResultParser() {
+            this._tempHit = new es.RaycastHit();
+            this._checkedColliders = [];
+            this._cellHits = [];
+        }
+        RaycastResultParser.prototype.start = function (ray, hits, layerMask) {
+            this._ray = ray;
+            this._hits = hits;
+            this._layerMask = layerMask;
+            this.hitCounter = 0;
+        };
+        RaycastResultParser.prototype.checkRayIntersection = function (cellX, cellY, cell) {
+            var fraction = new es.Ref(0);
+            for (var i = 0; i < cell.length; i++) {
+                var potential = cell[i];
+                if (this._checkedColliders.contains(potential))
+                    continue;
+                this._checkedColliders.push(potential);
+                if (potential.isTrigger && !es.Physics.raycastsHitTriggers)
+                    continue;
+                if (!es.Flags.isFlagSet(this._layerMask, potential.physicsLayer.value))
+                    continue;
+                var colliderBounds = potential.bounds;
+                if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1) {
+                    if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
+                        if (!es.Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
+                            continue;
+                        this._tempHit.collider = potential;
+                        this._cellHits.push(this._tempHit);
+                    }
+                }
+            }
+            if (this._cellHits.length == 0)
+                return false;
+            this._cellHits.sort(RaycastResultParser.compareRaycastHits);
+            for (var i = 0; i < this._cellHits.length; i++) {
+                this._hits[this.hitCounter] = this._cellHits[i];
+                this.hitCounter++;
+                if (this.hitCounter == this._hits.length)
+                    return true;
+            }
+            return false;
+        };
+        RaycastResultParser.prototype.reset = function () {
+            this._hits = null;
+            this._checkedColliders.length = 0;
+            this._cellHits.length = 0;
+        };
+        RaycastResultParser.compareRaycastHits = function (a, b) {
+            return a.distance - b.distance;
+        };
+        return RaycastResultParser;
+    }());
+    es.RaycastResultParser = RaycastResultParser;
+})(es || (es = {}));
+var es;
+(function (es) {
     var Shape = (function () {
         function Shape() {
         }
@@ -7701,267 +8048,180 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var SpatialHash = (function () {
-        function SpatialHash(cellSize) {
-            if (cellSize === void 0) { cellSize = 100; }
-            this.gridBounds = new es.Rectangle();
-            this._overlapTestCircle = new es.Circle(0);
-            this._cellDict = new NumberDictionary();
-            this._tempHashSet = [];
-            this._cellSize = cellSize;
-            this._inverseCellSize = 1 / this._cellSize;
-            this._raycastParser = new RaycastResultParser();
+    var Particle = (function () {
+        function Particle() {
+            this.mass = 1;
+            this.radius = 0;
+            this.collidesWithColliders = true;
         }
-        SpatialHash.prototype.register = function (collider) {
-            var bounds = collider.bounds;
-            collider.registeredPhysicsBounds = bounds;
-            var p1 = this.cellCoords(bounds.x, bounds.y);
-            var p2 = this.cellCoords(bounds.right, bounds.bottom);
-            if (!this.gridBounds.contains(p1.x, p1.y)) {
-                this.gridBounds = es.RectangleExt.union(this.gridBounds, p1);
-            }
-            if (!this.gridBounds.contains(p2.x, p2.y)) {
-                this.gridBounds = es.RectangleExt.union(this.gridBounds, p2);
-            }
-            for (var x = p1.x; x <= p2.x; x++) {
-                for (var y = p1.y; y <= p2.y; y++) {
-                    var c = this.cellAtPosition(x, y, true);
-                    if (!c.firstOrDefault(function (c) { return c.hashCode == collider.hashCode; }))
-                        c.push(collider);
-                }
-            }
+        Particle.prototype.applyForce = function (force) {
+            this.acceleration.add(es.Vector2.divide(force, new es.Vector2(this.mass)));
         };
-        SpatialHash.prototype.remove = function (collider) {
-            var bounds = collider.registeredPhysicsBounds;
-            var p1 = this.cellCoords(bounds.x, bounds.y);
-            var p2 = this.cellCoords(bounds.right, bounds.bottom);
-            for (var x = p1.x; x <= p2.x; x++) {
-                for (var y = p1.y; y <= p2.y; y++) {
-                    var cell = this.cellAtPosition(x, y);
-                    if (!cell)
-                        console.log("\u4ECE\u4E0D\u5B58\u5728\u78B0\u649E\u5668\u7684\u5355\u5143\u683C\u4E2D\u79FB\u9664\u78B0\u649E\u5668: [" + collider + "]");
-                    else
-                        cell.remove(collider);
-                }
-            }
-        };
-        SpatialHash.prototype.removeWithBruteForce = function (obj) {
-            this._cellDict.remove(obj);
-        };
-        SpatialHash.prototype.clear = function () {
-            this._cellDict.clear();
-        };
-        SpatialHash.prototype.debugDraw = function (secondsToDisplay, textScale) {
-            if (textScale === void 0) { textScale = 1; }
-            for (var x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
-                for (var y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
-                    var cell = this.cellAtPosition(x, y);
-                    if (cell && cell.length > 0)
-                        this.debugDrawCellDetails(x, y, cell.length, secondsToDisplay, textScale);
-                }
-            }
-        };
-        SpatialHash.prototype.aabbBroadphase = function (bounds, excludeCollider, layerMask) {
-            this._tempHashSet.length = 0;
-            var p1 = this.cellCoords(bounds.x, bounds.y);
-            var p2 = this.cellCoords(bounds.right, bounds.bottom);
-            for (var x = p1.x; x <= p2.x; x++) {
-                for (var y = p1.y; y <= p2.y; y++) {
-                    var cell = this.cellAtPosition(x, y);
-                    if (!cell)
-                        continue;
-                    var _loop_8 = function (i) {
-                        var collider = cell[i];
-                        if (collider == excludeCollider || !es.Flags.isFlagSet(layerMask, collider.physicsLayer.value))
-                            return "continue";
-                        if (bounds.intersects(collider.bounds)) {
-                            if (!this_4._tempHashSet.firstOrDefault(function (c) { return c.hashCode == collider.hashCode; }))
-                                this_4._tempHashSet.push(collider);
+        return Particle;
+    }());
+    es.Particle = Particle;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var VerletWorld = (function () {
+        function VerletWorld(simulationBounds) {
+            if (simulationBounds === void 0) { simulationBounds = null; }
+            this.gravity = new es.Vector2(0, 980);
+            this.constraintIterations = 3;
+            this.maximumStepIterations = 5;
+            this.allowDragging = true;
+            this._composites = [];
+            this._tempCircle = new es.Circle(1);
+            this._leftOverTime = 0;
+            this._fixedDeltaTime = 1 / 60;
+            this._iterationSteps = 0;
+            this._fixedDeltaTimeSq = 0;
+            this.simulationBounds = simulationBounds;
+            this._fixedDeltaTimeSq = Math.pow(this._fixedDeltaTimeSq, 2);
+        }
+        VerletWorld.prototype.update = function () {
+            this.updateTiming();
+            if (this.allowDragging)
+                this.handleDragging();
+            for (var iteration = 1; iteration <= this._iterationSteps; iteration++) {
+                for (var i = this._composites.length - 1; i >= 0; i--) {
+                    var composite = this._composites[i];
+                    for (var s = 0; s < this.constraintIterations; s++)
+                        composite.solveConstraints();
+                    composite.updateParticles(this._fixedDeltaTimeSq, this.gravity);
+                    composite.handleConstraintCollisions();
+                    for (var j = 0; j < composite.particles.length; j++) {
+                        var p = composite.particles[j];
+                        if (this.simulationBounds) {
+                            this.constrainParticleToBounds(p);
                         }
-                    };
-                    var this_4 = this;
-                    for (var i = 0; i < cell.length; i++) {
-                        _loop_8(i);
+                        if (p.collidesWithColliders)
+                            this.handleCollisions(p, composite.collidesWithLayers);
                     }
                 }
             }
-            return this._tempHashSet;
         };
-        SpatialHash.prototype.linecast = function (start, end, hits, layerMask) {
-            var ray = new es.Ray2D(start, end);
-            this._raycastParser.start(ray, hits, layerMask);
-            var currentCell = this.cellCoords(start.x, start.y);
-            var lastCell = this.cellCoords(end.x, end.y);
-            var stepX = Math.sign(ray.direction.x);
-            var stepY = Math.sign(ray.direction.y);
-            if (currentCell.x == lastCell.x)
-                stepX = 0;
-            if (currentCell.y == lastCell.y)
-                stepY = 0;
-            var xStep = stepX < 0 ? 0 : stepX;
-            var yStep = stepY < 0 ? 0 : stepY;
-            var nextBoundaryX = (currentCell.x + xStep) * this._cellSize;
-            var nextBoundaryY = (currentCell.y + yStep) * this._cellSize;
-            var tMaxX = ray.direction.x != 0 ? (nextBoundaryX - ray.start.x) / ray.direction.x : Number.MAX_VALUE;
-            var tMaxY = ray.direction.y != 0 ? (nextBoundaryY - ray.start.y) / ray.direction.y : Number.MAX_VALUE;
-            var tDeltaX = ray.direction.x != 0 ? this._cellSize / (ray.direction.x * stepX) : Number.MAX_VALUE;
-            var tDeltaY = ray.direction.y != 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
-            var cell = this.cellAtPosition(currentCell.x, currentCell.y);
-            if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
-                this._raycastParser.reset();
-                return this._raycastParser.hitCounter;
-            }
-            while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
-                if (tMaxX < tMaxY) {
-                    currentCell.x = Math.floor(es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
-                    tMaxX += tDeltaX;
-                }
-                else {
-                    currentCell.y = Math.floor(es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
-                    tMaxY += tDeltaY;
-                }
-                cell = this.cellAtPosition(currentCell.x, currentCell.y);
-                if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
-                    this._raycastParser.reset();
-                    return this._raycastParser.hitCounter;
-                }
-            }
-            this._raycastParser.reset();
-            return this._raycastParser.hitCounter;
-        };
-        SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
-            this._overlapTestCircle.radius = radius;
-            this._overlapTestCircle.position = circleCenter;
-            var resultCounter = 0;
-            var potentials = this.aabbBroadphase(bounds, null, layerMask);
-            for (var i = 0; i < potentials.length; i++) {
-                var collider = potentials[i];
-                if (collider instanceof es.BoxCollider) {
-                    results[resultCounter] = collider;
-                    resultCounter++;
-                }
-                else if (collider instanceof es.CircleCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
-                    }
-                }
-                else if (collider instanceof es.PolygonCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
+        VerletWorld.prototype.handleCollisions = function (p, collidesWithLayers) {
+            var collidedCount = es.Physics.overlapCircleAll(p.position, p.radius, VerletWorld._colliders, collidesWithLayers);
+            for (var i = 0; i < collidedCount; i++) {
+                var collider = VerletWorld._colliders[i];
+                if (collider.isTrigger)
+                    continue;
+                var collisionResult = new es.CollisionResult();
+                if (p.radius < 2) {
+                    if (collider.shape.pointCollidesWithShape(p.position, collisionResult)) {
+                        p.position.subtract(collisionResult.minimumTranslationVector);
                     }
                 }
                 else {
-                    throw new Error("overlapCircle against this collider type is not implemented!");
-                }
-                if (resultCounter == results.length)
-                    return resultCounter;
-            }
-            return resultCounter;
-        };
-        SpatialHash.prototype.cellCoords = function (x, y) {
-            return new es.Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
-        };
-        SpatialHash.prototype.cellAtPosition = function (x, y, createCellIfEmpty) {
-            if (createCellIfEmpty === void 0) { createCellIfEmpty = false; }
-            var cell = this._cellDict.tryGetValue(x, y);
-            if (!cell) {
-                if (createCellIfEmpty) {
-                    cell = [];
-                    this._cellDict.add(x, y, cell);
-                }
-            }
-            return cell;
-        };
-        SpatialHash.prototype.debugDrawCellDetails = function (x, y, cellCount, secondsToDisplay, textScale) {
-            if (secondsToDisplay === void 0) { secondsToDisplay = 0.5; }
-            if (textScale === void 0) { textScale = 1; }
-        };
-        return SpatialHash;
-    }());
-    es.SpatialHash = SpatialHash;
-    var NumberDictionary = (function () {
-        function NumberDictionary() {
-            this._store = new Map();
-        }
-        NumberDictionary.prototype.add = function (x, y, list) {
-            this._store.set(this.getKey(x, y), list);
-        };
-        NumberDictionary.prototype.remove = function (obj) {
-            this._store.forEach(function (list) {
-                if (list.contains(obj))
-                    list.remove(obj);
-            });
-        };
-        NumberDictionary.prototype.tryGetValue = function (x, y) {
-            return this._store.get(this.getKey(x, y));
-        };
-        NumberDictionary.prototype.getKey = function (x, y) {
-            return x + "_" + y;
-        };
-        NumberDictionary.prototype.clear = function () {
-            this._store.clear();
-        };
-        return NumberDictionary;
-    }());
-    es.NumberDictionary = NumberDictionary;
-    var RaycastResultParser = (function () {
-        function RaycastResultParser() {
-            this._tempHit = new es.RaycastHit();
-            this._checkedColliders = [];
-            this._cellHits = [];
-        }
-        RaycastResultParser.prototype.start = function (ray, hits, layerMask) {
-            this._ray = ray;
-            this._hits = hits;
-            this._layerMask = layerMask;
-            this.hitCounter = 0;
-        };
-        RaycastResultParser.prototype.checkRayIntersection = function (cellX, cellY, cell) {
-            var fraction = new es.Ref(0);
-            for (var i = 0; i < cell.length; i++) {
-                var potential = cell[i];
-                if (this._checkedColliders.contains(potential))
-                    continue;
-                this._checkedColliders.push(potential);
-                if (potential.isTrigger && !es.Physics.raycastsHitTriggers)
-                    continue;
-                if (!es.Flags.isFlagSet(this._layerMask, potential.physicsLayer.value))
-                    continue;
-                var colliderBounds = potential.bounds;
-                if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1) {
-                    if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
-                        if (!es.Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
-                            continue;
-                        this._tempHit.collider = potential;
-                        this._cellHits.push(this._tempHit);
+                    this._tempCircle.radius = p.radius;
+                    this._tempCircle.position = p.position;
+                    if (this._tempCircle.collidesWithShape(collider.shape, collisionResult)) {
+                        p.position.subtract(collisionResult.minimumTranslationVector);
                     }
                 }
             }
-            if (this._cellHits.length == 0)
-                return false;
-            this._cellHits.sort(RaycastResultParser.compareRaycastHits);
-            for (var i = 0; i < this._cellHits.length; i++) {
-                this._hits[this.hitCounter] = this._cellHits[i];
-                this.hitCounter++;
-                if (this.hitCounter == this._hits.length)
-                    return true;
+        };
+        VerletWorld.prototype.constrainParticleToBounds = function (p) {
+            var tempPos = p.position;
+            var bounds = this.simulationBounds;
+            if (p.radius == 0) {
+                if (tempPos.y > bounds.height)
+                    tempPos.y = bounds.height;
+                else if (tempPos.y < bounds.y)
+                    tempPos.y = bounds.y;
+                if (tempPos.x < bounds.x)
+                    tempPos.x = bounds.x;
+                else if (tempPos.x > bounds.width)
+                    tempPos.x = bounds.width;
             }
-            return false;
+            else {
+                if (tempPos.y < bounds.y + p.radius)
+                    tempPos.y = 2 * (bounds.y + p.radius) - tempPos.y;
+                if (tempPos.y > bounds.height - p.radius)
+                    tempPos.y = 2 * (bounds.height - p.radius) - tempPos.y;
+                if (tempPos.x > bounds.width - p.radius)
+                    tempPos.x = 2 * (bounds.width - p.radius) - tempPos.x;
+                if (tempPos.x < bounds.x + p.radius)
+                    tempPos.x = 2 * (bounds.x + p.radius) - tempPos.x;
+            }
+            p.position = tempPos;
         };
-        RaycastResultParser.prototype.reset = function () {
-            this._hits = null;
-            this._checkedColliders.length = 0;
-            this._cellHits.length = 0;
+        VerletWorld.prototype.updateTiming = function () {
+            this._leftOverTime += es.Time.deltaTime;
+            this._iterationSteps = Math.floor(Math.trunc(this._leftOverTime / this._fixedDeltaTime));
+            this._leftOverTime -= this._iterationSteps * this._fixedDeltaTime;
+            this._iterationSteps = Math.min(this._iterationSteps, this.maximumStepIterations);
         };
-        RaycastResultParser.compareRaycastHits = function (a, b) {
-            return a.distance - b.distance;
+        VerletWorld.prototype.addComposite = function (composite) {
+            this._composites.push(composite);
+            return composite;
         };
-        return RaycastResultParser;
+        VerletWorld.prototype.removeComposite = function (composite) {
+            this._composites.remove(composite);
+        };
+        VerletWorld.prototype.handleDragging = function () {
+        };
+        VerletWorld.prototype.debugRender = function (camera) {
+            for (var i = 0; i < this._composites.length; i++)
+                this._composites[i].debugRender(camera);
+        };
+        VerletWorld._colliders = new Array(4);
+        return VerletWorld;
     }());
-    es.RaycastResultParser = RaycastResultParser;
+    es.VerletWorld = VerletWorld;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Composite = (function () {
+        function Composite() {
+            this.friction = new es.Vector2(0.98, 1);
+            this.collidesWithLayers = es.Physics.allLayers;
+            this.particles = [];
+            this._constraints = [];
+        }
+        Composite.prototype.solveConstraints = function () {
+            for (var i = this._constraints.length - 1; i >= 0; i--) {
+                this._constraints[i].solve();
+            }
+        };
+        Composite.prototype.updateParticles = function (deltaTimeSquared, gravity) {
+            for (var j = 0; j < this.particles.length; j++) {
+                var p = this.particles[j];
+                if (p.isPinned) {
+                    p.position = p.pinnedPosition;
+                    continue;
+                }
+                p.applyForce(es.Vector2.multiply(new es.Vector2(p.mass), gravity));
+                var vel = es.Vector2.subtract(p.position, p.lastPosition).multiply(this.friction);
+                var nextPos = es.Vector2.add(p.position, vel).add(es.Vector2.multiply(new es.Vector2(0.5 * deltaTimeSquared), p.acceleration));
+                p.lastPosition = p.position;
+                p.position = nextPos;
+                p.acceleration.x = p.acceleration.y = 0;
+            }
+        };
+        Composite.prototype.handleConstraintCollisions = function () {
+            for (var i = this._constraints.length - 1; i >= 0; i--) {
+                if (this._constraints[i].collidesWithColliders)
+                    this._constraints[i].handleCollisions(this.collidesWithLayers);
+            }
+        };
+        Composite.prototype.debugRender = function (camera) {
+        };
+        return Composite;
+    }());
+    es.Composite = Composite;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Constraint = (function () {
+        function Constraint() {
+            this.collidesWithColliders = true;
+        }
+        Constraint.prototype.handleCollisions = function (collidesWithLayers) { };
+        return Constraint;
+    }());
+    es.Constraint = Constraint;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -10888,24 +11148,25 @@ var es;
             this._isInUpdate = false;
         };
         CoroutineManager.prototype.tickCoroutine = function (coroutine) {
-            if (!coroutine.enumerator.moveNext() || coroutine.isDone) {
+            var current = coroutine.enumerator.next();
+            if (!current.value || current.done) {
                 es.Pool.free(coroutine);
                 return false;
             }
-            if (coroutine.enumerator.current == null) {
+            if (!current.value) {
                 return true;
             }
-            if (coroutine.enumerator.current instanceof es.WaitForSeconds) {
-                coroutine.waitTimer = coroutine.enumerator.current.waitTime;
+            if (current.value instanceof es.WaitForSeconds) {
+                coroutine.waitTimer = current.value.waitTime;
                 return true;
             }
-            if (coroutine.enumerator.current instanceof Number) {
+            if (current.value instanceof Number) {
                 console.warn("协同程序检查返回一个Number类型，请不要在生产环境使用");
-                coroutine.waitTimer = Number(coroutine.enumerator.current);
+                coroutine.waitTimer = Number(current);
                 return true;
             }
-            if (coroutine.enumerator.current instanceof CoroutineImpl) {
-                coroutine.waitForCoroutine = coroutine.enumerator.current;
+            if (current.value instanceof CoroutineImpl) {
+                coroutine.waitForCoroutine = current.value;
                 return true;
             }
             else {

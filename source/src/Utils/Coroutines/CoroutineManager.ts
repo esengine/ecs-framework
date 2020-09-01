@@ -3,7 +3,7 @@ module es {
      * CoroutineManager使用的内部类，用于隐藏协同程序所需的数据
      */
     export class CoroutineImpl implements ICoroutine, IPoolable {
-        public enumerator: IEnumerator;
+        public enumerator: Iterator<any>;
         /**
          * 每当产生延迟时，它就被添加到跟踪延迟的waitTimer中
          */
@@ -34,12 +34,6 @@ module es {
         }
     }
 
-    export interface IEnumerator {
-        current: any;
-        moveNext(): boolean;
-        reset();
-    }
-
     /**
      * 基本CoroutineManager。协同程序可以做以下事情:
      * - return null(在下一帧继续执行)
@@ -60,7 +54,7 @@ module es {
          * 将i枚举器添加到CoroutineManager。协程在每一帧调用更新之前被执行。
          * @param enumerator
          */
-        public startCoroutine(enumerator: IEnumerator) {
+        public startCoroutine(enumerator: Iterator<any>) {
             // 查找或创建CoroutineImpl
             let coroutine = Pool.obtain<CoroutineImpl>(CoroutineImpl);
             coroutine.prepareForuse();
@@ -126,30 +120,30 @@ module es {
          * @param coroutine
          */
         public tickCoroutine(coroutine: CoroutineImpl){
+            let current = coroutine.enumerator.next();
             // 这个协同程序已经完成了
-            if (!coroutine.enumerator.moveNext() || coroutine.isDone){
+            if (!current.value || current.done){
                 Pool.free<CoroutineImpl>(coroutine);
                 return false;
             }
 
-            if (coroutine.enumerator.current == null){
-                // 再运行下一帧
+            if (!current.value){
                 return true;
             }
 
-            if (coroutine.enumerator.current instanceof WaitForSeconds){
-                coroutine.waitTimer = (coroutine.enumerator.current as WaitForSeconds).waitTime;
+            if (current.value instanceof WaitForSeconds){
+                coroutine.waitTimer = (current.value as WaitForSeconds).waitTime;
                 return true;
             }
 
-            if (coroutine.enumerator.current instanceof Number){
+            if (current.value instanceof Number){
                 console.warn("协同程序检查返回一个Number类型，请不要在生产环境使用");
-                coroutine.waitTimer = Number(coroutine.enumerator.current);
+                coroutine.waitTimer = Number(current);
                 return true;
             }
 
-            if (coroutine.enumerator.current instanceof  CoroutineImpl){
-                coroutine.waitForCoroutine = coroutine.enumerator.current as CoroutineImpl;
+            if (current.value instanceof  CoroutineImpl){
+                coroutine.waitForCoroutine = current.value as CoroutineImpl;
                 return true;
             }else {
                 return true;

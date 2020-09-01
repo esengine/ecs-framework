@@ -3,18 +3,20 @@
     "ui://m4sln17ak7mf0",
     "ui://m4sln17ajde15"
   ],
-  "libview.firstColumnWidth": 328,
-  "auxline1": true,
   "libview.iconScale": 0,
-  "backgroundColor": 6710886,
+  "auxline1": true,
   "doc.activeDoc": "ui://m4sln17ak7mf0",
-  "libview.currentGroup": "",
-  "canvasColor": 10066329,
-  "auxline2": true,
   "libview.twoColumn": false,
+  "libview.currentGroup": "",
+  "libview.firstColumnWidth": 459,
+  "auxline2": true,
+  "backgroundColor": 6710886,
+  "canvasColor": 10066329,
   "libview.expandedNodes": [
     "m4sln17a",
     "/",
+    "m4sln17a",
+    "/资源/",
     "m4sln17a",
     "/组件/"
   ]

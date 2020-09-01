@@ -133,7 +133,7 @@ module es {
          * 返回null将使协程在下一帧中被执行。
          * @param enumerator
          */
-        public static startCoroutine(enumerator: IEnumerator){
+        public static startCoroutine(enumerator: Iterator<any>){
             return this._instance._coroutineManager.startCoroutine(enumerator);
         }
 

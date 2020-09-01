@@ -6,6 +6,7 @@
     <component id="jde13" name="combo_sc_item.xml" path="/组件/"/>
     <component id="jde14" name="combo_sc_popup.xml" path="/组件/"/>
     <component id="jde15" name="combo_sc.xml" path="/组件/" exported="true"/>
+    <image id="hn197" name="cabbage.png" path="/资源/"/>
   </resources>
   <publish name="" genCode="true"/>
 </packageDescription>

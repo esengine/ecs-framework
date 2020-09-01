@@ -208,7 +208,7 @@ declare module es {
         static registerGlobalManager(manager: es.GlobalManager): void;
         static unregisterGlobalManager(manager: es.GlobalManager): void;
         static getGlobalManager<T extends es.GlobalManager>(type: any): T;
-        static startCoroutine(enumerator: IEnumerator): CoroutineImpl;
+        static startCoroutine(enumerator: Iterator<any>): CoroutineImpl;
         static schedule(timeInSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer) => void): Timer;
         onOrientationChanged(): void;
         draw(): Promise<void>;
@@ -581,6 +581,137 @@ declare module es {
     }
 }
 declare module es {
+    class SceneComponent {
+        scene: Scene;
+        enabled: boolean;
+        updateOrder: number;
+        _enabled: boolean;
+        onEnabled(): void;
+        onDisabled(): void;
+        onRemovedFromScene(): void;
+        update(): void;
+        setEnabled(isEnabled: boolean): SceneComponent;
+        setUpdateOrder(updateOrder: number): this;
+        compareTo(other: SceneComponent): number;
+    }
+}
+declare module es {
+    class CollisionState {
+        right: boolean;
+        left: boolean;
+        above: boolean;
+        below: boolean;
+        becameGroundedThisFrame: boolean;
+        wasGroundedLastFrame: boolean;
+        isGroundedOnOnewayPlatform: boolean;
+        slopAngle: number;
+        readonly hasCollision: boolean;
+        _movementRemainderX: SubpixelNumber;
+        _movementRemainderY: SubpixelNumber;
+        reset(): void;
+        toString(): string;
+    }
+    class TiledMapMover extends Component {
+        colliderHorizontalInset: number;
+        colliderVerticalInset: number;
+        _boxColliderBounds: Rectangle;
+        constructor();
+        testCollisions(motion: Vector2, boxColliderBounds: Rectangle, collisionState: CollisionState): void;
+        testMapCollision(collisionRect: Rectangle, direction: Edge, collisionState: CollisionState, collisionResponse: number): void;
+        collisionRectForSide(side: Edge, motion: number): Rectangle;
+    }
+}
+declare module es {
+    interface ITriggerListener {
+        onTriggerEnter(other: Collider, local: Collider): any;
+        onTriggerExit(other: Collider, local: Collider): any;
+    }
+}
+declare module es {
+    class Mover extends Component {
+        private _triggerHelper;
+        onAddedToEntity(): void;
+        calculateMovement(motion: Vector2, collisionResult: CollisionResult): boolean;
+        applyMovement(motion: Vector2): void;
+        move(motion: Vector2, collisionResult: CollisionResult): boolean;
+    }
+}
+declare module es {
+    class ProjectileMover extends Component {
+        private _tempTriggerList;
+        private _collider;
+        onAddedToEntity(): void;
+        move(motion: Vector2): boolean;
+        private notifyTriggerListeners;
+    }
+}
+declare module es {
+    abstract class Collider extends Component {
+        shape: Shape;
+        isTrigger: boolean;
+        physicsLayer: Ref<number>;
+        collidesWithLayers: Ref<number>;
+        shouldColliderScaleAndRotateWithTransform: boolean;
+        registeredPhysicsBounds: Rectangle;
+        _localOffsetLength: number;
+        _isPositionDirty: boolean;
+        _isRotationDirty: boolean;
+        protected _colliderRequiresAutoSizing: any;
+        protected _isParentEntityAddedToScene: any;
+        protected _isColliderRegistered: any;
+        readonly absolutePosition: Vector2;
+        readonly rotation: number;
+        readonly bounds: Rectangle;
+        protected _localOffset: Vector2;
+        localOffset: Vector2;
+        setLocalOffset(offset: Vector2): Collider;
+        setShouldColliderScaleAndRotateWithTransform(shouldColliderScaleAndRotationWithTransform: boolean): Collider;
+        onAddedToEntity(): void;
+        onRemovedFromEntity(): void;
+        onEntityTransformChanged(comp: transform.Component): void;
+        onEnabled(): void;
+        onDisabled(): void;
+        registerColliderWithPhysicsSystem(): void;
+        unregisterColliderWithPhysicsSystem(): void;
+        overlaps(other: Collider): boolean;
+        collidesWith(collider: Collider, motion: Vector2, result: CollisionResult): boolean;
+    }
+}
+declare module es {
+    class BoxCollider extends Collider {
+        hollowShape: egret.Shape;
+        polygonShape: egret.Shape;
+        pixelShape1: egret.Shape;
+        pixelShape2: egret.Shape;
+        constructor(x?: number, y?: number, width?: number, height?: number);
+        width: number;
+        height: number;
+        setSize(width: number, height: number): this;
+        setWidth(width: number): BoxCollider;
+        setHeight(height: number): void;
+        debugRender(camera: Camera): void;
+        toString(): string;
+    }
+}
+declare module es {
+    class CircleCollider extends Collider {
+        private rectShape;
+        private circleShape;
+        private pixelShape1;
+        private pixelShape2;
+        constructor(radius?: number);
+        radius: number;
+        setRadius(radius: number): CircleCollider;
+        debugRender(camera: Camera): void;
+        toString(): string;
+    }
+}
+declare module es {
+    class PolygonCollider extends Collider {
+        constructor(points: Vector2[]);
+    }
+}
+declare module es {
     abstract class RenderableComponent extends Component implements IRenderable {
         displayObject: egret.DisplayObject;
         hollowShape: egret.Shape;
@@ -613,18 +744,24 @@ declare module es {
     }
 }
 declare module es {
-    class SceneComponent {
-        scene: Scene;
-        enabled: boolean;
-        updateOrder: number;
-        _enabled: boolean;
-        onEnabled(): void;
-        onDisabled(): void;
-        onRemovedFromScene(): void;
-        update(): void;
-        setEnabled(isEnabled: boolean): SceneComponent;
-        setUpdateOrder(updateOrder: number): this;
-        compareTo(other: SceneComponent): number;
+    class Mesh extends RenderableComponent {
+        displayObject: egret.Mesh;
+        readonly bounds: Rectangle;
+        _primitiveCount: number;
+        _topLeftVertPosition: Vector2;
+        _width: number;
+        _height: number;
+        _triangles: number[];
+        _verts: VertexPositionColorTexture[];
+        recalculateBounds(recalculateUVs: boolean): this;
+        setTexture(texture: egret.Texture): Mesh;
+        setVertPositions(positions: Vector2[]): this;
+        setTriangles(triangles: number[]): this;
+        render(camera: es.Camera): void;
+    }
+    class VertexPositionColorTexture {
+        position: Vector2;
+        textureCoordinate: Vector2;
     }
 }
 declare module es {
@@ -731,32 +868,6 @@ declare module es {
     }
 }
 declare module es {
-    class CollisionState {
-        right: boolean;
-        left: boolean;
-        above: boolean;
-        below: boolean;
-        becameGroundedThisFrame: boolean;
-        wasGroundedLastFrame: boolean;
-        isGroundedOnOnewayPlatform: boolean;
-        slopAngle: number;
-        readonly hasCollision: boolean;
-        _movementRemainderX: SubpixelNumber;
-        _movementRemainderY: SubpixelNumber;
-        reset(): void;
-        toString(): string;
-    }
-    class TiledMapMover extends Component {
-        colliderHorizontalInset: number;
-        colliderVerticalInset: number;
-        _boxColliderBounds: Rectangle;
-        constructor();
-        testCollisions(motion: Vector2, boxColliderBounds: Rectangle, collisionState: CollisionState): void;
-        testMapCollision(collisionRect: Rectangle, direction: Edge, collisionState: CollisionState, collisionResponse: number): void;
-        collisionRectForSide(side: Edge, motion: number): Rectangle;
-    }
-}
-declare module es {
     class TiledMapRenderer extends RenderableComponent {
         tiledMap: TmxMap;
         physicsLayer: Ref<number>;
@@ -780,96 +891,6 @@ declare module es {
         render(camera: es.Camera): void;
         addColliders(): void;
         removeColliders(): void;
-    }
-}
-declare module es {
-    interface ITriggerListener {
-        onTriggerEnter(other: Collider, local: Collider): any;
-        onTriggerExit(other: Collider, local: Collider): any;
-    }
-}
-declare module es {
-    class Mover extends Component {
-        private _triggerHelper;
-        onAddedToEntity(): void;
-        calculateMovement(motion: Vector2, collisionResult: CollisionResult): boolean;
-        applyMovement(motion: Vector2): void;
-        move(motion: Vector2, collisionResult: CollisionResult): boolean;
-    }
-}
-declare module es {
-    class ProjectileMover extends Component {
-        private _tempTriggerList;
-        private _collider;
-        onAddedToEntity(): void;
-        move(motion: Vector2): boolean;
-        private notifyTriggerListeners;
-    }
-}
-declare module es {
-    abstract class Collider extends Component {
-        shape: Shape;
-        isTrigger: boolean;
-        physicsLayer: Ref<number>;
-        collidesWithLayers: Ref<number>;
-        shouldColliderScaleAndRotateWithTransform: boolean;
-        registeredPhysicsBounds: Rectangle;
-        _localOffsetLength: number;
-        _isPositionDirty: boolean;
-        _isRotationDirty: boolean;
-        protected _colliderRequiresAutoSizing: any;
-        protected _isParentEntityAddedToScene: any;
-        protected _isColliderRegistered: any;
-        readonly absolutePosition: Vector2;
-        readonly rotation: number;
-        readonly bounds: Rectangle;
-        protected _localOffset: Vector2;
-        localOffset: Vector2;
-        setLocalOffset(offset: Vector2): Collider;
-        setShouldColliderScaleAndRotateWithTransform(shouldColliderScaleAndRotationWithTransform: boolean): Collider;
-        onAddedToEntity(): void;
-        onRemovedFromEntity(): void;
-        onEntityTransformChanged(comp: transform.Component): void;
-        onEnabled(): void;
-        onDisabled(): void;
-        registerColliderWithPhysicsSystem(): void;
-        unregisterColliderWithPhysicsSystem(): void;
-        overlaps(other: Collider): boolean;
-        collidesWith(collider: Collider, motion: Vector2, result: CollisionResult): boolean;
-    }
-}
-declare module es {
-    class BoxCollider extends Collider {
-        hollowShape: egret.Shape;
-        polygonShape: egret.Shape;
-        pixelShape1: egret.Shape;
-        pixelShape2: egret.Shape;
-        constructor(x?: number, y?: number, width?: number, height?: number);
-        width: number;
-        height: number;
-        setSize(width: number, height: number): this;
-        setWidth(width: number): BoxCollider;
-        setHeight(height: number): void;
-        debugRender(camera: Camera): void;
-        toString(): string;
-    }
-}
-declare module es {
-    class CircleCollider extends Collider {
-        private rectShape;
-        private circleShape;
-        private pixelShape1;
-        private pixelShape2;
-        constructor(radius?: number);
-        radius: number;
-        setRadius(radius: number): CircleCollider;
-        debugRender(camera: Camera): void;
-        toString(): string;
-    }
-}
-declare module es {
-    class PolygonCollider extends Collider {
-        constructor(points: Vector2[]);
     }
 }
 declare module es {
@@ -1473,6 +1494,50 @@ declare module es {
     }
 }
 declare module es {
+    class SpatialHash {
+        gridBounds: Rectangle;
+        _raycastParser: RaycastResultParser;
+        _cellSize: number;
+        _inverseCellSize: number;
+        _overlapTestCircle: Circle;
+        _cellDict: NumberDictionary;
+        _tempHashSet: Collider[];
+        constructor(cellSize?: number);
+        register(collider: Collider): void;
+        remove(collider: Collider): void;
+        removeWithBruteForce(obj: Collider): void;
+        clear(): void;
+        debugDraw(secondsToDisplay: number, textScale?: number): void;
+        aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
+        linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number): number;
+        overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: any): number;
+        private cellCoords;
+        private cellAtPosition;
+        private debugDrawCellDetails;
+    }
+    class NumberDictionary {
+        _store: Map<string, Collider[]>;
+        add(x: number, y: number, list: Collider[]): void;
+        remove(obj: Collider): void;
+        tryGetValue(x: number, y: number): Collider[];
+        getKey(x: number, y: number): string;
+        clear(): void;
+    }
+    class RaycastResultParser {
+        hitCounter: number;
+        static compareRaycastHits: (a: RaycastHit, b: RaycastHit) => number;
+        _hits: RaycastHit[];
+        _tempHit: RaycastHit;
+        _checkedColliders: Collider[];
+        _cellHits: RaycastHit[];
+        _ray: Ray2D;
+        _layerMask: number;
+        start(ray: Ray2D, hits: RaycastHit[], layerMask: number): void;
+        checkRayIntersection(cellX: number, cellY: number, cell: Collider[]): boolean;
+        reset(): void;
+    }
+}
+declare module es {
     abstract class Shape {
         position: Vector2;
         center: Vector2;
@@ -1579,47 +1644,60 @@ declare module es {
     }
 }
 declare module es {
-    class SpatialHash {
-        gridBounds: Rectangle;
-        _raycastParser: RaycastResultParser;
-        _cellSize: number;
-        _inverseCellSize: number;
-        _overlapTestCircle: Circle;
-        _cellDict: NumberDictionary;
-        _tempHashSet: Collider[];
-        constructor(cellSize?: number);
-        register(collider: Collider): void;
-        remove(collider: Collider): void;
-        removeWithBruteForce(obj: Collider): void;
-        clear(): void;
-        debugDraw(secondsToDisplay: number, textScale?: number): void;
-        aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
-        linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number): number;
-        overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: any): number;
-        private cellCoords;
-        private cellAtPosition;
-        private debugDrawCellDetails;
+    class Particle {
+        position: Vector2;
+        lastPosition: Vector2;
+        mass: number;
+        radius: number;
+        collidesWithColliders: boolean;
+        isPinned: boolean;
+        acceleration: Vector2;
+        pinnedPosition: Vector2;
+        applyForce(force: Vector2): void;
     }
-    class NumberDictionary {
-        _store: Map<string, Collider[]>;
-        add(x: number, y: number, list: Collider[]): void;
-        remove(obj: Collider): void;
-        tryGetValue(x: number, y: number): Collider[];
-        getKey(x: number, y: number): string;
-        clear(): void;
+}
+declare module es {
+    class VerletWorld {
+        gravity: Vector2;
+        constraintIterations: number;
+        maximumStepIterations: number;
+        simulationBounds?: Rectangle;
+        allowDragging: boolean;
+        _composites: Composite[];
+        static _colliders: Collider[];
+        _tempCircle: Circle;
+        _leftOverTime: number;
+        _fixedDeltaTime: number;
+        _iterationSteps: number;
+        _fixedDeltaTimeSq: number;
+        constructor(simulationBounds?: Rectangle);
+        update(): void;
+        handleCollisions(p: Particle, collidesWithLayers: number): void;
+        constrainParticleToBounds(p: Particle): void;
+        updateTiming(): void;
+        addComposite<T extends Composite>(composite: T): T;
+        removeComposite(composite: Composite): void;
+        handleDragging(): void;
+        debugRender(camera: Camera): void;
     }
-    class RaycastResultParser {
-        hitCounter: number;
-        static compareRaycastHits: (a: RaycastHit, b: RaycastHit) => number;
-        _hits: RaycastHit[];
-        _tempHit: RaycastHit;
-        _checkedColliders: Collider[];
-        _cellHits: RaycastHit[];
-        _ray: Ray2D;
-        _layerMask: number;
-        start(ray: Ray2D, hits: RaycastHit[], layerMask: number): void;
-        checkRayIntersection(cellX: number, cellY: number, cell: Collider[]): boolean;
-        reset(): void;
+}
+declare module es {
+    class Composite {
+        friction: Vector2;
+        collidesWithLayers: number;
+        particles: Particle[];
+        _constraints: Constraint[];
+        solveConstraints(): void;
+        updateParticles(deltaTimeSquared: number, gravity: Vector2): void;
+        handleConstraintCollisions(): void;
+        debugRender(camera: Camera): void;
+    }
+}
+declare module es {
+    abstract class Constraint {
+        collidesWithColliders: boolean;
+        abstract solve(): any;
+        handleCollisions(collidesWithLayers: number): void;
     }
 }
 declare module es {
@@ -2295,7 +2373,7 @@ declare module es {
 }
 declare module es {
     class CoroutineImpl implements ICoroutine, IPoolable {
-        enumerator: IEnumerator;
+        enumerator: Iterator<any>;
         waitTimer: number;
         isDone: boolean;
         waitForCoroutine: CoroutineImpl;
@@ -2305,16 +2383,11 @@ declare module es {
         prepareForuse(): void;
         reset(): void;
     }
-    interface IEnumerator {
-        current: any;
-        moveNext(): boolean;
-        reset(): any;
-    }
     class CoroutineManager extends GlobalManager {
         _isInUpdate: boolean;
         _unblockedCoroutines: CoroutineImpl[];
         _shouldRunNextFrame: CoroutineImpl[];
-        startCoroutine(enumerator: IEnumerator): CoroutineImpl;
+        startCoroutine(enumerator: Iterator<any>): CoroutineImpl;
         update(): void;
         tickCoroutine(coroutine: CoroutineImpl): boolean;
     }
