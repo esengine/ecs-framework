@@ -24,7 +24,10 @@ module es {
             while (frontier.count > 0) {
                 let current = frontier.dequeue();
 
-                if (JSON.stringify(current.data) == JSON.stringify(goal)) {
+                if (current.data instanceof Vector2 && goal instanceof Vector2 && current.data.equals(goal)) {
+                    foundPath = true;
+                    break;
+                } else if (current.data == goal){
                     foundPath = true;
                     break;
                 }
@@ -68,7 +71,9 @@ module es {
             let iterator = map.keys();
             let r: IteratorResult<T>;
             while (r = iterator.next() , !r.done) {
-                if (JSON.stringify(r.value) == JSON.stringify(compareKey))
+                if (r.value instanceof Vector2 && compareKey instanceof Vector2 && r.value.equals(compareKey))
+                    return true;
+                else if (r.value == compareKey)
                     return true;
             }
 
@@ -81,7 +86,9 @@ module es {
             let r: IteratorResult<T>;
             let v: IteratorResult<T>;
             while (r = iterator.next(), v = valueIterator.next(), !r.done) {
-                if (JSON.stringify(r.value) == JSON.stringify(compareKey))
+                if (r.value instanceof Vector2 && compareKey instanceof Vector2 && r.value.equals(compareKey))
+                    return v.value;
+                else if (r.value == compareKey)
                     return v.value;
             }
 

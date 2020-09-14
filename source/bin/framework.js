@@ -309,7 +309,11 @@ var es;
             costSoFar.set(start, 0);
             var _loop_2 = function () {
                 var current = frontier.dequeue();
-                if (JSON.stringify(current.data) == JSON.stringify(goal)) {
+                if (current.data instanceof es.Vector2 && goal instanceof es.Vector2 && current.data.equals(goal)) {
+                    foundPath = true;
+                    return "break";
+                }
+                else if (current.data == goal) {
                     foundPath = true;
                     return "break";
                 }
@@ -345,7 +349,9 @@ var es;
             var iterator = map.keys();
             var r;
             while (r = iterator.next(), !r.done) {
-                if (JSON.stringify(r.value) == JSON.stringify(compareKey))
+                if (r.value instanceof es.Vector2 && compareKey instanceof es.Vector2 && r.value.equals(compareKey))
+                    return true;
+                else if (r.value == compareKey)
                     return true;
             }
             return false;
@@ -356,7 +362,9 @@ var es;
             var r;
             var v;
             while (r = iterator.next(), v = valueIterator.next(), !r.done) {
-                if (JSON.stringify(r.value) == JSON.stringify(compareKey))
+                if (r.value instanceof es.Vector2 && compareKey instanceof es.Vector2 && r.value.equals(compareKey))
+                    return v.value;
+                else if (r.value == compareKey)
                     return v.value;
             }
             return null;
@@ -397,7 +405,7 @@ var es;
             return 0 <= node.x && node.x < this._width && 0 <= node.y && node.y < this._height;
         };
         AstarGridGraph.prototype.isNodePassable = function (node) {
-            return !this.walls.firstOrDefault(function (wall) { return JSON.stringify(wall) == JSON.stringify(node); });
+            return !this.walls.firstOrDefault(function (wall) { return wall.equals(node); });
         };
         AstarGridGraph.prototype.search = function (start, goal) {
             return es.AStarPathfinder.search(this, start, goal);
@@ -413,7 +421,7 @@ var es;
             return this._neighbors;
         };
         AstarGridGraph.prototype.cost = function (from, to) {
-            return this.weightedNodes.find(function (p) { return JSON.stringify(p) == JSON.stringify(to); }) ? this.weightedNodeWeight : this.defaultWeight;
+            return this.weightedNodes.find(function (p) { return p.equals(to); }) ? this.weightedNodeWeight : this.defaultWeight;
         };
         AstarGridGraph.prototype.heuristic = function (node, goal) {
             return Math.abs(node.x - goal.x) + Math.abs(node.y - goal.y);

@@ -38,7 +38,7 @@ module es {
          * @param node
          */
         public isNodePassable(node: Vector2): boolean {
-            return !this.walls.firstOrDefault(wall => JSON.stringify(wall) == JSON.stringify(node));
+            return !this.walls.firstOrDefault(wall => wall.equals(node));
         }
 
         /**
@@ -63,7 +63,7 @@ module es {
         }
 
         public cost(from: Vector2, to: Vector2): number {
-            return this.weightedNodes.find((p) => JSON.stringify(p) == JSON.stringify(to)) ? this.weightedNodeWeight : this.defaultWeight;
+            return this.weightedNodes.find((p) => p.equals(to)) ? this.weightedNodeWeight : this.defaultWeight;
         }
 
         public heuristic(node: Vector2, goal: Vector2) {
