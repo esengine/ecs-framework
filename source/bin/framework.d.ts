@@ -868,6 +868,23 @@ declare module es {
     }
 }
 declare module es {
+    import Bitmap = egret.Bitmap;
+    class StaticSpriteContainerRenderer extends RenderableComponent {
+        displayObject: egret.DisplayObjectContainer;
+        private displayObjectCache;
+        constructor(sprite?: Sprite[] | egret.Texture[]);
+        readonly bounds: Rectangle;
+        originNormalized: Vector2;
+        protected _origin: Vector2;
+        origin: Vector2;
+        pushSprite(sprite: Sprite): StaticSpriteContainerRenderer;
+        getSprite(sprite: Sprite): Bitmap;
+        setOrigin(origin: Vector2): StaticSpriteContainerRenderer;
+        setOriginNormalized(value: Vector2): StaticSpriteContainerRenderer;
+        render(camera: Camera): void;
+    }
+}
+declare module es {
     class TiledMapRenderer extends RenderableComponent {
         tiledMap: TmxMap;
         physicsLayer: Ref<number>;
