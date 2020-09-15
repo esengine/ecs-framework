@@ -33,6 +33,7 @@ module es {
         public _renderers: Renderer[] = [];
         public readonly _postProcessors: PostProcessor[] = [];
         public _didSceneBegin;
+        public dynamicBatch: boolean = false;
 
         constructor() {
             super();
@@ -186,6 +187,35 @@ module es {
             for (let i = 0; i < this._renderers.length; i++) {
                 this.camera.forceMatrixUpdate();
                 this._renderers[i].render(this);
+            }
+        }
+
+        /**
+         * 动态合批
+         */
+        public dynamicInBatch(){
+            this.removeChildren();
+            let batching = false;
+            let displayContainer: egret.DisplayObjectContainer;
+            for (let component of this.renderableComponents.buffer){
+                if (component instanceof SpriteAnimator){
+                    // 动态
+                    this.addChild(component.displayObject);
+                    this.addChild(component.debugDisplayObject);
+                    batching = false;
+                    displayContainer = null;
+                } else if (component instanceof RenderableComponent) {
+                    // 静态
+                    if (!batching){
+                        batching = true;
+                        displayContainer = new egret.DisplayObjectContainer();
+                        displayContainer.cacheAsBitmap = true;
+                        this.addChild(displayContainer);
+                    }
+
+                    displayContainer.addChild(component.displayObject);
+                    displayContainer.addChild(component.debugDisplayObject);
+                }
             }
         }
 

@@ -364,6 +364,7 @@ declare module es {
         _renderers: Renderer[];
         readonly _postProcessors: PostProcessor[];
         _didSceneBegin: any;
+        dynamicBatch: boolean;
         constructor();
         static createWithDefaultRenderer(): Scene;
         initialize(): void;
@@ -376,6 +377,7 @@ declare module es {
         updateResolutionScaler(): void;
         update(): void;
         render(): void;
+        dynamicInBatch(): void;
         postRender(): void;
         requestScreenshot(callback: Function): void;
         addSceneComponent<T extends SceneComponent>(component: T): T;
