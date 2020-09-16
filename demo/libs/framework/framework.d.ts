@@ -365,6 +365,7 @@ declare module es {
         readonly _postProcessors: PostProcessor[];
         _didSceneBegin: any;
         dynamicBatch: boolean;
+        optimizeCost: boolean;
         constructor();
         static createWithDefaultRenderer(): Scene;
         initialize(): void;
@@ -378,6 +379,7 @@ declare module es {
         update(): void;
         render(): void;
         dynamicInBatch(): void;
+        private optimizeCombine;
         postRender(): void;
         requestScreenshot(callback: Function): void;
         addSceneComponent<T extends SceneComponent>(component: T): T;

@@ -103,7 +103,7 @@ module es {
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
             }
-            this._entity.scene.dynamicInBatch();
+            if (this._entity.scene.dynamicBatch) this._entity.scene.dynamicInBatch();
         }
 
         /**
@@ -134,7 +134,7 @@ module es {
                     this._components.push(component);
                     this._tempBufferList.push(component);
                 }
-                this._entity.scene.dynamicInBatch();
+                if (this._entity.scene.dynamicBatch) this._entity.scene.dynamicInBatch();
 
                 // 在调用onAddedToEntity之前清除，以防添加更多组件
                 this._componentsToAdd.length = 0;

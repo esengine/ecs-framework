@@ -90,6 +90,7 @@ module es {
                 this.displayObject.anchorOffsetY = this._origin.y;
             }
             this.displayObject = new Bitmap(sprite.texture2D);
+            this.displayObject.touchEnabled = false;
 
             return this;
         }
@@ -99,7 +100,7 @@ module es {
          * @param origin
          */
         public setOrigin(origin: Vector2): SpriteRenderer {
-            if (this._origin != origin) {
+            if (!this._origin.equals(origin)) {
                 this._origin = origin;
                 this.displayObject.anchorOffsetX = this._origin.x;
                 this.displayObject.anchorOffsetY = this._origin.y;
@@ -123,8 +124,8 @@ module es {
         public render(camera: Camera) {
             this.sync(camera);
 
-            if (this.displayObject.x != this.bounds.x - camera.bounds.x) this.displayObject.x = this.bounds.x - camera.bounds.x;
-            if (this.displayObject.y != this.bounds.y - camera.bounds.y) this.displayObject.y = this.bounds.y - camera.bounds.y;
+            if (this.displayObject.x != this.bounds.x - camera.bounds.x + this._origin.x) this.displayObject.x = this.bounds.x - camera.bounds.x + this._origin.x;
+            if (this.displayObject.y != this.bounds.y - camera.bounds.y + this._origin.y) this.displayObject.y = this.bounds.y - camera.bounds.y + this._origin.y;
         }
     }
 }

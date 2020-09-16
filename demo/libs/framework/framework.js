@@ -1629,6 +1629,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Bitmap = egret.Bitmap;
     var Scene = (function (_super) {
         __extends(Scene, _super);
         function Scene() {
@@ -1638,6 +1639,7 @@ var es;
             _this._renderers = [];
             _this._postProcessors = [];
             _this.dynamicBatch = false;
+            _this.optimizeCost = false;
             _this.entities = new es.EntityList(_this);
             _this.renderableComponents = new es.RenderableComponentList();
             _this.content = new es.ContentManager();
@@ -1747,6 +1749,8 @@ var es;
                     this.addChild(component.displayObject);
                     this.addChild(component.debugDisplayObject);
                     batching = false;
+                    if (this.optimizeCost && displayContainer)
+                        this.optimizeCombine(displayContainer);
                     displayContainer = null;
                 }
                 else if (component instanceof es.RenderableComponent) {
@@ -1754,12 +1758,25 @@ var es;
                         batching = true;
                         displayContainer = new egret.DisplayObjectContainer();
                         displayContainer.cacheAsBitmap = true;
+                        displayContainer.touchEnabled = false;
+                        displayContainer.touchChildren = false;
                         this.addChild(displayContainer);
                     }
                     displayContainer.addChild(component.displayObject);
                     displayContainer.addChild(component.debugDisplayObject);
                 }
             }
+            if (this.optimizeCost && displayContainer)
+                this.optimizeCombine(displayContainer);
+        };
+        Scene.prototype.optimizeCombine = function (container) {
+            var renderTexture = new egret.RenderTexture();
+            renderTexture.drawToTexture(container, new es.Rectangle(0, 0, container.width, container.height));
+            var parent = container.parent;
+            var index = this.getChildIndex(container);
+            parent.addChildAt(new Bitmap(renderTexture), index);
+            parent.removeChild(container);
+            container.removeChildren();
         };
         Scene.prototype.postRender = function () {
             if (this.enablePostProcessing) {
@@ -3655,10 +3672,11 @@ var es;
                 this.displayObject.anchorOffsetY = this._origin.y;
             }
             this.displayObject = new Bitmap(sprite.texture2D);
+            this.displayObject.touchEnabled = false;
             return this;
         };
         SpriteRenderer.prototype.setOrigin = function (origin) {
-            if (this._origin != origin) {
+            if (!this._origin.equals(origin)) {
                 this._origin = origin;
                 this.displayObject.anchorOffsetX = this._origin.x;
                 this.displayObject.anchorOffsetY = this._origin.y;
@@ -3672,10 +3690,10 @@ var es;
         };
         SpriteRenderer.prototype.render = function (camera) {
             this.sync(camera);
-            if (this.displayObject.x != this.bounds.x - camera.bounds.x)
-                this.displayObject.x = this.bounds.x - camera.bounds.x;
-            if (this.displayObject.y != this.bounds.y - camera.bounds.y)
-                this.displayObject.y = this.bounds.y - camera.bounds.y;
+            if (this.displayObject.x != this.bounds.x - camera.bounds.x + this._origin.x)
+                this.displayObject.x = this.bounds.x - camera.bounds.x + this._origin.x;
+            if (this.displayObject.y != this.bounds.y - camera.bounds.y + this._origin.y)
+                this.displayObject.y = this.bounds.y - camera.bounds.y + this._origin.y;
         };
         return SpriteRenderer;
     }(es.RenderableComponent));
@@ -4548,7 +4566,8 @@ var es;
                 this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
             }
-            this._entity.scene.dynamicInBatch();
+            if (this._entity.scene.dynamicBatch)
+                this._entity.scene.dynamicInBatch();
         };
         ComponentList.prototype.updateLists = function () {
             if (this._componentsToRemove.length > 0) {
@@ -4573,7 +4592,8 @@ var es;
                     this._components.push(component);
                     this._tempBufferList.push(component);
                 }
-                this._entity.scene.dynamicInBatch();
+                if (this._entity.scene.dynamicBatch)
+                    this._entity.scene.dynamicInBatch();
                 this._componentsToAdd.length = 0;
                 this._isComponentListUnsorted = true;
                 for (var i = 0; i < this._tempBufferList.length; i++) {
