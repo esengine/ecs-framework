@@ -105,7 +105,7 @@ class Main extends es.Core {
 - [x] 物理系统（简易）
   - [x] Collision碰撞检测
   - [x] ColliderTrigger帮助
-  - [x] Ray2D射线检测
+  - [x] [Ray2D射线检测](https://github.com/esengine/egret-framework/wiki/Ray2D-2D%E5%B0%84%E7%BA%BF)
   - [x] ShapeCollision 多种形状检测
   - [x] RealtimeCollisions 实时碰撞检测
   - [x] SpatialHash 网格检测
