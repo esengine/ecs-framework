@@ -121,7 +121,7 @@ ecs更灵活，可以更好的集中、组织、排序和过滤游戏中的对�
 
 所以ecs在设计当中拥有四种重要类型：世界（Scene），过滤器（Matcher），系统（System）和实体(Entity)
 
-## 世界（Scene）
+## [世界（Scene）](https://github.com/esengine/egret-framework/wiki/%E5%9C%BA%E6%99%AF-Scene)
 Scene是ecs包含系统和实体最外面的容器。
 
 ## 实体（Entity）
