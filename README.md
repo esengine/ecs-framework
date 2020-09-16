@@ -78,7 +78,7 @@ class Main extends es.Core {
   - [x] base64扩展
   - [x] Stopwatch计数器
   - [x] Input输入帮助
-  - [x] Keyboard键盘帮助
+  - [x] [Keyboard键盘帮助](https://github.com/esengine/egret-framework/wiki/KeyboardUtils-%E9%94%AE%E7%9B%98%E5%B8%AE%E5%8A%A9)
   - [x] List池对象
   - [x] Lock锁帮助
   - [x] Emitter事件发射器
