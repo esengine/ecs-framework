@@ -3691,9 +3691,13 @@ var es;
         SpriteRenderer.prototype.render = function (camera) {
             this.sync(camera);
             if (this.displayObject.x != this.bounds.x - camera.bounds.x + this._origin.x)
-                this.displayObject.x = this.bounds.x - camera.bounds.x + this._origin.x;
+                this.displayObject.x = this.bounds.x - camera.bounds.x + this._origin.x * this.entity.scale.x;
             if (this.displayObject.y != this.bounds.y - camera.bounds.y + this._origin.y)
-                this.displayObject.y = this.bounds.y - camera.bounds.y + this._origin.y;
+                this.displayObject.y = this.bounds.y - camera.bounds.y + this._origin.y * this.entity.scale.y;
+            if (this.displayObject.anchorOffsetX != this._origin.x)
+                this.displayObject.anchorOffsetX = this._origin.x;
+            if (this.displayObject.anchorOffsetY != this._origin.y)
+                this.displayObject.anchorOffsetY = this._origin.y;
         };
         return SpriteRenderer;
     }(es.RenderableComponent));
