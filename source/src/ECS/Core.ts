@@ -53,6 +53,8 @@ module es {
             return this._instance;
         }
 
+        public _frameCounterElapsedTime: number = 0;
+        public _frameCounter: number = 0;
         public _scene: Scene;
 
         /**
@@ -153,6 +155,8 @@ module es {
         }
 
         public async draw() {
+            this.startDebugDraw(Time.deltaTime);
+
             if (this._sceneTransition) {
                 this._sceneTransition.preRender();
 
@@ -177,6 +181,8 @@ module es {
                 // 如果我们没有一个活跃的场景转换，就像平常一样渲染
                 this._scene.postRender();
             }
+
+            this.endDebugDraw();
         }
 
         public startDebugUpdate() {
@@ -186,6 +192,24 @@ module es {
 
         public endDebugUpdate() {
             TimeRuler.Instance.endMark("update");
+        }
+
+        public startDebugDraw(elapsedGameTime: number){
+            TimeRuler.Instance.beginMark("draw", 0xFFD700);
+
+            // fps 计数器
+            this._frameCounter ++;
+            this._frameCounterElapsedTime += elapsedGameTime;
+            if (this._frameCounterElapsedTime >= 1){
+                this._frameCounter = 0;
+                this._frameCounterElapsedTime -= 1;
+            }
+        }
+
+        public endDebugDraw(){
+            TimeRuler.Instance.endMark("draw");
+
+            TimeRuler.Instance.render();
         }
 
         /**

@@ -976,6 +976,8 @@ var es;
             _this._globalManagers = [];
             _this._coroutineManager = new es.CoroutineManager();
             _this._timerManager = new es.TimerManager();
+            _this._frameCounterElapsedTime = 0;
+            _this._frameCounter = 0;
             Core._instance = _this;
             Core.emitter = new es.Emitter();
             Core.content = new es.ContentManager();
@@ -1054,6 +1056,7 @@ var es;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
+                            this.startDebugDraw(es.Time.deltaTime);
                             if (!this._sceneTransition) return [3, 4];
                             this._sceneTransition.preRender();
                             if (!(this._scene && !this._sceneTransition.hasPreviousSceneRender)) return [3, 2];
@@ -1080,7 +1083,9 @@ var es;
                                 this._scene.postRender();
                             }
                             _a.label = 5;
-                        case 5: return [2];
+                        case 5:
+                            this.endDebugDraw();
+                            return [2];
                     }
                 });
             });
@@ -1091,6 +1096,19 @@ var es;
         };
         Core.prototype.endDebugUpdate = function () {
             es.TimeRuler.Instance.endMark("update");
+        };
+        Core.prototype.startDebugDraw = function (elapsedGameTime) {
+            es.TimeRuler.Instance.beginMark("draw", 0xFFD700);
+            this._frameCounter++;
+            this._frameCounterElapsedTime += elapsedGameTime;
+            if (this._frameCounterElapsedTime >= 1) {
+                this._frameCounter = 0;
+                this._frameCounterElapsedTime -= 1;
+            }
+        };
+        Core.prototype.endDebugDraw = function () {
+            es.TimeRuler.Instance.endMark("draw");
+            es.TimeRuler.Instance.render();
         };
         Core.prototype.onSceneChanged = function () {
             Core.emitter.emit(es.CoreEvents.SceneChanged);
@@ -10927,13 +10945,19 @@ var es;
             this._rectShape4 = new egret.Shape();
             this._rectShape5 = new egret.Shape();
             this._rectShape6 = new egret.Shape();
-            this._logs = new Array(2);
-            for (var i = 0; i < this._logs.length; ++i)
-                this._logs[i] = new FrameLog();
+            this.logs = new Array(2);
+            for (var i = 0; i < this.logs.length; ++i)
+                this.logs[i] = new FrameLog();
             this.sampleFrames = this.targetSampleFrames = 1;
             this.width = Math.floor(es.Core.graphicsDevice.viewport.width * 0.8);
             es.Core.emitter.addObserver(es.CoreEvents.GraphicsDeviceReset, this.onGraphicsDeviceReset, this);
             this.onGraphicsDeviceReset();
+            es.Core.Instance.stage.addChild(this._rectShape1);
+            es.Core.Instance.stage.addChild(this._rectShape2);
+            es.Core.Instance.stage.addChild(this._rectShape3);
+            es.Core.Instance.stage.addChild(this._rectShape4);
+            es.Core.Instance.stage.addChild(this._rectShape5);
+            es.Core.Instance.stage.addChild(this._rectShape6);
         }
         Object.defineProperty(TimeRuler, "Instance", {
             get: function () {
@@ -10947,16 +10971,15 @@ var es;
         TimeRuler.prototype.startFrame = function () {
             if (isNaN(this._updateCount))
                 this._updateCount = 0;
-            var count = this._updateCount;
-            count += 1;
+            var count = this._updateCount++;
             if (this.enabled && (1 < count && count < TimeRuler.maxSampleFrames))
                 return;
-            this._prevLog = this._logs[this.frameCount++ & 0x1];
-            this._curLog = this._logs[this.frameCount & 0x1];
+            this.prevLog = this.logs[this.frameCount++ & 0x1];
+            this.curLog = this.logs[this.frameCount & 0x1];
             var endFrameTime = this.stopwacth.getTime();
-            for (var barIndex = 0; barIndex < this._prevLog.bars.length; ++barIndex) {
-                var prevBar = this._prevLog.bars[barIndex];
-                var nextBar = this._curLog.bars[barIndex];
+            for (var barIdx = 0; barIdx < this.prevLog.bars.length; ++barIdx) {
+                var prevBar = this.prevLog.bars[barIdx];
+                var nextBar = this.curLog.bars[barIdx];
                 for (var nest = 0; nest < prevBar.nestCount; ++nest) {
                     var markerIdx = prevBar.markerNests[nest];
                     prevBar.markers[markerIdx].endTime = endFrameTime;
@@ -10970,23 +10993,23 @@ var es;
                     var duration = prevBar.markers[markerIdx].endTime - prevBar.markers[markerIdx].beginTime;
                     var markerId = prevBar.markers[markerIdx].markerId;
                     var m = this.markers[markerId];
-                    m.logs[barIndex].color = prevBar.markers[markerIdx].color;
-                    if (!m.logs[barIndex].initialized) {
-                        m.logs[barIndex].min = duration;
-                        m.logs[barIndex].max = duration;
-                        m.logs[barIndex].avg = duration;
-                        m.logs[barIndex].initialized = true;
+                    m.logs[barIdx].color = prevBar.markers[markerIdx].color;
+                    if (!m.logs[barIdx].initialized) {
+                        m.logs[barIdx].min = duration;
+                        m.logs[barIdx].max = duration;
+                        m.logs[barIdx].avg = duration;
+                        m.logs[barIdx].initialized = true;
                     }
                     else {
-                        m.logs[barIndex].min = Math.min(m.logs[barIndex].min, duration);
-                        m.logs[barIndex].max = Math.min(m.logs[barIndex].max, duration);
-                        m.logs[barIndex].avg += duration;
-                        m.logs[barIndex].avg *= 0.5;
-                        if (m.logs[barIndex].samples++ >= TimeRuler.logSnapDuration) {
-                            m.logs[barIndex].snapMin = m.logs[barIndex].min;
-                            m.logs[barIndex].snapMax = m.logs[barIndex].max;
-                            m.logs[barIndex].snapAvg = m.logs[barIndex].avg;
-                            m.logs[barIndex].samples = 0;
+                        m.logs[barIdx].min = Math.min(m.logs[barIdx].min, duration);
+                        m.logs[barIdx].max = Math.min(m.logs[barIdx].max, duration);
+                        m.logs[barIdx].avg += duration;
+                        m.logs[barIdx].avg *= 0.5;
+                        if (m.logs[barIdx].samples++ >= TimeRuler.logSnapDuration) {
+                            m.logs[barIdx].snapMin = m.logs[barIdx].min;
+                            m.logs[barIdx].snapMax = m.logs[barIdx].max;
+                            m.logs[barIdx].snapAvg = m.logs[barIdx].avg;
+                            m.logs[barIdx].samples = 0;
                         }
                     }
                 }
@@ -11000,45 +11023,47 @@ var es;
             if (barIndex === void 0) { barIndex = 0; }
             if (barIndex < 0 || barIndex >= TimeRuler.maxBars)
                 throw new Error("barIndex argument out of range");
-            var bar = this._curLog.bars[barIndex];
+            var bar = this.curLog.bars[barIndex];
             if (bar.markCount >= TimeRuler.maxSamples) {
-                throw new Error("exceeded sample count. either set larger number to timeruler.maxsaple or lower sample count");
+                throw new Error("超出采样次数，可以设置更大的数字为timeruler.maxsaple，或者降低采样次数");
             }
             if (bar.nestCount >= TimeRuler.maxNestCall) {
-                throw new Error("exceeded nest count. either set larger number to timeruler.maxnestcall or lower nest calls");
+                throw new Error("超出采样次数，可以设置更大的数字为timeruler.maxsaple，或者降低采样次数");
             }
             var markerId = this._markerNameToIdMap.get(markerName);
             if (isNaN(markerId)) {
                 markerId = this.markers.length;
                 this._markerNameToIdMap.set(markerName, markerId);
+                this.markers.push(new MarkerInfo(markerName));
             }
             bar.markerNests[bar.nestCount++] = bar.markCount;
             bar.markers[bar.markCount].markerId = markerId;
             bar.markers[bar.markCount].color = color;
             bar.markers[bar.markCount].beginTime = this.stopwacth.getTime();
             bar.markers[bar.markCount].endTime = -1;
+            bar.markCount++;
         };
         TimeRuler.prototype.endMark = function (markerName, barIndex) {
             if (barIndex === void 0) { barIndex = 0; }
             if (barIndex < 0 || barIndex >= TimeRuler.maxBars)
-                throw new Error("barIndex argument out of range");
-            var bar = this._curLog.bars[barIndex];
+                throw new Error("barIndex参数超出范围");
+            var bar = this.curLog.bars[barIndex];
             if (bar.nestCount <= 0) {
-                throw new Error("call beginMark method before calling endMark method");
+                throw new Error("先调用beginMark方法，再调用endMark方法");
             }
             var markerId = this._markerNameToIdMap.get(markerName);
             if (isNaN(markerId)) {
-                throw new Error("Marker " + markerName + " is not registered. Make sure you specifed same name as you used for beginMark method");
+                throw new Error("\u6807\u8BB0 " + markerName + " \u672A\u6CE8\u518C\u3002\u8BF7\u786E\u8BA4\u60A8\u6307\u5B9A\u7684\u540D\u79F0\u4E0E beginMark \u65B9\u6CD5\u4F7F\u7528\u7684\u540D\u79F0\u76F8\u540C");
             }
             var markerIdx = bar.markerNests[--bar.nestCount];
             if (bar.markers[markerIdx].markerId != markerId) {
-                throw new Error("Incorrect call order of beginMark/endMark method. beginMark(A), beginMark(B), endMark(B), endMark(A) But you can't called it like beginMark(A), beginMark(B), endMark(A), endMark(B).");
+                throw new Error("beginMark/endMark方法的调用顺序不正确，beginMark(A)，beginMark(B)，endMark(B)，endMark(A)，但你不能像beginMark(A)，beginMark(B)，endMark(A)，endMark(B)这样调用。");
             }
             bar.markers[markerIdx].endTime = this.stopwacth.getTime();
         };
         TimeRuler.prototype.getAverageTime = function (barIndex, markerName) {
             if (barIndex < 0 || barIndex >= TimeRuler.maxBars) {
-                throw new Error("barIndex argument out of range");
+                throw new Error("barIndex参数超出范围");
             }
             var result = 0;
             var markerId = this._markerNameToIdMap.get(markerName);
@@ -11068,7 +11093,7 @@ var es;
                 return;
             var height = 0;
             var maxTime = 0;
-            this._prevLog.bars.forEach(function (bar) {
+            this.prevLog.bars.forEach(function (bar) {
                 if (bar.markCount > 0) {
                     height += TimeRuler.barHeight + TimeRuler.barPadding * 2;
                     maxTime = Math.max(maxTime, bar.markers[bar.markCount - 1].endTime);
@@ -11097,7 +11122,7 @@ var es;
             this._rectShape1.graphics.endFill();
             rc.height = TimeRuler.barHeight;
             this._rectShape2.graphics.clear();
-            for (var _i = 0, _a = this._prevLog.bars; _i < _a.length; _i++) {
+            for (var _i = 0, _a = this.prevLog.bars; _i < _a.length; _i++) {
                 var bar = _a[_i];
                 rc.y = y + TimeRuler.barPadding;
                 if (bar.markCount > 0) {

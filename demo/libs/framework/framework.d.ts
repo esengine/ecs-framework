@@ -202,6 +202,8 @@ declare module es {
         _timerManager: TimerManager;
         constructor();
         static readonly Instance: Core;
+        _frameCounterElapsedTime: number;
+        _frameCounter: number;
         _scene: Scene;
         static scene: Scene;
         static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
@@ -214,6 +216,8 @@ declare module es {
         draw(): Promise<void>;
         startDebugUpdate(): void;
         endDebugUpdate(): void;
+        startDebugDraw(elapsedGameTime: number): void;
+        endDebugDraw(): void;
         onSceneChanged(): void;
         protected onGraphicsDeviceReset(): void;
         protected initialize(): void;
@@ -2317,11 +2321,11 @@ declare module es {
         width: number;
         enabled: true;
         showLog: boolean;
-        private _logs;
+        logs: FrameLog[];
         private sampleFrames;
         private _position;
-        private _prevLog;
-        private _curLog;
+        private prevLog;
+        private curLog;
         private frameCount;
         private markers;
         private stopwacth;
