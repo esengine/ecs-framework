@@ -228,6 +228,7 @@ module es {
         }
 
         protected initialize() {
+            Graphics.Instance = new Graphics();
         }
 
         protected async update() {

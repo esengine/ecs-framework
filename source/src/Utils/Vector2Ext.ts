@@ -10,6 +10,10 @@ module es {
             return this.cross(Vector2.subtract(center, a), Vector2.subtract(c, center)) < 0;
         }
 
+        public static halfVector(): Vector2 {
+            return new Vector2(0.5, 0.5);
+        }
+
         /**
          * 计算二维伪叉乘点(Perp(u)， v)
          * @param u
