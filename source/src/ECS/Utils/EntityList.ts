@@ -22,10 +22,11 @@ module es {
          */
         public _entityDict: Map<number, Entity[]> = new Map<number, Entity[]>();
         public _unsortedTags: number[] = [];
-        /**
-         * 在updateLists中用于双缓冲区，以便可以在其他地方修改原始列表
-         */
-        public _tempEntityList: Entity[] = [];
+        public _addToSceneEntityList: Entity[] = [];
+        /** 是否使用分帧处理 */
+        public frameAllocate: boolean = false;
+        /** 每帧最大处理数量 */
+        public maxAllocate: number = 10;
 
         constructor(scene: Scene) {
             this.scene = scene;
@@ -103,7 +104,8 @@ module es {
          * @param entity
          */
         public contains(entity: Entity): boolean {
-            return this._entities.contains(entity) || this._entitiesToAdded.contains(entity);
+            return this._entities.findIndex(e => e.id == entity.id) != -1 ||
+                this._entitiesToAdded.findIndex(e => e.id == entity.id) != -1;
         }
 
         public getTagList(tag: number) {
@@ -113,14 +115,15 @@ module es {
                 this._entityDict.set(tag, list);
             }
 
-            return this._entityDict.get(tag);
+            return list;
         }
 
         public addToTagList(entity: Entity) {
             let list = this.getTagList(entity.tag);
-            if (!list.contains(entity)) {
+            if (list.findIndex(e => e.id == entity.id) == -1) {
                 list.push(entity);
-                this._unsortedTags.push(entity.tag);
+                if (!this._unsortedTags.contains(entity.tag))
+                    this._unsortedTags.push(entity.tag);
             }
         }
 
@@ -141,10 +144,7 @@ module es {
 
         public updateLists() {
             if (this._entitiesToRemove.length > 0) {
-                let temp = this._entitiesToRemove;
-                this._entitiesToRemove = this._tempEntityList;
-                this._tempEntityList = temp;
-                for (const entity of this._tempEntityList) {
+                for (const entity of this._entitiesToRemove) {
                     this.removeFromTagList(entity);
 
                     this._entities.remove(entity);
@@ -154,30 +154,30 @@ module es {
                     this.scene.entityProcessors.onEntityRemoved(entity);
                 }
 
-                this._tempEntityList.length = 0;
+                this._entitiesToRemove.length = 0;
+            }
+
+            // 现在所有实体都被添加到场景中，我们再次循环并调用onAddedToScene
+            while (this._addToSceneEntityList.length > 0){
+                let entity = this._addToSceneEntityList.shift();
+                entity.onAddedToScene();
             }
 
             if (this._entitiesToAdded.length > 0) {
-                let temp = this._entitiesToAdded;
-                this._entitiesToAdded = this._tempEntityList;
-                this._tempEntityList = temp;
-                for (const entity of this._tempEntityList) {
-                    if (!this._entities.contains(entity)) {
-                        this._entities.push(entity);
-                        entity.scene = this.scene;
-
-                        this.addToTagList(entity);
-
-                        this.scene.entityProcessors.onEntityAdded(entity)
+                if (this.frameAllocate && this._entitiesToAdded.length > this.maxAllocate){
+                    // 启用分帧处理
+                    for (let i = 0; i < this.maxAllocate; i ++){
+                        this.perEntityAddToScene();
                     }
-                }
 
-                // 现在所有实体都被添加到场景中，我们再次循环并调用onAddedToScene
-                for (const entity of this._tempEntityList) {
-                    entity.onAddedToScene();
+                    if (this._entitiesToAdded.length == 0) this._isEntityListUnsorted = true;
+                }else{
+                    while (this._entitiesToAdded.length > 0){
+                        this.perEntityAddToScene();
+                    }
+
+                    this._isEntityListUnsorted = true;
                 }
-                this._tempEntityList.length = 0;
-                this._isEntityListUnsorted = true;
             }
 
             if (this._isEntityListUnsorted) {
@@ -187,7 +187,7 @@ module es {
                 this._isEntityListUnsorted = false;
             }
 
-            if (this._unsortedTags.length > 0) {
+            if (this._addToSceneEntityList.length == 0 && this._unsortedTags.length > 0) {
                 for (const tag of this._unsortedTags) {
                     this._entityDict.get(tag).sort((a, b) => {
                         return a.compareTo(b);
@@ -195,6 +195,21 @@ module es {
                 }
 
                 this._unsortedTags.length = 0;
+            }
+        }
+
+        /** 每次添加一个实体到场景 */
+        private perEntityAddToScene(){
+            let entity = this._entitiesToAdded.shift();
+            this._addToSceneEntityList.push(entity);
+
+            if (this._entities.findIndex(e => e.id == entity.id) == -1) {
+                this._entities.push(entity);
+                entity.scene = this.scene;
+
+                this.addToTagList(entity);
+
+                this.scene.entityProcessors.onEntityAdded(entity);
             }
         }
 

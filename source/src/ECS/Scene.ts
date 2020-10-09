@@ -413,16 +413,6 @@ module es {
         }
 
         /**
-         * 将实体添加到此场景，并返回它
-         * @param name
-         */
-        public createEntityAsync(name: string): Promise<Entity> {
-            return new Promise<Entity>(resolve => {
-                resolve(this.createEntity(name));
-            });
-        }
-
-        /**
          * 在场景的实体列表中添加一个实体
          * @param entity
          */

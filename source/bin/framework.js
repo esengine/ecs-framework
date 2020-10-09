@@ -1889,12 +1889,6 @@ var es;
             var entity = new es.Entity(name);
             return this.addEntity(entity);
         };
-        Scene.prototype.createEntityAsync = function (name) {
-            var _this = this;
-            return new Promise(function (resolve) {
-                resolve(_this.createEntity(name));
-            });
-        };
         Scene.prototype.addEntity = function (entity) {
             if (this.entities.buffer.contains(entity))
                 console.warn("\u60A8\u8BD5\u56FE\u5C06\u540C\u4E00\u5B9E\u4F53\u6DFB\u52A0\u5230\u573A\u666F\u4E24\u6B21: " + entity);
@@ -4762,7 +4756,9 @@ var es;
             this._entitiesToRemove = [];
             this._entityDict = new Map();
             this._unsortedTags = [];
-            this._tempEntityList = [];
+            this._addToSceneEntityList = [];
+            this.frameAllocate = false;
+            this.maxAllocate = 10;
             this.scene = scene;
         }
         Object.defineProperty(EntityList.prototype, "count", {
@@ -4815,7 +4811,8 @@ var es;
             this._entityDict.clear();
         };
         EntityList.prototype.contains = function (entity) {
-            return this._entities.contains(entity) || this._entitiesToAdded.contains(entity);
+            return this._entities.findIndex(function (e) { return e.id == entity.id; }) != -1 ||
+                this._entitiesToAdded.findIndex(function (e) { return e.id == entity.id; }) != -1;
         };
         EntityList.prototype.getTagList = function (tag) {
             var list = this._entityDict.get(tag);
@@ -4823,13 +4820,14 @@ var es;
                 list = [];
                 this._entityDict.set(tag, list);
             }
-            return this._entityDict.get(tag);
+            return list;
         };
         EntityList.prototype.addToTagList = function (entity) {
             var list = this.getTagList(entity.tag);
-            if (!list.contains(entity)) {
+            if (list.findIndex(function (e) { return e.id == entity.id; }) == -1) {
                 list.push(entity);
-                this._unsortedTags.push(entity.tag);
+                if (!this._unsortedTags.contains(entity.tag))
+                    this._unsortedTags.push(entity.tag);
             }
         };
         EntityList.prototype.removeFromTagList = function (entity) {
@@ -4847,10 +4845,7 @@ var es;
         };
         EntityList.prototype.updateLists = function () {
             if (this._entitiesToRemove.length > 0) {
-                var temp = this._entitiesToRemove;
-                this._entitiesToRemove = this._tempEntityList;
-                this._tempEntityList = temp;
-                for (var _i = 0, _a = this._tempEntityList; _i < _a.length; _i++) {
+                for (var _i = 0, _a = this._entitiesToRemove; _i < _a.length; _i++) {
                     var entity = _a[_i];
                     this.removeFromTagList(entity);
                     this._entities.remove(entity);
@@ -4858,27 +4853,26 @@ var es;
                     entity.scene = null;
                     this.scene.entityProcessors.onEntityRemoved(entity);
                 }
-                this._tempEntityList.length = 0;
+                this._entitiesToRemove.length = 0;
+            }
+            while (this._addToSceneEntityList.length > 0) {
+                var entity = this._addToSceneEntityList.shift();
+                entity.onAddedToScene();
             }
             if (this._entitiesToAdded.length > 0) {
-                var temp = this._entitiesToAdded;
-                this._entitiesToAdded = this._tempEntityList;
-                this._tempEntityList = temp;
-                for (var _b = 0, _c = this._tempEntityList; _b < _c.length; _b++) {
-                    var entity = _c[_b];
-                    if (!this._entities.contains(entity)) {
-                        this._entities.push(entity);
-                        entity.scene = this.scene;
-                        this.addToTagList(entity);
-                        this.scene.entityProcessors.onEntityAdded(entity);
+                if (this.frameAllocate && this._entitiesToAdded.length > this.maxAllocate) {
+                    for (var i = 0; i < this.maxAllocate; i++) {
+                        this.perEntityAddToScene();
                     }
+                    if (this._entitiesToAdded.length == 0)
+                        this._isEntityListUnsorted = true;
                 }
-                for (var _d = 0, _e = this._tempEntityList; _d < _e.length; _d++) {
-                    var entity = _e[_d];
-                    entity.onAddedToScene();
+                else {
+                    while (this._entitiesToAdded.length > 0) {
+                        this.perEntityAddToScene();
+                    }
+                    this._isEntityListUnsorted = true;
                 }
-                this._tempEntityList.length = 0;
-                this._isEntityListUnsorted = true;
             }
             if (this._isEntityListUnsorted) {
                 this._entities.sort(function (a, b) {
@@ -4886,14 +4880,24 @@ var es;
                 });
                 this._isEntityListUnsorted = false;
             }
-            if (this._unsortedTags.length > 0) {
-                for (var _f = 0, _g = this._unsortedTags; _f < _g.length; _f++) {
-                    var tag = _g[_f];
+            if (this._addToSceneEntityList.length == 0 && this._unsortedTags.length > 0) {
+                for (var _b = 0, _c = this._unsortedTags; _b < _c.length; _b++) {
+                    var tag = _c[_b];
                     this._entityDict.get(tag).sort(function (a, b) {
                         return a.compareTo(b);
                     });
                 }
                 this._unsortedTags.length = 0;
+            }
+        };
+        EntityList.prototype.perEntityAddToScene = function () {
+            var entity = this._entitiesToAdded.shift();
+            this._addToSceneEntityList.push(entity);
+            if (this._entities.findIndex(function (e) { return e.id == entity.id; }) == -1) {
+                this._entities.push(entity);
+                entity.scene = this.scene;
+                this.addToTagList(entity);
+                this.scene.entityProcessors.onEntityAdded(entity);
             }
         };
         EntityList.prototype.findEntity = function (name) {

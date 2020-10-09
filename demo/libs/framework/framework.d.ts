@@ -397,7 +397,6 @@ declare module es {
         getPostProcessor<T extends PostProcessor>(type: any): T;
         removePostProcessor(postProcessor: PostProcessor): void;
         createEntity(name: string): Entity;
-        createEntityAsync(name: string): Promise<Entity>;
         addEntity(entity: Entity): Entity;
         destroyAllEntities(): void;
         findEntity(name: string): Entity;
@@ -1024,7 +1023,9 @@ declare module es {
         _isEntityListUnsorted: boolean;
         _entityDict: Map<number, Entity[]>;
         _unsortedTags: number[];
-        _tempEntityList: Entity[];
+        _addToSceneEntityList: Entity[];
+        frameAllocate: boolean;
+        maxAllocate: number;
         constructor(scene: Scene);
         readonly count: number;
         readonly buffer: Entity[];
@@ -1039,6 +1040,7 @@ declare module es {
         removeFromTagList(entity: Entity): void;
         update(): void;
         updateLists(): void;
+        private perEntityAddToScene;
         findEntity(name: string): Entity;
         entitiesWithTag(tag: number): Entity[];
         entitiesOfType<T extends Entity>(type: any): T[];
