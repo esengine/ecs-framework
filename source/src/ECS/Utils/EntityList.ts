@@ -144,7 +144,7 @@ module es {
                 let temp = this._entitiesToRemove;
                 this._entitiesToRemove = this._tempEntityList;
                 this._tempEntityList = temp;
-                this._tempEntityList.forEach(entity => {
+                for (const entity of this._tempEntityList) {
                     this.removeFromTagList(entity);
 
                     this._entities.remove(entity);
@@ -152,7 +152,7 @@ module es {
                     entity.scene = null;
 
                     this.scene.entityProcessors.onEntityRemoved(entity);
-                });
+                }
 
                 this._tempEntityList.length = 0;
             }
@@ -161,7 +161,7 @@ module es {
                 let temp = this._entitiesToAdded;
                 this._entitiesToAdded = this._tempEntityList;
                 this._tempEntityList = temp;
-                this._tempEntityList.forEach(entity => {
+                for (const entity of this._tempEntityList) {
                     if (!this._entities.contains(entity)) {
                         this._entities.push(entity);
                         entity.scene = this.scene;
@@ -170,23 +170,29 @@ module es {
 
                         this.scene.entityProcessors.onEntityAdded(entity)
                     }
-                });
+                }
 
                 // 现在所有实体都被添加到场景中，我们再次循环并调用onAddedToScene
-                this._tempEntityList.forEach(entity => entity.onAddedToScene());
+                for (const entity of this._tempEntityList) {
+                    entity.onAddedToScene();
+                }
                 this._tempEntityList.length = 0;
                 this._isEntityListUnsorted = true;
             }
 
             if (this._isEntityListUnsorted) {
-                this._entities.sort();
+                this._entities.sort((a, b)=>{
+                    return a.compareTo(b);
+                });
                 this._isEntityListUnsorted = false;
             }
 
             if (this._unsortedTags.length > 0) {
-                this._unsortedTags.forEach(tag => {
-                    this._entityDict.get(tag).sort();
-                });
+                for (const tag of this._unsortedTags) {
+                    this._entityDict.get(tag).sort((a, b) => {
+                        return a.compareTo(b);
+                    });
+                }
 
                 this._unsortedTags.length = 0;
             }
@@ -229,10 +235,10 @@ module es {
                 if (this._entities[i] instanceof type)
                     list.push(this._entities[i] as T);
             }
-            this._entitiesToAdded.forEach(entity => {
+            for (const entity of this._entitiesToAdded) {
                 if (entity instanceof type)
                     list.push(entity as T);
-            });
+            }
 
             return list;
         }

@@ -1170,6 +1170,13 @@ declare class TimeUtils {
     static timeToMillisecond(time: string, partition?: string): string;
 }
 declare module es {
+    class Graphics {
+        static Instance: Graphics;
+        pixelTexture: Sprite;
+        constructor();
+    }
+}
+declare module es {
     class GraphicsCapabilities extends egret.Capabilities {
         initialize(device: GraphicsDevice): void;
         private platformInitialize;
@@ -2229,6 +2236,7 @@ declare module es {
 declare module es {
     class Vector2Ext {
         static isTriangleCCW(a: Vector2, center: Vector2, c: Vector2): boolean;
+        static halfVector(): Vector2;
         static cross(u: Vector2, v: Vector2): number;
         static perpendicular(first: Vector2, second: Vector2): Vector2;
         static normalize(vec: Vector2): void;

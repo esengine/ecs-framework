@@ -1118,6 +1118,7 @@ var es;
             Core.emitter.emit(es.CoreEvents.GraphicsDeviceReset);
         };
         Core.prototype.initialize = function () {
+            es.Graphics.Instance = new es.Graphics();
         };
         Core.prototype.update = function () {
             return __awaiter(this, void 0, void 0, function () {
@@ -4845,44 +4846,53 @@ var es;
             }
         };
         EntityList.prototype.updateLists = function () {
-            var _this = this;
             if (this._entitiesToRemove.length > 0) {
                 var temp = this._entitiesToRemove;
                 this._entitiesToRemove = this._tempEntityList;
                 this._tempEntityList = temp;
-                this._tempEntityList.forEach(function (entity) {
-                    _this.removeFromTagList(entity);
-                    _this._entities.remove(entity);
+                for (var _i = 0, _a = this._tempEntityList; _i < _a.length; _i++) {
+                    var entity = _a[_i];
+                    this.removeFromTagList(entity);
+                    this._entities.remove(entity);
                     entity.onRemovedFromScene();
                     entity.scene = null;
-                    _this.scene.entityProcessors.onEntityRemoved(entity);
-                });
+                    this.scene.entityProcessors.onEntityRemoved(entity);
+                }
                 this._tempEntityList.length = 0;
             }
             if (this._entitiesToAdded.length > 0) {
                 var temp = this._entitiesToAdded;
                 this._entitiesToAdded = this._tempEntityList;
                 this._tempEntityList = temp;
-                this._tempEntityList.forEach(function (entity) {
-                    if (!_this._entities.contains(entity)) {
-                        _this._entities.push(entity);
-                        entity.scene = _this.scene;
-                        _this.addToTagList(entity);
-                        _this.scene.entityProcessors.onEntityAdded(entity);
+                for (var _b = 0, _c = this._tempEntityList; _b < _c.length; _b++) {
+                    var entity = _c[_b];
+                    if (!this._entities.contains(entity)) {
+                        this._entities.push(entity);
+                        entity.scene = this.scene;
+                        this.addToTagList(entity);
+                        this.scene.entityProcessors.onEntityAdded(entity);
                     }
-                });
-                this._tempEntityList.forEach(function (entity) { return entity.onAddedToScene(); });
+                }
+                for (var _d = 0, _e = this._tempEntityList; _d < _e.length; _d++) {
+                    var entity = _e[_d];
+                    entity.onAddedToScene();
+                }
                 this._tempEntityList.length = 0;
                 this._isEntityListUnsorted = true;
             }
             if (this._isEntityListUnsorted) {
-                this._entities.sort();
+                this._entities.sort(function (a, b) {
+                    return a.compareTo(b);
+                });
                 this._isEntityListUnsorted = false;
             }
             if (this._unsortedTags.length > 0) {
-                this._unsortedTags.forEach(function (tag) {
-                    _this._entityDict.get(tag).sort();
-                });
+                for (var _f = 0, _g = this._unsortedTags; _f < _g.length; _f++) {
+                    var tag = _g[_f];
+                    this._entityDict.get(tag).sort(function (a, b) {
+                        return a.compareTo(b);
+                    });
+                }
                 this._unsortedTags.length = 0;
             }
         };
@@ -4906,10 +4916,11 @@ var es;
                 if (this._entities[i] instanceof type)
                     list.push(this._entities[i]);
             }
-            this._entitiesToAdded.forEach(function (entity) {
+            for (var _i = 0, _a = this._entitiesToAdded; _i < _a.length; _i++) {
+                var entity = _a[_i];
                 if (entity instanceof type)
                     list.push(entity);
-            });
+            }
             return list;
         };
         EntityList.prototype.findComponentOfType = function (type) {
@@ -5677,6 +5688,23 @@ var TimeUtils = (function () {
     };
     return TimeUtils;
 }());
+var es;
+(function (es) {
+    var Graphics = (function () {
+        function Graphics() {
+            var _this = this;
+            var arrayBuffer = new ArrayBuffer(1);
+            arrayBuffer[0] = 0xffffff;
+            egret.BitmapData.create("arraybuffer", arrayBuffer, function (bitmapData) {
+                var tex = new egret.Texture();
+                tex.bitmapData = bitmapData;
+                _this.pixelTexture = new es.Sprite(tex);
+            });
+        }
+        return Graphics;
+    }());
+    es.Graphics = Graphics;
+})(es || (es = {}));
 var es;
 (function (es) {
     var GraphicsCapabilities = (function (_super) {
@@ -10686,6 +10714,9 @@ var es;
         }
         Vector2Ext.isTriangleCCW = function (a, center, c) {
             return this.cross(es.Vector2.subtract(center, a), es.Vector2.subtract(c, center)) < 0;
+        };
+        Vector2Ext.halfVector = function () {
+            return new es.Vector2(0.5, 0.5);
         };
         Vector2Ext.cross = function (u, v) {
             return u.y * v.x - u.x * v.y;
