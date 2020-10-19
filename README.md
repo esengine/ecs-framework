@@ -1,6 +1,3 @@
-Cegret-framework
-
-
 [![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/esengine/egret-framework.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/esengine/egret-framework/context:javascript)
 
 这是一套用于egret的游戏框架，里面包含ECS框架用于管理场景实体，一些常用2D碰撞检测及A*寻路。如果您还需要包含其他的AI系统可以查看作者其他库（行为树、简易FSM、实用AI）。
@@ -136,4 +133,6 @@ ecs中的系统会不断的更新实体。系统使用过滤器选择某些实�
 ## 作者其他库（egret）
 
 - [行为树/实用AI 系统](https://github.com/esengine/egret-BehaviourTree-ai)
+- [egret优化库](https://github.com/esengine/egret-optimize)
+包含一些常用游戏性能提高的帮助类
 
