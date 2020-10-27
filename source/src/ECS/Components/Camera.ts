@@ -1,13 +1,10 @@
 module es {
-    export class CameraInset {
-        public left: number = 0;
-        public right: number = 0;
-        public top: number = 0;
-        public bottom: number = 0;
+    export interface CameraInset {
+        left: number, right: number, top: number, bottom: number
     }
 
     export class Camera extends Component {
-        public _inset: CameraInset = new CameraInset();
+        public _inset: CameraInset = {left: 0, right: 0, top: 0, bottom: 0};
         public _areMatrixedDirty: boolean = true;
         public _areBoundsDirty: boolean = true;
         public _isProjectionMatrixDirty = true;
@@ -209,11 +206,7 @@ module es {
          * @param bottom
          */
         public setInset(left: number, right: number, top: number, bottom: number): Camera {
-            this._inset = new CameraInset();
-            this._inset.left = left;
-            this._inset.right = right;
-            this._inset.top = top;
-            this._inset.bottom = bottom;
+            this._inset = {left: left, right: right, top: top, bottom: bottom};
             this._areBoundsDirty = true;
             return this;
         }

@@ -155,7 +155,7 @@ module es {
         }
 
         public async draw() {
-            this.startDebugDraw(Time.deltaTime);
+            // this.startDebugDraw(Time.deltaTime);
 
             if (this._sceneTransition) {
                 this._sceneTransition.preRender();
@@ -182,7 +182,7 @@ module es {
                 this._scene.postRender();
             }
 
-            this.endDebugDraw();
+            // this.endDebugDraw();
         }
 
         public startDebugUpdate() {

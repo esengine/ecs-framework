@@ -733,10 +733,9 @@ var es;
             return Math.acos(es.MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
         };
         Vector2.negate = function (value) {
-            var result = new Vector2();
-            result.x = -value.x;
-            result.y = -value.y;
-            return result;
+            value.x = -value.x;
+            value.y = -value.y;
+            return value;
         };
         Vector2.prototype.add = function (value) {
             this.x += value.x;
@@ -773,7 +772,10 @@ var es;
             return new Vector2(Math.round(this.x), Math.round(this.y));
         };
         Vector2.prototype.equals = function (other) {
-            return other.x == this.x && other.y == this.y;
+            if (other instanceof Vector2) {
+                return other.x == this.x && other.y == this.y;
+            }
+            return false;
         };
         return Vector2;
     }());
@@ -1056,7 +1058,6 @@ var es;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
-                            this.startDebugDraw(es.Time.deltaTime);
                             if (!this._sceneTransition) return [3, 4];
                             this._sceneTransition.preRender();
                             if (!(this._scene && !this._sceneTransition.hasPreviousSceneRender)) return [3, 2];
@@ -1083,9 +1084,7 @@ var es;
                                 this._scene.postRender();
                             }
                             _a.label = 5;
-                        case 5:
-                            this.endDebugDraw();
-                            return [2];
+                        case 5: return [2];
                     }
                 });
             });
@@ -2287,21 +2286,11 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var CameraInset = (function () {
-        function CameraInset() {
-            this.left = 0;
-            this.right = 0;
-            this.top = 0;
-            this.bottom = 0;
-        }
-        return CameraInset;
-    }());
-    es.CameraInset = CameraInset;
     var Camera = (function (_super) {
         __extends(Camera, _super);
         function Camera() {
             var _this = _super.call(this) || this;
-            _this._inset = new CameraInset();
+            _this._inset = { left: 0, right: 0, top: 0, bottom: 0 };
             _this._areMatrixedDirty = true;
             _this._areBoundsDirty = true;
             _this._isProjectionMatrixDirty = true;
@@ -2444,11 +2433,7 @@ var es;
             configurable: true
         });
         Camera.prototype.setInset = function (left, right, top, bottom) {
-            this._inset = new CameraInset();
-            this._inset.left = left;
-            this._inset.right = right;
-            this._inset.top = top;
-            this._inset.bottom = bottom;
+            this._inset = { left: left, right: right, top: top, bottom: bottom };
             this._areBoundsDirty = true;
             return this;
         };
@@ -4513,7 +4498,7 @@ var es;
 (function (es) {
     var ComponentList = (function () {
         function ComponentList(entity) {
-            this._components = [];
+            this._components = new es.FastList();
             this._componentsToAdd = [];
             this._componentsToRemove = [];
             this._tempBufferList = [];
@@ -4528,7 +4513,7 @@ var es;
         });
         Object.defineProperty(ComponentList.prototype, "buffer", {
             get: function () {
-                return this._components;
+                return this._components.buffer;
             },
             enumerable: true,
             configurable: true
@@ -4541,7 +4526,7 @@ var es;
         };
         ComponentList.prototype.remove = function (component) {
             if (this._componentsToRemove.contains(component))
-                console.warn("You are trying to remove a Component (" + component + ") that you already removed");
+                console.warn("\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u4E00\u4E2A\u60A8\u5DF2\u7ECF\u5220\u9664\u7684\u7EC4\u4EF6(" + component + ")");
             if (this._componentsToAdd.contains(component)) {
                 this._componentsToAdd.remove(component);
                 return;
@@ -4552,13 +4537,13 @@ var es;
             for (var i = 0; i < this._components.length; i++) {
                 this.handleRemove(this._components[i]);
             }
-            this._components.length = 0;
+            this._components.clear();
             this._componentsToAdd.length = 0;
             this._componentsToRemove.length = 0;
         };
         ComponentList.prototype.deregisterAllComponents = function () {
             for (var i = 0; i < this._components.length; i++) {
-                var component = this._components[i];
+                var component = this._components.buffer[i];
                 if (component instanceof es.RenderableComponent) {
                     if (component.displayObject.parent)
                         component.displayObject.parent.removeChild(component.displayObject);
@@ -4572,7 +4557,7 @@ var es;
         };
         ComponentList.prototype.registerAllComponents = function () {
             for (var i = 0; i < this._components.length; i++) {
-                var component = this._components[i];
+                var component = this._components.buffer[i];
                 if (component instanceof es.RenderableComponent) {
                     if (!this._entity.scene.dynamicBatch)
                         this._entity.scene.addChild(component.displayObject);
@@ -4606,7 +4591,7 @@ var es;
                         this._entity.scene.addChild(component.debugDisplayObject);
                     this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component));
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
-                    this._components.push(component);
+                    this._components.add(component);
                     this._tempBufferList.push(component);
                 }
                 if (this._entity.scene.dynamicBatch)
@@ -4623,7 +4608,7 @@ var es;
                 this._tempBufferList.length = 0;
             }
             if (this._isComponentListUnsorted) {
-                this._components.sort(ComponentList.compareUpdatableOrder.compare);
+                this._components.sort(ComponentList.compareUpdatableOrder);
                 this._isComponentListUnsorted = false;
             }
         };
@@ -4642,7 +4627,7 @@ var es;
         };
         ComponentList.prototype.getComponent = function (type, onlyReturnInitializedComponents) {
             for (var i = 0; i < this._components.length; i++) {
-                var component = this._components[i];
+                var component = this._components.buffer[i];
                 if (component instanceof type)
                     return component;
             }
@@ -4659,7 +4644,7 @@ var es;
             if (!components)
                 components = [];
             for (var i = 0; i < this._components.length; i++) {
-                var component = this._components[i];
+                var component = this._components.buffer[i];
                 if (typeof (typeName) == "string") {
                     if (egret.is(component, typeName)) {
                         components.push(component);
@@ -4689,7 +4674,7 @@ var es;
         ComponentList.prototype.update = function () {
             this.updateLists();
             for (var i = 0; i < this._components.length; i++) {
-                var updatableComponent = this._components[i];
+                var updatableComponent = this._components.buffer[i];
                 if (updatableComponent.enabled &&
                     (updatableComponent.updateInterval == 1 ||
                         es.Time.frameCount % updatableComponent.updateInterval == 0))
@@ -4698,8 +4683,8 @@ var es;
         };
         ComponentList.prototype.onEntityTransformChanged = function (comp) {
             for (var i = 0; i < this._components.length; i++) {
-                if (this._components[i].enabled)
-                    this._components[i].onEntityTransformChanged(comp);
+                if (this._components.buffer[i].enabled)
+                    this._components.buffer[i].onEntityTransformChanged(comp);
             }
             for (var i = 0; i < this._componentsToAdd.length; i++) {
                 if (this._componentsToAdd[i].enabled)
@@ -4708,16 +4693,16 @@ var es;
         };
         ComponentList.prototype.onEntityEnabled = function () {
             for (var i = 0; i < this._components.length; i++)
-                this._components[i].onEnabled();
+                this._components.buffer[i].onEnabled();
         };
         ComponentList.prototype.onEntityDisabled = function () {
             for (var i = 0; i < this._components.length; i++)
-                this._components[i].onDisabled();
+                this._components.buffer[i].onDisabled();
         };
         ComponentList.prototype.debugRender = function (camera) {
             for (var i = 0; i < this._components.length; i++) {
-                if (this._components[i].enabled)
-                    this._components[i].debugRender(camera);
+                if (this._components.buffer[i].enabled)
+                    this._components.buffer[i].debugRender(camera);
             }
         };
         ComponentList.compareUpdatableOrder = new es.IUpdatableComparer();
@@ -4755,7 +4740,7 @@ var es;
             this._entitiesToAdded = [];
             this._entitiesToRemove = [];
             this._entityDict = new Map();
-            this._unsortedTags = [];
+            this._unsortedTags = new Set();
             this._addToSceneEntityList = [];
             this.frameAllocate = false;
             this.maxAllocate = 10;
@@ -4779,7 +4764,7 @@ var es;
             this._isEntityListUnsorted = true;
         };
         EntityList.prototype.markTagUnsorted = function (tag) {
-            this._unsortedTags.push(tag);
+            this._unsortedTags.add(tag);
         };
         EntityList.prototype.add = function (entity) {
             if (this._entitiesToAdded.indexOf(entity) == -1)
@@ -4787,7 +4772,7 @@ var es;
         };
         EntityList.prototype.remove = function (entity) {
             if (!this._entitiesToRemove.contains(entity)) {
-                console.warn("You are trying to remove an entity (" + entity.name + ") that you already removed");
+                console.warn("\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u5DF2\u7ECF\u5220\u9664\u7684\u5B9E\u4F53(" + entity.name + ")");
                 return;
             }
             if (this._entitiesToAdded.contains(entity)) {
@@ -4798,7 +4783,7 @@ var es;
                 this._entitiesToRemove.push(entity);
         };
         EntityList.prototype.removeAllEntities = function () {
-            this._unsortedTags.length = 0;
+            this._unsortedTags.clear();
             this._entitiesToAdded.length = 0;
             this._isEntityListUnsorted = false;
             this.updateLists();
@@ -4826,8 +4811,7 @@ var es;
             var list = this.getTagList(entity.tag);
             if (list.findIndex(function (e) { return e.id == entity.id; }) == -1) {
                 list.push(entity);
-                if (!this._unsortedTags.contains(entity.tag))
-                    this._unsortedTags.push(entity.tag);
+                this._unsortedTags.add(entity.tag);
             }
         };
         EntityList.prototype.removeFromTagList = function (entity) {
@@ -4844,6 +4828,7 @@ var es;
             }
         };
         EntityList.prototype.updateLists = function () {
+            var _this = this;
             if (this._entitiesToRemove.length > 0) {
                 for (var _i = 0, _a = this._entitiesToRemove; _i < _a.length; _i++) {
                     var entity = _a[_i];
@@ -4880,14 +4865,13 @@ var es;
                 });
                 this._isEntityListUnsorted = false;
             }
-            if (this._addToSceneEntityList.length == 0 && this._unsortedTags.length > 0) {
-                for (var _b = 0, _c = this._unsortedTags; _b < _c.length; _b++) {
-                    var tag = _c[_b];
-                    this._entityDict.get(tag).sort(function (a, b) {
+            if (this._addToSceneEntityList.length == 0 && this._unsortedTags.size > 0) {
+                this._unsortedTags.forEach(function (tag) {
+                    _this._entityDict.get(tag).sort(function (a, b) {
                         return a.compareTo(b);
                     });
-                }
-                this._unsortedTags.length = 0;
+                });
+                this._unsortedTags.clear();
             }
         };
         EntityList.prototype.perEntityAddToScene = function () {
@@ -4910,6 +4894,7 @@ var es;
         EntityList.prototype.entitiesWithTag = function (tag) {
             var list = this.getTagList(tag);
             var returnList = es.ListPool.obtain();
+            returnList.length = this._entities.length;
             for (var i = 0; i < list.length; i++)
                 returnList.push(list[i]);
             return returnList;
@@ -5021,6 +5006,67 @@ var es;
         return EntityProcessorList;
     }());
     es.EntityProcessorList = EntityProcessorList;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var FastList = (function () {
+        function FastList(size) {
+            if (size === void 0) { size = 5; }
+            this.length = 0;
+            this.buffer = new Array(size);
+        }
+        FastList.prototype.clear = function () {
+            this.buffer.length = 0;
+            this.length = 0;
+        };
+        FastList.prototype.reset = function () {
+            this.length = 0;
+        };
+        FastList.prototype.add = function (item) {
+            if (this.length == this.buffer.length)
+                this.buffer.length = Math.max(this.buffer.length << 1, 10);
+            this.buffer[this.length++] = item;
+        };
+        FastList.prototype.remove = function (item) {
+            var comp = es.EqualityComparer.default();
+            for (var i = 0; i < this.length; ++i) {
+                if (comp.equals(this.buffer[i], item)) {
+                    this.removeAt(i);
+                    return;
+                }
+            }
+        };
+        FastList.prototype.removeAt = function (index) {
+            if (index >= this.length)
+                throw new Error("index超出范围！");
+            this.length--;
+            this.buffer.removeAt(index);
+        };
+        FastList.prototype.contains = function (item) {
+            var comp = es.EqualityComparer.default();
+            for (var i = 0; i < this.length; ++i) {
+                if (comp.equals(this.buffer[i], item))
+                    return true;
+            }
+            return false;
+        };
+        FastList.prototype.ensureCapacity = function (additionalItemCount) {
+            if (additionalItemCount === void 0) { additionalItemCount = 1; }
+            if (this.length + additionalItemCount >= this.buffer.length)
+                this.buffer.length = Math.max(this.buffer.length << 1, this.length + additionalItemCount);
+        };
+        FastList.prototype.addRange = function (array) {
+            for (var _i = 0, array_1 = array; _i < array_1.length; _i++) {
+                var item = array_1[_i];
+                this.add(item);
+            }
+        };
+        FastList.prototype.sort = function (comparer) {
+            this.buffer.sort(comparer.compare);
+        };
+        return FastList;
+    }());
+    es.FastList = FastList;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -10330,6 +10376,26 @@ var es;
         return Enumerable;
     }());
     es.Enumerable = Enumerable;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var EqualityComparer = (function () {
+        function EqualityComparer() {
+        }
+        EqualityComparer.default = function () {
+            return new EqualityComparer();
+        };
+        EqualityComparer.prototype.equals = function (x, y) {
+            if (typeof x["equals"] == 'function') {
+                return x["equals"](y);
+            }
+            else {
+                return x === y;
+            }
+        };
+        return EqualityComparer;
+    }());
+    es.EqualityComparer = EqualityComparer;
 })(es || (es = {}));
 var es;
 (function (es) {

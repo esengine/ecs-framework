@@ -1,4 +1,4 @@
-///<reference path="../Components/IUpdatableComparer.ts" />
+///<reference path="../Components/IUpdatable.ts" />
 module es {
     export class ComponentList {
         /**
@@ -10,7 +10,7 @@ module es {
         /**
          * 添加到实体的组件列表
          */
-        public _components: Component[] = [];
+        public _components: FastList<Component> = new FastList<Component>();
         /**
          * 添加到此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
          */
@@ -34,7 +34,7 @@ module es {
         }
 
         public get buffer() {
-            return this._components;
+            return this._components.buffer;
         }
 
         public markEntityListUnsorted() {
@@ -47,7 +47,7 @@ module es {
 
         public remove(component: Component) {
             if (this._componentsToRemove.contains(component))
-                console.warn(`You are trying to remove a Component (${component}) that you already removed`);
+                console.warn(`您正在尝试删除一个您已经删除的组件(${component})`);
 
             // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
             if (this._componentsToAdd.contains(component)) {
@@ -66,14 +66,14 @@ module es {
                 this.handleRemove(this._components[i]);
             }
 
-            this._components.length = 0;
+            this._components.clear();
             this._componentsToAdd.length = 0;
             this._componentsToRemove.length = 0;
         }
 
         public deregisterAllComponents() {
             for (let i = 0; i < this._components.length; i++) {
-                let component = this._components[i];
+                let component = this._components.buffer[i];
 
                 // 处理渲染层列表
                 if (component instanceof RenderableComponent) {
@@ -92,7 +92,7 @@ module es {
 
         public registerAllComponents() {
             for (let i = 0; i < this._components.length; i++) {
-                let component = this._components[i];
+                let component = this._components.buffer[i];
 
                 if (component instanceof RenderableComponent) {
                     if (!this._entity.scene.dynamicBatch) this._entity.scene.addChild(component.displayObject);
@@ -131,7 +131,7 @@ module es {
                     this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component));
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
 
-                    this._components.push(component);
+                    this._components.add(component);
                     this._tempBufferList.push(component);
                 }
                 if (this._entity.scene.dynamicBatch) this._entity.scene.dynamicInBatch();
@@ -155,7 +155,7 @@ module es {
             }
 
             if (this._isComponentListUnsorted) {
-                this._components.sort(ComponentList.compareUpdatableOrder.compare);
+                this._components.sort(ComponentList.compareUpdatableOrder);
                 this._isComponentListUnsorted = false;
             }
         }
@@ -187,7 +187,7 @@ module es {
          */
         public getComponent<T extends Component>(type, onlyReturnInitializedComponents: boolean): T {
             for (let i = 0; i < this._components.length; i++) {
-                let component = this._components[i];
+                let component = this._components.buffer[i];
                 if (component instanceof type)
                     return component as T;
             }
@@ -214,7 +214,7 @@ module es {
                 components = [];
 
             for (let i = 0; i < this._components.length; i++) {
-                let component = this._components[i];
+                let component = this._components.buffer[i];
                 if (typeof (typeName) == "string") {
                     if (egret.is(component, typeName)) {
                         components.push(component);
@@ -245,7 +245,7 @@ module es {
         public update() {
             this.updateLists();
             for (let i = 0; i < this._components.length; i++) {
-                let updatableComponent = this._components[i];
+                let updatableComponent = this._components.buffer[i];
 
                 if (updatableComponent.enabled &&
                     (updatableComponent.updateInterval == 1 ||
@@ -256,8 +256,8 @@ module es {
 
         public onEntityTransformChanged(comp: transform.Component) {
             for (let i = 0; i < this._components.length; i++) {
-                if (this._components[i].enabled)
-                    this._components[i].onEntityTransformChanged(comp);
+                if (this._components.buffer[i].enabled)
+                    this._components.buffer[i].onEntityTransformChanged(comp);
             }
 
             for (let i = 0; i < this._componentsToAdd.length; i++) {
@@ -268,18 +268,18 @@ module es {
 
         public onEntityEnabled() {
             for (let i = 0; i < this._components.length; i++)
-                this._components[i].onEnabled();
+                this._components.buffer[i].onEnabled();
         }
 
         public onEntityDisabled() {
             for (let i = 0; i < this._components.length; i++)
-                this._components[i].onDisabled();
+                this._components.buffer[i].onDisabled();
         }
 
         public debugRender(camera: Camera){
             for (let i = 0; i < this._components.length; i ++){
-                if (this._components[i].enabled)
-                    this._components[i].debugRender(camera);
+                if (this._components.buffer[i].enabled)
+                    this._components.buffer[i].debugRender(camera);
             }
         }
     }

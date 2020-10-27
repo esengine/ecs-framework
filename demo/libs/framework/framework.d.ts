@@ -102,7 +102,7 @@ declare module es {
     }
 }
 declare module es {
-    class Vector2 {
+    class Vector2 implements IEquatable<Vector2> {
         x: number;
         y: number;
         constructor(x?: number, y?: number);
@@ -131,7 +131,7 @@ declare module es {
         length(): number;
         lengthSquared(): number;
         round(): Vector2;
-        equals(other: Vector2): boolean;
+        equals(other: Vector2 | object): boolean;
     }
 }
 declare module es {
@@ -483,7 +483,7 @@ declare module es {
     }
 }
 declare module es {
-    class CameraInset {
+    interface CameraInset {
         left: number;
         right: number;
         top: number;
@@ -578,7 +578,12 @@ declare module es {
     }
 }
 declare module es {
-    class IUpdatableComparer {
+    interface IUpdatable {
+        enabled: boolean;
+        updateOrder: number;
+        update(): any;
+    }
+    class IUpdatableComparer implements IComparer<IUpdatable> {
         compare(a: Component, b: Component): number;
     }
 }
@@ -982,7 +987,7 @@ declare module es {
     class ComponentList {
         static compareUpdatableOrder: IUpdatableComparer;
         _entity: Entity;
-        _components: Component[];
+        _components: FastList<Component>;
         _componentsToAdd: Component[];
         _componentsToRemove: Component[];
         _tempBufferList: Component[];
@@ -1022,7 +1027,7 @@ declare module es {
         _entitiesToRemove: Entity[];
         _isEntityListUnsorted: boolean;
         _entityDict: Map<number, Entity[]>;
-        _unsortedTags: number[];
+        _unsortedTags: Set<number>;
         _addToSceneEntityList: Entity[];
         frameAllocate: boolean;
         maxAllocate: number;
@@ -1050,7 +1055,7 @@ declare module es {
 }
 declare module es {
     class EntityProcessorList {
-        private _processors;
+        protected _processors: EntitySystem[];
         add(processor: EntitySystem): void;
         remove(processor: EntitySystem): void;
         onComponentAdded(entity: Entity): void;
@@ -1064,6 +1069,22 @@ declare module es {
         getProcessor<T extends EntitySystem>(): T;
         protected notifyEntityChanged(entity: Entity): void;
         protected removeFromProcessors(entity: Entity): void;
+    }
+}
+declare module es {
+    class FastList<T> {
+        buffer: T[];
+        length: number;
+        constructor(size?: number);
+        clear(): void;
+        reset(): void;
+        add(item: T): void;
+        remove(item: T): void;
+        removeAt(index: number): void;
+        contains(item: T): boolean;
+        ensureCapacity(additionalItemCount?: number): void;
+        addRange(array: T[]): void;
+        sort(comparer: IComparer<T>): void;
     }
 }
 declare module es {
@@ -2150,6 +2171,13 @@ declare module es {
     }
 }
 declare module es {
+    class EqualityComparer<T> implements IEqualityComparer {
+        static default<T>(): EqualityComparer<T>;
+        protected constructor();
+        equals(x: T, y: T): boolean;
+    }
+}
+declare module es {
     class GlobalManager {
         _enabled: boolean;
         enabled: boolean;
@@ -2157,6 +2185,21 @@ declare module es {
         onEnabled(): void;
         onDisabled(): void;
         update(): void;
+    }
+}
+declare module es {
+    interface IComparer<T> {
+        compare(x: T, y: T): number;
+    }
+}
+declare module es {
+    interface IEqualityComparer {
+        equals(x: any, y: any): boolean;
+    }
+}
+declare module es {
+    interface IEquatable<T> {
+        equals(other: T): boolean;
     }
 }
 declare module es {
@@ -2170,7 +2213,7 @@ declare module es {
     }
 }
 declare module es {
-    class Pair<T> {
+    class Pair<T> implements IEquatable<Pair<T>> {
         first: T;
         second: T;
         constructor(first: T, second: T);

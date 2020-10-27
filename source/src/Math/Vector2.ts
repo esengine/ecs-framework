@@ -1,6 +1,6 @@
 module es {
     /** 2d 向量 */
-    export class Vector2 {
+    export class Vector2 implements IEquatable<Vector2> {
         public x: number = 0;
         public y: number = 0;
 
@@ -111,7 +111,7 @@ module es {
         }
 
         /**
-         *
+         * 将指定的值限制在一个范围内
          * @param value1
          * @param min
          * @param max
@@ -122,17 +122,18 @@ module es {
         }
 
         /**
-         * 包含指定向量的线性插值
+         * 创建一个新的Vector2，其中包含指定向量的线性插值
          * @param value1 第一个向量
          * @param value2 第二个向量
-         * @param amount 权重值(0.0到1.0之间)
+         * @param amount 加权值(0.0-1.0之间)
+         * @returns 指定向量的线性插值结果
          */
         public static lerp(value1: Vector2, value2: Vector2, amount: number) {
             return new Vector2(MathHelper.lerp(value1.x, value2.x, amount), MathHelper.lerp(value1.y, value2.y, amount));
         }
 
         /**
-         *
+         * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换。
          * @param position
          * @param matrix
          */
@@ -145,8 +146,9 @@ module es {
          * 返回两个向量之间的距离
          * @param value1
          * @param value2
+         * @returns 两个向量之间的距离
          */
-        public static distance(value1: Vector2, value2: Vector2) {
+        public static distance(value1: Vector2, value2: Vector2): number {
             let v1 = value1.x - value2.x, v2 = value1.y - value2.y;
             return Math.sqrt((v1 * v1) + (v2 * v2));
         }
@@ -163,15 +165,15 @@ module es {
         }
 
         /**
-         * 矢量反演的结果
+         * 创建一个包含指定向量反转的新Vector2
          * @param value
+         * @returns 矢量反演的结果
          */
         public static negate(value: Vector2) {
-            let result: Vector2 = new Vector2();
-            result.x = -value.x;
-            result.y = -value.y;
+            value.x = -value.x;
+            value.y = -value.y;
 
-            return result;
+            return value;
         }
 
         /**
@@ -205,8 +207,9 @@ module es {
         }
 
         /**
-         *
-         * @param value
+         * 从当前Vector2减去一个Vector2
+         * @param value 要减去的Vector2
+         * @returns 当前Vector2
          */
         public subtract(value: Vector2) {
             this.x -= value.x;
@@ -214,7 +217,9 @@ module es {
             return this;
         }
 
-        /** 变成一个方向相同的单位向量 */
+        /** 
+         * 将这个Vector2变成一个方向相同的单位向量
+         */
         public normalize() {
             let val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
             this.x *= val;
@@ -227,19 +232,31 @@ module es {
         }
 
         /**
-         * 返回其长度的平方
+         * 返回该Vector2的平方长度
+         * @returns 这个Vector2的平方长度
          */
         public lengthSquared(): number {
             return (this.x * this.x) + (this.y * this.y);
         }
 
-        /** 对x和y值四舍五入 */
+        /** 
+         * 四舍五入X和Y值
+         */
         public round(): Vector2 {
             return new Vector2(Math.round(this.x), Math.round(this.y));
         }
 
-        public equals(other: Vector2) {
-            return other.x == this.x && other.y == this.y;
+        /**
+         * 比较当前实例是否等于指定的对象
+         * @param other 要比较的对象
+         * @returns 如果实例相同true 否则false 
+         */
+        public equals(other: Vector2 | object): boolean {
+            if (other instanceof Vector2){
+                return other.x == this.x && other.y == this.y;
+            }
+            
+            return false;
         }
     }
 }

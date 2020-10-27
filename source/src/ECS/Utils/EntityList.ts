@@ -2,26 +2,26 @@ module es {
     export class EntityList {
         public scene: Scene;
         /**
-         * 添加到场景中的实体列表
+         * 场景中添加的实体列表
          */
         public _entities: Entity[] = [];
         /**
-         * 添加到此框架的实体列表。用于对实体进行分组，以便我们可以同时处理它们
+         * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
         public _entitiesToAdded: Entity[] = [];
         /**
-         * 标记要删除此框架的实体列表。用于对实体进行分组，以便我们可以同时处理它们
+         * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
         public _entitiesToRemove: Entity[] = [];
         /**
-         * 用于确定是否需要在此框架中对实体进行排序的标志
+         * 标志，用于确定我们是否需要在这一帧中对实体进行排序
          */
         public _isEntityListUnsorted: boolean;
         /**
          * 通过标签跟踪实体，便于检索
          */
         public _entityDict: Map<number, Entity[]> = new Map<number, Entity[]>();
-        public _unsortedTags: number[] = [];
+        public _unsortedTags: Set<number> = new Set<number>();
         public _addToSceneEntityList: Entity[] = [];
         /** 是否使用分帧处理 */
         public frameAllocate: boolean = false;
@@ -45,11 +45,11 @@ module es {
         }
 
         public markTagUnsorted(tag: number) {
-            this._unsortedTags.push(tag);
+            this._unsortedTags.add(tag);
         }
 
         /**
-         * 将实体添加到列表中。所有生命周期方法将在下一帧中被调用。
+         * 将一个实体添加到列表中。所有的生命周期方法将在下一帧中被调用
          * @param entity
          */
         public add(entity: Entity) {
@@ -58,12 +58,12 @@ module es {
         }
 
         /**
-         * 从列表中删除一个实体。所有生命周期方法将在下一帧中被调用。
+         * 从列表中删除一个实体。所有的生命周期方法将在下一帧中被调用
          * @param entity
          */
         public remove(entity: Entity) {
             if (!this._entitiesToRemove.contains(entity)) {
-                console.warn(`You are trying to remove an entity (${entity.name}) that you already removed`);
+                console.warn(`您正在尝试删除已经删除的实体(${entity.name})`);
                 return;
             }
 
@@ -81,12 +81,12 @@ module es {
          * 从实体列表中删除所有实体
          */
         public removeAllEntities() {
-            this._unsortedTags.length = 0;
+            this._unsortedTags.clear();
             this._entitiesToAdded.length = 0;
             this._isEntityListUnsorted = false;
 
-            // 为什么我们要在这里更新列表?主要用于处理场景切换前分离的实体。
-            // 它们仍然在_entitiesToRemove列表中，该列表将由更新列表处理。
+            // 为什么我们要在这里更新列表？主要是为了处理在场景切换前被分离的实体。
+            // 它们仍然会在_entitiesToRemove列表中，这将由updateLists处理。
             this.updateLists();
 
             for (let i = 0; i < this._entities.length; i++) {
@@ -100,7 +100,7 @@ module es {
         }
 
         /**
-         * 检查该实体当前是否由此EntityList管理
+         * 检查实体目前是否由这个EntityList管理
          * @param entity
          */
         public contains(entity: Entity): boolean {
@@ -122,8 +122,7 @@ module es {
             let list = this.getTagList(entity.tag);
             if (list.findIndex(e => e.id == entity.id) == -1) {
                 list.push(entity);
-                if (!this._unsortedTags.contains(entity.tag))
-                    this._unsortedTags.push(entity.tag);
+                this._unsortedTags.add(entity.tag);
             }
         }
 
@@ -157,7 +156,7 @@ module es {
                 this._entitiesToRemove.length = 0;
             }
 
-            // 现在所有实体都被添加到场景中，我们再次循环并调用onAddedToScene
+            // 现在所有的实体都被添加到场景中，我们再次循环并调用onAddedToScene
             while (this._addToSceneEntityList.length > 0){
                 let entity = this._addToSceneEntityList.shift();
                 entity.onAddedToScene();
@@ -187,14 +186,15 @@ module es {
                 this._isEntityListUnsorted = false;
             }
 
-            if (this._addToSceneEntityList.length == 0 && this._unsortedTags.length > 0) {
-                for (const tag of this._unsortedTags) {
+            // 根据需要对标签列表进行排序
+            if (this._addToSceneEntityList.length == 0 && this._unsortedTags.size > 0) {
+                this._unsortedTags.forEach((tag)=>{
                     this._entityDict.get(tag).sort((a, b) => {
                         return a.compareTo(b);
                     });
-                }
-
-                this._unsortedTags.length = 0;
+                });
+                    
+                this._unsortedTags.clear();
             }
         }
 
@@ -214,7 +214,7 @@ module es {
         }
 
         /**
-         * 返回找到的第一个实体的名称。如果没有找到，则返回null。
+         * 返回第一个找到的名字为name的实体。如果没有找到则返回null
          * @param name
          */
         public findEntity(name: string) {
@@ -227,13 +227,15 @@ module es {
         }
 
         /**
-         * 返回带有标记的所有实体的列表。如果没有实体具有标记，则返回一个空列表。可以通过ListPool.free将返回的列表放回池中。
+         * 返回带有标签的所有实体的列表。如果没有实体有标签，则返回一个空列表。
+         * 返回的List可以通过ListPool.free放回池中
          * @param tag
          */
         public entitiesWithTag(tag: number) {
             let list = this.getTagList(tag);
 
             let returnList = ListPool.obtain<Entity>();
+            returnList.length = this._entities.length;
             for (let i = 0; i < list.length; i++)
                 returnList.push(list[i]);
 
@@ -241,7 +243,8 @@ module es {
         }
 
         /**
-         * 返回t类型的所有实体的列表。返回的列表可以通过ListPool.free放回池中。
+         * 返回一个T类型的所有实体的列表。
+         * 返回的List可以通过ListPool.free放回池中。
          * @param type
          */
         public entitiesOfType<T extends Entity>(type): T[] {
@@ -259,7 +262,7 @@ module es {
         }
 
         /**
-         * 返回在类型为T的场景中找到的第一个组件
+         * 返回在场景中找到的第一个T类型的组件。
          * @param type
          */
         public findComponentOfType<T extends Component>(type): T {
@@ -284,7 +287,8 @@ module es {
         }
 
         /**
-         * 返回在类型t的场景中找到的所有组件。返回的列表可以通过ListPool.free放回池中。
+         * 返回在场景中找到的所有T类型的组件。
+         * 返回的List可以通过ListPool.free放回池中。
          * @param type
          */
         public findComponentsOfType<T extends Component>(type): T[] {

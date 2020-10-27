@@ -1,6 +1,6 @@
 module es {
     export class EntityProcessorList {
-        private _processors: EntitySystem[] = [];
+        protected _processors: EntitySystem[] = [];
 
         public add(processor: EntitySystem) {
             this._processors.push(processor);
