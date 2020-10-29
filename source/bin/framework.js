@@ -381,7 +381,6 @@ var es;
         }
         return AStarNode;
     }(es.PriorityQueueNode));
-    es.AStarNode = AStarNode;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -968,6 +967,365 @@ var es;
         return WeightedPathfinder;
     }());
     es.WeightedPathfinder = WeightedPathfinder;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var AStarStorage = (function () {
+        function AStarStorage() {
+            this._opened = new Array(AStarStorage.MAX_NODES);
+            this._closed = new Array(AStarStorage.MAX_NODES);
+        }
+        AStarStorage.prototype.clear = function () {
+            for (var i = 0; i < this._numOpened; i++) {
+                es.Pool.free(this._opened[i]);
+                this._opened[i] = null;
+            }
+            for (var i = 0; i < this._numClosed; i++) {
+                es.Pool.free(this._closed[i]);
+                this._closed[i] = null;
+            }
+            this._numOpened = this._numClosed = 0;
+            this._lastFoundClosed = this._lastFoundOpened = 0;
+        };
+        AStarStorage.prototype.findOpened = function (node) {
+            for (var i = 0; i < this._numOpened; i++) {
+                var care = node.worldState.dontCare ^ -1;
+                if ((node.worldState.values & care) == (this._opened[i].worldState.values & care)) {
+                    this._lastFoundClosed = i;
+                    return this._closed[i];
+                }
+            }
+            return null;
+        };
+        AStarStorage.prototype.findClosed = function (node) {
+            for (var i = 0; i < this._numClosed; i++) {
+                var care = node.worldState.dontCare ^ -1;
+                if ((node.worldState.values & care) == (this._closed[i].worldState.values & care)) {
+                    this._lastFoundClosed = i;
+                    return this._closed[i];
+                }
+            }
+            return null;
+        };
+        AStarStorage.prototype.hasOpened = function () {
+            return this._numClosed > 0;
+        };
+        AStarStorage.prototype.removeOpened = function (node) {
+            if (this._numOpened > 0)
+                this._opened[this._lastFoundOpened] = this._opened[this._numOpened - 1];
+            this._numOpened--;
+        };
+        AStarStorage.prototype.removeClosed = function (node) {
+            if (this._numClosed > 0)
+                this._closed[this._lastFoundClosed] = this._closed[this._numClosed - 1];
+            this._numClosed--;
+        };
+        AStarStorage.prototype.isOpen = function (node) {
+            return this._opened.indexOf(node) > -1;
+        };
+        AStarStorage.prototype.isClosed = function (node) {
+            return this._closed.indexOf(node) > -1;
+        };
+        AStarStorage.prototype.addToOpenList = function (node) {
+            this._opened[this._numOpened++] = node;
+        };
+        AStarStorage.prototype.addToClosedList = function (node) {
+            this._closed[this._numClosed++] = node;
+        };
+        AStarStorage.prototype.removeCheapestOpenNode = function () {
+            var lowestVal = Number.MAX_VALUE;
+            this._lastFoundOpened = -1;
+            for (var i = 0; i < this._numOpened; i++) {
+                if (this._opened[i].costSoFarAndHeuristicCost < lowestVal) {
+                    lowestVal = this._opened[i].costSoFarAndHeuristicCost;
+                    this._lastFoundOpened = i;
+                }
+            }
+            var val = this._opened[this._lastFoundOpened];
+            this.removeOpened(val);
+            return val;
+        };
+        AStarStorage.MAX_NODES = 128;
+        return AStarStorage;
+    }());
+    es.AStarStorage = AStarStorage;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var AStarNode = (function () {
+        function AStarNode() {
+        }
+        AStarNode.prototype.equals = function (other) {
+            var care = this.worldState.dontCare ^ -1;
+            return (this.worldState.values & care) == (other.worldState.values & care);
+        };
+        AStarNode.prototype.compareTo = function (other) {
+            return this.costSoFarAndHeuristicCost - other.costSoFarAndHeuristicCost;
+        };
+        AStarNode.prototype.reset = function () {
+            this.action = null;
+            this.parent = null;
+        };
+        AStarNode.prototype.clone = function () {
+            var node = new AStarNode();
+            node.action = this.action;
+            node.costSoFar = this.costSoFar;
+            node.depth = this.depth;
+            node.parent = this.parent;
+            node.parentWorldState = this.parentWorldState;
+            node.heuristicCost = this.heuristicCost;
+            node.worldState = this.worldState;
+            return node;
+        };
+        AStarNode.prototype.toString = function () {
+            return "[cost: " + this.costSoFar + " | heuristic: " + this.heuristicCost + "]: " + this.action;
+        };
+        return AStarNode;
+    }());
+    es.AStarNode = AStarNode;
+    var AStar = (function () {
+        function AStar() {
+        }
+        AStar.plan = function (ap, start, goal, selectedNodes) {
+            if (selectedNodes === void 0) { selectedNodes = null; }
+            this.storage.clear();
+            var currentNode = es.Pool.obtain(AStarNode);
+            currentNode.worldState = start;
+            currentNode.parentWorldState = start;
+            currentNode.costSoFar = 0;
+            currentNode.heuristicCost = this.calculateHeuristic(start, goal);
+            currentNode.costSoFarAndHeuristicCost = currentNode.costSoFar + currentNode.heuristicCost;
+            currentNode.depth = 1;
+            this.storage.addToOpenList(currentNode);
+            while (true) {
+                if (!this.storage.hasOpened()) {
+                    this.storage.clear();
+                    return null;
+                }
+                currentNode = this.storage.removeCheapestOpenNode();
+                this.storage.addToClosedList(currentNode);
+                if (goal.equals(currentNode.worldState)) {
+                    var plan = this.reconstructPlan(currentNode, selectedNodes);
+                    this.storage.clear();
+                    return plan;
+                }
+                var neighbors = ap.getPossibleTransitions(currentNode.worldState);
+                for (var i = 0; i < neighbors.length; i++) {
+                    var cur = neighbors[i];
+                    var opened = this.storage.findOpened(cur);
+                    var closed_1 = this.storage.findClosed(cur);
+                    var cost = currentNode.costSoFar + cur.costSoFar;
+                    if (opened != null && cost < opened.costSoFar) {
+                        this.storage.removeOpened(opened);
+                        opened = null;
+                    }
+                    if (closed_1 != null && cost < closed_1.costSoFar) {
+                        this.storage.removeClosed(closed_1);
+                    }
+                    if (opened == null && closed_1 == null) {
+                        var nb = es.Pool.obtain(AStarNode);
+                        nb.worldState = cur.worldState;
+                        nb.costSoFar = cost;
+                        nb.heuristicCost = this.calculateHeuristic(cur.worldState, goal);
+                        nb.costSoFarAndHeuristicCost = nb.costSoFar + nb.heuristicCost;
+                        nb.action = cur.action;
+                        nb.parentWorldState = currentNode.worldState;
+                        nb.parent = currentNode;
+                        nb.depth = currentNode.depth + 1;
+                        this.storage.addToOpenList(nb);
+                    }
+                }
+                es.ListPool.free(neighbors);
+            }
+        };
+        AStar.reconstructPlan = function (goalNode, selectedNodes) {
+            var totalActionsInPlan = goalNode.depth - 1;
+            var plan = new Array(totalActionsInPlan);
+            var curnode = goalNode;
+            for (var i = 0; i <= totalActionsInPlan - 1; i++) {
+                if (selectedNodes != null)
+                    selectedNodes.push(curnode.clone());
+                plan.push(curnode.action);
+                curnode = curnode.parent;
+            }
+            if (selectedNodes != null)
+                selectedNodes.reverse();
+            return plan;
+        };
+        AStar.calculateHeuristic = function (fr, to) {
+            var care = (to.dontCare ^ -1);
+            var diff = (fr.values & care) ^ (to.values & care);
+            var dist = 0;
+            for (var i = 0; i < es.ActionPlanner.MAX_CONDITIONS; ++i)
+                if ((diff & (1 << i)) != 0)
+                    dist++;
+            return dist;
+        };
+        AStar.storage = new es.AStarStorage();
+        return AStar;
+    }());
+    es.AStar = AStar;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Action = (function () {
+        function Action(name, cost) {
+            if (cost === void 0) { cost = 1; }
+            this.cost = 1;
+            this._preConditions = new Set();
+            this._postConditions = new Set();
+            this.name = name;
+            this.cost = cost;
+        }
+        Action.prototype.setPrecondition = function (conditionName, value) {
+            this._preConditions.add([conditionName, value]);
+        };
+        Action.prototype.setPostcondition = function (conditionName, value) {
+            this._preConditions.add([conditionName, value]);
+        };
+        Action.prototype.validate = function () {
+            return true;
+        };
+        Action.prototype.toString = function () {
+            return "[Action] " + this.name + " - cost: " + this.cost;
+        };
+        return Action;
+    }());
+    es.Action = Action;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var ActionPlanner = (function () {
+        function ActionPlanner() {
+            this.conditionNames = new Array(ActionPlanner.MAX_CONDITIONS);
+            this._actions = [];
+            this._viableActions = [];
+            this._preConditions = new Array(ActionPlanner.MAX_CONDITIONS);
+            this._postConditions = new Array(ActionPlanner.MAX_CONDITIONS);
+            this._numConditionNames = 0;
+            for (var i = 0; i < ActionPlanner.MAX_CONDITIONS; ++i) {
+                this.conditionNames[i] = null;
+                this._preConditions[i] = es.WorldState.create(this);
+                this._postConditions[i] = es.WorldState.create(this);
+            }
+        }
+        ActionPlanner.prototype.createWorldState = function () {
+            return es.WorldState.create(this);
+        };
+        ActionPlanner.prototype.addAction = function (action) {
+            var _this = this;
+            var actionId = this.findActionIndex(action);
+            if (actionId == -1)
+                throw new Error("无法找到或创建行动");
+            action._preConditions.forEach(function (preCondition) {
+                var conditionId = _this.findConditionNameIndex(preCondition[0]);
+                if (conditionId == -1)
+                    throw new Error("无法找到或创建条件名称");
+                _this._preConditions[actionId].set(conditionId, preCondition[1]);
+            });
+            action._postConditions.forEach(function (postCondition) {
+                var conditionId = _this.findConditionNameIndex(postCondition[0]);
+                if (conditionId == -1)
+                    throw new Error("找不到条件名称");
+                _this._postConditions[actionId].set(conditionId, postCondition[1]);
+            });
+        };
+        ActionPlanner.prototype.plan = function (startState, goalState, selectedNode) {
+            if (selectedNode === void 0) { selectedNode = null; }
+            this._viableActions.length = 0;
+            for (var i = 0; i < this._actions.length; i++) {
+                if (this._actions[i].validate())
+                    this._viableActions.push(this._actions[i]);
+            }
+            return es.AStar.plan(this, startState, goalState, selectedNode);
+        };
+        ActionPlanner.prototype.getPossibleTransitions = function (fr) {
+            var result = es.ListPool.obtain();
+            for (var i = 0; i < this._viableActions.length; ++i) {
+                var pre = this._preConditions[i];
+                var care = (pre.dontCare ^ -1);
+                var met = ((pre.values & care) == (fr.values & care));
+                if (met) {
+                    var node = es.Pool.obtain(es.AStarNode);
+                    node.action = this._viableActions[i];
+                    node.costSoFar = this._viableActions[i].cost;
+                    node.worldState = this.applyPostConditions(this, i, fr);
+                    result.push(node);
+                }
+            }
+            return result;
+        };
+        ActionPlanner.prototype.applyPostConditions = function (ap, actionnr, fr) {
+            var pst = ap._postConditions[actionnr];
+            var unaffected = pst.dontCare;
+            var affected = (unaffected ^ -1);
+            fr.values = (fr.values & unaffected) | (pst.values & affected);
+            fr.dontCare &= pst.dontCare;
+            return fr;
+        };
+        ActionPlanner.prototype.findConditionNameIndex = function (conditionName) {
+            var idx;
+            for (idx = 0; idx < this._numConditionNames; ++idx) {
+                if (this.conditionNames[idx] == conditionName)
+                    return idx;
+            }
+            if (idx < ActionPlanner.MAX_CONDITIONS - 1) {
+                this.conditionNames[idx] = conditionName;
+                this._numConditionNames++;
+                return idx;
+            }
+            return -1;
+        };
+        ActionPlanner.prototype.findActionIndex = function (action) {
+            var idx = this._actions.indexOf(action);
+            if (idx > -1)
+                return idx;
+            this._actions.push(action);
+            return this._actions.length - 1;
+        };
+        ActionPlanner.MAX_CONDITIONS = 64;
+        return ActionPlanner;
+    }());
+    es.ActionPlanner = ActionPlanner;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var WorldState = (function () {
+        function WorldState(planner, values, dontcare) {
+            this.planner = planner;
+            this.values = values;
+            this.dontCare = dontcare;
+        }
+        WorldState.create = function (planner) {
+            return new WorldState(planner, 0, -1);
+        };
+        WorldState.prototype.set = function (conditionId, value) {
+            this.values = value ? (this.values | (1 << conditionId)) : (this.values & ~(1 << conditionId));
+            this.dontCare ^= (1 << conditionId);
+            return true;
+        };
+        WorldState.prototype.equals = function (other) {
+            var care = this.dontCare ^ -1;
+            return (this.values & care) == (other.values & care);
+        };
+        WorldState.prototype.describe = function (planner) {
+            var s = "";
+            for (var i = 0; i < es.ActionPlanner.MAX_CONDITIONS; i++) {
+                if ((this.dontCare & (1 << i)) == 0) {
+                    var val = planner.conditionNames[i];
+                    if (val == null)
+                        continue;
+                    var set = ((this.values & (1 << i)) != 0);
+                    if (s.length > 0)
+                        s += ", ";
+                    s += (set ? val.toUpperCase() : val);
+                }
+            }
+            return s;
+        };
+        return WorldState;
+    }());
+    es.WorldState = WorldState;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -5009,6 +5367,222 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var FasterDictionary = (function () {
+        function FasterDictionary(size) {
+            if (size === void 0) { size = 1; }
+            this._freeValueCellIndex = 0;
+            this._collisions = 0;
+            this._valuesInfo = new Array(size);
+            this._values = new Array(size);
+            this._buckets = new Array(es.HashHelpers.getPrime(size));
+        }
+        FasterDictionary.prototype.getValuesArray = function (count) {
+            count.value = this._freeValueCellIndex;
+            return this._values;
+        };
+        Object.defineProperty(FasterDictionary.prototype, "valuesArray", {
+            get: function () {
+                return this._values;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(FasterDictionary.prototype, "count", {
+            get: function () {
+                return this._freeValueCellIndex;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        FasterDictionary.prototype.add = function (key, value) {
+            if (!this.addValue(key, value, { value: 0 }))
+                throw new Error("key 已经存在");
+        };
+        FasterDictionary.prototype.addValue = function (key, value, indexSet) {
+            var hash = es.HashHelpers.getHashCode(key);
+            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
+            if (this._freeValueCellIndex == this._values.length) {
+                var expandPrime = es.HashHelpers.expandPrime(this._freeValueCellIndex);
+                this._values.length = expandPrime;
+                this._valuesInfo.length = expandPrime;
+            }
+            var valueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
+            if (valueIndex == -1) {
+                this._valuesInfo[this._freeValueCellIndex] = new FastNode(key, hash);
+            }
+            else {
+                {
+                    var currentValueIndex = valueIndex;
+                    do {
+                        if (this._valuesInfo[currentValueIndex].hashcode == hash &&
+                            this._valuesInfo[currentValueIndex].key == key) {
+                            this._values[currentValueIndex] = value;
+                            indexSet.value = currentValueIndex;
+                            return false;
+                        }
+                        currentValueIndex = this._valuesInfo[currentValueIndex].previous;
+                    } while (currentValueIndex != -1);
+                }
+                this._collisions++;
+                this._valuesInfo[this._freeValueCellIndex] = new FastNode(key, hash, valueIndex);
+                this._valuesInfo[valueIndex].next = this._freeValueCellIndex;
+            }
+            this._buckets[bucketIndex] = (this._freeValueCellIndex + 1);
+            this._values[this._freeValueCellIndex] = value;
+            indexSet.value = this._freeValueCellIndex;
+            this._freeValueCellIndex++;
+            if (this._collisions > this._buckets.length) {
+                this._buckets = new Array(es.HashHelpers.expandPrime(this._collisions));
+                this._collisions = 0;
+                for (var newValueIndex = 0; newValueIndex < this._freeValueCellIndex; newValueIndex++) {
+                    bucketIndex = FasterDictionary.reduce(this._valuesInfo[newValueIndex].hashcode, this._buckets.length);
+                    var existingValueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
+                    this._buckets[bucketIndex] = newValueIndex + 1;
+                    if (existingValueIndex != -1) {
+                        this._collisions++;
+                        this._valuesInfo[newValueIndex].previous = existingValueIndex;
+                        this._valuesInfo[newValueIndex].next = -1;
+                        this._valuesInfo[existingValueIndex].next = newValueIndex;
+                    }
+                    else {
+                        this._valuesInfo[newValueIndex].next = -1;
+                        this._valuesInfo[newValueIndex].previous = -1;
+                    }
+                }
+            }
+            return true;
+        };
+        FasterDictionary.prototype.remove = function (key) {
+            var hash = FasterDictionary.hash(key);
+            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
+            var indexToValueToRemove = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
+            while (indexToValueToRemove != -1) {
+                if (this._valuesInfo[indexToValueToRemove].hashcode == hash &&
+                    this._valuesInfo[indexToValueToRemove].key == key) {
+                    if (this._buckets[bucketIndex] - 1 == indexToValueToRemove) {
+                        if (this._valuesInfo[indexToValueToRemove].next != -1)
+                            throw new Error("如果 bucket 指向单元格，那么 next 必须不存在。");
+                        var value = this._valuesInfo[indexToValueToRemove].previous;
+                        this._buckets[bucketIndex] = value + 1;
+                    }
+                    else {
+                        if (this._valuesInfo[indexToValueToRemove].next == -1)
+                            throw new Error("如果 bucket 指向另一个单元格，则 NEXT 必须存在");
+                    }
+                    FasterDictionary.updateLinkedList(indexToValueToRemove, this._valuesInfo);
+                    break;
+                }
+                indexToValueToRemove = this._valuesInfo[indexToValueToRemove].previous;
+            }
+            if (indexToValueToRemove == -1)
+                return false;
+            this._freeValueCellIndex--;
+            if (indexToValueToRemove != this._freeValueCellIndex) {
+                var movingBucketIndex = FasterDictionary.reduce(this._valuesInfo[this._freeValueCellIndex].hashcode, this._buckets.length);
+                if (this._buckets[movingBucketIndex] - 1 == this._freeValueCellIndex)
+                    this._buckets[movingBucketIndex] = (indexToValueToRemove + 1);
+                var next = this._valuesInfo[this._freeValueCellIndex].next;
+                var previous = this._valuesInfo[this._freeValueCellIndex].previous;
+                if (next != -1)
+                    this._valuesInfo[next].previous = indexToValueToRemove;
+                if (previous != -1)
+                    this._valuesInfo[previous].next = indexToValueToRemove;
+                this._valuesInfo[indexToValueToRemove] = this._valuesInfo[this._freeValueCellIndex];
+                this._values[indexToValueToRemove] = this._values[this._freeValueCellIndex];
+            }
+            return true;
+        };
+        FasterDictionary.prototype.trim = function () {
+            var expandPrime = es.HashHelpers.expandPrime(this._freeValueCellIndex);
+            if (expandPrime < this._valuesInfo.length) {
+                this._values.length = expandPrime;
+                this._valuesInfo.length = expandPrime;
+            }
+        };
+        FasterDictionary.prototype.clear = function () {
+            if (this._freeValueCellIndex == 0)
+                return;
+            this._freeValueCellIndex = 0;
+            this._buckets.length = 0;
+            this._values.length = 0;
+            this._valuesInfo.length = 0;
+        };
+        FasterDictionary.prototype.fastClear = function () {
+            if (this._freeValueCellIndex == 0)
+                return;
+            this._freeValueCellIndex = 0;
+            this._buckets.length = 0;
+            this._valuesInfo.length = 0;
+        };
+        FasterDictionary.prototype.containsKey = function (key) {
+            if (this.tryFindIndex(key, { value: 0 })) {
+                return true;
+            }
+            return false;
+        };
+        FasterDictionary.prototype.tryGetValue = function (key) {
+            var findIndex = { value: 0 };
+            if (this.tryFindIndex(key, findIndex)) {
+                return this._values[findIndex.value];
+            }
+            return null;
+        };
+        FasterDictionary.prototype.tryFindIndex = function (key, findIndex) {
+            var hash = FasterDictionary.hash(key);
+            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
+            var valueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
+            while (valueIndex != -1) {
+                if (this._valuesInfo[valueIndex].hashcode == hash && this._valuesInfo[valueIndex].key == key) {
+                    findIndex.value = valueIndex;
+                    return true;
+                }
+                valueIndex = this._valuesInfo[valueIndex].previous;
+            }
+            findIndex.value = 0;
+            return false;
+        };
+        FasterDictionary.prototype.getDirectValue = function (index) {
+            return this._values[index];
+        };
+        FasterDictionary.prototype.getIndex = function (key) {
+            var findIndex = { value: 0 };
+            if (this.tryFindIndex(key, findIndex))
+                return findIndex.value;
+            throw new Error("未找到key");
+        };
+        FasterDictionary.updateLinkedList = function (index, valuesInfo) {
+            var next = valuesInfo[index].next;
+            var previous = valuesInfo[index].previous;
+            if (next != -1)
+                valuesInfo[next].previous = previous;
+            if (previous != -1)
+                valuesInfo[previous].next = next;
+        };
+        FasterDictionary.hash = function (key) {
+            return es.HashHelpers.getHashCode(key);
+        };
+        FasterDictionary.reduce = function (x, n) {
+            if (x >= n)
+                return x % n;
+            return x;
+        };
+        return FasterDictionary;
+    }());
+    es.FasterDictionary = FasterDictionary;
+    var FastNode = (function () {
+        function FastNode(key, hash, previousNode) {
+            if (previousNode === void 0) { previousNode = -1; }
+            this.key = key;
+            this.hashcode = hash;
+            this.previous = previousNode;
+            this.next = -1;
+        }
+        return FastNode;
+    }());
+    es.FastNode = FastNode;
+})(es || (es = {}));
+var es;
+(function (es) {
     var FastList = (function () {
         function FastList(size) {
             if (size === void 0) { size = 5; }
@@ -5067,6 +5641,73 @@ var es;
         return FastList;
     }());
     es.FastList = FastList;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var HashHelpers = (function () {
+        function HashHelpers() {
+        }
+        HashHelpers.isPrime = function (candidate) {
+            if ((candidate & 1) != 0) {
+                var limit = Math.sqrt(candidate);
+                for (var divisor = 3; divisor <= limit; divisor += 2) {
+                    if ((candidate & divisor) == 0)
+                        return false;
+                }
+                return true;
+            }
+            return (candidate == 2);
+        };
+        HashHelpers.getPrime = function (min) {
+            if (min < 0)
+                throw new Error("参数错误 min不能小于0");
+            for (var i = 0; i < this.primes.length; i++) {
+                var prime = this.primes[i];
+                if (prime >= min)
+                    return prime;
+            }
+            for (var i = (min | 1); i < Number.MAX_VALUE; i += 2) {
+                if (this.isPrime(i) && ((i - 1) % this.hashPrime != 0))
+                    return i;
+            }
+            return min;
+        };
+        HashHelpers.expandPrime = function (oldSize) {
+            var newSize = 2 * oldSize;
+            if (newSize > this.maxPrimeArrayLength && this.maxPrimeArrayLength > oldSize) {
+                return this.maxPrimeArrayLength;
+            }
+            return this.getPrime(newSize);
+        };
+        HashHelpers.getHashCode = function (str) {
+            var s;
+            if (typeof str == 'object') {
+                s = JSON.stringify(str);
+            }
+            else {
+                s = str.toString();
+            }
+            var hash = 0;
+            if (s.length == 0)
+                return hash;
+            for (var i = 0; i < s.length; i++) {
+                var char = s.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return hash;
+        };
+        HashHelpers.hashCollisionThreshold = 100;
+        HashHelpers.hashPrime = 101;
+        HashHelpers.primes = [3, 7, 11, 17, 23, 29, 37, 47, 59, 71, 89, 107, 131, 163, 197, 239, 293, 353, 431, 521, 631, 761, 919,
+            1103, 1327, 1597, 1931, 2333, 2801, 3371, 4049, 4861, 5839, 7013, 8419, 10103, 12143, 14591,
+            17519, 21023, 25229, 30293, 36353, 43627, 52361, 62851, 75431, 90523, 108631, 130363, 156437,
+            187751, 225307, 270371, 324449, 389357, 467237, 560689, 672827, 807403, 968897, 1162687, 1395263,
+            1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369];
+        HashHelpers.maxPrimeArrayLength = 0x7FEFFFFD;
+        return HashHelpers;
+    }());
+    es.HashHelpers = HashHelpers;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -6203,6 +6844,124 @@ var es;
         return PolyLight;
     }(es.RenderableComponent));
     es.PolyLight = PolyLight;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var GaussianBlur = (function () {
+        function GaussianBlur() {
+        }
+        GaussianBlur.createBlurredTexture = function (image, deviation) {
+            if (deviation === void 0) { deviation = 1; }
+            var pixelData = image.getPixels(0, 0, image.textureWidth, image.textureHeight);
+            var srcData = new Array(image.textureWidth * image.textureHeight);
+            for (var i = 0; i < image.textureWidth; i++) {
+                for (var j = 0; j < image.textureHeight; j++) {
+                    var width = image.textureWidth;
+                    var r = pixelData[i * 4 + j * width];
+                    var g = pixelData[i * 4 + j * width + 1];
+                    var b = pixelData[i * 4 + j * width + 2];
+                    var a = pixelData[i * 4 + j * width + 3];
+                    srcData[i + j * width] = new es.Color(r, g, b, a);
+                }
+            }
+            var destData = this.createBlurredTextureData(srcData, image.textureWidth, image.textureHeight, deviation);
+            var arrayBuffer = new ArrayBuffer(destData.length);
+            destData.forEach(function (value, index) {
+                arrayBuffer[index] = value.packedValue;
+            });
+            egret.BitmapData.create("arraybuffer", arrayBuffer, function (bitmapData) {
+            });
+        };
+        GaussianBlur.createBlurredTextureData = function (srcData, width, height, deviation) {
+            if (deviation === void 0) { deviation = 1; }
+            var matrixR = new es.FasterDictionary();
+            var matrixG = new es.FasterDictionary();
+            var matrixB = new es.FasterDictionary();
+            var matrixA = new es.FasterDictionary();
+            var destData = new Array(width * height);
+            for (var i = 0; i < width; i++) {
+                for (var j = 0; j < height; j++) {
+                    matrixR.add({ x: i, y: j }, srcData[i + j * width].r);
+                    matrixG.add({ x: i, y: j }, srcData[i + j * width].g);
+                    matrixB.add({ x: i, y: j }, srcData[i + j * width].b);
+                    matrixA.add({ x: i, y: j }, srcData[i + j * width].a);
+                }
+            }
+            matrixR = this.gaussianConvolution(matrixR, deviation);
+            matrixG = this.gaussianConvolution(matrixG, deviation);
+            matrixB = this.gaussianConvolution(matrixB, deviation);
+            matrixA = this.gaussianConvolution(matrixA, deviation);
+            for (var i = 0; i < width; i++) {
+                for (var j = 0; j < height; j++) {
+                    var r = Math.min(255, matrixR.tryGetValue({ x: i, y: j }));
+                    var g = Math.min(255, matrixG.tryGetValue({ x: i, y: j }));
+                    var b = Math.min(255, matrixB.tryGetValue({ x: i, y: j }));
+                    var a = Math.min(255, matrixA.tryGetValue({ x: i, y: j }));
+                    destData[i + j * width] = new es.Color(r, g, b, a);
+                }
+            }
+            return destData;
+        };
+        GaussianBlur.gaussianConvolution = function (matrix, deviation) {
+            var kernel = this.calculateNormalized1DSampleKernel(deviation);
+            var res1 = new es.FasterDictionary();
+            var res2 = new es.FasterDictionary();
+            for (var i = 0; i < matrix._valuesInfo.length; i++) {
+                for (var j = 0; j < matrix.valuesArray.length; j++)
+                    res1.add({ x: i, y: j }, this.processPoint(matrix, i, j, kernel, 0));
+            }
+            for (var i = 0; i < matrix._valuesInfo.length; i++) {
+                for (var j = 0; j < matrix.valuesArray.length; j++)
+                    res2.add({ x: i, y: j }, this.processPoint(res1, i, j, kernel, 1));
+            }
+            return res2;
+        };
+        GaussianBlur.processPoint = function (matrix, x, y, kernel, direction) {
+            var res = 0;
+            var half = kernel._valuesInfo.length / 2;
+            for (var i = 0; i < kernel._valuesInfo.length; i++) {
+                var cox = direction == 0 ? x + i - half : x;
+                var coy = direction == 1 ? y + i - half : y;
+                if (cox >= 0 && cox < matrix._valuesInfo.length && coy >= 0 && coy < matrix.valuesArray.length)
+                    res += matrix.tryGetValue({ x: cox, y: coy }) * kernel.tryGetValue({ x: i, y: 0 });
+            }
+            return res;
+        };
+        GaussianBlur.calculate1DSampleKernel = function (deviation) {
+            var size = Math.ceil(deviation * 3) * 3 + 1;
+            return this.calculate1DSampleKernelOfSize(deviation, size);
+        };
+        GaussianBlur.calculate1DSampleKernelOfSize = function (deviation, size) {
+            var ret = new es.FasterDictionary();
+            var half = (size - 1) / 2;
+            for (var i = 0; i < size; i++) {
+                ret.add({ x: i, y: 0 }, 1 / (Math.sqrt(2 * Math.PI) * deviation) * Math.exp(-(i - half) * (i - half) / (2 * deviation * deviation)));
+            }
+            return ret;
+        };
+        GaussianBlur.calculateNormalized1DSampleKernel = function (deviation) {
+            return this.normalizeMatrix(this.calculate1DSampleKernel(deviation));
+        };
+        GaussianBlur.normalizeMatrix = function (matrix) {
+            var ret = new es.FasterDictionary();
+            var sum = 0;
+            for (var i = 0; i < ret._valuesInfo.length; i++) {
+                for (var j = 0; j < ret.valuesArray.length; j++) {
+                    sum += matrix.tryGetValue({ x: i, y: j });
+                }
+            }
+            if (sum != 0) {
+                for (var i = 0; i < ret._valuesInfo.length; i++) {
+                    for (var j = 0; j < ret.valuesArray.length; j++) {
+                        ret.add({ x: i, y: j }, matrix.tryGetValue({ x: i, y: j }) / sum);
+                    }
+                }
+            }
+            return ret;
+        };
+        return GaussianBlur;
+    }());
+    es.GaussianBlur = GaussianBlur;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -10466,6 +11225,20 @@ var es;
         return ListPool;
     }());
     es.ListPool = ListPool;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var NumberExtension = (function () {
+        function NumberExtension() {
+        }
+        NumberExtension.toNumber = function (value) {
+            if (value == undefined)
+                return 0;
+            return Number(value);
+        };
+        return NumberExtension;
+    }());
+    es.NumberExtension = NumberExtension;
 })(es || (es = {}));
 var es;
 (function (es) {

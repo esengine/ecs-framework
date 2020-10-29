@@ -11,17 +11,17 @@ module samples {
 
                 this.camera.entity.addComponent(new es.FollowCamera(moonEntity));
 
-                this.entities.frameAllocate = true;
-                this.entities.maxAllocate = 10;
-                for (let i = 0; i < 10000; i ++){
-                    this.createEntity("");
-                }
+                // this.entities.frameAllocate = true;
+                // this.entities.maxAllocate = 10;
+                // for (let i = 0; i < 10000; i ++){
+                //     this.createEntity("");
+                // }
             });
         }
 
         public update(){
             super.update();
-            console.log(this.entities.buffer.length);
+            // console.log(this.entities.buffer.length);
         }
     }
 }

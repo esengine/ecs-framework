@@ -31,10 +31,6 @@ declare module es {
         private static hasKey;
         private static getKey;
     }
-    class AStarNode<T> extends PriorityQueueNode {
-        data: T;
-        constructor(data: T);
-    }
 }
 declare module es {
     class AstarGridGraph implements IAstarGraph<Vector2> {
@@ -186,6 +182,96 @@ declare module es {
         static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[];
         private static hasKey;
         private static getKey;
+    }
+}
+declare module es {
+    class AStarStorage {
+        static readonly MAX_NODES: number;
+        _opened: AStarNode[];
+        _closed: AStarNode[];
+        _numOpened: number;
+        _numClosed: number;
+        _lastFoundOpened: number;
+        _lastFoundClosed: number;
+        constructor();
+        clear(): void;
+        findOpened(node: AStarNode): AStarNode;
+        findClosed(node: AStarNode): AStarNode;
+        hasOpened(): boolean;
+        removeOpened(node: AStarNode): void;
+        removeClosed(node: AStarNode): void;
+        isOpen(node: AStarNode): boolean;
+        isClosed(node: AStarNode): boolean;
+        addToOpenList(node: AStarNode): void;
+        addToClosedList(node: AStarNode): void;
+        removeCheapestOpenNode(): AStarNode;
+    }
+}
+declare module es {
+    class AStarNode implements IEquatable<AStarNode>, IPoolable {
+        worldState: WorldState;
+        costSoFar: number;
+        heuristicCost: number;
+        costSoFarAndHeuristicCost: number;
+        action: Action;
+        parent: AStarNode;
+        parentWorldState: WorldState;
+        depth: number;
+        equals(other: AStarNode): boolean;
+        compareTo(other: AStarNode): number;
+        reset(): void;
+        clone(): AStarNode;
+        toString(): string;
+    }
+    class AStar {
+        static storage: AStarStorage;
+        static plan(ap: ActionPlanner, start: WorldState, goal: WorldState, selectedNodes?: AStarNode[]): Action[];
+        static reconstructPlan(goalNode: AStarNode, selectedNodes: AStarNode[]): Action[];
+        static calculateHeuristic(fr: WorldState, to: WorldState): number;
+    }
+}
+declare module es {
+    class Action {
+        name: string;
+        cost: number;
+        _preConditions: Set<[string, boolean]>;
+        _postConditions: Set<[string, boolean]>;
+        constructor(name?: string, cost?: number);
+        setPrecondition(conditionName: string, value: boolean): void;
+        setPostcondition(conditionName: string, value: boolean): void;
+        validate(): boolean;
+        toString(): string;
+    }
+}
+declare module es {
+    class ActionPlanner {
+        static readonly MAX_CONDITIONS: number;
+        conditionNames: string[];
+        _actions: Action[];
+        _viableActions: Action[];
+        _preConditions: WorldState[];
+        _postConditions: WorldState[];
+        _numConditionNames: number;
+        constructor();
+        createWorldState(): WorldState;
+        addAction(action: Action): void;
+        plan(startState: WorldState, goalState: WorldState, selectedNode?: any): Action[];
+        getPossibleTransitions(fr: WorldState): AStarNode[];
+        applyPostConditions(ap: ActionPlanner, actionnr: number, fr: WorldState): WorldState;
+        findConditionNameIndex(conditionName: string): any;
+        findActionIndex(action: Action): number;
+    }
+}
+declare module es {
+    class WorldState implements IEquatable<WorldState> {
+        values: number;
+        dontCare: number;
+        planner: ActionPlanner;
+        static create(planner: ActionPlanner): WorldState;
+        constructor(planner: ActionPlanner, values: number, dontcare: number);
+        set(conditionId: number, value: boolean): boolean;
+        equals(other: WorldState): boolean;
+        describe(planner: ActionPlanner): string;
     }
 }
 declare module es {
@@ -1072,6 +1158,46 @@ declare module es {
     }
 }
 declare module es {
+    class FasterDictionary<TKey, TValue> {
+        _values: TValue[];
+        _valuesInfo: FastNode[];
+        _buckets: number[];
+        _freeValueCellIndex: number;
+        _collisions: number;
+        constructor(size?: number);
+        getValuesArray(count: {
+            value: number;
+        }): TValue[];
+        readonly valuesArray: TValue[];
+        readonly count: number;
+        add(key: TKey, value: TValue): void;
+        addValue(key: TKey, value: TValue, indexSet: {
+            value: number;
+        }): boolean;
+        remove(key: TKey): boolean;
+        trim(): void;
+        clear(): void;
+        fastClear(): void;
+        containsKey(key: TKey): boolean;
+        tryGetValue(key: TKey): TValue;
+        tryFindIndex(key: TKey, findIndex: {
+            value: number;
+        }): boolean;
+        getDirectValue(index: number): TValue;
+        getIndex(key: TKey): number;
+        static updateLinkedList(index: number, valuesInfo: FastNode[]): void;
+        static hash(key: any): number;
+        static reduce(x: number, n: number): number;
+    }
+    class FastNode {
+        readonly key: any;
+        readonly hashcode: number;
+        previous: number;
+        next: number;
+        constructor(key: any, hash: number, previousNode?: number);
+    }
+}
+declare module es {
     class FastList<T> {
         buffer: T[];
         length: number;
@@ -1085,6 +1211,18 @@ declare module es {
         ensureCapacity(additionalItemCount?: number): void;
         addRange(array: T[]): void;
         sort(comparer: IComparer<T>): void;
+    }
+}
+declare module es {
+    class HashHelpers {
+        static readonly hashCollisionThreshold: number;
+        static readonly hashPrime: number;
+        static readonly primes: number[];
+        static readonly maxPrimeArrayLength: number;
+        static isPrime(candidate: number): boolean;
+        static getPrime(min: number): number;
+        static expandPrime(oldSize: number): number;
+        static getHashCode(str: any): number;
     }
 }
 declare module es {
@@ -1315,6 +1453,45 @@ declare module es {
         render(camera: Camera): void;
         reset(): void;
         private computeTriangleIndices;
+    }
+}
+declare module es {
+    class GaussianBlur {
+        static createBlurredTexture(image: egret.Texture, deviation?: number): void;
+        static createBlurredTextureData(srcData: Color[], width: number, height: number, deviation?: number): Color[];
+        static gaussianConvolution(matrix: FasterDictionary<{
+            x: number;
+            y: number;
+        }, number>, deviation: number): FasterDictionary<{
+            x: number;
+            y: number;
+        }, number>;
+        static processPoint(matrix: FasterDictionary<{
+            x: number;
+            y: number;
+        }, number>, x: number, y: number, kernel: FasterDictionary<{
+            x: number;
+            y: number;
+        }, number>, direction: number): number;
+        static calculate1DSampleKernel(deviation: number): FasterDictionary<{
+            x: number;
+            y: number;
+        }, number>;
+        static calculate1DSampleKernelOfSize(deviation: number, size: number): FasterDictionary<{
+            x: number;
+            y: number;
+        }, number>;
+        static calculateNormalized1DSampleKernel(deviation: number): FasterDictionary<{
+            x: number;
+            y: number;
+        }, number>;
+        static normalizeMatrix(matrix: FasterDictionary<{
+            x: number;
+            y: number;
+        }, number>): FasterDictionary<{
+            x: number;
+            y: number;
+        }, number>;
     }
 }
 declare module es {
@@ -2210,6 +2387,11 @@ declare module es {
         static clearCache(): void;
         static obtain<T>(): T[];
         static free<T>(obj: Array<T>): void;
+    }
+}
+declare module es {
+    class NumberExtension {
+        static toNumber(value: any): number;
     }
 }
 declare module es {

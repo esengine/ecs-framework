@@ -99,7 +99,7 @@ module es {
     /**
      * 使用PriorityQueue需要的额外字段将原始数据封装在一个小类中
      */
-    export class AStarNode<T> extends PriorityQueueNode {
+    class AStarNode<T> extends PriorityQueueNode {
         public data: T;
 
         constructor(data: T) {
