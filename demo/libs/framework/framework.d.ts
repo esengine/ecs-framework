@@ -263,6 +263,17 @@ declare module es {
     }
 }
 declare module es {
+    abstract class Agent {
+        actions: Action[];
+        _planner: ActionPlanner;
+        constructor();
+        plan(debugPlan?: boolean): boolean;
+        hasActionPlan(): boolean;
+        abstract getWorldState(): WorldState;
+        abstract getGoalState(): WorldState;
+    }
+}
+declare module es {
     class WorldState implements IEquatable<WorldState> {
         values: number;
         dontCare: number;

@@ -232,7 +232,7 @@ module es {
         }
 
         protected async update() {
-            this.startDebugUpdate();
+            // this.startDebugUpdate();
 
             // 更新我们所有的系统管理器
             Time.update(egret.getTimer());
@@ -266,7 +266,7 @@ module es {
                 }
             }
 
-            this.endDebugUpdate();
+            // this.endDebugUpdate();
 
             await this.draw();
         }

@@ -1290,6 +1290,36 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Agent = (function () {
+        function Agent() {
+            this._planner = new es.ActionPlanner();
+        }
+        Agent.prototype.plan = function (debugPlan) {
+            if (debugPlan === void 0) { debugPlan = false; }
+            var nodes = null;
+            if (debugPlan)
+                nodes = [];
+            this.actions = this._planner.plan(this.getWorldState(), this.getGoalState(), nodes);
+            if (nodes != null && nodes.length > 0) {
+                console.log("---- ActionPlanner plan ----");
+                console.log("plan cost = " + nodes[nodes.length - 1].costSoFar);
+                console.log("               start" + "\t" + this.getWorldState().describe(this._planner));
+                for (var i = 0; i < nodes.length; i++) {
+                    console.log(i + ": " + nodes[i].action.name + "\t" + nodes[i].worldState.describe(this._planner));
+                    es.Pool.free(nodes[i]);
+                }
+            }
+            return this.hasActionPlan();
+        };
+        Agent.prototype.hasActionPlan = function () {
+            return this.actions != null && this.actions.length > 0;
+        };
+        return Agent;
+    }());
+    es.Agent = Agent;
+})(es || (es = {}));
+var es;
+(function (es) {
     var WorldState = (function () {
         function WorldState(planner, values, dontcare) {
             this.planner = planner;
@@ -1483,7 +1513,6 @@ var es;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
-                            this.startDebugUpdate();
                             es.Time.update(egret.getTimer());
                             es.Input.update();
                             if (!this._scene) return [3, 2];
@@ -1507,9 +1536,7 @@ var es;
                             _a.sent();
                             this.addChild(this._scene);
                             _a.label = 2;
-                        case 2:
-                            this.endDebugUpdate();
-                            return [4, this.draw()];
+                        case 2: return [4, this.draw()];
                         case 3:
                             _a.sent();
                             return [2];
@@ -4902,6 +4929,8 @@ var es;
         ComponentList.prototype.deregisterAllComponents = function () {
             for (var i = 0; i < this._components.length; i++) {
                 var component = this._components.buffer[i];
+                if (!component)
+                    continue;
                 if (component instanceof es.RenderableComponent) {
                     if (component.displayObject.parent)
                         component.displayObject.parent.removeChild(component.displayObject);
@@ -4971,6 +5000,8 @@ var es;
             }
         };
         ComponentList.prototype.handleRemove = function (component) {
+            if (!component)
+                return;
             if (component instanceof es.RenderableComponent) {
                 if (component.displayObject.parent)
                     component.displayObject.parent.removeChild(component.displayObject);
