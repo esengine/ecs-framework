@@ -6,6 +6,7 @@ module sc {
             new SceneData("Tiled Tiles", samples.AnimatedTilesScene),
             new SceneData("Linecasting", samples.LineCastingScene),
             new SceneData("Ninja Adventure", samples.NinjaAdventureScene),
+            new SceneData("GOAP", samples.GoapScene),
         ];
 
         private _transitionList: TransitionData[] = [
