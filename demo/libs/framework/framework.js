@@ -1008,7 +1008,7 @@ var es;
             return null;
         };
         AStarStorage.prototype.hasOpened = function () {
-            return this._numClosed > 0;
+            return this._numOpened > 0;
         };
         AStarStorage.prototype.removeOpened = function (node) {
             if (this._numOpened > 0)
@@ -1330,6 +1330,9 @@ var es;
             return new WorldState(planner, 0, -1);
         };
         WorldState.prototype.set = function (conditionId, value) {
+            if (typeof conditionId == "string") {
+                return this.set(this.planner.findConditionNameIndex(conditionId), value);
+            }
             this.values = value ? (this.values | (1 << conditionId)) : (this.values & ~(1 << conditionId));
             this.dontCare ^= (1 << conditionId);
             return true;
@@ -1513,7 +1516,6 @@ var es;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
-                            this.startDebugUpdate();
                             es.Time.update(egret.getTimer());
                             es.Input.update();
                             if (!this._scene) return [3, 2];
@@ -1537,9 +1539,7 @@ var es;
                             _a.sent();
                             this.addChild(this._scene);
                             _a.label = 2;
-                        case 2:
-                            this.endDebugUpdate();
-                            return [4, this.draw()];
+                        case 2: return [4, this.draw()];
                         case 3:
                             _a.sent();
                             return [2];
@@ -4932,6 +4932,8 @@ var es;
         ComponentList.prototype.deregisterAllComponents = function () {
             for (var i = 0; i < this._components.length; i++) {
                 var component = this._components.buffer[i];
+                if (!component)
+                    continue;
                 if (component instanceof es.RenderableComponent) {
                     if (component.displayObject.parent)
                         component.displayObject.parent.removeChild(component.displayObject);
@@ -5001,6 +5003,8 @@ var es;
             }
         };
         ComponentList.prototype.handleRemove = function (component) {
+            if (!component)
+                return;
             if (component instanceof es.RenderableComponent) {
                 if (component.displayObject.parent)
                     component.displayObject.parent.removeChild(component.displayObject);
@@ -11318,7 +11322,7 @@ var es;
                 obj["reset"]();
             }
         };
-        Pool._objectQueue = new Array(10);
+        Pool._objectQueue = [];
         return Pool;
     }());
     es.Pool = Pool;

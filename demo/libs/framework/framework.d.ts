@@ -280,7 +280,7 @@ declare module es {
         planner: ActionPlanner;
         static create(planner: ActionPlanner): WorldState;
         constructor(planner: ActionPlanner, values: number, dontcare: number);
-        set(conditionId: number, value: boolean): boolean;
+        set(conditionId: number | string, value: boolean): boolean;
         equals(other: WorldState): boolean;
         describe(planner: ActionPlanner): string;
     }

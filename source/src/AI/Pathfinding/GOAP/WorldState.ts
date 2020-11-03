@@ -36,7 +36,11 @@ module es {
             this.dontCare = dontcare;
         }
 
-        public set(conditionId: number, value: boolean): boolean {
+        public set(conditionId: number | string, value: boolean): boolean {
+            if (typeof conditionId == "string"){
+                return this.set(this.planner.findConditionNameIndex(conditionId), value);
+            }
+            
             this.values = value ? (this.values | (1 << conditionId)) : (this.values & ~(1 << conditionId));
             this.dontCare ^= (1 << conditionId);
             return true;

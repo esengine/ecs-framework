@@ -75,6 +75,7 @@ module es {
             for (let i = 0; i < this._components.length; i++) {
                 let component = this._components.buffer[i];
 
+                if (!component) continue;
                 // 处理渲染层列表
                 if (component instanceof RenderableComponent) {
                     if (component.displayObject.parent)
@@ -161,6 +162,7 @@ module es {
         }
 
         public handleRemove(component: Component) {
+            if (!component) return;
             // 处理渲染层列表
             if (component instanceof RenderableComponent) {
                 if (component.displayObject.parent)

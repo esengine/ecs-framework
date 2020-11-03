@@ -3,7 +3,7 @@ module es {
      * 用于池任何对象
      */
     export class Pool<T> {
-        private static _objectQueue = new Array(10);
+        private static _objectQueue = [];
 
         /**
          * 预热缓存，使用最大的cacheCount对象填充缓存

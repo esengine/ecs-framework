@@ -55,7 +55,7 @@ module es {
         }
 
         public hasOpened(): boolean {
-            return this._numClosed > 0;
+            return this._numOpened > 0;
         }
 
         public removeOpened(node: AStarNode){
