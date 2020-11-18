@@ -14,7 +14,14 @@ module es {
          */
         public _componentsByRenderLayer: Map<number, IRenderable[]> = new Map<number, IRenderable[]>();
         public _unsortedRenderLayers: number[] = [];
-        public _componentsNeedSort: boolean = true;
+        private _componentsNeedSort: boolean = true;
+        public get componentsNeedSort(): boolean {
+            return this._componentsNeedSort;
+        }
+        public set componentsNeedSort(value: boolean) {
+            this._componentsNeedSort = value;
+            Core.scene.sortableChildren = value;
+        }
 
         public get count() {
             return this._components.length;
@@ -49,11 +56,11 @@ module es {
         public setRenderLayerNeedsComponentSort(renderLayer: number) {
             if (!this._unsortedRenderLayers.contains(renderLayer))
                 this._unsortedRenderLayers.push(renderLayer);
-            this._componentsNeedSort = true;
+            this.componentsNeedSort = true;
         }
 
         public setNeedsComponentSort() {
-            this._componentsNeedSort = true;
+            this.componentsNeedSort = true;
         }
 
         public addToRenderLayerList(component: IRenderable, renderLayer: number) {
@@ -66,7 +73,7 @@ module es {
             list.push(component);
             if (!this._unsortedRenderLayers.contains(renderLayer))
                 this._unsortedRenderLayers.push(renderLayer);
-            this._componentsNeedSort = true;
+            this.componentsNeedSort = true;
         }
 
         /**
@@ -81,10 +88,9 @@ module es {
         }
 
         public updateList() {
-            if (this._componentsNeedSort) {
+            if (this.componentsNeedSort) {
                 this._components.sort(RenderableComponentList.compareUpdatableOrder.compare);
-                this._componentsNeedSort = false;
-                this.updateEgretList();
+                this.componentsNeedSort = false;
             }
 
             if (this._unsortedRenderLayers.length > 0) {
@@ -96,20 +102,6 @@ module es {
                 }
 
                 this._unsortedRenderLayers.length = 0;
-                this.updateEgretList();
-            }
-        }
-
-        private updateEgretList(){
-            let scene = Core._instance._scene;
-            if (!scene)
-                return;
-
-            for (let i = 0 ; i < this._components.length; i ++){
-                let component = this._components[i] as RenderableComponent;
-                let egretDisplayObject = scene.$children.find(a => {return a.hashCode == component.displayObject.hashCode});
-                let displayIndex = scene.getChildIndex(egretDisplayObject);
-                if (displayIndex != -1 && displayIndex != i) scene.swapChildrenAt(displayIndex, i);
             }
         }
     }

@@ -159,9 +159,10 @@ module es {
          */
         public setRenderLayer(renderLayer: number): RenderableComponent {
             if (renderLayer != this._renderLayer) {
+                this.displayObject.zIndex = renderLayer;
+                
                 let oldRenderLayer = this._renderLayer;
                 this._renderLayer = renderLayer;
-
                 // 如果该组件拥有一个实体，那么是由ComponentList管理，需要通知它改变了渲染层
                 if (this.entity && this.entity.scene)
                     this.entity.scene.renderableComponents.updateRenderableRenderLayer(this, oldRenderLayer, this._renderLayer);

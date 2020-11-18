@@ -2035,7 +2035,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Bitmap = egret.Bitmap;
     var Scene = (function (_super) {
         __extends(Scene, _super);
         function Scene() {
@@ -2045,7 +2044,6 @@ var es;
             _this._renderers = [];
             _this._postProcessors = [];
             _this.dynamicBatch = false;
-            _this.optimizeCost = false;
             _this.entities = new es.EntityList(_this);
             _this.renderableComponents = new es.RenderableComponentList();
             _this.content = new es.ContentManager();
@@ -2155,8 +2153,6 @@ var es;
                     this.addChild(component.displayObject);
                     this.addChild(component.debugDisplayObject);
                     batching = false;
-                    if (this.optimizeCost && displayContainer)
-                        this.optimizeCombine(displayContainer);
                     displayContainer = null;
                 }
                 else if (component instanceof es.RenderableComponent) {
@@ -2172,17 +2168,6 @@ var es;
                     displayContainer.addChild(component.debugDisplayObject);
                 }
             }
-            if (this.optimizeCost && displayContainer)
-                this.optimizeCombine(displayContainer);
-        };
-        Scene.prototype.optimizeCombine = function (container) {
-            var renderTexture = new egret.RenderTexture();
-            renderTexture.drawToTexture(container, new es.Rectangle(0, 0, container.width, container.height));
-            var parent = container.parent;
-            var index = this.getChildIndex(container);
-            parent.addChildAt(new Bitmap(renderTexture), index);
-            parent.removeChild(container);
-            container.removeChildren();
         };
         Scene.prototype.postRender = function () {
             if (this.enablePostProcessing) {
@@ -3863,6 +3848,7 @@ var es;
         };
         RenderableComponent.prototype.setRenderLayer = function (renderLayer) {
             if (renderLayer != this._renderLayer) {
+                this.displayObject.zIndex = renderLayer;
                 var oldRenderLayer = this._renderLayer;
                 this._renderLayer = renderLayer;
                 if (this.entity && this.entity.scene)
@@ -5868,6 +5854,17 @@ var es;
             this._unsortedRenderLayers = [];
             this._componentsNeedSort = true;
         }
+        Object.defineProperty(RenderableComponentList.prototype, "componentsNeedSort", {
+            get: function () {
+                return this._componentsNeedSort;
+            },
+            set: function (value) {
+                this._componentsNeedSort = value;
+                es.Core.scene.sortableChildren = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(RenderableComponentList.prototype, "count", {
             get: function () {
                 return this._components.length;
@@ -5899,10 +5896,10 @@ var es;
         RenderableComponentList.prototype.setRenderLayerNeedsComponentSort = function (renderLayer) {
             if (!this._unsortedRenderLayers.contains(renderLayer))
                 this._unsortedRenderLayers.push(renderLayer);
-            this._componentsNeedSort = true;
+            this.componentsNeedSort = true;
         };
         RenderableComponentList.prototype.setNeedsComponentSort = function () {
-            this._componentsNeedSort = true;
+            this.componentsNeedSort = true;
         };
         RenderableComponentList.prototype.addToRenderLayerList = function (component, renderLayer) {
             var list = this.componentsWithRenderLayer(renderLayer);
@@ -5913,7 +5910,7 @@ var es;
             list.push(component);
             if (!this._unsortedRenderLayers.contains(renderLayer))
                 this._unsortedRenderLayers.push(renderLayer);
-            this._componentsNeedSort = true;
+            this.componentsNeedSort = true;
         };
         RenderableComponentList.prototype.componentsWithRenderLayer = function (renderLayer) {
             if (!this._componentsByRenderLayer.get(renderLayer)) {
@@ -5922,10 +5919,9 @@ var es;
             return this._componentsByRenderLayer.get(renderLayer);
         };
         RenderableComponentList.prototype.updateList = function () {
-            if (this._componentsNeedSort) {
+            if (this.componentsNeedSort) {
                 this._components.sort(RenderableComponentList.compareUpdatableOrder.compare);
-                this._componentsNeedSort = false;
-                this.updateEgretList();
+                this.componentsNeedSort = false;
             }
             if (this._unsortedRenderLayers.length > 0) {
                 for (var i = 0, count = this._unsortedRenderLayers.length; i < count; i++) {
@@ -5935,23 +5931,6 @@ var es;
                     }
                 }
                 this._unsortedRenderLayers.length = 0;
-                this.updateEgretList();
-            }
-        };
-        RenderableComponentList.prototype.updateEgretList = function () {
-            var scene = es.Core._instance._scene;
-            if (!scene)
-                return;
-            var _loop_5 = function (i) {
-                var component = this_1._components[i];
-                var egretDisplayObject = scene.$children.find(function (a) { return a.hashCode == component.displayObject.hashCode; });
-                var displayIndex = scene.getChildIndex(egretDisplayObject);
-                if (displayIndex != -1 && displayIndex != i)
-                    scene.swapChildrenAt(displayIndex, i);
-            };
-            var this_1 = this;
-            for (var i = 0; i < this._components.length; i++) {
-                _loop_5(i);
             }
         };
         RenderableComponentList.compareUpdatableOrder = new es.RenderableComparer();
@@ -7815,26 +7794,26 @@ var es;
             for (var i = 0; i < colliders.length; i++) {
                 var collider = colliders[i];
                 var neighbors = es.Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-                var _loop_6 = function (j) {
+                var _loop_5 = function (j) {
                     var neighbor = neighbors[j];
                     if (!collider.isTrigger && !neighbor.isTrigger)
                         return "continue";
                     if (collider.overlaps(neighbor)) {
                         var pair_1 = new es.Pair(collider, neighbor);
-                        var shouldReportTriggerEvent = this_2._activeTriggerIntersections.findIndex(function (value) {
+                        var shouldReportTriggerEvent = this_1._activeTriggerIntersections.findIndex(function (value) {
                             return value.first == pair_1.first && value.second == pair_1.second;
-                        }) == -1 && this_2._previousTriggerIntersections.findIndex(function (value) {
+                        }) == -1 && this_1._previousTriggerIntersections.findIndex(function (value) {
                             return value.first == pair_1.first && value.second == pair_1.second;
                         }) == -1;
                         if (shouldReportTriggerEvent)
-                            this_2.notifyTriggerListeners(pair_1, true);
-                        if (!this_2._activeTriggerIntersections.contains(pair_1))
-                            this_2._activeTriggerIntersections.push(pair_1);
+                            this_1.notifyTriggerListeners(pair_1, true);
+                        if (!this_1._activeTriggerIntersections.contains(pair_1))
+                            this_1._activeTriggerIntersections.push(pair_1);
                     }
                 };
-                var this_2 = this;
+                var this_1 = this;
                 for (var j = 0; j < neighbors.length; j++) {
-                    _loop_6(j);
+                    _loop_5(j);
                 }
             }
             es.ListPool.free(colliders);
@@ -7842,18 +7821,18 @@ var es;
         };
         ColliderTriggerHelper.prototype.checkForExitedColliders = function () {
             var _this = this;
-            var _loop_7 = function (i) {
-                var index = this_3._previousTriggerIntersections.findIndex(function (value) {
+            var _loop_6 = function (i) {
+                var index = this_2._previousTriggerIntersections.findIndex(function (value) {
                     if (value.first == _this._activeTriggerIntersections[i].first && value.second == _this._activeTriggerIntersections[i].second)
                         return true;
                     return false;
                 });
                 if (index != -1)
-                    this_3._previousTriggerIntersections.removeAt(index);
+                    this_2._previousTriggerIntersections.removeAt(index);
             };
-            var this_3 = this;
+            var this_2 = this;
             for (var i = 0; i < this._activeTriggerIntersections.length; i++) {
-                _loop_7(i);
+                _loop_6(i);
             }
             for (var i = 0; i < this._previousTriggerIntersections.length; i++) {
                 this.notifyTriggerListeners(this._previousTriggerIntersections[i], false);
@@ -8229,18 +8208,18 @@ var es;
                     var cell = this.cellAtPosition(x, y);
                     if (!cell)
                         continue;
-                    var _loop_8 = function (i) {
+                    var _loop_7 = function (i) {
                         var collider = cell[i];
                         if (collider == excludeCollider || !es.Flags.isFlagSet(layerMask, collider.physicsLayer.value))
                             return "continue";
                         if (bounds.intersects(collider.bounds)) {
-                            if (!this_4._tempHashSet.firstOrDefault(function (c) { return c.hashCode == collider.hashCode; }))
-                                this_4._tempHashSet.push(collider);
+                            if (!this_3._tempHashSet.firstOrDefault(function (c) { return c.hashCode == collider.hashCode; }))
+                                this_3._tempHashSet.push(collider);
                         }
                     };
-                    var this_4 = this;
+                    var this_3 = this;
                     for (var i = 0; i < cell.length; i++) {
-                        _loop_8(i);
+                        _loop_7(i);
                     }
                 }
             }
@@ -13018,12 +12997,12 @@ var es;
                         var garbage = garbageRect_1[_b];
                         rectangles.remove(garbage);
                     }
-                    var _loop_9 = function (garbage) {
+                    var _loop_8 = function (garbage) {
                         textures.removeAll(function (a) { return a.texture.hashCode == garbage.hashCode; });
                     };
                     for (var _c = 0, garabeTextures_1 = garabeTextures; _c < garabeTextures_1.length; _c++) {
                         var garbage = garabeTextures_1[_c];
-                        _loop_9(garbage);
+                        _loop_8(garbage);
                     }
                     for (var _d = 0, garbageImages_1 = garbageImages; _d < garbageImages_1.length; _d++) {
                         var garbage = garbageImages_1[_d];

@@ -466,7 +466,6 @@ declare module es {
         readonly _postProcessors: PostProcessor[];
         _didSceneBegin: any;
         dynamicBatch: boolean;
-        optimizeCost: boolean;
         constructor();
         static createWithDefaultRenderer(): Scene;
         initialize(): void;
@@ -480,7 +479,6 @@ declare module es {
         update(): void;
         render(): void;
         dynamicInBatch(): void;
-        private optimizeCombine;
         postRender(): void;
         requestScreenshot(callback: Function): void;
         addSceneComponent<T extends SceneComponent>(component: T): T;
@@ -1275,7 +1273,8 @@ declare module es {
         _components: IRenderable[];
         _componentsByRenderLayer: Map<number, IRenderable[]>;
         _unsortedRenderLayers: number[];
-        _componentsNeedSort: boolean;
+        private _componentsNeedSort;
+        componentsNeedSort: boolean;
         readonly count: number;
         readonly buffer: IRenderable[];
         add(component: IRenderable): void;
@@ -1286,7 +1285,6 @@ declare module es {
         addToRenderLayerList(component: IRenderable, renderLayer: number): void;
         componentsWithRenderLayer(renderLayer: number): IRenderable[];
         updateList(): void;
-        private updateEgretList;
     }
 }
 declare class StringUtils {

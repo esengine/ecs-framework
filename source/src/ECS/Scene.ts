@@ -39,10 +39,6 @@ module es {
          * 动态合批
          */
         public dynamicBatch: boolean = false;
-        /**
-         * 极致优化cost 会失去所有的事件（触摸、点击） 慎重开启
-         */
-        public optimizeCost: boolean = false;
 
         constructor() {
             super();
@@ -212,7 +208,6 @@ module es {
                     this.addChild(component.displayObject);
                     this.addChild(component.debugDisplayObject);
                     batching = false;
-                    if (this.optimizeCost && displayContainer) this.optimizeCombine(displayContainer);
                     displayContainer = null;
                 } else if (component instanceof RenderableComponent) {
                     // 静态
@@ -229,18 +224,6 @@ module es {
                     displayContainer.addChild(component.debugDisplayObject);
                 }
             }
-
-            if (this.optimizeCost && displayContainer) this.optimizeCombine(displayContainer);
-        }
-
-        private optimizeCombine(container: egret.DisplayObjectContainer){
-            let renderTexture = new egret.RenderTexture();
-            renderTexture.drawToTexture(container, new Rectangle(0, 0, container.width, container.height));
-            let parent = container.parent;
-            let index = this.getChildIndex(container);
-            parent.addChildAt(new Bitmap(renderTexture), index);
-            parent.removeChild(container);
-            container.removeChildren();
         }
 
         /**
