@@ -1,0 +1,525 @@
+<!doctype html>
+<html class="default no-js">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>AstarGridGraph | @esengine/egret-framework</title>
+	<meta name="description" content="Documentation for @esengine/egret-framework">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+<header>
+	<div class="tsd-page-toolbar">
+		<div class="container">
+			<div class="table-wrap">
+				<div class="table-cell" id="tsd-search" data-index="../assets/js/search.json" data-base="..">
+					<div class="field">
+						<label for="tsd-search-field" class="tsd-widget search no-caption">Search</label>
+						<input id="tsd-search-field" type="text" />
+					</div>
+					<ul class="results">
+						<li class="state loading">Preparing search index...</li>
+						<li class="state failure">The search index is not available</li>
+					</ul>
+					<a href="../index.html" class="title">@esengine/egret-framework</a>
+				</div>
+				<div class="table-cell" id="tsd-widgets">
+					<div id="tsd-filter">
+						<a href="#" class="tsd-widget options no-caption" data-toggle="options">Options</a>
+						<div class="tsd-filter-group">
+							<div class="tsd-select" id="tsd-filter-visibility">
+								<span class="tsd-select-label">All</span>
+								<ul class="tsd-select-list">
+									<li data-value="public">Public</li>
+									<li data-value="protected">Public/Protected</li>
+									<li data-value="private" class="selected">All</li>
+								</ul>
+							</div>
+							<input type="checkbox" id="tsd-filter-inherited" checked />
+							<label class="tsd-widget" for="tsd-filter-inherited">Inherited</label>
+							<input type="checkbox" id="tsd-filter-externals" checked />
+							<label class="tsd-widget" for="tsd-filter-externals">Externals</label>
+							<input type="checkbox" id="tsd-filter-only-exported" />
+							<label class="tsd-widget" for="tsd-filter-only-exported">Only exported</label>
+						</div>
+					</div>
+					<a href="#" class="tsd-widget menu no-caption" data-toggle="menu">Menu</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="tsd-page-title">
+		<div class="container">
+			<ul class="tsd-breadcrumb">
+				<li>
+					<a href="../globals.html">Globals</a>
+				</li>
+				<li>
+					<a href="../modules/_ai_pathfinding_astar_astargridgraph_.html">&quot;AI/Pathfinding/AStar/AstarGridGraph&quot;</a>
+				</li>
+				<li>
+					<a href="../modules/_ai_pathfinding_astar_astargridgraph_.es.html">es</a>
+				</li>
+				<li>
+					<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html">AstarGridGraph</a>
+				</li>
+			</ul>
+			<h1>Class AstarGridGraph</h1>
+		</div>
+	</div>
+</header>
+<div class="container container-main">
+	<div class="row">
+		<div class="col-8 col-content">
+			<section class="tsd-panel tsd-comment">
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>基本静态网格图与A*一起使用
+						将walls添加到walls HashSet，并将加权节点添加到weightedNodes</p>
+					</div>
+				</div>
+			</section>
+			<section class="tsd-panel tsd-hierarchy">
+				<h3>Hierarchy</h3>
+				<ul class="tsd-hierarchy">
+					<li>
+						<span class="target">AstarGridGraph</span>
+					</li>
+				</ul>
+			</section>
+			<section class="tsd-panel">
+				<h3>Implements</h3>
+				<ul class="tsd-hierarchy">
+					<li><a href="../interfaces/_ai_pathfinding_astar_iastargraph_.es.iastargraph.html" class="tsd-signature-type">IAstarGraph</a><span class="tsd-signature-symbol">&lt;</span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">&gt;</span></li>
+				</ul>
+			</section>
+			<section class="tsd-panel-group tsd-index-group">
+				<h2>Index</h2>
+				<section class="tsd-panel tsd-index-panel">
+					<div class="tsd-index-content">
+						<section class="tsd-index-section ">
+							<h3>Constructors</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-constructor tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#constructor" class="tsd-kind-icon">constructor</a></li>
+							</ul>
+						</section>
+						<section class="tsd-index-section ">
+							<h3>Properties</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#_height" class="tsd-kind-icon">_height</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#_neighbors" class="tsd-kind-icon">_neighbors</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#_width" class="tsd-kind-icon">_width</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#defaultweight" class="tsd-kind-icon">default<wbr>Weight</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#dirs" class="tsd-kind-icon">dirs</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#walls" class="tsd-kind-icon">walls</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#weightednodeweight" class="tsd-kind-icon">weighted<wbr>Node<wbr>Weight</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#weightednodes" class="tsd-kind-icon">weighted<wbr>Nodes</a></li>
+							</ul>
+						</section>
+						<section class="tsd-index-section ">
+							<h3>Methods</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#cost" class="tsd-kind-icon">cost</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#getneighbors" class="tsd-kind-icon">get<wbr>Neighbors</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#heuristic" class="tsd-kind-icon">heuristic</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#isnodeinbounds" class="tsd-kind-icon">is<wbr>Node<wbr>InBounds</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#isnodepassable" class="tsd-kind-icon">is<wbr>Node<wbr>Passable</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#search" class="tsd-kind-icon">search</a></li>
+							</ul>
+						</section>
+					</div>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Constructors</h2>
+				<section class="tsd-panel tsd-member tsd-kind-constructor tsd-parent-kind-class">
+					<a name="constructor" class="tsd-anchor"></a>
+					<h3>constructor</h3>
+					<ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">new <wbr>Astar<wbr>Grid<wbr>Graph<span class="tsd-signature-symbol">(</span>width<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span>, height<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html" class="tsd-signature-type">AstarGridGraph</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L21">src/AI/Pathfinding/AStar/AstarGridGraph.ts:21</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>width: <span class="tsd-signature-type">number</span></h5>
+								</li>
+								<li>
+									<h5>height: <span class="tsd-signature-type">number</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html" class="tsd-signature-type">AstarGridGraph</a></h4>
+						</li>
+					</ul>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Properties</h2>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
+					<a name="_height" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagPrivate">Private</span> _height</h3>
+					<div class="tsd-signature tsd-kind-icon">_height<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">any</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L20">src/AI/Pathfinding/AStar/AstarGridGraph.ts:20</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
+					<a name="_neighbors" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagPrivate">Private</span> _neighbors</h3>
+					<div class="tsd-signature tsd-kind-icon">_neighbors<span class="tsd-signature-symbol">:</span> <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> = new Array(4)</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L21">src/AI/Pathfinding/AStar/AstarGridGraph.ts:21</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
+					<a name="_width" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagPrivate">Private</span> _width</h3>
+					<div class="tsd-signature tsd-kind-icon">_width<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">any</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L19">src/AI/Pathfinding/AStar/AstarGridGraph.ts:19</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="defaultweight" class="tsd-anchor"></a>
+					<h3>default<wbr>Weight</h3>
+					<div class="tsd-signature tsd-kind-icon">default<wbr>Weight<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 1</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L16">src/AI/Pathfinding/AStar/AstarGridGraph.ts:16</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="dirs" class="tsd-anchor"></a>
+					<h3>dirs</h3>
+					<div class="tsd-signature tsd-kind-icon">dirs<span class="tsd-signature-symbol">:</span> <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> = [new Vector2(1, 0),new Vector2(0, -1),new Vector2(-1, 0),new Vector2(0, 1)]</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L7">src/AI/Pathfinding/AStar/AstarGridGraph.ts:7</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="walls" class="tsd-anchor"></a>
+					<h3>walls</h3>
+					<div class="tsd-signature tsd-kind-icon">walls<span class="tsd-signature-symbol">:</span> <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> = []</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L14">src/AI/Pathfinding/AStar/AstarGridGraph.ts:14</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="weightednodeweight" class="tsd-anchor"></a>
+					<h3>weighted<wbr>Node<wbr>Weight</h3>
+					<div class="tsd-signature tsd-kind-icon">weighted<wbr>Node<wbr>Weight<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 5</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L17">src/AI/Pathfinding/AStar/AstarGridGraph.ts:17</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="weightednodes" class="tsd-anchor"></a>
+					<h3>weighted<wbr>Nodes</h3>
+					<div class="tsd-signature tsd-kind-icon">weighted<wbr>Nodes<span class="tsd-signature-symbol">:</span> <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> = []</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L15">src/AI/Pathfinding/AStar/AstarGridGraph.ts:15</a></li>
+						</ul>
+					</aside>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Methods</h2>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="cost" class="tsd-anchor"></a>
+					<h3>cost</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">cost<span class="tsd-signature-symbol">(</span>from<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a>, to<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L65">src/AI/Pathfinding/AStar/AstarGridGraph.ts:65</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>from: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+								</li>
+								<li>
+									<h5>to: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="getneighbors" class="tsd-anchor"></a>
+					<h3>get<wbr>Neighbors</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">get<wbr>Neighbors<span class="tsd-signature-symbol">(</span>node<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">[]</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L53">src/AI/Pathfinding/AStar/AstarGridGraph.ts:53</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>node: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">[]</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="heuristic" class="tsd-anchor"></a>
+					<h3>heuristic</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">heuristic<span class="tsd-signature-symbol">(</span>node<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a>, goal<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L69">src/AI/Pathfinding/AStar/AstarGridGraph.ts:69</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>node: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+								</li>
+								<li>
+									<h5>goal: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="isnodeinbounds" class="tsd-anchor"></a>
+					<h3>is<wbr>Node<wbr>InBounds</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">is<wbr>Node<wbr>InBounds<span class="tsd-signature-symbol">(</span>node<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L32">src/AI/Pathfinding/AStar/AstarGridGraph.ts:32</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>确保节点在网格图的边界内</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>node: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="isnodepassable" class="tsd-anchor"></a>
+					<h3>is<wbr>Node<wbr>Passable</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">is<wbr>Node<wbr>Passable<span class="tsd-signature-symbol">(</span>node<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L40">src/AI/Pathfinding/AStar/AstarGridGraph.ts:40</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>检查节点是否可以通过。walls是不可逾越的。</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>node: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="search" class="tsd-anchor"></a>
+					<h3>search</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">search<span class="tsd-signature-symbol">(</span>start<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a>, goal<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">[]</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/AI/Pathfinding/AStar/AstarGridGraph.ts#L49">src/AI/Pathfinding/AStar/AstarGridGraph.ts:49</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>调用AStarPathfinder.search的快捷方式</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>start: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+								</li>
+								<li>
+									<h5>goal: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">[]</span></h4>
+						</li>
+					</ul>
+				</section>
+			</section>
+		</div>
+		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
+			<nav class="tsd-navigation primary">
+				<ul>
+					<li class="globals  ">
+						<a href="../globals.html"><em>Globals</em></a>
+					</li>
+					<li class="current tsd-kind-module">
+						<a href="../modules/_ai_pathfinding_astar_astargridgraph_.html">&quot;AI/<wbr>Pathfinding/AStar/<wbr>Astar<wbr>Grid<wbr>Graph&quot;</a>
+						<ul>
+							<li class="current tsd-kind-namespace tsd-parent-kind-module">
+								<a href="../modules/_ai_pathfinding_astar_astargridgraph_.es.html">es</a>
+							</li>
+						</ul>
+					</li>
+				</ul>
+			</nav>
+			<nav class="tsd-navigation secondary menu-sticky">
+				<ul class="before-current">
+				</ul>
+				<ul class="current">
+					<li class="current tsd-kind-class tsd-parent-kind-namespace">
+						<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html" class="tsd-kind-icon">Astar<wbr>Grid<wbr>Graph</a>
+						<ul>
+							<li class=" tsd-kind-constructor tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#constructor" class="tsd-kind-icon">constructor</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-private">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#_height" class="tsd-kind-icon">_height</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-private">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#_neighbors" class="tsd-kind-icon">_neighbors</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-private">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#_width" class="tsd-kind-icon">_width</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#defaultweight" class="tsd-kind-icon">default<wbr>Weight</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#dirs" class="tsd-kind-icon">dirs</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#walls" class="tsd-kind-icon">walls</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#weightednodeweight" class="tsd-kind-icon">weighted<wbr>Node<wbr>Weight</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#weightednodes" class="tsd-kind-icon">weighted<wbr>Nodes</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#cost" class="tsd-kind-icon">cost</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#getneighbors" class="tsd-kind-icon">get<wbr>Neighbors</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#heuristic" class="tsd-kind-icon">heuristic</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#isnodeinbounds" class="tsd-kind-icon">is<wbr>Node<wbr>InBounds</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#isnodepassable" class="tsd-kind-icon">is<wbr>Node<wbr>Passable</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ai_pathfinding_astar_astargridgraph_.es.astargridgraph.html#search" class="tsd-kind-icon">search</a>
+							</li>
+						</ul>
+					</li>
+				</ul>
+				<ul class="after-current">
+				</ul>
+			</nav>
+		</div>
+	</div>
+</div>
+<footer class="with-border-bottom">
+	<div class="container">
+		<h2>Legend</h2>
+		<div class="tsd-legend-group">
+			<ul class="tsd-legend">
+				<li class="tsd-kind-class"><span class="tsd-kind-icon">Class</span></li>
+				<li class="tsd-kind-constructor tsd-parent-kind-class"><span class="tsd-kind-icon">Constructor</span></li>
+				<li class="tsd-kind-property tsd-parent-kind-class"><span class="tsd-kind-icon">Property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class"><span class="tsd-kind-icon">Method</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-namespace"><span class="tsd-kind-icon">Namespace</span></li>
+				<li class="tsd-kind-variable"><span class="tsd-kind-icon">Variable</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-interface tsd-has-type-parameter"><span class="tsd-kind-icon">Interface with type parameter</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><span class="tsd-kind-icon">Private property</span></li>
+			</ul>
+		</div>
+	</div>
+</footer>
+<div class="container tsd-generator">
+	<p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p>
+</div>
+<div class="overlay"></div>
+<script src="../assets/js/main.js"></script>
+<script>if (location.protocol == 'file:') document.write('<script src="../assets/js/search.js"><' + '/script>');</script>
+</body>
+</html>

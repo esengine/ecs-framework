@@ -703,32 +703,6 @@ declare module es {
     }
 }
 declare module es {
-    class CollisionState {
-        right: boolean;
-        left: boolean;
-        above: boolean;
-        below: boolean;
-        becameGroundedThisFrame: boolean;
-        wasGroundedLastFrame: boolean;
-        isGroundedOnOnewayPlatform: boolean;
-        slopAngle: number;
-        readonly hasCollision: boolean;
-        _movementRemainderX: SubpixelNumber;
-        _movementRemainderY: SubpixelNumber;
-        reset(): void;
-        toString(): string;
-    }
-    class TiledMapMover extends Component {
-        colliderHorizontalInset: number;
-        colliderVerticalInset: number;
-        _boxColliderBounds: Rectangle;
-        constructor();
-        testCollisions(motion: Vector2, boxColliderBounds: Rectangle, collisionState: CollisionState): void;
-        testMapCollision(collisionRect: Rectangle, direction: Edge, collisionState: CollisionState, collisionResponse: number): void;
-        collisionRectForSide(side: Edge, motion: number): Rectangle;
-    }
-}
-declare module es {
     interface ITriggerListener {
         onTriggerEnter(other: Collider, local: Collider): any;
         onTriggerExit(other: Collider, local: Collider): any;
@@ -2447,7 +2421,7 @@ declare module es {
     }
 }
 declare module es {
-    class Ref<T> {
+    class Ref<T extends number | string | boolean> {
         value: T;
         constructor(value: T);
     }

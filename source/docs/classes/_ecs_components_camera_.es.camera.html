@@ -1,0 +1,1781 @@
+<!doctype html>
+<html class="default no-js">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>Camera | @esengine/egret-framework</title>
+	<meta name="description" content="Documentation for @esengine/egret-framework">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+<header>
+	<div class="tsd-page-toolbar">
+		<div class="container">
+			<div class="table-wrap">
+				<div class="table-cell" id="tsd-search" data-index="../assets/js/search.json" data-base="..">
+					<div class="field">
+						<label for="tsd-search-field" class="tsd-widget search no-caption">Search</label>
+						<input id="tsd-search-field" type="text" />
+					</div>
+					<ul class="results">
+						<li class="state loading">Preparing search index...</li>
+						<li class="state failure">The search index is not available</li>
+					</ul>
+					<a href="../index.html" class="title">@esengine/egret-framework</a>
+				</div>
+				<div class="table-cell" id="tsd-widgets">
+					<div id="tsd-filter">
+						<a href="#" class="tsd-widget options no-caption" data-toggle="options">Options</a>
+						<div class="tsd-filter-group">
+							<div class="tsd-select" id="tsd-filter-visibility">
+								<span class="tsd-select-label">All</span>
+								<ul class="tsd-select-list">
+									<li data-value="public">Public</li>
+									<li data-value="protected">Public/Protected</li>
+									<li data-value="private" class="selected">All</li>
+								</ul>
+							</div>
+							<input type="checkbox" id="tsd-filter-inherited" checked />
+							<label class="tsd-widget" for="tsd-filter-inherited">Inherited</label>
+							<input type="checkbox" id="tsd-filter-externals" checked />
+							<label class="tsd-widget" for="tsd-filter-externals">Externals</label>
+							<input type="checkbox" id="tsd-filter-only-exported" />
+							<label class="tsd-widget" for="tsd-filter-only-exported">Only exported</label>
+						</div>
+					</div>
+					<a href="#" class="tsd-widget menu no-caption" data-toggle="menu">Menu</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="tsd-page-title">
+		<div class="container">
+			<ul class="tsd-breadcrumb">
+				<li>
+					<a href="../globals.html">Globals</a>
+				</li>
+				<li>
+					<a href="../modules/_ecs_components_camera_.html">&quot;ECS/Components/Camera&quot;</a>
+				</li>
+				<li>
+					<a href="../modules/_ecs_components_camera_.es.html">es</a>
+				</li>
+				<li>
+					<a href="_ecs_components_camera_.es.camera.html">Camera</a>
+				</li>
+			</ul>
+			<h1>Class Camera</h1>
+		</div>
+	</div>
+</header>
+<div class="container container-main">
+	<div class="row">
+		<div class="col-8 col-content">
+			<section class="tsd-panel tsd-hierarchy">
+				<h3>Hierarchy</h3>
+				<ul class="tsd-hierarchy">
+					<li>
+						<a href="_ecs_component_.es.component.html" class="tsd-signature-type">Component</a>
+						<ul class="tsd-hierarchy">
+							<li>
+								<span class="target">Camera</span>
+							</li>
+						</ul>
+					</li>
+				</ul>
+			</section>
+			<section class="tsd-panel">
+				<h3>Implements</h3>
+				<ul class="tsd-hierarchy">
+					<li><span class="tsd-signature-type">IHashObject</span></li>
+				</ul>
+			</section>
+			<section class="tsd-panel-group tsd-index-group">
+				<h2>Index</h2>
+				<section class="tsd-panel tsd-index-panel">
+					<div class="tsd-index-content">
+						<section class="tsd-index-section ">
+							<h3>Constructors</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-constructor tsd-parent-kind-class tsd-is-overwrite"><a href="_ecs_components_camera_.es.camera.html#constructor" class="tsd-kind-icon">constructor</a></li>
+							</ul>
+						</section>
+						<section class="tsd-index-section ">
+							<h3>Properties</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-private"><a href="_ecs_components_camera_.es.camera.html#_hashcode" class="tsd-kind-icon">$hash<wbr>Code</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#_areboundsdirty" class="tsd-kind-icon">_are<wbr>Bounds<wbr>Dirty</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#_arematrixeddirty" class="tsd-kind-icon">_are<wbr>Matrixed<wbr>Dirty</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#_bounds" class="tsd-kind-icon">_bounds</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#_inversetransformmatrix" class="tsd-kind-icon">_inverse<wbr>Transform<wbr>Matrix</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#_isprojectionmatrixdirty" class="tsd-kind-icon">_is<wbr>Projection<wbr>Matrix<wbr>Dirty</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#_maximumzoom" class="tsd-kind-icon">_maximum<wbr>Zoom</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#_minimumzoom" class="tsd-kind-icon">_minimum<wbr>Zoom</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#_origin" class="tsd-kind-icon">_origin</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#_transformmatrix" class="tsd-kind-icon">_transform<wbr>Matrix</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#_zoom" class="tsd-kind-icon">_zoom</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#debugdisplayobject" class="tsd-kind-icon">debug<wbr>Display<wbr>Object</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#entity" class="tsd-kind-icon">entity</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#hashcode" class="tsd-kind-icon">hash<wbr>Code</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#updateinterval" class="tsd-kind-icon">update<wbr>Interval</a></li>
+							</ul>
+						</section>
+						<section class="tsd-index-section ">
+							<h3>Accessors</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-get-signature tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#bounds" class="tsd-kind-icon">bounds</a></li>
+								<li class="tsd-kind-accessor tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#enabled" class="tsd-kind-icon">enabled</a></li>
+								<li class="tsd-kind-get-signature tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#inversetransformmatrix" class="tsd-kind-icon">inverse<wbr>Transform<wbr>Matrix</a></li>
+								<li class="tsd-kind-accessor tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#maximumzoom" class="tsd-kind-icon">maximum<wbr>Zoom</a></li>
+								<li class="tsd-kind-accessor tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#minimumzoom" class="tsd-kind-icon">minimum<wbr>Zoom</a></li>
+								<li class="tsd-kind-accessor tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#origin" class="tsd-kind-icon">origin</a></li>
+								<li class="tsd-kind-accessor tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#position" class="tsd-kind-icon">position</a></li>
+								<li class="tsd-kind-accessor tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#rawzoom" class="tsd-kind-icon">raw<wbr>Zoom</a></li>
+								<li class="tsd-kind-accessor tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#rotation" class="tsd-kind-icon">rotation</a></li>
+								<li class="tsd-kind-get-signature tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#transform" class="tsd-kind-icon">transform</a></li>
+								<li class="tsd-kind-get-signature tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#transformmatrix" class="tsd-kind-icon">transform<wbr>Matrix</a></li>
+								<li class="tsd-kind-accessor tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#updateorder" class="tsd-kind-icon">update<wbr>Order</a></li>
+								<li class="tsd-kind-accessor tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#zoom" class="tsd-kind-icon">zoom</a></li>
+							</ul>
+						</section>
+						<section class="tsd-index-section ">
+							<h3>Methods</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#debugrender" class="tsd-kind-icon">debug<wbr>Render</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#forcematrixupdate" class="tsd-kind-icon">force<wbr>Matrix<wbr>Update</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#initialize" class="tsd-kind-icon">initialize</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#mousetoworldpoint" class="tsd-kind-icon">mouse<wbr>ToWorld<wbr>Point</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#onaddedtoentity" class="tsd-kind-icon">on<wbr>Added<wbr>ToEntity</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#ondisabled" class="tsd-kind-icon">on<wbr>Disabled</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#onenabled" class="tsd-kind-icon">on<wbr>Enabled</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-overwrite"><a href="_ecs_components_camera_.es.camera.html#onentitytransformchanged" class="tsd-kind-icon">on<wbr>Entity<wbr>Transform<wbr>Changed</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#onremovedfromentity" class="tsd-kind-icon">on<wbr>Removed<wbr>From<wbr>Entity</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#onscenerendertargetsizechanged" class="tsd-kind-icon">on<wbr>Scene<wbr>Render<wbr>Target<wbr>Size<wbr>Changed</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#screentoworldpoint" class="tsd-kind-icon">screen<wbr>ToWorld<wbr>Point</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#setenabled" class="tsd-kind-icon">set<wbr>Enabled</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#setinset" class="tsd-kind-icon">set<wbr>Inset</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#setmaximumzoom" class="tsd-kind-icon">set<wbr>Maximum<wbr>Zoom</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#setminimumzoom" class="tsd-kind-icon">set<wbr>Minimum<wbr>Zoom</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#setposition" class="tsd-kind-icon">set<wbr>Position</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#setrotation" class="tsd-kind-icon">set<wbr>Rotation</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#setupdateorder" class="tsd-kind-icon">set<wbr>Update<wbr>Order</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#setzoom" class="tsd-kind-icon">set<wbr>Zoom</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_ecs_components_camera_.es.camera.html#update" class="tsd-kind-icon">update</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-protected"><a href="_ecs_components_camera_.es.camera.html#updatematrixes" class="tsd-kind-icon">update<wbr>Matrixes</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#worldtoscreenpoint" class="tsd-kind-icon">world<wbr>ToScreen<wbr>Point</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#zoomin" class="tsd-kind-icon">zoom<wbr>In</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#zoomout" class="tsd-kind-icon">zoom<wbr>Out</a></li>
+							</ul>
+						</section>
+						<section class="tsd-index-section ">
+							<h3>Object literals</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-object-literal tsd-parent-kind-class"><a href="_ecs_components_camera_.es.camera.html#_inset" class="tsd-kind-icon">_inset</a></li>
+							</ul>
+						</section>
+					</div>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Constructors</h2>
+				<section class="tsd-panel tsd-member tsd-kind-constructor tsd-parent-kind-class tsd-is-overwrite">
+					<a name="constructor" class="tsd-anchor"></a>
+					<h3>constructor</h3>
+					<ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class tsd-is-overwrite">
+						<li class="tsd-signature tsd-kind-icon">new <wbr>Camera<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Overrides <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#constructor">constructor</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L10">src/ECS/Components/Camera.ts:10</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-returns-title">Returns <a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></h4>
+						</li>
+					</ul>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Properties</h2>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-private">
+					<a name="_hashcode" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagPrivate">Private</span> $hash<wbr>Code</h3>
+					<div class="tsd-signature tsd-kind-icon">$hash<wbr>Code<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
+					<aside class="tsd-sources">
+						<p>Inherited from <a href="_ecs_core_.es.core.html">Core</a>.<a href="_ecs_core_.es.core.html#_hashcode">$hashCode</a></p>
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/lib/egret.d.ts#L71">lib/egret.d.ts:71</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="_areboundsdirty" class="tsd-anchor"></a>
+					<h3>_are<wbr>Bounds<wbr>Dirty</h3>
+					<div class="tsd-signature tsd-kind-icon">_are<wbr>Bounds<wbr>Dirty<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> = true</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L9">src/ECS/Components/Camera.ts:9</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="_arematrixeddirty" class="tsd-anchor"></a>
+					<h3>_are<wbr>Matrixed<wbr>Dirty</h3>
+					<div class="tsd-signature tsd-kind-icon">_are<wbr>Matrixed<wbr>Dirty<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> = true</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L8">src/ECS/Components/Camera.ts:8</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="_bounds" class="tsd-anchor"></a>
+					<h3>_bounds</h3>
+					<div class="tsd-signature tsd-kind-icon">_bounds<span class="tsd-signature-symbol">:</span> <a href="_math_rectangle_.es.rectangle.html" class="tsd-signature-type">Rectangle</a><span class="tsd-signature-symbol"> = new Rectangle()</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L124">src/ECS/Components/Camera.ts:124</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="_inversetransformmatrix" class="tsd-anchor"></a>
+					<h3>_inverse<wbr>Transform<wbr>Matrix</h3>
+					<div class="tsd-signature tsd-kind-icon">_inverse<wbr>Transform<wbr>Matrix<span class="tsd-signature-symbol">:</span> <a href="_math_matrix2d_.es.matrix2d.html" class="tsd-signature-type">Matrix2D</a><span class="tsd-signature-symbol"> = new Matrix2D().identity()</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L177">src/ECS/Components/Camera.ts:177</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="_isprojectionmatrixdirty" class="tsd-anchor"></a>
+					<h3>_is<wbr>Projection<wbr>Matrix<wbr>Dirty</h3>
+					<div class="tsd-signature tsd-kind-icon">_is<wbr>Projection<wbr>Matrix<wbr>Dirty<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> = true</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L10">src/ECS/Components/Camera.ts:10</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="_maximumzoom" class="tsd-anchor"></a>
+					<h3>_maximum<wbr>Zoom</h3>
+					<div class="tsd-signature tsd-kind-icon">_maximum<wbr>Zoom<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 3</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L107">src/ECS/Components/Camera.ts:107</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="_minimumzoom" class="tsd-anchor"></a>
+					<h3>_minimum<wbr>Zoom</h3>
+					<div class="tsd-signature tsd-kind-icon">_minimum<wbr>Zoom<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0.3</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L90">src/ECS/Components/Camera.ts:90</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="_origin" class="tsd-anchor"></a>
+					<h3>_origin</h3>
+					<div class="tsd-signature tsd-kind-icon">_origin<span class="tsd-signature-symbol">:</span> <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol"> = Vector2.zero</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L188">src/ECS/Components/Camera.ts:188</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="_transformmatrix" class="tsd-anchor"></a>
+					<h3>_transform<wbr>Matrix</h3>
+					<div class="tsd-signature tsd-kind-icon">_transform<wbr>Matrix<span class="tsd-signature-symbol">:</span> <a href="_math_matrix2d_.es.matrix2d.html" class="tsd-signature-type">Matrix2D</a><span class="tsd-signature-symbol"> = new Matrix2D().identity()</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L166">src/ECS/Components/Camera.ts:166</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="_zoom" class="tsd-anchor"></a>
+					<h3>_zoom</h3>
+					<div class="tsd-signature tsd-kind-icon">_zoom<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L65">src/ECS/Components/Camera.ts:65</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-inherited">
+					<a name="debugdisplayobject" class="tsd-anchor"></a>
+					<h3>debug<wbr>Display<wbr>Object</h3>
+					<div class="tsd-signature tsd-kind-icon">debug<wbr>Display<wbr>Object<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">DisplayObjectContainer</span><span class="tsd-signature-symbol"> = new egret.DisplayObjectContainer()</span></div>
+					<aside class="tsd-sources">
+						<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#debugdisplayobject">debugDisplayObject</a></p>
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L22">src/ECS/Component.ts:22</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>用于装载debug使用的显示容器</p>
+						</div>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-inherited">
+					<a name="entity" class="tsd-anchor"></a>
+					<h3>entity</h3>
+					<div class="tsd-signature tsd-kind-icon">entity<span class="tsd-signature-symbol">:</span> <a href="_ecs_entity_.es.entity.html" class="tsd-signature-type">Entity</a></div>
+					<aside class="tsd-sources">
+						<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#entity">entity</a></p>
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L14">src/ECS/Component.ts:14</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>此组件附加的实体</p>
+						</div>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-inherited">
+					<a name="hashcode" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagReadonly">Readonly</span> hash<wbr>Code</h3>
+					<div class="tsd-signature tsd-kind-icon">hash<wbr>Code<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
+					<aside class="tsd-sources">
+						<p>Inherited from <a href="_ecs_core_.es.core.html">Core</a>.<a href="_ecs_core_.es.core.html#hashcode">hashCode</a></p>
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/lib/egret.d.ts#L84">lib/egret.d.ts:84</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>返回此对象唯一的哈希值,用于唯一确定一个对象。hashCode为大于等于1的整数。</p>
+						</div>
+						<dl class="tsd-comment-tags">
+							<dt>version</dt>
+							<dd><p>Egret 2.4</p>
+							</dd>
+							<dt>platform</dt>
+							<dd><p>Web,Native</p>
+							</dd>
+							<dt>language</dt>
+							<dd><p>zh_CN</p>
+							</dd>
+						</dl>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-inherited">
+					<a name="updateinterval" class="tsd-anchor"></a>
+					<h3>update<wbr>Interval</h3>
+					<div class="tsd-signature tsd-kind-icon">update<wbr>Interval<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 1</span></div>
+					<aside class="tsd-sources">
+						<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#updateinterval">updateInterval</a></p>
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L18">src/ECS/Component.ts:18</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>更新该组件的时间间隔。这与实体的更新间隔无关。</p>
+						</div>
+					</div>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Accessors</h2>
+				<section class="tsd-panel tsd-member tsd-kind-get-signature tsd-parent-kind-class">
+					<a name="bounds" class="tsd-anchor"></a>
+					<h3>bounds</h3>
+					<ul class="tsd-signatures tsd-kind-get-signature tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> bounds<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_math_rectangle_.es.rectangle.html" class="tsd-signature-type">Rectangle</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L129">src/ECS/Components/Camera.ts:129</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>相机的世界-空间边界</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <a href="_math_rectangle_.es.rectangle.html" class="tsd-signature-type">Rectangle</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class tsd-is-inherited">
+					<a name="enabled" class="tsd-anchor"></a>
+					<h3>enabled</h3>
+					<ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> enabled<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span></li>
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">set</span> enabled<span class="tsd-signature-symbol">(</span>value<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#enabled">enabled</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L36">src/ECS/Component.ts:36</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>如果组件和实体都已启用，则为。当启用该组件时，将调用该组件的生命周期方法。状态的改变会导致调用onEnabled/onDisable。</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#enabled">enabled</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L44">src/ECS/Component.ts:44</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>如果组件和实体都已启用，则为。当启用该组件时，将调用该组件的生命周期方法。状态的改变会导致调用onEnabled/onDisable。</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>value: <span class="tsd-signature-type">boolean</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-get-signature tsd-parent-kind-class">
+					<a name="inversetransformmatrix" class="tsd-anchor"></a>
+					<h3>inverse<wbr>Transform<wbr>Matrix</h3>
+					<ul class="tsd-signatures tsd-kind-get-signature tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> inverseTransformMatrix<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_math_matrix2d_.es.matrix2d.html" class="tsd-signature-type">Matrix2D</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L182">src/ECS/Components/Camera.ts:182</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>用于从屏幕坐标到世界的转换</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <a href="_math_matrix2d_.es.matrix2d.html" class="tsd-signature-type">Matrix2D</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class">
+					<a name="maximumzoom" class="tsd-anchor"></a>
+					<h3>maximum<wbr>Zoom</h3>
+					<ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> maximumZoom<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">set</span> maximumZoom<span class="tsd-signature-symbol">(</span>value<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L112">src/ECS/Components/Camera.ts:112</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>相机变焦可以达到的最大非缩放值（0-number.max）。默认为3</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L120">src/ECS/Components/Camera.ts:120</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>相机变焦可以达到的最大非缩放值（0-number.max）。默认为3</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>value: <span class="tsd-signature-type">number</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class">
+					<a name="minimumzoom" class="tsd-anchor"></a>
+					<h3>minimum<wbr>Zoom</h3>
+					<ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> minimumZoom<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">set</span> minimumZoom<span class="tsd-signature-symbol">(</span>value<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L95">src/ECS/Components/Camera.ts:95</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>相机变焦可以达到的最小非缩放值（0-number.max）。默认为0.3</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L103">src/ECS/Components/Camera.ts:103</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>相机变焦可以达到的最小非缩放值（0-number.max）。默认为0.3</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>value: <span class="tsd-signature-type">number</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class">
+					<a name="origin" class="tsd-anchor"></a>
+					<h3>origin</h3>
+					<ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> origin<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></li>
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">set</span> origin<span class="tsd-signature-symbol">(</span>value<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L190">src/ECS/Components/Camera.ts:190</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-returns-title">Returns <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L194">src/ECS/Components/Camera.ts:194</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>value: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class">
+					<a name="position" class="tsd-anchor"></a>
+					<h3>position</h3>
+					<ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> position<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></li>
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">set</span> position<span class="tsd-signature-symbol">(</span>value<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L20">src/ECS/Components/Camera.ts:20</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>对entity.transform.position的快速访问</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L28">src/ECS/Components/Camera.ts:28</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>对entity.transform.position的快速访问</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>value: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class">
+					<a name="rawzoom" class="tsd-anchor"></a>
+					<h3>raw<wbr>Zoom</h3>
+					<ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> rawZoom<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">set</span> rawZoom<span class="tsd-signature-symbol">(</span>value<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L50">src/ECS/Components/Camera.ts:50</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>原始的缩放值。这就是用于比例矩阵的精确值。默认值为1。</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L58">src/ECS/Components/Camera.ts:58</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>原始的缩放值。这就是用于比例矩阵的精确值。默认值为1。</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>value: <span class="tsd-signature-type">number</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class">
+					<a name="rotation" class="tsd-anchor"></a>
+					<h3>rotation</h3>
+					<ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> rotation<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">set</span> rotation<span class="tsd-signature-symbol">(</span>value<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L35">src/ECS/Components/Camera.ts:35</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>对entity.transform.rotation的快速访问</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L43">src/ECS/Components/Camera.ts:43</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>对entity.transform.rotation的快速访问</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>value: <span class="tsd-signature-type">number</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-get-signature tsd-parent-kind-class tsd-is-inherited">
+					<a name="transform" class="tsd-anchor"></a>
+					<h3>transform</h3>
+					<ul class="tsd-signatures tsd-kind-get-signature tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> transform<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ecs_transform_.es.transform.html" class="tsd-signature-type">Transform</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#transform">transform</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L27">src/ECS/Component.ts:27</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>快速访问 this.entity.transform</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <a href="_ecs_transform_.es.transform.html" class="tsd-signature-type">Transform</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-get-signature tsd-parent-kind-class">
+					<a name="transformmatrix" class="tsd-anchor"></a>
+					<h3>transform<wbr>Matrix</h3>
+					<ul class="tsd-signatures tsd-kind-get-signature tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> transformMatrix<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_math_matrix2d_.es.matrix2d.html" class="tsd-signature-type">Matrix2D</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L171">src/ECS/Components/Camera.ts:171</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>用于从世界坐标转换到屏幕</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <a href="_math_matrix2d_.es.matrix2d.html" class="tsd-signature-type">Matrix2D</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class tsd-is-inherited">
+					<a name="updateorder" class="tsd-anchor"></a>
+					<h3>update<wbr>Order</h3>
+					<ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> updateOrder<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">set</span> updateOrder<span class="tsd-signature-symbol">(</span>value<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#updateorder">updateOrder</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L51">src/ECS/Component.ts:51</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>更新此实体上组件的顺序</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#updateorder">updateOrder</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L56">src/ECS/Component.ts:56</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>更新此实体上组件的顺序</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>value: <span class="tsd-signature-type">number</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-accessor tsd-parent-kind-class">
+					<a name="zoom" class="tsd-anchor"></a>
+					<h3>zoom</h3>
+					<ul class="tsd-signatures tsd-kind-accessor tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> zoom<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">set</span> zoom<span class="tsd-signature-symbol">(</span>value<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L71">src/ECS/Components/Camera.ts:71</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>缩放值应该在-1和1之间、然后将该值从minimumZoom转换为maximumZoom。
+									允许你设置适当的最小/最大值，然后使用更直观的-1到1的映射来更改缩放</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L86">src/ECS/Components/Camera.ts:86</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>缩放值应该在-1和1之间、然后将该值从minimumZoom转换为maximumZoom。
+									允许你设置适当的最小/最大值，然后使用更直观的-1到1的映射来更改缩放</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>value: <span class="tsd-signature-type">number</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Methods</h2>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="debugrender" class="tsd-anchor"></a>
+					<h3>debug<wbr>Render</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">debug<wbr>Render<span class="tsd-signature-symbol">(</span>camera<span class="tsd-signature-symbol">: </span><a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#debugrender">debugRender</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L88">src/ECS/Component.ts:88</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>camera: <a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="forcematrixupdate" class="tsd-anchor"></a>
+					<h3>force<wbr>Matrix<wbr>Update</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">force<wbr>Matrix<wbr>Update<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L285">src/ECS/Components/Camera.ts:285</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="initialize" class="tsd-anchor"></a>
+					<h3>initialize</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">initialize<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#initialize">initialize</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L63">src/ECS/Component.ts:63</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>当此组件已分配其实体，但尚未添加到实体的活动组件列表时调用。有用的东西，如物理组件，需要访问转换来修改碰撞体的属性。</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="mousetoworldpoint" class="tsd-anchor"></a>
+					<h3>mouse<wbr>ToWorld<wbr>Point</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">mouse<wbr>ToWorld<wbr>Point<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L338">src/ECS/Components/Camera.ts:338</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>返回鼠标在世界空间中的位置</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="onaddedtoentity" class="tsd-anchor"></a>
+					<h3>on<wbr>Added<wbr>ToEntity</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">on<wbr>Added<wbr>ToEntity<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#onaddedtoentity">onAddedToEntity</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L69">src/ECS/Component.ts:69</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>在提交所有挂起的组件更改后，将该组件添加到场景时调用。此时，设置了实体字段和实体。场景也设定好了。</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="ondisabled" class="tsd-anchor"></a>
+					<h3>on<wbr>Disabled</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">on<wbr>Disabled<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#ondisabled">onDisabled</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L100">src/ECS/Component.ts:100</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>禁用父实体或此组件时调用</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="onenabled" class="tsd-anchor"></a>
+					<h3>on<wbr>Enabled</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">on<wbr>Enabled<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#onenabled">onEnabled</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L94">src/ECS/Component.ts:94</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>当父实体或此组件启用时调用</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-overwrite">
+					<a name="onentitytransformchanged" class="tsd-anchor"></a>
+					<h3>on<wbr>Entity<wbr>Transform<wbr>Changed</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-overwrite">
+						<li class="tsd-signature tsd-kind-icon">on<wbr>Entity<wbr>Transform<wbr>Changed<span class="tsd-signature-symbol">(</span>comp<span class="tsd-signature-symbol">: </span><a href="../enums/_ecs_transform_.transform.component.html" class="tsd-signature-type">Component</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Overrides <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#onentitytransformchanged">onEntityTransformChanged</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L290">src/ECS/Components/Camera.ts:290</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>comp: <a href="../enums/_ecs_transform_.transform.component.html" class="tsd-signature-type">Component</a></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="onremovedfromentity" class="tsd-anchor"></a>
+					<h3>on<wbr>Removed<wbr>From<wbr>Entity</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">on<wbr>Removed<wbr>From<wbr>Entity<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#onremovedfromentity">onRemovedFromEntity</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L75">src/ECS/Component.ts:75</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>当此组件从其实体中移除时调用。在这里做所有的清理工作。</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="onscenerendertargetsizechanged" class="tsd-anchor"></a>
+					<h3>on<wbr>Scene<wbr>Render<wbr>Target<wbr>Size<wbr>Changed</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">on<wbr>Scene<wbr>Render<wbr>Target<wbr>Size<wbr>Changed<span class="tsd-signature-symbol">(</span>newWidth<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span>, newHeight<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L327">src/ECS/Components/Camera.ts:327</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>当场景渲染目标的大小发生变化时，我们会更新相机的原点并调整它的位置以保持它原来的位置</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>newWidth: <span class="tsd-signature-type">number</span></h5>
+								</li>
+								<li>
+									<h5>newHeight: <span class="tsd-signature-type">number</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="screentoworldpoint" class="tsd-anchor"></a>
+					<h3>screen<wbr>ToWorld<wbr>Point</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">screen<wbr>ToWorld<wbr>Point<span class="tsd-signature-symbol">(</span>screenPosition<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L316">src/ECS/Components/Camera.ts:316</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>将点从屏幕坐标转换为世界坐标</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>screenPosition: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="setenabled" class="tsd-anchor"></a>
+					<h3>set<wbr>Enabled</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">set<wbr>Enabled<span class="tsd-signature-symbol">(</span>isEnabled<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#setenabled">setEnabled</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L109">src/ECS/Component.ts:109</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>isEnabled: <span class="tsd-signature-type">boolean</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="setinset" class="tsd-anchor"></a>
+					<h3>set<wbr>Inset</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">set<wbr>Inset<span class="tsd-signature-symbol">(</span>left<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span>, right<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span>, top<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span>, bottom<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L208">src/ECS/Components/Camera.ts:208</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>设置用于从视口边缘插入摄像机边界的量</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>left: <span class="tsd-signature-type">number</span></h5>
+								</li>
+								<li>
+									<h5>right: <span class="tsd-signature-type">number</span></h5>
+								</li>
+								<li>
+									<h5>top: <span class="tsd-signature-type">number</span></h5>
+								</li>
+								<li>
+									<h5>bottom: <span class="tsd-signature-type">number</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="setmaximumzoom" class="tsd-anchor"></a>
+					<h3>set<wbr>Maximum<wbr>Zoom</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">set<wbr>Maximum<wbr>Zoom<span class="tsd-signature-symbol">(</span>maxZoom<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L272">src/ECS/Components/Camera.ts:272</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>相机变焦可以达到的最大非缩放值（0-number.max） 默认为3</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>maxZoom: <span class="tsd-signature-type">number</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="setminimumzoom" class="tsd-anchor"></a>
+					<h3>set<wbr>Minimum<wbr>Zoom</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">set<wbr>Minimum<wbr>Zoom<span class="tsd-signature-symbol">(</span>minZoom<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L255">src/ECS/Components/Camera.ts:255</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>相机变焦可以达到的最小非缩放值（0-number.max） 默认为0.3</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>minZoom: <span class="tsd-signature-type">number</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="setposition" class="tsd-anchor"></a>
+					<h3>set<wbr>Position</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">set<wbr>Position<span class="tsd-signature-symbol">(</span>position<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L218">src/ECS/Components/Camera.ts:218</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>对entity.transform.setPosition快速访问</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>position: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="setrotation" class="tsd-anchor"></a>
+					<h3>set<wbr>Rotation</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">set<wbr>Rotation<span class="tsd-signature-symbol">(</span>rotation<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L227">src/ECS/Components/Camera.ts:227</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>对entity.transform.setRotation的快速访问</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>rotation: <span class="tsd-signature-type">number</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="setupdateorder" class="tsd-anchor"></a>
+					<h3>set<wbr>Update<wbr>Order</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">set<wbr>Update<wbr>Order<span class="tsd-signature-symbol">(</span>updateOrder<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">this</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#setupdateorder">setUpdateOrder</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L123">src/ECS/Component.ts:123</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>updateOrder: <span class="tsd-signature-type">number</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">this</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="setzoom" class="tsd-anchor"></a>
+					<h3>set<wbr>Zoom</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">set<wbr>Zoom<span class="tsd-signature-symbol">(</span>zoom<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L237">src/ECS/Components/Camera.ts:237</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>设置缩放值，缩放值应该在-1到1之间。然后将该值从minimumZoom转换为maximumZoom
+									允许您设置适当的最小/最大值。使用更直观的-1到1的映射来更改缩放</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>zoom: <span class="tsd-signature-type">number</span></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_ecs_components_camera_.es.camera.html" class="tsd-signature-type">Camera</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="update" class="tsd-anchor"></a>
+					<h3>update</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">update<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_ecs_component_.es.component.html">Component</a>.<a href="_ecs_component_.es.component.html#update">update</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Component.ts#L106">src/ECS/Component.ts:106</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>当该组件启用时每帧进行调用</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-protected">
+					<a name="updatematrixes" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagProtected">Protected</span> update<wbr>Matrixes</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-protected">
+						<li class="tsd-signature tsd-kind-icon">update<wbr>Matrixes<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L342">src/ECS/Components/Camera.ts:342</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="worldtoscreenpoint" class="tsd-anchor"></a>
+					<h3>world<wbr>ToScreen<wbr>Point</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">world<wbr>ToScreen<wbr>Point<span class="tsd-signature-symbol">(</span>worldPosition<span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L306">src/ECS/Components/Camera.ts:306</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>将一个点从世界坐标转换到屏幕</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>worldPosition: <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h5>
+									<div class="tsd-comment tsd-typography">
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_math_vector2_.es.vector2.html" class="tsd-signature-type">Vector2</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="zoomin" class="tsd-anchor"></a>
+					<h3>zoom<wbr>In</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">zoom<wbr>In<span class="tsd-signature-symbol">(</span>deltaZoom<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L294">src/ECS/Components/Camera.ts:294</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>deltaZoom: <span class="tsd-signature-type">number</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="zoomout" class="tsd-anchor"></a>
+					<h3>zoom<wbr>Out</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">zoom<wbr>Out<span class="tsd-signature-symbol">(</span>deltaZoom<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L298">src/ECS/Components/Camera.ts:298</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>deltaZoom: <span class="tsd-signature-type">number</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Object literals</h2>
+				<section class="tsd-panel tsd-member tsd-kind-object-literal tsd-parent-kind-class">
+					<a name="_inset" class="tsd-anchor"></a>
+					<h3>_inset</h3>
+					<div class="tsd-signature tsd-kind-icon">_inset<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">object</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L7">src/ECS/Components/Camera.ts:7</a></li>
+						</ul>
+					</aside>
+					<section class="tsd-panel tsd-member tsd-kind-variable tsd-parent-kind-object-literal">
+						<a name="_inset.bottom" class="tsd-anchor"></a>
+						<h3>bottom</h3>
+						<div class="tsd-signature tsd-kind-icon">bottom<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div>
+						<aside class="tsd-sources">
+							<ul>
+								<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L7">src/ECS/Components/Camera.ts:7</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section class="tsd-panel tsd-member tsd-kind-variable tsd-parent-kind-object-literal">
+						<a name="_inset.left" class="tsd-anchor"></a>
+						<h3>left</h3>
+						<div class="tsd-signature tsd-kind-icon">left<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div>
+						<aside class="tsd-sources">
+							<ul>
+								<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L7">src/ECS/Components/Camera.ts:7</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section class="tsd-panel tsd-member tsd-kind-variable tsd-parent-kind-object-literal">
+						<a name="_inset.right" class="tsd-anchor"></a>
+						<h3>right</h3>
+						<div class="tsd-signature tsd-kind-icon">right<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div>
+						<aside class="tsd-sources">
+							<ul>
+								<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L7">src/ECS/Components/Camera.ts:7</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section class="tsd-panel tsd-member tsd-kind-variable tsd-parent-kind-object-literal">
+						<a name="_inset.top" class="tsd-anchor"></a>
+						<h3>top</h3>
+						<div class="tsd-signature tsd-kind-icon">top<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div>
+						<aside class="tsd-sources">
+							<ul>
+								<li>Defined in <a href="https://github.com/esengine/egret-framework/blob/562bacb/source/src/ECS/Components/Camera.ts#L7">src/ECS/Components/Camera.ts:7</a></li>
+							</ul>
+						</aside>
+					</section>
+				</section>
+			</section>
+		</div>
+		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
+			<nav class="tsd-navigation primary">
+				<ul>
+					<li class="globals  ">
+						<a href="../globals.html"><em>Globals</em></a>
+					</li>
+					<li class="current tsd-kind-module">
+						<a href="../modules/_ecs_components_camera_.html">&quot;ECS/<wbr>Components/<wbr>Camera&quot;</a>
+						<ul>
+							<li class="current tsd-kind-namespace tsd-parent-kind-module">
+								<a href="../modules/_ecs_components_camera_.es.html">es</a>
+							</li>
+						</ul>
+					</li>
+				</ul>
+			</nav>
+			<nav class="tsd-navigation secondary menu-sticky">
+				<ul class="before-current">
+				</ul>
+				<ul class="current">
+					<li class="current tsd-kind-class tsd-parent-kind-namespace">
+						<a href="_ecs_components_camera_.es.camera.html" class="tsd-kind-icon">Camera</a>
+						<ul>
+							<li class=" tsd-kind-constructor tsd-parent-kind-class tsd-is-overwrite">
+								<a href="_ecs_components_camera_.es.camera.html#constructor" class="tsd-kind-icon">constructor</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-private">
+								<a href="_ecs_components_camera_.es.camera.html#_hashcode" class="tsd-kind-icon">$hash<wbr>Code</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#_areboundsdirty" class="tsd-kind-icon">_are<wbr>Bounds<wbr>Dirty</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#_arematrixeddirty" class="tsd-kind-icon">_are<wbr>Matrixed<wbr>Dirty</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#_bounds" class="tsd-kind-icon">_bounds</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#_inversetransformmatrix" class="tsd-kind-icon">_inverse<wbr>Transform<wbr>Matrix</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#_isprojectionmatrixdirty" class="tsd-kind-icon">_is<wbr>Projection<wbr>Matrix<wbr>Dirty</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#_maximumzoom" class="tsd-kind-icon">_maximum<wbr>Zoom</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#_minimumzoom" class="tsd-kind-icon">_minimum<wbr>Zoom</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#_origin" class="tsd-kind-icon">_origin</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#_transformmatrix" class="tsd-kind-icon">_transform<wbr>Matrix</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#_zoom" class="tsd-kind-icon">_zoom</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#debugdisplayobject" class="tsd-kind-icon">debug<wbr>Display<wbr>Object</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#entity" class="tsd-kind-icon">entity</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#hashcode" class="tsd-kind-icon">hash<wbr>Code</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#updateinterval" class="tsd-kind-icon">update<wbr>Interval</a>
+							</li>
+							<li class=" tsd-kind-get-signature tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#bounds" class="tsd-kind-icon">bounds</a>
+							</li>
+							<li class=" tsd-kind-accessor tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#enabled" class="tsd-kind-icon">enabled</a>
+							</li>
+							<li class=" tsd-kind-get-signature tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#inversetransformmatrix" class="tsd-kind-icon">inverse<wbr>Transform<wbr>Matrix</a>
+							</li>
+							<li class=" tsd-kind-accessor tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#maximumzoom" class="tsd-kind-icon">maximum<wbr>Zoom</a>
+							</li>
+							<li class=" tsd-kind-accessor tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#minimumzoom" class="tsd-kind-icon">minimum<wbr>Zoom</a>
+							</li>
+							<li class=" tsd-kind-accessor tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#origin" class="tsd-kind-icon">origin</a>
+							</li>
+							<li class=" tsd-kind-accessor tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#position" class="tsd-kind-icon">position</a>
+							</li>
+							<li class=" tsd-kind-accessor tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#rawzoom" class="tsd-kind-icon">raw<wbr>Zoom</a>
+							</li>
+							<li class=" tsd-kind-accessor tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#rotation" class="tsd-kind-icon">rotation</a>
+							</li>
+							<li class=" tsd-kind-get-signature tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#transform" class="tsd-kind-icon">transform</a>
+							</li>
+							<li class=" tsd-kind-get-signature tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#transformmatrix" class="tsd-kind-icon">transform<wbr>Matrix</a>
+							</li>
+							<li class=" tsd-kind-accessor tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#updateorder" class="tsd-kind-icon">update<wbr>Order</a>
+							</li>
+							<li class=" tsd-kind-accessor tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#zoom" class="tsd-kind-icon">zoom</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#debugrender" class="tsd-kind-icon">debug<wbr>Render</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#forcematrixupdate" class="tsd-kind-icon">force<wbr>Matrix<wbr>Update</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#initialize" class="tsd-kind-icon">initialize</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#mousetoworldpoint" class="tsd-kind-icon">mouse<wbr>ToWorld<wbr>Point</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#onaddedtoentity" class="tsd-kind-icon">on<wbr>Added<wbr>ToEntity</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#ondisabled" class="tsd-kind-icon">on<wbr>Disabled</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#onenabled" class="tsd-kind-icon">on<wbr>Enabled</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-overwrite">
+								<a href="_ecs_components_camera_.es.camera.html#onentitytransformchanged" class="tsd-kind-icon">on<wbr>Entity<wbr>Transform<wbr>Changed</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#onremovedfromentity" class="tsd-kind-icon">on<wbr>Removed<wbr>From<wbr>Entity</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#onscenerendertargetsizechanged" class="tsd-kind-icon">on<wbr>Scene<wbr>Render<wbr>Target<wbr>Size<wbr>Changed</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#screentoworldpoint" class="tsd-kind-icon">screen<wbr>ToWorld<wbr>Point</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#setenabled" class="tsd-kind-icon">set<wbr>Enabled</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#setinset" class="tsd-kind-icon">set<wbr>Inset</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#setmaximumzoom" class="tsd-kind-icon">set<wbr>Maximum<wbr>Zoom</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#setminimumzoom" class="tsd-kind-icon">set<wbr>Minimum<wbr>Zoom</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#setposition" class="tsd-kind-icon">set<wbr>Position</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#setrotation" class="tsd-kind-icon">set<wbr>Rotation</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#setupdateorder" class="tsd-kind-icon">set<wbr>Update<wbr>Order</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#setzoom" class="tsd-kind-icon">set<wbr>Zoom</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_ecs_components_camera_.es.camera.html#update" class="tsd-kind-icon">update</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-protected">
+								<a href="_ecs_components_camera_.es.camera.html#updatematrixes" class="tsd-kind-icon">update<wbr>Matrixes</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#worldtoscreenpoint" class="tsd-kind-icon">world<wbr>ToScreen<wbr>Point</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#zoomin" class="tsd-kind-icon">zoom<wbr>In</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#zoomout" class="tsd-kind-icon">zoom<wbr>Out</a>
+							</li>
+							<li class=" tsd-kind-object-literal tsd-parent-kind-class">
+								<a href="_ecs_components_camera_.es.camera.html#_inset" class="tsd-kind-icon">_inset</a>
+							</li>
+						</ul>
+					</li>
+				</ul>
+				<ul class="after-current">
+					<li class=" tsd-kind-interface tsd-parent-kind-namespace">
+						<a href="../interfaces/_ecs_components_camera_.es.camerainset.html" class="tsd-kind-icon">Camera<wbr>Inset</a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+</div>
+<footer class="with-border-bottom">
+	<div class="container">
+		<h2>Legend</h2>
+		<div class="tsd-legend-group">
+			<ul class="tsd-legend">
+				<li class="tsd-kind-class"><span class="tsd-kind-icon">Class</span></li>
+				<li class="tsd-kind-constructor tsd-parent-kind-class"><span class="tsd-kind-icon">Constructor</span></li>
+				<li class="tsd-kind-property tsd-parent-kind-class"><span class="tsd-kind-icon">Property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class"><span class="tsd-kind-icon">Method</span></li>
+				<li class="tsd-kind-accessor tsd-parent-kind-class"><span class="tsd-kind-icon">Accessor</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited method</span></li>
+				<li class="tsd-kind-accessor tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited accessor</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-namespace"><span class="tsd-kind-icon">Namespace</span></li>
+				<li class="tsd-kind-variable"><span class="tsd-kind-icon">Variable</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-interface tsd-has-type-parameter"><span class="tsd-kind-icon">Interface with type parameter</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-method tsd-parent-kind-class tsd-is-protected"><span class="tsd-kind-icon">Protected method</span></li>
+			</ul>
+		</div>
+	</div>
+</footer>
+<div class="container tsd-generator">
+	<p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p>
+</div>
+<div class="overlay"></div>
+<script src="../assets/js/main.js"></script>
+<script>if (location.protocol == 'file:') document.write('<script src="../assets/js/search.js"><' + '/script>');</script>
+</body>
+</html>
