@@ -8,8 +8,9 @@
 		"libs/modules/tween/tween.js",
 		"libs/modules/promise/promise.js",
 		"libs/modules/dragonBones/dragonBones.js",
+		"libs/fairygui/fairygui.js",
 		"libs/framework/framework.js",
-		"libs/fairygui/fairygui.js"
+		"libs/framework_tiled/framework_tiled.js"
 	],
 	"game": [
 		"bin-debug/Fgui/common/commonBinder.js",
