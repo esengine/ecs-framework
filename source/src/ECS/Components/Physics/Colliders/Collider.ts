@@ -29,7 +29,6 @@ module es {
         public _localOffsetLength: number;
         public _isPositionDirty: boolean = true;
         public _isRotationDirty: boolean = true;
-        protected _colliderRequiresAutoSizing;
         /**
          * 标记来跟踪我们的实体是否被添加到场景中
          */
@@ -112,34 +111,6 @@ module es {
         }
 
         public onAddedToEntity() {
-            if (this._colliderRequiresAutoSizing) {
-                if (!(this instanceof BoxCollider || this instanceof CircleCollider)) {
-                    console.error("Only box and circle colliders can be created automatically");
-                    return;
-                }
-
-                let renderable = this.entity.getComponent<RenderableComponent>(RenderableComponent);
-                if (renderable) {
-                    let renderableBounds = renderable.bounds;
-
-                    // 这里我们需要大小*反尺度，因为当我们自动调整碰撞器的大小时，它需要没有缩放的渲染
-                    let width = renderableBounds.width / this.entity.transform.scale.x;
-                    let height = renderableBounds.height / this.entity.transform.scale.y;
-                    // 圆碰撞器需要特别注意原点
-                    if (this instanceof CircleCollider) {
-                        this.radius = Math.max(width, height) * 0.5;
-                    } else {
-                        this.width = width;
-                        this.height = height;
-                    }
-
-                    // 获取渲染的中心，将其转移到本地坐标，并使用它作为碰撞器的localOffset
-                    this.localOffset = Vector2.subtract(renderableBounds.center, this.entity.transform.position);
-                } else {
-                    console.warn("碰撞器没有形状和RenderableComponent。不知道如何调整大小.");
-                }
-            }
-
             this._isParentEntityAddedToScene = true;
             this.registerColliderWithPhysicsSystem();
         }

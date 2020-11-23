@@ -20,7 +20,6 @@ module es {
         }
         public set componentsNeedSort(value: boolean) {
             this._componentsNeedSort = value;
-            Core.scene.sortableChildren = value;
         }
 
         public get count() {

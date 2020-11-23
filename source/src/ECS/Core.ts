@@ -2,7 +2,7 @@ module es {
     /**
      *  全局核心类
      */
-    export class Core extends egret.DisplayObjectContainer {
+    export class Core {
         /**
          * 核心发射器。只发出核心级别的事件
          */
@@ -11,14 +11,6 @@ module es {
          * 是否启用调试渲染
          */
         public static debugRenderEndabled = false;
-        /**
-         * 全局访问图形设备
-         */
-        public static graphicsDevice: GraphicsDevice;
-        /**
-         * 全局内容管理器加载任何应该停留在场景之间的资产
-         */
-        public static content: ContentManager;
         /**
          * 简化对内部类的全局内容实例的访问
          */
@@ -29,20 +21,20 @@ module es {
          * 全局访问系统
          */
         public _globalManagers: GlobalManager[] = [];
-        public _coroutineManager: CoroutineManager = new CoroutineManager();
         public _timerManager: TimerManager = new TimerManager();
+        public width: number;
+        public height: number;
 
-        constructor() {
-            super();
+        constructor(width: number, height: number) {
+            this.width = width;
+            this.height = height;
 
             Core._instance = this;
             Core.emitter = new Emitter<CoreEvents>();
-            Core.content = new ContentManager();
 
-            this.addEventListener(egret.Event.ADDED_TO_STAGE, this.onAddToStage, this);
-
-            Core.registerGlobalManager(this._coroutineManager);
             Core.registerGlobalManager(this._timerManager);
+
+            this.initialize();
         }
 
         /**
@@ -77,7 +69,6 @@ module es {
             }
 
             if (this._instance._scene == null) {
-                this._instance.addChild(value);
                 this._instance._scene = value;
                 this._instance._scene.begin();
                 Core.Instance.onSceneChanged();
@@ -131,15 +122,6 @@ module es {
         }
 
         /**
-         * 开始了一个协同程序。协程可以使用number延迟几秒，也可以使其他对startCoroutine的调用延迟几秒。
-         * 返回null将使协程在下一帧中被执行。
-         * @param enumerator
-         */
-        public static startCoroutine(enumerator: Iterator<any>){
-            return this._instance._coroutineManager.startCoroutine(enumerator);
-        }
-
-        /**
          * 调度一个一次性或重复的计时器，该计时器将调用已传递的动作
          * @param timeInSeconds
          * @param repeats
@@ -155,8 +137,6 @@ module es {
         }
 
         public async draw() {
-            // this.startDebugDraw(Time.deltaTime);
-
             if (this._sceneTransition) {
                 this._sceneTransition.preRender();
 
@@ -176,40 +156,9 @@ module es {
             } else if (this._scene) {
                 this._scene.render();
 
-                Debug.render();
-
                 // 如果我们没有一个活跃的场景转换，就像平常一样渲染
                 this._scene.postRender();
             }
-
-            // this.endDebugDraw();
-        }
-
-        public startDebugUpdate() {
-            TimeRuler.Instance.startFrame();
-            TimeRuler.Instance.beginMark("update", 0x00FF00);
-        }
-
-        public endDebugUpdate() {
-            TimeRuler.Instance.endMark("update");
-        }
-
-        public startDebugDraw(elapsedGameTime: number){
-            TimeRuler.Instance.beginMark("draw", 0xFFD700);
-
-            // fps 计数器
-            this._frameCounter ++;
-            this._frameCounterElapsedTime += elapsedGameTime;
-            if (this._frameCounterElapsedTime >= 1){
-                this._frameCounter = 0;
-                this._frameCounterElapsedTime -= 1;
-            }
-        }
-
-        public endDebugDraw(){
-            TimeRuler.Instance.endMark("draw");
-
-            TimeRuler.Instance.render();
         }
 
         /**
@@ -228,16 +177,9 @@ module es {
         }
 
         protected initialize() {
-            Graphics.Instance = new Graphics();
         }
 
         protected async update() {
-            // this.startDebugUpdate();
-
-            // 更新我们所有的系统管理器
-            Time.update(egret.getTimer());
-            Input.update();
-
             if (this._scene) {
                 for (let i = this._globalManagers.length - 1; i >= 0; i--) {
                     if (this._globalManagers[i].enabled)
@@ -254,7 +196,6 @@ module es {
                 }
 
                 if (this._nextScene) {
-                    if (this._scene.parent) this._scene.parent.removeChild(this._scene);
                     this._scene.end();
 
                     this._scene = this._nextScene;
@@ -262,25 +203,10 @@ module es {
                     this.onSceneChanged();
 
                     await this._scene.begin();
-                    this.addChild(this._scene);
                 }
             }
 
-            // this.endDebugUpdate();
-
             await this.draw();
-        }
-
-        private onAddToStage() {
-            Core.graphicsDevice = new GraphicsDevice();
-
-            this.addEventListener(egret.Event.RESIZE, this.onGraphicsDeviceReset, this);
-            this.addEventListener(egret.StageOrientationEvent.ORIENTATION_CHANGE, this.onOrientationChanged, this);
-            this.addEventListener(egret.Event.ENTER_FRAME, this.update, this);
-
-            Input.initialize();
-            KeyboardUtils.init();
-            this.initialize();
         }
     }
 }

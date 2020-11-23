@@ -286,93 +286,15 @@ declare module es {
     }
 }
 declare module es {
-    class Core extends egret.DisplayObjectContainer {
-        static emitter: Emitter<CoreEvents>;
-        static debugRenderEndabled: boolean;
-        static graphicsDevice: GraphicsDevice;
-        static content: ContentManager;
-        static _instance: Core;
-        _nextScene: Scene;
-        _sceneTransition: SceneTransition;
-        _globalManagers: GlobalManager[];
-        _coroutineManager: CoroutineManager;
-        _timerManager: TimerManager;
-        constructor();
-        static readonly Instance: Core;
-        _frameCounterElapsedTime: number;
-        _frameCounter: number;
-        _scene: Scene;
-        static scene: Scene;
-        static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
-        static registerGlobalManager(manager: es.GlobalManager): void;
-        static unregisterGlobalManager(manager: es.GlobalManager): void;
-        static getGlobalManager<T extends es.GlobalManager>(type: any): T;
-        static startCoroutine(enumerator: Iterator<any>): CoroutineImpl;
-        static schedule(timeInSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer) => void): Timer;
-        onOrientationChanged(): void;
-        draw(): Promise<void>;
-        startDebugUpdate(): void;
-        endDebugUpdate(): void;
-        startDebugDraw(elapsedGameTime: number): void;
-        endDebugDraw(): void;
-        onSceneChanged(): void;
-        protected onGraphicsDeviceReset(): void;
-        protected initialize(): void;
-        protected update(): Promise<void>;
-        private onAddToStage;
-    }
-}
-declare module es {
-    class Colors {
-        static renderableBounds: number;
-        static renderableCenter: number;
-        static colliderBounds: number;
-        static colliderEdge: number;
-        static colliderPosition: number;
-        static colliderCenter: number;
-    }
-    class Size {
-        static readonly lineSizeMultiplier: number;
-    }
-    class Debug {
-        private static _debugDrawItems;
-        static drawHollowRect(rectanle: Rectangle, color: number, duration?: number): void;
-        static render(): void;
-    }
-}
-declare module es {
     class DebugDefaults {
         static verletParticle: number;
         static verletConstraintEdge: number;
     }
 }
 declare module es {
-    enum DebugDrawType {
-        line = 0,
-        hollowRectangle = 1,
-        pixel = 2,
-        text = 3
-    }
-    class DebugDrawItem {
-        rectangle: Rectangle;
-        color: number;
-        duration: number;
-        drawType: DebugDrawType;
-        text: string;
-        start: Vector2;
-        end: Vector2;
-        x: number;
-        y: number;
-        size: number;
-        constructor(rectangle: Rectangle, color: number, duration: number);
-        draw(shape: egret.Shape): boolean;
-    }
-}
-declare module es {
-    abstract class Component extends egret.HashObject {
+    abstract class Component {
         entity: Entity;
         updateInterval: number;
-        debugDisplayObject: egret.DisplayObjectContainer;
         readonly transform: Transform;
         private _enabled;
         enabled: boolean;
@@ -385,9 +307,38 @@ declare module es {
         debugRender(camera: Camera): void;
         onEnabled(): void;
         onDisabled(): void;
-        update(): void;
         setEnabled(isEnabled: boolean): this;
         setUpdateOrder(updateOrder: number): this;
+    }
+}
+declare module es {
+    class Core {
+        static emitter: Emitter<CoreEvents>;
+        static debugRenderEndabled: boolean;
+        static _instance: Core;
+        _nextScene: Scene;
+        _sceneTransition: SceneTransition;
+        _globalManagers: GlobalManager[];
+        _timerManager: TimerManager;
+        width: number;
+        height: number;
+        constructor(width: number, height: number);
+        static readonly Instance: Core;
+        _frameCounterElapsedTime: number;
+        _frameCounter: number;
+        _scene: Scene;
+        static scene: Scene;
+        static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
+        static registerGlobalManager(manager: es.GlobalManager): void;
+        static unregisterGlobalManager(manager: es.GlobalManager): void;
+        static getGlobalManager<T extends es.GlobalManager>(type: any): T;
+        static schedule(timeInSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer) => void): Timer;
+        onOrientationChanged(): void;
+        draw(): Promise<void>;
+        onSceneChanged(): void;
+        protected onGraphicsDeviceReset(): void;
+        protected initialize(): void;
+        protected update(): Promise<void>;
     }
 }
 declare module es {
@@ -444,7 +395,7 @@ declare module es {
         getComponent<T extends Component>(type: any): T;
         hasComponent<T extends Component>(type: any): boolean;
         getOrCreateComponent<T extends Component>(type: T): T;
-        getComponents(typeName: string | any, componentList?: any): any;
+        getComponents(typeName: any, componentList?: any): any;
         removeComponent(component: Component): void;
         removeComponentForType<T extends Component>(type: any): boolean;
         removeAllComponents(): void;
@@ -453,19 +404,14 @@ declare module es {
     }
 }
 declare module es {
-    class Scene extends egret.DisplayObjectContainer {
+    class Scene {
         camera: Camera;
-        readonly content: ContentManager;
-        enablePostProcessing: boolean;
         readonly entities: EntityList;
         readonly renderableComponents: RenderableComponentList;
         readonly entityProcessors: EntityProcessorList;
-        _screenshotRequestCallback: Function;
         readonly _sceneComponents: SceneComponent[];
         _renderers: Renderer[];
-        readonly _postProcessors: PostProcessor[];
         _didSceneBegin: any;
-        dynamicBatch: boolean;
         constructor();
         static createWithDefaultRenderer(): Scene;
         initialize(): void;
@@ -478,9 +424,7 @@ declare module es {
         updateResolutionScaler(): void;
         update(): void;
         render(): void;
-        dynamicInBatch(): void;
         postRender(): void;
-        requestScreenshot(callback: Function): void;
         addSceneComponent<T extends SceneComponent>(component: T): T;
         getSceneComponent<T extends SceneComponent>(type: any): T;
         getOrCreateSceneComponent<T extends SceneComponent>(type: any): T;
@@ -488,9 +432,6 @@ declare module es {
         addRenderer<T extends Renderer>(renderer: T): T;
         getRenderer<T extends Renderer>(type: any): T;
         removeRenderer(renderer: Renderer): void;
-        addPostProcessor<T extends PostProcessor>(postProcessor: T): T;
-        getPostProcessor<T extends PostProcessor>(type: any): T;
-        removePostProcessor(postProcessor: PostProcessor): void;
         createEntity(name: string): Entity;
         addEntity(entity: Entity): Entity;
         destroyAllEntities(): void;
@@ -512,14 +453,13 @@ declare module transform {
     }
 }
 declare module es {
-    import HashObject = egret.HashObject;
     enum DirtyType {
         clean = 0,
         positionDirty = 1,
         scaleDirty = 2,
         rotationDirty = 3
     }
-    class Transform extends HashObject {
+    class Transform {
         readonly entity: Entity;
         hierarchyDirty: DirtyType;
         _localDirty: boolean;
@@ -574,64 +514,6 @@ declare module es {
         setDirty(dirtyFlagType: DirtyType): void;
         copyFrom(transform: Transform): void;
         toString(): string;
-        equals(other: Transform): boolean;
-    }
-}
-declare module es {
-    interface CameraInset {
-        left: number;
-        right: number;
-        top: number;
-        bottom: number;
-    }
-    class Camera extends Component {
-        _inset: CameraInset;
-        _areMatrixedDirty: boolean;
-        _areBoundsDirty: boolean;
-        _isProjectionMatrixDirty: boolean;
-        constructor();
-        position: Vector2;
-        rotation: number;
-        rawZoom: number;
-        _zoom: number;
-        zoom: number;
-        _minimumZoom: number;
-        minimumZoom: number;
-        _maximumZoom: number;
-        maximumZoom: number;
-        _bounds: Rectangle;
-        readonly bounds: Rectangle;
-        _transformMatrix: Matrix2D;
-        readonly transformMatrix: Matrix2D;
-        _inverseTransformMatrix: Matrix2D;
-        readonly inverseTransformMatrix: Matrix2D;
-        _origin: Vector2;
-        origin: Vector2;
-        setInset(left: number, right: number, top: number, bottom: number): Camera;
-        setPosition(position: Vector2): this;
-        setRotation(rotation: number): Camera;
-        setZoom(zoom: number): Camera;
-        setMinimumZoom(minZoom: number): Camera;
-        setMaximumZoom(maxZoom: number): Camera;
-        forceMatrixUpdate(): void;
-        onEntityTransformChanged(comp: transform.Component): void;
-        zoomIn(deltaZoom: number): void;
-        zoomOut(deltaZoom: number): void;
-        worldToScreenPoint(worldPosition: Vector2): Vector2;
-        screenToWorldPoint(screenPosition: Vector2): Vector2;
-        onSceneRenderTargetSizeChanged(newWidth: number, newHeight: number): void;
-        mouseToWorldPoint(): Vector2;
-        protected updateMatrixes(): void;
-    }
-}
-declare module es {
-    class CameraShake extends Component {
-        _shakeDirection: Vector2;
-        _shakeOffset: Vector2;
-        _shakeIntensity: number;
-        _shakeDegredation: number;
-        shake(shakeIntensify?: number, shakeDegredation?: number, shakeDirection?: Vector2): void;
-        update(): void;
     }
 }
 declare module es {
@@ -644,43 +526,15 @@ declare module es {
     }
 }
 declare module es {
-    enum CameraStyle {
-        lockOn = 0,
-        cameraWindow = 1
-    }
-    class FollowCamera extends Component {
-        camera: Camera;
-        followLerp: number;
-        deadzone: Rectangle;
-        focusOffset: Vector2;
-        mapLockEnabled: boolean;
-        mapSize: Rectangle;
-        _targetEntity: Entity;
-        _targetCollider: Collider;
-        _desiredPositionDelta: Vector2;
-        _cameraStyle: CameraStyle;
-        _worldSpaceDeadZone: Rectangle;
-        private rectShape;
-        constructor(targetEntity?: Entity, camera?: Camera, cameraStyle?: CameraStyle);
-        onAddedToEntity(): void;
-        onGraphicsDeviceReset(): void;
-        update(): void;
-        debugRender(camera: Camera): void;
-        clampToMapSize(position: Vector2): Vector2;
-        follow(targetEntity: Entity, cameraStyle?: CameraStyle): void;
-        updateFollow(): void;
-        setCenteredDeadzone(width: number, height: number): void;
-    }
-}
-declare module es {
     interface IUpdatable {
         enabled: boolean;
         updateOrder: number;
         update(): any;
     }
     class IUpdatableComparer implements IComparer<IUpdatable> {
-        compare(a: Component, b: Component): number;
+        compare(a: IUpdatable, b: IUpdatable): number;
     }
+    var isIUpdatable: (props: any) => props is IUpdatable;
 }
 declare module es {
     abstract class PooledComponent extends Component {
@@ -737,7 +591,6 @@ declare module es {
         _localOffsetLength: number;
         _isPositionDirty: boolean;
         _isRotationDirty: boolean;
-        protected _colliderRequiresAutoSizing: any;
         protected _isParentEntityAddedToScene: any;
         protected _isColliderRegistered: any;
         readonly absolutePosition: Vector2;
@@ -760,11 +613,7 @@ declare module es {
 }
 declare module es {
     class BoxCollider extends Collider {
-        hollowShape: egret.Shape;
-        polygonShape: egret.Shape;
-        pixelShape1: egret.Shape;
-        pixelShape2: egret.Shape;
-        constructor(x?: number, y?: number, width?: number, height?: number);
+        constructor(x: number, y: number, width: number, height: number);
         width: number;
         height: number;
         setSize(width: number, height: number): this;
@@ -776,11 +625,7 @@ declare module es {
 }
 declare module es {
     class CircleCollider extends Collider {
-        private rectShape;
-        private circleShape;
-        private pixelShape1;
-        private pixelShape2;
-        constructor(radius?: number);
+        constructor(radius: number);
         radius: number;
         setRadius(radius: number): CircleCollider;
         debugRender(camera: Camera): void;
@@ -790,179 +635,6 @@ declare module es {
 declare module es {
     class PolygonCollider extends Collider {
         constructor(points: Vector2[]);
-    }
-}
-declare module es {
-    abstract class RenderableComponent extends Component implements IRenderable {
-        displayObject: egret.DisplayObject;
-        hollowShape: egret.Shape;
-        pixelShape: egret.Shape;
-        color: number;
-        protected _areBoundsDirty: boolean;
-        readonly width: number;
-        readonly height: number;
-        debugRenderEnabled: boolean;
-        protected _localOffset: Vector2;
-        localOffset: Vector2;
-        protected _renderLayer: number;
-        renderLayer: number;
-        protected _bounds: Rectangle;
-        readonly bounds: Rectangle;
-        private _isVisible;
-        isVisible: boolean;
-        onEntityTransformChanged(comp: transform.Component): void;
-        abstract render(camera: Camera): any;
-        debugRender(camera: Camera): void;
-        isVisibleFromCamera(camera: Camera): boolean;
-        setRenderLayer(renderLayer: number): RenderableComponent;
-        setColor(color: number): RenderableComponent;
-        setLocalOffset(offset: Vector2): RenderableComponent;
-        sync(camera: Camera): void;
-        compareTo(other: RenderableComponent): number;
-        toString(): string;
-        protected onBecameVisible(): void;
-        protected onBecameInvisible(): void;
-    }
-}
-declare module es {
-    class Mesh extends RenderableComponent {
-        displayObject: egret.Mesh;
-        readonly bounds: Rectangle;
-        _primitiveCount: number;
-        _topLeftVertPosition: Vector2;
-        _width: number;
-        _height: number;
-        _triangles: number[];
-        _verts: VertexPositionColorTexture[];
-        recalculateBounds(recalculateUVs: boolean): this;
-        setTexture(texture: egret.Texture): Mesh;
-        setVertPositions(positions: Vector2[]): this;
-        setTriangles(triangles: number[]): this;
-        render(camera: es.Camera): void;
-    }
-    class VertexPositionColorTexture {
-        position: Vector2;
-        textureCoordinate: Vector2;
-    }
-}
-declare module es {
-    class SpriteRenderer extends RenderableComponent {
-        constructor(sprite?: Sprite | egret.Texture);
-        readonly bounds: Rectangle;
-        originNormalized: Vector2;
-        protected _origin: Vector2;
-        origin: Vector2;
-        protected _sprite: Sprite;
-        sprite: Sprite;
-        setSprite(sprite: Sprite): SpriteRenderer;
-        setOrigin(origin: Vector2): SpriteRenderer;
-        setOriginNormalized(value: Vector2): SpriteRenderer;
-        render(camera: Camera): void;
-    }
-}
-declare module es {
-    class TiledSpriteRenderer extends SpriteRenderer {
-        readonly bounds: Rectangle;
-        scrollX: number;
-        scrollY: number;
-        textureScale: Vector2;
-        width: number;
-        height: number;
-        gapXY: Vector2;
-        protected _sourceRect: Rectangle;
-        protected _textureScale: Vector2;
-        protected _inverseTexScale: Vector2;
-        private _gapX;
-        private _gapY;
-        constructor(sprite: Sprite);
-        setGapXY(value: Vector2): TiledSpriteRenderer;
-        render(camera: es.Camera): void;
-    }
-}
-declare module es {
-    class ScrollingSpriteRenderer extends TiledSpriteRenderer {
-        scrollSpeedX: number;
-        scroolSpeedY: number;
-        textureScale: Vector2;
-        scrollWidth: number;
-        scrollHeight: number;
-        private _scrollX;
-        private _scrollY;
-        private _scrollWidth;
-        private _scrollHeight;
-        constructor(sprite: Sprite);
-        update(): void;
-    }
-}
-declare module es {
-    class Sprite {
-        texture2D: egret.Texture;
-        readonly sourceRect: Rectangle;
-        readonly center: Vector2;
-        origin: Vector2;
-        readonly uvs: Rectangle;
-        constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
-        static spritesFromAtlas(texture: egret.Texture, cellWidth: number, cellHeight: number, cellOffset?: number, maxCellsToInclude?: number): Sprite[];
-    }
-}
-declare module es {
-    class SpriteAnimation {
-        readonly sprites: Sprite[];
-        readonly frameRate: number;
-        constructor(sprites: Sprite[], frameRate?: number);
-    }
-}
-declare module es {
-    enum LoopMode {
-        loop = 0,
-        once = 1,
-        clampForever = 2,
-        pingPong = 3,
-        pingPongOnce = 4
-    }
-    enum State {
-        none = 0,
-        running = 1,
-        paused = 2,
-        completed = 3
-    }
-    class SpriteAnimator extends SpriteRenderer {
-        onAnimationCompletedEvent: (string: any) => {};
-        speed: number;
-        animationState: State;
-        currentAnimation: SpriteAnimation;
-        currentAnimationName: string;
-        currentFrame: number;
-        _elapsedTime: number;
-        _loopMode: LoopMode;
-        constructor(sprite?: Sprite);
-        readonly isRunning: boolean;
-        private _animations;
-        readonly animations: Map<string, SpriteAnimation>;
-        update(): void;
-        addAnimation(name: string, animation: SpriteAnimation): SpriteAnimator;
-        play(name: string, loopMode?: LoopMode): void;
-        isAnimationActive(name: string): boolean;
-        pause(): void;
-        unPause(): void;
-        stop(): void;
-    }
-}
-declare module es {
-    import Bitmap = egret.Bitmap;
-    class StaticSpriteContainerRenderer extends RenderableComponent {
-        displayObject: egret.DisplayObjectContainer;
-        private displayObjectCache;
-        constructor(sprite?: Sprite[] | egret.Texture[]);
-        readonly bounds: Rectangle;
-        originNormalized: Vector2;
-        protected _origin: Vector2;
-        origin: Vector2;
-        pushSprite(sprite: Sprite): StaticSpriteContainerRenderer;
-        getSprite(sprite: Sprite): Bitmap;
-        setOrigin(origin: Vector2): StaticSpriteContainerRenderer;
-        setOriginNormalized(value: Vector2): StaticSpriteContainerRenderer;
-        render(camera: Camera): void;
     }
 }
 declare module es {
@@ -1031,6 +703,7 @@ declare module es {
         static compareUpdatableOrder: IUpdatableComparer;
         _entity: Entity;
         _components: FastList<Component>;
+        _updatableComponents: FastList<IUpdatable>;
         _componentsToAdd: Component[];
         _componentsToRemove: Component[];
         _tempBufferList: Component[];
@@ -1047,7 +720,7 @@ declare module es {
         updateLists(): void;
         handleRemove(component: Component): void;
         getComponent<T extends Component>(type: any, onlyReturnInitializedComponents: boolean): T;
-        getComponents(typeName: string | any, components?: any): any;
+        getComponents(typeName: any, components?: any): any;
         update(): void;
         onEntityTransformChanged(comp: transform.Component): void;
         onEntityEnabled(): void;
@@ -1197,10 +870,6 @@ declare module es {
         one(...types: any[]): this;
     }
 }
-declare class ObjectUtils {
-    static clone<T>(p: any, c?: T): T;
-    static elements(p: {}): any[];
-}
 declare module es {
     interface IRenderable {
         bounds: Rectangle;
@@ -1250,17 +919,6 @@ declare class StringUtils {
     static strReplace(str: string, rStr: string[]): string;
 }
 declare module es {
-    class TextureUtils {
-        static sharedCanvas: HTMLCanvasElement;
-        static sharedContext: CanvasRenderingContext2D;
-        static convertImageToCanvas(texture: egret.Texture, rect?: egret.Rectangle): HTMLCanvasElement;
-        static toDataURL(type: string, texture: egret.Texture, rect?: egret.Rectangle, encoderOptions?: any): string;
-        static eliFoTevas(type: string, texture: egret.Texture, filePath: string, rect?: egret.Rectangle, encoderOptions?: any): void;
-        static getPixel32(texture: egret.Texture, x: number, y: number): number[];
-        static getPixels(texture: egret.Texture, x: number, y: number, width?: number, height?: number): number[];
-    }
-}
-declare module es {
     class Time {
         static unscaledDeltaTime: any;
         static deltaTime: number;
@@ -1288,28 +946,6 @@ declare class TimeUtils {
     static timeToMillisecond(time: string, partition?: string): string;
 }
 declare module es {
-    class Graphics {
-        static Instance: Graphics;
-        pixelTexture: Sprite;
-        constructor();
-    }
-}
-declare module es {
-    class GraphicsCapabilities extends egret.Capabilities {
-        initialize(device: GraphicsDevice): void;
-        private platformInitialize;
-    }
-}
-declare module es {
-    class GraphicsDevice {
-        graphicsCapabilities: GraphicsCapabilities;
-        constructor();
-        private _viewport;
-        readonly viewport: Viewport;
-        private setup;
-    }
-}
-declare module es {
     class Viewport {
         private _x;
         private _y;
@@ -1325,45 +961,10 @@ declare module es {
     }
 }
 declare module es {
-    class GaussianBlurEffect extends egret.CustomFilter {
-        private static blur_frag;
-        constructor();
-    }
-}
-declare module es {
-    class PolygonLightEffect extends egret.CustomFilter {
-        private static vertSrc;
-        private static fragmentSrc;
-        constructor();
-    }
-}
-declare module es {
-    class PostProcessor {
-        static default_vert: string;
-        enabled: boolean;
-        effect: egret.Filter;
-        scene: Scene;
-        shape: egret.Shape;
-        constructor(effect?: egret.Filter);
-        onAddedToScene(scene: Scene): void;
-        process(): void;
-        onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
-        unload(): void;
-        protected drawFullscreenQuad(): void;
-    }
-}
-declare module es {
-    class GaussianBlurPostProcessor extends PostProcessor {
-        onAddedToScene(scene: Scene): void;
-    }
-}
-declare module es {
     abstract class Renderer {
         camera: Camera;
         readonly renderOrder: number;
-        renderTexture: egret.RenderTexture;
         shouldDebugRender: boolean;
-        readonly wantsToRenderToSceneRenderTarget: boolean;
         protected constructor(renderOrder: number, camera?: Camera);
         onAddedToScene(scene: Scene): void;
         unload(): void;
@@ -1382,76 +983,6 @@ declare module es {
     }
 }
 declare module es {
-    class RenderLayerExcludeRenderer extends Renderer {
-        excludedRenderLayers: number[];
-        constructor(renderOrder: number, ...excludedRenderLayers: number[]);
-        render(scene: es.Scene): void;
-        protected debugRender(scene: es.Scene, cam: es.Camera): void;
-    }
-}
-declare module es {
-    class ScreenSpaceRenderer extends Renderer {
-        renderLayers: number[];
-        constructor(renderOrder: number, ...renderLayers: number[]);
-        render(scene: Scene): void;
-        protected debugRender(scene: es.Scene, cam: es.Camera): void;
-        onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
-    }
-}
-declare module es {
-    class PolyLight extends RenderableComponent {
-        power: number;
-        private _lightEffect;
-        private _indices;
-        constructor(radius: number, color: number, power: number);
-        protected _radius: number;
-        radius: number;
-        setRadius(radius: number): void;
-        render(camera: Camera): void;
-        reset(): void;
-        private computeTriangleIndices;
-    }
-}
-declare module es {
-    class GaussianBlur {
-        static createBlurredTexture(image: egret.Texture, deviation?: number): void;
-        static createBlurredTextureData(srcData: Color[], width: number, height: number, deviation?: number): Color[];
-        static gaussianConvolution(matrix: FasterDictionary<{
-            x: number;
-            y: number;
-        }, number>, deviation: number): FasterDictionary<{
-            x: number;
-            y: number;
-        }, number>;
-        static processPoint(matrix: FasterDictionary<{
-            x: number;
-            y: number;
-        }, number>, x: number, y: number, kernel: FasterDictionary<{
-            x: number;
-            y: number;
-        }, number>, direction: number): number;
-        static calculate1DSampleKernel(deviation: number): FasterDictionary<{
-            x: number;
-            y: number;
-        }, number>;
-        static calculate1DSampleKernelOfSize(deviation: number, size: number): FasterDictionary<{
-            x: number;
-            y: number;
-        }, number>;
-        static calculateNormalized1DSampleKernel(deviation: number): FasterDictionary<{
-            x: number;
-            y: number;
-        }, number>;
-        static normalizeMatrix(matrix: FasterDictionary<{
-            x: number;
-            y: number;
-        }, number>): FasterDictionary<{
-            x: number;
-            y: number;
-        }, number>;
-    }
-}
-declare module es {
     abstract class SceneTransition {
         loadsNewScene: boolean;
         isNewSceneLoaded: boolean;
@@ -1464,36 +995,8 @@ declare module es {
         preRender(): void;
         render(): void;
         onBeginTransition(): Promise<void>;
-        tickEffectProgressProperty(filter: egret.CustomFilter, duration: number, easeType: Function, reverseDirection?: boolean): Promise<boolean>;
         protected transitionComplete(): void;
         protected loadNextScene(): Promise<void>;
-    }
-}
-declare module es {
-    class FadeTransition extends SceneTransition {
-        fadeToColor: number;
-        fadeOutDuration: number;
-        fadeEaseType: Function;
-        delayBeforeFadeInDuration: number;
-        private _mask;
-        private _alpha;
-        constructor(sceneLoadAction: Function);
-        onBeginTransition(): Promise<void>;
-        protected transitionComplete(): void;
-        render(): void;
-    }
-}
-declare module es {
-    class WindTransition extends SceneTransition {
-        duration: number;
-        easeType: (t: number) => number;
-        private _mask;
-        private _windEffect;
-        constructor(sceneLoadAction: Function);
-        windSegments: number;
-        size: number;
-        onBeginTransition(): Promise<void>;
-        protected transitionComplete(): void;
     }
 }
 declare module es {
@@ -1536,46 +1039,87 @@ declare module es {
     }
 }
 declare module es {
-    var matrixPool: any[];
-    class Matrix2D extends egret.Matrix {
+    class Matrix2D implements IEquatable<Matrix2D> {
         m11: number;
         m12: number;
         m21: number;
         m22: number;
         m31: number;
         m32: number;
-        static create(): Matrix2D;
-        identity(): Matrix2D;
-        translate(dx: number, dy: number): Matrix2D;
-        scale(sx: number, sy: number): Matrix2D;
-        rotate(angle: number): Matrix2D;
-        invert(): Matrix2D;
+        static readonly identity: Matrix2D;
+        translation: Vector2;
+        rotation: number;
+        rotationDegrees: number;
+        scale: Vector2;
+        static _identity: Matrix2D;
+        constructor(m11: number, m12: number, m21: number, m22: number, m31: number, m32: number);
+        static createRotation(radians: number): Matrix2D;
+        static createScale(xScale: number, yScale: number): Matrix2D;
+        static createTranslation(xPosition: number, yPosition: number): Matrix2D;
+        static invert(matrix: Matrix2D): Matrix2D;
         add(matrix: Matrix2D): Matrix2D;
         substract(matrix: Matrix2D): Matrix2D;
         divide(matrix: Matrix2D): Matrix2D;
         multiply(matrix: Matrix2D): Matrix2D;
         determinant(): number;
-        release(matrix: Matrix2D): void;
+        static lerp(matrix1: Matrix2D, matrix2: Matrix2D, amount: number): Matrix2D;
+        static transpose(matrix: Matrix2D): Matrix2D;
+        mutiplyTranslation(x: number, y: number): Matrix2D;
+        equals(other: Matrix2D): boolean;
+        toString(): string;
     }
 }
 declare module es {
-    class Rectangle extends egret.Rectangle {
-        _tempMat: Matrix2D;
-        _transformMat: Matrix2D;
+    class MatrixHelper {
+        static add(matrix1: Matrix2D, matrix2: Matrix2D): Matrix2D;
+        static divide(matrix1: Matrix2D, matrix2: Matrix2D): Matrix2D;
+        static mutiply(matrix1: Matrix2D, matrix2: Matrix2D | number): Matrix2D;
+        static subtract(matrix1: Matrix2D, matrix2: Matrix2D): Matrix2D;
+    }
+}
+declare module es {
+    class Rectangle implements IEquatable<Rectangle> {
+        static emptyRectangle: Rectangle;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        static readonly empty: Rectangle;
+        static readonly maxRect: Rectangle;
+        readonly left: number;
+        readonly right: number;
+        readonly top: number;
+        readonly bottom: number;
         readonly max: Vector2;
-        readonly center: Vector2;
+        isEmpty(): boolean;
         location: Vector2;
         size: Vector2;
+        readonly center: Vector2;
+        _tempMat: Matrix2D;
+        _transformMat: Matrix2D;
+        constructor(x?: number, y?: number, width?: number, height?: number);
         static fromMinMax(minX: number, minY: number, maxX: number, maxY: number): Rectangle;
         static rectEncompassingPoints(points: Vector2[]): Rectangle;
-        intersects(value: egret.Rectangle): boolean;
+        getSide(edge: Edge): number;
+        contains(x: number, y: number): boolean;
+        inflate(horizontalAmount: number, verticalAmount: number): void;
+        intersects(value: Rectangle): boolean;
         rayIntersects(ray: Ray2D, distance: Ref<number>): boolean;
         containsRect(value: Rectangle): boolean;
-        contains(x: number, y: number): boolean;
         getHalfSize(): Vector2;
-        getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2;
         getClosestPointOnBoundsToOrigin(): Vector2;
+        getClosestPointOnRectangleToPoint(point: Vector2): Vector2;
+        getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2;
+        static intersect(value1: Rectangle, value2: Rectangle): Rectangle;
+        offset(offsetX: number, offsetY: number): void;
+        static union(value1: Rectangle, value2: Rectangle): Rectangle;
+        static overlap(value1: Rectangle, value2: Rectangle): Rectangle;
         calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
+        getSweptBroadphaseBounds(deltaX: number, deltaY: number): Rectangle;
+        collisionCheck(other: Rectangle, moveX: Ref<number>, moveY: Ref<number>): boolean;
+        static getIntersectionDepth(rectA: Rectangle, rectB: Rectangle): Vector2;
+        equals(other: Rectangle): boolean;
+        getHashCode(): number;
     }
 }
 declare module es {
@@ -1632,7 +1176,7 @@ declare module es {
         static circleToCircle(circleCenter1: Vector2, circleRadius1: number, circleCenter2: Vector2, circleRadius2: number): boolean;
         static circleToLine(circleCenter: Vector2, radius: number, lineFrom: Vector2, lineTo: Vector2): boolean;
         static circleToPoint(circleCenter: Vector2, radius: number, point: Vector2): boolean;
-        static rectToCircle(rect: egret.Rectangle, cPosition: Vector2, cRadius: number): boolean;
+        static rectToCircle(rect: Rectangle, cPosition: Vector2, cRadius: number): boolean;
         static rectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2): boolean;
         static rectToPoint(rX: number, rY: number, rW: number, rH: number, point: Vector2): boolean;
         static getSector(rX: number, rY: number, rW: number, rH: number, point: Vector2): PointSectors;
@@ -1928,18 +1472,6 @@ declare module es {
     }
 }
 declare module es {
-    class ContentManager {
-        protected loadedAssets: Map<string, any>;
-        loadRes(name: string, local?: boolean): Promise<any>;
-        dispose(): void;
-    }
-}
-declare module es {
-    class DrawUtils {
-        static getColorMatrix(color: number): egret.ColorMatrixFilter;
-    }
-}
-declare module es {
     class EdgeExt {
         static oppositeEdge(self: Edge): Edge;
         static isHorizontal(self: Edge): boolean;
@@ -2041,6 +1573,7 @@ declare module es {
     interface IPoolable {
         reset(): any;
     }
+    var isIPoolable: (props: any) => props is IPoolable;
 }
 declare class RandomUtils {
     static randrange(start: number, stop: number, step?: number): number;
@@ -2102,32 +1635,6 @@ declare module es {
 declare class WebGLUtils {
     static getContext(): CanvasRenderingContext2D;
 }
-declare module es {
-    class Layout {
-        clientArea: Rectangle;
-        safeArea: Rectangle;
-        constructor();
-        place(size: Vector2, horizontalMargin: number, verticalMargine: number, alignment: Alignment): Rectangle;
-    }
-    enum Alignment {
-        none = 0,
-        left = 1,
-        right = 2,
-        horizontalCenter = 4,
-        top = 8,
-        bottom = 16,
-        verticalCenter = 32,
-        topLeft = 9,
-        topRight = 10,
-        topCenter = 12,
-        bottomLeft = 17,
-        bottomRight = 18,
-        bottomCenter = 20,
-        centerLeft = 33,
-        centerRight = 34,
-        center = 36
-    }
-}
 declare namespace stopwatch {
     class Stopwatch {
         private readonly getSystemTime;
@@ -2165,444 +1672,6 @@ declare namespace stopwatch {
         readonly startTime: number;
         readonly endTime: number;
         readonly duration: number;
-    }
-}
-declare module es {
-    class TimeRuler {
-        static readonly maxBars: number;
-        static readonly maxSamples: number;
-        static readonly maxNestCall: number;
-        static readonly barHeight: number;
-        static readonly maxSampleFrames: number;
-        static readonly logSnapDuration: number;
-        static readonly barPadding: number;
-        static readonly autoAdjustDelay: number;
-        private static _instance;
-        targetSampleFrames: number;
-        width: number;
-        enabled: true;
-        showLog: boolean;
-        logs: FrameLog[];
-        private sampleFrames;
-        private _position;
-        private prevLog;
-        private curLog;
-        private frameCount;
-        private markers;
-        private stopwacth;
-        private _markerNameToIdMap;
-        private _updateCount;
-        private _frameAdjust;
-        private _rectShape1;
-        private _rectShape2;
-        private _rectShape3;
-        private _rectShape4;
-        private _rectShape5;
-        private _rectShape6;
-        constructor();
-        static readonly Instance: TimeRuler;
-        startFrame(): void;
-        beginMark(markerName: string, color: number, barIndex?: number): void;
-        endMark(markerName: string, barIndex?: number): void;
-        getAverageTime(barIndex: number, markerName: string): number;
-        resetLog(): void;
-        render(position?: Vector2, width?: number): void;
-        private onGraphicsDeviceReset;
-    }
-    class FrameLog {
-        bars: MarkerCollection[];
-        constructor();
-    }
-    class MarkerCollection {
-        markers: Marker[];
-        markCount: number;
-        markerNests: number[];
-        nestCount: number;
-        constructor();
-    }
-    class Marker {
-        markerId: number;
-        beginTime: number;
-        endTime: number;
-        color: number;
-    }
-    class MarkerInfo {
-        name: string;
-        logs: MarkerLog[];
-        constructor(name: any);
-    }
-    class MarkerLog {
-        snapMin: number;
-        snapMax: number;
-        snapAvg: number;
-        min: number;
-        max: number;
-        avg: number;
-        samples: number;
-        color: number;
-        initialized: boolean;
-    }
-}
-declare module es {
-    interface ICoroutine {
-        stop(): any;
-        setUseUnscaledDeltaTime(useUnscaledDeltaTime: any): ICoroutine;
-    }
-    class Coroutine {
-        static waitForSeconds(seconds: number): WaitForSeconds;
-    }
-    class WaitForSeconds {
-        static waiter: WaitForSeconds;
-        waitTime: number;
-        wait(seconds: number): WaitForSeconds;
-    }
-}
-declare module es {
-    class CoroutineImpl implements ICoroutine, IPoolable {
-        enumerator: Iterator<any>;
-        waitTimer: number;
-        isDone: boolean;
-        waitForCoroutine: CoroutineImpl;
-        useUnscaledDeltaTime: boolean;
-        stop(): void;
-        setUseUnscaledDeltaTime(useUnscaledDeltaTime: any): es.ICoroutine;
-        prepareForuse(): void;
-        reset(): void;
-    }
-    class CoroutineManager extends GlobalManager {
-        _isInUpdate: boolean;
-        _unblockedCoroutines: CoroutineImpl[];
-        _shouldRunNextFrame: CoroutineImpl[];
-        startCoroutine(enumerator: Iterator<any>): CoroutineImpl;
-        update(): void;
-        tickCoroutine(coroutine: CoroutineImpl): boolean;
-    }
-}
-declare module es {
-    class TouchState {
-        x: number;
-        y: number;
-        touchPoint: number;
-        touchDown: boolean;
-        readonly position: Vector2;
-        reset(): void;
-    }
-    class Input {
-        private static _init;
-        private static _previousTouchState;
-        private static _resolutionOffset;
-        private static _touchIndex;
-        private static _gameTouchs;
-        static readonly gameTouchs: TouchState[];
-        private static _resolutionScale;
-        static readonly resolutionScale: Vector2;
-        private static _totalTouchCount;
-        static readonly totalTouchCount: number;
-        static readonly touchPosition: Vector2;
-        static _virtualInputs: VirtualInput[];
-        static maxSupportedTouch: number;
-        static readonly touchPositionDelta: Vector2;
-        static initialize(): void;
-        static update(): void;
-        static scaledPosition(position: Vector2): Vector2;
-        static isKeyPressed(key: Keys): boolean;
-        static isKeyPressedBoth(keyA: Keys, keyB: Keys): boolean;
-        static isKeyDown(key: Keys): boolean;
-        static isKeyDownBoth(keyA: Keys, keyB: Keys): boolean;
-        static isKeyReleased(key: Keys): boolean;
-        static isKeyReleasedBoth(keyA: Keys, keyB: Keys): boolean;
-        private static initTouchCache;
-        private static touchBegin;
-        private static touchMove;
-        private static touchEnd;
-        private static setpreviousTouchState;
-    }
-}
-import Keys = es.Keys;
-declare class KeyboardUtils {
-    static currentKeys: Keys[];
-    static previousKeys: Keys[];
-    private static keyStatusKeys;
-    static init(): void;
-    static update(): void;
-    static destroy(): void;
-    private static onKeyDownHandler;
-    private static onKeyUpHandler;
-}
-declare module es {
-    enum Keys {
-        none = 0,
-        back = 8,
-        tab = 9,
-        enter = 13,
-        capsLock = 20,
-        escape = 27,
-        space = 32,
-        pageUp = 33,
-        pageDown = 34,
-        end = 35,
-        home = 36,
-        left = 37,
-        up = 38,
-        right = 39,
-        down = 40,
-        select = 41,
-        print = 42,
-        execute = 43,
-        printScreen = 44,
-        insert = 45,
-        delete = 46,
-        help = 47,
-        d0 = 48,
-        d1 = 49,
-        d2 = 50,
-        d3 = 51,
-        d4 = 52,
-        d5 = 53,
-        d6 = 54,
-        d7 = 55,
-        d8 = 56,
-        d9 = 57,
-        a = 65,
-        b = 66,
-        c = 67,
-        d = 68,
-        e = 69,
-        f = 70,
-        g = 71,
-        h = 72,
-        i = 73,
-        j = 74,
-        k = 75,
-        l = 76,
-        m = 77,
-        n = 78,
-        o = 79,
-        p = 80,
-        q = 81,
-        r = 82,
-        s = 83,
-        t = 84,
-        u = 85,
-        v = 86,
-        w = 87,
-        x = 88,
-        y = 89,
-        z = 90,
-        leftWindows = 91,
-        rightWindows = 92,
-        apps = 93,
-        sleep = 95,
-        numPad0 = 96,
-        numPad1 = 97,
-        numPad2 = 98,
-        numPad3 = 99,
-        numPad4 = 100,
-        numPad5 = 101,
-        numPad6 = 102,
-        numPad7 = 103,
-        numPad8 = 104,
-        numPad9 = 105,
-        multiply = 106,
-        add = 107,
-        seperator = 108,
-        subtract = 109,
-        decimal = 110,
-        divide = 111,
-        f1 = 112,
-        f2 = 113,
-        f3 = 114,
-        f4 = 115,
-        f5 = 116,
-        f6 = 117,
-        f7 = 118,
-        f8 = 119,
-        f9 = 120,
-        f10 = 121,
-        f11 = 122,
-        f12 = 123,
-        f13 = 124,
-        f14 = 125,
-        f15 = 126,
-        f16 = 127,
-        f17 = 128,
-        f18 = 129,
-        f19 = 130,
-        f20 = 131,
-        f21 = 132,
-        f22 = 133,
-        f23 = 134,
-        f24 = 135,
-        numLock = 144,
-        scroll = 145,
-        leftShift = 160,
-        rightShift = 161,
-        leftControl = 162,
-        rightControl = 163,
-        leftAlt = 164,
-        rightAlt = 165,
-        browserBack = 166,
-        browserForward = 167
-    }
-}
-declare module es {
-    enum OverlapBehavior {
-        cancelOut = 0,
-        takeOlder = 1,
-        takeNewer = 2
-    }
-    abstract class VirtualInput {
-        protected constructor();
-        deregister(): void;
-        abstract update(): any;
-    }
-    abstract class VirtualInputNode {
-        update(): void;
-    }
-}
-declare module es {
-    class VirtualIntegerAxis extends VirtualInput {
-        nodes: VirtualAxisNode[];
-        readonly value: number;
-        constructor(...nodes: VirtualAxisNode[]);
-        update(): void;
-        addKeyboardKeys(overlapBehavior: OverlapBehavior, negative: Keys, positive: Keys): this;
-    }
-    abstract class VirtualAxisNode extends VirtualInputNode {
-        abstract value: number;
-    }
-}
-declare module es {
-    class VirtualAxis extends VirtualInput {
-        nodes: VirtualAxisNode[];
-        readonly value: number;
-        constructor(...nodes: VirtualAxisNode[]);
-        update(): void;
-    }
-    class KeyboardKeys extends VirtualAxisNode {
-        overlapBehavior: OverlapBehavior;
-        positive: Keys;
-        negative: Keys;
-        _value: number;
-        _turned: boolean;
-        constructor(overlapBehavior: OverlapBehavior, negative: Keys, positive: Keys);
-        update(): void;
-        readonly value: number;
-    }
-}
-declare module es {
-    class VirtualButton extends VirtualInput {
-        nodes: Node[];
-        bufferTime: number;
-        firstRepeatTime: number;
-        mutiRepeatTime: number;
-        isRepeating: boolean;
-        _bufferCounter: number;
-        _repeatCounter: number;
-        _willRepeat: boolean;
-        constructor(bufferTime?: number, ...nodes: Node[]);
-        setRepeat(firstRepeatTime: number, mutiRepeatTime?: number): void;
-        update(): void;
-        readonly isDown: boolean;
-        readonly isPressed: boolean;
-        readonly isReleased: boolean;
-        consumeBuffer(): void;
-        addKeyboardKey(key: Keys): VirtualButton;
-    }
-    abstract class Node extends VirtualInputNode {
-        abstract isDown: boolean;
-        abstract isPressed: boolean;
-        abstract isReleased: boolean;
-    }
-    class KeyboardKey extends Node {
-        key: Keys;
-        constructor(key: Keys);
-        readonly isDown: boolean;
-        readonly isPressed: boolean;
-        readonly isReleased: boolean;
-    }
-}
-declare module es {
-    class AssetPacker {
-        protected itemsToRaster: TextureToPack[];
-        onProcessCompleted: Function;
-        useCache: boolean;
-        cacheName: string;
-        protected _sprites: Map<string, egret.Texture>;
-        protected allow4096Textures: boolean;
-        addTextureToPack(texture: egret.Texture, customID: string): void;
-        process(allow4096Textures?: boolean): Promise<void>;
-        protected loadPack(): Promise<any>;
-        protected createPack(): void;
-        dispose(): void;
-        getTexture(id: string): egret.Texture;
-    }
-}
-declare module es {
-    class IntegerRectangle extends Rectangle {
-        id: number;
-    }
-}
-declare module es {
-    class RectanglePacker {
-        private _width;
-        private _height;
-        private _padding;
-        private _packedWidth;
-        private _packedHeight;
-        private _insertList;
-        private _insertedRectangles;
-        private _freeAreas;
-        private _newFreeAreas;
-        private _outsideRectangle;
-        private _sortableSizeStack;
-        private _rectangleStack;
-        readonly rectangleCount: number;
-        readonly packedWidth: number;
-        readonly packedHeight: number;
-        readonly padding: number;
-        constructor(width: number, height: number, padding?: number);
-        reset(width: number, height: number, padding?: number): void;
-        insertRectangle(width: number, height: number, id: number): void;
-        packRectangles(sort?: boolean): number;
-        getRectangle(index: number, rectangle: IntegerRectangle): IntegerRectangle;
-        getRectangleId(index: number): number;
-        private generateNewFreeAreas;
-        private filterSelfSubAreas;
-        private generateDividedAreas;
-        private getFreeAreaIndex;
-        private allocateSize;
-        private freeSize;
-        private allocateRectangle;
-        private freeRectangle;
-    }
-}
-declare module es {
-    class SortableSize {
-        width: number;
-        height: number;
-        id: number;
-        constructor(width: number, height: number, id: number);
-    }
-}
-declare module es {
-    class TextureAssets {
-        assets: TextureAsset[];
-        constructor(assets: TextureAsset[]);
-    }
-    class TextureAsset {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-        name: string;
-    }
-}
-declare module es {
-    class TextureToPack {
-        texture: egret.Texture;
-        id: string;
-        constructor(texture: egret.Texture, id: string);
     }
 }
 declare module es {

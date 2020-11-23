@@ -14,22 +14,11 @@ module es {
          */
         public readonly renderOrder: number = 0;
         /**
-         * 如果renderTarget不是null，这个渲染器将渲染到渲染目标而不是屏幕
-         */
-        public renderTexture: egret.RenderTexture;
-        /**
          * 这个渲染器的标志，决定它是否应该调试渲染。
          * render方法接收一个bool (debugRenderEnabled)，让渲染器知道全局调试渲染是否打开/关闭。
          * 渲染器然后使用本地bool来决定它是否应该调试渲染。
          */
         public shouldDebugRender: boolean = true;
-        /**
-         * 如果为true，场景将使用场景渲染目标调用setRenderTarget。
-         * 如果渲染器有渲染纹理，默认实现返回true
-         */
-        public get wantsToRenderToSceneRenderTarget(): boolean{
-            return !!this.renderTexture;
-        }
 
         protected constructor(renderOrder: number, camera: Camera = null) {
             this.camera = camera;

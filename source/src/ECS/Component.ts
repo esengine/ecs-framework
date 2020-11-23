@@ -7,7 +7,7 @@ module es {
      *  删除执行顺序
      *      - onRemovedFromEntity
      */
-    export abstract class Component extends egret.HashObject {
+    export abstract class Component {
         /**
          * 此组件附加的实体
          */
@@ -16,10 +16,6 @@ module es {
          * 更新该组件的时间间隔。这与实体的更新间隔无关。
          */
         public updateInterval: number = 1;
-        /**
-         * 用于装载debug使用的显示容器
-         */
-        public debugDisplayObject: egret.DisplayObjectContainer = new egret.DisplayObjectContainer();
 
         /**
          * 快速访问 this.entity.transform
@@ -99,13 +95,7 @@ module es {
          */
         public onDisabled() {
         }
-
-        /**
-         * 当该组件启用时每帧进行调用
-         */
-        public update() {
-        }
-
+        
         public setEnabled(isEnabled: boolean) {
             if (this._enabled != isEnabled) {
                 this._enabled = isEnabled;

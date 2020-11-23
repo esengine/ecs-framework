@@ -1,31 +1,14 @@
 ///<reference path="./Collider.ts" />
 module es {
     export class BoxCollider extends Collider {
-        public hollowShape: egret.Shape = new egret.Shape();
-        public polygonShape: egret.Shape = new egret.Shape();
-        public pixelShape1: egret.Shape = new egret.Shape();
-        public pixelShape2: egret.Shape = new egret.Shape();
         /**
          * 零参数构造函数要求RenderableComponent在实体上，这样碰撞器可以在实体被添加到场景时调整自身的大小。
          */
-        constructor(x?: number, y?: number, width?: number, height?: number) {
+        constructor(x: number, y: number, width: number, height: number) {
             super();
 
-            if (x == undefined && y == undefined){
-                if (width == undefined && height == undefined){
-                    // 我们在这里插入一个1x1框作为占位符，直到碰撞器在下一阵被添加到实体并可以获得更精确的自动调整大小数据
-                    this.shape = new Box(1, 1);
-                    this._colliderRequiresAutoSizing = true;
-                }else if (width != undefined && height != undefined){
-                    x = -width / 2;
-                    y = -height / 2;
-                    this._localOffset = new Vector2(x + width / 2, y + height / 2);
-                    this.shape = new Box(width, height);
-                }
-            }else if (x != undefined && y != undefined && width != undefined && height != undefined){
-                this._localOffset = new Vector2(x + width / 2, y + height / 2);
-                this.shape = new Box(width, height);
-            }
+            this._localOffset = new Vector2(x + width / 2, y + height / 2);
+            this.shape = new Box(width, height);
         }
 
         public get width() {
@@ -50,7 +33,6 @@ module es {
          * @param height
          */
         public setSize(width: number, height: number) {
-            this._colliderRequiresAutoSizing = false;
             let box = this.shape as Box;
             if (width != box.width || height != box.height) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
@@ -67,7 +49,6 @@ module es {
          * @param width
          */
         public setWidth(width: number): BoxCollider {
-            this._colliderRequiresAutoSizing = false;
             let box = this.shape as Box;
             if (width != box.width) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
@@ -84,7 +65,6 @@ module es {
          * @param height
          */
         public setHeight(height: number) {
-            this._colliderRequiresAutoSizing = false;
             let box = this.shape as Box;
             if (height != box.height) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
@@ -95,56 +75,6 @@ module es {
         }
 
         public debugRender(camera: Camera) {
-            let poly = this.shape as Polygon;
-            if (!this.hollowShape.parent)
-                this.debugDisplayObject.addChild(this.hollowShape);
-
-            if (!this.polygonShape.parent)
-                this.debugDisplayObject.addChild(this.polygonShape);
-
-            if (!this.pixelShape1.parent)
-                this.debugDisplayObject.addChild(this.pixelShape1);
-
-            if (!this.pixelShape2.parent)
-                this.debugDisplayObject.addChild(this.pixelShape2);
-
-            this.hollowShape.graphics.clear();
-            this.hollowShape.graphics.beginFill(Colors.colliderBounds, 0);
-            this.hollowShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderBounds);
-            this.hollowShape.graphics.drawRect(this.bounds.x - camera.bounds.x, this.bounds.y - camera.bounds.y, this.bounds.width, this.bounds.height);
-            this.hollowShape.graphics.endFill();
-
-            this.polygonShape.graphics.clear();
-            if (poly.points.length >= 2){
-                this.polygonShape.graphics.beginFill(Colors.colliderEdge, 0);
-                this.polygonShape.graphics.lineStyle(Size.lineSizeMultiplier, Colors.colliderEdge);
-                for (let i = 0; i < poly.points.length; i ++){
-                    if (i == 0){
-                        this.polygonShape.graphics.moveTo(poly.position.x + poly.points[i].x - camera.bounds.x, poly.position.y + poly.points[i].y - camera.bounds.y);
-                    }else{
-                        this.polygonShape.graphics.lineTo(poly.position.x + poly.points[i].x - camera.bounds.x, poly.position.y + poly.points[i].y - camera.bounds.y);
-                    }
-                }
-
-                this.polygonShape.graphics.lineTo(poly.position.x + poly.points[poly.points.length - 1].x - camera.bounds.x, poly.position.y + poly.points[0].y - camera.bounds.y);
-                this.polygonShape.graphics.endFill();
-            }
-
-            this.pixelShape1.graphics.clear();
-            this.pixelShape1.graphics.beginFill(Colors.colliderPosition, 0);
-            this.pixelShape1.graphics.lineStyle(4 * Size.lineSizeMultiplier, Colors.colliderPosition);
-            this.pixelShape1.graphics.moveTo(this.entity.transform.position.x - camera.bounds.x, this.entity.transform.position.y - camera.bounds.y);
-            this.pixelShape1.graphics.lineTo(this.entity.transform.position.x - camera.bounds.x, this.entity.transform.position.y - camera.bounds.y);
-            this.pixelShape1.graphics.endFill();
-
-            this.pixelShape2.graphics.clear();
-            this.pixelShape2.graphics.beginFill(Colors.colliderCenter, 0);
-            this.pixelShape2.graphics.lineStyle(2 * Size.lineSizeMultiplier, Colors.colliderCenter);
-            this.pixelShape2.graphics.moveTo(this.entity.transform.position.x + this.shape.center.x - camera.bounds.x,
-                this.entity.transform.position.y + this.shape.center.y - camera.bounds.y);
-            this.pixelShape2.graphics.lineTo(this.entity.transform.position.x + this.shape.center.x - camera.bounds.x,
-                this.entity.transform.position.y + this.shape.center.y - camera.bounds.y);
-            this.pixelShape2.graphics.endFill();
         }
 
         public toString() {

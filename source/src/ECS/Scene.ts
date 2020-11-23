@@ -1,21 +1,10 @@
 module es {
-    import Bitmap = egret.Bitmap;
-
     /** 场景 */
-    export class Scene extends egret.DisplayObjectContainer {
+    export class Scene {
         /**
          * 默认场景摄像机
          */
         public camera: Camera;
-        /**
-         * 场景特定内容管理器。使用它来加载仅由这个场景需要的任何资源。如果你有全局/多场景资源，你可以使用SceneManager.content。
-         * contentManager来加载它们，因为Nez不会卸载它们。
-         */
-        public readonly content: ContentManager;
-        /**
-         * 全局切换后处理器
-         */
-        public enablePostProcessing = true;
         /**
          * 这个场景中的实体列表
          */
@@ -29,22 +18,13 @@ module es {
          */
         public readonly entityProcessors: EntityProcessorList;
 
-        public _screenshotRequestCallback: Function;
-
         public readonly _sceneComponents: SceneComponent[] = [];
         public _renderers: Renderer[] = [];
-        public readonly _postProcessors: PostProcessor[] = [];
         public _didSceneBegin;
-        /**
-         * 动态合批
-         */
-        public dynamicBatch: boolean = false;
 
         constructor() {
-            super();
             this.entities = new EntityList(this);
             this.renderableComponents = new RenderableComponentList();
-            this.content = new ContentManager();
 
             this.entityProcessors = new EntityProcessorList();
 
@@ -97,11 +77,6 @@ module es {
                 console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
             }
 
-            let cameraEntity = this.findEntity("camera");
-            if (!cameraEntity)
-                cameraEntity = this.createEntity("camera");
-            this.camera = cameraEntity.getOrCreateComponent(new Camera());
-
             Physics.reset();
             this.updateResolutionScaler();
 
@@ -110,9 +85,6 @@ module es {
 
             Core.emitter.addObserver(CoreEvents.GraphicsDeviceReset,this.updateResolutionScaler, this);
             Core.emitter.addObserver(CoreEvents.OrientationChanged, this.updateResolutionScaler, this);
-
-            this.addEventListener(egret.Event.ACTIVATE, this.onActive, this);
-            this.addEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
 
             this._didSceneBegin = true;
             this.onStart();
@@ -125,19 +97,11 @@ module es {
             Core.emitter.removeObserver(CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler);
             Core.emitter.removeObserver(CoreEvents.OrientationChanged, this.updateResolutionScaler);
 
-            this.removeEventListener(egret.Event.DEACTIVATE, this.onDeactive, this);
-            this.removeEventListener(egret.Event.ACTIVATE, this.onActive, this);
-
             for (let i = 0; i < this._renderers.length; i++) {
                 this._renderers[i].unload();
             }
 
-            for (let i = 0; i < this._postProcessors.length; i++) {
-                this._postProcessors[i].unload();
-            }
-
             this.entities.removeAllEntities();
-            this.removeChildren();
 
             for (let i = 0; i < this._sceneComponents.length; i++) {
                 this._sceneComponents[i].onRemovedFromScene();
@@ -145,19 +109,15 @@ module es {
             this._sceneComponents.length = 0;
 
             this.camera = null;
-            this.content.dispose();
 
             if (this.entityProcessors)
                 this.entityProcessors.end();
-
-            if (this.parent)
-                this.parent.removeChild(this);
 
             this.unload();
         }
 
         public updateResolutionScaler(){
-            this.camera.onSceneRenderTargetSizeChanged(Core.Instance.stage.stageWidth, Core.Instance.stage.stageHeight);
+
         }
 
         public update() {
@@ -190,39 +150,7 @@ module es {
             }
 
             for (let i = 0; i < this._renderers.length; i++) {
-                this.camera.forceMatrixUpdate();
                 this._renderers[i].render(this);
-            }
-        }
-
-        /**
-         * 动态合批
-         */
-        public dynamicInBatch(){
-            this.removeChildren();
-            let batching = false;
-            let displayContainer: egret.DisplayObjectContainer;
-            for (let component of this.renderableComponents.buffer){
-                if (component instanceof SpriteAnimator){
-                    // 动态
-                    this.addChild(component.displayObject);
-                    this.addChild(component.debugDisplayObject);
-                    batching = false;
-                    displayContainer = null;
-                } else if (component instanceof RenderableComponent) {
-                    // 静态
-                    if (!batching){
-                        batching = true;
-                        displayContainer = new egret.DisplayObjectContainer();
-                        displayContainer.cacheAsBitmap = true;
-                        displayContainer.touchEnabled = false;
-                        displayContainer.touchChildren = false;
-                        this.addChild(displayContainer);
-                    }
-
-                    displayContainer.addChild(component.displayObject);
-                    displayContainer.addChild(component.debugDisplayObject);
-                }
             }
         }
 
@@ -231,29 +159,7 @@ module es {
          * 只有在SceneTransition请求渲染时，它才会有一个值。
          */
         public postRender() {
-            if (this.enablePostProcessing) {
-                for (let i = 0; i < this._postProcessors.length; i++) {
-                    if (this._postProcessors[i].enabled) {
-                        this._postProcessors[i].process();
-                    }
-                }
-            }
 
-            // 如果我们有一个屏幕截图请求处理它之前，最后渲染到backbuffer
-            if (this._screenshotRequestCallback){
-                let tex = new egret.RenderTexture();
-                tex.drawToTexture(this, new Rectangle(0, 0, this.stage.stageWidth, this.stage.stageHeight));
-                this._screenshotRequestCallback(tex);
-                this._screenshotRequestCallback = null;
-            }
-        }
-
-        /**
-         * 在下一次绘制完成后，会进行场景全屏截图
-         * @param callback
-         */
-        public requestScreenshot(callback: Function){
-            this._screenshotRequestCallback = callback;
         }
 
         /**
@@ -343,47 +249,6 @@ module es {
                 return;
             this._renderers.remove(renderer);
             renderer.unload();
-        }
-
-        /**
-         * 添加一个后处理器到场景。设置场景字段并调用后处理器。onAddedToScene使后处理器可以使用场景ContentManager加载资源。
-         * @param postProcessor
-         */
-        public addPostProcessor<T extends PostProcessor>(postProcessor: T): T {
-            this._postProcessors.push(postProcessor);
-            this._postProcessors.sort();
-            postProcessor.onAddedToScene(this);
-
-            if (this._didSceneBegin) {
-                postProcessor.onSceneBackBufferSizeChanged(this.stage.stageWidth, this.stage.stageHeight);
-            }
-
-            return postProcessor;
-        }
-
-        /**
-         * 获取类型为T的第一个后处理器
-         * @param type
-         */
-        public getPostProcessor<T extends PostProcessor>(type): T {
-            for (let i = 0; i < this._postProcessors.length; i++) {
-                if (this._postProcessors[i] instanceof type)
-                    return this._postProcessors[i] as T;
-            }
-
-            return null;
-        }
-
-        /**
-         * 删除一个后处理程序。注意，在删除时不会调用unload，因此如果不再需要PostProcessor，请确保调用unload来释放资源。
-         * @param postProcessor
-         */
-        public removePostProcessor(postProcessor: PostProcessor) {
-            if (!this._postProcessors.contains(postProcessor))
-                return;
-
-            this._postProcessors.remove(postProcessor);
-            postProcessor.unload();
         }
 
         /**

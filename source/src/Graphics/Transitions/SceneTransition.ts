@@ -45,17 +45,6 @@ module es {
             this.transitionComplete();
         }
 
-        public tickEffectProgressProperty(filter: egret.CustomFilter, duration: number, easeType: Function, reverseDirection = false): Promise<boolean> {
-            return new Promise((resolve) => {
-                let start = reverseDirection ? 1 : 0;
-                let end = reverseDirection ? 0 : 1;
-
-                egret.Tween.get(filter.uniforms).set({_progress: start}).to({_progress: end}, duration * 1000, easeType).call(() => {
-                    resolve();
-                });
-            });
-        }
-
         protected transitionComplete() {
             Core._instance._sceneTransition = null;
 

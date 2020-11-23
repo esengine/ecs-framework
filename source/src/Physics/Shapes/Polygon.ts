@@ -217,10 +217,10 @@ module es {
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 let hasUnitScale = true;
                 let tempMat: Matrix2D;
-                let combinedMatrix = Matrix2D.create().translate(-this._polygonCenter.x, -this._polygonCenter.y);
+                let combinedMatrix = Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
 
                 if (!collider.entity.transform.scale.equals(Vector2.one)) {
-                    tempMat = Matrix2D.create().scale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
+                    tempMat = Matrix2D.createScale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
                     combinedMatrix = combinedMatrix.multiply(tempMat);
                     hasUnitScale = false;
 
@@ -229,7 +229,7 @@ module es {
                 }
 
                 if (collider.entity.transform.rotation != 0) {
-                    tempMat = Matrix2D.create().rotate(collider.entity.transform.rotation);
+                    tempMat = Matrix2D.createRotation(collider.entity.transform.rotation);
                     combinedMatrix = combinedMatrix.multiply(tempMat);
 
                     // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动
@@ -241,7 +241,7 @@ module es {
                         collider.entity.transform.rotationDegrees + offsetAngle);
                 }
 
-                tempMat = Matrix2D.create().translate(this._polygonCenter.x, this._polygonCenter.y);
+                tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
                 combinedMatrix = combinedMatrix.multiply(tempMat);
 
                 // 最后变换原始点

@@ -53,7 +53,7 @@ module es {
                 for (let y = p1.y; y <= p2.y; y++) {
                     // 如果没有单元格，我们需要创建它
                     let c: Collider[] = this.cellAtPosition(x, y, true);
-                    if (!c.firstOrDefault(c => c.hashCode == collider.hashCode))
+                    if (!c.firstOrDefault(c => c == collider))
                         c.push(collider);
                 }
             }
@@ -134,7 +134,7 @@ module es {
                             continue;
 
                         if (bounds.intersects(collider.bounds)) {
-                            if (!this._tempHashSet.firstOrDefault(c => c.hashCode == collider.hashCode))
+                            if (!this._tempHashSet.firstOrDefault(c => c == collider))
                                 this._tempHashSet.push(collider);
                         }
                     }

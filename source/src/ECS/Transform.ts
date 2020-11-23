@@ -7,8 +7,6 @@ module transform {
 }
 
 module es {
-    import HashObject = egret.HashObject;
-
     export enum DirtyType {
         clean,
         positionDirty,
@@ -16,7 +14,7 @@ module es {
         rotationDirty,
     }
 
-    export class Transform extends HashObject {
+    export class Transform {
         /** 与此转换关联的实体 */
         public readonly entity: Entity;
         public hierarchyDirty: DirtyType;
@@ -30,18 +28,17 @@ module es {
         /**
          * 值会根据位置、旋转和比例自动重新计算
          */
-        public _localTransform: Matrix2D = Matrix2D.create();
+        public _localTransform: Matrix2D = Matrix2D.identity;
         /**
          * 值将自动从本地和父矩阵重新计算。
          */
-        public _worldTransform = Matrix2D.create().identity();
-        public _rotationMatrix: Matrix2D = Matrix2D.create().identity();
-        public _translationMatrix: Matrix2D = Matrix2D.create().identity();
-        public _scaleMatrix: Matrix2D = Matrix2D.create().identity();
+        public _worldTransform = Matrix2D.identity;
+        public _rotationMatrix: Matrix2D = Matrix2D.identity;
+        public _translationMatrix: Matrix2D = Matrix2D.identity;
+        public _scaleMatrix: Matrix2D = Matrix2D.identity;
         public _children: Transform[];
 
         constructor(entity: Entity) {
-            super();
             this.entity = entity;
             this.scale = this._localScale = Vector2.one;
             this._children = [];
@@ -106,15 +103,15 @@ module es {
             this.setParent(value);
         }
 
-        public _worldToLocalTransform = Matrix2D.create().identity();
+        public _worldToLocalTransform = Matrix2D.identity;
 
         public get worldToLocalTransform(): Matrix2D {
             if (this._worldToLocalDirty) {
                 if (!this.parent) {
-                    this._worldToLocalTransform = Matrix2D.create().identity();
+                    this._worldToLocalTransform = Matrix2D.identity;
                 } else {
                     this.parent.updateTransform();
-                    this._worldToLocalTransform = this.parent._worldTransform.invert();
+                    this._worldToLocalTransform = Matrix2D.invert(this.parent._worldTransform);
                 }
 
                 this._worldToLocalDirty = false;
@@ -123,12 +120,12 @@ module es {
             return this._worldToLocalTransform;
         }
 
-        public _worldInverseTransform = Matrix2D.create().identity();
+        public _worldInverseTransform = Matrix2D.identity;
 
         public get worldInverseTransform(): Matrix2D {
             this.updateTransform();
             if (this._worldInverseDirty) {
-                this._worldInverseTransform = this._worldTransform.invert();
+                this._worldInverseTransform = Matrix2D.invert(this._worldTransform);
                 this._worldInverseDirty = false;
             }
 
@@ -267,7 +264,7 @@ module es {
          * @param parent
          */
         public setParent(parent: Transform): Transform {
-            if (this._parent.equals(parent))
+            if (this._parent == parent)
                 return this;
 
             if (!this._parent) {
@@ -411,17 +408,17 @@ module es {
 
                 if (this._localDirty) {
                     if (this._localPositionDirty) {
-                        this._translationMatrix = Matrix2D.create().translate(this._localPosition.x, this._localPosition.y);
+                        this._translationMatrix = Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y);
                         this._localPositionDirty = false;
                     }
 
                     if (this._localRotationDirty) {
-                        this._rotationMatrix = Matrix2D.create().rotate(this._localRotation);
+                        this._rotationMatrix = Matrix2D.createRotation(this._localRotation);
                         this._localRotationDirty = false;
                     }
 
                     if (this._localScaleDirty) {
-                        this._scaleMatrix = Matrix2D.create().scale(this._localScale.x, this._localScale.y);
+                        this._scaleMatrix = Matrix2D.createScale(this._localScale.x, this._localScale.y);
                         this._localScaleDirty = false;
                     }
 
@@ -498,10 +495,6 @@ module es {
             return `[Transform: parent: ${this.parent}, position: ${this.position}, rotation: ${this.rotation},
                 scale: ${this.scale}, localPosition: ${this._localPosition}, localRotation: ${this._localRotation},
                 localScale: ${this._localScale}]`;
-        }
-
-        public equals(other: Transform) {
-            return other.hashCode == this.hashCode;
         }
     }
 }

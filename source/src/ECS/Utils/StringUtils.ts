@@ -82,7 +82,7 @@ class StringUtils {
      * @return  返回执行替换后的字符串
      */
     public static replaceMatch(mainStr: string, targetStr: string,
-                               replaceStr: string, caseMark: boolean = false): string {
+        replaceStr: string, caseMark: boolean = false): string {
         let len: number = mainStr.length;
         let tempStr: string = "";
         let isMatch: boolean = false;
@@ -201,7 +201,7 @@ class StringUtils {
      * @return    截断后的字符串
      */
     public static cutOff(str: string, start: number,
-                         len: number, order: boolean = true): string {
+        len: number, order: boolean = true): string {
         start = Math.floor(start);
         len = Math.floor(len);
         let length: number = str.length;

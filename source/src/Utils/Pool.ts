@@ -52,7 +52,7 @@ module es {
         public static free<T>(obj: T) {
             this._objectQueue.unshift(obj);
 
-            if (egret.is(obj, "IPoolable")){
+            if (isIPoolable(obj)){
                 obj["reset"]();
             }
         }
@@ -64,4 +64,6 @@ module es {
          */
         reset();
     }
+
+    export var isIPoolable = (props: any): props is IPoolable => typeof (props as IPoolable)['js'] !== 'undefined';
 }

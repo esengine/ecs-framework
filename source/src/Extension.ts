@@ -189,11 +189,6 @@ Array.prototype.findAll = function (predicate) {
 Array.prototype.contains = function (value) {
     function contains(array, value) {
         for (let i = 0, len = array.length; i < len; i++) {
-            if (array[i] instanceof egret.HashObject && value instanceof egret.HashObject){
-                if ((array[i] as egret.HashObject).hashCode == (value as egret.HashObject).hashCode)
-                    return true;
-            }
-
             if (array[i] == value) {
                 return true;
             }

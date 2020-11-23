@@ -354,7 +354,7 @@ module es {
          * @param typeName
          * @param componentList
          */
-        public getComponents(typeName: string | any, componentList?) {
+        public getComponents(typeName: any, componentList?) {
             return this.components.getComponents(typeName, componentList);
         }
 

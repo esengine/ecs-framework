@@ -79,7 +79,7 @@ module es {
             return Vector2.distanceSquared(circleCenter, point) < radius * radius;
         }
 
-        public static rectToCircle(rect: egret.Rectangle, cPosition: Vector2, cRadius: number): boolean {
+        public static rectToCircle(rect: Rectangle, cPosition: Vector2, cRadius: number): boolean {
             if (this.rectToPoint(rect.x, rect.y, rect.width, rect.height, cPosition))
                 return true;
 
