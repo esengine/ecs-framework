@@ -2,10 +2,6 @@ module es {
     /** 场景 */
     export class Scene {
         /**
-         * 默认场景摄像机
-         */
-        public camera: Camera;
-        /**
          * 这个场景中的实体列表
          */
         public readonly entities: EntityList;
@@ -29,15 +25,6 @@ module es {
             this.entityProcessors = new EntityProcessorList();
 
             this.initialize();
-        }
-
-        /**
-         * 辅助器，创建一个场景与DefaultRenderer附加并准备使用
-         */
-        public static createWithDefaultRenderer() {
-            let scene = new Scene();
-            scene.addRenderer(new DefaultRenderer());
-            return scene;
         }
 
         /**
@@ -72,11 +59,6 @@ module es {
         }
 
         public begin() {
-            if (this._renderers.length == 0) {
-                this.addRenderer(new DefaultRenderer());
-                console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
-            }
-
             Physics.reset();
             this.updateResolutionScaler();
 
@@ -107,8 +89,6 @@ module es {
                 this._sceneComponents[i].onRemovedFromScene();
             }
             this._sceneComponents.length = 0;
-
-            this.camera = null;
 
             if (this.entityProcessors)
                 this.entityProcessors.end();

@@ -250,12 +250,5 @@ module es {
             for (let i = 0; i < this._components.length; i++)
                 this._components.buffer[i].onDisabled();
         }
-
-        public debugRender(camera: Camera){
-            for (let i = 0; i < this._components.length; i ++){
-                if (this._components.buffer[i].enabled)
-                    this._components.buffer[i].debugRender(camera);
-            }
-        }
     }
 }

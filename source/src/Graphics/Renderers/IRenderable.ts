@@ -20,25 +20,6 @@ module es {
          * 可渲染的可见性。状态的改变会调用onBecameVisible/onBecameInvisible方法
          */
         isVisible: boolean;
-
-        /**
-         * 如果renderableComponent的边界与camera.bounds相交 返回true
-         * 用于处理isVisible标志的状态开关
-         * 在渲染方法中使用这个方法来决定是否渲染
-         * @param camera
-         */
-        isVisibleFromCamera(camera: Camera);
-
-        /**
-         * 由渲染器调用。可以使用摄像机进行剔除
-         * @param camera
-         */
-        render(camera: Camera);
-
-        /**
-         * 只有在没有碰撞器时才呈现边界。总是在原点上渲染一个正方形。
-         */
-        debugRender(camera: Camera);
     }
 
     /**

@@ -74,9 +74,6 @@ module es {
             }
         }
 
-        public debugRender(camera: Camera) {
-        }
-
         public toString() {
             return `[BoxCollider: bounds: ${this.bounds}]`;
         }

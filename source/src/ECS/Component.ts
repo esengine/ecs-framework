@@ -79,12 +79,6 @@ module es {
         }
 
         /**
-         *
-         */
-        public debugRender(camera: Camera) {
-        }
-
-        /**
          *当父实体或此组件启用时调用
          */
         public onEnabled() {

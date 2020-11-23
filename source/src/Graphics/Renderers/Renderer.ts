@@ -4,12 +4,6 @@ module es {
      */
     export abstract class Renderer {
         /**
-         * 渲染器用于渲染的摄像机(实际上是用于剔除的变换矩阵和边界)
-         * 不是必须的
-         * Renderer子类可以选择调用beginRender时使用的摄像头
-         */
-        public camera: Camera;
-        /**
          * 指定场景调用渲染器的顺序
          */
         public readonly renderOrder: number = 0;
@@ -20,8 +14,7 @@ module es {
          */
         public shouldDebugRender: boolean = true;
 
-        protected constructor(renderOrder: number, camera: Camera = null) {
-            this.camera = camera;
+        protected constructor(renderOrder: number) {
             this.renderOrder = renderOrder;
         }
 
@@ -51,35 +44,6 @@ module es {
 
         public compareTo(other: Renderer): number {
             return this.renderOrder - other.renderOrder;
-        }
-
-        /**
-         *
-         * @param cam
-         */
-        protected beginRender(cam: Camera) {
-        }
-
-        /**
-         *
-         * @param renderable
-         * @param cam
-         */
-        protected renderAfterStateCheck(renderable: IRenderable, cam: Camera) {
-            renderable.render(cam);
-        }
-
-        /**
-         * 默认debugRender方法只循环遍历所有实体并调用entity.debugRender
-         * @param scene
-         * @param cam
-         */
-        protected debugRender(scene: Scene, cam: Camera){
-            for (let i = 0; i < scene.entities.count; i ++){
-                let entity = scene.entities.buffer[i];
-                if (entity.enabled)
-                    entity.debugRender(cam);
-            }
         }
     }
 }

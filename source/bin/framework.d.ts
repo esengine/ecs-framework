@@ -30,7 +30,6 @@ declare module es {
         onAddedToEntity(): void;
         onRemovedFromEntity(): void;
         onEntityTransformChanged(comp: transform.Component): void;
-        debugRender(camera: Camera): void;
         onEnabled(): void;
         onDisabled(): void;
         setEnabled(isEnabled: boolean): this;
@@ -116,7 +115,6 @@ declare module es {
         onAddedToScene(): void;
         onRemovedFromScene(): void;
         update(): void;
-        debugRender(camera: Camera): void;
         addComponent<T extends Component>(component: T): T;
         getComponent<T extends Component>(type: any): T;
         hasComponent<T extends Component>(type: any): boolean;
@@ -131,7 +129,6 @@ declare module es {
 }
 declare module es {
     class Scene {
-        camera: Camera;
         readonly entities: EntityList;
         readonly renderableComponents: RenderableComponentList;
         readonly entityProcessors: EntityProcessorList;
@@ -139,7 +136,6 @@ declare module es {
         _renderers: Renderer[];
         _didSceneBegin: any;
         constructor();
-        static createWithDefaultRenderer(): Scene;
         initialize(): void;
         onStart(): Promise<void>;
         unload(): void;
@@ -345,7 +341,6 @@ declare module es {
         setSize(width: number, height: number): this;
         setWidth(width: number): BoxCollider;
         setHeight(height: number): void;
-        debugRender(camera: Camera): void;
         toString(): string;
     }
 }
@@ -354,7 +349,6 @@ declare module es {
         constructor(radius: number);
         radius: number;
         setRadius(radius: number): CircleCollider;
-        debugRender(camera: Camera): void;
         toString(): string;
     }
 }
@@ -451,7 +445,6 @@ declare module es {
         onEntityTransformChanged(comp: transform.Component): void;
         onEntityEnabled(): void;
         onEntityDisabled(): void;
-        debugRender(camera: Camera): void;
     }
 }
 declare module es {
@@ -602,9 +595,6 @@ declare module es {
         enabled: boolean;
         renderLayer: number;
         isVisible: boolean;
-        isVisibleFromCamera(camera: Camera): any;
-        render(camera: Camera): any;
-        debugRender(camera: Camera): any;
     }
     class RenderableComparer {
         compare(self: IRenderable, other: IRenderable): number;
@@ -688,24 +678,14 @@ declare module es {
 }
 declare module es {
     abstract class Renderer {
-        camera: Camera;
         readonly renderOrder: number;
         shouldDebugRender: boolean;
-        protected constructor(renderOrder: number, camera?: Camera);
+        protected constructor(renderOrder: number);
         onAddedToScene(scene: Scene): void;
         unload(): void;
         abstract render(scene: Scene): any;
         onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
         compareTo(other: Renderer): number;
-        protected beginRender(cam: Camera): void;
-        protected renderAfterStateCheck(renderable: IRenderable, cam: Camera): void;
-        protected debugRender(scene: Scene, cam: Camera): void;
-    }
-}
-declare module es {
-    class DefaultRenderer extends Renderer {
-        constructor();
-        render(scene: Scene): void;
     }
 }
 declare module es {

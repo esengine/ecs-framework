@@ -36,10 +36,6 @@ module es {
             return this;
         }
 
-        public debugRender(camera: Camera) {
-            
-        }
-
         public toString() {
             return `[CircleCollider: bounds: ${this.bounds}, radius: ${(this.shape as Circle).radius}]`
         }

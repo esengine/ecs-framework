@@ -320,8 +320,6 @@ var es;
         };
         Component.prototype.onEntityTransformChanged = function (comp) {
         };
-        Component.prototype.debugRender = function (camera) {
-        };
         Component.prototype.onEnabled = function () {
         };
         Component.prototype.onDisabled = function () {
@@ -748,9 +746,6 @@ var es;
         Entity.prototype.update = function () {
             this.components.update();
         };
-        Entity.prototype.debugRender = function (camera) {
-            this.components.debugRender(camera);
-        };
         Entity.prototype.addComponent = function (component) {
             component.entity = this;
             this.components.add(component);
@@ -814,11 +809,6 @@ var es;
             this.entityProcessors = new es.EntityProcessorList();
             this.initialize();
         }
-        Scene.createWithDefaultRenderer = function () {
-            var scene = new Scene();
-            scene.addRenderer(new es.DefaultRenderer());
-            return scene;
-        };
         Scene.prototype.initialize = function () {
         };
         Scene.prototype.onStart = function () {
@@ -835,10 +825,6 @@ var es;
         Scene.prototype.onDeactive = function () {
         };
         Scene.prototype.begin = function () {
-            if (this._renderers.length == 0) {
-                this.addRenderer(new es.DefaultRenderer());
-                console.warn("场景开始时没有渲染器 自动添加DefaultRenderer以保证能够正常渲染");
-            }
             es.Physics.reset();
             this.updateResolutionScaler();
             if (this.entityProcessors)
@@ -860,7 +846,6 @@ var es;
                 this._sceneComponents[i].onRemovedFromScene();
             }
             this._sceneComponents.length = 0;
-            this.camera = null;
             if (this.entityProcessors)
                 this.entityProcessors.end();
             this.unload();
@@ -1707,8 +1692,6 @@ var es;
                     es.Physics.updateCollider(this);
             }
         };
-        BoxCollider.prototype.debugRender = function (camera) {
-        };
         BoxCollider.prototype.toString = function () {
             return "[BoxCollider: bounds: " + this.bounds + "]";
         };
@@ -1744,8 +1727,6 @@ var es;
                     es.Physics.updateCollider(this);
             }
             return this;
-        };
-        CircleCollider.prototype.debugRender = function (camera) {
         };
         CircleCollider.prototype.toString = function () {
             return "[CircleCollider: bounds: " + this.bounds + ", radius: " + this.shape.radius + "]";
@@ -2178,12 +2159,6 @@ var es;
         ComponentList.prototype.onEntityDisabled = function () {
             for (var i = 0; i < this._components.length; i++)
                 this._components.buffer[i].onDisabled();
-        };
-        ComponentList.prototype.debugRender = function (camera) {
-            for (var i = 0; i < this._components.length; i++) {
-                if (this._components.buffer[i].enabled)
-                    this._components.buffer[i].debugRender(camera);
-            }
         };
         ComponentList.compareUpdatableOrder = new es.IUpdatableComparer();
         return ComponentList;
@@ -3389,11 +3364,9 @@ var es;
 var es;
 (function (es) {
     var Renderer = (function () {
-        function Renderer(renderOrder, camera) {
-            if (camera === void 0) { camera = null; }
+        function Renderer(renderOrder) {
             this.renderOrder = 0;
             this.shouldDebugRender = true;
-            this.camera = camera;
             this.renderOrder = renderOrder;
         }
         Renderer.prototype.onAddedToScene = function (scene) {
@@ -3405,41 +3378,9 @@ var es;
         Renderer.prototype.compareTo = function (other) {
             return this.renderOrder - other.renderOrder;
         };
-        Renderer.prototype.beginRender = function (cam) {
-        };
-        Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
-            renderable.render(cam);
-        };
-        Renderer.prototype.debugRender = function (scene, cam) {
-            for (var i = 0; i < scene.entities.count; i++) {
-                var entity = scene.entities.buffer[i];
-                if (entity.enabled)
-                    entity.debugRender(cam);
-            }
-        };
         return Renderer;
     }());
     es.Renderer = Renderer;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var DefaultRenderer = (function (_super) {
-        __extends(DefaultRenderer, _super);
-        function DefaultRenderer() {
-            return _super.call(this, 0, null) || this;
-        }
-        DefaultRenderer.prototype.render = function (scene) {
-            var cam = this.camera ? this.camera : scene.camera;
-            this.beginRender(cam);
-            for (var i = 0; i < scene.renderableComponents.count; i++) {
-                var renderable = scene.renderableComponents.buffer[i];
-                if (renderable.enabled && renderable.isVisibleFromCamera(cam))
-                    this.renderAfterStateCheck(renderable, cam);
-            }
-        };
-        return DefaultRenderer;
-    }(es.Renderer));
-    es.DefaultRenderer = DefaultRenderer;
 })(es || (es = {}));
 var es;
 (function (es) {
