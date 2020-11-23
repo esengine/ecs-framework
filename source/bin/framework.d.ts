@@ -18,280 +18,6 @@ declare interface Array<T> {
     sum(selector: Function): number;
 }
 declare module es {
-    class PriorityQueueNode {
-        priority: number;
-        insertionIndex: number;
-        queueIndex: number;
-    }
-}
-declare module es {
-    class AStarPathfinder {
-        static search<T>(graph: IAstarGraph<T>, start: T, goal: T): T[];
-        static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[];
-        private static hasKey;
-        private static getKey;
-    }
-}
-declare module es {
-    class AstarGridGraph implements IAstarGraph<Vector2> {
-        dirs: Vector2[];
-        walls: Vector2[];
-        weightedNodes: Vector2[];
-        defaultWeight: number;
-        weightedNodeWeight: number;
-        private _width;
-        private _height;
-        private _neighbors;
-        constructor(width: number, height: number);
-        isNodeInBounds(node: Vector2): boolean;
-        isNodePassable(node: Vector2): boolean;
-        search(start: Vector2, goal: Vector2): Vector2[];
-        getNeighbors(node: Vector2): Vector2[];
-        cost(from: Vector2, to: Vector2): number;
-        heuristic(node: Vector2, goal: Vector2): number;
-    }
-}
-declare module es {
-    interface IAstarGraph<T> {
-        getNeighbors(node: T): Array<T>;
-        cost(from: T, to: T): number;
-        heuristic(node: T, goal: T): any;
-    }
-}
-declare module es {
-    class PriorityQueue<T extends PriorityQueueNode> {
-        private _numNodes;
-        private _nodes;
-        private _numNodesEverEnqueued;
-        constructor(maxNodes: number);
-        readonly count: number;
-        readonly maxSize: number;
-        clear(): void;
-        contains(node: T): boolean;
-        enqueue(node: T, priority: number): void;
-        dequeue(): T;
-        remove(node: T): void;
-        isValidQueue(): boolean;
-        private onNodeUpdated;
-        private cascadeDown;
-        private cascadeUp;
-        private swap;
-        private hasHigherPriority;
-    }
-}
-declare module es {
-    class BreadthFirstPathfinder {
-        static search<T>(graph: IUnweightedGraph<T>, start: T, goal: T): T[];
-        private static hasKey;
-    }
-}
-declare module es {
-    interface IUnweightedGraph<T> {
-        getNeighbors(node: T): T[];
-    }
-}
-declare module es {
-    class UnweightedGraph<T> implements IUnweightedGraph<T> {
-        edges: Map<T, T[]>;
-        addEdgesForNode(node: T, edges: T[]): this;
-        getNeighbors(node: T): T[];
-    }
-}
-declare module es {
-    class Vector2 implements IEquatable<Vector2> {
-        x: number;
-        y: number;
-        constructor(x?: number, y?: number);
-        static readonly zero: Vector2;
-        static readonly one: Vector2;
-        static readonly unitX: Vector2;
-        static readonly unitY: Vector2;
-        static add(value1: Vector2, value2: Vector2): Vector2;
-        static divide(value1: Vector2, value2: Vector2): Vector2;
-        static multiply(value1: Vector2, value2: Vector2): Vector2;
-        static subtract(value1: Vector2, value2: Vector2): Vector2;
-        static normalize(value: Vector2): Vector2;
-        static dot(value1: Vector2, value2: Vector2): number;
-        static distanceSquared(value1: Vector2, value2: Vector2): number;
-        static clamp(value1: Vector2, min: Vector2, max: Vector2): Vector2;
-        static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
-        static transform(position: Vector2, matrix: Matrix2D): Vector2;
-        static distance(value1: Vector2, value2: Vector2): number;
-        static angle(from: Vector2, to: Vector2): number;
-        static negate(value: Vector2): Vector2;
-        add(value: Vector2): Vector2;
-        divide(value: Vector2): Vector2;
-        multiply(value: Vector2): Vector2;
-        subtract(value: Vector2): this;
-        normalize(): void;
-        length(): number;
-        lengthSquared(): number;
-        round(): Vector2;
-        equals(other: Vector2 | object): boolean;
-    }
-}
-declare module es {
-    class UnweightedGridGraph implements IUnweightedGraph<Vector2> {
-        private static readonly CARDINAL_DIRS;
-        private static readonly COMPASS_DIRS;
-        walls: Vector2[];
-        private _width;
-        private _hegiht;
-        private _dirs;
-        private _neighbors;
-        constructor(width: number, height: number, allowDiagonalSearch?: boolean);
-        isNodeInBounds(node: Vector2): boolean;
-        isNodePassable(node: Vector2): boolean;
-        getNeighbors(node: Vector2): Vector2[];
-        search(start: Vector2, goal: Vector2): Vector2[];
-    }
-}
-declare module es {
-    interface IWeightedGraph<T> {
-        getNeighbors(node: T): T[];
-        cost(from: T, to: T): number;
-    }
-}
-declare module es {
-    class WeightedGridGraph implements IWeightedGraph<Vector2> {
-        static readonly CARDINAL_DIRS: Vector2[];
-        private static readonly COMPASS_DIRS;
-        walls: Vector2[];
-        weightedNodes: Vector2[];
-        defaultWeight: number;
-        weightedNodeWeight: number;
-        private _width;
-        private _height;
-        private _dirs;
-        private _neighbors;
-        constructor(width: number, height: number, allowDiagonalSearch?: boolean);
-        isNodeInBounds(node: Vector2): boolean;
-        isNodePassable(node: Vector2): boolean;
-        search(start: Vector2, goal: Vector2): Vector2[];
-        getNeighbors(node: Vector2): Vector2[];
-        cost(from: Vector2, to: Vector2): number;
-    }
-}
-declare module es {
-    class WeightedNode<T> extends PriorityQueueNode {
-        data: T;
-        constructor(data: T);
-    }
-    class WeightedPathfinder {
-        static search<T>(graph: IWeightedGraph<T>, start: T, goal: T): T[];
-        static recontructPath<T>(cameFrom: Map<T, T>, start: T, goal: T): T[];
-        private static hasKey;
-        private static getKey;
-    }
-}
-declare module es {
-    class AStarStorage {
-        static readonly MAX_NODES: number;
-        _opened: AStarNode[];
-        _closed: AStarNode[];
-        _numOpened: number;
-        _numClosed: number;
-        _lastFoundOpened: number;
-        _lastFoundClosed: number;
-        constructor();
-        clear(): void;
-        findOpened(node: AStarNode): AStarNode;
-        findClosed(node: AStarNode): AStarNode;
-        hasOpened(): boolean;
-        removeOpened(node: AStarNode): void;
-        removeClosed(node: AStarNode): void;
-        isOpen(node: AStarNode): boolean;
-        isClosed(node: AStarNode): boolean;
-        addToOpenList(node: AStarNode): void;
-        addToClosedList(node: AStarNode): void;
-        removeCheapestOpenNode(): AStarNode;
-    }
-}
-declare module es {
-    class AStarNode implements IEquatable<AStarNode>, IPoolable {
-        worldState: WorldState;
-        costSoFar: number;
-        heuristicCost: number;
-        costSoFarAndHeuristicCost: number;
-        action: Action;
-        parent: AStarNode;
-        parentWorldState: WorldState;
-        depth: number;
-        equals(other: AStarNode): boolean;
-        compareTo(other: AStarNode): number;
-        reset(): void;
-        clone(): AStarNode;
-        toString(): string;
-    }
-    class AStar {
-        static storage: AStarStorage;
-        static plan(ap: ActionPlanner, start: WorldState, goal: WorldState, selectedNodes?: AStarNode[]): Action[];
-        static reconstructPlan(goalNode: AStarNode, selectedNodes: AStarNode[]): Action[];
-        static calculateHeuristic(fr: WorldState, to: WorldState): number;
-    }
-}
-declare module es {
-    class Action {
-        name: string;
-        cost: number;
-        _preConditions: Set<[string, boolean]>;
-        _postConditions: Set<[string, boolean]>;
-        constructor(name?: string, cost?: number);
-        setPrecondition(conditionName: string, value: boolean): void;
-        setPostcondition(conditionName: string, value: boolean): void;
-        validate(): boolean;
-        toString(): string;
-    }
-}
-declare module es {
-    class ActionPlanner {
-        static readonly MAX_CONDITIONS: number;
-        conditionNames: string[];
-        _actions: Action[];
-        _viableActions: Action[];
-        _preConditions: WorldState[];
-        _postConditions: WorldState[];
-        _numConditionNames: number;
-        constructor();
-        createWorldState(): WorldState;
-        addAction(action: Action): void;
-        plan(startState: WorldState, goalState: WorldState, selectedNode?: any): Action[];
-        getPossibleTransitions(fr: WorldState): AStarNode[];
-        applyPostConditions(ap: ActionPlanner, actionnr: number, fr: WorldState): WorldState;
-        findConditionNameIndex(conditionName: string): any;
-        findActionIndex(action: Action): number;
-    }
-}
-declare module es {
-    abstract class Agent {
-        actions: Action[];
-        _planner: ActionPlanner;
-        constructor();
-        plan(debugPlan?: boolean): boolean;
-        hasActionPlan(): boolean;
-        abstract getWorldState(): WorldState;
-        abstract getGoalState(): WorldState;
-    }
-}
-declare module es {
-    class WorldState implements IEquatable<WorldState> {
-        values: number;
-        dontCare: number;
-        planner: ActionPlanner;
-        static create(planner: ActionPlanner): WorldState;
-        constructor(planner: ActionPlanner, values: number, dontcare: number);
-        set(conditionId: number | string, value: boolean): boolean;
-        equals(other: WorldState): boolean;
-        describe(planner: ActionPlanner): string;
-    }
-}
-declare module es {
-    class DebugDefaults {
-        static verletParticle: number;
-        static verletConstraintEdge: number;
-    }
-}
-declare module es {
     abstract class Component {
         entity: Entity;
         updateInterval: number;
@@ -1135,6 +861,39 @@ declare module es {
         _y: SubpixelFloat;
         update(amount: Vector2): void;
         reset(): void;
+    }
+}
+declare module es {
+    class Vector2 implements IEquatable<Vector2> {
+        x: number;
+        y: number;
+        constructor(x?: number, y?: number);
+        static readonly zero: Vector2;
+        static readonly one: Vector2;
+        static readonly unitX: Vector2;
+        static readonly unitY: Vector2;
+        static add(value1: Vector2, value2: Vector2): Vector2;
+        static divide(value1: Vector2, value2: Vector2): Vector2;
+        static multiply(value1: Vector2, value2: Vector2): Vector2;
+        static subtract(value1: Vector2, value2: Vector2): Vector2;
+        static normalize(value: Vector2): Vector2;
+        static dot(value1: Vector2, value2: Vector2): number;
+        static distanceSquared(value1: Vector2, value2: Vector2): number;
+        static clamp(value1: Vector2, min: Vector2, max: Vector2): Vector2;
+        static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
+        static transform(position: Vector2, matrix: Matrix2D): Vector2;
+        static distance(value1: Vector2, value2: Vector2): number;
+        static angle(from: Vector2, to: Vector2): number;
+        static negate(value: Vector2): Vector2;
+        add(value: Vector2): Vector2;
+        divide(value: Vector2): Vector2;
+        multiply(value: Vector2): Vector2;
+        subtract(value: Vector2): this;
+        normalize(): void;
+        length(): number;
+        lengthSquared(): number;
+        round(): Vector2;
+        equals(other: Vector2 | object): boolean;
     }
 }
 declare module es {
