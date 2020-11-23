@@ -1376,63 +1376,6 @@ declare module es {
         static boxToBoxCast(first: Box, second: Box, movement: Vector2, hit: RaycastHit): boolean;
     }
 }
-declare module es {
-    class Particle {
-        position: Vector2;
-        lastPosition: Vector2;
-        mass: number;
-        radius: number;
-        collidesWithColliders: boolean;
-        isPinned: boolean;
-        acceleration: Vector2;
-        pinnedPosition: Vector2;
-        applyForce(force: Vector2): void;
-    }
-}
-declare module es {
-    class VerletWorld {
-        gravity: Vector2;
-        constraintIterations: number;
-        maximumStepIterations: number;
-        simulationBounds?: Rectangle;
-        allowDragging: boolean;
-        _composites: Composite[];
-        static _colliders: Collider[];
-        _tempCircle: Circle;
-        _leftOverTime: number;
-        _fixedDeltaTime: number;
-        _iterationSteps: number;
-        _fixedDeltaTimeSq: number;
-        constructor(simulationBounds?: Rectangle);
-        update(): void;
-        handleCollisions(p: Particle, collidesWithLayers: number): void;
-        constrainParticleToBounds(p: Particle): void;
-        updateTiming(): void;
-        addComposite<T extends Composite>(composite: T): T;
-        removeComposite(composite: Composite): void;
-        handleDragging(): void;
-        debugRender(camera: Camera): void;
-    }
-}
-declare module es {
-    class Composite {
-        friction: Vector2;
-        collidesWithLayers: number;
-        particles: Particle[];
-        _constraints: Constraint[];
-        solveConstraints(): void;
-        updateParticles(deltaTimeSquared: number, gravity: Vector2): void;
-        handleConstraintCollisions(): void;
-        debugRender(camera: Camera): void;
-    }
-}
-declare module es {
-    abstract class Constraint {
-        collidesWithColliders: boolean;
-        abstract solve(): any;
-        handleCollisions(collidesWithLayers: number): void;
-    }
-}
 declare class ArrayUtils {
     static bubbleSort(ary: number[]): void;
     static insertionSort(ary: number[]): void;
