@@ -584,7 +584,8 @@ declare module es {
         getAllSet(): BitSet;
         getExclusionSet(): BitSet;
         getOneSet(): BitSet;
-        IsIntersted(e: Entity): boolean;
+        isInterestedEntity(e: Entity): boolean;
+        isInterested(componentBits: BitSet): boolean;
         all(...types: any[]): Matcher;
         exclude(...types: any[]): this;
         one(...types: any[]): this;

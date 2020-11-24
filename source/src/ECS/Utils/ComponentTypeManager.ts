@@ -12,6 +12,8 @@ module es {
             if (!this._componentTypesMask.has(type)) {
                 this.add(type);
                 v = this._componentTypesMask.get(type);
+            } else {
+                v = this._componentTypesMask.get(type);
             }
 
             return v;

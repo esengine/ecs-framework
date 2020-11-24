@@ -1781,7 +1781,7 @@ var es;
         };
         EntitySystem.prototype.onChanged = function (entity) {
             var contains = this._entities.contains(entity);
-            var interest = this._matcher.IsIntersted(entity);
+            var interest = this._matcher.isInterestedEntity(entity);
             if (interest && !contains)
                 this.add(entity);
             else if (!interest && contains)
@@ -1880,10 +1880,11 @@ var es;
     var BitSet = (function () {
         function BitSet(nbits) {
             if (nbits === void 0) { nbits = 64; }
-            var length = nbits >> 6;
+            var length = nbits >> 6 >>> 0;
             if ((nbits & BitSet.LONG_MASK) != 0)
                 length++;
             this._bits = new Array(length);
+            this._bits.fill(0);
         }
         BitSet.prototype.and = function (bs) {
             var max = Math.min(this._bits.length, bs._bits.length);
@@ -1899,7 +1900,7 @@ var es;
                 this._bits[i] &= ~bs._bits[i];
         };
         BitSet.prototype.cardinality = function () {
-            var card = 0;
+            var card = 0 >>> 0;
             for (var i = this._bits.length - 1; i >= 0; i--) {
                 var a = this._bits[i];
                 if (a == 0)
@@ -1910,7 +1911,7 @@ var es;
                 }
                 a = ((a >> 1) & 0x5555555555555555) + (a & 0x5555555555555555);
                 a = ((a >> 2) & 0x3333333333333333) + (a & 0x3333333333333333);
-                var b = ((a >> 32) + a);
+                var b = ((a >> 32) + a) >>> 0;
                 b = ((b >> 4) & 0x0f0f0f0f) + (b & 0x0f0f0f0f);
                 b = ((b >> 8) & 0x00ff00ff) + (b & 0x00ff00ff);
                 card += ((b >> 16) & 0x0000ffff) + (b & 0x0000ffff);
@@ -1978,9 +1979,9 @@ var es;
         };
         BitSet.prototype.ensure = function (lastElt) {
             if (lastElt >= this._bits.length) {
-                var nd = new Number[lastElt + 1];
-                nd = this._bits.copyWithin(0, 0, this._bits.length);
-                this._bits = nd;
+                var startIndex = this._bits.length;
+                this._bits.length = lastElt + 1;
+                this._bits.fill(0, startIndex, lastElt + 1);
             }
         };
         BitSet.LONG_MASK = 0x3f;
@@ -2044,7 +2045,7 @@ var es;
                     continue;
                 if (es.isIUpdatable(component))
                     this._updatableComponents.remove(component);
-                this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component), false);
+                this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
                 this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             }
         };
@@ -2053,7 +2054,7 @@ var es;
                 var component = this._components.buffer[i];
                 if (es.isIUpdatable(component))
                     this._updatableComponents.add(component);
-                this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component));
+                this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
             }
         };
@@ -2070,7 +2071,7 @@ var es;
                     var component = this._componentsToAdd[i];
                     if (es.isIUpdatable(component))
                         this._updatableComponents.add(component);
-                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component));
+                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                     this._components.add(component);
                     this._tempBufferList.push(component);
@@ -2096,7 +2097,7 @@ var es;
                 return;
             if (es.isIUpdatable(component))
                 this._updatableComponents.remove(component);
-            this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component), false);
+            this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             component.onRemovedFromEntity();
             component.entity = null;
@@ -2176,6 +2177,9 @@ var es;
             var v = -1;
             if (!this._componentTypesMask.has(type)) {
                 this.add(type);
+                v = this._componentTypesMask.get(type);
+            }
+            else {
                 v = this._componentTypesMask.get(type);
             }
             return v;
@@ -2824,16 +2828,19 @@ var es;
         Matcher.prototype.getOneSet = function () {
             return this.oneSet;
         };
-        Matcher.prototype.IsIntersted = function (e) {
+        Matcher.prototype.isInterestedEntity = function (e) {
+            return this.isInterested(e.componentBits);
+        };
+        Matcher.prototype.isInterested = function (componentBits) {
             if (!this.allSet.isEmpty()) {
                 for (var i = this.allSet.nextSetBit(0); i >= 0; i = this.allSet.nextSetBit(i + 1)) {
-                    if (!e.componentBits.get(i))
+                    if (!componentBits.get(i))
                         return false;
                 }
             }
-            if (!this.exclusionSet.isEmpty() && this.exclusionSet.intersects(e.componentBits))
+            if (!this.exclusionSet.isEmpty() && this.exclusionSet.intersects(componentBits))
                 return false;
-            if (!this.oneSet.isEmpty() && !this.oneSet.intersects(e.componentBits))
+            if (!this.oneSet.isEmpty() && !this.oneSet.intersects(componentBits))
                 return false;
             return true;
         };

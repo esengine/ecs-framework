@@ -29,7 +29,7 @@ module es {
 
         public onChanged(entity: Entity) {
             let contains = this._entities.contains(entity);
-            let interest = this._matcher.IsIntersted(entity);
+            let interest = this._matcher.isInterestedEntity(entity);
 
             if (interest && !contains)
                 this.add(entity);
