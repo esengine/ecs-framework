@@ -124,11 +124,6 @@ module es {
         }
 
         public render() {
-            if (this._renderers.length == 0) {
-                console.error("场景中没有渲染器!");
-                return;
-            }
-
             for (let i = 0; i < this._renderers.length; i++) {
                 this._renderers[i].render(this);
             }

@@ -31,6 +31,7 @@ module es {
 
             Core._instance = this;
             Core.emitter = new Emitter<CoreEvents>();
+            Core.emitter.addObserver(CoreEvents.FrameUpdated, this.update, this);
 
             Core.registerGlobalManager(this._timerManager);
 

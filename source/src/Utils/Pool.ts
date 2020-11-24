@@ -65,5 +65,5 @@ module es {
         reset();
     }
 
-    export var isIPoolable = (props: any): props is IPoolable => typeof (props as IPoolable)['js'] !== 'undefined';
+    export var isIPoolable = (props: any): props is IPoolable => typeof (props as IPoolable)['reset'] !== 'undefined';
 }

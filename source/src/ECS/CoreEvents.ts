@@ -12,5 +12,9 @@ module es {
          * 当设备方向改变时触发
          */
         OrientationChanged,
+        /**
+         * 当每帧事件触发时
+         */
+        FrameUpdated,
     }
 }

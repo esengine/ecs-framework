@@ -358,6 +358,7 @@ var es;
             this.height = height;
             Core._instance = this;
             Core.emitter = new es.Emitter();
+            Core.emitter.addObserver(es.CoreEvents.FrameUpdated, this.update, this);
             Core.registerGlobalManager(this._timerManager);
             this.initialize();
         }
@@ -510,6 +511,7 @@ var es;
         CoreEvents[CoreEvents["GraphicsDeviceReset"] = 0] = "GraphicsDeviceReset";
         CoreEvents[CoreEvents["SceneChanged"] = 1] = "SceneChanged";
         CoreEvents[CoreEvents["OrientationChanged"] = 2] = "OrientationChanged";
+        CoreEvents[CoreEvents["FrameUpdated"] = 3] = "FrameUpdated";
     })(CoreEvents = es.CoreEvents || (es.CoreEvents = {}));
 })(es || (es = {}));
 var es;
@@ -866,10 +868,6 @@ var es;
             this.renderableComponents.updateList();
         };
         Scene.prototype.render = function () {
-            if (this._renderers.length == 0) {
-                console.error("场景中没有渲染器!");
-                return;
-            }
             for (var i = 0; i < this._renderers.length; i++) {
                 this._renderers[i].render(this);
             }
@@ -1351,7 +1349,7 @@ var es;
         return IUpdatableComparer;
     }());
     es.IUpdatableComparer = IUpdatableComparer;
-    es.isIUpdatable = function (props) { return typeof props['js'] !== 'undefined'; };
+    es.isIUpdatable = function (props) { return typeof props['update'] !== 'undefined'; };
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -6286,7 +6284,7 @@ var es;
         return Pool;
     }());
     es.Pool = Pool;
-    es.isIPoolable = function (props) { return typeof props['js'] !== 'undefined'; };
+    es.isIPoolable = function (props) { return typeof props['reset'] !== 'undefined'; };
 })(es || (es = {}));
 var RandomUtils = (function () {
     function RandomUtils() {

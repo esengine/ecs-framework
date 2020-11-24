@@ -70,7 +70,8 @@ declare module es {
     enum CoreEvents {
         GraphicsDeviceReset = 0,
         SceneChanged = 1,
-        OrientationChanged = 2
+        OrientationChanged = 2,
+        FrameUpdated = 3
     }
 }
 declare module es {

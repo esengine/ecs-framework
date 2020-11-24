@@ -17,5 +17,5 @@ module es {
         }
     }
 
-    export var isIUpdatable = (props: any): props is IUpdatable => typeof (props as IUpdatable)['js'] !== 'undefined';
+    export var isIUpdatable = (props: any): props is IUpdatable => typeof (props as IUpdatable)['update'] !== 'undefined';
 }
