@@ -1,5 +1,8 @@
 这是一套ecs游戏框架，里面包含ECS框架用于管理场景实体，一些常用2D碰撞检测及A*寻路
 
+## 交流群
+点击链接加入群聊【ecs游戏框架交流】：https://jq.qq.com/?_wv=1027&k=29w1Nud6
+
 ## 版本计划功能
 
 - [x] 简易ECS框架
@@ -30,7 +33,6 @@
 - [x] 图形帮助
   - [x] 场景过渡
   - [x] 场景渲染器
-- [x] A*寻路(AStar)
 - [x] 常用碰撞检测
 - [x] 数学库
   - [x] 矩形类（Rectangle）
@@ -46,8 +48,6 @@
   - [x] ShapeCollision 多种形状检测
   - [x] RealtimeCollisions 实时碰撞检测
   - [x] SpatialHash 网格检测
-- [x] BreadthFirst 寻路算法
-- [x] Dijkstra 寻路算法
 - [x] 事件处理器
 
 ## 关于用ecs框架（typescript/javascript）

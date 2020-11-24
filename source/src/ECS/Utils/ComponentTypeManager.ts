@@ -4,7 +4,7 @@ module es {
 
         public static add(type) {
             if (!this._componentTypesMask.has(type))
-                this._componentTypesMask[type] = this._componentTypesMask.size;
+                this._componentTypesMask.set(type, this._componentTypesMask.size);
         }
 
         public static getIndexFor(type) {

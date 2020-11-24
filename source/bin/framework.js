@@ -2170,7 +2170,7 @@ var es;
         }
         ComponentTypeManager.add = function (type) {
             if (!this._componentTypesMask.has(type))
-                this._componentTypesMask[type] = this._componentTypesMask.size;
+                this._componentTypesMask.set(type, this._componentTypesMask.size);
         };
         ComponentTypeManager.getIndexFor = function (type) {
             var v = -1;
