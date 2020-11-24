@@ -1,7 +1,139 @@
-这是一套ecs游戏框架，里面包含ECS框架用于管理场景实体，一些常用2D碰撞检测及A*寻路
+这是一套ecs游戏框架，里面包含ECS框架用于管理场景实体，一些常用2D碰撞检测及游戏中常用的工具
 
 ## 交流群
 点击链接加入群聊【ecs游戏框架交流】：https://jq.qq.com/?_wv=1027&k=29w1Nud6
+
+## Getting Start
+
+1. 初始化核心
+
+```typescript
+// 传入舞台宽高确定屏幕大小
+let core = new es.Core(768, 1366);
+```
+
+2. 派发核心事件
+
+```typescript
+// 在监听每帧更新时间处执行 egret
+es.Time.update(egret.getTimer());
+// 必须派发该事件 否则核心内所有更新事件将不会执行
+es.Core.emitter.emit(es.CoreEvents.FrameUpdated);
+```
+
+3. 创建主场景
+
+```typescript
+// 继承es.Scene来确定这是一个场景
+class MainScene extends es.Scene {
+  public initialize(){
+    // 当场景构造函数执行完成后执行
+  }
+  public async onStart() {
+    // 当场景被激活时执行
+  }
+}
+```
+
+4. 创建组件
+
+```typescript
+// 敌人组件 继承es.Component确定他是一个组件
+// 组件当中不应该含有具体逻辑 只存储数据/属性
+class SpawnerComponent extends es.Component {
+    public cooldown: number = -1;
+    public minInterval: number = 2;
+    public maxInterval: number = 60;
+    public minCount: number = 1;
+    public maxCount: number = 1;
+    public enemyType: EnemyType = EnemyType.worm;
+    public numSpawned: number = 0;
+    public numAlive: number = 0;
+
+    constructor(enemyType: EnemyType) {
+        super();
+        this.enemyType = enemyType;
+    }
+}
+
+enum EnemyType {
+  worm
+}
+```
+
+5. 创建系统
+
+```typescript
+// 每个组件应对应一个系统 系统中负责游戏逻辑
+class SpawnerSystem extends es.EntityProcessingSystem {
+  // 必须实现的构造函数
+  constructor(matcher: es.Matcher){
+      super(matcher);
+  }
+
+  // 当满足条件的实体会被派发至这统一进行处理
+  // 条件在Matcher中进行设置
+  processEntity(entity: es.Entity){
+      let spawner = entity.getComponent<component.SpawnerComponent>(component.SpawnerComponent);
+      if (spawner.numAlive <= 0)
+          spawner.enabled = true;
+      
+      if (!spawner.enabled)
+          return;
+
+      if (spawner.cooldown <= -1) {
+          this.scheduleSpawn(spawner);
+          console.log("冷却时间已到，进入下一轮刷新 冷却时间:", spawner.cooldown);
+          spawner.cooldown /= 4;
+      }
+
+      spawner.cooldown -= es.Time.deltaTime;
+      if (spawner.cooldown <= 0) {
+          this.scheduleSpawn(spawner);
+
+          for (let i = 0; i < RandomUtils.randint(spawner.minCount, spawner.maxCount); i ++) {
+              console.log("创建敌人", entity.position.x, entity.position.y, spawner.enemyType, entity);
+              spawner.numSpawned ++;
+              spawner.numAlive++;
+          }
+
+          if (spawner.numAlive > 0)
+              spawner.enabled = false;
+      }
+  }
+
+  private scheduleSpawn(spawner: component.SpawnerComponent) {
+      spawner.cooldown = RandomUtils.randint(spawner.minInterval, spawner.maxInterval);
+  }
+}
+```
+
+6. 创建实体、添加组件、激活实体处理器
+
+```typescript
+class MainScene extends es.Scene {
+  public async onStart() {
+      // 创建实体
+      let spawn = this.createEntity("spawn");
+      // 添加组件
+      spawn.addComponent(new component.SpawnerComponent(component.EnemyType.worm));
+
+      // 添加实体处理
+      // Matcher.all 代表对带有该组件的实体进行处理
+      // Matcher.one 代表对至少有一个该组件的实体进行处理
+      // Matcher.exclude 代表对不带该组件的实体进行处理
+      this.addEntityProcessor(new system.SpawnerSystem(new es.Matcher().all(component.SpawnerComponent)));
+  }
+}
+```
+
+7. 激活场景
+
+```typescript
+// 设置MainScene为当前激活的场景
+es.Core.scene = new MainScene();
+```
+
 
 ## 版本计划功能
 
