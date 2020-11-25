@@ -638,11 +638,12 @@ declare class StringUtils {
 }
 declare module es {
     class Time {
+        static totalTime: number;
         static unscaledDeltaTime: any;
         static deltaTime: number;
         static timeScale: number;
         static frameCount: number;
-        static _timeSinceSceneLoad: any;
+        static timeSinceSceneLoad: any;
         private static _lastTime;
         static update(currentTime: number): void;
         static sceneChanged(): void;

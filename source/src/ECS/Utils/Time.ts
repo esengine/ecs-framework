@@ -1,6 +1,8 @@
 module es {
     /** 提供帧定时信息 */
     export class Time {
+        /** 游戏运行的总时间 */
+        public static totalTime: number;
         /** deltaTime的未缩放版本。不受时间尺度的影响 */
         public static unscaledDeltaTime;
         /** 前一帧到当前帧的时间增量，按时间刻度进行缩放 */
@@ -10,21 +12,22 @@ module es {
         /** 已传递的帧总数 */
         public static frameCount = 0;
         /** 自场景加载以来的总时间 */
-        public static _timeSinceSceneLoad;
+        public static timeSinceSceneLoad;
         private static _lastTime = 0;
 
         public static update(currentTime: number) {
             let dt = (currentTime - this._lastTime) / 1000;
+            this.totalTime += dt;
             this.deltaTime = dt * this.timeScale;
             this.unscaledDeltaTime = dt;
-            this._timeSinceSceneLoad += dt;
+            this.timeSinceSceneLoad += dt;
             this.frameCount++;
 
             this._lastTime = currentTime;
         }
 
         public static sceneChanged() {
-            this._timeSinceSceneLoad = 0;
+            this.timeSinceSceneLoad = 0;
         }
 
         /**
@@ -33,7 +36,7 @@ module es {
          */
         public static checkEvery(interval: number) {
             // 我们减去了delta，因为timeSinceSceneLoad已经包含了这个update ticks delta
-            return Math.floor(this._timeSinceSceneLoad / interval) > Math.floor((this._timeSinceSceneLoad - this.deltaTime) / interval);
+            return this.timeSinceSceneLoad / interval > (this.timeSinceSceneLoad - this.deltaTime) / interval;
         }
     }
 }

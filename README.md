@@ -139,10 +139,6 @@ es.Core.scene = new MainScene();
 
 ### 示例地址
 
-- [egret]: https://github.com/esengine/ecs-egret-demo	"egret"
-
-- [laya]: https://github.com/esengine/ecs-laya-demo	"laya"
-
 
 
 ## 版本计划功能

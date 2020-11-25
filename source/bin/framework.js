@@ -3136,17 +3136,18 @@ var es;
         }
         Time.update = function (currentTime) {
             var dt = (currentTime - this._lastTime) / 1000;
+            this.totalTime += dt;
             this.deltaTime = dt * this.timeScale;
             this.unscaledDeltaTime = dt;
-            this._timeSinceSceneLoad += dt;
+            this.timeSinceSceneLoad += dt;
             this.frameCount++;
             this._lastTime = currentTime;
         };
         Time.sceneChanged = function () {
-            this._timeSinceSceneLoad = 0;
+            this.timeSinceSceneLoad = 0;
         };
         Time.checkEvery = function (interval) {
-            return Math.floor(this._timeSinceSceneLoad / interval) > Math.floor((this._timeSinceSceneLoad - this.deltaTime) / interval);
+            return this.timeSinceSceneLoad / interval > (this.timeSinceSceneLoad - this.deltaTime) / interval;
         };
         Time.deltaTime = 0;
         Time.timeScale = 1;
