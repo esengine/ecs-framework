@@ -139,7 +139,13 @@ es.Core.scene = new MainScene();
 
 ### 示例地址
 
+- [egret-demo](https://github.com/esengine/ecs-egret-demo)
+- [laya-demo](https://github.com/esengine/ecs-laya-demo)
 
+## 扩展库
+
+- [基于ecs-framework开发的astar/BreadthFirst/Dijkstra/GOAP目标导向计划 路径寻找库](https://github.com/esengine/ecs-astar)
+- [基于ecs-framework开发的AI（BehaviourTree、UtilityAI）系统]([esengine/BehaviourTree-ai: 基于Egret开发的AI（BehaviourTree、UtilityAI）系统 (github.com)](https://github.com/esengine/BehaviourTree-ai))
 
 ## 版本计划功能
 
