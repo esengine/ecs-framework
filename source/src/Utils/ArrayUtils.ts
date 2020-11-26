@@ -21,10 +21,9 @@ class ArrayUtils {
         }
     }
 
-
     /**
      * 执行插入排序
-     * @param    ary
+     * @param ary 
      */
     public static insertionSort(ary: number[]): void {
         let len: number = ary.length;
@@ -39,9 +38,9 @@ class ArrayUtils {
 
     /**
      * 执行二分搜索
-     * @param    ary        搜索的数组（必须排序过）
-     * @param    value    需要搜索的值
-     * @return  返回匹配结果的数组索引
+     * @param ary 搜索的数组（必须排序过）
+     * @param value 需要搜索的值
+     * @returns 返回匹配结果的数组索引
      */
     public static binarySearch(ary: number[], value: number): number {
         let startIndex: number = 0;
@@ -59,9 +58,8 @@ class ArrayUtils {
 
     /**
      * 返回匹配项的索引
-     * @param    ary
-     * @param    num
-     * @return  返回匹配项的索引
+     * @param ary 
+     * @param num 
      */
     public static findElementIndex(ary: any[], num: any): any {
         let len: number = ary.length;
@@ -74,8 +72,7 @@ class ArrayUtils {
 
     /**
      * 返回数组中最大值的索引
-     * @param    ary
-     * @return  返回数组中最大值的索引
+     * @param ary 
      */
     public static getMaxElementIndex(ary: number[]): number {
         let matchIndex: number = 0;
@@ -89,8 +86,7 @@ class ArrayUtils {
 
     /**
      * 返回数组中最小值的索引
-     * @param    ary
-     * @return  返回数组中最小值的索引
+     * @param ary 
      */
     public static getMinElementIndex(ary: number[]): number {
         let matchIndex: number = 0;
@@ -104,8 +100,10 @@ class ArrayUtils {
 
     /**
      * 返回一个"唯一性"数组
-     * @param    ary        需要唯一性的数组
-     * @return    唯一性的数组
+     * @param ary 需要唯一性的数组
+     * @returns 唯一性的数组
+     * 
+     * @tutorial
      * 比如: [1, 2, 2, 3, 4]
      * 返回: [1, 2, 3, 4]
      */
@@ -177,7 +175,7 @@ class ArrayUtils {
 
     /**
      * 清除列表
-     * @param    ary 列表
+     * @param ary 
      */
     public static clearList(ary: any[]): void {
         if (!ary) return;
@@ -197,12 +195,10 @@ class ArrayUtils {
         return ary.slice(0, ary.length);
     }
 
-
     /**
      * 判断2个数组是否相同
-     * @param    ary1    数组1
-     * @param    ary2    数组2
-     * @return    是否相同
+     * @param ary1 数组1
+     * @param ary2 数组2
      */
     public static equals(ary1: number[], ary2: number[]): Boolean {
         if (ary1 == ary2) return true;
@@ -215,12 +211,12 @@ class ArrayUtils {
         return true;
     }
 
-
     /**
      * 根据索引插入元素，索引和索引后的元素都向后移动一位
-     * @param    index   插入索引
-     * @param    value   插入的元素
-     * @return  插入的元素 未插入则返回空
+     * @param ary
+     * @param index 插入索引
+     * @param value 插入的元素
+     * @returns 插入的元素 未插入则返回空
      */
     public static insert(ary: any[], index: number, value: any): any {
         if (!ary) return null;
@@ -236,5 +232,67 @@ class ArrayUtils {
             ary[index] = value;
         }
         return value;
+    }
+
+    /**
+     * 打乱数组 Fisher–Yates shuffle
+     * @param list 
+     */
+    public static shuffle<T>(list: T[]) {
+        let n = list.length;
+        while (n > 1) {
+            n--;
+            let k = RandomUtils.randint(0, n + 1);
+            let value: T = list[k];
+            list[k] = list[n];
+            list[n] = value;
+        }
+    }
+
+    /**
+     * 如果项目已经在列表中，返回false，如果成功添加，返回true
+     * @param list 
+     * @param item 
+     */
+    public static addIfNotPresent<T>(list: T[], item: T) {
+        if (list.contains(item))
+            return false;
+
+        list.push(item);
+        return true;
+    }
+
+    /**
+     * 返回列表中的最后一项。列表中至少应该有一个项目
+     * @param list 
+     */
+    public static lastItem<T>(list: T[]) {
+        return list[list.length - 1];
+    }
+
+    /**
+     * 从列表中随机获取一个项目。不清空检查列表!
+     * @param list 
+     */
+    public static randomItem<T>(list: T[]) {
+        return list[RandomUtils.randint(0, list.length)];
+    }
+
+    /**
+     * 从列表中随机获取物品。不清空检查列表，也不验证列表数是否大于项目数。返回的List可以通过ListPool.free放回池中
+     * @param list 
+     * @param itemCount 从列表中返回的随机项目的数量
+     */
+    public static randomItems<T>(list: T[], itemCount: number){
+        let set = new Set<T>();
+        while (set.size != itemCount) {
+            let item = this.randomItem(list);
+            if (!set.has(item))
+                set.add(item);
+        }
+
+        let items = es.ListPool.obtain<T>();
+        set.forEach(value => items.push(value));
+        return items;
     }
 }

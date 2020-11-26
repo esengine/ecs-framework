@@ -87,7 +87,7 @@ module es {
                     this._updatableComponents.remove(component);
 
                 if (Core.entitySystemsEnabled) {
-                    this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
+                    this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
                     this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
                 }
             }
@@ -101,7 +101,7 @@ module es {
                     this._updatableComponents.add(component);
 
                 if (Core.entitySystemsEnabled) {
-                    this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
+                    this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                 }
             }
@@ -128,7 +128,7 @@ module es {
                         this._updatableComponents.add(component);
 
                     if (Core.entitySystemsEnabled) {
-                        this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
+                        this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
                         this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                     }
 
@@ -167,7 +167,7 @@ module es {
                 this._updatableComponents.remove(component);
 
             if (Core.entitySystemsEnabled) {
-                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
+                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
                 this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             }
 

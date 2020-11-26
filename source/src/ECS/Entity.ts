@@ -335,7 +335,7 @@ module es {
          * @param type
          */
         public getOrCreateComponent<T extends Component>(type: T) {
-            let comp = this.components.getComponent<T>(type, true);
+            let comp = this.components.getComponent<T>(TypeUtils.getType(type), true);
             if (!comp) {
                 comp = this.addComponent<T>(type);
             }

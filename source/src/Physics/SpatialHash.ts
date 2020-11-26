@@ -22,7 +22,7 @@ module es {
         /**
          * 用于返回冲突信息的共享HashSet
          */
-        public _tempHashSet: Collider[] = [];
+        public _tempHashSet: Set<Collider> = new Set<Collider>();
 
         constructor(cellSize: number = 100) {
             this._cellSize = cellSize;
@@ -53,8 +53,7 @@ module es {
                 for (let y = p1.y; y <= p2.y; y++) {
                     // 如果没有单元格，我们需要创建它
                     let c: Collider[] = this.cellAtPosition(x, y, true);
-                    if (!c.firstOrDefault(c => c == collider))
-                        c.push(collider);
+                    c.push(collider);
                 }
             }
         }
@@ -93,28 +92,13 @@ module es {
         }
 
         /**
-         * debug绘制空间散列的内容
-         * @param secondsToDisplay
-         * @param textScale
-         */
-        public debugDraw(secondsToDisplay: number, textScale: number = 1) {
-            for (let x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
-                for (let y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
-                    let cell = this.cellAtPosition(x, y);
-                    if (cell && cell.length > 0)
-                        this.debugDrawCellDetails(x, y, cell.length, secondsToDisplay, textScale);
-                }
-            }
-        }
-
-        /**
          * 返回边框与单元格相交的所有对象
          * @param bounds
          * @param excludeCollider
          * @param layerMask
          */
-        public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[] {
-            this._tempHashSet.length = 0;
+        public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Set<Collider> {
+            this._tempHashSet.clear();
 
             let p1 = this.cellCoords(bounds.x, bounds.y);
             let p2 = this.cellCoords(bounds.right, bounds.bottom);
@@ -134,8 +118,7 @@ module es {
                             continue;
 
                         if (bounds.intersects(collider.bounds)) {
-                            if (!this._tempHashSet.firstOrDefault(c => c == collider))
-                                this._tempHashSet.push(collider);
+                            this._tempHashSet.add(collider);
                         }
                     }
                 }
@@ -226,7 +209,7 @@ module es {
 
             let resultCounter = 0;
             let potentials = this.aabbBroadphase(bounds, null, layerMask);
-            for (let i = 0; i < potentials.length; i++) {
+            for (let i = 0; i < potentials.size; i++) {
                 let collider = potentials[i];
                 if (collider instanceof BoxCollider) {
                     results[resultCounter] = collider;
@@ -258,7 +241,7 @@ module es {
          * @param x
          * @param y
          */
-        private cellCoords(x: number, y: number): Vector2 {
+        public cellCoords(x: number, y: number): Vector2 {
             return new Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
         }
 
@@ -269,7 +252,7 @@ module es {
          * @param y
          * @param createCellIfEmpty
          */
-        private cellAtPosition(x: number, y: number, createCellIfEmpty: boolean = false): Collider[] {
+        public cellAtPosition(x: number, y: number, createCellIfEmpty: boolean = false): Collider[] {
             let cell: Collider[] = this._cellDict.tryGetValue(x, y);
             if (!cell) {
                 if (createCellIfEmpty) {
@@ -278,10 +261,6 @@ module es {
                 }
             }
             return cell;
-        }
-
-        private debugDrawCellDetails(x: number, y: number, cellCount: number, secondsToDisplay = 0.5, textScale = 1) {
-
         }
     }
 

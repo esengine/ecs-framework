@@ -20,4 +20,26 @@ module es {
          */
         onTriggerExit(other: Collider, local: Collider);
     }
+
+    export class TriggerListenerHelper {
+        public static getITriggerListener(entity: Entity, components: ITriggerListener[]){
+            for (let i = 0; i < entity.components._components.length; i++) {
+                let component = entity.components._components.buffer[i];
+                if (isITriggerListener(component)) {
+                    components.push(component);
+                }
+            }
+
+            for (let i = 0; i < entity.components._componentsToAdd.length; i++) {
+                let component = entity.components._componentsToAdd[i];
+                if (isITriggerListener(component)) {
+                    components.push(component);
+                }
+            }
+
+            return components;
+        }
+    }
+
+    export var isITriggerListener = (props: any): props is ITriggerListener => typeof (props as ITriggerListener)['onTriggerEnter'] !== 'undefined';
 }

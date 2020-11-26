@@ -38,7 +38,7 @@ module es {
                 bounds.y += motion.y;
                 let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
 
-                for (let j = 0; j < neighbors.length; j++) {
+                for (let j = 0; j < neighbors.size; j++) {
                     let neighbor = neighbors[j];
                     // 不检测触发器
                     if (neighbor.isTrigger)

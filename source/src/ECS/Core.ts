@@ -204,7 +204,8 @@ module es {
             
         }
 
-        protected async update() {
+        protected async update(currentTime?: number) {
+            if (currentTime != null) Time.update(currentTime);
             if (this._scene != null) {
                 for (let i = this._globalManagers.length - 1; i >= 0; i--) {
                     if (this._globalManagers[i].enabled)

@@ -246,7 +246,7 @@ declare module es {
          */
         protected onGraphicsDeviceReset(): void;
         protected initialize(): void;
-        protected update(): Promise<void>;
+        protected update(currentTime?: number): Promise<void>;
     }
 }
 declare module es {
@@ -858,6 +858,10 @@ declare module es {
          */
         onTriggerExit(other: Collider, local: Collider): any;
     }
+    class TriggerListenerHelper {
+        static getITriggerListener(entity: Entity, components: ITriggerListener[]): ITriggerListener[];
+    }
+    var isITriggerListener: (props: any) => props is ITriggerListener;
 }
 declare module es {
     /**
@@ -2474,17 +2478,20 @@ declare module es {
      */
     class ColliderTriggerHelper {
         private _entity;
-        /** 存储当前帧中发生的所有活动交集对 */
+        /** 存储当前帧中发生的所有活动交点对 */
         private _activeTriggerIntersections;
-        /** 存储前一帧的交叉对，以便我们可以在移动该帧后检测出口 */
+        /** 存储前一帧的交点对，这样我们就可以在移动这一帧后检测到退出 */
         private _previousTriggerIntersections;
         private _tempTriggerList;
         constructor(entity: Entity);
         /**
-         * 实体被移动后，应该调用更新。它会处理碰撞器重叠的任何itriggerlistener。
+         * update应该在实体被移动后被调用，它将处理任何与Colllider重叠的ITriggerListeners。
+         * 它将处理任何与Collider重叠的ITriggerListeners。
          */
         update(): void;
         private checkForExitedColliders;
+        private excepthWith;
+        private unionWith;
         private notifyTriggerListeners;
     }
 }
@@ -2561,11 +2568,11 @@ declare module es {
 }
 declare module es {
     class Physics {
+        static _spatialHash: SpatialHash;
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
         static spatialHashCellSize: number;
         /** 接受layerMask的所有方法的默认值 */
         static readonly allLayers: number;
-        private static _spatialHash;
         /**
          * raycast是否检测配置为触发器的碰撞器
          */
@@ -2596,14 +2603,14 @@ declare module es {
          * @param rect
          * @param layerMask
          */
-        static boxcastBroadphase(rect: Rectangle, layerMask?: number): Collider[];
+        static boxcastBroadphase(rect: Rectangle, layerMask?: number): Set<Collider>;
         /**
          * 返回所有与边界相交的碰撞器，不包括传入的碰撞器(self)。如果您希望为其他查询自行创建扫过的边界，则此方法非常有用
          * @param collider
          * @param rect
          * @param layerMask
          */
-        static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Collider[];
+        static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Set<Collider>;
         /**
          * 将对撞机添加到物理系统中
          * @param collider
@@ -2634,11 +2641,6 @@ declare module es {
          * @param layerMask
          */
         static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask?: number): number;
-        /**
-         * debug绘制空间散列的内容
-         * @param secondsToDisplay
-         */
-        static debugDraw(secondsToDisplay: any): void;
     }
 }
 declare module es {
@@ -2675,7 +2677,7 @@ declare module es {
         /**
          * 用于返回冲突信息的共享HashSet
          */
-        _tempHashSet: Collider[];
+        _tempHashSet: Set<Collider>;
         constructor(cellSize?: number);
         /**
          * 将对象添加到SpatialHash
@@ -2694,18 +2696,12 @@ declare module es {
         removeWithBruteForce(obj: Collider): void;
         clear(): void;
         /**
-         * debug绘制空间散列的内容
-         * @param secondsToDisplay
-         * @param textScale
-         */
-        debugDraw(secondsToDisplay: number, textScale?: number): void;
-        /**
          * 返回边框与单元格相交的所有对象
          * @param bounds
          * @param excludeCollider
          * @param layerMask
          */
-        aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
+        aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Set<Collider>;
         /**
          * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组。
          * @param start
@@ -2727,7 +2723,7 @@ declare module es {
          * @param x
          * @param y
          */
-        private cellCoords;
+        cellCoords(x: number, y: number): Vector2;
         /**
          * 获取世界空间x,y值的单元格。
          * 如果单元格为空且createCellIfEmpty为true，则会创建一个新的单元格
@@ -2735,8 +2731,7 @@ declare module es {
          * @param y
          * @param createCellIfEmpty
          */
-        private cellAtPosition;
-        private debugDrawCellDetails;
+        cellAtPosition(x: number, y: number, createCellIfEmpty?: boolean): Collider[];
     }
     /**
      * 包装一个Unit32，列表碰撞器字典
@@ -3083,39 +3078,38 @@ declare class ArrayUtils {
     static bubbleSort(ary: number[]): void;
     /**
      * 执行插入排序
-     * @param    ary
+     * @param ary
      */
     static insertionSort(ary: number[]): void;
     /**
      * 执行二分搜索
-     * @param    ary        搜索的数组（必须排序过）
-     * @param    value    需要搜索的值
-     * @return  返回匹配结果的数组索引
+     * @param ary 搜索的数组（必须排序过）
+     * @param value 需要搜索的值
+     * @returns 返回匹配结果的数组索引
      */
     static binarySearch(ary: number[], value: number): number;
     /**
      * 返回匹配项的索引
-     * @param    ary
-     * @param    num
-     * @return  返回匹配项的索引
+     * @param ary
+     * @param num
      */
     static findElementIndex(ary: any[], num: any): any;
     /**
      * 返回数组中最大值的索引
-     * @param    ary
-     * @return  返回数组中最大值的索引
+     * @param ary
      */
     static getMaxElementIndex(ary: number[]): number;
     /**
      * 返回数组中最小值的索引
-     * @param    ary
-     * @return  返回数组中最小值的索引
+     * @param ary
      */
     static getMinElementIndex(ary: number[]): number;
     /**
      * 返回一个"唯一性"数组
-     * @param    ary        需要唯一性的数组
-     * @return    唯一性的数组
+     * @param ary 需要唯一性的数组
+     * @returns 唯一性的数组
+     *
+     * @tutorial
      * 比如: [1, 2, 2, 3, 4]
      * 返回: [1, 2, 3, 4]
      */
@@ -3139,7 +3133,7 @@ declare class ArrayUtils {
     static swap(array: any[], index1: number, index2: number): void;
     /**
      * 清除列表
-     * @param    ary 列表
+     * @param ary
      */
     static clearList(ary: any[]): void;
     /**
@@ -3150,18 +3144,45 @@ declare class ArrayUtils {
     static cloneList(ary: any[]): any[];
     /**
      * 判断2个数组是否相同
-     * @param    ary1    数组1
-     * @param    ary2    数组2
-     * @return    是否相同
+     * @param ary1 数组1
+     * @param ary2 数组2
      */
     static equals(ary1: number[], ary2: number[]): Boolean;
     /**
      * 根据索引插入元素，索引和索引后的元素都向后移动一位
-     * @param    index   插入索引
-     * @param    value   插入的元素
-     * @return  插入的元素 未插入则返回空
+     * @param ary
+     * @param index 插入索引
+     * @param value 插入的元素
+     * @returns 插入的元素 未插入则返回空
      */
     static insert(ary: any[], index: number, value: any): any;
+    /**
+     * 打乱数组 Fisher–Yates shuffle
+     * @param list
+     */
+    static shuffle<T>(list: T[]): void;
+    /**
+     * 如果项目已经在列表中，返回false，如果成功添加，返回true
+     * @param list
+     * @param item
+     */
+    static addIfNotPresent<T>(list: T[], item: T): boolean;
+    /**
+     * 返回列表中的最后一项。列表中至少应该有一个项目
+     * @param list
+     */
+    static lastItem<T>(list: T[]): T;
+    /**
+     * 从列表中随机获取一个项目。不清空检查列表!
+     * @param list
+     */
+    static randomItem<T>(list: T[]): T;
+    /**
+     * 从列表中随机获取物品。不清空检查列表，也不验证列表数是否大于项目数。返回的List可以通过ListPool.free放回池中
+     * @param list
+     * @param itemCount 从列表中返回的随机项目的数量
+     */
+    static randomItems<T>(list: T[], itemCount: number): T[];
 }
 declare module es {
     class Base64Utils {
@@ -3575,6 +3596,11 @@ declare module es {
          */
         triangulate(points: Vector2[], arePointsCCW?: boolean): void;
         private initialize;
+    }
+}
+declare module es {
+    class TypeUtils {
+        static getType(obj: any): any;
     }
 }
 declare module es {

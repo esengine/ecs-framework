@@ -1,11 +1,11 @@
 ///<reference path="./RaycastHit.ts" />
 module es {
     export class Physics {
+        public static _spatialHash: SpatialHash;
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
         public static spatialHashCellSize = 100;
         /** 接受layerMask的所有方法的默认值 */
         public static readonly allLayers: number = -1;
-        private static _spatialHash: SpatialHash;
         /**
          * raycast是否检测配置为触发器的碰撞器
          */
@@ -119,14 +119,6 @@ module es {
             }
 
             return this._spatialHash.linecast(start, end, hits, layerMask);
-        }
-
-        /**
-         * debug绘制空间散列的内容
-         * @param secondsToDisplay
-         */
-        public static debugDraw(secondsToDisplay) {
-            this._spatialHash.debugDraw(secondsToDisplay, 2);
         }
     }
 }

@@ -568,12 +568,14 @@ var es;
         };
         Core.prototype.initialize = function () {
         };
-        Core.prototype.update = function () {
+        Core.prototype.update = function (currentTime) {
             return __awaiter(this, void 0, void 0, function () {
                 var i;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
+                            if (currentTime != null)
+                                es.Time.update(currentTime);
                             if (this._scene != null) {
                                 for (i = this._globalManagers.length - 1; i >= 0; i--) {
                                     if (this._globalManagers[i].enabled)
@@ -964,7 +966,7 @@ var es;
          * @param type
          */
         Entity.prototype.getOrCreateComponent = function (type) {
-            var comp = this.components.getComponent(type, true);
+            var comp = this.components.getComponent(es.TypeUtils.getType(type), true);
             if (!comp) {
                 comp = this.addComponent(type);
             }
@@ -1879,6 +1881,31 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var TriggerListenerHelper = /** @class */ (function () {
+        function TriggerListenerHelper() {
+        }
+        TriggerListenerHelper.getITriggerListener = function (entity, components) {
+            for (var i = 0; i < entity.components._components.length; i++) {
+                var component = entity.components._components.buffer[i];
+                if (es.isITriggerListener(component)) {
+                    components.push(component);
+                }
+            }
+            for (var i = 0; i < entity.components._componentsToAdd.length; i++) {
+                var component = entity.components._componentsToAdd[i];
+                if (es.isITriggerListener(component)) {
+                    components.push(component);
+                }
+            }
+            return components;
+        };
+        return TriggerListenerHelper;
+    }());
+    es.TriggerListenerHelper = TriggerListenerHelper;
+    es.isITriggerListener = function (props) { return typeof props['onTriggerEnter'] !== 'undefined'; };
+})(es || (es = {}));
+var es;
+(function (es) {
     /**
      * 辅助类说明了一种处理移动的方法，它考虑了包括触发器在内的所有冲突。
      * ITriggerListener接口用于管理对移动过程中违反的任何触发器的回调。
@@ -1915,7 +1942,7 @@ var es;
                 bounds.x += motion.x;
                 bounds.y += motion.y;
                 var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
-                for (var j = 0; j < neighbors.length; j++) {
+                for (var j = 0; j < neighbors.size; j++) {
                     var neighbor = neighbors[j];
                     // 不检测触发器
                     if (neighbor.isTrigger)
@@ -1989,8 +2016,8 @@ var es;
             this.entity.position.add(motion);
             // 获取任何可能在新位置发生碰撞的东西
             var neighbors = es.Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers.value);
-            for (var _i = 0, neighbors_1 = neighbors; _i < neighbors_1.length; _i++) {
-                var neighbor = neighbors_1[_i];
+            for (var i = 0; i < neighbors.size; i++) {
+                var neighbor = neighbors[i];
                 if (this._collider.overlaps(neighbor) && neighbor.enabled) {
                     didCollide = true;
                     this.notifyTriggerListeners(this._collider, neighbor);
@@ -2000,13 +2027,13 @@ var es;
         };
         ProjectileMover.prototype.notifyTriggerListeners = function (self, other) {
             // 通知我们重叠的碰撞器实体上的任何侦听器
-            other.entity.getComponents("ITriggerListener", this._tempTriggerList);
+            es.TriggerListenerHelper.getITriggerListener(other.entity, this._tempTriggerList);
             for (var i = 0; i < this._tempTriggerList.length; i++) {
                 this._tempTriggerList[i].onTriggerEnter(self, other);
             }
             this._tempTriggerList.length = 0;
             // 通知此实体上的任何侦听器
-            this.entity.getComponents("ITriggerListener", this._tempTriggerList);
+            es.TriggerListenerHelper.getITriggerListener(this.entity, this._tempTriggerList);
             for (var i = 0; i < this._tempTriggerList.length; i++) {
                 this._tempTriggerList[i].onTriggerEnter(other, self);
             }
@@ -2685,7 +2712,7 @@ var es;
                 if (es.isIUpdatable(component))
                     this._updatableComponents.remove(component);
                 if (es.Core.entitySystemsEnabled) {
-                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
+                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
                     this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
                 }
             }
@@ -2696,7 +2723,7 @@ var es;
                 if (es.isIUpdatable(component))
                     this._updatableComponents.add(component);
                 if (es.Core.entitySystemsEnabled) {
-                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
+                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                 }
             }
@@ -2718,7 +2745,7 @@ var es;
                     if (es.isIUpdatable(component))
                         this._updatableComponents.add(component);
                     if (es.Core.entitySystemsEnabled) {
-                        this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
+                        this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
                         this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                     }
                     this._components.add(component);
@@ -2749,7 +2776,7 @@ var es;
             if (es.isIUpdatable(component))
                 this._updatableComponents.remove(component);
             if (es.Core.entitySystemsEnabled) {
-                this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
+                this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
                 this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             }
             component.onRemovedFromEntity();
@@ -5979,74 +6006,73 @@ var es;
      */
     var ColliderTriggerHelper = /** @class */ (function () {
         function ColliderTriggerHelper(entity) {
-            /** 存储当前帧中发生的所有活动交集对 */
-            this._activeTriggerIntersections = [];
-            /** 存储前一帧的交叉对，以便我们可以在移动该帧后检测出口 */
-            this._previousTriggerIntersections = [];
+            /** 存储当前帧中发生的所有活动交点对 */
+            this._activeTriggerIntersections = new Set();
+            /** 存储前一帧的交点对，这样我们就可以在移动这一帧后检测到退出 */
+            this._previousTriggerIntersections = new Set();
             this._tempTriggerList = [];
             this._entity = entity;
         }
         /**
-         * 实体被移动后，应该调用更新。它会处理碰撞器重叠的任何itriggerlistener。
+         * update应该在实体被移动后被调用，它将处理任何与Colllider重叠的ITriggerListeners。
+         * 它将处理任何与Collider重叠的ITriggerListeners。
          */
         ColliderTriggerHelper.prototype.update = function () {
+            // 对所有实体.colliders进行重叠检查，这些实体.colliders是触发器，与所有宽相碰撞器，无论是否触发器。   
+            // 任何重叠都会导致触发事件
             var colliders = this._entity.getComponents(es.Collider);
             for (var i = 0; i < colliders.length; i++) {
                 var collider = colliders[i];
                 var neighbors = es.Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-                var _loop_2 = function (j) {
+                for (var j = 0; j < neighbors.size; j++) {
                     var neighbor = neighbors[j];
+                    // 我们至少需要一个碰撞器作为触发器
                     if (!collider.isTrigger && !neighbor.isTrigger)
-                        return "continue";
+                        continue;
                     if (collider.overlaps(neighbor)) {
-                        var pair_1 = new es.Pair(collider, neighbor);
-                        var shouldReportTriggerEvent = this_1._activeTriggerIntersections.findIndex(function (value) {
-                            return value.first == pair_1.first && value.second == pair_1.second;
-                        }) == -1 && this_1._previousTriggerIntersections.findIndex(function (value) {
-                            return value.first == pair_1.first && value.second == pair_1.second;
-                        }) == -1;
+                        var pair = new es.Pair(collider, neighbor);
+                        // 如果我们的某一个集合中已经有了这个对子（前一个或当前的触发交叉点），就不要调用输入事件了
+                        var shouldReportTriggerEvent = !this._activeTriggerIntersections.has(pair) &&
+                            !this._previousTriggerIntersections.has(pair);
                         if (shouldReportTriggerEvent)
-                            this_1.notifyTriggerListeners(pair_1, true);
-                        if (!this_1._activeTriggerIntersections.contains(pair_1))
-                            this_1._activeTriggerIntersections.push(pair_1);
+                            this.notifyTriggerListeners(pair, true);
+                        this._activeTriggerIntersections.add(pair);
                     }
-                };
-                var this_1 = this;
-                for (var j = 0; j < neighbors.length; j++) {
-                    _loop_2(j);
                 }
             }
             es.ListPool.free(colliders);
             this.checkForExitedColliders();
         };
         ColliderTriggerHelper.prototype.checkForExitedColliders = function () {
-            var _this = this;
-            var _loop_3 = function (i) {
-                var index = this_2._previousTriggerIntersections.findIndex(function (value) {
-                    if (value.first == _this._activeTriggerIntersections[i].first && value.second == _this._activeTriggerIntersections[i].second)
-                        return true;
-                    return false;
-                });
-                if (index != -1)
-                    this_2._previousTriggerIntersections.removeAt(index);
-            };
-            var this_2 = this;
-            for (var i = 0; i < this._activeTriggerIntersections.length; i++) {
-                _loop_3(i);
-            }
-            for (var i = 0; i < this._previousTriggerIntersections.length; i++) {
+            // 删除所有与此帧交互的触发器，留下我们退出的触发器
+            this.excepthWith(this._previousTriggerIntersections, this._activeTriggerIntersections);
+            for (var i = 0; i < this._previousTriggerIntersections.size; i++) {
                 this.notifyTriggerListeners(this._previousTriggerIntersections[i], false);
             }
-            this._previousTriggerIntersections.length = 0;
-            for (var i = 0; i < this._activeTriggerIntersections.length; i++) {
-                if (!this._previousTriggerIntersections.contains(this._activeTriggerIntersections[i])) {
-                    this._previousTriggerIntersections.push(this._activeTriggerIntersections[i]);
+            this._previousTriggerIntersections.clear();
+            // 添加所有当前激活的触发器
+            this.unionWith(this._previousTriggerIntersections, this._activeTriggerIntersections);
+            // 清空活动集，为下一帧做准备
+            this._activeTriggerIntersections.clear();
+        };
+        ColliderTriggerHelper.prototype.excepthWith = function (previous, active) {
+            for (var i = 0; i < previous.size; i++) {
+                var previousDATA = previous[i];
+                for (var j = 0; j < active.size; j++) {
+                    var activeDATA = active[j];
+                    if (activeDATA.equals(previousDATA))
+                        previous.delete(previousDATA);
                 }
             }
-            this._activeTriggerIntersections.length = 0;
+        };
+        ColliderTriggerHelper.prototype.unionWith = function (previous, active) {
+            for (var i = 0; i < this._activeTriggerIntersections.size; i++) {
+                if (!this._previousTriggerIntersections.has(this._activeTriggerIntersections[i]))
+                    this._previousTriggerIntersections.add(this._activeTriggerIntersections[i]);
+            }
         };
         ColliderTriggerHelper.prototype.notifyTriggerListeners = function (collisionPair, isEntering) {
-            collisionPair.first.entity.getComponents("ITriggerListener", this._tempTriggerList);
+            es.TriggerListenerHelper.getITriggerListener(collisionPair.first.entity, this._tempTriggerList);
             for (var i = 0; i < this._tempTriggerList.length; i++) {
                 if (isEntering) {
                     this._tempTriggerList[i].onTriggerEnter(collisionPair.second, collisionPair.first);
@@ -6056,7 +6082,7 @@ var es;
                 }
                 this._tempTriggerList.length = 0;
                 if (collisionPair.second.entity) {
-                    collisionPair.second.entity.getComponents("ITriggerListener", this._tempTriggerList);
+                    es.TriggerListenerHelper.getITriggerListener(collisionPair.second.entity, this._tempTriggerList);
                     for (var i_2 = 0; i_2 < this._tempTriggerList.length; i_2++) {
                         if (isEntering) {
                             this._tempTriggerList[i_2].onTriggerEnter(collisionPair.first, collisionPair.second);
@@ -6388,13 +6414,6 @@ var es;
             }
             return this._spatialHash.linecast(start, end, hits, layerMask);
         };
-        /**
-         * debug绘制空间散列的内容
-         * @param secondsToDisplay
-         */
-        Physics.debugDraw = function (secondsToDisplay) {
-            this._spatialHash.debugDraw(secondsToDisplay, 2);
-        };
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
         Physics.spatialHashCellSize = 100;
         /** 接受layerMask的所有方法的默认值 */
@@ -6449,7 +6468,7 @@ var es;
             /**
              * 用于返回冲突信息的共享HashSet
              */
-            this._tempHashSet = [];
+            this._tempHashSet = new Set();
             this._cellSize = cellSize;
             this._inverseCellSize = 1 / this._cellSize;
             this._raycastParser = new RaycastResultParser();
@@ -6474,8 +6493,7 @@ var es;
                 for (var y = p1.y; y <= p2.y; y++) {
                     // 如果没有单元格，我们需要创建它
                     var c = this.cellAtPosition(x, y, true);
-                    if (!c.firstOrDefault(function (c) { return c == collider; }))
-                        c.push(collider);
+                    c.push(collider);
                 }
             }
         };
@@ -6509,28 +6527,13 @@ var es;
             this._cellDict.clear();
         };
         /**
-         * debug绘制空间散列的内容
-         * @param secondsToDisplay
-         * @param textScale
-         */
-        SpatialHash.prototype.debugDraw = function (secondsToDisplay, textScale) {
-            if (textScale === void 0) { textScale = 1; }
-            for (var x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
-                for (var y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
-                    var cell = this.cellAtPosition(x, y);
-                    if (cell && cell.length > 0)
-                        this.debugDrawCellDetails(x, y, cell.length, secondsToDisplay, textScale);
-                }
-            }
-        };
-        /**
          * 返回边框与单元格相交的所有对象
          * @param bounds
          * @param excludeCollider
          * @param layerMask
          */
         SpatialHash.prototype.aabbBroadphase = function (bounds, excludeCollider, layerMask) {
-            this._tempHashSet.length = 0;
+            this._tempHashSet.clear();
             var p1 = this.cellCoords(bounds.x, bounds.y);
             var p2 = this.cellCoords(bounds.right, bounds.bottom);
             for (var x = p1.x; x <= p2.x; x++) {
@@ -6538,20 +6541,15 @@ var es;
                     var cell = this.cellAtPosition(x, y);
                     if (!cell)
                         continue;
-                    var _loop_4 = function (i) {
+                    // 当cell不为空。循环并取回所有碰撞器
+                    for (var i = 0; i < cell.length; i++) {
                         var collider = cell[i];
                         // 如果它是自身或者如果它不匹配我们的层掩码 跳过这个碰撞器
                         if (collider == excludeCollider || !es.Flags.isFlagSet(layerMask, collider.physicsLayer.value))
-                            return "continue";
+                            continue;
                         if (bounds.intersects(collider.bounds)) {
-                            if (!this_3._tempHashSet.firstOrDefault(function (c) { return c == collider; }))
-                                this_3._tempHashSet.push(collider);
+                            this._tempHashSet.add(collider);
                         }
-                    };
-                    var this_3 = this;
-                    // 当cell不为空。循环并取回所有碰撞器
-                    for (var i = 0; i < cell.length; i++) {
-                        _loop_4(i);
                     }
                 }
             }
@@ -6626,7 +6624,7 @@ var es;
             this._overlapTestCircle.position = circleCenter;
             var resultCounter = 0;
             var potentials = this.aabbBroadphase(bounds, null, layerMask);
-            for (var i = 0; i < potentials.length; i++) {
+            for (var i = 0; i < potentials.size; i++) {
                 var collider = potentials[i];
                 if (collider instanceof es.BoxCollider) {
                     results[resultCounter] = collider;
@@ -6678,10 +6676,6 @@ var es;
                 }
             }
             return cell;
-        };
-        SpatialHash.prototype.debugDrawCellDetails = function (x, y, cellCount, secondsToDisplay, textScale) {
-            if (secondsToDisplay === void 0) { secondsToDisplay = 0.5; }
-            if (textScale === void 0) { textScale = 1; }
         };
         return SpatialHash;
     }());
@@ -7719,7 +7713,7 @@ var ArrayUtils = /** @class */ (function () {
     };
     /**
      * 执行插入排序
-     * @param    ary
+     * @param ary
      */
     ArrayUtils.insertionSort = function (ary) {
         var len = ary.length;
@@ -7733,9 +7727,9 @@ var ArrayUtils = /** @class */ (function () {
     };
     /**
      * 执行二分搜索
-     * @param    ary        搜索的数组（必须排序过）
-     * @param    value    需要搜索的值
-     * @return  返回匹配结果的数组索引
+     * @param ary 搜索的数组（必须排序过）
+     * @param value 需要搜索的值
+     * @returns 返回匹配结果的数组索引
      */
     ArrayUtils.binarySearch = function (ary, value) {
         var startIndex = 0;
@@ -7754,9 +7748,8 @@ var ArrayUtils = /** @class */ (function () {
     };
     /**
      * 返回匹配项的索引
-     * @param    ary
-     * @param    num
-     * @return  返回匹配项的索引
+     * @param ary
+     * @param num
      */
     ArrayUtils.findElementIndex = function (ary, num) {
         var len = ary.length;
@@ -7768,8 +7761,7 @@ var ArrayUtils = /** @class */ (function () {
     };
     /**
      * 返回数组中最大值的索引
-     * @param    ary
-     * @return  返回数组中最大值的索引
+     * @param ary
      */
     ArrayUtils.getMaxElementIndex = function (ary) {
         var matchIndex = 0;
@@ -7782,8 +7774,7 @@ var ArrayUtils = /** @class */ (function () {
     };
     /**
      * 返回数组中最小值的索引
-     * @param    ary
-     * @return  返回数组中最小值的索引
+     * @param ary
      */
     ArrayUtils.getMinElementIndex = function (ary) {
         var matchIndex = 0;
@@ -7796,8 +7787,10 @@ var ArrayUtils = /** @class */ (function () {
     };
     /**
      * 返回一个"唯一性"数组
-     * @param    ary        需要唯一性的数组
-     * @return    唯一性的数组
+     * @param ary 需要唯一性的数组
+     * @returns 唯一性的数组
+     *
+     * @tutorial
      * 比如: [1, 2, 2, 3, 4]
      * 返回: [1, 2, 3, 4]
      */
@@ -7865,7 +7858,7 @@ var ArrayUtils = /** @class */ (function () {
     };
     /**
      * 清除列表
-     * @param    ary 列表
+     * @param ary
      */
     ArrayUtils.clearList = function (ary) {
         if (!ary)
@@ -7887,9 +7880,8 @@ var ArrayUtils = /** @class */ (function () {
     };
     /**
      * 判断2个数组是否相同
-     * @param    ary1    数组1
-     * @param    ary2    数组2
-     * @return    是否相同
+     * @param ary1 数组1
+     * @param ary2 数组2
      */
     ArrayUtils.equals = function (ary1, ary2) {
         if (ary1 == ary2)
@@ -7905,9 +7897,10 @@ var ArrayUtils = /** @class */ (function () {
     };
     /**
      * 根据索引插入元素，索引和索引后的元素都向后移动一位
-     * @param    index   插入索引
-     * @param    value   插入的元素
-     * @return  插入的元素 未插入则返回空
+     * @param ary
+     * @param index 插入索引
+     * @param value 插入的元素
+     * @returns 插入的元素 未插入则返回空
      */
     ArrayUtils.insert = function (ary, index, value) {
         if (!ary)
@@ -7928,6 +7921,61 @@ var ArrayUtils = /** @class */ (function () {
             ary[index] = value;
         }
         return value;
+    };
+    /**
+     * 打乱数组 Fisher–Yates shuffle
+     * @param list
+     */
+    ArrayUtils.shuffle = function (list) {
+        var n = list.length;
+        while (n > 1) {
+            n--;
+            var k = RandomUtils.randint(0, n + 1);
+            var value = list[k];
+            list[k] = list[n];
+            list[n] = value;
+        }
+    };
+    /**
+     * 如果项目已经在列表中，返回false，如果成功添加，返回true
+     * @param list
+     * @param item
+     */
+    ArrayUtils.addIfNotPresent = function (list, item) {
+        if (list.contains(item))
+            return false;
+        list.push(item);
+        return true;
+    };
+    /**
+     * 返回列表中的最后一项。列表中至少应该有一个项目
+     * @param list
+     */
+    ArrayUtils.lastItem = function (list) {
+        return list[list.length - 1];
+    };
+    /**
+     * 从列表中随机获取一个项目。不清空检查列表!
+     * @param list
+     */
+    ArrayUtils.randomItem = function (list) {
+        return list[RandomUtils.randint(0, list.length)];
+    };
+    /**
+     * 从列表中随机获取物品。不清空检查列表，也不验证列表数是否大于项目数。返回的List可以通过ListPool.free放回池中
+     * @param list
+     * @param itemCount 从列表中返回的随机项目的数量
+     */
+    ArrayUtils.randomItems = function (list, itemCount) {
+        var set = new Set();
+        while (set.size != itemCount) {
+            var item = this.randomItem(list);
+            if (!set.has(item))
+                set.add(item);
+        }
+        var items = es.ListPool.obtain();
+        set.forEach(function (value) { return items.push(value); });
+        return items;
     };
     return ArrayUtils;
 }());
@@ -8640,7 +8688,6 @@ var es;
          */
         RectangleExt.union = function (first, point) {
             var rect = new es.Rectangle(point.x, point.y, 0, 0);
-            // let rectResult = first.union(rect);
             var result = new es.Rectangle();
             result.x = Math.min(first.x, rect.x);
             result.y = Math.min(first.y, rect.y);
@@ -8848,6 +8895,18 @@ var es;
         return Triangulator;
     }());
     es.Triangulator = Triangulator;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TypeUtils = /** @class */ (function () {
+        function TypeUtils() {
+        }
+        TypeUtils.getType = function (obj) {
+            return obj["__proto__"]["constructor"];
+        };
+        return TypeUtils;
+    }());
+    es.TypeUtils = TypeUtils;
 })(es || (es = {}));
 var es;
 (function (es) {
