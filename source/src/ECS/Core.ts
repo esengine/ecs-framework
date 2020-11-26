@@ -8,6 +8,10 @@ module es {
          */
         public static emitter: Emitter<CoreEvents>;
         /**
+         * 启用/禁用焦点丢失时的暂停。如果为真，则不调用更新或渲染方法
+         */
+        public static pauseOnFocusLost = true;
+        /**
          * 是否启用调试渲染
          */
         public static debugRenderEndabled = false;
@@ -15,8 +19,17 @@ module es {
          * 简化对内部类的全局内容实例的访问
          */
         public static _instance: Core;
+        /**
+         * 用于确定是否应该使用EntitySystems
+         */
+        public static entitySystemsEnabled: boolean;
+
         public _nextScene: Scene;
         public _sceneTransition: SceneTransition;
+        /**
+         * 用于凝聚GraphicsDeviceReset事件
+         */
+        public _graphicsDeviceChangeTimer: ITimer;
         /**
          * 全局访问系统
          */
@@ -25,7 +38,7 @@ module es {
         public width: number;
         public height: number;
 
-        constructor(width: number, height: number) {
+        constructor(width: number, height: number, enableEntitySystems: boolean = true) {
             this.width = width;
             this.height = height;
 
@@ -34,6 +47,7 @@ module es {
             Core.emitter.addObserver(CoreEvents.FrameUpdated, this.update, this);
 
             Core.registerGlobalManager(this._timerManager);
+            Core.entitySystemsEnabled = enableEntitySystems;
 
             this.initialize();
         }
@@ -138,16 +152,17 @@ module es {
         }
 
         public async draw() {
-            if (this._sceneTransition) {
+            if (this._sceneTransition != null) {
                 this._sceneTransition.preRender();
 
-                // 如果我们有场景转换的特殊处理。我们要么渲染场景过渡，要么渲染场景
-                if (this._scene && !this._sceneTransition.hasPreviousSceneRender) {
-                    this._scene.render();
-                    this._scene.postRender();
-                    await this._sceneTransition.onBeginTransition();
-                } else if (this._sceneTransition) {
-                    if (this._scene && this._sceneTransition.isNewSceneLoaded) {
+                // 如果有的话，我们会对SceneTransition进行特殊处理。
+                // 我们要么渲染SceneTransition，要么渲染Scene的
+                if (this._sceneTransition != null){
+                    if (this._scene != null && !this._sceneTransition.hasPreviousSceneRender) {
+                        this._scene.render();
+                        this._scene.postRender();
+                        await this._sceneTransition.onBeginTransition();
+                    } else if (this._scene != null && this._sceneTransition.isNewSceneLoaded) {
                         this._scene.render();
                         this._scene.postRender();
                     }
@@ -157,7 +172,7 @@ module es {
             } else if (this._scene) {
                 this._scene.render();
 
-                // 如果我们没有一个活跃的场景转换，就像平常一样渲染
+                // 如如果我们没有一个活动的SceneTransition，就像往常一样渲染
                 this._scene.postRender();
             }
         }
@@ -174,36 +189,46 @@ module es {
          * 当屏幕大小发生改变时调用
          */
         protected onGraphicsDeviceReset() {
-            Core.emitter.emit(CoreEvents.GraphicsDeviceReset);
+            // 我们用这些来避免垃圾事件的发生
+            if (this._graphicsDeviceChangeTimer != null){
+                this._graphicsDeviceChangeTimer.reset();
+            } else {
+                this._graphicsDeviceChangeTimer = Core.schedule(0.05, false, this, t => {
+                    (t.context as Core)._graphicsDeviceChangeTimer = null;
+                    Core.emitter.emit(CoreEvents.GraphicsDeviceReset);
+                });
+            }
         }
 
         protected initialize() {
+            
         }
 
         protected async update() {
-            if (this._scene) {
+            if (this._scene != null) {
                 for (let i = this._globalManagers.length - 1; i >= 0; i--) {
                     if (this._globalManagers[i].enabled)
                         this._globalManagers[i].update();
                 }
 
                 // 仔细阅读:
-                // 当场景转换发生时，我们不会更新场景
-                // -除非是不改变场景的场景转换(没有理由不更新)
-                // -或者它是一个已经切换到新场景的场景转换(新场景需要做它自己的事情)
+                // 当场景转换发生时，我们不更新场景
+                // - 除非是不改变场景的SceneTransition(没有理由不更新)
+                // - 或者是一个已经切换到新场景的SceneTransition（新场景需要做它的事情）
                 if (!this._sceneTransition ||
-                    (this._sceneTransition && (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
+                    (this._sceneTransition && 
+                    (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
                     this._scene.update();
                 }
 
-                if (this._nextScene) {
+                if (this._nextScene != null) {
                     this._scene.end();
 
                     this._scene = this._nextScene;
                     this._nextScene = null;
                     this.onSceneChanged();
 
-                    await this._scene.begin();
+                    this._scene.begin();
                 }
             }
 

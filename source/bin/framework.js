@@ -349,7 +349,8 @@ var es;
 var es;
 (function (es) {
     var Core = (function () {
-        function Core(width, height) {
+        function Core(width, height, enableEntitySystems) {
+            if (enableEntitySystems === void 0) { enableEntitySystems = true; }
             this._globalManagers = [];
             this._timerManager = new es.TimerManager();
             this._frameCounterElapsedTime = 0;
@@ -360,6 +361,7 @@ var es;
             Core.emitter = new es.Emitter();
             Core.emitter.addObserver(es.CoreEvents.FrameUpdated, this.update, this);
             Core.registerGlobalManager(this._timerManager);
+            Core.entitySystemsEnabled = enableEntitySystems;
             this.initialize();
         }
         Object.defineProperty(Core, "Instance", {
@@ -428,9 +430,10 @@ var es;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
-                            if (!this._sceneTransition) return [3, 4];
+                            if (!(this._sceneTransition != null)) return [3, 5];
                             this._sceneTransition.preRender();
-                            if (!(this._scene && !this._sceneTransition.hasPreviousSceneRender)) return [3, 2];
+                            if (!(this._sceneTransition != null)) return [3, 4];
+                            if (!(this._scene != null && !this._sceneTransition.hasPreviousSceneRender)) return [3, 2];
                             this._scene.render();
                             this._scene.postRender();
                             return [4, this._sceneTransition.onBeginTransition()];
@@ -438,22 +441,22 @@ var es;
                             _a.sent();
                             return [3, 3];
                         case 2:
-                            if (this._sceneTransition) {
-                                if (this._scene && this._sceneTransition.isNewSceneLoaded) {
-                                    this._scene.render();
-                                    this._scene.postRender();
-                                }
-                                this._sceneTransition.render();
+                            if (this._scene != null && this._sceneTransition.isNewSceneLoaded) {
+                                this._scene.render();
+                                this._scene.postRender();
                             }
                             _a.label = 3;
-                        case 3: return [3, 5];
-                        case 4:
+                        case 3:
+                            this._sceneTransition.render();
+                            _a.label = 4;
+                        case 4: return [3, 6];
+                        case 5:
                             if (this._scene) {
                                 this._scene.render();
                                 this._scene.postRender();
                             }
-                            _a.label = 5;
-                        case 5: return [2];
+                            _a.label = 6;
+                        case 6: return [2];
                     }
                 });
             });
@@ -463,7 +466,15 @@ var es;
             es.Time.sceneChanged();
         };
         Core.prototype.onGraphicsDeviceReset = function () {
-            Core.emitter.emit(es.CoreEvents.GraphicsDeviceReset);
+            if (this._graphicsDeviceChangeTimer != null) {
+                this._graphicsDeviceChangeTimer.reset();
+            }
+            else {
+                this._graphicsDeviceChangeTimer = Core.schedule(0.05, false, this, function (t) {
+                    t.context._graphicsDeviceChangeTimer = null;
+                    Core.emitter.emit(es.CoreEvents.GraphicsDeviceReset);
+                });
+            }
         };
         Core.prototype.initialize = function () {
         };
@@ -473,32 +484,33 @@ var es;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
-                            if (!this._scene) return [3, 2];
-                            for (i = this._globalManagers.length - 1; i >= 0; i--) {
-                                if (this._globalManagers[i].enabled)
-                                    this._globalManagers[i].update();
+                            if (this._scene != null) {
+                                for (i = this._globalManagers.length - 1; i >= 0; i--) {
+                                    if (this._globalManagers[i].enabled)
+                                        this._globalManagers[i].update();
+                                }
+                                if (!this._sceneTransition ||
+                                    (this._sceneTransition &&
+                                        (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
+                                    this._scene.update();
+                                }
+                                if (this._nextScene != null) {
+                                    this._scene.end();
+                                    this._scene = this._nextScene;
+                                    this._nextScene = null;
+                                    this.onSceneChanged();
+                                    this._scene.begin();
+                                }
                             }
-                            if (!this._sceneTransition ||
-                                (this._sceneTransition && (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
-                                this._scene.update();
-                            }
-                            if (!this._nextScene) return [3, 2];
-                            this._scene.end();
-                            this._scene = this._nextScene;
-                            this._nextScene = null;
-                            this.onSceneChanged();
-                            return [4, this._scene.begin()];
+                            return [4, this.draw()];
                         case 1:
-                            _a.sent();
-                            _a.label = 2;
-                        case 2: return [4, this.draw()];
-                        case 3:
                             _a.sent();
                             return [2];
                     }
                 });
             });
         };
+        Core.pauseOnFocusLost = true;
         Core.debugRenderEndabled = false;
         return Core;
     }());
@@ -829,7 +841,7 @@ var es;
         Scene.prototype.begin = function () {
             es.Physics.reset();
             this.updateResolutionScaler();
-            if (this.entityProcessors)
+            if (this.entityProcessors != null)
                 this.entityProcessors.begin();
             es.Core.emitter.addObserver(es.CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler, this);
             es.Core.emitter.addObserver(es.CoreEvents.OrientationChanged, this.updateResolutionScaler, this);
@@ -838,16 +850,17 @@ var es;
         };
         Scene.prototype.end = function () {
             this._didSceneBegin = false;
-            es.Core.emitter.removeObserver(es.CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler);
-            es.Core.emitter.removeObserver(es.CoreEvents.OrientationChanged, this.updateResolutionScaler);
             for (var i = 0; i < this._renderers.length; i++) {
                 this._renderers[i].unload();
             }
+            es.Core.emitter.removeObserver(es.CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler);
+            es.Core.emitter.removeObserver(es.CoreEvents.OrientationChanged, this.updateResolutionScaler);
             this.entities.removeAllEntities();
             for (var i = 0; i < this._sceneComponents.length; i++) {
                 this._sceneComponents[i].onRemovedFromScene();
             }
             this._sceneComponents.length = 0;
+            es.Physics.clear();
             if (this.entityProcessors)
                 this.entityProcessors.end();
             this.unload();
@@ -860,10 +873,10 @@ var es;
                 if (this._sceneComponents[i].enabled)
                     this._sceneComponents[i].update();
             }
-            if (this.entityProcessors)
+            if (this.entityProcessors != null)
                 this.entityProcessors.update();
             this.entities.update();
-            if (this.entityProcessors)
+            if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
             this.renderableComponents.updateList();
         };
@@ -4708,6 +4721,7 @@ var es;
         }
         Physics.reset = function () {
             this._spatialHash = new es.SpatialHash(this.spatialHashCellSize);
+            this._hitArray[0].reset();
         };
         Physics.clear = function () {
             this._spatialHash.clear();

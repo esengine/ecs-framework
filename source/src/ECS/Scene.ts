@@ -62,7 +62,7 @@ module es {
             Physics.reset();
             this.updateResolutionScaler();
 
-            if (this.entityProcessors)
+            if (this.entityProcessors != null)
                 this.entityProcessors.begin();
 
             Core.emitter.addObserver(CoreEvents.GraphicsDeviceReset,this.updateResolutionScaler, this);
@@ -76,12 +76,12 @@ module es {
         public end() {
             this._didSceneBegin = false;
 
-            Core.emitter.removeObserver(CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler);
-            Core.emitter.removeObserver(CoreEvents.OrientationChanged, this.updateResolutionScaler);
-
             for (let i = 0; i < this._renderers.length; i++) {
                 this._renderers[i].unload();
             }
+
+            Core.emitter.removeObserver(CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler);
+            Core.emitter.removeObserver(CoreEvents.OrientationChanged, this.updateResolutionScaler);
 
             this.entities.removeAllEntities();
 
@@ -89,6 +89,8 @@ module es {
                 this._sceneComponents[i].onRemovedFromScene();
             }
             this._sceneComponents.length = 0;
+
+            Physics.clear();
 
             if (this.entityProcessors)
                 this.entityProcessors.end();
@@ -110,16 +112,16 @@ module es {
             }
 
             // 更新我们的实体解析器
-            if (this.entityProcessors)
+            if (this.entityProcessors != null)
                 this.entityProcessors.update();
 
             // 更新我们的实体组
             this.entities.update();
 
-            if (this.entityProcessors)
+            if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
 
-            // 我们在实体之后更新我们的呈现。如果添加了任何新的渲染，请进行更新
+            // 我们在entity.update之后更新我们的renderables，以防止任何新的Renderables被添加
             this.renderableComponents.updateList();
         }
 
@@ -134,7 +136,7 @@ module es {
          * 只有在SceneTransition请求渲染时，它才会有一个值。
          */
         public postRender() {
-
+            
         }
 
         /**

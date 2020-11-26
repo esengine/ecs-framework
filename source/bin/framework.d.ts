@@ -39,15 +39,18 @@ declare module es {
 declare module es {
     class Core {
         static emitter: Emitter<CoreEvents>;
+        static pauseOnFocusLost: boolean;
         static debugRenderEndabled: boolean;
         static _instance: Core;
+        static entitySystemsEnabled: boolean;
         _nextScene: Scene;
         _sceneTransition: SceneTransition;
+        _graphicsDeviceChangeTimer: ITimer;
         _globalManagers: GlobalManager[];
         _timerManager: TimerManager;
         width: number;
         height: number;
-        constructor(width: number, height: number);
+        constructor(width: number, height: number, enableEntitySystems?: boolean);
         static readonly Instance: Core;
         _frameCounterElapsedTime: number;
         _frameCounter: number;

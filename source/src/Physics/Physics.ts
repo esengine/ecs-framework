@@ -23,6 +23,7 @@ module es {
 
         public static reset() {
             this._spatialHash = new SpatialHash(this.spatialHashCellSize);
+            this._hitArray[0].reset();
         }
 
         /**
