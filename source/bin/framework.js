@@ -279,13 +279,27 @@ Array.prototype.sum = function (selector) {
 };
 var es;
 (function (es) {
-    var Component = (function () {
+    /**
+     * 执行顺序
+     *  - onAddedToEntity
+     *  - OnEnabled
+     *
+     *  删除执行顺序
+     *      - onRemovedFromEntity
+     */
+    var Component = /** @class */ (function () {
         function Component() {
+            /**
+             * 更新该组件的时间间隔。这与实体的更新间隔无关。
+             */
             this.updateInterval = 1;
             this._enabled = true;
             this._updateOrder = 0;
         }
         Object.defineProperty(Component.prototype, "transform", {
+            /**
+             * 快速访问 this.entity.transform
+             */
             get: function () {
                 return this.entity.transform;
             },
@@ -293,9 +307,16 @@ var es;
             configurable: true
         });
         Object.defineProperty(Component.prototype, "enabled", {
+            /**
+             * 如果组件和实体都已启用，则为。当启用该组件时，将调用该组件的生命周期方法。状态的改变会导致调用onEnabled/onDisable。
+             */
             get: function () {
                 return this.entity ? this.entity.enabled && this._enabled : this._enabled;
             },
+            /**
+             * 如果组件和实体都已启用，则为。当启用该组件时，将调用该组件的生命周期方法。状态的改变会导致调用onEnabled/onDisable。
+             * @param value
+             */
             set: function (value) {
                 this.setEnabled(value);
             },
@@ -303,25 +324,46 @@ var es;
             configurable: true
         });
         Object.defineProperty(Component.prototype, "updateOrder", {
+            /** 更新此实体上组件的顺序 */
             get: function () {
                 return this._updateOrder;
             },
+            /** 更新此实体上组件的顺序 */
             set: function (value) {
                 this.setUpdateOrder(value);
             },
             enumerable: true,
             configurable: true
         });
+        /**
+         * 当此组件已分配其实体，但尚未添加到实体的活动组件列表时调用。有用的东西，如物理组件，需要访问转换来修改碰撞体的属性。
+         */
         Component.prototype.initialize = function () {
         };
+        /**
+         * 在提交所有挂起的组件更改后，将该组件添加到场景时调用。此时，设置了实体字段和实体。场景也设定好了。
+         */
         Component.prototype.onAddedToEntity = function () {
         };
+        /**
+         * 当此组件从其实体中移除时调用。在这里做所有的清理工作。
+         */
         Component.prototype.onRemovedFromEntity = function () {
         };
+        /**
+         * 当实体的位置改变时调用。这允许组件知道它们由于父实体的移动而移动了。
+         * @param comp
+         */
         Component.prototype.onEntityTransformChanged = function (comp) {
         };
+        /**
+         *当父实体或此组件启用时调用
+         */
         Component.prototype.onEnabled = function () {
         };
+        /**
+         * 禁用父实体或此组件时调用
+         */
         Component.prototype.onDisabled = function () {
         };
         Component.prototype.setEnabled = function (isEnabled) {
@@ -348,9 +390,15 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Core = (function () {
+    /**
+     *  全局核心类
+     */
+    var Core = /** @class */ (function () {
         function Core(width, height, enableEntitySystems) {
             if (enableEntitySystems === void 0) { enableEntitySystems = true; }
+            /**
+             * 全局访问系统
+             */
             this._globalManagers = [];
             this._timerManager = new es.TimerManager();
             this._frameCounterElapsedTime = 0;
@@ -365,6 +413,10 @@ var es;
             this.initialize();
         }
         Object.defineProperty(Core, "Instance", {
+            /**
+             * 提供对单例/游戏实例的访问
+             * @constructor
+             */
             get: function () {
                 return this._instance;
             },
@@ -372,11 +424,18 @@ var es;
             configurable: true
         });
         Object.defineProperty(Core, "scene", {
+            /**
+             * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
+             */
             get: function () {
                 if (!this._instance)
                     return null;
                 return this._instance._scene;
             },
+            /**
+             * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
+             * @param value
+             */
             set: function (value) {
                 if (!value) {
                     console.error("场景不能为空");
@@ -394,6 +453,10 @@ var es;
             enumerable: true,
             configurable: true
         });
+        /**
+         * 临时运行SceneTransition，允许一个场景过渡到另一个平滑的自定义效果。
+         * @param sceneTransition
+         */
         Core.startSceneTransition = function (sceneTransition) {
             if (this._instance._sceneTransition) {
                 console.warn("在前一个场景完成之前，不能开始一个新的场景转换。");
@@ -402,14 +465,26 @@ var es;
             this._instance._sceneTransition = sceneTransition;
             return sceneTransition;
         };
+        /**
+         * 添加一个全局管理器对象，它的更新方法将调用场景前的每一帧。
+         * @param manager
+         */
         Core.registerGlobalManager = function (manager) {
             this._instance._globalManagers.push(manager);
             manager.enabled = true;
         };
+        /**
+         * 删除全局管理器对象
+         * @param manager
+         */
         Core.unregisterGlobalManager = function (manager) {
             this._instance._globalManagers.remove(manager);
             manager.enabled = false;
         };
+        /**
+         * 获取类型为T的全局管理器
+         * @param type
+         */
         Core.getGlobalManager = function (type) {
             for (var i = 0; i < this._instance._globalManagers.length; i++) {
                 if (this._instance._globalManagers[i] instanceof type)
@@ -417,6 +492,13 @@ var es;
             }
             return null;
         };
+        /**
+         * 调度一个一次性或重复的计时器，该计时器将调用已传递的动作
+         * @param timeInSeconds
+         * @param repeats
+         * @param context
+         * @param onTime
+         */
         Core.schedule = function (timeInSeconds, repeats, context, onTime) {
             if (repeats === void 0) { repeats = false; }
             if (context === void 0) { context = null; }
@@ -430,16 +512,16 @@ var es;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
-                            if (!(this._sceneTransition != null)) return [3, 5];
+                            if (!(this._sceneTransition != null)) return [3 /*break*/, 5];
                             this._sceneTransition.preRender();
-                            if (!(this._sceneTransition != null)) return [3, 4];
-                            if (!(this._scene != null && !this._sceneTransition.hasPreviousSceneRender)) return [3, 2];
+                            if (!(this._sceneTransition != null)) return [3 /*break*/, 4];
+                            if (!(this._scene != null && !this._sceneTransition.hasPreviousSceneRender)) return [3 /*break*/, 2];
                             this._scene.render();
                             this._scene.postRender();
-                            return [4, this._sceneTransition.onBeginTransition()];
+                            return [4 /*yield*/, this._sceneTransition.onBeginTransition()];
                         case 1:
                             _a.sent();
-                            return [3, 3];
+                            return [3 /*break*/, 3];
                         case 2:
                             if (this._scene != null && this._sceneTransition.isNewSceneLoaded) {
                                 this._scene.render();
@@ -449,23 +531,31 @@ var es;
                         case 3:
                             this._sceneTransition.render();
                             _a.label = 4;
-                        case 4: return [3, 6];
+                        case 4: return [3 /*break*/, 6];
                         case 5:
                             if (this._scene) {
                                 this._scene.render();
+                                // 如如果我们没有一个活动的SceneTransition，就像往常一样渲染
                                 this._scene.postRender();
                             }
                             _a.label = 6;
-                        case 6: return [2];
+                        case 6: return [2 /*return*/];
                     }
                 });
             });
         };
+        /**
+         * 在一个场景结束后，下一个场景开始之前调用
+         */
         Core.prototype.onSceneChanged = function () {
             Core.emitter.emit(es.CoreEvents.SceneChanged);
             es.Time.sceneChanged();
         };
+        /**
+         * 当屏幕大小发生改变时调用
+         */
         Core.prototype.onGraphicsDeviceReset = function () {
+            // 我们用这些来避免垃圾事件的发生
             if (this._graphicsDeviceChangeTimer != null) {
                 this._graphicsDeviceChangeTimer.reset();
             }
@@ -489,6 +579,10 @@ var es;
                                     if (this._globalManagers[i].enabled)
                                         this._globalManagers[i].update();
                                 }
+                                // 仔细阅读:
+                                // 当场景转换发生时，我们不更新场景
+                                // - 除非是不改变场景的SceneTransition(没有理由不更新)
+                                // - 或者是一个已经切换到新场景的SceneTransition（新场景需要做它的事情）
                                 if (!this._sceneTransition ||
                                     (this._sceneTransition &&
                                         (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
@@ -502,15 +596,21 @@ var es;
                                     this._scene.begin();
                                 }
                             }
-                            return [4, this.draw()];
+                            return [4 /*yield*/, this.draw()];
                         case 1:
                             _a.sent();
-                            return [2];
+                            return [2 /*return*/];
                     }
                 });
             });
         };
+        /**
+         * 启用/禁用焦点丢失时的暂停。如果为真，则不调用更新或渲染方法
+         */
         Core.pauseOnFocusLost = true;
+        /**
+         * 是否启用调试渲染
+         */
         Core.debugRenderEndabled = false;
         return Core;
     }());
@@ -520,16 +620,31 @@ var es;
 (function (es) {
     var CoreEvents;
     (function (CoreEvents) {
+        /**
+         * 在图形设备重置时触发。当这种情况发生时，任何渲染目标或其他内容的VRAM将被擦除，需要重新生成
+         */
         CoreEvents[CoreEvents["GraphicsDeviceReset"] = 0] = "GraphicsDeviceReset";
+        /**
+         * 当场景发生变化时触发
+         */
         CoreEvents[CoreEvents["SceneChanged"] = 1] = "SceneChanged";
+        /**
+         * 当设备方向改变时触发
+         */
         CoreEvents[CoreEvents["OrientationChanged"] = 2] = "OrientationChanged";
+        /**
+         * 当每帧事件触发时
+         */
         CoreEvents[CoreEvents["FrameUpdated"] = 3] = "FrameUpdated";
     })(CoreEvents = es.CoreEvents || (es.CoreEvents = {}));
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Entity = (function () {
+    var Entity = /** @class */ (function () {
         function Entity(name) {
+            /**
+             * 指定应该调用这个entity update方法的频率。1表示每一帧，2表示每一帧，以此类推
+             */
             this.updateInterval = 1;
             this._tag = 0;
             this._enabled = true;
@@ -542,6 +657,9 @@ var es;
                 this.componentBits = new es.BitSet();
         }
         Object.defineProperty(Entity.prototype, "isDestroyed", {
+            /**
+             * 如果调用了destroy，那么在下一次处理实体之前这将一直为true
+             */
             get: function () {
                 return this._isDestroyed;
             },
@@ -549,9 +667,16 @@ var es;
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "tag", {
+            /**
+             * 你可以随意使用。稍后可以使用它来查询场景中具有特定标记的所有实体
+             */
             get: function () {
                 return this._tag;
             },
+            /**
+             * 你可以随意使用。稍后可以使用它来查询场景中具有特定标记的所有实体
+             * @param value
+             */
             set: function (value) {
                 this.setTag(value);
             },
@@ -559,9 +684,16 @@ var es;
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "enabled", {
+            /**
+             * 启用/禁用实体。当禁用碰撞器从物理系统和组件中移除时，方法将不会被调用
+             */
             get: function () {
                 return this._enabled;
             },
+            /**
+             * 启用/禁用实体。当禁用碰撞器从物理系统和组件中移除时，方法将不会被调用
+             * @param value
+             */
             set: function (value) {
                 this.setEnabled(value);
             },
@@ -569,9 +701,16 @@ var es;
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "updateOrder", {
+            /**
+             * 更新此实体的顺序。updateOrder还用于对scene.entities上的标签列表进行排序
+             */
             get: function () {
                 return this._updateOrder;
             },
+            /**
+             * 更新此实体的顺序。updateOrder还用于对scene.entities上的标签列表进行排序
+             * @param value
+             */
             set: function (value) {
                 this.setUpdateOrder(value);
             },
@@ -697,10 +836,16 @@ var es;
             configurable: true
         });
         Entity.prototype.onTransformChanged = function (comp) {
+            // 通知我们的子项改变了位置
             this.components.onEntityTransformChanged(comp);
         };
+        /**
+         * 设置实体的标记
+         * @param tag
+         */
         Entity.prototype.setTag = function (tag) {
             if (this._tag != tag) {
+                // 我们只有在已经有场景的情况下才会调用entityTagList。如果我们还没有场景，我们会被添加到entityTagList
                 if (this.scene)
                     this.scene.entities.removeFromTagList(this);
                 this._tag = tag;
@@ -709,6 +854,10 @@ var es;
             }
             return this;
         };
+        /**
+         * 设置实体的启用状态。当禁用碰撞器从物理系统和组件中移除时，方法将不会被调用
+         * @param isEnabled
+         */
         Entity.prototype.setEnabled = function (isEnabled) {
             if (this._enabled != isEnabled) {
                 this._enabled = isEnabled;
@@ -719,6 +868,10 @@ var es;
             }
             return this;
         };
+        /**
+         * 设置此实体的更新顺序。updateOrder还用于对scene.entities上的标签列表进行排序
+         * @param updateOrder
+         */
         Entity.prototype.setUpdateOrder = function (updateOrder) {
             if (this._updateOrder != updateOrder) {
                 this._updateOrder = updateOrder;
@@ -729,21 +882,32 @@ var es;
                 return this;
             }
         };
+        /**
+         * 从场景中删除实体并销毁所有子元素
+         */
         Entity.prototype.destroy = function () {
             this._isDestroyed = true;
             this.scene.entities.remove(this);
             this.transform.parent = null;
+            // 销毁所有子项
             for (var i = this.transform.childCount - 1; i >= 0; i--) {
                 var child = this.transform.getChild(i);
                 child.entity.destroy();
             }
         };
+        /**
+         * 将实体从场景中分离。下面的生命周期方法将被调用在组件上:OnRemovedFromEntity
+         */
         Entity.prototype.detachFromScene = function () {
             this.scene.entities.remove(this);
             this.components.deregisterAllComponents();
             for (var i = 0; i < this.transform.childCount; i++)
                 this.transform.getChild(i).entity.detachFromScene();
         };
+        /**
+         * 将一个先前分离的实体附加到一个新的场景
+         * @param newScene
+         */
         Entity.prototype.attachToScene = function (newScene) {
             this.scene = newScene;
             newScene.entities.add(this);
@@ -752,27 +916,53 @@ var es;
                 this.transform.getChild(i).entity.attachToScene(newScene);
             }
         };
+        /**
+         * 在提交了所有挂起的实体更改后，将此实体添加到场景时调用
+         */
         Entity.prototype.onAddedToScene = function () {
         };
+        /**
+         * 当此实体从场景中删除时调用
+         */
         Entity.prototype.onRemovedFromScene = function () {
+            // 如果已经被销毁了，移走我们的组件。如果我们只是分离，我们需要保持我们的组件在实体上。
             if (this._isDestroyed)
                 this.components.removeAllComponents();
         };
+        /**
+         * 每帧进行调用进行更新组件
+         */
         Entity.prototype.update = function () {
             this.components.update();
         };
+        /**
+         * 将组件添加到组件列表中。返回组件。
+         * @param component
+         */
         Entity.prototype.addComponent = function (component) {
             component.entity = this;
             this.components.add(component);
             component.initialize();
             return component;
         };
+        /**
+         * 获取类型T的第一个组件并返回它。如果没有找到组件，则返回null。
+         * @param type
+         */
         Entity.prototype.getComponent = function (type) {
             return this.components.getComponent(type, false);
         };
+        /**
+         * 检查实体是否具有该组件
+         * @param type
+         */
         Entity.prototype.hasComponent = function (type) {
             return this.components.getComponent(type, false) != null;
         };
+        /**
+         * 获取类型T的第一个组件并返回它。如果没有找到组件，将创建组件。
+         * @param type
+         */
         Entity.prototype.getOrCreateComponent = function (type) {
             var comp = this.components.getComponent(type, true);
             if (!comp) {
@@ -780,12 +970,25 @@ var es;
             }
             return comp;
         };
+        /**
+         * 获取typeName类型的所有组件，但不使用列表分配
+         * @param typeName
+         * @param componentList
+         */
         Entity.prototype.getComponents = function (typeName, componentList) {
             return this.components.getComponents(typeName, componentList);
         };
+        /**
+         * 从组件列表中删除组件
+         * @param component
+         */
         Entity.prototype.removeComponent = function (component) {
             this.components.remove(component);
         };
+        /**
+         * 从组件列表中删除类型为T的第一个组件
+         * @param type
+         */
         Entity.prototype.removeComponentForType = function (type) {
             var comp = this.getComponent(type);
             if (comp) {
@@ -794,6 +997,9 @@ var es;
             }
             return false;
         };
+        /**
+         * 从实体中删除所有组件
+         */
         Entity.prototype.removeAllComponents = function () {
             for (var i = 0; i < this.components.count; i++) {
                 this.removeComponent(this.components.buffer[i]);
@@ -815,7 +1021,8 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Scene = (function () {
+    /** 场景 */
+    var Scene = /** @class */ (function () {
         function Scene() {
             this._sceneComponents = [];
             this._renderers = [];
@@ -825,20 +1032,27 @@ var es;
                 this.entityProcessors = new es.EntityProcessorList();
             this.initialize();
         }
+        /**
+         * 在场景子类中重写这个，然后在这里进行加载。
+         * 在场景设置好之后，但在调用begin之前，从contructor中调用这个函数
+         */
         Scene.prototype.initialize = function () {
         };
+        /**
+         * 当Core将这个场景设置为活动场景时，这个将被调用
+         */
         Scene.prototype.onStart = function () {
             return __awaiter(this, void 0, void 0, function () {
                 return __generator(this, function (_a) {
-                    return [2];
+                    return [2 /*return*/];
                 });
             });
         };
+        /**
+         * 在场景子类中重写这个，并在这里做任何必要的卸载。
+         * 当Core把这个场景从活动槽中移除时，这个被调用。
+         */
         Scene.prototype.unload = function () {
-        };
-        Scene.prototype.onActive = function () {
-        };
-        Scene.prototype.onDeactive = function () {
         };
         Scene.prototype.begin = function () {
             es.Physics.reset();
@@ -870,16 +1084,20 @@ var es;
         Scene.prototype.updateResolutionScaler = function () {
         };
         Scene.prototype.update = function () {
+            // 更新我们的列表，以防它们有任何变化
             this.entities.updateLists();
             for (var i = this._sceneComponents.length - 1; i >= 0; i--) {
                 if (this._sceneComponents[i].enabled)
                     this._sceneComponents[i].update();
             }
+            // 更新我们的实体解析器
             if (this.entityProcessors != null)
                 this.entityProcessors.update();
+            // 更新我们的实体组
             this.entities.update();
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
+            // 我们在entity.update之后更新我们的renderables，以防止任何新的Renderables被添加
             this.renderableComponents.updateList();
         };
         Scene.prototype.render = function () {
@@ -887,8 +1105,16 @@ var es;
                 this._renderers[i].render(this);
             }
         };
+        /**
+         * 现在的任何后处理器都要完成它的处理
+         * 只有在SceneTransition请求渲染时，它才会有一个值。
+         */
         Scene.prototype.postRender = function () {
         };
+        /**
+         * 向组件列表添加并返回SceneComponent
+         * @param component
+         */
         Scene.prototype.addSceneComponent = function (component) {
             component.scene = this;
             component.onEnabled();
@@ -896,6 +1122,10 @@ var es;
             this._sceneComponents.sort(component.compareTo);
             return component;
         };
+        /**
+         * 获取类型为T的第一个SceneComponent并返回它。如果没有找到组件，则返回null。
+         * @param type
+         */
         Scene.prototype.getSceneComponent = function (type) {
             for (var i = 0; i < this._sceneComponents.length; i++) {
                 var component = this._sceneComponents[i];
@@ -904,12 +1134,20 @@ var es;
             }
             return null;
         };
+        /**
+         * 获取类型为T的第一个SceneComponent并返回它。如果没有找到SceneComponent，则将创建SceneComponent。
+         * @param type
+         */
         Scene.prototype.getOrCreateSceneComponent = function (type) {
             var comp = this.getSceneComponent(type);
             if (comp == null)
                 comp = this.addSceneComponent(new type());
             return comp;
         };
+        /**
+         * 从SceneComponents列表中删除一个SceneComponent
+         * @param component
+         */
         Scene.prototype.removeSceneComponent = function (component) {
             if (!this._sceneComponents.contains(component)) {
                 console.warn("SceneComponent" + component + "\u4E0D\u5728SceneComponents\u5217\u8868\u4E2D!");
@@ -918,12 +1156,20 @@ var es;
             this._sceneComponents.remove(component);
             component.onRemovedFromScene();
         };
+        /**
+         * 为场景添加一个渲染器
+         * @param renderer
+         */
         Scene.prototype.addRenderer = function (renderer) {
             this._renderers.push(renderer);
             this._renderers.sort();
             renderer.onAddedToScene(this);
             return renderer;
         };
+        /**
+         * 获取类型为T的第一个渲染器
+         * @param type
+         */
         Scene.prototype.getRenderer = function (type) {
             for (var i = 0; i < this._renderers.length; i++) {
                 if (this._renderers[i] instanceof type)
@@ -931,16 +1177,28 @@ var es;
             }
             return null;
         };
+        /**
+         * 从场景中移除渲染器
+         * @param renderer
+         */
         Scene.prototype.removeRenderer = function (renderer) {
             if (!this._renderers.contains(renderer))
                 return;
             this._renderers.remove(renderer);
             renderer.unload();
         };
+        /**
+         * 将实体添加到此场景，并返回它
+         * @param name
+         */
         Scene.prototype.createEntity = function (name) {
             var entity = new es.Entity(name);
             return this.addEntity(entity);
         };
+        /**
+         * 在场景的实体列表中添加一个实体
+         * @param entity
+         */
         Scene.prototype.addEntity = function (entity) {
             if (this.entities.buffer.contains(entity))
                 console.warn("\u60A8\u8BD5\u56FE\u5C06\u540C\u4E00\u5B9E\u4F53\u6DFB\u52A0\u5230\u573A\u666F\u4E24\u6B21: " + entity);
@@ -950,34 +1208,68 @@ var es;
                 this.addEntity(entity.transform.getChild(i).entity);
             return entity;
         };
+        /**
+         * 从场景中删除所有实体
+         */
         Scene.prototype.destroyAllEntities = function () {
             for (var i = 0; i < this.entities.count; i++) {
                 this.entities.buffer[i].destroy();
             }
         };
+        /**
+         * 搜索并返回第一个具有名称的实体
+         * @param name
+         */
         Scene.prototype.findEntity = function (name) {
             return this.entities.findEntity(name);
         };
+        /**
+         * 返回具有给定标记的所有实体
+         * @param tag
+         */
         Scene.prototype.findEntitiesWithTag = function (tag) {
             return this.entities.entitiesWithTag(tag);
         };
+        /**
+         * 返回类型为T的所有实体
+         * @param type
+         */
         Scene.prototype.entitiesOfType = function (type) {
             return this.entities.entitiesOfType(type);
         };
+        /**
+         * 返回第一个启用加载的类型为T的组件
+         * @param type
+         */
         Scene.prototype.findComponentOfType = function (type) {
             return this.entities.findComponentOfType(type);
         };
+        /**
+         * 返回类型为T的所有已启用已加载组件的列表
+         * @param type
+         */
         Scene.prototype.findComponentsOfType = function (type) {
             return this.entities.findComponentsOfType(type);
         };
+        /**
+         * 在场景中添加一个EntitySystem处理器
+         * @param processor 处理器
+         */
         Scene.prototype.addEntityProcessor = function (processor) {
             processor.scene = this;
             this.entityProcessors.add(processor);
             return processor;
         };
+        /**
+         * 从场景中删除EntitySystem处理器
+         * @param processor
+         */
         Scene.prototype.removeEntityProcessor = function (processor) {
             this.entityProcessors.remove(processor);
         };
+        /**
+         * 获取EntitySystem处理器
+         */
         Scene.prototype.getEntityProcessor = function () {
             return this.entityProcessors.getProcessor();
         };
@@ -1003,9 +1295,15 @@ var es;
         DirtyType[DirtyType["scaleDirty"] = 2] = "scaleDirty";
         DirtyType[DirtyType["rotationDirty"] = 3] = "rotationDirty";
     })(DirtyType = es.DirtyType || (es.DirtyType = {}));
-    var Transform = (function () {
+    var Transform = /** @class */ (function () {
         function Transform(entity) {
+            /**
+             * 值会根据位置、旋转和比例自动重新计算
+             */
             this._localTransform = es.Matrix2D.identity;
+            /**
+             * 值将自动从本地和父矩阵重新计算。
+             */
             this._worldTransform = es.Matrix2D.identity;
             this._rotationMatrix = es.Matrix2D.identity;
             this._translationMatrix = es.Matrix2D.identity;
@@ -1023,6 +1321,9 @@ var es;
             this._children = [];
         }
         Object.defineProperty(Transform.prototype, "childCount", {
+            /**
+             * 这个转换的所有子元素
+             */
             get: function () {
                 return this._children.length;
             },
@@ -1030,9 +1331,16 @@ var es;
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "rotationDegrees", {
+            /**
+             * 变换在世界空间的旋转度
+             */
             get: function () {
                 return es.MathHelper.toDegrees(this._rotation);
             },
+            /**
+             * 变换在世界空间的旋转度
+             * @param value
+             */
             set: function (value) {
                 this.setRotation(es.MathHelper.toRadians(value));
             },
@@ -1040,9 +1348,16 @@ var es;
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "localRotationDegrees", {
+            /**
+             * 旋转相对于父变换旋转的角度
+             */
             get: function () {
                 return es.MathHelper.toDegrees(this._localRotation);
             },
+            /**
+             * 旋转相对于父变换旋转的角度
+             * @param value
+             */
             set: function (value) {
                 this.localRotation = es.MathHelper.toRadians(value);
             },
@@ -1058,9 +1373,16 @@ var es;
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "parent", {
+            /**
+             * 获取此转换的父转换
+             */
             get: function () {
                 return this._parent;
             },
+            /**
+             * 设置此转换的父转换
+             * @param value
+             */
             set: function (value) {
                 this.setParent(value);
             },
@@ -1097,6 +1419,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "position", {
+            /**
+             * 变换在世界空间中的位置
+             */
             get: function () {
                 this.updateTransform();
                 if (this._positionDirty) {
@@ -1111,6 +1436,10 @@ var es;
                 }
                 return this._position;
             },
+            /**
+             * 变换在世界空间中的位置
+             * @param value
+             */
             set: function (value) {
                 this.setPosition(value.x, value.y);
             },
@@ -1118,10 +1447,17 @@ var es;
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "scale", {
+            /**
+             * 变换在世界空间的缩放
+             */
             get: function () {
                 this.updateTransform();
                 return this._scale;
             },
+            /**
+             * 变换在世界空间的缩放
+             * @param value
+             */
             set: function (value) {
                 this.setScale(value);
             },
@@ -1129,10 +1465,17 @@ var es;
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "rotation", {
+            /**
+             * 在世界空间中以弧度旋转的变换
+             */
             get: function () {
                 this.updateTransform();
                 return this._rotation;
             },
+            /**
+             * 变换在世界空间的旋转度
+             * @param value
+             */
             set: function (value) {
                 this.setRotation(value);
             },
@@ -1140,10 +1483,17 @@ var es;
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "localPosition", {
+            /**
+             * 转换相对于父转换的位置。如果转换没有父元素，则与transform.position相同
+             */
             get: function () {
                 this.updateTransform();
                 return this._localPosition;
             },
+            /**
+             * 转换相对于父转换的位置。如果转换没有父元素，则与transform.position相同
+             * @param value
+             */
             set: function (value) {
                 this.setLocalPosition(value);
             },
@@ -1151,10 +1501,17 @@ var es;
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "localScale", {
+            /**
+             * 转换相对于父元素的比例。如果转换没有父元素，则与transform.scale相同
+             */
             get: function () {
                 this.updateTransform();
                 return this._localScale;
             },
+            /**
+             * 转换相对于父元素的比例。如果转换没有父元素，则与transform.scale相同
+             * @param value
+             */
             set: function (value) {
                 this.setLocalScale(value);
             },
@@ -1162,19 +1519,34 @@ var es;
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "localRotation", {
+            /**
+             * 相对于父变换的旋转，变换的旋转。如果转换没有父元素，则与transform.rotation相同
+             */
             get: function () {
                 this.updateTransform();
                 return this._localRotation;
             },
+            /**
+             * 相对于父变换的旋转，变换的旋转。如果转换没有父元素，则与transform.rotation相同
+             * @param value
+             */
             set: function (value) {
                 this.setLocalRotation(value);
             },
             enumerable: true,
             configurable: true
         });
+        /**
+         * 返回在索引处的转换子元素
+         * @param index
+         */
         Transform.prototype.getChild = function (index) {
             return this._children[index];
         };
+        /**
+         * 设置此转换的父转换
+         * @param parent
+         */
         Transform.prototype.setParent = function (parent) {
             if (this._parent == parent)
                 return this;
@@ -1186,6 +1558,11 @@ var es;
             this.setDirty(DirtyType.positionDirty);
             return this;
         };
+        /**
+         * 设置转换在世界空间中的位置
+         * @param x
+         * @param y
+         */
         Transform.prototype.setPosition = function (x, y) {
             var position = new es.Vector2(x, y);
             if (position.equals(this._position))
@@ -1200,6 +1577,10 @@ var es;
             this._positionDirty = false;
             return this;
         };
+        /**
+         * 设置转换相对于父转换的位置。如果转换没有父元素，则与transform.position相同
+         * @param localPosition
+         */
         Transform.prototype.setLocalPosition = function (localPosition) {
             if (localPosition.equals(this._localPosition))
                 return this;
@@ -1208,6 +1589,10 @@ var es;
             this.setDirty(DirtyType.positionDirty);
             return this;
         };
+        /**
+         * 设置变换在世界空间的旋转度
+         * @param radians
+         */
         Transform.prototype.setRotation = function (radians) {
             this._rotation = radians;
             if (this.parent) {
@@ -1218,23 +1603,43 @@ var es;
             }
             return this;
         };
+        /**
+         * 设置变换在世界空间的旋转度
+         * @param degrees
+         */
         Transform.prototype.setRotationDegrees = function (degrees) {
             return this.setRotation(es.MathHelper.toRadians(degrees));
         };
+        /**
+         * 旋转精灵的顶部，使其朝向位置
+         * @param pos
+         */
         Transform.prototype.lookAt = function (pos) {
             var sign = this.position.x > pos.x ? -1 : 1;
             var vectorToAlignTo = es.Vector2.normalize(es.Vector2.subtract(this.position, pos));
             this.rotation = sign * Math.acos(es.Vector2.dot(vectorToAlignTo, es.Vector2.unitY));
         };
+        /**
+         * 相对于父变换的旋转设置变换的旋转。如果转换没有父元素，则与transform.rotation相同
+         * @param radians
+         */
         Transform.prototype.setLocalRotation = function (radians) {
             this._localRotation = radians;
             this._localDirty = this._positionDirty = this._localPositionDirty = this._localRotationDirty = this._localScaleDirty = true;
             this.setDirty(DirtyType.rotationDirty);
             return this;
         };
+        /**
+         * 相对于父变换的旋转设置变换的旋转。如果转换没有父元素，则与transform.rotation相同
+         * @param degrees
+         */
         Transform.prototype.setLocalRotationDegrees = function (degrees) {
             return this.setLocalRotation(es.MathHelper.toRadians(degrees));
         };
+        /**
+         * 设置变换在世界空间中的缩放
+         * @param scale
+         */
         Transform.prototype.setScale = function (scale) {
             this._scale = scale;
             if (this.parent) {
@@ -1245,12 +1650,19 @@ var es;
             }
             return this;
         };
+        /**
+         * 设置转换相对于父对象的比例。如果转换没有父元素，则与transform.scale相同
+         * @param scale
+         */
         Transform.prototype.setLocalScale = function (scale) {
             this._localScale = scale;
             this._localDirty = this._positionDirty = this._localScaleDirty = true;
             this.setDirty(DirtyType.scaleDirty);
             return this;
         };
+        /**
+         * 对精灵坐标进行四舍五入
+         */
         Transform.prototype.roundPosition = function () {
             this.position = this._position.round();
         };
@@ -1308,10 +1720,15 @@ var es;
                 }
                 if (!this._children)
                     this._children = [];
+                // 告诉子项发生了变换
                 for (var i = 0; i < this._children.length; i++)
                     this._children[i].setDirty(dirtyFlagType);
             }
         };
+        /**
+         * 从另一个transform属性进行拷贝
+         * @param transform
+         */
         Transform.prototype.copyFrom = function (transform) {
             this._position = transform.position;
             this._localPosition = transform._localPosition;
@@ -1332,7 +1749,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var ComponentPool = (function () {
+    var ComponentPool = /** @class */ (function () {
         function ComponentPool(typeClass) {
             this._type = typeClass;
             this._cache = [];
@@ -1355,7 +1772,10 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var IUpdatableComparer = (function () {
+    /**
+     * 用于比较组件更新排序
+     */
+    var IUpdatableComparer = /** @class */ (function () {
         function IUpdatableComparer() {
         }
         IUpdatableComparer.prototype.compare = function (a, b) {
@@ -1368,7 +1788,8 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var PooledComponent = (function (_super) {
+    /** 回收实例的组件类型。 */
+    var PooledComponent = /** @class */ (function (_super) {
         __extends(PooledComponent, _super);
         function PooledComponent() {
             return _super !== null && _super.apply(this, arguments) || this;
@@ -1379,29 +1800,55 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var SceneComponent = (function () {
+    var SceneComponent = /** @class */ (function () {
         function SceneComponent() {
+            /**
+             * 更新此场景中SceneComponents的顺序
+             */
             this.updateOrder = 0;
             this._enabled = true;
         }
         Object.defineProperty(SceneComponent.prototype, "enabled", {
+            /**
+             * 如果启用了SceneComponent，则为true。状态的改变会导致调用onEnabled/onDisable。
+             */
             get: function () {
                 return this._enabled;
             },
+            /**
+             * 如果启用了SceneComponent，则为true。状态的改变会导致调用onEnabled/onDisable。
+             * @param value
+             */
             set: function (value) {
                 this.setEnabled(value);
             },
             enumerable: true,
             configurable: true
         });
+        /**
+         * 在启用此SceneComponent时调用
+         */
         SceneComponent.prototype.onEnabled = function () {
         };
+        /**
+         * 当禁用此SceneComponent时调用
+         */
         SceneComponent.prototype.onDisabled = function () {
         };
+        /**
+         * 当该SceneComponent从场景中移除时调用
+         */
         SceneComponent.prototype.onRemovedFromScene = function () {
         };
+        /**
+         * 在实体更新之前每一帧调用
+         */
         SceneComponent.prototype.update = function () {
         };
+        /**
+         * 启用/禁用这个SceneComponent
+         * @param isEnabled
+         */
         SceneComponent.prototype.setEnabled = function (isEnabled) {
             if (this._enabled != isEnabled) {
                 this._enabled = isEnabled;
@@ -1412,6 +1859,10 @@ var es;
             }
             return this;
         };
+        /**
+         * 设置SceneComponent的updateOrder并触发某种SceneComponent
+         * @param updateOrder
+         */
         SceneComponent.prototype.setUpdateOrder = function (updateOrder) {
             if (this.updateOrder != updateOrder) {
                 this.updateOrder = updateOrder;
@@ -1428,7 +1879,14 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Mover = (function (_super) {
+    /**
+     * 辅助类说明了一种处理移动的方法，它考虑了包括触发器在内的所有冲突。
+     * ITriggerListener接口用于管理对移动过程中违反的任何触发器的回调。
+     * 一个物体只能通过移动器移动。要正确报告触发器的move方法。
+     *
+     * 请注意，多个移动者相互交互将多次调用ITriggerListener。
+     */
+    var Mover = /** @class */ (function (_super) {
         __extends(Mover, _super);
         function Mover() {
             return _super !== null && _super.apply(this, arguments) || this;
@@ -1436,26 +1894,37 @@ var es;
         Mover.prototype.onAddedToEntity = function () {
             this._triggerHelper = new es.ColliderTriggerHelper(this.entity);
         };
+        /**
+         * 计算修改运动矢量的运动，以考虑移动时可能发生的碰撞
+         * @param motion
+         * @param collisionResult
+         */
         Mover.prototype.calculateMovement = function (motion, collisionResult) {
             if (!this.entity.getComponent(es.Collider) || !this._triggerHelper) {
                 return false;
             }
+            // 移动所有的非触发碰撞器并获得最近的碰撞
             var colliders = this.entity.getComponents(es.Collider);
             for (var i = 0; i < colliders.length; i++) {
                 var collider = colliders[i];
+                // 不检测触发器 在我们移动后会重新访问它
                 if (collider.isTrigger)
                     continue;
+                // 获取我们在新位置可能发生碰撞的任何东西
                 var bounds = collider.bounds;
                 bounds.x += motion.x;
                 bounds.y += motion.y;
                 var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
                 for (var j = 0; j < neighbors.length; j++) {
                     var neighbor = neighbors[j];
+                    // 不检测触发器
                     if (neighbor.isTrigger)
                         continue;
                     var _internalcollisionResult = new es.CollisionResult();
                     if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
+                        // 如果碰撞 则退回之前的移动量
                         motion = motion.subtract(_internalcollisionResult.minimumTranslationVector);
+                        // 如果我们碰到多个对象，为了简单起见，只取第一个。
                         if (_internalcollisionResult.collider != null) {
                             collisionResult = _internalcollisionResult;
                         }
@@ -1465,11 +1934,22 @@ var es;
             es.ListPool.free(colliders);
             return collisionResult.collider != null;
         };
+        /**
+         *  将calculatemomovement应用到实体并更新triggerHelper
+         * @param motion
+         */
         Mover.prototype.applyMovement = function (motion) {
+            // 移动实体到它的新位置，如果我们有一个碰撞，否则移动全部数量。当碰撞发生时，运动被更新
             this.entity.position = es.Vector2.add(this.entity.position, motion);
+            // 对所有是触发器的碰撞器与所有宽相位碰撞器进行重叠检查。任何重叠都会导致触发事件。
             if (this._triggerHelper)
                 this._triggerHelper.update();
         };
+        /**
+         * 通过调用calculateMovement和applyMovement来移动考虑碰撞的实体;
+         * @param motion
+         * @param collisionResult
+         */
         Mover.prototype.move = function (motion, collisionResult) {
             this.calculateMovement(motion, collisionResult);
             this.applyMovement(motion);
@@ -1481,7 +1961,11 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var ProjectileMover = (function (_super) {
+    /**
+     * 只向itriggerlistener报告冲突的移动器
+     * 该对象将始终移动完整的距离
+     */
+    var ProjectileMover = /** @class */ (function (_super) {
         __extends(ProjectileMover, _super);
         function ProjectileMover() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
@@ -1493,11 +1977,17 @@ var es;
             if (!this._collider)
                 console.warn("ProjectileMover has no Collider. ProjectilMover requires a Collider!");
         };
+        /**
+         * 移动考虑碰撞的实体
+         * @param motion
+         */
         ProjectileMover.prototype.move = function (motion) {
             if (!this._collider)
                 return false;
             var didCollide = false;
+            // 获取我们在新位置可能发生碰撞的任何东西
             this.entity.position.add(motion);
+            // 获取任何可能在新位置发生碰撞的东西
             var neighbors = es.Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers.value);
             for (var _i = 0, neighbors_1 = neighbors; _i < neighbors_1.length; _i++) {
                 var neighbor = neighbors_1[_i];
@@ -1509,11 +1999,13 @@ var es;
             return didCollide;
         };
         ProjectileMover.prototype.notifyTriggerListeners = function (self, other) {
+            // 通知我们重叠的碰撞器实体上的任何侦听器
             other.entity.getComponents("ITriggerListener", this._tempTriggerList);
             for (var i = 0; i < this._tempTriggerList.length; i++) {
                 this._tempTriggerList[i].onTriggerEnter(self, other);
             }
             this._tempTriggerList.length = 0;
+            // 通知此实体上的任何侦听器
             this.entity.getComponents("ITriggerListener", this._tempTriggerList);
             for (var i = 0; i < this._tempTriggerList.length; i++) {
                 this._tempTriggerList[i].onTriggerEnter(other, self);
@@ -1526,13 +2018,27 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Collider = (function (_super) {
+    var Collider = /** @class */ (function (_super) {
         __extends(Collider, _super);
         function Collider() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
+            /**
+             * 在处理冲突时，physicsLayer可以用作过滤器。Flags类有帮助位掩码的方法
+             */
             _this.physicsLayer = new es.Ref(1 << 0);
+            /**
+             * 碰撞器在使用移动器移动时应该碰撞的层
+             * 默认为所有层
+             */
             _this.collidesWithLayers = new es.Ref(es.Physics.allLayers);
+            /**
+             * 如果为true，碰撞器将根据附加的变换缩放和旋转
+             */
             _this.shouldColliderScaleAndRotateWithTransform = true;
+            /**
+             * 这个对撞机在物理系统注册时的边界。
+             * 存储这个允许我们始终能够安全地从物理系统中移除对撞机，即使它在试图移除它之前已经被移动了。
+             */
             _this.registeredPhysicsBounds = new es.Rectangle();
             _this._isPositionDirty = true;
             _this._isRotationDirty = true;
@@ -1540,6 +2046,9 @@ var es;
             return _this;
         }
         Object.defineProperty(Collider.prototype, "absolutePosition", {
+            /**
+             * 镖师碰撞器的绝对位置
+             */
             get: function () {
                 return es.Vector2.add(this.entity.transform.position, this._localOffset);
             },
@@ -1547,6 +2056,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Collider.prototype, "rotation", {
+            /**
+             * 封装变换。如果碰撞器没和实体一起旋转 则返回transform.rotation
+             */
             get: function () {
                 if (this.shouldColliderScaleAndRotateWithTransform && this.entity)
                     return this.entity.transform.rotation;
@@ -1567,15 +2079,29 @@ var es;
             configurable: true
         });
         Object.defineProperty(Collider.prototype, "localOffset", {
+            /**
+             * 将localOffset添加到实体。获取碰撞器几何图形的最终位置。
+             * 允许向一个实体添加多个碰撞器并分别定位，还允许你设置缩放/旋转
+             */
             get: function () {
                 return this._localOffset;
             },
+            /**
+             * 将localOffset添加到实体。获取碰撞器几何图形的最终位置。
+             * 允许向一个实体添加多个碰撞器并分别定位，还允许你设置缩放/旋转
+             * @param value
+             */
             set: function (value) {
                 this.setLocalOffset(value);
             },
             enumerable: true,
             configurable: true
         });
+        /**
+         * 将localOffset添加到实体。获取碰撞器的最终位置。
+         * 这允许您向一个实体添加多个碰撞器并分别定位它们。
+         * @param offset
+         */
         Collider.prototype.setLocalOffset = function (offset) {
             if (this._localOffset != offset) {
                 this.unregisterColliderWithPhysicsSystem();
@@ -1586,6 +2112,10 @@ var es;
             }
             return this;
         };
+        /**
+         * 如果为true，碰撞器将根据附加的变换缩放和旋转
+         * @param shouldColliderScaleAndRotationWithTransform
+         */
         Collider.prototype.setShouldColliderScaleAndRotateWithTransform = function (shouldColliderScaleAndRotationWithTransform) {
             this.shouldColliderScaleAndRotateWithTransform = shouldColliderScaleAndRotationWithTransform;
             this._isPositionDirty = this._isRotationDirty = true;
@@ -1621,27 +2151,46 @@ var es;
         Collider.prototype.onDisabled = function () {
             this.unregisterColliderWithPhysicsSystem();
         };
+        /**
+         * 父实体会在不同的时间调用它(当添加到场景，启用，等等)
+         */
         Collider.prototype.registerColliderWithPhysicsSystem = function () {
+            // 如果在将我们添加到实体之前更改了origin等属性，则实体可以为null
             if (this._isParentEntityAddedToScene && !this._isColliderRegistered) {
                 es.Physics.addCollider(this);
                 this._isColliderRegistered = true;
             }
         };
+        /**
+         * 父实体会在不同的时候调用它(从场景中移除，禁用，等等)
+         */
         Collider.prototype.unregisterColliderWithPhysicsSystem = function () {
             if (this._isParentEntityAddedToScene && this._isColliderRegistered) {
                 es.Physics.removeCollider(this);
             }
             this._isColliderRegistered = false;
         };
+        /**
+         * 检查这个形状是否与物理系统中的其他对撞机重叠
+         * @param other
+         */
         Collider.prototype.overlaps = function (other) {
             return this.shape.overlaps(other.shape);
         };
+        /**
+         * 检查这个与运动应用的碰撞器(移动向量)是否与碰撞器碰撞。如果是这样，将返回true，并且结果将填充碰撞数据。
+         * @param collider
+         * @param motion
+         * @param result
+         */
         Collider.prototype.collidesWith = function (collider, motion, result) {
+            // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
             var oldPosition = this.entity.position;
             this.entity.position.add(motion);
             var didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)
                 result.collider = collider;
+            // 将图形位置返回到检查前的位置
             this.entity.position = oldPosition;
             return didCollide;
         };
@@ -1649,10 +2198,15 @@ var es;
     }(es.Component));
     es.Collider = Collider;
 })(es || (es = {}));
+///<reference path="./Collider.ts" />
 var es;
+///<reference path="./Collider.ts" />
 (function (es) {
-    var BoxCollider = (function (_super) {
+    var BoxCollider = /** @class */ (function (_super) {
         __extends(BoxCollider, _super);
+        /**
+         * 零参数构造函数要求RenderableComponent在实体上，这样碰撞器可以在实体被添加到场景时调整自身的大小。
+         */
         function BoxCollider(x, y, width, height) {
             var _this = _super.call(this) || this;
             _this._localOffset = new es.Vector2(x + width / 2, y + height / 2);
@@ -1679,27 +2233,43 @@ var es;
             enumerable: true,
             configurable: true
         });
+        /**
+         * 设置BoxCollider的大小
+         * @param width
+         * @param height
+         */
         BoxCollider.prototype.setSize = function (width, height) {
             var box = this.shape;
             if (width != box.width || height != box.height) {
+                // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(width, height);
                 if (this.entity && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
             return this;
         };
+        /**
+         * 设置BoxCollider的宽度
+         * @param width
+         */
         BoxCollider.prototype.setWidth = function (width) {
             var box = this.shape;
             if (width != box.width) {
+                // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(width, box.height);
                 if (this.entity && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
             return this;
         };
+        /**
+         * 设置BoxCollider的高度
+         * @param height
+         */
         BoxCollider.prototype.setHeight = function (height) {
             var box = this.shape;
             if (height != box.height) {
+                // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(box.width, height);
                 if (this.entity && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
@@ -1714,8 +2284,13 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var CircleCollider = (function (_super) {
+    var CircleCollider = /** @class */ (function (_super) {
         __extends(CircleCollider, _super);
+        /**
+         * 创建一个有半径的圆
+         *
+         * @param radius
+         */
         function CircleCollider(radius) {
             var _this = _super.call(this) || this;
             _this.shape = new es.Circle(radius);
@@ -1731,6 +2306,10 @@ var es;
             enumerable: true,
             configurable: true
         });
+        /**
+         * 设置圆的半径
+         * @param radius
+         */
         CircleCollider.prototype.setRadius = function (radius) {
             var circle = this.shape;
             if (radius != circle.radius) {
@@ -1750,11 +2329,20 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var PolygonCollider = (function (_super) {
+    /**
+     * 多边形应该以顺时针方式定义
+     */
+    var PolygonCollider = /** @class */ (function (_super) {
         __extends(PolygonCollider, _super);
+        /**
+         * 如果这些点没有居中，它们将以localOffset的差异为居中。
+         * @param points
+         */
         function PolygonCollider(points) {
             var _this = _super.call(this) || this;
+            // 第一点和最后一点决不能相同。我们想要一个开放的多边形
             var isPolygonClosed = points[0] == points[points.length - 1];
+            // 最后一个移除
             if (isPolygonClosed)
                 points.splice(points.length - 1, 1);
             var center = es.Polygon.findPolygonCenter(points);
@@ -1769,7 +2357,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var EntitySystem = (function () {
+    var EntitySystem = /** @class */ (function () {
         function EntitySystem(matcher) {
             this._entities = [];
             this._matcher = matcher ? matcher : es.Matcher.empty();
@@ -1834,15 +2422,24 @@ var es;
     }());
     es.EntitySystem = EntitySystem;
 })(es || (es = {}));
+///<reference path="./EntitySystem.ts" />
 var es;
+///<reference path="./EntitySystem.ts" />
 (function (es) {
-    var EntityProcessingSystem = (function (_super) {
+    /**
+     * 基本实体处理系统。将其用作处理具有特定组件的许多实体的基础
+     */
+    var EntityProcessingSystem = /** @class */ (function (_super) {
         __extends(EntityProcessingSystem, _super);
         function EntityProcessingSystem(matcher) {
             return _super.call(this, matcher) || this;
         }
         EntityProcessingSystem.prototype.lateProcessEntity = function (entity) {
         };
+        /**
+         * 遍历这个系统的所有实体并逐个处理它们
+         * @param entities
+         */
         EntityProcessingSystem.prototype.process = function (entities) {
             var _this = this;
             entities.forEach(function (entity) { return _this.processEntity(entity); });
@@ -1857,7 +2454,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var PassiveSystem = (function (_super) {
+    var PassiveSystem = /** @class */ (function (_super) {
         __extends(PassiveSystem, _super);
         function PassiveSystem() {
             return _super !== null && _super.apply(this, arguments) || this;
@@ -1865,6 +2462,7 @@ var es;
         PassiveSystem.prototype.onChanged = function (entity) {
         };
         PassiveSystem.prototype.process = function (entities) {
+            // 我们用我们自己的不考虑实体的基本实体系统来代替
             this.begin();
             this.end();
         };
@@ -1872,9 +2470,11 @@ var es;
     }(es.EntitySystem));
     es.PassiveSystem = PassiveSystem;
 })(es || (es = {}));
+/** 用于协调其他系统的通用系统基类 */
 var es;
+/** 用于协调其他系统的通用系统基类 */
 (function (es) {
-    var ProcessingSystem = (function (_super) {
+    var ProcessingSystem = /** @class */ (function (_super) {
         __extends(ProcessingSystem, _super);
         function ProcessingSystem() {
             return _super !== null && _super.apply(this, arguments) || this;
@@ -1892,7 +2492,12 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var BitSet = (function () {
+    /**
+     * 这个类可以从两方面来考虑。你可以把它看成一个位向量或者一组非负整数。这个名字有点误导人。
+     *
+     * 它是由一个位向量实现的，但同样可以把它看成是一个非负整数的集合;集合中的每个整数由对应索引处的集合位表示。该结构的大小由集合中的最大整数决定。
+     */
+    var BitSet = /** @class */ (function () {
         function BitSet(nbits) {
             if (nbits === void 0) { nbits = 64; }
             var length = nbits >> 6 >>> 0;
@@ -2004,13 +2609,27 @@ var es;
     }());
     es.BitSet = BitSet;
 })(es || (es = {}));
+///<reference path="../Components/IUpdatable.ts" />
 var es;
+///<reference path="../Components/IUpdatable.ts" />
 (function (es) {
-    var ComponentList = (function () {
+    var ComponentList = /** @class */ (function () {
         function ComponentList(entity) {
+            /**
+             * 添加到实体的组件列表
+             */
             this._components = new es.FastList();
+            /**
+             * 所有需要更新的组件列表
+             */
             this._updatableComponents = new es.FastList();
+            /**
+             * 添加到此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
+             */
             this._componentsToAdd = [];
+            /**
+             * 标记要删除此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
+             */
             this._componentsToRemove = [];
             this._tempBufferList = [];
             this._entity = entity;
@@ -2038,12 +2657,16 @@ var es;
         ComponentList.prototype.remove = function (component) {
             if (this._componentsToRemove.contains(component))
                 console.warn("\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u4E00\u4E2A\u60A8\u5DF2\u7ECF\u5220\u9664\u7684\u7EC4\u4EF6(" + component + ")");
+            // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
             if (this._componentsToAdd.contains(component)) {
                 this._componentsToAdd.remove(component);
                 return;
             }
             this._componentsToRemove.push(component);
         };
+        /**
+         * 立即从组件列表中删除所有组件
+         */
         ComponentList.prototype.removeAllComponents = function () {
             for (var i = 0; i < this._components.length; i++) {
                 this.handleRemove(this._components[i]);
@@ -2058,6 +2681,7 @@ var es;
                 var component = this._components.buffer[i];
                 if (!component)
                     continue;
+                // 处理IUpdatable
                 if (es.isIUpdatable(component))
                     this._updatableComponents.remove(component);
                 if (es.Core.entitySystemsEnabled) {
@@ -2077,6 +2701,9 @@ var es;
                 }
             }
         };
+        /**
+         * 处理任何需要删除或添加的组件
+         */
         ComponentList.prototype.updateLists = function () {
             if (this._componentsToRemove.length > 0) {
                 for (var i = 0; i < this._componentsToRemove.length; i++) {
@@ -2097,11 +2724,14 @@ var es;
                     this._components.add(component);
                     this._tempBufferList.push(component);
                 }
+                // 在调用onAddedToEntity之前清除，以防添加更多组件
                 this._componentsToAdd.length = 0;
                 this._isComponentListUnsorted = true;
+                // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
                 for (var i = 0; i < this._tempBufferList.length; i++) {
                     var component = this._tempBufferList[i];
                     component.onAddedToEntity();
+                    // enabled检查实体和组件
                     if (component.enabled) {
                         component.onEnabled();
                     }
@@ -2125,12 +2755,20 @@ var es;
             component.onRemovedFromEntity();
             component.entity = null;
         };
+        /**
+         * 获取类型T的第一个组件并返回它
+         * 可以选择跳过检查未初始化的组件(尚未调用onAddedToEntity方法的组件)
+         * 如果没有找到组件，则返回null。
+         * @param type
+         * @param onlyReturnInitializedComponents
+         */
         ComponentList.prototype.getComponent = function (type, onlyReturnInitializedComponents) {
             for (var i = 0; i < this._components.length; i++) {
                 var component = this._components.buffer[i];
                 if (component instanceof type)
                     return component;
             }
+            // 我们可以选择检查挂起的组件，以防addComponent和getComponent在同一个框架中被调用
             if (!onlyReturnInitializedComponents) {
                 for (var i = 0; i < this._componentsToAdd.length; i++) {
                     var component = this._componentsToAdd[i];
@@ -2140,6 +2778,11 @@ var es;
             }
             return null;
         };
+        /**
+         * 获取T类型的所有组件，但不使用列表分配
+         * @param typeName
+         * @param components
+         */
         ComponentList.prototype.getComponents = function (typeName, components) {
             if (!components)
                 components = [];
@@ -2149,6 +2792,7 @@ var es;
                     components.push(component);
                 }
             }
+            // 我们还检查了待处理的组件，以防在同一帧中调用addComponent和getComponent
             for (var i = 0; i < this._componentsToAdd.length; i++) {
                 var component = this._componentsToAdd[i];
                 if (component instanceof typeName) {
@@ -2182,6 +2826,9 @@ var es;
             for (var i = 0; i < this._components.length; i++)
                 this._components.buffer[i].onDisabled();
         };
+        /**
+         * 组件列表的全局updateOrder排序
+         */
         ComponentList.compareUpdatableOrder = new es.IUpdatableComparer();
         return ComponentList;
     }());
@@ -2189,7 +2836,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var ComponentTypeManager = (function () {
+    var ComponentTypeManager = /** @class */ (function () {
         function ComponentTypeManager() {
         }
         ComponentTypeManager.add = function (type) {
@@ -2214,15 +2861,29 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var EntityList = (function () {
+    var EntityList = /** @class */ (function () {
         function EntityList(scene) {
+            /**
+             * 场景中添加的实体列表
+             */
             this._entities = [];
+            /**
+             * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
+             */
             this._entitiesToAdded = [];
+            /**
+             * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
+             */
             this._entitiesToRemove = [];
+            /**
+             * 通过标签跟踪实体，便于检索
+             */
             this._entityDict = new Map();
             this._unsortedTags = new Set();
             this._addToSceneEntityList = [];
+            /** 是否使用分帧处理 */
             this.frameAllocate = false;
+            /** 每帧最大处理数量 */
             this.maxAllocate = 10;
             this.scene = scene;
         }
@@ -2246,15 +2907,24 @@ var es;
         EntityList.prototype.markTagUnsorted = function (tag) {
             this._unsortedTags.add(tag);
         };
+        /**
+         * 将一个实体添加到列表中。所有的生命周期方法将在下一帧中被调用
+         * @param entity
+         */
         EntityList.prototype.add = function (entity) {
             if (this._entitiesToAdded.indexOf(entity) == -1)
                 this._entitiesToAdded.push(entity);
         };
+        /**
+         * 从列表中删除一个实体。所有的生命周期方法将在下一帧中被调用
+         * @param entity
+         */
         EntityList.prototype.remove = function (entity) {
             if (!this._entitiesToRemove.contains(entity)) {
                 console.warn("\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u5DF2\u7ECF\u5220\u9664\u7684\u5B9E\u4F53(" + entity.name + ")");
                 return;
             }
+            // 防止在同一帧中添加或删除实体
             if (this._entitiesToAdded.contains(entity)) {
                 this._entitiesToAdded.remove(entity);
                 return;
@@ -2262,10 +2932,15 @@ var es;
             if (!this._entitiesToRemove.contains(entity))
                 this._entitiesToRemove.push(entity);
         };
+        /**
+         * 从实体列表中删除所有实体
+         */
         EntityList.prototype.removeAllEntities = function () {
             this._unsortedTags.clear();
             this._entitiesToAdded.length = 0;
             this._isEntityListUnsorted = false;
+            // 为什么我们要在这里更新列表？主要是为了处理在场景切换前被分离的实体。
+            // 它们仍然会在_entitiesToRemove列表中，这将由updateLists处理。
             this.updateLists();
             for (var i = 0; i < this._entities.length; i++) {
                 this._entities[i]._isDestroyed = true;
@@ -2275,6 +2950,10 @@ var es;
             this._entities.length = 0;
             this._entityDict.clear();
         };
+        /**
+         * 检查实体目前是否由这个EntityList管理
+         * @param entity
+         */
         EntityList.prototype.contains = function (entity) {
             return this._entities.findIndex(function (e) { return e.id == entity.id; }) != -1 ||
                 this._entitiesToAdded.findIndex(function (e) { return e.id == entity.id; }) != -1;
@@ -2312,7 +2991,9 @@ var es;
             if (this._entitiesToRemove.length > 0) {
                 for (var _i = 0, _a = this._entitiesToRemove; _i < _a.length; _i++) {
                     var entity = _a[_i];
+                    // 处理标签列表
                     this.removeFromTagList(entity);
+                    // 处理常规实体列表
                     this._entities.remove(entity);
                     entity.onRemovedFromScene();
                     entity.scene = null;
@@ -2321,12 +3002,14 @@ var es;
                 }
                 this._entitiesToRemove.length = 0;
             }
+            // 现在所有的实体都被添加到场景中，我们再次循环并调用onAddedToScene
             while (this._addToSceneEntityList.length > 0) {
                 var entity = this._addToSceneEntityList.shift();
                 entity.onAddedToScene();
             }
             if (this._entitiesToAdded.length > 0) {
                 if (this.frameAllocate && this._entitiesToAdded.length > this.maxAllocate) {
+                    // 启用分帧处理
                     for (var i = 0; i < this.maxAllocate; i++) {
                         this.perEntityAddToScene();
                     }
@@ -2346,6 +3029,7 @@ var es;
                 });
                 this._isEntityListUnsorted = false;
             }
+            // 根据需要对标签列表进行排序
             if (this._addToSceneEntityList.length == 0 && this._unsortedTags.size > 0) {
                 this._unsortedTags.forEach(function (tag) {
                     _this._entityDict.get(tag).sort(function (a, b) {
@@ -2355,6 +3039,7 @@ var es;
                 this._unsortedTags.clear();
             }
         };
+        /** 每次添加一个实体到场景 */
         EntityList.prototype.perEntityAddToScene = function () {
             var entity = this._entitiesToAdded.shift();
             this._addToSceneEntityList.push(entity);
@@ -2366,6 +3051,10 @@ var es;
                     this.scene.entityProcessors.onEntityAdded(entity);
             }
         };
+        /**
+         * 返回第一个找到的名字为name的实体。如果没有找到则返回null
+         * @param name
+         */
         EntityList.prototype.findEntity = function (name) {
             for (var i = 0; i < this._entities.length; i++) {
                 if (this._entities[i].name == name)
@@ -2373,6 +3062,11 @@ var es;
             }
             return this._entitiesToAdded.firstOrDefault(function (entity) { return entity.name == name; });
         };
+        /**
+         * 返回带有标签的所有实体的列表。如果没有实体有标签，则返回一个空列表。
+         * 返回的List可以通过ListPool.free放回池中
+         * @param tag
+         */
         EntityList.prototype.entitiesWithTag = function (tag) {
             var list = this.getTagList(tag);
             var returnList = es.ListPool.obtain();
@@ -2381,6 +3075,11 @@ var es;
                 returnList.push(list[i]);
             return returnList;
         };
+        /**
+         * 返回一个T类型的所有实体的列表。
+         * 返回的List可以通过ListPool.free放回池中。
+         * @param type
+         */
         EntityList.prototype.entitiesOfType = function (type) {
             var list = es.ListPool.obtain();
             for (var i = 0; i < this._entities.length; i++) {
@@ -2394,6 +3093,10 @@ var es;
             }
             return list;
         };
+        /**
+         * 返回在场景中找到的第一个T类型的组件。
+         * @param type
+         */
         EntityList.prototype.findComponentOfType = function (type) {
             for (var i = 0; i < this._entities.length; i++) {
                 if (this._entities[i].enabled) {
@@ -2412,6 +3115,11 @@ var es;
             }
             return null;
         };
+        /**
+         * 返回在场景中找到的所有T类型的组件。
+         * 返回的List可以通过ListPool.free放回池中。
+         * @param type
+         */
         EntityList.prototype.findComponentsOfType = function (type) {
             var comps = es.ListPool.obtain();
             for (var i = 0; i < this._entities.length; i++) {
@@ -2431,7 +3139,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var EntityProcessorList = (function () {
+    var EntityProcessorList = /** @class */ (function () {
         function EntityProcessorList() {
             this._processors = [];
         }
@@ -2491,7 +3199,14 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var FasterDictionary = (function () {
+    /**
+     * 创建这个字典的原因只有一个：
+     * 我需要一个能让我直接以数组的形式对值进行迭代的字典，而不需要生成一个数组或使用迭代器。
+     * 对于这个目标是比标准字典快N倍。
+     * Faster dictionary在大部分操作上也比标准字典快，但差别可以忽略不计。
+     * 唯一较慢的操作是在添加时调整内存大小，因为与标准数组相比，这个实现需要使用两个单独的数组。
+     */
+    var FasterDictionary = /** @class */ (function () {
         function FasterDictionary(size) {
             if (size === void 0) { size = 1; }
             this._freeValueCellIndex = 0;
@@ -2530,45 +3245,67 @@ var es;
                 this._values.length = expandPrime;
                 this._valuesInfo.length = expandPrime;
             }
+            // buckets值-1表示它是空的
             var valueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
             if (valueIndex == -1) {
+                // 在最后一个位置创建信息节点，并填入相关信息
                 this._valuesInfo[this._freeValueCellIndex] = new FastNode(key, hash);
             }
             else {
                 {
                     var currentValueIndex = valueIndex;
                     do {
+                        // 必须检查键是否已经存在于字典中
                         if (this._valuesInfo[currentValueIndex].hashcode == hash &&
                             this._valuesInfo[currentValueIndex].key == key) {
+                            // 键已经存在，只需将其值替换掉即可
                             this._values[currentValueIndex] = value;
                             indexSet.value = currentValueIndex;
                             return false;
                         }
                         currentValueIndex = this._valuesInfo[currentValueIndex].previous;
-                    } while (currentValueIndex != -1);
+                    } while (currentValueIndex != -1); // -1表示没有更多的值与相同的哈希值的键
                 }
                 this._collisions++;
+                // 创建一个新的节点，该节点之前的索引指向当前指向桶的节点
                 this._valuesInfo[this._freeValueCellIndex] = new FastNode(key, hash, valueIndex);
+                // 更新现有单元格的下一个单元格指向新的单元格，旧的单元格 -> 新的单元格 -> 旧的单元格 <- 下一个单元格
                 this._valuesInfo[valueIndex].next = this._freeValueCellIndex;
             }
+            // 重要的是：新的节点总是被桶单元格指向的那个节点，所以我可以假设被桶指向的那个节点总是最后添加的值(next = -1)
+            // item与这个bucketIndex将指向最后创建的值 
+            // TODO: 如果相反，我假设原来的那个是bucket中的那个，我就不需要在这里更新bucket了
             this._buckets[bucketIndex] = (this._freeValueCellIndex + 1);
             this._values[this._freeValueCellIndex] = value;
             indexSet.value = this._freeValueCellIndex;
             this._freeValueCellIndex++;
             if (this._collisions > this._buckets.length) {
+                // 我们需要更多的空间和更少的碰撞
                 this._buckets = new Array(es.HashHelpers.expandPrime(this._collisions));
                 this._collisions = 0;
+                // 我们需要得到目前存储的所有值的哈希码，并将它们分布在新的桶长上
                 for (var newValueIndex = 0; newValueIndex < this._freeValueCellIndex; newValueIndex++) {
+                    // 获取原始哈希码，并根据新的长度找到新的bucketIndex
                     bucketIndex = FasterDictionary.reduce(this._valuesInfo[newValueIndex].hashcode, this._buckets.length);
+                    // bucketsIndex可以是-1或下一个值。
+                    // 如果是-1意味着没有碰撞。
+                    // 如果有碰撞，我们创建一个新节点，它的上一个指向旧节点。
+                    // 旧节点指向新节点，新节点指向旧节点，旧节点指向新节点，现在bucket指向新节点，这样我们就可以重建linkedlist.
+                    // 获取当前值Index，如果没有碰撞，则为-1。
                     var existingValueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
+                    // 将bucket索引更新为共享bucketIndex的当前项目的索引（最后找到的总是bucket中的那个）
                     this._buckets[bucketIndex] = newValueIndex + 1;
                     if (existingValueIndex != -1) {
+                        // 这个单元格已经指向了新的bucket list中的一个值，这意味着有一个碰撞，出了问题
                         this._collisions++;
+                        // bucket将指向这个值，所以新的值将使用以前的索引
                         this._valuesInfo[newValueIndex].previous = existingValueIndex;
                         this._valuesInfo[newValueIndex].next = -1;
+                        // 并将之前的下一个索引更新为新的索引
                         this._valuesInfo[existingValueIndex].next = newValueIndex;
                     }
                     else {
+                        // 什么都没有被索引，桶是空的。我们需要更新之前的 next 和 previous 的值。
                         this._valuesInfo[newValueIndex].next = -1;
                         this._valuesInfo[newValueIndex].previous = -1;
                     }
@@ -2579,13 +3316,23 @@ var es;
         FasterDictionary.prototype.remove = function (key) {
             var hash = FasterDictionary.hash(key);
             var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
+            // 找桶
             var indexToValueToRemove = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
+            // 第一部分：在bucket list中寻找实际的键，如果找到了，我就更新bucket list，使它不再指向要删除的单元格。
             while (indexToValueToRemove != -1) {
                 if (this._valuesInfo[indexToValueToRemove].hashcode == hash &&
                     this._valuesInfo[indexToValueToRemove].key == key) {
+                    // 如果找到了密钥，并且桶直接指向了要删除的节点
                     if (this._buckets[bucketIndex] - 1 == indexToValueToRemove) {
                         if (this._valuesInfo[indexToValueToRemove].next != -1)
                             throw new Error("如果 bucket 指向单元格，那么 next 必须不存在。");
+                        // 如果前一个单元格存在，它的下一个指针必须被更新!
+                        //<---迭代顺序  
+                        // B(ucket总是指向最后一个)
+                        // ------- ------- -------
+                        // 1 | | | | 2 | | | 3 | //bucket不能有下一个，只能有上一个。
+                        // ------- ------- -------
+                        //--> 插入
                         var value = this._valuesInfo[indexToValueToRemove].previous;
                         this._buckets[bucketIndex] = value + 1;
                     }
@@ -2599,18 +3346,29 @@ var es;
                 indexToValueToRemove = this._valuesInfo[indexToValueToRemove].previous;
             }
             if (indexToValueToRemove == -1)
-                return false;
-            this._freeValueCellIndex--;
+                return false; // 未找到
+            this._freeValueCellIndex--; // 少了一个需要反复计算的值
+            // 第二部分
+            // 这时节点指针和水桶会被更新，但_values数组会被更新仍然有要删除的值
+            // 这个字典的目标是能够做到像数组一样对数值进行迭代，所以数值数组必须始终是最新的
+            // 如果要删除的单元格是列表中的最后一个，我们可以执行较少的操作（不需要交换），否则我们要将最后一个值的单元格移到要删除的值上。
             if (indexToValueToRemove != this._freeValueCellIndex) {
+                // 我们可以将两个数组的最后一个值移到要删除的数组中。
+                // 为了做到这一点，我们需要确保 bucket 指针已经更新了
+                // 首先我们在桶列表中找到指向要移动的单元格的指针的索引
                 var movingBucketIndex = FasterDictionary.reduce(this._valuesInfo[this._freeValueCellIndex].hashcode, this._buckets.length);
+                // 如果找到了键，并且桶直接指向要删除的节点，现在必须指向要移动的单元格。
                 if (this._buckets[movingBucketIndex] - 1 == this._freeValueCellIndex)
                     this._buckets[movingBucketIndex] = (indexToValueToRemove + 1);
+                // 否则意味着有多个键具有相同的哈希值（碰撞），所以我们需要更新链接列表和它的指针
                 var next = this._valuesInfo[this._freeValueCellIndex].next;
                 var previous = this._valuesInfo[this._freeValueCellIndex].previous;
+                // 现在它们指向最后一个值被移入的单元格
                 if (next != -1)
                     this._valuesInfo[next].previous = indexToValueToRemove;
                 if (previous != -1)
                     this._valuesInfo[previous].next = indexToValueToRemove;
+                // 最后，实际上是移动值
                 this._valuesInfo[indexToValueToRemove] = this._valuesInfo[this._freeValueCellIndex];
                 this._values[indexToValueToRemove] = this._values[this._freeValueCellIndex];
             }
@@ -2652,9 +3410,13 @@ var es;
             return null;
         };
         FasterDictionary.prototype.tryFindIndex = function (key, findIndex) {
+            // 我把所有的索引都用偏移量+1来存储，这样在bucket list中0就意味着实际上不存在
+            // 当读取时，偏移量必须再偏移-1才是真实的
+            // 这样我就避免了将数组初始化为-1
             var hash = FasterDictionary.hash(key);
             var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
             var valueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
+            // 即使我们找到了一个现有的值，我们也需要确定它是我们所要求的值
             while (valueIndex != -1) {
                 if (this._valuesInfo[valueIndex].hashcode == hash && this._valuesInfo[valueIndex].key == key) {
                     findIndex.value = valueIndex;
@@ -2693,7 +3455,7 @@ var es;
         return FasterDictionary;
     }());
     es.FasterDictionary = FasterDictionary;
-    var FastNode = (function () {
+    var FastNode = /** @class */ (function () {
         function FastNode(key, hash, previousNode) {
             if (previousNode === void 0) { previousNode = -1; }
             this.key = key;
@@ -2707,24 +3469,49 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var FastList = (function () {
+    /**
+     * 围绕一个数组的非常基本的包装，当它达到容量时自动扩展。
+     * 注意，在迭代时应该这样直接访问缓冲区，但使用FastList.length字段。
+     *
+     * @tutorial
+     * for( var i = 0; i <= list.length; i++ )
+     *      var item = list.buffer[i];
+     */
+    var FastList = /** @class */ (function () {
         function FastList(size) {
             if (size === void 0) { size = 5; }
+            /**
+             * 直接访问缓冲区内填充项的长度。不要改变。
+             */
             this.length = 0;
             this.buffer = new Array(size);
         }
+        /**
+         * 清空列表并清空缓冲区中的所有项目
+         */
         FastList.prototype.clear = function () {
             this.buffer.length = 0;
             this.length = 0;
         };
+        /**
+         *  和clear的工作原理一样，只是它不会将缓冲区中的所有项目清空。
+         */
         FastList.prototype.reset = function () {
             this.length = 0;
         };
+        /**
+         * 将该项目添加到列表中
+         * @param item
+         */
         FastList.prototype.add = function (item) {
             if (this.length == this.buffer.length)
                 this.buffer.length = Math.max(this.buffer.length << 1, 10);
             this.buffer[this.length++] = item;
         };
+        /**
+         * 从列表中删除该项目
+         * @param item
+         */
         FastList.prototype.remove = function (item) {
             var comp = es.EqualityComparer.default();
             for (var i = 0; i < this.length; ++i) {
@@ -2734,12 +3521,20 @@ var es;
                 }
             }
         };
+        /**
+         * 从列表中删除给定索引的项目。
+         * @param index
+         */
         FastList.prototype.removeAt = function (index) {
             if (index >= this.length)
                 throw new Error("index超出范围！");
             this.length--;
             this.buffer.removeAt(index);
         };
+        /**
+         * 检查项目是否在FastList中
+         * @param item
+         */
         FastList.prototype.contains = function (item) {
             var comp = es.EqualityComparer.default();
             for (var i = 0; i < this.length; ++i) {
@@ -2748,17 +3543,28 @@ var es;
             }
             return false;
         };
+        /**
+         * 如果缓冲区达到最大，将分配更多的空间来容纳额外的ItemCount。
+         * @param additionalItemCount
+         */
         FastList.prototype.ensureCapacity = function (additionalItemCount) {
             if (additionalItemCount === void 0) { additionalItemCount = 1; }
             if (this.length + additionalItemCount >= this.buffer.length)
                 this.buffer.length = Math.max(this.buffer.length << 1, this.length + additionalItemCount);
         };
+        /**
+         * 添加数组中的所有项目
+         * @param array
+         */
         FastList.prototype.addRange = function (array) {
             for (var _i = 0, array_1 = array; _i < array_1.length; _i++) {
                 var item = array_1[_i];
                 this.add(item);
             }
         };
+        /**
+         * 对缓冲区中的所有项目进行排序，长度不限。
+         */
         FastList.prototype.sort = function (comparer) {
             this.buffer.sort(comparer.compare);
         };
@@ -2768,7 +3574,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var HashHelpers = (function () {
+    var HashHelpers = /** @class */ (function () {
         function HashHelpers() {
         }
         HashHelpers.isPrime = function (candidate) {
@@ -2790,14 +3596,22 @@ var es;
                 if (prime >= min)
                     return prime;
             }
+            // 在我们预定义的表之外，计算的方式稍复杂。
             for (var i = (min | 1); i < Number.MAX_VALUE; i += 2) {
                 if (this.isPrime(i) && ((i - 1) % this.hashPrime != 0))
                     return i;
             }
             return min;
         };
+        /**
+         *
+         * @param oldSize
+         * @returns 返回要增长的哈希特表的大小
+         */
         HashHelpers.expandPrime = function (oldSize) {
             var newSize = 2 * oldSize;
+            // 在遇到容量溢出之前，允许哈希特表增长到最大可能的大小
+            // 请注意，即使当_items.Length溢出时，这项检查也会起作用
             if (newSize > this.maxPrimeArrayLength && this.maxPrimeArrayLength > oldSize) {
                 return this.maxPrimeArrayLength;
             }
@@ -2823,11 +3637,22 @@ var es;
         };
         HashHelpers.hashCollisionThreshold = 100;
         HashHelpers.hashPrime = 101;
+        /**
+         * 用来作为哈希表大小的质数表。
+         * 一个典型的调整大小的算法会在这个数组中选取比之前容量大两倍的最小质数。
+         * 假设我们的Hashtable当前的容量为x，并且添加了足够多的元素，因此需要进行大小调整。
+         * 调整大小首先计算2x，然后在表中找到第一个大于2x的质数，即如果质数的顺序是p_1，p_2，...，p_i，...，则找到p_n，使p_n-1 < 2x < p_n。
+         * 双倍对于保持哈希特操作的渐近复杂度是很重要的，比如添加。
+         * 拥有一个质数可以保证双倍哈希不会导致无限循环。 IE，你的哈希函数将是h1(key)+i*h2(key)，0 <= i < size.h2和size必须是相对质数。
+         */
         HashHelpers.primes = [3, 7, 11, 17, 23, 29, 37, 47, 59, 71, 89, 107, 131, 163, 197, 239, 293, 353, 431, 521, 631, 761, 919,
             1103, 1327, 1597, 1931, 2333, 2801, 3371, 4049, 4861, 5839, 7013, 8419, 10103, 12143, 14591,
             17519, 21023, 25229, 30293, 36353, 43627, 52361, 62851, 75431, 90523, 108631, 130363, 156437,
             187751, 225307, 270371, 324449, 389357, 467237, 560689, 672827, 807403, 968897, 1162687, 1395263,
             1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369];
+        /**
+         * 这是比Array.MaxArrayLength小的最大质数
+         */
         HashHelpers.maxPrimeArrayLength = 0x7FEFFFFD;
         return HashHelpers;
     }());
@@ -2835,7 +3660,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Matcher = (function () {
+    var Matcher = /** @class */ (function () {
         function Matcher() {
             this.allSet = new es.BitSet();
             this.exclusionSet = new es.BitSet();
@@ -2857,14 +3682,17 @@ var es;
             return this.isInterested(e.componentBits);
         };
         Matcher.prototype.isInterested = function (componentBits) {
+            // 检查实体是否拥有该方面中定义的所有组件
             if (!this.allSet.isEmpty()) {
                 for (var i = this.allSet.nextSetBit(0); i >= 0; i = this.allSet.nextSetBit(i + 1)) {
                     if (!componentBits.get(i))
                         return false;
                 }
             }
+            // 如果我们仍然感兴趣，检查该实体是否拥有任何一个排除组件，如果有，那么系统就不感兴趣
             if (!this.exclusionSet.isEmpty() && this.exclusionSet.intersects(componentBits))
                 return false;
+            // 如果我们仍然感兴趣，检查该实体是否拥有oneSet中的任何一个组件。如果是，系统就会感兴趣
             if (!this.oneSet.isEmpty() && !this.oneSet.intersects(componentBits))
                 return false;
             return true;
@@ -2908,7 +3736,10 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var RenderableComparer = (function () {
+    /**
+     * 用于排序IRenderables的比较器
+     */
+    var RenderableComparer = /** @class */ (function () {
         function RenderableComparer() {
         }
         RenderableComparer.prototype.compare = function (self, other) {
@@ -2918,11 +3749,19 @@ var es;
     }());
     es.RenderableComparer = RenderableComparer;
 })(es || (es = {}));
+///<reference path="../../Graphics/Renderers/IRenderable.ts" />
 var es;
+///<reference path="../../Graphics/Renderers/IRenderable.ts" />
 (function (es) {
-    var RenderableComponentList = (function () {
+    var RenderableComponentList = /** @class */ (function () {
         function RenderableComponentList() {
+            /**
+             * 添加到实体的组件列表
+             */
             this._components = [];
+            /**
+             * 通过渲染层跟踪组件，便于检索
+             */
             this._componentsByRenderLayer = new Map();
             this._unsortedRenderLayers = [];
             this._componentsNeedSort = true;
@@ -2960,11 +3799,16 @@ var es;
             this._componentsByRenderLayer.get(component.renderLayer).remove(component);
         };
         RenderableComponentList.prototype.updateRenderableRenderLayer = function (component, oldRenderLayer, newRenderLayer) {
+            // 需要注意的是，如果渲染层在组件update之前发生了改变
             if (this._componentsByRenderLayer.has(oldRenderLayer) && this._componentsByRenderLayer.get(oldRenderLayer).contains(component)) {
                 this._componentsByRenderLayer.get(oldRenderLayer).remove(component);
                 this.addToRenderLayerList(component, newRenderLayer);
             }
         };
+        /**
+         * 将渲染层排序标志弄脏，让所有组件重新排序
+         * @param renderLayer
+         */
         RenderableComponentList.prototype.setRenderLayerNeedsComponentSort = function (renderLayer) {
             if (!this._unsortedRenderLayers.contains(renderLayer))
                 this._unsortedRenderLayers.push(renderLayer);
@@ -2984,6 +3828,10 @@ var es;
                 this._unsortedRenderLayers.push(renderLayer);
             this.componentsNeedSort = true;
         };
+        /**
+         * 使用给定的渲染层获取所有组件。组件列表是预先排序的
+         * @param renderLayer
+         */
         RenderableComponentList.prototype.componentsWithRenderLayer = function (renderLayer) {
             if (!this._componentsByRenderLayer.get(renderLayer)) {
                 this._componentsByRenderLayer.set(renderLayer, []);
@@ -3005,18 +3853,32 @@ var es;
                 this._unsortedRenderLayers.length = 0;
             }
         };
+        /**
+         * IRenderable列表的全局updatePrder排序
+         */
         RenderableComponentList.compareUpdatableOrder = new es.RenderableComparer();
         return RenderableComponentList;
     }());
     es.RenderableComponentList = RenderableComponentList;
 })(es || (es = {}));
-var StringUtils = (function () {
+var StringUtils = /** @class */ (function () {
     function StringUtils() {
     }
+    /**
+     * 匹配中文字符
+     * @param    str    需要匹配的字符串
+     * @return
+     */
     StringUtils.matchChineseWord = function (str) {
+        //中文字符的unicode值[\u4E00-\u9FA5]
         var patternA = /[\u4E00-\u9FA5]+/gim;
         return str.match(patternA);
     };
+    /**
+     * 去除字符串左端的空白字符
+     * @param    target        目标字符串
+     * @return
+     */
     StringUtils.lTrim = function (target) {
         var startIndex = 0;
         while (this.isWhiteSpace(target.charAt(startIndex))) {
@@ -3024,6 +3886,11 @@ var StringUtils = (function () {
         }
         return target.slice(startIndex, target.length);
     };
+    /**
+     * 去除字符串右端的空白字符
+     * @param    target        目标字符串
+     * @return
+     */
     StringUtils.rTrim = function (target) {
         var endIndex = target.length - 1;
         while (this.isWhiteSpace(target.charAt(endIndex))) {
@@ -3031,17 +3898,35 @@ var StringUtils = (function () {
         }
         return target.slice(0, endIndex + 1);
     };
+    /**
+     * 返回一个去除2段空白字符的字符串
+     * @param    target
+     * @return  返回一个去除2段空白字符的字符串
+     */
     StringUtils.trim = function (target) {
         if (target == null) {
             return null;
         }
         return this.rTrim(this.lTrim(target));
     };
+    /**
+     * 返回该字符是否为空白字符
+     * @param    str
+     * @return  返回该字符是否为空白字符
+     */
     StringUtils.isWhiteSpace = function (str) {
         if (str == " " || str == "\t" || str == "\r" || str == "\n")
             return true;
         return false;
     };
+    /**
+     * 返回执行替换后的字符串
+     * @param    mainStr   待查找字符串
+     * @param    targetStr 目标字符串
+     * @param    replaceStr 替换字符串
+     * @param    caseMark  是否忽略大小写
+     * @return  返回执行替换后的字符串
+     */
     StringUtils.replaceMatch = function (mainStr, targetStr, replaceStr, caseMark) {
         if (caseMark === void 0) { caseMark = false; }
         var len = mainStr.length;
@@ -3065,6 +3950,12 @@ var StringUtils = (function () {
         }
         return tempStr;
     };
+    /**
+     * 用html实体换掉字符窜中的特殊字符
+     * @param    str                需要替换的字符串
+     * @param    reversion        是否翻转替换：将转义符号替换为正常的符号
+     * @return    换掉特殊字符后的字符串
+     */
     StringUtils.htmlSpecialChars = function (str, reversion) {
         if (reversion === void 0) { reversion = false; }
         var len = this.specialSigns.length;
@@ -3082,6 +3973,28 @@ var StringUtils = (function () {
         }
         return str;
     };
+    /**
+     * 给数字字符前面添 "0"
+     *
+     * <pre>
+     *
+     * trace( StringFormat.zfill('1') );
+     * // 01
+     *
+     * trace( StringFormat.zfill('16', 5) );
+     * // 00016
+     *
+     * trace( StringFormat.zfill('-3', 3) );
+     * // -03
+     *
+     * </pre>
+     *
+     * @param str 要进行处理的字符串
+     * @param width 处理后字符串的长度，
+     *              如果str.length >= width，将不做任何处理直接返回原始的str。
+     * @return
+     *
+     */
     StringUtils.zfill = function (str, width) {
         if (width === void 0) { width = 2; }
         if (!str) {
@@ -3106,12 +4019,25 @@ var StringUtils = (function () {
         }
         return str;
     };
+    /**
+     * 翻转字符串
+     * @param    str 字符串
+     * @return  翻转后的字符串
+     */
     StringUtils.reverse = function (str) {
         if (str.length > 1)
             return this.reverse(str.substring(1)) + str.substring(0, 1);
         else
             return str;
     };
+    /**
+     * 截断某段字符串
+     * @param    str        目标字符串
+     * @param    start    需要截断的起始索引
+     * @param    len        截断长度
+     * @param    order    顺序，true从字符串头部开始计算，false从字符串尾巴开始结算。
+     * @return    截断后的字符串
+     */
     StringUtils.cutOff = function (str, start, len, order) {
         if (order === void 0) { order = true; }
         start = Math.floor(start);
@@ -3132,6 +4058,7 @@ var StringUtils = (function () {
         }
         return newStr;
     };
+    /**{0} 字符替换   */
     StringUtils.strReplace = function (str, rStr) {
         var i = 0, len = rStr.length;
         for (; i < len; i++) {
@@ -3142,6 +4069,9 @@ var StringUtils = (function () {
         }
         return str;
     };
+    /**
+     * 特殊符号字符串
+     */
     StringUtils.specialSigns = [
         '&', '&amp;',
         '<', '&lt;',
@@ -3156,7 +4086,8 @@ var StringUtils = (function () {
 }());
 var es;
 (function (es) {
-    var Time = (function () {
+    /** 提供帧定时信息 */
+    var Time = /** @class */ (function () {
         function Time() {
         }
         Time.update = function (currentTime) {
@@ -3171,20 +4102,33 @@ var es;
         Time.sceneChanged = function () {
             this.timeSinceSceneLoad = 0;
         };
+        /**
+         * 允许在间隔检查。只应该使用高于delta的间隔值，否则它将始终返回true。
+         * @param interval
+         */
         Time.checkEvery = function (interval) {
+            // 我们减去了delta，因为timeSinceSceneLoad已经包含了这个update ticks delta
             return this.timeSinceSceneLoad / interval > (this.timeSinceSceneLoad - this.deltaTime) / interval;
         };
+        /** 前一帧到当前帧的时间增量，按时间刻度进行缩放 */
         Time.deltaTime = 0;
+        /** 时间刻度缩放 */
         Time.timeScale = 1;
+        /** 已传递的帧总数 */
         Time.frameCount = 0;
         Time._lastTime = 0;
         return Time;
     }());
     es.Time = Time;
 })(es || (es = {}));
-var TimeUtils = (function () {
+var TimeUtils = /** @class */ (function () {
     function TimeUtils() {
     }
+    /**
+     * 计算月份ID
+     * @param d 指定计算日期
+     * @returns 月ID
+     */
     TimeUtils.monthId = function (d) {
         if (d === void 0) { d = null; }
         d = d ? d : new Date();
@@ -3193,6 +4137,11 @@ var TimeUtils = (function () {
         var g = m < 10 ? "0" : "";
         return parseInt(y + g + m);
     };
+    /**
+     * 计算日期ID
+     * @param d 指定计算日期
+     * @returns 日期ID
+     */
     TimeUtils.dateId = function (t) {
         if (t === void 0) { t = null; }
         t = t ? t : new Date();
@@ -3202,6 +4151,11 @@ var TimeUtils = (function () {
         var b = d < 10 ? "0" : "";
         return parseInt(t.getFullYear() + a + m + b + d);
     };
+    /**
+     * 计算周ID
+     * @param d 指定计算日期
+     * @returns 周ID
+     */
     TimeUtils.weekId = function (d, first) {
         if (d === void 0) { d = null; }
         if (first === void 0) { first = true; }
@@ -3209,7 +4163,7 @@ var TimeUtils = (function () {
         var c = new Date();
         c.setTime(d.getTime());
         c.setDate(1);
-        c.setMonth(0);
+        c.setMonth(0); //当年第一天
         var year = c.getFullYear();
         var firstDay = c.getDay();
         if (firstDay == 0) {
@@ -3226,7 +4180,7 @@ var TimeUtils = (function () {
         var num = this.diffDay(d, c, false);
         if (num < 0) {
             c.setDate(1);
-            c.setMonth(0);
+            c.setMonth(0); //当年第一天
             c.setDate(c.getDate() - 1);
             return this.weekId(c, false);
         }
@@ -3242,32 +4196,47 @@ var TimeUtils = (function () {
             if (first && (!max || endDay < 4)) {
                 c.setFullYear(c.getFullYear() + 1);
                 c.setDate(1);
-                c.setMonth(0);
+                c.setMonth(0); //当年第一天
                 return this.weekId(c, false);
             }
         }
         var g = weekIdx > 9 ? "" : "0";
-        var s = year + "00" + g + weekIdx;
+        var s = year + "00" + g + weekIdx; //加上00防止和月份ID冲突
         return parseInt(s);
     };
+    /**
+     * 计算俩日期时间差，如果a比b小，返回负数
+     */
     TimeUtils.diffDay = function (a, b, fixOne) {
         if (fixOne === void 0) { fixOne = false; }
         var x = (a.getTime() - b.getTime()) / 86400000;
         return fixOne ? Math.ceil(x) : Math.floor(x);
     };
+    /**
+     * 获取本周一 凌晨时间
+     */
     TimeUtils.getFirstDayOfWeek = function (d) {
         d = d ? d : new Date();
         var day = d.getDay() || 7;
         return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1 - day, 0, 0, 0, 0);
     };
+    /**
+     * 获取当日凌晨时间
+     */
     TimeUtils.getFirstOfDay = function (d) {
         d = d ? d : new Date();
         d.setHours(0, 0, 0, 0);
         return d;
     };
+    /**
+     * 获取次日凌晨时间
+     */
     TimeUtils.getNextFirstOfDay = function (d) {
         return new Date(this.getFirstOfDay(d).getTime() + 86400000);
     };
+    /**
+     * @returns 2018-12-12
+     */
     TimeUtils.formatDate = function (date) {
         var y = date.getFullYear();
         var m = date.getMonth() + 1;
@@ -3276,6 +4245,9 @@ var TimeUtils = (function () {
         d = d < 10 ? ('0' + d) : d;
         return y + '-' + m + '-' + d;
     };
+    /**
+     * @returns 2018-12-12 12:12:12
+     */
     TimeUtils.formatDateTime = function (date) {
         var y = date.getFullYear();
         var m = date.getMonth() + 1;
@@ -3289,6 +4261,9 @@ var TimeUtils = (function () {
         s = s < 10 ? ('0' + s) : s;
         return y + '-' + m + '-' + d + ' ' + h + ':' + i + ":" + s;
     };
+    /**
+     * @returns s 2018-12-12 或者 2018-12-12 12:12:12
+     */
     TimeUtils.parseDate = function (s) {
         var t = Date.parse(s);
         if (!isNaN(t)) {
@@ -3298,6 +4273,15 @@ var TimeUtils = (function () {
             return new Date();
         }
     };
+    /**
+     * 秒数转换为时间形式。
+     * @param    time 秒数
+     * @param    partition 分隔符
+     * @param    showHour  是否显示小时
+     * @return  返回一个以分隔符分割的时, 分, 秒
+     *
+     * 比如: time = 4351; secondToTime(time)返回字符串01:12:31;
+     */
     TimeUtils.secondToTime = function (time, partition, showHour) {
         if (time === void 0) { time = 0; }
         if (partition === void 0) { partition = ":"; }
@@ -3321,6 +4305,20 @@ var TimeUtils = (function () {
             timeStr = m + partition + s;
         return timeStr;
     };
+    /**
+     * 时间形式转换为毫秒数。
+     * @param   time  以指定分隔符分割的时间字符串
+     * @param   partition  分隔符
+     * @return  毫秒数显示的字符串
+     * @throws  Error Exception
+     *
+     * 用法1 trace(MillisecondTransform.timeToMillisecond("00:60:00"))
+     * 输出   3600000
+     *
+     *
+     * 用法2 trace(MillisecondTransform.timeToMillisecond("00.60.00","."))
+     * 输出   3600000
+     */
     TimeUtils.timeToMillisecond = function (time, partition) {
         if (partition === void 0) { partition = ":"; }
         var _ary = time.split(partition);
@@ -3337,7 +4335,7 @@ var TimeUtils = (function () {
 }());
 var es;
 (function (es) {
-    var Viewport = (function () {
+    var Viewport = /** @class */ (function () {
         function Viewport(x, y, width, height) {
             this._x = x;
             this._y = y;
@@ -3394,16 +4392,39 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Renderer = (function () {
+    /**
+     * 渲染器被添加到场景中并处理所有对RenderableComponent的实际调用
+     */
+    var Renderer = /** @class */ (function () {
         function Renderer(renderOrder) {
+            /**
+             * 指定场景调用渲染器的顺序
+             */
             this.renderOrder = 0;
+            /**
+             * 这个渲染器的标志，决定它是否应该调试渲染。
+             * render方法接收一个bool (debugRenderEnabled)，让渲染器知道全局调试渲染是否打开/关闭。
+             * 渲染器然后使用本地bool来决定它是否应该调试渲染。
+             */
             this.shouldDebugRender = true;
             this.renderOrder = renderOrder;
         }
+        /**
+         * 当渲染器被添加到场景时调用
+         * @param scene
+         */
         Renderer.prototype.onAddedToScene = function (scene) {
         };
+        /**
+         * 当场景结束或渲染器从场景中移除时调用。使用这个进行清理。
+         */
         Renderer.prototype.unload = function () {
         };
+        /**
+         * 当默认场景渲染目标被调整大小和当场景已经开始添加渲染器时调用
+         * @param newWidth
+         * @param newHeight
+         */
         Renderer.prototype.onSceneBackBufferSizeChanged = function (newWidth, newHeight) {
         };
         Renderer.prototype.compareTo = function (other) {
@@ -3415,7 +4436,10 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var SceneTransition = (function () {
+    /**
+     * SceneTransition用于从一个场景过渡到另一个场景或在一个有效果的场景中过渡
+     */
+    var SceneTransition = /** @class */ (function () {
         function SceneTransition(sceneLoadAction) {
             this.sceneLoadAction = sceneLoadAction;
             this.loadsNewScene = sceneLoadAction != null;
@@ -3439,11 +4463,11 @@ var es;
             return __awaiter(this, void 0, void 0, function () {
                 return __generator(this, function (_a) {
                     switch (_a.label) {
-                        case 0: return [4, this.loadNextScene()];
+                        case 0: return [4 /*yield*/, this.loadNextScene()];
                         case 1:
                             _a.sent();
                             this.transitionComplete();
-                            return [2];
+                            return [2 /*return*/];
                     }
                 });
             });
@@ -3466,11 +4490,11 @@ var es;
                                 this.isNewSceneLoaded = true;
                             }
                             _a = es.Core;
-                            return [4, this.sceneLoadAction()];
+                            return [4 /*yield*/, this.sceneLoadAction()];
                         case 1:
                             _a.scene = _b.sent();
                             this.isNewSceneLoaded = true;
-                            return [2];
+                            return [2 /*return*/];
                     }
                 });
             });
@@ -3481,27 +4505,67 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Bezier = (function () {
+    /** 贝塞尔帮助类 */
+    var Bezier = /** @class */ (function () {
         function Bezier() {
         }
+        /**
+         * 二次贝塞尔曲线
+         * @param p0
+         * @param p1
+         * @param p2
+         * @param t
+         */
         Bezier.getPoint = function (p0, p1, p2, t) {
             t = es.MathHelper.clamp01(t);
             var oneMinusT = 1 - t;
             return es.Vector2.add(es.Vector2.add(es.Vector2.multiply(new es.Vector2(oneMinusT * oneMinusT), p0), es.Vector2.multiply(new es.Vector2(2 * oneMinusT * t), p1)), es.Vector2.multiply(new es.Vector2(t * t), p2));
         };
+        /**
+         * 得到二次贝塞尔函数的一阶导数
+         * @param p0
+         * @param p1
+         * @param p2
+         * @param t
+         */
         Bezier.getFirstDerivative = function (p0, p1, p2, t) {
             return es.Vector2.add(es.Vector2.multiply(new es.Vector2(2 * (1 - t)), es.Vector2.subtract(p1, p0)), es.Vector2.multiply(new es.Vector2(2 * t), es.Vector2.subtract(p2, p1)));
         };
+        /**
+         * 得到一个三次贝塞尔函数的一阶导数
+         * @param start
+         * @param firstControlPoint
+         * @param secondControlPoint
+         * @param end
+         * @param t
+         */
         Bezier.getFirstDerivativeThree = function (start, firstControlPoint, secondControlPoint, end, t) {
             t = es.MathHelper.clamp01(t);
             var oneMunusT = 1 - t;
             return es.Vector2.add(es.Vector2.add(es.Vector2.multiply(new es.Vector2(3 * oneMunusT * oneMunusT), es.Vector2.subtract(firstControlPoint, start)), es.Vector2.multiply(new es.Vector2(6 * oneMunusT * t), es.Vector2.subtract(secondControlPoint, firstControlPoint))), es.Vector2.multiply(new es.Vector2(3 * t * t), es.Vector2.subtract(end, secondControlPoint)));
         };
+        /**
+         * 计算一个三次贝塞尔
+         * @param start
+         * @param firstControlPoint
+         * @param secondControlPoint
+         * @param end
+         * @param t
+         */
         Bezier.getPointThree = function (start, firstControlPoint, secondControlPoint, end, t) {
             t = es.MathHelper.clamp01(t);
             var oneMunusT = 1 - t;
             return es.Vector2.add(es.Vector2.add(es.Vector2.add(es.Vector2.multiply(new es.Vector2(oneMunusT * oneMunusT * oneMunusT), start), es.Vector2.multiply(new es.Vector2(3 * oneMunusT * oneMunusT * t), firstControlPoint)), es.Vector2.multiply(new es.Vector2(3 * oneMunusT * t * t), secondControlPoint)), es.Vector2.multiply(new es.Vector2(t * t * t), end));
         };
+        /**
+         * 递归地细分bezier曲线，直到满足距离校正
+         * 在这种算法中，平面切片的点要比曲面切片少。返回完成后应返回到ListPool的合并列表。
+         * @param start
+         * @param firstCtrlPoint
+         * @param secondCtrlPoint
+         * @param end
+         * @param distanceTolerance
+         */
         Bezier.getOptimizedDrawingPoints = function (start, firstCtrlPoint, secondCtrlPoint, end, distanceTolerance) {
             if (distanceTolerance === void 0) { distanceTolerance = 1; }
             var points = es.ListPool.obtain();
@@ -3510,13 +4574,26 @@ var es;
             points.push(end);
             return points;
         };
+        /**
+         * 递归地细分bezier曲线，直到满足距离校正。在这种算法中，平面切片的点要比曲面切片少。
+         * @param start
+         * @param firstCtrlPoint
+         * @param secondCtrlPoint
+         * @param end
+         * @param points
+         * @param distanceTolerance
+         */
         Bezier.recursiveGetOptimizedDrawingPoints = function (start, firstCtrlPoint, secondCtrlPoint, end, points, distanceTolerance) {
+            // 计算线段的所有中点
             var pt12 = es.Vector2.divide(es.Vector2.add(start, firstCtrlPoint), new es.Vector2(2));
             var pt23 = es.Vector2.divide(es.Vector2.add(firstCtrlPoint, secondCtrlPoint), new es.Vector2(2));
             var pt34 = es.Vector2.divide(es.Vector2.add(secondCtrlPoint, end), new es.Vector2(2));
+            // 计算新半直线的中点
             var pt123 = es.Vector2.divide(es.Vector2.add(pt12, pt23), new es.Vector2(2));
             var pt234 = es.Vector2.divide(es.Vector2.add(pt23, pt34), new es.Vector2(2));
+            // 最后再细分最后两个中点。如果我们满足我们的距离公差，这将是我们使用的最后一点。
             var pt1234 = es.Vector2.divide(es.Vector2.add(pt123, pt234), new es.Vector2(2));
+            // 试着用一条直线来近似整个三次曲线
             var deltaLine = es.Vector2.subtract(end, start);
             var d2 = Math.abs(((firstCtrlPoint.x, end.x) * deltaLine.y - (firstCtrlPoint.y - end.y) * deltaLine.x));
             var d3 = Math.abs(((secondCtrlPoint.x - end.x) * deltaLine.y - (secondCtrlPoint.y - end.y) * deltaLine.x));
@@ -3524,6 +4601,7 @@ var es;
                 points.push(pt1234);
                 return;
             }
+            // 继续细分
             this.recursiveGetOptimizedDrawingPoints(start, pt12, pt123, pt1234, points, distanceTolerance);
             this.recursiveGetOptimizedDrawingPoints(pt1234, pt234, pt34, end, points, distanceTolerance);
         };
@@ -3533,26 +4611,61 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Flags = (function () {
+    /**
+     * 帮助处理位掩码的实用程序类
+     * 除了isFlagSet之外，所有方法都期望flag参数是一个非移位的标志
+     * 允许您使用普通的(0、1、2、3等)来设置/取消您的标记
+     */
+    var Flags = /** @class */ (function () {
         function Flags() {
         }
+        /**
+         * 检查位标志是否已在数值中设置
+         * 检查期望标志是否已经移位
+         * @param self
+         * @param flag
+         */
         Flags.isFlagSet = function (self, flag) {
             return (self & flag) != 0;
         };
+        /**
+         * 检查位标志是否在数值中设置
+         * @param self
+         * @param flag
+         */
         Flags.isUnshiftedFlagSet = function (self, flag) {
             flag = 1 << flag;
             return (self & flag) != 0;
         };
+        /**
+         *  设置数值标志位，移除所有已经设置的标志
+         * @param self
+         * @param flag
+         */
         Flags.setFlagExclusive = function (self, flag) {
             self.value = 1 << flag;
         };
+        /**
+         * 设置标志位
+         * @param self
+         * @param flag
+         */
         Flags.setFlag = function (self, flag) {
             self.value = (self.value | 1 << flag);
         };
+        /**
+         * 取消标志位
+         * @param self
+         * @param flag
+         */
         Flags.unsetFlag = function (self, flag) {
             flag = 1 << flag;
             self.value = (self.value & (~flag));
         };
+        /**
+         * 反转数值集合位
+         * @param self
+         */
         Flags.invertFlags = function (self) {
             self.value = ~self.value;
         };
@@ -3562,15 +4675,31 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var MathHelper = (function () {
+    var MathHelper = /** @class */ (function () {
         function MathHelper() {
         }
+        /**
+         * 将弧度转换成角度。
+         * @param radians 用弧度表示的角
+         */
         MathHelper.toDegrees = function (radians) {
             return radians * 57.295779513082320876798154814105;
         };
+        /**
+         * 将角度转换为弧度
+         * @param degrees
+         */
         MathHelper.toRadians = function (degrees) {
             return degrees * 0.017453292519943295769236907684886;
         };
+        /**
+         * mapps值(在leftMin - leftMax范围内)到rightMin - rightMax范围内的值
+         * @param value
+         * @param leftMin
+         * @param leftMax
+         * @param rightMin
+         * @param rightMax
+         */
         MathHelper.map = function (value, leftMin, leftMax, rightMin, rightMax) {
             return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
         };
@@ -3584,13 +4713,27 @@ var es;
                 return max;
             return value;
         };
+        /**
+         * 给定圆心、半径和角度，得到圆周上的一个点。0度是3点钟。
+         * @param circleCenter
+         * @param radius
+         * @param angleInDegrees
+         */
         MathHelper.pointOnCirlce = function (circleCenter, radius, angleInDegrees) {
             var radians = MathHelper.toRadians(angleInDegrees);
             return new es.Vector2(Math.cos(radians) * radians + circleCenter.x, Math.sin(radians) * radians + circleCenter.y);
         };
+        /**
+         * 如果值为偶数，返回true
+         * @param value
+         */
         MathHelper.isEven = function (value) {
             return value % 2 == 0;
         };
+        /**
+         * 数值限定在0-1之间
+         * @param value
+         */
         MathHelper.clamp01 = function (value) {
             if (value < 0)
                 return 0;
@@ -3601,12 +4744,23 @@ var es;
         MathHelper.angleBetweenVectors = function (from, to) {
             return Math.atan2(to.y - from.y, to.x - from.x);
         };
+        /**
+         * 增加t并确保它总是大于或等于0并且小于长度
+         * @param t
+         * @param length
+         */
         MathHelper.incrementWithWrap = function (t, length) {
             t++;
             if (t == length)
                 return 0;
             return t;
         };
+        /**
+         * 由上移量向上移。start可以小于或大于end。例如:开始是2，结束是10，移位是4，结果是6
+         * @param start
+         * @param end
+         * @param shift
+         */
         MathHelper.approach = function (start, end, shift) {
             if (start < end)
                 return Math.min(start + shift, end);
@@ -3615,6 +4769,9 @@ var es;
         MathHelper.Epsilon = 0.00001;
         MathHelper.Rad2Deg = 57.29578;
         MathHelper.Deg2Rad = 0.0174532924;
+        /**
+         * 表示pi除以2的值(1.57079637)
+         */
         MathHelper.PiOver2 = Math.PI / 2;
         return MathHelper;
     }());
@@ -3622,9 +4779,21 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Matrix2D = (function () {
+    /**
+     * 表示右手3 * 3的浮点矩阵，可以存储平移、缩放和旋转信息。
+     */
+    var Matrix2D = /** @class */ (function () {
+        /**
+         * 构建一个矩阵
+         * @param m11
+         * @param m12
+         * @param m21
+         * @param m22
+         * @param m31
+         * @param m32
+         */
         function Matrix2D(m11, m12, m21, m22, m31, m32) {
-            this.m11 = 0;
+            this.m11 = 0; // x 缩放
             this.m12 = 0;
             this.m21 = 0;
             this.m22 = 0;
@@ -3638,6 +4807,9 @@ var es;
             this.m32 = m32;
         }
         Object.defineProperty(Matrix2D, "identity", {
+            /**
+             * 返回标识矩阵
+             */
             get: function () {
                 return this._identity;
             },
@@ -3645,6 +4817,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Matrix2D.prototype, "translation", {
+            /**
+             * 储存在该矩阵中的位置
+             */
             get: function () {
                 return new es.Vector2(this.m31, this.m32);
             },
@@ -3656,6 +4831,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Matrix2D.prototype, "rotation", {
+            /**
+             * 以弧度为单位的旋转，存储在这个矩阵中
+             */
             get: function () {
                 return Math.atan2(this.m21, this.m11);
             },
@@ -3671,6 +4849,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Matrix2D.prototype, "rotationDegrees", {
+            /**
+             * 矩阵中存储的旋转度数
+             */
             get: function () {
                 return es.MathHelper.toDegrees(this.rotation);
             },
@@ -3681,6 +4862,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Matrix2D.prototype, "scale", {
+            /**
+             * 储存在这个矩阵中的缩放
+             */
             get: function () {
                 return new es.Vector2(this.m11, this.m22);
             },
@@ -3691,6 +4875,10 @@ var es;
             enumerable: true,
             configurable: true
         });
+        /**
+         * 创建一个新的围绕Z轴的旋转矩阵2D
+         * @param radians
+         */
         Matrix2D.createRotation = function (radians) {
             var result = this.identity;
             var val1 = Math.cos(radians);
@@ -3701,6 +4889,11 @@ var es;
             result.m22 = val1;
             return result;
         };
+        /**
+         * 创建一个新的缩放矩阵2D
+         * @param xScale
+         * @param yScale
+         */
         Matrix2D.createScale = function (xScale, yScale) {
             var result = this.identity;
             result.m11 = xScale;
@@ -3711,6 +4904,11 @@ var es;
             result.m32 = 0;
             return result;
         };
+        /**
+         * 创建一个新的平移矩阵2D
+         * @param xPosition
+         * @param yPosition
+         */
         Matrix2D.createTranslation = function (xPosition, yPosition) {
             var result = this.identity;
             result.m11 = 1;
@@ -3732,6 +4930,10 @@ var es;
             result.m32 = -(matrix.m32 * matrix.m11 - matrix.m31 * matrix.m12) * det;
             return result;
         };
+        /**
+         * 创建一个新的matrix, 它包含两个矩阵的和。
+         * @param matrix
+         */
         Matrix2D.prototype.add = function (matrix) {
             this.m11 += matrix.m11;
             this.m12 += matrix.m12;
@@ -3777,6 +4979,12 @@ var es;
         Matrix2D.prototype.determinant = function () {
             return this.m11 * this.m22 - this.m12 * this.m21;
         };
+        /**
+         * 创建一个新的Matrix2D，包含指定矩阵中的线性插值。
+         * @param matrix1
+         * @param matrix2
+         * @param amount
+         */
         Matrix2D.lerp = function (matrix1, matrix2, amount) {
             matrix1.m11 = matrix1.m11 + ((matrix2.m11 - matrix1.m11) * amount);
             matrix1.m12 = matrix1.m12 + ((matrix2.m12 - matrix1.m12) * amount);
@@ -3786,6 +4994,10 @@ var es;
             matrix1.m32 = matrix1.m32 + ((matrix2.m32 - matrix1.m32) * amount);
             return matrix1;
         };
+        /**
+         * 交换矩阵的行和列
+         * @param matrix
+         */
         Matrix2D.transpose = function (matrix) {
             var ret = this.identity;
             ret.m11 = matrix.m11;
@@ -3800,6 +5012,10 @@ var es;
             var trans = Matrix2D.createTranslation(x, y);
             return es.MatrixHelper.mutiply(this, trans);
         };
+        /**
+         * 比较当前实例是否等于指定的Matrix2D
+         * @param other
+         */
         Matrix2D.prototype.equals = function (other) {
             return this == other;
         };
@@ -3813,9 +5029,14 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var MatrixHelper = (function () {
+    var MatrixHelper = /** @class */ (function () {
         function MatrixHelper() {
         }
+        /**
+         * 创建一个新的Matrix2D，其中包含两个矩阵的和
+         * @param matrix1
+         * @param matrix2
+         */
         MatrixHelper.add = function (matrix1, matrix2) {
             var result = es.Matrix2D.identity;
             result.m11 = matrix1.m11 + matrix2.m11;
@@ -3826,6 +5047,11 @@ var es;
             result.m32 = matrix1.m32 + matrix2.m32;
             return result;
         };
+        /**
+         * 将一个Matrix2D的元素除以另一个矩阵的元素
+         * @param matrix1
+         * @param matrix2
+         */
         MatrixHelper.divide = function (matrix1, matrix2) {
             var result = es.Matrix2D.identity;
             result.m11 = matrix1.m11 / matrix2.m11;
@@ -3836,6 +5062,11 @@ var es;
             result.m32 = matrix1.m32 / matrix2.m32;
             return result;
         };
+        /**
+         * 创建一个新的Matrix2D，包含两个矩阵的乘法
+         * @param matrix1
+         * @param matrix2
+         */
         MatrixHelper.mutiply = function (matrix1, matrix2) {
             var result = es.Matrix2D.identity;
             if (matrix2 instanceof es.Matrix2D) {
@@ -3862,6 +5093,11 @@ var es;
             }
             return result;
         };
+        /**
+         * 创建一个新的Matrix2D，包含一个矩阵与另一个矩阵的减法。
+         * @param matrix1
+         * @param matrix2
+         */
         MatrixHelper.subtract = function (matrix1, matrix2) {
             var result = es.Matrix2D.identity;
             result.m11 = matrix1.m11 - matrix2.m11;
@@ -3878,15 +5114,34 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Rectangle = (function () {
+    var Rectangle = /** @class */ (function () {
+        /**
+         * 创建一个新的Rectanglestruct实例，指定位置、宽度和高度。
+         * @param x 创建的矩形的左上角的X坐标
+         * @param y 创建的矩形的左上角的y坐标
+         * @param width 创建的矩形的宽度
+         * @param height 创建的矩形的高度
+         */
         function Rectangle(x, y, width, height) {
             if (x === void 0) { x = 0; }
             if (y === void 0) { y = 0; }
             if (width === void 0) { width = 0; }
             if (height === void 0) { height = 0; }
+            /**
+             * 该矩形的左上角的x坐标
+             */
             this.x = 0;
+            /**
+             * 该矩形的左上角的y坐标
+             */
             this.y = 0;
+            /**
+             * 该矩形的宽度
+             */
             this.width = 0;
+            /**
+             * 该矩形的高度
+             */
             this.height = 0;
             this.x = x;
             this.y = y;
@@ -3894,6 +5149,9 @@ var es;
             this.height = height;
         }
         Object.defineProperty(Rectangle, "empty", {
+            /**
+             * 返回X=0, Y=0, Width=0, Height=0的矩形
+             */
             get: function () {
                 return this.emptyRectangle;
             },
@@ -3901,6 +5159,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Rectangle, "maxRect", {
+            /**
+             * 返回一个Number.Min/Max值的矩形
+             */
             get: function () {
                 return new Rectangle(Number.MIN_VALUE / 2, Number.MIN_VALUE / 2, Number.MAX_VALUE, Number.MAX_VALUE);
             },
@@ -3908,6 +5169,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "left", {
+            /**
+             * 返回此矩形左边缘的X坐标
+             */
             get: function () {
                 return this.x;
             },
@@ -3915,6 +5179,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "right", {
+            /**
+             * 返回此矩形右边缘的X坐标
+             */
             get: function () {
                 return this.x + this.width;
             },
@@ -3922,6 +5189,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "top", {
+            /**
+             * 返回此矩形顶边的y坐标
+             */
             get: function () {
                 return this.y;
             },
@@ -3929,6 +5199,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "bottom", {
+            /**
+             * 返回此矩形底边的y坐标
+             */
             get: function () {
                 return this.y + this.height;
             },
@@ -3936,16 +5209,23 @@ var es;
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "max", {
+            /**
+             * 获取矩形的最大点，即右下角
+             */
             get: function () {
                 return new es.Vector2(this.right, this.bottom);
             },
             enumerable: true,
             configurable: true
         });
+        /**
+         * 这个矩形的宽和高是否为0，位置是否为（0，0）
+         */
         Rectangle.prototype.isEmpty = function () {
             return ((((this.width == 0) && (this.height == 0)) && (this.x == 0)) && (this.y == 0));
         };
         Object.defineProperty(Rectangle.prototype, "location", {
+            /** 这个矩形的左上角坐标 */
             get: function () {
                 return new es.Vector2(this.x, this.y);
             },
@@ -3957,6 +5237,9 @@ var es;
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "size", {
+            /**
+             * 这个矩形的宽-高坐标
+             */
             get: function () {
                 return new es.Vector2(this.width, this.height);
             },
@@ -3968,16 +5251,33 @@ var es;
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "center", {
+            /**
+             * 位于这个矩形中心的一个点
+             * 如果 "宽度 "或 "高度 "是奇数，则中心点将向下舍入
+             */
             get: function () {
                 return new es.Vector2(this.x + (this.width / 2), this.y + (this.height / 2));
             },
             enumerable: true,
             configurable: true
         });
+        /**
+         * 创建一个给定最小/最大点（左上角，右下角）的矩形
+         * @param minX
+         * @param minY
+         * @param maxX
+         * @param maxY
+         */
         Rectangle.fromMinMax = function (minX, minY, maxX, maxY) {
             return new Rectangle(minX, minY, maxX - minX, maxY - minY);
         };
+        /**
+         * 给定多边形的点，计算边界
+         * @param points
+         * @returns 来自多边形的点
+         */
         Rectangle.rectEncompassingPoints = function (points) {
+            // 我们需要求出x/y的最小值/最大值
             var minX = Number.POSITIVE_INFINITY;
             var minY = Number.POSITIVE_INFINITY;
             var maxX = Number.NEGATIVE_INFINITY;
@@ -3995,6 +5295,10 @@ var es;
             }
             return this.fromMinMax(minX, minY, maxX, maxY);
         };
+        /**
+         * 获取指定边缘的位置
+         * @param edge
+         */
         Rectangle.prototype.getSide = function (edge) {
             switch (edge) {
                 case es.Edge.top:
@@ -4009,16 +5313,30 @@ var es;
                     throw new Error("Argument Out Of Range");
             }
         };
+        /**
+         * 获取所提供的坐标是否在这个矩形的范围内
+         * @param x 检查封堵点的X坐标
+         * @param y 检查封堵点的Y坐标
+         */
         Rectangle.prototype.contains = function (x, y) {
             return ((((this.x <= x) && (x < (this.x + this.width))) &&
                 (this.y <= y)) && (y < (this.y + this.height)));
         };
+        /**
+         * 按指定的水平和垂直方向调整此矩形的边缘
+         * @param horizontalAmount 调整左、右边缘的值
+         * @param verticalAmount 调整上、下边缘的值
+         */
         Rectangle.prototype.inflate = function (horizontalAmount, verticalAmount) {
             this.x -= horizontalAmount;
             this.y -= verticalAmount;
             this.width += horizontalAmount * 2;
             this.height += verticalAmount * 2;
         };
+        /**
+         * 获取其他矩形是否与这个矩形相交
+         * @param value 另一个用于测试的矩形
+         */
         Rectangle.prototype.intersects = function (value) {
             return value.left < this.right &&
                 this.left < value.right &&
@@ -4066,6 +5384,10 @@ var es;
             }
             return true;
         };
+        /**
+         * 获取所提供的矩形是否在此矩形的边界内
+         * @param value
+         */
         Rectangle.prototype.containsRect = function (value) {
             return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
                 (this.y <= value.y)) &&
@@ -4095,17 +5417,30 @@ var es;
             }
             return boundsPoint;
         };
+        /**
+         * 返回离给定点最近的点
+         * @param point 矩形上离点最近的点
+         */
         Rectangle.prototype.getClosestPointOnRectangleToPoint = function (point) {
+            // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
             var res = new es.Vector2();
             res.x = es.MathHelper.clamp(point.x, this.left, this.right);
             res.y = es.MathHelper.clamp(point.y, this.top, this.bottom);
             return res;
         };
+        /**
+         * 获取矩形边界上与给定点最近的点
+         * @param point
+         * @param edgeNormal
+         * @returns 矩形边框上离点最近的点
+         */
         Rectangle.prototype.getClosestPointOnRectangleBorderToPoint = function (point, edgeNormal) {
             edgeNormal = es.Vector2.zero;
+            // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
             var res = new es.Vector2();
             res.x = es.MathHelper.clamp(point.x, this.left, this.right);
             res.y = es.MathHelper.clamp(point.y, this.top, this.bottom);
+            // 如果点在矩形内，我们需要将res推到边界上，因为它将在矩形内
             if (this.contains(res.x, res.y)) {
                 var dl = res.x - this.left;
                 var dr = this.right - res.x;
@@ -4141,6 +5476,12 @@ var es;
             }
             return res;
         };
+        /**
+         * 创建一个新的RectangleF，该RectangleF包含两个其他矩形的重叠区域
+         * @param value1
+         * @param value2
+         * @returns 将两个矩形的重叠区域作为输出参数
+         */
         Rectangle.intersect = function (value1, value2) {
             if (value1.intersects(value2)) {
                 var right_side = Math.min(value1.x + value1.width, value2.x + value2.width);
@@ -4153,15 +5494,30 @@ var es;
                 return new Rectangle(0, 0, 0, 0);
             }
         };
+        /**
+         * 改变这个矩形的位置
+         * @param offsetX 要添加到这个矩形的X坐标
+         * @param offsetY 要添加到这个矩形的y坐标
+         */
         Rectangle.prototype.offset = function (offsetX, offsetY) {
             this.x += offsetX;
             this.y += offsetY;
         };
+        /**
+         * 创建一个完全包含两个其他矩形的新矩形
+         * @param value1
+         * @param value2
+         */
         Rectangle.union = function (value1, value2) {
             var x = Math.min(value1.x, value2.x);
             var y = Math.min(value1.y, value2.y);
             return new Rectangle(x, y, Math.max(value1.right, value2.right) - x, Math.max(value1.bottom, value2.bottom) - y);
         };
+        /**
+         * 在矩形重叠的地方创建一个新的矩形
+         * @param value1
+         * @param value2
+         */
         Rectangle.overlap = function (value1, value2) {
             var x = Math.max(Math.max(value1.x, value2.x), 0);
             var y = Math.max(Math.max(value1.y, value2.y), 0);
@@ -4175,8 +5531,10 @@ var es;
                 this.height = height * scale.y;
             }
             else {
+                // 我们需要找到我们的绝对最小/最大值，并据此创建边界
                 var worldPosX = parentPosition.x + position.x;
                 var worldPosY = parentPosition.y + position.y;
+                // 考虑到原点，将参考点设置为世界参考
                 this._transformMat = es.Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
                 this._tempMat = es.Matrix2D.createScale(scale.x, scale.y);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
@@ -4184,6 +5542,7 @@ var es;
                 this._transformMat = this._transformMat.multiply(this._tempMat);
                 this._tempMat = es.Matrix2D.createTranslation(worldPosX, worldPosY);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
+                // TODO: 我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角
                 var topLeft = new es.Vector2(worldPosX, worldPosY);
                 var topRight = new es.Vector2(worldPosX + width, worldPosY);
                 var bottomLeft = new es.Vector2(worldPosX, worldPosY + height);
@@ -4192,6 +5551,7 @@ var es;
                 es.Vector2Ext.transformR(topRight, this._transformMat, topRight);
                 es.Vector2Ext.transformR(bottomLeft, this._transformMat, bottomLeft);
                 es.Vector2Ext.transformR(bottomRight, this._transformMat, bottomRight);
+                // 找出最小值和最大值，这样我们就可以计算出我们的边界框。
                 var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
                 var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
                 var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
@@ -4201,6 +5561,11 @@ var es;
                 this.height = maxY - minY;
             }
         };
+        /**
+         * 返回一个横跨当前矩形和提供的三角形位置的矩形
+         * @param deltaX
+         * @param deltaY
+         */
         Rectangle.prototype.getSweptBroadphaseBounds = function (deltaX, deltaY) {
             var broadphasebox = Rectangle.empty;
             broadphasebox.x = deltaX > 0 ? this.x : this.x + deltaX;
@@ -4209,42 +5574,73 @@ var es;
             broadphasebox.height = deltaY > 0 ? deltaY + this.height : this.height - deltaY;
             return broadphasebox;
         };
+        /**
+         * 如果发生碰撞，返回true
+         * moveX和moveY将返回b1为避免碰撞而必须移动的移动量
+         * @param other
+         * @param moveX
+         * @param moveY
+         */
         Rectangle.prototype.collisionCheck = function (other, moveX, moveY) {
             moveX.value = moveY.value = 0;
             var l = other.x - (this.x + this.width);
             var r = (other.x + other.width) - this.x;
             var t = (other.y - (this.y + this.height));
             var b = (other.y + other.height) - this.y;
+            // 检验是否有碰撞
             if (l > 0 || r < 0 || t > 0 || b < 0)
                 return false;
+            // 求两边的偏移量
             moveX.value = Math.abs(l) < r ? l : r;
             moveY.value = Math.abs(t) < b ? t : b;
+            // 只使用最小的偏移量
             if (Math.abs(moveX.value) < Math.abs(moveY.value))
                 moveY.value = 0;
             else
                 moveX.value = 0;
             return true;
         };
+        /**
+         * 计算两个矩形之间有符号的交点深度
+         * @param rectA
+         * @param rectB
+         * @returns 两个相交的矩形之间的重叠量。
+         * 这些深度值可以是负值，取决于矩形/相交的哪些边。
+         * 这允许调用者确定正确的推送对象的方向，以解决碰撞问题。
+         * 如果矩形不相交，则返回Vector2.Zero
+         */
         Rectangle.getIntersectionDepth = function (rectA, rectB) {
+            // 计算半尺寸
             var halfWidthA = rectA.width / 2;
             var halfHeightA = rectA.height / 2;
             var halfWidthB = rectB.width / 2;
             var halfHeightB = rectB.height / 2;
+            // 计算中心
             var centerA = new es.Vector2(rectA.left + halfWidthA, rectA.top + halfHeightA);
             var centerB = new es.Vector2(rectB.left + halfWidthB, rectB.top + halfHeightB);
+            // 计算当前中心间的距离和最小非相交距离
             var distanceX = centerA.x - centerB.x;
             var distanceY = centerA.y - centerB.y;
             var minDistanceX = halfWidthA + halfWidthB;
             var minDistanceY = halfHeightA + halfHeightB;
+            // 如果我们根本不相交，则返回(0，0)
             if (Math.abs(distanceX) >= minDistanceX || Math.abs(distanceY) >= minDistanceY)
                 return es.Vector2.zero;
+            // 计算并返回交叉点深度
             var depthX = distanceX > 0 ? minDistanceX - distanceX : -minDistanceX - distanceX;
             var depthY = distanceY > 0 ? minDistanceY - distanceY : -minDistanceY - distanceY;
             return new es.Vector2(depthX, depthY);
         };
+        /**
+         * 比较当前实例是否等于指定的矩形
+         * @param other
+         */
         Rectangle.prototype.equals = function (other) {
             return this === other;
         };
+        /**
+         * 获取这个矩形的哈希码
+         */
         Rectangle.prototype.getHashCode = function () {
             return (this.x ^ this.y ^ this.width ^ this.height);
         };
@@ -4255,10 +5651,22 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var SubpixelFloat = (function () {
+    /**
+     * 它存储值，直到累计的总数大于1。一旦超过1，该值将在调用update时添加到amount中
+     * 一般用法如下:
+     *
+     *  let deltaMove = this.velocity * es.Time.deltaTime;
+     *  deltaMove.x = this._x.update(deltaMove.x);
+     *  deltaMove.y = this._y.update(deltaMove.y);
+     */
+    var SubpixelFloat = /** @class */ (function () {
         function SubpixelFloat() {
             this.remainder = 0;
         }
+        /**
+         * 以amount递增余数，将值截断，存储新的余数并将amount设置为当前值
+         * @param amount
+         */
         SubpixelFloat.prototype.update = function (amount) {
             this.remainder += amount;
             var motion = Math.floor(Math.trunc(this.remainder));
@@ -4266,6 +5674,9 @@ var es;
             amount = motion;
             return amount;
         };
+        /**
+         * 将余数重置为0
+         */
         SubpixelFloat.prototype.reset = function () {
             this.remainder = 0;
         };
@@ -4275,15 +5686,22 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var SubpixelVector2 = (function () {
+    var SubpixelVector2 = /** @class */ (function () {
         function SubpixelVector2() {
             this._x = new es.SubpixelFloat();
             this._y = new es.SubpixelFloat();
         }
+        /**
+         * 以数量递增s/y余数，将值截断为整数，存储新的余数并将amount设置为当前值
+         * @param amount
+         */
         SubpixelVector2.prototype.update = function (amount) {
             amount.x = this._x.update(amount.x);
             amount.y = this._y.update(amount.y);
         };
+        /**
+         * 将余数重置为0
+         */
         SubpixelVector2.prototype.reset = function () {
             this._x.reset();
             this._y.reset();
@@ -4294,7 +5712,13 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Vector2 = (function () {
+    /** 2d 向量 */
+    var Vector2 = /** @class */ (function () {
+        /**
+         * 从两个值构造一个带有X和Y的二维向量。
+         * @param x 二维空间中的x坐标
+         * @param y 二维空间的y坐标
+         */
         function Vector2(x, y) {
             this.x = 0;
             this.y = 0;
@@ -4329,30 +5753,55 @@ var es;
             enumerable: true,
             configurable: true
         });
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
         Vector2.add = function (value1, value2) {
             var result = new Vector2(0, 0);
             result.x = value1.x + value2.x;
             result.y = value1.y + value2.y;
             return result;
         };
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
         Vector2.divide = function (value1, value2) {
             var result = new Vector2(0, 0);
             result.x = value1.x / value2.x;
             result.y = value1.y / value2.y;
             return result;
         };
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
         Vector2.multiply = function (value1, value2) {
             var result = new Vector2(0, 0);
             result.x = value1.x * value2.x;
             result.y = value1.y * value2.y;
             return result;
         };
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
         Vector2.subtract = function (value1, value2) {
             var result = new Vector2(0, 0);
             result.x = value1.x - value2.x;
             result.y = value1.y - value2.y;
             return result;
         };
+        /**
+         * 创建一个新的Vector2
+         * 它包含来自另一个向量的标准化值。
+         * @param value
+         */
         Vector2.normalize = function (value) {
             var nValue = new Vector2(value.x, value.y);
             var val = 1 / Math.sqrt((nValue.x * nValue.x) + (nValue.y * nValue.y));
@@ -4360,70 +5809,147 @@ var es;
             nValue.y *= val;
             return nValue;
         };
+        /**
+         * 返回两个向量的点积
+         * @param value1
+         * @param value2
+         */
         Vector2.dot = function (value1, value2) {
             return (value1.x * value2.x) + (value1.y * value2.y);
         };
+        /**
+         * 返回两个向量之间距离的平方
+         * @param value1
+         * @param value2
+         */
         Vector2.distanceSquared = function (value1, value2) {
             var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
             return (v1 * v1) + (v2 * v2);
         };
+        /**
+         * 将指定的值限制在一个范围内
+         * @param value1
+         * @param min
+         * @param max
+         */
         Vector2.clamp = function (value1, min, max) {
             return new Vector2(es.MathHelper.clamp(value1.x, min.x, max.x), es.MathHelper.clamp(value1.y, min.y, max.y));
         };
+        /**
+         * 创建一个新的Vector2，其中包含指定向量的线性插值
+         * @param value1 第一个向量
+         * @param value2 第二个向量
+         * @param amount 加权值(0.0-1.0之间)
+         * @returns 指定向量的线性插值结果
+         */
         Vector2.lerp = function (value1, value2, amount) {
             return new Vector2(es.MathHelper.lerp(value1.x, value2.x, amount), es.MathHelper.lerp(value1.y, value2.y, amount));
         };
+        /**
+         * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换。
+         * @param position
+         * @param matrix
+         */
         Vector2.transform = function (position, matrix) {
             return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31, (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32);
         };
+        /**
+         * 返回两个向量之间的距离
+         * @param value1
+         * @param value2
+         * @returns 两个向量之间的距离
+         */
         Vector2.distance = function (value1, value2) {
             var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
             return Math.sqrt((v1 * v1) + (v2 * v2));
         };
+        /**
+         * 返回两个向量之间的角度，单位是度数
+         * @param from
+         * @param to
+         */
         Vector2.angle = function (from, to) {
             from = Vector2.normalize(from);
             to = Vector2.normalize(to);
             return Math.acos(es.MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
         };
+        /**
+         * 创建一个包含指定向量反转的新Vector2
+         * @param value
+         * @returns 矢量反演的结果
+         */
         Vector2.negate = function (value) {
             value.x = -value.x;
             value.y = -value.y;
             return value;
         };
+        /**
+         *
+         * @param value
+         */
         Vector2.prototype.add = function (value) {
             this.x += value.x;
             this.y += value.y;
             return this;
         };
+        /**
+         *
+         * @param value
+         */
         Vector2.prototype.divide = function (value) {
             this.x /= value.x;
             this.y /= value.y;
             return this;
         };
+        /**
+         *
+         * @param value
+         */
         Vector2.prototype.multiply = function (value) {
             this.x *= value.x;
             this.y *= value.y;
             return this;
         };
+        /**
+         * 从当前Vector2减去一个Vector2
+         * @param value 要减去的Vector2
+         * @returns 当前Vector2
+         */
         Vector2.prototype.subtract = function (value) {
             this.x -= value.x;
             this.y -= value.y;
             return this;
         };
+        /**
+         * 将这个Vector2变成一个方向相同的单位向量
+         */
         Vector2.prototype.normalize = function () {
             var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
             this.x *= val;
             this.y *= val;
         };
+        /** 返回它的长度 */
         Vector2.prototype.length = function () {
             return Math.sqrt((this.x * this.x) + (this.y * this.y));
         };
+        /**
+         * 返回该Vector2的平方长度
+         * @returns 这个Vector2的平方长度
+         */
         Vector2.prototype.lengthSquared = function () {
             return (this.x * this.x) + (this.y * this.y);
         };
+        /**
+         * 四舍五入X和Y值
+         */
         Vector2.prototype.round = function () {
             return new Vector2(Math.round(this.x), Math.round(this.y));
         };
+        /**
+         * 比较当前实例是否等于指定的对象
+         * @param other 要比较的对象
+         * @returns 如果实例相同true 否则false
+         */
         Vector2.prototype.equals = function (other) {
             if (other instanceof Vector2) {
                 return other.x == this.x && other.y == this.y;
@@ -4436,7 +5962,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Vector3 = (function () {
+    var Vector3 = /** @class */ (function () {
         function Vector3(x, y, z) {
             this.x = x;
             this.y = y;
@@ -4448,13 +5974,21 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var ColliderTriggerHelper = (function () {
+    /**
+     * 移动器使用的帮助器类，用于管理触发器碰撞器交互并调用itriggerlistener
+     */
+    var ColliderTriggerHelper = /** @class */ (function () {
         function ColliderTriggerHelper(entity) {
+            /** 存储当前帧中发生的所有活动交集对 */
             this._activeTriggerIntersections = [];
+            /** 存储前一帧的交叉对，以便我们可以在移动该帧后检测出口 */
             this._previousTriggerIntersections = [];
             this._tempTriggerList = [];
             this._entity = entity;
         }
+        /**
+         * 实体被移动后，应该调用更新。它会处理碰撞器重叠的任何itriggerlistener。
+         */
         ColliderTriggerHelper.prototype.update = function () {
             var colliders = this._entity.getComponents(es.Collider);
             for (var i = 0; i < colliders.length; i++) {
@@ -4553,13 +6087,14 @@ var es;
         PointSectors[PointSectors["bottomLeft"] = 10] = "bottomLeft";
         PointSectors[PointSectors["bottomRight"] = 6] = "bottomRight";
     })(PointSectors = es.PointSectors || (es.PointSectors = {}));
-    var Collisions = (function () {
+    var Collisions = /** @class */ (function () {
         function Collisions() {
         }
         Collisions.isLineToLine = function (a1, a2, b1, b2) {
             var b = es.Vector2.subtract(a2, a1);
             var d = es.Vector2.subtract(b2, b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
+            // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
                 return false;
             var c = es.Vector2.subtract(b1, a1);
@@ -4576,6 +6111,7 @@ var es;
             var b = es.Vector2.subtract(a2, a1);
             var d = es.Vector2.subtract(b2, b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
+            // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
                 return intersection;
             var c = es.Vector2.subtract(b1, a1);
@@ -4641,6 +6177,7 @@ var es;
             }
             else {
                 var both = fromSector | toSector;
+                // 线对边进行检查
                 var edgeFrom = void 0;
                 var edgeTo = void 0;
                 if ((both & PointSectors.top) != 0) {
@@ -4673,6 +6210,19 @@ var es;
         Collisions.rectToPoint = function (rX, rY, rW, rH, point) {
             return point.x >= rX && point.y >= rY && point.x < rX + rW && point.y < rY + rH;
         };
+        /**
+         * 位标志和帮助使用Cohen–Sutherland算法
+         *
+         * 位标志:
+         * 1001 1000 1010
+         * 0001 0000 0010
+         * 0101 0100 0110
+         * @param rX
+         * @param rY
+         * @param rW
+         * @param rH
+         * @param point
+         */
         Collisions.getSector = function (rX, rY, rW, rH, point) {
             var sector = PointSectors.center;
             if (point.x < rX)
@@ -4691,11 +6241,23 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var RaycastHit = (function () {
+    var RaycastHit = /** @class */ (function () {
         function RaycastHit(collider, fraction, distance, point, normal) {
+            /**
+             * 撞击发生时沿射线的距离。
+             */
             this.fraction = 0;
+            /**
+             * 从射线原点到碰撞点的距离
+             */
             this.distance = 0;
+            /**
+             * 世界空间中光线击中对撞机表面的点
+             */
             this.point = es.Vector2.zero;
+            /**
+             * 被射线击中的表面的法向量
+             */
             this.normal = es.Vector2.zero;
             this.collider = collider;
             this.fraction = fraction;
@@ -4726,18 +6288,30 @@ var es;
     }());
     es.RaycastHit = RaycastHit;
 })(es || (es = {}));
+///<reference path="./RaycastHit.ts" />
 var es;
+///<reference path="./RaycastHit.ts" />
 (function (es) {
-    var Physics = (function () {
+    var Physics = /** @class */ (function () {
         function Physics() {
         }
         Physics.reset = function () {
             this._spatialHash = new es.SpatialHash(this.spatialHashCellSize);
             this._hitArray[0].reset();
         };
+        /**
+         * 从SpatialHash中移除所有碰撞器
+         */
         Physics.clear = function () {
             this._spatialHash.clear();
         };
+        /**
+         * 获取位于指定圆内的所有碰撞器
+         * @param center
+         * @param randius
+         * @param results
+         * @param layerMask
+         */
         Physics.overlapCircleAll = function (center, randius, results, layerMask) {
             if (layerMask === void 0) { layerMask = -1; }
             if (results.length == 0) {
@@ -4746,30 +6320,66 @@ var es;
             }
             return this._spatialHash.overlapCircle(center, randius, results, layerMask);
         };
+        /**
+         * 返回所有碰撞器与边界相交的碰撞器。bounds。请注意，这是一个broadphase检查，所以它只检查边界，不做单个碰撞到碰撞器的检查!
+         * @param rect
+         * @param layerMask
+         */
         Physics.boxcastBroadphase = function (rect, layerMask) {
             if (layerMask === void 0) { layerMask = this.allLayers; }
             return this._spatialHash.aabbBroadphase(rect, null, layerMask);
         };
+        /**
+         * 返回所有与边界相交的碰撞器，不包括传入的碰撞器(self)。如果您希望为其他查询自行创建扫过的边界，则此方法非常有用
+         * @param collider
+         * @param rect
+         * @param layerMask
+         */
         Physics.boxcastBroadphaseExcludingSelf = function (collider, rect, layerMask) {
             if (layerMask === void 0) { layerMask = this.allLayers; }
             return this._spatialHash.aabbBroadphase(rect, collider, layerMask);
         };
+        /**
+         * 将对撞机添加到物理系统中
+         * @param collider
+         */
         Physics.addCollider = function (collider) {
             Physics._spatialHash.register(collider);
         };
+        /**
+         * 从物理系统中移除对撞机
+         * @param collider
+         */
         Physics.removeCollider = function (collider) {
             Physics._spatialHash.remove(collider);
         };
+        /**
+         * 更新物理系统中对撞机的位置。这实际上只是移除然后重新添加带有新边界的碰撞器
+         * @param collider
+         */
         Physics.updateCollider = function (collider) {
             this._spatialHash.remove(collider);
             this._spatialHash.register(collider);
         };
+        /**
+         * 返回与layerMask匹配的碰撞器的第一次命中
+         * @param start
+         * @param end
+         * @param layerMask
+         */
         Physics.linecast = function (start, end, layerMask) {
             if (layerMask === void 0) { layerMask = Physics.allLayers; }
             this._hitArray[0].reset();
             this.linecastAll(start, end, this._hitArray, layerMask);
             return this._hitArray[0];
         };
+        /**
+         * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组
+         * @param start
+         * @param end
+         * @param hits
+         * @param layerMask
+         */
         Physics.linecastAll = function (start, end, hits, layerMask) {
             if (layerMask === void 0) { layerMask = Physics.allLayers; }
             if (hits.length == 0) {
@@ -4778,13 +6388,28 @@ var es;
             }
             return this._spatialHash.linecast(start, end, hits, layerMask);
         };
+        /**
+         * debug绘制空间散列的内容
+         * @param secondsToDisplay
+         */
         Physics.debugDraw = function (secondsToDisplay) {
             this._spatialHash.debugDraw(secondsToDisplay, 2);
         };
+        /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
         Physics.spatialHashCellSize = 100;
+        /** 接受layerMask的所有方法的默认值 */
         Physics.allLayers = -1;
+        /**
+         * raycast是否检测配置为触发器的碰撞器
+         */
         Physics.raycastsHitTriggers = false;
+        /**
+         * 在碰撞器中开始的射线/直线是否强制转换检测到那些碰撞器
+         */
         Physics.raycastsStartInColliders = false;
+        /**
+         * 我们保留它以避免在每次raycast发生时分配它
+         */
         Physics._hitArray = [
             new es.RaycastHit()
         ];
@@ -4794,7 +6419,10 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Ray2D = (function () {
+    /**
+     * 不是真正的射线(射线只有开始和方向)，作为一条线和射线。
+     */
+    var Ray2D = /** @class */ (function () {
         function Ray2D(position, end) {
             this.start = position;
             this.end = end;
@@ -4806,22 +6434,36 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var SpatialHash = (function () {
+    var SpatialHash = /** @class */ (function () {
         function SpatialHash(cellSize) {
             if (cellSize === void 0) { cellSize = 100; }
             this.gridBounds = new es.Rectangle();
+            /**
+             * 缓存的循环用于重叠检查
+             */
             this._overlapTestCircle = new es.Circle(0);
+            /**
+             * 保存所有数据的字典
+             */
             this._cellDict = new NumberDictionary();
+            /**
+             * 用于返回冲突信息的共享HashSet
+             */
             this._tempHashSet = [];
             this._cellSize = cellSize;
             this._inverseCellSize = 1 / this._cellSize;
             this._raycastParser = new RaycastResultParser();
         }
+        /**
+         * 将对象添加到SpatialHash
+         * @param collider
+         */
         SpatialHash.prototype.register = function (collider) {
             var bounds = collider.bounds;
             collider.registeredPhysicsBounds = bounds;
             var p1 = this.cellCoords(bounds.x, bounds.y);
             var p2 = this.cellCoords(bounds.right, bounds.bottom);
+            // 更新边界以跟踪网格大小
             if (!this.gridBounds.contains(p1.x, p1.y)) {
                 this.gridBounds = es.RectangleExt.union(this.gridBounds, p1);
             }
@@ -4830,18 +6472,24 @@ var es;
             }
             for (var x = p1.x; x <= p2.x; x++) {
                 for (var y = p1.y; y <= p2.y; y++) {
+                    // 如果没有单元格，我们需要创建它
                     var c = this.cellAtPosition(x, y, true);
                     if (!c.firstOrDefault(function (c) { return c == collider; }))
                         c.push(collider);
                 }
             }
         };
+        /**
+         * 从SpatialHash中删除对象
+         * @param collider
+         */
         SpatialHash.prototype.remove = function (collider) {
             var bounds = collider.registeredPhysicsBounds;
             var p1 = this.cellCoords(bounds.x, bounds.y);
             var p2 = this.cellCoords(bounds.right, bounds.bottom);
             for (var x = p1.x; x <= p2.x; x++) {
                 for (var y = p1.y; y <= p2.y; y++) {
+                    // 单元格应该始终存在，因为这个碰撞器应该在所有查询的单元格中
                     var cell = this.cellAtPosition(x, y);
                     if (!cell)
                         console.log("\u4ECE\u4E0D\u5B58\u5728\u78B0\u649E\u5668\u7684\u5355\u5143\u683C\u4E2D\u79FB\u9664\u78B0\u649E\u5668: [" + collider + "]");
@@ -4850,12 +6498,21 @@ var es;
                 }
             }
         };
+        /**
+         * 使用蛮力方法从SpatialHash中删除对象
+         * @param obj
+         */
         SpatialHash.prototype.removeWithBruteForce = function (obj) {
             this._cellDict.remove(obj);
         };
         SpatialHash.prototype.clear = function () {
             this._cellDict.clear();
         };
+        /**
+         * debug绘制空间散列的内容
+         * @param secondsToDisplay
+         * @param textScale
+         */
         SpatialHash.prototype.debugDraw = function (secondsToDisplay, textScale) {
             if (textScale === void 0) { textScale = 1; }
             for (var x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
@@ -4866,6 +6523,12 @@ var es;
                 }
             }
         };
+        /**
+         * 返回边框与单元格相交的所有对象
+         * @param bounds
+         * @param excludeCollider
+         * @param layerMask
+         */
         SpatialHash.prototype.aabbBroadphase = function (bounds, excludeCollider, layerMask) {
             this._tempHashSet.length = 0;
             var p1 = this.cellCoords(bounds.x, bounds.y);
@@ -4877,6 +6540,7 @@ var es;
                         continue;
                     var _loop_4 = function (i) {
                         var collider = cell[i];
+                        // 如果它是自身或者如果它不匹配我们的层掩码 跳过这个碰撞器
                         if (collider == excludeCollider || !es.Flags.isFlagSet(layerMask, collider.physicsLayer.value))
                             return "continue";
                         if (bounds.intersects(collider.bounds)) {
@@ -4885,6 +6549,7 @@ var es;
                         }
                     };
                     var this_3 = this;
+                    // 当cell不为空。循环并取回所有碰撞器
                     for (var i = 0; i < cell.length; i++) {
                         _loop_4(i);
                     }
@@ -4892,25 +6557,39 @@ var es;
             }
             return this._tempHashSet;
         };
+        /**
+         * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组。
+         * @param start
+         * @param end
+         * @param hits
+         * @param layerMask
+         */
         SpatialHash.prototype.linecast = function (start, end, hits, layerMask) {
             var ray = new es.Ray2D(start, end);
             this._raycastParser.start(ray, hits, layerMask);
+            // 在与网格相同的空间中获取起始/结束位置
             var currentCell = this.cellCoords(start.x, start.y);
             var lastCell = this.cellCoords(end.x, end.y);
             var stepX = Math.sign(ray.direction.x);
             var stepY = Math.sign(ray.direction.y);
+            // 我们要确保，如果我们在同一行或同一行，我们不会步进不必要的方向
             if (currentCell.x == lastCell.x)
                 stepX = 0;
             if (currentCell.y == lastCell.y)
                 stepY = 0;
+            // 计算单元边界。当这一步是正的，下一个单元格在这一步之后意味着我们加1。
+            // 如果为负，则单元格在此之前，这种情况下不添加边界
             var xStep = stepX < 0 ? 0 : stepX;
             var yStep = stepY < 0 ? 0 : stepY;
             var nextBoundaryX = (currentCell.x + xStep) * this._cellSize;
             var nextBoundaryY = (currentCell.y + yStep) * this._cellSize;
+            // 确定射线穿过第一个垂直体素边界时的t值。y/horizontal。
+            // 这两个值的最小值将表明我们可以沿着射线走多少，而仍然保持在当前体素中，对于接近vertical/horizontal的射线来说可能是无限的
             var tMaxX = ray.direction.x != 0 ? (nextBoundaryX - ray.start.x) / ray.direction.x : Number.MAX_VALUE;
             var tMaxY = ray.direction.y != 0 ? (nextBoundaryY - ray.start.y) / ray.direction.y : Number.MAX_VALUE;
             var tDeltaX = ray.direction.x != 0 ? this._cellSize / (ray.direction.x * stepX) : Number.MAX_VALUE;
             var tDeltaY = ray.direction.y != 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
+            // 开始遍历并返回交叉单元格。
             var cell = this.cellAtPosition(currentCell.x, currentCell.y);
             if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
                 this._raycastParser.reset();
@@ -4934,6 +6613,13 @@ var es;
             this._raycastParser.reset();
             return this._raycastParser.hitCounter;
         };
+        /**
+         * 获取位于指定圆内的所有碰撞器
+         * @param circleCenter
+         * @param radius
+         * @param results
+         * @param layerMask
+         */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
@@ -4961,14 +6647,27 @@ var es;
                 else {
                     throw new Error("overlapCircle against this collider type is not implemented!");
                 }
+                // 如果我们所有的结果数据有了则返回
                 if (resultCounter == results.length)
                     return resultCounter;
             }
             return resultCounter;
         };
+        /**
+         * 获取单元格的x,y值作为世界空间的x,y值
+         * @param x
+         * @param y
+         */
         SpatialHash.prototype.cellCoords = function (x, y) {
             return new es.Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
         };
+        /**
+         * 获取世界空间x,y值的单元格。
+         * 如果单元格为空且createCellIfEmpty为true，则会创建一个新的单元格
+         * @param x
+         * @param y
+         * @param createCellIfEmpty
+         */
         SpatialHash.prototype.cellAtPosition = function (x, y, createCellIfEmpty) {
             if (createCellIfEmpty === void 0) { createCellIfEmpty = false; }
             var cell = this._cellDict.tryGetValue(x, y);
@@ -4987,13 +6686,21 @@ var es;
         return SpatialHash;
     }());
     es.SpatialHash = SpatialHash;
-    var NumberDictionary = (function () {
+    /**
+     * 包装一个Unit32，列表碰撞器字典
+     * 它的主要目的是将int、int x、y坐标散列到单个Uint32键中，使用O(1)查找。
+     */
+    var NumberDictionary = /** @class */ (function () {
         function NumberDictionary() {
             this._store = new Map();
         }
         NumberDictionary.prototype.add = function (x, y, list) {
             this._store.set(this.getKey(x, y), list);
         };
+        /**
+         * 使用蛮力方法从字典存储列表中移除碰撞器
+         * @param obj
+         */
         NumberDictionary.prototype.remove = function (obj) {
             this._store.forEach(function (list) {
                 if (list.contains(obj))
@@ -5006,13 +6713,16 @@ var es;
         NumberDictionary.prototype.getKey = function (x, y) {
             return x + "_" + y;
         };
+        /**
+         * 清除字典数据
+         */
         NumberDictionary.prototype.clear = function () {
             this._store.clear();
         };
         return NumberDictionary;
     }());
     es.NumberDictionary = NumberDictionary;
-    var RaycastResultParser = (function () {
+    var RaycastResultParser = /** @class */ (function () {
         function RaycastResultParser() {
             this._tempHit = new es.RaycastHit();
             this._checkedColliders = [];
@@ -5024,22 +6734,36 @@ var es;
             this._layerMask = layerMask;
             this.hitCounter = 0;
         };
+        /**
+         * 如果hits数组被填充，返回true。单元格不能为空!
+         * @param cellX
+         * @param cellY
+         * @param cell
+         */
         RaycastResultParser.prototype.checkRayIntersection = function (cellX, cellY, cell) {
             var fraction = new es.Ref(0);
             for (var i = 0; i < cell.length; i++) {
                 var potential = cell[i];
+                // 管理我们已经处理过的碰撞器
                 if (this._checkedColliders.contains(potential))
                     continue;
                 this._checkedColliders.push(potential);
+                // 只有当我们被设置为这样做时才会点击触发器
                 if (potential.isTrigger && !es.Physics.raycastsHitTriggers)
                     continue;
+                // 确保碰撞器在图层蒙版上
                 if (!es.Flags.isFlagSet(this._layerMask, potential.physicsLayer.value))
                     continue;
+                // TODO: rayIntersects的性能够吗?需要测试它。Collisions.rectToLine可能更快
+                // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
+                // 在做形状测试之前先做一个边界检查
                 var colliderBounds = potential.bounds;
                 if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1) {
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
+                        // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
                         if (!es.Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
                             continue;
+                        // TODO: 确保碰撞点在当前单元格中，如果它没有保存它以供以后计算
                         this._tempHit.collider = potential;
                         this._cellHits.push(this._tempHit);
                     }
@@ -5047,9 +6771,11 @@ var es;
             }
             if (this._cellHits.length == 0)
                 return false;
+            // 所有处理单元完成。对结果进行排序并将命中结果打包到结果数组中
             this._cellHits.sort(RaycastResultParser.compareRaycastHits);
             for (var i = 0; i < this._cellHits.length; i++) {
                 this._hits[this.hitCounter] = this._cellHits[i];
+                // 增加命中计数器，如果它已经达到数组大小的限制，我们就完成了
                 this.hitCounter++;
                 if (this.hitCounter == this._hits.length)
                     return true;
@@ -5070,17 +6796,28 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Shape = (function () {
+    var Shape = /** @class */ (function () {
         function Shape() {
         }
         return Shape;
     }());
     es.Shape = Shape;
 })(es || (es = {}));
+///<reference path="./Shape.ts" />
 var es;
+///<reference path="./Shape.ts" />
 (function (es) {
-    var Polygon = (function (_super) {
+    /**
+     * 多边形
+     */
+    var Polygon = /** @class */ (function (_super) {
         __extends(Polygon, _super);
+        /**
+         * 从点构造一个多边形
+         * 多边形应该以顺时针方式指定 不能重复第一个/最后一个点，它们以0 0为中心
+         * @param points
+         * @param isBox
+         */
         function Polygon(points, isBox) {
             var _this = _super.call(this) || this;
             _this._areEdgeNormalsDirty = true;
@@ -5090,6 +6827,10 @@ var es;
             return _this;
         }
         Object.defineProperty(Polygon.prototype, "edgeNormals", {
+            /**
+             * 边缘法线用于SAT碰撞检测。缓存它们用于避免squareRoots
+             * box只有两个边缘 因为其他两边是平行的
+             */
             get: function () {
                 if (this._areEdgeNormalsDirty)
                     this.buildEdgeNormals();
@@ -5098,6 +6839,10 @@ var es;
             enumerable: true,
             configurable: true
         });
+        /**
+         * 重置点并重新计算中心和边缘法线
+         * @param points
+         */
         Polygon.prototype.setPoints = function (points) {
             this.points = points;
             this.recalculateCenterAndEdgeNormals();
@@ -5106,11 +6851,20 @@ var es;
                 this._originalPoints.push(this.points[i]);
             }
         };
+        /**
+         * 重新计算多边形中心
+         * 如果点数改变必须调用该方法
+         */
         Polygon.prototype.recalculateCenterAndEdgeNormals = function () {
             this._polygonCenter = Polygon.findPolygonCenter(this.points);
             this._areEdgeNormalsDirty = true;
         };
+        /**
+         * 建立多边形边缘法线
+         * 它们仅由edgeNormals getter惰性创建和更新
+         */
         Polygon.prototype.buildEdgeNormals = function () {
+            // 对于box 我们只需要两条边，因为另外两条边是平行的
             var totalEdges = this.isBox ? 2 : this.points.length;
             if (this._edgeNormals == undefined || this._edgeNormals.length != totalEdges)
                 this._edgeNormals = new Array(totalEdges);
@@ -5126,6 +6880,11 @@ var es;
                 this._edgeNormals[i] = perp;
             }
         };
+        /**
+         * 建立一个对称的多边形(六边形，八角形，n角形)并返回点
+         * @param vertCount
+         * @param radius
+         */
         Polygon.buildSymmetricalPolygon = function (vertCount, radius) {
             var verts = new Array(vertCount);
             for (var i = 0; i < vertCount; i++) {
@@ -5134,11 +6893,19 @@ var es;
             }
             return verts;
         };
+        /**
+         * 重定位多边形的点
+         * @param points
+         */
         Polygon.recenterPolygonVerts = function (points) {
             var center = this.findPolygonCenter(points);
             for (var i = 0; i < points.length; i++)
                 points[i].subtract(center);
         };
+        /**
+         * 找到多边形的中心。注意，这对于正则多边形是准确的。不规则多边形没有中心。
+         * @param points
+         */
         Polygon.findPolygonCenter = function (points) {
             var x = 0, y = 0;
             for (var i = 0; i < points.length; i++) {
@@ -5147,6 +6914,11 @@ var es;
             }
             return new es.Vector2(x / points.length, y / points.length);
         };
+        /**
+         * 不知道辅助顶点，所以取每个顶点，如果你知道辅助顶点，执行climbing算法
+         * @param points
+         * @param direction
+         */
         Polygon.getFarthestPointInDirection = function (points, direction) {
             var index = 0;
             var maxDot = es.Vector2.dot(points[index], direction);
@@ -5159,6 +6931,15 @@ var es;
             }
             return points[index];
         };
+        /**
+         * 迭代多边形的所有边，并得到任意边上离点最近的点。
+         * 通过最近点的平方距离和它所在的边的法线返回。
+         * 点应该在多边形的空间中(点-多边形.位置)
+         * @param points
+         * @param point
+         * @param distanceSquared
+         * @param edgeNormal
+         */
         Polygon.getClosestPointOnPolygonToPoint = function (points, point, distanceSquared, edgeNormal) {
             distanceSquared.value = Number.MAX_VALUE;
             edgeNormal.x = 0;
@@ -5174,6 +6955,7 @@ var es;
                 if (tempDistanceSquared < distanceSquared.value) {
                     distanceSquared.value = tempDistanceSquared;
                     closestPoint = closest;
+                    // 求直线的法线
                     var line = es.Vector2.subtract(points[j], points[i]);
                     edgeNormal.x = -line.y;
                     edgeNormal.y = line.x;
@@ -5182,6 +6964,12 @@ var es;
             es.Vector2Ext.normalize(edgeNormal);
             return closestPoint;
         };
+        /**
+         * 旋转原始点并复制旋转的值到旋转的点
+         * @param radians
+         * @param originalPoints
+         * @param rotatedPoints
+         */
         Polygon.rotatePolygonVerts = function (radians, originalPoints, rotatedPoints) {
             var cos = Math.cos(radians);
             var sin = Math.sin(radians);
@@ -5191,6 +6979,7 @@ var es;
             }
         };
         Polygon.prototype.recalculateBounds = function (collider) {
+            // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
             this.center = collider.localOffset;
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 var hasUnitScale = true;
@@ -5200,11 +6989,14 @@ var es;
                     tempMat = es.Matrix2D.createScale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
                     combinedMatrix = combinedMatrix.multiply(tempMat);
                     hasUnitScale = false;
+                    // 缩放偏移量并将其设置为中心。如果我们有旋转，它会在下面重置
                     this.center = es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale);
                 }
                 if (collider.entity.transform.rotation != 0) {
                     tempMat = es.Matrix2D.createRotation(collider.entity.transform.rotation);
                     combinedMatrix = combinedMatrix.multiply(tempMat);
+                    // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动
+                    // 我们的偏移使角度为0我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
                     var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * es.MathHelper.Rad2Deg;
                     var offsetLength = hasUnitScale ? collider._localOffsetLength :
                         es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
@@ -5212,8 +7004,10 @@ var es;
                 }
                 tempMat = es.Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
                 combinedMatrix = combinedMatrix.multiply(tempMat);
+                // 最后变换原始点
                 es.Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
                 this.isUnrotated = collider.entity.transform.rotation == 0;
+                // 如果旋转的话，我们只需要重建边的法线
                 if (collider._isRotationDirty)
                     this._areEdgeNormalsDirty = true;
             }
@@ -5250,7 +7044,13 @@ var es;
         Polygon.prototype.collidesWithLine = function (start, end, hit) {
             return es.ShapeCollisions.lineToPoly(start, end, this, hit);
         };
+        /**
+         * 本质上，这个算法所做的就是从一个点发射一条射线。
+         * 如果它与奇数条多边形边相交，我们就知道它在多边形内部。
+         * @param point
+         */
         Polygon.prototype.containsPoint = function (point) {
+            // 将点归一化到多边形坐标空间中
             point.subtract(this.position);
             var isInside = false;
             for (var i = 0, j = this.points.length - 1; i < this.points.length; j = i++) {
@@ -5269,9 +7069,14 @@ var es;
     }(es.Shape));
     es.Polygon = Polygon;
 })(es || (es = {}));
+///<reference path="./Polygon.ts" />
 var es;
+///<reference path="./Polygon.ts" />
 (function (es) {
-    var Box = (function (_super) {
+    /**
+     * 多边形的特殊情况。在进行SAT碰撞检查时，我们只需要检查2个轴而不是8个轴
+     */
+    var Box = /** @class */ (function (_super) {
         __extends(Box, _super);
         function Box(width, height) {
             var _this = _super.call(this, Box.buildBox(width, height), true) || this;
@@ -5279,7 +7084,13 @@ var es;
             _this.height = height;
             return _this;
         }
+        /**
+         * 在一个盒子的形状中建立多边形需要的点的帮助方法
+         * @param width
+         * @param height
+         */
         Box.buildBox = function (width, height) {
+            // 我们在(0,0)的中心周围创建点
             var halfWidth = width / 2;
             var halfHeight = height / 2;
             var verts = new Array(4);
@@ -5289,9 +7100,15 @@ var es;
             verts[3] = new es.Vector2(-halfWidth, halfHeight);
             return verts;
         };
+        /**
+         * 更新框点，重新计算中心，设置宽度/高度
+         * @param width
+         * @param height
+         */
         Box.prototype.updateBox = function (width, height) {
             this.width = width;
             this.height = height;
+            // 我们在(0,0)的中心周围创建点
             var halfWidth = width / 2;
             var halfHeight = height / 2;
             this.points[0] = new es.Vector2(-halfWidth, -halfHeight);
@@ -5302,6 +7119,7 @@ var es;
                 this._originalPoints[i] = this.points[i];
         };
         Box.prototype.overlaps = function (other) {
+            // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
             if (this.isUnrotated) {
                 if (other instanceof Box && other.isUnrotated)
                     return this.bounds.intersects(other.bounds);
@@ -5311,9 +7129,11 @@ var es;
             return _super.prototype.overlaps.call(this, other);
         };
         Box.prototype.collidesWithShape = function (other, result) {
+            // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
             if (other instanceof Box && other.isUnrotated) {
                 return es.ShapeCollisions.boxToBox(this, other, result);
             }
+            // TODO: 让 minkowski 运行于 cricleToBox
             return _super.prototype.collidesWithShape.call(this, other, result);
         };
         Box.prototype.containsPoint = function (point) {
@@ -5330,9 +7150,11 @@ var es;
     }(es.Polygon));
     es.Box = Box;
 })(es || (es = {}));
+///<reference path="./Shape.ts" />
 var es;
+///<reference path="./Shape.ts" />
 (function (es) {
-    var Circle = (function (_super) {
+    var Circle = /** @class */ (function (_super) {
         __extends(Circle, _super);
         function Circle(radius) {
             var _this = _super.call(this) || this;
@@ -5341,13 +7163,16 @@ var es;
             return _this;
         }
         Circle.prototype.recalculateBounds = function (collider) {
+            // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心
             this.center = collider.localOffset;
             if (collider.shouldColliderScaleAndRotateWithTransform) {
+                // 我们只将直线缩放为一个圆，所以我们将使用最大值
                 var scale = collider.entity.transform.scale;
                 var hasUnitScale = scale.x == 1 && scale.y == 1;
                 var maxScale = Math.max(scale.x, scale.y);
                 this.radius = this._originalRadius * maxScale;
                 if (collider.entity.transform.rotation != 0) {
+                    // 为了处理偏移原点的旋转，我们只需要将圆心围绕(0,0)在一个圆上移动，我们的偏移量就是0角
                     var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * es.MathHelper.Rad2Deg;
                     var offsetLength = hasUnitScale ? collider._localOffsetLength : es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
                     this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
@@ -5381,6 +7206,10 @@ var es;
         Circle.prototype.collidesWithLine = function (start, end, hit) {
             return es.ShapeCollisions.lineToCircle(start, end, this, hit);
         };
+        /**
+         * 获取所提供的点是否在此范围内
+         * @param point
+         */
         Circle.prototype.containsPoint = function (point) {
             return (es.Vector2.subtract(point, this.position)).lengthSquared() <= this.radius * this.radius;
         };
@@ -5393,16 +7222,31 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var CollisionResult = (function () {
+    var CollisionResult = /** @class */ (function () {
         function CollisionResult() {
+            /**
+             * 被形状击中的表面的法向量
+             */
             this.normal = es.Vector2.zero;
+            /**
+             * 应用于第一个形状以推入形状的转换
+             */
             this.minimumTranslationVector = es.Vector2.zero;
+            /**
+             * 不是所有冲突类型都使用!在依赖这个字段之前，请检查ShapeCollisions切割类!
+             */
             this.point = es.Vector2.zero;
         }
+        /**
+         * 改变最小平移向量，如果没有相同方向上的运动，它将移除平移的x分量。
+         * @param deltaMovement
+         */
         CollisionResult.prototype.removeHorizontal = function (deltaMovement) {
+            // 检查是否需要横向移动，如果需要，移除并固定响应
             if (Math.sign(this.normal.x) != Math.sign(deltaMovement.x) || (deltaMovement.x == 0 && this.normal.x != 0)) {
                 var responseDistance = this.minimumTranslationVector.length();
                 var fix = responseDistance / this.normal.y;
+                // 检查一些边界情况。因为我们除以法线 使得x == 1和一个非常小的y这将导致一个巨大的固定值
                 if (Math.abs(this.normal.x) != 1 && Math.abs(fix) < Math.abs(deltaMovement.y * 3)) {
                     this.minimumTranslationVector = new es.Vector2(0, -fix);
                 }
@@ -5422,16 +7266,20 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var RealtimeCollisions = (function () {
+    var RealtimeCollisions = /** @class */ (function () {
         function RealtimeCollisions() {
         }
         RealtimeCollisions.intersectMovingCircleBox = function (s, b, movement, time) {
+            // 计算用球面半径r inflate b得到的AABB
             var e = b.bounds;
             e.inflate(s.radius, s.radius);
+            // 射线与展开矩形e相交。如果射线错过了e，则退出不相交，否则得到相交点p和时间t
             var ray = new es.Ray2D(es.Vector2.subtract(s.position, movement), s.position);
             if (!e.rayIntersects(ray, time) && time.value > 1)
                 return false;
+            // 求交点
             var point = es.Vector2.add(ray.start, es.Vector2.add(ray.direction, new es.Vector2(time.value)));
+            // 计算b的最小面和最大面p的交点在哪个面之外。注意，u和v不能有相同的位集，它们之间必须至少有一个位集。
             var u, v = 0;
             if (point.x < b.bounds.left)
                 u |= 1;
@@ -5441,13 +7289,20 @@ var es;
                 u |= 2;
             if (point.y > b.bounds.bottom)
                 v |= 2;
+            // 将所有位集合成位掩码(注意u + v == u | v)
             var m = u + v;
+            // 如果所有的3位都被设置，那么点在一个顶点区域
             if (m == 3) {
+                // 现在必须相交的部分，如果一个或多个击中对胶囊的两边会合在斜面和返回的最佳时间
+                // TODO: 需要实现这个
                 console.log("m == 3. corner " + es.Time.frameCount);
             }
+            // 如果m中只设置了一个位，那么点在一个面区域
             if ((m & (m - 1)) == 0) {
+                // 什么也不做。从扩展矩形交集的时间是正确的时间
                 return true;
             }
+            // 点在边缘区域上。与边缘相交。
             return true;
         };
         return RealtimeCollisions;
@@ -5456,9 +7311,20 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var ShapeCollisions = (function () {
+    /**
+     * 各种形状的碰撞例程
+     * 大多数人都希望第一个形状位于第二个形状的空间内(即shape1)
+     * pos应该设置为shape1。pos - shape2.pos)。
+     */
+    var ShapeCollisions = /** @class */ (function () {
         function ShapeCollisions() {
         }
+        /**
+         * 检查两个多边形之间的碰撞
+         * @param first
+         * @param second
+         * @param result
+         */
         ShapeCollisions.polygonToPolygon = function (first, second, result) {
             var isIntersecting = true;
             var firstEdges = first.edgeNormals;
@@ -5467,13 +7333,17 @@ var es;
             var translationAxis = new es.Vector2();
             var polygonOffset = es.Vector2.subtract(first.position, second.position);
             var axis;
+            // 循环穿过两个多边形的所有边
             for (var edgeIndex = 0; edgeIndex < firstEdges.length + secondEdges.length; edgeIndex++) {
+                // 1. 找出当前多边形是否相交
+                // 多边形的归一化轴垂直于缓存给我们的当前边
                 if (edgeIndex < firstEdges.length) {
                     axis = firstEdges[edgeIndex];
                 }
                 else {
                     axis = secondEdges[edgeIndex - firstEdges.length];
                 }
+                // 求多边形在当前轴上的投影
                 var minA = 0;
                 var minB = 0;
                 var maxA = 0;
@@ -5485,14 +7355,20 @@ var es;
                 var tb = this.getInterval(axis, second, minB, maxB);
                 minB = tb.min;
                 maxB = tb.max;
+                // 将区间设为第二个多边形的空间。由轴上投影的位置差偏移。
                 var relativeIntervalOffset = es.Vector2.dot(polygonOffset, axis);
                 minA += relativeIntervalOffset;
                 maxA += relativeIntervalOffset;
+                // 检查多边形投影是否正在相交
                 intervalDist = this.intervalDistance(minA, maxA, minB, maxB);
                 if (intervalDist > 0)
                     isIntersecting = false;
+                // 对于多对多数据类型转换，添加一个Vector2?参数称为deltaMovement。为了提高速度，我们这里不使用它
+                // TODO: 现在找出多边形是否会相交。只要检查速度就行了
+                // 如果多边形不相交，也不会相交，退出循环
                 if (!isIntersecting)
                     return false;
+                // 检查当前间隔距离是否为最小值。如果是，则存储间隔距离和当前距离。这将用于计算最小平移向量
                 intervalDist = Math.abs(intervalDist);
                 if (intervalDist < minIntervalDistance) {
                     minIntervalDistance = intervalDist;
@@ -5501,15 +7377,30 @@ var es;
                         translationAxis = new es.Vector2(-translationAxis);
                 }
             }
+            // 利用最小平移向量对多边形进行推入。
             result.normal = translationAxis;
             result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(-translationAxis.x, -translationAxis.y), new es.Vector2(minIntervalDistance));
             return true;
         };
+        /**
+         * 计算[minA, maxA]和[minB, maxB]之间的距离。如果间隔重叠，距离是负的
+         * @param minA
+         * @param maxA
+         * @param minB
+         * @param maxB
+         */
         ShapeCollisions.intervalDistance = function (minA, maxA, minB, maxB) {
             if (minA < minB)
                 return minB - maxA;
             return minA - minB;
         };
+        /**
+         * 计算一个多边形在一个轴上的投影，并返回一个[min，max]区间
+         * @param axis
+         * @param polygon
+         * @param min
+         * @param max
+         */
         ShapeCollisions.getInterval = function (axis, polygon, min, max) {
             var dot = es.Vector2.dot(polygon.points[0], axis);
             min = max = dot;
@@ -5524,6 +7415,12 @@ var es;
             }
             return { min: min, max: max };
         };
+        /**
+         *
+         * @param circle
+         * @param polygon
+         * @param result
+         */
         ShapeCollisions.circleToPolygon = function (circle, polygon, result) {
             var poly2Circle = es.Vector2.subtract(circle.position, polygon.position);
             var distanceSquared = new es.Ref(0);
@@ -5548,15 +7445,24 @@ var es;
             result.point = es.Vector2.add(closestPoint, polygon.position);
             return true;
         };
+        /**
+         * 适用于圆心在方框内以及只与方框外圆心重叠的圆。
+         * @param circle
+         * @param box
+         * @param result
+         */
         ShapeCollisions.circleToBox = function (circle, box, result) {
             var closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
+            // 处理那些中心在盒子里的圆，因为比较好操作，
             if (box.containsPoint(circle.position)) {
                 result.point = closestPointOnBounds;
+                // 计算mtv。找到安全的，没有碰撞的位置，然后从那里得到mtv
                 var safePlace = es.Vector2.add(closestPointOnBounds, es.Vector2.multiply(result.normal, new es.Vector2(circle.radius)));
                 result.minimumTranslationVector = es.Vector2.subtract(circle.position, safePlace);
                 return true;
             }
             var sqrDistance = es.Vector2.distanceSquared(closestPointOnBounds, circle.position);
+            // 看盒子上的点与圆的距离是否小于半径
             if (sqrDistance == 0) {
                 result.minimumTranslationVector = es.Vector2.multiply(result.normal, new es.Vector2(circle.radius));
             }
@@ -5570,6 +7476,12 @@ var es;
             }
             return false;
         };
+        /**
+         *
+         * @param point
+         * @param circle
+         * @param result
+         */
         ShapeCollisions.pointToCircle = function (point, circle, result) {
             var distanceSquared = es.Vector2.distanceSquared(point, circle.position);
             var sumOfRadii = 1 + circle.radius;
@@ -5585,12 +7497,19 @@ var es;
         };
         ShapeCollisions.pointToBox = function (point, box, result) {
             if (box.containsPoint(point)) {
+                // 在方框的空间里找到点
                 result.point = box.bounds.getClosestPointOnRectangleBorderToPoint(point, result.normal);
                 result.minimumTranslationVector = es.Vector2.subtract(point, result.point);
                 return true;
             }
             return false;
         };
+        /**
+         *
+         * @param lineA
+         * @param lineB
+         * @param closestTo
+         */
         ShapeCollisions.closestPointOnLine = function (lineA, lineB, closestTo) {
             var v = es.Vector2.subtract(lineB, lineA);
             var w = es.Vector2.subtract(closestTo, lineA);
@@ -5598,6 +7517,12 @@ var es;
             t = es.MathHelper.clamp(t, 0, 1);
             return es.Vector2.add(lineA, es.Vector2.multiply(v, new es.Vector2(t, t)));
         };
+        /**
+         *
+         * @param point
+         * @param poly
+         * @param result
+         */
         ShapeCollisions.pointToPoly = function (point, poly, result) {
             if (poly.containsPoint(point)) {
                 var distanceSquared = new es.Ref(0);
@@ -5608,6 +7533,12 @@ var es;
             }
             return false;
         };
+        /**
+         *
+         * @param first
+         * @param second
+         * @param result
+         */
         ShapeCollisions.circleToCircle = function (first, second, result) {
             var distanceSquared = es.Vector2.distanceSquared(first.position, second.position);
             var sumOfRadii = first.radius + second.radius;
@@ -5621,9 +7552,16 @@ var es;
             }
             return false;
         };
+        /**
+         *
+         * @param first
+         * @param second
+         * @param result
+         */
         ShapeCollisions.boxToBox = function (first, second, result) {
             var minkowskiDiff = this.minkowskiDifference(first, second);
             if (minkowskiDiff.contains(0, 0)) {
+                // 计算MTV。如果它是零，我们就可以称它为非碰撞
                 result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
                 if (result.minimumTranslationVector.equals(es.Vector2.zero))
                     return false;
@@ -5634,6 +7572,8 @@ var es;
             return false;
         };
         ShapeCollisions.minkowskiDifference = function (first, second) {
+            // 我们需要第一个框的左上角
+            // 碰撞器只会修改运动的位置所以我们需要用位置来计算出运动是什么。
             var positionOffset = es.Vector2.subtract(first.position, es.Vector2.add(first.bounds.location, es.Vector2.divide(first.bounds.size, new es.Vector2(2))));
             var topLeft = es.Vector2.subtract(es.Vector2.add(first.bounds.location, positionOffset), second.bounds.max);
             var fullSize = es.Vector2.add(first.bounds.size, second.bounds.size);
@@ -5650,6 +7590,8 @@ var es;
                 var intersection = es.Vector2.zero;
                 if (this.lineToLine(edge1, edge2, start, end, intersection)) {
                     hasIntersection = true;
+                    // TODO: 这是得到分数的正确和最有效的方法吗?
+                    // 先检查x分数。如果是NaN，就用y代替
                     var distanceFraction = (intersection.x - start.x) / (end.x - start.x);
                     if (Number.isNaN(distanceFraction) || Number.isFinite(distanceFraction))
                         distanceFraction = (intersection.y - start.y) / (end.y - start.y);
@@ -5673,6 +7615,7 @@ var es;
             var b = es.Vector2.subtract(a2, a1);
             var d = es.Vector2.subtract(b2, b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
+            // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
                 return false;
             var c = es.Vector2.subtract(b1, a1);
@@ -5686,17 +7629,22 @@ var es;
             return true;
         };
         ShapeCollisions.lineToCircle = function (start, end, s, hit) {
+            // 计算这里的长度并分别对d进行标准化，因为如果我们命中了我们需要它来得到分数
             var lineLength = es.Vector2.distance(start, end);
             var d = es.Vector2.divide(es.Vector2.subtract(end, start), new es.Vector2(lineLength));
             var m = es.Vector2.subtract(start, s.position);
             var b = es.Vector2.dot(m, d);
             var c = es.Vector2.dot(m, m) - s.radius * s.radius;
+            // 如果r的原点在s之外，(c>0)和r指向s (b>0) 则返回
             if (c > 0 && b > 0)
                 return false;
             var discr = b * b - c;
+            // 线不在圆圈上
             if (discr < 0)
                 return false;
+            // 射线相交圆
             hit.fraction = -b - Math.sqrt(discr);
+            // 如果分数为负数，射线从圈内开始，
             if (hit.fraction < 0)
                 hit.fraction = 0;
             hit.point = es.Vector2.add(start, es.Vector2.multiply(new es.Vector2(hit.fraction), d));
@@ -5705,9 +7653,18 @@ var es;
             hit.fraction = hit.distance / lineLength;
             return true;
         };
+        /**
+         * 用second检查被deltaMovement移动的框的结果
+         * @param first
+         * @param second
+         * @param movement
+         * @param hit
+         */
         ShapeCollisions.boxToBoxCast = function (first, second, movement, hit) {
+            // 首先，我们检查是否有重叠。如果有重叠，我们就不做扫描测试
             var minkowskiDiff = this.minkowskiDifference(first, second);
             if (minkowskiDiff.contains(0, 0)) {
+                // 计算MTV。如果它是零，我们就可以称它为非碰撞
                 var mtv = minkowskiDiff.getClosestPointOnBoundsToOrigin();
                 if (mtv.equals(es.Vector2.zero))
                     return false;
@@ -5718,6 +7675,7 @@ var es;
                 return true;
             }
             else {
+                // 射线投射移动矢量
                 var ray = new es.Ray2D(es.Vector2.zero, new es.Vector2(-movement.x));
                 var fraction = new es.Ref(0);
                 if (minkowskiDiff.rayIntersects(ray, fraction) && fraction.value <= 1) {
@@ -5735,9 +7693,14 @@ var es;
     }());
     es.ShapeCollisions = ShapeCollisions;
 })(es || (es = {}));
-var ArrayUtils = (function () {
+var ArrayUtils = /** @class */ (function () {
     function ArrayUtils() {
     }
+    /**
+     * 执行冒泡排序
+     * @param    ary
+     * 算法参考 -- http://www.hiahia.org/datastructure/paixu/paixu8.3.1.1-1.htm
+     */
     ArrayUtils.bubbleSort = function (ary) {
         var isExchange = false;
         for (var i = 0; i < ary.length; i++) {
@@ -5754,6 +7717,10 @@ var ArrayUtils = (function () {
                 break;
         }
     };
+    /**
+     * 执行插入排序
+     * @param    ary
+     */
     ArrayUtils.insertionSort = function (ary) {
         var len = ary.length;
         for (var i = 1; i < len; i++) {
@@ -5764,6 +7731,12 @@ var ArrayUtils = (function () {
             ary[j] = val;
         }
     };
+    /**
+     * 执行二分搜索
+     * @param    ary        搜索的数组（必须排序过）
+     * @param    value    需要搜索的值
+     * @return  返回匹配结果的数组索引
+     */
     ArrayUtils.binarySearch = function (ary, value) {
         var startIndex = 0;
         var endIndex = ary.length;
@@ -5779,6 +7752,12 @@ var ArrayUtils = (function () {
             return startIndex;
         return -1;
     };
+    /**
+     * 返回匹配项的索引
+     * @param    ary
+     * @param    num
+     * @return  返回匹配项的索引
+     */
     ArrayUtils.findElementIndex = function (ary, num) {
         var len = ary.length;
         for (var i = 0; i < len; ++i) {
@@ -5787,6 +7766,11 @@ var ArrayUtils = (function () {
         }
         return null;
     };
+    /**
+     * 返回数组中最大值的索引
+     * @param    ary
+     * @return  返回数组中最大值的索引
+     */
     ArrayUtils.getMaxElementIndex = function (ary) {
         var matchIndex = 0;
         var len = ary.length;
@@ -5796,6 +7780,11 @@ var ArrayUtils = (function () {
         }
         return matchIndex;
     };
+    /**
+     * 返回数组中最小值的索引
+     * @param    ary
+     * @return  返回数组中最小值的索引
+     */
     ArrayUtils.getMinElementIndex = function (ary) {
         var matchIndex = 0;
         var len = ary.length;
@@ -5805,6 +7794,13 @@ var ArrayUtils = (function () {
         }
         return matchIndex;
     };
+    /**
+     * 返回一个"唯一性"数组
+     * @param    ary        需要唯一性的数组
+     * @return    唯一性的数组
+     * 比如: [1, 2, 2, 3, 4]
+     * 返回: [1, 2, 3, 4]
+     */
     ArrayUtils.getUniqueAry = function (ary) {
         var uAry = [];
         var newAry = [];
@@ -5820,6 +7816,15 @@ var ArrayUtils = (function () {
         }
         return newAry;
     };
+    /**
+     * 返回2个数组中不同的部分
+     * 比如数组A = [1, 2, 3, 4, 6]
+     *    数组B = [0, 2, 1, 3, 4]
+     * 返回[6, 0]
+     * @param    aryA
+     * @param    aryB
+     * @return
+     */
     ArrayUtils.getDifferAry = function (aryA, aryB) {
         aryA = this.getUniqueAry(aryA);
         aryB = this.getUniqueAry(aryB);
@@ -5847,11 +7852,21 @@ var ArrayUtils = (function () {
         }
         return newAry;
     };
+    /**
+     * 交换数组元素
+     * @param    array    目标数组
+     * @param    index1    交换后的索引
+     * @param    index2    交换前的索引
+     */
     ArrayUtils.swap = function (array, index1, index2) {
         var temp = array[index1];
         array[index1] = array[index2];
         array[index2] = temp;
     };
+    /**
+     * 清除列表
+     * @param    ary 列表
+     */
     ArrayUtils.clearList = function (ary) {
         if (!ary)
             return;
@@ -5860,11 +7875,22 @@ var ArrayUtils = (function () {
             ary.splice(i, 1);
         }
     };
+    /**
+     * 克隆一个数组
+     * @param    ary 需要克隆的数组
+     * @return  克隆的数组
+     */
     ArrayUtils.cloneList = function (ary) {
         if (!ary)
             return null;
         return ary.slice(0, ary.length);
     };
+    /**
+     * 判断2个数组是否相同
+     * @param    ary1    数组1
+     * @param    ary2    数组2
+     * @return    是否相同
+     */
     ArrayUtils.equals = function (ary1, ary2) {
         if (ary1 == ary2)
             return true;
@@ -5877,6 +7903,12 @@ var ArrayUtils = (function () {
         }
         return true;
     };
+    /**
+     * 根据索引插入元素，索引和索引后的元素都向后移动一位
+     * @param    index   插入索引
+     * @param    value   插入的元素
+     * @return  插入的元素 未插入则返回空
+     */
     ArrayUtils.insert = function (ary, index, value) {
         if (!ary)
             return null;
@@ -5886,9 +7918,9 @@ var ArrayUtils = (function () {
         if (index < 0)
             index = 0;
         if (index == length)
-            ary.push(value);
+            ary.push(value); //插入最后
         else if (index == 0)
-            ary.unshift(value);
+            ary.unshift(value); //插入头
         else {
             for (var i = length - 1; i >= index; i -= 1) {
                 ary[i + 1] = ary[i];
@@ -5901,16 +7933,23 @@ var ArrayUtils = (function () {
 }());
 var es;
 (function (es) {
-    var Base64Utils = (function () {
+    var Base64Utils = /** @class */ (function () {
         function Base64Utils() {
         }
         Object.defineProperty(Base64Utils, "nativeBase64", {
+            /**
+             * 判断是否原生支持Base64位解析
+             */
             get: function () {
                 return (typeof (window.atob) === "function");
             },
             enumerable: true,
             configurable: true
         });
+        /**
+         * 解码
+         * @param input
+         */
         Base64Utils.decode = function (input) {
             input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
             if (this.nativeBase64) {
@@ -5938,6 +7977,10 @@ var es;
                 return output;
             }
         };
+        /**
+         * 编码
+         * @param input
+         */
         Base64Utils.encode = function (input) {
             input = input.replace(/\r\n/g, "\n");
             if (this.nativeBase64) {
@@ -5968,6 +8011,11 @@ var es;
                 return output;
             }
         };
+        /**
+         * 解析Base64格式数据
+         * @param input
+         * @param bytes
+         */
         Base64Utils.decodeBase64AsArray = function (input, bytes) {
             bytes = bytes || 1;
             var dec = Base64Utils.decode(input), i, j, len;
@@ -5980,9 +8028,20 @@ var es;
             }
             return ar;
         };
+        /**
+         * 暂时不支持
+         * @param data
+         * @param decoded
+         * @param compression
+         * @private
+         */
         Base64Utils.decompress = function (data, decoded, compression) {
             throw new Error("GZIP/ZLIB compressed TMX Tile Map not supported!");
         };
+        /**
+         * 解析csv数据
+         * @param input
+         */
         Base64Utils.decodeCSV = function (input) {
             var entries = input.replace("\n", "").trim().split(",");
             var result = [];
@@ -5998,7 +8057,10 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Color = (function () {
+    var Color = /** @class */ (function () {
+        /**
+         * 从代表红、绿、蓝和alpha值的标量构造RGBA颜色。
+         */
         function Color(r, g, b, alpha) {
             if (((r | g | b | alpha) & 0xFFFFFF00) != 0) {
                 var clampedR = es.MathHelper.clamp(r, 0, 255);
@@ -6070,7 +8132,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var EdgeExt = (function () {
+    var EdgeExt = /** @class */ (function () {
         function EdgeExt() {
         }
         EdgeExt.oppositeEdge = function (self) {
@@ -6085,9 +8147,17 @@ var es;
                     return es.Edge.left;
             }
         };
+        /**
+         * 如果边是右或左，则返回true
+         * @param self
+         */
         EdgeExt.isHorizontal = function (self) {
             return self == es.Edge.right || self == es.Edge.left;
         };
+        /**
+         * 如果边是顶部或底部，则返回true
+         * @param self
+         */
         EdgeExt.isVertical = function (self) {
             return self == es.Edge.top || self == es.Edge.bottom;
         };
@@ -6097,7 +8167,10 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var FuncPack = (function () {
+    /**
+     * 用于包装事件的一个小类
+     */
+    var FuncPack = /** @class */ (function () {
         function FuncPack(func, context) {
             this.func = func;
             this.context = context;
@@ -6105,10 +8178,19 @@ var es;
         return FuncPack;
     }());
     es.FuncPack = FuncPack;
-    var Emitter = (function () {
+    /**
+     * 用于事件管理
+     */
+    var Emitter = /** @class */ (function () {
         function Emitter() {
             this._messageTable = new Map();
         }
+        /**
+         * 开始监听项
+         * @param eventType 监听类型
+         * @param handler 监听函数
+         * @param context 监听上下文
+         */
         Emitter.prototype.addObserver = function (eventType, handler, context) {
             var list = this._messageTable.get(eventType);
             if (!list) {
@@ -6119,12 +8201,22 @@ var es;
                 console.warn("您试图添加相同的观察者两次");
             list.push(new FuncPack(handler, context));
         };
+        /**
+         * 移除监听项
+         * @param eventType 事件类型
+         * @param handler 事件函数
+         */
         Emitter.prototype.removeObserver = function (eventType, handler) {
             var messageData = this._messageTable.get(eventType);
             var index = messageData.findIndex(function (data) { return data.func == handler; });
             if (index != -1)
                 messageData.removeAt(index);
         };
+        /**
+         * 触发该事件
+         * @param eventType 事件类型
+         * @param data 事件数据
+         */
         Emitter.prototype.emit = function (eventType, data) {
             var list = this._messageTable.get(eventType);
             if (list) {
@@ -6148,9 +8240,14 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Enumerable = (function () {
+    var Enumerable = /** @class */ (function () {
         function Enumerable() {
         }
+        /**
+         * 生成包含一个重复值的序列
+         * @param element 要重复的值
+         * @param count 在生成的序列中重复该值的次数
+         */
         Enumerable.repeat = function (element, count) {
             var result = [];
             while (count--) {
@@ -6164,7 +8261,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var EqualityComparer = (function () {
+    var EqualityComparer = /** @class */ (function () {
         function EqualityComparer() {
         }
         EqualityComparer.default = function () {
@@ -6184,19 +8281,32 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var GlobalManager = (function () {
+    var GlobalManager = /** @class */ (function () {
         function GlobalManager() {
         }
         Object.defineProperty(GlobalManager.prototype, "enabled", {
+            /**
+             * 如果true则启用了GlobalManager。
+             * 状态的改变会导致调用OnEnabled/OnDisable
+             */
             get: function () {
                 return this._enabled;
             },
+            /**
+             * 如果true则启用了GlobalManager。
+             * 状态的改变会导致调用OnEnabled/OnDisable
+             * @param value
+             */
             set: function (value) {
                 this.setEnabled(value);
             },
             enumerable: true,
             configurable: true
         });
+        /**
+         * 启用/禁用这个GlobalManager
+         * @param isEnabled
+         */
         GlobalManager.prototype.setEnabled = function (isEnabled) {
             if (this._enabled != isEnabled) {
                 this._enabled = isEnabled;
@@ -6208,10 +8318,19 @@ var es;
                 }
             }
         };
+        /**
+         * 此GlobalManager启用时调用
+         */
         GlobalManager.prototype.onEnabled = function () {
         };
+        /**
+         * 此GlobalManager禁用时调用
+         */
         GlobalManager.prototype.onDisabled = function () {
         };
+        /**
+         * 在frame .update之前调用每一帧
+         */
         GlobalManager.prototype.update = function () {
         };
         return GlobalManager;
@@ -6220,9 +8339,16 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var ListPool = (function () {
+    /**
+     * 可以用于列表池的简单类
+     */
+    var ListPool = /** @class */ (function () {
         function ListPool() {
         }
+        /**
+         * 预热缓存，使用最大的cacheCount对象填充缓存
+         * @param cacheCount
+         */
         ListPool.warmCache = function (cacheCount) {
             cacheCount -= this._objectQueue.length;
             if (cacheCount > 0) {
@@ -6231,18 +8357,32 @@ var es;
                 }
             }
         };
+        /**
+         * 将缓存修剪为cacheCount项目
+         * @param cacheCount
+         */
         ListPool.trimCache = function (cacheCount) {
             while (cacheCount > this._objectQueue.length)
                 this._objectQueue.shift();
         };
+        /**
+         * 清除缓存
+         */
         ListPool.clearCache = function () {
             this._objectQueue.length = 0;
         };
+        /**
+         * 如果可以的话，从堆栈中弹出一个项
+         */
         ListPool.obtain = function () {
             if (this._objectQueue.length > 0)
                 return this._objectQueue.shift();
             return [];
         };
+        /**
+         * 将项推回堆栈
+         * @param obj
+         */
         ListPool.free = function (obj) {
             this._objectQueue.unshift(obj);
             obj.length = 0;
@@ -6254,7 +8394,7 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var NumberExtension = (function () {
+    var NumberExtension = /** @class */ (function () {
         function NumberExtension() {
         }
         NumberExtension.toNumber = function (value) {
@@ -6268,7 +8408,10 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Pair = (function () {
+    /**
+     * 用于管理一对对象的简单DTO
+     */
+    var Pair = /** @class */ (function () {
         function Pair(first, second) {
             this.first = first;
             this.second = second;
@@ -6277,6 +8420,7 @@ var es;
             this.first = this.second = null;
         };
         Pair.prototype.equals = function (other) {
+            // 这两种方法在功能上应该是等价的
             return this.first == other.first && this.second == other.second;
         };
         return Pair;
@@ -6285,9 +8429,17 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Pool = (function () {
+    /**
+     * 用于池任何对象
+     */
+    var Pool = /** @class */ (function () {
         function Pool() {
         }
+        /**
+         * 预热缓存，使用最大的cacheCount对象填充缓存
+         * @param type
+         * @param cacheCount
+         */
         Pool.warmCache = function (type, cacheCount) {
             cacheCount -= this._objectQueue.length;
             if (cacheCount > 0) {
@@ -6296,18 +8448,32 @@ var es;
                 }
             }
         };
+        /**
+         * 将缓存修剪为cacheCount项目
+         * @param cacheCount
+         */
         Pool.trimCache = function (cacheCount) {
             while (cacheCount > this._objectQueue.length)
                 this._objectQueue.shift();
         };
+        /**
+         * 清除缓存
+         */
         Pool.clearCache = function () {
             this._objectQueue.length = 0;
         };
+        /**
+         * 如果可以的话，从堆栈中弹出一个项
+         */
         Pool.obtain = function (type) {
             if (this._objectQueue.length > 0)
                 return this._objectQueue.shift();
             return new type();
         };
+        /**
+         * 将项推回堆栈
+         * @param obj
+         */
         Pool.free = function (obj) {
             this._objectQueue.unshift(obj);
             if (es.isIPoolable(obj)) {
@@ -6320,9 +8486,21 @@ var es;
     es.Pool = Pool;
     es.isIPoolable = function (props) { return typeof props['reset'] !== 'undefined'; };
 })(es || (es = {}));
-var RandomUtils = (function () {
+var RandomUtils = /** @class */ (function () {
     function RandomUtils() {
     }
+    /**
+     * 在 start 与 stop之间取一个随机整数，可以用step指定间隔， 但不包括较大的端点（start与stop较大的一个）
+     * 如
+     * this.randrange(1, 10, 3)
+     * 则返回的可能是   1 或  4 或  7  , 注意 这里面不会返回10，因为是10是大端点
+     *
+     * @param start
+     * @param stop
+     * @param step
+     * @return 假设 start < stop,  [start, stop) 区间内的随机整数
+     *
+     */
     RandomUtils.randrange = function (start, stop, step) {
         if (step === void 0) { step = 1; }
         if (step == 0)
@@ -6335,6 +8513,13 @@ var RandomUtils = (function () {
         var n = Math.floor((width + step - 1) / step);
         return Math.floor(this.random() * n) * step + Math.min(start, stop);
     };
+    /**
+     * 返回a 到 b直间的随机整数，包括 a 和 b
+     * @param a
+     * @param b
+     * @return [a, b] 直接的随机整数
+     *
+     */
     RandomUtils.randint = function (a, b) {
         a = Math.floor(a);
         b = Math.floor(b);
@@ -6344,13 +8529,31 @@ var RandomUtils = (function () {
             b++;
         return this.randrange(a, b);
     };
+    /**
+     * 返回 a - b之间的随机数，不包括  Math.max(a, b)
+     * @param a
+     * @param b
+     * @return 假设 a < b, [a, b)
+     */
     RandomUtils.randnum = function (a, b) {
         return this.random() * (b - a) + a;
     };
+    /**
+     * 打乱数组
+     * @param array
+     * @return
+     */
     RandomUtils.shuffle = function (array) {
         array.sort(this._randomCompare);
         return array;
     };
+    /**
+     * 从序列中随机取一个元素
+     * @param sequence 可以是 数组、 vector，等只要是有length属性，并且可以用数字索引获取元素的对象，
+     *                 另外，字符串也是允许的。
+     * @return 序列中的某一个元素
+     *
+     */
     RandomUtils.choice = function (sequence) {
         if (!sequence.hasOwnProperty("length"))
             throw new Error('无法对此对象执行此操作');
@@ -6360,6 +8563,17 @@ var RandomUtils = (function () {
         else
             return sequence[index];
     };
+    /**
+     * 对列表中的元素进行随机采æ ?
+     * <pre>
+     * this.sample([1, 2, 3, 4, 5],  3)  // Choose 3 elements
+     * [4, 1, 5]
+     * </pre>
+     * @param sequence
+     * @param num
+     * @return
+     *
+     */
     RandomUtils.sample = function (sequence, num) {
         var len = sequence.length;
         if (num <= 0 || len < num)
@@ -6375,9 +8589,19 @@ var RandomUtils = (function () {
         }
         return selected;
     };
+    /**
+     * 返回 0.0 - 1.0 之间的随机数，等同于 Math.random()
+     * @return Math.random()
+     *
+     */
     RandomUtils.random = function () {
         return Math.random();
     };
+    /**
+     * 计算概率
+     * @param    chance 概率
+     * @return
+     */
     RandomUtils.boolean = function (chance) {
         if (chance === void 0) { chance = .5; }
         return (this.random() < chance) ? true : false;
@@ -6389,9 +8613,14 @@ var RandomUtils = (function () {
 }());
 var es;
 (function (es) {
-    var RectangleExt = (function () {
+    var RectangleExt = /** @class */ (function () {
         function RectangleExt() {
         }
+        /**
+         * 获取指定边的位置
+         * @param rect
+         * @param edge
+         */
         RectangleExt.getSide = function (rect, edge) {
             switch (edge) {
                 case es.Edge.top:
@@ -6404,8 +8633,14 @@ var es;
                     return rect.right;
             }
         };
+        /**
+         * 计算两个矩形的并集。结果将是一个包含其他两个的矩形。
+         * @param first
+         * @param point
+         */
         RectangleExt.union = function (first, point) {
             var rect = new es.Rectangle(point.x, point.y, 0, 0);
+            // let rectResult = first.union(rect);
             var result = new es.Rectangle();
             result.x = Math.min(first.x, rect.x);
             result.y = Math.min(first.y, rect.y);
@@ -6425,6 +8660,12 @@ var es;
                     return new es.Rectangle(rect.x + rect.width / 2, rect.y, rect.width / 2, rect.height);
             }
         };
+        /**
+         * 获取矩形的一部分，其宽度/高度的大小位于矩形的边缘，但仍然包含在其中。
+         * @param rect
+         * @param edge
+         * @param size
+         */
         RectangleExt.getRectEdgePortion = function (rect, edge, size) {
             if (size === void 0) { size = 1; }
             switch (edge) {
@@ -6469,7 +8710,10 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Ref = (function () {
+    /**
+     * 使得number/string/boolean类型作为对象引用来进行传递
+     */
+    var Ref = /** @class */ (function () {
         function Ref(value) {
             this.value = value;
         }
@@ -6479,15 +8723,26 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var SubpixelNumber = (function () {
+    /**
+     * 管理数值的简单助手类。它存储值，直到累计的总数大于1。一旦超过1，该值将在调用update时添加到amount中。
+     */
+    var SubpixelNumber = /** @class */ (function () {
         function SubpixelNumber() {
         }
+        /**
+         * 以amount递增余数，将值截断为int，存储新的余数并将amount设置为当前值。
+         * @param amount
+         */
         SubpixelNumber.prototype.update = function (amount) {
             this.remainder += amount;
             var motion = Math.trunc(this.remainder);
             this.remainder -= motion;
             return motion;
         };
+        /**
+         * 将余数重置为0。当一个物体与一个不可移动的物体碰撞时有用。
+         * 在这种情况下，您将希望将亚像素余数归零，因为它是空的和无效的碰撞。
+         */
         SubpixelNumber.prototype.reset = function () {
             this.remainder = 0;
         };
@@ -6497,8 +8752,14 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Triangulator = (function () {
+    /**
+     * 三角剖分
+     */
+    var Triangulator = /** @class */ (function () {
         function Triangulator() {
+            /**
+             * 最后一次三角调用中使用的点列表的三角形列表项的索引
+             */
             this.triangleIndices = [];
             this._triPrev = new Array(12);
             this._triNext = new Array(12);
@@ -6512,12 +8773,21 @@ var es;
                 return false;
             return true;
         };
+        /**
+         * 计算一个三角形列表，该列表完全覆盖给定点集所包含的区域。如果点不是CCW，则将arePointsCCW参数传递为false
+         * @param points 定义封闭路径的点列表
+         * @param arePointsCCW
+         */
         Triangulator.prototype.triangulate = function (points, arePointsCCW) {
             if (arePointsCCW === void 0) { arePointsCCW = true; }
             var count = points.length;
+            // 设置前一个链接和下一个链接
             this.initialize(count);
+            // 非三角的多边形断路器
             var iterations = 0;
+            // 从0开始
             var index = 0;
+            // 继续移除所有的三角形，直到只剩下一个三角形
             while (count > 3 && iterations < 500) {
                 iterations++;
                 var isEar = true;
@@ -6541,9 +8811,11 @@ var es;
                     this.triangleIndices.push(this._triPrev[index]);
                     this.triangleIndices.push(index);
                     this.triangleIndices.push(this._triNext[index]);
+                    // 删除vert通过重定向相邻vert的上一个和下一个链接，从而减少vertext计数
                     this._triNext[this._triPrev[index]] = this._triNext[index];
                     this._triPrev[this._triNext[index]] = this._triPrev[index];
                     count--;
+                    // 接下来访问前一个vert
                     index = this._triPrev[index];
                 }
                 else {
@@ -6579,21 +8851,42 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Vector2Ext = (function () {
+    var Vector2Ext = /** @class */ (function () {
         function Vector2Ext() {
         }
+        /**
+         * 检查三角形是CCW还是CW
+         * @param a
+         * @param center
+         * @param c
+         */
         Vector2Ext.isTriangleCCW = function (a, center, c) {
             return this.cross(es.Vector2.subtract(center, a), es.Vector2.subtract(c, center)) < 0;
         };
         Vector2Ext.halfVector = function () {
             return new es.Vector2(0.5, 0.5);
         };
+        /**
+         * 计算二维伪叉乘点(Perp(u)， v)
+         * @param u
+         * @param v
+         */
         Vector2Ext.cross = function (u, v) {
             return u.y * v.x - u.x * v.y;
         };
+        /**
+         * 返回与传入向量垂直的向量
+         * @param first
+         * @param second
+         */
         Vector2Ext.perpendicular = function (first, second) {
             return new es.Vector2(-1 * (second.y - first.y), second.x - first.x);
         };
+        /**
+         * Vector2的临时解决方案
+         * 标准化把向量弄乱了
+         * @param vec
+         */
         Vector2Ext.normalize = function (vec) {
             var magnitude = Math.sqrt((vec.x * vec.x) + (vec.y * vec.y));
             if (magnitude > es.MathHelper.Epsilon) {
@@ -6603,6 +8896,15 @@ var es;
                 vec.x = vec.y = 0;
             }
         };
+        /**
+         * 通过指定的矩阵对Vector2的数组中的向量应用变换，并将结果放置在另一个数组中。
+         * @param sourceArray
+         * @param sourceIndex
+         * @param matrix
+         * @param destinationArray
+         * @param destinationIndex
+         * @param length
+         */
         Vector2Ext.transformA = function (sourceArray, sourceIndex, matrix, destinationArray, destinationIndex, length) {
             for (var i = 0; i < length; i++) {
                 var position = sourceArray[sourceIndex + i];
@@ -6618,6 +8920,12 @@ var es;
             result.x = x;
             result.y = y;
         };
+        /**
+         * 通过指定的矩阵对Vector2的数组中的所有向量应用变换，并将结果放到另一个数组中。
+         * @param sourceArray
+         * @param matrix
+         * @param destinationArray
+         */
         Vector2Ext.transform = function (sourceArray, matrix, destinationArray) {
             this.transformA(sourceArray, 0, matrix, destinationArray, 0, sourceArray.length);
         };
@@ -6628,9 +8936,12 @@ var es;
     }());
     es.Vector2Ext = Vector2Ext;
 })(es || (es = {}));
-var WebGLUtils = (function () {
+var WebGLUtils = /** @class */ (function () {
     function WebGLUtils() {
     }
+    /**
+     * 获取webgl context
+     */
     WebGLUtils.getContext = function () {
         var canvas = document.getElementsByTagName('canvas')[0];
         return canvas.getContext('2d');
@@ -6639,11 +8950,18 @@ var WebGLUtils = (function () {
 }());
 var stopwatch;
 (function (stopwatch) {
-    var Stopwatch = (function () {
+    /**
+     * 记录时间的持续时间，一些设计灵感来自物理秒表。
+     */
+    var Stopwatch = /** @class */ (function () {
         function Stopwatch(getSystemTime) {
             if (getSystemTime === void 0) { getSystemTime = _defaultSystemTimeGetter; }
             this.getSystemTime = getSystemTime;
+            /** 自上次复位以来，秒表已停止的系统时间总数。 */
             this._stopDuration = 0;
+            /**
+             * 记录自上次复位以来所有已完成切片的结果。
+             */
             this._completeSlices = [];
         }
         Stopwatch.prototype.getState = function () {
@@ -6666,26 +8984,48 @@ var stopwatch;
         Stopwatch.prototype.isStopped = function () {
             return this.getState() === State.STOPPED;
         };
+        /**
+         *
+         */
         Stopwatch.prototype.slice = function () {
             return this.recordPendingSlice();
         };
+        /**
+         * 获取自上次复位以来该秒表已完成/记录的所有片的列表。
+         */
         Stopwatch.prototype.getCompletedSlices = function () {
             return Array.from(this._completeSlices);
         };
+        /**
+         * 获取自上次重置以来该秒表已完成/记录的所有片的列表，以及当前挂起的片。
+         */
         Stopwatch.prototype.getCompletedAndPendingSlices = function () {
             return this._completeSlices.concat([this.getPendingSlice()]);
         };
+        /**
+         * 获取关于这个秒表当前挂起的切片的详细信息。
+         */
         Stopwatch.prototype.getPendingSlice = function () {
             return this.calculatePendingSlice();
         };
+        /**
+         * 获取当前秒表时间。这是这个秒表自上次复位以来运行的系统时间总数。
+         */
         Stopwatch.prototype.getTime = function () {
             return this.caculateStopwatchTime();
         };
+        /**
+         * 完全重置这个秒表到它的初始状态。清除所有记录的运行持续时间、切片等。
+         */
         Stopwatch.prototype.reset = function () {
             this._startSystemTime = this._pendingSliceStartStopwatchTime = this._stopSystemTime = undefined;
             this._stopDuration = 0;
             this._completeSlices = [];
         };
+        /**
+         * 开始(或继续)运行秒表。
+         * @param forceReset
+         */
         Stopwatch.prototype.start = function (forceReset) {
             if (forceReset === void 0) { forceReset = false; }
             if (forceReset) {
@@ -6703,6 +9043,10 @@ var stopwatch;
                 this._pendingSliceStartStopwatchTime = 0;
             }
         };
+        /**
+         *
+         * @param recordPendingSlice
+         */
         Stopwatch.prototype.stop = function (recordPendingSlice) {
             if (recordPendingSlice === void 0) { recordPendingSlice = false; }
             if (this._startSystemTime === undefined) {
@@ -6715,6 +9059,10 @@ var stopwatch;
             this._stopSystemTime = systemTimeOfStopwatchTime;
             return this.getTime();
         };
+        /**
+         * 计算指定秒表时间的当前挂起片。
+         * @param endStopwatchTime
+         */
         Stopwatch.prototype.calculatePendingSlice = function (endStopwatchTime) {
             if (this._pendingSliceStartStopwatchTime === undefined) {
                 return Object.freeze({ startTime: 0, endTime: 0, duration: 0 });
@@ -6728,6 +9076,10 @@ var stopwatch;
                 duration: endStopwatchTime - this._pendingSliceStartStopwatchTime
             });
         };
+        /**
+         * 计算指定系统时间的当前秒表时间。
+         * @param endSystemTime
+         */
         Stopwatch.prototype.caculateStopwatchTime = function (endSystemTime) {
             if (this._startSystemTime === undefined)
                 return 0;
@@ -6735,9 +9087,17 @@ var stopwatch;
                 endSystemTime = this.getSystemTimeOfCurrentStopwatchTime();
             return endSystemTime - this._startSystemTime - this._stopDuration;
         };
+        /**
+         * 获取与当前秒表时间等效的系统时间。
+         * 如果该秒表当前停止，则返回该秒表停止时的系统时间。
+         */
         Stopwatch.prototype.getSystemTimeOfCurrentStopwatchTime = function () {
             return this._stopSystemTime === undefined ? this.getSystemTime() : this._stopSystemTime;
         };
+        /**
+         * 结束/记录当前挂起的片的私有实现。
+         * @param endStopwatchTime
+         */
         Stopwatch.prototype.recordPendingSlice = function (endStopwatchTime) {
             if (this._pendingSliceStartStopwatchTime !== undefined) {
                 if (endStopwatchTime === undefined) {
@@ -6757,8 +9117,11 @@ var stopwatch;
     stopwatch.Stopwatch = Stopwatch;
     var State;
     (function (State) {
+        /** 秒表尚未启动，或已复位。 */
         State["IDLE"] = "IDLE";
+        /** 秒表正在运行。 */
         State["RUNNING"] = "RUNNING";
+        /** 秒表以前还在跑，但现在已经停了。 */
         State["STOPPED"] = "STOPPED";
     })(State || (State = {}));
     function setDefaultSystemTimeGetter(systemTimeGetter) {
@@ -6766,11 +9129,12 @@ var stopwatch;
         _defaultSystemTimeGetter = systemTimeGetter;
     }
     stopwatch.setDefaultSystemTimeGetter = setDefaultSystemTimeGetter;
+    /** 所有新实例的默认“getSystemTime”实现 */
     var _defaultSystemTimeGetter = Date.now;
 })(stopwatch || (stopwatch = {}));
 var es;
 (function (es) {
-    var Timer = (function () {
+    var Timer = /** @class */ (function () {
         function Timer() {
             this._timeInSeconds = 0;
             this._repeats = false;
@@ -6787,6 +9151,7 @@ var es;
             this._isDone = true;
         };
         Timer.prototype.tick = function () {
+            // 如果stop在tick之前被调用，那么isDone将为true，我们不应该再做任何事情
             if (!this._isDone && this._elapsedTime > this._timeInSeconds) {
                 this._elapsedTime -= this._timeInSeconds;
                 this._onTime(this);
@@ -6802,6 +9167,9 @@ var es;
             this.context = context;
             this._onTime = onTime;
         };
+        /**
+         * 空出对象引用，以便在js需要时GC可以清理它们的引用
+         */
         Timer.prototype.unload = function () {
             this.context = null;
             this._onTime = null;
@@ -6812,7 +9180,10 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var TimerManager = (function (_super) {
+    /**
+     * 允许动作的延迟和重复执行
+     */
+    var TimerManager = /** @class */ (function (_super) {
         __extends(TimerManager, _super);
         function TimerManager() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
@@ -6827,6 +9198,13 @@ var es;
                 }
             }
         };
+        /**
+         * 调度一个一次性或重复的计时器，该计时器将调用已传递的动作
+         * @param timeInSeconds
+         * @param repeats
+         * @param context
+         * @param onTime
+         */
         TimerManager.prototype.schedule = function (timeInSeconds, repeats, context, onTime) {
             var timer = new es.Timer();
             timer.initialize(timeInSeconds, repeats, context, onTime);

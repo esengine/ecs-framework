@@ -3,6 +3,7 @@ const gulp = require("gulp");
 const minify = require('gulp-minify');
 const inject = require("gulp-inject-string");
 const ts = require('gulp-typescript');
+const compile = require("gulp-typescript");
 const tsProject = ts.createProject('tsconfig.json');
 
 gulp.task('buildJs', () => {
