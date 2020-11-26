@@ -144,13 +144,16 @@ module es {
         public updateLists() {
             if (this._entitiesToRemove.length > 0) {
                 for (const entity of this._entitiesToRemove) {
+                    // 处理标签列表
                     this.removeFromTagList(entity);
 
+                    // 处理常规实体列表
                     this._entities.remove(entity);
                     entity.onRemovedFromScene();
                     entity.scene = null;
 
-                    this.scene.entityProcessors.onEntityRemoved(entity);
+                    if (Core.entitySystemsEnabled)
+                        this.scene.entityProcessors.onEntityRemoved(entity);
                 }
 
                 this._entitiesToRemove.length = 0;
@@ -208,8 +211,9 @@ module es {
                 entity.scene = this.scene;
 
                 this.addToTagList(entity);
-
-                this.scene.entityProcessors.onEntityAdded(entity);
+                
+                if (Core.entitySystemsEnabled)
+                    this.scene.entityProcessors.onEntityAdded(entity);
             }
         }
 

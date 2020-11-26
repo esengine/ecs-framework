@@ -34,7 +34,8 @@ module es {
             this.name = name;
             this.id = Entity._idGenerator++;
 
-            this.componentBits = new BitSet();
+            if (Core.entitySystemsEnabled)
+                this.componentBits = new BitSet();
         }
 
         public _isDestroyed: boolean;

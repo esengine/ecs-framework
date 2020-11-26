@@ -22,7 +22,8 @@ module es {
             this.entities = new EntityList(this);
             this.renderableComponents = new RenderableComponentList();
 
-            this.entityProcessors = new EntityProcessorList();
+            if (Core.entitySystemsEnabled)
+                this.entityProcessors = new EntityProcessorList();
 
             this.initialize();
         }
@@ -136,7 +137,7 @@ module es {
          * 只有在SceneTransition请求渲染时，它才会有一个值。
          */
         public postRender() {
-            
+
         }
 
         /**

@@ -538,7 +538,8 @@ var es;
             this.transform = new es.Transform(this);
             this.name = name;
             this.id = Entity._idGenerator++;
-            this.componentBits = new es.BitSet();
+            if (es.Core.entitySystemsEnabled)
+                this.componentBits = new es.BitSet();
         }
         Object.defineProperty(Entity.prototype, "isDestroyed", {
             get: function () {
@@ -820,7 +821,8 @@ var es;
             this._renderers = [];
             this.entities = new es.EntityList(this);
             this.renderableComponents = new es.RenderableComponentList();
-            this.entityProcessors = new es.EntityProcessorList();
+            if (es.Core.entitySystemsEnabled)
+                this.entityProcessors = new es.EntityProcessorList();
             this.initialize();
         }
         Scene.prototype.initialize = function () {
@@ -2058,8 +2060,10 @@ var es;
                     continue;
                 if (es.isIUpdatable(component))
                     this._updatableComponents.remove(component);
-                this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
-                this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+                if (es.Core.entitySystemsEnabled) {
+                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
+                    this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+                }
             }
         };
         ComponentList.prototype.registerAllComponents = function () {
@@ -2067,8 +2071,10 @@ var es;
                 var component = this._components.buffer[i];
                 if (es.isIUpdatable(component))
                     this._updatableComponents.add(component);
-                this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
-                this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                if (es.Core.entitySystemsEnabled) {
+                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
+                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                }
             }
         };
         ComponentList.prototype.updateLists = function () {
@@ -2084,8 +2090,10 @@ var es;
                     var component = this._componentsToAdd[i];
                     if (es.isIUpdatable(component))
                         this._updatableComponents.add(component);
-                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
-                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                    if (es.Core.entitySystemsEnabled) {
+                        this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
+                        this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                    }
                     this._components.add(component);
                     this._tempBufferList.push(component);
                 }
@@ -2110,8 +2118,10 @@ var es;
                 return;
             if (es.isIUpdatable(component))
                 this._updatableComponents.remove(component);
-            this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
-            this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+            if (es.Core.entitySystemsEnabled) {
+                this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
+                this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+            }
             component.onRemovedFromEntity();
             component.entity = null;
         };
@@ -2306,7 +2316,8 @@ var es;
                     this._entities.remove(entity);
                     entity.onRemovedFromScene();
                     entity.scene = null;
-                    this.scene.entityProcessors.onEntityRemoved(entity);
+                    if (es.Core.entitySystemsEnabled)
+                        this.scene.entityProcessors.onEntityRemoved(entity);
                 }
                 this._entitiesToRemove.length = 0;
             }
@@ -2351,7 +2362,8 @@ var es;
                 this._entities.push(entity);
                 entity.scene = this.scene;
                 this.addToTagList(entity);
-                this.scene.entityProcessors.onEntityAdded(entity);
+                if (es.Core.entitySystemsEnabled)
+                    this.scene.entityProcessors.onEntityAdded(entity);
             }
         };
         EntityList.prototype.findEntity = function (name) {

@@ -86,8 +86,10 @@ module es {
                 if (isIUpdatable(component))
                     this._updatableComponents.remove(component);
 
-                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
-                this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+                if (Core.entitySystemsEnabled) {
+                    this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
+                    this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+                }
             }
         }
 
@@ -98,8 +100,10 @@ module es {
                 if (isIUpdatable(component))
                     this._updatableComponents.add(component);
 
-                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
-                this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                if (Core.entitySystemsEnabled) {
+                    this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
+                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                }
             }
         }
 
@@ -123,8 +127,10 @@ module es {
                     if (isIUpdatable(component))
                         this._updatableComponents.add(component);
 
-                    this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
-                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                    if (Core.entitySystemsEnabled) {
+                        this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]));
+                        this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                    }
 
                     this._components.add(component);
                     this._tempBufferList.push(component);
@@ -160,8 +166,10 @@ module es {
             if (isIUpdatable(component))
                 this._updatableComponents.remove(component);
 
-            this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
-            this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+            if (Core.entitySystemsEnabled) {
+                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(component["__proto__"]["constructor"]), false);
+                this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+            }
 
             component.onRemovedFromEntity();
             component.entity = null;
