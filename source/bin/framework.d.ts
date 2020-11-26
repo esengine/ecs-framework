@@ -270,8 +270,12 @@ declare module es {
     }
 }
 declare module es {
+    class EntityComparer implements IComparer<Entity> {
+        compare(self: Entity, other: Entity): number;
+    }
     class Entity {
         static _idGenerator: number;
+        static entityComparer: IComparer<Entity>;
         /**
          * 当前实体所属的场景
          */
@@ -1220,15 +1224,15 @@ declare module es {
         /**
          * 场景中添加的实体列表
          */
-        _entities: Entity[];
+        _entities: FastList<Entity>;
         /**
          * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        _entitiesToAdded: Entity[];
+        _entitiesToAdded: Set<Entity>;
         /**
          * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        _entitiesToRemove: Entity[];
+        _entitiesToRemove: Set<Entity>;
         /**
          * 标志，用于确定我们是否需要在这一帧中对实体进行排序
          */
@@ -1238,14 +1242,9 @@ declare module es {
          */
         _entityDict: Map<number, Entity[]>;
         _unsortedTags: Set<number>;
-        _addToSceneEntityList: Entity[];
-        /** 是否使用分帧处理 */
-        frameAllocate: boolean;
-        /** 每帧最大处理数量 */
-        maxAllocate: number;
         constructor(scene: Scene);
         readonly count: number;
-        readonly buffer: Entity[];
+        readonly buffer: FastList<Entity>;
         markEntityListUnsorted(): void;
         markTagUnsorted(tag: number): void;
         /**
@@ -1272,13 +1271,11 @@ declare module es {
         removeFromTagList(entity: Entity): void;
         update(): void;
         updateLists(): void;
-        /** 每次添加一个实体到场景 */
-        private perEntityAddToScene;
         /**
          * 返回第一个找到的名字为name的实体。如果没有找到则返回null
          * @param name
          */
-        findEntity(name: string): Entity;
+        findEntity(name: string): any;
         /**
          * 返回带有标签的所有实体的列表。如果没有实体有标签，则返回一个空列表。
          * 返回的List可以通过ListPool.free放回池中

@@ -4,15 +4,15 @@ module es {
         /**
          * 场景中添加的实体列表
          */
-        public _entities: Entity[] = [];
+        public _entities: FastList<Entity> = new FastList<Entity>();
         /**
          * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        public _entitiesToAdded: Entity[] = [];
+        public _entitiesToAdded: Set<Entity> = new Set<Entity>();
         /**
          * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        public _entitiesToRemove: Entity[] = [];
+        public _entitiesToRemove: Set<Entity> = new Set<Entity>();
         /**
          * 标志，用于确定我们是否需要在这一帧中对实体进行排序
          */
@@ -22,11 +22,6 @@ module es {
          */
         public _entityDict: Map<number, Entity[]> = new Map<number, Entity[]>();
         public _unsortedTags: Set<number> = new Set<number>();
-        public _addToSceneEntityList: Entity[] = [];
-        /** 是否使用分帧处理 */
-        public frameAllocate: boolean = false;
-        /** 每帧最大处理数量 */
-        public maxAllocate: number = 10;
 
         constructor(scene: Scene) {
             this.scene = scene;
@@ -53,8 +48,7 @@ module es {
          * @param entity
          */
         public add(entity: Entity) {
-            if (this._entitiesToAdded.indexOf(entity) == -1)
-                this._entitiesToAdded.push(entity);
+            this._entitiesToAdded.add(entity);
         }
 
         /**
@@ -62,19 +56,19 @@ module es {
          * @param entity
          */
         public remove(entity: Entity) {
-            if (!this._entitiesToRemove.contains(entity)) {
+            if (!this._entitiesToRemove.has(entity)) {
                 console.warn(`您正在尝试删除已经删除的实体(${entity.name})`);
                 return;
             }
 
             // 防止在同一帧中添加或删除实体
-            if (this._entitiesToAdded.contains(entity)) {
-                this._entitiesToAdded.remove(entity);
+            if (this._entitiesToAdded.has(entity)) {
+                this._entitiesToAdded.delete(entity);
                 return;
             }
 
-            if (!this._entitiesToRemove.contains(entity))
-                this._entitiesToRemove.push(entity);
+            if (!this._entitiesToRemove.has(entity))
+                this._entitiesToRemove.add(entity);
         }
 
         /**
@@ -82,7 +76,7 @@ module es {
          */
         public removeAllEntities() {
             this._unsortedTags.clear();
-            this._entitiesToAdded.length = 0;
+            this._entitiesToAdded.clear();
             this._isEntityListUnsorted = false;
 
             // 为什么我们要在这里更新列表？主要是为了处理在场景切换前被分离的实体。
@@ -104,8 +98,7 @@ module es {
          * @param entity
          */
         public contains(entity: Entity): boolean {
-            return this._entities.findIndex(e => e.id == entity.id) != -1 ||
-                this._entitiesToAdded.findIndex(e => e.id == entity.id) != -1;
+            return this._entities.contains(entity) || this._entitiesToAdded.has(entity);
         }
 
         public getTagList(tag: number) {
@@ -142,8 +135,9 @@ module es {
         }
 
         public updateLists() {
-            if (this._entitiesToRemove.length > 0) {
-                for (const entity of this._entitiesToRemove) {
+            if (this._entitiesToRemove.size > 0) {
+                for (let i = 0; i< this._entitiesToRemove.size; i ++) {
+                    let entity = this._entitiesToRemove[i];
                     // 处理标签列表
                     this.removeFromTagList(entity);
 
@@ -156,64 +150,39 @@ module es {
                         this.scene.entityProcessors.onEntityRemoved(entity);
                 }
 
-                this._entitiesToRemove.length = 0;
+                this._entitiesToRemove.clear();
             }
 
-            // 现在所有的实体都被添加到场景中，我们再次循环并调用onAddedToScene
-            while (this._addToSceneEntityList.length > 0){
-                let entity = this._addToSceneEntityList.shift();
-                entity.onAddedToScene();
-            }
+            if (this._entitiesToAdded.size > 0) {
+                for (let i = 0; i < this._entitiesToAdded.size; i ++) {
+                    let entity = this._entitiesToAdded[i];
+                    this._entities.add(entity);
+                    entity.scene = this.scene;
 
-            if (this._entitiesToAdded.length > 0) {
-                if (this.frameAllocate && this._entitiesToAdded.length > this.maxAllocate){
-                    // 启用分帧处理
-                    for (let i = 0; i < this.maxAllocate; i ++){
-                        this.perEntityAddToScene();
-                    }
+                    this.addToTagList(entity);
 
-                    if (this._entitiesToAdded.length == 0) this._isEntityListUnsorted = true;
-                }else{
-                    while (this._entitiesToAdded.length > 0){
-                        this.perEntityAddToScene();
-                    }
-
-                    this._isEntityListUnsorted = true;
+                    if (Core.entitySystemsEnabled)
+                        this.scene.entityProcessors.onEntityAdded(entity);
                 }
+
+                for (let i = 0; i < this._entitiesToAdded.size; i ++)
+                    this._entitiesToAdded[i].onAddedToScene();
+
+                this._entitiesToAdded.clear();
+                this._isEntityListUnsorted = true;
             }
 
             if (this._isEntityListUnsorted) {
-                this._entities.sort((a, b)=>{
-                    return a.compareTo(b);
-                });
+                this._entities.sort(Entity.entityComparer);
                 this._isEntityListUnsorted = false;
             }
 
             // 根据需要对标签列表进行排序
-            if (this._addToSceneEntityList.length == 0 && this._unsortedTags.size > 0) {
-                this._unsortedTags.forEach((tag)=>{
-                    this._entityDict.get(tag).sort((a, b) => {
-                        return a.compareTo(b);
-                    });
-                });
+            if (this._unsortedTags.size == 0) {
+                for (let i = 0; i < this._unsortedTags.size; i ++)
+                    this._entityDict.get(this._unsortedTags[i]).sort();
                     
                 this._unsortedTags.clear();
-            }
-        }
-
-        /** 每次添加一个实体到场景 */
-        private perEntityAddToScene(){
-            let entity = this._entitiesToAdded.shift();
-            this._addToSceneEntityList.push(entity);
-
-            if (this._entities.findIndex(e => e.id == entity.id) == -1) {
-                this._entities.push(entity);
-                entity.scene = this.scene;
-
-                this.addToTagList(entity);
-                
-                if (Core.entitySystemsEnabled)
-                    this.scene.entityProcessors.onEntityAdded(entity);
             }
         }
 
@@ -227,7 +196,12 @@ module es {
                     return this._entities[i];
             }
 
-            return this._entitiesToAdded.firstOrDefault(entity => entity.name == name);
+            for (let i = 0; i < this._entitiesToAdded.size; i ++){
+                if (this._entitiesToAdded[i].name == name)
+                    return this._entitiesToAdded[i];
+            }
+            
+            return null;
         }
 
         /**
@@ -257,9 +231,12 @@ module es {
                 if (this._entities[i] instanceof type)
                     list.push(this._entities[i] as T);
             }
-            for (const entity of this._entitiesToAdded) {
-                if (entity instanceof type)
-                    list.push(entity as T);
+
+            for (let i = 0; i < this._entitiesToAdded.size; i ++){
+                let entity = this._entitiesToAdded[i];
+                if (entity instanceof type) {
+                    list.push(entity);
+                }
             }
 
             return list;
@@ -272,14 +249,14 @@ module es {
         public findComponentOfType<T extends Component>(type): T {
             for (let i = 0; i < this._entities.length; i++) {
                 if (this._entities[i].enabled) {
-                    let comp = this._entities[i].getComponent<T>(type);
+                    let comp = this._entities.buffer[i].getComponent<T>(type);
                     if (comp)
                         return comp;
                 }
             }
 
-            for (let i = 0; i < this._entitiesToAdded.length; i++) {
-                let entity = this._entitiesToAdded[i];
+            for (let i = 0; i < this._entitiesToAdded.size; i++) {
+                let entity: Entity = this._entitiesToAdded[i];
                 if (entity.enabled) {
                     let comp = entity.getComponent<T>(type);
                     if (comp)
@@ -302,7 +279,7 @@ module es {
                     this._entities[i].getComponents(type, comps);
             }
 
-            for (let i = 0; i < this._entitiesToAdded.length; i++) {
+            for (let i = 0; i < this._entitiesToAdded.size; i++) {
                 let entity = this._entitiesToAdded[i];
                 if (entity.enabled)
                     entity.getComponents(type, comps);

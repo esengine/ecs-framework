@@ -1,7 +1,16 @@
 module es {
+    export class EntityComparer implements IComparer<Entity> {
+        public compare(self: Entity, other: Entity): number {
+            let compare = self.updateOrder - other.updateOrder;
+            if (compare == 0)
+                compare = self.id - other.id;
+            return compare;
+        }
+    }
+
     export class Entity {
         public static _idGenerator: number = 0;
-
+        public static entityComparer: IComparer<Entity> = new EntityComparer();
         /**
          * 当前实体所属的场景
          */

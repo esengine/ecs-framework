@@ -642,6 +642,18 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var EntityComparer = /** @class */ (function () {
+        function EntityComparer() {
+        }
+        EntityComparer.prototype.compare = function (self, other) {
+            var compare = self.updateOrder - other.updateOrder;
+            if (compare == 0)
+                compare = self.id - other.id;
+            return compare;
+        };
+        return EntityComparer;
+    }());
+    es.EntityComparer = EntityComparer;
     var Entity = /** @class */ (function () {
         function Entity(name) {
             /**
@@ -1017,6 +1029,7 @@ var es;
             return "[Entity: name: " + this.name + ", tag: " + this.tag + ", enabled: " + this.enabled + ", depth: " + this.updateOrder + "]";
         };
         Entity._idGenerator = 0;
+        Entity.entityComparer = new EntityComparer();
         return Entity;
     }());
     es.Entity = Entity;
@@ -2893,25 +2906,20 @@ var es;
             /**
              * 场景中添加的实体列表
              */
-            this._entities = [];
+            this._entities = new es.FastList();
             /**
              * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
              */
-            this._entitiesToAdded = [];
+            this._entitiesToAdded = new Set();
             /**
              * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
              */
-            this._entitiesToRemove = [];
+            this._entitiesToRemove = new Set();
             /**
              * 通过标签跟踪实体，便于检索
              */
             this._entityDict = new Map();
             this._unsortedTags = new Set();
-            this._addToSceneEntityList = [];
-            /** 是否使用分帧处理 */
-            this.frameAllocate = false;
-            /** 每帧最大处理数量 */
-            this.maxAllocate = 10;
             this.scene = scene;
         }
         Object.defineProperty(EntityList.prototype, "count", {
@@ -2939,32 +2947,31 @@ var es;
          * @param entity
          */
         EntityList.prototype.add = function (entity) {
-            if (this._entitiesToAdded.indexOf(entity) == -1)
-                this._entitiesToAdded.push(entity);
+            this._entitiesToAdded.add(entity);
         };
         /**
          * 从列表中删除一个实体。所有的生命周期方法将在下一帧中被调用
          * @param entity
          */
         EntityList.prototype.remove = function (entity) {
-            if (!this._entitiesToRemove.contains(entity)) {
+            if (!this._entitiesToRemove.has(entity)) {
                 console.warn("\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u5DF2\u7ECF\u5220\u9664\u7684\u5B9E\u4F53(" + entity.name + ")");
                 return;
             }
             // 防止在同一帧中添加或删除实体
-            if (this._entitiesToAdded.contains(entity)) {
-                this._entitiesToAdded.remove(entity);
+            if (this._entitiesToAdded.has(entity)) {
+                this._entitiesToAdded.delete(entity);
                 return;
             }
-            if (!this._entitiesToRemove.contains(entity))
-                this._entitiesToRemove.push(entity);
+            if (!this._entitiesToRemove.has(entity))
+                this._entitiesToRemove.add(entity);
         };
         /**
          * 从实体列表中删除所有实体
          */
         EntityList.prototype.removeAllEntities = function () {
             this._unsortedTags.clear();
-            this._entitiesToAdded.length = 0;
+            this._entitiesToAdded.clear();
             this._isEntityListUnsorted = false;
             // 为什么我们要在这里更新列表？主要是为了处理在场景切换前被分离的实体。
             // 它们仍然会在_entitiesToRemove列表中，这将由updateLists处理。
@@ -2982,8 +2989,7 @@ var es;
          * @param entity
          */
         EntityList.prototype.contains = function (entity) {
-            return this._entities.findIndex(function (e) { return e.id == entity.id; }) != -1 ||
-                this._entitiesToAdded.findIndex(function (e) { return e.id == entity.id; }) != -1;
+            return this._entities.contains(entity) || this._entitiesToAdded.has(entity);
         };
         EntityList.prototype.getTagList = function (tag) {
             var list = this._entityDict.get(tag);
@@ -3014,10 +3020,9 @@ var es;
             }
         };
         EntityList.prototype.updateLists = function () {
-            var _this = this;
-            if (this._entitiesToRemove.length > 0) {
-                for (var _i = 0, _a = this._entitiesToRemove; _i < _a.length; _i++) {
-                    var entity = _a[_i];
+            if (this._entitiesToRemove.size > 0) {
+                for (var i = 0; i < this._entitiesToRemove.size; i++) {
+                    var entity = this._entitiesToRemove[i];
                     // 处理标签列表
                     this.removeFromTagList(entity);
                     // 处理常规实体列表
@@ -3027,55 +3032,31 @@ var es;
                     if (es.Core.entitySystemsEnabled)
                         this.scene.entityProcessors.onEntityRemoved(entity);
                 }
-                this._entitiesToRemove.length = 0;
+                this._entitiesToRemove.clear();
             }
-            // 现在所有的实体都被添加到场景中，我们再次循环并调用onAddedToScene
-            while (this._addToSceneEntityList.length > 0) {
-                var entity = this._addToSceneEntityList.shift();
-                entity.onAddedToScene();
-            }
-            if (this._entitiesToAdded.length > 0) {
-                if (this.frameAllocate && this._entitiesToAdded.length > this.maxAllocate) {
-                    // 启用分帧处理
-                    for (var i = 0; i < this.maxAllocate; i++) {
-                        this.perEntityAddToScene();
-                    }
-                    if (this._entitiesToAdded.length == 0)
-                        this._isEntityListUnsorted = true;
+            if (this._entitiesToAdded.size > 0) {
+                for (var i = 0; i < this._entitiesToAdded.size; i++) {
+                    var entity = this._entitiesToAdded[i];
+                    this._entities.add(entity);
+                    entity.scene = this.scene;
+                    this.addToTagList(entity);
+                    if (es.Core.entitySystemsEnabled)
+                        this.scene.entityProcessors.onEntityAdded(entity);
                 }
-                else {
-                    while (this._entitiesToAdded.length > 0) {
-                        this.perEntityAddToScene();
-                    }
-                    this._isEntityListUnsorted = true;
-                }
+                for (var i = 0; i < this._entitiesToAdded.size; i++)
+                    this._entitiesToAdded[i].onAddedToScene();
+                this._entitiesToAdded.clear();
+                this._isEntityListUnsorted = true;
             }
             if (this._isEntityListUnsorted) {
-                this._entities.sort(function (a, b) {
-                    return a.compareTo(b);
-                });
+                this._entities.sort(es.Entity.entityComparer);
                 this._isEntityListUnsorted = false;
             }
             // 根据需要对标签列表进行排序
-            if (this._addToSceneEntityList.length == 0 && this._unsortedTags.size > 0) {
-                this._unsortedTags.forEach(function (tag) {
-                    _this._entityDict.get(tag).sort(function (a, b) {
-                        return a.compareTo(b);
-                    });
-                });
+            if (this._unsortedTags.size == 0) {
+                for (var i = 0; i < this._unsortedTags.size; i++)
+                    this._entityDict.get(this._unsortedTags[i]).sort();
                 this._unsortedTags.clear();
-            }
-        };
-        /** 每次添加一个实体到场景 */
-        EntityList.prototype.perEntityAddToScene = function () {
-            var entity = this._entitiesToAdded.shift();
-            this._addToSceneEntityList.push(entity);
-            if (this._entities.findIndex(function (e) { return e.id == entity.id; }) == -1) {
-                this._entities.push(entity);
-                entity.scene = this.scene;
-                this.addToTagList(entity);
-                if (es.Core.entitySystemsEnabled)
-                    this.scene.entityProcessors.onEntityAdded(entity);
             }
         };
         /**
@@ -3087,7 +3068,11 @@ var es;
                 if (this._entities[i].name == name)
                     return this._entities[i];
             }
-            return this._entitiesToAdded.firstOrDefault(function (entity) { return entity.name == name; });
+            for (var i = 0; i < this._entitiesToAdded.size; i++) {
+                if (this._entitiesToAdded[i].name == name)
+                    return this._entitiesToAdded[i];
+            }
+            return null;
         };
         /**
          * 返回带有标签的所有实体的列表。如果没有实体有标签，则返回一个空列表。
@@ -3113,10 +3098,11 @@ var es;
                 if (this._entities[i] instanceof type)
                     list.push(this._entities[i]);
             }
-            for (var _i = 0, _a = this._entitiesToAdded; _i < _a.length; _i++) {
-                var entity = _a[_i];
-                if (entity instanceof type)
+            for (var i = 0; i < this._entitiesToAdded.size; i++) {
+                var entity = this._entitiesToAdded[i];
+                if (entity instanceof type) {
                     list.push(entity);
+                }
             }
             return list;
         };
@@ -3127,12 +3113,12 @@ var es;
         EntityList.prototype.findComponentOfType = function (type) {
             for (var i = 0; i < this._entities.length; i++) {
                 if (this._entities[i].enabled) {
-                    var comp = this._entities[i].getComponent(type);
+                    var comp = this._entities.buffer[i].getComponent(type);
                     if (comp)
                         return comp;
                 }
             }
-            for (var i = 0; i < this._entitiesToAdded.length; i++) {
+            for (var i = 0; i < this._entitiesToAdded.size; i++) {
                 var entity = this._entitiesToAdded[i];
                 if (entity.enabled) {
                     var comp = entity.getComponent(type);
@@ -3153,7 +3139,7 @@ var es;
                 if (this._entities[i].enabled)
                     this._entities[i].getComponents(type, comps);
             }
-            for (var i = 0; i < this._entitiesToAdded.length; i++) {
+            for (var i = 0; i < this._entitiesToAdded.size; i++) {
                 var entity = this._entitiesToAdded[i];
                 if (entity.enabled)
                     entity.getComponents(type, comps);
