@@ -273,7 +273,7 @@ declare module es {
     class EntityComparer implements IComparer<Entity> {
         compare(self: Entity, other: Entity): number;
     }
-    class Entity {
+    class Entity implements IEqualityComparable {
         static _idGenerator: number;
         static entityComparer: IComparer<Entity>;
         /**
@@ -429,6 +429,8 @@ declare module es {
          */
         removeAllComponents(): void;
         compareTo(other: Entity): number;
+        equals(other: Entity): boolean;
+        getHashCode(): number;
         toString(): string;
     }
 }
@@ -1228,11 +1230,11 @@ declare module es {
         /**
          * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        _entitiesToAdded: Set<Entity>;
+        _entitiesToAdded: HashSet<Entity>;
         /**
          * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        _entitiesToRemove: Set<Entity>;
+        _entitiesToRemove: HashSet<Entity>;
         /**
          * 标志，用于确定我们是否需要在这一帧中对实体进行排序
          */
@@ -2487,8 +2489,6 @@ declare module es {
          */
         update(): void;
         private checkForExitedColliders;
-        private excepthWith;
-        private unionWith;
         private notifyTriggerListeners;
     }
 }
@@ -3309,10 +3309,14 @@ declare module es {
     }
 }
 declare module es {
-    class EqualityComparer<T> implements IEqualityComparer {
+    class EqualityComparer<T> implements IEqualityComparer<T> {
         static default<T>(): EqualityComparer<T>;
         protected constructor();
         equals(x: T, y: T): boolean;
+        getHashCode(o: T): number;
+        private _getHashCodeForNumber;
+        private _getHashCodeForString;
+        private forOwn;
     }
 }
 declare module es {
@@ -3353,8 +3357,37 @@ declare module es {
     }
 }
 declare module es {
-    interface IEqualityComparer {
-        equals(x: any, y: any): boolean;
+    /**
+     * 对象声明自己的平等方法和Hashcode的生成
+     */
+    interface IEqualityComparable {
+        /**
+         * 确定另一个对象是否等于这个实例
+         * @param other
+         */
+        equals(other: any): boolean;
+        /**
+         * 生成对象的哈希码
+         */
+        getHashCode(): number;
+    }
+}
+declare module es {
+    /**
+     * 为确定对象的哈希码和两个项目是否相等提供接口
+     */
+    interface IEqualityComparer<T> {
+        /**
+         * 判断两个对象是否相等
+         * @param x
+         * @param y
+         */
+        equals(x: T, y: T): boolean;
+        /**
+         * 生成对象的哈希码
+         * @param value
+         */
+        getHashCode(value: T): number;
     }
 }
 declare module es {
@@ -3405,12 +3438,13 @@ declare module es {
     /**
      * 用于管理一对对象的简单DTO
      */
-    class Pair<T> implements IEquatable<Pair<T>> {
+    class Pair<T> implements IEqualityComparable {
         first: T;
         second: T;
         constructor(first: T, second: T);
         clear(): void;
         equals(other: Pair<T>): boolean;
+        getHashCode(): number;
     }
 }
 declare module es {
@@ -3554,6 +3588,70 @@ declare module es {
     class Ref<T extends number | string | boolean> {
         value: T;
         constructor(value: T);
+    }
+}
+declare module es {
+    interface ISet<T> {
+        add(item: T): boolean;
+        remove(item: T): boolean;
+        contains(item: T): boolean;
+        getCount(): number;
+        clear(): void;
+        toArray(): Array<T>;
+        /**
+         * 从当前集合中删除指定集合中的所有元素
+         * @param other
+         */
+        exceptWith(other: Array<T>): void;
+        /**
+         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
+         * @param other
+         */
+        intersectWith(other: Array<T>): void;
+        /**
+         * 修改当前的集合对象，使其包含所有存在于自身、指定集合中的元素，或者两者都包含
+         * @param other
+         */
+        unionWith(other: Array<T>): void;
+        isSubsetOf(other: Array<T>): boolean;
+        isSupersetOf(other: Array<T>): boolean;
+        overlaps(other: Array<T>): boolean;
+        setEquals(other: Array<T>): boolean;
+    }
+    abstract class Set<T> implements ISet<T> {
+        protected buckets: T[][];
+        protected count: number;
+        constructor(source?: Array<T>);
+        abstract getHashCode(item: T): number;
+        abstract areEqual(value1: T, value2: T): boolean;
+        add(item: T): boolean;
+        remove(item: T): boolean;
+        contains(item: T): boolean;
+        getCount(): number;
+        clear(): void;
+        toArray(): T[];
+        /**
+         * 从当前集合中删除指定集合中的所有元素
+         * @param other
+         */
+        exceptWith(other: Array<T>): void;
+        /**
+         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
+         * @param other
+         */
+        intersectWith(other: Array<T>): void;
+        unionWith(other: Array<T>): void;
+        isSubsetOf(other: Array<T>): boolean;
+        isSupersetOf(other: Array<T>): boolean;
+        overlaps(other: Array<T>): boolean;
+        setEquals(other: Array<T>): boolean;
+        private buildInternalBuckets;
+        private bucketsContains;
+    }
+    class HashSet<T extends IEqualityComparable> extends Set<T> {
+        constructor(source?: Array<T>);
+        getHashCode(item: T): number;
+        areEqual(value1: T, value2: T): boolean;
     }
 }
 declare module es {

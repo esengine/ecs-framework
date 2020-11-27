@@ -1025,6 +1025,12 @@ var es;
                 compare = this.id - other.id;
             return compare;
         };
+        Entity.prototype.equals = function (other) {
+            return this.compareTo(other) == 0;
+        };
+        Entity.prototype.getHashCode = function () {
+            return this.id;
+        };
         Entity.prototype.toString = function () {
             return "[Entity: name: " + this.name + ", tag: " + this.tag + ", enabled: " + this.enabled + ", depth: " + this.updateOrder + "]";
         };
@@ -2910,11 +2916,11 @@ var es;
             /**
              * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
              */
-            this._entitiesToAdded = new Set();
+            this._entitiesToAdded = new es.HashSet();
             /**
              * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
              */
-            this._entitiesToRemove = new Set();
+            this._entitiesToRemove = new es.HashSet();
             /**
              * 通过标签跟踪实体，便于检索
              */
@@ -2954,16 +2960,16 @@ var es;
          * @param entity
          */
         EntityList.prototype.remove = function (entity) {
-            if (!this._entitiesToRemove.has(entity)) {
+            if (!this._entitiesToRemove.contains(entity)) {
                 console.warn("\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u5DF2\u7ECF\u5220\u9664\u7684\u5B9E\u4F53(" + entity.name + ")");
                 return;
             }
             // 防止在同一帧中添加或删除实体
-            if (this._entitiesToAdded.has(entity)) {
-                this._entitiesToAdded.delete(entity);
+            if (this._entitiesToAdded.contains(entity)) {
+                this._entitiesToAdded.remove(entity);
                 return;
             }
-            if (!this._entitiesToRemove.has(entity))
+            if (!this._entitiesToRemove.contains(entity))
                 this._entitiesToRemove.add(entity);
         };
         /**
@@ -2989,7 +2995,7 @@ var es;
          * @param entity
          */
         EntityList.prototype.contains = function (entity) {
-            return this._entities.contains(entity) || this._entitiesToAdded.has(entity);
+            return this._entities.contains(entity) || this._entitiesToAdded.contains(entity);
         };
         EntityList.prototype.getTagList = function (tag) {
             var list = this._entityDict.get(tag);
@@ -3014,14 +3020,15 @@ var es;
         };
         EntityList.prototype.update = function () {
             for (var i = 0; i < this._entities.length; i++) {
-                var entity = this._entities[i];
+                var entity = this._entities.buffer[i];
                 if (entity.enabled && (entity.updateInterval == 1 || es.Time.frameCount % entity.updateInterval == 0))
                     entity.update();
             }
         };
         EntityList.prototype.updateLists = function () {
-            if (this._entitiesToRemove.size > 0) {
-                for (var i = 0; i < this._entitiesToRemove.size; i++) {
+            var _this = this;
+            if (this._entitiesToRemove.getCount() > 0) {
+                for (var i = 0; i < this._entitiesToRemove.getCount(); i++) {
                     var entity = this._entitiesToRemove[i];
                     // 处理标签列表
                     this.removeFromTagList(entity);
@@ -3034,17 +3041,17 @@ var es;
                 }
                 this._entitiesToRemove.clear();
             }
-            if (this._entitiesToAdded.size > 0) {
-                for (var i = 0; i < this._entitiesToAdded.size; i++) {
-                    var entity = this._entitiesToAdded[i];
+            if (this._entitiesToAdded.getCount() > 0) {
+                for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
+                    var entity = this._entitiesToAdded.toArray()[i];
                     this._entities.add(entity);
                     entity.scene = this.scene;
                     this.addToTagList(entity);
                     if (es.Core.entitySystemsEnabled)
                         this.scene.entityProcessors.onEntityAdded(entity);
                 }
-                for (var i = 0; i < this._entitiesToAdded.size; i++)
-                    this._entitiesToAdded[i].onAddedToScene();
+                for (var i = 0; i < this._entitiesToAdded.getCount(); i++)
+                    this._entitiesToAdded.toArray()[i].onAddedToScene();
                 this._entitiesToAdded.clear();
                 this._isEntityListUnsorted = true;
             }
@@ -3054,8 +3061,7 @@ var es;
             }
             // 根据需要对标签列表进行排序
             if (this._unsortedTags.size == 0) {
-                for (var i = 0; i < this._unsortedTags.size; i++)
-                    this._entityDict.get(this._unsortedTags[i]).sort();
+                this._unsortedTags.forEach(function (value) { return _this._entityDict.get(value).sort(function (a, b) { return a.compareTo(b); }); });
                 this._unsortedTags.clear();
             }
         };
@@ -3068,9 +3074,10 @@ var es;
                 if (this._entities[i].name == name)
                     return this._entities[i];
             }
-            for (var i = 0; i < this._entitiesToAdded.size; i++) {
-                if (this._entitiesToAdded[i].name == name)
-                    return this._entitiesToAdded[i];
+            for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
+                var entity = this._entitiesToAdded.toArray()[i];
+                if (entity.name == name)
+                    return entity;
             }
             return null;
         };
@@ -3098,9 +3105,9 @@ var es;
                 if (this._entities[i] instanceof type)
                     list.push(this._entities[i]);
             }
-            for (var i = 0; i < this._entitiesToAdded.size; i++) {
-                var entity = this._entitiesToAdded[i];
-                if (entity instanceof type) {
+            for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
+                var entity = this._entitiesToAdded.toArray()[i];
+                if (es.TypeUtils.getType(entity) instanceof type) {
                     list.push(entity);
                 }
             }
@@ -3118,8 +3125,8 @@ var es;
                         return comp;
                 }
             }
-            for (var i = 0; i < this._entitiesToAdded.size; i++) {
-                var entity = this._entitiesToAdded[i];
+            for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
+                var entity = this._entitiesToAdded.toArray()[i];
                 if (entity.enabled) {
                     var comp = entity.getComponent(type);
                     if (comp)
@@ -3139,8 +3146,8 @@ var es;
                 if (this._entities[i].enabled)
                     this._entities[i].getComponents(type, comps);
             }
-            for (var i = 0; i < this._entitiesToAdded.size; i++) {
-                var entity = this._entitiesToAdded[i];
+            for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
+                var entity = this._entitiesToAdded.toArray()[i];
                 if (entity.enabled)
                     entity.getComponents(type, comps);
             }
@@ -5993,9 +6000,9 @@ var es;
     var ColliderTriggerHelper = /** @class */ (function () {
         function ColliderTriggerHelper(entity) {
             /** 存储当前帧中发生的所有活动交点对 */
-            this._activeTriggerIntersections = new Set();
+            this._activeTriggerIntersections = new es.HashSet();
             /** 存储前一帧的交点对，这样我们就可以在移动这一帧后检测到退出 */
-            this._previousTriggerIntersections = new Set();
+            this._previousTriggerIntersections = new es.HashSet();
             this._tempTriggerList = [];
             this._entity = entity;
         }
@@ -6018,8 +6025,8 @@ var es;
                     if (collider.overlaps(neighbor)) {
                         var pair = new es.Pair(collider, neighbor);
                         // 如果我们的某一个集合中已经有了这个对子（前一个或当前的触发交叉点），就不要调用输入事件了
-                        var shouldReportTriggerEvent = !this._activeTriggerIntersections.has(pair) &&
-                            !this._previousTriggerIntersections.has(pair);
+                        var shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) &&
+                            !this._previousTriggerIntersections.contains(pair);
                         if (shouldReportTriggerEvent)
                             this.notifyTriggerListeners(pair, true);
                         this._activeTriggerIntersections.add(pair);
@@ -6031,31 +6038,15 @@ var es;
         };
         ColliderTriggerHelper.prototype.checkForExitedColliders = function () {
             // 删除所有与此帧交互的触发器，留下我们退出的触发器
-            this.excepthWith(this._previousTriggerIntersections, this._activeTriggerIntersections);
-            for (var i = 0; i < this._previousTriggerIntersections.size; i++) {
+            this._previousTriggerIntersections.exceptWith(this._activeTriggerIntersections.toArray());
+            for (var i = 0; i < this._previousTriggerIntersections.getCount(); i++) {
                 this.notifyTriggerListeners(this._previousTriggerIntersections[i], false);
             }
             this._previousTriggerIntersections.clear();
             // 添加所有当前激活的触发器
-            this.unionWith(this._previousTriggerIntersections, this._activeTriggerIntersections);
+            this._previousTriggerIntersections.unionWith(this._activeTriggerIntersections.toArray());
             // 清空活动集，为下一帧做准备
             this._activeTriggerIntersections.clear();
-        };
-        ColliderTriggerHelper.prototype.excepthWith = function (previous, active) {
-            for (var i = 0; i < previous.size; i++) {
-                var previousDATA = previous[i];
-                for (var j = 0; j < active.size; j++) {
-                    var activeDATA = active[j];
-                    if (activeDATA.equals(previousDATA))
-                        previous.delete(previousDATA);
-                }
-            }
-        };
-        ColliderTriggerHelper.prototype.unionWith = function (previous, active) {
-            for (var i = 0; i < this._activeTriggerIntersections.size; i++) {
-                if (!this._previousTriggerIntersections.has(this._activeTriggerIntersections[i]))
-                    this._previousTriggerIntersections.add(this._activeTriggerIntersections[i]);
-            }
         };
         ColliderTriggerHelper.prototype.notifyTriggerListeners = function (collisionPair, isEntering) {
             es.TriggerListenerHelper.getITriggerListener(collisionPair.first.entity, this._tempTriggerList);
@@ -8309,6 +8300,44 @@ var es;
                 return x === y;
             }
         };
+        EqualityComparer.prototype.getHashCode = function (o) {
+            var _this = this;
+            if (typeof o == 'number') {
+                return this._getHashCodeForNumber(o);
+            }
+            if (typeof o == 'string') {
+                return this._getHashCodeForString(o);
+            }
+            var hashCode = 385229220;
+            this.forOwn(o, function (value) {
+                if (typeof value == 'number') {
+                    hashCode += _this._getHashCodeForNumber(value);
+                }
+                else if (typeof value == 'string') {
+                    hashCode += _this._getHashCodeForString(value);
+                }
+                else if (typeof value == 'object') {
+                    _this.forOwn(value, function () {
+                        hashCode += _this.getHashCode(value);
+                    });
+                }
+            });
+            return hashCode;
+        };
+        EqualityComparer.prototype._getHashCodeForNumber = function (n) {
+            return n;
+        };
+        EqualityComparer.prototype._getHashCodeForString = function (s) {
+            var hashCode = 385229220;
+            for (var i = 0; i < s.length; i++) {
+                hashCode = (hashCode * -1521134295) ^ s.charCodeAt(i);
+            }
+            return hashCode;
+        };
+        EqualityComparer.prototype.forOwn = function (object, iteratee) {
+            object = Object(object);
+            Object.keys(object).forEach(function (key) { return iteratee(object[key], key, object); });
+        };
         return EqualityComparer;
     }());
     es.EqualityComparer = EqualityComparer;
@@ -8456,6 +8485,10 @@ var es;
         Pair.prototype.equals = function (other) {
             // 这两种方法在功能上应该是等价的
             return this.first == other.first && this.second == other.second;
+        };
+        Pair.prototype.getHashCode = function () {
+            return es.EqualityComparer.default().getHashCode(this.first) * 37 +
+                es.EqualityComparer.default().getHashCode(this.second);
         };
         return Pair;
     }());
@@ -8753,6 +8786,176 @@ var es;
         return Ref;
     }());
     es.Ref = Ref;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Set = /** @class */ (function () {
+        function Set(source) {
+            var _this = this;
+            this.clear();
+            if (source)
+                source.forEach(function (value) {
+                    _this.add(value);
+                });
+        }
+        Set.prototype.add = function (item) {
+            var _this = this;
+            var hashCode = this.getHashCode(item);
+            var bucket = this.buckets[hashCode];
+            if (bucket === undefined) {
+                var newBucket = new Array();
+                newBucket.push(item);
+                this.buckets[hashCode] = newBucket;
+                this.count = this.count + 1;
+                return true;
+            }
+            if (bucket.some(function (value) { return _this.areEqual(value, item); }))
+                return false;
+            bucket.push(item);
+            this.count = this.count + 1;
+            return true;
+        };
+        ;
+        Set.prototype.remove = function (item) {
+            var _this = this;
+            var hashCode = this.getHashCode(item);
+            var bucket = this.buckets[hashCode];
+            if (bucket === undefined) {
+                return false;
+            }
+            var result = false;
+            var newBucket = new Array();
+            bucket.forEach(function (value) {
+                if (!_this.areEqual(value, item))
+                    newBucket.push(item);
+                else
+                    result = true;
+            });
+            this.buckets[hashCode] = newBucket;
+            if (result)
+                this.count = this.count - 1;
+            return result;
+        };
+        Set.prototype.contains = function (item) {
+            return this.bucketsContains(this.buckets, item);
+        };
+        ;
+        Set.prototype.getCount = function () {
+            return this.count;
+        };
+        Set.prototype.clear = function () {
+            this.buckets = new Array();
+            this.count = 0;
+        };
+        Set.prototype.toArray = function () {
+            var result = new Array();
+            this.buckets.forEach(function (value) {
+                value.forEach(function (inner) {
+                    result.push(inner);
+                });
+            });
+            return result;
+        };
+        /**
+         * 从当前集合中删除指定集合中的所有元素
+         * @param other
+         */
+        Set.prototype.exceptWith = function (other) {
+            var _this = this;
+            if (other) {
+                other.forEach(function (value) {
+                    _this.remove(value);
+                });
+            }
+        };
+        /**
+         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
+         * @param other
+         */
+        Set.prototype.intersectWith = function (other) {
+            var _this = this;
+            if (other) {
+                var otherBuckets_1 = this.buildInternalBuckets(other);
+                this.toArray().forEach(function (value) {
+                    if (!_this.bucketsContains(otherBuckets_1.Buckets, value))
+                        _this.remove(value);
+                });
+            }
+            else {
+                this.clear();
+            }
+        };
+        Set.prototype.unionWith = function (other) {
+            var _this = this;
+            other.forEach(function (value) {
+                _this.add(value);
+            });
+        };
+        Set.prototype.isSubsetOf = function (other) {
+            var _this = this;
+            var otherBuckets = this.buildInternalBuckets(other);
+            return this.toArray().every(function (value) { return _this.bucketsContains(otherBuckets.Buckets, value); });
+        };
+        Set.prototype.isSupersetOf = function (other) {
+            var _this = this;
+            return other.every(function (value) { return _this.contains(value); });
+        };
+        Set.prototype.overlaps = function (other) {
+            var _this = this;
+            return other.some(function (value) { return _this.contains(value); });
+        };
+        Set.prototype.setEquals = function (other) {
+            var _this = this;
+            var otherBuckets = this.buildInternalBuckets(other);
+            if (otherBuckets.Count !== this.count)
+                return false;
+            return other.every(function (value) { return _this.contains(value); });
+        };
+        Set.prototype.buildInternalBuckets = function (source) {
+            var _this = this;
+            var internalBuckets = new Array();
+            var internalCount = 0;
+            source.forEach(function (item) {
+                var hashCode = _this.getHashCode(item);
+                var bucket = internalBuckets[hashCode];
+                if (bucket === undefined) {
+                    var newBucket = new Array();
+                    newBucket.push(item);
+                    internalBuckets[hashCode] = newBucket;
+                    internalCount = internalCount + 1;
+                }
+                else if (!bucket.some(function (value) { return _this.areEqual(value, item); })) {
+                    bucket.push(item);
+                    internalCount = internalCount + 1;
+                }
+            });
+            return { Buckets: internalBuckets, Count: internalCount };
+        };
+        Set.prototype.bucketsContains = function (internalBuckets, item) {
+            var _this = this;
+            var hashCode = this.getHashCode(item);
+            var bucket = internalBuckets[hashCode];
+            if (bucket === undefined) {
+                return false;
+            }
+            return bucket.some(function (value) { return _this.areEqual(value, item); });
+        };
+        return Set;
+    }());
+    var HashSet = /** @class */ (function (_super) {
+        __extends(HashSet, _super);
+        function HashSet(source) {
+            return _super.call(this, source) || this;
+        }
+        HashSet.prototype.getHashCode = function (item) {
+            return item.getHashCode();
+        };
+        HashSet.prototype.areEqual = function (value1, value2) {
+            return value1.equals(value2);
+        };
+        return HashSet;
+    }(Set));
+    es.HashSet = HashSet;
 })(es || (es = {}));
 var es;
 (function (es) {

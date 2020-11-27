@@ -8,7 +8,7 @@ module es {
         }
     }
 
-    export class Entity {
+    export class Entity implements IEqualityComparable {
         public static _idGenerator: number = 0;
         public static entityComparer: IComparer<Entity> = new EntityComparer();
         /**
@@ -397,6 +397,14 @@ module es {
             if (compare == 0)
                 compare = this.id - other.id;
             return compare;
+        }
+
+        public equals(other: Entity): boolean {
+            return this.compareTo(other) == 0;
+        }
+
+        public getHashCode(): number {
+            return this.id;
         }
 
         public toString(): string {

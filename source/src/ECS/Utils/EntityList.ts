@@ -8,11 +8,11 @@ module es {
         /**
          * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        public _entitiesToAdded: Set<Entity> = new Set<Entity>();
+        public _entitiesToAdded: HashSet<Entity> = new HashSet<Entity>();
         /**
          * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        public _entitiesToRemove: Set<Entity> = new Set<Entity>();
+        public _entitiesToRemove: HashSet<Entity> = new HashSet<Entity>();
         /**
          * 标志，用于确定我们是否需要在这一帧中对实体进行排序
          */
@@ -56,18 +56,18 @@ module es {
          * @param entity
          */
         public remove(entity: Entity) {
-            if (!this._entitiesToRemove.has(entity)) {
+            if (!this._entitiesToRemove.contains(entity)) {
                 console.warn(`您正在尝试删除已经删除的实体(${entity.name})`);
                 return;
             }
 
             // 防止在同一帧中添加或删除实体
-            if (this._entitiesToAdded.has(entity)) {
-                this._entitiesToAdded.delete(entity);
+            if (this._entitiesToAdded.contains(entity)) {
+                this._entitiesToAdded.remove(entity);
                 return;
             }
 
-            if (!this._entitiesToRemove.has(entity))
+            if (!this._entitiesToRemove.contains(entity))
                 this._entitiesToRemove.add(entity);
         }
 
@@ -98,7 +98,7 @@ module es {
          * @param entity
          */
         public contains(entity: Entity): boolean {
-            return this._entities.contains(entity) || this._entitiesToAdded.has(entity);
+            return this._entities.contains(entity) || this._entitiesToAdded.contains(entity);
         }
 
         public getTagList(tag: number) {
@@ -128,15 +128,15 @@ module es {
 
         public update() {
             for (let i = 0; i < this._entities.length; i++) {
-                let entity = this._entities[i];
+                let entity = this._entities.buffer[i];
                 if (entity.enabled && (entity.updateInterval == 1 || Time.frameCount % entity.updateInterval == 0))
                     entity.update();
             }
         }
 
         public updateLists() {
-            if (this._entitiesToRemove.size > 0) {
-                for (let i = 0; i< this._entitiesToRemove.size; i ++) {
+            if (this._entitiesToRemove.getCount() > 0) {
+                for (let i = 0; i< this._entitiesToRemove.getCount(); i ++) {
                     let entity = this._entitiesToRemove[i];
                     // 处理标签列表
                     this.removeFromTagList(entity);
@@ -153,9 +153,9 @@ module es {
                 this._entitiesToRemove.clear();
             }
 
-            if (this._entitiesToAdded.size > 0) {
-                for (let i = 0; i < this._entitiesToAdded.size; i ++) {
-                    let entity = this._entitiesToAdded[i];
+            if (this._entitiesToAdded.getCount() > 0) {
+                for (let i = 0; i < this._entitiesToAdded.getCount(); i ++) {
+                    let entity = this._entitiesToAdded.toArray()[i];
                     this._entities.add(entity);
                     entity.scene = this.scene;
 
@@ -165,8 +165,8 @@ module es {
                         this.scene.entityProcessors.onEntityAdded(entity);
                 }
 
-                for (let i = 0; i < this._entitiesToAdded.size; i ++)
-                    this._entitiesToAdded[i].onAddedToScene();
+                for (let i = 0; i < this._entitiesToAdded.getCount(); i ++)
+                    this._entitiesToAdded.toArray()[i].onAddedToScene();
 
                 this._entitiesToAdded.clear();
                 this._isEntityListUnsorted = true;
@@ -179,8 +179,7 @@ module es {
 
             // 根据需要对标签列表进行排序
             if (this._unsortedTags.size == 0) {
-                for (let i = 0; i < this._unsortedTags.size; i ++)
-                    this._entityDict.get(this._unsortedTags[i]).sort();
+                this._unsortedTags.forEach(value => this._entityDict.get(value).sort((a, b) => a.compareTo(b)));
                     
                 this._unsortedTags.clear();
             }
@@ -196,9 +195,10 @@ module es {
                     return this._entities[i];
             }
 
-            for (let i = 0; i < this._entitiesToAdded.size; i ++){
-                if (this._entitiesToAdded[i].name == name)
-                    return this._entitiesToAdded[i];
+            for (let i = 0; i < this._entitiesToAdded.getCount(); i ++){
+                let entity = this._entitiesToAdded.toArray()[i];
+                if (entity.name == name)
+                    return entity;
             }
             
             return null;
@@ -232,10 +232,10 @@ module es {
                     list.push(this._entities[i] as T);
             }
 
-            for (let i = 0; i < this._entitiesToAdded.size; i ++){
-                let entity = this._entitiesToAdded[i];
-                if (entity instanceof type) {
-                    list.push(entity);
+            for (let i = 0; i < this._entitiesToAdded.getCount(); i ++){
+                let entity = this._entitiesToAdded.toArray()[i];
+                if (TypeUtils.getType(entity) instanceof type) {
+                    list.push(entity as T);
                 }
             }
 
@@ -255,8 +255,8 @@ module es {
                 }
             }
 
-            for (let i = 0; i < this._entitiesToAdded.size; i++) {
-                let entity: Entity = this._entitiesToAdded[i];
+            for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
+                let entity: Entity = this._entitiesToAdded.toArray()[i];
                 if (entity.enabled) {
                     let comp = entity.getComponent<T>(type);
                     if (comp)
@@ -279,8 +279,8 @@ module es {
                     this._entities[i].getComponents(type, comps);
             }
 
-            for (let i = 0; i < this._entitiesToAdded.size; i++) {
-                let entity = this._entitiesToAdded[i];
+            for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
+                let entity = this._entitiesToAdded.toArray()[i];
                 if (entity.enabled)
                     entity.getComponents(type, comps);
             }
