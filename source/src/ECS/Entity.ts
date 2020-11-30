@@ -343,10 +343,10 @@ module es {
          * 获取类型T的第一个组件并返回它。如果没有找到组件，将创建组件。
          * @param type
          */
-        public getOrCreateComponent<T extends Component>(type: T) {
-            let comp = this.components.getComponent<T>(TypeUtils.getType(type), true);
+        public getOrCreateComponent<T extends Component>(type) {
+            let comp = this.components.getComponent<T>(type, true);
             if (!comp) {
-                comp = this.addComponent<T>(type);
+                comp = this.addComponent<T>(new type());
             }
 
             return comp;

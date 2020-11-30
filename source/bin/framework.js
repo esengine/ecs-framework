@@ -43,240 +43,6 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-Array.prototype.findIndex = function (predicate) {
-    function findIndex(array, predicate) {
-        for (var i = 0, len = array.length; i < len; i++) {
-            if (predicate.call(arguments[2], array[i], i, array)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-    return findIndex(this, predicate);
-};
-Array.prototype.any = function (predicate) {
-    function any(array, predicate) {
-        return array.findIndex(predicate) > -1;
-    }
-    return any(this, predicate);
-};
-Array.prototype.firstOrDefault = function (predicate) {
-    function firstOrDefault(array, predicate) {
-        var index = array.findIndex(predicate);
-        return index == -1 ? null : array[index];
-    }
-    return firstOrDefault(this, predicate);
-};
-Array.prototype.find = function (predicate) {
-    function find(array, predicate) {
-        return array.firstOrDefault(predicate);
-    }
-    return find(this, predicate);
-};
-Array.prototype.where = function (predicate) {
-    function where(array, predicate) {
-        if (typeof (array.reduce) === "function") {
-            return array.reduce(function (ret, element, index) {
-                if (predicate.call(arguments[2], element, index, array)) {
-                    ret.push(element);
-                }
-                return ret;
-            }, []);
-        }
-        else {
-            var ret = [];
-            for (var i = 0, len = array.length; i < len; i++) {
-                var element = array[i];
-                if (predicate.call(arguments[2], element, i, array)) {
-                    ret.push(element);
-                }
-            }
-            return ret;
-        }
-    }
-    return where(this, predicate);
-};
-Array.prototype.count = function (predicate) {
-    function count(array, predicate) {
-        return array.where(predicate).length;
-    }
-    return count(this, predicate);
-};
-Array.prototype.findAll = function (predicate) {
-    function findAll(array, predicate) {
-        return array.where(predicate);
-    }
-    return findAll(this, predicate);
-};
-Array.prototype.contains = function (value) {
-    function contains(array, value) {
-        for (var i = 0, len = array.length; i < len; i++) {
-            if (array[i] == value) {
-                return true;
-            }
-        }
-        return false;
-    }
-    return contains(this, value);
-};
-Array.prototype.removeAll = function (predicate) {
-    function removeAll(array, predicate) {
-        var index;
-        do {
-            index = array.findIndex(predicate);
-            if (index >= 0) {
-                array.splice(index, 1);
-            }
-        } while (index >= 0);
-    }
-    removeAll(this, predicate);
-};
-Array.prototype.remove = function (element) {
-    function remove(array, element) {
-        var index = array.findIndex(function (x) {
-            return x === element;
-        });
-        if (index >= 0) {
-            array.splice(index, 1);
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-    return remove(this, element);
-};
-Array.prototype.removeAt = function (index) {
-    function removeAt(array, index) {
-        array.splice(index, 1);
-    }
-    return removeAt(this, index);
-};
-Array.prototype.removeRange = function (index, count) {
-    function removeRange(array, index, count) {
-        array.splice(index, count);
-    }
-    return removeRange(this, index, count);
-};
-Array.prototype.select = function (selector) {
-    function select(array, selector) {
-        if (typeof (array.reduce) === "function") {
-            return array.reduce(function (ret, element, index) {
-                ret.push(selector.call(arguments[2], element, index, array));
-                return ret;
-            }, []);
-        }
-        else {
-            var ret = [];
-            for (var i = 0, len = array.length; i < len; i++) {
-                ret.push(selector.call(arguments[2], array[i], i, array));
-            }
-            return ret;
-        }
-    }
-    return select(this, selector);
-};
-Array.prototype.orderBy = function (keySelector, comparer) {
-    function orderBy(array, keySelector, comparer) {
-        array.sort(function (x, y) {
-            var v1 = keySelector(x);
-            var v2 = keySelector(y);
-            if (comparer) {
-                return comparer(v1, v2);
-            }
-            else {
-                return (v1 > v2) ? 1 : -1;
-            }
-        });
-        return array;
-    }
-    return orderBy(this, keySelector, comparer);
-};
-Array.prototype.orderByDescending = function (keySelector, comparer) {
-    function orderByDescending(array, keySelector, comparer) {
-        array.sort(function (x, y) {
-            var v1 = keySelector(x);
-            var v2 = keySelector(y);
-            if (comparer) {
-                return -comparer(v1, v2);
-            }
-            else {
-                return (v1 < v2) ? 1 : -1;
-            }
-        });
-        return array;
-    }
-    return orderByDescending(this, keySelector, comparer);
-};
-Array.prototype.groupBy = function (keySelector) {
-    function groupBy(array, keySelector) {
-        if (typeof (array.reduce) === "function") {
-            var keys_1 = [];
-            return array.reduce(function (groups, element, index) {
-                var key = JSON.stringify(keySelector.call(arguments[1], element, index, array));
-                var index2 = keys_1.findIndex(function (x) {
-                    return x === key;
-                });
-                if (index2 < 0) {
-                    index2 = keys_1.push(key) - 1;
-                }
-                if (!groups[index2]) {
-                    groups[index2] = [];
-                }
-                groups[index2].push(element);
-                return groups;
-            }, []);
-        }
-        else {
-            var groups = [];
-            var keys = [];
-            var _loop_1 = function (i, len) {
-                var key = JSON.stringify(keySelector.call(arguments_1[1], array[i], i, array));
-                var index = keys.findIndex(function (x) {
-                    return x === key;
-                });
-                if (index < 0) {
-                    index = keys.push(key) - 1;
-                }
-                if (!groups[index]) {
-                    groups[index] = [];
-                }
-                groups[index].push(array[i]);
-            };
-            var arguments_1 = arguments;
-            for (var i = 0, len = array.length; i < len; i++) {
-                _loop_1(i, len);
-            }
-            return groups;
-        }
-    }
-    return groupBy(this, keySelector);
-};
-Array.prototype.sum = function (selector) {
-    function sum(array, selector) {
-        var ret;
-        for (var i = 0, len = array.length; i < len; i++) {
-            if (i == 0) {
-                if (selector) {
-                    ret = selector.call(arguments[2], array[i], i, array);
-                }
-                else {
-                    ret = array[i];
-                }
-            }
-            else {
-                if (selector) {
-                    ret += selector.call(arguments[2], array[i], i, array);
-                }
-                else {
-                    ret += array[i];
-                }
-            }
-        }
-        return ret;
-    }
-    return sum(this, selector);
-};
 var es;
 (function (es) {
     /**
@@ -554,6 +320,8 @@ var es;
                 if (memoryInfo != null) {
                     this._totalMemory = Number((memoryInfo.totalJSHeapSize / 1048576).toFixed(2));
                 }
+                if (this._titleMemory)
+                    this._titleMemory(this._totalMemory, this._frameCounter);
                 this._frameCounter = 0;
                 this._frameCounterElapsedTime -= 1;
             }
@@ -992,9 +760,9 @@ var es;
          * @param type
          */
         Entity.prototype.getOrCreateComponent = function (type) {
-            var comp = this.components.getComponent(es.TypeUtils.getType(type), true);
+            var comp = this.components.getComponent(type, true);
             if (!comp) {
-                comp = this.addComponent(type);
+                comp = this.addComponent(new type());
             }
             return comp;
         };
@@ -1163,7 +931,7 @@ var es;
          */
         Scene.prototype.getSceneComponent = function (type) {
             for (var i = 0; i < this._sceneComponents.length; i++) {
-                var component = this._sceneComponents[i];
+                var component = this._sceneComponents.buffer[i];
                 if (component instanceof type)
                     return component;
             }
@@ -1217,9 +985,10 @@ var es;
          * @param renderer
          */
         Scene.prototype.removeRenderer = function (renderer) {
-            if (!this._renderers.contains(renderer))
+            var rendererList = new linq.List(this._renderers);
+            if (!rendererList.contains(renderer))
                 return;
-            this._renderers.remove(renderer);
+            rendererList.remove(renderer);
             renderer.unload();
         };
         /**
@@ -1586,8 +1355,9 @@ var es;
             if (this._parent == parent)
                 return this;
             if (!this._parent) {
-                this._parent._children.remove(this);
-                this._parent._children.push(this);
+                var children = new linq.List(this._parent._children);
+                children.remove(this);
+                children.add(this);
             }
             this._parent = parent;
             this.setDirty(DirtyType.positionDirty);
@@ -2445,7 +2215,7 @@ var es;
         EntitySystem.prototype.initialize = function () {
         };
         EntitySystem.prototype.onChanged = function (entity) {
-            var contains = this._entities.contains(entity);
+            var contains = new linq.List(this._entities).contains(entity);
             var interest = this._matcher.isInterestedEntity(entity);
             if (interest && !contains)
                 this.add(entity);
@@ -2459,7 +2229,7 @@ var es;
         EntitySystem.prototype.onAdded = function (entity) {
         };
         EntitySystem.prototype.remove = function (entity) {
-            this._entities.remove(entity);
+            new linq.List(this._entities).remove(entity);
             this.onRemoved(entity);
         };
         EntitySystem.prototype.onRemoved = function (entity) {
@@ -2717,14 +2487,16 @@ var es;
             this._componentsToAdd.push(component);
         };
         ComponentList.prototype.remove = function (component) {
-            if (this._componentsToRemove.contains(component))
+            var componentToRemove = new linq.List(this._componentsToRemove);
+            var componentToAdd = new linq.List(this._componentsToAdd);
+            if (componentToRemove.contains(component))
                 console.warn("\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u4E00\u4E2A\u60A8\u5DF2\u7ECF\u5220\u9664\u7684\u7EC4\u4EF6(" + component + ")");
             // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
-            if (this._componentsToAdd.contains(component)) {
-                this._componentsToAdd.remove(component);
+            if (componentToAdd.contains(component)) {
+                componentToAdd.remove(component);
                 return;
             }
-            this._componentsToRemove.push(component);
+            componentToRemove.add(component);
         };
         /**
          * 立即从组件列表中删除所有组件
@@ -3031,7 +2803,7 @@ var es;
         EntityList.prototype.removeFromTagList = function (entity) {
             var list = this._entityDict.get(entity.tag);
             if (list) {
-                list.remove(entity);
+                new linq.List(list).remove(entity);
             }
         };
         EntityList.prototype.update = function () {
@@ -3183,7 +2955,7 @@ var es;
             this._processors.push(processor);
         };
         EntityProcessorList.prototype.remove = function (processor) {
-            this._processors.remove(processor);
+            new linq.List(this._processors).remove(processor);
         };
         EntityProcessorList.prototype.onComponentAdded = function (entity) {
             this.notifyEntityChanged(entity);
@@ -3565,7 +3337,7 @@ var es;
             if (index >= this.length)
                 throw new Error("index超出范围！");
             this.length--;
-            this.buffer.removeAt(index);
+            new linq.List(this.buffer).removeAt(index);
         };
         /**
          * 检查项目是否在FastList中
@@ -3831,13 +3603,14 @@ var es;
             this.addToRenderLayerList(component, component.renderLayer);
         };
         RenderableComponentList.prototype.remove = function (component) {
-            this._components.remove(component);
-            this._componentsByRenderLayer.get(component.renderLayer).remove(component);
+            new linq.List(this._components).remove(component);
+            new linq.List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);
         };
         RenderableComponentList.prototype.updateRenderableRenderLayer = function (component, oldRenderLayer, newRenderLayer) {
             // 需要注意的是，如果渲染层在组件update之前发生了改变
-            if (this._componentsByRenderLayer.has(oldRenderLayer) && this._componentsByRenderLayer.get(oldRenderLayer).contains(component)) {
-                this._componentsByRenderLayer.get(oldRenderLayer).remove(component);
+            var oldRenderLayers = new linq.List(this._componentsByRenderLayer.get(oldRenderLayer));
+            if (this._componentsByRenderLayer.has(oldRenderLayer) && oldRenderLayers.contains(component)) {
+                oldRenderLayers.remove(component);
                 this.addToRenderLayerList(component, newRenderLayer);
             }
         };
@@ -3846,22 +3619,24 @@ var es;
          * @param renderLayer
          */
         RenderableComponentList.prototype.setRenderLayerNeedsComponentSort = function (renderLayer) {
-            if (!this._unsortedRenderLayers.contains(renderLayer))
-                this._unsortedRenderLayers.push(renderLayer);
+            var unsortedRenderLayers = new linq.List(this._unsortedRenderLayers);
+            if (!unsortedRenderLayers.contains(renderLayer))
+                unsortedRenderLayers.add(renderLayer);
             this.componentsNeedSort = true;
         };
         RenderableComponentList.prototype.setNeedsComponentSort = function () {
             this.componentsNeedSort = true;
         };
         RenderableComponentList.prototype.addToRenderLayerList = function (component, renderLayer) {
-            var list = this.componentsWithRenderLayer(renderLayer);
+            var list = new linq.List(this.componentsWithRenderLayer(renderLayer));
             if (list.contains(component)) {
                 console.warn("组件呈现层列表已经包含此组件");
                 return;
             }
-            list.push(component);
-            if (!this._unsortedRenderLayers.contains(renderLayer))
-                this._unsortedRenderLayers.push(renderLayer);
+            list.add(component);
+            var unsortedRenderLayers = new linq.List(this._unsortedRenderLayers);
+            if (!unsortedRenderLayers.contains(renderLayer))
+                unsortedRenderLayers.add(renderLayer);
             this.componentsNeedSort = true;
         };
         /**
@@ -6505,7 +6280,7 @@ var es;
                     if (!cell)
                         console.log("\u4ECE\u4E0D\u5B58\u5728\u78B0\u649E\u5668\u7684\u5355\u5143\u683C\u4E2D\u79FB\u9664\u78B0\u649E\u5668: [" + collider + "]");
                     else
-                        cell.remove(collider);
+                        new linq.List(cell).remove(collider);
                 }
             }
         };
@@ -6690,8 +6465,9 @@ var es;
          */
         NumberDictionary.prototype.remove = function (obj) {
             this._store.forEach(function (list) {
-                if (list.contains(obj))
-                    list.remove(obj);
+                var linqList = new linq.List(list);
+                if (linqList.contains(obj))
+                    linqList.remove(obj);
             });
         };
         NumberDictionary.prototype.tryGetValue = function (x, y) {
@@ -6732,7 +6508,7 @@ var es;
             for (var i = 0; i < cell.length; i++) {
                 var potential = cell[i];
                 // 管理我们已经处理过的碰撞器
-                if (this._checkedColliders.contains(potential))
+                if (new linq.List(this._checkedColliders).contains(potential))
                     continue;
                 this._checkedColliders.push(potential);
                 // 只有当我们被设置为这样做时才会点击触发器
@@ -7935,7 +7711,7 @@ var ArrayUtils = /** @class */ (function () {
      * @param item
      */
     ArrayUtils.addIfNotPresent = function (list, item) {
-        if (list.contains(item))
+        if (new linq.List(list).contains(item))
             return false;
         list.push(item);
         return true;
@@ -8251,7 +8027,7 @@ var es;
             var messageData = this._messageTable.get(eventType);
             var index = messageData.findIndex(function (data) { return data.func == handler; });
             if (index != -1)
-                messageData.removeAt(index);
+                new linq.List(messageData).removeAt(index);
         };
         /**
          * 触发该事件
@@ -9404,6 +9180,538 @@ var stopwatch;
     /** 所有新实例的默认“getSystemTime”实现 */
     var _defaultSystemTimeGetter = Date.now;
 })(stopwatch || (stopwatch = {}));
+var linq;
+(function (linq) {
+    var Enumerable = /** @class */ (function () {
+        function Enumerable() {
+        }
+        /**
+         * 在指定范围内生成一个整数序列。
+         */
+        Enumerable.range = function (start, count) {
+            var result = new linq.List();
+            while (count--) {
+                result.add(start++);
+            }
+            return result;
+        };
+        /**
+         * 生成包含一个重复值的序列。
+         */
+        Enumerable.repeat = function (element, count) {
+            var result = new linq.List();
+            while (count--) {
+                result.add(element);
+            }
+            return result;
+        };
+        return Enumerable;
+    }());
+    linq.Enumerable = Enumerable;
+})(linq || (linq = {}));
+var linq;
+(function (linq) {
+    /**
+     * 检查传递的参数是否为对象
+     */
+    linq.isObj = function (x) { return !!x && typeof x === 'object'; };
+    /**
+     * 创建一个否定谓词结果的函数
+     */
+    linq.negate = function (pred) { return function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        return !pred.apply(void 0, args);
+    }; };
+    /**
+     * 比较器助手
+     */
+    linq.composeComparers = function (previousComparer, currentComparer) { return function (a, b) {
+        return previousComparer(a, b) || currentComparer(a, b);
+    }; };
+    linq.keyComparer = function (_keySelector, descending) { return function (a, b) {
+        var sortKeyA = _keySelector(a);
+        var sortKeyB = _keySelector(b);
+        if (sortKeyA > sortKeyB) {
+            return !descending ? 1 : -1;
+        }
+        else if (sortKeyA < sortKeyB) {
+            return !descending ? -1 : 1;
+        }
+        else {
+            return 0;
+        }
+    }; };
+})(linq || (linq = {}));
+var linq;
+(function (linq) {
+    var List = /** @class */ (function () {
+        /**
+         * 默认为列表的元素
+         */
+        function List(elements) {
+            if (elements === void 0) { elements = []; }
+            this._elements = elements;
+        }
+        /**
+         * 在列表的末尾添加一个对象。
+         */
+        List.prototype.add = function (element) {
+            this._elements.push(element);
+        };
+        /**
+         * 将一个对象追加到列表的末尾。
+         */
+        List.prototype.append = function (element) {
+            this.add(element);
+        };
+        /**
+         * 在列表的开头添加一个对象。
+         */
+        List.prototype.prepend = function (element) {
+            this._elements.unshift(element);
+        };
+        /**
+         * 将指定集合的元素添加到列表的末尾。
+         */
+        List.prototype.addRange = function (elements) {
+            var _a;
+            (_a = this._elements).push.apply(_a, elements);
+        };
+        /**
+         * 对序列应用累加器函数。
+         */
+        List.prototype.aggregate = function (accumulator, initialValue) {
+            return this._elements.reduce(accumulator, initialValue);
+        };
+        /**
+         * 确定序列的所有元素是否满足一个条件。
+         */
+        List.prototype.all = function (predicate) {
+            return this._elements.every(predicate);
+        };
+        List.prototype.any = function (predicate) {
+            return predicate
+                ? this._elements.some(predicate)
+                : this._elements.length > 0;
+        };
+        List.prototype.average = function (transform) {
+            return this.sum(transform) / this.count(transform);
+        };
+        /**
+         * 将序列的元素转换为指定的类型。
+         */
+        List.prototype.cast = function () {
+            return new List(this._elements);
+        };
+        /**
+         * 从列表中删除所有元素。
+         */
+        List.prototype.clear = function () {
+            this._elements.length = 0;
+        };
+        /**
+         * 连接两个序列。
+         */
+        List.prototype.concat = function (list) {
+            return new List(this._elements.concat(list.toArray()));
+        };
+        /**
+         * 确定一个元素是否在列表中。
+         */
+        List.prototype.contains = function (element) {
+            return this.any(function (x) { return x === element; });
+        };
+        List.prototype.count = function (predicate) {
+            return predicate ? this.where(predicate).count() : this._elements.length;
+        };
+        /**
+         * 返回指定序列的元素，或者如果序列为空，则返回单例集合中类型参数的默认值。
+         */
+        List.prototype.defaultIfEmpty = function (defaultValue) {
+            return this.count() ? this : new List([defaultValue]);
+        };
+        /**
+         * 根据指定的键选择器从序列中返回不同的元素。
+         */
+        List.prototype.distinctBy = function (keySelector) {
+            var groups = this.groupBy(keySelector);
+            return Object.keys(groups).reduce(function (res, key) {
+                res.add(groups[key][0]);
+                return res;
+            }, new List());
+        };
+        /**
+         * 返回序列中指定索引处的元素。
+         */
+        List.prototype.elementAt = function (index) {
+            if (index < this.count() && index >= 0) {
+                return this._elements[index];
+            }
+            else {
+                throw new Error('ArgumentOutOfRangeException: index is less than 0 or greater than or equal to the number of elements in source.');
+            }
+        };
+        /**
+         * 返回序列中指定索引处的元素，如果索引超出范围，则返回默认值。
+         */
+        List.prototype.elementAtOrDefault = function (index) {
+            return index < this.count() && index >= 0
+                ? this._elements[index]
+                : undefined;
+        };
+        /**
+         * 通过使用默认的相等比较器来比较值，生成两个序列的差值集。
+         */
+        List.prototype.except = function (source) {
+            return this.where(function (x) { return !source.contains(x); });
+        };
+        List.prototype.first = function (predicate) {
+            if (this.count()) {
+                return predicate ? this.where(predicate).first() : this._elements[0];
+            }
+            else {
+                throw new Error('InvalidOperationException: The source sequence is empty.');
+            }
+        };
+        List.prototype.firstOrDefault = function (predicate) {
+            return this.count(predicate) ? this.first(predicate) : undefined;
+        };
+        /**
+         * 对列表中的每个元素执行指定的操作。
+         */
+        List.prototype.forEach = function (action) {
+            return this._elements.forEach(action);
+        };
+        /**
+         * 根据指定的键选择器函数对序列中的元素进行分组。
+         */
+        List.prototype.groupBy = function (grouper, mapper) {
+            if (mapper === void 0) { mapper = function (val) { return val; }; }
+            var initialValue = {};
+            return this.aggregate(function (ac, v) {
+                var key = grouper(v);
+                var existingGroup = ac[key];
+                var mappedValue = mapper(v);
+                existingGroup
+                    ? existingGroup.push(mappedValue)
+                    : (ac[key] = [mappedValue]);
+                return ac;
+            }, initialValue);
+        };
+        /**
+         * 根据键的相等将两个序列的元素关联起来，并将结果分组。默认的相等比较器用于比较键。
+         */
+        List.prototype.groupJoin = function (list, key1, key2, result) {
+            return this.select(function (x) {
+                return result(x, list.where(function (z) { return key1(x) === key2(z); }));
+            });
+        };
+        /**
+         * 返回列表中某个元素第一次出现的索引。
+         */
+        List.prototype.indexOf = function (element) {
+            return this._elements.indexOf(element);
+        };
+        /**
+         * 向列表中插入一个元素在指定索引处。
+         */
+        List.prototype.insert = function (index, element) {
+            if (index < 0 || index > this._elements.length) {
+                throw new Error('Index is out of range.');
+            }
+            this._elements.splice(index, 0, element);
+        };
+        /**
+         * 通过使用默认的相等比较器来比较值，生成两个序列的交集集。
+         */
+        List.prototype.intersect = function (source) {
+            return this.where(function (x) { return source.contains(x); });
+        };
+        /**
+         * 基于匹配的键将两个序列的元素关联起来。默认的相等比较器用于比较键。
+         */
+        List.prototype.join = function (list, key1, key2, result) {
+            return this.selectMany(function (x) {
+                return list.where(function (y) { return key2(y) === key1(x); }).select(function (z) { return result(x, z); });
+            });
+        };
+        List.prototype.last = function (predicate) {
+            if (this.count()) {
+                return predicate
+                    ? this.where(predicate).last()
+                    : this._elements[this.count() - 1];
+            }
+            else {
+                throw Error('InvalidOperationException: The source sequence is empty.');
+            }
+        };
+        List.prototype.lastOrDefault = function (predicate) {
+            return this.count(predicate) ? this.last(predicate) : undefined;
+        };
+        List.prototype.max = function (selector) {
+            var id = function (x) { return x; };
+            return Math.max.apply(Math, this._elements.map(selector || id));
+        };
+        List.prototype.min = function (selector) {
+            var id = function (x) { return x; };
+            return Math.min.apply(Math, this._elements.map(selector || id));
+        };
+        /**
+         * 根据指定的类型筛选序列中的元素。
+         */
+        List.prototype.ofType = function (type) {
+            var typeName;
+            switch (type) {
+                case Number:
+                    typeName = typeof 0;
+                    break;
+                case String:
+                    typeName = typeof '';
+                    break;
+                case Boolean:
+                    typeName = typeof true;
+                    break;
+                case Function:
+                    typeName = typeof function () { }; // tslint:disable-line no-empty
+                    break;
+                default:
+                    typeName = null;
+                    break;
+            }
+            return typeName === null
+                ? this.where(function (x) { return x instanceof type; }).cast()
+                : this.where(function (x) { return typeof x === typeName; }).cast();
+        };
+        /**
+         * 根据键按升序对序列中的元素进行排序。
+         */
+        List.prototype.orderBy = function (keySelector, comparer) {
+            if (comparer === void 0) { comparer = linq.keyComparer(keySelector, false); }
+            // tslint:disable-next-line: no-use-before-declare
+            return new OrderedList(this._elements, comparer);
+        };
+        /**
+         * 根据键值降序对序列中的元素进行排序。
+         */
+        List.prototype.orderByDescending = function (keySelector, comparer) {
+            if (comparer === void 0) { comparer = linq.keyComparer(keySelector, true); }
+            // tslint:disable-next-line: no-use-before-declare
+            return new OrderedList(this._elements, comparer);
+        };
+        /**
+         * 按键按升序对序列中的元素执行后续排序。
+         */
+        List.prototype.thenBy = function (keySelector) {
+            return this.orderBy(keySelector);
+        };
+        /**
+         * 根据键值按降序对序列中的元素执行后续排序。
+         */
+        List.prototype.thenByDescending = function (keySelector) {
+            return this.orderByDescending(keySelector);
+        };
+        /**
+         * 从列表中删除第一个出现的特定对象。
+         */
+        List.prototype.remove = function (element) {
+            return this.indexOf(element) !== -1
+                ? (this.removeAt(this.indexOf(element)), true)
+                : false;
+        };
+        /**
+         * 删除与指定谓词定义的条件匹配的所有元素。
+         */
+        List.prototype.removeAll = function (predicate) {
+            return this.where(linq.negate(predicate));
+        };
+        /**
+         * 删除列表指定索引处的元素。
+         */
+        List.prototype.removeAt = function (index) {
+            this._elements.splice(index, 1);
+        };
+        /**
+         * 颠倒整个列表中元素的顺序。
+         */
+        List.prototype.reverse = function () {
+            return new List(this._elements.reverse());
+        };
+        /**
+         * 将序列中的每个元素投射到一个新形式中。
+         */
+        List.prototype.select = function (selector) {
+            return new List(this._elements.map(selector));
+        };
+        /**
+         * 将序列的每个元素投影到一个列表中。并将得到的序列扁平化为一个序列。
+         */
+        List.prototype.selectMany = function (selector) {
+            var _this = this;
+            return this.aggregate(function (ac, _, i) { return (ac.addRange(_this.select(selector)
+                .elementAt(i)
+                .toArray()),
+                ac); }, new List());
+        };
+        /**
+         * 通过使用默认的相等比较器对元素的类型进行比较，确定两个序列是否相等。
+         */
+        List.prototype.sequenceEqual = function (list) {
+            return this.all(function (e) { return list.contains(e); });
+        };
+        /**
+         * 返回序列中唯一的元素，如果序列中没有恰好一个元素，则抛出异常。
+         */
+        List.prototype.single = function (predicate) {
+            if (this.count(predicate) !== 1) {
+                throw new Error('The collection does not contain exactly one element.');
+            }
+            else {
+                return this.first(predicate);
+            }
+        };
+        /**
+         * 返回序列中唯一的元素，如果序列为空，则返回默认值;如果序列中有多个元素，此方法将抛出异常。
+         */
+        List.prototype.singleOrDefault = function (predicate) {
+            return this.count(predicate) ? this.single(predicate) : undefined;
+        };
+        /**
+         * 绕过序列中指定数量的元素，然后返回剩余的元素。
+         */
+        List.prototype.skip = function (amount) {
+            return new List(this._elements.slice(Math.max(0, amount)));
+        };
+        /**
+         * 省略序列中最后指定数量的元素，然后返回剩余的元素。
+         */
+        List.prototype.skipLast = function (amount) {
+            return new List(this._elements.slice(0, -Math.max(0, amount)));
+        };
+        /**
+         * 只要指定条件为真，就绕过序列中的元素，然后返回剩余的元素。
+         */
+        List.prototype.skipWhile = function (predicate) {
+            var _this = this;
+            return this.skip(this.aggregate(function (ac) { return (predicate(_this.elementAt(ac)) ? ++ac : ac); }, 0));
+        };
+        List.prototype.sum = function (transform) {
+            return transform
+                ? this.select(transform).sum()
+                : this.aggregate(function (ac, v) { return (ac += +v); }, 0);
+        };
+        /**
+         * 从序列的开始返回指定数量的连续元素。
+         */
+        List.prototype.take = function (amount) {
+            return new List(this._elements.slice(0, Math.max(0, amount)));
+        };
+        /**
+         * 从序列的末尾返回指定数目的连续元素。
+         */
+        List.prototype.takeLast = function (amount) {
+            return new List(this._elements.slice(-Math.max(0, amount)));
+        };
+        /**
+         * 返回序列中的元素，只要指定的条件为真。
+         */
+        List.prototype.takeWhile = function (predicate) {
+            var _this = this;
+            return this.take(this.aggregate(function (ac) { return (predicate(_this.elementAt(ac)) ? ++ac : ac); }, 0));
+        };
+        /**
+         * 复制列表中的元素到一个新数组。
+         */
+        List.prototype.toArray = function () {
+            return this._elements;
+        };
+        List.prototype.toDictionary = function (key, value) {
+            var _this = this;
+            return this.aggregate(function (dicc, v, i) {
+                dicc[_this.select(key)
+                    .elementAt(i)
+                    .toString()] = value ? _this.select(value).elementAt(i) : v;
+                dicc.add({
+                    Key: _this.select(key).elementAt(i),
+                    Value: value ? _this.select(value).elementAt(i) : v
+                });
+                return dicc;
+            }, new List());
+        };
+        /**
+         * 创建一个Set从一个Enumerable.List< T>。
+         */
+        List.prototype.toSet = function () {
+            var result = new Set();
+            for (var _i = 0, _a = this._elements; _i < _a.length; _i++) {
+                var x = _a[_i];
+                result.add(x);
+            }
+            return result;
+        };
+        /**
+         * 创建一个List< T>从一个Enumerable.List< T>。
+         */
+        List.prototype.toList = function () {
+            return this;
+        };
+        /**
+         * 创建一个查找，TElement>从一个IEnumerable< T>根据指定的键选择器和元素选择器函数。
+         */
+        List.prototype.toLookup = function (keySelector, elementSelector) {
+            return this.groupBy(keySelector, elementSelector);
+        };
+        /**
+         * 基于谓词过滤一系列值。
+         */
+        List.prototype.where = function (predicate) {
+            return new List(this._elements.filter(predicate));
+        };
+        /**
+         * 将指定的函数应用于两个序列的对应元素，生成结果序列。
+         */
+        List.prototype.zip = function (list, result) {
+            var _this = this;
+            return list.count() < this.count()
+                ? list.select(function (x, y) { return result(_this.elementAt(y), x); })
+                : this.select(function (x, y) { return result(x, list.elementAt(y)); });
+        };
+        return List;
+    }());
+    linq.List = List;
+    /**
+     * 表示已排序的序列。该类的方法是通过使用延迟执行来实现的。
+     * 即时返回值是一个存储执行操作所需的所有信息的对象。
+     * 在通过调用对象的ToDictionary、ToLookup、ToList或ToArray方法枚举对象之前，不会执行由该方法表示的查询
+     */
+    var OrderedList = /** @class */ (function (_super) {
+        __extends(OrderedList, _super);
+        function OrderedList(elements, _comparer) {
+            var _this = _super.call(this, elements) || this;
+            _this._comparer = _comparer;
+            _this._elements.sort(_this._comparer);
+            return _this;
+        }
+        /**
+         * 按键按升序对序列中的元素执行后续排序。
+         * @override
+         */
+        OrderedList.prototype.thenBy = function (keySelector) {
+            return new OrderedList(this._elements, linq.composeComparers(this._comparer, linq.keyComparer(keySelector, false)));
+        };
+        /**
+         * 根据键值按降序对序列中的元素执行后续排序。
+         * @override
+         */
+        OrderedList.prototype.thenByDescending = function (keySelector) {
+            return new OrderedList(this._elements, linq.composeComparers(this._comparer, linq.keyComparer(keySelector, true)));
+        };
+        return OrderedList;
+    }(List));
+    linq.OrderedList = OrderedList;
+})(linq || (linq = {}));
 var es;
 (function (es) {
     var Timer = /** @class */ (function () {
@@ -9466,7 +9774,7 @@ var es;
             for (var i = this._timers.length - 1; i >= 0; i--) {
                 if (this._timers[i].tick()) {
                     this._timers[i].unload();
-                    this._timers.removeAt(i);
+                    new linq.List(this._timers).removeAt(i);
                 }
             }
         };

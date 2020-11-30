@@ -268,8 +268,9 @@ module es {
                 return this;
 
             if (!this._parent) {
-                this._parent._children.remove(this);
-                this._parent._children.push(this);
+                let children = new linq.List(this._parent._children);
+                children.remove(this);
+                children.add(this);
             }
 
             this._parent = parent;

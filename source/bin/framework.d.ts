@@ -1,93 +1,3 @@
-declare interface Array<T> {
-    /**
-     * 获取满足表达式的数组元素索引
-     * @param predicate 表达式
-     */
-    findIndex(predicate: (c: T) => boolean): number;
-    /**
-     * 是否存在满足表达式的数组元素
-     * @param predicate 表达式
-     */
-    any(predicate: (c: T) => boolean): boolean;
-    /**
-     * 获取满足表达式的第一个或默认数组元素
-     * @param predicate 表达式
-     */
-    firstOrDefault(predicate: (c: T) => boolean): T;
-    /**
-     * 获取满足表达式的第一个数组元素
-     * @param predicate 表达式
-     */
-    find(predicate: (c: T) => boolean): T;
-    /**
-     * 筛选满足表达式的数组元素
-     * @param predicate 表达式
-     */
-    where(predicate: (c: T) => boolean): Array<T>;
-    /**
-     * 获取满足表达式的数组元素的计数
-     * @param predicate 表达式
-     */
-    count(predicate: (c: T) => boolean): number;
-    /**
-     * 获取满足表达式的数组元素的数组
-     * @param predicate 表达式
-     */
-    findAll(predicate: (c: T) => boolean): Array<T>;
-    /**
-     * 是否有获取满足表达式的数组元素
-     * @param value 值
-     */
-    contains(value: T): boolean;
-    /**
-     * 移除满足表达式的数组元素
-     * @param predicate 表达式
-     */
-    removeAll(predicate: (c: T) => boolean): void;
-    /**
-     * 移除数组元素
-     * @param element 数组元素
-     */
-    remove(element: T): boolean;
-    /**
-     * 移除特定索引数组元素
-     * @param index 索引
-     */
-    removeAt(index: number): void;
-    /**
-     * 移除范围数组元素
-     * @param index 开始索引
-     * @param count 删除的个数
-     */
-    removeRange(index: number, count: number): void;
-    /**
-     * 获取通过选择器转换的数组
-     * @param selector 选择器
-     */
-    select(selector: Function): Array<T>;
-    /**
-     * 排序（升序）
-     * @param keySelector key选择器
-     * @param comparer 比较器
-     */
-    orderBy(keySelector: Function, comparer: Function): Array<T>;
-    /**
-     * 排序（降序）
-     * @param keySelector key选择器
-     * @param comparer 比较器
-     */
-    orderByDescending(keySelector: Function, comparer: Function): Array<T>;
-    /**
-     * 分组
-     * @param keySelector key选择器
-     */
-    groupBy(keySelector: Function): Array<T>;
-    /**
-     * 求和
-     * @param selector  选择器
-     */
-    sum(selector: Function): number;
-}
 declare module es {
     /**
      * 执行顺序
@@ -199,6 +109,7 @@ declare module es {
         _frameCounterElapsedTime: number;
         _frameCounter: number;
         _totalMemory: number;
+        _titleMemory: (totalMemory: number, frameCounter: number) => void;
         _scene: Scene;
         /**
          * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
@@ -409,7 +320,7 @@ declare module es {
          * 获取类型T的第一个组件并返回它。如果没有找到组件，将创建组件。
          * @param type
          */
-        getOrCreateComponent<T extends Component>(type: T): T;
+        getOrCreateComponent<T extends Component>(type: any): T;
         /**
          * 获取typeName类型的所有组件，但不使用列表分配
          * @param typeName
@@ -3874,6 +3785,319 @@ declare namespace stopwatch {
         readonly endTime: number;
         /** 该切片的运行时间 */
         readonly duration: number;
+    }
+}
+declare module linq {
+    class Enumerable {
+        /**
+         * 在指定范围内生成一个整数序列。
+         */
+        static range(start: number, count: number): List<number>;
+        /**
+         * 生成包含一个重复值的序列。
+         */
+        static repeat<T>(element: T, count: number): List<T>;
+    }
+}
+declare module linq {
+    /**
+     * 检查传递的参数是否为对象
+     */
+    const isObj: <T>(x: T) => boolean;
+    /**
+     * 创建一个否定谓词结果的函数
+     */
+    const negate: <T>(pred: (...args: T[]) => boolean) => (...args: T[]) => boolean;
+    /**
+     * 比较器助手
+     */
+    const composeComparers: <T>(previousComparer: (a: T, b: T) => number, currentComparer: (a: T, b: T) => number) => (a: T, b: T) => number;
+    const keyComparer: <T>(_keySelector: (key: T) => string, descending?: boolean) => (a: T, b: T) => number;
+}
+declare module linq {
+    type PredicateType<T> = (value?: T, index?: number, list?: T[]) => boolean;
+    class List<T> {
+        protected _elements: T[];
+        /**
+         * 默认为列表的元素
+         */
+        constructor(elements?: T[]);
+        /**
+         * 在列表的末尾添加一个对象。
+         */
+        add(element: T): void;
+        /**
+         * 将一个对象追加到列表的末尾。
+         */
+        append(element: T): void;
+        /**
+         * 在列表的开头添加一个对象。
+         */
+        prepend(element: T): void;
+        /**
+         * 将指定集合的元素添加到列表的末尾。
+         */
+        addRange(elements: T[]): void;
+        /**
+         * 对序列应用累加器函数。
+         */
+        aggregate<U>(accumulator: (accum: U, value?: T, index?: number, list?: T[]) => any, initialValue?: U): any;
+        /**
+         * 确定序列的所有元素是否满足一个条件。
+         */
+        all(predicate: PredicateType<T>): boolean;
+        /**
+         * 确定序列是否包含任何元素。
+         */
+        any(): boolean;
+        any(predicate: PredicateType<T>): boolean;
+        /**
+         * 计算通过对输入序列的每个元素调用转换函数获得的一系列数值的平均值。
+         */
+        average(): number;
+        average(transform: (value?: T, index?: number, list?: T[]) => any): number;
+        /**
+         * 将序列的元素转换为指定的类型。
+         */
+        cast<U>(): List<U>;
+        /**
+         * 从列表中删除所有元素。
+         */
+        clear(): void;
+        /**
+         * 连接两个序列。
+         */
+        concat(list: List<T>): List<T>;
+        /**
+         * 确定一个元素是否在列表中。
+         */
+        contains(element: T): boolean;
+        /**
+         * 返回序列中元素的数量。
+         */
+        count(): number;
+        count(predicate: PredicateType<T>): number;
+        /**
+         * 返回指定序列的元素，或者如果序列为空，则返回单例集合中类型参数的默认值。
+         */
+        defaultIfEmpty(defaultValue?: T): List<T>;
+        /**
+         * 根据指定的键选择器从序列中返回不同的元素。
+         */
+        distinctBy(keySelector: (key: T) => string | number): List<T>;
+        /**
+         * 返回序列中指定索引处的元素。
+         */
+        elementAt(index: number): T;
+        /**
+         * 返回序列中指定索引处的元素，如果索引超出范围，则返回默认值。
+         */
+        elementAtOrDefault(index: number): T | null;
+        /**
+         * 通过使用默认的相等比较器来比较值，生成两个序列的差值集。
+         */
+        except(source: List<T>): List<T>;
+        /**
+         * 返回序列的第一个元素。
+         */
+        first(): T;
+        first(predicate: PredicateType<T>): T;
+        /**
+         * 返回序列的第一个元素，如果序列不包含元素，则返回默认值。
+         */
+        firstOrDefault(): T;
+        firstOrDefault(predicate: PredicateType<T>): T;
+        /**
+         * 对列表中的每个元素执行指定的操作。
+         */
+        forEach(action: (value?: T, index?: number, list?: T[]) => any): void;
+        /**
+         * 根据指定的键选择器函数对序列中的元素进行分组。
+         */
+        groupBy<TResult>(grouper: (key: T) => string | number, mapper?: (element: T) => TResult): {
+            [key: string]: TResult[];
+        };
+        /**
+         * 根据键的相等将两个序列的元素关联起来，并将结果分组。默认的相等比较器用于比较键。
+         */
+        groupJoin<U, R>(list: List<U>, key1: (k: T) => any, key2: (k: U) => any, result: (first: T, second: List<U>) => R): List<R>;
+        /**
+         * 返回列表中某个元素第一次出现的索引。
+         */
+        indexOf(element: T): number;
+        /**
+         * 向列表中插入一个元素在指定索引处。
+         */
+        insert(index: number, element: T): void | Error;
+        /**
+         * 通过使用默认的相等比较器来比较值，生成两个序列的交集集。
+         */
+        intersect(source: List<T>): List<T>;
+        /**
+         * 基于匹配的键将两个序列的元素关联起来。默认的相等比较器用于比较键。
+         */
+        join<U, R>(list: List<U>, key1: (key: T) => any, key2: (key: U) => any, result: (first: T, second: U) => R): List<R>;
+        /**
+         * 返回序列的最后一个元素。
+         */
+        last(): T;
+        last(predicate: PredicateType<T>): T;
+        /**
+         * 返回序列的最后一个元素，如果序列不包含元素，则返回默认值。
+         */
+        lastOrDefault(): T;
+        lastOrDefault(predicate: PredicateType<T>): T;
+        /**
+         * 返回泛型序列中的最大值。
+         */
+        max(): number;
+        max(selector: (value: T, index: number, array: T[]) => number): number;
+        /**
+         * 返回泛型序列中的最小值。
+         */
+        min(): number;
+        min(selector: (value: T, index: number, array: T[]) => number): number;
+        /**
+         * 根据指定的类型筛选序列中的元素。
+         */
+        ofType<U>(type: any): List<U>;
+        /**
+         * 根据键按升序对序列中的元素进行排序。
+         */
+        orderBy(keySelector: (key: T) => any, comparer?: (a: T, b: T) => number): List<T>;
+        /**
+         * 根据键值降序对序列中的元素进行排序。
+         */
+        orderByDescending(keySelector: (key: T) => any, comparer?: (a: T, b: T) => number): List<T>;
+        /**
+         * 按键按升序对序列中的元素执行后续排序。
+         */
+        thenBy(keySelector: (key: T) => any): List<T>;
+        /**
+         * 根据键值按降序对序列中的元素执行后续排序。
+         */
+        thenByDescending(keySelector: (key: T) => any): List<T>;
+        /**
+         * 从列表中删除第一个出现的特定对象。
+         */
+        remove(element: T): boolean;
+        /**
+         * 删除与指定谓词定义的条件匹配的所有元素。
+         */
+        removeAll(predicate: PredicateType<T>): List<T>;
+        /**
+         * 删除列表指定索引处的元素。
+         */
+        removeAt(index: number): void;
+        /**
+         * 颠倒整个列表中元素的顺序。
+         */
+        reverse(): List<T>;
+        /**
+         * 将序列中的每个元素投射到一个新形式中。
+         */
+        select<TOut>(selector: (element: T, index: number) => TOut): List<TOut>;
+        /**
+         * 将序列的每个元素投影到一个列表中。并将得到的序列扁平化为一个序列。
+         */
+        selectMany<TOut extends List<any>>(selector: (element: T, index: number) => TOut): TOut;
+        /**
+         * 通过使用默认的相等比较器对元素的类型进行比较，确定两个序列是否相等。
+         */
+        sequenceEqual(list: List<T>): boolean;
+        /**
+         * 返回序列中唯一的元素，如果序列中没有恰好一个元素，则抛出异常。
+         */
+        single(predicate?: PredicateType<T>): T;
+        /**
+         * 返回序列中唯一的元素，如果序列为空，则返回默认值;如果序列中有多个元素，此方法将抛出异常。
+         */
+        singleOrDefault(predicate?: PredicateType<T>): T;
+        /**
+         * 绕过序列中指定数量的元素，然后返回剩余的元素。
+         */
+        skip(amount: number): List<T>;
+        /**
+         * 省略序列中最后指定数量的元素，然后返回剩余的元素。
+         */
+        skipLast(amount: number): List<T>;
+        /**
+         * 只要指定条件为真，就绕过序列中的元素，然后返回剩余的元素。
+         */
+        skipWhile(predicate: PredicateType<T>): List<T>;
+        /**
+         * 计算通过对输入序列的每个元素调用转换函数获得的数值序列的和。
+         */
+        sum(): number;
+        sum(transform: (value?: T, index?: number, list?: T[]) => number): number;
+        /**
+         * 从序列的开始返回指定数量的连续元素。
+         */
+        take(amount: number): List<T>;
+        /**
+         * 从序列的末尾返回指定数目的连续元素。
+         */
+        takeLast(amount: number): List<T>;
+        /**
+         * 返回序列中的元素，只要指定的条件为真。
+         */
+        takeWhile(predicate: PredicateType<T>): List<T>;
+        /**
+         * 复制列表中的元素到一个新数组。
+         */
+        toArray(): T[];
+        /**
+         * 创建一个<dictionary>从List< T>根据指定的键选择器函数。
+         */
+        toDictionary<TKey>(key: (key: T) => TKey): List<{
+            Key: TKey;
+            Value: T;
+        }>;
+        toDictionary<TKey, TValue>(key: (key: T) => TKey, value: (value: T) => TValue): List<{
+            Key: TKey;
+            Value: T | TValue;
+        }>;
+        /**
+         * 创建一个Set从一个Enumerable.List< T>。
+         */
+        toSet(): Set<any>;
+        /**
+         * 创建一个List< T>从一个Enumerable.List< T>。
+         */
+        toList(): List<T>;
+        /**
+         * 创建一个查找，TElement>从一个IEnumerable< T>根据指定的键选择器和元素选择器函数。
+         */
+        toLookup<TResult>(keySelector: (key: T) => string | number, elementSelector: (element: T) => TResult): {
+            [key: string]: TResult[];
+        };
+        /**
+         * 基于谓词过滤一系列值。
+         */
+        where(predicate: PredicateType<T>): List<T>;
+        /**
+         * 将指定的函数应用于两个序列的对应元素，生成结果序列。
+         */
+        zip<U, TOut>(list: List<U>, result: (first: T, second: U) => TOut): List<TOut>;
+    }
+    /**
+     * 表示已排序的序列。该类的方法是通过使用延迟执行来实现的。
+     * 即时返回值是一个存储执行操作所需的所有信息的对象。
+     * 在通过调用对象的ToDictionary、ToLookup、ToList或ToArray方法枚举对象之前，不会执行由该方法表示的查询
+     */
+    class OrderedList<T> extends List<T> {
+        private _comparer;
+        constructor(elements: T[], _comparer: (a: T, b: T) => number);
+        /**
+         * 按键按升序对序列中的元素执行后续排序。
+         * @override
+         */
+        thenBy(keySelector: (key: T) => any): List<T>;
+        /**
+         * 根据键值按降序对序列中的元素执行后续排序。
+         * @override
+         */
+        thenByDescending(keySelector: (key: T) => any): List<T>;
     }
 }
 declare module es {

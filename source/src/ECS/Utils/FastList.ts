@@ -71,7 +71,7 @@ module es {
                 throw new Error("index超出范围！");
 
             this.length --;
-            this.buffer.removeAt(index);
+            new linq.List(this.buffer).removeAt(index);
         }
 
         /**

@@ -7,7 +7,7 @@ module es {
         }
 
         public remove(processor: EntitySystem) {
-            this._processors.remove(processor);
+            new linq.List(this._processors).remove(processor);
         }
 
         public onComponentAdded(entity: Entity) {

@@ -63,6 +63,7 @@ module es {
         public _frameCounterElapsedTime: number = 0;
         public _frameCounter: number = 0;
         public _totalMemory: number = 0;
+        public _titleMemory: (totalMemory: number, frameCounter: number) => void;
         public _scene: Scene;
 
         /**
@@ -188,6 +189,7 @@ module es {
                 if (memoryInfo != null) {
                     this._totalMemory = Number((memoryInfo.totalJSHeapSize / 1048576).toFixed(2));
                 }
+                if (this._titleMemory) this._titleMemory(this._totalMemory, this._frameCounter);
                 this._frameCounter = 0;
                 this._frameCounterElapsedTime -= 1;
             }

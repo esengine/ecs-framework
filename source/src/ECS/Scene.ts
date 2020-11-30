@@ -147,7 +147,7 @@ module es {
          */
         public getSceneComponent<T extends SceneComponent>(type) {
             for (let i = 0; i < this._sceneComponents.length; i++) {
-                let component = this._sceneComponents[i];
+                let component = this._sceneComponents.buffer[i];
                 if (component instanceof type)
                     return component as T;
             }
@@ -212,9 +212,10 @@ module es {
          * @param renderer
          */
         public removeRenderer(renderer: Renderer) {
-            if (!this._renderers.contains(renderer))
+            let rendererList = new linq.List(this._renderers);
+            if (!rendererList.contains(renderer))
                 return;
-            this._renderers.remove(renderer);
+            rendererList.remove(renderer);
             renderer.unload();
         }
 

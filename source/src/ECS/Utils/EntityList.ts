@@ -122,7 +122,7 @@ module es {
         public removeFromTagList(entity: Entity) {
             let list = this._entityDict.get(entity.tag);
             if (list) {
-                list.remove(entity);
+                new linq.List(list).remove(entity);
             }
         }
 

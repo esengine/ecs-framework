@@ -50,16 +50,18 @@ module es {
         }
 
         public remove(component: Component) {
-            if (this._componentsToRemove.contains(component))
+            let componentToRemove = new linq.List(this._componentsToRemove);
+            let componentToAdd = new linq.List(this._componentsToAdd);
+            if (componentToRemove.contains(component))
                 console.warn(`您正在尝试删除一个您已经删除的组件(${component})`);
 
             // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
-            if (this._componentsToAdd.contains(component)) {
-                this._componentsToAdd.remove(component);
+            if (componentToAdd.contains(component)) {
+                componentToAdd.remove(component);
                 return;
             }
 
-            this._componentsToRemove.push(component);
+            componentToRemove.add(component);
         }
 
         /**

@@ -36,14 +36,15 @@ module es {
         }
 
         public remove(component: IRenderable) {
-            this._components.remove(component);
-            this._componentsByRenderLayer.get(component.renderLayer).remove(component);
+            new linq.List(this._components).remove(component);
+            new linq.List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);
         }
 
         public updateRenderableRenderLayer(component: IRenderable, oldRenderLayer: number, newRenderLayer: number) {
             // 需要注意的是，如果渲染层在组件update之前发生了改变
-            if (this._componentsByRenderLayer.has(oldRenderLayer) && this._componentsByRenderLayer.get(oldRenderLayer).contains(component)) {
-                this._componentsByRenderLayer.get(oldRenderLayer).remove(component);
+            let oldRenderLayers = new linq.List(this._componentsByRenderLayer.get(oldRenderLayer));
+            if (this._componentsByRenderLayer.has(oldRenderLayer) && oldRenderLayers.contains(component)) {
+                oldRenderLayers.remove(component);
                 this.addToRenderLayerList(component, newRenderLayer);
             }
         }
@@ -53,8 +54,9 @@ module es {
          * @param renderLayer
          */
         public setRenderLayerNeedsComponentSort(renderLayer: number) {
-            if (!this._unsortedRenderLayers.contains(renderLayer))
-                this._unsortedRenderLayers.push(renderLayer);
+            let unsortedRenderLayers = new linq.List(this._unsortedRenderLayers);
+            if (!unsortedRenderLayers.contains(renderLayer))
+                unsortedRenderLayers.add(renderLayer);
             this.componentsNeedSort = true;
         }
 
@@ -63,15 +65,16 @@ module es {
         }
 
         public addToRenderLayerList(component: IRenderable, renderLayer: number) {
-            let list = this.componentsWithRenderLayer(renderLayer);
+            let list = new linq.List(this.componentsWithRenderLayer(renderLayer));
             if (list.contains(component)) {
                 console.warn("组件呈现层列表已经包含此组件");
                 return;
             }
 
-            list.push(component);
-            if (!this._unsortedRenderLayers.contains(renderLayer))
-                this._unsortedRenderLayers.push(renderLayer);
+            list.add(component);
+            let unsortedRenderLayers = new linq.List(this._unsortedRenderLayers);
+            if (!unsortedRenderLayers.contains(renderLayer))
+                unsortedRenderLayers.add(renderLayer);
             this.componentsNeedSort = true;
         }
 
