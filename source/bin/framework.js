@@ -221,18 +221,6 @@ var es;
             configurable: true
         });
         /**
-         * 临时运行SceneTransition，允许一个场景过渡到另一个平滑的自定义效果。
-         * @param sceneTransition
-         */
-        Core.startSceneTransition = function (sceneTransition) {
-            if (this._instance._sceneTransition) {
-                console.warn("在前一个场景完成之前，不能开始一个新的场景转换。");
-                return;
-            }
-            this._instance._sceneTransition = sceneTransition;
-            return sceneTransition;
-        };
-        /**
          * 添加一个全局管理器对象，它的更新方法将调用场景前的每一帧。
          * @param manager
          */
@@ -273,44 +261,6 @@ var es;
         };
         Core.prototype.onOrientationChanged = function () {
             Core.emitter.emit(es.CoreEvents.OrientationChanged);
-        };
-        Core.prototype.draw = function () {
-            return __awaiter(this, void 0, void 0, function () {
-                return __generator(this, function (_a) {
-                    switch (_a.label) {
-                        case 0:
-                            this.startDebugDraw();
-                            if (!(this._sceneTransition != null)) return [3 /*break*/, 5];
-                            this._sceneTransition.preRender();
-                            if (!(this._sceneTransition != null)) return [3 /*break*/, 4];
-                            if (!(this._scene != null && !this._sceneTransition.hasPreviousSceneRender)) return [3 /*break*/, 2];
-                            this._scene.render();
-                            this._scene.postRender();
-                            return [4 /*yield*/, this._sceneTransition.onBeginTransition()];
-                        case 1:
-                            _a.sent();
-                            return [3 /*break*/, 3];
-                        case 2:
-                            if (this._scene != null && this._sceneTransition.isNewSceneLoaded) {
-                                this._scene.render();
-                                this._scene.postRender();
-                            }
-                            _a.label = 3;
-                        case 3:
-                            this._sceneTransition.render();
-                            _a.label = 4;
-                        case 4: return [3 /*break*/, 6];
-                        case 5:
-                            if (this._scene) {
-                                this._scene.render();
-                                // 如如果我们没有一个活动的SceneTransition，就像往常一样渲染
-                                this._scene.postRender();
-                            }
-                            _a.label = 6;
-                        case 6: return [2 /*return*/];
-                    }
-                });
-            });
         };
         Core.prototype.startDebugDraw = function () {
             this._frameCounter++;
@@ -354,37 +304,24 @@ var es;
             return __awaiter(this, void 0, void 0, function () {
                 var i;
                 return __generator(this, function (_a) {
-                    switch (_a.label) {
-                        case 0:
-                            if (currentTime != null)
-                                es.Time.update(currentTime);
-                            if (this._scene != null) {
-                                for (i = this._globalManagers.length - 1; i >= 0; i--) {
-                                    if (this._globalManagers.buffer[i].enabled)
-                                        this._globalManagers.buffer[i].update();
-                                }
-                                // 仔细阅读:
-                                // 当场景转换发生时，我们不更新场景
-                                // - 除非是不改变场景的SceneTransition(没有理由不更新)
-                                // - 或者是一个已经切换到新场景的SceneTransition（新场景需要做它的事情）
-                                if (this._sceneTransition == null ||
-                                    (this._sceneTransition != null &&
-                                        (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
-                                    this._scene.update();
-                                }
-                                if (this._nextScene != null) {
-                                    this._scene.end();
-                                    this._scene = this._nextScene;
-                                    this._nextScene = null;
-                                    this.onSceneChanged();
-                                    this._scene.begin();
-                                }
-                            }
-                            return [4 /*yield*/, this.draw()];
-                        case 1:
-                            _a.sent();
-                            return [2 /*return*/];
+                    if (currentTime != null)
+                        es.Time.update(currentTime);
+                    if (this._scene != null) {
+                        for (i = this._globalManagers.length - 1; i >= 0; i--) {
+                            if (this._globalManagers.buffer[i].enabled)
+                                this._globalManagers.buffer[i].update();
+                        }
+                        this._scene.update();
+                        if (this._nextScene != null) {
+                            this._scene.end();
+                            this._scene = this._nextScene;
+                            this._nextScene = null;
+                            this.onSceneChanged();
+                            this._scene.begin();
+                        }
                     }
+                    this.startDebugDraw();
+                    return [2 /*return*/];
                 });
             });
         };
@@ -828,9 +765,7 @@ var es;
     var Scene = /** @class */ (function () {
         function Scene() {
             this._sceneComponents = new es.FastList();
-            this._renderers = [];
             this.entities = new es.EntityList(this);
-            this.renderableComponents = new es.RenderableComponentList();
             if (es.Core.entitySystemsEnabled)
                 this.entityProcessors = new es.EntityProcessorList();
             this.initialize();
@@ -869,9 +804,6 @@ var es;
         };
         Scene.prototype.end = function () {
             this._didSceneBegin = false;
-            for (var i = 0; i < this._renderers.length; i++) {
-                this._renderers[i].unload();
-            }
             es.Core.emitter.removeObserver(es.CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler);
             es.Core.emitter.removeObserver(es.CoreEvents.OrientationChanged, this.updateResolutionScaler);
             this.entities.removeAllEntities();
@@ -900,19 +832,6 @@ var es;
             this.entities.update();
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
-            // 我们在entity.update之后更新我们的renderables，以防止任何新的Renderables被添加
-            this.renderableComponents.updateList();
-        };
-        Scene.prototype.render = function () {
-            for (var i = 0; i < this._renderers.length; i++) {
-                this._renderers[i].render(this);
-            }
-        };
-        /**
-         * 现在的任何后处理器都要完成它的处理
-         * 只有在SceneTransition请求渲染时，它才会有一个值。
-         */
-        Scene.prototype.postRender = function () {
         };
         /**
          * 向组件列表添加并返回SceneComponent
@@ -958,38 +877,6 @@ var es;
             }
             this._sceneComponents.remove(component);
             component.onRemovedFromScene();
-        };
-        /**
-         * 为场景添加一个渲染器
-         * @param renderer
-         */
-        Scene.prototype.addRenderer = function (renderer) {
-            this._renderers.push(renderer);
-            this._renderers.sort();
-            renderer.onAddedToScene(this);
-            return renderer;
-        };
-        /**
-         * 获取类型为T的第一个渲染器
-         * @param type
-         */
-        Scene.prototype.getRenderer = function (type) {
-            for (var i = 0; i < this._renderers.length; i++) {
-                if (this._renderers[i] instanceof type)
-                    return this._renderers[i];
-            }
-            return null;
-        };
-        /**
-         * 从场景中移除渲染器
-         * @param renderer
-         */
-        Scene.prototype.removeRenderer = function (renderer) {
-            var rendererList = new linq.List(this._renderers);
-            if (!rendererList.contains(renderer))
-                return;
-            rendererList.remove(renderer);
-            renderer.unload();
         };
         /**
          * 将实体添加到此场景，并返回它
@@ -3542,136 +3429,6 @@ var es;
     }());
     es.Matcher = Matcher;
 })(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 用于排序IRenderables的比较器
-     */
-    var RenderableComparer = /** @class */ (function () {
-        function RenderableComparer() {
-        }
-        RenderableComparer.prototype.compare = function (self, other) {
-            return other.renderLayer - self.renderLayer;
-        };
-        return RenderableComparer;
-    }());
-    es.RenderableComparer = RenderableComparer;
-})(es || (es = {}));
-///<reference path="../../Graphics/Renderers/IRenderable.ts" />
-var es;
-///<reference path="../../Graphics/Renderers/IRenderable.ts" />
-(function (es) {
-    var RenderableComponentList = /** @class */ (function () {
-        function RenderableComponentList() {
-            /**
-             * 添加到实体的组件列表
-             */
-            this._components = [];
-            /**
-             * 通过渲染层跟踪组件，便于检索
-             */
-            this._componentsByRenderLayer = new Map();
-            this._unsortedRenderLayers = [];
-            this._componentsNeedSort = true;
-        }
-        Object.defineProperty(RenderableComponentList.prototype, "componentsNeedSort", {
-            get: function () {
-                return this._componentsNeedSort;
-            },
-            set: function (value) {
-                this._componentsNeedSort = value;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(RenderableComponentList.prototype, "count", {
-            get: function () {
-                return this._components.length;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(RenderableComponentList.prototype, "buffer", {
-            get: function () {
-                return this._components;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        RenderableComponentList.prototype.add = function (component) {
-            this._components.push(component);
-            this.addToRenderLayerList(component, component.renderLayer);
-        };
-        RenderableComponentList.prototype.remove = function (component) {
-            new linq.List(this._components).remove(component);
-            new linq.List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);
-        };
-        RenderableComponentList.prototype.updateRenderableRenderLayer = function (component, oldRenderLayer, newRenderLayer) {
-            // 需要注意的是，如果渲染层在组件update之前发生了改变
-            var oldRenderLayers = new linq.List(this._componentsByRenderLayer.get(oldRenderLayer));
-            if (this._componentsByRenderLayer.has(oldRenderLayer) && oldRenderLayers.contains(component)) {
-                oldRenderLayers.remove(component);
-                this.addToRenderLayerList(component, newRenderLayer);
-            }
-        };
-        /**
-         * 将渲染层排序标志弄脏，让所有组件重新排序
-         * @param renderLayer
-         */
-        RenderableComponentList.prototype.setRenderLayerNeedsComponentSort = function (renderLayer) {
-            var unsortedRenderLayers = new linq.List(this._unsortedRenderLayers);
-            if (!unsortedRenderLayers.contains(renderLayer))
-                unsortedRenderLayers.add(renderLayer);
-            this.componentsNeedSort = true;
-        };
-        RenderableComponentList.prototype.setNeedsComponentSort = function () {
-            this.componentsNeedSort = true;
-        };
-        RenderableComponentList.prototype.addToRenderLayerList = function (component, renderLayer) {
-            var list = new linq.List(this.componentsWithRenderLayer(renderLayer));
-            if (list.contains(component)) {
-                console.warn("组件呈现层列表已经包含此组件");
-                return;
-            }
-            list.add(component);
-            var unsortedRenderLayers = new linq.List(this._unsortedRenderLayers);
-            if (!unsortedRenderLayers.contains(renderLayer))
-                unsortedRenderLayers.add(renderLayer);
-            this.componentsNeedSort = true;
-        };
-        /**
-         * 使用给定的渲染层获取所有组件。组件列表是预先排序的
-         * @param renderLayer
-         */
-        RenderableComponentList.prototype.componentsWithRenderLayer = function (renderLayer) {
-            if (!this._componentsByRenderLayer.get(renderLayer)) {
-                this._componentsByRenderLayer.set(renderLayer, []);
-            }
-            return this._componentsByRenderLayer.get(renderLayer);
-        };
-        RenderableComponentList.prototype.updateList = function () {
-            if (this.componentsNeedSort) {
-                this._components.sort(RenderableComponentList.compareUpdatableOrder.compare);
-                this.componentsNeedSort = false;
-            }
-            if (this._unsortedRenderLayers.length > 0) {
-                for (var i = 0, count = this._unsortedRenderLayers.length; i < count; i++) {
-                    var renderLayerComponents = this._componentsByRenderLayer.get(this._unsortedRenderLayers[i]);
-                    if (renderLayerComponents) {
-                        renderLayerComponents.sort(RenderableComponentList.compareUpdatableOrder.compare);
-                    }
-                }
-                this._unsortedRenderLayers.length = 0;
-            }
-        };
-        /**
-         * IRenderable列表的全局updatePrder排序
-         */
-        RenderableComponentList.compareUpdatableOrder = new es.RenderableComparer();
-        return RenderableComponentList;
-    }());
-    es.RenderableComponentList = RenderableComponentList;
-})(es || (es = {}));
 var StringUtils = /** @class */ (function () {
     function StringUtils() {
     }
@@ -4144,176 +3901,6 @@ var TimeUtils = /** @class */ (function () {
     };
     return TimeUtils;
 }());
-var es;
-(function (es) {
-    var Viewport = /** @class */ (function () {
-        function Viewport(x, y, width, height) {
-            this._x = x;
-            this._y = y;
-            this._width = width;
-            this._height = height;
-            this._minDepth = 0;
-            this._maxDepth = 1;
-        }
-        Object.defineProperty(Viewport.prototype, "width", {
-            get: function () {
-                return this._width;
-            },
-            set: function (value) {
-                this._width = value;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Viewport.prototype, "height", {
-            get: function () {
-                return this._height;
-            },
-            set: function (value) {
-                this._height = value;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Viewport.prototype, "aspectRatio", {
-            get: function () {
-                if ((this._height != 0) && (this._width != 0))
-                    return (this._width / this._height);
-                return 0;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Viewport.prototype, "bounds", {
-            get: function () {
-                return new es.Rectangle(this._x, this._y, this._width, this._height);
-            },
-            set: function (value) {
-                this._x = value.x;
-                this._y = value.y;
-                this._width = value.width;
-                this._height = value.height;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        return Viewport;
-    }());
-    es.Viewport = Viewport;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 渲染器被添加到场景中并处理所有对RenderableComponent的实际调用
-     */
-    var Renderer = /** @class */ (function () {
-        function Renderer(renderOrder) {
-            /**
-             * 指定场景调用渲染器的顺序
-             */
-            this.renderOrder = 0;
-            /**
-             * 这个渲染器的标志，决定它是否应该调试渲染。
-             * render方法接收一个bool (debugRenderEnabled)，让渲染器知道全局调试渲染是否打开/关闭。
-             * 渲染器然后使用本地bool来决定它是否应该调试渲染。
-             */
-            this.shouldDebugRender = true;
-            this.renderOrder = renderOrder;
-        }
-        /**
-         * 当渲染器被添加到场景时调用
-         * @param scene
-         */
-        Renderer.prototype.onAddedToScene = function (scene) {
-        };
-        /**
-         * 当场景结束或渲染器从场景中移除时调用。使用这个进行清理。
-         */
-        Renderer.prototype.unload = function () {
-        };
-        /**
-         * 当默认场景渲染目标被调整大小和当场景已经开始添加渲染器时调用
-         * @param newWidth
-         * @param newHeight
-         */
-        Renderer.prototype.onSceneBackBufferSizeChanged = function (newWidth, newHeight) {
-        };
-        Renderer.prototype.compareTo = function (other) {
-            return this.renderOrder - other.renderOrder;
-        };
-        return Renderer;
-    }());
-    es.Renderer = Renderer;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * SceneTransition用于从一个场景过渡到另一个场景或在一个有效果的场景中过渡
-     */
-    var SceneTransition = /** @class */ (function () {
-        function SceneTransition(sceneLoadAction) {
-            this.sceneLoadAction = sceneLoadAction;
-            this.loadsNewScene = sceneLoadAction != null;
-        }
-        Object.defineProperty(SceneTransition.prototype, "hasPreviousSceneRender", {
-            get: function () {
-                if (!this._hasPreviousSceneRender) {
-                    this._hasPreviousSceneRender = true;
-                    return false;
-                }
-                return true;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        SceneTransition.prototype.preRender = function () {
-        };
-        SceneTransition.prototype.render = function () {
-        };
-        SceneTransition.prototype.onBeginTransition = function () {
-            return __awaiter(this, void 0, void 0, function () {
-                return __generator(this, function (_a) {
-                    switch (_a.label) {
-                        case 0: return [4 /*yield*/, this.loadNextScene()];
-                        case 1:
-                            _a.sent();
-                            this.transitionComplete();
-                            return [2 /*return*/];
-                    }
-                });
-            });
-        };
-        SceneTransition.prototype.transitionComplete = function () {
-            es.Core._instance._sceneTransition = null;
-            if (this.onTransitionCompleted) {
-                this.onTransitionCompleted();
-            }
-        };
-        SceneTransition.prototype.loadNextScene = function () {
-            return __awaiter(this, void 0, void 0, function () {
-                var _a;
-                return __generator(this, function (_b) {
-                    switch (_b.label) {
-                        case 0:
-                            if (this.onScreenObscured)
-                                this.onScreenObscured();
-                            if (!this.loadsNewScene) {
-                                this.isNewSceneLoaded = true;
-                            }
-                            _a = es.Core;
-                            return [4 /*yield*/, this.sceneLoadAction()];
-                        case 1:
-                            _a.scene = _b.sent();
-                            this.isNewSceneLoaded = true;
-                            return [2 /*return*/];
-                    }
-                });
-            });
-        };
-        return SceneTransition;
-    }());
-    es.SceneTransition = SceneTransition;
-})(es || (es = {}));
 var es;
 (function (es) {
     /** 贝塞尔帮助类 */

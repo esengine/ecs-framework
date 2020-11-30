@@ -25,7 +25,6 @@ module es {
         public static entitySystemsEnabled: boolean;
 
         public _nextScene: Scene;
-        public _sceneTransition: SceneTransition;
         /**
          * 用于凝聚GraphicsDeviceReset事件
          */
@@ -95,20 +94,6 @@ module es {
         }
 
         /**
-         * 临时运行SceneTransition，允许一个场景过渡到另一个平滑的自定义效果。
-         * @param sceneTransition
-         */
-        public static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T {
-            if (this._instance._sceneTransition) {
-                console.warn("在前一个场景完成之前，不能开始一个新的场景转换。");
-                return;
-            }
-
-            this._instance._sceneTransition = sceneTransition;
-            return sceneTransition;
-        }
-
-        /**
          * 添加一个全局管理器对象，它的更新方法将调用场景前的每一帧。
          * @param manager
          */
@@ -151,34 +136,6 @@ module es {
 
         public onOrientationChanged() {
             Core.emitter.emit(CoreEvents.OrientationChanged);
-        }
-
-        public async draw() {
-            this.startDebugDraw();
-
-            if (this._sceneTransition != null) {
-                this._sceneTransition.preRender();
-
-                // 如果有的话，我们会对SceneTransition进行特殊处理。
-                // 我们要么渲染SceneTransition，要么渲染Scene的
-                if (this._sceneTransition != null){
-                    if (this._scene != null && !this._sceneTransition.hasPreviousSceneRender) {
-                        this._scene.render();
-                        this._scene.postRender();
-                        await this._sceneTransition.onBeginTransition();
-                    } else if (this._scene != null && this._sceneTransition.isNewSceneLoaded) {
-                        this._scene.render();
-                        this._scene.postRender();
-                    }
-
-                    this._sceneTransition.render();
-                }
-            } else if (this._scene) {
-                this._scene.render();
-
-                // 如如果我们没有一个活动的SceneTransition，就像往常一样渲染
-                this._scene.postRender();
-            }
         }
 
         public startDebugDraw() {
@@ -230,15 +187,7 @@ module es {
                         this._globalManagers.buffer[i].update();
                 }
 
-                // 仔细阅读:
-                // 当场景转换发生时，我们不更新场景
-                // - 除非是不改变场景的SceneTransition(没有理由不更新)
-                // - 或者是一个已经切换到新场景的SceneTransition（新场景需要做它的事情）
-                if (this._sceneTransition == null ||
-                    (this._sceneTransition != null && 
-                    (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
-                    this._scene.update();
-                }
+                this._scene.update();
 
                 if (this._nextScene != null) {
                     this._scene.end();
@@ -251,7 +200,7 @@ module es {
                 }
             }
 
-            await this.draw();
+            this.startDebugDraw();
         }
     }
 }

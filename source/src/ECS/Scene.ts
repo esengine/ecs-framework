@@ -6,21 +6,15 @@ module es {
          */
         public readonly entities: EntityList;
         /**
-         * 管理当前在场景实体上的所有可呈现组件的列表
-         */
-        public readonly renderableComponents: RenderableComponentList;
-        /**
          * 管理所有实体处理器
          */
         public readonly entityProcessors: EntityProcessorList;
 
         public readonly _sceneComponents: FastList<SceneComponent> = new FastList<SceneComponent>();
-        public _renderers: Renderer[] = [];
         public _didSceneBegin;
 
         constructor() {
             this.entities = new EntityList(this);
-            this.renderableComponents = new RenderableComponentList();
 
             if (Core.entitySystemsEnabled)
                 this.entityProcessors = new EntityProcessorList();
@@ -66,10 +60,6 @@ module es {
         public end() {
             this._didSceneBegin = false;
 
-            for (let i = 0; i < this._renderers.length; i++) {
-                this._renderers[i].unload();
-            }
-
             Core.emitter.removeObserver(CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler);
             Core.emitter.removeObserver(CoreEvents.OrientationChanged, this.updateResolutionScaler);
 
@@ -110,23 +100,6 @@ module es {
 
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
-
-            // 我们在entity.update之后更新我们的renderables，以防止任何新的Renderables被添加
-            this.renderableComponents.updateList();
-        }
-
-        public render() {
-            for (let i = 0; i < this._renderers.length; i++) {
-                this._renderers[i].render(this);
-            }
-        }
-
-        /**
-         * 现在的任何后处理器都要完成它的处理
-         * 只有在SceneTransition请求渲染时，它才会有一个值。
-         */
-        public postRender() {
-
         }
 
         /**
@@ -179,44 +152,6 @@ module es {
 
             this._sceneComponents.remove(component);
             component.onRemovedFromScene();
-        }
-
-        /**
-         * 为场景添加一个渲染器
-         * @param renderer
-         */
-        public addRenderer<T extends Renderer>(renderer: T) {
-            this._renderers.push(renderer);
-            this._renderers.sort();
-
-            renderer.onAddedToScene(this);
-
-            return renderer;
-        }
-
-        /**
-         * 获取类型为T的第一个渲染器
-         * @param type
-         */
-        public getRenderer<T extends Renderer>(type): T {
-            for (let i = 0; i < this._renderers.length; i++) {
-                if (this._renderers[i] instanceof type)
-                    return this._renderers[i] as T;
-            }
-
-            return null;
-        }
-
-        /**
-         * 从场景中移除渲染器
-         * @param renderer
-         */
-        public removeRenderer(renderer: Renderer) {
-            let rendererList = new linq.List(this._renderers);
-            if (!rendererList.contains(renderer))
-                return;
-            rendererList.remove(renderer);
-            renderer.unload();
         }
 
         /**

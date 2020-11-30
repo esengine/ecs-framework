@@ -88,7 +88,6 @@ declare module es {
          */
         static entitySystemsEnabled: boolean;
         _nextScene: Scene;
-        _sceneTransition: SceneTransition;
         /**
          * 用于凝聚GraphicsDeviceReset事件
          */
@@ -120,11 +119,6 @@ declare module es {
         */
         static scene: Scene;
         /**
-         * 临时运行SceneTransition，允许一个场景过渡到另一个平滑的自定义效果。
-         * @param sceneTransition
-         */
-        static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
-        /**
          * 添加一个全局管理器对象，它的更新方法将调用场景前的每一帧。
          * @param manager
          */
@@ -148,7 +142,6 @@ declare module es {
          */
         static schedule(timeInSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer) => void): Timer;
         onOrientationChanged(): void;
-        draw(): Promise<void>;
         startDebugDraw(): void;
         /**
          * 在一个场景结束后，下一个场景开始之前调用
@@ -355,15 +348,10 @@ declare module es {
          */
         readonly entities: EntityList;
         /**
-         * 管理当前在场景实体上的所有可呈现组件的列表
-         */
-        readonly renderableComponents: RenderableComponentList;
-        /**
          * 管理所有实体处理器
          */
         readonly entityProcessors: EntityProcessorList;
         readonly _sceneComponents: FastList<SceneComponent>;
-        _renderers: Renderer[];
         _didSceneBegin: any;
         constructor();
         /**
@@ -384,12 +372,6 @@ declare module es {
         end(): void;
         updateResolutionScaler(): void;
         update(): void;
-        render(): void;
-        /**
-         * 现在的任何后处理器都要完成它的处理
-         * 只有在SceneTransition请求渲染时，它才会有一个值。
-         */
-        postRender(): void;
         /**
          * 向组件列表添加并返回SceneComponent
          * @param component
@@ -410,21 +392,6 @@ declare module es {
          * @param component
          */
         removeSceneComponent(component: SceneComponent): void;
-        /**
-         * 为场景添加一个渲染器
-         * @param renderer
-         */
-        addRenderer<T extends Renderer>(renderer: T): T;
-        /**
-         * 获取类型为T的第一个渲染器
-         * @param type
-         */
-        getRenderer<T extends Renderer>(type: any): T;
-        /**
-         * 从场景中移除渲染器
-         * @param renderer
-         */
-        removeRenderer(renderer: Renderer): void;
         /**
          * 将实体添加到此场景，并返回它
          * @param name
@@ -1389,73 +1356,6 @@ declare module es {
         one(...types: any[]): this;
     }
 }
-declare module es {
-    /**
-     * 当该接口应用到组件时，它将注册组件以场景渲染器显示
-     * 该接口请谨慎实现
-     */
-    interface IRenderable {
-        /**
-         * 对象的AABB用于相机剔除
-         */
-        bounds: Rectangle;
-        /**
-         * 这个组件是否应该被渲染
-         */
-        enabled: boolean;
-        /**
-         * 较低的渲染层在前面，较高的在后面
-         */
-        renderLayer: number;
-        /**
-         * 可渲染的可见性。状态的改变会调用onBecameVisible/onBecameInvisible方法
-         */
-        isVisible: boolean;
-    }
-    /**
-     * 用于排序IRenderables的比较器
-     */
-    class RenderableComparer {
-        compare(self: IRenderable, other: IRenderable): number;
-    }
-}
-declare module es {
-    class RenderableComponentList {
-        /**
-         * IRenderable列表的全局updatePrder排序
-         */
-        static compareUpdatableOrder: RenderableComparer;
-        /**
-         * 添加到实体的组件列表
-         */
-        _components: IRenderable[];
-        /**
-         * 通过渲染层跟踪组件，便于检索
-         */
-        _componentsByRenderLayer: Map<number, IRenderable[]>;
-        _unsortedRenderLayers: number[];
-        private _componentsNeedSort;
-        componentsNeedSort: boolean;
-        readonly count: number;
-        readonly buffer: IRenderable[];
-        add(component: IRenderable): void;
-        remove(component: IRenderable): void;
-        updateRenderableRenderLayer(component: IRenderable, oldRenderLayer: number, newRenderLayer: number): void;
-        /**
-         * 将渲染层排序标志弄脏，让所有组件重新排序
-         * @param renderLayer
-         */
-        setRenderLayerNeedsComponentSort(renderLayer: number): void;
-        setNeedsComponentSort(): void;
-        addToRenderLayerList(component: IRenderable, renderLayer: number): void;
-        /**
-         * 使用给定的渲染层获取所有组件。组件列表是预先排序的
-         * @param renderLayer
-         */
-        componentsWithRenderLayer(renderLayer: number): IRenderable[];
-        updateList(): void;
-    }
-}
 declare class StringUtils {
     /**
      * 特殊符号字符串
@@ -1645,84 +1545,6 @@ declare class TimeUtils {
      * 输出   3600000
      */
     static timeToMillisecond(time: string, partition?: string): string;
-}
-declare module es {
-    class Viewport {
-        private _x;
-        private _y;
-        private _minDepth;
-        private _maxDepth;
-        constructor(x: number, y: number, width: number, height: number);
-        private _width;
-        width: number;
-        private _height;
-        height: number;
-        readonly aspectRatio: number;
-        bounds: Rectangle;
-    }
-}
-declare module es {
-    /**
-     * 渲染器被添加到场景中并处理所有对RenderableComponent的实际调用
-     */
-    abstract class Renderer {
-        /**
-         * 指定场景调用渲染器的顺序
-         */
-        readonly renderOrder: number;
-        /**
-         * 这个渲染器的标志，决定它是否应该调试渲染。
-         * render方法接收一个bool (debugRenderEnabled)，让渲染器知道全局调试渲染是否打开/关闭。
-         * 渲染器然后使用本地bool来决定它是否应该调试渲染。
-         */
-        shouldDebugRender: boolean;
-        protected constructor(renderOrder: number);
-        /**
-         * 当渲染器被添加到场景时调用
-         * @param scene
-         */
-        onAddedToScene(scene: Scene): void;
-        /**
-         * 当场景结束或渲染器从场景中移除时调用。使用这个进行清理。
-         */
-        unload(): void;
-        abstract render(scene: Scene): any;
-        /**
-         * 当默认场景渲染目标被调整大小和当场景已经开始添加渲染器时调用
-         * @param newWidth
-         * @param newHeight
-         */
-        onSceneBackBufferSizeChanged(newWidth: number, newHeight: number): void;
-        compareTo(other: Renderer): number;
-    }
-}
-declare module es {
-    /**
-     * SceneTransition用于从一个场景过渡到另一个场景或在一个有效果的场景中过渡
-     */
-    abstract class SceneTransition {
-        /** 是否加载新场景的标志 */
-        loadsNewScene: boolean;
-        /**
-         * 将此用于两个部分的转换。例如，淡出会先淡出到黑色，然后当isNewSceneLoaded为true，它会淡出。
-         * 对于场景过渡，isNewSceneLoaded应该在中点设置为true，这就标识一个新的场景被加载了。
-         */
-        isNewSceneLoaded: boolean;
-        /** 在loadNextScene执行时调用。这在进行场景间过渡时很有用，这样你就知道什么时候可以更多地使用相机或者重置任何实体 */
-        onScreenObscured: Function;
-        /** 当转换完成执行时调用，以便可以调用其他工作，比如启动另一个转换。 */
-        onTransitionCompleted: Function;
-        /** 返回新加载场景的函数 */
-        protected sceneLoadAction: Function;
-        constructor(sceneLoadAction: Function);
-        private _hasPreviousSceneRender;
-        readonly hasPreviousSceneRender: boolean;
-        preRender(): void;
-        render(): void;
-        onBeginTransition(): Promise<void>;
-        protected transitionComplete(): void;
-        protected loadNextScene(): Promise<void>;
-    }
 }
 declare module es {
     /** 贝塞尔帮助类 */
