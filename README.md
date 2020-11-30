@@ -15,13 +15,11 @@ let core = new es.Core(768, 1366);
 2. 派发核心事件
 
 ```typescript
-// 在监听每帧更新时间处执行 egret写法:
-es.Time.update(egret.getTimer());
-// 在监听每帧更新时间处执行 laya写法:
-// laya 使用 Laya.timer.frameLoop 进行侦听
-// es.Time.update(Laya.systemTimer.currTimer);
-// 必须派发该事件 否则核心内所有更新事件将不会执行
-es.Core.emitter.emit(es.CoreEvents.FrameUpdated);
+// 必须派发该事件 否则核心内所有更新事件将不会执行 egret写法:
+es.Core.emitter.emit(es.CoreEvents.FrameUpdated, egret.getTimer());
+
+// 必须派发该事件 否则核心内所有更新事件将不会执行 laya写法:
+// es.Core.emitter.emit(es.CoreEvents.FrameUpdated, Laya.systemTimer.currTimer);
 ```
 
 3. 创建主场景
