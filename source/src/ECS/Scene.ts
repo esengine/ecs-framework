@@ -14,7 +14,7 @@ module es {
          */
         public readonly entityProcessors: EntityProcessorList;
 
-        public readonly _sceneComponents: SceneComponent[] = [];
+        public readonly _sceneComponents: FastList<SceneComponent> = new FastList<SceneComponent>();
         public _renderers: Renderer[] = [];
         public _didSceneBegin;
 
@@ -76,9 +76,9 @@ module es {
             this.entities.removeAllEntities();
 
             for (let i = 0; i < this._sceneComponents.length; i++) {
-                this._sceneComponents[i].onRemovedFromScene();
+                this._sceneComponents.buffer[i].onRemovedFromScene();
             }
-            this._sceneComponents.length = 0;
+            this._sceneComponents.clear();
 
             Physics.clear();
 
@@ -136,8 +136,8 @@ module es {
         public addSceneComponent<T extends SceneComponent>(component: T): T {
             component.scene = this;
             component.onEnabled();
-            this._sceneComponents.push(component);
-            this._sceneComponents.sort(component.compareTo);
+            this._sceneComponents.add(component);
+            this._sceneComponents.sort(component);
             return component;
         }
 

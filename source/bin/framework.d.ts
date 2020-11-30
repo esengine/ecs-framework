@@ -186,7 +186,7 @@ declare module es {
         /**
          * 全局访问系统
          */
-        _globalManagers: GlobalManager[];
+        _globalManagers: FastList<GlobalManager>;
         _timerManager: TimerManager;
         width: number;
         height: number;
@@ -198,6 +198,7 @@ declare module es {
         static readonly Instance: Core;
         _frameCounterElapsedTime: number;
         _frameCounter: number;
+        _totalMemory: number;
         _scene: Scene;
         /**
          * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
@@ -237,6 +238,7 @@ declare module es {
         static schedule(timeInSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer) => void): Timer;
         onOrientationChanged(): void;
         draw(): Promise<void>;
+        startDebugDraw(): void;
         /**
          * 在一个场景结束后，下一个场景开始之前调用
          */
@@ -449,7 +451,7 @@ declare module es {
          * 管理所有实体处理器
          */
         readonly entityProcessors: EntityProcessorList;
-        readonly _sceneComponents: SceneComponent[];
+        readonly _sceneComponents: FastList<SceneComponent>;
         _renderers: Renderer[];
         _didSceneBegin: any;
         constructor();
@@ -796,7 +798,7 @@ declare module es {
     }
 }
 declare module es {
-    class SceneComponent {
+    class SceneComponent implements IComparer<SceneComponent> {
         /**
          * 这个场景组件被附加到的场景
          */
@@ -840,7 +842,7 @@ declare module es {
          * @param updateOrder
          */
         setUpdateOrder(updateOrder: number): this;
-        compareTo(other: SceneComponent): number;
+        compare(other: SceneComponent): number;
     }
 }
 declare module es {
@@ -3641,7 +3643,15 @@ declare module es {
          */
         intersectWith(other: Array<T>): void;
         unionWith(other: Array<T>): void;
+        /**
+         * 确定当前集合是否为指定集合或数组的子集
+         * @param other
+         */
         isSubsetOf(other: Array<T>): boolean;
+        /**
+         * 确定当前不可变排序集是否为指定集合的超集
+         * @param other
+         */
         isSupersetOf(other: Array<T>): boolean;
         overlaps(other: Array<T>): boolean;
         setEquals(other: Array<T>): boolean;

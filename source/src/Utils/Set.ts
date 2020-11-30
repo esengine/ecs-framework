@@ -139,12 +139,20 @@ module es {
             });
         }
 
+        /**
+         * 确定当前集合是否为指定集合或数组的子集
+         * @param other 
+         */
         isSubsetOf(other: Array<T>) {
 
             let otherBuckets = this.buildInternalBuckets(other);
             return this.toArray().every(value => this.bucketsContains(otherBuckets.Buckets, value));
 
         }
+        /**
+         * 确定当前不可变排序集是否为指定集合的超集
+         * @param other 
+         */
         isSupersetOf(other: Array<T>) {
             return other.every(value => this.contains(value));
         }

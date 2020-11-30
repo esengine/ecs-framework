@@ -33,7 +33,7 @@ module es {
         /**
          * 全局访问系统
          */
-        public _globalManagers: GlobalManager[] = [];
+        public _globalManagers: FastList<GlobalManager> = new FastList<GlobalManager>();
         public _timerManager: TimerManager = new TimerManager();
         public width: number;
         public height: number;
@@ -62,6 +62,7 @@ module es {
 
         public _frameCounterElapsedTime: number = 0;
         public _frameCounter: number = 0;
+        public _totalMemory: number = 0;
         public _scene: Scene;
 
         /**
@@ -111,7 +112,7 @@ module es {
          * @param manager
          */
         public static registerGlobalManager(manager: es.GlobalManager) {
-            this._instance._globalManagers.push(manager);
+            this._instance._globalManagers.add(manager);
             manager.enabled = true;
         }
 
@@ -130,8 +131,8 @@ module es {
          */
         public static getGlobalManager<T extends es.GlobalManager>(type): T {
             for (let i = 0; i < this._instance._globalManagers.length; i++) {
-                if (this._instance._globalManagers[i] instanceof type)
-                    return this._instance._globalManagers[i] as T;
+                if (this._instance._globalManagers.buffer[i] instanceof type)
+                    return this._instance._globalManagers.buffer[i] as T;
             }
             return null;
         }
@@ -152,6 +153,8 @@ module es {
         }
 
         public async draw() {
+            this.startDebugDraw();
+
             if (this._sceneTransition != null) {
                 this._sceneTransition.preRender();
 
@@ -174,6 +177,19 @@ module es {
 
                 // 如如果我们没有一个活动的SceneTransition，就像往常一样渲染
                 this._scene.postRender();
+            }
+        }
+
+        public startDebugDraw() {
+            this._frameCounter ++;
+            this._frameCounterElapsedTime += Time.deltaTime;
+            if (this._frameCounterElapsedTime >= 1) {
+                let memoryInfo = window.performance["memory"];
+                if (memoryInfo != null) {
+                    this._totalMemory = Number((memoryInfo.totalJSHeapSize / 1048576).toFixed(2));
+                }
+                this._frameCounter = 0;
+                this._frameCounterElapsedTime -= 1;
             }
         }
 
@@ -208,16 +224,16 @@ module es {
             if (currentTime != null) Time.update(currentTime);
             if (this._scene != null) {
                 for (let i = this._globalManagers.length - 1; i >= 0; i--) {
-                    if (this._globalManagers[i].enabled)
-                        this._globalManagers[i].update();
+                    if (this._globalManagers.buffer[i].enabled)
+                        this._globalManagers.buffer[i].update();
                 }
 
                 // 仔细阅读:
                 // 当场景转换发生时，我们不更新场景
                 // - 除非是不改变场景的SceneTransition(没有理由不更新)
                 // - 或者是一个已经切换到新场景的SceneTransition（新场景需要做它的事情）
-                if (!this._sceneTransition ||
-                    (this._sceneTransition && 
+                if (this._sceneTransition == null ||
+                    (this._sceneTransition != null && 
                     (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
                     this._scene.update();
                 }

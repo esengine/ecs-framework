@@ -42,7 +42,7 @@ module es {
          */
         public static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask = -1) {
             if (results.length == 0) {
-                console.error("An empty results array was passed in. No results will ever be returned.");
+                console.error("传入了一个空的结果数组。不会返回任何结果");
                 return;
             }
 

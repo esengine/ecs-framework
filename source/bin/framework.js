@@ -399,10 +399,11 @@ var es;
             /**
              * 全局访问系统
              */
-            this._globalManagers = [];
+            this._globalManagers = new es.FastList();
             this._timerManager = new es.TimerManager();
             this._frameCounterElapsedTime = 0;
             this._frameCounter = 0;
+            this._totalMemory = 0;
             this.width = width;
             this.height = height;
             Core._instance = this;
@@ -470,7 +471,7 @@ var es;
          * @param manager
          */
         Core.registerGlobalManager = function (manager) {
-            this._instance._globalManagers.push(manager);
+            this._instance._globalManagers.add(manager);
             manager.enabled = true;
         };
         /**
@@ -487,8 +488,8 @@ var es;
          */
         Core.getGlobalManager = function (type) {
             for (var i = 0; i < this._instance._globalManagers.length; i++) {
-                if (this._instance._globalManagers[i] instanceof type)
-                    return this._instance._globalManagers[i];
+                if (this._instance._globalManagers.buffer[i] instanceof type)
+                    return this._instance._globalManagers.buffer[i];
             }
             return null;
         };
@@ -512,6 +513,7 @@ var es;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
+                            this.startDebugDraw();
                             if (!(this._sceneTransition != null)) return [3 /*break*/, 5];
                             this._sceneTransition.preRender();
                             if (!(this._sceneTransition != null)) return [3 /*break*/, 4];
@@ -543,6 +545,18 @@ var es;
                     }
                 });
             });
+        };
+        Core.prototype.startDebugDraw = function () {
+            this._frameCounter++;
+            this._frameCounterElapsedTime += es.Time.deltaTime;
+            if (this._frameCounterElapsedTime >= 1) {
+                var memoryInfo = window.performance["memory"];
+                if (memoryInfo != null) {
+                    this._totalMemory = Number((memoryInfo.totalJSHeapSize / 1048576).toFixed(2));
+                }
+                this._frameCounter = 0;
+                this._frameCounterElapsedTime -= 1;
+            }
         };
         /**
          * 在一个场景结束后，下一个场景开始之前调用
@@ -578,15 +592,15 @@ var es;
                                 es.Time.update(currentTime);
                             if (this._scene != null) {
                                 for (i = this._globalManagers.length - 1; i >= 0; i--) {
-                                    if (this._globalManagers[i].enabled)
-                                        this._globalManagers[i].update();
+                                    if (this._globalManagers.buffer[i].enabled)
+                                        this._globalManagers.buffer[i].update();
                                 }
                                 // 仔细阅读:
                                 // 当场景转换发生时，我们不更新场景
                                 // - 除非是不改变场景的SceneTransition(没有理由不更新)
                                 // - 或者是一个已经切换到新场景的SceneTransition（新场景需要做它的事情）
-                                if (!this._sceneTransition ||
-                                    (this._sceneTransition &&
+                                if (this._sceneTransition == null ||
+                                    (this._sceneTransition != null &&
                                         (!this._sceneTransition.loadsNewScene || this._sceneTransition.isNewSceneLoaded))) {
                                     this._scene.update();
                                 }
@@ -1045,7 +1059,7 @@ var es;
     /** 场景 */
     var Scene = /** @class */ (function () {
         function Scene() {
-            this._sceneComponents = [];
+            this._sceneComponents = new es.FastList();
             this._renderers = [];
             this.entities = new es.EntityList(this);
             this.renderableComponents = new es.RenderableComponentList();
@@ -1094,9 +1108,9 @@ var es;
             es.Core.emitter.removeObserver(es.CoreEvents.OrientationChanged, this.updateResolutionScaler);
             this.entities.removeAllEntities();
             for (var i = 0; i < this._sceneComponents.length; i++) {
-                this._sceneComponents[i].onRemovedFromScene();
+                this._sceneComponents.buffer[i].onRemovedFromScene();
             }
-            this._sceneComponents.length = 0;
+            this._sceneComponents.clear();
             es.Physics.clear();
             if (this.entityProcessors)
                 this.entityProcessors.end();
@@ -1139,8 +1153,8 @@ var es;
         Scene.prototype.addSceneComponent = function (component) {
             component.scene = this;
             component.onEnabled();
-            this._sceneComponents.push(component);
-            this._sceneComponents.sort(component.compareTo);
+            this._sceneComponents.add(component);
+            this._sceneComponents.sort(component);
             return component;
         };
         /**
@@ -1874,8 +1888,10 @@ var es;
             if (this._enabled != isEnabled) {
                 this._enabled = isEnabled;
                 if (this._enabled) {
+                    this.onEnabled();
                 }
                 else {
+                    this.onDisabled();
                 }
             }
             return this;
@@ -1887,11 +1903,11 @@ var es;
         SceneComponent.prototype.setUpdateOrder = function (updateOrder) {
             if (this.updateOrder != updateOrder) {
                 this.updateOrder = updateOrder;
-                es.Core.scene._sceneComponents.sort(this.compareTo);
+                es.Core.scene._sceneComponents.sort(this);
             }
             return this;
         };
-        SceneComponent.prototype.compareTo = function (other) {
+        SceneComponent.prototype.compare = function (other) {
             return this.updateOrder - other.updateOrder;
         };
         return SceneComponent;
@@ -6318,7 +6334,7 @@ var es;
         Physics.overlapCircleAll = function (center, randius, results, layerMask) {
             if (layerMask === void 0) { layerMask = -1; }
             if (results.length == 0) {
-                console.error("An empty results array was passed in. No results will ever be returned.");
+                console.error("传入了一个空的结果数组。不会返回任何结果");
                 return;
             }
             return this._spatialHash.overlapCircle(center, randius, results, layerMask);
@@ -8891,11 +8907,19 @@ var es;
                 _this.add(value);
             });
         };
+        /**
+         * 确定当前集合是否为指定集合或数组的子集
+         * @param other
+         */
         Set.prototype.isSubsetOf = function (other) {
             var _this = this;
             var otherBuckets = this.buildInternalBuckets(other);
             return this.toArray().every(function (value) { return _this.bucketsContains(otherBuckets.Buckets, value); });
         };
+        /**
+         * 确定当前不可变排序集是否为指定集合的超集
+         * @param other
+         */
         Set.prototype.isSupersetOf = function (other) {
             var _this = this;
             return other.every(function (value) { return _this.contains(value); });

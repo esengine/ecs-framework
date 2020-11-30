@@ -1,5 +1,5 @@
 module es {
-    export class SceneComponent {
+    export class SceneComponent implements IComparer<SceneComponent> {
         /**
          * 这个场景组件被附加到的场景
          */
@@ -60,9 +60,9 @@ module es {
                 this._enabled = isEnabled;
 
                 if (this._enabled){
-
+                    this.onEnabled();
                 }else{
-
+                    this.onDisabled();
                 }
             }
 
@@ -76,13 +76,13 @@ module es {
         public setUpdateOrder(updateOrder: number){
             if (this.updateOrder != updateOrder){
                 this.updateOrder = updateOrder;
-                Core.scene._sceneComponents.sort(this.compareTo);
+                Core.scene._sceneComponents.sort(this);
             }
 
             return this;
         }
 
-        public compareTo(other: SceneComponent): number{
+        public compare(other: SceneComponent): number{
             return this.updateOrder - other.updateOrder;
         }
     }
