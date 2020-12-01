@@ -780,11 +780,6 @@ var es;
          * 当Core将这个场景设置为活动场景时，这个将被调用
          */
         Scene.prototype.onStart = function () {
-            return __awaiter(this, void 0, void 0, function () {
-                return __generator(this, function (_a) {
-                    return [2 /*return*/];
-                });
-            });
         };
         /**
          * 在场景子类中重写这个，并在这里做任何必要的卸载。
@@ -822,8 +817,8 @@ var es;
             // 更新我们的列表，以防它们有任何变化
             this.entities.updateLists();
             for (var i = this._sceneComponents.length - 1; i >= 0; i--) {
-                if (this._sceneComponents[i].enabled)
-                    this._sceneComponents[i].update();
+                if (this._sceneComponents.buffer[i].enabled)
+                    this._sceneComponents.buffer[i].update();
             }
             // 更新我们的实体解析器
             if (this.entityProcessors != null)

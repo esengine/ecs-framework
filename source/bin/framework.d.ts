@@ -362,7 +362,7 @@ declare module es {
         /**
          * 当Core将这个场景设置为活动场景时，这个将被调用
          */
-        onStart(): Promise<void>;
+        onStart(): void;
         /**
          * 在场景子类中重写这个，并在这里做任何必要的卸载。
          * 当Core把这个场景从活动槽中移除时，这个被调用。

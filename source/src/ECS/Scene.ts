@@ -32,7 +32,7 @@ module es {
         /**
          * 当Core将这个场景设置为活动场景时，这个将被调用
          */
-        public async onStart() {
+        public onStart() {
         }
 
         /**
@@ -87,8 +87,8 @@ module es {
             this.entities.updateLists();
 
             for (let i = this._sceneComponents.length - 1; i >= 0; i--) {
-                if (this._sceneComponents[i].enabled)
-                    this._sceneComponents[i].update();
+                if (this._sceneComponents.buffer[i].enabled)
+                    this._sceneComponents.buffer[i].update();
             }
 
             // 更新我们的实体解析器
