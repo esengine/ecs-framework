@@ -1157,7 +1157,7 @@ declare module es {
          * 返回第一个找到的名字为name的实体。如果没有找到则返回null
          * @param name
          */
-        findEntity(name: string): any;
+        findEntity(name: string): Entity;
         /**
          * 返回带有标签的所有实体的列表。如果没有实体有标签，则返回一个空列表。
          * 返回的List可以通过ListPool.free放回池中

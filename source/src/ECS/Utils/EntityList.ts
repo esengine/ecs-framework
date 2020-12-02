@@ -84,12 +84,12 @@ module es {
             this.updateLists();
 
             for (let i = 0; i < this._entities.length; i++) {
-                this._entities[i]._isDestroyed = true;
-                this._entities[i].onRemovedFromScene();
-                this._entities[i].scene = null;
+                this._entities.buffer[i]._isDestroyed = true;
+                this._entities.buffer[i].onRemovedFromScene();
+                this._entities.buffer[i].scene = null;
             }
 
-            this._entities.length = 0;
+            this._entities.clear();
             this._entityDict.clear();
         }
 
@@ -191,8 +191,8 @@ module es {
          */
         public findEntity(name: string) {
             for (let i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].name == name)
-                    return this._entities[i];
+                if (this._entities.buffer[i].name == name)
+                    return this._entities.buffer[i];
             }
 
             for (let i = 0; i < this._entitiesToAdded.getCount(); i ++){
@@ -228,8 +228,8 @@ module es {
         public entitiesOfType<T extends Entity>(type): T[] {
             let list = ListPool.obtain<T>();
             for (let i = 0; i < this._entities.length; i++) {
-                if (this._entities[i] instanceof type)
-                    list.push(this._entities[i] as T);
+                if (this._entities.buffer[i] instanceof type)
+                    list.push(this._entities.buffer[i] as T);
             }
 
             for (let i = 0; i < this._entitiesToAdded.getCount(); i ++){
@@ -248,7 +248,7 @@ module es {
          */
         public findComponentOfType<T extends Component>(type): T {
             for (let i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].enabled) {
+                if (this._entities.buffer[i].enabled) {
                     let comp = this._entities.buffer[i].getComponent<T>(type);
                     if (comp)
                         return comp;
@@ -275,8 +275,8 @@ module es {
         public findComponentsOfType<T extends Component>(type): T[] {
             let comps = ListPool.obtain<T>();
             for (let i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].enabled)
-                    this._entities[i].getComponents(type, comps);
+                if (this._entities.buffer[i].enabled)
+                    this._entities.buffer[i].getComponents(type, comps);
             }
 
             for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {

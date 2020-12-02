@@ -2653,11 +2653,11 @@ var es;
             // 它们仍然会在_entitiesToRemove列表中，这将由updateLists处理。
             this.updateLists();
             for (var i = 0; i < this._entities.length; i++) {
-                this._entities[i]._isDestroyed = true;
-                this._entities[i].onRemovedFromScene();
-                this._entities[i].scene = null;
+                this._entities.buffer[i]._isDestroyed = true;
+                this._entities.buffer[i].onRemovedFromScene();
+                this._entities.buffer[i].scene = null;
             }
-            this._entities.length = 0;
+            this._entities.clear();
             this._entityDict.clear();
         };
         /**
@@ -2741,8 +2741,8 @@ var es;
          */
         EntityList.prototype.findEntity = function (name) {
             for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].name == name)
-                    return this._entities[i];
+                if (this._entities.buffer[i].name == name)
+                    return this._entities.buffer[i];
             }
             for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
                 var entity = this._entitiesToAdded.toArray()[i];
@@ -2772,8 +2772,8 @@ var es;
         EntityList.prototype.entitiesOfType = function (type) {
             var list = es.ListPool.obtain();
             for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities[i] instanceof type)
-                    list.push(this._entities[i]);
+                if (this._entities.buffer[i] instanceof type)
+                    list.push(this._entities.buffer[i]);
             }
             for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
                 var entity = this._entitiesToAdded.toArray()[i];
@@ -2789,7 +2789,7 @@ var es;
          */
         EntityList.prototype.findComponentOfType = function (type) {
             for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].enabled) {
+                if (this._entities.buffer[i].enabled) {
                     var comp = this._entities.buffer[i].getComponent(type);
                     if (comp)
                         return comp;
@@ -2813,8 +2813,8 @@ var es;
         EntityList.prototype.findComponentsOfType = function (type) {
             var comps = es.ListPool.obtain();
             for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].enabled)
-                    this._entities[i].getComponents(type, comps);
+                if (this._entities.buffer[i].enabled)
+                    this._entities.buffer[i].getComponents(type, comps);
             }
             for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
                 var entity = this._entitiesToAdded.toArray()[i];
