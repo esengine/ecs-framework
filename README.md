@@ -141,6 +141,8 @@ es.Core.scene = new MainScene();
 - [egret-demo](https://github.com/esengine/ecs-egret-demo)
 - [ecs-modern-egret](https://github.com/esengine/ecs-modern-egret)
 
+![GIF](screenshot\GIF.gif)
+
 ## 扩展库
 
 - [基于ecs-framework开发的astar/BreadthFirst/Dijkstra/GOAP目标导向计划 路径寻找库](https://github.com/esengine/ecs-astar)
