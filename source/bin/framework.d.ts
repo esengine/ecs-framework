@@ -1744,7 +1744,6 @@ declare module es {
          * 储存在这个矩阵中的缩放
          */
         scale: Vector2;
-        static _identity: Matrix2D;
         /**
          * 构建一个矩阵
          * @param m11

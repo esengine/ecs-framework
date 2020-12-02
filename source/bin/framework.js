@@ -4204,7 +4204,7 @@ var es;
              * 返回标识矩阵
              */
             get: function () {
-                return this._identity;
+                return new Matrix2D(1, 0, 0, 1, 0, 0);
             },
             enumerable: true,
             configurable: true
@@ -4415,7 +4415,6 @@ var es;
         Matrix2D.prototype.toString = function () {
             return "{m11:" + this.m11 + " m12:" + this.m12 + " m21:" + this.m21 + " m22:" + this.m22 + " m31:" + this.m31 + " m32:" + this.m32 + "}";
         };
-        Matrix2D._identity = new Matrix2D(1, 0, 0, 1, 0, 0);
         return Matrix2D;
     }());
     es.Matrix2D = Matrix2D;

@@ -16,7 +16,7 @@ module es {
          * 返回标识矩阵
          */
         public static get identity(): Matrix2D {
-            return this._identity;
+            return new Matrix2D(1, 0, 0, 1, 0, 0);
         }
 
         /**
@@ -70,8 +70,6 @@ module es {
             this.m11 = value.x;
             this.m22 = value.y;
         }
-
-        static _identity: Matrix2D = new Matrix2D(1, 0, 0, 1, 0, 0);
 
         /**
          * 构建一个矩阵
