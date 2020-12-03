@@ -141,7 +141,7 @@ es.Core.scene = new MainScene();
 - [egret-demo](https://github.com/esengine/ecs-egret-demo)
 - [ecs-modern-egret](https://github.com/esengine/ecs-modern-egret)
 
-![GIF](screenshot\GIF.gif)
+![GIF](https://github.com/esengine/ecs-framework/blob/master/screenshot/GIF.gif)
 
 ## 扩展库
 
