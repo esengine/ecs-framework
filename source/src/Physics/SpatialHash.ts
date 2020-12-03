@@ -209,8 +209,7 @@ module es {
 
             let resultCounter = 0;
             let potentials = this.aabbBroadphase(bounds, null, layerMask);
-            for (let i = 0; i < potentials.size; i++) {
-                let collider = potentials[i];
+            potentials.forEach(collider => {
                 if (collider instanceof BoxCollider) {
                     results[resultCounter] = collider;
                     resultCounter++;
@@ -231,7 +230,7 @@ module es {
                 // 如果我们所有的结果数据有了则返回
                 if (resultCounter == results.length)
                     return resultCounter;
-            }
+            });
 
             return resultCounter;
         }

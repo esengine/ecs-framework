@@ -2722,10 +2722,7 @@ declare module es {
          * @param min
          * @param max
          */
-        static getInterval(axis: Vector2, polygon: Polygon, min: number, max: number): {
-            min: number;
-            max: number;
-        };
+        static getInterval(axis: Vector2, polygon: Polygon, min: Ref<number>, max: Ref<number>): void;
         /**
          *
          * @param circle

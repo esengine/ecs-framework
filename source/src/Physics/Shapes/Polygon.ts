@@ -167,7 +167,7 @@ module es {
             distanceSquared.value = Number.MAX_VALUE;
             edgeNormal.x = 0;
             edgeNormal.y = 0;
-            let closestPoint = new Vector2(0, 0);
+            let closestPoint = Vector2.zero;
 
             let tempDistanceSquared = 0;
             for (let i = 0; i < points.length; i++) {

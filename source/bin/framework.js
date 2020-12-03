@@ -5471,7 +5471,7 @@ var es;
             return true;
         };
         Collisions.lineToLineIntersection = function (a1, a2, b1, b2) {
-            var intersection = new es.Vector2(0, 0);
+            var intersection = es.Vector2.zero;
             var b = es.Vector2.subtract(a2, a1);
             var d = es.Vector2.subtract(b2, b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
@@ -5507,8 +5507,8 @@ var es;
         Collisions.rectToCircle = function (rect, cPosition, cRadius) {
             if (this.rectToPoint(rect.x, rect.y, rect.width, rect.height, cPosition))
                 return true;
-            var edgeFrom = es.Vector2.zero;
-            var edgeTo = es.Vector2.zero;
+            var edgeFrom;
+            var edgeTo;
             var sector = this.getSector(rect.x, rect.y, rect.width, rect.height, cPosition);
             if ((sector & PointSectors.top) != 0) {
                 edgeFrom = new es.Vector2(rect.x, rect.y);
@@ -5523,6 +5523,12 @@ var es;
                     return true;
             }
             if ((sector & PointSectors.left) != 0) {
+                edgeFrom = new es.Vector2(rect.x, rect.y);
+                edgeTo = new es.Vector2(rect.x, rect.y + rect.height);
+                if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                    return true;
+            }
+            if ((sector & PointSectors.right) != 0) {
                 edgeFrom = new es.Vector2(rect.x + rect.width, rect.y);
                 edgeTo = new es.Vector2(rect.x + rect.width, rect.y + rect.height);
                 if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
@@ -5957,25 +5963,25 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
+            var _this = this;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
             var resultCounter = 0;
             var potentials = this.aabbBroadphase(bounds, null, layerMask);
-            for (var i = 0; i < potentials.size; i++) {
-                var collider = potentials[i];
+            potentials.forEach(function (collider) {
                 if (collider instanceof es.BoxCollider) {
                     results[resultCounter] = collider;
                     resultCounter++;
                 }
                 else if (collider instanceof es.CircleCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)) {
+                    if (collider.shape.overlaps(_this._overlapTestCircle)) {
                         results[resultCounter] = collider;
                         resultCounter++;
                     }
                 }
                 else if (collider instanceof es.PolygonCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)) {
+                    if (collider.shape.overlaps(_this._overlapTestCircle)) {
                         results[resultCounter] = collider;
                         resultCounter++;
                     }
@@ -5986,7 +5992,7 @@ var es;
                 // 如果我们所有的结果数据有了则返回
                 if (resultCounter == results.length)
                     return resultCounter;
-            }
+            });
             return resultCounter;
         };
         /**
@@ -6277,7 +6283,7 @@ var es;
             distanceSquared.value = Number.MAX_VALUE;
             edgeNormal.x = 0;
             edgeNormal.y = 0;
-            var closestPoint = new es.Vector2(0, 0);
+            var closestPoint = es.Vector2.zero;
             var tempDistanceSquared = 0;
             for (var i = 0; i < points.length; i++) {
                 var j = i + 1;
@@ -6677,23 +6683,19 @@ var es;
                     axis = secondEdges[edgeIndex - firstEdges.length];
                 }
                 // 求多边形在当前轴上的投影
-                var minA = 0;
-                var minB = 0;
-                var maxA = 0;
-                var maxB = 0;
+                var minA = new es.Ref(0);
+                var minB = new es.Ref(0);
+                var maxA = new es.Ref(0);
+                var maxB = new es.Ref(0);
                 var intervalDist = 0;
-                var ta = this.getInterval(axis, first, minA, maxA);
-                minA = ta.min;
-                minB = ta.max;
-                var tb = this.getInterval(axis, second, minB, maxB);
-                minB = tb.min;
-                maxB = tb.max;
+                this.getInterval(axis, first, minA, maxA);
+                this.getInterval(axis, second, minB, maxB);
                 // 将区间设为第二个多边形的空间。由轴上投影的位置差偏移。
                 var relativeIntervalOffset = es.Vector2.dot(polygonOffset, axis);
-                minA += relativeIntervalOffset;
-                maxA += relativeIntervalOffset;
+                minA.value += relativeIntervalOffset;
+                maxA.value += relativeIntervalOffset;
                 // 检查多边形投影是否正在相交
-                intervalDist = this.intervalDistance(minA, maxA, minB, maxB);
+                intervalDist = this.intervalDistance(minA.value, maxA.value, minB.value, maxB.value);
                 if (intervalDist > 0)
                     isIntersecting = false;
                 // 对于多对多数据类型转换，添加一个Vector2?参数称为deltaMovement。为了提高速度，我们这里不使用它
@@ -6707,12 +6709,12 @@ var es;
                     minIntervalDistance = intervalDist;
                     translationAxis = axis;
                     if (es.Vector2.dot(translationAxis, polygonOffset) < 0)
-                        translationAxis = new es.Vector2(-translationAxis);
+                        translationAxis = new es.Vector2(-translationAxis.x, -translationAxis.y);
                 }
             }
             // 利用最小平移向量对多边形进行推入。
             result.normal = translationAxis;
-            result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(-translationAxis.x, -translationAxis.y), new es.Vector2(minIntervalDistance));
+            result.minimumTranslationVector = new es.Vector2(-translationAxis.x * minIntervalDistance, -translationAxis.y * minIntervalDistance);
             return true;
         };
         /**
@@ -6736,17 +6738,16 @@ var es;
          */
         ShapeCollisions.getInterval = function (axis, polygon, min, max) {
             var dot = es.Vector2.dot(polygon.points[0], axis);
-            min = max = dot;
+            min.value = max.value = dot;
             for (var i = 1; i < polygon.points.length; i++) {
                 dot = es.Vector2.dot(polygon.points[i], axis);
-                if (dot < min) {
-                    min = dot;
+                if (dot < min.value) {
+                    min.value = dot;
                 }
-                else if (dot > max) {
-                    max = dot;
+                else if (dot > max.value) {
+                    max.value = dot;
                 }
             }
-            return { min: min, max: max };
         };
         /**
          *
@@ -6755,23 +6756,31 @@ var es;
          * @param result
          */
         ShapeCollisions.circleToPolygon = function (circle, polygon, result) {
+            // 圆圈在多边形中的位置坐标
             var poly2Circle = es.Vector2.subtract(circle.position, polygon.position);
+            // 首先，我们需要找到从圆到多边形的最近距离
             var distanceSquared = new es.Ref(0);
             var closestPoint = es.Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle, distanceSquared, result.normal);
+            // 确保距离的平方小于半径的平方，否则我们不会相撞。
+            // 请注意，如果圆完全包含在多边形中，距离可能大于半径。
+            // 正因为如此，我们还要确保圆的位置不在多边形内。
             var circleCenterInsidePoly = polygon.containsPoint(circle.position);
             if (distanceSquared.value > circle.radius * circle.radius && !circleCenterInsidePoly)
                 return false;
+            // 算出MTV。我们要注意处理完全包含在多边形中的圆或包含其中心的圆
             var mtv;
             if (circleCenterInsidePoly) {
                 mtv = es.Vector2.multiply(result.normal, new es.Vector2(Math.sqrt(distanceSquared.value) - circle.radius));
             }
             else {
+                // 如果我们没有距离，这意味着圆心在多边形的边缘上。只需根据它的半径移动它
                 if (distanceSquared.value == 0) {
-                    mtv = es.Vector2.multiply(result.normal, new es.Vector2(circle.radius));
+                    mtv = new es.Vector2(result.normal.x * circle.radius, result.normal.y * circle.radius);
                 }
                 else {
                     var distance = Math.sqrt(distanceSquared.value);
-                    mtv = es.Vector2.multiply(new es.Vector2(-es.Vector2.subtract(poly2Circle, closestPoint)), new es.Vector2((circle.radius - distanceSquared.value) / distance));
+                    mtv = new es.Vector2(-poly2Circle.x + closestPoint.x, -poly2Circle.y + closestPoint.y)
+                        .multiply(new es.Vector2((circle.radius - distance) / distance));
                 }
             }
             result.minimumTranslationVector = mtv;

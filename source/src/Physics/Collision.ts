@@ -34,7 +34,7 @@ module es {
         }
 
         public static lineToLineIntersection(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): Vector2 {
-            let intersection = new Vector2(0, 0);
+            let intersection = Vector2.zero;
 
             let b = Vector2.subtract(a2, a1);
             let d = Vector2.subtract(b2, b1);
@@ -83,8 +83,8 @@ module es {
             if (this.rectToPoint(rect.x, rect.y, rect.width, rect.height, cPosition))
                 return true;
 
-            let edgeFrom: Vector2 = Vector2.zero;
-            let edgeTo: Vector2 = Vector2.zero;
+            let edgeFrom: Vector2;
+            let edgeTo: Vector2;
             let sector = this.getSector(rect.x, rect.y, rect.width, rect.height, cPosition);
 
             if ((sector & PointSectors.top) != 0){
@@ -102,6 +102,13 @@ module es {
             }
 
             if ((sector & PointSectors.left) != 0){
+                edgeFrom = new Vector2(rect.x, rect.y);
+                edgeTo = new Vector2(rect.x, rect.y + rect.height);
+                if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
+                    return true;
+            }
+
+            if ((sector & PointSectors.right) != 0) {
                 edgeFrom = new Vector2(rect.x + rect.width, rect.y);
                 edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
                 if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))

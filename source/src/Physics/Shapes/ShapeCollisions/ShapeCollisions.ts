@@ -32,25 +32,21 @@ module es {
                 }
 
                 // 求多边形在当前轴上的投影
-                let minA = 0;
-                let minB = 0;
-                let maxA = 0;
-                let maxB = 0;
+                let minA = new Ref(0);
+                let minB = new Ref(0);
+                let maxA = new Ref(0);
+                let maxB = new Ref(0);
                 let intervalDist = 0;
-                let ta = this.getInterval(axis, first, minA, maxA);
-                minA = ta.min;
-                minB = ta.max;
-                let tb = this.getInterval(axis, second, minB, maxB);
-                minB = tb.min;
-                maxB = tb.max;
+                this.getInterval(axis, first, minA, maxA);
+                this.getInterval(axis, second, minB, maxB);
 
                 // 将区间设为第二个多边形的空间。由轴上投影的位置差偏移。
                 let relativeIntervalOffset = Vector2.dot(polygonOffset, axis);
-                minA += relativeIntervalOffset;
-                maxA += relativeIntervalOffset;
+                minA.value += relativeIntervalOffset;
+                maxA.value += relativeIntervalOffset;
 
                 // 检查多边形投影是否正在相交
-                intervalDist = this.intervalDistance(minA, maxA, minB, maxB);
+                intervalDist = this.intervalDistance(minA.value, maxA.value, minB.value, maxB.value);
                 if (intervalDist > 0)
                     isIntersecting = false;
 
@@ -68,13 +64,13 @@ module es {
                     translationAxis = axis;
 
                     if (Vector2.dot(translationAxis, polygonOffset) < 0)
-                        translationAxis = new Vector2(-translationAxis);
+                        translationAxis = new Vector2(-translationAxis.x, -translationAxis.y);
                 }
             }
 
             // 利用最小平移向量对多边形进行推入。
             result.normal = translationAxis;
-            result.minimumTranslationVector = Vector2.multiply(new Vector2(-translationAxis.x, -translationAxis.y), new Vector2(minIntervalDistance));
+            result.minimumTranslationVector = new Vector2(-translationAxis.x * minIntervalDistance, -translationAxis.y * minIntervalDistance);
 
             return true;
         }
@@ -100,20 +96,18 @@ module es {
          * @param min
          * @param max
          */
-        public static getInterval(axis: Vector2, polygon: Polygon, min: number, max: number) {
+        public static getInterval(axis: Vector2, polygon: Polygon, min: Ref<number>, max: Ref<number>) {
             let dot = Vector2.dot(polygon.points[0], axis);
-            min = max = dot;
+            min.value = max.value = dot;
 
             for (let i = 1; i < polygon.points.length; i++) {
                 dot = Vector2.dot(polygon.points[i], axis);
-                if (dot < min) {
-                    min = dot;
-                } else if (dot > max) {
-                    max = dot;
+                if (dot  < min.value ) {
+                    min.value  = dot;
+                } else if (dot > max.value) {
+                    max.value  = dot;
                 }
             }
-
-            return {min: min, max: max};
         }
 
         /**
@@ -123,24 +117,32 @@ module es {
          * @param result
          */
         public static circleToPolygon(circle: Circle, polygon: Polygon, result: CollisionResult): boolean {
+            // 圆圈在多边形中的位置坐标
             let poly2Circle = Vector2.subtract(circle.position, polygon.position);
 
+            // 首先，我们需要找到从圆到多边形的最近距离
             let distanceSquared = new Ref(0);
             let closestPoint = Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle, distanceSquared, result.normal);
 
+            // 确保距离的平方小于半径的平方，否则我们不会相撞。
+            // 请注意，如果圆完全包含在多边形中，距离可能大于半径。
+            // 正因为如此，我们还要确保圆的位置不在多边形内。
             let circleCenterInsidePoly = polygon.containsPoint(circle.position);
             if (distanceSquared.value > circle.radius * circle.radius && !circleCenterInsidePoly)
                 return false;
 
+            // 算出MTV。我们要注意处理完全包含在多边形中的圆或包含其中心的圆
             let mtv: Vector2;
             if (circleCenterInsidePoly) {
                 mtv = Vector2.multiply(result.normal, new Vector2(Math.sqrt(distanceSquared.value) - circle.radius));
             } else {
+                // 如果我们没有距离，这意味着圆心在多边形的边缘上。只需根据它的半径移动它
                 if (distanceSquared.value == 0) {
-                    mtv = Vector2.multiply(result.normal, new Vector2(circle.radius));
+                    mtv = new Vector2(result.normal.x * circle.radius, result.normal.y * circle.radius);
                 } else {
                     let distance = Math.sqrt(distanceSquared.value);
-                    mtv = Vector2.multiply(new Vector2(-Vector2.subtract(poly2Circle, closestPoint)), new Vector2((circle.radius - distanceSquared.value) / distance));
+                    mtv = new Vector2(-poly2Circle.x + closestPoint.x, -poly2Circle.y + closestPoint.y)
+                        .multiply(new Vector2((circle.radius - distance) / distance));
                 }
             }
 
