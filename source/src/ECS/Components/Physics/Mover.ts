@@ -38,11 +38,11 @@ module es {
                 bounds.y += motion.y;
                 let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
 
-                for (let j = 0; j < neighbors.size; j++) {
-                    let neighbor = neighbors[j];
+                neighbors.forEach(value => {
+                    let neighbor = value;
                     // 不检测触发器
                     if (neighbor.isTrigger)
-                        continue;
+                        return;
 
                     let _internalcollisionResult: CollisionResult = new CollisionResult();
                     if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
@@ -54,7 +54,7 @@ module es {
                             collisionResult = _internalcollisionResult;
                         }
                     }
-                }
+                });
             }
 
             ListPool.free(colliders);

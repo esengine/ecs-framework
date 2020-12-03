@@ -1619,21 +1619,21 @@ var es;
             }
             // 移动所有的非触发碰撞器并获得最近的碰撞
             var colliders = this.entity.getComponents(es.Collider);
-            for (var i = 0; i < colliders.length; i++) {
+            var _loop_1 = function (i) {
                 var collider = colliders[i];
                 // 不检测触发器 在我们移动后会重新访问它
                 if (collider.isTrigger)
-                    continue;
+                    return "continue";
                 // 获取我们在新位置可能发生碰撞的任何东西
                 var bounds = collider.bounds;
                 bounds.x += motion.x;
                 bounds.y += motion.y;
                 var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
-                for (var j = 0; j < neighbors.size; j++) {
-                    var neighbor = neighbors[j];
+                neighbors.forEach(function (value) {
+                    var neighbor = value;
                     // 不检测触发器
                     if (neighbor.isTrigger)
-                        continue;
+                        return;
                     var _internalcollisionResult = new es.CollisionResult();
                     if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
                         // 如果碰撞 则退回之前的移动量
@@ -1643,7 +1643,10 @@ var es;
                             collisionResult = _internalcollisionResult;
                         }
                     }
-                }
+                });
+            };
+            for (var i = 0; i < colliders.length; i++) {
+                _loop_1(i);
             }
             es.ListPool.free(colliders);
             return collisionResult.collider != null;
