@@ -24,7 +24,7 @@ module es {
             let didCollide = false;
 
             // 获取我们在新位置可能发生碰撞的任何东西
-            this.entity.position.add(motion);
+            this.entity.position = Vector2.add(this.entity.position, motion);
 
             // 获取任何可能在新位置发生碰撞的东西
             let neighbors = Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers.value);

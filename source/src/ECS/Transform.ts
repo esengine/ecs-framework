@@ -28,20 +28,19 @@ module es {
         /**
          * 值会根据位置、旋转和比例自动重新计算
          */
-        public _localTransform: Matrix2D = Matrix2D.identity;
+        public _localTransform: Matrix2D;
         /**
          * 值将自动从本地和父矩阵重新计算。
          */
         public _worldTransform = Matrix2D.identity;
         public _rotationMatrix: Matrix2D = Matrix2D.identity;
         public _translationMatrix: Matrix2D = Matrix2D.identity;
-        public _scaleMatrix: Matrix2D = Matrix2D.identity;
-        public _children: Transform[];
+        public _scaleMatrix: Matrix2D;
+        public _children: Transform[] = [];
 
         constructor(entity: Entity) {
             this.entity = entity;
             this.scale = this._localScale = Vector2.one;
-            this._children = [];
         }
 
         /**
@@ -140,7 +139,7 @@ module es {
         public get position(): Vector2 {
             this.updateTransform();
             if (this._positionDirty) {
-                if (!this.parent) {
+                if (this.parent == null) {
                     this._position = this._localPosition;
                 } else {
                     this.parent.updateTransform();
@@ -290,7 +289,7 @@ module es {
                 return this;
 
             this._position = position;
-            if (this.parent) {
+            if (this.parent != null) {
                 this.localPosition = Vector2.transform(this._position, this._worldToLocalTransform);
             } else {
                 this.localPosition = position;
@@ -404,7 +403,7 @@ module es {
 
         public updateTransform() {
             if (this.hierarchyDirty != DirtyType.clean) {
-                if (this.parent)
+                if (this.parent != null)
                     this.parent.updateTransform();
 
                 if (this._localDirty) {
@@ -426,7 +425,7 @@ module es {
                     this._localTransform = this._scaleMatrix.multiply(this._rotationMatrix);
                     this._localTransform = this._localTransform.multiply(this._translationMatrix);
 
-                    if (!this.parent) {
+                    if (this.parent == null) {
                         this._worldTransform = this._localTransform;
                         this._rotation = this._localRotation;
                         this._scale = this._localScale;
@@ -436,7 +435,7 @@ module es {
                     this._localDirty = false;
                 }
 
-                if (this.parent) {
+                if (this.parent != null) {
                     this._worldTransform = this._localTransform.multiply(this.parent._worldTransform);
 
                     this._rotation = this._localRotation + this.parent._rotation;
@@ -465,9 +464,6 @@ module es {
                         this.entity.onTransformChanged(transform.Component.scale);
                         break;
                 }
-
-                if (!this._children)
-                    this._children = [];
 
                 // 告诉子项发生了变换
                 for (let i = 0; i < this._children.length; i++)

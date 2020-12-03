@@ -1,7 +1,5 @@
 module es {
     export class Rectangle implements IEquatable<Rectangle> {
-        static emptyRectangle: Rectangle = new Rectangle();
-
         /**
          * 该矩形的左上角的x坐标
          */
@@ -26,7 +24,7 @@ module es {
          * 返回X=0, Y=0, Width=0, Height=0的矩形
          */
         public static get empty(): Rectangle {
-            return this.emptyRectangle;
+            return new Rectangle();
         }
 
         /**
@@ -320,8 +318,6 @@ module es {
          * @returns 矩形边框上离点最近的点
          */
         public getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2 {
-            edgeNormal = Vector2.zero;
-
             // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
             let res = new Vector2();
             res.x = MathHelper.clamp(point.x, this.left, this.right);
@@ -405,8 +401,8 @@ module es {
          * @param value2 
          */
         public static overlap(value1: Rectangle, value2: Rectangle): Rectangle {
-            let x = Math.max(Math.max(value1.x, value2.x), 0);
-            let y = Math.max(Math.max(value1.y, value2.y), 0);
+            let x = Math.max(value1.x, value2.x, 0);
+            let y = Math.max(value1.y, value2.y, 0);
             return new Rectangle(x, y,
                 Math.max(Math.min(value1.right, value2.right) - x, 0),
                 Math.max(Math.min(value1.bottom, value2.bottom) - y, 0));
@@ -554,6 +550,10 @@ module es {
          */
         public getHashCode(): number{
             return (this.x ^ this.y ^ this.width ^ this.height);
+        }
+
+        public clone(): Rectangle {
+            return new Rectangle(this.x, this.y, this.width, this.height);
         }
     }
 }

@@ -369,7 +369,7 @@ module es {
             if (u < 0 || u > 1)
                 return false;
 
-            intersection = intersection.add(a1).add(Vector2.multiply(new Vector2(t), b));
+            intersection = Vector2.add(a1, Vector2.multiply(new Vector2(t), b));
 
             return true;
         }

@@ -1,9 +1,6 @@
 ///<reference path="./Collider.ts" />
 module es {
     export class BoxCollider extends Collider {
-        /**
-         * 零参数构造函数要求RenderableComponent在实体上，这样碰撞器可以在实体被添加到场景时调整自身的大小。
-         */
         constructor(x: number, y: number, width: number, height: number) {
             super();
 

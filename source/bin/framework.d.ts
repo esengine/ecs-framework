@@ -895,9 +895,6 @@ declare module es {
 }
 declare module es {
     class BoxCollider extends Collider {
-        /**
-         * 零参数构造函数要求RenderableComponent在实体上，这样碰撞器可以在实体被添加到场景时调整自身的大小。
-         */
         constructor(x: number, y: number, width: number, height: number);
         width: number;
         height: number;
@@ -1832,7 +1829,6 @@ declare module es {
 }
 declare module es {
     class Rectangle implements IEquatable<Rectangle> {
-        static emptyRectangle: Rectangle;
         /**
          * 该矩形的左上角的x坐标
          */
@@ -2017,6 +2013,7 @@ declare module es {
          * 获取这个矩形的哈希码
          */
         getHashCode(): number;
+        clone(): Rectangle;
     }
 }
 declare module es {
@@ -2195,14 +2192,7 @@ declare module es {
          * @returns 如果实例相同true 否则false
          */
         equals(other: Vector2 | object): boolean;
-    }
-}
-declare module es {
-    class Vector3 {
-        x: number;
-        y: number;
-        z: number;
-        constructor(x: number, y: number, z: number);
+        clone(): Vector2;
     }
 }
 declare module es {

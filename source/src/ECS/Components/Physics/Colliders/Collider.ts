@@ -7,7 +7,7 @@ module es {
         /**
          * 如果这个碰撞器是一个触发器，它将不会引起碰撞，但它仍然会触发事件
          */
-        public isTrigger: boolean;
+        public isTrigger: boolean = false;
         /**
          * 在处理冲突时，physicsLayer可以用作过滤器。Flags类有帮助位掩码的方法
          */
@@ -26,6 +26,7 @@ module es {
          * 存储这个允许我们始终能够安全地从物理系统中移除对撞机，即使它在试图移除它之前已经被移动了。
          */
         public registeredPhysicsBounds: Rectangle = new Rectangle();
+
         public _localOffsetLength: number;
         public _isPositionDirty: boolean = true;
         public _isRotationDirty: boolean = true;
@@ -183,8 +184,8 @@ module es {
          */
         public collidesWith(collider: Collider, motion: Vector2, result: CollisionResult): boolean {
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
-            let oldPosition = this.entity.position;
-            this.entity.position.add(motion);
+            let oldPosition = this.entity.position.clone();
+            this.entity.position = Vector2.add(this.entity.position, motion);
 
             let didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)

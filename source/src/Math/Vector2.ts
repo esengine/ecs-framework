@@ -36,7 +36,7 @@ module es {
          * @param value2
          */
         public static add(value1: Vector2, value2: Vector2) {
-            let result: Vector2 = new Vector2(0, 0);
+            let result: Vector2 = Vector2.zero;
             result.x = value1.x + value2.x;
             result.y = value1.y + value2.y;
             return result;
@@ -48,7 +48,7 @@ module es {
          * @param value2
          */
         public static divide(value1: Vector2, value2: Vector2) {
-            let result: Vector2 = new Vector2(0, 0);
+            let result: Vector2 = Vector2.zero;
             result.x = value1.x / value2.x;
             result.y = value1.y / value2.y;
             return result;
@@ -257,6 +257,10 @@ module es {
             }
             
             return false;
+        }
+
+        public clone(): Vector2 {
+            return new Vector2(this.x, this.y);
         }
     }
 }

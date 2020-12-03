@@ -984,16 +984,12 @@ var es;
     var Transform = /** @class */ (function () {
         function Transform(entity) {
             /**
-             * 值会根据位置、旋转和比例自动重新计算
-             */
-            this._localTransform = es.Matrix2D.identity;
-            /**
              * 值将自动从本地和父矩阵重新计算。
              */
             this._worldTransform = es.Matrix2D.identity;
             this._rotationMatrix = es.Matrix2D.identity;
             this._translationMatrix = es.Matrix2D.identity;
-            this._scaleMatrix = es.Matrix2D.identity;
+            this._children = [];
             this._worldToLocalTransform = es.Matrix2D.identity;
             this._worldInverseTransform = es.Matrix2D.identity;
             this._position = es.Vector2.zero;
@@ -1004,7 +1000,6 @@ var es;
             this._localRotation = 0;
             this.entity = entity;
             this.scale = this._localScale = es.Vector2.one;
-            this._children = [];
         }
         Object.defineProperty(Transform.prototype, "childCount", {
             /**
@@ -1111,7 +1106,7 @@ var es;
             get: function () {
                 this.updateTransform();
                 if (this._positionDirty) {
-                    if (!this.parent) {
+                    if (this.parent == null) {
                         this._position = this._localPosition;
                     }
                     else {
@@ -1255,7 +1250,7 @@ var es;
             if (position.equals(this._position))
                 return this;
             this._position = position;
-            if (this.parent) {
+            if (this.parent != null) {
                 this.localPosition = es.Vector2.transform(this._position, this._worldToLocalTransform);
             }
             else {
@@ -1355,7 +1350,7 @@ var es;
         };
         Transform.prototype.updateTransform = function () {
             if (this.hierarchyDirty != DirtyType.clean) {
-                if (this.parent)
+                if (this.parent != null)
                     this.parent.updateTransform();
                 if (this._localDirty) {
                     if (this._localPositionDirty) {
@@ -1372,7 +1367,7 @@ var es;
                     }
                     this._localTransform = this._scaleMatrix.multiply(this._rotationMatrix);
                     this._localTransform = this._localTransform.multiply(this._translationMatrix);
-                    if (!this.parent) {
+                    if (this.parent == null) {
                         this._worldTransform = this._localTransform;
                         this._rotation = this._localRotation;
                         this._scale = this._localScale;
@@ -1380,7 +1375,7 @@ var es;
                     }
                     this._localDirty = false;
                 }
-                if (this.parent) {
+                if (this.parent != null) {
                     this._worldTransform = this._localTransform.multiply(this.parent._worldTransform);
                     this._rotation = this._localRotation + this.parent._rotation;
                     this._scale = es.Vector2.multiply(this.parent._scale, this._localScale);
@@ -1405,8 +1400,6 @@ var es;
                         this.entity.onTransformChanged(transform.Component.scale);
                         break;
                 }
-                if (!this._children)
-                    this._children = [];
                 // 告诉子项发生了变换
                 for (var i = 0; i < this._children.length; i++)
                     this._children[i].setDirty(dirtyFlagType);
@@ -1614,7 +1607,7 @@ var es;
          * @param collisionResult
          */
         Mover.prototype.calculateMovement = function (motion, collisionResult) {
-            if (!this.entity.getComponent(es.Collider) || !this._triggerHelper) {
+            if (this.entity.getComponent(es.Collider) == null || this._triggerHelper == null) {
                 return false;
             }
             // 移动所有的非触发碰撞器并获得最近的碰撞
@@ -1625,7 +1618,7 @@ var es;
                 if (collider.isTrigger)
                     return "continue";
                 // 获取我们在新位置可能发生碰撞的任何东西
-                var bounds = collider.bounds;
+                var bounds = collider.bounds.clone();
                 bounds.x += motion.x;
                 bounds.y += motion.y;
                 var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
@@ -1637,7 +1630,7 @@ var es;
                     var _internalcollisionResult = new es.CollisionResult();
                     if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
                         // 如果碰撞 则退回之前的移动量
-                        motion = motion.subtract(_internalcollisionResult.minimumTranslationVector);
+                        motion.subtract(_internalcollisionResult.minimumTranslationVector);
                         // 如果我们碰到多个对象，为了简单起见，只取第一个。
                         if (_internalcollisionResult.collider != null) {
                             collisionResult = _internalcollisionResult;
@@ -1703,7 +1696,7 @@ var es;
                 return false;
             var didCollide = false;
             // 获取我们在新位置可能发生碰撞的任何东西
-            this.entity.position.add(motion);
+            this.entity.position = es.Vector2.add(this.entity.position, motion);
             // 获取任何可能在新位置发生碰撞的东西
             var neighbors = es.Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers.value);
             for (var i = 0; i < neighbors.size; i++) {
@@ -1739,6 +1732,10 @@ var es;
         __extends(Collider, _super);
         function Collider() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
+            /**
+             * 如果这个碰撞器是一个触发器，它将不会引起碰撞，但它仍然会触发事件
+             */
+            _this.isTrigger = false;
             /**
              * 在处理冲突时，physicsLayer可以用作过滤器。Flags类有帮助位掩码的方法
              */
@@ -1902,8 +1899,8 @@ var es;
          */
         Collider.prototype.collidesWith = function (collider, motion, result) {
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
-            var oldPosition = this.entity.position;
-            this.entity.position.add(motion);
+            var oldPosition = this.entity.position.clone();
+            this.entity.position = es.Vector2.add(this.entity.position, motion);
             var didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)
                 result.collider = collider;
@@ -1921,9 +1918,6 @@ var es;
 (function (es) {
     var BoxCollider = /** @class */ (function (_super) {
         __extends(BoxCollider, _super);
-        /**
-         * 零参数构造函数要求RenderableComponent在实体上，这样碰撞器可以在实体被添加到场景时调整自身的大小。
-         */
         function BoxCollider(x, y, width, height) {
             var _this = _super.call(this) || this;
             _this._localOffset = new es.Vector2(x + width / 2, y + height / 2);
@@ -2217,7 +2211,7 @@ var es;
     var BitSet = /** @class */ (function () {
         function BitSet(nbits) {
             if (nbits === void 0) { nbits = 64; }
-            var length = nbits >> 6 >>> 0;
+            var length = nbits >> 6;
             if ((nbits & BitSet.LONG_MASK) != 0)
                 length++;
             this._bits = new Array(length);
@@ -2237,7 +2231,7 @@ var es;
                 this._bits[i] &= ~bs._bits[i];
         };
         BitSet.prototype.cardinality = function () {
-            var card = 0 >>> 0;
+            var card = 0;
             for (var i = this._bits.length - 1; i >= 0; i--) {
                 var a = this._bits[i];
                 if (a == 0)
@@ -4548,7 +4542,7 @@ var es;
              * 返回X=0, Y=0, Width=0, Height=0的矩形
              */
             get: function () {
-                return this.emptyRectangle;
+                return new Rectangle();
             },
             enumerable: true,
             configurable: true
@@ -4830,7 +4824,6 @@ var es;
          * @returns 矩形边框上离点最近的点
          */
         Rectangle.prototype.getClosestPointOnRectangleBorderToPoint = function (point, edgeNormal) {
-            edgeNormal = es.Vector2.zero;
             // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
             var res = new es.Vector2();
             res.x = es.MathHelper.clamp(point.x, this.left, this.right);
@@ -4914,8 +4907,8 @@ var es;
          * @param value2
          */
         Rectangle.overlap = function (value1, value2) {
-            var x = Math.max(Math.max(value1.x, value2.x), 0);
-            var y = Math.max(Math.max(value1.y, value2.y), 0);
+            var x = Math.max(value1.x, value2.x, 0);
+            var y = Math.max(value1.y, value2.y, 0);
             return new Rectangle(x, y, Math.max(Math.min(value1.right, value2.right) - x, 0), Math.max(Math.min(value1.bottom, value2.bottom) - y, 0));
         };
         Rectangle.prototype.calculateBounds = function (parentPosition, position, origin, scale, rotation, width, height) {
@@ -5039,7 +5032,9 @@ var es;
         Rectangle.prototype.getHashCode = function () {
             return (this.x ^ this.y ^ this.width ^ this.height);
         };
-        Rectangle.emptyRectangle = new Rectangle();
+        Rectangle.prototype.clone = function () {
+            return new Rectangle(this.x, this.y, this.width, this.height);
+        };
         return Rectangle;
     }());
     es.Rectangle = Rectangle;
@@ -5154,7 +5149,7 @@ var es;
          * @param value2
          */
         Vector2.add = function (value1, value2) {
-            var result = new Vector2(0, 0);
+            var result = Vector2.zero;
             result.x = value1.x + value2.x;
             result.y = value1.y + value2.y;
             return result;
@@ -5165,7 +5160,7 @@ var es;
          * @param value2
          */
         Vector2.divide = function (value1, value2) {
-            var result = new Vector2(0, 0);
+            var result = Vector2.zero;
             result.x = value1.x / value2.x;
             result.y = value1.y / value2.y;
             return result;
@@ -5351,21 +5346,12 @@ var es;
             }
             return false;
         };
+        Vector2.prototype.clone = function () {
+            return new Vector2(this.x, this.y);
+        };
         return Vector2;
     }());
     es.Vector2 = Vector2;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Vector3 = /** @class */ (function () {
-        function Vector3(x, y, z) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-        return Vector3;
-    }());
-    es.Vector3 = Vector3;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -5830,7 +5816,7 @@ var es;
          * @param collider
          */
         SpatialHash.prototype.register = function (collider) {
-            var bounds = collider.bounds;
+            var bounds = collider.bounds.clone();
             collider.registeredPhysicsBounds = bounds;
             var p1 = this.cellCoords(bounds.x, bounds.y);
             var p2 = this.cellCoords(bounds.right, bounds.bottom);
@@ -5854,7 +5840,7 @@ var es;
          * @param collider
          */
         SpatialHash.prototype.remove = function (collider) {
-            var bounds = collider.registeredPhysicsBounds;
+            var bounds = collider.registeredPhysicsBounds.clone();
             var p1 = this.cellCoords(bounds.x, bounds.y);
             var p2 = this.cellCoords(bounds.right, bounds.bottom);
             for (var x = p1.x; x <= p2.x; x++) {
@@ -5891,7 +5877,7 @@ var es;
             for (var x = p1.x; x <= p2.x; x++) {
                 for (var y = p1.y; y <= p2.y; y++) {
                     var cell = this.cellAtPosition(x, y);
-                    if (!cell)
+                    if (cell == null)
                         continue;
                     // 当cell不为空。循环并取回所有碰撞器
                     for (var i = 0; i < cell.length; i++) {
@@ -6104,7 +6090,7 @@ var es;
                 // TODO: rayIntersects的性能够吗?需要测试它。Collisions.rectToLine可能更快
                 // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
                 // 在做形状测试之前先做一个边界检查
-                var colliderBounds = potential.bounds;
+                var colliderBounds = potential.bounds.clone();
                 if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1) {
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
                         // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
@@ -6247,7 +6233,7 @@ var es;
         Polygon.recenterPolygonVerts = function (points) {
             var center = this.findPolygonCenter(points);
             for (var i = 0; i < points.length; i++)
-                points[i].subtract(center);
+                points[i] = es.Vector2.subtract(points[i], center);
         };
         /**
          * 找到多边形的中心。注意，这对于正则多边形是准确的。不规则多边形没有中心。
@@ -6327,7 +6313,7 @@ var es;
         };
         Polygon.prototype.recalculateBounds = function (collider) {
             // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
-            this.center = collider.localOffset;
+            this.center = collider.localOffset.clone();
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 var hasUnitScale = true;
                 var tempMat = void 0;
@@ -6344,7 +6330,7 @@ var es;
                     combinedMatrix = combinedMatrix.multiply(tempMat);
                     // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动
                     // 我们的偏移使角度为0我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
-                    var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * es.MathHelper.Rad2Deg;
+                    var offsetAngle = Math.atan2(collider.localOffset.y * collider.entity.transform.scale.y, collider.localOffset.x * collider.entity.transform.scale.x) * es.MathHelper.Rad2Deg;
                     var offsetLength = hasUnitScale ? collider._localOffsetLength :
                         es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
                     this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
@@ -6360,7 +6346,7 @@ var es;
             }
             this.position = es.Vector2.add(collider.entity.transform.position, this.center);
             this.bounds = es.Rectangle.rectEncompassingPoints(this.points);
-            this.bounds.location.add(this.position);
+            this.bounds.location = es.Vector2.add(this.bounds.location, this.position);
         };
         Polygon.prototype.overlaps = function (other) {
             var result = new es.CollisionResult();
@@ -6972,7 +6958,7 @@ var es;
             var u = (c.x * b.y - c.y * b.x) / bDotDPerp;
             if (u < 0 || u > 1)
                 return false;
-            intersection = intersection.add(a1).add(es.Vector2.multiply(new es.Vector2(t), b));
+            intersection = es.Vector2.add(a1, es.Vector2.multiply(new es.Vector2(t), b));
             return true;
         };
         ShapeCollisions.lineToCircle = function (start, end, s, hit) {
@@ -8087,7 +8073,7 @@ var es;
             result.x = Math.min(first.x, rect.x);
             result.y = Math.min(first.y, rect.y);
             result.width = Math.max(first.right, rect.right) - result.x;
-            result.height = Math.max(first.bottom, result.bottom) - result.y;
+            result.height = Math.max(first.bottom, rect.bottom) - result.y;
             return result;
         };
         RectangleExt.getHalfRect = function (rect, edge) {

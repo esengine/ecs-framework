@@ -35,7 +35,7 @@ module es {
          * @param collider
          */
         public register(collider: Collider) {
-            let bounds = collider.bounds;
+            let bounds = collider.bounds.clone();
             collider.registeredPhysicsBounds = bounds;
             let p1 = this.cellCoords(bounds.x, bounds.y);
             let p2 = this.cellCoords(bounds.right, bounds.bottom);
@@ -63,7 +63,7 @@ module es {
          * @param collider
          */
         public remove(collider: Collider) {
-            let bounds = collider.registeredPhysicsBounds;
+            let bounds = collider.registeredPhysicsBounds.clone();
             let p1 = this.cellCoords(bounds.x, bounds.y);
             let p2 = this.cellCoords(bounds.right, bounds.bottom);
 
@@ -106,7 +106,7 @@ module es {
             for (let x = p1.x; x <= p2.x; x++) {
                 for (let y = p1.y; y <= p2.y; y++) {
                     let cell = this.cellAtPosition(x, y);
-                    if (!cell)
+                    if (cell == null)
                         continue;
 
                     // 当cell不为空。循环并取回所有碰撞器
@@ -350,7 +350,7 @@ module es {
                 // TODO: rayIntersects的性能够吗?需要测试它。Collisions.rectToLine可能更快
                 // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
                 // 在做形状测试之前先做一个边界检查
-                let colliderBounds = potential.bounds;
+                let colliderBounds = potential.bounds.clone();
                 if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1){
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
                         // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始

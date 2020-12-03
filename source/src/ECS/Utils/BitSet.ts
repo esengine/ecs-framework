@@ -9,7 +9,7 @@ module es {
         private _bits: number[];
 
         constructor(nbits: number = 64) {
-            let length = nbits >> 6 >>> 0;
+            let length = nbits >> 6;
             if ((nbits & BitSet.LONG_MASK) != 0)
                 length++;
 
@@ -34,7 +34,7 @@ module es {
         }
 
         public cardinality(): number {
-            let card = 0 >>> 0;
+            let card = 0;
             for (let i = this._bits.length - 1; i >= 0; i--) {
                 let a = this._bits[i];
 

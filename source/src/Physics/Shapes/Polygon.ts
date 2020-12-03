@@ -116,7 +116,7 @@ module es {
         public static recenterPolygonVerts(points: Vector2[]) {
             let center = this.findPolygonCenter(points);
             for (let i = 0; i < points.length; i++)
-                points[i].subtract(center);
+                points[i] = Vector2.subtract(points[i], center);
         }
 
         /**
@@ -212,7 +212,7 @@ module es {
 
         public recalculateBounds(collider: Collider) {
             // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
-            this.center = collider.localOffset;
+            this.center = collider.localOffset.clone();
 
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 let hasUnitScale = true;
@@ -234,7 +234,7 @@ module es {
 
                     // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动
                     // 我们的偏移使角度为0我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
-                    let offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
+                    let offsetAngle = Math.atan2(collider.localOffset.y * collider.entity.transform.scale.y, collider.localOffset.x * collider.entity.transform.scale.x) * MathHelper.Rad2Deg;
                     let offsetLength = hasUnitScale ? collider._localOffsetLength :
                         Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
                     this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength,
@@ -256,7 +256,7 @@ module es {
 
             this.position = Vector2.add(collider.entity.transform.position, this.center);
             this.bounds = Rectangle.rectEncompassingPoints(this.points);
-            this.bounds.location.add(this.position);
+            this.bounds.location = Vector2.add(this.bounds.location, this.position);
         }
 
         public overlaps(other: Shape) {

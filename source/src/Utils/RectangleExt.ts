@@ -29,7 +29,7 @@ module es {
             result.x = Math.min(first.x, rect.x);
             result.y = Math.min(first.y, rect.y);
             result.width = Math.max(first.right, rect.right) - result.x;
-            result.height = Math.max(first.bottom, result.bottom) - result.y;
+            result.height = Math.max(first.bottom, rect.bottom) - result.y;
             return result;
         }
 
