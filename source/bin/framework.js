@@ -6656,16 +6656,16 @@ var es;
         function RealtimeCollisions() {
         }
         RealtimeCollisions.intersectMovingCircleBox = function (s, b, movement, time) {
-            // 计算用球面半径r inflate b得到的AABB
+            // 计算将b按球面半径r扩大后的AABB
             var e = b.bounds;
             e.inflate(s.radius, s.radius);
-            // 射线与展开矩形e相交。如果射线错过了e，则退出不相交，否则得到相交点p和时间t
+            // 将射线与展开的矩形e相交，如果射线错过了e，则以无交点退出，否则得到交点p和时间t作为结果。
             var ray = new es.Ray2D(es.Vector2.subtract(s.position, movement), s.position);
             if (!e.rayIntersects(ray, time) && time.value > 1)
                 return false;
             // 求交点
             var point = es.Vector2.add(ray.start, es.Vector2.add(ray.direction, new es.Vector2(time.value)));
-            // 计算b的最小面和最大面p的交点在哪个面之外。注意，u和v不能有相同的位集，它们之间必须至少有一个位集。
+            // 计算交点p位于b的哪个最小面和最大面之外。注意，u和v不能有相同的位集，它们之间必须至少有一个位集。
             var u, v = 0;
             if (point.x < b.bounds.left)
                 u |= 1;
@@ -6675,21 +6675,45 @@ var es;
                 u |= 2;
             if (point.y > b.bounds.bottom)
                 v |= 2;
-            // 将所有位集合成位掩码(注意u + v == u | v)
+            // 'or'将所有的比特集合在一起，形成一个比特掩码(注意u + v == u | v)
             var m = u + v;
-            // 如果所有的3位都被设置，那么点在一个顶点区域
+            // 如果这3个比特都被设置，那么该点就在顶点区域内。
             if (m == 3) {
-                // 现在必须相交的部分，如果一个或多个击中对胶囊的两边会合在斜面和返回的最佳时间
-                // TODO: 需要实现这个
+                // 如果有一条或多条命中,则必须在两条边的顶点相交,并返回最佳时间。
                 console.log("m == 3. corner " + es.Time.frameCount);
             }
-            // 如果m中只设置了一个位，那么点在一个面区域
+            // 如果在m中只设置了一个位，那么该点就在一个面的区域。
             if ((m & (m - 1)) == 0) {
-                // 什么也不做。从扩展矩形交集的时间是正确的时间
+                // 从扩大的矩形交点开始的时间就是正确的时间
                 return true;
             }
-            // 点在边缘区域上。与边缘相交。
+            // 点在边缘区域，与边缘相交。
             return true;
+        };
+        /**
+         * 支持函数，返回索引为n的矩形vert
+         * @param b
+         * @param n
+         */
+        RealtimeCollisions.corner = function (b, n) {
+            var p = new es.Vector2();
+            p.x = (n & 1) == 0 ? b.right : b.left;
+            p.y = (n & 1) == 0 ? b.bottom : b.top;
+            return p;
+        };
+        /**
+         * 检查圆是否与方框重叠，并返回point交点
+         * @param cirlce
+         * @param box
+         * @param point
+         */
+        RealtimeCollisions.testCircleBox = function (cirlce, box, point) {
+            // 找出离球心最近的点
+            point = box.bounds.getClosestPointOnRectangleToPoint(cirlce.position);
+            // 圆和方块相交，如果圆心到点的距离小于圆的半径，则圆和方块相交
+            var v = es.Vector2.subtract(point, cirlce.position);
+            var dist = es.Vector2.dot(v, v);
+            return dist <= cirlce.radius * cirlce.radius;
         };
         return RealtimeCollisions;
     }());

@@ -2691,6 +2691,19 @@ declare module es {
 declare module es {
     class RealtimeCollisions {
         static intersectMovingCircleBox(s: Circle, b: Box, movement: Vector2, time: Ref<number>): boolean;
+        /**
+         * 支持函数，返回索引为n的矩形vert
+         * @param b
+         * @param n
+         */
+        static corner(b: Rectangle, n: number): Vector2;
+        /**
+         * 检查圆是否与方框重叠，并返回point交点
+         * @param cirlce
+         * @param box
+         * @param point
+         */
+        static testCircleBox(cirlce: Circle, box: Box, point: Vector2): boolean;
     }
 }
 declare module es {
