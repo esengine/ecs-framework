@@ -54,10 +54,7 @@ module es {
             this.points = points;
             this.recalculateCenterAndEdgeNormals();
 
-            this._originalPoints = [];
-            for (let i = 0; i < this.points.length; i++) {
-                this._originalPoints.push(this.points[i]);
-            }
+            this._originalPoints = this.points.slice();
         }
 
         /**

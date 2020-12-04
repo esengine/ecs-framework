@@ -14,8 +14,8 @@ module es {
         public static polygonToPolygon(first: Polygon, second: Polygon, result: CollisionResult): boolean {
             let isIntersecting = true;
 
-            let firstEdges = first.edgeNormals;
-            let secondEdges = second.edgeNormals;
+            let firstEdges = first.edgeNormals.slice();
+            let secondEdges = second.edgeNormals.slice();
             let minIntervalDistance = Number.POSITIVE_INFINITY;
             let translationAxis = new Vector2();
             let polygonOffset = Vector2.subtract(first.position, second.position);
@@ -86,7 +86,7 @@ module es {
             if (minA < minB)
                 return minB - maxA;
 
-            return minA - minB;
+            return minA - maxB;
         }
 
         /**
@@ -250,7 +250,7 @@ module es {
                 let distanceSquared = new Ref(0);
                 let closestPoint = Polygon.getClosestPointOnPolygonToPoint(poly.points, Vector2.subtract(point, poly.position), distanceSquared, result.normal);
 
-                result.minimumTranslationVector = Vector2.multiply(result.normal, new Vector2(Math.sqrt(distanceSquared.value), Math.sqrt(distanceSquared.value)));
+                result.minimumTranslationVector = new Vector2(result.normal.x * Math.sqrt(distanceSquared.value), result.normal.y * Math.sqrt(distanceSquared.value));
                 result.point = Vector2.add(closestPoint, poly.position);
 
                 return true;
@@ -308,7 +308,7 @@ module es {
         private static minkowskiDifference(first: Box, second: Box): Rectangle {
             // 我们需要第一个框的左上角
             // 碰撞器只会修改运动的位置所以我们需要用位置来计算出运动是什么。
-            let positionOffset = Vector2.subtract(first.position, Vector2.add(first.bounds.location, Vector2.divide(first.bounds.size, new Vector2(2))));
+            let positionOffset = Vector2.subtract(first.position, Vector2.add(first.bounds.location, new Vector2(first.bounds.size.x / 2, first.bounds.size.y / 2)));
             let topLeft = Vector2.subtract(Vector2.add(first.bounds.location, positionOffset), second.bounds.max);
             let fullSize = Vector2.add(first.bounds.size, second.bounds.size);
 

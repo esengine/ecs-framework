@@ -2083,9 +2083,10 @@ var es;
             var _this = _super.call(this) || this;
             // 第一点和最后一点决不能相同。我们想要一个开放的多边形
             var isPolygonClosed = points[0] == points[points.length - 1];
+            var linqPoints = new linq.List(points);
             // 最后一个移除
             if (isPolygonClosed)
-                points.splice(points.length - 1, 1);
+                linqPoints.remove(linqPoints.last());
             var center = es.Polygon.findPolygonCenter(points);
             _this.setLocalOffset(center);
             es.Polygon.recenterPolygonVerts(points);
@@ -6234,10 +6235,7 @@ var es;
         Polygon.prototype.setPoints = function (points) {
             this.points = points;
             this.recalculateCenterAndEdgeNormals();
-            this._originalPoints = [];
-            for (var i = 0; i < this.points.length; i++) {
-                this._originalPoints.push(this.points[i]);
-            }
+            this._originalPoints = this.points.slice();
         };
         /**
          * 重新计算多边形中心
@@ -6715,8 +6713,8 @@ var es;
          */
         ShapeCollisions.polygonToPolygon = function (first, second, result) {
             var isIntersecting = true;
-            var firstEdges = first.edgeNormals;
-            var secondEdges = second.edgeNormals;
+            var firstEdges = first.edgeNormals.slice();
+            var secondEdges = second.edgeNormals.slice();
             var minIntervalDistance = Number.POSITIVE_INFINITY;
             var translationAxis = new es.Vector2();
             var polygonOffset = es.Vector2.subtract(first.position, second.position);
@@ -6776,7 +6774,7 @@ var es;
         ShapeCollisions.intervalDistance = function (minA, maxA, minB, maxB) {
             if (minA < minB)
                 return minB - maxA;
-            return minA - minB;
+            return minA - maxB;
         };
         /**
          * 计算一个多边形在一个轴上的投影，并返回一个[min，max]区间
@@ -6918,7 +6916,7 @@ var es;
             if (poly.containsPoint(point)) {
                 var distanceSquared = new es.Ref(0);
                 var closestPoint = es.Polygon.getClosestPointOnPolygonToPoint(poly.points, es.Vector2.subtract(point, poly.position), distanceSquared, result.normal);
-                result.minimumTranslationVector = es.Vector2.multiply(result.normal, new es.Vector2(Math.sqrt(distanceSquared.value), Math.sqrt(distanceSquared.value)));
+                result.minimumTranslationVector = new es.Vector2(result.normal.x * Math.sqrt(distanceSquared.value), result.normal.y * Math.sqrt(distanceSquared.value));
                 result.point = es.Vector2.add(closestPoint, poly.position);
                 return true;
             }
@@ -6965,7 +6963,7 @@ var es;
         ShapeCollisions.minkowskiDifference = function (first, second) {
             // 我们需要第一个框的左上角
             // 碰撞器只会修改运动的位置所以我们需要用位置来计算出运动是什么。
-            var positionOffset = es.Vector2.subtract(first.position, es.Vector2.add(first.bounds.location, es.Vector2.divide(first.bounds.size, new es.Vector2(2))));
+            var positionOffset = es.Vector2.subtract(first.position, es.Vector2.add(first.bounds.location, new es.Vector2(first.bounds.size.x / 2, first.bounds.size.y / 2)));
             var topLeft = es.Vector2.subtract(es.Vector2.add(first.bounds.location, positionOffset), second.bounds.max);
             var fullSize = es.Vector2.add(first.bounds.size, second.bounds.size);
             return new es.Rectangle(topLeft.x, topLeft.y, fullSize.x, fullSize.y);
