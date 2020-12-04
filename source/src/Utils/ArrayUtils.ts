@@ -275,7 +275,7 @@ class ArrayUtils {
      * @param list 
      */
     public static randomItem<T>(list: T[]) {
-        return list[RandomUtils.randint(0, list.length)];
+        return list[RandomUtils.randint(0, list.length - 1)];
     }
 
     /**

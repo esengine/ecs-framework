@@ -7354,7 +7354,7 @@ var ArrayUtils = /** @class */ (function () {
      * @param list
      */
     ArrayUtils.randomItem = function (list) {
-        return list[RandomUtils.randint(0, list.length)];
+        return list[RandomUtils.randint(0, list.length - 1)];
     };
     /**
      * 从列表中随机获取物品。不清空检查列表，也不验证列表数是否大于项目数。返回的List可以通过ListPool.free放回池中
