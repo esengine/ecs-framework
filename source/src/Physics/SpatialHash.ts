@@ -209,7 +209,7 @@ module es {
 
             let resultCounter = 0;
             let potentials = this.aabbBroadphase(bounds, null, layerMask);
-            potentials.forEach(collider => {
+            for (let collider of potentials) {
                 if (collider instanceof BoxCollider) {
                     results[resultCounter] = collider;
                     resultCounter++;
@@ -224,13 +224,13 @@ module es {
                         resultCounter++;
                     }
                 } else {
-                    throw new Error("overlapCircle against this collider type is not implemented!");
+                    throw new Error("对这个对撞机类型的overlapCircle没有实现!");
                 }
 
                 // 如果我们所有的结果数据有了则返回
                 if (resultCounter == results.length)
                     return resultCounter;
-            });
+            }
 
             return resultCounter;
         }

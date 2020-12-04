@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "experimentalDecorators": true,
+    "downlevelIteration": true,
     "module": "system",
     "target": "es5",
     "declaration": true,

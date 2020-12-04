@@ -43,6 +43,36 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __values = (this && this.__values) || function (o) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
+    if (m) return m.call(o);
+    return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+};
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spread = (this && this.__spread) || function () {
+    for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
+    return ar;
+};
 var es;
 (function (es) {
     /**
@@ -3243,9 +3273,19 @@ var es;
          * @param array
          */
         FastList.prototype.addRange = function (array) {
-            for (var _i = 0, array_1 = array; _i < array_1.length; _i++) {
-                var item = array_1[_i];
-                this.add(item);
+            var e_1, _a;
+            try {
+                for (var array_1 = __values(array), array_1_1 = array_1.next(); !array_1_1.done; array_1_1 = array_1.next()) {
+                    var item = array_1_1.value;
+                    this.add(item);
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (array_1_1 && !array_1_1.done && (_a = array_1.return)) _a.call(array_1);
+                }
+                finally { if (e_1) throw e_1.error; }
             }
         };
         /**
@@ -5962,36 +6002,46 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var _this = this;
+            var e_2, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
             var resultCounter = 0;
             var potentials = this.aabbBroadphase(bounds, null, layerMask);
-            potentials.forEach(function (collider) {
-                if (collider instanceof es.BoxCollider) {
-                    results[resultCounter] = collider;
-                    resultCounter++;
-                }
-                else if (collider instanceof es.CircleCollider) {
-                    if (collider.shape.overlaps(_this._overlapTestCircle)) {
+            try {
+                for (var potentials_1 = __values(potentials), potentials_1_1 = potentials_1.next(); !potentials_1_1.done; potentials_1_1 = potentials_1.next()) {
+                    var collider = potentials_1_1.value;
+                    if (collider instanceof es.BoxCollider) {
                         results[resultCounter] = collider;
                         resultCounter++;
                     }
-                }
-                else if (collider instanceof es.PolygonCollider) {
-                    if (collider.shape.overlaps(_this._overlapTestCircle)) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
+                    else if (collider instanceof es.CircleCollider) {
+                        if (collider.shape.overlaps(this._overlapTestCircle)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
                     }
+                    else if (collider instanceof es.PolygonCollider) {
+                        if (collider.shape.overlaps(this._overlapTestCircle)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
+                    }
+                    else {
+                        throw new Error("对这个对撞机类型的overlapCircle没有实现!");
+                    }
+                    // 如果我们所有的结果数据有了则返回
+                    if (resultCounter == results.length)
+                        return resultCounter;
                 }
-                else {
-                    throw new Error("overlapCircle against this collider type is not implemented!");
+            }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            finally {
+                try {
+                    if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                // 如果我们所有的结果数据有了则返回
-                if (resultCounter == results.length)
-                    return resultCounter;
-            });
+                finally { if (e_2) throw e_2.error; }
+            }
             return resultCounter;
         };
         /**
@@ -8626,7 +8676,7 @@ var stopwatch;
          * 获取自上次重置以来该秒表已完成/记录的所有片的列表，以及当前挂起的片。
          */
         Stopwatch.prototype.getCompletedAndPendingSlices = function () {
-            return this._completeSlices.concat([this.getPendingSlice()]);
+            return __spread(this._completeSlices, [this.getPendingSlice()]);
         };
         /**
          * 获取关于这个秒表当前挂起的切片的详细信息。
@@ -8801,7 +8851,7 @@ var linq;
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        return !pred.apply(void 0, args);
+        return !pred.apply(void 0, __spread(args));
     }; };
     /**
      * 比较器助手
@@ -8856,7 +8906,7 @@ var linq;
          */
         List.prototype.addRange = function (elements) {
             var _a;
-            (_a = this._elements).push.apply(_a, elements);
+            (_a = this._elements).push.apply(_a, __spread(elements));
         };
         /**
          * 对序列应用累加器函数。
@@ -9031,11 +9081,11 @@ var linq;
         };
         List.prototype.max = function (selector) {
             var id = function (x) { return x; };
-            return Math.max.apply(Math, this._elements.map(selector || id));
+            return Math.max.apply(Math, __spread(this._elements.map(selector || id)));
         };
         List.prototype.min = function (selector) {
             var id = function (x) { return x; };
-            return Math.min.apply(Math, this._elements.map(selector || id));
+            return Math.min.apply(Math, __spread(this._elements.map(selector || id)));
         };
         /**
          * 根据指定的类型筛选序列中的元素。
@@ -9222,10 +9272,20 @@ var linq;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
+            var e_3, _a;
             var result = new Set();
-            for (var _i = 0, _a = this._elements; _i < _a.length; _i++) {
-                var x = _a[_i];
-                result.add(x);
+            try {
+                for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var x = _c.value;
+                    result.add(x);
+                }
+            }
+            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_3) throw e_3.error; }
             }
             return result;
         };
