@@ -136,26 +136,23 @@ module es {
 
         public updateLists() {
             if (this._entitiesToRemove.getCount() > 0) {
-                for (let i = 0; i< this._entitiesToRemove.getCount(); i ++) {
-                    let entity = this._entitiesToRemove[i];
-                    // 处理标签列表
-                    this.removeFromTagList(entity);
+                this._entitiesToRemove.toArray().forEach(entity => {
+                     // 处理标签列表
+                     this.removeFromTagList(entity);
 
-                    // 处理常规实体列表
-                    this._entities.remove(entity);
-                    entity.onRemovedFromScene();
-                    entity.scene = null;
-
-                    if (Core.entitySystemsEnabled)
-                        this.scene.entityProcessors.onEntityRemoved(entity);
-                }
-
+                     // 处理常规实体列表
+                     this._entities.remove(entity);
+                     entity.onRemovedFromScene();
+                     entity.scene = null;
+ 
+                     if (Core.entitySystemsEnabled)
+                         this.scene.entityProcessors.onEntityRemoved(entity);
+                });
                 this._entitiesToRemove.clear();
             }
 
             if (this._entitiesToAdded.getCount() > 0) {
-                for (let i = 0; i < this._entitiesToAdded.getCount(); i ++) {
-                    let entity = this._entitiesToAdded.toArray()[i];
+                this._entitiesToAdded.toArray().forEach(entity => {
                     this._entities.add(entity);
                     entity.scene = this.scene;
 
@@ -163,10 +160,11 @@ module es {
 
                     if (Core.entitySystemsEnabled)
                         this.scene.entityProcessors.onEntityAdded(entity);
-                }
+                });
 
-                for (let i = 0; i < this._entitiesToAdded.getCount(); i ++)
-                    this._entitiesToAdded.toArray()[i].onAddedToScene();
+                this._entitiesToAdded.toArray().forEach(entity => {
+                    entity.onAddedToScene();
+                })
 
                 this._entitiesToAdded.clear();
                 this._isEntityListUnsorted = true;
@@ -178,7 +176,7 @@ module es {
             }
 
             // 根据需要对标签列表进行排序
-            if (this._unsortedTags.size == 0) {
+            if (this._unsortedTags.size > 0) {
                 this._unsortedTags.forEach(value => this._entityDict.get(value).sort((a, b) => a.compareTo(b)));
                     
                 this._unsortedTags.clear();

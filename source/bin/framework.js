@@ -2695,30 +2695,29 @@ var es;
         EntityList.prototype.updateLists = function () {
             var _this = this;
             if (this._entitiesToRemove.getCount() > 0) {
-                for (var i = 0; i < this._entitiesToRemove.getCount(); i++) {
-                    var entity = this._entitiesToRemove[i];
+                this._entitiesToRemove.toArray().forEach(function (entity) {
                     // 处理标签列表
-                    this.removeFromTagList(entity);
+                    _this.removeFromTagList(entity);
                     // 处理常规实体列表
-                    this._entities.remove(entity);
+                    _this._entities.remove(entity);
                     entity.onRemovedFromScene();
                     entity.scene = null;
                     if (es.Core.entitySystemsEnabled)
-                        this.scene.entityProcessors.onEntityRemoved(entity);
-                }
+                        _this.scene.entityProcessors.onEntityRemoved(entity);
+                });
                 this._entitiesToRemove.clear();
             }
             if (this._entitiesToAdded.getCount() > 0) {
-                for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
-                    var entity = this._entitiesToAdded.toArray()[i];
-                    this._entities.add(entity);
-                    entity.scene = this.scene;
-                    this.addToTagList(entity);
+                this._entitiesToAdded.toArray().forEach(function (entity) {
+                    _this._entities.add(entity);
+                    entity.scene = _this.scene;
+                    _this.addToTagList(entity);
                     if (es.Core.entitySystemsEnabled)
-                        this.scene.entityProcessors.onEntityAdded(entity);
-                }
-                for (var i = 0; i < this._entitiesToAdded.getCount(); i++)
-                    this._entitiesToAdded.toArray()[i].onAddedToScene();
+                        _this.scene.entityProcessors.onEntityAdded(entity);
+                });
+                this._entitiesToAdded.toArray().forEach(function (entity) {
+                    entity.onAddedToScene();
+                });
                 this._entitiesToAdded.clear();
                 this._isEntityListUnsorted = true;
             }
@@ -2727,7 +2726,7 @@ var es;
                 this._isEntityListUnsorted = false;
             }
             // 根据需要对标签列表进行排序
-            if (this._unsortedTags.size == 0) {
+            if (this._unsortedTags.size > 0) {
                 this._unsortedTags.forEach(function (value) { return _this._entityDict.get(value).sort(function (a, b) { return a.compareTo(b); }); });
                 this._unsortedTags.clear();
             }
