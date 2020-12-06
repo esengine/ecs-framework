@@ -2954,24 +2954,6 @@ declare module es {
     }
 }
 declare module es {
-    class Color {
-        /**
-         * 存储为RGBA
-         */
-        private _packedValue;
-        /**
-         * 从代表红、绿、蓝和alpha值的标量构造RGBA颜色。
-         */
-        constructor(r: number, g: number, b: number, alpha: number);
-        b: number;
-        g: number;
-        r: number;
-        a: number;
-        packedValue: number;
-        equals(other: Color): boolean;
-    }
-}
-declare module es {
     class EdgeExt {
         static oppositeEdge(self: Edge): Edge;
         /**
