@@ -1,4 +1,7 @@
 module es {
+    /**
+     * 私有类隐藏ITimer的实现
+     */
     export class Timer implements ITimer{
         public context: any;
         public _timeInSeconds: number = 0;

@@ -13,7 +13,7 @@ module es {
         reset();
 
         /**
-         *
+         * 返回投向T的上下文，作为方便
          */
         getContext<T>(): T;
     }

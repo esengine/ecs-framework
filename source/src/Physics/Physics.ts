@@ -2,6 +2,8 @@
 module es {
     export class Physics {
         public static _spatialHash: SpatialHash;
+        /** 用于在全局范围内存储重力值的方便字段 */
+        public static gravity = new Vector2(0, 300);
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
         public static spatialHashCellSize = 100;
         /** 接受layerMask的所有方法的默认值 */
@@ -66,6 +68,16 @@ module es {
          */
         public static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask = this.allLayers) {
             return this._spatialHash.aabbBroadphase(rect, collider, layerMask);
+        }
+
+        /**
+         * 返回所有边界与 collider.bounds 相交的碰撞器，但不包括传入的碰撞器(self)
+         * @param collider 
+         * @param layerMask 
+         */
+        public static boxcastBroadphaseExcludingSelfNonRect(collider: Collider, layerMask = this.allLayers) {
+            let bounds = collider.bounds;
+            return this._spatialHash.aabbBroadphase(bounds, collider, layerMask);
         }
 
         /**

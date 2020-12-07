@@ -247,6 +247,17 @@ module es {
         }
 
         /**
+         * 返回以自己为中心点的左右角，单位为度
+         * @param left 
+         * @param right 
+         */
+        public angleBetween(left: Vector2, right: Vector2) {
+            let one = Vector2.subtract(left, this);
+            let two = Vector2.subtract(right, this);
+            return Vector2Ext.angle(one, two);
+        }
+
+        /**
          * 比较当前实例是否等于指定的对象
          * @param other 要比较的对象
          * @returns 如果实例相同true 否则false 

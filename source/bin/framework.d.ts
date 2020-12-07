@@ -725,6 +725,93 @@ declare module es {
 }
 declare module es {
     /**
+     * 请注意，这不是一个完整的、多迭代的物理系统！它可以用于简单的、街机风格的物理。这可以用于简单的，街机风格的物理学
+     */
+    class ArcadeRigidbody extends Component implements IUpdatable {
+        /** 这个刚体的质量。质量为0，则是一个不可移动的物体 */
+        mass: number;
+        /**
+         * 0-1范围，其中0为无反弹，1为完全反射。
+         */
+        readonly elasticity: number;
+        elasticiy: number;
+        /**
+         * 0 - 1范围。0表示没有摩擦力，1表示物体会停止在原地
+         */
+        friction: number;
+        /**
+         * 0-9的范围。当发生碰撞时，沿碰撞面做直线运动时，如果其平方幅度小于glue摩擦力，则将碰撞设置为上限
+         */
+        glue: number;
+        /**
+         *  如果为真，则每一帧都会考虑到Physics.gravity
+         */
+        shouldUseGravity: boolean;
+        /**
+         * 该刚体的速度
+         */
+        velocity: Vector2;
+        /**
+         * 质量为0的刚体被认为是不可移动的。改变速度和碰撞对它们没有影响
+         */
+        readonly isImmovable: boolean;
+        _mass: number;
+        _elasticity: number;
+        _friction: number;
+        _glue: number;
+        _inverseMass: any;
+        _collider: Collider;
+        constructor();
+        /**
+         * 这个刚体的质量。质量为0，则是一个不可移动的物体
+         * @param mass
+         */
+        setMass(mass: number): ArcadeRigidbody;
+        /**
+         * 0-1范围，其中0为无反弹，1为完全反射。
+         * @param value
+         */
+        setElasticity(value: number): ArcadeRigidbody;
+        /**
+         * 0 - 1范围。0表示没有摩擦力，1表示物体会停止在原地
+         * @param value
+         */
+        setFriction(value: number): ArcadeRigidbody;
+        /**
+         * 0-9的范围。当发生碰撞时，沿碰撞面做直线运动时，如果其平方幅度小于glue摩擦力，则将碰撞设置为上限
+         * @param value
+         */
+        setGlue(value: number): ArcadeRigidbody;
+        /**
+         * 用刚体的质量给刚体加上一个瞬间的力脉冲。力是一个加速度，单位是每秒像素每秒。将力乘以100000，使数值使用更合理
+         * @param force
+         */
+        addImpulse(force: Vector2): void;
+        onAddedToEntity(): void;
+        update(): void;
+        /**
+         * 将两个重叠的刚体分开。也处理其中一个不可移动的情况
+         * @param other
+         * @param minimumTranslationVector
+         */
+        processOverlap(other: ArcadeRigidbody, minimumTranslationVector: Vector2): void;
+        /**
+         * 处理两个非重叠的刚体的碰撞。新的速度将根据情况分配给每个刚体
+         * @param other
+         * @param minimumTranslationVector
+         */
+        processCollision(other: ArcadeRigidbody, minimumTranslationVector: Vector2): void;
+        /**
+         *  给定两个物体和MTV之间的相对速度，本方法修改相对速度，使其成为碰撞响应
+         * @param relativeVelocity
+         * @param minimumTranslationVector
+         * @param responseVelocity
+         */
+        calculateResponseVelocity(relativeVelocity: Vector2, minimumTranslationVector: Vector2, responseVelocity?: Vector2): void;
+    }
+}
+declare module es {
+    /**
      * 当添加到组件时，每当实体上的冲突器与另一个组件重叠/退出时，将调用这些方法。
      * ITriggerListener方法将在实现接口的触发器实体上的任何组件上调用。
      * 注意，这个接口只与Mover类一起工作
@@ -890,7 +977,13 @@ declare module es {
          * @param motion
          * @param result
          */
-        collidesWith(collider: Collider, motion: Vector2, result: CollisionResult): boolean;
+        collidesWith(collider: Collider, motion: Vector2, result?: CollisionResult): boolean;
+        /**
+         * 检查这个对撞机是否与对撞机发生碰撞。如果碰撞，则返回true，结果将被填充
+         * @param collider
+         * @param result
+         */
+        collidesWithNonMotion(collider: Collider, result?: CollisionResult): boolean;
     }
 }
 declare module es {
@@ -2187,6 +2280,12 @@ declare module es {
          */
         round(): Vector2;
         /**
+         * 返回以自己为中心点的左右角，单位为度
+         * @param left
+         * @param right
+         */
+        angleBetween(left: Vector2, right: Vector2): number;
+        /**
          * 比较当前实例是否等于指定的对象
          * @param other 要比较的对象
          * @returns 如果实例相同true 否则false
@@ -2290,6 +2389,8 @@ declare module es {
 declare module es {
     class Physics {
         static _spatialHash: SpatialHash;
+        /** 用于在全局范围内存储重力值的方便字段 */
+        static gravity: Vector2;
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
         static spatialHashCellSize: number;
         /** 接受layerMask的所有方法的默认值 */
@@ -2332,6 +2433,12 @@ declare module es {
          * @param layerMask
          */
         static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Set<Collider>;
+        /**
+         * 返回所有边界与 collider.bounds 相交的碰撞器，但不包括传入的碰撞器(self)
+         * @param collider
+         * @param layerMask
+         */
+        static boxcastBroadphaseExcludingSelfNonRect(collider: Collider, layerMask?: number): Set<Collider>;
         /**
          * 将对撞机添加到物理系统中
          * @param collider
@@ -2970,16 +3077,6 @@ declare module es {
 }
 declare module es {
     /**
-     * 用于包装事件的一个小类
-     */
-    class FuncPack {
-        /** 函数 */
-        func: Function;
-        /** 上下文 */
-        context: any;
-        constructor(func: Function, context: any);
-    }
-    /**
      * 用于事件管理
      */
     class Emitter<T> {
@@ -3398,11 +3495,11 @@ declare module es {
 }
 declare module es {
     /**
-     * 三角剖分
+     * 简单的剪耳三角测量器，最终的三角形将出现在triangleIndices列表中。
      */
     class Triangulator {
         /**
-         * 最后一次三角调用中使用的点列表的三角形列表项的索引
+         * 上次三角函数调用中使用的点列表的三角列表条目索引
          */
         triangleIndices: number[];
         private _triPrev;
@@ -3439,11 +3536,26 @@ declare module es {
          */
         static cross(u: Vector2, v: Vector2): number;
         /**
-         * 返回与传入向量垂直的向量
+         * 返回垂直于传入向量的向量
          * @param first
          * @param second
          */
         static perpendicular(first: Vector2, second: Vector2): Vector2;
+        /**
+         * 返回两个向量之间的角度，单位为度
+         * @param from
+         * @param to
+         */
+        static angle(from: Vector2, to: Vector2): number;
+        /**
+         * 给定两条直线(ab和cd)，求交点
+         * @param a
+         * @param b
+         * @param c
+         * @param d
+         * @param intersection
+         */
+        static getRayIntersection(a: Vector2, b: Vector2, c: Vector2, d: Vector2, intersection?: Vector2): boolean;
         /**
          * Vector2的临时解决方案
          * 标准化把向量弄乱了
@@ -3460,7 +3572,13 @@ declare module es {
          * @param length
          */
         static transformA(sourceArray: Vector2[], sourceIndex: number, matrix: Matrix2D, destinationArray: Vector2[], destinationIndex: number, length: number): void;
-        static transformR(position: Vector2, matrix: Matrix2D, result: Vector2): void;
+        /**
+         * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换
+         * @param position
+         * @param matrix
+         * @param result
+         */
+        static transformR(position: Vector2, matrix: Matrix2D, result?: Vector2): void;
         /**
          * 通过指定的矩阵对Vector2的数组中的所有向量应用变换，并将结果放到另一个数组中。
          * @param sourceArray
@@ -3915,12 +4033,15 @@ declare module es {
          */
         reset(): any;
         /**
-         *
+         * 返回投向T的上下文，作为方便
          */
         getContext<T>(): T;
     }
 }
 declare module es {
+    /**
+     * 私有类隐藏ITimer的实现
+     */
     class Timer implements ITimer {
         context: any;
         _timeInSeconds: number;

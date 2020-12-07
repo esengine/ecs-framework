@@ -1,10 +1,10 @@
 module es {
     /**
-     * 三角剖分
+     * 简单的剪耳三角测量器，最终的三角形将出现在triangleIndices列表中。
      */
     export class Triangulator {
         /**
-         * 最后一次三角调用中使用的点列表的三角形列表项的索引
+         * 上次三角函数调用中使用的点列表的三角列表条目索引
          */
         public triangleIndices: number[] = [];
 
@@ -12,15 +12,19 @@ module es {
         private _triNext: number[] = new Array<number>(12);
 
         public static testPointTriangle(point: Vector2, a: Vector2, b: Vector2, c: Vector2): boolean {
+            // 如果点在AB的右边，那么外边的三角形是
             if (Vector2Ext.cross(Vector2.subtract(point, a), Vector2.subtract(b, a)) < 0)
                 return false;
 
+            // 如果点在BC的右边，则在三角形的外侧
             if (Vector2Ext.cross(Vector2.subtract(point, b), Vector2.subtract(c, b)) < 0)
                 return false;
 
+            // 如果点在ca的右边，则在三角形的外面
             if (Vector2Ext.cross(Vector2.subtract(point, c), Vector2.subtract(a, c)) < 0)
                 return false;
 
+            // 点在三角形上
             return true;
         }
 
@@ -44,8 +48,9 @@ module es {
             // 继续移除所有的三角形，直到只剩下一个三角形
             while (count > 3 && iterations < 500) {
                 iterations++;
-
+                
                 let isEar = true;
+
                 let a = points[this._triPrev[index]];
                 let b = points[index];
                 let c = points[this._triNext[index]];
@@ -94,11 +99,11 @@ module es {
 
             if (this._triNext.length < count) {
                 this._triNext.reverse();
-                this._triNext = new Array<number>(Math.max(this._triNext.length * 2, count));
+                this._triNext.length = Math.max(this._triNext.length * 2, count);
             }
             if (this._triPrev.length < count) {
                 this._triPrev.reverse();
-                this._triPrev = new Array<number>(Math.max(this._triPrev.length * 2, count));
+                this._triPrev.length = Math.max(this._triPrev.length * 2, count);
             }
 
             for (let i = 0; i < count; i++) {

@@ -182,7 +182,7 @@ module es {
          * @param motion
          * @param result
          */
-        public collidesWith(collider: Collider, motion: Vector2, result: CollisionResult): boolean {
+        public collidesWith(collider: Collider, motion: Vector2, result: CollisionResult = new CollisionResult()): boolean {
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
             let oldPosition = this.entity.position.clone();
             this.entity.position = Vector2.add(this.entity.position, motion);
@@ -195,6 +195,20 @@ module es {
             this.entity.position = oldPosition;
 
             return didCollide;
+        }
+
+        /**
+         * 检查这个对撞机是否与对撞机发生碰撞。如果碰撞，则返回true，结果将被填充
+         * @param collider 
+         * @param result 
+         */
+        public collidesWithNonMotion(collider: Collider, result: CollisionResult = new CollisionResult()): boolean {
+            if (this.shape.collidesWithShape(collider.shape, result)) {
+                result.collider = collider;
+                return true;
+            }
+
+            return false;
         }
     }
 }

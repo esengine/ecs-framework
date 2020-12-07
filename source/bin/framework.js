@@ -1591,6 +1591,249 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 请注意，这不是一个完整的、多迭代的物理系统！它可以用于简单的、街机风格的物理。这可以用于简单的，街机风格的物理学
+     */
+    var ArcadeRigidbody = /** @class */ (function (_super) {
+        __extends(ArcadeRigidbody, _super);
+        function ArcadeRigidbody() {
+            var _this = _super.call(this) || this;
+            /**
+             *  如果为真，则每一帧都会考虑到Physics.gravity
+             */
+            _this.shouldUseGravity = true;
+            _this._mass = 10;
+            _this._elasticity = 0.5;
+            _this._friction = 0.5;
+            _this._glue = 0.01;
+            _this._inverseMass = 1 / _this._mass;
+            return _this;
+        }
+        Object.defineProperty(ArcadeRigidbody.prototype, "mass", {
+            /** 这个刚体的质量。质量为0，则是一个不可移动的物体 */
+            get: function () {
+                return this._mass;
+            },
+            set: function (value) {
+                this.setMass(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ArcadeRigidbody.prototype, "elasticity", {
+            /**
+             * 0-1范围，其中0为无反弹，1为完全反射。
+             */
+            get: function () {
+                return this._elasticity;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ArcadeRigidbody.prototype, "elasticiy", {
+            set: function (value) {
+                this.setElasticity(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ArcadeRigidbody.prototype, "friction", {
+            /**
+             * 0 - 1范围。0表示没有摩擦力，1表示物体会停止在原地
+             */
+            get: function () {
+                return this._friction;
+            },
+            set: function (value) {
+                this.setFriction(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ArcadeRigidbody.prototype, "glue", {
+            /**
+             * 0-9的范围。当发生碰撞时，沿碰撞面做直线运动时，如果其平方幅度小于glue摩擦力，则将碰撞设置为上限
+             */
+            get: function () {
+                return this._glue;
+            },
+            set: function (value) {
+                this.setGlue(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ArcadeRigidbody.prototype, "isImmovable", {
+            /**
+             * 质量为0的刚体被认为是不可移动的。改变速度和碰撞对它们没有影响
+             */
+            get: function () {
+                return this._mass < 0.0001;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /**
+         * 这个刚体的质量。质量为0，则是一个不可移动的物体
+         * @param mass
+         */
+        ArcadeRigidbody.prototype.setMass = function (mass) {
+            this._mass = es.MathHelper.clamp(mass, 0, Number.MAX_VALUE);
+            if (this._mass > 0.0001)
+                this._inverseMass = 1 / this._mass;
+            else
+                this._inverseMass = 0;
+            return this;
+        };
+        /**
+         * 0-1范围，其中0为无反弹，1为完全反射。
+         * @param value
+         */
+        ArcadeRigidbody.prototype.setElasticity = function (value) {
+            this._elasticity = es.MathHelper.clamp01(value);
+            return this;
+        };
+        /**
+         * 0 - 1范围。0表示没有摩擦力，1表示物体会停止在原地
+         * @param value
+         */
+        ArcadeRigidbody.prototype.setFriction = function (value) {
+            this._friction = es.MathHelper.clamp01(value);
+            return this;
+        };
+        /**
+         * 0-9的范围。当发生碰撞时，沿碰撞面做直线运动时，如果其平方幅度小于glue摩擦力，则将碰撞设置为上限
+         * @param value
+         */
+        ArcadeRigidbody.prototype.setGlue = function (value) {
+            this._glue = es.MathHelper.clamp(value, 0, 10);
+            return this;
+        };
+        /**
+         * 用刚体的质量给刚体加上一个瞬间的力脉冲。力是一个加速度，单位是每秒像素每秒。将力乘以100000，使数值使用更合理
+         * @param force
+         */
+        ArcadeRigidbody.prototype.addImpulse = function (force) {
+            if (!this.isImmovable) {
+                this.velocity.add(new es.Vector2(force.x * 100000, force.y * 100000).multiply(new es.Vector2(this._inverseMass * es.Time.deltaTime)));
+            }
+        };
+        ArcadeRigidbody.prototype.onAddedToEntity = function () {
+            this._collider = this.entity.getComponent(es.Collider);
+            if (this._collider == null) {
+                console.warn("ArcadeRigidbody 没有 Collider。ArcadeRigidbody需要一个Collider!");
+            }
+        };
+        ArcadeRigidbody.prototype.update = function () {
+            var e_1, _a;
+            if (this.isImmovable || this._collider == null) {
+                this.velocity = es.Vector2.zero;
+                return;
+            }
+            if (this.shouldUseGravity)
+                this.velocity.add(es.Vector2.multiply(es.Physics.gravity, new es.Vector2(es.Time.deltaTime)));
+            this.entity.transform.position.add(es.Vector2.multiply(this.velocity, new es.Vector2(es.Time.deltaTime)));
+            var collisionResult = new es.CollisionResult();
+            // 捞取我们在新的位置上可能会碰撞到的任何东西
+            var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this._collider, this._collider.collidesWithLayers.value);
+            try {
+                for (var neighbors_1 = __values(neighbors), neighbors_1_1 = neighbors_1.next(); !neighbors_1_1.done; neighbors_1_1 = neighbors_1.next()) {
+                    var neighbor = neighbors_1_1.value;
+                    // 如果邻近的对撞机是同一个实体，则忽略它
+                    if (neighbor.entity == this.entity) {
+                        continue;
+                    }
+                    if (this._collider.collidesWithNonMotion(neighbor, collisionResult)) {
+                        // 如果附近有一个ArcadeRigidbody，我们就会处理完整的碰撞响应。如果没有，我们会根据附近是不可移动的来计算事情
+                        var neighborRigidbody = neighbor.entity.getComponent(ArcadeRigidbody);
+                        if (neighborRigidbody != null) {
+                            this.processOverlap(neighborRigidbody, collisionResult.minimumTranslationVector);
+                            this.processCollision(neighborRigidbody, collisionResult.minimumTranslationVector);
+                        }
+                        else {
+                            // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
+                            this.entity.transform.position.subtract(collisionResult.minimumTranslationVector);
+                            var relativeVelocity = this.velocity.clone();
+                            this.calculateResponseVelocity(relativeVelocity, collisionResult.minimumTranslationVector, relativeVelocity);
+                            this.velocity.add(relativeVelocity);
+                        }
+                    }
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (neighbors_1_1 && !neighbors_1_1.done && (_a = neighbors_1.return)) _a.call(neighbors_1);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+        };
+        /**
+         * 将两个重叠的刚体分开。也处理其中一个不可移动的情况
+         * @param other
+         * @param minimumTranslationVector
+         */
+        ArcadeRigidbody.prototype.processOverlap = function (other, minimumTranslationVector) {
+            if (this.isImmovable) {
+                other.entity.transform.position.add(minimumTranslationVector);
+            }
+            else if (other.isImmovable) {
+                this.entity.transform.position.subtract(minimumTranslationVector);
+            }
+            else {
+                this.entity.transform.position.subtract(es.Vector2.multiply(minimumTranslationVector, es.Vector2Ext.halfVector()));
+                other.entity.transform.position.add(es.Vector2.multiply(minimumTranslationVector, es.Vector2Ext.halfVector()));
+            }
+        };
+        /**
+         * 处理两个非重叠的刚体的碰撞。新的速度将根据情况分配给每个刚体
+         * @param other
+         * @param minimumTranslationVector
+         */
+        ArcadeRigidbody.prototype.processCollision = function (other, minimumTranslationVector) {
+            // 我们计算两个相撞物体的响应。
+            // 计算的基础是沿碰撞表面法线反射的物体的相对速度。
+            // 然后，响应的一部分会根据质量加到每个物体上
+            var relativeVelocity = es.Vector2.subtract(this.velocity, other.velocity);
+            this.calculateResponseVelocity(relativeVelocity, minimumTranslationVector, relativeVelocity);
+            // 现在，我们使用质量来线性缩放两个刚体上的响应
+            var totalinverseMass = this._inverseMass + other._inverseMass;
+            var ourResponseFraction = this._inverseMass / totalinverseMass;
+            var otherResponseFraction = other._inverseMass / totalinverseMass;
+            this.velocity.add(es.Vector2.multiply(relativeVelocity, new es.Vector2(ourResponseFraction)));
+            other.velocity.subtract(es.Vector2.multiply(relativeVelocity, new es.Vector2(otherResponseFraction)));
+        };
+        /**
+         *  给定两个物体和MTV之间的相对速度，本方法修改相对速度，使其成为碰撞响应
+         * @param relativeVelocity
+         * @param minimumTranslationVector
+         * @param responseVelocity
+         */
+        ArcadeRigidbody.prototype.calculateResponseVelocity = function (relativeVelocity, minimumTranslationVector, responseVelocity) {
+            if (responseVelocity === void 0) { responseVelocity = new es.Vector2(); }
+            // 首先，我们得到反方向的归一化MTV：表面法线
+            var inverseMTV = es.Vector2.multiply(minimumTranslationVector, new es.Vector2(-1));
+            var normal = es.Vector2.normalize(inverseMTV);
+            // 速度是沿碰撞法线和碰撞平面分解的。
+            // 弹性将影响沿法线的响应（法线速度分量），摩擦力将影响速度的切向分量（切向速度分量）
+            var n = es.Vector2.dot(relativeVelocity, normal);
+            var normalVelocityComponent = es.Vector2.multiply(normal, new es.Vector2(n));
+            var tangentialVelocityComponent = es.Vector2.subtract(relativeVelocity, normalVelocityComponent);
+            if (n > 0)
+                normalVelocityComponent = es.Vector2.zero;
+            // 如果切向分量的平方幅度小于glue，那么我们就把摩擦力提升到最大
+            var coefficientOfFriction = this._friction;
+            if (tangentialVelocityComponent.lengthSquared() < this._glue)
+                coefficientOfFriction = 1.01;
+            // 弹性影响速度的法向分量，摩擦力影响速度的切向分量
+            responseVelocity = es.Vector2.multiply(new es.Vector2(-(1 + this._elasticity)), normalVelocityComponent).subtract(es.Vector2.multiply(new es.Vector2(coefficientOfFriction), tangentialVelocityComponent));
+        };
+        return ArcadeRigidbody;
+    }(es.Component));
+    es.ArcadeRigidbody = ArcadeRigidbody;
+})(es || (es = {}));
+var es;
+(function (es) {
     var TriggerListenerHelper = /** @class */ (function () {
         function TriggerListenerHelper() {
         }
@@ -1928,6 +2171,7 @@ var es;
          * @param result
          */
         Collider.prototype.collidesWith = function (collider, motion, result) {
+            if (result === void 0) { result = new es.CollisionResult(); }
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
             var oldPosition = this.entity.position.clone();
             this.entity.position = es.Vector2.add(this.entity.position, motion);
@@ -1937,6 +2181,19 @@ var es;
             // 将图形位置返回到检查前的位置
             this.entity.position = oldPosition;
             return didCollide;
+        };
+        /**
+         * 检查这个对撞机是否与对撞机发生碰撞。如果碰撞，则返回true，结果将被填充
+         * @param collider
+         * @param result
+         */
+        Collider.prototype.collidesWithNonMotion = function (collider, result) {
+            if (result === void 0) { result = new es.CollisionResult(); }
+            if (this.shape.collidesWithShape(collider.shape, result)) {
+                result.collider = collider;
+                return true;
+            }
+            return false;
         };
         return Collider;
     }(es.Component));
@@ -3274,19 +3531,19 @@ var es;
          * @param array
          */
         FastList.prototype.addRange = function (array) {
-            var e_1, _a;
+            var e_2, _a;
             try {
                 for (var array_1 = __values(array), array_1_1 = array_1.next(); !array_1_1.done; array_1_1 = array_1.next()) {
                     var item = array_1_1.value;
                     this.add(item);
                 }
             }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
             finally {
                 try {
                     if (array_1_1 && !array_1_1.done && (_a = array_1.return)) _a.call(array_1);
                 }
-                finally { if (e_1) throw e_1.error; }
+                finally { if (e_2) throw e_2.error; }
             }
         };
         /**
@@ -5376,6 +5633,16 @@ var es;
             return new Vector2(Math.round(this.x), Math.round(this.y));
         };
         /**
+         * 返回以自己为中心点的左右角，单位为度
+         * @param left
+         * @param right
+         */
+        Vector2.prototype.angleBetween = function (left, right) {
+            var one = Vector2.subtract(left, this);
+            var two = Vector2.subtract(right, this);
+            return es.Vector2Ext.angle(one, two);
+        };
+        /**
          * 比较当前实例是否等于指定的对象
          * @param other 要比较的对象
          * @returns 如果实例相同true 否则false
@@ -5750,6 +6017,16 @@ var es;
             return this._spatialHash.aabbBroadphase(rect, collider, layerMask);
         };
         /**
+         * 返回所有边界与 collider.bounds 相交的碰撞器，但不包括传入的碰撞器(self)
+         * @param collider
+         * @param layerMask
+         */
+        Physics.boxcastBroadphaseExcludingSelfNonRect = function (collider, layerMask) {
+            if (layerMask === void 0) { layerMask = this.allLayers; }
+            var bounds = collider.bounds;
+            return this._spatialHash.aabbBroadphase(bounds, collider, layerMask);
+        };
+        /**
          * 将对撞机添加到物理系统中
          * @param collider
          */
@@ -5798,6 +6075,8 @@ var es;
             }
             return this._spatialHash.linecast(start, end, hits, layerMask);
         };
+        /** 用于在全局范围内存储重力值的方便字段 */
+        Physics.gravity = new es.Vector2(0, 300);
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
         Physics.spatialHashCellSize = 100;
         /** 接受layerMask的所有方法的默认值 */
@@ -6003,7 +6282,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_2, _a;
+            var e_3, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -6036,12 +6315,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            catch (e_3_1) { e_3 = { error: e_3_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_2) throw e_2.error; }
+                finally { if (e_3) throw e_3.error; }
             }
             return resultCounter;
         };
@@ -7560,17 +7839,6 @@ var es;
 var es;
 (function (es) {
     /**
-     * 用于包装事件的一个小类
-     */
-    var FuncPack = /** @class */ (function () {
-        function FuncPack(func, context) {
-            this.func = func;
-            this.context = context;
-        }
-        return FuncPack;
-    }());
-    es.FuncPack = FuncPack;
-    /**
      * 用于事件管理
      */
     var Emitter = /** @class */ (function () {
@@ -7584,14 +7852,15 @@ var es;
          * @param context 监听上下文
          */
         Emitter.prototype.addObserver = function (eventType, handler, context) {
+            handler.bind(context);
             var list = this._messageTable.get(eventType);
             if (!list) {
                 list = [];
                 this._messageTable.set(eventType, list);
             }
-            if (list.findIndex(function (funcPack) { return funcPack.func == handler; }) != -1)
+            if (new linq.List(list).contains(handler))
                 console.warn("您试图添加相同的观察者两次");
-            list.push(new FuncPack(handler, context));
+            list.push(handler);
         };
         /**
          * 移除监听项
@@ -7600,9 +7869,7 @@ var es;
          */
         Emitter.prototype.removeObserver = function (eventType, handler) {
             var messageData = this._messageTable.get(eventType);
-            var index = messageData.findIndex(function (data) { return data.func == handler; });
-            if (index != -1)
-                new linq.List(messageData).removeAt(index);
+            new linq.List(messageData).remove(handler);
         };
         /**
          * 触发该事件
@@ -7613,7 +7880,7 @@ var es;
             var list = this._messageTable.get(eventType);
             if (list) {
                 for (var i = list.length - 1; i >= 0; i--)
-                    list[i].func.call(list[i].context, data);
+                    list[i](data);
             }
         };
         return Emitter;
@@ -8364,24 +8631,28 @@ var es;
 var es;
 (function (es) {
     /**
-     * 三角剖分
+     * 简单的剪耳三角测量器，最终的三角形将出现在triangleIndices列表中。
      */
     var Triangulator = /** @class */ (function () {
         function Triangulator() {
             /**
-             * 最后一次三角调用中使用的点列表的三角形列表项的索引
+             * 上次三角函数调用中使用的点列表的三角列表条目索引
              */
             this.triangleIndices = [];
             this._triPrev = new Array(12);
             this._triNext = new Array(12);
         }
         Triangulator.testPointTriangle = function (point, a, b, c) {
+            // 如果点在AB的右边，那么外边的三角形是
             if (es.Vector2Ext.cross(es.Vector2.subtract(point, a), es.Vector2.subtract(b, a)) < 0)
                 return false;
+            // 如果点在BC的右边，则在三角形的外侧
             if (es.Vector2Ext.cross(es.Vector2.subtract(point, b), es.Vector2.subtract(c, b)) < 0)
                 return false;
+            // 如果点在ca的右边，则在三角形的外面
             if (es.Vector2Ext.cross(es.Vector2.subtract(point, c), es.Vector2.subtract(a, c)) < 0)
                 return false;
+            // 点在三角形上
             return true;
         };
         /**
@@ -8443,11 +8714,11 @@ var es;
             this.triangleIndices.length = 0;
             if (this._triNext.length < count) {
                 this._triNext.reverse();
-                this._triNext = new Array(Math.max(this._triNext.length * 2, count));
+                this._triNext.length = Math.max(this._triNext.length * 2, count);
             }
             if (this._triPrev.length < count) {
                 this._triPrev.reverse();
-                this._triPrev = new Array(Math.max(this._triPrev.length * 2, count));
+                this._triPrev.length = Math.max(this._triPrev.length * 2, count);
             }
             for (var i = 0; i < count; i++) {
                 this._triPrev[i] = i - 1;
@@ -8498,12 +8769,47 @@ var es;
             return u.y * v.x - u.x * v.y;
         };
         /**
-         * 返回与传入向量垂直的向量
+         * 返回垂直于传入向量的向量
          * @param first
          * @param second
          */
         Vector2Ext.perpendicular = function (first, second) {
             return new es.Vector2(-1 * (second.y - first.y), second.x - first.x);
+        };
+        /**
+         * 返回两个向量之间的角度，单位为度
+         * @param from
+         * @param to
+         */
+        Vector2Ext.angle = function (from, to) {
+            this.normalize(from);
+            this.normalize(to);
+            return Math.acos(es.MathHelper.clamp(es.Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
+        };
+        /**
+         * 给定两条直线(ab和cd)，求交点
+         * @param a
+         * @param b
+         * @param c
+         * @param d
+         * @param intersection
+         */
+        Vector2Ext.getRayIntersection = function (a, b, c, d, intersection) {
+            if (intersection === void 0) { intersection = new es.Vector2(); }
+            var dy1 = b.y - a.y;
+            var dx1 = b.x - a.x;
+            var dy2 = d.y - c.y;
+            var dx2 = d.x - c.x;
+            if (dy1 * dx2 == dy2 * dx1) {
+                intersection.x = Number.NaN;
+                intersection.y = Number.NaN;
+                return false;
+            }
+            var x = ((c.y - a.y) * dx1 * dx2 + dy1 * dx2 * a.x - dy2 * dx1 * c.x) / (dy1 * dx2 - dy2 * dx1);
+            var y = a.y + (dy1 / dx1) * (x - a.x);
+            intersection.x = x;
+            intersection.y = y;
+            return true;
         };
         /**
          * Vector2的临时解决方案
@@ -8537,7 +8843,14 @@ var es;
                 destinationArray[destinationIndex + i] = destination;
             }
         };
+        /**
+         * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换
+         * @param position
+         * @param matrix
+         * @param result
+         */
         Vector2Ext.transformR = function (position, matrix, result) {
+            if (result === void 0) { result = new es.Vector2(); }
             var x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
             var y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
             result.x = x;
@@ -9219,7 +9532,7 @@ var linq;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_3, _a;
+            var e_4, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -9227,12 +9540,12 @@ var linq;
                     result.add(x);
                 }
             }
-            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+            catch (e_4_1) { e_4 = { error: e_4_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_3) throw e_3.error; }
+                finally { if (e_4) throw e_4.error; }
             }
             return result;
         };
@@ -9299,6 +9612,9 @@ var linq;
 })(linq || (linq = {}));
 var es;
 (function (es) {
+    /**
+     * 私有类隐藏ITimer的实现
+     */
     var Timer = /** @class */ (function () {
         function Timer() {
             this._timeInSeconds = 0;

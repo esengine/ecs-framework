@@ -24,12 +24,51 @@ module es {
         }
 
         /**
-         * 返回与传入向量垂直的向量
+         * 返回垂直于传入向量的向量
          * @param first
          * @param second
          */
         public static perpendicular(first: Vector2, second: Vector2) {
             return new Vector2(-1 * (second.y - first.y), second.x - first.x);
+        }
+
+        /**
+         * 返回两个向量之间的角度，单位为度
+         * @param from 
+         * @param to 
+         */
+        public static angle(from: Vector2, to: Vector2) {
+            this.normalize(from);
+            this.normalize(to);
+            return Math.acos(MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * MathHelper.Rad2Deg;
+        }
+
+        /**
+         * 给定两条直线(ab和cd)，求交点
+         * @param a 
+         * @param b 
+         * @param c 
+         * @param d 
+         * @param intersection 
+         */
+        public static getRayIntersection(a: Vector2, b: Vector2, c: Vector2, d: Vector2, intersection: Vector2 = new Vector2()) {
+            let dy1 = b.y - a.y;
+            let dx1 = b.x - a.x;
+            let dy2 = d.y - c.y;
+            let dx2 = d.x - c.x;
+
+            if (dy1 * dx2 == dy2 * dx1) {
+                intersection.x = Number.NaN;
+                intersection.y = Number.NaN;
+                return false;
+            }
+
+            let x = ((c.y - a.y) * dx1 * dx2 + dy1 * dx2 * a.x - dy2 * dx1 * c.x) / (dy1 * dx2 - dy2 * dx1);
+            let y = a.y + (dy1 / dx1) * (x - a.x);
+
+            intersection.x = x;
+            intersection.y = y;
+            return true;
         }
 
         /**
@@ -66,7 +105,13 @@ module es {
             }
         }
 
-        public static transformR(position: Vector2, matrix: Matrix2D, result: Vector2) {
+        /**
+         * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换
+         * @param position 
+         * @param matrix 
+         * @param result 
+         */
+        public static transformR(position: Vector2, matrix: Matrix2D, result: Vector2 = new Vector2()) {
             let x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
             let y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
             result.x = x;
