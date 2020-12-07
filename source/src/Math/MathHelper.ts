@@ -88,6 +88,10 @@ module es {
             return Math.atan2(to.y - from.y, to.x - from.x);
         }
 
+        public static angleToVector(angleRadians: number, length: number){
+            return new Vector2(Math.cos(angleRadians) * length, Math.sin(angleRadians) * length);
+        }
+
         /**
          * 增加t并确保它总是大于或等于0并且小于长度
          * @param t

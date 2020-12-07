@@ -4453,6 +4453,9 @@ var es;
         MathHelper.angleBetweenVectors = function (from, to) {
             return Math.atan2(to.y - from.y, to.x - from.x);
         };
+        MathHelper.angleToVector = function (angleRadians, length) {
+            return new es.Vector2(Math.cos(angleRadians) * length, Math.sin(angleRadians) * length);
+        };
         /**
          * 增加t并确保它总是大于或等于0并且小于长度
          * @param t
@@ -8070,6 +8073,190 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Node = /** @class */ (function () {
+        // next为可选参数，如果不传则为undefined
+        function Node(element, next) {
+            this.element = element;
+            this.next = next;
+        }
+        return Node;
+    }());
+    es.Node = Node;
+    function defaultEquals(a, b) {
+        return a === b;
+    }
+    es.defaultEquals = defaultEquals;
+    var LinkedList = /** @class */ (function () {
+        function LinkedList(equalsFn) {
+            if (equalsFn === void 0) { equalsFn = defaultEquals; }
+            // 初始化链表内部变量
+            this.count = 0;
+            this.next = undefined;
+            this.equalsFn = equalsFn;
+            this.head = null;
+        }
+        // 链表尾部添加元素
+        LinkedList.prototype.push = function (element) {
+            // 声明结点变量，将元素当作参数传入生成结点
+            var node = new Node(element);
+            // 存储遍历到的链表元素
+            var current;
+            if (this.head == null) {
+                // 链表为空，直接将链表头部赋值为结点变量
+                this.head = node;
+            }
+            else {
+                // 链表不为空，我们只能拿到链表中第一个元素的引用
+                current = this.head;
+                // 循环访问链表
+                while (current.next != null) {
+                    // 赋值遍历到的元素
+                    current = current.next;
+                }
+                // 此时已经得到了链表的最后一个元素(null)，将链表的下一个元素赋值为结点变量。
+                current.next = node;
+            }
+            // 链表长度自增
+            this.count++;
+        };
+        // 移除链表指定位置的元素
+        LinkedList.prototype.removeAt = function (index) {
+            // 边界判断: 参数是否有效
+            if (index >= 0 && index < this.count) {
+                // 获取当前链表头部元素
+                var current = this.head;
+                // 移除第一项
+                if (index === 0) {
+                    this.head = current.next;
+                }
+                else {
+                    // 获取目标参数上一个结点
+                    var previous = this.getElementAt(index - 1);
+                    // 当前结点指向目标结点
+                    current = previous.next;
+                    /**
+                     * 目标结点元素已找到
+                     * previous.next指向目标结点
+                     * current.next指向undefined
+                     * previous.next指向current.next即删除目标结点的元素
+                     */
+                    previous.next = current.next;
+                }
+                // 链表长度自减
+                this.count--;
+                // 返回当前删除的目标结点
+                return current.element;
+            }
+            return undefined;
+        };
+        // 获取链表指定位置的结点
+        LinkedList.prototype.getElementAt = function (index) {
+            // 参数校验
+            if (index >= 0 && index <= this.count) {
+                // 获取链表头部元素
+                var current = this.head;
+                // 从链表头部遍历至目标结点位置
+                for (var i = 0; i < index && current != null; i++) {
+                    // 当前结点指向下一个目标结点
+                    current = current.next;
+                }
+                // 返回目标结点数据
+                return current;
+            }
+            return undefined;
+        };
+        // 向链表中插入元素
+        LinkedList.prototype.insert = function (element, index) {
+            // 参数有效性判断
+            if (index >= 0 && index <= this.count) {
+                // 声明节点变量，将当前要插入的元素作为参数生成结点
+                var node = new Node(element);
+                // 第一个位置添加元素
+                if (index === 0) {
+                    // 将节点变量(node)的下一个元素指向链表的头部元素
+                    node.next = this.head;
+                    // 链表头部元素赋值为节点变量
+                    this.head = node;
+                }
+                else {
+                    // 获取目标结点的上一个结点
+                    var previous = this.getElementAt(index - 1);
+                    // 将节点变量的下一个元素指向目标节点
+                    node.next = previous.next;
+                    /**
+                     * 此时node中当前结点为要插入的值
+                     * next为原位置处的结点
+                     * 因此将当前结点赋值为node，就完成了结点插入操作
+                     */
+                    previous.next = node;
+                }
+                // 链表长度自增
+                this.count++;
+                return true;
+            }
+            return false;
+        };
+        // 根据元素获取其在链表中的索引
+        LinkedList.prototype.indexOf = function (element) {
+            // 获取链表顶部元素
+            var current = this.head;
+            // 遍历链表内的元素
+            for (var i = 0; i < this.count && current != null; i++) {
+                // 判断当前链表中的结点与目标结点是否相等
+                if (this.equalsFn(element, current.element)) {
+                    // 返回索引
+                    return i;
+                }
+                // 当前结点指向下一个结点
+                current = current.next;
+            }
+            // 目标元素不存在
+            return -1;
+        };
+        // 移除链表中的指定元素
+        LinkedList.prototype.remove = function (element) {
+            // 获取element的索引,移除索引位置的元素
+            this.removeAt(this.indexOf(element));
+        };
+        LinkedList.prototype.clear = function () {
+            this.head = undefined;
+            this.count = 0;
+        };
+        // 获取链表长度
+        LinkedList.prototype.size = function () {
+            return this.count;
+        };
+        // 判断链表是否为空
+        LinkedList.prototype.isEmpty = function () {
+            return this.size() === 0;
+        };
+        // 获取链表头部元素
+        LinkedList.prototype.getHead = function () {
+            return this.head;
+        };
+        // 获取链表中的所有元素
+        LinkedList.prototype.toString = function () {
+            if (this.head == null) {
+                return "";
+            }
+            var objString = "" + this.head.element;
+            // 获取链表顶点的下一个结点
+            var current = this.head.next;
+            // 遍历链表中的所有结点
+            for (var i = 1; i < this.size() && current != null; i++) {
+                // 将当前结点的元素拼接到最终要生成的字符串对象中
+                objString = objString + ", " + current.element;
+                // 当前结点指向链表的下一个元素
+                current = current.next;
+            }
+            return objString;
+        };
+        return LinkedList;
+    }());
+    es.LinkedList = LinkedList;
+})(es || (es = {}));
+var es;
+(function (es) {
     /**
      * 可以用于列表池的简单类
      */
@@ -9644,6 +9831,388 @@ var linq;
     }(List));
     linq.OrderedList = OrderedList;
 })(linq || (linq = {}));
+var es;
+(function (es) {
+    /**
+     * 一段的终点
+     */
+    var EndPoint = /** @class */ (function () {
+        function EndPoint() {
+            this.position = es.Vector2.zero;
+            this.begin = false;
+            this.segment = null;
+            this.angle = 0;
+        }
+        return EndPoint;
+    }());
+    es.EndPoint = EndPoint;
+    var EndPointComparer = /** @class */ (function () {
+        function EndPointComparer() {
+        }
+        /**
+         * 按角度对点进行排序的比较功能
+         * @param a
+         * @param b
+         */
+        EndPointComparer.prototype.compare = function (a, b) {
+            // 按角度顺序移动
+            if (a.angle > b.angle)
+                return 1;
+            if (a.angle < b.angle)
+                return -1;
+            // 但对于纽带，我们希望Begin节点在End节点之前
+            if (!a.begin && b.begin)
+                return 1;
+            if (a.begin && !b.begin)
+                return -1;
+            return 0;
+        };
+        return EndPointComparer;
+    }());
+    es.EndPointComparer = EndPointComparer;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 表示可见性网格中的遮挡线段
+     */
+    var Segment = /** @class */ (function () {
+        function Segment() {
+            this.p1 = null;
+            this.p2 = null;
+        }
+        return Segment;
+    }());
+    es.Segment = Segment;
+})(es || (es = {}));
+///<reference path="../LinkList.ts" />
+var es;
+///<reference path="../LinkList.ts" />
+(function (es) {
+    /**
+     * 类，它可以计算出一个网格，表示从给定的一组遮挡物的原点可以看到哪些区域。使用方法如下。
+     *
+     * - 调用 begin
+     * - 添加任何遮挡物
+     * - 调用end来获取可见度多边形。当调用end时，所有的内部存储都会被清空。
+     */
+    var VisibilityComputer = /** @class */ (function () {
+        function VisibilityComputer(origin, radius) {
+            /**
+             *  在近似圆的时候要用到的线的总数。只需要一个180度的半球，所以这将是近似该半球的线段数
+             */
+            this.lineCountForCircleApproximation = 10;
+            this._radius = 0;
+            this._origin = es.Vector2.zero;
+            this._isSpotLight = false;
+            this._spotStartAngle = 0;
+            this._spotEndAngle = 0;
+            this._endPoints = [];
+            this._segments = [];
+            this._origin = origin;
+            this._radius = radius;
+            this._radialComparer = new es.EndPointComparer();
+        }
+        /**
+         * 增加了一个对撞机作为PolyLight的遮蔽器
+         * @param collider
+         */
+        VisibilityComputer.prototype.addColliderOccluder = function (collider) {
+            // 特殊情况下，BoxColliders没有旋转
+            if (collider instanceof es.BoxCollider && collider.rotation == 0) {
+                this.addSquareOccluder(collider.bounds);
+                return;
+            }
+            if (collider instanceof es.PolygonCollider) {
+                var poly = collider.shape;
+                for (var i = 0; i < poly.points.length; i++) {
+                    var firstIndex = i - 1;
+                    if (i == 0)
+                        firstIndex += poly.points.length;
+                    this.addLineOccluder(es.Vector2.add(poly.points[firstIndex], poly.position), es.Vector2.add(poly.points[i], poly.position));
+                }
+            }
+            else if (collider instanceof es.CircleCollider) {
+                this.addCircleOccluder(collider.absolutePosition, collider.radius);
+            }
+        };
+        /**
+         * 增加了一个圆形的遮挡器
+         * @param position
+         * @param radius
+         */
+        VisibilityComputer.prototype.addCircleOccluder = function (position, radius) {
+            var dirToCircle = es.Vector2.subtract(position, this._origin);
+            var angle = Math.atan2(dirToCircle.y, dirToCircle.x);
+            var stepSize = Math.PI / this.lineCountForCircleApproximation;
+            var startAngle = angle + es.MathHelper.PiOver2;
+            var lastPt = es.MathHelper.angleToVector(startAngle, radius).add(position);
+            for (var i = 1; i < this.lineCountForCircleApproximation; i++) {
+                var nextPt = es.MathHelper.angleToVector(startAngle + i * stepSize, radius).add(position);
+                this.addLineOccluder(lastPt, nextPt);
+                lastPt = nextPt;
+            }
+        };
+        /**
+         * 增加一个线型遮挡器
+         * @param p1
+         * @param p2
+         */
+        VisibilityComputer.prototype.addLineOccluder = function (p1, p2) {
+            this.addSegment(p1, p2);
+        };
+        /**
+         * 增加一个方形的遮挡器
+         * @param bounds
+         */
+        VisibilityComputer.prototype.addSquareOccluder = function (bounds) {
+            var tr = new es.Vector2(bounds.right, bounds.top);
+            var bl = new es.Vector2(bounds.left, bounds.bottom);
+            var br = new es.Vector2(bounds.right, bounds.bottom);
+            this.addSegment(bounds.location, tr);
+            this.addSegment(tr, br);
+            this.addSegment(br, bl);
+            this.addSegment(bl, bounds.location);
+        };
+        /**
+         * 添加一个段，第一个点在可视化中显示，但第二个点不显示。
+         * 每个端点都是两个段的一部分，但我们希望只显示一次
+         * @param p1
+         * @param p2
+         */
+        VisibilityComputer.prototype.addSegment = function (p1, p2) {
+            var segment = new es.Segment();
+            var endPoint1 = new es.EndPoint();
+            var endPoint2 = new es.EndPoint();
+            endPoint1.position = p1;
+            endPoint1.segment = segment;
+            endPoint2.position = p2;
+            endPoint2.segment = segment;
+            segment.p1 = endPoint1;
+            segment.p2 = endPoint2;
+            this._segments.push(segment);
+            this._endPoints.push(endPoint1);
+            this._endPoints.push(endPoint2);
+        };
+        /**
+         * 移除所有的遮挡物
+         */
+        VisibilityComputer.prototype.clearOccluders = function () {
+            this._segments.length = 0;
+            this._endPoints.length = 0;
+        };
+        /**
+         * 为计算机计算当前的聚光做好准备
+         * @param origin
+         * @param radius
+         */
+        VisibilityComputer.prototype.begin = function (origin, radius) {
+            this._origin = origin;
+            this._radius = radius;
+            this._isSpotLight = false;
+        };
+        /**
+         * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
+         */
+        VisibilityComputer.prototype.end = function () {
+            var e_6, _a;
+            var output = es.ListPool.obtain();
+            this.updateSegments();
+            this._endPoints.sort(this._radialComparer.compare);
+            var currentAngle = 0;
+            // 在扫描开始时，我们想知道哪些段是活动的。
+            // 最简单的方法是先进行一次段的收集，然后再进行一次段的收集和处理。
+            // 然而，更有效的方法是通过所有的段，找出哪些段与最初的扫描线相交，然后对它们进行分类
+            for (var pass = 0; pass < 2; pass++) {
+                try {
+                    for (var _b = __values(this._endPoints), _c = _b.next(); !_c.done; _c = _b.next()) {
+                        var p = _c.value;
+                        var currentOld = VisibilityComputer._openSegments.size() == 0 ? null : VisibilityComputer._openSegments.getHead().element;
+                        if (p.begin) {
+                            // 在列表中的正确位置插入
+                            var node = VisibilityComputer._openSegments.getHead();
+                            while (node != null && this.isSegmentInFrontOf(p.segment, node.element, this._origin))
+                                node = node.next;
+                            if (node == null)
+                                VisibilityComputer._openSegments.push(p.segment);
+                            else
+                                VisibilityComputer._openSegments.insert(p.segment, VisibilityComputer._openSegments.indexOf(node.element));
+                        }
+                        else {
+                            VisibilityComputer._openSegments.remove(p.segment);
+                        }
+                        var currentNew = null;
+                        if (VisibilityComputer._openSegments.size() != 0)
+                            currentNew = VisibilityComputer._openSegments.getHead().element;
+                        if (currentOld != currentNew) {
+                            if (pass == 1) {
+                                if (!this._isSpotLight || (VisibilityComputer.between(currentAngle, this._spotStartAngle, this._spotEndAngle) &&
+                                    VisibilityComputer.between(p.angle, this._spotStartAngle, this._spotEndAngle)))
+                                    this.addTriangle(output, currentAngle, p.angle, currentOld);
+                            }
+                            currentAngle = p.angle;
+                        }
+                    }
+                }
+                catch (e_6_1) { e_6 = { error: e_6_1 }; }
+                finally {
+                    try {
+                        if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                    }
+                    finally { if (e_6) throw e_6.error; }
+                }
+            }
+            VisibilityComputer._openSegments.clear();
+            this.clearOccluders();
+            return output;
+        };
+        VisibilityComputer.prototype.addTriangle = function (triangles, angle1, angle2, segment) {
+            var p1 = this._origin.clone();
+            var p2 = new es.Vector2(this._origin.x + Math.cos(angle1), this._origin.y + Math.sin(angle1));
+            var p3 = es.Vector2.zero;
+            var p4 = es.Vector2.zero;
+            if (segment != null) {
+                // 将三角形停在相交线段上
+                p3.x = segment.p1.position.x;
+                p3.y = segment.p1.position.y;
+                p4.x = segment.p2.position.x;
+                p4.y = segment.p2.position.y;
+            }
+            else {
+                p3.x = this._origin.x + Math.cos(angle1) * this._radius * 2;
+                p3.y = this._origin.y + Math.sin(angle1) * this._radius * 2;
+                p4.x = this._origin.x + Math.cos(angle2) * this._radius * 2;
+                p4.y = this._origin.y + Math.sin(angle2) * this._radius * 2;
+            }
+            var pBegin = VisibilityComputer.lineLineIntersection(p3, p4, p1, p2);
+            p2.x = this._origin.x + Math.cos(angle2);
+            p2.y = this._origin.y + Math.sin(angle2);
+            var pEnd = VisibilityComputer.lineLineIntersection(p3, p4, p1, p2);
+            triangles.push(pBegin);
+            triangles.push(pEnd);
+        };
+        /**
+         * 计算直线p1-p2与p3-p4的交点
+         * @param p1
+         * @param p2
+         * @param p3
+         * @param p4
+         */
+        VisibilityComputer.lineLineIntersection = function (p1, p2, p3, p4) {
+            var s = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x))
+                / ((p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y));
+            return new es.Vector2(p1.x + s * (p2.x - p1.x), p1.y + s * (p2.y - p1.y));
+        };
+        VisibilityComputer.between = function (value, min, max) {
+            value = (360 + (value % 360)) % 360;
+            min = (3600000 + min) % 360;
+            max = (3600000 + max) % 360;
+            if (min < max)
+                return min <= value && value <= max;
+            return min <= value || value <= max;
+        };
+        /**
+         * 辅助函数，用于沿外周线构建分段，以限制光的半径。
+         */
+        VisibilityComputer.prototype.loadRectangleBoundaries = function () {
+            this.addSegment(new es.Vector2(this._origin.x - this._radius, this._origin.y - this._radius), new es.Vector2(this._origin.x + this._radius, this._origin.y - this._radius));
+            this.addSegment(new es.Vector2(this._origin.x - this._radius, this._origin.y + this._radius), new es.Vector2(this._origin.x + this._radius, this._origin.y + this._radius));
+            this.addSegment(new es.Vector2(this._origin.x - this._radius, this._origin.y - this._radius), new es.Vector2(this._origin.x - this._radius, this._origin.y + this._radius));
+            this.addSegment(new es.Vector2(this._origin.x + this._radius, this._origin.y - this._radius), new es.Vector2(this._origin.x + this._radius, this._origin.y + this._radius));
+        };
+        /**
+         * 助手：我们知道a段在b的前面吗？实现不反对称（也就是说，isSegmentInFrontOf(a, b) != (!isSegmentInFrontOf(b, a))）。
+         * 另外要注意的是，在可见性算法中，它只需要在有限的一组情况下工作，我不认为它能处理所有的情况。
+         * 见http://www.redblobgames.com/articles/visibility/segment-sorting.html
+         * @param a
+         * @param b
+         * @param relativeTo
+         */
+        VisibilityComputer.prototype.isSegmentInFrontOf = function (a, b, relativeTo) {
+            // 注意：我们稍微缩短了段，所以在这个算法中，端点的交点（共同）不计入交点。
+            var a1 = VisibilityComputer.isLeftOf(a.p2.position, a.p1.position, VisibilityComputer.interpolate(b.p1.position, b.p2.position, 0.01));
+            var a2 = VisibilityComputer.isLeftOf(a.p2.position, a.p1.position, VisibilityComputer.interpolate(b.p2.position, b.p1.position, 0.01));
+            var a3 = VisibilityComputer.isLeftOf(a.p2.position, a.p1.position, relativeTo);
+            var b1 = VisibilityComputer.isLeftOf(b.p2.position, b.p1.position, VisibilityComputer.interpolate(a.p1.position, a.p2.position, 0.01));
+            var b2 = VisibilityComputer.isLeftOf(b.p2.position, b.p1.position, VisibilityComputer.interpolate(a.p2.position, a.p1.position, 0.01));
+            var b3 = VisibilityComputer.isLeftOf(b.p2.position, b.p1.position, relativeTo);
+            // 注：考虑A1-A2这条线。如果B1和B2都在一条边上，而relativeTo在另一条边上，那么A就在观看者和B之间。
+            if (b1 == b2 && b2 != b3)
+                return true;
+            if (a1 == a2 && a2 == a3)
+                return true;
+            if (a1 == a2 && a2 != a3)
+                return false;
+            if (b1 == b2 && b2 == b3)
+                return false;
+            // 如果A1 !=A2，B1 !=B2，那么我们就有一个交点。
+            // 一个更稳健的实现是在交叉点上分割段，使一部分段在前面，一部分段在后面，但无论如何我们不应该有重叠的碰撞器，所以这不是太重要
+            return false;
+            // 注意：以前的实现方式是a.d < b.d.，这比较简单，但当段的大小不一样时，就麻烦了。
+            // 如果你是在一个网格上，而且段的大小相似，那么使用距离将是一个更简单和更快的实现。
+        };
+        /**
+         * 返回略微缩短的向量：p * (1 - f) + q * f
+         * @param p
+         * @param q
+         * @param f
+         */
+        VisibilityComputer.interpolate = function (p, q, f) {
+            return new es.Vector2(p.x * (1 - f) + q.x * f, p.y * (1 - f) + q.y * f);
+        };
+        /**
+         * 返回点是否在直线p1-p2的 "左边"。
+         * @param p1
+         * @param p2
+         * @param point
+         */
+        VisibilityComputer.isLeftOf = function (p1, p2, point) {
+            var cross = (p2.x - p1.x) * (point.y - p1.y)
+                - (p2.y - p1.y) * (point.x - p1.x);
+            return cross < 0;
+        };
+        /**
+         * 处理片段，以便我们稍后对它们进行分类
+         */
+        VisibilityComputer.prototype.updateSegments = function () {
+            var e_7, _a;
+            try {
+                for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var segment = _c.value;
+                    // 注：未来的优化：我们可以记录象限和y/x或x/y比率，并按（象限、比率）排序，而不是调用atan2。
+                    // 参见<https://github.com/mikolalysenko/compare-slope>，有一个库可以做到这一点
+                    segment.p1.angle = Math.atan2(segment.p1.position.y - this._origin.y, segment.p1.position.x - this._origin.x);
+                    segment.p2.angle = Math.atan2(segment.p2.position.y - this._origin.y, segment.p2.position.x - this._origin.x);
+                    //  Pi和Pi之间的映射角度
+                    var dAngle = segment.p2.angle - segment.p1.angle;
+                    if (dAngle <= -Math.PI)
+                        dAngle += Math.PI * 2;
+                    if (dAngle > Math.PI)
+                        dAngle -= Math.PI * 2;
+                    segment.p1.begin = (dAngle > 0);
+                    segment.p2.begin = !segment.p1.begin;
+                }
+            }
+            catch (e_7_1) { e_7 = { error: e_7_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_7) throw e_7.error; }
+            }
+            // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
+            // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。
+            if (this._isSpotLight) {
+                this._spotStartAngle = this._segments[0].p2.angle;
+                this._spotEndAngle = this._segments[1].p2.angle;
+            }
+        };
+        VisibilityComputer._cornerCache = [];
+        VisibilityComputer._openSegments = new es.LinkedList();
+        return VisibilityComputer;
+    }());
+    es.VisibilityComputer = VisibilityComputer;
+})(es || (es = {}));
 var es;
 (function (es) {
     /**

@@ -1789,6 +1789,7 @@ declare module es {
          */
         static clamp01(value: number): number;
         static angleBetweenVectors(from: Vector2, to: Vector2): number;
+        static angleToVector(angleRadians: number, length: number): Vector2;
         /**
          * 增加t并确保它总是大于或等于0并且小于长度
          * @param t
@@ -3223,6 +3224,35 @@ declare module es {
     }
 }
 declare module es {
+    class Node<T> {
+        element: T;
+        next: Node<T>;
+        constructor(element: T, next?: Node<T>);
+    }
+    interface equalsFnType<T> {
+        (a: T, b: T): boolean;
+    }
+    function defaultEquals<T>(a: T, b: T): boolean;
+    class LinkedList<T> {
+        protected count: number;
+        protected next: any;
+        protected equalsFn: equalsFnType<T>;
+        protected head: Node<T>;
+        constructor(equalsFn?: typeof defaultEquals);
+        push(element: T): void;
+        removeAt(index: number): T;
+        getElementAt(index: number): Node<T>;
+        insert(element: T, index: number): boolean;
+        indexOf(element: T): number;
+        remove(element: T): void;
+        clear(): void;
+        size(): number;
+        isEmpty(): boolean;
+        getHead(): Node<T>;
+        toString(): string;
+    }
+}
+declare module es {
     /**
      * 可以用于列表池的简单类
      */
@@ -4030,6 +4060,156 @@ declare module linq {
          * @override
          */
         thenByDescending(keySelector: (key: T) => any): List<T>;
+    }
+}
+declare module es {
+    /**
+     * 一段的终点
+     */
+    class EndPoint {
+        /** 该部分的位置 */
+        position: Vector2;
+        /** 如果这个端点是一个段的起始点或终点（每个段只有一个起始点和一个终点） */
+        begin: boolean;
+        /** 该端点所属的段 */
+        segment: Segment;
+        /** 端点相对于能见度测试位置的角度 */
+        angle: number;
+        constructor();
+    }
+    class EndPointComparer implements IComparer<EndPoint> {
+        /**
+         * 按角度对点进行排序的比较功能
+         * @param a
+         * @param b
+         */
+        compare(a: EndPoint, b: EndPoint): 1 | 0 | -1;
+    }
+}
+declare module es {
+    /**
+     * 表示可见性网格中的遮挡线段
+     */
+    class Segment {
+        /**
+         * 该部分的第一个终点
+         */
+        p1: EndPoint;
+        /**
+         * 该部分的第二个终点
+         */
+        p2: EndPoint;
+        constructor();
+    }
+}
+declare module es {
+    /**
+     * 类，它可以计算出一个网格，表示从给定的一组遮挡物的原点可以看到哪些区域。使用方法如下。
+     *
+     * - 调用 begin
+     * - 添加任何遮挡物
+     * - 调用end来获取可见度多边形。当调用end时，所有的内部存储都会被清空。
+     */
+    class VisibilityComputer {
+        /**
+         *  在近似圆的时候要用到的线的总数。只需要一个180度的半球，所以这将是近似该半球的线段数
+         */
+        lineCountForCircleApproximation: number;
+        _radius: number;
+        _origin: Vector2;
+        _isSpotLight: boolean;
+        _spotStartAngle: number;
+        _spotEndAngle: number;
+        _endPoints: EndPoint[];
+        _segments: Segment[];
+        _radialComparer: EndPointComparer;
+        static _cornerCache: Vector2[];
+        static _openSegments: LinkedList<Segment>;
+        constructor(origin?: Vector2, radius?: number);
+        /**
+         * 增加了一个对撞机作为PolyLight的遮蔽器
+         * @param collider
+         */
+        addColliderOccluder(collider: Collider): void;
+        /**
+         * 增加了一个圆形的遮挡器
+         * @param position
+         * @param radius
+         */
+        addCircleOccluder(position: Vector2, radius: number): void;
+        /**
+         * 增加一个线型遮挡器
+         * @param p1
+         * @param p2
+         */
+        addLineOccluder(p1: Vector2, p2: Vector2): void;
+        /**
+         * 增加一个方形的遮挡器
+         * @param bounds
+         */
+        addSquareOccluder(bounds: Rectangle): void;
+        /**
+         * 添加一个段，第一个点在可视化中显示，但第二个点不显示。
+         * 每个端点都是两个段的一部分，但我们希望只显示一次
+         * @param p1
+         * @param p2
+         */
+        addSegment(p1: Vector2, p2: Vector2): void;
+        /**
+         * 移除所有的遮挡物
+         */
+        clearOccluders(): void;
+        /**
+         * 为计算机计算当前的聚光做好准备
+         * @param origin
+         * @param radius
+         */
+        begin(origin: Vector2, radius: number): void;
+        /**
+         * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
+         */
+        end(): Vector2[];
+        addTriangle(triangles: Vector2[], angle1: number, angle2: number, segment: Segment): void;
+        /**
+         * 计算直线p1-p2与p3-p4的交点
+         * @param p1
+         * @param p2
+         * @param p3
+         * @param p4
+         */
+        static lineLineIntersection(p1: Vector2, p2: Vector2, p3: Vector2, p4: Vector2): Vector2;
+        static between(value: number, min: number, max: number): boolean;
+        /**
+         * 辅助函数，用于沿外周线构建分段，以限制光的半径。
+         */
+        loadRectangleBoundaries(): void;
+        /**
+         * 助手：我们知道a段在b的前面吗？实现不反对称（也就是说，isSegmentInFrontOf(a, b) != (!isSegmentInFrontOf(b, a))）。
+         * 另外要注意的是，在可见性算法中，它只需要在有限的一组情况下工作，我不认为它能处理所有的情况。
+         * 见http://www.redblobgames.com/articles/visibility/segment-sorting.html
+         * @param a
+         * @param b
+         * @param relativeTo
+         */
+        isSegmentInFrontOf(a: Segment, b: Segment, relativeTo: Vector2): boolean;
+        /**
+         * 返回略微缩短的向量：p * (1 - f) + q * f
+         * @param p
+         * @param q
+         * @param f
+         */
+        static interpolate(p: Vector2, q: Vector2, f: number): Vector2;
+        /**
+         * 返回点是否在直线p1-p2的 "左边"。
+         * @param p1
+         * @param p2
+         * @param point
+         */
+        static isLeftOf(p1: Vector2, p2: Vector2, point: Vector2): boolean;
+        /**
+         * 处理片段，以便我们稍后对它们进行分类
+         */
+        updateSegments(): void;
     }
 }
 declare module es {
