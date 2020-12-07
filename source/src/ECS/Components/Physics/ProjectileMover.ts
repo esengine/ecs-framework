@@ -1,7 +1,7 @@
 module es {
     /**
-     * 只向itriggerlistener报告冲突的移动器
-     * 该对象将始终移动完整的距离
+     * 移动时考虑到碰撞，只用于向任何ITriggerListeners报告。
+     * 物体总是会全量移动，所以如果需要的话，由调用者在撞击时销毁它。
      */
     export class ProjectileMover extends Component {
         private _tempTriggerList: ITriggerListener[] = [];
@@ -10,26 +10,25 @@ module es {
         public onAddedToEntity() {
             this._collider = this.entity.getComponent<Collider>(Collider);
             if (!this._collider)
-                console.warn("ProjectileMover has no Collider. ProjectilMover requires a Collider!");
+                console.warn("ProjectileMover没有Collider。ProjectilMover需要一个Collider!");
         }
 
         /**
-         * 移动考虑碰撞的实体
+         * 在考虑到碰撞的情况下移动实体
          * @param motion
          */
         public move(motion: Vector2): boolean {
-            if (!this._collider)
+            if (this._collider == null)
                 return false;
 
             let didCollide = false;
 
-            // 获取我们在新位置可能发生碰撞的任何东西
+            // 获取我们在新的位置上可能会碰撞到的任何东西
             this.entity.position = Vector2.add(this.entity.position, motion);
 
             // 获取任何可能在新位置发生碰撞的东西
             let neighbors = Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers.value);
-            for (let i = 0; i < neighbors.size; i ++){
-                let neighbor = neighbors[i];
+            for (let neighbor of neighbors){
                 if (this._collider.overlaps(neighbor) && neighbor.enabled){
                     didCollide = true;
                     this.notifyTriggerListeners(this._collider, neighbor);

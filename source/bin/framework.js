@@ -1604,10 +1604,15 @@ var es;
              *  如果为真，则每一帧都会考虑到Physics.gravity
              */
             _this.shouldUseGravity = true;
+            /**
+             * 该刚体的速度
+             */
+            _this.velocity = new es.Vector2();
             _this._mass = 10;
             _this._elasticity = 0.5;
             _this._friction = 0.5;
             _this._glue = 0.01;
+            _this._inverseMass = 0;
             _this._inverseMass = 1 / _this._mass;
             return _this;
         }
@@ -1717,7 +1722,8 @@ var es;
          */
         ArcadeRigidbody.prototype.addImpulse = function (force) {
             if (!this.isImmovable) {
-                this.velocity.add(new es.Vector2(force.x * 100000, force.y * 100000).multiply(new es.Vector2(this._inverseMass * es.Time.deltaTime)));
+                this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiply(force, new es.Vector2(100000))
+                    .multiply(new es.Vector2(this._inverseMass * es.Time.deltaTime)));
             }
         };
         ArcadeRigidbody.prototype.onAddedToEntity = function () {
@@ -1733,8 +1739,8 @@ var es;
                 return;
             }
             if (this.shouldUseGravity)
-                this.velocity.add(es.Vector2.multiply(es.Physics.gravity, new es.Vector2(es.Time.deltaTime)));
-            this.entity.transform.position.add(es.Vector2.multiply(this.velocity, new es.Vector2(es.Time.deltaTime)));
+                this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiply(es.Physics.gravity, new es.Vector2(es.Time.deltaTime)));
+            this.entity.transform.position = es.Vector2.add(this.entity.transform.position, es.Vector2.multiply(this.velocity, new es.Vector2(es.Time.deltaTime)));
             var collisionResult = new es.CollisionResult();
             // 捞取我们在新的位置上可能会碰撞到的任何东西
             var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this._collider, this._collider.collidesWithLayers.value);
@@ -1742,7 +1748,7 @@ var es;
                 for (var neighbors_1 = __values(neighbors), neighbors_1_1 = neighbors_1.next(); !neighbors_1_1.done; neighbors_1_1 = neighbors_1.next()) {
                     var neighbor = neighbors_1_1.value;
                     // 如果邻近的对撞机是同一个实体，则忽略它
-                    if (neighbor.entity == this.entity) {
+                    if (neighbor.entity.equals(this.entity)) {
                         continue;
                     }
                     if (this._collider.collidesWithNonMotion(neighbor, collisionResult)) {
@@ -1754,10 +1760,10 @@ var es;
                         }
                         else {
                             // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                            this.entity.transform.position.subtract(collisionResult.minimumTranslationVector);
+                            this.entity.transform.position = es.Vector2.subtract(this.entity.transform.position, collisionResult.minimumTranslationVector);
                             var relativeVelocity = this.velocity.clone();
                             this.calculateResponseVelocity(relativeVelocity, collisionResult.minimumTranslationVector, relativeVelocity);
-                            this.velocity.add(relativeVelocity);
+                            this.velocity = es.Vector2.add(this.velocity, relativeVelocity);
                         }
                     }
                 }
@@ -1777,14 +1783,14 @@ var es;
          */
         ArcadeRigidbody.prototype.processOverlap = function (other, minimumTranslationVector) {
             if (this.isImmovable) {
-                other.entity.transform.position.add(minimumTranslationVector);
+                other.entity.transform.position = es.Vector2.add(other.entity.transform.position, minimumTranslationVector);
             }
             else if (other.isImmovable) {
-                this.entity.transform.position.subtract(minimumTranslationVector);
+                this.entity.transform.position = es.Vector2.subtract(this.entity.transform.position, minimumTranslationVector);
             }
             else {
-                this.entity.transform.position.subtract(es.Vector2.multiply(minimumTranslationVector, es.Vector2Ext.halfVector()));
-                other.entity.transform.position.add(es.Vector2.multiply(minimumTranslationVector, es.Vector2Ext.halfVector()));
+                this.entity.transform.position = es.Vector2.subtract(this.entity.transform.position, es.Vector2.multiply(minimumTranslationVector, es.Vector2Ext.halfVector()));
+                other.entity.transform.position = es.Vector2.add(other.entity.transform.position, es.Vector2.multiply(minimumTranslationVector, es.Vector2Ext.halfVector()));
             }
         };
         /**
@@ -1802,8 +1808,8 @@ var es;
             var totalinverseMass = this._inverseMass + other._inverseMass;
             var ourResponseFraction = this._inverseMass / totalinverseMass;
             var otherResponseFraction = other._inverseMass / totalinverseMass;
-            this.velocity.add(es.Vector2.multiply(relativeVelocity, new es.Vector2(ourResponseFraction)));
-            other.velocity.subtract(es.Vector2.multiply(relativeVelocity, new es.Vector2(otherResponseFraction)));
+            this.velocity = es.Vector2.add(this.velocity, new es.Vector2(relativeVelocity.x * ourResponseFraction, relativeVelocity.y * ourResponseFraction));
+            other.velocity = es.Vector2.subtract(other.velocity, new es.Vector2(relativeVelocity.x * otherResponseFraction, relativeVelocity.y * otherResponseFraction));
         };
         /**
          *  给定两个物体和MTV之间的相对速度，本方法修改相对速度，使其成为碰撞响应
@@ -1819,7 +1825,7 @@ var es;
             // 速度是沿碰撞法线和碰撞平面分解的。
             // 弹性将影响沿法线的响应（法线速度分量），摩擦力将影响速度的切向分量（切向速度分量）
             var n = es.Vector2.dot(relativeVelocity, normal);
-            var normalVelocityComponent = es.Vector2.multiply(normal, new es.Vector2(n));
+            var normalVelocityComponent = new es.Vector2(normal.x * n, normal.y * n);
             var tangentialVelocityComponent = es.Vector2.subtract(relativeVelocity, normalVelocityComponent);
             if (n > 0)
                 normalVelocityComponent = es.Vector2.zero;
@@ -1828,7 +1834,11 @@ var es;
             if (tangentialVelocityComponent.lengthSquared() < this._glue)
                 coefficientOfFriction = 1.01;
             // 弹性影响速度的法向分量，摩擦力影响速度的切向分量
-            responseVelocity = es.Vector2.multiply(new es.Vector2(-(1 + this._elasticity)), normalVelocityComponent).subtract(es.Vector2.multiply(new es.Vector2(coefficientOfFriction), tangentialVelocityComponent));
+            var t = es.Vector2.multiply(new es.Vector2((1 + this._elasticity)), normalVelocityComponent)
+                .multiply(new es.Vector2(-1))
+                .subtract(es.Vector2.multiply(new es.Vector2(coefficientOfFriction), tangentialVelocityComponent));
+            responseVelocity.x = t.x;
+            relativeVelocity.y = t.y;
         };
         return ArcadeRigidbody;
     }(es.Component));
@@ -1947,8 +1957,8 @@ var es;
 var es;
 (function (es) {
     /**
-     * 只向itriggerlistener报告冲突的移动器
-     * 该对象将始终移动完整的距离
+     * 移动时考虑到碰撞，只用于向任何ITriggerListeners报告。
+     * 物体总是会全量移动，所以如果需要的话，由调用者在撞击时销毁它。
      */
     var ProjectileMover = /** @class */ (function (_super) {
         __extends(ProjectileMover, _super);
@@ -1960,26 +1970,36 @@ var es;
         ProjectileMover.prototype.onAddedToEntity = function () {
             this._collider = this.entity.getComponent(es.Collider);
             if (!this._collider)
-                console.warn("ProjectileMover has no Collider. ProjectilMover requires a Collider!");
+                console.warn("ProjectileMover没有Collider。ProjectilMover需要一个Collider!");
         };
         /**
-         * 移动考虑碰撞的实体
+         * 在考虑到碰撞的情况下移动实体
          * @param motion
          */
         ProjectileMover.prototype.move = function (motion) {
-            if (!this._collider)
+            var e_2, _a;
+            if (this._collider == null)
                 return false;
             var didCollide = false;
-            // 获取我们在新位置可能发生碰撞的任何东西
+            // 获取我们在新的位置上可能会碰撞到的任何东西
             this.entity.position = es.Vector2.add(this.entity.position, motion);
             // 获取任何可能在新位置发生碰撞的东西
             var neighbors = es.Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers.value);
-            for (var i = 0; i < neighbors.size; i++) {
-                var neighbor = neighbors[i];
-                if (this._collider.overlaps(neighbor) && neighbor.enabled) {
-                    didCollide = true;
-                    this.notifyTriggerListeners(this._collider, neighbor);
+            try {
+                for (var neighbors_2 = __values(neighbors), neighbors_2_1 = neighbors_2.next(); !neighbors_2_1.done; neighbors_2_1 = neighbors_2.next()) {
+                    var neighbor = neighbors_2_1.value;
+                    if (this._collider.overlaps(neighbor) && neighbor.enabled) {
+                        didCollide = true;
+                        this.notifyTriggerListeners(this._collider, neighbor);
+                    }
                 }
+            }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            finally {
+                try {
+                    if (neighbors_2_1 && !neighbors_2_1.done && (_a = neighbors_2.return)) _a.call(neighbors_2);
+                }
+                finally { if (e_2) throw e_2.error; }
             }
             return didCollide;
         };
@@ -3533,19 +3553,19 @@ var es;
          * @param array
          */
         FastList.prototype.addRange = function (array) {
-            var e_2, _a;
+            var e_3, _a;
             try {
                 for (var array_1 = __values(array), array_1_1 = array_1.next(); !array_1_1.done; array_1_1 = array_1.next()) {
                     var item = array_1_1.value;
                     this.add(item);
                 }
             }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            catch (e_3_1) { e_3 = { error: e_3_1 }; }
             finally {
                 try {
                     if (array_1_1 && !array_1_1.done && (_a = array_1.return)) _a.call(array_1);
                 }
-                finally { if (e_2) throw e_2.error; }
+                finally { if (e_3) throw e_3.error; }
             }
         };
         /**
@@ -6025,7 +6045,7 @@ var es;
          */
         Physics.boxcastBroadphaseExcludingSelfNonRect = function (collider, layerMask) {
             if (layerMask === void 0) { layerMask = this.allLayers; }
-            var bounds = collider.bounds;
+            var bounds = collider.bounds.clone();
             return this._spatialHash.aabbBroadphase(bounds, collider, layerMask);
         };
         /**
@@ -6284,7 +6304,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_3, _a;
+            var e_4, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -6317,12 +6337,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+            catch (e_4_1) { e_4 = { error: e_4_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_3) throw e_3.error; }
+                finally { if (e_4) throw e_4.error; }
             }
             return resultCounter;
         };
@@ -6381,7 +6401,7 @@ var es;
             return this._store.get(this.getKey(x, y));
         };
         NumberDictionary.prototype.getKey = function (x, y) {
-            return x + "_" + y;
+            return x << 16 | (y >>> 0);
         };
         /**
          * 清除字典数据
@@ -9546,7 +9566,7 @@ var linq;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_4, _a;
+            var e_5, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -9554,12 +9574,12 @@ var linq;
                     result.add(x);
                 }
             }
-            catch (e_4_1) { e_4 = { error: e_4_1 }; }
+            catch (e_5_1) { e_5 = { error: e_5_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_4) throw e_4.error; }
+                finally { if (e_5) throw e_5.error; }
             }
             return result;
         };

@@ -760,7 +760,7 @@ declare module es {
         _elasticity: number;
         _friction: number;
         _glue: number;
-        _inverseMass: any;
+        _inverseMass: number;
         _collider: Collider;
         constructor();
         /**
@@ -869,15 +869,15 @@ declare module es {
 }
 declare module es {
     /**
-     * 只向itriggerlistener报告冲突的移动器
-     * 该对象将始终移动完整的距离
+     * 移动时考虑到碰撞，只用于向任何ITriggerListeners报告。
+     * 物体总是会全量移动，所以如果需要的话，由调用者在撞击时销毁它。
      */
     class ProjectileMover extends Component {
         private _tempTriggerList;
         private _collider;
         onAddedToEntity(): void;
         /**
-         * 移动考虑碰撞的实体
+         * 在考虑到碰撞的情况下移动实体
          * @param motion
          */
         move(motion: Vector2): boolean;
@@ -2567,7 +2567,7 @@ declare module es {
      * 它的主要目的是将int、int x、y坐标散列到单个Uint32键中，使用O(1)查找。
      */
     class NumberDictionary {
-        _store: Map<string, Collider[]>;
+        _store: Map<number, Collider[]>;
         add(x: number, y: number, list: Collider[]): void;
         /**
          * 使用蛮力方法从字典存储列表中移除碰撞器
@@ -2575,7 +2575,7 @@ declare module es {
          */
         remove(obj: Collider): void;
         tryGetValue(x: number, y: number): Collider[];
-        getKey(x: number, y: number): string;
+        getKey(x: number, y: number): number;
         /**
          * 清除字典数据
          */

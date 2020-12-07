@@ -76,7 +76,7 @@ module es {
          * @param layerMask 
          */
         public static boxcastBroadphaseExcludingSelfNonRect(collider: Collider, layerMask = this.allLayers) {
-            let bounds = collider.bounds;
+            let bounds = collider.bounds.clone();
             return this._spatialHash.aabbBroadphase(bounds, collider, layerMask);
         }
 

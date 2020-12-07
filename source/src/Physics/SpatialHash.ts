@@ -268,7 +268,7 @@ module es {
      * 它的主要目的是将int、int x、y坐标散列到单个Uint32键中，使用O(1)查找。
      */
     export class NumberDictionary {
-        public _store: Map<string, Collider[]> = new Map<string, Collider[]>();
+        public _store: Map<number, Collider[]> = new Map<number, Collider[]>();
 
         public add(x: number, y: number, list: Collider[]) {
             this._store.set(this.getKey(x, y), list);
@@ -291,7 +291,7 @@ module es {
         }
 
         public getKey(x: number, y: number){
-            return `${x}_${y}`;
+            return x << 16 | (y >>> 0);
         }
 
         /**
