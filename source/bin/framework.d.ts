@@ -725,7 +725,8 @@ declare module es {
 }
 declare module es {
     /**
-     * 请注意，这不是一个完整的、多迭代的物理系统！它可以用于简单的、街机风格的物理。这可以用于简单的，街机风格的物理学
+     * 请注意，这不是一个完整的、多迭代的物理系统！它可以用于简单的、街机风格的物理。
+     * 这可以用于简单的，街机风格的物理学
      */
     class ArcadeRigidbody extends Component implements IUpdatable {
         /** 这个刚体的质量。质量为0，则是一个不可移动的物体 */
@@ -3076,6 +3077,16 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * 用于包装事件的一个小类
+     */
+    class FuncPack {
+        /** 函数 */
+        func: Function;
+        /** 上下文 */
+        context: any;
+        constructor(func: Function, context: any);
+    }
     /**
      * 用于事件管理
      */

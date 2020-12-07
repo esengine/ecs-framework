@@ -1,3 +1,4 @@
+"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -1592,7 +1593,8 @@ var es;
 var es;
 (function (es) {
     /**
-     * 请注意，这不是一个完整的、多迭代的物理系统！它可以用于简单的、街机风格的物理。这可以用于简单的，街机风格的物理学
+     * 请注意，这不是一个完整的、多迭代的物理系统！它可以用于简单的、街机风格的物理。
+     * 这可以用于简单的，街机风格的物理学
      */
     var ArcadeRigidbody = /** @class */ (function (_super) {
         __extends(ArcadeRigidbody, _super);
@@ -7839,6 +7841,17 @@ var es;
 var es;
 (function (es) {
     /**
+     * 用于包装事件的一个小类
+     */
+    var FuncPack = /** @class */ (function () {
+        function FuncPack(func, context) {
+            this.func = func;
+            this.context = context;
+        }
+        return FuncPack;
+    }());
+    es.FuncPack = FuncPack;
+    /**
      * 用于事件管理
      */
     var Emitter = /** @class */ (function () {
@@ -7852,15 +7865,14 @@ var es;
          * @param context 监听上下文
          */
         Emitter.prototype.addObserver = function (eventType, handler, context) {
-            handler.bind(context);
             var list = this._messageTable.get(eventType);
             if (!list) {
                 list = [];
                 this._messageTable.set(eventType, list);
             }
-            if (new linq.List(list).contains(handler))
+            if (list.findIndex(function (funcPack) { return funcPack.func == handler; }) != -1)
                 console.warn("您试图添加相同的观察者两次");
-            list.push(handler);
+            list.push(new FuncPack(handler, context));
         };
         /**
          * 移除监听项
@@ -7869,7 +7881,9 @@ var es;
          */
         Emitter.prototype.removeObserver = function (eventType, handler) {
             var messageData = this._messageTable.get(eventType);
-            new linq.List(messageData).remove(handler);
+            var index = messageData.findIndex(function (data) { return data.func == handler; });
+            if (index != -1)
+                new linq.List(messageData).removeAt(index);
         };
         /**
          * 触发该事件
@@ -7880,7 +7894,7 @@ var es;
             var list = this._messageTable.get(eventType);
             if (list) {
                 for (var i = list.length - 1; i >= 0; i--)
-                    list[i](data);
+                    list[i].func.call(list[i].context, data);
             }
         };
         return Emitter;
