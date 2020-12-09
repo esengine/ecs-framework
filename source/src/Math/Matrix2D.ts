@@ -280,6 +280,27 @@ module es {
             return this == other;
         }
 
+        public static toMatrix(mat: Matrix2D) {
+            let matrix = new Matrix();
+            matrix.m11 = mat.m11;
+            matrix.m12 = mat.m12;
+            matrix.m13 = 0;
+            matrix.m14 = 0;
+            matrix.m21 = mat.m21;
+            matrix.m22 = mat.m22;
+            matrix.m23 = 0;
+            matrix.m24 = 0;
+            matrix.m31 = 0;
+            matrix.m32 = 0;
+            matrix.m33 = 1;
+            matrix.m34 = 0;
+            matrix.m41 = mat.m31;
+            matrix.m42 = mat.m32;
+            matrix.m43 = 0;
+            matrix.m44 = 1;
+            return matrix;
+        }
+
         public toString() {
             return `{m11:${this.m11} m12:${this.m12} m21:${this.m21} m22:${this.m22} m31:${this.m31} m32:${this.m32}}`
         }

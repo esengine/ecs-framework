@@ -1807,6 +1807,45 @@ declare module es {
 }
 declare module es {
     /**
+     * 代表右手4x4浮点矩阵，可以存储平移、比例和旋转信息
+     */
+    class Matrix {
+        m11: number;
+        m12: number;
+        m13: number;
+        m14: number;
+        m21: number;
+        m22: number;
+        m23: number;
+        m24: number;
+        m31: number;
+        m32: number;
+        m33: number;
+        m34: number;
+        m41: number;
+        m42: number;
+        m43: number;
+        m44: number;
+        /**
+         * 为自定义的正交视图创建一个新的投影矩阵
+         * @param left
+         * @param right
+         * @param top
+         * @param zFarPlane
+         * @param result
+         */
+        static createOrthographicOffCenter(left: number, right: number, bottom: number, top: number, zNearPlane: number, zFarPlane: number, result?: Matrix): void;
+        /**
+         * 创建一个新的矩阵，其中包含两个矩阵的乘法。
+         * @param matrix1
+         * @param matrix2
+         * @param result
+         */
+        static multiply(matrix1: Matrix, matrix2: Matrix, result?: Matrix): void;
+    }
+}
+declare module es {
+    /**
      * 表示右手3 * 3的浮点矩阵，可以存储平移、缩放和旋转信息。
      */
     class Matrix2D implements IEquatable<Matrix2D> {
@@ -1891,6 +1930,7 @@ declare module es {
          * @param other
          */
         equals(other: Matrix2D): boolean;
+        static toMatrix(mat: Matrix2D): Matrix;
         toString(): string;
     }
 }

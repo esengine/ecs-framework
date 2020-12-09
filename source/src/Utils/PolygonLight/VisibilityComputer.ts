@@ -255,7 +255,7 @@ module es {
          */
         public loadRectangleBoundaries(){
             this.addSegment(new Vector2(this._origin.x - this._radius, this._origin.y - this._radius),
-                new Vector2(this._origin.x + this._radius, this._origin.y - this._radius);
+                new Vector2(this._origin.x + this._radius, this._origin.y - this._radius));
             this.addSegment(new Vector2(this._origin.x - this._radius, this._origin.y + this._radius),
                 new Vector2(this._origin.x + this._radius, this._origin.y + this._radius));
             this.addSegment(new Vector2(this._origin.x - this._radius, this._origin.y - this._radius),

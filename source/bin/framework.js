@@ -4492,6 +4492,86 @@ var es;
 var es;
 (function (es) {
     /**
+     * 代表右手4x4浮点矩阵，可以存储平移、比例和旋转信息
+     */
+    var Matrix = /** @class */ (function () {
+        function Matrix() {
+        }
+        /**
+         * 为自定义的正交视图创建一个新的投影矩阵
+         * @param left
+         * @param right
+         * @param top
+         * @param zFarPlane
+         * @param result
+         */
+        Matrix.createOrthographicOffCenter = function (left, right, bottom, top, zNearPlane, zFarPlane, result) {
+            if (result === void 0) { result = new Matrix(); }
+            result.m11 = 2 / (right - left);
+            result.m12 = 0;
+            result.m13 = 0;
+            result.m14 = 0;
+            result.m21 = 0;
+            result.m22 = 2 / (top - bottom);
+            result.m23 = 0;
+            result.m24 = 0;
+            result.m31 = 0;
+            result.m32 = 0;
+            result.m33 = 1 / (zNearPlane - zFarPlane);
+            result.m34 = 0;
+            result.m41 = (left + right) / (left - right);
+            result.m42 = (top + bottom) / (bottom - top);
+            result.m43 = zNearPlane / (zNearPlane - zFarPlane);
+            result.m44 = 1;
+        };
+        /**
+         * 创建一个新的矩阵，其中包含两个矩阵的乘法。
+         * @param matrix1
+         * @param matrix2
+         * @param result
+         */
+        Matrix.multiply = function (matrix1, matrix2, result) {
+            if (result === void 0) { result = new Matrix(); }
+            var m11 = (((matrix1.m11 * matrix2.m11) + (matrix1.m12 * matrix2.m21)) + (matrix1.m13 * matrix2.m31)) + (matrix1.m14 * matrix2.m41);
+            var m12 = (((matrix1.m11 * matrix2.m12) + (matrix1.m12 * matrix2.m22)) + (matrix1.m13 * matrix2.m32)) + (matrix1.m14 * matrix2.m42);
+            var m13 = (((matrix1.m11 * matrix2.m13) + (matrix1.m12 * matrix2.m23)) + (matrix1.m13 * matrix2.m33)) + (matrix1.m14 * matrix2.m43);
+            var m14 = (((matrix1.m11 * matrix2.m14) + (matrix1.m12 * matrix2.m24)) + (matrix1.m13 * matrix2.m34)) + (matrix1.m14 * matrix2.m44);
+            var m21 = (((matrix1.m21 * matrix2.m11) + (matrix1.m22 * matrix2.m21)) + (matrix1.m23 * matrix2.m31)) + (matrix1.m24 * matrix2.m41);
+            var m22 = (((matrix1.m21 * matrix2.m12) + (matrix1.m22 * matrix2.m22)) + (matrix1.m23 * matrix2.m32)) + (matrix1.m24 * matrix2.m42);
+            var m23 = (((matrix1.m21 * matrix2.m13) + (matrix1.m22 * matrix2.m23)) + (matrix1.m23 * matrix2.m33)) + (matrix1.m24 * matrix2.m43);
+            var m24 = (((matrix1.m21 * matrix2.m14) + (matrix1.m22 * matrix2.m24)) + (matrix1.m23 * matrix2.m34)) + (matrix1.m24 * matrix2.m44);
+            var m31 = (((matrix1.m31 * matrix2.m11) + (matrix1.m32 * matrix2.m21)) + (matrix1.m33 * matrix2.m31)) + (matrix1.m34 * matrix2.m41);
+            var m32 = (((matrix1.m31 * matrix2.m12) + (matrix1.m32 * matrix2.m22)) + (matrix1.m33 * matrix2.m32)) + (matrix1.m34 * matrix2.m42);
+            var m33 = (((matrix1.m31 * matrix2.m13) + (matrix1.m32 * matrix2.m23)) + (matrix1.m33 * matrix2.m33)) + (matrix1.m34 * matrix2.m43);
+            var m34 = (((matrix1.m31 * matrix2.m14) + (matrix1.m32 * matrix2.m24)) + (matrix1.m33 * matrix2.m34)) + (matrix1.m34 * matrix2.m44);
+            var m41 = (((matrix1.m41 * matrix2.m11) + (matrix1.m42 * matrix2.m21)) + (matrix1.m43 * matrix2.m31)) + (matrix1.m44 * matrix2.m41);
+            var m42 = (((matrix1.m41 * matrix2.m12) + (matrix1.m42 * matrix2.m22)) + (matrix1.m43 * matrix2.m32)) + (matrix1.m44 * matrix2.m42);
+            var m43 = (((matrix1.m41 * matrix2.m13) + (matrix1.m42 * matrix2.m23)) + (matrix1.m43 * matrix2.m33)) + (matrix1.m44 * matrix2.m43);
+            var m44 = (((matrix1.m41 * matrix2.m14) + (matrix1.m42 * matrix2.m24)) + (matrix1.m43 * matrix2.m34)) + (matrix1.m44 * matrix2.m44);
+            result.m11 = m11;
+            result.m12 = m12;
+            result.m13 = m13;
+            result.m14 = m14;
+            result.m21 = m21;
+            result.m22 = m22;
+            result.m23 = m23;
+            result.m24 = m24;
+            result.m31 = m31;
+            result.m32 = m32;
+            result.m33 = m33;
+            result.m34 = m34;
+            result.m41 = m41;
+            result.m42 = m42;
+            result.m43 = m43;
+            result.m44 = m44;
+        };
+        return Matrix;
+    }());
+    es.Matrix = Matrix;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
      * 表示右手3 * 3的浮点矩阵，可以存储平移、缩放和旋转信息。
      */
     var Matrix2D = /** @class */ (function () {
@@ -4730,6 +4810,26 @@ var es;
          */
         Matrix2D.prototype.equals = function (other) {
             return this == other;
+        };
+        Matrix2D.toMatrix = function (mat) {
+            var matrix = new es.Matrix();
+            matrix.m11 = mat.m11;
+            matrix.m12 = mat.m12;
+            matrix.m13 = 0;
+            matrix.m14 = 0;
+            matrix.m21 = mat.m21;
+            matrix.m22 = mat.m22;
+            matrix.m23 = 0;
+            matrix.m24 = 0;
+            matrix.m31 = 0;
+            matrix.m32 = 0;
+            matrix.m33 = 1;
+            matrix.m34 = 0;
+            matrix.m41 = mat.m31;
+            matrix.m42 = mat.m32;
+            matrix.m43 = 0;
+            matrix.m44 = 1;
+            return matrix;
         };
         Matrix2D.prototype.toString = function () {
             return "{m11:" + this.m11 + " m12:" + this.m12 + " m21:" + this.m21 + " m22:" + this.m22 + " m31:" + this.m31 + " m32:" + this.m32 + "}";
