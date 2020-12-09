@@ -1638,10 +1638,12 @@ declare class TimeUtils {
     static timeToMillisecond(time: string, partition?: string): string;
 }
 declare module es {
-    /** 贝塞尔帮助类 */
+    /**
+     * 三次方和二次方贝塞尔帮助器(cubic and quadratic bezier helper)
+     */
     class Bezier {
         /**
-         * 二次贝塞尔曲线
+         * 求解二次曲折线
          * @param p0
          * @param p1
          * @param p2
@@ -2370,8 +2372,8 @@ declare module es {
         bottomRight = 6
     }
     class Collisions {
-        static isLineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): boolean;
-        static lineToLineIntersection(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): Vector2;
+        static lineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): boolean;
+        static lineToLineIntersection(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2, intersection?: Vector2): boolean;
         static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
         static circleToCircle(circleCenter1: Vector2, circleRadius1: number, circleCenter2: Vector2, circleRadius2: number): boolean;
         static circleToLine(circleCenter: Vector2, radius: number, lineFrom: Vector2, lineTo: Vector2): boolean;

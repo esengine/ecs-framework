@@ -12,7 +12,7 @@ module es {
     }
 
     export class Collisions {
-        public static isLineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): boolean {
+        public static lineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): boolean {
             let b = Vector2.subtract(a2, a1);
             let d = Vector2.subtract(b2, b1);
             let bDotDPerp = b.x * d.y - b.y * d.x;
@@ -33,8 +33,9 @@ module es {
             return true;
         }
 
-        public static lineToLineIntersection(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2): Vector2 {
-            let intersection = Vector2.zero;
+        public static lineToLineIntersection(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2, intersection: Vector2 = new Vector2()): boolean {
+            intersection.x = 0;
+            intersection.y = 0;
 
             let b = Vector2.subtract(a2, a1);
             let d = Vector2.subtract(b2, b1);
@@ -42,20 +43,22 @@ module es {
 
             // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
-                return intersection;
+                return false;
 
             let c = Vector2.subtract(b1, a1);
             let t = (c.x * d.y - c.y * d.x) / bDotDPerp;
             if (t < 0 || t > 1)
-                return intersection;
+                return false;
 
             let u = (c.x * b.y - c.y * b.x) / bDotDPerp;
             if (u < 0 || u > 1)
-                return intersection;
+                return false;
 
-            intersection = Vector2.add(a1, new Vector2(t * b.x, t * b.y));
+            let temp = Vector2.add(a1, new Vector2(t * b.x, t * b.y));
+            intersection.x = temp.x;
+            intersection.y = temp.y;
 
-            return intersection;
+            return true;
         }
 
         public static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2) {
@@ -80,9 +83,11 @@ module es {
         }
 
         public static rectToCircle(rect: Rectangle, cPosition: Vector2, cRadius: number): boolean {
+            // 检查矩形是否包含圆的中心点
             if (this.rectToPoint(rect.x, rect.y, rect.width, rect.height, cPosition))
                 return true;
 
+            // 对照相关边缘检查圆圈
             let edgeFrom: Vector2;
             let edgeTo: Vector2;
             let sector = this.getSector(rect.x, rect.y, rect.width, rect.height, cPosition);
@@ -135,28 +140,28 @@ module es {
                 if ((both & PointSectors.top) != 0) {
                     edgeFrom = new Vector2(rect.x, rect.y);
                     edgeTo = new Vector2(rect.x + rect.width, rect.y);
-                    if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
                         return true;
                 }
 
                 if ((both & PointSectors.bottom) != 0) {
                     edgeFrom = new Vector2(rect.x, rect.y + rect.height);
                     edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
-                    if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
                         return true;
                 }
 
                 if ((both & PointSectors.left) != 0) {
                     edgeFrom = new Vector2(rect.x, rect.y);
                     edgeTo = new Vector2(rect.x, rect.y + rect.height);
-                    if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
                         return true;
                 }
 
                 if ((both & PointSectors.right) != 0) {
                     edgeFrom = new Vector2(rect.x + rect.width, rect.y);
                     edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
-                    if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
                         return true;
                 }
             }

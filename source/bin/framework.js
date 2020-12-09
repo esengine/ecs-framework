@@ -4214,12 +4214,14 @@ var TimeUtils = /** @class */ (function () {
 }());
 var es;
 (function (es) {
-    /** 贝塞尔帮助类 */
+    /**
+     * 三次方和二次方贝塞尔帮助器(cubic and quadratic bezier helper)
+     */
     var Bezier = /** @class */ (function () {
         function Bezier() {
         }
         /**
-         * 二次贝塞尔曲线
+         * 求解二次曲折线
          * @param p0
          * @param p1
          * @param p2
@@ -5886,7 +5888,7 @@ var es;
     var Collisions = /** @class */ (function () {
         function Collisions() {
         }
-        Collisions.isLineToLine = function (a1, a2, b1, b2) {
+        Collisions.lineToLine = function (a1, a2, b1, b2) {
             var b = es.Vector2.subtract(a2, a1);
             var d = es.Vector2.subtract(b2, b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
@@ -5902,23 +5904,27 @@ var es;
                 return false;
             return true;
         };
-        Collisions.lineToLineIntersection = function (a1, a2, b1, b2) {
-            var intersection = es.Vector2.zero;
+        Collisions.lineToLineIntersection = function (a1, a2, b1, b2, intersection) {
+            if (intersection === void 0) { intersection = new es.Vector2(); }
+            intersection.x = 0;
+            intersection.y = 0;
             var b = es.Vector2.subtract(a2, a1);
             var d = es.Vector2.subtract(b2, b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
             // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
-                return intersection;
+                return false;
             var c = es.Vector2.subtract(b1, a1);
             var t = (c.x * d.y - c.y * d.x) / bDotDPerp;
             if (t < 0 || t > 1)
-                return intersection;
+                return false;
             var u = (c.x * b.y - c.y * b.x) / bDotDPerp;
             if (u < 0 || u > 1)
-                return intersection;
-            intersection = es.Vector2.add(a1, new es.Vector2(t * b.x, t * b.y));
-            return intersection;
+                return false;
+            var temp = es.Vector2.add(a1, new es.Vector2(t * b.x, t * b.y));
+            intersection.x = temp.x;
+            intersection.y = temp.y;
+            return true;
         };
         Collisions.closestPointOnLine = function (lineA, lineB, closestTo) {
             var v = es.Vector2.subtract(lineB, lineA);
@@ -5937,8 +5943,10 @@ var es;
             return es.Vector2.distanceSquared(circleCenter, point) < radius * radius;
         };
         Collisions.rectToCircle = function (rect, cPosition, cRadius) {
+            // 检查矩形是否包含圆的中心点
             if (this.rectToPoint(rect.x, rect.y, rect.width, rect.height, cPosition))
                 return true;
+            // 对照相关边缘检查圆圈
             var edgeFrom;
             var edgeTo;
             var sector = this.getSector(rect.x, rect.y, rect.width, rect.height, cPosition);
@@ -5985,25 +5993,25 @@ var es;
                 if ((both & PointSectors.top) != 0) {
                     edgeFrom = new es.Vector2(rect.x, rect.y);
                     edgeTo = new es.Vector2(rect.x + rect.width, rect.y);
-                    if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
                         return true;
                 }
                 if ((both & PointSectors.bottom) != 0) {
                     edgeFrom = new es.Vector2(rect.x, rect.y + rect.height);
                     edgeTo = new es.Vector2(rect.x + rect.width, rect.y + rect.height);
-                    if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
                         return true;
                 }
                 if ((both & PointSectors.left) != 0) {
                     edgeFrom = new es.Vector2(rect.x, rect.y);
                     edgeTo = new es.Vector2(rect.x, rect.y + rect.height);
-                    if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
                         return true;
                 }
                 if ((both & PointSectors.right) != 0) {
                     edgeFrom = new es.Vector2(rect.x + rect.width, rect.y);
                     edgeTo = new es.Vector2(rect.x + rect.width, rect.y + rect.height);
-                    if (this.isLineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
+                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
                         return true;
                 }
             }
@@ -7061,14 +7069,14 @@ var es;
         }
         RealtimeCollisions.intersectMovingCircleBox = function (s, b, movement, time) {
             // 计算将b按球面半径r扩大后的AABB
-            var e = b.bounds;
+            var e = b.bounds.clone();
             e.inflate(s.radius, s.radius);
             // 将射线与展开的矩形e相交，如果射线错过了e，则以无交点退出，否则得到交点p和时间t作为结果。
             var ray = new es.Ray2D(es.Vector2.subtract(s.position, movement), s.position);
             if (!e.rayIntersects(ray, time) && time.value > 1)
                 return false;
             // 求交点
-            var point = es.Vector2.add(ray.start, es.Vector2.add(ray.direction, new es.Vector2(time.value)));
+            var point = es.Vector2.add(ray.start, es.Vector2.multiply(ray.direction, new es.Vector2(time.value)));
             // 计算交点p位于b的哪个最小面和最大面之外。注意，u和v不能有相同的位集，它们之间必须至少有一个位集。
             var u, v = 0;
             if (point.x < b.bounds.left)

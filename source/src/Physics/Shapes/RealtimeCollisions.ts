@@ -2,7 +2,7 @@ module es {
     export class RealtimeCollisions {
         public static intersectMovingCircleBox(s: Circle, b: Box, movement: Vector2, time: Ref<number>): boolean {
             // 计算将b按球面半径r扩大后的AABB
-            let e = b.bounds;
+            let e = b.bounds.clone();
             e.inflate(s.radius, s.radius);
 
             // 将射线与展开的矩形e相交，如果射线错过了e，则以无交点退出，否则得到交点p和时间t作为结果。
@@ -11,7 +11,7 @@ module es {
                 return false;
 
             // 求交点
-            let point = Vector2.add(ray.start, Vector2.add(ray.direction, new Vector2(time.value)));
+            let point = Vector2.add(ray.start, Vector2.multiply(ray.direction, new Vector2(time.value)));
 
             // 计算交点p位于b的哪个最小面和最大面之外。注意，u和v不能有相同的位集，它们之间必须至少有一个位集。
             let u, v = 0;

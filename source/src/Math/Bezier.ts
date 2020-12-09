@@ -1,8 +1,10 @@
 module es {
-    /** 贝塞尔帮助类 */
+    /** 
+     * 三次方和二次方贝塞尔帮助器(cubic and quadratic bezier helper)
+     */
     export class Bezier {
         /**
-         * 二次贝塞尔曲线
+         * 求解二次曲折线
          * @param p0
          * @param p1
          * @param p2
