@@ -7635,8 +7635,7 @@ var ArrayUtils = /** @class */ (function () {
     }
     /**
      * 执行冒泡排序
-     * @param    ary
-     * 算法参考 -- http://www.hiahia.org/datastructure/paixu/paixu8.3.1.1-1.htm
+     * @param ary
      */
     ArrayUtils.bubbleSort = function (ary) {
         var isExchange = false;
