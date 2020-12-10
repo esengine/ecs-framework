@@ -1293,117 +1293,6 @@ declare module es {
     }
 }
 declare module es {
-    /**
-     * 创建这个字典的原因只有一个：
-     * 我需要一个能让我直接以数组的形式对值进行迭代的字典，而不需要生成一个数组或使用迭代器。
-     * 对于这个目标是比标准字典快N倍。
-     * Faster dictionary在大部分操作上也比标准字典快，但差别可以忽略不计。
-     * 唯一较慢的操作是在添加时调整内存大小，因为与标准数组相比，这个实现需要使用两个单独的数组。
-     */
-    class FasterDictionary<TKey, TValue> {
-        _values: TValue[];
-        _valuesInfo: FastNode[];
-        _buckets: number[];
-        _freeValueCellIndex: number;
-        _collisions: number;
-        constructor(size?: number);
-        getValuesArray(count: {
-            value: number;
-        }): TValue[];
-        readonly valuesArray: TValue[];
-        readonly count: number;
-        add(key: TKey, value: TValue): void;
-        addValue(key: TKey, value: TValue, indexSet: {
-            value: number;
-        }): boolean;
-        remove(key: TKey): boolean;
-        trim(): void;
-        clear(): void;
-        fastClear(): void;
-        containsKey(key: TKey): boolean;
-        tryGetValue(key: TKey): TValue;
-        tryFindIndex(key: TKey, findIndex: {
-            value: number;
-        }): boolean;
-        getDirectValue(index: number): TValue;
-        getIndex(key: TKey): number;
-        static updateLinkedList(index: number, valuesInfo: FastNode[]): void;
-        static hash(key: any): number;
-        static reduce(x: number, n: number): number;
-    }
-    class FastNode {
-        readonly key: any;
-        readonly hashcode: number;
-        previous: number;
-        next: number;
-        constructor(key: any, hash: number, previousNode?: number);
-    }
-}
-declare module es {
-    /**
-     * 围绕一个数组的非常基本的包装，当它达到容量时自动扩展。
-     * 注意，在迭代时应该这样直接访问缓冲区，但使用FastList.length字段。
-     *
-     * @tutorial
-     * for( var i = 0; i <= list.length; i++ )
-     *      var item = list.buffer[i];
-     */
-    class FastList<T> {
-        /**
-         * 直接访问后备缓冲区。
-         * 不要使用buffer.Length! 使用FastList.length
-         */
-        buffer: T[];
-        /**
-         * 直接访问缓冲区内填充项的长度。不要改变。
-         */
-        length: number;
-        constructor(size?: number);
-        /**
-         * 清空列表并清空缓冲区中的所有项目
-         */
-        clear(): void;
-        /**
-         *  和clear的工作原理一样，只是它不会将缓冲区中的所有项目清空。
-         */
-        reset(): void;
-        /**
-         * 将该项目添加到列表中
-         * @param item
-         */
-        add(item: T): void;
-        /**
-         * 从列表中删除该项目
-         * @param item
-         */
-        remove(item: T): void;
-        /**
-         * 从列表中删除给定索引的项目。
-         * @param index
-         */
-        removeAt(index: number): void;
-        /**
-         * 检查项目是否在FastList中
-         * @param item
-         */
-        contains(item: T): boolean;
-        /**
-         * 如果缓冲区达到最大，将分配更多的空间来容纳额外的ItemCount。
-         * @param additionalItemCount
-         */
-        ensureCapacity(additionalItemCount?: number): void;
-        /**
-         * 添加数组中的所有项目
-         * @param array
-         */
-        addRange(array: T[]): void;
-        /**
-         * 对缓冲区中的所有项目进行排序，长度不限。
-         */
-        sort(comparer: IComparer<T>): void;
-    }
-}
-declare module es {
     class HashHelpers {
         static readonly hashCollisionThreshold: number;
         static readonly hashPrime: number;
@@ -2945,14 +2834,14 @@ declare module es {
          * @param polygon
          * @param result
          */
-        static circleToPolygon(circle: Circle, polygon: Polygon, result: CollisionResult): boolean;
+        static circleToPolygon(circle: Circle, polygon: Polygon, result?: CollisionResult): boolean;
         /**
-         * 适用于圆心在方框内以及只与方框外圆心重叠的圆。
+         * 适用于中心在框内的圆，也适用于与框外中心重合的圆。
          * @param circle
          * @param box
          * @param result
          */
-        static circleToBox(circle: Circle, box: Box, result: CollisionResult): boolean;
+        static circleToBox(circle: Circle, box: Box, result?: CollisionResult): boolean;
         /**
          *
          * @param point
@@ -2981,7 +2870,7 @@ declare module es {
          * @param second
          * @param result
          */
-        static circleToCircle(first: Circle, second: Circle, result: CollisionResult): boolean;
+        static circleToCircle(first: Circle, second: Circle, result?: CollisionResult): boolean;
         /**
          *
          * @param first
@@ -2990,7 +2879,7 @@ declare module es {
          */
         static boxToBox(first: Box, second: Box, result: CollisionResult): boolean;
         private static minkowskiDifference;
-        static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit: RaycastHit): boolean;
+        static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit?: RaycastHit): boolean;
         static lineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2, intersection: Vector2): boolean;
         static lineToCircle(start: Vector2, end: Vector2, s: Circle, hit: RaycastHit): boolean;
         /**
@@ -3001,6 +2890,608 @@ declare module es {
          * @param hit
          */
         static boxToBoxCast(first: Box, second: Box, movement: Vector2, hit: RaycastHit): boolean;
+    }
+}
+declare module es {
+    /**
+     * 用于包装事件的一个小类
+     */
+    class FuncPack {
+        /** 函数 */
+        func: Function;
+        /** 上下文 */
+        context: any;
+        constructor(func: Function, context: any);
+    }
+    /**
+     * 用于事件管理
+     */
+    class Emitter<T> {
+        private _messageTable;
+        constructor();
+        /**
+         * 开始监听项
+         * @param eventType 监听类型
+         * @param handler 监听函数
+         * @param context 监听上下文
+         */
+        addObserver(eventType: T, handler: Function, context: any): void;
+        /**
+         * 移除监听项
+         * @param eventType 事件类型
+         * @param handler 事件函数
+         */
+        removeObserver(eventType: T, handler: Function): void;
+        /**
+         * 触发该事件
+         * @param eventType 事件类型
+         * @param data 事件数据
+         */
+        emit(eventType: T, data?: any): void;
+    }
+}
+declare module es {
+    enum Edge {
+        top = 0,
+        bottom = 1,
+        left = 2,
+        right = 3
+    }
+}
+declare module es {
+    class Enumerable {
+        /**
+         * 生成包含一个重复值的序列
+         * @param element 要重复的值
+         * @param count 在生成的序列中重复该值的次数
+         */
+        static repeat<T>(element: T, count: number): any[];
+    }
+}
+declare module es {
+    class EqualityComparer<T> implements IEqualityComparer<T> {
+        static default<T>(): EqualityComparer<T>;
+        protected constructor();
+        equals(x: T, y: T): boolean;
+        getHashCode(o: T): number;
+        private _getHashCodeForNumber;
+        private _getHashCodeForString;
+        private forOwn;
+    }
+}
+declare module es {
+    class GlobalManager {
+        _enabled: boolean;
+        /**
+         * 如果true则启用了GlobalManager。
+         * 状态的改变会导致调用OnEnabled/OnDisable
+         */
+        /**
+        * 如果true则启用了GlobalManager。
+        * 状态的改变会导致调用OnEnabled/OnDisable
+        * @param value
+        */
+        enabled: boolean;
+        /**
+         * 启用/禁用这个GlobalManager
+         * @param isEnabled
+         */
+        setEnabled(isEnabled: boolean): void;
+        /**
+         * 此GlobalManager启用时调用
+         */
+        onEnabled(): void;
+        /**
+         * 此GlobalManager禁用时调用
+         */
+        onDisabled(): void;
+        /**
+         * 在frame .update之前调用每一帧
+         */
+        update(): void;
+    }
+}
+declare module es {
+    interface IComparer<T> {
+        compare(x: T, y: T): number;
+    }
+}
+declare module es {
+    /**
+     * 对象声明自己的平等方法和Hashcode的生成
+     */
+    interface IEqualityComparable {
+        /**
+         * 确定另一个对象是否等于这个实例
+         * @param other
+         */
+        equals(other: any): boolean;
+        /**
+         * 生成对象的哈希码
+         */
+        getHashCode(): number;
+    }
+}
+declare module es {
+    /**
+     * 为确定对象的哈希码和两个项目是否相等提供接口
+     */
+    interface IEqualityComparer<T> {
+        /**
+         * 判断两个对象是否相等
+         * @param x
+         * @param y
+         */
+        equals(x: T, y: T): boolean;
+        /**
+         * 生成对象的哈希码
+         * @param value
+         */
+        getHashCode(value: T): number;
+    }
+}
+declare module es {
+    /**
+     * 实现该接口用于判定两个对象是否相等的快速接口
+     */
+    interface IEquatable<T> {
+        equals(other: T): boolean;
+    }
+}
+declare module es {
+    /**
+     * 使得number/string/boolean类型作为对象引用来进行传递
+     */
+    class Ref<T extends number | string | boolean> {
+        value: T;
+        constructor(value: T);
+    }
+}
+declare module es {
+    /**
+     * 管理数值的简单助手类。它存储值，直到累计的总数大于1。一旦超过1，该值将在调用update时添加到amount中。
+     */
+    class SubpixelNumber {
+        remainder: number;
+        /**
+         * 以amount递增余数，将值截断为int，存储新的余数并将amount设置为当前值。
+         * @param amount
+         */
+        update(amount: number): number;
+        /**
+         * 将余数重置为0。当一个物体与一个不可移动的物体碰撞时有用。
+         * 在这种情况下，您将希望将亚像素余数归零，因为它是空的和无效的碰撞。
+         */
+        reset(): void;
+    }
+}
+declare module es {
+    /**
+     * 简单的剪耳三角测量器，最终的三角形将出现在triangleIndices列表中。
+     */
+    class Triangulator {
+        /**
+         * 上次三角函数调用中使用的点列表的三角列表条目索引
+         */
+        triangleIndices: number[];
+        private _triPrev;
+        private _triNext;
+        static testPointTriangle(point: Vector2, a: Vector2, b: Vector2, c: Vector2): boolean;
+        /**
+         * 计算一个三角形列表，该列表完全覆盖给定点集所包含的区域。如果点不是CCW，则将arePointsCCW参数传递为false
+         * @param points 定义封闭路径的点列表
+         * @param arePointsCCW
+         */
+        triangulate(points: Vector2[], arePointsCCW?: boolean): void;
+        private initialize;
+    }
+}
+declare namespace stopwatch {
+    /**
+     * 记录时间的持续时间，一些设计灵感来自物理秒表。
+     */
+    class Stopwatch {
+        private readonly getSystemTime;
+        /**
+         * 秒表启动的系统时间。
+         * undefined，如果秒表尚未启动，或已复位。
+         */
+        private _startSystemTime;
+        /**
+         * 秒表停止的系统时间。
+         * undefined，如果秒表目前没有停止，尚未开始，或已复位。
+         */
+        private _stopSystemTime;
+        /** 自上次复位以来，秒表已停止的系统时间总数。 */
+        private _stopDuration;
+        /**
+         * 用秒表计时，当前等待的切片开始的时间。
+         * undefined，如果秒表尚未启动，或已复位。
+         */
+        private _pendingSliceStartStopwatchTime;
+        /**
+         * 记录自上次复位以来所有已完成切片的结果。
+         */
+        private _completeSlices;
+        constructor(getSystemTime?: GetTimeFunc);
+        getState(): State;
+        isIdle(): boolean;
+        isRunning(): boolean;
+        isStopped(): boolean;
+        /**
+         *
+         */
+        slice(): Slice;
+        /**
+         * 获取自上次复位以来该秒表已完成/记录的所有片的列表。
+         */
+        getCompletedSlices(): Slice[];
+        /**
+         * 获取自上次重置以来该秒表已完成/记录的所有片的列表，以及当前挂起的片。
+         */
+        getCompletedAndPendingSlices(): Slice[];
+        /**
+         * 获取关于这个秒表当前挂起的切片的详细信息。
+         */
+        getPendingSlice(): Slice;
+        /**
+         * 获取当前秒表时间。这是这个秒表自上次复位以来运行的系统时间总数。
+         */
+        getTime(): number;
+        /**
+         * 完全重置这个秒表到它的初始状态。清除所有记录的运行持续时间、切片等。
+         */
+        reset(): void;
+        /**
+         * 开始(或继续)运行秒表。
+         * @param forceReset
+         */
+        start(forceReset?: boolean): void;
+        /**
+         *
+         * @param recordPendingSlice
+         */
+        stop(recordPendingSlice?: boolean): number;
+        /**
+         * 计算指定秒表时间的当前挂起片。
+         * @param endStopwatchTime
+         */
+        private calculatePendingSlice;
+        /**
+         * 计算指定系统时间的当前秒表时间。
+         * @param endSystemTime
+         */
+        private caculateStopwatchTime;
+        /**
+         * 获取与当前秒表时间等效的系统时间。
+         * 如果该秒表当前停止，则返回该秒表停止时的系统时间。
+         */
+        private getSystemTimeOfCurrentStopwatchTime;
+        /**
+         * 结束/记录当前挂起的片的私有实现。
+         * @param endStopwatchTime
+         */
+        private recordPendingSlice;
+    }
+    /**
+     * 返回某个系统的“当前时间”的函数。
+     * 惟一的要求是，对该函数的每次调用都必须返回一个大于或等于前一次对该函数的调用的数字。
+     */
+    type GetTimeFunc = () => number;
+    enum State {
+        /** 秒表尚未启动，或已复位。 */
+        IDLE = "IDLE",
+        /** 秒表正在运行。 */
+        RUNNING = "RUNNING",
+        /** 秒表以前还在跑，但现在已经停了。 */
+        STOPPED = "STOPPED"
+    }
+    function setDefaultSystemTimeGetter(systemTimeGetter?: GetTimeFunc): void;
+    /**
+     * 由秒表记录的单个“薄片”的测量值
+     */
+    interface Slice {
+        /** 秒表显示的时间在这一片开始的时候。 */
+        readonly startTime: number;
+        /** 秒表在这片片尾的时间。 */
+        readonly endTime: number;
+        /** 该切片的运行时间 */
+        readonly duration: number;
+    }
+}
+declare module es {
+    /**
+     * 围绕一个数组的非常基本的包装，当它达到容量时自动扩展。
+     * 注意，在迭代时应该这样直接访问缓冲区，但使用FastList.length字段。
+     *
+     * @tutorial
+     * for( var i = 0; i <= list.length; i++ )
+     *      var item = list.buffer[i];
+     */
+    class FastList<T> {
+        /**
+         * 直接访问后备缓冲区。
+         * 不要使用buffer.Length! 使用FastList.length
+         */
+        buffer: T[];
+        /**
+         * 直接访问缓冲区内填充项的长度。不要改变。
+         */
+        length: number;
+        constructor(size?: number);
+        /**
+         * 清空列表并清空缓冲区中的所有项目
+         */
+        clear(): void;
+        /**
+         *  和clear的工作原理一样，只是它不会将缓冲区中的所有项目清空。
+         */
+        reset(): void;
+        /**
+         * 将该项目添加到列表中
+         * @param item
+         */
+        add(item: T): void;
+        /**
+         * 从列表中删除该项目
+         * @param item
+         */
+        remove(item: T): void;
+        /**
+         * 从列表中删除给定索引的项目。
+         * @param index
+         */
+        removeAt(index: number): void;
+        /**
+         * 检查项目是否在FastList中
+         * @param item
+         */
+        contains(item: T): boolean;
+        /**
+         * 如果缓冲区达到最大，将分配更多的空间来容纳额外的ItemCount。
+         * @param additionalItemCount
+         */
+        ensureCapacity(additionalItemCount?: number): void;
+        /**
+         * 添加数组中的所有项目
+         * @param array
+         */
+        addRange(array: T[]): void;
+        /**
+         * 对缓冲区中的所有项目进行排序，长度不限。
+         */
+        sort(comparer: IComparer<T>): void;
+    }
+}
+declare module es {
+    /**
+     * 创建这个字典的原因只有一个：
+     * 我需要一个能让我直接以数组的形式对值进行迭代的字典，而不需要生成一个数组或使用迭代器。
+     * 对于这个目标是比标准字典快N倍。
+     * Faster dictionary在大部分操作上也比标准字典快，但差别可以忽略不计。
+     * 唯一较慢的操作是在添加时调整内存大小，因为与标准数组相比，这个实现需要使用两个单独的数组。
+     */
+    class FasterDictionary<TKey, TValue> {
+        _values: TValue[];
+        _valuesInfo: FastNode[];
+        _buckets: number[];
+        _freeValueCellIndex: number;
+        _collisions: number;
+        constructor(size?: number);
+        getValuesArray(count: {
+            value: number;
+        }): TValue[];
+        readonly valuesArray: TValue[];
+        readonly count: number;
+        add(key: TKey, value: TValue): void;
+        addValue(key: TKey, value: TValue, indexSet: {
+            value: number;
+        }): boolean;
+        remove(key: TKey): boolean;
+        trim(): void;
+        clear(): void;
+        fastClear(): void;
+        containsKey(key: TKey): boolean;
+        tryGetValue(key: TKey): TValue;
+        tryFindIndex(key: TKey, findIndex: {
+            value: number;
+        }): boolean;
+        getDirectValue(index: number): TValue;
+        getIndex(key: TKey): number;
+        static updateLinkedList(index: number, valuesInfo: FastNode[]): void;
+        static hash(key: any): number;
+        static reduce(x: number, n: number): number;
+    }
+    class FastNode {
+        readonly key: any;
+        readonly hashcode: number;
+        previous: number;
+        next: number;
+        constructor(key: any, hash: number, previousNode?: number);
+    }
+}
+declare module es {
+    class Node<T> {
+        element: T;
+        next: Node<T>;
+        constructor(element: T, next?: Node<T>);
+    }
+    interface equalsFnType<T> {
+        (a: T, b: T): boolean;
+    }
+    function defaultEquals<T>(a: T, b: T): boolean;
+    class LinkedList<T> {
+        protected count: number;
+        protected next: any;
+        protected equalsFn: equalsFnType<T>;
+        protected head: Node<T>;
+        constructor(equalsFn?: typeof defaultEquals);
+        push(element: T): void;
+        removeAt(index: number): T;
+        getElementAt(index: number): Node<T>;
+        insert(element: T, index: number): boolean;
+        indexOf(element: T): number;
+        remove(element: T): void;
+        clear(): void;
+        size(): number;
+        isEmpty(): boolean;
+        getHead(): Node<T>;
+        toString(): string;
+    }
+}
+declare module es {
+    /**
+     * 可以用于列表池的简单类
+     */
+    class ListPool {
+        private static readonly _objectQueue;
+        /**
+         * 预热缓存，使用最大的cacheCount对象填充缓存
+         * @param cacheCount
+         */
+        static warmCache(cacheCount: number): void;
+        /**
+         * 将缓存修剪为cacheCount项目
+         * @param cacheCount
+         */
+        static trimCache(cacheCount: any): void;
+        /**
+         * 清除缓存
+         */
+        static clearCache(): void;
+        /**
+         * 如果可以的话，从堆栈中弹出一个项
+         */
+        static obtain<T>(): T[];
+        /**
+         * 将项推回堆栈
+         * @param obj
+         */
+        static free<T>(obj: Array<T>): void;
+    }
+}
+declare module es {
+    /**
+     * 用于管理一对对象的简单DTO
+     */
+    class Pair<T> implements IEqualityComparable {
+        first: T;
+        second: T;
+        constructor(first: T, second: T);
+        clear(): void;
+        equals(other: Pair<T>): boolean;
+        getHashCode(): number;
+    }
+}
+declare module es {
+    /**
+     * 用于池任何对象
+     */
+    class Pool<T> {
+        private static _objectQueue;
+        /**
+         * 预热缓存，使用最大的cacheCount对象填充缓存
+         * @param type
+         * @param cacheCount
+         */
+        static warmCache(type: any, cacheCount: number): void;
+        /**
+         * 将缓存修剪为cacheCount项目
+         * @param cacheCount
+         */
+        static trimCache(cacheCount: number): void;
+        /**
+         * 清除缓存
+         */
+        static clearCache(): void;
+        /**
+         * 如果可以的话，从堆栈中弹出一个项
+         */
+        static obtain<T>(type: any): T;
+        /**
+         * 将项推回堆栈
+         * @param obj
+         */
+        static free<T>(obj: T): void;
+    }
+    interface IPoolable {
+        /**
+         * 重置对象以供重用。对象引用应该为空，字段可以设置为默认值
+         */
+        reset(): any;
+    }
+    var isIPoolable: (props: any) => props is IPoolable;
+}
+declare module es {
+    interface ISet<T> {
+        add(item: T): boolean;
+        remove(item: T): boolean;
+        contains(item: T): boolean;
+        getCount(): number;
+        clear(): void;
+        toArray(): Array<T>;
+        /**
+         * 从当前集合中删除指定集合中的所有元素
+         * @param other
+         */
+        exceptWith(other: Array<T>): void;
+        /**
+         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
+         * @param other
+         */
+        intersectWith(other: Array<T>): void;
+        /**
+         * 修改当前的集合对象，使其包含所有存在于自身、指定集合中的元素，或者两者都包含
+         * @param other
+         */
+        unionWith(other: Array<T>): void;
+        isSubsetOf(other: Array<T>): boolean;
+        isSupersetOf(other: Array<T>): boolean;
+        overlaps(other: Array<T>): boolean;
+        setEquals(other: Array<T>): boolean;
+    }
+    abstract class Set<T> implements ISet<T> {
+        protected buckets: T[][];
+        protected count: number;
+        constructor(source?: Array<T>);
+        abstract getHashCode(item: T): number;
+        abstract areEqual(value1: T, value2: T): boolean;
+        add(item: T): boolean;
+        remove(item: T): boolean;
+        contains(item: T): boolean;
+        getCount(): number;
+        clear(): void;
+        toArray(): T[];
+        /**
+         * 从当前集合中删除指定集合中的所有元素
+         * @param other
+         */
+        exceptWith(other: Array<T>): void;
+        /**
+         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
+         * @param other
+         */
+        intersectWith(other: Array<T>): void;
+        unionWith(other: Array<T>): void;
+        /**
+         * 确定当前集合是否为指定集合或数组的子集
+         * @param other
+         */
+        isSubsetOf(other: Array<T>): boolean;
+        /**
+         * 确定当前不可变排序集是否为指定集合的超集
+         * @param other
+         */
+        isSupersetOf(other: Array<T>): boolean;
+        overlaps(other: Array<T>): boolean;
+        setEquals(other: Array<T>): boolean;
+        private buildInternalBuckets;
+        private bucketsContains;
+    }
+    class HashSet<T extends IEqualityComparable> extends Set<T> {
+        constructor(source?: Array<T>);
+        getHashCode(item: T): number;
+        areEqual(value1: T, value2: T): boolean;
     }
 }
 declare class ArrayUtils {
@@ -3171,267 +3662,9 @@ declare module es {
     }
 }
 declare module es {
-    /**
-     * 用于包装事件的一个小类
-     */
-    class FuncPack {
-        /** 函数 */
-        func: Function;
-        /** 上下文 */
-        context: any;
-        constructor(func: Function, context: any);
-    }
-    /**
-     * 用于事件管理
-     */
-    class Emitter<T> {
-        private _messageTable;
-        constructor();
-        /**
-         * 开始监听项
-         * @param eventType 监听类型
-         * @param handler 监听函数
-         * @param context 监听上下文
-         */
-        addObserver(eventType: T, handler: Function, context: any): void;
-        /**
-         * 移除监听项
-         * @param eventType 事件类型
-         * @param handler 事件函数
-         */
-        removeObserver(eventType: T, handler: Function): void;
-        /**
-         * 触发该事件
-         * @param eventType 事件类型
-         * @param data 事件数据
-         */
-        emit(eventType: T, data?: any): void;
-    }
-}
-declare module es {
-    enum Edge {
-        top = 0,
-        bottom = 1,
-        left = 2,
-        right = 3
-    }
-}
-declare module es {
-    class Enumerable {
-        /**
-         * 生成包含一个重复值的序列
-         * @param element 要重复的值
-         * @param count 在生成的序列中重复该值的次数
-         */
-        static repeat<T>(element: T, count: number): any[];
-    }
-}
-declare module es {
-    class EqualityComparer<T> implements IEqualityComparer<T> {
-        static default<T>(): EqualityComparer<T>;
-        protected constructor();
-        equals(x: T, y: T): boolean;
-        getHashCode(o: T): number;
-        private _getHashCodeForNumber;
-        private _getHashCodeForString;
-        private forOwn;
-    }
-}
-declare module es {
-    class GlobalManager {
-        _enabled: boolean;
-        /**
-         * 如果true则启用了GlobalManager。
-         * 状态的改变会导致调用OnEnabled/OnDisable
-         */
-        /**
-        * 如果true则启用了GlobalManager。
-        * 状态的改变会导致调用OnEnabled/OnDisable
-        * @param value
-        */
-        enabled: boolean;
-        /**
-         * 启用/禁用这个GlobalManager
-         * @param isEnabled
-         */
-        setEnabled(isEnabled: boolean): void;
-        /**
-         * 此GlobalManager启用时调用
-         */
-        onEnabled(): void;
-        /**
-         * 此GlobalManager禁用时调用
-         */
-        onDisabled(): void;
-        /**
-         * 在frame .update之前调用每一帧
-         */
-        update(): void;
-    }
-}
-declare module es {
-    interface IComparer<T> {
-        compare(x: T, y: T): number;
-    }
-}
-declare module es {
-    /**
-     * 对象声明自己的平等方法和Hashcode的生成
-     */
-    interface IEqualityComparable {
-        /**
-         * 确定另一个对象是否等于这个实例
-         * @param other
-         */
-        equals(other: any): boolean;
-        /**
-         * 生成对象的哈希码
-         */
-        getHashCode(): number;
-    }
-}
-declare module es {
-    /**
-     * 为确定对象的哈希码和两个项目是否相等提供接口
-     */
-    interface IEqualityComparer<T> {
-        /**
-         * 判断两个对象是否相等
-         * @param x
-         * @param y
-         */
-        equals(x: T, y: T): boolean;
-        /**
-         * 生成对象的哈希码
-         * @param value
-         */
-        getHashCode(value: T): number;
-    }
-}
-declare module es {
-    /**
-     * 实现该接口用于判定两个对象是否相等的快速接口
-     */
-    interface IEquatable<T> {
-        equals(other: T): boolean;
-    }
-}
-declare module es {
-    class Node<T> {
-        element: T;
-        next: Node<T>;
-        constructor(element: T, next?: Node<T>);
-    }
-    interface equalsFnType<T> {
-        (a: T, b: T): boolean;
-    }
-    function defaultEquals<T>(a: T, b: T): boolean;
-    class LinkedList<T> {
-        protected count: number;
-        protected next: any;
-        protected equalsFn: equalsFnType<T>;
-        protected head: Node<T>;
-        constructor(equalsFn?: typeof defaultEquals);
-        push(element: T): void;
-        removeAt(index: number): T;
-        getElementAt(index: number): Node<T>;
-        insert(element: T, index: number): boolean;
-        indexOf(element: T): number;
-        remove(element: T): void;
-        clear(): void;
-        size(): number;
-        isEmpty(): boolean;
-        getHead(): Node<T>;
-        toString(): string;
-    }
-}
-declare module es {
-    /**
-     * 可以用于列表池的简单类
-     */
-    class ListPool {
-        private static readonly _objectQueue;
-        /**
-         * 预热缓存，使用最大的cacheCount对象填充缓存
-         * @param cacheCount
-         */
-        static warmCache(cacheCount: number): void;
-        /**
-         * 将缓存修剪为cacheCount项目
-         * @param cacheCount
-         */
-        static trimCache(cacheCount: any): void;
-        /**
-         * 清除缓存
-         */
-        static clearCache(): void;
-        /**
-         * 如果可以的话，从堆栈中弹出一个项
-         */
-        static obtain<T>(): T[];
-        /**
-         * 将项推回堆栈
-         * @param obj
-         */
-        static free<T>(obj: Array<T>): void;
-    }
-}
-declare module es {
     class NumberExtension {
         static toNumber(value: any): number;
     }
-}
-declare module es {
-    /**
-     * 用于管理一对对象的简单DTO
-     */
-    class Pair<T> implements IEqualityComparable {
-        first: T;
-        second: T;
-        constructor(first: T, second: T);
-        clear(): void;
-        equals(other: Pair<T>): boolean;
-        getHashCode(): number;
-    }
-}
-declare module es {
-    /**
-     * 用于池任何对象
-     */
-    class Pool<T> {
-        private static _objectQueue;
-        /**
-         * 预热缓存，使用最大的cacheCount对象填充缓存
-         * @param type
-         * @param cacheCount
-         */
-        static warmCache(type: any, cacheCount: number): void;
-        /**
-         * 将缓存修剪为cacheCount项目
-         * @param cacheCount
-         */
-        static trimCache(cacheCount: number): void;
-        /**
-         * 清除缓存
-         */
-        static clearCache(): void;
-        /**
-         * 如果可以的话，从堆栈中弹出一个项
-         */
-        static obtain<T>(type: any): T;
-        /**
-         * 将项推回堆栈
-         * @param obj
-         */
-        static free<T>(obj: T): void;
-    }
-    interface IPoolable {
-        /**
-         * 重置对象以供重用。对象引用应该为空，字段可以设置为默认值
-         */
-        reset(): any;
-    }
-    var isIPoolable: (props: any) => props is IPoolable;
 }
 declare class RandomUtils {
     /**
@@ -3526,126 +3759,43 @@ declare module es {
         static getRectEdgePortion(rect: Rectangle, edge: Edge, size?: number): Rectangle;
         static expandSide(rect: Rectangle, edge: Edge, amount: number): void;
         static contract(rect: Rectangle, horizontalAmount: any, verticalAmount: any): void;
-    }
-}
-declare module es {
-    /**
-     * 使得number/string/boolean类型作为对象引用来进行传递
-     */
-    class Ref<T extends number | string | boolean> {
-        value: T;
-        constructor(value: T);
-    }
-}
-declare module es {
-    interface ISet<T> {
-        add(item: T): boolean;
-        remove(item: T): boolean;
-        contains(item: T): boolean;
-        getCount(): number;
-        clear(): void;
-        toArray(): Array<T>;
         /**
-         * 从当前集合中删除指定集合中的所有元素
+         * 给定多边形的点，计算其边界
+         * @param points
+         */
+        static boundsFromPolygonVector(points: Vector2[]): Rectangle;
+        /**
+         * 创建一个给定最小/最大点（左上角，右下角）的矩形
+         * @param min
+         * @param max
+         */
+        static fromMinMaxVector(min: Vector2, max: Vector2): Rectangle;
+        /**
+         * 返回一个跨越当前边界和提供的delta位置的Bounds
+         * @param rect
+         * @param deltaX
+         * @param deltaY
+         */
+        static getSweptBroadphaseBounds(rect: Rectangle, deltaX: number, deltaY: number): Rectangle;
+        /**
+         * 如果矩形发生碰撞，返回true
+         * moveX和moveY将返回b1为避免碰撞而必须移动的移动量
+         * @param rect
          * @param other
+         * @param moveX
+         * @param moveY
          */
-        exceptWith(other: Array<T>): void;
+        collisionCheck(rect: Rectangle, other: Rectangle, moveX: Ref<number>, moveY: Ref<number>): boolean;
         /**
-         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
-         * @param other
+         * 计算两个矩形之间有符号的交点深度
+         * @param rectA
+         * @param rectB
+         * @returns 两个相交的矩形之间的重叠量。
+         * 这些深度值可以是负值，取决于矩形相交的边。
+         * 这允许调用者确定正确的推送对象的方向，以解决碰撞问题。
+         * 如果矩形不相交，则返回Vector2.zero。
          */
-        intersectWith(other: Array<T>): void;
-        /**
-         * 修改当前的集合对象，使其包含所有存在于自身、指定集合中的元素，或者两者都包含
-         * @param other
-         */
-        unionWith(other: Array<T>): void;
-        isSubsetOf(other: Array<T>): boolean;
-        isSupersetOf(other: Array<T>): boolean;
-        overlaps(other: Array<T>): boolean;
-        setEquals(other: Array<T>): boolean;
-    }
-    abstract class Set<T> implements ISet<T> {
-        protected buckets: T[][];
-        protected count: number;
-        constructor(source?: Array<T>);
-        abstract getHashCode(item: T): number;
-        abstract areEqual(value1: T, value2: T): boolean;
-        add(item: T): boolean;
-        remove(item: T): boolean;
-        contains(item: T): boolean;
-        getCount(): number;
-        clear(): void;
-        toArray(): T[];
-        /**
-         * 从当前集合中删除指定集合中的所有元素
-         * @param other
-         */
-        exceptWith(other: Array<T>): void;
-        /**
-         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
-         * @param other
-         */
-        intersectWith(other: Array<T>): void;
-        unionWith(other: Array<T>): void;
-        /**
-         * 确定当前集合是否为指定集合或数组的子集
-         * @param other
-         */
-        isSubsetOf(other: Array<T>): boolean;
-        /**
-         * 确定当前不可变排序集是否为指定集合的超集
-         * @param other
-         */
-        isSupersetOf(other: Array<T>): boolean;
-        overlaps(other: Array<T>): boolean;
-        setEquals(other: Array<T>): boolean;
-        private buildInternalBuckets;
-        private bucketsContains;
-    }
-    class HashSet<T extends IEqualityComparable> extends Set<T> {
-        constructor(source?: Array<T>);
-        getHashCode(item: T): number;
-        areEqual(value1: T, value2: T): boolean;
-    }
-}
-declare module es {
-    /**
-     * 管理数值的简单助手类。它存储值，直到累计的总数大于1。一旦超过1，该值将在调用update时添加到amount中。
-     */
-    class SubpixelNumber {
-        remainder: number;
-        /**
-         * 以amount递增余数，将值截断为int，存储新的余数并将amount设置为当前值。
-         * @param amount
-         */
-        update(amount: number): number;
-        /**
-         * 将余数重置为0。当一个物体与一个不可移动的物体碰撞时有用。
-         * 在这种情况下，您将希望将亚像素余数归零，因为它是空的和无效的碰撞。
-         */
-        reset(): void;
-    }
-}
-declare module es {
-    /**
-     * 简单的剪耳三角测量器，最终的三角形将出现在triangleIndices列表中。
-     */
-    class Triangulator {
-        /**
-         * 上次三角函数调用中使用的点列表的三角列表条目索引
-         */
-        triangleIndices: number[];
-        private _triPrev;
-        private _triNext;
-        static testPointTriangle(point: Vector2, a: Vector2, b: Vector2, c: Vector2): boolean;
-        /**
-         * 计算一个三角形列表，该列表完全覆盖给定点集所包含的区域。如果点不是CCW，则将arePointsCCW参数传递为false
-         * @param points 定义封闭路径的点列表
-         * @param arePointsCCW
-         */
-        triangulate(points: Vector2[], arePointsCCW?: boolean): void;
-        private initialize;
+        static getIntersectionDepth(rectA: Rectangle, rectB: Rectangle): Vector2;
     }
 }
 declare module es {
@@ -3728,119 +3878,6 @@ declare class WebGLUtils {
      * 获取webgl context
      */
     static getContext(): CanvasRenderingContext2D;
-}
-declare namespace stopwatch {
-    /**
-     * 记录时间的持续时间，一些设计灵感来自物理秒表。
-     */
-    class Stopwatch {
-        private readonly getSystemTime;
-        /**
-         * 秒表启动的系统时间。
-         * undefined，如果秒表尚未启动，或已复位。
-         */
-        private _startSystemTime;
-        /**
-         * 秒表停止的系统时间。
-         * undefined，如果秒表目前没有停止，尚未开始，或已复位。
-         */
-        private _stopSystemTime;
-        /** 自上次复位以来，秒表已停止的系统时间总数。 */
-        private _stopDuration;
-        /**
-         * 用秒表计时，当前等待的切片开始的时间。
-         * undefined，如果秒表尚未启动，或已复位。
-         */
-        private _pendingSliceStartStopwatchTime;
-        /**
-         * 记录自上次复位以来所有已完成切片的结果。
-         */
-        private _completeSlices;
-        constructor(getSystemTime?: GetTimeFunc);
-        getState(): State;
-        isIdle(): boolean;
-        isRunning(): boolean;
-        isStopped(): boolean;
-        /**
-         *
-         */
-        slice(): Slice;
-        /**
-         * 获取自上次复位以来该秒表已完成/记录的所有片的列表。
-         */
-        getCompletedSlices(): Slice[];
-        /**
-         * 获取自上次重置以来该秒表已完成/记录的所有片的列表，以及当前挂起的片。
-         */
-        getCompletedAndPendingSlices(): Slice[];
-        /**
-         * 获取关于这个秒表当前挂起的切片的详细信息。
-         */
-        getPendingSlice(): Slice;
-        /**
-         * 获取当前秒表时间。这是这个秒表自上次复位以来运行的系统时间总数。
-         */
-        getTime(): number;
-        /**
-         * 完全重置这个秒表到它的初始状态。清除所有记录的运行持续时间、切片等。
-         */
-        reset(): void;
-        /**
-         * 开始(或继续)运行秒表。
-         * @param forceReset
-         */
-        start(forceReset?: boolean): void;
-        /**
-         *
-         * @param recordPendingSlice
-         */
-        stop(recordPendingSlice?: boolean): number;
-        /**
-         * 计算指定秒表时间的当前挂起片。
-         * @param endStopwatchTime
-         */
-        private calculatePendingSlice;
-        /**
-         * 计算指定系统时间的当前秒表时间。
-         * @param endSystemTime
-         */
-        private caculateStopwatchTime;
-        /**
-         * 获取与当前秒表时间等效的系统时间。
-         * 如果该秒表当前停止，则返回该秒表停止时的系统时间。
-         */
-        private getSystemTimeOfCurrentStopwatchTime;
-        /**
-         * 结束/记录当前挂起的片的私有实现。
-         * @param endStopwatchTime
-         */
-        private recordPendingSlice;
-    }
-    /**
-     * 返回某个系统的“当前时间”的函数。
-     * 惟一的要求是，对该函数的每次调用都必须返回一个大于或等于前一次对该函数的调用的数字。
-     */
-    type GetTimeFunc = () => number;
-    enum State {
-        /** 秒表尚未启动，或已复位。 */
-        IDLE = "IDLE",
-        /** 秒表正在运行。 */
-        RUNNING = "RUNNING",
-        /** 秒表以前还在跑，但现在已经停了。 */
-        STOPPED = "STOPPED"
-    }
-    function setDefaultSystemTimeGetter(systemTimeGetter?: GetTimeFunc): void;
-    /**
-     * 由秒表记录的单个“薄片”的测量值
-     */
-    interface Slice {
-        /** 秒表显示的时间在这一片开始的时候。 */
-        readonly startTime: number;
-        /** 秒表在这片片尾的时间。 */
-        readonly endTime: number;
-        /** 该切片的运行时间 */
-        readonly duration: number;
-    }
 }
 declare module linq {
     class Enumerable {

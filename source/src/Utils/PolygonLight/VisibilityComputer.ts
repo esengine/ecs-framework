@@ -1,4 +1,4 @@
-///<reference path="../LinkList.ts" />
+///<reference path="../Collections/LinkList.ts" />
 module es {
     /**
      * 类，它可以计算出一个网格，表示从给定的一组遮挡物的原点可以看到哪些区域。使用方法如下。

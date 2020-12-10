@@ -241,8 +241,8 @@ var es;
                 }
                 if (this._instance._scene == null) {
                     this._instance._scene = value;
+                    this._instance.onSceneChanged();
                     this._instance._scene.begin();
-                    Core.Instance.onSceneChanged();
                 }
                 else {
                     this._instance._nextScene = value;
@@ -1377,7 +1377,7 @@ var es;
          * 对精灵坐标进行四舍五入
          */
         Transform.prototype.roundPosition = function () {
-            this.position = this._position.round();
+            this.position = es.Vector2Ext.round(this._position);
         };
         Transform.prototype.updateTransform = function () {
             if (this.hierarchyDirty != DirtyType.clean) {
@@ -3192,391 +3192,6 @@ var es;
         return EntityProcessorList;
     }());
     es.EntityProcessorList = EntityProcessorList;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 创建这个字典的原因只有一个：
-     * 我需要一个能让我直接以数组的形式对值进行迭代的字典，而不需要生成一个数组或使用迭代器。
-     * 对于这个目标是比标准字典快N倍。
-     * Faster dictionary在大部分操作上也比标准字典快，但差别可以忽略不计。
-     * 唯一较慢的操作是在添加时调整内存大小，因为与标准数组相比，这个实现需要使用两个单独的数组。
-     */
-    var FasterDictionary = /** @class */ (function () {
-        function FasterDictionary(size) {
-            if (size === void 0) { size = 1; }
-            this._freeValueCellIndex = 0;
-            this._collisions = 0;
-            this._valuesInfo = new Array(size);
-            this._values = new Array(size);
-            this._buckets = new Array(es.HashHelpers.getPrime(size));
-        }
-        FasterDictionary.prototype.getValuesArray = function (count) {
-            count.value = this._freeValueCellIndex;
-            return this._values;
-        };
-        Object.defineProperty(FasterDictionary.prototype, "valuesArray", {
-            get: function () {
-                return this._values;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(FasterDictionary.prototype, "count", {
-            get: function () {
-                return this._freeValueCellIndex;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        FasterDictionary.prototype.add = function (key, value) {
-            if (!this.addValue(key, value, { value: 0 }))
-                throw new Error("key 已经存在");
-        };
-        FasterDictionary.prototype.addValue = function (key, value, indexSet) {
-            var hash = es.HashHelpers.getHashCode(key);
-            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
-            if (this._freeValueCellIndex == this._values.length) {
-                var expandPrime = es.HashHelpers.expandPrime(this._freeValueCellIndex);
-                this._values.length = expandPrime;
-                this._valuesInfo.length = expandPrime;
-            }
-            // buckets值-1表示它是空的
-            var valueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
-            if (valueIndex == -1) {
-                // 在最后一个位置创建信息节点，并填入相关信息
-                this._valuesInfo[this._freeValueCellIndex] = new FastNode(key, hash);
-            }
-            else {
-                {
-                    var currentValueIndex = valueIndex;
-                    do {
-                        // 必须检查键是否已经存在于字典中
-                        if (this._valuesInfo[currentValueIndex].hashcode == hash &&
-                            this._valuesInfo[currentValueIndex].key == key) {
-                            // 键已经存在，只需将其值替换掉即可
-                            this._values[currentValueIndex] = value;
-                            indexSet.value = currentValueIndex;
-                            return false;
-                        }
-                        currentValueIndex = this._valuesInfo[currentValueIndex].previous;
-                    } while (currentValueIndex != -1); // -1表示没有更多的值与相同的哈希值的键
-                }
-                this._collisions++;
-                // 创建一个新的节点，该节点之前的索引指向当前指向桶的节点
-                this._valuesInfo[this._freeValueCellIndex] = new FastNode(key, hash, valueIndex);
-                // 更新现有单元格的下一个单元格指向新的单元格，旧的单元格 -> 新的单元格 -> 旧的单元格 <- 下一个单元格
-                this._valuesInfo[valueIndex].next = this._freeValueCellIndex;
-            }
-            // 重要的是：新的节点总是被桶单元格指向的那个节点，所以我可以假设被桶指向的那个节点总是最后添加的值(next = -1)
-            // item与这个bucketIndex将指向最后创建的值 
-            // TODO: 如果相反，我假设原来的那个是bucket中的那个，我就不需要在这里更新bucket了
-            this._buckets[bucketIndex] = (this._freeValueCellIndex + 1);
-            this._values[this._freeValueCellIndex] = value;
-            indexSet.value = this._freeValueCellIndex;
-            this._freeValueCellIndex++;
-            if (this._collisions > this._buckets.length) {
-                // 我们需要更多的空间和更少的碰撞
-                this._buckets = new Array(es.HashHelpers.expandPrime(this._collisions));
-                this._collisions = 0;
-                // 我们需要得到目前存储的所有值的哈希码，并将它们分布在新的桶长上
-                for (var newValueIndex = 0; newValueIndex < this._freeValueCellIndex; newValueIndex++) {
-                    // 获取原始哈希码，并根据新的长度找到新的bucketIndex
-                    bucketIndex = FasterDictionary.reduce(this._valuesInfo[newValueIndex].hashcode, this._buckets.length);
-                    // bucketsIndex可以是-1或下一个值。
-                    // 如果是-1意味着没有碰撞。
-                    // 如果有碰撞，我们创建一个新节点，它的上一个指向旧节点。
-                    // 旧节点指向新节点，新节点指向旧节点，旧节点指向新节点，现在bucket指向新节点，这样我们就可以重建linkedlist.
-                    // 获取当前值Index，如果没有碰撞，则为-1。
-                    var existingValueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
-                    // 将bucket索引更新为共享bucketIndex的当前项目的索引（最后找到的总是bucket中的那个）
-                    this._buckets[bucketIndex] = newValueIndex + 1;
-                    if (existingValueIndex != -1) {
-                        // 这个单元格已经指向了新的bucket list中的一个值，这意味着有一个碰撞，出了问题
-                        this._collisions++;
-                        // bucket将指向这个值，所以新的值将使用以前的索引
-                        this._valuesInfo[newValueIndex].previous = existingValueIndex;
-                        this._valuesInfo[newValueIndex].next = -1;
-                        // 并将之前的下一个索引更新为新的索引
-                        this._valuesInfo[existingValueIndex].next = newValueIndex;
-                    }
-                    else {
-                        // 什么都没有被索引，桶是空的。我们需要更新之前的 next 和 previous 的值。
-                        this._valuesInfo[newValueIndex].next = -1;
-                        this._valuesInfo[newValueIndex].previous = -1;
-                    }
-                }
-            }
-            return true;
-        };
-        FasterDictionary.prototype.remove = function (key) {
-            var hash = FasterDictionary.hash(key);
-            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
-            // 找桶
-            var indexToValueToRemove = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
-            // 第一部分：在bucket list中寻找实际的键，如果找到了，我就更新bucket list，使它不再指向要删除的单元格。
-            while (indexToValueToRemove != -1) {
-                if (this._valuesInfo[indexToValueToRemove].hashcode == hash &&
-                    this._valuesInfo[indexToValueToRemove].key == key) {
-                    // 如果找到了密钥，并且桶直接指向了要删除的节点
-                    if (this._buckets[bucketIndex] - 1 == indexToValueToRemove) {
-                        if (this._valuesInfo[indexToValueToRemove].next != -1)
-                            throw new Error("如果 bucket 指向单元格，那么 next 必须不存在。");
-                        // 如果前一个单元格存在，它的下一个指针必须被更新!
-                        //<---迭代顺序  
-                        // B(ucket总是指向最后一个)
-                        // ------- ------- -------
-                        // 1 | | | | 2 | | | 3 | //bucket不能有下一个，只能有上一个。
-                        // ------- ------- -------
-                        //--> 插入
-                        var value = this._valuesInfo[indexToValueToRemove].previous;
-                        this._buckets[bucketIndex] = value + 1;
-                    }
-                    else {
-                        if (this._valuesInfo[indexToValueToRemove].next == -1)
-                            throw new Error("如果 bucket 指向另一个单元格，则 NEXT 必须存在");
-                    }
-                    FasterDictionary.updateLinkedList(indexToValueToRemove, this._valuesInfo);
-                    break;
-                }
-                indexToValueToRemove = this._valuesInfo[indexToValueToRemove].previous;
-            }
-            if (indexToValueToRemove == -1)
-                return false; // 未找到
-            this._freeValueCellIndex--; // 少了一个需要反复计算的值
-            // 第二部分
-            // 这时节点指针和水桶会被更新，但_values数组会被更新仍然有要删除的值
-            // 这个字典的目标是能够做到像数组一样对数值进行迭代，所以数值数组必须始终是最新的
-            // 如果要删除的单元格是列表中的最后一个，我们可以执行较少的操作（不需要交换），否则我们要将最后一个值的单元格移到要删除的值上。
-            if (indexToValueToRemove != this._freeValueCellIndex) {
-                // 我们可以将两个数组的最后一个值移到要删除的数组中。
-                // 为了做到这一点，我们需要确保 bucket 指针已经更新了
-                // 首先我们在桶列表中找到指向要移动的单元格的指针的索引
-                var movingBucketIndex = FasterDictionary.reduce(this._valuesInfo[this._freeValueCellIndex].hashcode, this._buckets.length);
-                // 如果找到了键，并且桶直接指向要删除的节点，现在必须指向要移动的单元格。
-                if (this._buckets[movingBucketIndex] - 1 == this._freeValueCellIndex)
-                    this._buckets[movingBucketIndex] = (indexToValueToRemove + 1);
-                // 否则意味着有多个键具有相同的哈希值（碰撞），所以我们需要更新链接列表和它的指针
-                var next = this._valuesInfo[this._freeValueCellIndex].next;
-                var previous = this._valuesInfo[this._freeValueCellIndex].previous;
-                // 现在它们指向最后一个值被移入的单元格
-                if (next != -1)
-                    this._valuesInfo[next].previous = indexToValueToRemove;
-                if (previous != -1)
-                    this._valuesInfo[previous].next = indexToValueToRemove;
-                // 最后，实际上是移动值
-                this._valuesInfo[indexToValueToRemove] = this._valuesInfo[this._freeValueCellIndex];
-                this._values[indexToValueToRemove] = this._values[this._freeValueCellIndex];
-            }
-            return true;
-        };
-        FasterDictionary.prototype.trim = function () {
-            var expandPrime = es.HashHelpers.expandPrime(this._freeValueCellIndex);
-            if (expandPrime < this._valuesInfo.length) {
-                this._values.length = expandPrime;
-                this._valuesInfo.length = expandPrime;
-            }
-        };
-        FasterDictionary.prototype.clear = function () {
-            if (this._freeValueCellIndex == 0)
-                return;
-            this._freeValueCellIndex = 0;
-            this._buckets.length = 0;
-            this._values.length = 0;
-            this._valuesInfo.length = 0;
-        };
-        FasterDictionary.prototype.fastClear = function () {
-            if (this._freeValueCellIndex == 0)
-                return;
-            this._freeValueCellIndex = 0;
-            this._buckets.length = 0;
-            this._valuesInfo.length = 0;
-        };
-        FasterDictionary.prototype.containsKey = function (key) {
-            if (this.tryFindIndex(key, { value: 0 })) {
-                return true;
-            }
-            return false;
-        };
-        FasterDictionary.prototype.tryGetValue = function (key) {
-            var findIndex = { value: 0 };
-            if (this.tryFindIndex(key, findIndex)) {
-                return this._values[findIndex.value];
-            }
-            return null;
-        };
-        FasterDictionary.prototype.tryFindIndex = function (key, findIndex) {
-            // 我把所有的索引都用偏移量+1来存储，这样在bucket list中0就意味着实际上不存在
-            // 当读取时，偏移量必须再偏移-1才是真实的
-            // 这样我就避免了将数组初始化为-1
-            var hash = FasterDictionary.hash(key);
-            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
-            var valueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
-            // 即使我们找到了一个现有的值，我们也需要确定它是我们所要求的值
-            while (valueIndex != -1) {
-                if (this._valuesInfo[valueIndex].hashcode == hash && this._valuesInfo[valueIndex].key == key) {
-                    findIndex.value = valueIndex;
-                    return true;
-                }
-                valueIndex = this._valuesInfo[valueIndex].previous;
-            }
-            findIndex.value = 0;
-            return false;
-        };
-        FasterDictionary.prototype.getDirectValue = function (index) {
-            return this._values[index];
-        };
-        FasterDictionary.prototype.getIndex = function (key) {
-            var findIndex = { value: 0 };
-            if (this.tryFindIndex(key, findIndex))
-                return findIndex.value;
-            throw new Error("未找到key");
-        };
-        FasterDictionary.updateLinkedList = function (index, valuesInfo) {
-            var next = valuesInfo[index].next;
-            var previous = valuesInfo[index].previous;
-            if (next != -1)
-                valuesInfo[next].previous = previous;
-            if (previous != -1)
-                valuesInfo[previous].next = next;
-        };
-        FasterDictionary.hash = function (key) {
-            return es.HashHelpers.getHashCode(key);
-        };
-        FasterDictionary.reduce = function (x, n) {
-            if (x >= n)
-                return x % n;
-            return x;
-        };
-        return FasterDictionary;
-    }());
-    es.FasterDictionary = FasterDictionary;
-    var FastNode = /** @class */ (function () {
-        function FastNode(key, hash, previousNode) {
-            if (previousNode === void 0) { previousNode = -1; }
-            this.key = key;
-            this.hashcode = hash;
-            this.previous = previousNode;
-            this.next = -1;
-        }
-        return FastNode;
-    }());
-    es.FastNode = FastNode;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 围绕一个数组的非常基本的包装，当它达到容量时自动扩展。
-     * 注意，在迭代时应该这样直接访问缓冲区，但使用FastList.length字段。
-     *
-     * @tutorial
-     * for( var i = 0; i <= list.length; i++ )
-     *      var item = list.buffer[i];
-     */
-    var FastList = /** @class */ (function () {
-        function FastList(size) {
-            if (size === void 0) { size = 5; }
-            /**
-             * 直接访问缓冲区内填充项的长度。不要改变。
-             */
-            this.length = 0;
-            this.buffer = new Array(size);
-        }
-        /**
-         * 清空列表并清空缓冲区中的所有项目
-         */
-        FastList.prototype.clear = function () {
-            this.buffer.length = 0;
-            this.length = 0;
-        };
-        /**
-         *  和clear的工作原理一样，只是它不会将缓冲区中的所有项目清空。
-         */
-        FastList.prototype.reset = function () {
-            this.length = 0;
-        };
-        /**
-         * 将该项目添加到列表中
-         * @param item
-         */
-        FastList.prototype.add = function (item) {
-            if (this.length == this.buffer.length)
-                this.buffer.length = Math.max(this.buffer.length << 1, 10);
-            this.buffer[this.length++] = item;
-        };
-        /**
-         * 从列表中删除该项目
-         * @param item
-         */
-        FastList.prototype.remove = function (item) {
-            var comp = es.EqualityComparer.default();
-            for (var i = 0; i < this.length; ++i) {
-                if (comp.equals(this.buffer[i], item)) {
-                    this.removeAt(i);
-                    return;
-                }
-            }
-        };
-        /**
-         * 从列表中删除给定索引的项目。
-         * @param index
-         */
-        FastList.prototype.removeAt = function (index) {
-            if (index >= this.length)
-                throw new Error("index超出范围！");
-            this.length--;
-            new linq.List(this.buffer).removeAt(index);
-        };
-        /**
-         * 检查项目是否在FastList中
-         * @param item
-         */
-        FastList.prototype.contains = function (item) {
-            var comp = es.EqualityComparer.default();
-            for (var i = 0; i < this.length; ++i) {
-                if (comp.equals(this.buffer[i], item))
-                    return true;
-            }
-            return false;
-        };
-        /**
-         * 如果缓冲区达到最大，将分配更多的空间来容纳额外的ItemCount。
-         * @param additionalItemCount
-         */
-        FastList.prototype.ensureCapacity = function (additionalItemCount) {
-            if (additionalItemCount === void 0) { additionalItemCount = 1; }
-            if (this.length + additionalItemCount >= this.buffer.length)
-                this.buffer.length = Math.max(this.buffer.length << 1, this.length + additionalItemCount);
-        };
-        /**
-         * 添加数组中的所有项目
-         * @param array
-         */
-        FastList.prototype.addRange = function (array) {
-            var e_3, _a;
-            try {
-                for (var array_1 = __values(array), array_1_1 = array_1.next(); !array_1_1.done; array_1_1 = array_1.next()) {
-                    var item = array_1_1.value;
-                    this.add(item);
-                }
-            }
-            catch (e_3_1) { e_3 = { error: e_3_1 }; }
-            finally {
-                try {
-                    if (array_1_1 && !array_1_1.done && (_a = array_1.return)) _a.call(array_1);
-                }
-                finally { if (e_3) throw e_3.error; }
-            }
-        };
-        /**
-         * 对缓冲区中的所有项目进行排序，长度不限。
-         */
-        FastList.prototype.sort = function (comparer) {
-            this.buffer.sort(comparer.compare);
-        };
-        return FastList;
-    }());
-    es.FastList = FastList;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -6527,7 +6142,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_4, _a;
+            var e_3, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -6560,12 +6175,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_4_1) { e_4 = { error: e_4_1 }; }
+            catch (e_3_1) { e_3 = { error: e_3_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_4) throw e_4.error; }
+                finally { if (e_3) throw e_3.error; }
             }
             return resultCounter;
         };
@@ -7351,6 +6966,7 @@ var es;
          * @param result
          */
         ShapeCollisions.circleToPolygon = function (circle, polygon, result) {
+            if (result === void 0) { result = new es.CollisionResult(); }
             // 圆圈在多边形中的位置坐标
             var poly2Circle = es.Vector2.subtract(circle.position, polygon.position);
             // 首先，我们需要找到从圆到多边形的最近距离
@@ -7374,7 +6990,7 @@ var es;
                 }
                 else {
                     var distance = Math.sqrt(distanceSquared.value);
-                    mtv = new es.Vector2(-poly2Circle.x + closestPoint.x, -poly2Circle.y + closestPoint.y)
+                    mtv = es.Vector2.subtract(new es.Vector2(-1), es.Vector2.subtract(poly2Circle, closestPoint))
                         .multiply(new es.Vector2((circle.radius - distance) / distance));
                 }
             }
@@ -7383,23 +6999,24 @@ var es;
             return true;
         };
         /**
-         * 适用于圆心在方框内以及只与方框外圆心重叠的圆。
+         * 适用于中心在框内的圆，也适用于与框外中心重合的圆。
          * @param circle
          * @param box
          * @param result
          */
         ShapeCollisions.circleToBox = function (circle, box, result) {
+            if (result === void 0) { result = new es.CollisionResult(); }
             var closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
-            // 处理那些中心在盒子里的圆，因为比较好操作，
+            // 先处理中心在盒子里的圆，如果我们是包含的, 它的成本更低，
             if (box.containsPoint(circle.position)) {
-                result.point = closestPointOnBounds;
-                // 计算mtv。找到安全的，没有碰撞的位置，然后从那里得到mtv
+                result.point = closestPointOnBounds.clone();
+                // 计算MTV。找出安全的、非碰撞的位置，并从中得到MTV
                 var safePlace = es.Vector2.add(closestPointOnBounds, es.Vector2.multiply(result.normal, new es.Vector2(circle.radius)));
                 result.minimumTranslationVector = es.Vector2.subtract(circle.position, safePlace);
                 return true;
             }
             var sqrDistance = es.Vector2.distanceSquared(closestPointOnBounds, circle.position);
-            // 看盒子上的点与圆的距离是否小于半径
+            // 看框上的点距圆的半径是否小于圆的半径
             if (sqrDistance == 0) {
                 result.minimumTranslationVector = es.Vector2.multiply(result.normal, new es.Vector2(circle.radius));
             }
@@ -7452,7 +7069,7 @@ var es;
             var w = es.Vector2.subtract(closestTo, lineA);
             var t = es.Vector2.dot(w, v) / es.Vector2.dot(v, v);
             t = es.MathHelper.clamp(t, 0, 1);
-            return es.Vector2.add(lineA, es.Vector2.multiply(v, new es.Vector2(t, t)));
+            return es.Vector2.add(lineA, es.Vector2.multiply(v, new es.Vector2(t)));
         };
         /**
          *
@@ -7477,6 +7094,7 @@ var es;
          * @param result
          */
         ShapeCollisions.circleToCircle = function (first, second, result) {
+            if (result === void 0) { result = new es.CollisionResult(); }
             var distanceSquared = es.Vector2.distanceSquared(first.position, second.position);
             var sumOfRadii = first.radius + second.radius;
             var collided = distanceSquared < sumOfRadii * sumOfRadii;
@@ -7485,6 +7103,10 @@ var es;
                 var depth = sumOfRadii - Math.sqrt(distanceSquared);
                 result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(-depth), result.normal);
                 result.point = es.Vector2.add(second.position, es.Vector2.multiply(result.normal, new es.Vector2(second.radius)));
+                // 这可以得到实际的碰撞点，可能有用也可能没用，所以我们暂时把它留在这里
+                // let collisionPointX = ((first.position.x * second.radius) + (second.position.x * first.radius)) / sumOfRadii;
+                // let collisionPointY = ((first.position.y * second.radius) + (second.position.y * first.radius)) / sumOfRadii;
+                // result.point = new Vector2(collisionPointX, collisionPointY);
                 return true;
             }
             return false;
@@ -7517,6 +7139,7 @@ var es;
             return new es.Rectangle(topLeft.x, topLeft.y, fullSize.x, fullSize.y);
         };
         ShapeCollisions.lineToPoly = function (start, end, polygon, hit) {
+            if (hit === void 0) { hit = new es.RaycastHit(); }
             var normal = es.Vector2.zero;
             var intersectionPoint = es.Vector2.zero;
             var fraction = Number.MAX_VALUE;
@@ -7629,6 +7252,1431 @@ var es;
         return ShapeCollisions;
     }());
     es.ShapeCollisions = ShapeCollisions;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 用于包装事件的一个小类
+     */
+    var FuncPack = /** @class */ (function () {
+        function FuncPack(func, context) {
+            this.func = func;
+            this.context = context;
+        }
+        return FuncPack;
+    }());
+    es.FuncPack = FuncPack;
+    /**
+     * 用于事件管理
+     */
+    var Emitter = /** @class */ (function () {
+        function Emitter() {
+            this._messageTable = new Map();
+        }
+        /**
+         * 开始监听项
+         * @param eventType 监听类型
+         * @param handler 监听函数
+         * @param context 监听上下文
+         */
+        Emitter.prototype.addObserver = function (eventType, handler, context) {
+            var list = this._messageTable.get(eventType);
+            if (!list) {
+                list = [];
+                this._messageTable.set(eventType, list);
+            }
+            if (list.findIndex(function (funcPack) { return funcPack.func == handler; }) != -1)
+                console.warn("您试图添加相同的观察者两次");
+            list.push(new FuncPack(handler, context));
+        };
+        /**
+         * 移除监听项
+         * @param eventType 事件类型
+         * @param handler 事件函数
+         */
+        Emitter.prototype.removeObserver = function (eventType, handler) {
+            var messageData = this._messageTable.get(eventType);
+            var index = messageData.findIndex(function (data) { return data.func == handler; });
+            if (index != -1)
+                new linq.List(messageData).removeAt(index);
+        };
+        /**
+         * 触发该事件
+         * @param eventType 事件类型
+         * @param data 事件数据
+         */
+        Emitter.prototype.emit = function (eventType, data) {
+            var list = this._messageTable.get(eventType);
+            if (list) {
+                for (var i = list.length - 1; i >= 0; i--)
+                    list[i].func.call(list[i].context, data);
+            }
+        };
+        return Emitter;
+    }());
+    es.Emitter = Emitter;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Edge;
+    (function (Edge) {
+        Edge[Edge["top"] = 0] = "top";
+        Edge[Edge["bottom"] = 1] = "bottom";
+        Edge[Edge["left"] = 2] = "left";
+        Edge[Edge["right"] = 3] = "right";
+    })(Edge = es.Edge || (es.Edge = {}));
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Enumerable = /** @class */ (function () {
+        function Enumerable() {
+        }
+        /**
+         * 生成包含一个重复值的序列
+         * @param element 要重复的值
+         * @param count 在生成的序列中重复该值的次数
+         */
+        Enumerable.repeat = function (element, count) {
+            var result = [];
+            while (count--) {
+                result.push(element);
+            }
+            return result;
+        };
+        return Enumerable;
+    }());
+    es.Enumerable = Enumerable;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var EqualityComparer = /** @class */ (function () {
+        function EqualityComparer() {
+        }
+        EqualityComparer.default = function () {
+            return new EqualityComparer();
+        };
+        EqualityComparer.prototype.equals = function (x, y) {
+            if (typeof x["equals"] == 'function') {
+                return x["equals"](y);
+            }
+            else {
+                return x === y;
+            }
+        };
+        EqualityComparer.prototype.getHashCode = function (o) {
+            var _this = this;
+            if (typeof o == 'number') {
+                return this._getHashCodeForNumber(o);
+            }
+            if (typeof o == 'string') {
+                return this._getHashCodeForString(o);
+            }
+            var hashCode = 385229220;
+            this.forOwn(o, function (value) {
+                if (typeof value == 'number') {
+                    hashCode += _this._getHashCodeForNumber(value);
+                }
+                else if (typeof value == 'string') {
+                    hashCode += _this._getHashCodeForString(value);
+                }
+                else if (typeof value == 'object') {
+                    _this.forOwn(value, function () {
+                        hashCode += _this.getHashCode(value);
+                    });
+                }
+            });
+            return hashCode;
+        };
+        EqualityComparer.prototype._getHashCodeForNumber = function (n) {
+            return n;
+        };
+        EqualityComparer.prototype._getHashCodeForString = function (s) {
+            var hashCode = 385229220;
+            for (var i = 0; i < s.length; i++) {
+                hashCode = (hashCode * -1521134295) ^ s.charCodeAt(i);
+            }
+            return hashCode;
+        };
+        EqualityComparer.prototype.forOwn = function (object, iteratee) {
+            object = Object(object);
+            Object.keys(object).forEach(function (key) { return iteratee(object[key], key, object); });
+        };
+        return EqualityComparer;
+    }());
+    es.EqualityComparer = EqualityComparer;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var GlobalManager = /** @class */ (function () {
+        function GlobalManager() {
+        }
+        Object.defineProperty(GlobalManager.prototype, "enabled", {
+            /**
+             * 如果true则启用了GlobalManager。
+             * 状态的改变会导致调用OnEnabled/OnDisable
+             */
+            get: function () {
+                return this._enabled;
+            },
+            /**
+             * 如果true则启用了GlobalManager。
+             * 状态的改变会导致调用OnEnabled/OnDisable
+             * @param value
+             */
+            set: function (value) {
+                this.setEnabled(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /**
+         * 启用/禁用这个GlobalManager
+         * @param isEnabled
+         */
+        GlobalManager.prototype.setEnabled = function (isEnabled) {
+            if (this._enabled != isEnabled) {
+                this._enabled = isEnabled;
+                if (this._enabled) {
+                    this.onEnabled();
+                }
+                else {
+                    this.onDisabled();
+                }
+            }
+        };
+        /**
+         * 此GlobalManager启用时调用
+         */
+        GlobalManager.prototype.onEnabled = function () {
+        };
+        /**
+         * 此GlobalManager禁用时调用
+         */
+        GlobalManager.prototype.onDisabled = function () {
+        };
+        /**
+         * 在frame .update之前调用每一帧
+         */
+        GlobalManager.prototype.update = function () {
+        };
+        return GlobalManager;
+    }());
+    es.GlobalManager = GlobalManager;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 使得number/string/boolean类型作为对象引用来进行传递
+     */
+    var Ref = /** @class */ (function () {
+        function Ref(value) {
+            this.value = value;
+        }
+        return Ref;
+    }());
+    es.Ref = Ref;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 管理数值的简单助手类。它存储值，直到累计的总数大于1。一旦超过1，该值将在调用update时添加到amount中。
+     */
+    var SubpixelNumber = /** @class */ (function () {
+        function SubpixelNumber() {
+        }
+        /**
+         * 以amount递增余数，将值截断为int，存储新的余数并将amount设置为当前值。
+         * @param amount
+         */
+        SubpixelNumber.prototype.update = function (amount) {
+            this.remainder += amount;
+            var motion = Math.trunc(this.remainder);
+            this.remainder -= motion;
+            return motion;
+        };
+        /**
+         * 将余数重置为0。当一个物体与一个不可移动的物体碰撞时有用。
+         * 在这种情况下，您将希望将亚像素余数归零，因为它是空的和无效的碰撞。
+         */
+        SubpixelNumber.prototype.reset = function () {
+            this.remainder = 0;
+        };
+        return SubpixelNumber;
+    }());
+    es.SubpixelNumber = SubpixelNumber;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 简单的剪耳三角测量器，最终的三角形将出现在triangleIndices列表中。
+     */
+    var Triangulator = /** @class */ (function () {
+        function Triangulator() {
+            /**
+             * 上次三角函数调用中使用的点列表的三角列表条目索引
+             */
+            this.triangleIndices = [];
+            this._triPrev = new Array(12);
+            this._triNext = new Array(12);
+        }
+        Triangulator.testPointTriangle = function (point, a, b, c) {
+            // 如果点在AB的右边，那么外边的三角形是
+            if (es.Vector2Ext.cross(es.Vector2.subtract(point, a), es.Vector2.subtract(b, a)) < 0)
+                return false;
+            // 如果点在BC的右边，则在三角形的外侧
+            if (es.Vector2Ext.cross(es.Vector2.subtract(point, b), es.Vector2.subtract(c, b)) < 0)
+                return false;
+            // 如果点在ca的右边，则在三角形的外面
+            if (es.Vector2Ext.cross(es.Vector2.subtract(point, c), es.Vector2.subtract(a, c)) < 0)
+                return false;
+            // 点在三角形上
+            return true;
+        };
+        /**
+         * 计算一个三角形列表，该列表完全覆盖给定点集所包含的区域。如果点不是CCW，则将arePointsCCW参数传递为false
+         * @param points 定义封闭路径的点列表
+         * @param arePointsCCW
+         */
+        Triangulator.prototype.triangulate = function (points, arePointsCCW) {
+            if (arePointsCCW === void 0) { arePointsCCW = true; }
+            var count = points.length;
+            // 设置前一个链接和下一个链接
+            this.initialize(count);
+            // 非三角的多边形断路器
+            var iterations = 0;
+            // 从0开始
+            var index = 0;
+            // 继续移除所有的三角形，直到只剩下一个三角形
+            while (count > 3 && iterations < 500) {
+                iterations++;
+                var isEar = true;
+                var a = points[this._triPrev[index]];
+                var b = points[index];
+                var c = points[this._triNext[index]];
+                if (es.Vector2Ext.isTriangleCCW(a, b, c)) {
+                    var k = this._triNext[this._triNext[index]];
+                    do {
+                        if (Triangulator.testPointTriangle(points[k], a, b, c)) {
+                            isEar = false;
+                            break;
+                        }
+                        k = this._triNext[k];
+                    } while (k != this._triPrev[index]);
+                }
+                else {
+                    isEar = false;
+                }
+                if (isEar) {
+                    this.triangleIndices.push(this._triPrev[index]);
+                    this.triangleIndices.push(index);
+                    this.triangleIndices.push(this._triNext[index]);
+                    // 删除vert通过重定向相邻vert的上一个和下一个链接，从而减少vertext计数
+                    this._triNext[this._triPrev[index]] = this._triNext[index];
+                    this._triPrev[this._triNext[index]] = this._triPrev[index];
+                    count--;
+                    // 接下来访问前一个vert
+                    index = this._triPrev[index];
+                }
+                else {
+                    index = this._triNext[index];
+                }
+            }
+            this.triangleIndices.push(this._triPrev[index]);
+            this.triangleIndices.push(index);
+            this.triangleIndices.push(this._triNext[index]);
+            if (!arePointsCCW)
+                this.triangleIndices.reverse();
+        };
+        Triangulator.prototype.initialize = function (count) {
+            this.triangleIndices.length = 0;
+            if (this._triNext.length < count) {
+                this._triNext.reverse();
+                this._triNext.length = Math.max(this._triNext.length * 2, count);
+            }
+            if (this._triPrev.length < count) {
+                this._triPrev.reverse();
+                this._triPrev.length = Math.max(this._triPrev.length * 2, count);
+            }
+            for (var i = 0; i < count; i++) {
+                this._triPrev[i] = i - 1;
+                this._triNext[i] = i + 1;
+            }
+            this._triPrev[0] = count - 1;
+            this._triNext[count - 1] = 0;
+        };
+        return Triangulator;
+    }());
+    es.Triangulator = Triangulator;
+})(es || (es = {}));
+var stopwatch;
+(function (stopwatch) {
+    /**
+     * 记录时间的持续时间，一些设计灵感来自物理秒表。
+     */
+    var Stopwatch = /** @class */ (function () {
+        function Stopwatch(getSystemTime) {
+            if (getSystemTime === void 0) { getSystemTime = _defaultSystemTimeGetter; }
+            this.getSystemTime = getSystemTime;
+            /** 自上次复位以来，秒表已停止的系统时间总数。 */
+            this._stopDuration = 0;
+            /**
+             * 记录自上次复位以来所有已完成切片的结果。
+             */
+            this._completeSlices = [];
+        }
+        Stopwatch.prototype.getState = function () {
+            if (this._startSystemTime === undefined) {
+                return State.IDLE;
+            }
+            else if (this._stopSystemTime === undefined) {
+                return State.RUNNING;
+            }
+            else {
+                return State.STOPPED;
+            }
+        };
+        Stopwatch.prototype.isIdle = function () {
+            return this.getState() === State.IDLE;
+        };
+        Stopwatch.prototype.isRunning = function () {
+            return this.getState() === State.RUNNING;
+        };
+        Stopwatch.prototype.isStopped = function () {
+            return this.getState() === State.STOPPED;
+        };
+        /**
+         *
+         */
+        Stopwatch.prototype.slice = function () {
+            return this.recordPendingSlice();
+        };
+        /**
+         * 获取自上次复位以来该秒表已完成/记录的所有片的列表。
+         */
+        Stopwatch.prototype.getCompletedSlices = function () {
+            return Array.from(this._completeSlices);
+        };
+        /**
+         * 获取自上次重置以来该秒表已完成/记录的所有片的列表，以及当前挂起的片。
+         */
+        Stopwatch.prototype.getCompletedAndPendingSlices = function () {
+            return __spread(this._completeSlices, [this.getPendingSlice()]);
+        };
+        /**
+         * 获取关于这个秒表当前挂起的切片的详细信息。
+         */
+        Stopwatch.prototype.getPendingSlice = function () {
+            return this.calculatePendingSlice();
+        };
+        /**
+         * 获取当前秒表时间。这是这个秒表自上次复位以来运行的系统时间总数。
+         */
+        Stopwatch.prototype.getTime = function () {
+            return this.caculateStopwatchTime();
+        };
+        /**
+         * 完全重置这个秒表到它的初始状态。清除所有记录的运行持续时间、切片等。
+         */
+        Stopwatch.prototype.reset = function () {
+            this._startSystemTime = this._pendingSliceStartStopwatchTime = this._stopSystemTime = undefined;
+            this._stopDuration = 0;
+            this._completeSlices = [];
+        };
+        /**
+         * 开始(或继续)运行秒表。
+         * @param forceReset
+         */
+        Stopwatch.prototype.start = function (forceReset) {
+            if (forceReset === void 0) { forceReset = false; }
+            if (forceReset) {
+                this.reset();
+            }
+            if (this._stopSystemTime !== undefined) {
+                var systemNow = this.getSystemTime();
+                var stopDuration = systemNow - this._stopSystemTime;
+                this._stopDuration += stopDuration;
+                this._stopSystemTime = undefined;
+            }
+            else if (this._startSystemTime === undefined) {
+                var systemNow = this.getSystemTime();
+                this._startSystemTime = systemNow;
+                this._pendingSliceStartStopwatchTime = 0;
+            }
+        };
+        /**
+         *
+         * @param recordPendingSlice
+         */
+        Stopwatch.prototype.stop = function (recordPendingSlice) {
+            if (recordPendingSlice === void 0) { recordPendingSlice = false; }
+            if (this._startSystemTime === undefined) {
+                return 0;
+            }
+            var systemTimeOfStopwatchTime = this.getSystemTimeOfCurrentStopwatchTime();
+            if (recordPendingSlice) {
+                this.recordPendingSlice(this.caculateStopwatchTime(systemTimeOfStopwatchTime));
+            }
+            this._stopSystemTime = systemTimeOfStopwatchTime;
+            return this.getTime();
+        };
+        /**
+         * 计算指定秒表时间的当前挂起片。
+         * @param endStopwatchTime
+         */
+        Stopwatch.prototype.calculatePendingSlice = function (endStopwatchTime) {
+            if (this._pendingSliceStartStopwatchTime === undefined) {
+                return Object.freeze({ startTime: 0, endTime: 0, duration: 0 });
+            }
+            if (endStopwatchTime === undefined) {
+                endStopwatchTime = this.getTime();
+            }
+            return Object.freeze({
+                startTime: this._pendingSliceStartStopwatchTime,
+                endTime: endStopwatchTime,
+                duration: endStopwatchTime - this._pendingSliceStartStopwatchTime
+            });
+        };
+        /**
+         * 计算指定系统时间的当前秒表时间。
+         * @param endSystemTime
+         */
+        Stopwatch.prototype.caculateStopwatchTime = function (endSystemTime) {
+            if (this._startSystemTime === undefined)
+                return 0;
+            if (endSystemTime === undefined)
+                endSystemTime = this.getSystemTimeOfCurrentStopwatchTime();
+            return endSystemTime - this._startSystemTime - this._stopDuration;
+        };
+        /**
+         * 获取与当前秒表时间等效的系统时间。
+         * 如果该秒表当前停止，则返回该秒表停止时的系统时间。
+         */
+        Stopwatch.prototype.getSystemTimeOfCurrentStopwatchTime = function () {
+            return this._stopSystemTime === undefined ? this.getSystemTime() : this._stopSystemTime;
+        };
+        /**
+         * 结束/记录当前挂起的片的私有实现。
+         * @param endStopwatchTime
+         */
+        Stopwatch.prototype.recordPendingSlice = function (endStopwatchTime) {
+            if (this._pendingSliceStartStopwatchTime !== undefined) {
+                if (endStopwatchTime === undefined) {
+                    endStopwatchTime = this.getTime();
+                }
+                var slice = this.calculatePendingSlice(endStopwatchTime);
+                this._pendingSliceStartStopwatchTime = slice.endTime;
+                this._completeSlices.push(slice);
+                return slice;
+            }
+            else {
+                return this.calculatePendingSlice();
+            }
+        };
+        return Stopwatch;
+    }());
+    stopwatch.Stopwatch = Stopwatch;
+    var State;
+    (function (State) {
+        /** 秒表尚未启动，或已复位。 */
+        State["IDLE"] = "IDLE";
+        /** 秒表正在运行。 */
+        State["RUNNING"] = "RUNNING";
+        /** 秒表以前还在跑，但现在已经停了。 */
+        State["STOPPED"] = "STOPPED";
+    })(State || (State = {}));
+    function setDefaultSystemTimeGetter(systemTimeGetter) {
+        if (systemTimeGetter === void 0) { systemTimeGetter = Date.now; }
+        _defaultSystemTimeGetter = systemTimeGetter;
+    }
+    stopwatch.setDefaultSystemTimeGetter = setDefaultSystemTimeGetter;
+    /** 所有新实例的默认“getSystemTime”实现 */
+    var _defaultSystemTimeGetter = Date.now;
+})(stopwatch || (stopwatch = {}));
+var es;
+(function (es) {
+    /**
+     * 围绕一个数组的非常基本的包装，当它达到容量时自动扩展。
+     * 注意，在迭代时应该这样直接访问缓冲区，但使用FastList.length字段。
+     *
+     * @tutorial
+     * for( var i = 0; i <= list.length; i++ )
+     *      var item = list.buffer[i];
+     */
+    var FastList = /** @class */ (function () {
+        function FastList(size) {
+            if (size === void 0) { size = 5; }
+            /**
+             * 直接访问缓冲区内填充项的长度。不要改变。
+             */
+            this.length = 0;
+            this.buffer = new Array(size);
+        }
+        /**
+         * 清空列表并清空缓冲区中的所有项目
+         */
+        FastList.prototype.clear = function () {
+            this.buffer.length = 0;
+            this.length = 0;
+        };
+        /**
+         *  和clear的工作原理一样，只是它不会将缓冲区中的所有项目清空。
+         */
+        FastList.prototype.reset = function () {
+            this.length = 0;
+        };
+        /**
+         * 将该项目添加到列表中
+         * @param item
+         */
+        FastList.prototype.add = function (item) {
+            if (this.length == this.buffer.length)
+                this.buffer.length = Math.max(this.buffer.length << 1, 10);
+            this.buffer[this.length++] = item;
+        };
+        /**
+         * 从列表中删除该项目
+         * @param item
+         */
+        FastList.prototype.remove = function (item) {
+            var comp = es.EqualityComparer.default();
+            for (var i = 0; i < this.length; ++i) {
+                if (comp.equals(this.buffer[i], item)) {
+                    this.removeAt(i);
+                    return;
+                }
+            }
+        };
+        /**
+         * 从列表中删除给定索引的项目。
+         * @param index
+         */
+        FastList.prototype.removeAt = function (index) {
+            if (index >= this.length)
+                throw new Error("index超出范围！");
+            this.length--;
+            new linq.List(this.buffer).removeAt(index);
+        };
+        /**
+         * 检查项目是否在FastList中
+         * @param item
+         */
+        FastList.prototype.contains = function (item) {
+            var comp = es.EqualityComparer.default();
+            for (var i = 0; i < this.length; ++i) {
+                if (comp.equals(this.buffer[i], item))
+                    return true;
+            }
+            return false;
+        };
+        /**
+         * 如果缓冲区达到最大，将分配更多的空间来容纳额外的ItemCount。
+         * @param additionalItemCount
+         */
+        FastList.prototype.ensureCapacity = function (additionalItemCount) {
+            if (additionalItemCount === void 0) { additionalItemCount = 1; }
+            if (this.length + additionalItemCount >= this.buffer.length)
+                this.buffer.length = Math.max(this.buffer.length << 1, this.length + additionalItemCount);
+        };
+        /**
+         * 添加数组中的所有项目
+         * @param array
+         */
+        FastList.prototype.addRange = function (array) {
+            var e_4, _a;
+            try {
+                for (var array_1 = __values(array), array_1_1 = array_1.next(); !array_1_1.done; array_1_1 = array_1.next()) {
+                    var item = array_1_1.value;
+                    this.add(item);
+                }
+            }
+            catch (e_4_1) { e_4 = { error: e_4_1 }; }
+            finally {
+                try {
+                    if (array_1_1 && !array_1_1.done && (_a = array_1.return)) _a.call(array_1);
+                }
+                finally { if (e_4) throw e_4.error; }
+            }
+        };
+        /**
+         * 对缓冲区中的所有项目进行排序，长度不限。
+         */
+        FastList.prototype.sort = function (comparer) {
+            this.buffer.sort(comparer.compare);
+        };
+        return FastList;
+    }());
+    es.FastList = FastList;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 创建这个字典的原因只有一个：
+     * 我需要一个能让我直接以数组的形式对值进行迭代的字典，而不需要生成一个数组或使用迭代器。
+     * 对于这个目标是比标准字典快N倍。
+     * Faster dictionary在大部分操作上也比标准字典快，但差别可以忽略不计。
+     * 唯一较慢的操作是在添加时调整内存大小，因为与标准数组相比，这个实现需要使用两个单独的数组。
+     */
+    var FasterDictionary = /** @class */ (function () {
+        function FasterDictionary(size) {
+            if (size === void 0) { size = 1; }
+            this._freeValueCellIndex = 0;
+            this._collisions = 0;
+            this._valuesInfo = new Array(size);
+            this._values = new Array(size);
+            this._buckets = new Array(es.HashHelpers.getPrime(size));
+        }
+        FasterDictionary.prototype.getValuesArray = function (count) {
+            count.value = this._freeValueCellIndex;
+            return this._values;
+        };
+        Object.defineProperty(FasterDictionary.prototype, "valuesArray", {
+            get: function () {
+                return this._values;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(FasterDictionary.prototype, "count", {
+            get: function () {
+                return this._freeValueCellIndex;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        FasterDictionary.prototype.add = function (key, value) {
+            if (!this.addValue(key, value, { value: 0 }))
+                throw new Error("key 已经存在");
+        };
+        FasterDictionary.prototype.addValue = function (key, value, indexSet) {
+            var hash = es.HashHelpers.getHashCode(key);
+            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
+            if (this._freeValueCellIndex == this._values.length) {
+                var expandPrime = es.HashHelpers.expandPrime(this._freeValueCellIndex);
+                this._values.length = expandPrime;
+                this._valuesInfo.length = expandPrime;
+            }
+            // buckets值-1表示它是空的
+            var valueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
+            if (valueIndex == -1) {
+                // 在最后一个位置创建信息节点，并填入相关信息
+                this._valuesInfo[this._freeValueCellIndex] = new FastNode(key, hash);
+            }
+            else {
+                {
+                    var currentValueIndex = valueIndex;
+                    do {
+                        // 必须检查键是否已经存在于字典中
+                        if (this._valuesInfo[currentValueIndex].hashcode == hash &&
+                            this._valuesInfo[currentValueIndex].key == key) {
+                            // 键已经存在，只需将其值替换掉即可
+                            this._values[currentValueIndex] = value;
+                            indexSet.value = currentValueIndex;
+                            return false;
+                        }
+                        currentValueIndex = this._valuesInfo[currentValueIndex].previous;
+                    } while (currentValueIndex != -1); // -1表示没有更多的值与相同的哈希值的键
+                }
+                this._collisions++;
+                // 创建一个新的节点，该节点之前的索引指向当前指向桶的节点
+                this._valuesInfo[this._freeValueCellIndex] = new FastNode(key, hash, valueIndex);
+                // 更新现有单元格的下一个单元格指向新的单元格，旧的单元格 -> 新的单元格 -> 旧的单元格 <- 下一个单元格
+                this._valuesInfo[valueIndex].next = this._freeValueCellIndex;
+            }
+            // 重要的是：新的节点总是被桶单元格指向的那个节点，所以我可以假设被桶指向的那个节点总是最后添加的值(next = -1)
+            // item与这个bucketIndex将指向最后创建的值 
+            // TODO: 如果相反，我假设原来的那个是bucket中的那个，我就不需要在这里更新bucket了
+            this._buckets[bucketIndex] = (this._freeValueCellIndex + 1);
+            this._values[this._freeValueCellIndex] = value;
+            indexSet.value = this._freeValueCellIndex;
+            this._freeValueCellIndex++;
+            if (this._collisions > this._buckets.length) {
+                // 我们需要更多的空间和更少的碰撞
+                this._buckets = new Array(es.HashHelpers.expandPrime(this._collisions));
+                this._collisions = 0;
+                // 我们需要得到目前存储的所有值的哈希码，并将它们分布在新的桶长上
+                for (var newValueIndex = 0; newValueIndex < this._freeValueCellIndex; newValueIndex++) {
+                    // 获取原始哈希码，并根据新的长度找到新的bucketIndex
+                    bucketIndex = FasterDictionary.reduce(this._valuesInfo[newValueIndex].hashcode, this._buckets.length);
+                    // bucketsIndex可以是-1或下一个值。
+                    // 如果是-1意味着没有碰撞。
+                    // 如果有碰撞，我们创建一个新节点，它的上一个指向旧节点。
+                    // 旧节点指向新节点，新节点指向旧节点，旧节点指向新节点，现在bucket指向新节点，这样我们就可以重建linkedlist.
+                    // 获取当前值Index，如果没有碰撞，则为-1。
+                    var existingValueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
+                    // 将bucket索引更新为共享bucketIndex的当前项目的索引（最后找到的总是bucket中的那个）
+                    this._buckets[bucketIndex] = newValueIndex + 1;
+                    if (existingValueIndex != -1) {
+                        // 这个单元格已经指向了新的bucket list中的一个值，这意味着有一个碰撞，出了问题
+                        this._collisions++;
+                        // bucket将指向这个值，所以新的值将使用以前的索引
+                        this._valuesInfo[newValueIndex].previous = existingValueIndex;
+                        this._valuesInfo[newValueIndex].next = -1;
+                        // 并将之前的下一个索引更新为新的索引
+                        this._valuesInfo[existingValueIndex].next = newValueIndex;
+                    }
+                    else {
+                        // 什么都没有被索引，桶是空的。我们需要更新之前的 next 和 previous 的值。
+                        this._valuesInfo[newValueIndex].next = -1;
+                        this._valuesInfo[newValueIndex].previous = -1;
+                    }
+                }
+            }
+            return true;
+        };
+        FasterDictionary.prototype.remove = function (key) {
+            var hash = FasterDictionary.hash(key);
+            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
+            // 找桶
+            var indexToValueToRemove = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
+            // 第一部分：在bucket list中寻找实际的键，如果找到了，我就更新bucket list，使它不再指向要删除的单元格。
+            while (indexToValueToRemove != -1) {
+                if (this._valuesInfo[indexToValueToRemove].hashcode == hash &&
+                    this._valuesInfo[indexToValueToRemove].key == key) {
+                    // 如果找到了密钥，并且桶直接指向了要删除的节点
+                    if (this._buckets[bucketIndex] - 1 == indexToValueToRemove) {
+                        if (this._valuesInfo[indexToValueToRemove].next != -1)
+                            throw new Error("如果 bucket 指向单元格，那么 next 必须不存在。");
+                        // 如果前一个单元格存在，它的下一个指针必须被更新!
+                        //<---迭代顺序  
+                        // B(ucket总是指向最后一个)
+                        // ------- ------- -------
+                        // 1 | | | | 2 | | | 3 | //bucket不能有下一个，只能有上一个。
+                        // ------- ------- -------
+                        //--> 插入
+                        var value = this._valuesInfo[indexToValueToRemove].previous;
+                        this._buckets[bucketIndex] = value + 1;
+                    }
+                    else {
+                        if (this._valuesInfo[indexToValueToRemove].next == -1)
+                            throw new Error("如果 bucket 指向另一个单元格，则 NEXT 必须存在");
+                    }
+                    FasterDictionary.updateLinkedList(indexToValueToRemove, this._valuesInfo);
+                    break;
+                }
+                indexToValueToRemove = this._valuesInfo[indexToValueToRemove].previous;
+            }
+            if (indexToValueToRemove == -1)
+                return false; // 未找到
+            this._freeValueCellIndex--; // 少了一个需要反复计算的值
+            // 第二部分
+            // 这时节点指针和水桶会被更新，但_values数组会被更新仍然有要删除的值
+            // 这个字典的目标是能够做到像数组一样对数值进行迭代，所以数值数组必须始终是最新的
+            // 如果要删除的单元格是列表中的最后一个，我们可以执行较少的操作（不需要交换），否则我们要将最后一个值的单元格移到要删除的值上。
+            if (indexToValueToRemove != this._freeValueCellIndex) {
+                // 我们可以将两个数组的最后一个值移到要删除的数组中。
+                // 为了做到这一点，我们需要确保 bucket 指针已经更新了
+                // 首先我们在桶列表中找到指向要移动的单元格的指针的索引
+                var movingBucketIndex = FasterDictionary.reduce(this._valuesInfo[this._freeValueCellIndex].hashcode, this._buckets.length);
+                // 如果找到了键，并且桶直接指向要删除的节点，现在必须指向要移动的单元格。
+                if (this._buckets[movingBucketIndex] - 1 == this._freeValueCellIndex)
+                    this._buckets[movingBucketIndex] = (indexToValueToRemove + 1);
+                // 否则意味着有多个键具有相同的哈希值（碰撞），所以我们需要更新链接列表和它的指针
+                var next = this._valuesInfo[this._freeValueCellIndex].next;
+                var previous = this._valuesInfo[this._freeValueCellIndex].previous;
+                // 现在它们指向最后一个值被移入的单元格
+                if (next != -1)
+                    this._valuesInfo[next].previous = indexToValueToRemove;
+                if (previous != -1)
+                    this._valuesInfo[previous].next = indexToValueToRemove;
+                // 最后，实际上是移动值
+                this._valuesInfo[indexToValueToRemove] = this._valuesInfo[this._freeValueCellIndex];
+                this._values[indexToValueToRemove] = this._values[this._freeValueCellIndex];
+            }
+            return true;
+        };
+        FasterDictionary.prototype.trim = function () {
+            var expandPrime = es.HashHelpers.expandPrime(this._freeValueCellIndex);
+            if (expandPrime < this._valuesInfo.length) {
+                this._values.length = expandPrime;
+                this._valuesInfo.length = expandPrime;
+            }
+        };
+        FasterDictionary.prototype.clear = function () {
+            if (this._freeValueCellIndex == 0)
+                return;
+            this._freeValueCellIndex = 0;
+            this._buckets.length = 0;
+            this._values.length = 0;
+            this._valuesInfo.length = 0;
+        };
+        FasterDictionary.prototype.fastClear = function () {
+            if (this._freeValueCellIndex == 0)
+                return;
+            this._freeValueCellIndex = 0;
+            this._buckets.length = 0;
+            this._valuesInfo.length = 0;
+        };
+        FasterDictionary.prototype.containsKey = function (key) {
+            if (this.tryFindIndex(key, { value: 0 })) {
+                return true;
+            }
+            return false;
+        };
+        FasterDictionary.prototype.tryGetValue = function (key) {
+            var findIndex = { value: 0 };
+            if (this.tryFindIndex(key, findIndex)) {
+                return this._values[findIndex.value];
+            }
+            return null;
+        };
+        FasterDictionary.prototype.tryFindIndex = function (key, findIndex) {
+            // 我把所有的索引都用偏移量+1来存储，这样在bucket list中0就意味着实际上不存在
+            // 当读取时，偏移量必须再偏移-1才是真实的
+            // 这样我就避免了将数组初始化为-1
+            var hash = FasterDictionary.hash(key);
+            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
+            var valueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
+            // 即使我们找到了一个现有的值，我们也需要确定它是我们所要求的值
+            while (valueIndex != -1) {
+                if (this._valuesInfo[valueIndex].hashcode == hash && this._valuesInfo[valueIndex].key == key) {
+                    findIndex.value = valueIndex;
+                    return true;
+                }
+                valueIndex = this._valuesInfo[valueIndex].previous;
+            }
+            findIndex.value = 0;
+            return false;
+        };
+        FasterDictionary.prototype.getDirectValue = function (index) {
+            return this._values[index];
+        };
+        FasterDictionary.prototype.getIndex = function (key) {
+            var findIndex = { value: 0 };
+            if (this.tryFindIndex(key, findIndex))
+                return findIndex.value;
+            throw new Error("未找到key");
+        };
+        FasterDictionary.updateLinkedList = function (index, valuesInfo) {
+            var next = valuesInfo[index].next;
+            var previous = valuesInfo[index].previous;
+            if (next != -1)
+                valuesInfo[next].previous = previous;
+            if (previous != -1)
+                valuesInfo[previous].next = next;
+        };
+        FasterDictionary.hash = function (key) {
+            return es.HashHelpers.getHashCode(key);
+        };
+        FasterDictionary.reduce = function (x, n) {
+            if (x >= n)
+                return x % n;
+            return x;
+        };
+        return FasterDictionary;
+    }());
+    es.FasterDictionary = FasterDictionary;
+    var FastNode = /** @class */ (function () {
+        function FastNode(key, hash, previousNode) {
+            if (previousNode === void 0) { previousNode = -1; }
+            this.key = key;
+            this.hashcode = hash;
+            this.previous = previousNode;
+            this.next = -1;
+        }
+        return FastNode;
+    }());
+    es.FastNode = FastNode;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Node = /** @class */ (function () {
+        // next为可选参数，如果不传则为undefined
+        function Node(element, next) {
+            this.element = element;
+            this.next = next;
+        }
+        return Node;
+    }());
+    es.Node = Node;
+    function defaultEquals(a, b) {
+        return a === b;
+    }
+    es.defaultEquals = defaultEquals;
+    var LinkedList = /** @class */ (function () {
+        function LinkedList(equalsFn) {
+            if (equalsFn === void 0) { equalsFn = defaultEquals; }
+            // 初始化链表内部变量
+            this.count = 0;
+            this.next = undefined;
+            this.equalsFn = equalsFn;
+            this.head = null;
+        }
+        // 链表尾部添加元素
+        LinkedList.prototype.push = function (element) {
+            // 声明结点变量，将元素当作参数传入生成结点
+            var node = new Node(element);
+            // 存储遍历到的链表元素
+            var current;
+            if (this.head == null) {
+                // 链表为空，直接将链表头部赋值为结点变量
+                this.head = node;
+            }
+            else {
+                // 链表不为空，我们只能拿到链表中第一个元素的引用
+                current = this.head;
+                // 循环访问链表
+                while (current.next != null) {
+                    // 赋值遍历到的元素
+                    current = current.next;
+                }
+                // 此时已经得到了链表的最后一个元素(null)，将链表的下一个元素赋值为结点变量。
+                current.next = node;
+            }
+            // 链表长度自增
+            this.count++;
+        };
+        // 移除链表指定位置的元素
+        LinkedList.prototype.removeAt = function (index) {
+            // 边界判断: 参数是否有效
+            if (index >= 0 && index < this.count) {
+                // 获取当前链表头部元素
+                var current = this.head;
+                // 移除第一项
+                if (index === 0) {
+                    this.head = current.next;
+                }
+                else {
+                    // 获取目标参数上一个结点
+                    var previous = this.getElementAt(index - 1);
+                    // 当前结点指向目标结点
+                    current = previous.next;
+                    /**
+                     * 目标结点元素已找到
+                     * previous.next指向目标结点
+                     * current.next指向undefined
+                     * previous.next指向current.next即删除目标结点的元素
+                     */
+                    previous.next = current.next;
+                }
+                // 链表长度自减
+                this.count--;
+                // 返回当前删除的目标结点
+                return current.element;
+            }
+            return undefined;
+        };
+        // 获取链表指定位置的结点
+        LinkedList.prototype.getElementAt = function (index) {
+            // 参数校验
+            if (index >= 0 && index <= this.count) {
+                // 获取链表头部元素
+                var current = this.head;
+                // 从链表头部遍历至目标结点位置
+                for (var i = 0; i < index && current != null; i++) {
+                    // 当前结点指向下一个目标结点
+                    current = current.next;
+                }
+                // 返回目标结点数据
+                return current;
+            }
+            return undefined;
+        };
+        // 向链表中插入元素
+        LinkedList.prototype.insert = function (element, index) {
+            // 参数有效性判断
+            if (index >= 0 && index <= this.count) {
+                // 声明节点变量，将当前要插入的元素作为参数生成结点
+                var node = new Node(element);
+                // 第一个位置添加元素
+                if (index === 0) {
+                    // 将节点变量(node)的下一个元素指向链表的头部元素
+                    node.next = this.head;
+                    // 链表头部元素赋值为节点变量
+                    this.head = node;
+                }
+                else {
+                    // 获取目标结点的上一个结点
+                    var previous = this.getElementAt(index - 1);
+                    // 将节点变量的下一个元素指向目标节点
+                    node.next = previous.next;
+                    /**
+                     * 此时node中当前结点为要插入的值
+                     * next为原位置处的结点
+                     * 因此将当前结点赋值为node，就完成了结点插入操作
+                     */
+                    previous.next = node;
+                }
+                // 链表长度自增
+                this.count++;
+                return true;
+            }
+            return false;
+        };
+        // 根据元素获取其在链表中的索引
+        LinkedList.prototype.indexOf = function (element) {
+            // 获取链表顶部元素
+            var current = this.head;
+            // 遍历链表内的元素
+            for (var i = 0; i < this.count && current != null; i++) {
+                // 判断当前链表中的结点与目标结点是否相等
+                if (this.equalsFn(element, current.element)) {
+                    // 返回索引
+                    return i;
+                }
+                // 当前结点指向下一个结点
+                current = current.next;
+            }
+            // 目标元素不存在
+            return -1;
+        };
+        // 移除链表中的指定元素
+        LinkedList.prototype.remove = function (element) {
+            // 获取element的索引,移除索引位置的元素
+            this.removeAt(this.indexOf(element));
+        };
+        LinkedList.prototype.clear = function () {
+            this.head = undefined;
+            this.count = 0;
+        };
+        // 获取链表长度
+        LinkedList.prototype.size = function () {
+            return this.count;
+        };
+        // 判断链表是否为空
+        LinkedList.prototype.isEmpty = function () {
+            return this.size() === 0;
+        };
+        // 获取链表头部元素
+        LinkedList.prototype.getHead = function () {
+            return this.head;
+        };
+        // 获取链表中的所有元素
+        LinkedList.prototype.toString = function () {
+            if (this.head == null) {
+                return "";
+            }
+            var objString = "" + this.head.element;
+            // 获取链表顶点的下一个结点
+            var current = this.head.next;
+            // 遍历链表中的所有结点
+            for (var i = 1; i < this.size() && current != null; i++) {
+                // 将当前结点的元素拼接到最终要生成的字符串对象中
+                objString = objString + ", " + current.element;
+                // 当前结点指向链表的下一个元素
+                current = current.next;
+            }
+            return objString;
+        };
+        return LinkedList;
+    }());
+    es.LinkedList = LinkedList;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 可以用于列表池的简单类
+     */
+    var ListPool = /** @class */ (function () {
+        function ListPool() {
+        }
+        /**
+         * 预热缓存，使用最大的cacheCount对象填充缓存
+         * @param cacheCount
+         */
+        ListPool.warmCache = function (cacheCount) {
+            cacheCount -= this._objectQueue.length;
+            if (cacheCount > 0) {
+                for (var i = 0; i < cacheCount; i++) {
+                    this._objectQueue.unshift([]);
+                }
+            }
+        };
+        /**
+         * 将缓存修剪为cacheCount项目
+         * @param cacheCount
+         */
+        ListPool.trimCache = function (cacheCount) {
+            while (cacheCount > this._objectQueue.length)
+                this._objectQueue.shift();
+        };
+        /**
+         * 清除缓存
+         */
+        ListPool.clearCache = function () {
+            this._objectQueue.length = 0;
+        };
+        /**
+         * 如果可以的话，从堆栈中弹出一个项
+         */
+        ListPool.obtain = function () {
+            if (this._objectQueue.length > 0)
+                return this._objectQueue.shift();
+            return [];
+        };
+        /**
+         * 将项推回堆栈
+         * @param obj
+         */
+        ListPool.free = function (obj) {
+            this._objectQueue.unshift(obj);
+            obj.length = 0;
+        };
+        ListPool._objectQueue = [];
+        return ListPool;
+    }());
+    es.ListPool = ListPool;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 用于管理一对对象的简单DTO
+     */
+    var Pair = /** @class */ (function () {
+        function Pair(first, second) {
+            this.first = first;
+            this.second = second;
+        }
+        Pair.prototype.clear = function () {
+            this.first = this.second = null;
+        };
+        Pair.prototype.equals = function (other) {
+            // 这两种方法在功能上应该是等价的
+            return this.first == other.first && this.second == other.second;
+        };
+        Pair.prototype.getHashCode = function () {
+            return es.EqualityComparer.default().getHashCode(this.first) * 37 +
+                es.EqualityComparer.default().getHashCode(this.second);
+        };
+        return Pair;
+    }());
+    es.Pair = Pair;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 用于池任何对象
+     */
+    var Pool = /** @class */ (function () {
+        function Pool() {
+        }
+        /**
+         * 预热缓存，使用最大的cacheCount对象填充缓存
+         * @param type
+         * @param cacheCount
+         */
+        Pool.warmCache = function (type, cacheCount) {
+            cacheCount -= this._objectQueue.length;
+            if (cacheCount > 0) {
+                for (var i = 0; i < cacheCount; i++) {
+                    this._objectQueue.unshift(new type());
+                }
+            }
+        };
+        /**
+         * 将缓存修剪为cacheCount项目
+         * @param cacheCount
+         */
+        Pool.trimCache = function (cacheCount) {
+            while (cacheCount > this._objectQueue.length)
+                this._objectQueue.shift();
+        };
+        /**
+         * 清除缓存
+         */
+        Pool.clearCache = function () {
+            this._objectQueue.length = 0;
+        };
+        /**
+         * 如果可以的话，从堆栈中弹出一个项
+         */
+        Pool.obtain = function (type) {
+            if (this._objectQueue.length > 0)
+                return this._objectQueue.shift();
+            return new type();
+        };
+        /**
+         * 将项推回堆栈
+         * @param obj
+         */
+        Pool.free = function (obj) {
+            this._objectQueue.unshift(obj);
+            if (es.isIPoolable(obj)) {
+                obj["reset"]();
+            }
+        };
+        Pool._objectQueue = [];
+        return Pool;
+    }());
+    es.Pool = Pool;
+    es.isIPoolable = function (props) { return typeof props['reset'] !== 'undefined'; };
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Set = /** @class */ (function () {
+        function Set(source) {
+            var _this = this;
+            this.clear();
+            if (source)
+                source.forEach(function (value) {
+                    _this.add(value);
+                });
+        }
+        Set.prototype.add = function (item) {
+            var _this = this;
+            var hashCode = this.getHashCode(item);
+            var bucket = this.buckets[hashCode];
+            if (bucket === undefined) {
+                var newBucket = new Array();
+                newBucket.push(item);
+                this.buckets[hashCode] = newBucket;
+                this.count = this.count + 1;
+                return true;
+            }
+            if (bucket.some(function (value) { return _this.areEqual(value, item); }))
+                return false;
+            bucket.push(item);
+            this.count = this.count + 1;
+            return true;
+        };
+        ;
+        Set.prototype.remove = function (item) {
+            var _this = this;
+            var hashCode = this.getHashCode(item);
+            var bucket = this.buckets[hashCode];
+            if (bucket === undefined) {
+                return false;
+            }
+            var result = false;
+            var newBucket = new Array();
+            bucket.forEach(function (value) {
+                if (!_this.areEqual(value, item))
+                    newBucket.push(item);
+                else
+                    result = true;
+            });
+            this.buckets[hashCode] = newBucket;
+            if (result)
+                this.count = this.count - 1;
+            return result;
+        };
+        Set.prototype.contains = function (item) {
+            return this.bucketsContains(this.buckets, item);
+        };
+        ;
+        Set.prototype.getCount = function () {
+            return this.count;
+        };
+        Set.prototype.clear = function () {
+            this.buckets = new Array();
+            this.count = 0;
+        };
+        Set.prototype.toArray = function () {
+            var result = new Array();
+            this.buckets.forEach(function (value) {
+                value.forEach(function (inner) {
+                    result.push(inner);
+                });
+            });
+            return result;
+        };
+        /**
+         * 从当前集合中删除指定集合中的所有元素
+         * @param other
+         */
+        Set.prototype.exceptWith = function (other) {
+            var _this = this;
+            if (other) {
+                other.forEach(function (value) {
+                    _this.remove(value);
+                });
+            }
+        };
+        /**
+         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
+         * @param other
+         */
+        Set.prototype.intersectWith = function (other) {
+            var _this = this;
+            if (other) {
+                var otherBuckets_1 = this.buildInternalBuckets(other);
+                this.toArray().forEach(function (value) {
+                    if (!_this.bucketsContains(otherBuckets_1.Buckets, value))
+                        _this.remove(value);
+                });
+            }
+            else {
+                this.clear();
+            }
+        };
+        Set.prototype.unionWith = function (other) {
+            var _this = this;
+            other.forEach(function (value) {
+                _this.add(value);
+            });
+        };
+        /**
+         * 确定当前集合是否为指定集合或数组的子集
+         * @param other
+         */
+        Set.prototype.isSubsetOf = function (other) {
+            var _this = this;
+            var otherBuckets = this.buildInternalBuckets(other);
+            return this.toArray().every(function (value) { return _this.bucketsContains(otherBuckets.Buckets, value); });
+        };
+        /**
+         * 确定当前不可变排序集是否为指定集合的超集
+         * @param other
+         */
+        Set.prototype.isSupersetOf = function (other) {
+            var _this = this;
+            return other.every(function (value) { return _this.contains(value); });
+        };
+        Set.prototype.overlaps = function (other) {
+            var _this = this;
+            return other.some(function (value) { return _this.contains(value); });
+        };
+        Set.prototype.setEquals = function (other) {
+            var _this = this;
+            var otherBuckets = this.buildInternalBuckets(other);
+            if (otherBuckets.Count !== this.count)
+                return false;
+            return other.every(function (value) { return _this.contains(value); });
+        };
+        Set.prototype.buildInternalBuckets = function (source) {
+            var _this = this;
+            var internalBuckets = new Array();
+            var internalCount = 0;
+            source.forEach(function (item) {
+                var hashCode = _this.getHashCode(item);
+                var bucket = internalBuckets[hashCode];
+                if (bucket === undefined) {
+                    var newBucket = new Array();
+                    newBucket.push(item);
+                    internalBuckets[hashCode] = newBucket;
+                    internalCount = internalCount + 1;
+                }
+                else if (!bucket.some(function (value) { return _this.areEqual(value, item); })) {
+                    bucket.push(item);
+                    internalCount = internalCount + 1;
+                }
+            });
+            return { Buckets: internalBuckets, Count: internalCount };
+        };
+        Set.prototype.bucketsContains = function (internalBuckets, item) {
+            var _this = this;
+            var hashCode = this.getHashCode(item);
+            var bucket = internalBuckets[hashCode];
+            if (bucket === undefined) {
+                return false;
+            }
+            return bucket.some(function (value) { return _this.areEqual(value, item); });
+        };
+        return Set;
+    }());
+    var HashSet = /** @class */ (function (_super) {
+        __extends(HashSet, _super);
+        function HashSet(source) {
+            return _super.call(this, source) || this;
+        }
+        HashSet.prototype.getHashCode = function (item) {
+            return item.getHashCode();
+        };
+        HashSet.prototype.areEqual = function (value1, value2) {
+            return value1.equals(value2);
+        };
+        return HashSet;
+    }(Set));
+    es.HashSet = HashSet;
 })(es || (es = {}));
 var ArrayUtils = /** @class */ (function () {
     function ArrayUtils() {
@@ -8082,455 +9130,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    /**
-     * 用于包装事件的一个小类
-     */
-    var FuncPack = /** @class */ (function () {
-        function FuncPack(func, context) {
-            this.func = func;
-            this.context = context;
-        }
-        return FuncPack;
-    }());
-    es.FuncPack = FuncPack;
-    /**
-     * 用于事件管理
-     */
-    var Emitter = /** @class */ (function () {
-        function Emitter() {
-            this._messageTable = new Map();
-        }
-        /**
-         * 开始监听项
-         * @param eventType 监听类型
-         * @param handler 监听函数
-         * @param context 监听上下文
-         */
-        Emitter.prototype.addObserver = function (eventType, handler, context) {
-            var list = this._messageTable.get(eventType);
-            if (!list) {
-                list = [];
-                this._messageTable.set(eventType, list);
-            }
-            if (list.findIndex(function (funcPack) { return funcPack.func == handler; }) != -1)
-                console.warn("您试图添加相同的观察者两次");
-            list.push(new FuncPack(handler, context));
-        };
-        /**
-         * 移除监听项
-         * @param eventType 事件类型
-         * @param handler 事件函数
-         */
-        Emitter.prototype.removeObserver = function (eventType, handler) {
-            var messageData = this._messageTable.get(eventType);
-            var index = messageData.findIndex(function (data) { return data.func == handler; });
-            if (index != -1)
-                new linq.List(messageData).removeAt(index);
-        };
-        /**
-         * 触发该事件
-         * @param eventType 事件类型
-         * @param data 事件数据
-         */
-        Emitter.prototype.emit = function (eventType, data) {
-            var list = this._messageTable.get(eventType);
-            if (list) {
-                for (var i = list.length - 1; i >= 0; i--)
-                    list[i].func.call(list[i].context, data);
-            }
-        };
-        return Emitter;
-    }());
-    es.Emitter = Emitter;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Edge;
-    (function (Edge) {
-        Edge[Edge["top"] = 0] = "top";
-        Edge[Edge["bottom"] = 1] = "bottom";
-        Edge[Edge["left"] = 2] = "left";
-        Edge[Edge["right"] = 3] = "right";
-    })(Edge = es.Edge || (es.Edge = {}));
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Enumerable = /** @class */ (function () {
-        function Enumerable() {
-        }
-        /**
-         * 生成包含一个重复值的序列
-         * @param element 要重复的值
-         * @param count 在生成的序列中重复该值的次数
-         */
-        Enumerable.repeat = function (element, count) {
-            var result = [];
-            while (count--) {
-                result.push(element);
-            }
-            return result;
-        };
-        return Enumerable;
-    }());
-    es.Enumerable = Enumerable;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var EqualityComparer = /** @class */ (function () {
-        function EqualityComparer() {
-        }
-        EqualityComparer.default = function () {
-            return new EqualityComparer();
-        };
-        EqualityComparer.prototype.equals = function (x, y) {
-            if (typeof x["equals"] == 'function') {
-                return x["equals"](y);
-            }
-            else {
-                return x === y;
-            }
-        };
-        EqualityComparer.prototype.getHashCode = function (o) {
-            var _this = this;
-            if (typeof o == 'number') {
-                return this._getHashCodeForNumber(o);
-            }
-            if (typeof o == 'string') {
-                return this._getHashCodeForString(o);
-            }
-            var hashCode = 385229220;
-            this.forOwn(o, function (value) {
-                if (typeof value == 'number') {
-                    hashCode += _this._getHashCodeForNumber(value);
-                }
-                else if (typeof value == 'string') {
-                    hashCode += _this._getHashCodeForString(value);
-                }
-                else if (typeof value == 'object') {
-                    _this.forOwn(value, function () {
-                        hashCode += _this.getHashCode(value);
-                    });
-                }
-            });
-            return hashCode;
-        };
-        EqualityComparer.prototype._getHashCodeForNumber = function (n) {
-            return n;
-        };
-        EqualityComparer.prototype._getHashCodeForString = function (s) {
-            var hashCode = 385229220;
-            for (var i = 0; i < s.length; i++) {
-                hashCode = (hashCode * -1521134295) ^ s.charCodeAt(i);
-            }
-            return hashCode;
-        };
-        EqualityComparer.prototype.forOwn = function (object, iteratee) {
-            object = Object(object);
-            Object.keys(object).forEach(function (key) { return iteratee(object[key], key, object); });
-        };
-        return EqualityComparer;
-    }());
-    es.EqualityComparer = EqualityComparer;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var GlobalManager = /** @class */ (function () {
-        function GlobalManager() {
-        }
-        Object.defineProperty(GlobalManager.prototype, "enabled", {
-            /**
-             * 如果true则启用了GlobalManager。
-             * 状态的改变会导致调用OnEnabled/OnDisable
-             */
-            get: function () {
-                return this._enabled;
-            },
-            /**
-             * 如果true则启用了GlobalManager。
-             * 状态的改变会导致调用OnEnabled/OnDisable
-             * @param value
-             */
-            set: function (value) {
-                this.setEnabled(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /**
-         * 启用/禁用这个GlobalManager
-         * @param isEnabled
-         */
-        GlobalManager.prototype.setEnabled = function (isEnabled) {
-            if (this._enabled != isEnabled) {
-                this._enabled = isEnabled;
-                if (this._enabled) {
-                    this.onEnabled();
-                }
-                else {
-                    this.onDisabled();
-                }
-            }
-        };
-        /**
-         * 此GlobalManager启用时调用
-         */
-        GlobalManager.prototype.onEnabled = function () {
-        };
-        /**
-         * 此GlobalManager禁用时调用
-         */
-        GlobalManager.prototype.onDisabled = function () {
-        };
-        /**
-         * 在frame .update之前调用每一帧
-         */
-        GlobalManager.prototype.update = function () {
-        };
-        return GlobalManager;
-    }());
-    es.GlobalManager = GlobalManager;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Node = /** @class */ (function () {
-        // next为可选参数，如果不传则为undefined
-        function Node(element, next) {
-            this.element = element;
-            this.next = next;
-        }
-        return Node;
-    }());
-    es.Node = Node;
-    function defaultEquals(a, b) {
-        return a === b;
-    }
-    es.defaultEquals = defaultEquals;
-    var LinkedList = /** @class */ (function () {
-        function LinkedList(equalsFn) {
-            if (equalsFn === void 0) { equalsFn = defaultEquals; }
-            // 初始化链表内部变量
-            this.count = 0;
-            this.next = undefined;
-            this.equalsFn = equalsFn;
-            this.head = null;
-        }
-        // 链表尾部添加元素
-        LinkedList.prototype.push = function (element) {
-            // 声明结点变量，将元素当作参数传入生成结点
-            var node = new Node(element);
-            // 存储遍历到的链表元素
-            var current;
-            if (this.head == null) {
-                // 链表为空，直接将链表头部赋值为结点变量
-                this.head = node;
-            }
-            else {
-                // 链表不为空，我们只能拿到链表中第一个元素的引用
-                current = this.head;
-                // 循环访问链表
-                while (current.next != null) {
-                    // 赋值遍历到的元素
-                    current = current.next;
-                }
-                // 此时已经得到了链表的最后一个元素(null)，将链表的下一个元素赋值为结点变量。
-                current.next = node;
-            }
-            // 链表长度自增
-            this.count++;
-        };
-        // 移除链表指定位置的元素
-        LinkedList.prototype.removeAt = function (index) {
-            // 边界判断: 参数是否有效
-            if (index >= 0 && index < this.count) {
-                // 获取当前链表头部元素
-                var current = this.head;
-                // 移除第一项
-                if (index === 0) {
-                    this.head = current.next;
-                }
-                else {
-                    // 获取目标参数上一个结点
-                    var previous = this.getElementAt(index - 1);
-                    // 当前结点指向目标结点
-                    current = previous.next;
-                    /**
-                     * 目标结点元素已找到
-                     * previous.next指向目标结点
-                     * current.next指向undefined
-                     * previous.next指向current.next即删除目标结点的元素
-                     */
-                    previous.next = current.next;
-                }
-                // 链表长度自减
-                this.count--;
-                // 返回当前删除的目标结点
-                return current.element;
-            }
-            return undefined;
-        };
-        // 获取链表指定位置的结点
-        LinkedList.prototype.getElementAt = function (index) {
-            // 参数校验
-            if (index >= 0 && index <= this.count) {
-                // 获取链表头部元素
-                var current = this.head;
-                // 从链表头部遍历至目标结点位置
-                for (var i = 0; i < index && current != null; i++) {
-                    // 当前结点指向下一个目标结点
-                    current = current.next;
-                }
-                // 返回目标结点数据
-                return current;
-            }
-            return undefined;
-        };
-        // 向链表中插入元素
-        LinkedList.prototype.insert = function (element, index) {
-            // 参数有效性判断
-            if (index >= 0 && index <= this.count) {
-                // 声明节点变量，将当前要插入的元素作为参数生成结点
-                var node = new Node(element);
-                // 第一个位置添加元素
-                if (index === 0) {
-                    // 将节点变量(node)的下一个元素指向链表的头部元素
-                    node.next = this.head;
-                    // 链表头部元素赋值为节点变量
-                    this.head = node;
-                }
-                else {
-                    // 获取目标结点的上一个结点
-                    var previous = this.getElementAt(index - 1);
-                    // 将节点变量的下一个元素指向目标节点
-                    node.next = previous.next;
-                    /**
-                     * 此时node中当前结点为要插入的值
-                     * next为原位置处的结点
-                     * 因此将当前结点赋值为node，就完成了结点插入操作
-                     */
-                    previous.next = node;
-                }
-                // 链表长度自增
-                this.count++;
-                return true;
-            }
-            return false;
-        };
-        // 根据元素获取其在链表中的索引
-        LinkedList.prototype.indexOf = function (element) {
-            // 获取链表顶部元素
-            var current = this.head;
-            // 遍历链表内的元素
-            for (var i = 0; i < this.count && current != null; i++) {
-                // 判断当前链表中的结点与目标结点是否相等
-                if (this.equalsFn(element, current.element)) {
-                    // 返回索引
-                    return i;
-                }
-                // 当前结点指向下一个结点
-                current = current.next;
-            }
-            // 目标元素不存在
-            return -1;
-        };
-        // 移除链表中的指定元素
-        LinkedList.prototype.remove = function (element) {
-            // 获取element的索引,移除索引位置的元素
-            this.removeAt(this.indexOf(element));
-        };
-        LinkedList.prototype.clear = function () {
-            this.head = undefined;
-            this.count = 0;
-        };
-        // 获取链表长度
-        LinkedList.prototype.size = function () {
-            return this.count;
-        };
-        // 判断链表是否为空
-        LinkedList.prototype.isEmpty = function () {
-            return this.size() === 0;
-        };
-        // 获取链表头部元素
-        LinkedList.prototype.getHead = function () {
-            return this.head;
-        };
-        // 获取链表中的所有元素
-        LinkedList.prototype.toString = function () {
-            if (this.head == null) {
-                return "";
-            }
-            var objString = "" + this.head.element;
-            // 获取链表顶点的下一个结点
-            var current = this.head.next;
-            // 遍历链表中的所有结点
-            for (var i = 1; i < this.size() && current != null; i++) {
-                // 将当前结点的元素拼接到最终要生成的字符串对象中
-                objString = objString + ", " + current.element;
-                // 当前结点指向链表的下一个元素
-                current = current.next;
-            }
-            return objString;
-        };
-        return LinkedList;
-    }());
-    es.LinkedList = LinkedList;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 可以用于列表池的简单类
-     */
-    var ListPool = /** @class */ (function () {
-        function ListPool() {
-        }
-        /**
-         * 预热缓存，使用最大的cacheCount对象填充缓存
-         * @param cacheCount
-         */
-        ListPool.warmCache = function (cacheCount) {
-            cacheCount -= this._objectQueue.length;
-            if (cacheCount > 0) {
-                for (var i = 0; i < cacheCount; i++) {
-                    this._objectQueue.unshift([]);
-                }
-            }
-        };
-        /**
-         * 将缓存修剪为cacheCount项目
-         * @param cacheCount
-         */
-        ListPool.trimCache = function (cacheCount) {
-            while (cacheCount > this._objectQueue.length)
-                this._objectQueue.shift();
-        };
-        /**
-         * 清除缓存
-         */
-        ListPool.clearCache = function () {
-            this._objectQueue.length = 0;
-        };
-        /**
-         * 如果可以的话，从堆栈中弹出一个项
-         */
-        ListPool.obtain = function () {
-            if (this._objectQueue.length > 0)
-                return this._objectQueue.shift();
-            return [];
-        };
-        /**
-         * 将项推回堆栈
-         * @param obj
-         */
-        ListPool.free = function (obj) {
-            this._objectQueue.unshift(obj);
-            obj.length = 0;
-        };
-        ListPool._objectQueue = [];
-        return ListPool;
-    }());
-    es.ListPool = ListPool;
-})(es || (es = {}));
-var es;
-(function (es) {
     var NumberExtension = /** @class */ (function () {
         function NumberExtension() {
         }
@@ -8542,90 +9141,6 @@ var es;
         return NumberExtension;
     }());
     es.NumberExtension = NumberExtension;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 用于管理一对对象的简单DTO
-     */
-    var Pair = /** @class */ (function () {
-        function Pair(first, second) {
-            this.first = first;
-            this.second = second;
-        }
-        Pair.prototype.clear = function () {
-            this.first = this.second = null;
-        };
-        Pair.prototype.equals = function (other) {
-            // 这两种方法在功能上应该是等价的
-            return this.first == other.first && this.second == other.second;
-        };
-        Pair.prototype.getHashCode = function () {
-            return es.EqualityComparer.default().getHashCode(this.first) * 37 +
-                es.EqualityComparer.default().getHashCode(this.second);
-        };
-        return Pair;
-    }());
-    es.Pair = Pair;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 用于池任何对象
-     */
-    var Pool = /** @class */ (function () {
-        function Pool() {
-        }
-        /**
-         * 预热缓存，使用最大的cacheCount对象填充缓存
-         * @param type
-         * @param cacheCount
-         */
-        Pool.warmCache = function (type, cacheCount) {
-            cacheCount -= this._objectQueue.length;
-            if (cacheCount > 0) {
-                for (var i = 0; i < cacheCount; i++) {
-                    this._objectQueue.unshift(new type());
-                }
-            }
-        };
-        /**
-         * 将缓存修剪为cacheCount项目
-         * @param cacheCount
-         */
-        Pool.trimCache = function (cacheCount) {
-            while (cacheCount > this._objectQueue.length)
-                this._objectQueue.shift();
-        };
-        /**
-         * 清除缓存
-         */
-        Pool.clearCache = function () {
-            this._objectQueue.length = 0;
-        };
-        /**
-         * 如果可以的话，从堆栈中弹出一个项
-         */
-        Pool.obtain = function (type) {
-            if (this._objectQueue.length > 0)
-                return this._objectQueue.shift();
-            return new type();
-        };
-        /**
-         * 将项推回堆栈
-         * @param obj
-         */
-        Pool.free = function (obj) {
-            this._objectQueue.unshift(obj);
-            if (es.isIPoolable(obj)) {
-                obj["reset"]();
-            }
-        };
-        Pool._objectQueue = [];
-        return Pool;
-    }());
-    es.Pool = Pool;
-    es.isIPoolable = function (props) { return typeof props['reset'] !== 'undefined'; };
 })(es || (es = {}));
 var RandomUtils = /** @class */ (function () {
     function RandomUtils() {
@@ -8844,332 +9359,112 @@ var es;
             rect.width -= horizontalAmount * 2;
             rect.height -= verticalAmount * 2;
         };
+        /**
+         * 给定多边形的点，计算其边界
+         * @param points
+         */
+        RectangleExt.boundsFromPolygonVector = function (points) {
+            // 我们需要找到最小/最大的x/y值。
+            var minX = Number.POSITIVE_INFINITY;
+            var minY = Number.POSITIVE_INFINITY;
+            var maxX = Number.NEGATIVE_INFINITY;
+            var maxY = Number.NEGATIVE_INFINITY;
+            for (var i = 0; i < points.length; i++) {
+                var pt = points[i];
+                if (pt.x < minX)
+                    minX = pt.x;
+                if (pt.x > maxX)
+                    maxX = pt.x;
+                if (pt.y < minY)
+                    minY = pt.y;
+                if (pt.y > maxY)
+                    maxY = pt.y;
+            }
+            return this.fromMinMaxVector(new es.Vector2(minX, minY), new es.Vector2(maxX, maxY));
+        };
+        /**
+         * 创建一个给定最小/最大点（左上角，右下角）的矩形
+         * @param min
+         * @param max
+         */
+        RectangleExt.fromMinMaxVector = function (min, max) {
+            return new es.Rectangle(min.x, min.y, max.x - min.x, max.y - min.y);
+        };
+        /**
+         * 返回一个跨越当前边界和提供的delta位置的Bounds
+         * @param rect
+         * @param deltaX
+         * @param deltaY
+         */
+        RectangleExt.getSweptBroadphaseBounds = function (rect, deltaX, deltaY) {
+            var broadphasebox = es.Rectangle.empty;
+            broadphasebox.x = deltaX > 0 ? rect.x : rect.x + deltaX;
+            broadphasebox.y = deltaY > 0 ? rect.y : rect.y + deltaY;
+            broadphasebox.width = deltaX > 0 ? deltaX + rect.width : rect.width - deltaX;
+            broadphasebox.height = deltaY > 0 ? deltaY + rect.height : rect.height - deltaY;
+            return broadphasebox;
+        };
+        /**
+         * 如果矩形发生碰撞，返回true
+         * moveX和moveY将返回b1为避免碰撞而必须移动的移动量
+         * @param rect
+         * @param other
+         * @param moveX
+         * @param moveY
+         */
+        RectangleExt.prototype.collisionCheck = function (rect, other, moveX, moveY) {
+            moveX.value = moveY.value = 0;
+            var l = other.x - (rect.x + rect.width);
+            var r = (other.x + other.width) - rect.x;
+            var t = other.y - (rect.y + rect.height);
+            var b = (other.y + other.height) - rect.y;
+            // 检验是否有碰撞
+            if (l > 0 || r < 0 || t > 0 || b < 0)
+                return false;
+            // 求两边的偏移量
+            moveX.value = Math.abs(l) < r ? l : r;
+            moveY.value = Math.abs(t) < b ? t : b;
+            // 只使用最小的偏移量
+            if (Math.abs(moveX.value) < Math.abs(moveY.value))
+                moveY.value = 0;
+            else
+                moveX.value = 0;
+            return true;
+        };
+        /**
+         * 计算两个矩形之间有符号的交点深度
+         * @param rectA
+         * @param rectB
+         * @returns 两个相交的矩形之间的重叠量。
+         * 这些深度值可以是负值，取决于矩形相交的边。
+         * 这允许调用者确定正确的推送对象的方向，以解决碰撞问题。
+         * 如果矩形不相交，则返回Vector2.zero。
+         */
+        RectangleExt.getIntersectionDepth = function (rectA, rectB) {
+            // 计算半尺寸
+            var halfWidthA = rectA.width / 2;
+            var halfHeightA = rectA.height / 2;
+            var halfWidthB = rectB.width / 2;
+            var halfHeightB = rectB.height / 2;
+            // 计算中心
+            var centerA = new es.Vector2(rectA.left + halfWidthA, rectA.top + halfHeightA);
+            var centerB = new es.Vector2(rectB.left + halfWidthB, rectB.top + halfHeightB);
+            // 计算当前中心间的距离和最小非相交距离
+            var distanceX = centerA.x - centerB.x;
+            var distanceY = centerA.y - centerB.y;
+            var minDistanceX = halfWidthA + halfWidthB;
+            var minDistanceY = halfHeightA + halfHeightB;
+            // 如果我们根本不相交，则返回(0，0)
+            if (Math.abs(distanceX) >= minDistanceX || Math.abs(distanceY) >= minDistanceY)
+                return es.Vector2.zero;
+            // 计算并返回交叉点深度
+            var depthX = distanceX > 0 ? minDistanceX - distanceX : -minDistanceX - distanceX;
+            var depthY = distanceY > 0 ? minDistanceY - distanceY : -minDistanceY - distanceY;
+            return new es.Vector2(depthX, depthY);
+        };
         return RectangleExt;
     }());
     es.RectangleExt = RectangleExt;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 使得number/string/boolean类型作为对象引用来进行传递
-     */
-    var Ref = /** @class */ (function () {
-        function Ref(value) {
-            this.value = value;
-        }
-        return Ref;
-    }());
-    es.Ref = Ref;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Set = /** @class */ (function () {
-        function Set(source) {
-            var _this = this;
-            this.clear();
-            if (source)
-                source.forEach(function (value) {
-                    _this.add(value);
-                });
-        }
-        Set.prototype.add = function (item) {
-            var _this = this;
-            var hashCode = this.getHashCode(item);
-            var bucket = this.buckets[hashCode];
-            if (bucket === undefined) {
-                var newBucket = new Array();
-                newBucket.push(item);
-                this.buckets[hashCode] = newBucket;
-                this.count = this.count + 1;
-                return true;
-            }
-            if (bucket.some(function (value) { return _this.areEqual(value, item); }))
-                return false;
-            bucket.push(item);
-            this.count = this.count + 1;
-            return true;
-        };
-        ;
-        Set.prototype.remove = function (item) {
-            var _this = this;
-            var hashCode = this.getHashCode(item);
-            var bucket = this.buckets[hashCode];
-            if (bucket === undefined) {
-                return false;
-            }
-            var result = false;
-            var newBucket = new Array();
-            bucket.forEach(function (value) {
-                if (!_this.areEqual(value, item))
-                    newBucket.push(item);
-                else
-                    result = true;
-            });
-            this.buckets[hashCode] = newBucket;
-            if (result)
-                this.count = this.count - 1;
-            return result;
-        };
-        Set.prototype.contains = function (item) {
-            return this.bucketsContains(this.buckets, item);
-        };
-        ;
-        Set.prototype.getCount = function () {
-            return this.count;
-        };
-        Set.prototype.clear = function () {
-            this.buckets = new Array();
-            this.count = 0;
-        };
-        Set.prototype.toArray = function () {
-            var result = new Array();
-            this.buckets.forEach(function (value) {
-                value.forEach(function (inner) {
-                    result.push(inner);
-                });
-            });
-            return result;
-        };
-        /**
-         * 从当前集合中删除指定集合中的所有元素
-         * @param other
-         */
-        Set.prototype.exceptWith = function (other) {
-            var _this = this;
-            if (other) {
-                other.forEach(function (value) {
-                    _this.remove(value);
-                });
-            }
-        };
-        /**
-         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
-         * @param other
-         */
-        Set.prototype.intersectWith = function (other) {
-            var _this = this;
-            if (other) {
-                var otherBuckets_1 = this.buildInternalBuckets(other);
-                this.toArray().forEach(function (value) {
-                    if (!_this.bucketsContains(otherBuckets_1.Buckets, value))
-                        _this.remove(value);
-                });
-            }
-            else {
-                this.clear();
-            }
-        };
-        Set.prototype.unionWith = function (other) {
-            var _this = this;
-            other.forEach(function (value) {
-                _this.add(value);
-            });
-        };
-        /**
-         * 确定当前集合是否为指定集合或数组的子集
-         * @param other
-         */
-        Set.prototype.isSubsetOf = function (other) {
-            var _this = this;
-            var otherBuckets = this.buildInternalBuckets(other);
-            return this.toArray().every(function (value) { return _this.bucketsContains(otherBuckets.Buckets, value); });
-        };
-        /**
-         * 确定当前不可变排序集是否为指定集合的超集
-         * @param other
-         */
-        Set.prototype.isSupersetOf = function (other) {
-            var _this = this;
-            return other.every(function (value) { return _this.contains(value); });
-        };
-        Set.prototype.overlaps = function (other) {
-            var _this = this;
-            return other.some(function (value) { return _this.contains(value); });
-        };
-        Set.prototype.setEquals = function (other) {
-            var _this = this;
-            var otherBuckets = this.buildInternalBuckets(other);
-            if (otherBuckets.Count !== this.count)
-                return false;
-            return other.every(function (value) { return _this.contains(value); });
-        };
-        Set.prototype.buildInternalBuckets = function (source) {
-            var _this = this;
-            var internalBuckets = new Array();
-            var internalCount = 0;
-            source.forEach(function (item) {
-                var hashCode = _this.getHashCode(item);
-                var bucket = internalBuckets[hashCode];
-                if (bucket === undefined) {
-                    var newBucket = new Array();
-                    newBucket.push(item);
-                    internalBuckets[hashCode] = newBucket;
-                    internalCount = internalCount + 1;
-                }
-                else if (!bucket.some(function (value) { return _this.areEqual(value, item); })) {
-                    bucket.push(item);
-                    internalCount = internalCount + 1;
-                }
-            });
-            return { Buckets: internalBuckets, Count: internalCount };
-        };
-        Set.prototype.bucketsContains = function (internalBuckets, item) {
-            var _this = this;
-            var hashCode = this.getHashCode(item);
-            var bucket = internalBuckets[hashCode];
-            if (bucket === undefined) {
-                return false;
-            }
-            return bucket.some(function (value) { return _this.areEqual(value, item); });
-        };
-        return Set;
-    }());
-    var HashSet = /** @class */ (function (_super) {
-        __extends(HashSet, _super);
-        function HashSet(source) {
-            return _super.call(this, source) || this;
-        }
-        HashSet.prototype.getHashCode = function (item) {
-            return item.getHashCode();
-        };
-        HashSet.prototype.areEqual = function (value1, value2) {
-            return value1.equals(value2);
-        };
-        return HashSet;
-    }(Set));
-    es.HashSet = HashSet;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 管理数值的简单助手类。它存储值，直到累计的总数大于1。一旦超过1，该值将在调用update时添加到amount中。
-     */
-    var SubpixelNumber = /** @class */ (function () {
-        function SubpixelNumber() {
-        }
-        /**
-         * 以amount递增余数，将值截断为int，存储新的余数并将amount设置为当前值。
-         * @param amount
-         */
-        SubpixelNumber.prototype.update = function (amount) {
-            this.remainder += amount;
-            var motion = Math.trunc(this.remainder);
-            this.remainder -= motion;
-            return motion;
-        };
-        /**
-         * 将余数重置为0。当一个物体与一个不可移动的物体碰撞时有用。
-         * 在这种情况下，您将希望将亚像素余数归零，因为它是空的和无效的碰撞。
-         */
-        SubpixelNumber.prototype.reset = function () {
-            this.remainder = 0;
-        };
-        return SubpixelNumber;
-    }());
-    es.SubpixelNumber = SubpixelNumber;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 简单的剪耳三角测量器，最终的三角形将出现在triangleIndices列表中。
-     */
-    var Triangulator = /** @class */ (function () {
-        function Triangulator() {
-            /**
-             * 上次三角函数调用中使用的点列表的三角列表条目索引
-             */
-            this.triangleIndices = [];
-            this._triPrev = new Array(12);
-            this._triNext = new Array(12);
-        }
-        Triangulator.testPointTriangle = function (point, a, b, c) {
-            // 如果点在AB的右边，那么外边的三角形是
-            if (es.Vector2Ext.cross(es.Vector2.subtract(point, a), es.Vector2.subtract(b, a)) < 0)
-                return false;
-            // 如果点在BC的右边，则在三角形的外侧
-            if (es.Vector2Ext.cross(es.Vector2.subtract(point, b), es.Vector2.subtract(c, b)) < 0)
-                return false;
-            // 如果点在ca的右边，则在三角形的外面
-            if (es.Vector2Ext.cross(es.Vector2.subtract(point, c), es.Vector2.subtract(a, c)) < 0)
-                return false;
-            // 点在三角形上
-            return true;
-        };
-        /**
-         * 计算一个三角形列表，该列表完全覆盖给定点集所包含的区域。如果点不是CCW，则将arePointsCCW参数传递为false
-         * @param points 定义封闭路径的点列表
-         * @param arePointsCCW
-         */
-        Triangulator.prototype.triangulate = function (points, arePointsCCW) {
-            if (arePointsCCW === void 0) { arePointsCCW = true; }
-            var count = points.length;
-            // 设置前一个链接和下一个链接
-            this.initialize(count);
-            // 非三角的多边形断路器
-            var iterations = 0;
-            // 从0开始
-            var index = 0;
-            // 继续移除所有的三角形，直到只剩下一个三角形
-            while (count > 3 && iterations < 500) {
-                iterations++;
-                var isEar = true;
-                var a = points[this._triPrev[index]];
-                var b = points[index];
-                var c = points[this._triNext[index]];
-                if (es.Vector2Ext.isTriangleCCW(a, b, c)) {
-                    var k = this._triNext[this._triNext[index]];
-                    do {
-                        if (Triangulator.testPointTriangle(points[k], a, b, c)) {
-                            isEar = false;
-                            break;
-                        }
-                        k = this._triNext[k];
-                    } while (k != this._triPrev[index]);
-                }
-                else {
-                    isEar = false;
-                }
-                if (isEar) {
-                    this.triangleIndices.push(this._triPrev[index]);
-                    this.triangleIndices.push(index);
-                    this.triangleIndices.push(this._triNext[index]);
-                    // 删除vert通过重定向相邻vert的上一个和下一个链接，从而减少vertext计数
-                    this._triNext[this._triPrev[index]] = this._triNext[index];
-                    this._triPrev[this._triNext[index]] = this._triPrev[index];
-                    count--;
-                    // 接下来访问前一个vert
-                    index = this._triPrev[index];
-                }
-                else {
-                    index = this._triNext[index];
-                }
-            }
-            this.triangleIndices.push(this._triPrev[index]);
-            this.triangleIndices.push(index);
-            this.triangleIndices.push(this._triNext[index]);
-            if (!arePointsCCW)
-                this.triangleIndices.reverse();
-        };
-        Triangulator.prototype.initialize = function (count) {
-            this.triangleIndices.length = 0;
-            if (this._triNext.length < count) {
-                this._triNext.reverse();
-                this._triNext.length = Math.max(this._triNext.length * 2, count);
-            }
-            if (this._triPrev.length < count) {
-                this._triPrev.reverse();
-                this._triPrev.length = Math.max(this._triPrev.length * 2, count);
-            }
-            for (var i = 0; i < count; i++) {
-                this._triPrev[i] = i - 1;
-                this._triNext[i] = i + 1;
-            }
-            this._triPrev[0] = count - 1;
-            this._triNext[count - 1] = 0;
-        };
-        return Triangulator;
-    }());
-    es.Triangulator = Triangulator;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -9324,190 +9619,6 @@ var WebGLUtils = /** @class */ (function () {
     };
     return WebGLUtils;
 }());
-var stopwatch;
-(function (stopwatch) {
-    /**
-     * 记录时间的持续时间，一些设计灵感来自物理秒表。
-     */
-    var Stopwatch = /** @class */ (function () {
-        function Stopwatch(getSystemTime) {
-            if (getSystemTime === void 0) { getSystemTime = _defaultSystemTimeGetter; }
-            this.getSystemTime = getSystemTime;
-            /** 自上次复位以来，秒表已停止的系统时间总数。 */
-            this._stopDuration = 0;
-            /**
-             * 记录自上次复位以来所有已完成切片的结果。
-             */
-            this._completeSlices = [];
-        }
-        Stopwatch.prototype.getState = function () {
-            if (this._startSystemTime === undefined) {
-                return State.IDLE;
-            }
-            else if (this._stopSystemTime === undefined) {
-                return State.RUNNING;
-            }
-            else {
-                return State.STOPPED;
-            }
-        };
-        Stopwatch.prototype.isIdle = function () {
-            return this.getState() === State.IDLE;
-        };
-        Stopwatch.prototype.isRunning = function () {
-            return this.getState() === State.RUNNING;
-        };
-        Stopwatch.prototype.isStopped = function () {
-            return this.getState() === State.STOPPED;
-        };
-        /**
-         *
-         */
-        Stopwatch.prototype.slice = function () {
-            return this.recordPendingSlice();
-        };
-        /**
-         * 获取自上次复位以来该秒表已完成/记录的所有片的列表。
-         */
-        Stopwatch.prototype.getCompletedSlices = function () {
-            return Array.from(this._completeSlices);
-        };
-        /**
-         * 获取自上次重置以来该秒表已完成/记录的所有片的列表，以及当前挂起的片。
-         */
-        Stopwatch.prototype.getCompletedAndPendingSlices = function () {
-            return __spread(this._completeSlices, [this.getPendingSlice()]);
-        };
-        /**
-         * 获取关于这个秒表当前挂起的切片的详细信息。
-         */
-        Stopwatch.prototype.getPendingSlice = function () {
-            return this.calculatePendingSlice();
-        };
-        /**
-         * 获取当前秒表时间。这是这个秒表自上次复位以来运行的系统时间总数。
-         */
-        Stopwatch.prototype.getTime = function () {
-            return this.caculateStopwatchTime();
-        };
-        /**
-         * 完全重置这个秒表到它的初始状态。清除所有记录的运行持续时间、切片等。
-         */
-        Stopwatch.prototype.reset = function () {
-            this._startSystemTime = this._pendingSliceStartStopwatchTime = this._stopSystemTime = undefined;
-            this._stopDuration = 0;
-            this._completeSlices = [];
-        };
-        /**
-         * 开始(或继续)运行秒表。
-         * @param forceReset
-         */
-        Stopwatch.prototype.start = function (forceReset) {
-            if (forceReset === void 0) { forceReset = false; }
-            if (forceReset) {
-                this.reset();
-            }
-            if (this._stopSystemTime !== undefined) {
-                var systemNow = this.getSystemTime();
-                var stopDuration = systemNow - this._stopSystemTime;
-                this._stopDuration += stopDuration;
-                this._stopSystemTime = undefined;
-            }
-            else if (this._startSystemTime === undefined) {
-                var systemNow = this.getSystemTime();
-                this._startSystemTime = systemNow;
-                this._pendingSliceStartStopwatchTime = 0;
-            }
-        };
-        /**
-         *
-         * @param recordPendingSlice
-         */
-        Stopwatch.prototype.stop = function (recordPendingSlice) {
-            if (recordPendingSlice === void 0) { recordPendingSlice = false; }
-            if (this._startSystemTime === undefined) {
-                return 0;
-            }
-            var systemTimeOfStopwatchTime = this.getSystemTimeOfCurrentStopwatchTime();
-            if (recordPendingSlice) {
-                this.recordPendingSlice(this.caculateStopwatchTime(systemTimeOfStopwatchTime));
-            }
-            this._stopSystemTime = systemTimeOfStopwatchTime;
-            return this.getTime();
-        };
-        /**
-         * 计算指定秒表时间的当前挂起片。
-         * @param endStopwatchTime
-         */
-        Stopwatch.prototype.calculatePendingSlice = function (endStopwatchTime) {
-            if (this._pendingSliceStartStopwatchTime === undefined) {
-                return Object.freeze({ startTime: 0, endTime: 0, duration: 0 });
-            }
-            if (endStopwatchTime === undefined) {
-                endStopwatchTime = this.getTime();
-            }
-            return Object.freeze({
-                startTime: this._pendingSliceStartStopwatchTime,
-                endTime: endStopwatchTime,
-                duration: endStopwatchTime - this._pendingSliceStartStopwatchTime
-            });
-        };
-        /**
-         * 计算指定系统时间的当前秒表时间。
-         * @param endSystemTime
-         */
-        Stopwatch.prototype.caculateStopwatchTime = function (endSystemTime) {
-            if (this._startSystemTime === undefined)
-                return 0;
-            if (endSystemTime === undefined)
-                endSystemTime = this.getSystemTimeOfCurrentStopwatchTime();
-            return endSystemTime - this._startSystemTime - this._stopDuration;
-        };
-        /**
-         * 获取与当前秒表时间等效的系统时间。
-         * 如果该秒表当前停止，则返回该秒表停止时的系统时间。
-         */
-        Stopwatch.prototype.getSystemTimeOfCurrentStopwatchTime = function () {
-            return this._stopSystemTime === undefined ? this.getSystemTime() : this._stopSystemTime;
-        };
-        /**
-         * 结束/记录当前挂起的片的私有实现。
-         * @param endStopwatchTime
-         */
-        Stopwatch.prototype.recordPendingSlice = function (endStopwatchTime) {
-            if (this._pendingSliceStartStopwatchTime !== undefined) {
-                if (endStopwatchTime === undefined) {
-                    endStopwatchTime = this.getTime();
-                }
-                var slice = this.calculatePendingSlice(endStopwatchTime);
-                this._pendingSliceStartStopwatchTime = slice.endTime;
-                this._completeSlices.push(slice);
-                return slice;
-            }
-            else {
-                return this.calculatePendingSlice();
-            }
-        };
-        return Stopwatch;
-    }());
-    stopwatch.Stopwatch = Stopwatch;
-    var State;
-    (function (State) {
-        /** 秒表尚未启动，或已复位。 */
-        State["IDLE"] = "IDLE";
-        /** 秒表正在运行。 */
-        State["RUNNING"] = "RUNNING";
-        /** 秒表以前还在跑，但现在已经停了。 */
-        State["STOPPED"] = "STOPPED";
-    })(State || (State = {}));
-    function setDefaultSystemTimeGetter(systemTimeGetter) {
-        if (systemTimeGetter === void 0) { systemTimeGetter = Date.now; }
-        _defaultSystemTimeGetter = systemTimeGetter;
-    }
-    stopwatch.setDefaultSystemTimeGetter = setDefaultSystemTimeGetter;
-    /** 所有新实例的默认“getSystemTime”实现 */
-    var _defaultSystemTimeGetter = Date.now;
-})(stopwatch || (stopwatch = {}));
 var linq;
 (function (linq) {
     var Enumerable = /** @class */ (function () {
@@ -10104,9 +10215,9 @@ var es;
     }());
     es.Segment = Segment;
 })(es || (es = {}));
-///<reference path="../LinkList.ts" />
+///<reference path="../Collections/LinkList.ts" />
 var es;
-///<reference path="../LinkList.ts" />
+///<reference path="../Collections/LinkList.ts" />
 (function (es) {
     /**
      * 类，它可以计算出一个网格，表示从给定的一组遮挡物的原点可以看到哪些区域。使用方法如下。

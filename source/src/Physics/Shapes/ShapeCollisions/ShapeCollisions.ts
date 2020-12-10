@@ -116,7 +116,7 @@ module es {
          * @param polygon
          * @param result
          */
-        public static circleToPolygon(circle: Circle, polygon: Polygon, result: CollisionResult): boolean {
+        public static circleToPolygon(circle: Circle, polygon: Polygon, result: CollisionResult = new CollisionResult()): boolean {
             // 圆圈在多边形中的位置坐标
             let poly2Circle = Vector2.subtract(circle.position, polygon.position);
 
@@ -141,7 +141,7 @@ module es {
                     mtv = new Vector2(result.normal.x * circle.radius, result.normal.y * circle.radius);
                 } else {
                     let distance = Math.sqrt(distanceSquared.value);
-                    mtv = new Vector2(-poly2Circle.x + closestPoint.x, -poly2Circle.y + closestPoint.y)
+                    mtv = Vector2.subtract(new Vector2(-1), Vector2.subtract(poly2Circle, closestPoint))
                         .multiply(new Vector2((circle.radius - distance) / distance));
                 }
             }
@@ -153,19 +153,19 @@ module es {
         }
 
         /**
-         * 适用于圆心在方框内以及只与方框外圆心重叠的圆。
+         * 适用于中心在框内的圆，也适用于与框外中心重合的圆。
          * @param circle
          * @param box
          * @param result
          */
-        public static circleToBox(circle: Circle, box: Box, result: CollisionResult): boolean {
+        public static circleToBox(circle: Circle, box: Box, result: CollisionResult = new CollisionResult()): boolean {
             let closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
 
-            // 处理那些中心在盒子里的圆，因为比较好操作，
+            // 先处理中心在盒子里的圆，如果我们是包含的, 它的成本更低，
             if (box.containsPoint(circle.position)) {
-                result.point = closestPointOnBounds;
+                result.point = closestPointOnBounds.clone();
 
-                // 计算mtv。找到安全的，没有碰撞的位置，然后从那里得到mtv
+                // 计算MTV。找出安全的、非碰撞的位置，并从中得到MTV
                 let safePlace = Vector2.add(closestPointOnBounds, Vector2.multiply(result.normal, new Vector2(circle.radius)));
                 result.minimumTranslationVector = Vector2.subtract(circle.position, safePlace);
 
@@ -173,7 +173,8 @@ module es {
             }
 
             let sqrDistance = Vector2.distanceSquared(closestPointOnBounds, circle.position);
-            // 看盒子上的点与圆的距离是否小于半径
+            
+            // 看框上的点距圆的半径是否小于圆的半径
             if (sqrDistance == 0) {
                 result.minimumTranslationVector = Vector2.multiply(result.normal, new Vector2(circle.radius));
             } else if (sqrDistance <= circle.radius * circle.radius) {
@@ -236,7 +237,7 @@ module es {
             let t = Vector2.dot(w, v) / Vector2.dot(v, v);
             t = MathHelper.clamp(t, 0, 1);
 
-            return Vector2.add(lineA, Vector2.multiply(v, new Vector2(t, t)));
+            return Vector2.add(lineA, Vector2.multiply(v, new Vector2(t)));
         }
 
         /**
@@ -265,7 +266,7 @@ module es {
          * @param second
          * @param result
          */
-        public static circleToCircle(first: Circle, second: Circle, result: CollisionResult): boolean {
+        public static circleToCircle(first: Circle, second: Circle, result: CollisionResult = new CollisionResult()): boolean {
             let distanceSquared = Vector2.distanceSquared(first.position, second.position);
             let sumOfRadii = first.radius + second.radius;
             let collided = distanceSquared < sumOfRadii * sumOfRadii;
@@ -274,6 +275,11 @@ module es {
                 let depth = sumOfRadii - Math.sqrt(distanceSquared);
                 result.minimumTranslationVector = Vector2.multiply(new Vector2(-depth), result.normal);
                 result.point = Vector2.add(second.position, Vector2.multiply(result.normal, new Vector2(second.radius)));
+
+                // 这可以得到实际的碰撞点，可能有用也可能没用，所以我们暂时把它留在这里
+                // let collisionPointX = ((first.position.x * second.radius) + (second.position.x * first.radius)) / sumOfRadii;
+                // let collisionPointY = ((first.position.y * second.radius) + (second.position.y * first.radius)) / sumOfRadii;
+                // result.point = new Vector2(collisionPointX, collisionPointY);
 
                 return true;
             }
@@ -315,7 +321,7 @@ module es {
             return new Rectangle(topLeft.x, topLeft.y, fullSize.x, fullSize.y)
         }
 
-        public static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit: RaycastHit): boolean {
+        public static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit: RaycastHit = new RaycastHit()): boolean {
             let normal = Vector2.zero;
             let intersectionPoint = Vector2.zero;
             let fraction = Number.MAX_VALUE;

@@ -86,8 +86,8 @@ module es {
 
             if (this._instance._scene == null) {
                 this._instance._scene = value;
+                this._instance.onSceneChanged();
                 this._instance._scene.begin();
-                Core.Instance.onSceneChanged();
             } else {
                 this._instance._nextScene = value;
             }

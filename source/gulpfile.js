@@ -3,7 +3,7 @@ const gulp = require("gulp");
 const minify = require('gulp-minify');
 const inject = require("gulp-inject-string");
 const ts = require('gulp-typescript');
-const compile = require("gulp-typescript");
+const merge = require('merge2');
 const tsProject = ts.createProject('tsconfig.json');
 
 gulp.task('buildJs', () => {
@@ -23,7 +23,16 @@ gulp.task("buildDts", ["buildJs"], () => {
         .pipe(gulp.dest('./bin'));
 });
 
-gulp.task("build", ["buildDts"], () => {
+gulp.task("copy", ["buildDts"], () => {
     return gulp.src('bin/**/*')
-        // .pipe(gulp.dest('../demo_egret/libs/framework/'))
+        .pipe(gulp.dest('../demo/egret_demo/libs/framework/'))
+});
+
+gulp.task('build', ['copy'], ()=>{
+    return merge([
+        gulp.src('bin/*.js')
+            .pipe(gulp.dest('../demo/laya_demo/bin/libs/')),
+        gulp.src('bin/*.ts')
+            .pipe(gulp.dest('../demo/laya_demo/libs/'))
+    ])
 });

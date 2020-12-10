@@ -398,7 +398,7 @@ module es {
          * 对精灵坐标进行四舍五入
          */
         public roundPosition() {
-            this.position = this._position.round();
+            this.position = Vector2Ext.round(this._position);
         }
 
         public updateTransform() {
