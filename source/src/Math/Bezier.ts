@@ -13,8 +13,27 @@ module es {
         public static getPoint(p0: Vector2, p1: Vector2, p2: Vector2, t: number): Vector2 {
             t = MathHelper.clamp01(t);
             let oneMinusT = 1 - t;
-            return Vector2.add(Vector2.add(Vector2.multiply(new Vector2(oneMinusT * oneMinusT), p0),
-                Vector2.multiply(new Vector2(2 * oneMinusT * t), p1)), Vector2.multiply(new Vector2(t * t), p2));
+            return new Vector2(oneMinusT * oneMinusT).multiply(p0)
+                .add(new Vector2(2 * oneMinusT * t).multiply(p1))
+                .add(new Vector2(t * t).multiply(p2));
+        }
+
+        /**
+         * 求解一个立方体曲率
+         * @param start 
+         * @param firstControlPoint 
+         * @param secondControlPoint 
+         * @param end
+         * @param t 
+         */
+        public static getPointThree(start: Vector2, firstControlPoint: Vector2, secondControlPoint: Vector2, 
+            end: Vector2, t: number): Vector2 {
+            t = MathHelper.clamp01(t);
+            let oneMinusT = 1 - t;
+            return new Vector2(oneMinusT * oneMinusT * oneMinusT).multiply(start)
+                .add(new Vector2(3 * oneMinusT * oneMinusT * t).multiply(firstControlPoint))
+                .add(new Vector2(3 * oneMinusT * t * t).multiply(secondControlPoint))
+                .add(new Vector2(t * t * t).multiply(end));
         }
 
         /**
@@ -25,8 +44,8 @@ module es {
          * @param t
          */
         public static getFirstDerivative(p0: Vector2, p1: Vector2, p2: Vector2, t: number) {
-            return Vector2.add(Vector2.multiply(new Vector2(2 * (1 - t)), Vector2.subtract(p1, p0)),
-                Vector2.multiply(new Vector2(2 * t), Vector2.subtract(p2, p1)));
+            return new Vector2(2 * (1 - t)).multiply(Vector2.subtract(p1, p0))
+                .add(new Vector2(2 * t).multiply(Vector2.subtract(p2, p1)));
         }
 
         /**
@@ -41,27 +60,9 @@ module es {
                                               end: Vector2, t: number) {
             t = MathHelper.clamp01(t);
             let oneMunusT = 1 - t;
-            return Vector2.add(Vector2.add(Vector2.multiply(new Vector2(3 * oneMunusT * oneMunusT), Vector2.subtract(firstControlPoint, start)),
-                Vector2.multiply(new Vector2(6 * oneMunusT * t), Vector2.subtract(secondControlPoint, firstControlPoint))),
-                Vector2.multiply(new Vector2(3 * t * t), Vector2.subtract(end, secondControlPoint)));
-        }
-
-        /**
-         * 计算一个三次贝塞尔
-         * @param start
-         * @param firstControlPoint
-         * @param secondControlPoint
-         * @param end
-         * @param t
-         */
-        public static getPointThree(start: Vector2, firstControlPoint: Vector2, secondControlPoint: Vector2,
-                                    end: Vector2, t: number) {
-            t = MathHelper.clamp01(t);
-            let oneMunusT = 1 - t;
-            return Vector2.add(Vector2.add(Vector2.add(Vector2.multiply(new Vector2(oneMunusT * oneMunusT * oneMunusT), start),
-                Vector2.multiply(new Vector2(3 * oneMunusT * oneMunusT * t), firstControlPoint)),
-                Vector2.multiply(new Vector2(3 * oneMunusT * t * t), secondControlPoint)),
-                Vector2.multiply(new Vector2(t * t * t), end));
+            return new Vector2(3 * oneMunusT * oneMunusT).multiply(Vector2.subtract(firstControlPoint, start))
+                .add(new Vector2(6 * oneMunusT * t).multiply(Vector2.subtract(secondControlPoint, firstControlPoint)))
+                .add(new Vector2(3 * t * t).multiply(Vector2.subtract(end, secondControlPoint)));
         }
 
         /**

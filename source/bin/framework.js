@@ -4230,7 +4230,25 @@ var es;
         Bezier.getPoint = function (p0, p1, p2, t) {
             t = es.MathHelper.clamp01(t);
             var oneMinusT = 1 - t;
-            return es.Vector2.add(es.Vector2.add(es.Vector2.multiply(new es.Vector2(oneMinusT * oneMinusT), p0), es.Vector2.multiply(new es.Vector2(2 * oneMinusT * t), p1)), es.Vector2.multiply(new es.Vector2(t * t), p2));
+            return new es.Vector2(oneMinusT * oneMinusT).multiply(p0)
+                .add(new es.Vector2(2 * oneMinusT * t).multiply(p1))
+                .add(new es.Vector2(t * t).multiply(p2));
+        };
+        /**
+         * 求解一个立方体曲率
+         * @param start
+         * @param firstControlPoint
+         * @param secondControlPoint
+         * @param end
+         * @param t
+         */
+        Bezier.getPointThree = function (start, firstControlPoint, secondControlPoint, end, t) {
+            t = es.MathHelper.clamp01(t);
+            var oneMinusT = 1 - t;
+            return new es.Vector2(oneMinusT * oneMinusT * oneMinusT).multiply(start)
+                .add(new es.Vector2(3 * oneMinusT * oneMinusT * t).multiply(firstControlPoint))
+                .add(new es.Vector2(3 * oneMinusT * t * t).multiply(secondControlPoint))
+                .add(new es.Vector2(t * t * t).multiply(end));
         };
         /**
          * 得到二次贝塞尔函数的一阶导数
@@ -4240,7 +4258,8 @@ var es;
          * @param t
          */
         Bezier.getFirstDerivative = function (p0, p1, p2, t) {
-            return es.Vector2.add(es.Vector2.multiply(new es.Vector2(2 * (1 - t)), es.Vector2.subtract(p1, p0)), es.Vector2.multiply(new es.Vector2(2 * t), es.Vector2.subtract(p2, p1)));
+            return new es.Vector2(2 * (1 - t)).multiply(es.Vector2.subtract(p1, p0))
+                .add(new es.Vector2(2 * t).multiply(es.Vector2.subtract(p2, p1)));
         };
         /**
          * 得到一个三次贝塞尔函数的一阶导数
@@ -4253,20 +4272,9 @@ var es;
         Bezier.getFirstDerivativeThree = function (start, firstControlPoint, secondControlPoint, end, t) {
             t = es.MathHelper.clamp01(t);
             var oneMunusT = 1 - t;
-            return es.Vector2.add(es.Vector2.add(es.Vector2.multiply(new es.Vector2(3 * oneMunusT * oneMunusT), es.Vector2.subtract(firstControlPoint, start)), es.Vector2.multiply(new es.Vector2(6 * oneMunusT * t), es.Vector2.subtract(secondControlPoint, firstControlPoint))), es.Vector2.multiply(new es.Vector2(3 * t * t), es.Vector2.subtract(end, secondControlPoint)));
-        };
-        /**
-         * 计算一个三次贝塞尔
-         * @param start
-         * @param firstControlPoint
-         * @param secondControlPoint
-         * @param end
-         * @param t
-         */
-        Bezier.getPointThree = function (start, firstControlPoint, secondControlPoint, end, t) {
-            t = es.MathHelper.clamp01(t);
-            var oneMunusT = 1 - t;
-            return es.Vector2.add(es.Vector2.add(es.Vector2.add(es.Vector2.multiply(new es.Vector2(oneMunusT * oneMunusT * oneMunusT), start), es.Vector2.multiply(new es.Vector2(3 * oneMunusT * oneMunusT * t), firstControlPoint)), es.Vector2.multiply(new es.Vector2(3 * oneMunusT * t * t), secondControlPoint)), es.Vector2.multiply(new es.Vector2(t * t * t), end));
+            return new es.Vector2(3 * oneMunusT * oneMunusT).multiply(es.Vector2.subtract(firstControlPoint, start))
+                .add(new es.Vector2(6 * oneMunusT * t).multiply(es.Vector2.subtract(secondControlPoint, firstControlPoint)))
+                .add(new es.Vector2(3 * t * t).multiply(es.Vector2.subtract(end, secondControlPoint)));
         };
         /**
          * 递归地细分bezier曲线，直到满足距离校正
@@ -4319,6 +4327,110 @@ var es;
         return Bezier;
     }());
     es.Bezier = Bezier;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 提供了一系列立方贝塞尔点，并提供了帮助方法来访问贝塞尔
+     */
+    var BezierSpline = /** @class */ (function () {
+        function BezierSpline() {
+            this._points = new es.FastList();
+            this._curveCount = 0;
+        }
+        /**
+         * 在这个过程中，t被修改为在曲线段的范围内。
+         * @param t
+         */
+        BezierSpline.prototype.pointIndexAtTime = function (t) {
+            var i = 0;
+            if (t.value >= 1) {
+                t.value = 1;
+                i = this._points.length - 4;
+            }
+            else {
+                t.value = es.MathHelper.clamp01(t.value) * this._curveCount;
+                i = ~~t;
+                t.value -= i;
+                i *= 3;
+            }
+            return i;
+        };
+        /**
+         * 设置一个控制点，考虑到这是否是一个共享点，如果是，则适当调整
+         * @param index
+         * @param point
+         */
+        BezierSpline.prototype.setControlPoint = function (index, point) {
+            if (index % 3 == 0) {
+                var delta = es.Vector2.subtract(point, this._points.buffer[index]);
+                if (index > 0)
+                    this._points.buffer[index - 1].add(delta);
+                if (index + 1 < this._points.length)
+                    this._points.buffer[index + 1].add(delta);
+            }
+            this._points.buffer[index] = point;
+        };
+        /**
+         * 得到时间t的贝塞尔曲线上的点
+         * @param t
+         */
+        BezierSpline.prototype.getPointAtTime = function (t) {
+            var i = this.pointIndexAtTime(new es.Ref(t));
+            return es.Bezier.getPointThree(this._points.buffer[i], this._points.buffer[i + 1], this._points.buffer[i + 2], this._points.buffer[i + 3], t);
+        };
+        /**
+         * 得到贝塞尔在时间t的速度（第一导数）
+         * @param t
+         */
+        BezierSpline.prototype.getVelocityAtTime = function (t) {
+            var i = this.pointIndexAtTime(new es.Ref(t));
+            return es.Bezier.getFirstDerivativeThree(this._points.buffer[i], this._points.buffer[i + 1], this._points.buffer[i + 2], this._points.buffer[i + 3], t);
+        };
+        /**
+         * 得到时间t时贝塞尔的方向（归一化第一导数）
+         * @param t
+         */
+        BezierSpline.prototype.getDirectionAtTime = function (t) {
+            return es.Vector2.normalize(this.getVelocityAtTime(t));
+        };
+        /**
+         * 在贝塞尔曲线上添加一条曲线
+         * @param start
+         * @param firstControlPoint
+         * @param secondControlPoint
+         * @param end
+         */
+        BezierSpline.prototype.addCurve = function (start, firstControlPoint, secondControlPoint, end) {
+            // 只有当这是第一条曲线时，我们才会添加起始点。对于其他所有的曲线，前一个曲线的终点应该等于新曲线的起点。
+            if (this._points.length == 0)
+                this._points.add(start);
+            this._points.add(firstControlPoint);
+            this._points.add(secondControlPoint);
+            this._points.add(end);
+            this._curveCount = (this._points.length - 1) / 3;
+        };
+        /**
+         * 重置bezier，移除所有点
+         */
+        BezierSpline.prototype.reset = function () {
+            this._points.clear();
+        };
+        /**
+         * 将splitine分解成totalSegments部分，并返回使用线条绘制所需的所有点
+         * @param totalSegments
+         */
+        BezierSpline.prototype.getDrawingPoints = function (totalSegments) {
+            var points = [];
+            for (var i = 0; i < totalSegments; i++) {
+                var t = i / totalSegments;
+                points[i] = this.getPointAtTime(t);
+            }
+            return points;
+        };
+        return BezierSpline;
+    }());
+    es.BezierSpline = BezierSpline;
 })(es || (es = {}));
 var es;
 (function (es) {

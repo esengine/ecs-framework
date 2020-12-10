@@ -1651,6 +1651,15 @@ declare module es {
          */
         static getPoint(p0: Vector2, p1: Vector2, p2: Vector2, t: number): Vector2;
         /**
+         * 求解一个立方体曲率
+         * @param start
+         * @param firstControlPoint
+         * @param secondControlPoint
+         * @param end
+         * @param t
+         */
+        static getPointThree(start: Vector2, firstControlPoint: Vector2, secondControlPoint: Vector2, end: Vector2, t: number): Vector2;
+        /**
          * 得到二次贝塞尔函数的一阶导数
          * @param p0
          * @param p1
@@ -1667,15 +1676,6 @@ declare module es {
          * @param t
          */
         static getFirstDerivativeThree(start: Vector2, firstControlPoint: Vector2, secondControlPoint: Vector2, end: Vector2, t: number): Vector2;
-        /**
-         * 计算一个三次贝塞尔
-         * @param start
-         * @param firstControlPoint
-         * @param secondControlPoint
-         * @param end
-         * @param t
-         */
-        static getPointThree(start: Vector2, firstControlPoint: Vector2, secondControlPoint: Vector2, end: Vector2, t: number): Vector2;
         /**
          * 递归地细分bezier曲线，直到满足距离校正
          * 在这种算法中，平面切片的点要比曲面切片少。返回完成后应返回到ListPool的合并列表。
@@ -1696,6 +1696,58 @@ declare module es {
          * @param distanceTolerance
          */
         private static recursiveGetOptimizedDrawingPoints;
+    }
+}
+declare module es {
+    /**
+     * 提供了一系列立方贝塞尔点，并提供了帮助方法来访问贝塞尔
+     */
+    class BezierSpline {
+        _points: FastList<Vector2>;
+        _curveCount: number;
+        /**
+         * 在这个过程中，t被修改为在曲线段的范围内。
+         * @param t
+         */
+        pointIndexAtTime(t: Ref<number>): number;
+        /**
+         * 设置一个控制点，考虑到这是否是一个共享点，如果是，则适当调整
+         * @param index
+         * @param point
+         */
+        setControlPoint(index: number, point: Vector2): void;
+        /**
+         * 得到时间t的贝塞尔曲线上的点
+         * @param t
+         */
+        getPointAtTime(t: number): Vector2;
+        /**
+         * 得到贝塞尔在时间t的速度（第一导数）
+         * @param t
+         */
+        getVelocityAtTime(t: number): Vector2;
+        /**
+         * 得到时间t时贝塞尔的方向（归一化第一导数）
+         * @param t
+         */
+        getDirectionAtTime(t: number): Vector2;
+        /**
+         * 在贝塞尔曲线上添加一条曲线
+         * @param start
+         * @param firstControlPoint
+         * @param secondControlPoint
+         * @param end
+         */
+        addCurve(start: Vector2, firstControlPoint: Vector2, secondControlPoint: Vector2, end: Vector2): void;
+        /**
+         * 重置bezier，移除所有点
+         */
+        reset(): void;
+        /**
+         * 将splitine分解成totalSegments部分，并返回使用线条绘制所需的所有点
+         * @param totalSegments
+         */
+        getDrawingPoints(totalSegments: number): Vector2[];
     }
 }
 declare module es {
