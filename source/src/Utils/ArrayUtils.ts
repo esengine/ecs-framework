@@ -1,8 +1,7 @@
 class ArrayUtils {
     /**
      * 执行冒泡排序
-     * @param    ary
-     * 算法参考 -- http://www.hiahia.org/datastructure/paixu/paixu8.3.1.1-1.htm
+     * @param ary
      */
     public static bubbleSort(ary: number[]): void {
         let isExchange: Boolean = false;
