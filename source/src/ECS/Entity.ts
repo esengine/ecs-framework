@@ -35,6 +35,9 @@ module es {
          * 指定应该调用这个entity update方法的频率。1表示每一帧，2表示每一帧，以此类推
          */
         public updateInterval: number = 1;
+        /**
+         * 返回一个BitSet实例，包含实体拥有的组件的位
+         */
         public componentBits: BitSet;
 
         constructor(name: string) {

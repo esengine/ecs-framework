@@ -3,7 +3,7 @@ module es {
      * 提供了一系列立方贝塞尔点，并提供了帮助方法来访问贝塞尔
      */
     export class BezierSpline {
-        public _points: FastList<Vector2> = new FastList<Vector2>();
+        public _points: Vector2[] = [];
         public _curveCount: number = 0;
 
         /**
@@ -32,15 +32,15 @@ module es {
          */
         public setControlPoint(index: number, point: Vector2) {
             if (index % 3 == 0) {
-                let delta = Vector2.subtract(point, this._points.buffer[index]);
+                let delta = Vector2.subtract(point, this._points[index]);
                 if (index > 0)
-                    this._points.buffer[index - 1].add(delta);
+                    this._points[index - 1].add(delta);
                 
                 if (index + 1 < this._points.length)
-                    this._points.buffer[index + 1].add(delta);
+                    this._points[index + 1].add(delta);
             }
 
-            this._points.buffer[index] = point;
+            this._points[index] = point;
         }
 
         /**
@@ -49,8 +49,8 @@ module es {
          */
         public getPointAtTime(t: number): Vector2{
             let i = this.pointIndexAtTime(new Ref(t));
-            return Bezier.getPointThree(this._points.buffer[i], this._points.buffer[i + 1], this._points.buffer[i + 2],
-                    this._points.buffer[i + 3], t);
+            return Bezier.getPointThree(this._points[i], this._points[i + 1], this._points[i + 2],
+                    this._points[i + 3], t);
         }
 
         /**
@@ -59,8 +59,8 @@ module es {
          */
         public getVelocityAtTime(t: number): Vector2 {
             let i = this.pointIndexAtTime(new Ref(t));
-            return Bezier.getFirstDerivativeThree(this._points.buffer[i], this._points.buffer[i + 1], this._points.buffer[i + 2],
-                this._points.buffer[i + 3], t);
+            return Bezier.getFirstDerivativeThree(this._points[i], this._points[i + 1], this._points[i + 2],
+                this._points[i + 3], t);
         }
 
         /**
@@ -81,11 +81,11 @@ module es {
         public addCurve(start: Vector2, firstControlPoint: Vector2, secondControlPoint: Vector2, end: Vector2) {
             // 只有当这是第一条曲线时，我们才会添加起始点。对于其他所有的曲线，前一个曲线的终点应该等于新曲线的起点。
             if (this._points.length == 0)
-                this._points.add(start);
+                this._points.push(start);
             
-            this._points.add(firstControlPoint);
-            this._points.add(secondControlPoint);
-            this._points.add(end);
+            this._points.push(firstControlPoint);
+            this._points.push(secondControlPoint);
+            this._points.push(end);
 
             this._curveCount = (this._points.length - 1) / 3;
         }
@@ -94,7 +94,7 @@ module es {
          * 重置bezier，移除所有点
          */
         public reset() {
-            this._points.clear();
+            this._points.length = 0;
         }
 
         /**

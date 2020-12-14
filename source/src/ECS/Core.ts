@@ -32,7 +32,7 @@ module es {
         /**
          * 全局访问系统
          */
-        public _globalManagers: FastList<GlobalManager> = new FastList<GlobalManager>();
+        public _globalManagers: GlobalManager[] = [];
         public _timerManager: TimerManager = new TimerManager();
         public width: number;
         public height: number;
@@ -98,7 +98,7 @@ module es {
          * @param manager
          */
         public static registerGlobalManager(manager: es.GlobalManager) {
-            this._instance._globalManagers.add(manager);
+            this._instance._globalManagers.push(manager);
             manager.enabled = true;
         }
 
@@ -107,7 +107,7 @@ module es {
          * @param manager
          */
         public static unregisterGlobalManager(manager: es.GlobalManager) {
-            this._instance._globalManagers.remove(manager);
+            new linq.List(this._instance._globalManagers).remove(manager);
             manager.enabled = false;
         }
 
@@ -117,8 +117,8 @@ module es {
          */
         public static getGlobalManager<T extends es.GlobalManager>(type): T {
             for (let i = 0; i < this._instance._globalManagers.length; i++) {
-                if (this._instance._globalManagers.buffer[i] instanceof type)
-                    return this._instance._globalManagers.buffer[i] as T;
+                if (this._instance._globalManagers[i] instanceof type)
+                    return this._instance._globalManagers[i] as T;
             }
             return null;
         }
@@ -183,8 +183,8 @@ module es {
             if (currentTime != null) Time.update(currentTime);
             if (this._scene != null) {
                 for (let i = this._globalManagers.length - 1; i >= 0; i--) {
-                    if (this._globalManagers.buffer[i].enabled)
-                        this._globalManagers.buffer[i].update();
+                    if (this._globalManagers[i].enabled)
+                        this._globalManagers[i].update();
                 }
 
                 this._scene.update();

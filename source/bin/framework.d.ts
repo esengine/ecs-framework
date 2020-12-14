@@ -95,7 +95,7 @@ declare module es {
         /**
          * 全局访问系统
          */
-        _globalManagers: FastList<GlobalManager>;
+        _globalManagers: GlobalManager[];
         _timerManager: TimerManager;
         width: number;
         height: number;
@@ -206,6 +206,9 @@ declare module es {
          * 指定应该调用这个entity update方法的频率。1表示每一帧，2表示每一帧，以此类推
          */
         updateInterval: number;
+        /**
+         * 返回一个BitSet实例，包含实体拥有的组件的位
+         */
         componentBits: BitSet;
         constructor(name: string);
         _isDestroyed: boolean;
@@ -351,7 +354,7 @@ declare module es {
          * 管理所有实体处理器
          */
         readonly entityProcessors: EntityProcessorList;
-        readonly _sceneComponents: FastList<SceneComponent>;
+        readonly _sceneComponents: SceneComponent[];
         _didSceneBegin: any;
         constructor();
         /**
@@ -1041,7 +1044,10 @@ declare module es {
     }
 }
 declare module es {
-    class EntitySystem {
+    /**
+     * 追踪实体的子集，但不实现任何排序或迭代。
+     */
+    abstract class EntitySystem {
         private _entities;
         constructor(matcher?: Matcher);
         private _scene;
@@ -1065,6 +1071,9 @@ declare module es {
 declare module es {
     /**
      * 基本实体处理系统。将其用作处理具有特定组件的许多实体的基础
+     *
+     * 按实体引用遍历实体订阅成员实体的系统
+     * 当你需要处理与Matcher相匹配的实体，并且你更喜欢使用Entity的时候，可以使用这个功能。
      */
     abstract class EntityProcessingSystem extends EntitySystem {
         constructor(matcher: Matcher);
@@ -1129,11 +1138,11 @@ declare module es {
         /**
          * 添加到实体的组件列表
          */
-        _components: FastList<Component>;
+        _components: Component[];
         /**
          * 所有需要更新的组件列表
          */
-        _updatableComponents: FastList<IUpdatable>;
+        _updatableComponents: IUpdatable[];
         /**
          * 添加到此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
          */
@@ -1197,7 +1206,7 @@ declare module es {
         /**
          * 场景中添加的实体列表
          */
-        _entities: FastList<Entity>;
+        _entities: Entity[];
         /**
          * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
@@ -1217,7 +1226,7 @@ declare module es {
         _unsortedTags: Set<number>;
         constructor(scene: Scene);
         readonly count: number;
-        readonly buffer: FastList<Entity>;
+        readonly buffer: Entity[];
         markEntityListUnsorted(): void;
         markTagUnsorted(tag: number): void;
         /**
@@ -1592,7 +1601,7 @@ declare module es {
      * 提供了一系列立方贝塞尔点，并提供了帮助方法来访问贝塞尔
      */
     class BezierSpline {
-        _points: FastList<Vector2>;
+        _points: Vector2[];
         _curveCount: number;
         /**
          * 在这个过程中，t被修改为在曲线段的范围内。
@@ -3197,70 +3206,6 @@ declare namespace stopwatch {
         readonly endTime: number;
         /** 该切片的运行时间 */
         readonly duration: number;
-    }
-}
-declare module es {
-    /**
-     * 围绕一个数组的非常基本的包装，当它达到容量时自动扩展。
-     * 注意，在迭代时应该这样直接访问缓冲区，但使用FastList.length字段。
-     *
-     * @tutorial
-     * for( var i = 0; i <= list.length; i++ )
-     *      var item = list.buffer[i];
-     */
-    class FastList<T> {
-        /**
-         * 直接访问后备缓冲区。
-         * 不要使用buffer.Length! 使用FastList.length
-         */
-        buffer: T[];
-        /**
-         * 直接访问缓冲区内填充项的长度。不要改变。
-         */
-        length: number;
-        constructor(size?: number);
-        /**
-         * 清空列表并清空缓冲区中的所有项目
-         */
-        clear(): void;
-        /**
-         *  和clear的工作原理一样，只是它不会将缓冲区中的所有项目清空。
-         */
-        reset(): void;
-        /**
-         * 将该项目添加到列表中
-         * @param item
-         */
-        add(item: T): void;
-        /**
-         * 从列表中删除该项目
-         * @param item
-         */
-        remove(item: T): void;
-        /**
-         * 从列表中删除给定索引的项目。
-         * @param index
-         */
-        removeAt(index: number): void;
-        /**
-         * 检查项目是否在FastList中
-         * @param item
-         */
-        contains(item: T): boolean;
-        /**
-         * 如果缓冲区达到最大，将分配更多的空间来容纳额外的ItemCount。
-         * @param additionalItemCount
-         */
-        ensureCapacity(additionalItemCount?: number): void;
-        /**
-         * 添加数组中的所有项目
-         * @param array
-         */
-        addRange(array: T[]): void;
-        /**
-         * 对缓冲区中的所有项目进行排序，长度不限。
-         */
-        sort(comparer: IComparer<T>): void;
     }
 }
 declare module es {

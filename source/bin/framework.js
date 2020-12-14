@@ -196,7 +196,7 @@ var es;
             /**
              * 全局访问系统
              */
-            this._globalManagers = new es.FastList();
+            this._globalManagers = [];
             this._timerManager = new es.TimerManager();
             this._frameCounterElapsedTime = 0;
             this._frameCounter = 0;
@@ -256,7 +256,7 @@ var es;
          * @param manager
          */
         Core.registerGlobalManager = function (manager) {
-            this._instance._globalManagers.add(manager);
+            this._instance._globalManagers.push(manager);
             manager.enabled = true;
         };
         /**
@@ -264,7 +264,7 @@ var es;
          * @param manager
          */
         Core.unregisterGlobalManager = function (manager) {
-            this._instance._globalManagers.remove(manager);
+            new linq.List(this._instance._globalManagers).remove(manager);
             manager.enabled = false;
         };
         /**
@@ -273,8 +273,8 @@ var es;
          */
         Core.getGlobalManager = function (type) {
             for (var i = 0; i < this._instance._globalManagers.length; i++) {
-                if (this._instance._globalManagers.buffer[i] instanceof type)
-                    return this._instance._globalManagers.buffer[i];
+                if (this._instance._globalManagers[i] instanceof type)
+                    return this._instance._globalManagers[i];
             }
             return null;
         };
@@ -339,8 +339,8 @@ var es;
                         es.Time.update(currentTime);
                     if (this._scene != null) {
                         for (i = this._globalManagers.length - 1; i >= 0; i--) {
-                            if (this._globalManagers.buffer[i].enabled)
-                                this._globalManagers.buffer[i].update();
+                            if (this._globalManagers[i].enabled)
+                                this._globalManagers[i].update();
                         }
                         this._scene.update();
                         if (this._nextScene != null) {
@@ -795,7 +795,7 @@ var es;
     /** 场景 */
     var Scene = /** @class */ (function () {
         function Scene() {
-            this._sceneComponents = new es.FastList();
+            this._sceneComponents = [];
             this.entities = new es.EntityList(this);
             if (es.Core.entitySystemsEnabled)
                 this.entityProcessors = new es.EntityProcessorList();
@@ -834,9 +834,9 @@ var es;
             es.Core.emitter.removeObserver(es.CoreEvents.OrientationChanged, this.updateResolutionScaler);
             this.entities.removeAllEntities();
             for (var i = 0; i < this._sceneComponents.length; i++) {
-                this._sceneComponents.buffer[i].onRemovedFromScene();
+                this._sceneComponents[i].onRemovedFromScene();
             }
-            this._sceneComponents.clear();
+            this._sceneComponents.length = 0;
             es.Physics.clear();
             if (this.entityProcessors)
                 this.entityProcessors.end();
@@ -848,8 +848,8 @@ var es;
             // 更新我们的列表，以防它们有任何变化
             this.entities.updateLists();
             for (var i = this._sceneComponents.length - 1; i >= 0; i--) {
-                if (this._sceneComponents.buffer[i].enabled)
-                    this._sceneComponents.buffer[i].update();
+                if (this._sceneComponents[i].enabled)
+                    this._sceneComponents[i].update();
             }
             // 更新我们的实体解析器
             if (this.entityProcessors != null)
@@ -866,8 +866,8 @@ var es;
         Scene.prototype.addSceneComponent = function (component) {
             component.scene = this;
             component.onEnabled();
-            this._sceneComponents.add(component);
-            this._sceneComponents.sort(component);
+            this._sceneComponents.push(component);
+            this._sceneComponents.sort(component.compare);
             return component;
         };
         /**
@@ -876,7 +876,7 @@ var es;
          */
         Scene.prototype.getSceneComponent = function (type) {
             for (var i = 0; i < this._sceneComponents.length; i++) {
-                var component = this._sceneComponents.buffer[i];
+                var component = this._sceneComponents[i];
                 if (component instanceof type)
                     return component;
             }
@@ -897,11 +897,11 @@ var es;
          * @param component
          */
         Scene.prototype.removeSceneComponent = function (component) {
-            if (!this._sceneComponents.contains(component)) {
+            if (!new linq.List(this._sceneComponents).contains(component)) {
                 console.warn("SceneComponent" + component + "\u4E0D\u5728SceneComponents\u5217\u8868\u4E2D!");
                 return;
             }
-            this._sceneComponents.remove(component);
+            new linq.List(this._sceneComponents).remove(component);
             component.onRemovedFromScene();
         };
         /**
@@ -917,7 +917,7 @@ var es;
          * @param entity
          */
         Scene.prototype.addEntity = function (entity) {
-            if (this.entities.buffer.contains(entity))
+            if (new linq.List(this.entities.buffer).contains(entity))
                 console.warn("\u60A8\u8BD5\u56FE\u5C06\u540C\u4E00\u5B9E\u4F53\u6DFB\u52A0\u5230\u573A\u666F\u4E24\u6B21: " + entity);
             this.entities.add(entity);
             entity.scene = this;
@@ -1579,7 +1579,7 @@ var es;
         SceneComponent.prototype.setUpdateOrder = function (updateOrder) {
             if (this.updateOrder != updateOrder) {
                 this.updateOrder = updateOrder;
-                es.Core.scene._sceneComponents.sort(this);
+                es.Core.scene._sceneComponents.sort(this.compare);
             }
             return this;
         };
@@ -1850,17 +1850,36 @@ var es;
         function TriggerListenerHelper() {
         }
         TriggerListenerHelper.getITriggerListener = function (entity, components) {
-            for (var i = 0; i < entity.components._components.length; i++) {
-                var component = entity.components._components.buffer[i];
-                if (es.isITriggerListener(component)) {
-                    components.push(component);
+            var e_2, _a, e_3, _b;
+            try {
+                for (var _c = __values(entity.components._components), _d = _c.next(); !_d.done; _d = _c.next()) {
+                    var component = _d.value;
+                    if (es.isITriggerListener(component)) {
+                        components.push(component);
+                    }
                 }
             }
-            for (var i = 0; i < entity.components._componentsToAdd.length; i++) {
-                var component = entity.components._componentsToAdd[i];
-                if (es.isITriggerListener(component)) {
-                    components.push(component);
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            finally {
+                try {
+                    if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
+                finally { if (e_2) throw e_2.error; }
+            }
+            try {
+                for (var _e = __values(entity.components._componentsToAdd), _f = _e.next(); !_f.done; _f = _e.next()) {
+                    var component = _f.value;
+                    if (es.isITriggerListener(component)) {
+                        components.push(component);
+                    }
+                }
+            }
+            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+            finally {
+                try {
+                    if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                }
+                finally { if (e_3) throw e_3.error; }
             }
             return components;
         };
@@ -1977,7 +1996,7 @@ var es;
          * @param motion
          */
         ProjectileMover.prototype.move = function (motion) {
-            var e_2, _a;
+            var e_4, _a;
             if (this._collider == null)
                 return false;
             var didCollide = false;
@@ -1994,12 +2013,12 @@ var es;
                     }
                 }
             }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            catch (e_4_1) { e_4 = { error: e_4_1 }; }
             finally {
                 try {
                     if (neighbors_2_1 && !neighbors_2_1.done && (_a = neighbors_2.return)) _a.call(neighbors_2);
                 }
-                finally { if (e_2) throw e_2.error; }
+                finally { if (e_4) throw e_4.error; }
             }
             return didCollide;
         };
@@ -2378,6 +2397,9 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 追踪实体的子集，但不实现任何排序或迭代。
+     */
     var EntitySystem = /** @class */ (function () {
         function EntitySystem(matcher) {
             this._entities = [];
@@ -2449,6 +2471,9 @@ var es;
 (function (es) {
     /**
      * 基本实体处理系统。将其用作处理具有特定组件的许多实体的基础
+     *
+     * 按实体引用遍历实体订阅成员实体的系统
+     * 当你需要处理与Matcher相匹配的实体，并且你更喜欢使用Entity的时候，可以使用这个功能。
      */
     var EntityProcessingSystem = /** @class */ (function (_super) {
         __extends(EntityProcessingSystem, _super);
@@ -2639,11 +2664,11 @@ var es;
             /**
              * 添加到实体的组件列表
              */
-            this._components = new es.FastList();
+            this._components = [];
             /**
              * 所有需要更新的组件列表
              */
-            this._updatableComponents = new es.FastList();
+            this._updatableComponents = [];
             /**
              * 添加到此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
              */
@@ -2664,7 +2689,7 @@ var es;
         });
         Object.defineProperty(ComponentList.prototype, "buffer", {
             get: function () {
-                return this._components.buffer;
+                return this._components;
             },
             enumerable: true,
             configurable: true
@@ -2694,34 +2719,54 @@ var es;
             for (var i = 0; i < this._components.length; i++) {
                 this.handleRemove(this._components[i]);
             }
-            this._components.clear();
-            this._updatableComponents.clear();
+            this._components.length = 0;
+            this._updatableComponents.length = 0;
             this._componentsToAdd.length = 0;
             this._componentsToRemove.length = 0;
         };
         ComponentList.prototype.deregisterAllComponents = function () {
-            for (var i = 0; i < this._components.length; i++) {
-                var component = this._components.buffer[i];
-                if (!component)
-                    continue;
-                // 处理IUpdatable
-                if (es.isIUpdatable(component))
-                    this._updatableComponents.remove(component);
-                if (es.Core.entitySystemsEnabled) {
-                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
-                    this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+            var e_5, _a;
+            try {
+                for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var component = _c.value;
+                    if (!component)
+                        continue;
+                    // 处理IUpdatable
+                    if (es.isIUpdatable(component))
+                        new linq.List(this._updatableComponents).remove(component);
+                    if (es.Core.entitySystemsEnabled) {
+                        this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
+                        this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+                    }
                 }
+            }
+            catch (e_5_1) { e_5 = { error: e_5_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_5) throw e_5.error; }
             }
         };
         ComponentList.prototype.registerAllComponents = function () {
-            for (var i = 0; i < this._components.length; i++) {
-                var component = this._components.buffer[i];
-                if (es.isIUpdatable(component))
-                    this._updatableComponents.add(component);
-                if (es.Core.entitySystemsEnabled) {
-                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
-                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+            var e_6, _a;
+            try {
+                for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var component = _c.value;
+                    if (es.isIUpdatable(component))
+                        this._updatableComponents.push(component);
+                    if (es.Core.entitySystemsEnabled) {
+                        this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
+                        this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                    }
                 }
+            }
+            catch (e_6_1) { e_6 = { error: e_6_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_6) throw e_6.error; }
             }
         };
         /**
@@ -2731,7 +2776,7 @@ var es;
             if (this._componentsToRemove.length > 0) {
                 for (var i = 0; i < this._componentsToRemove.length; i++) {
                     this.handleRemove(this._componentsToRemove[i]);
-                    this._components.remove(this._componentsToRemove[i]);
+                    new linq.List(this._components).remove(this._componentsToRemove[i]);
                 }
                 this._componentsToRemove.length = 0;
             }
@@ -2739,12 +2784,12 @@ var es;
                 for (var i = 0, count = this._componentsToAdd.length; i < count; i++) {
                     var component = this._componentsToAdd[i];
                     if (es.isIUpdatable(component))
-                        this._updatableComponents.add(component);
+                        this._updatableComponents.push(component);
                     if (es.Core.entitySystemsEnabled) {
                         this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
                         this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                     }
-                    this._components.add(component);
+                    this._components.push(component);
                     this._tempBufferList.push(component);
                 }
                 // 在调用onAddedToEntity之前清除，以防添加更多组件
@@ -2762,7 +2807,7 @@ var es;
                 this._tempBufferList.length = 0;
             }
             if (this._isComponentListUnsorted) {
-                this._updatableComponents.sort(ComponentList.compareUpdatableOrder);
+                this._updatableComponents.sort(ComponentList.compareUpdatableOrder.compare);
                 this._isComponentListUnsorted = false;
             }
         };
@@ -2770,7 +2815,7 @@ var es;
             if (!component)
                 return;
             if (es.isIUpdatable(component))
-                this._updatableComponents.remove(component);
+                new linq.List(this._updatableComponents).remove(component);
             if (es.Core.entitySystemsEnabled) {
                 this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
                 this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
@@ -2786,17 +2831,36 @@ var es;
          * @param onlyReturnInitializedComponents
          */
         ComponentList.prototype.getComponent = function (type, onlyReturnInitializedComponents) {
-            for (var i = 0; i < this._components.length; i++) {
-                var component = this._components.buffer[i];
-                if (component instanceof type)
-                    return component;
+            var e_7, _a, e_8, _b;
+            try {
+                for (var _c = __values(this._components), _d = _c.next(); !_d.done; _d = _c.next()) {
+                    var component = _d.value;
+                    if (component instanceof type)
+                        return component;
+                }
+            }
+            catch (e_7_1) { e_7 = { error: e_7_1 }; }
+            finally {
+                try {
+                    if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+                }
+                finally { if (e_7) throw e_7.error; }
             }
             // 我们可以选择检查挂起的组件，以防addComponent和getComponent在同一个框架中被调用
             if (!onlyReturnInitializedComponents) {
-                for (var i = 0; i < this._componentsToAdd.length; i++) {
-                    var component = this._componentsToAdd[i];
-                    if (component instanceof type)
-                        return component;
+                try {
+                    for (var _e = __values(this._componentsToAdd), _f = _e.next(); !_f.done; _f = _e.next()) {
+                        var component = _f.value;
+                        if (component instanceof type)
+                            return component;
+                    }
+                }
+                catch (e_8_1) { e_8 = { error: e_8_1 }; }
+                finally {
+                    try {
+                        if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                    }
+                    finally { if (e_8) throw e_8.error; }
                 }
             }
             return null;
@@ -2807,34 +2871,53 @@ var es;
          * @param components
          */
         ComponentList.prototype.getComponents = function (typeName, components) {
+            var e_9, _a, e_10, _b;
             if (!components)
                 components = [];
-            for (var i = 0; i < this._components.length; i++) {
-                var component = this._components.buffer[i];
-                if (component instanceof typeName) {
-                    components.push(component);
+            try {
+                for (var _c = __values(this._components), _d = _c.next(); !_d.done; _d = _c.next()) {
+                    var component = _d.value;
+                    if (component instanceof typeName) {
+                        components.push(component);
+                    }
                 }
             }
-            // 我们还检查了待处理的组件，以防在同一帧中调用addComponent和getComponent
-            for (var i = 0; i < this._componentsToAdd.length; i++) {
-                var component = this._componentsToAdd[i];
-                if (component instanceof typeName) {
-                    components.push(component);
+            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            finally {
+                try {
+                    if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
+                finally { if (e_9) throw e_9.error; }
+            }
+            try {
+                // 我们还检查了待处理的组件，以防在同一帧中调用addComponent和getComponent
+                for (var _e = __values(this._componentsToAdd), _f = _e.next(); !_f.done; _f = _e.next()) {
+                    var component = _f.value;
+                    if (component instanceof typeName) {
+                        components.push(component);
+                    }
+                }
+            }
+            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+            finally {
+                try {
+                    if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                }
+                finally { if (e_10) throw e_10.error; }
             }
             return components;
         };
         ComponentList.prototype.update = function () {
             this.updateLists();
             for (var i = 0; i < this._updatableComponents.length; i++) {
-                if (this._updatableComponents.buffer[i].enabled)
-                    this._updatableComponents.buffer[i].update();
+                if (this._updatableComponents[i].enabled)
+                    this._updatableComponents[i].update();
             }
         };
         ComponentList.prototype.onEntityTransformChanged = function (comp) {
             for (var i = 0; i < this._components.length; i++) {
-                if (this._components.buffer[i].enabled)
-                    this._components.buffer[i].onEntityTransformChanged(comp);
+                if (this._components[i].enabled)
+                    this._components[i].onEntityTransformChanged(comp);
             }
             for (var i = 0; i < this._componentsToAdd.length; i++) {
                 if (this._componentsToAdd[i].enabled)
@@ -2843,11 +2926,11 @@ var es;
         };
         ComponentList.prototype.onEntityEnabled = function () {
             for (var i = 0; i < this._components.length; i++)
-                this._components.buffer[i].onEnabled();
+                this._components[i].onEnabled();
         };
         ComponentList.prototype.onEntityDisabled = function () {
             for (var i = 0; i < this._components.length; i++)
-                this._components.buffer[i].onDisabled();
+                this._components[i].onDisabled();
         };
         /**
          * 组件列表的全局updateOrder排序
@@ -2889,7 +2972,7 @@ var es;
             /**
              * 场景中添加的实体列表
              */
-            this._entities = new es.FastList();
+            this._entities = [];
             /**
              * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
              */
@@ -2960,11 +3043,11 @@ var es;
             // 它们仍然会在_entitiesToRemove列表中，这将由updateLists处理。
             this.updateLists();
             for (var i = 0; i < this._entities.length; i++) {
-                this._entities.buffer[i]._isDestroyed = true;
-                this._entities.buffer[i].onRemovedFromScene();
-                this._entities.buffer[i].scene = null;
+                this._entities[i]._isDestroyed = true;
+                this._entities[i].onRemovedFromScene();
+                this._entities[i].scene = null;
             }
-            this._entities.clear();
+            this._entities.length = 0;
             this._entityDict.clear();
         };
         /**
@@ -2972,7 +3055,7 @@ var es;
          * @param entity
          */
         EntityList.prototype.contains = function (entity) {
-            return this._entities.contains(entity) || this._entitiesToAdded.contains(entity);
+            return new linq.List(this._entities).contains(entity) || this._entitiesToAdded.contains(entity);
         };
         EntityList.prototype.getTagList = function (tag) {
             var list = this._entityDict.get(tag);
@@ -2996,10 +3079,20 @@ var es;
             }
         };
         EntityList.prototype.update = function () {
-            for (var i = 0; i < this._entities.length; i++) {
-                var entity = this._entities.buffer[i];
-                if (entity.enabled && (entity.updateInterval == 1 || es.Time.frameCount % entity.updateInterval == 0))
-                    entity.update();
+            var e_11, _a;
+            try {
+                for (var _b = __values(this._entities), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var entity = _c.value;
+                    if (entity.enabled && (entity.updateInterval == 1 || es.Time.frameCount % entity.updateInterval == 0))
+                        entity.update();
+                }
+            }
+            catch (e_11_1) { e_11 = { error: e_11_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_11) throw e_11.error; }
             }
         };
         EntityList.prototype.updateLists = function () {
@@ -3009,7 +3102,7 @@ var es;
                     // 处理标签列表
                     _this.removeFromTagList(entity);
                     // 处理常规实体列表
-                    _this._entities.remove(entity);
+                    new linq.List(_this._entities).remove(entity);
                     entity.onRemovedFromScene();
                     entity.scene = null;
                     if (es.Core.entitySystemsEnabled)
@@ -3019,7 +3112,7 @@ var es;
             }
             if (this._entitiesToAdded.getCount() > 0) {
                 this._entitiesToAdded.toArray().forEach(function (entity) {
-                    _this._entities.add(entity);
+                    _this._entities.push(entity);
                     entity.scene = _this.scene;
                     _this.addToTagList(entity);
                     if (es.Core.entitySystemsEnabled)
@@ -3032,7 +3125,7 @@ var es;
                 this._isEntityListUnsorted = true;
             }
             if (this._isEntityListUnsorted) {
-                this._entities.sort(es.Entity.entityComparer);
+                this._entities.sort(es.Entity.entityComparer.compare);
                 this._isEntityListUnsorted = false;
             }
             // 根据需要对标签列表进行排序
@@ -3047,8 +3140,8 @@ var es;
          */
         EntityList.prototype.findEntity = function (name) {
             for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities.buffer[i].name == name)
-                    return this._entities.buffer[i];
+                if (this._entities[i].name == name)
+                    return this._entities[i];
             }
             for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
                 var entity = this._entitiesToAdded.toArray()[i];
@@ -3078,8 +3171,8 @@ var es;
         EntityList.prototype.entitiesOfType = function (type) {
             var list = es.ListPool.obtain();
             for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities.buffer[i] instanceof type)
-                    list.push(this._entities.buffer[i]);
+                if (this._entities[i] instanceof type)
+                    list.push(this._entities[i]);
             }
             for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
                 var entity = this._entitiesToAdded.toArray()[i];
@@ -3095,8 +3188,8 @@ var es;
          */
         EntityList.prototype.findComponentOfType = function (type) {
             for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities.buffer[i].enabled) {
-                    var comp = this._entities.buffer[i].getComponent(type);
+                if (this._entities[i].enabled) {
+                    var comp = this._entities[i].getComponent(type);
                     if (comp)
                         return comp;
                 }
@@ -3119,8 +3212,8 @@ var es;
         EntityList.prototype.findComponentsOfType = function (type) {
             var comps = es.ListPool.obtain();
             for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities.buffer[i].enabled)
-                    this._entities.buffer[i].getComponents(type, comps);
+                if (this._entities[i].enabled)
+                    this._entities[i].getComponents(type, comps);
             }
             for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
                 var entity = this._entitiesToAdded.toArray()[i];
@@ -3950,7 +4043,7 @@ var es;
      */
     var BezierSpline = /** @class */ (function () {
         function BezierSpline() {
-            this._points = new es.FastList();
+            this._points = [];
             this._curveCount = 0;
         }
         /**
@@ -3978,13 +4071,13 @@ var es;
          */
         BezierSpline.prototype.setControlPoint = function (index, point) {
             if (index % 3 == 0) {
-                var delta = es.Vector2.subtract(point, this._points.buffer[index]);
+                var delta = es.Vector2.subtract(point, this._points[index]);
                 if (index > 0)
-                    this._points.buffer[index - 1].add(delta);
+                    this._points[index - 1].add(delta);
                 if (index + 1 < this._points.length)
-                    this._points.buffer[index + 1].add(delta);
+                    this._points[index + 1].add(delta);
             }
-            this._points.buffer[index] = point;
+            this._points[index] = point;
         };
         /**
          * 得到时间t的贝塞尔曲线上的点
@@ -3992,7 +4085,7 @@ var es;
          */
         BezierSpline.prototype.getPointAtTime = function (t) {
             var i = this.pointIndexAtTime(new es.Ref(t));
-            return es.Bezier.getPointThree(this._points.buffer[i], this._points.buffer[i + 1], this._points.buffer[i + 2], this._points.buffer[i + 3], t);
+            return es.Bezier.getPointThree(this._points[i], this._points[i + 1], this._points[i + 2], this._points[i + 3], t);
         };
         /**
          * 得到贝塞尔在时间t的速度（第一导数）
@@ -4000,7 +4093,7 @@ var es;
          */
         BezierSpline.prototype.getVelocityAtTime = function (t) {
             var i = this.pointIndexAtTime(new es.Ref(t));
-            return es.Bezier.getFirstDerivativeThree(this._points.buffer[i], this._points.buffer[i + 1], this._points.buffer[i + 2], this._points.buffer[i + 3], t);
+            return es.Bezier.getFirstDerivativeThree(this._points[i], this._points[i + 1], this._points[i + 2], this._points[i + 3], t);
         };
         /**
          * 得到时间t时贝塞尔的方向（归一化第一导数）
@@ -4019,17 +4112,17 @@ var es;
         BezierSpline.prototype.addCurve = function (start, firstControlPoint, secondControlPoint, end) {
             // 只有当这是第一条曲线时，我们才会添加起始点。对于其他所有的曲线，前一个曲线的终点应该等于新曲线的起点。
             if (this._points.length == 0)
-                this._points.add(start);
-            this._points.add(firstControlPoint);
-            this._points.add(secondControlPoint);
-            this._points.add(end);
+                this._points.push(start);
+            this._points.push(firstControlPoint);
+            this._points.push(secondControlPoint);
+            this._points.push(end);
             this._curveCount = (this._points.length - 1) / 3;
         };
         /**
          * 重置bezier，移除所有点
          */
         BezierSpline.prototype.reset = function () {
-            this._points.clear();
+            this._points.length = 0;
         };
         /**
          * 将splitine分解成totalSegments部分，并返回使用线条绘制所需的所有点
@@ -6142,7 +6235,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_3, _a;
+            var e_12, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -6175,12 +6268,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_3) throw e_3.error; }
+                finally { if (e_12) throw e_12.error; }
             }
             return resultCounter;
         };
@@ -7792,121 +7885,6 @@ var stopwatch;
     /** 所有新实例的默认“getSystemTime”实现 */
     var _defaultSystemTimeGetter = Date.now;
 })(stopwatch || (stopwatch = {}));
-var es;
-(function (es) {
-    /**
-     * 围绕一个数组的非常基本的包装，当它达到容量时自动扩展。
-     * 注意，在迭代时应该这样直接访问缓冲区，但使用FastList.length字段。
-     *
-     * @tutorial
-     * for( var i = 0; i <= list.length; i++ )
-     *      var item = list.buffer[i];
-     */
-    var FastList = /** @class */ (function () {
-        function FastList(size) {
-            if (size === void 0) { size = 5; }
-            /**
-             * 直接访问缓冲区内填充项的长度。不要改变。
-             */
-            this.length = 0;
-            this.buffer = new Array(size);
-        }
-        /**
-         * 清空列表并清空缓冲区中的所有项目
-         */
-        FastList.prototype.clear = function () {
-            this.buffer.length = 0;
-            this.length = 0;
-        };
-        /**
-         *  和clear的工作原理一样，只是它不会将缓冲区中的所有项目清空。
-         */
-        FastList.prototype.reset = function () {
-            this.length = 0;
-        };
-        /**
-         * 将该项目添加到列表中
-         * @param item
-         */
-        FastList.prototype.add = function (item) {
-            if (this.length == this.buffer.length)
-                this.buffer.length = Math.max(this.buffer.length << 1, 10);
-            this.buffer[this.length++] = item;
-        };
-        /**
-         * 从列表中删除该项目
-         * @param item
-         */
-        FastList.prototype.remove = function (item) {
-            var comp = es.EqualityComparer.default();
-            for (var i = 0; i < this.length; ++i) {
-                if (comp.equals(this.buffer[i], item)) {
-                    this.removeAt(i);
-                    return;
-                }
-            }
-        };
-        /**
-         * 从列表中删除给定索引的项目。
-         * @param index
-         */
-        FastList.prototype.removeAt = function (index) {
-            if (index >= this.length)
-                throw new Error("index超出范围！");
-            this.length--;
-            new linq.List(this.buffer).removeAt(index);
-        };
-        /**
-         * 检查项目是否在FastList中
-         * @param item
-         */
-        FastList.prototype.contains = function (item) {
-            var comp = es.EqualityComparer.default();
-            for (var i = 0; i < this.length; ++i) {
-                if (comp.equals(this.buffer[i], item))
-                    return true;
-            }
-            return false;
-        };
-        /**
-         * 如果缓冲区达到最大，将分配更多的空间来容纳额外的ItemCount。
-         * @param additionalItemCount
-         */
-        FastList.prototype.ensureCapacity = function (additionalItemCount) {
-            if (additionalItemCount === void 0) { additionalItemCount = 1; }
-            if (this.length + additionalItemCount >= this.buffer.length)
-                this.buffer.length = Math.max(this.buffer.length << 1, this.length + additionalItemCount);
-        };
-        /**
-         * 添加数组中的所有项目
-         * @param array
-         */
-        FastList.prototype.addRange = function (array) {
-            var e_4, _a;
-            try {
-                for (var array_1 = __values(array), array_1_1 = array_1.next(); !array_1_1.done; array_1_1 = array_1.next()) {
-                    var item = array_1_1.value;
-                    this.add(item);
-                }
-            }
-            catch (e_4_1) { e_4 = { error: e_4_1 }; }
-            finally {
-                try {
-                    if (array_1_1 && !array_1_1.done && (_a = array_1.return)) _a.call(array_1);
-                }
-                finally { if (e_4) throw e_4.error; }
-            }
-        };
-        /**
-         * 对缓冲区中的所有项目进行排序，长度不限。
-         */
-        FastList.prototype.sort = function (comparer) {
-            this.buffer.sort(comparer.compare);
-        };
-        return FastList;
-    }());
-    es.FastList = FastList;
-})(es || (es = {}));
 var es;
 (function (es) {
     /**
@@ -10083,7 +10061,7 @@ var linq;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_5, _a;
+            var e_13, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -10091,12 +10069,12 @@ var linq;
                     result.add(x);
                 }
             }
-            catch (e_5_1) { e_5 = { error: e_5_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_5) throw e_5.error; }
+                finally { if (e_13) throw e_13.error; }
             }
             return result;
         };
@@ -10345,7 +10323,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_6, _a;
+            var e_14, _a;
             var output = es.ListPool.obtain();
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -10384,12 +10362,12 @@ var es;
                         }
                     }
                 }
-                catch (e_6_1) { e_6 = { error: e_6_1 }; }
+                catch (e_14_1) { e_14 = { error: e_14_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_6) throw e_6.error; }
+                    finally { if (e_14) throw e_14.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -10505,7 +10483,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_7, _a;
+            var e_15, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -10523,12 +10501,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_7_1) { e_7 = { error: e_7_1 }; }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_7) throw e_7.error; }
+                finally { if (e_15) throw e_15.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

@@ -10,11 +10,11 @@ module es {
         /**
          * 添加到实体的组件列表
          */
-        public _components: FastList<Component> = new FastList<Component>();
+        public _components: Component[] = [];
         /**
          * 所有需要更新的组件列表
          */
-        public _updatableComponents: FastList<IUpdatable> = new FastList<IUpdatable>();
+        public _updatableComponents: IUpdatable[] = [];
         /**
          * 添加到此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
          */
@@ -38,7 +38,7 @@ module es {
         }
 
         public get buffer() {
-            return this._components.buffer;
+            return this._components;
         }
 
         public markEntityListUnsorted() {
@@ -72,21 +72,19 @@ module es {
                 this.handleRemove(this._components[i]);
             }
 
-            this._components.clear();
-            this._updatableComponents.clear();
+            this._components.length = 0;
+            this._updatableComponents.length = 0;
             this._componentsToAdd.length = 0;
             this._componentsToRemove.length = 0;
         }
 
         public deregisterAllComponents() {
-            for (let i = 0; i < this._components.length; i++) {
-                let component = this._components.buffer[i];
-
+            for (let component of this._components) {
                 if (!component) continue;
 
                 // 处理IUpdatable
                 if (isIUpdatable(component))
-                    this._updatableComponents.remove(component);
+                    new linq.List(this._updatableComponents).remove(component);
 
                 if (Core.entitySystemsEnabled) {
                     this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
@@ -96,11 +94,9 @@ module es {
         }
 
         public registerAllComponents() {
-            for (let i = 0; i < this._components.length; i++) {
-                let component = this._components.buffer[i];
-
+            for (let component of this._components) {
                 if (isIUpdatable(component))
-                    this._updatableComponents.add(component);
+                    this._updatableComponents.push(component);
 
                 if (Core.entitySystemsEnabled) {
                     this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
@@ -116,7 +112,7 @@ module es {
             if (this._componentsToRemove.length > 0) {
                 for (let i = 0; i < this._componentsToRemove.length; i++) {
                     this.handleRemove(this._componentsToRemove[i]);
-                    this._components.remove(this._componentsToRemove[i]);
+                    new linq.List(this._components).remove(this._componentsToRemove[i]);
                 }
 
                 this._componentsToRemove.length = 0;
@@ -127,14 +123,14 @@ module es {
                     let component = this._componentsToAdd[i];
 
                     if (isIUpdatable(component))
-                        this._updatableComponents.add(component);
+                        this._updatableComponents.push(component);
 
                     if (Core.entitySystemsEnabled) {
                         this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
                         this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                     }
 
-                    this._components.add(component);
+                    this._components.push(component);
                     this._tempBufferList.push(component);
                 }
 
@@ -157,7 +153,7 @@ module es {
             }
 
             if (this._isComponentListUnsorted) {
-                this._updatableComponents.sort(ComponentList.compareUpdatableOrder);
+                this._updatableComponents.sort(ComponentList.compareUpdatableOrder.compare);
                 this._isComponentListUnsorted = false;
             }
         }
@@ -166,7 +162,7 @@ module es {
             if (!component) return;
 
             if (isIUpdatable(component))
-                this._updatableComponents.remove(component);
+                new linq.List(this._updatableComponents).remove(component);
 
             if (Core.entitySystemsEnabled) {
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
@@ -186,16 +182,14 @@ module es {
          * @param onlyReturnInitializedComponents
          */
         public getComponent<T extends Component>(type, onlyReturnInitializedComponents: boolean): T {
-            for (let i = 0; i < this._components.length; i++) {
-                let component = this._components.buffer[i];
+            for (let component of this._components) {
                 if (component instanceof type)
                     return component as T;
             }
 
             // 我们可以选择检查挂起的组件，以防addComponent和getComponent在同一个框架中被调用
             if (!onlyReturnInitializedComponents) {
-                for (let i = 0; i < this._componentsToAdd.length; i++) {
-                    let component = this._componentsToAdd[i];
+                for (let component of this._componentsToAdd) {
                     if (component instanceof type)
                         return component as T;
                 }
@@ -213,16 +207,14 @@ module es {
             if (!components)
                 components = [];
 
-            for (let i = 0; i < this._components.length; i++) {
-                let component = this._components.buffer[i];
+            for (let component of this._components) {
                 if (component instanceof typeName) {
                     components.push(component);
                 }
             }
 
             // 我们还检查了待处理的组件，以防在同一帧中调用addComponent和getComponent
-            for (let i = 0; i < this._componentsToAdd.length; i++) {
-                let component = this._componentsToAdd[i];
+            for (let component of this._componentsToAdd) {
                 if (component instanceof typeName) {
                     components.push(component);
                 }
@@ -234,15 +226,15 @@ module es {
         public update() {
             this.updateLists();
             for (let i = 0; i < this._updatableComponents.length; i++) {
-                if (this._updatableComponents.buffer[i].enabled)
-                    this._updatableComponents.buffer[i].update();
+                if (this._updatableComponents[i].enabled)
+                    this._updatableComponents[i].update();
             }
         }
 
         public onEntityTransformChanged(comp: transform.Component) {
             for (let i = 0; i < this._components.length; i++) {
-                if (this._components.buffer[i].enabled)
-                    this._components.buffer[i].onEntityTransformChanged(comp);
+                if (this._components[i].enabled)
+                    this._components[i].onEntityTransformChanged(comp);
             }
 
             for (let i = 0; i < this._componentsToAdd.length; i++) {
@@ -253,12 +245,12 @@ module es {
 
         public onEntityEnabled() {
             for (let i = 0; i < this._components.length; i++)
-                this._components.buffer[i].onEnabled();
+                this._components[i].onEnabled();
         }
 
         public onEntityDisabled() {
             for (let i = 0; i < this._components.length; i++)
-                this._components.buffer[i].onDisabled();
+                this._components[i].onDisabled();
         }
     }
 }

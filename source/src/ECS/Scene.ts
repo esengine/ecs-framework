@@ -10,7 +10,7 @@ module es {
          */
         public readonly entityProcessors: EntityProcessorList;
 
-        public readonly _sceneComponents: FastList<SceneComponent> = new FastList<SceneComponent>();
+        public readonly _sceneComponents: SceneComponent[] = [];
         public _didSceneBegin;
 
         constructor() {
@@ -66,9 +66,9 @@ module es {
             this.entities.removeAllEntities();
 
             for (let i = 0; i < this._sceneComponents.length; i++) {
-                this._sceneComponents.buffer[i].onRemovedFromScene();
+                this._sceneComponents[i].onRemovedFromScene();
             }
-            this._sceneComponents.clear();
+            this._sceneComponents.length = 0;
 
             Physics.clear();
 
@@ -87,8 +87,8 @@ module es {
             this.entities.updateLists();
 
             for (let i = this._sceneComponents.length - 1; i >= 0; i--) {
-                if (this._sceneComponents.buffer[i].enabled)
-                    this._sceneComponents.buffer[i].update();
+                if (this._sceneComponents[i].enabled)
+                    this._sceneComponents[i].update();
             }
 
             // 更新我们的实体解析器
@@ -109,8 +109,8 @@ module es {
         public addSceneComponent<T extends SceneComponent>(component: T): T {
             component.scene = this;
             component.onEnabled();
-            this._sceneComponents.add(component);
-            this._sceneComponents.sort(component);
+            this._sceneComponents.push(component);
+            this._sceneComponents.sort(component.compare);
             return component;
         }
 
@@ -120,7 +120,7 @@ module es {
          */
         public getSceneComponent<T extends SceneComponent>(type) {
             for (let i = 0; i < this._sceneComponents.length; i++) {
-                let component = this._sceneComponents.buffer[i];
+                let component = this._sceneComponents[i];
                 if (component instanceof type)
                     return component as T;
             }
@@ -145,12 +145,12 @@ module es {
          * @param component
          */
         public removeSceneComponent(component: SceneComponent) {
-            if (!this._sceneComponents.contains(component)) {
+            if (!new linq.List(this._sceneComponents).contains(component)) {
                 console.warn(`SceneComponent${component}不在SceneComponents列表中!`);
                 return;
             }
 
-            this._sceneComponents.remove(component);
+            new linq.List(this._sceneComponents).remove(component);
             component.onRemovedFromScene();
         }
 
@@ -168,7 +168,7 @@ module es {
          * @param entity
          */
         public addEntity(entity: Entity) {
-            if (this.entities.buffer.contains(entity))
+            if (new linq.List(this.entities.buffer).contains(entity))
                 console.warn(`您试图将同一实体添加到场景两次: ${entity}`);
             this.entities.add(entity);
             entity.scene = this;

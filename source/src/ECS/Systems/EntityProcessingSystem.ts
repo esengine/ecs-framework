@@ -2,6 +2,9 @@
 module es {
     /**
      * 基本实体处理系统。将其用作处理具有特定组件的许多实体的基础
+     * 
+     * 按实体引用遍历实体订阅成员实体的系统
+     * 当你需要处理与Matcher相匹配的实体，并且你更喜欢使用Entity的时候，可以使用这个功能。
      */
     export abstract class EntityProcessingSystem extends EntitySystem {
         constructor(matcher: Matcher) {

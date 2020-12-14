@@ -76,7 +76,7 @@ module es {
         public setUpdateOrder(updateOrder: number){
             if (this.updateOrder != updateOrder){
                 this.updateOrder = updateOrder;
-                Core.scene._sceneComponents.sort(this);
+                Core.scene._sceneComponents.sort(this.compare);
             }
 
             return this;

@@ -1,5 +1,8 @@
 module es {
-    export class EntitySystem {
+    /**
+     * 追踪实体的子集，但不实现任何排序或迭代。
+     */
+    export abstract class EntitySystem {
         private _entities: Entity[] = [];
 
         constructor(matcher?: Matcher) {
