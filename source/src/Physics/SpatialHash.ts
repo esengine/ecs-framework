@@ -12,7 +12,11 @@ module es {
          */
         public _inverseCellSize: number;
         /**
-         * 缓存的循环用于重叠检查
+         * 重叠检查缓存框
+         */
+        public _overlapTestBox: Box = new Box(0, 0);
+        /**
+         * 重叠检查缓存圈
          */
         public _overlapTestCircle: Circle = new Circle(0);
         /**
@@ -128,7 +132,9 @@ module es {
         }
 
         /**
-         * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组。
+         * 通过空间散列投掷一条线，并将该线碰到的任何碰撞器填入碰撞数组
+         * https://github.com/francisengelmann/fast_voxel_traversal/blob/master/main.cpp
+         * http://www.cse.yorku.ca/~amana/research/grid.pdf
          * @param start
          * @param end
          * @param hits
@@ -138,29 +144,31 @@ module es {
             let ray = new Ray2D(start, end);
             this._raycastParser.start(ray, hits, layerMask);
 
-            // 在与网格相同的空间中获取起始/结束位置
+            // 获取我们的起始/结束位置，与我们的网格在同一空间内
             let currentCell = this.cellCoords(start.x, start.y);
             let lastCell = this.cellCoords(end.x, end.y);
 
+            // 我们向什么方向递增单元格检查？
             let stepX = Math.sign(ray.direction.x);
             let stepY = Math.sign(ray.direction.y);
 
-            // 我们要确保，如果我们在同一行或同一行，我们不会步进不必要的方向
+            // 我们要确保，如果我们在同一条线上或同一排上，就不会踩到不必要的方向上
             if (currentCell.x == lastCell.x) stepX = 0;
             if (currentCell.y == lastCell.y) stepY = 0;
 
-            // 计算单元边界。当这一步是正的，下一个单元格在这一步之后意味着我们加1。
-            // 如果为负，则单元格在此之前，这种情况下不添加边界
+            // 计算单元格的边界。
+            // 当步长为正数时，下一个单元格在这个单元格之后，意味着我们要加1。
             let xStep = stepX < 0 ? 0 : stepX;
             let yStep = stepY < 0 ? 0 : stepY;
             let nextBoundaryX = (currentCell.x + xStep) * this._cellSize;
             let nextBoundaryY = (currentCell.y + yStep) * this._cellSize;
 
-            // 确定射线穿过第一个垂直体素边界时的t值。y/horizontal。
-            // 这两个值的最小值将表明我们可以沿着射线走多少，而仍然保持在当前体素中，对于接近vertical/horizontal的射线来说可能是无限的
+            // 确定射线穿过第一个垂直体素边界时的t值，y/水平也是如此。
+            // 这两个值的最小值将表明我们可以沿着射线移动多少，并且仍然保持在当前的体素中，对于接近垂直/水平的射线可能是无限的。
             let tMaxX = ray.direction.x != 0 ? (nextBoundaryX - ray.start.x) / ray.direction.x : Number.MAX_VALUE;
             let tMaxY = ray.direction.y != 0 ? (nextBoundaryY - ray.start.y) / ray.direction.y : Number.MAX_VALUE;
 
+            // 我们要走多远才能从一个单元格的边界穿过一个单元格
             let tDeltaX = ray.direction.x != 0 ? this._cellSize / (ray.direction.x * stepX) : Number.MAX_VALUE;
             let tDeltaY = ray.direction.y != 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
 
@@ -190,12 +198,50 @@ module es {
                 }
             }
 
+            // 复位
             this._raycastParser.reset();
             return this._raycastParser.hitCounter;
         }
 
         /**
-         * 获取位于指定圆内的所有碰撞器
+         * 获取所有在指定矩形范围内的碰撞器
+         * @param rect 
+         * @param results 
+         * @param layerMask 
+         */
+        public overlapRectangle(rect: Rectangle, results: Collider[], layerMask: number) {
+            this._overlapTestBox.updateBox(rect.width, rect.height);
+            this._overlapTestBox.position = rect.location;
+
+            let resultCounter = 0;
+            let potentials = this.aabbBroadphase(rect, null, layerMask);
+            for (let collider of potentials) {
+                if (collider instanceof BoxCollider) {
+                    results[resultCounter] = collider;
+                    resultCounter ++;
+                } else if(collider instanceof CircleCollider) {
+                    if (Collisions.rectToCircle(rect, collider.bounds.center, collider.bounds.width * 0.5)) {
+                        results[resultCounter] = collider;
+                        resultCounter ++;
+                    }
+                } else if(collider instanceof PolygonCollider) {
+                    if (collider.shape.overlaps(this._overlapTestBox)) {
+                        results[resultCounter] = collider;
+                        resultCounter ++;
+                    }
+                } else {
+                    throw new Error("overlapRectangle对这个类型没有实现!");
+                }
+
+                if (resultCounter == results.length)
+                    return resultCounter;
+            }
+
+            return resultCounter;
+        }
+
+        /**
+         * 获取所有落在指定圆圈内的碰撞器
          * @param circleCenter
          * @param radius
          * @param results

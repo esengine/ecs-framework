@@ -603,6 +603,57 @@ var es;
             // 通知我们的子项改变了位置
             this.components.onEntityTransformChanged(comp);
         };
+        Entity.prototype.setParent = function (parent) {
+            if (parent instanceof es.Transform) {
+                this.transform.setParent(parent);
+            }
+            else if (parent instanceof Entity) {
+                this.transform.setParent(parent.transform);
+            }
+            return this;
+        };
+        Entity.prototype.setPosition = function (x, y) {
+            this.transform.setPosition(x, y);
+            return this;
+        };
+        Entity.prototype.setLocalPosition = function (localPosition) {
+            this.transform.setLocalPosition(localPosition);
+            return this;
+        };
+        Entity.prototype.setRotation = function (radians) {
+            this.transform.setRotation(radians);
+            return this;
+        };
+        Entity.prototype.setRotationDegrees = function (degrees) {
+            this.transform.setRotationDegrees(degrees);
+            return this;
+        };
+        Entity.prototype.setLocalRotation = function (radians) {
+            this.transform.setLocalRotation(radians);
+            return this;
+        };
+        Entity.prototype.setLocalRotationDegrees = function (degrees) {
+            this.transform.setLocalRotationDegrees(degrees);
+            return this;
+        };
+        Entity.prototype.setScale = function (scale) {
+            if (scale instanceof es.Vector2) {
+                this.transform.setScale(scale);
+            }
+            else {
+                this.transform.setScale(new es.Vector2(scale));
+            }
+            return this;
+        };
+        Entity.prototype.setLocalScale = function (scale) {
+            if (scale instanceof es.Vector2) {
+                this.transform.setLocalScale(scale);
+            }
+            else {
+                this.transform.setLocalScale(new es.Vector2(scale));
+            }
+            return this;
+        };
         /**
          * 设置实体的标记
          * @param tag
@@ -3697,12 +3748,18 @@ var es;
             // 我们减去了delta，因为timeSinceSceneLoad已经包含了这个update ticks delta
             return this.timeSinceSceneLoad / interval > (this.timeSinceSceneLoad - this.deltaTime) / interval;
         };
+        /** 游戏运行的总时间 */
+        Time.totalTime = 0;
+        /** deltaTime的未缩放版本。不受时间尺度的影响 */
+        Time.unscaledDeltaTime = 0;
         /** 前一帧到当前帧的时间增量，按时间刻度进行缩放 */
         Time.deltaTime = 0;
         /** 时间刻度缩放 */
         Time.timeScale = 1;
         /** 已传递的帧总数 */
         Time.frameCount = 0;
+        /** 自场景加载以来的总时间 */
+        Time.timeSinceSceneLoad = 0;
         Time._lastTime = 0;
         return Time;
     }());
@@ -5928,6 +5985,7 @@ var es;
         Physics.reset = function () {
             this._spatialHash = new es.SpatialHash(this.spatialHashCellSize);
             this._hitArray[0].reset();
+            this._colliderArray[0] = null;
         };
         /**
          * 从SpatialHash中移除所有碰撞器
@@ -5936,7 +5994,19 @@ var es;
             this._spatialHash.clear();
         };
         /**
-         * 获取位于指定圆内的所有碰撞器
+         * 检查是否有对撞机落在一个圆形区域内。返回遇到的第一个对撞机
+         * @param center
+         * @param radius
+         * @param layerMask
+         */
+        Physics.overlapCircle = function (center, radius, layerMask) {
+            if (layerMask === void 0) { layerMask = Physics.allLayers; }
+            this._colliderArray[0] = null;
+            this._spatialHash.overlapCircle(center, radius, this._colliderArray, layerMask);
+            return this._colliderArray[0];
+        };
+        /**
+         * 获取所有落在指定圆圈内的碰撞器
          * @param center
          * @param randius
          * @param results
@@ -5945,7 +6015,7 @@ var es;
         Physics.overlapCircleAll = function (center, randius, results, layerMask) {
             if (layerMask === void 0) { layerMask = -1; }
             if (results.length == 0) {
-                console.error("传入了一个空的结果数组。不会返回任何结果");
+                console.warn("传入了一个空的结果数组。不会返回任何结果");
                 return;
             }
             return this._spatialHash.overlapCircle(center, randius, results, layerMask);
@@ -5960,7 +6030,8 @@ var es;
             return this._spatialHash.aabbBroadphase(rect, null, layerMask);
         };
         /**
-         * 返回所有与边界相交的碰撞器，不包括传入的碰撞器(self)。如果您希望为其他查询自行创建扫过的边界，则此方法非常有用
+         * 返回所有被边界交错的碰撞器，但不包括传入的碰撞器（self）。
+         * 如果你想为其他查询自己创建扫描边界，这个方法很有用
          * @param collider
          * @param rect
          * @param layerMask
@@ -5978,6 +6049,19 @@ var es;
             if (layerMask === void 0) { layerMask = this.allLayers; }
             var bounds = collider.bounds.clone();
             return this._spatialHash.aabbBroadphase(bounds, collider, layerMask);
+        };
+        /**
+         * 返回所有被 collider.bounds 扩展为包含 deltaX/deltaY 的碰撞器，但不包括传入的碰撞器（self）
+         * @param collider
+         * @param deltaX
+         * @param deltaY
+         * @param layerMask
+         */
+        Physics.boxcastBroadphaseExcludingSelfDelta = function (collider, deltaX, deltaY, layerMask) {
+            if (layerMask === void 0) { layerMask = Physics.allLayers; }
+            var colliderBounds = collider.bounds.clone();
+            var sweptBounds = colliderBounds.getSweptBroadphaseBounds(deltaX, deltaY);
+            return this._spatialHash.aabbBroadphase(sweptBounds, collider, layerMask);
         };
         /**
          * 将对撞机添加到物理系统中
@@ -6028,6 +6112,31 @@ var es;
             }
             return this._spatialHash.linecast(start, end, hits, layerMask);
         };
+        /**
+         * 检查是否有对撞机落在一个矩形区域中
+         * @param rect
+         * @param layerMask
+         */
+        Physics.overlapRectangle = function (rect, layerMask) {
+            if (layerMask === void 0) { layerMask = Physics.allLayers; }
+            this._colliderArray[0] = null;
+            this._spatialHash.overlapRectangle(rect, this._colliderArray, layerMask);
+            return this._colliderArray[0];
+        };
+        /**
+         * 获取所有在指定矩形范围内的碰撞器
+         * @param rect
+         * @param results
+         * @param layerMask
+         */
+        Physics.overlapRectangleAll = function (rect, results, layerMask) {
+            if (layerMask === void 0) { layerMask = Physics.allLayers; }
+            if (results.length == 0) {
+                console.warn("传入了一个空的结果数组。不会返回任何结果");
+                return 0;
+            }
+            return this._spatialHash.overlapRectangle(rect, results, layerMask);
+        };
         /** 用于在全局范围内存储重力值的方便字段 */
         Physics.gravity = new es.Vector2(0, 300);
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
@@ -6047,6 +6156,12 @@ var es;
          */
         Physics._hitArray = [
             new es.RaycastHit()
+        ];
+        /**
+         * 避免重叠检查和形状投射的分配
+         */
+        Physics._colliderArray = [
+            null
         ];
         return Physics;
     }());
@@ -6074,7 +6189,11 @@ var es;
             if (cellSize === void 0) { cellSize = 100; }
             this.gridBounds = new es.Rectangle();
             /**
-             * 缓存的循环用于重叠检查
+             * 重叠检查缓存框
+             */
+            this._overlapTestBox = new es.Box(0, 0);
+            /**
+             * 重叠检查缓存圈
              */
             this._overlapTestCircle = new es.Circle(0);
             /**
@@ -6172,7 +6291,9 @@ var es;
             return this._tempHashSet;
         };
         /**
-         * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组。
+         * 通过空间散列投掷一条线，并将该线碰到的任何碰撞器填入碰撞数组
+         * https://github.com/francisengelmann/fast_voxel_traversal/blob/master/main.cpp
+         * http://www.cse.yorku.ca/~amana/research/grid.pdf
          * @param start
          * @param end
          * @param hits
@@ -6181,26 +6302,28 @@ var es;
         SpatialHash.prototype.linecast = function (start, end, hits, layerMask) {
             var ray = new es.Ray2D(start, end);
             this._raycastParser.start(ray, hits, layerMask);
-            // 在与网格相同的空间中获取起始/结束位置
+            // 获取我们的起始/结束位置，与我们的网格在同一空间内
             var currentCell = this.cellCoords(start.x, start.y);
             var lastCell = this.cellCoords(end.x, end.y);
+            // 我们向什么方向递增单元格检查？
             var stepX = Math.sign(ray.direction.x);
             var stepY = Math.sign(ray.direction.y);
-            // 我们要确保，如果我们在同一行或同一行，我们不会步进不必要的方向
+            // 我们要确保，如果我们在同一条线上或同一排上，就不会踩到不必要的方向上
             if (currentCell.x == lastCell.x)
                 stepX = 0;
             if (currentCell.y == lastCell.y)
                 stepY = 0;
-            // 计算单元边界。当这一步是正的，下一个单元格在这一步之后意味着我们加1。
-            // 如果为负，则单元格在此之前，这种情况下不添加边界
+            // 计算单元格的边界。
+            // 当步长为正数时，下一个单元格在这个单元格之后，意味着我们要加1。
             var xStep = stepX < 0 ? 0 : stepX;
             var yStep = stepY < 0 ? 0 : stepY;
             var nextBoundaryX = (currentCell.x + xStep) * this._cellSize;
             var nextBoundaryY = (currentCell.y + yStep) * this._cellSize;
-            // 确定射线穿过第一个垂直体素边界时的t值。y/horizontal。
-            // 这两个值的最小值将表明我们可以沿着射线走多少，而仍然保持在当前体素中，对于接近vertical/horizontal的射线来说可能是无限的
+            // 确定射线穿过第一个垂直体素边界时的t值，y/水平也是如此。
+            // 这两个值的最小值将表明我们可以沿着射线移动多少，并且仍然保持在当前的体素中，对于接近垂直/水平的射线可能是无限的。
             var tMaxX = ray.direction.x != 0 ? (nextBoundaryX - ray.start.x) / ray.direction.x : Number.MAX_VALUE;
             var tMaxY = ray.direction.y != 0 ? (nextBoundaryY - ray.start.y) / ray.direction.y : Number.MAX_VALUE;
+            // 我们要走多远才能从一个单元格的边界穿过一个单元格
             var tDeltaX = ray.direction.x != 0 ? this._cellSize / (ray.direction.x * stepX) : Number.MAX_VALUE;
             var tDeltaY = ray.direction.y != 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
             // 开始遍历并返回交叉单元格。
@@ -6224,26 +6347,74 @@ var es;
                     return this._raycastParser.hitCounter;
                 }
             }
+            // 复位
             this._raycastParser.reset();
             return this._raycastParser.hitCounter;
         };
         /**
-         * 获取位于指定圆内的所有碰撞器
+         * 获取所有在指定矩形范围内的碰撞器
+         * @param rect
+         * @param results
+         * @param layerMask
+         */
+        SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
+            var e_12, _a;
+            this._overlapTestBox.updateBox(rect.width, rect.height);
+            this._overlapTestBox.position = rect.location;
+            var resultCounter = 0;
+            var potentials = this.aabbBroadphase(rect, null, layerMask);
+            try {
+                for (var potentials_1 = __values(potentials), potentials_1_1 = potentials_1.next(); !potentials_1_1.done; potentials_1_1 = potentials_1.next()) {
+                    var collider = potentials_1_1.value;
+                    if (collider instanceof es.BoxCollider) {
+                        results[resultCounter] = collider;
+                        resultCounter++;
+                    }
+                    else if (collider instanceof es.CircleCollider) {
+                        if (es.Collisions.rectToCircle(rect, collider.bounds.center, collider.bounds.width * 0.5)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
+                    }
+                    else if (collider instanceof es.PolygonCollider) {
+                        if (collider.shape.overlaps(this._overlapTestBox)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
+                    }
+                    else {
+                        throw new Error("overlapRectangle对这个类型没有实现!");
+                    }
+                    if (resultCounter == results.length)
+                        return resultCounter;
+                }
+            }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            finally {
+                try {
+                    if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
+                }
+                finally { if (e_12) throw e_12.error; }
+            }
+            return resultCounter;
+        };
+        /**
+         * 获取所有落在指定圆圈内的碰撞器
          * @param circleCenter
          * @param radius
          * @param results
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_12, _a;
+            var e_13, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
             var resultCounter = 0;
             var potentials = this.aabbBroadphase(bounds, null, layerMask);
             try {
-                for (var potentials_1 = __values(potentials), potentials_1_1 = potentials_1.next(); !potentials_1_1.done; potentials_1_1 = potentials_1.next()) {
-                    var collider = potentials_1_1.value;
+                for (var potentials_2 = __values(potentials), potentials_2_1 = potentials_2.next(); !potentials_2_1.done; potentials_2_1 = potentials_2.next()) {
+                    var collider = potentials_2_1.value;
                     if (collider instanceof es.BoxCollider) {
                         results[resultCounter] = collider;
                         resultCounter++;
@@ -6268,12 +6439,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
-                    if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
+                    if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_12) throw e_12.error; }
+                finally { if (e_13) throw e_13.error; }
             }
             return resultCounter;
         };
@@ -9446,6 +9617,26 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var TextureUtils = /** @class */ (function () {
+        function TextureUtils() {
+        }
+        TextureUtils.premultiplyAlpha = function (pixels) {
+            var b = pixels[0];
+            for (var i = 0; i < pixels.length; i += 4) {
+                if (b[i + 3] != 255) {
+                    var alpha = b[i + 3] / 255;
+                    b[i + 0] = b[i + 0] * alpha;
+                    b[i + 1] = b[i + 1] * alpha;
+                    b[i + 2] = b[i + 2] * alpha;
+                }
+            }
+        };
+        return TextureUtils;
+    }());
+    es.TextureUtils = TextureUtils;
+})(es || (es = {}));
+var es;
+(function (es) {
     var TypeUtils = /** @class */ (function () {
         function TypeUtils() {
         }
@@ -10061,7 +10252,7 @@ var linq;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_13, _a;
+            var e_14, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -10069,12 +10260,12 @@ var linq;
                     result.add(x);
                 }
             }
-            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_13) throw e_13.error; }
+                finally { if (e_14) throw e_14.error; }
             }
             return result;
         };
@@ -10323,7 +10514,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_14, _a;
+            var e_15, _a;
             var output = es.ListPool.obtain();
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -10362,12 +10553,12 @@ var es;
                         }
                     }
                 }
-                catch (e_14_1) { e_14 = { error: e_14_1 }; }
+                catch (e_15_1) { e_15 = { error: e_15_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_14) throw e_14.error; }
+                    finally { if (e_15) throw e_15.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -10483,7 +10674,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_15, _a;
+            var e_16, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -10501,12 +10692,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_15) throw e_15.error; }
+                finally { if (e_16) throw e_16.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

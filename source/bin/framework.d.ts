@@ -257,6 +257,18 @@ declare module es {
         readonly localToWorldTransform: Matrix2D;
         readonly worldToLocalTransform: Matrix2D;
         onTransformChanged(comp: transform.Component): void;
+        setParent(parent: Entity): any;
+        setParent(parent: Transform): any;
+        setPosition(x: number, y: number): this;
+        setLocalPosition(localPosition: Vector2): this;
+        setRotation(radians: number): this;
+        setRotationDegrees(degrees: number): this;
+        setLocalRotation(radians: number): this;
+        setLocalRotationDegrees(degrees: number): this;
+        setScale(scale: number): any;
+        setScale(scale: Vector2): any;
+        setLocalScale(scale: number): any;
+        setLocalScale(scale: Vector2): any;
         /**
          * 设置实体的标记
          * @param tag
@@ -1443,7 +1455,7 @@ declare module es {
         /** 游戏运行的总时间 */
         static totalTime: number;
         /** deltaTime的未缩放版本。不受时间尺度的影响 */
-        static unscaledDeltaTime: any;
+        static unscaledDeltaTime: number;
         /** 前一帧到当前帧的时间增量，按时间刻度进行缩放 */
         static deltaTime: number;
         /** 时间刻度缩放 */
@@ -1451,7 +1463,7 @@ declare module es {
         /** 已传递的帧总数 */
         static frameCount: number;
         /** 自场景加载以来的总时间 */
-        static timeSinceSceneLoad: any;
+        static timeSinceSceneLoad: number;
         private static _lastTime;
         static update(currentTime: number): void;
         static sceneChanged(): void;
@@ -2401,13 +2413,24 @@ declare module es {
          * 我们保留它以避免在每次raycast发生时分配它
          */
         static _hitArray: RaycastHit[];
+        /**
+         * 避免重叠检查和形状投射的分配
+         */
+        static _colliderArray: Collider[];
         static reset(): void;
         /**
          * 从SpatialHash中移除所有碰撞器
          */
         static clear(): void;
         /**
-         * 获取位于指定圆内的所有碰撞器
+         * 检查是否有对撞机落在一个圆形区域内。返回遇到的第一个对撞机
+         * @param center
+         * @param radius
+         * @param layerMask
+         */
+        static overlapCircle(center: Vector2, radius: number, layerMask?: number): Collider;
+        /**
+         * 获取所有落在指定圆圈内的碰撞器
          * @param center
          * @param randius
          * @param results
@@ -2421,7 +2444,8 @@ declare module es {
          */
         static boxcastBroadphase(rect: Rectangle, layerMask?: number): Set<Collider>;
         /**
-         * 返回所有与边界相交的碰撞器，不包括传入的碰撞器(self)。如果您希望为其他查询自行创建扫过的边界，则此方法非常有用
+         * 返回所有被边界交错的碰撞器，但不包括传入的碰撞器（self）。
+         * 如果你想为其他查询自己创建扫描边界，这个方法很有用
          * @param collider
          * @param rect
          * @param layerMask
@@ -2433,6 +2457,14 @@ declare module es {
          * @param layerMask
          */
         static boxcastBroadphaseExcludingSelfNonRect(collider: Collider, layerMask?: number): Set<Collider>;
+        /**
+         * 返回所有被 collider.bounds 扩展为包含 deltaX/deltaY 的碰撞器，但不包括传入的碰撞器（self）
+         * @param collider
+         * @param deltaX
+         * @param deltaY
+         * @param layerMask
+         */
+        static boxcastBroadphaseExcludingSelfDelta(collider: Collider, deltaX: number, deltaY: number, layerMask?: number): Set<Collider>;
         /**
          * 将对撞机添加到物理系统中
          * @param collider
@@ -2463,6 +2495,19 @@ declare module es {
          * @param layerMask
          */
         static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask?: number): number;
+        /**
+         * 检查是否有对撞机落在一个矩形区域中
+         * @param rect
+         * @param layerMask
+         */
+        static overlapRectangle(rect: Rectangle, layerMask?: number): Collider;
+        /**
+         * 获取所有在指定矩形范围内的碰撞器
+         * @param rect
+         * @param results
+         * @param layerMask
+         */
+        static overlapRectangleAll(rect: Rectangle, results: Collider[], layerMask?: number): number;
     }
 }
 declare module es {
@@ -2489,7 +2534,11 @@ declare module es {
          */
         _inverseCellSize: number;
         /**
-         * 缓存的循环用于重叠检查
+         * 重叠检查缓存框
+         */
+        _overlapTestBox: Box;
+        /**
+         * 重叠检查缓存圈
          */
         _overlapTestCircle: Circle;
         /**
@@ -2525,7 +2574,9 @@ declare module es {
          */
         aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Set<Collider>;
         /**
-         * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组。
+         * 通过空间散列投掷一条线，并将该线碰到的任何碰撞器填入碰撞数组
+         * https://github.com/francisengelmann/fast_voxel_traversal/blob/master/main.cpp
+         * http://www.cse.yorku.ca/~amana/research/grid.pdf
          * @param start
          * @param end
          * @param hits
@@ -2533,7 +2584,14 @@ declare module es {
          */
         linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number): number;
         /**
-         * 获取位于指定圆内的所有碰撞器
+         * 获取所有在指定矩形范围内的碰撞器
+         * @param rect
+         * @param results
+         * @param layerMask
+         */
+        overlapRectangle(rect: Rectangle, results: Collider[], layerMask: number): number;
+        /**
+         * 获取所有落在指定圆圈内的碰撞器
          * @param circleCenter
          * @param radius
          * @param results
@@ -3741,6 +3799,11 @@ declare module es {
          * 如果矩形不相交，则返回Vector2.zero。
          */
         static getIntersectionDepth(rectA: Rectangle, rectB: Rectangle): Vector2;
+    }
+}
+declare module es {
+    class TextureUtils {
+        static premultiplyAlpha(pixels: number[]): void;
     }
 }
 declare module es {

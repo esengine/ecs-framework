@@ -203,6 +203,72 @@ module es {
             this.components.onEntityTransformChanged(comp);
         }
 
+        public setParent(parent: Entity);
+        public setParent(parent: Transform);
+        public setParent(parent: Transform | Entity) {
+            if (parent instanceof Transform) {
+                this.transform.setParent(parent);
+            } else if (parent instanceof Entity) {
+                this.transform.setParent(parent.transform);
+            }
+            
+            return this;
+        }
+
+        public setPosition(x: number, y: number){
+            this.transform.setPosition(x, y);
+            return this;
+        }
+
+        public setLocalPosition(localPosition: Vector2) {
+            this.transform.setLocalPosition(localPosition);
+            return this;
+        }
+
+        public setRotation(radians: number){
+            this.transform.setRotation(radians);
+            return this;
+        }
+
+        public setRotationDegrees(degrees: number){
+            this.transform.setRotationDegrees(degrees);
+            return this;
+        }
+
+        public setLocalRotation(radians: number){
+            this.transform.setLocalRotation(radians);
+            return this;
+        }
+
+        public setLocalRotationDegrees(degrees: number){
+            this.transform.setLocalRotationDegrees(degrees);
+            return this;
+        }
+
+        public setScale(scale: number);
+        public setScale(scale: Vector2);
+        public setScale(scale: Vector2 | number) {
+            if (scale instanceof Vector2) {
+                this.transform.setScale(scale);
+            } else {
+                this.transform.setScale(new Vector2(scale));
+            }
+            
+            return this;
+        }
+
+        public setLocalScale(scale: number);
+        public setLocalScale(scale: Vector2);
+        public setLocalScale(scale: Vector2 | number) {
+            if (scale instanceof Vector2) {
+                this.transform.setLocalScale(scale);
+            } else {
+                this.transform.setLocalScale(new Vector2(scale));
+            }
+            
+            return this;
+        }
+
         /**
          * 设置实体的标记
          * @param tag

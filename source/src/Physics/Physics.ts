@@ -22,10 +22,17 @@ module es {
         public static _hitArray: RaycastHit[] = [
             new RaycastHit()
         ];
+        /**
+         * 避免重叠检查和形状投射的分配
+         */
+        public static _colliderArray: Collider[] = [
+            null
+        ];
 
         public static reset() {
             this._spatialHash = new SpatialHash(this.spatialHashCellSize);
             this._hitArray[0].reset();
+            this._colliderArray[0] = null;
         }
 
         /**
@@ -36,7 +43,19 @@ module es {
         }
 
         /**
-         * 获取位于指定圆内的所有碰撞器
+         * 检查是否有对撞机落在一个圆形区域内。返回遇到的第一个对撞机
+         * @param center 
+         * @param radius 
+         * @param layerMask 
+         */
+        public static overlapCircle(center: Vector2, radius: number, layerMask: number = Physics.allLayers) {
+            this._colliderArray[0] = null;
+            this._spatialHash.overlapCircle(center, radius, this._colliderArray, layerMask);
+            return this._colliderArray[0];
+        }
+
+        /**
+         * 获取所有落在指定圆圈内的碰撞器
          * @param center
          * @param randius
          * @param results
@@ -44,7 +63,7 @@ module es {
          */
         public static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask = -1) {
             if (results.length == 0) {
-                console.error("传入了一个空的结果数组。不会返回任何结果");
+                console.warn("传入了一个空的结果数组。不会返回任何结果");
                 return;
             }
 
@@ -61,7 +80,8 @@ module es {
         }
 
         /**
-         * 返回所有与边界相交的碰撞器，不包括传入的碰撞器(self)。如果您希望为其他查询自行创建扫过的边界，则此方法非常有用
+         * 返回所有被边界交错的碰撞器，但不包括传入的碰撞器（self）。
+         * 如果你想为其他查询自己创建扫描边界，这个方法很有用
          * @param collider
          * @param rect
          * @param layerMask
@@ -78,6 +98,19 @@ module es {
         public static boxcastBroadphaseExcludingSelfNonRect(collider: Collider, layerMask = this.allLayers) {
             let bounds = collider.bounds.clone();
             return this._spatialHash.aabbBroadphase(bounds, collider, layerMask);
+        }
+
+        /**
+         * 返回所有被 collider.bounds 扩展为包含 deltaX/deltaY 的碰撞器，但不包括传入的碰撞器（self）
+         * @param collider 
+         * @param deltaX 
+         * @param deltaY 
+         * @param layerMask 
+         */
+        public static boxcastBroadphaseExcludingSelfDelta(collider: Collider, deltaX: number, deltaY: number, layerMask: number = Physics.allLayers) {
+            let colliderBounds = collider.bounds.clone();
+            let sweptBounds = colliderBounds.getSweptBroadphaseBounds(deltaX, deltaY);
+            return this._spatialHash.aabbBroadphase(sweptBounds, collider, layerMask);
         }
 
         /**
@@ -131,6 +164,31 @@ module es {
             }
 
             return this._spatialHash.linecast(start, end, hits, layerMask);
+        }
+
+        /**
+         * 检查是否有对撞机落在一个矩形区域中
+         * @param rect 
+         * @param layerMask 
+         */
+        public static overlapRectangle(rect: Rectangle, layerMask: number = Physics.allLayers) {
+            this._colliderArray[0] = null;
+            this._spatialHash.overlapRectangle(rect, this._colliderArray, layerMask);
+            return this._colliderArray[0];
+        }
+
+        /**
+         * 获取所有在指定矩形范围内的碰撞器
+         * @param rect 
+         * @param results 
+         * @param layerMask 
+         */
+        public static overlapRectangleAll(rect: Rectangle, results: Collider[], layerMask: number = Physics.allLayers) {
+            if (results.length == 0){
+                console.warn("传入了一个空的结果数组。不会返回任何结果");
+                return 0;
+            }
+            return this._spatialHash.overlapRectangle(rect, results, layerMask);
         }
     }
 }

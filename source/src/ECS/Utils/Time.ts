@@ -2,9 +2,9 @@ module es {
     /** 提供帧定时信息 */
     export class Time {
         /** 游戏运行的总时间 */
-        public static totalTime: number;
+        public static totalTime: number = 0;
         /** deltaTime的未缩放版本。不受时间尺度的影响 */
-        public static unscaledDeltaTime;
+        public static unscaledDeltaTime: number = 0;
         /** 前一帧到当前帧的时间增量，按时间刻度进行缩放 */
         public static deltaTime: number = 0;
         /** 时间刻度缩放 */
@@ -12,7 +12,7 @@ module es {
         /** 已传递的帧总数 */
         public static frameCount = 0;
         /** 自场景加载以来的总时间 */
-        public static timeSinceSceneLoad;
+        public static timeSinceSceneLoad: number = 0;
         private static _lastTime = 0;
 
         public static update(currentTime: number) {
