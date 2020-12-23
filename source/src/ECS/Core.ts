@@ -33,6 +33,7 @@ module es {
          * 全局访问系统
          */
         public _globalManagers: GlobalManager[] = [];
+        public _coroutineManager: CoroutineManager = new CoroutineManager();
         public _timerManager: TimerManager = new TimerManager();
         public width: number;
         public height: number;
@@ -45,6 +46,7 @@ module es {
             Core.emitter = new Emitter<CoreEvents>();
             Core.emitter.addObserver(CoreEvents.FrameUpdated, this.update, this);
 
+            Core.registerGlobalManager(this._coroutineManager);
             Core.registerGlobalManager(this._timerManager);
             Core.entitySystemsEnabled = enableEntitySystems;
 
@@ -124,13 +126,22 @@ module es {
         }
 
         /**
+         * 启动一个coroutine。Coroutine可以将number延时几秒或延时到其他startCoroutine.Yielding 
+         * null将使coroutine在下一帧被执行。
+         * @param enumerator 
+         */
+        public static startCoroutine(enumerator): ICoroutine {
+            return this._instance._coroutineManager.startCoroutine(enumerator);
+        }
+
+        /**
          * 调度一个一次性或重复的计时器，该计时器将调用已传递的动作
          * @param timeInSeconds
          * @param repeats
          * @param context
          * @param onTime
          */
-        public static schedule(timeInSeconds: number, repeats: boolean = false, context: any = null, onTime: (timer: ITimer)=>void){
+        public static schedule(timeInSeconds: number, repeats: boolean = false, context: any = null, onTime: (timer: ITimer) => void) {
             return this._instance._timerManager.schedule(timeInSeconds, repeats, context, onTime);
         }
 
@@ -139,7 +150,7 @@ module es {
         }
 
         public startDebugDraw() {
-            this._frameCounter ++;
+            this._frameCounter++;
             this._frameCounterElapsedTime += Time.deltaTime;
             if (this._frameCounterElapsedTime >= 1) {
                 let memoryInfo = window.performance["memory"];
@@ -165,7 +176,7 @@ module es {
          */
         protected onGraphicsDeviceReset() {
             // 我们用这些来避免垃圾事件的发生
-            if (this._graphicsDeviceChangeTimer != null){
+            if (this._graphicsDeviceChangeTimer != null) {
                 this._graphicsDeviceChangeTimer.reset();
             } else {
                 this._graphicsDeviceChangeTimer = Core.schedule(0.05, false, this, t => {
@@ -176,7 +187,7 @@ module es {
         }
 
         protected initialize() {
-            
+
         }
 
         protected async update(currentTime?: number) {

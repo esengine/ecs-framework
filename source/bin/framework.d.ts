@@ -96,6 +96,7 @@ declare module es {
          * 全局访问系统
          */
         _globalManagers: GlobalManager[];
+        _coroutineManager: CoroutineManager;
         _timerManager: TimerManager;
         width: number;
         height: number;
@@ -133,6 +134,12 @@ declare module es {
          * @param type
          */
         static getGlobalManager<T extends es.GlobalManager>(type: any): T;
+        /**
+         * 启动一个coroutine。Coroutine可以将number延时几秒或延时到其他startCoroutine.Yielding
+         * null将使coroutine在下一帧被执行。
+         * @param enumerator
+         */
+        static startCoroutine(enumerator: any): ICoroutine;
         /**
          * 调度一个一次性或重复的计时器，该计时器将调用已传递的动作
          * @param timeInSeconds
@@ -3495,6 +3502,77 @@ declare module es {
         constructor(source?: Array<T>);
         getHashCode(item: T): number;
         areEqual(value1: T, value2: T): boolean;
+    }
+}
+declare module es {
+    /**
+     * startCoroutine返回的接口，它提供了中途停止coroutine的能力。
+     */
+    interface ICoroutine {
+        /**
+         * 停止Coroutine
+         */
+        stop(): any;
+        /**
+         * 设置Coroutine是否应该使用deltaTime或unscaledDeltaTime进行计时
+         * @param useUnscaledDeltaTime
+         */
+        setUseUnscaledDeltaTime(useUnscaledDeltaTime: boolean): ICoroutine;
+    }
+    class Coroutine {
+        /**
+         * 导致Coroutine在指定的时间内暂停。在Coroutine.waitForSeconds的基础上，在Coroutine中使用Yield
+         * @param seconds
+         */
+        static waitForSeconds(seconds: number): WaitForSeconds;
+    }
+    /**
+     * 帮助类，用于当一个coroutine想要暂停一段时间时。返回Coroutine.waitForSeconds返回其中一个
+     */
+    class WaitForSeconds {
+        static waiter: WaitForSeconds;
+        waitTime: number;
+        wait(seconds: number): WaitForSeconds;
+    }
+}
+declare module es {
+    /**
+     * CoroutineManager用于隐藏Coroutine所需数据的内部类
+     */
+    class CoroutineImpl implements ICoroutine, IPoolable {
+        enumerator: any;
+        /**
+         * 每当产生一个延迟，它就会被添加到跟踪延迟的waitTimer中
+         */
+        waitTimer: number;
+        isDone: boolean;
+        waitForCoroutine: CoroutineImpl;
+        useUnscaledDeltaTime: boolean;
+        stop(): void;
+        setUseUnscaledDeltaTime(useUnscaledDeltaTime: boolean): this;
+        prepareForUse(): void;
+        reset(): void;
+    }
+    class CoroutineManager extends GlobalManager {
+        /**
+         * 标志来跟踪我们何时处于更新循环中。
+         * 如果在更新循环中启动了一个新的coroutine，我们必须将它贴在shouldRunNextFrame列表中，以避免在迭代时修改一个数组
+         */
+        _isInUpdate: boolean;
+        _unblockedCoroutines: CoroutineImpl[];
+        _shouldRunNextFrame: CoroutineImpl[];
+        /**
+         * 将IEnumerator添加到CoroutineManager中
+         * Coroutine在每一帧调用Update之前被执行
+         * @param enumerator
+         */
+        startCoroutine(enumerator: any): CoroutineImpl;
+        update(): void;
+        /**
+         * 勾选一个coroutine，如果该coroutine应该在下一帧继续运行，则返回true。本方法会将完成的coroutine放回Pool
+         * @param coroutine
+         */
+        tickCoroutine(coroutine: CoroutineImpl): boolean;
     }
 }
 declare class ArrayUtils {

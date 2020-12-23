@@ -197,6 +197,7 @@ var es;
              * 全局访问系统
              */
             this._globalManagers = [];
+            this._coroutineManager = new es.CoroutineManager();
             this._timerManager = new es.TimerManager();
             this._frameCounterElapsedTime = 0;
             this._frameCounter = 0;
@@ -206,6 +207,7 @@ var es;
             Core._instance = this;
             Core.emitter = new es.Emitter();
             Core.emitter.addObserver(es.CoreEvents.FrameUpdated, this.update, this);
+            Core.registerGlobalManager(this._coroutineManager);
             Core.registerGlobalManager(this._timerManager);
             Core.entitySystemsEnabled = enableEntitySystems;
             this.initialize();
@@ -277,6 +279,14 @@ var es;
                     return this._instance._globalManagers[i];
             }
             return null;
+        };
+        /**
+         * 启动一个coroutine。Coroutine可以将number延时几秒或延时到其他startCoroutine.Yielding
+         * null将使coroutine在下一帧被执行。
+         * @param enumerator
+         */
+        Core.startCoroutine = function (enumerator) {
+            return this._instance._coroutineManager.startCoroutine(enumerator);
         };
         /**
          * 调度一个一次性或重复的计时器，该计时器将调用已传递的动作
@@ -8826,6 +8836,164 @@ var es;
         return HashSet;
     }(Set));
     es.HashSet = HashSet;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Coroutine = /** @class */ (function () {
+        function Coroutine() {
+        }
+        /**
+         * 导致Coroutine在指定的时间内暂停。在Coroutine.waitForSeconds的基础上，在Coroutine中使用Yield
+         * @param seconds
+         */
+        Coroutine.waitForSeconds = function (seconds) {
+            return WaitForSeconds.waiter.wait(seconds);
+        };
+        return Coroutine;
+    }());
+    es.Coroutine = Coroutine;
+    /**
+     * 帮助类，用于当一个coroutine想要暂停一段时间时。返回Coroutine.waitForSeconds返回其中一个
+     */
+    var WaitForSeconds = /** @class */ (function () {
+        function WaitForSeconds() {
+            this.waitTime = 0;
+        }
+        WaitForSeconds.prototype.wait = function (seconds) {
+            WaitForSeconds.waiter.waitTime = seconds;
+            return WaitForSeconds.waiter;
+        };
+        WaitForSeconds.waiter = new WaitForSeconds();
+        return WaitForSeconds;
+    }());
+    es.WaitForSeconds = WaitForSeconds;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * CoroutineManager用于隐藏Coroutine所需数据的内部类
+     */
+    var CoroutineImpl = /** @class */ (function () {
+        function CoroutineImpl() {
+            /**
+             * 每当产生一个延迟，它就会被添加到跟踪延迟的waitTimer中
+             */
+            this.waitTimer = 0;
+            this.useUnscaledDeltaTime = false;
+        }
+        CoroutineImpl.prototype.stop = function () {
+            this.isDone = true;
+        };
+        CoroutineImpl.prototype.setUseUnscaledDeltaTime = function (useUnscaledDeltaTime) {
+            this.useUnscaledDeltaTime = useUnscaledDeltaTime;
+            return this;
+        };
+        CoroutineImpl.prototype.prepareForUse = function () {
+            this.isDone = false;
+        };
+        CoroutineImpl.prototype.reset = function () {
+            this.isDone = true;
+            this.waitTimer = 0;
+            this.waitForCoroutine = null;
+            this.enumerator = null;
+            this.useUnscaledDeltaTime = false;
+        };
+        return CoroutineImpl;
+    }());
+    es.CoroutineImpl = CoroutineImpl;
+    var CoroutineManager = /** @class */ (function (_super) {
+        __extends(CoroutineManager, _super);
+        function CoroutineManager() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this._unblockedCoroutines = [];
+            _this._shouldRunNextFrame = [];
+            return _this;
+        }
+        /**
+         * 将IEnumerator添加到CoroutineManager中
+         * Coroutine在每一帧调用Update之前被执行
+         * @param enumerator
+         */
+        CoroutineManager.prototype.startCoroutine = function (enumerator) {
+            // 找到或创建一个CoroutineImpl
+            var coroutine = es.Pool.obtain(CoroutineImpl);
+            coroutine.prepareForUse();
+            // 设置coroutine并添加它
+            coroutine.enumerator = enumerator;
+            var shouldContinueCoroutine = this.tickCoroutine(coroutine);
+            if (!shouldContinueCoroutine)
+                return null;
+            if (this._isInUpdate)
+                this._shouldRunNextFrame.push(coroutine);
+            else
+                this._unblockedCoroutines.push(coroutine);
+            return coroutine;
+        };
+        CoroutineManager.prototype.update = function () {
+            this._isInUpdate = true;
+            for (var i = 0; i < this._unblockedCoroutines.length; i++) {
+                var coroutine = this._unblockedCoroutines[i];
+                if (coroutine.isDone) {
+                    es.Pool.free(coroutine);
+                    continue;
+                }
+                if (coroutine.waitForCoroutine != null) {
+                    if (coroutine.waitForCoroutine.isDone) {
+                        coroutine.waitForCoroutine = null;
+                    }
+                    else {
+                        this._shouldRunNextFrame.push(coroutine);
+                        continue;
+                    }
+                }
+                if (coroutine.waitTimer > 0) {
+                    // 递减，然后再运行下一帧，确保用适当的deltaTime递减
+                    coroutine.waitTimer -= coroutine.useUnscaledDeltaTime ? es.Time.unscaledDeltaTime : es.Time.deltaTime;
+                    this._shouldRunNextFrame.push(coroutine);
+                    continue;
+                }
+                if (this.tickCoroutine(coroutine))
+                    this._shouldRunNextFrame.push(coroutine);
+            }
+            var linqCoroutines = new linq.List(this._unblockedCoroutines);
+            linqCoroutines.clear();
+            linqCoroutines.addRange(this._shouldRunNextFrame);
+            this._shouldRunNextFrame.length = 0;
+            this._isInUpdate = false;
+        };
+        /**
+         * 勾选一个coroutine，如果该coroutine应该在下一帧继续运行，则返回true。本方法会将完成的coroutine放回Pool
+         * @param coroutine
+         */
+        CoroutineManager.prototype.tickCoroutine = function (coroutine) {
+            var chain = coroutine.enumerator.next();
+            if (chain.done || coroutine.isDone) {
+                es.Pool.free(coroutine);
+                return false;
+            }
+            if (chain.value == null) {
+                // 下一帧再运行
+                return true;
+            }
+            if (chain.value instanceof es.WaitForSeconds) {
+                coroutine.waitTimer = chain.value.waitTime;
+                return true;
+            }
+            if (typeof chain.value == 'number') {
+                coroutine.waitTimer = chain.value;
+                return true;
+            }
+            if (chain.value instanceof CoroutineImpl) {
+                coroutine.waitForCoroutine = chain.value;
+                return true;
+            }
+            else {
+                return true;
+            }
+        };
+        return CoroutineManager;
+    }(es.GlobalManager));
+    es.CoroutineManager = CoroutineManager;
 })(es || (es = {}));
 var ArrayUtils = /** @class */ (function () {
     function ArrayUtils() {
