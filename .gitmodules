@@ -4,3 +4,12 @@
 [submodule "demo/laya_demo"]
 	path = demo/laya_demo
 	url = https://github.com/esengine/ecs-laya-demo.git
+[submodule "extensions/ecs-star"]
+	path = extensions/ecs-star
+	url = https://github.com/esengine/ecs-astar
+[submodule "extensions/behaviourTree-ai"]
+	path = extensions/behaviourTree-ai
+	url = https://github.com/esengine/BehaviourTree-ai
+[submodule "engine_support/egret"]
+	path = engine_support/egret
+	url = https://github.com/esengine/egret-ecs-ext.git

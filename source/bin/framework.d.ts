@@ -3575,6 +3575,22 @@ declare module es {
         tickCoroutine(coroutine: CoroutineImpl): boolean;
     }
 }
+declare module es {
+    class MaxRectsBinPack {
+        binWidth: number;
+        binHeight: number;
+        allowRotations: boolean;
+        usedRectangles: Rectangle[];
+        freeRectangles: Rectangle[];
+        constructor(width: number, height: number, rotations?: boolean);
+        init(width: number, height: number, rotations?: boolean): void;
+        insert(width: number, height: number): Rectangle;
+        findPositionForNewNodeBestAreaFit(width: number, height: number, bestAreaFit: Ref<number>, bestShortSideFit: Ref<number>): Rectangle;
+        splitFreeNode(freeNode: Rectangle, usedNode: Rectangle): boolean;
+        pruneFreeList(): void;
+        isContainedIn(a: Rectangle, b: Rectangle): boolean;
+    }
+}
 declare class ArrayUtils {
     /**
      * 执行冒泡排序
