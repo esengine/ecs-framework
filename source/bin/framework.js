@@ -76,6 +76,98 @@ var __spread = (this && this.__spread) || function () {
 };
 var es;
 (function (es) {
+    var Insist = /** @class */ (function () {
+        function Insist() {
+        }
+        Insist.fail = function (message) {
+            if (message === void 0) { message = null; }
+            var args = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                args[_i - 1] = arguments[_i];
+            }
+            if (message == null) {
+                console.assert(false);
+            }
+            else {
+                console.assert(false, StringUtils.format(message, args));
+            }
+        };
+        Insist.isTrue = function (condition, message) {
+            if (message === void 0) { message = null; }
+            var args = [];
+            for (var _i = 2; _i < arguments.length; _i++) {
+                args[_i - 2] = arguments[_i];
+            }
+            if (!condition) {
+                if (message == null) {
+                    this.fail();
+                }
+                else {
+                    this.fail(message, args);
+                }
+            }
+        };
+        Insist.isFalse = function (condition, message) {
+            if (message === void 0) { message = null; }
+            var args = [];
+            for (var _i = 2; _i < arguments.length; _i++) {
+                args[_i - 2] = arguments[_i];
+            }
+            if (message == null) {
+                this.isTrue(!condition);
+            }
+            else {
+                this.isTrue(!condition, message, args);
+            }
+        };
+        Insist.isNull = function (obj, message) {
+            if (message === void 0) { message = null; }
+            var args = [];
+            for (var _i = 2; _i < arguments.length; _i++) {
+                args[_i - 2] = arguments[_i];
+            }
+            if (message == null) {
+                this.isTrue(obj == null);
+            }
+            else {
+                this.isTrue(obj == null, message, args);
+            }
+        };
+        Insist.isNotNull = function (obj, message) {
+            if (message === void 0) { message = null; }
+            var args = [];
+            for (var _i = 2; _i < arguments.length; _i++) {
+                args[_i - 2] = arguments[_i];
+            }
+            if (message == null) {
+                this.isTrue(obj != null);
+            }
+            else {
+                this.isTrue(obj != null, message, args);
+            }
+        };
+        Insist.areEqual = function (first, second, message) {
+            var args = [];
+            for (var _i = 3; _i < arguments.length; _i++) {
+                args[_i - 3] = arguments[_i];
+            }
+            if (first != second)
+                this.fail(message, args);
+        };
+        Insist.areNotEqual = function (first, second, message) {
+            var args = [];
+            for (var _i = 3; _i < arguments.length; _i++) {
+                args[_i - 3] = arguments[_i];
+            }
+            if (first == second)
+                this.fail(message, args);
+        };
+        return Insist;
+    }());
+    es.Insist = Insist;
+})(es || (es = {}));
+var es;
+(function (es) {
     /**
      * 执行顺序
      *  - onAddedToEntity
@@ -3514,7 +3606,7 @@ var StringUtils = /** @class */ (function () {
     }
     /**
      * 匹配中文字符
-     * @param    str    需要匹配的字符串
+     * @param str 需要匹配的字符串
      * @return
      */
     StringUtils.matchChineseWord = function (str) {
@@ -3524,7 +3616,7 @@ var StringUtils = /** @class */ (function () {
     };
     /**
      * 去除字符串左端的空白字符
-     * @param    target        目标字符串
+     * @param target 目标字符串
      * @return
      */
     StringUtils.lTrim = function (target) {
@@ -3536,7 +3628,7 @@ var StringUtils = /** @class */ (function () {
     };
     /**
      * 去除字符串右端的空白字符
-     * @param    target        目标字符串
+     * @param target 目标字符串
      * @return
      */
     StringUtils.rTrim = function (target) {
@@ -3548,8 +3640,8 @@ var StringUtils = /** @class */ (function () {
     };
     /**
      * 返回一个去除2段空白字符的字符串
-     * @param    target
-     * @return  返回一个去除2段空白字符的字符串
+     * @param target
+     * @return 返回一个去除2段空白字符的字符串
      */
     StringUtils.trim = function (target) {
         if (target == null) {
@@ -3569,11 +3661,11 @@ var StringUtils = /** @class */ (function () {
     };
     /**
      * 返回执行替换后的字符串
-     * @param    mainStr   待查找字符串
-     * @param    targetStr 目标字符串
-     * @param    replaceStr 替换字符串
-     * @param    caseMark  是否忽略大小写
-     * @return  返回执行替换后的字符串
+     * @param mainStr 待查找字符串
+     * @param targetStr 目标字符串
+     * @param replaceStr 替换字符串
+     * @param caseMark 是否忽略大小写
+     * @return 返回执行替换后的字符串
      */
     StringUtils.replaceMatch = function (mainStr, targetStr, replaceStr, caseMark) {
         if (caseMark === void 0) { caseMark = false; }
@@ -3600,9 +3692,9 @@ var StringUtils = /** @class */ (function () {
     };
     /**
      * 用html实体换掉字符窜中的特殊字符
-     * @param    str                需要替换的字符串
-     * @param    reversion        是否翻转替换：将转义符号替换为正常的符号
-     * @return    换掉特殊字符后的字符串
+     * @param str 需要替换的字符串
+     * @param reversion 是否翻转替换：将转义符号替换为正常的符号
+     * @return 换掉特殊字符后的字符串
      */
     StringUtils.htmlSpecialChars = function (str, reversion) {
         if (reversion === void 0) { reversion = false; }
@@ -3623,19 +3715,6 @@ var StringUtils = /** @class */ (function () {
     };
     /**
      * 给数字字符前面添 "0"
-     *
-     * <pre>
-     *
-     * trace( StringFormat.zfill('1') );
-     * // 01
-     *
-     * trace( StringFormat.zfill('16', 5) );
-     * // 00016
-     *
-     * trace( StringFormat.zfill('-3', 3) );
-     * // -03
-     *
-     * </pre>
      *
      * @param str 要进行处理的字符串
      * @param width 处理后字符串的长度，
@@ -3669,8 +3748,8 @@ var StringUtils = /** @class */ (function () {
     };
     /**
      * 翻转字符串
-     * @param    str 字符串
-     * @return  翻转后的字符串
+     * @param str 字符串
+     * @return 翻转后的字符串
      */
     StringUtils.reverse = function (str) {
         if (str.length > 1)
@@ -3680,11 +3759,11 @@ var StringUtils = /** @class */ (function () {
     };
     /**
      * 截断某段字符串
-     * @param    str        目标字符串
-     * @param    start    需要截断的起始索引
-     * @param    len        截断长度
-     * @param    order    顺序，true从字符串头部开始计算，false从字符串尾巴开始结算。
-     * @return    截断后的字符串
+     * @param str 目标字符串
+     * @param start 需要截断的起始索引
+     * @param en 截断长度
+     * @param order 顺序，true从字符串头部开始计算，false从字符串尾巴开始结算。
+     * @return 截断后的字符串
      */
     StringUtils.cutOff = function (str, start, len, order) {
         if (order === void 0) { order = true; }
@@ -3706,7 +3785,9 @@ var StringUtils = /** @class */ (function () {
         }
         return newStr;
     };
-    /**{0} 字符替换   */
+    /**
+     * {0} 字符替换
+     */
     StringUtils.strReplace = function (str, rStr) {
         var i = 0, len = rStr.length;
         for (; i < len; i++) {
@@ -3714,6 +3795,17 @@ var StringUtils = /** @class */ (function () {
                 rStr[i] = "无";
             }
             str = str.replace("{" + i + "}", rStr[i]);
+        }
+        return str;
+    };
+    StringUtils.format = function (str) {
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
+        for (var i = 0; i < args.length - 1; i++) {
+            var reg = new RegExp("\\{" + i + "\\}", "gm");
+            str = str.replace(reg, args[i + 1]);
         }
         return str;
     };

@@ -1,4 +1,15 @@
 declare module es {
+    class Insist {
+        static fail(message?: string, ...args: any[]): void;
+        static isTrue(condition: boolean, message?: string, ...args: any[]): void;
+        static isFalse(condition: boolean, message?: string, ...args: any[]): void;
+        static isNull(obj: any, message?: string, ...args: any[]): void;
+        static isNotNull(obj: any, message?: string, ...args: any[]): void;
+        static areEqual(first: any, second: any, message: string, ...args: any[]): void;
+        static areNotEqual(first: any, second: any, message: string, ...args: any[]): void;
+    }
+}
+declare module es {
     /**
      * 执行顺序
      *  - onAddedToEntity
@@ -1371,26 +1382,26 @@ declare class StringUtils {
     private static specialSigns;
     /**
      * 匹配中文字符
-     * @param    str    需要匹配的字符串
+     * @param str 需要匹配的字符串
      * @return
      */
     static matchChineseWord(str: string): string[];
     /**
      * 去除字符串左端的空白字符
-     * @param    target        目标字符串
+     * @param target 目标字符串
      * @return
      */
     static lTrim(target: string): string;
     /**
      * 去除字符串右端的空白字符
-     * @param    target        目标字符串
+     * @param target 目标字符串
      * @return
      */
     static rTrim(target: string): string;
     /**
      * 返回一个去除2段空白字符的字符串
-     * @param    target
-     * @return  返回一个去除2段空白字符的字符串
+     * @param target
+     * @return 返回一个去除2段空白字符的字符串
      */
     static trim(target: string): string;
     /**
@@ -1401,35 +1412,22 @@ declare class StringUtils {
     static isWhiteSpace(str: string): boolean;
     /**
      * 返回执行替换后的字符串
-     * @param    mainStr   待查找字符串
-     * @param    targetStr 目标字符串
-     * @param    replaceStr 替换字符串
-     * @param    caseMark  是否忽略大小写
-     * @return  返回执行替换后的字符串
+     * @param mainStr 待查找字符串
+     * @param targetStr 目标字符串
+     * @param replaceStr 替换字符串
+     * @param caseMark 是否忽略大小写
+     * @return 返回执行替换后的字符串
      */
     static replaceMatch(mainStr: string, targetStr: string, replaceStr: string, caseMark?: boolean): string;
     /**
      * 用html实体换掉字符窜中的特殊字符
-     * @param    str                需要替换的字符串
-     * @param    reversion        是否翻转替换：将转义符号替换为正常的符号
-     * @return    换掉特殊字符后的字符串
+     * @param str 需要替换的字符串
+     * @param reversion 是否翻转替换：将转义符号替换为正常的符号
+     * @return 换掉特殊字符后的字符串
      */
     static htmlSpecialChars(str: string, reversion?: boolean): string;
     /**
      * 给数字字符前面添 "0"
-     *
-     * <pre>
-     *
-     * trace( StringFormat.zfill('1') );
-     * // 01
-     *
-     * trace( StringFormat.zfill('16', 5) );
-     * // 00016
-     *
-     * trace( StringFormat.zfill('-3', 3) );
-     * // -03
-     *
-     * </pre>
      *
      * @param str 要进行处理的字符串
      * @param width 处理后字符串的长度，
@@ -1440,21 +1438,24 @@ declare class StringUtils {
     static zfill(str: string, width?: number): string;
     /**
      * 翻转字符串
-     * @param    str 字符串
-     * @return  翻转后的字符串
+     * @param str 字符串
+     * @return 翻转后的字符串
      */
     static reverse(str: string): string;
     /**
      * 截断某段字符串
-     * @param    str        目标字符串
-     * @param    start    需要截断的起始索引
-     * @param    len        截断长度
-     * @param    order    顺序，true从字符串头部开始计算，false从字符串尾巴开始结算。
-     * @return    截断后的字符串
+     * @param str 目标字符串
+     * @param start 需要截断的起始索引
+     * @param en 截断长度
+     * @param order 顺序，true从字符串头部开始计算，false从字符串尾巴开始结算。
+     * @return 截断后的字符串
      */
     static cutOff(str: string, start: number, len: number, order?: boolean): string;
-    /**{0} 字符替换   */
+    /**
+     * {0} 字符替换
+     */
     static strReplace(str: string, rStr: string[]): string;
+    static format(str: string, ...args: any[]): string;
 }
 declare module es {
     /** 提供帧定时信息 */
