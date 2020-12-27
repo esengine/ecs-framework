@@ -27,6 +27,8 @@ module es {
          */
         public registeredPhysicsBounds: Rectangle = new Rectangle();
 
+        protected _colliderRequiresAutoSizing: boolean;
+
         public _localOffsetLength: number;
         public _isPositionDirty: boolean = true;
         public _isRotationDirty: boolean = true;
@@ -50,7 +52,7 @@ module es {
          * 封装变换。如果碰撞器没和实体一起旋转 则返回transform.rotation
          */
         public get rotation(): number {
-            if (this.shouldColliderScaleAndRotateWithTransform && this.entity)
+            if (this.shouldColliderScaleAndRotateWithTransform && this.entity != null)
                 return this.entity.transform.rotation;
 
             return 0;
@@ -90,7 +92,7 @@ module es {
          * @param offset
          */
         public setLocalOffset(offset: Vector2): Collider {
-            if (this._localOffset != offset) {
+            if (!this._localOffset.equals(offset)) {
                 this.unregisterColliderWithPhysicsSystem();
                 this._localOffset = offset;
                 this._localOffsetLength = this._localOffset.length();
@@ -112,6 +114,10 @@ module es {
         }
 
         public onAddedToEntity() {
+            if (this._colliderRequiresAutoSizing) {
+                Insist.isTrue(this instanceof BoxCollider || this instanceof CircleCollider, "只有框和圆的碰撞器可以自动创建");
+            }
+
             this._isParentEntityAddedToScene = true;
             this.registerColliderWithPhysicsSystem();
         }
