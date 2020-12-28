@@ -2241,7 +2241,7 @@ var es;
              * 封装变换。如果碰撞器没和实体一起旋转 则返回transform.rotation
              */
             get: function () {
-                if (this.shouldColliderScaleAndRotateWithTransform && this.entity)
+                if (this.shouldColliderScaleAndRotateWithTransform && this.entity != null)
                     return this.entity.transform.rotation;
                 return 0;
             },
@@ -2284,7 +2284,7 @@ var es;
          * @param offset
          */
         Collider.prototype.setLocalOffset = function (offset) {
-            if (this._localOffset != offset) {
+            if (!this._localOffset.equals(offset)) {
                 this.unregisterColliderWithPhysicsSystem();
                 this._localOffset = offset;
                 this._localOffsetLength = this._localOffset.length();
@@ -2303,6 +2303,9 @@ var es;
             return this;
         };
         Collider.prototype.onAddedToEntity = function () {
+            if (this._colliderRequiresAutoSizing) {
+                es.Insist.isTrue(this instanceof es.BoxCollider || this instanceof es.CircleCollider, "只有框和圆的碰撞器可以自动创建");
+            }
             this._isParentEntityAddedToScene = true;
             this.registerColliderWithPhysicsSystem();
         };
@@ -4447,6 +4450,23 @@ var es;
             if (t == length)
                 return 0;
             return t;
+        };
+        /**
+         * 以roundToNearest为步长，将值舍入到最接近的数字。例如：在125中找到127到最近的5个结果
+         * @param value
+         * @param roundToNearest
+         */
+        MathHelper.roundToNearest = function (value, roundToNearest) {
+            return Math.round(value / roundToNearest) * roundToNearest;
+        };
+        /**
+         * 检查传递的值是否在某个阈值之下。对于小规模、精确的比较很有用
+         * @param value
+         * @param ep
+         */
+        MathHelper.withinEpsilon = function (value, ep) {
+            if (ep === void 0) { ep = this.Epsilon; }
+            return Math.abs(value) < ep;
         };
         /**
          * 由上移量向上移。start可以小于或大于end。例如:开始是2，结束是10，移位是4，结果是6
@@ -7831,6 +7851,35 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Hash = /** @class */ (function () {
+        function Hash() {
+        }
+        /**
+         * 从一个字节数组中计算一个哈希值
+         * @param data
+         */
+        Hash.computeHash = function () {
+            var data = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                data[_i] = arguments[_i];
+            }
+            var p = 16777619;
+            var hash = 2166136261;
+            for (var i = 0; i < data.length; i++)
+                hash = (hash ^ data[i]) * p;
+            hash += hash << 13;
+            hash ^= hash >> 7;
+            hash += hash << 3;
+            hash ^= hash >> 17;
+            hash += hash << 5;
+            return hash;
+        };
+        return Hash;
+    }());
+    es.Hash = Hash;
+})(es || (es = {}));
+var es;
+(function (es) {
     /**
      * 使得number/string/boolean类型作为对象引用来进行传递
      */
@@ -10175,18 +10224,6 @@ var es;
     }());
     es.Vector2Ext = Vector2Ext;
 })(es || (es = {}));
-var WebGLUtils = /** @class */ (function () {
-    function WebGLUtils() {
-    }
-    /**
-     * 获取webgl context
-     */
-    WebGLUtils.getContext = function () {
-        var canvas = document.getElementsByTagName('canvas')[0];
-        return canvas.getContext('2d');
-    };
-    return WebGLUtils;
-}());
 var linq;
 (function (linq) {
     var Enumerable = /** @class */ (function () {

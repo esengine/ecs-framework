@@ -88,7 +88,7 @@ module es {
             return Math.atan2(to.y - from.y, to.x - from.x);
         }
 
-        public static angleToVector(angleRadians: number, length: number){
+        public static angleToVector(angleRadians: number, length: number) {
             return new Vector2(Math.cos(angleRadians) * length, Math.sin(angleRadians) * length);
         }
 
@@ -97,12 +97,30 @@ module es {
          * @param t
          * @param length
          */
-        public static incrementWithWrap(t: number, length: number){
-            t ++;
+        public static incrementWithWrap(t: number, length: number) {
+            t++;
             if (t == length)
                 return 0;
 
             return t;
+        }
+
+        /**
+         * 以roundToNearest为步长，将值舍入到最接近的数字。例如：在125中找到127到最近的5个结果
+         * @param value 
+         * @param roundToNearest 
+         */
+        public static roundToNearest(value: number, roundToNearest: number) {
+            return Math.round(value / roundToNearest) * roundToNearest;
+        }
+
+        /**
+         * 检查传递的值是否在某个阈值之下。对于小规模、精确的比较很有用
+         * @param value 
+         * @param ep 
+         */
+        public static withinEpsilon(value: number, ep: number = this.Epsilon) {
+            return Math.abs(value) < ep;
         }
 
         /**

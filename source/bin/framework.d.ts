@@ -945,6 +945,7 @@ declare module es {
          * 存储这个允许我们始终能够安全地从物理系统中移除对撞机，即使它在试图移除它之前已经被移动了。
          */
         registeredPhysicsBounds: Rectangle;
+        protected _colliderRequiresAutoSizing: boolean;
         _localOffsetLength: number;
         _isPositionDirty: boolean;
         _isRotationDirty: boolean;
@@ -1768,6 +1769,18 @@ declare module es {
          * @param length
          */
         static incrementWithWrap(t: number, length: number): number;
+        /**
+         * 以roundToNearest为步长，将值舍入到最接近的数字。例如：在125中找到127到最近的5个结果
+         * @param value
+         * @param roundToNearest
+         */
+        static roundToNearest(value: number, roundToNearest: number): number;
+        /**
+         * 检查传递的值是否在某个阈值之下。对于小规模、精确的比较很有用
+         * @param value
+         * @param ep
+         */
+        static withinEpsilon(value: number, ep?: number): boolean;
         /**
          * 由上移量向上移。start可以小于或大于end。例如:开始是2，结束是10，移位是4，结果是6
          * @param start
@@ -3067,6 +3080,15 @@ declare module es {
     }
 }
 declare module es {
+    class Hash {
+        /**
+         * 从一个字节数组中计算一个哈希值
+         * @param data
+         */
+        static computeHash(...data: number[]): number;
+    }
+}
+declare module es {
     interface IComparer<T> {
         compare(x: T, y: T): number;
     }
@@ -3975,12 +3997,6 @@ declare module es {
         static transform(sourceArray: Vector2[], matrix: Matrix2D, destinationArray: Vector2[]): void;
         static round(vec: Vector2): Vector2;
     }
-}
-declare class WebGLUtils {
-    /**
-     * 获取webgl context
-     */
-    static getContext(): CanvasRenderingContext2D;
 }
 declare module linq {
     class Enumerable {
