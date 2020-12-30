@@ -135,6 +135,15 @@ module es {
                 return true;
             }
 
+            if (typeof chain.value == 'string') {
+                if (chain.value == 'break') {
+                    Pool.free(coroutine);
+                    return false;
+                }
+
+                return true;
+            }
+
             if (chain.value instanceof CoroutineImpl) {
                 coroutine.waitForCoroutine = chain.value;
                 return true;

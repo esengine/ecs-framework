@@ -46,8 +46,7 @@ module es {
             this.name = name;
             this.id = Entity._idGenerator++;
 
-            if (Core.entitySystemsEnabled)
-                this.componentBits = new BitSet();
+            this.componentBits = new BitSet();
         }
 
         public _isDestroyed: boolean;
@@ -211,11 +210,11 @@ module es {
             } else if (parent instanceof Entity) {
                 this.transform.setParent(parent.transform);
             }
-            
+
             return this;
         }
 
-        public setPosition(x: number, y: number){
+        public setPosition(x: number, y: number) {
             this.transform.setPosition(x, y);
             return this;
         }
@@ -225,22 +224,22 @@ module es {
             return this;
         }
 
-        public setRotation(radians: number){
+        public setRotation(radians: number) {
             this.transform.setRotation(radians);
             return this;
         }
 
-        public setRotationDegrees(degrees: number){
+        public setRotationDegrees(degrees: number) {
             this.transform.setRotationDegrees(degrees);
             return this;
         }
 
-        public setLocalRotation(radians: number){
+        public setLocalRotation(radians: number) {
             this.transform.setLocalRotation(radians);
             return this;
         }
 
-        public setLocalRotationDegrees(degrees: number){
+        public setLocalRotationDegrees(degrees: number) {
             this.transform.setLocalRotationDegrees(degrees);
             return this;
         }
@@ -253,7 +252,7 @@ module es {
             } else {
                 this.transform.setScale(new Vector2(scale));
             }
-            
+
             return this;
         }
 
@@ -265,7 +264,7 @@ module es {
             } else {
                 this.transform.setLocalScale(new Vector2(scale));
             }
-            
+
             return this;
         }
 
@@ -379,6 +378,14 @@ module es {
          */
         public update() {
             this.components.update();
+        }
+
+        /**
+         * 自定义渲染器可以选择是否调用它
+         * @param batcher 
+         */
+        public debugRender(batcher: IBatcher) {
+            this.components.debugRender(batcher);
         }
 
         /**

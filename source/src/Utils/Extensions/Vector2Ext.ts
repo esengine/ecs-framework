@@ -33,6 +33,14 @@ module es {
         }
 
         /**
+         * 将x/y值翻转，并将y反转，得到垂直于x/y的值
+         * @param original 
+         */
+        public static perpendicularFlip(original: Vector2) {
+            return new Vector2(-original.y, original.x);
+        }
+
+        /**
          * 返回两个向量之间的角度，单位为度
          * @param from 
          * @param to 
@@ -95,7 +103,7 @@ module es {
          * @param length
          */
         public static transformA(sourceArray: Vector2[], sourceIndex: number, matrix: Matrix2D,
-                                 destinationArray: Vector2[], destinationIndex: number, length: number) {
+            destinationArray: Vector2[], destinationIndex: number, length: number) {
             for (let i = 0; i < length; i++) {
                 let position = sourceArray[sourceIndex + i];
                 let destination = destinationArray[destinationIndex + i];

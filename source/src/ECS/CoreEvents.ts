@@ -16,5 +16,17 @@ module es {
          * 当每帧事件触发时
          */
         FrameUpdated,
+        /**
+         * 当Core.useCustomUpdate为true时则派发该事件
+         */
+        SceneUpdated,
+        /**
+         * 当场景需要绘制时
+         */
+        CallDraw,
+        /**
+         * 当需要GC时
+         */
+        CallGC,
     }
 }

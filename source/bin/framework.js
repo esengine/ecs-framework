@@ -1,39 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -74,6 +39,28 @@ var __spread = (this && this.__spread) || function () {
     for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
     return ar;
 };
+var es;
+(function (es) {
+    /**
+     * 我们在这里存储了各种系统的默认颜色，如对撞机调试渲染、Debug.drawText等。
+     * 命名方式尽可能采用CLASS-THING，以明确它的使用位置
+     */
+    var Debug = /** @class */ (function () {
+        function Debug() {
+        }
+        Debug.debugText = 0xffffff;
+        Debug.colliderBounds = 0xffffff * 0.3;
+        Debug.colliderEdge = 0x8B0000;
+        Debug.colliderPosition = 0xFFFF00;
+        Debug.colliderCenter = 0xFF0000;
+        Debug.renderableBounds = 0xFFFF00;
+        Debug.renderableCenter = 0x9932CC;
+        Debug.verletParticle = 0xDC345E;
+        Debug.verletConstraintEdge = 0x433E36;
+        return Debug;
+    }());
+    es.Debug = Debug;
+})(es || (es = {}));
 var es;
 (function (es) {
     var Insist = /** @class */ (function () {
@@ -245,6 +232,8 @@ var es;
          */
         Component.prototype.onEntityTransformChanged = function (comp) {
         };
+        Component.prototype.debugRender = function (batcher) {
+        };
         /**
          *当父实体或此组件启用时调用
          */
@@ -279,199 +268,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    /**
-     *  全局核心类
-     */
-    var Core = /** @class */ (function () {
-        function Core(width, height, enableEntitySystems) {
-            if (enableEntitySystems === void 0) { enableEntitySystems = true; }
-            /**
-             * 全局访问系统
-             */
-            this._globalManagers = [];
-            this._coroutineManager = new es.CoroutineManager();
-            this._timerManager = new es.TimerManager();
-            this._frameCounterElapsedTime = 0;
-            this._frameCounter = 0;
-            this._totalMemory = 0;
-            this.width = width;
-            this.height = height;
-            Core._instance = this;
-            Core.emitter = new es.Emitter();
-            Core.emitter.addObserver(es.CoreEvents.FrameUpdated, this.update, this);
-            Core.registerGlobalManager(this._coroutineManager);
-            Core.registerGlobalManager(this._timerManager);
-            Core.entitySystemsEnabled = enableEntitySystems;
-            this.initialize();
-        }
-        Object.defineProperty(Core, "Instance", {
-            /**
-             * 提供对单例/游戏实例的访问
-             * @constructor
-             */
-            get: function () {
-                return this._instance;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Core, "scene", {
-            /**
-             * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
-             */
-            get: function () {
-                if (!this._instance)
-                    return null;
-                return this._instance._scene;
-            },
-            /**
-             * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
-             * @param value
-             */
-            set: function (value) {
-                if (!value) {
-                    console.error("场景不能为空");
-                    return;
-                }
-                if (this._instance._scene == null) {
-                    this._instance._scene = value;
-                    this._instance.onSceneChanged();
-                    this._instance._scene.begin();
-                }
-                else {
-                    this._instance._nextScene = value;
-                }
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /**
-         * 添加一个全局管理器对象，它的更新方法将调用场景前的每一帧。
-         * @param manager
-         */
-        Core.registerGlobalManager = function (manager) {
-            this._instance._globalManagers.push(manager);
-            manager.enabled = true;
-        };
-        /**
-         * 删除全局管理器对象
-         * @param manager
-         */
-        Core.unregisterGlobalManager = function (manager) {
-            new linq.List(this._instance._globalManagers).remove(manager);
-            manager.enabled = false;
-        };
-        /**
-         * 获取类型为T的全局管理器
-         * @param type
-         */
-        Core.getGlobalManager = function (type) {
-            for (var i = 0; i < this._instance._globalManagers.length; i++) {
-                if (this._instance._globalManagers[i] instanceof type)
-                    return this._instance._globalManagers[i];
-            }
-            return null;
-        };
-        /**
-         * 启动一个coroutine。Coroutine可以将number延时几秒或延时到其他startCoroutine.Yielding
-         * null将使coroutine在下一帧被执行。
-         * @param enumerator
-         */
-        Core.startCoroutine = function (enumerator) {
-            return this._instance._coroutineManager.startCoroutine(enumerator);
-        };
-        /**
-         * 调度一个一次性或重复的计时器，该计时器将调用已传递的动作
-         * @param timeInSeconds
-         * @param repeats
-         * @param context
-         * @param onTime
-         */
-        Core.schedule = function (timeInSeconds, repeats, context, onTime) {
-            if (repeats === void 0) { repeats = false; }
-            if (context === void 0) { context = null; }
-            return this._instance._timerManager.schedule(timeInSeconds, repeats, context, onTime);
-        };
-        Core.prototype.onOrientationChanged = function () {
-            Core.emitter.emit(es.CoreEvents.OrientationChanged);
-        };
-        Core.prototype.startDebugDraw = function () {
-            this._frameCounter++;
-            this._frameCounterElapsedTime += es.Time.deltaTime;
-            if (this._frameCounterElapsedTime >= 1) {
-                var memoryInfo = window.performance["memory"];
-                if (memoryInfo != null) {
-                    this._totalMemory = Number((memoryInfo.totalJSHeapSize / 1048576).toFixed(2));
-                }
-                if (this._titleMemory)
-                    this._titleMemory(this._totalMemory, this._frameCounter);
-                this._frameCounter = 0;
-                this._frameCounterElapsedTime -= 1;
-            }
-        };
-        /**
-         * 在一个场景结束后，下一个场景开始之前调用
-         */
-        Core.prototype.onSceneChanged = function () {
-            Core.emitter.emit(es.CoreEvents.SceneChanged);
-            es.Time.sceneChanged();
-        };
-        /**
-         * 当屏幕大小发生改变时调用
-         */
-        Core.prototype.onGraphicsDeviceReset = function () {
-            // 我们用这些来避免垃圾事件的发生
-            if (this._graphicsDeviceChangeTimer != null) {
-                this._graphicsDeviceChangeTimer.reset();
-            }
-            else {
-                this._graphicsDeviceChangeTimer = Core.schedule(0.05, false, this, function (t) {
-                    t.context._graphicsDeviceChangeTimer = null;
-                    Core.emitter.emit(es.CoreEvents.GraphicsDeviceReset);
-                });
-            }
-        };
-        Core.prototype.initialize = function () {
-        };
-        Core.prototype.update = function (currentTime) {
-            return __awaiter(this, void 0, void 0, function () {
-                var i;
-                return __generator(this, function (_a) {
-                    if (currentTime != null)
-                        es.Time.update(currentTime);
-                    if (this._scene != null) {
-                        for (i = this._globalManagers.length - 1; i >= 0; i--) {
-                            if (this._globalManagers[i].enabled)
-                                this._globalManagers[i].update();
-                        }
-                        this._scene.update();
-                        if (this._nextScene != null) {
-                            this._scene.end();
-                            this._scene = this._nextScene;
-                            this._nextScene = null;
-                            this.onSceneChanged();
-                            this._scene.begin();
-                        }
-                    }
-                    this.startDebugDraw();
-                    return [2 /*return*/];
-                });
-            });
-        };
-        /**
-         * 启用/禁用焦点丢失时的暂停。如果为真，则不调用更新或渲染方法
-         */
-        Core.pauseOnFocusLost = true;
-        /**
-         * 是否启用调试渲染
-         */
-        Core.debugRenderEndabled = false;
-        return Core;
-    }());
-    es.Core = Core;
-})(es || (es = {}));
-var es;
-(function (es) {
     var CoreEvents;
     (function (CoreEvents) {
         /**
@@ -490,6 +286,18 @@ var es;
          * 当每帧事件触发时
          */
         CoreEvents[CoreEvents["FrameUpdated"] = 3] = "FrameUpdated";
+        /**
+         * 当Core.useCustomUpdate为true时则派发该事件
+         */
+        CoreEvents[CoreEvents["SceneUpdated"] = 4] = "SceneUpdated";
+        /**
+         * 当场景需要绘制时
+         */
+        CoreEvents[CoreEvents["CallDraw"] = 5] = "CallDraw";
+        /**
+         * 当需要GC时
+         */
+        CoreEvents[CoreEvents["CallGC"] = 6] = "CallGC";
     })(CoreEvents = es.CoreEvents || (es.CoreEvents = {}));
 })(es || (es = {}));
 var es;
@@ -519,8 +327,7 @@ var es;
             this.transform = new es.Transform(this);
             this.name = name;
             this.id = Entity._idGenerator++;
-            if (es.Core.entitySystemsEnabled)
-                this.componentBits = new es.BitSet();
+            this.componentBits = new es.BitSet();
         }
         Object.defineProperty(Entity.prototype, "isDestroyed", {
             /**
@@ -853,6 +660,13 @@ var es;
             this.components.update();
         };
         /**
+         * 自定义渲染器可以选择是否调用它
+         * @param batcher
+         */
+        Entity.prototype.debugRender = function (batcher) {
+            this.components.debugRender(batcher);
+        };
+        /**
          * 将组件添加到组件列表中。返回组件。
          * @param component
          */
@@ -949,11 +763,31 @@ var es;
     var Scene = /** @class */ (function () {
         function Scene() {
             this._sceneComponents = [];
+            this._renderers = [];
+            this._afterPostProcessorRenderers = [];
             this.entities = new es.EntityList(this);
-            if (es.Core.entitySystemsEnabled)
-                this.entityProcessors = new es.EntityProcessorList();
+            this.renderableComponents = new es.RenderableComponentList();
+            this.entityProcessors = new es.EntityProcessorList();
             this.initialize();
         }
+        Object.defineProperty(Scene.prototype, "finalRenderDelegate", {
+            get: function () {
+                return this._finalRenderDelegate;
+            },
+            /**
+             * 如果设置了，最终渲染到屏幕上的时间可以推迟到这个委托。
+             * 这实际上只在最终渲染可能需要全屏大小效果的情况下有用，即使使用了一个小的后置缓冲区
+             */
+            set: function (value) {
+                if (this._finalRenderDelegate != null)
+                    this._finalRenderDelegate.unload();
+                this._finalRenderDelegate = value;
+                if (this._finalRenderDelegate != null)
+                    this._finalRenderDelegate.onAddedToScene(this);
+            },
+            enumerable: true,
+            configurable: true
+        });
         /**
          * 在场景子类中重写这个，然后在这里进行加载。
          * 在场景设置好之后，但在调用begin之前，从contructor中调用这个函数
@@ -972,30 +806,40 @@ var es;
         Scene.prototype.unload = function () {
         };
         Scene.prototype.begin = function () {
+            if (this._renderers.length == 0) {
+                console.warn("场景开始时没有渲染器");
+            }
             es.Physics.reset();
             this.updateResolutionScaler();
             if (this.entityProcessors != null)
                 this.entityProcessors.begin();
-            es.Core.emitter.addObserver(es.CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler, this);
-            es.Core.emitter.addObserver(es.CoreEvents.OrientationChanged, this.updateResolutionScaler, this);
             this._didSceneBegin = true;
             this.onStart();
         };
         Scene.prototype.end = function () {
             this._didSceneBegin = false;
-            es.Core.emitter.removeObserver(es.CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler);
-            es.Core.emitter.removeObserver(es.CoreEvents.OrientationChanged, this.updateResolutionScaler);
+            for (var i = 0; i < this._renderers.length; i++)
+                this._renderers[i].unload();
             this.entities.removeAllEntities();
             for (var i = 0; i < this._sceneComponents.length; i++) {
                 this._sceneComponents[i].onRemovedFromScene();
             }
             this._sceneComponents.length = 0;
+            this.camera = null;
             es.Physics.clear();
             if (this.entityProcessors)
                 this.entityProcessors.end();
             this.unload();
         };
         Scene.prototype.updateResolutionScaler = function () {
+        };
+        /**
+         * 下一次绘制完成后，这将克隆回缓冲区，并调用回调与clone。
+         * 注意，当使用完Texture后，你必须处理掉它
+         * @param callback
+         */
+        Scene.prototype.requestScreenshot = function (callback) {
+            this._screenshotRequestCallback = callback;
         };
         Scene.prototype.update = function () {
             // 更新我们的列表，以防它们有任何变化
@@ -1009,8 +853,51 @@ var es;
                 this.entityProcessors.update();
             // 更新我们的实体组
             this.entities.update();
+            // 我们在entity.update之后更新我们的renderables，以防止任何新的Renderables被添加
+            this.renderableComponents.updateList();
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
+        };
+        Scene.prototype.render = function () {
+            if (this._renderers.length == 0) {
+                console.error("场景中没有渲染器!");
+                return;
+            }
+            var lastRendererHadRenderTarget = false;
+            for (var i = 0; i < this._renderers.length; i++) {
+                if (lastRendererHadRenderTarget && this._renderers[i].wantsToRenderToSceneRenderTarget) {
+                    // 强制更新相机矩阵，以考虑到新的视口尺寸
+                    if (this._renderers[i].camera != null)
+                        this._renderers[i].camera.forceMatrixUpdate();
+                    this.camera && this.camera.forceMatrixUpdate();
+                }
+                this._renderers[i].render(this);
+                lastRendererHadRenderTarget = this._renderers[i].renderTexture != null;
+            }
+        };
+        /**
+         * 任何存在的PostProcessors都可以进行处理，然后我们对RenderTarget进行最后的渲染。
+         * 几乎在所有情况下，finalRenderTarget都是空的。
+         * 只有在场景转换的第一帧中，如果转换请求渲染，它才会有一个值。
+         * @param finalRenderTarget
+         */
+        Scene.prototype.postRender = function (finalRenderTarget) {
+            if (finalRenderTarget === void 0) { finalRenderTarget = null; }
+            for (var i = 0; i < this._afterPostProcessorRenderers.length; i++) {
+                if (this._afterPostProcessorRenderers[i].camera != null)
+                    this._afterPostProcessorRenderers[i].camera.forceMatrixUpdate();
+                this._afterPostProcessorRenderers[i].render(this);
+            }
+            // 如果我们有一个截图请求，在最终渲染到回缓冲区之前处理它
+            if (this._screenshotRequestCallback != null) {
+                // TODO: 实现各平台的截图方式
+                this._screenshotRequestCallback = null;
+            }
+            // 将我们的最终结果渲染到后置缓冲区，或者让我们的委托来做
+            if (this._finalRenderDelegate != null) {
+            }
+            else {
+            }
         };
         /**
          * 向组件列表添加并返回SceneComponent
@@ -1058,6 +945,54 @@ var es;
             component.onRemovedFromScene();
         };
         /**
+         * 添加一个渲染器到场景中
+         * @param renderer
+         */
+        Scene.prototype.addRenderer = function (renderer) {
+            if (renderer.wantsToRenderAfterPostProcessors) {
+                this._afterPostProcessorRenderers.push(renderer);
+                this._afterPostProcessorRenderers.sort(function (a, b) {
+                    return a.compare(b);
+                });
+            }
+            else {
+                this._renderers.push(renderer);
+                this._renderers.sort(function (a, b) {
+                    return a.compare(b);
+                });
+            }
+            renderer.onAddedToScene(this);
+            return renderer;
+        };
+        /**
+         * 得到第一个T型的渲染器
+         * @param type
+         */
+        Scene.prototype.getRenderer = function (type) {
+            for (var i = 0; i < this._renderers.length; i++) {
+                if (this._renderers[i] instanceof type)
+                    return this._renderers[i];
+            }
+            for (var i = 0; i < this._afterPostProcessorRenderers.length; i++) {
+                if (this._afterPostProcessorRenderers[i] instanceof type)
+                    return this._afterPostProcessorRenderers[i];
+            }
+            return null;
+        };
+        /**
+         * 从场景中移除渲染器
+         * @param renderer
+         */
+        Scene.prototype.removeRenderer = function (renderer) {
+            es.Insist.isTrue(new linq.List(this._renderers).contains(renderer) ||
+                new linq.List(this._afterPostProcessorRenderers).contains(renderer));
+            if (renderer.wantsToRenderAfterPostProcessors)
+                new linq.List(this._afterPostProcessorRenderers).remove(renderer);
+            else
+                new linq.List(this._renderers).remove(renderer);
+            renderer.unload();
+        };
+        /**
          * 将实体添加到此场景，并返回它
          * @param name
          */
@@ -1070,8 +1005,7 @@ var es;
          * @param entity
          */
         Scene.prototype.addEntity = function (entity) {
-            if (new linq.List(this.entities.buffer).contains(entity))
-                console.warn("\u60A8\u8BD5\u56FE\u5C06\u540C\u4E00\u5B9E\u4F53\u6DFB\u52A0\u5230\u573A\u666F\u4E24\u6B21: " + entity);
+            es.Insist.isFalse(new linq.List(this.entities.buffer).contains(entity), "\u60A8\u8BD5\u56FE\u5C06\u540C\u4E00\u5B9E\u4F53\u6DFB\u52A0\u5230\u573A\u666F\u4E24\u6B21: " + entity);
             this.entities.add(entity);
             entity.scene = this;
             for (var i = 0; i < entity.transform.childCount; i++)
@@ -1732,7 +1666,6 @@ var es;
         SceneComponent.prototype.setUpdateOrder = function (updateOrder) {
             if (this.updateOrder != updateOrder) {
                 this.updateOrder = updateOrder;
-                es.Core.scene._sceneComponents.sort(this.compare);
             }
             return this;
         };
@@ -2305,6 +2238,25 @@ var es;
         Collider.prototype.onAddedToEntity = function () {
             if (this._colliderRequiresAutoSizing) {
                 es.Insist.isTrue(this instanceof es.BoxCollider || this instanceof es.CircleCollider, "只有框和圆的碰撞器可以自动创建");
+                var renderable = this.entity.getComponent(es.RenderableComponent);
+                if (renderable == null)
+                    console.warn("Collider没有形状，也没有RenderableComponent。不知道如何确定它的大小。");
+                if (renderable != null) {
+                    var renderableBounds = renderable.bounds.clone();
+                    // 我们在这里需要大小*反比例，因为当我们自动调整Collider的大小时，它需要没有一个缩放的Renderable
+                    var width = renderableBounds.width / this.entity.transform.scale.x;
+                    var height = renderableBounds.height / this.entity.transform.scale.y;
+                    if (this instanceof es.CircleCollider) {
+                        this.radius = Math.max(width, height) * 0.5;
+                        // 获取Renderable的中心，将其转移到本地坐标，并将其作为我们碰撞器的localOffset
+                        this.localOffset = es.Vector2.subtract(renderableBounds.center, this.entity.transform.position);
+                    }
+                    else if (this instanceof es.BoxCollider) {
+                        this.width = width;
+                        this.height = height;
+                        this.localOffset = es.Vector2.subtract(renderableBounds.center, this.entity.transform.position);
+                    }
+                }
             }
             this._isParentEntityAddedToScene = true;
             this.registerColliderWithPhysicsSystem();
@@ -2402,6 +2354,13 @@ var es;
 (function (es) {
     var BoxCollider = /** @class */ (function (_super) {
         __extends(BoxCollider, _super);
+        /**
+         * 创建一个BoxCollider，并使用x/y组件作为局部Offset
+         * @param x
+         * @param y
+         * @param width
+         * @param height
+         */
         function BoxCollider(x, y, width, height) {
             var _this = _super.call(this) || this;
             _this._localOffset = new es.Vector2(x + width / 2, y + height / 2);
@@ -2434,10 +2393,12 @@ var es;
          * @param height
          */
         BoxCollider.prototype.setSize = function (width, height) {
+            this._colliderRequiresAutoSizing = false;
             var box = this.shape;
             if (width != box.width || height != box.height) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(width, height);
+                this._isPositionDirty = true;
                 if (this.entity && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
@@ -2448,10 +2409,12 @@ var es;
          * @param width
          */
         BoxCollider.prototype.setWidth = function (width) {
+            this._colliderRequiresAutoSizing = false;
             var box = this.shape;
             if (width != box.width) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(width, box.height);
+                this._isPositionDirty = true;
                 if (this.entity && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
@@ -2462,13 +2425,22 @@ var es;
          * @param height
          */
         BoxCollider.prototype.setHeight = function (height) {
+            this._colliderRequiresAutoSizing = false;
             var box = this.shape;
             if (height != box.height) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(box.width, height);
+                this._isPositionDirty = true;
                 if (this.entity && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
+        };
+        BoxCollider.prototype.debugRender = function (batcher) {
+            var poly = this.shape;
+            batcher.drawHollowRect(this.bounds, es.Debug.colliderBounds, 1);
+            batcher.drawPolygon(this.shape.position, poly.points, es.Debug.colliderEdge, true, 1);
+            batcher.drawPixel(this.entity.transform.position, es.Debug.colliderPosition, 4);
+            batcher.drawPixel(es.Vector2.add(this.entity.transform.position, this.shape.center), es.Debug.colliderCenter, 2);
         };
         BoxCollider.prototype.toString = function () {
             return "[BoxCollider: bounds: " + this.bounds + "]";
@@ -2482,7 +2454,9 @@ var es;
     var CircleCollider = /** @class */ (function (_super) {
         __extends(CircleCollider, _super);
         /**
-         * 创建一个有半径的圆
+         * 创建一个具有半径的CircleCollider。
+         * 请注意，当指定半径时，如果在实体上使用RenderableComponent，您将需要设置原点来对齐CircleCollider。
+         * 例如，如果RenderableComponent有一个0,0的原点，并且创建了一个半径为1.5f * renderable.width的CircleCollider，你可以通过设置originNormalied为中心除以缩放尺寸来偏移原点
          *
          * @param radius
          */
@@ -2506,14 +2480,22 @@ var es;
          * @param radius
          */
         CircleCollider.prototype.setRadius = function (radius) {
+            this._colliderRequiresAutoSizing = false;
             var circle = this.shape;
             if (radius != circle.radius) {
                 circle.radius = radius;
                 circle._originalRadius = radius;
-                if (this.entity && this._isParentEntityAddedToScene)
+                this._isPositionDirty = true;
+                if (this.entity != null && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
             return this;
+        };
+        CircleCollider.prototype.debugRender = function (batcher) {
+            batcher.drawHollowRect(this.bounds, es.Debug.colliderBounds, 1);
+            batcher.drawCircle(this.shape.position, this.shape.radius, es.Debug.colliderEdge, 1);
+            batcher.drawPixel(this.entity.transform.position, es.Debug.colliderPosition, 4);
+            batcher.drawPixel(this.shape.position, es.Debug.colliderCenter, 2);
         };
         CircleCollider.prototype.toString = function () {
             return "[CircleCollider: bounds: " + this.bounds + ", radius: " + this.shape.radius + "]";
@@ -2547,9 +2529,262 @@ var es;
             _this.shape = new es.Polygon(points);
             return _this;
         }
+        PolygonCollider.prototype.debugRender = function (batcher) {
+            var poly = this.shape;
+            batcher.drawHollowRect(this.bounds, es.Debug.colliderBounds, 1);
+            batcher.drawPolygon(this.shape.position, poly.points, es.Debug.colliderEdge, true, 1);
+            batcher.drawPixel(this.entity.transform.position, es.Debug.colliderPosition, 4);
+            batcher.drawPixel(this.shape.position, es.Debug.colliderCenter, 2);
+        };
         return PolygonCollider;
     }(es.Collider));
     es.PolygonCollider = PolygonCollider;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 对IRenderables进行排序的比较器。
+     * 首先按 RenderLayer 排序，然后按 LayerDepth 排序。
+     * 如果出现平局，则使用材料作为平局的断定器，以避免渲染状态的改变
+     */
+    var RenderableComparer = /** @class */ (function () {
+        function RenderableComparer() {
+        }
+        RenderableComparer.prototype.compare = function (self, other) {
+            var res = other.renderLayer - self.renderLayer;
+            if (res == 0) {
+                res = other.layerDepth - self.layerDepth;
+                if (res == 0) {
+                    if (self.material == other.material)
+                        return 0;
+                    if (other.material == null)
+                        return -1;
+                    return 1;
+                }
+            }
+            return res;
+        };
+        return RenderableComparer;
+    }());
+    es.RenderableComparer = RenderableComparer;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * IRenderable的具体实现。包含方便的方法。
+     * 非常重要！子类必须覆盖width/height或bounds! 子类必须覆盖width/height或bounds!
+     */
+    var RenderableComponent = /** @class */ (function (_super) {
+        __extends(RenderableComponent, _super);
+        function RenderableComponent() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.debugRenderEnabled = true;
+            _this._areBoundsDirty = true;
+            return _this;
+        }
+        Object.defineProperty(RenderableComponent.prototype, "width", {
+            /**
+             * 不重写bounds属性的子类必须实现这个！RenderableComponent的宽度。
+             */
+            get: function () {
+                return this.bounds.width;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "height", {
+            /**
+             * 不重写bounds属性的子类必须实现这个!
+             */
+            get: function () {
+                return this.bounds.height;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "bounds", {
+            /**
+             * 包裹此对象的AABB。用来进行相机筛选。
+             */
+            get: function () {
+                if (this._areBoundsDirty) {
+                    this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, es.Vector2.zero, this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
+                    this._areBoundsDirty = false;
+                }
+                return this._bounds;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "layerDepth", {
+            /**
+             * 标准的Batcher图层深度，0为前面，1为后面。
+             * 改变这个值会触发场景中可渲染组件列表的排序。
+             */
+            get: function () {
+                return this._layerDepth;
+            },
+            set: function (value) {
+                this.setLayerDepth(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "renderLayer", {
+            /**
+             * 较低的renderLayers在前面，较高的在后面，就像layerDepth一樣，但不是限制在0-1。
+             * 请注意，这意味着更高的renderLayers首先被发送到Batcher。
+             */
+            get: function () {
+                return this._renderLayer;
+            },
+            set: function (value) {
+                this.setRenderLayer(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "localOffset", {
+            /**
+             * 偏移。用于将多个Renderables添加到需要特定定位的实体
+             */
+            get: function () {
+                return this._localOffset;
+            },
+            set: function (value) {
+                this.setLocalOffset(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "isVisible", {
+            /**
+             * 这个Renderable的可见性。
+             * 状态的改变最终会调用onBecameVisible/onBecameInvisible方法
+             */
+            get: function () {
+                return this._isVisble;
+            },
+            set: function (value) {
+                if (this._isVisble != value) {
+                    this._isVisble = value;
+                    if (this._isVisble)
+                        this.onBecameVisible();
+                    else
+                        this.onBecameInvisible();
+                }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
+            this._areBoundsDirty = true;
+        };
+        /**
+         * 只有在没有对撞机的情况下才会渲染边界。始终在原点上渲染一个正方形
+         * @param batcher
+         */
+        RenderableComponent.prototype.debugRender = function (batcher) {
+            if (!this.debugRenderEnabled)
+                return;
+            // 如果我们没有对撞机，我们就画出我们的范围
+            if (this.entity.getComponent(es.Collider) == null)
+                batcher.drawHollowRect(this.bounds, 0xFFFF00);
+            batcher.drawPixel(this.entity.transform.position.add(this._localOffset), 0xcc3299, 4);
+        };
+        /**
+         * 当Renderable进入相机帧时被调用。
+         * 请注意，如果您的Renderer没有使用isVisibleFromCamera来进行裁剪检查，这些方法将不会被调用。
+         * 所有默认的Renderer都会这样做
+         */
+        RenderableComponent.prototype.onBecameVisible = function () {
+        };
+        /**
+         * 当渲染器退出相机帧时，将调用这些方法。
+         * 请注意，如果你的Renderer没有使用isVisibleFromCamera来进行Culling检查，这些方法将不会被调用。
+         * 所有默认的Renderer都会这样做
+         */
+        RenderableComponent.prototype.onBecameInvisible = function () {
+        };
+        RenderableComponent.prototype.onRemovedFromEntity = function () {
+        };
+        /**
+         * 如果Renderables的边界与Camera.bounds相交，则返回true。
+         * 处理isVisible标志的状态切换。在你的渲染方法中使用这个方法来决定你是否应该渲染
+         * @param camera
+         */
+        RenderableComponent.prototype.isVisibleFromCamera = function (camera) {
+            this.isVisible = camera.bounds.intersects(this.bounds);
+            return this.isVisible;
+        };
+        RenderableComponent.prototype.setMaterial = function (material) {
+            this.material = material;
+            if (this.entity != null && this.entity.scene != null)
+                this.entity.scene.renderableComponents.setRenderLayerNeedsComponentSort(this.renderLayer);
+            return this;
+        };
+        /**
+         * 标准的Batcher图层深度，0为前面，1为后面。
+         * 改变这个值会触发一种类似于renderableComponents的方法
+         * @param layerDepth
+         */
+        RenderableComponent.prototype.setLayerDepth = function (layerDepth) {
+            this._layerDepth = es.MathHelper.clamp01(layerDepth);
+            if (this.entity != null && this.entity.scene != null)
+                this.entity.scene.renderableComponents.setRenderLayerNeedsComponentSort(this.renderLayer);
+            return this;
+        };
+        /**
+        * 较低的渲染层在前面，较高的在后面
+        * @param renderLayer
+        */
+        RenderableComponent.prototype.setRenderLayer = function (renderLayer) {
+            if (renderLayer != this._renderLayer) {
+                var oldRenderLayer = this._renderLayer;
+                this._renderLayer = renderLayer;
+                // 如果该组件拥有一个实体，那么是由ComponentList管理，需要通知它改变了渲染层
+                if (this.entity && this.entity.scene)
+                    this.entity.scene.renderableComponents.updateRenderableRenderLayer(this, oldRenderLayer, this._renderLayer);
+            }
+            return this;
+        };
+        /**
+         * 偏移。用于将多个Renderables添加到需要特定定位的实体
+         * @param offset
+         */
+        RenderableComponent.prototype.setLocalOffset = function (offset) {
+            if (!this._localOffset.equals(offset)) {
+                this._localOffset = offset;
+                this._areBoundsDirty = true;
+            }
+            return this;
+        };
+        /**
+         * 用于检索一个已经铸造的Material子类的帮助程序
+         */
+        RenderableComponent.prototype.getMaterial = function () {
+            return this.material;
+        };
+        /**
+         * 先按renderLayer排序，再按layerDepth排序，最后按材质排序
+         * @param other
+         */
+        RenderableComponent.prototype.compare = function (other) {
+            var res = other.renderLayer - this.renderLayer;
+            if (res == 0) {
+                res = other.layerDepth - this.layerDepth;
+                if (res == 0) {
+                    if (this.material == other.material)
+                        return 0;
+                    if (other.material == null)
+                        return -1;
+                    return 1;
+                }
+            }
+        };
+        return RenderableComponent;
+    }(es.Component));
+    es.RenderableComponent = RenderableComponent;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -2890,10 +3125,8 @@ var es;
                     // 处理IUpdatable
                     if (es.isIUpdatable(component))
                         new linq.List(this._updatableComponents).remove(component);
-                    if (es.Core.entitySystemsEnabled) {
-                        this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
-                        this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
-                    }
+                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
+                    this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
                 }
             }
             catch (e_5_1) { e_5 = { error: e_5_1 }; }
@@ -2911,10 +3144,8 @@ var es;
                     var component = _c.value;
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
-                    if (es.Core.entitySystemsEnabled) {
-                        this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
-                        this._entity.scene.entityProcessors.onComponentAdded(this._entity);
-                    }
+                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
+                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                 }
             }
             catch (e_6_1) { e_6 = { error: e_6_1 }; }
@@ -2941,10 +3172,8 @@ var es;
                     var component = this._componentsToAdd[i];
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
-                    if (es.Core.entitySystemsEnabled) {
-                        this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
-                        this._entity.scene.entityProcessors.onComponentAdded(this._entity);
-                    }
+                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
+                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                     this._components.push(component);
                     this._tempBufferList.push(component);
                 }
@@ -2972,10 +3201,8 @@ var es;
                 return;
             if (es.isIUpdatable(component))
                 new linq.List(this._updatableComponents).remove(component);
-            if (es.Core.entitySystemsEnabled) {
-                this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
-                this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
-            }
+            this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
+            this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             component.onRemovedFromEntity();
             component.entity = null;
         };
@@ -3087,6 +3314,12 @@ var es;
         ComponentList.prototype.onEntityDisabled = function () {
             for (var i = 0; i < this._components.length; i++)
                 this._components[i].onDisabled();
+        };
+        ComponentList.prototype.debugRender = function (batcher) {
+            for (var i = 0; i < this._components.length; i++) {
+                if (this._components[i].enabled)
+                    this._components[i].debugRender(batcher);
+            }
         };
         /**
          * 组件列表的全局updateOrder排序
@@ -3261,8 +3494,7 @@ var es;
                     new linq.List(_this._entities).remove(entity);
                     entity.onRemovedFromScene();
                     entity.scene = null;
-                    if (es.Core.entitySystemsEnabled)
-                        _this.scene.entityProcessors.onEntityRemoved(entity);
+                    _this.scene.entityProcessors.onEntityRemoved(entity);
                 });
                 this._entitiesToRemove.clear();
             }
@@ -3271,8 +3503,7 @@ var es;
                     _this._entities.push(entity);
                     entity.scene = _this.scene;
                     _this.addToTagList(entity);
-                    if (es.Core.entitySystemsEnabled)
-                        _this.scene.entityProcessors.onEntityAdded(entity);
+                    _this.scene.entityProcessors.onEntityAdded(entity);
                 });
                 this._entitiesToAdded.toArray().forEach(function (entity) {
                     entity.onAddedToScene();
@@ -3603,6 +3834,91 @@ var es;
         return Matcher;
     }());
     es.Matcher = Matcher;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var RenderableComponentList = /** @class */ (function () {
+        function RenderableComponentList() {
+            /**
+             * 添加到实体的组件列表
+             */
+            this._components = [];
+            /**
+             * 通过renderLayer跟踪组件，便于检索
+             */
+            this._componentsByRenderLayer = new Map();
+            this._unsortedRenderLayers = [];
+            this._componentsNeedSort = true;
+        }
+        Object.defineProperty(RenderableComponentList.prototype, "count", {
+            get: function () {
+                return this._components.length;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RenderableComponentList.prototype.get = function (index) {
+            return this._components[index];
+        };
+        RenderableComponentList.prototype.add = function (component) {
+            this._components.push(component);
+            this.addToRenderLayerList(component, component.renderLayer);
+        };
+        RenderableComponentList.prototype.remove = function (component) {
+            new linq.List(this._components).remove(component);
+            new linq.List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);
+        };
+        RenderableComponentList.prototype.updateRenderableRenderLayer = function (component, oldRenderLayer, newRenderLayer) {
+            // 需要注意的是，在组件 "上线 "之前，renderLayer可能会发生变化
+            if (this._componentsByRenderLayer.has(oldRenderLayer) &&
+                new linq.List(this._componentsByRenderLayer.get(oldRenderLayer)).contains(component)) {
+                new linq.List(this._componentsByRenderLayer.get(oldRenderLayer)).remove(component);
+                this.addToRenderLayerList(component, newRenderLayer);
+            }
+        };
+        /**
+         * 弄脏RenderLayers排序标志，导致所有组件的重新排序
+         * @param renderLayer
+         */
+        RenderableComponentList.prototype.setRenderLayerNeedsComponentSort = function (renderLayer) {
+            if (!new linq.List(this._unsortedRenderLayers).contains(renderLayer))
+                this._unsortedRenderLayers.push(renderLayer);
+            this._componentsNeedSort = true;
+        };
+        RenderableComponentList.prototype.addToRenderLayerList = function (component, renderLayer) {
+            var list = this.componentsWithRenderLayer(renderLayer);
+            es.Insist.isFalse(new linq.List(list).contains(component), "组件renderLayer列表已经包含这个组件");
+        };
+        /**
+         * 获取所有给定renderLayer的组件。组件列表是预先排序的。
+         * @param renderLayer
+         */
+        RenderableComponentList.prototype.componentsWithRenderLayer = function (renderLayer) {
+            if (!this._componentsByRenderLayer.has(renderLayer)) {
+                this._componentsByRenderLayer.set(renderLayer, []);
+            }
+            return this._componentsByRenderLayer.get(renderLayer);
+        };
+        RenderableComponentList.prototype.updateList = function () {
+            if (this._componentsNeedSort) {
+                this._components.sort(RenderableComponentList.compareUpdatableOrder.compare);
+                this._componentsNeedSort = false;
+            }
+            if (this._unsortedRenderLayers.length > 0) {
+                for (var i = 0, count = this._unsortedRenderLayers.length; i < count; i++) {
+                    var renderLayerComponents = this._componentsByRenderLayer.get(this._unsortedRenderLayers[i]);
+                    if (renderLayerComponents) {
+                        renderLayerComponents.sort(RenderableComponentList.compareUpdatableOrder.compare);
+                    }
+                }
+                this._unsortedRenderLayers.length = 0;
+            }
+        };
+        // IRenderable列表的全局updateOrder排序
+        RenderableComponentList.compareUpdatableOrder = new es.RenderableComparer();
+        return RenderableComponentList;
+    }());
+    es.RenderableComponentList = RenderableComponentList;
 })(es || (es = {}));
 var StringUtils = /** @class */ (function () {
     function StringUtils() {
@@ -4478,6 +4794,25 @@ var es;
             if (start < end)
                 return Math.min(start + shift, end);
             return Math.max(start - shift, end);
+        };
+        /**
+         * 计算两个给定角之间的最短差值（度数）
+         * @param current
+         * @param target
+         */
+        MathHelper.deltaAngle = function (current, target) {
+            var num = this.repeat(target - current, 360);
+            if (num > 180)
+                num -= 360;
+            return num;
+        };
+        /**
+         * 循环t，使其永远不大于长度，永远不小于0
+         * @param t
+         * @param length
+         */
+        MathHelper.repeat = function (t, length) {
+            return t - Math.floor(t / length) * length;
         };
         MathHelper.Epsilon = 0.00001;
         MathHelper.Rad2Deg = 57.29578;
@@ -9124,6 +9459,13 @@ var es;
                 coroutine.waitTimer = chain.value;
                 return true;
             }
+            if (typeof chain.value == 'string') {
+                if (chain.value == 'break') {
+                    es.Pool.free(coroutine);
+                    return false;
+                }
+                return true;
+            }
             if (chain.value instanceof CoroutineImpl) {
                 coroutine.waitForCoroutine = chain.value;
                 return true;
@@ -10127,6 +10469,13 @@ var es;
          */
         Vector2Ext.perpendicular = function (first, second) {
             return new es.Vector2(-1 * (second.y - first.y), second.x - first.x);
+        };
+        /**
+         * 将x/y值翻转，并将y反转，得到垂直于x/y的值
+         * @param original
+         */
+        Vector2Ext.perpendicularFlip = function (original) {
+            return new es.Vector2(-original.y, original.x);
         };
         /**
          * 返回两个向量之间的角度，单位为度

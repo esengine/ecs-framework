@@ -86,10 +86,8 @@ module es {
                 if (isIUpdatable(component))
                     new linq.List(this._updatableComponents).remove(component);
 
-                if (Core.entitySystemsEnabled) {
-                    this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
-                    this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
-                }
+                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
+                this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             }
         }
 
@@ -98,10 +96,8 @@ module es {
                 if (isIUpdatable(component))
                     this._updatableComponents.push(component);
 
-                if (Core.entitySystemsEnabled) {
-                    this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
-                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
-                }
+                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
+                this._entity.scene.entityProcessors.onComponentAdded(this._entity);
             }
         }
 
@@ -125,10 +121,8 @@ module es {
                     if (isIUpdatable(component))
                         this._updatableComponents.push(component);
 
-                    if (Core.entitySystemsEnabled) {
-                        this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
-                        this._entity.scene.entityProcessors.onComponentAdded(this._entity);
-                    }
+                    this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
+                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
 
                     this._components.push(component);
                     this._tempBufferList.push(component);
@@ -164,10 +158,8 @@ module es {
             if (isIUpdatable(component))
                 new linq.List(this._updatableComponents).remove(component);
 
-            if (Core.entitySystemsEnabled) {
-                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
-                this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
-            }
+            this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
+            this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
 
             component.onRemovedFromEntity();
             component.entity = null;
@@ -251,6 +243,13 @@ module es {
         public onEntityDisabled() {
             for (let i = 0; i < this._components.length; i++)
                 this._components[i].onDisabled();
+        }
+
+        public debugRender(batcher: IBatcher) {
+            for (let i = 0; i < this._components.length; i++) {
+                if (this._components[i].enabled)
+                    this._components[i].debugRender(batcher);
+            }
         }
     }
 }

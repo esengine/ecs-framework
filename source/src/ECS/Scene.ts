@@ -2,22 +2,50 @@ module es {
     /** 场景 */
     export class Scene {
         /**
+         * 默认场景 摄像机
+         */
+        public camera: ICamera;
+        /**
          * 这个场景中的实体列表
          */
         public readonly entities: EntityList;
+        /** 管理当前在场景中的所有RenderableComponents的列表 Entitys */
+        public readonly renderableComponents: RenderableComponentList;
+        /**
+         * 如果设置了，最终渲染到屏幕上的时间可以推迟到这个委托。
+         * 这实际上只在最终渲染可能需要全屏大小效果的情况下有用，即使使用了一个小的后置缓冲区
+         */
+        public set finalRenderDelegate(value: IFinalRenderDelegate) {
+            if (this._finalRenderDelegate != null)
+                this._finalRenderDelegate.unload();
+
+            this._finalRenderDelegate = value;
+
+            if (this._finalRenderDelegate != null)
+                this._finalRenderDelegate.onAddedToScene(this);
+        }
+
+        public get finalRenderDelegate() {
+            return this._finalRenderDelegate;
+        }
+
+        private _finalRenderDelegate: IFinalRenderDelegate;
         /**
          * 管理所有实体处理器
          */
         public readonly entityProcessors: EntityProcessorList;
 
+        private _screenshotRequestCallback: (texture) => void;
+
         public readonly _sceneComponents: SceneComponent[] = [];
-        public _didSceneBegin;
+        public _renderers: IRenderer[] = [];
+        public readonly _afterPostProcessorRenderers: IRenderer[] = [];
+        public _didSceneBegin: boolean;
 
         constructor() {
             this.entities = new EntityList(this);
-
-            if (Core.entitySystemsEnabled)
-                this.entityProcessors = new EntityProcessorList();
+            this.renderableComponents = new RenderableComponentList();
+            this.entityProcessors = new EntityProcessorList();
 
             this.initialize();
         }
@@ -43,14 +71,15 @@ module es {
         }
 
         public begin() {
+            if (this._renderers.length == 0) {
+                console.warn("场景开始时没有渲染器");
+            }
+
             Physics.reset();
             this.updateResolutionScaler();
 
             if (this.entityProcessors != null)
                 this.entityProcessors.begin();
-
-            Core.emitter.addObserver(CoreEvents.GraphicsDeviceReset,this.updateResolutionScaler, this);
-            Core.emitter.addObserver(CoreEvents.OrientationChanged, this.updateResolutionScaler, this);
 
             this._didSceneBegin = true;
             this.onStart();
@@ -60,8 +89,8 @@ module es {
         public end() {
             this._didSceneBegin = false;
 
-            Core.emitter.removeObserver(CoreEvents.GraphicsDeviceReset, this.updateResolutionScaler);
-            Core.emitter.removeObserver(CoreEvents.OrientationChanged, this.updateResolutionScaler);
+            for (let i = 0; i < this._renderers.length; i++)
+                this._renderers[i].unload();
 
             this.entities.removeAllEntities();
 
@@ -70,6 +99,7 @@ module es {
             }
             this._sceneComponents.length = 0;
 
+            this.camera = null;
             Physics.clear();
 
             if (this.entityProcessors)
@@ -78,8 +108,17 @@ module es {
             this.unload();
         }
 
-        public updateResolutionScaler(){
+        public updateResolutionScaler() {
 
+        }
+
+        /**
+         * 下一次绘制完成后，这将克隆回缓冲区，并调用回调与clone。
+         * 注意，当使用完Texture后，你必须处理掉它
+         * @param callback 
+         */
+        public requestScreenshot(callback: (texture) => void) {
+            this._screenshotRequestCallback = callback;
         }
 
         public update() {
@@ -98,8 +137,58 @@ module es {
             // 更新我们的实体组
             this.entities.update();
 
+            // 我们在entity.update之后更新我们的renderables，以防止任何新的Renderables被添加
+            this.renderableComponents.updateList();
+
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
+        }
+
+        public render() {
+            if (this._renderers.length == 0) {
+                console.error("场景中没有渲染器!");
+                return;
+            }
+
+            let lastRendererHadRenderTarget = false;
+            for (let i = 0; i < this._renderers.length; i++) {
+                if (lastRendererHadRenderTarget && this._renderers[i].wantsToRenderToSceneRenderTarget) {
+                    // 强制更新相机矩阵，以考虑到新的视口尺寸
+                    if (this._renderers[i].camera != null)
+                        this._renderers[i].camera.forceMatrixUpdate();
+                    this.camera && this.camera.forceMatrixUpdate();
+                }
+
+                this._renderers[i].render(this);
+                lastRendererHadRenderTarget = this._renderers[i].renderTexture != null;
+            }
+        }
+
+        /**
+         * 任何存在的PostProcessors都可以进行处理，然后我们对RenderTarget进行最后的渲染。
+         * 几乎在所有情况下，finalRenderTarget都是空的。
+         * 只有在场景转换的第一帧中，如果转换请求渲染，它才会有一个值。
+         * @param finalRenderTarget 
+         */
+        public postRender(finalRenderTarget = null) {
+            for (let i = 0; i < this._afterPostProcessorRenderers.length; i++) {
+                if (this._afterPostProcessorRenderers[i].camera != null)
+                    this._afterPostProcessorRenderers[i].camera.forceMatrixUpdate();
+                this._afterPostProcessorRenderers[i].render(this);
+            }
+
+            // 如果我们有一个截图请求，在最终渲染到回缓冲区之前处理它
+            if (this._screenshotRequestCallback != null) {
+                // TODO: 实现各平台的截图方式
+                this._screenshotRequestCallback = null;
+            }
+
+            // 将我们的最终结果渲染到后置缓冲区，或者让我们的委托来做
+            if (this._finalRenderDelegate != null) {
+
+            } else {
+
+            }
         }
 
         /**
@@ -155,6 +244,62 @@ module es {
         }
 
         /**
+         * 添加一个渲染器到场景中
+         * @param renderer 
+         */
+        public addRenderer<T extends IRenderer>(renderer: T): T {
+            if (renderer.wantsToRenderAfterPostProcessors) {
+                this._afterPostProcessorRenderers.push(renderer);
+                this._afterPostProcessorRenderers.sort((a, b) => {
+                    return a.compare(b);
+                });
+            } else {
+                this._renderers.push(renderer);
+                this._renderers.sort((a, b) => {
+                    return a.compare(b);
+                });
+            }
+
+            renderer.onAddedToScene(this);
+
+            return renderer;
+        }
+
+        /**
+         * 得到第一个T型的渲染器
+         * @param type 
+         */
+        public getRenderer<T extends IRenderer>(type): T {
+            for (let i = 0; i < this._renderers.length; i++) {
+                if (this._renderers[i] instanceof type)
+                    return this._renderers[i] as T;
+            }
+
+            for (let i = 0; i < this._afterPostProcessorRenderers.length; i++) {
+                if (this._afterPostProcessorRenderers[i] instanceof type)
+                    return this._afterPostProcessorRenderers[i] as T;
+            }
+
+            return null;
+        }
+
+        /**
+         * 从场景中移除渲染器
+         * @param renderer 
+         */
+        public removeRenderer(renderer: IRenderer) {
+            Insist.isTrue(new linq.List(this._renderers).contains(renderer) ||
+                new linq.List(this._afterPostProcessorRenderers).contains(renderer));
+
+            if (renderer.wantsToRenderAfterPostProcessors)
+                new linq.List(this._afterPostProcessorRenderers).remove(renderer);
+            else
+                new linq.List(this._renderers).remove(renderer);
+
+            renderer.unload();
+        }
+
+        /**
          * 将实体添加到此场景，并返回它
          * @param name
          */
@@ -168,8 +313,7 @@ module es {
          * @param entity
          */
         public addEntity(entity: Entity) {
-            if (new linq.List(this.entities.buffer).contains(entity))
-                console.warn(`您试图将同一实体添加到场景两次: ${entity}`);
+            Insist.isFalse(new linq.List(this.entities.buffer).contains(entity), `您试图将同一实体添加到场景两次: ${entity}`);
             this.entities.add(entity);
             entity.scene = this;
 

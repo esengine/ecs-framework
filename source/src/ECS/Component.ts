@@ -78,6 +78,9 @@ module es {
         public onEntityTransformChanged(comp: transform.Component) {
         }
 
+        public debugRender(batcher: IBatcher) {
+        }
+
         /**
          *当父实体或此组件启用时调用
          */
@@ -89,7 +92,7 @@ module es {
          */
         public onDisabled() {
         }
-        
+
         public setEnabled(isEnabled: boolean) {
             if (this._enabled != isEnabled) {
                 this._enabled = isEnabled;

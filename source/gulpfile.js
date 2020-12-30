@@ -38,6 +38,7 @@ gulp.task('build', ['copy'], () => {
         gulp.src('bin/framework.d.ts')
             .pipe(gulp.dest('../extensions/behaviourTree-ai/source/lib/'))
             .pipe(gulp.dest('../extensions/ecs-star/lib/'))
+            .pipe(gulp.dest('../extensions/ecs-tween/lib/'))
             .pipe(gulp.dest('../engine_support/egret/lib/'))
     ])
 });

@@ -135,5 +135,27 @@ module es {
 
             return Math.max(start - shift, end);
         }
+
+        /**
+         * 计算两个给定角之间的最短差值（度数）
+         * @param current 
+         * @param target 
+         */
+        public static deltaAngle(current: number, target: number) {
+            let num = this.repeat(target - current, 360);
+            if (num > 180)
+                num -= 360;
+
+            return num;
+        }
+
+        /**
+         * 循环t，使其永远不大于长度，永远不小于0
+         * @param t 
+         * @param length 
+         */
+        public static repeat(t: number, length: number) {
+            return t - Math.floor(t / length) * length;
+        }
     }
 }

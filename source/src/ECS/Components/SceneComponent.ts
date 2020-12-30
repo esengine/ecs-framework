@@ -8,7 +8,7 @@ module es {
         /**
          * 如果启用了SceneComponent，则为true。状态的改变会导致调用onEnabled/onDisable。
          */
-        public get enabled(){
+        public get enabled() {
             return this._enabled;
         }
 
@@ -16,7 +16,7 @@ module es {
          * 如果启用了SceneComponent，则为true。状态的改变会导致调用onEnabled/onDisable。
          * @param value
          */
-        public set enabled(value: boolean){
+        public set enabled(value: boolean) {
             this.setEnabled(value);
         }
 
@@ -30,38 +30,38 @@ module es {
         /**
          * 在启用此SceneComponent时调用
          */
-        public onEnabled(){
+        public onEnabled() {
         }
 
         /**
          * 当禁用此SceneComponent时调用
          */
-        public onDisabled(){
+        public onDisabled() {
         }
 
         /**
          * 当该SceneComponent从场景中移除时调用
          */
-        public onRemovedFromScene(){
+        public onRemovedFromScene() {
         }
 
         /**
          * 在实体更新之前每一帧调用
          */
-        public update(){
+        public update() {
         }
 
         /**
          * 启用/禁用这个SceneComponent
          * @param isEnabled
          */
-        public setEnabled(isEnabled: boolean): SceneComponent{
-            if (this._enabled != isEnabled){
+        public setEnabled(isEnabled: boolean): SceneComponent {
+            if (this._enabled != isEnabled) {
                 this._enabled = isEnabled;
 
-                if (this._enabled){
+                if (this._enabled) {
                     this.onEnabled();
-                }else{
+                } else {
                     this.onDisabled();
                 }
             }
@@ -73,16 +73,15 @@ module es {
          * 设置SceneComponent的updateOrder并触发某种SceneComponent
          * @param updateOrder
          */
-        public setUpdateOrder(updateOrder: number){
-            if (this.updateOrder != updateOrder){
+        public setUpdateOrder(updateOrder: number) {
+            if (this.updateOrder != updateOrder) {
                 this.updateOrder = updateOrder;
-                Core.scene._sceneComponents.sort(this.compare);
             }
 
             return this;
         }
 
-        public compare(other: SceneComponent): number{
+        public compare(other: SceneComponent): number {
             return this.updateOrder - other.updateOrder;
         }
     }
