@@ -1,5 +1,8 @@
 这是一套ecs游戏框架，里面包含ECS框架用于管理场景实体，一些常用2D碰撞检测及游戏中常用的工具
 
+# 项目规划及讨论
+- [点击参与及查看](https://github.com/esengine/ecs-framework/discussions/36)
+
 ## 交流群
 点击链接加入群聊【ecs游戏框架交流】：https://jq.qq.com/?_wv=1027&k=29w1Nud6
 
