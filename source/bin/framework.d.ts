@@ -1,5 +1,56 @@
 declare module es {
     /**
+     * 用于包装事件的一个小类
+     */
+    class FuncPack {
+        /** 函数 */
+        func: Function;
+        /** 上下文 */
+        context: any;
+        constructor(func: Function, context: any);
+    }
+    /**
+     * 用于事件管理
+     */
+    class Emitter<T> {
+        private _messageTable;
+        constructor();
+        /**
+         * 开始监听项
+         * @param eventType 监听类型
+         * @param handler 监听函数
+         * @param context 监听上下文
+         */
+        addObserver(eventType: T, handler: Function, context: any): void;
+        /**
+         * 移除监听项
+         * @param eventType 事件类型
+         * @param handler 事件函数
+         */
+        removeObserver(eventType: T, handler: Function): void;
+        /**
+         * 触发该事件
+         * @param eventType 事件类型
+         * @param data 事件数据
+         */
+        emit(eventType: T, ...data: any[]): void;
+    }
+}
+declare module es {
+    /**
+     * 这里作为框架的核心件
+     * 全局函数移动到这
+     */
+    class Framework {
+        /**
+         * 核心发射器。只发出核心级别的事件
+         */
+        static emitter: Emitter<CoreEvents>;
+        static batcher: IBatcher;
+    }
+}
+declare module es {
+    /**
      * 我们在这里存储了各种系统的默认颜色，如对撞机调试渲染、Debug.drawText等。
      * 命名方式尽可能采用CLASS-THING，以明确它的使用位置
      */
@@ -96,31 +147,26 @@ declare module es {
         /**
          * 在图形设备重置时触发。当这种情况发生时，任何渲染目标或其他内容的VRAM将被擦除，需要重新生成
          */
-        GraphicsDeviceReset = 0,
+        graphicsDeviceReset = 0,
         /**
          * 当场景发生变化时触发
          */
-        SceneChanged = 1,
+        sceneChanged = 1,
         /**
          * 当设备方向改变时触发
          */
-        OrientationChanged = 2,
-        /**
-         * 当每帧事件触发时
-         */
-        FrameUpdated = 3,
+        orientationChanged = 2,
         /**
          * 当Core.useCustomUpdate为true时则派发该事件
          */
-        SceneUpdated = 4,
-        /**
-         * 当场景需要绘制时
-         */
-        CallDraw = 5,
-        /**
-         * 当需要GC时
-         */
-        CallGC = 6
+        sceneUpdated = 3,
+        addDefaultRender = 4,
+        setRenderTarget = 5,
+        clearGraphics = 6,
+        disposeRenderTarget = 7,
+        resolutionScale = 8,
+        resolutionOffset = 9,
+        createRenderTarget = 10
     }
 }
 declare module es {
@@ -309,6 +355,16 @@ declare module es {
     }
 }
 declare module es {
+    enum SceneResolutionPolicy {
+        /**
+         * 默认情况下，RenderTarget与屏幕大小匹配。RenderTarget与屏幕大小相匹配
+         */
+        none = 0,
+        /**
+         * 该应用程序采用最适合设计分辨率的宽度和高度
+         */
+        bestFit = 1
+    }
     /** 场景 */
     class Scene {
         /**
@@ -322,6 +378,10 @@ declare module es {
         /** 管理当前在场景中的所有RenderableComponents的列表 Entitys */
         readonly renderableComponents: RenderableComponentList;
         /**
+         * 如果ResolutionPolicy是完美的像素，这将被设置为为它计算的比例
+         */
+        pixelPerfectScale: number;
+        /**
          * 如果设置了，最终渲染到屏幕上的时间可以推迟到这个委托。
          * 这实际上只在最终渲染可能需要全屏大小效果的情况下有用，即使使用了一个小的后置缓冲区
          */
@@ -331,11 +391,44 @@ declare module es {
          * 管理所有实体处理器
          */
         readonly entityProcessors: EntityProcessorList;
+        /**
+         * 所有场景的默认分辨率大小
+         */
+        private static _defaultDesignResolutionSize;
+        private static _defaultDesignBleedSize;
+        /**
+         * 用于所有场景的默认分辨率策略
+         */
+        private static _defaultSceneResolutionPolicy;
+        /**
+         * 场景的解析策略
+         */
+        private _resolutionPolicy;
+        /**
+         * 场景使用的设计分辨率大小
+         */
+        private _designResolutionSize;
+        private _designBleedSize;
+        /**
+         * 这将根据分辨率策略进行设置，并用于RenderTarget的最终输出
+         */
+        private _finalRenderDestinationRect;
+        private _sceneRenderTarget;
+        private _destinationRenderTarget;
         private _screenshotRequestCallback;
         readonly _sceneComponents: SceneComponent[];
         _renderers: IRenderer[];
         readonly _afterPostProcessorRenderers: IRenderer[];
         _didSceneBegin: boolean;
+        /**
+         * 设置新场景将使用的默认设计尺寸和分辨率策略，水平/垂直Bleed仅与BestFit相关
+         * @param width
+         * @param height
+         * @param sceneResolutionPolicy
+         * @param horizontalBleed
+         * @param vertialcalBleed
+         */
+        static setDefaultDesignResolution(width: number, height: number, sceneResolutionPolicy: SceneResolutionPolicy, horizontalBleed?: number, vertialcalBleed?: number): void;
         constructor();
         /**
          * 在场景子类中重写这个，然后在这里进行加载。
@@ -1232,7 +1325,7 @@ declare module es {
          * 先按renderLayer排序，再按layerDepth排序，最后按材质排序
          * @param other
          */
-        compare(other: RenderableComponent): 1 | 0 | -1;
+        compare(other: RenderableComponent): 1 | -1 | 0;
     }
 }
 declare module es {
@@ -1761,7 +1854,7 @@ declare module es {
          */
         shouldRoundDestinations: boolean;
         disposed(): any;
-        begin(effect: any, transformationMatrix: Matrix, disableBatching: boolean): any;
+        begin(effect: any, transformationMatrix?: Matrix, disableBatching?: boolean): any;
         end(): any;
         prepRenderState(): any;
         /**
@@ -1772,7 +1865,7 @@ declare module es {
         drawHollowBounds(x: number, y: number, width: number, height: number, color: number, thickness: number): any;
         drawLine(start: Vector2, end: Vector2, color: number, thickness: any): any;
         drawLineAngle(start: Vector2, radians: number, length: number, color: number, thickness: number): any;
-        draw(texture: any, position: Vector2): any;
+        draw(texture: any, position: Vector2, color?: number, rotation?: number, origin?: Vector2, scale?: Vector2, effects?: any): any;
         flushBatch(): any;
         drawPrimitives(texture: any, baseSprite: number, batchSize: number): any;
         drawPixel(position: Vector2, color: number, size?: number): any;
@@ -3350,44 +3443,6 @@ declare module es {
     }
 }
 declare module es {
-    /**
-     * 用于包装事件的一个小类
-     */
-    class FuncPack {
-        /** 函数 */
-        func: Function;
-        /** 上下文 */
-        context: any;
-        constructor(func: Function, context: any);
-    }
-    /**
-     * 用于事件管理
-     */
-    class Emitter<T> {
-        private _messageTable;
-        constructor();
-        /**
-         * 开始监听项
-         * @param eventType 监听类型
-         * @param handler 监听函数
-         * @param context 监听上下文
-         */
-        addObserver(eventType: T, handler: Function, context: any): void;
-        /**
-         * 移除监听项
-         * @param eventType 事件类型
-         * @param handler 事件函数
-         */
-        removeObserver(eventType: T, handler: Function): void;
-        /**
-         * 触发该事件
-         * @param eventType 事件类型
-         * @param data 事件数据
-         */
-        emit(eventType: T, data?: any): void;
-    }
-}
-declare module es {
     enum Edge {
         top = 0,
         bottom = 1,
@@ -3505,12 +3560,17 @@ declare module es {
     }
 }
 declare module es {
-    /**
-     * 使得number/string/boolean类型作为对象引用来进行传递
-     */
-    class Ref<T extends number | string | boolean> {
+    class Ref<T> {
         value: T;
         constructor(value: T);
+    }
+}
+declare module es {
+    class Screen {
+        static width: number;
+        static height: number;
+        static readonly size: Vector2;
+        static readonly center: Vector2;
     }
 }
 declare module es {
@@ -4706,7 +4766,7 @@ declare module es {
          * @param a
          * @param b
          */
-        compare(a: EndPoint, b: EndPoint): 1 | 0 | -1;
+        compare(a: EndPoint, b: EndPoint): 1 | -1 | 0;
     }
 }
 declare module es {

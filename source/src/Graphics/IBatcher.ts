@@ -9,7 +9,7 @@ module es {
          */
         shouldRoundDestinations: boolean;
         disposed();
-        begin(effect, transformationMatrix: Matrix, disableBatching: boolean);
+        begin(effect, transformationMatrix?: Matrix, disableBatching?: boolean);
         end();
         prepRenderState();
         /**
@@ -20,7 +20,7 @@ module es {
         drawHollowBounds(x: number, y: number, width: number, height: number, color: number, thickness: number);
         drawLine(start: Vector2, end: Vector2, color: number, thickness);
         drawLineAngle(start: Vector2, radians: number, length: number, color: number, thickness: number);
-        draw(texture, position: Vector2);
+        draw(texture, position: Vector2, color?: number, rotation?: number, origin?: Vector2, scale?: Vector2, effects?);
         flushBatch();
         drawPrimitives(texture, baseSprite: number, batchSize: number);
         drawPixel(position: Vector2, color: number, size?: number);

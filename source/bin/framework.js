@@ -42,6 +42,92 @@ var __spread = (this && this.__spread) || function () {
 var es;
 (function (es) {
     /**
+     * 用于包装事件的一个小类
+     */
+    var FuncPack = /** @class */ (function () {
+        function FuncPack(func, context) {
+            this.func = func;
+            this.context = context;
+        }
+        return FuncPack;
+    }());
+    es.FuncPack = FuncPack;
+    /**
+     * 用于事件管理
+     */
+    var Emitter = /** @class */ (function () {
+        function Emitter() {
+            this._messageTable = new Map();
+        }
+        /**
+         * 开始监听项
+         * @param eventType 监听类型
+         * @param handler 监听函数
+         * @param context 监听上下文
+         */
+        Emitter.prototype.addObserver = function (eventType, handler, context) {
+            var list = this._messageTable.get(eventType);
+            if (!list) {
+                list = [];
+                this._messageTable.set(eventType, list);
+            }
+            if (list.findIndex(function (funcPack) { return funcPack.func == handler; }) != -1)
+                console.warn("您试图添加相同的观察者两次");
+            list.push(new FuncPack(handler, context));
+        };
+        /**
+         * 移除监听项
+         * @param eventType 事件类型
+         * @param handler 事件函数
+         */
+        Emitter.prototype.removeObserver = function (eventType, handler) {
+            var messageData = this._messageTable.get(eventType);
+            var index = messageData.findIndex(function (data) { return data.func == handler; });
+            if (index != -1)
+                new linq.List(messageData).removeAt(index);
+        };
+        /**
+         * 触发该事件
+         * @param eventType 事件类型
+         * @param data 事件数据
+         */
+        Emitter.prototype.emit = function (eventType) {
+            var data = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                data[_i - 1] = arguments[_i];
+            }
+            var list = this._messageTable.get(eventType);
+            if (list) {
+                for (var i = list.length - 1; i >= 0; i--)
+                    list[i].func.call(list[i].context, data);
+            }
+        };
+        return Emitter;
+    }());
+    es.Emitter = Emitter;
+})(es || (es = {}));
+///<reference path="./Utils/Emitter.ts" />
+var es;
+///<reference path="./Utils/Emitter.ts" />
+(function (es) {
+    /**
+     * 这里作为框架的核心件
+     * 全局函数移动到这
+     */
+    var Framework = /** @class */ (function () {
+        function Framework() {
+        }
+        /**
+         * 核心发射器。只发出核心级别的事件
+         */
+        Framework.emitter = new es.Emitter();
+        return Framework;
+    }());
+    es.Framework = Framework;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
      * 我们在这里存储了各种系统的默认颜色，如对撞机调试渲染、Debug.drawText等。
      * 命名方式尽可能采用CLASS-THING，以明确它的使用位置
      */
@@ -273,31 +359,26 @@ var es;
         /**
          * 在图形设备重置时触发。当这种情况发生时，任何渲染目标或其他内容的VRAM将被擦除，需要重新生成
          */
-        CoreEvents[CoreEvents["GraphicsDeviceReset"] = 0] = "GraphicsDeviceReset";
+        CoreEvents[CoreEvents["graphicsDeviceReset"] = 0] = "graphicsDeviceReset";
         /**
          * 当场景发生变化时触发
          */
-        CoreEvents[CoreEvents["SceneChanged"] = 1] = "SceneChanged";
+        CoreEvents[CoreEvents["sceneChanged"] = 1] = "sceneChanged";
         /**
          * 当设备方向改变时触发
          */
-        CoreEvents[CoreEvents["OrientationChanged"] = 2] = "OrientationChanged";
-        /**
-         * 当每帧事件触发时
-         */
-        CoreEvents[CoreEvents["FrameUpdated"] = 3] = "FrameUpdated";
+        CoreEvents[CoreEvents["orientationChanged"] = 2] = "orientationChanged";
         /**
          * 当Core.useCustomUpdate为true时则派发该事件
          */
-        CoreEvents[CoreEvents["SceneUpdated"] = 4] = "SceneUpdated";
-        /**
-         * 当场景需要绘制时
-         */
-        CoreEvents[CoreEvents["CallDraw"] = 5] = "CallDraw";
-        /**
-         * 当需要GC时
-         */
-        CoreEvents[CoreEvents["CallGC"] = 6] = "CallGC";
+        CoreEvents[CoreEvents["sceneUpdated"] = 3] = "sceneUpdated";
+        CoreEvents[CoreEvents["addDefaultRender"] = 4] = "addDefaultRender";
+        CoreEvents[CoreEvents["setRenderTarget"] = 5] = "setRenderTarget";
+        CoreEvents[CoreEvents["clearGraphics"] = 6] = "clearGraphics";
+        CoreEvents[CoreEvents["disposeRenderTarget"] = 7] = "disposeRenderTarget";
+        CoreEvents[CoreEvents["resolutionScale"] = 8] = "resolutionScale";
+        CoreEvents[CoreEvents["resolutionOffset"] = 9] = "resolutionOffset";
+        CoreEvents[CoreEvents["createRenderTarget"] = 10] = "createRenderTarget";
     })(CoreEvents = es.CoreEvents || (es.CoreEvents = {}));
 })(es || (es = {}));
 var es;
@@ -759,15 +840,33 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var SceneResolutionPolicy;
+    (function (SceneResolutionPolicy) {
+        /**
+         * 默认情况下，RenderTarget与屏幕大小匹配。RenderTarget与屏幕大小相匹配
+         */
+        SceneResolutionPolicy[SceneResolutionPolicy["none"] = 0] = "none";
+        /**
+         * 该应用程序采用最适合设计分辨率的宽度和高度
+         */
+        SceneResolutionPolicy[SceneResolutionPolicy["bestFit"] = 1] = "bestFit";
+    })(SceneResolutionPolicy = es.SceneResolutionPolicy || (es.SceneResolutionPolicy = {}));
     /** 场景 */
     var Scene = /** @class */ (function () {
         function Scene() {
+            /**
+             * 如果ResolutionPolicy是完美的像素，这将被设置为为它计算的比例
+             */
+            this.pixelPerfectScale = 1;
             this._sceneComponents = [];
             this._renderers = [];
             this._afterPostProcessorRenderers = [];
             this.entities = new es.EntityList(this);
             this.renderableComponents = new es.RenderableComponentList();
             this.entityProcessors = new es.EntityProcessorList();
+            this._resolutionPolicy = Scene._defaultSceneResolutionPolicy;
+            this._designResolutionSize = Scene._defaultDesignResolutionSize;
+            this._designBleedSize = Scene._defaultDesignBleedSize;
             this.initialize();
         }
         Object.defineProperty(Scene.prototype, "finalRenderDelegate", {
@@ -789,6 +888,22 @@ var es;
             configurable: true
         });
         /**
+         * 设置新场景将使用的默认设计尺寸和分辨率策略，水平/垂直Bleed仅与BestFit相关
+         * @param width
+         * @param height
+         * @param sceneResolutionPolicy
+         * @param horizontalBleed
+         * @param vertialcalBleed
+         */
+        Scene.setDefaultDesignResolution = function (width, height, sceneResolutionPolicy, horizontalBleed, vertialcalBleed) {
+            if (horizontalBleed === void 0) { horizontalBleed = 0; }
+            if (vertialcalBleed === void 0) { vertialcalBleed = 0; }
+            this._defaultDesignBleedSize = new es.Vector2(width, height);
+            this._defaultSceneResolutionPolicy = sceneResolutionPolicy;
+            if (this._defaultSceneResolutionPolicy == SceneResolutionPolicy.bestFit)
+                this._defaultDesignBleedSize = new es.Vector2(horizontalBleed, vertialcalBleed);
+        };
+        /**
          * 在场景子类中重写这个，然后在这里进行加载。
          * 在场景设置好之后，但在调用begin之前，从contructor中调用这个函数
          */
@@ -807,10 +922,14 @@ var es;
         };
         Scene.prototype.begin = function () {
             if (this._renderers.length == 0) {
+                es.Framework.emitter.emit(es.CoreEvents.addDefaultRender);
                 console.warn("场景开始时没有渲染器");
             }
             es.Physics.reset();
             this.updateResolutionScaler();
+            es.Framework.emitter.emit(es.CoreEvents.setRenderTarget, this._sceneRenderTarget);
+            es.Framework.emitter.addObserver(es.CoreEvents.graphicsDeviceReset, this.updateResolutionScaler, this);
+            es.Framework.emitter.addObserver(es.CoreEvents.orientationChanged, this.updateResolutionScaler, this);
             if (this.entityProcessors != null)
                 this.entityProcessors.begin();
             this._didSceneBegin = true;
@@ -820,18 +939,85 @@ var es;
             this._didSceneBegin = false;
             for (var i = 0; i < this._renderers.length; i++)
                 this._renderers[i].unload();
+            es.Framework.emitter.removeObserver(es.CoreEvents.graphicsDeviceReset, this.updateResolutionScaler);
             this.entities.removeAllEntities();
             for (var i = 0; i < this._sceneComponents.length; i++) {
                 this._sceneComponents[i].onRemovedFromScene();
             }
             this._sceneComponents.length = 0;
             this.camera = null;
+            es.Framework.emitter.emit(es.CoreEvents.disposeRenderTarget, this._sceneRenderTarget);
+            es.Framework.emitter.emit(es.CoreEvents.disposeRenderTarget, this._destinationRenderTarget);
             es.Physics.clear();
             if (this.entityProcessors)
                 this.entityProcessors.end();
             this.unload();
         };
         Scene.prototype.updateResolutionScaler = function () {
+            var designSize = this._designResolutionSize;
+            var screenSize = new es.Vector2(es.Screen.width, es.Screen.height);
+            var screenAspectRatio = screenSize.x / screenSize.y;
+            var renderTargetWidth = screenSize.x;
+            var renderTargetHeight = screenSize.y;
+            var resolutionScaleX = screenSize.x / designSize.x;
+            var resolutionScaleY = screenSize.y / designSize.y;
+            var rectCalculated = false;
+            // 计算PixelPerfect变体所使用的比例
+            this.pixelPerfectScale = 1;
+            if (this._resolutionPolicy != SceneResolutionPolicy.none) {
+                if (designSize.x / designSize.y > screenAspectRatio)
+                    this.pixelPerfectScale = screenSize.x / designSize.x;
+                else
+                    this.pixelPerfectScale = screenSize.y / designSize.y;
+                if (this.pixelPerfectScale == 0)
+                    this.pixelPerfectScale = 1;
+            }
+            switch (this._resolutionPolicy) {
+                case SceneResolutionPolicy.none:
+                    this._finalRenderDestinationRect.x = this._finalRenderDestinationRect.y = 0;
+                    this._finalRenderDestinationRect.width = screenSize.x;
+                    this._finalRenderDestinationRect.height = screenSize.y;
+                    rectCalculated = true;
+                    break;
+                case SceneResolutionPolicy.bestFit:
+                    var safeScaleX = screenSize.x / (designSize.x - this._designBleedSize.x);
+                    var safeScaleY = screenSize.y / (designSize.y - this._designBleedSize.y);
+                    var resolutionScale = Math.max(resolutionScaleX, resolutionScaleY);
+                    var safeScale = Math.min(safeScaleX, safeScaleY);
+                    resolutionScaleX = resolutionScaleY = Math.min(resolutionScale, safeScale);
+                    renderTargetWidth = designSize.x;
+                    renderTargetHeight = designSize.y;
+                    break;
+            }
+            // 如果我们还没有计算出一个矩形
+            if (!rectCalculated) {
+                // 计算RenderTarget的显示矩形
+                var renderWidth = designSize.x * resolutionScaleX;
+                var renderHeight = designSize.y * resolutionScaleY;
+                this._finalRenderDestinationRect = new es.Rectangle((screenSize.x - renderWidth) / 2, (screenSize.y - renderHeight) / 2, renderWidth, renderHeight);
+            }
+            // 在Input类中设置一些值，将鼠标位置转换为我们的缩放分辨率
+            var scaleX = renderTargetWidth / this._finalRenderDestinationRect.width;
+            var scaleY = renderTargetHeight / this._finalRenderDestinationRect.height;
+            es.Framework.emitter.emit(es.CoreEvents.resolutionScale, new es.Vector2(scaleX, scaleY));
+            es.Framework.emitter.emit(es.CoreEvents.resolutionOffset, this._finalRenderDestinationRect.location);
+            // 调整我们的RenderTargets大小
+            if (this._sceneRenderTarget != null)
+                es.Framework.emitter.emit(es.CoreEvents.disposeRenderTarget, this._sceneRenderTarget);
+            es.Framework.emitter.emit(es.CoreEvents.createRenderTarget, this._sceneRenderTarget, renderTargetWidth, renderTargetHeight);
+            // 只有在已经存在的情况下才会创建 destinationRenderTarget
+            if (this._destinationRenderTarget != null) {
+                es.Framework.emitter.emit(es.CoreEvents.disposeRenderTarget, this._destinationRenderTarget);
+                es.Framework.emitter.emit(es.CoreEvents.createRenderTarget, this._destinationRenderTarget, renderTargetWidth, renderTargetHeight);
+            }
+            // 通知渲染器、后处理器和FinalRenderDelegate渲染纹理尺寸的变化
+            for (var i = 0; i < this._renderers.length; i++)
+                this._renderers[i].onSceneBackBufferSizeChanged(renderTargetWidth, renderTargetHeight);
+            for (var i = 0; i < this._afterPostProcessorRenderers.length; i++)
+                this._afterPostProcessorRenderers[i].onSceneBackBufferSizeChanged(renderTargetWidth, renderTargetHeight);
+            if (this._finalRenderDelegate != null)
+                this._finalRenderDelegate.onSceneBackBufferSizeChanged(renderTargetWidth, renderTargetHeight);
+            this.camera.onSceneRenderTargetSizeChanged(renderTargetWidth, renderTargetHeight);
         };
         /**
          * 下一次绘制完成后，这将克隆回缓冲区，并调用回调与clone。
@@ -842,6 +1028,8 @@ var es;
             this._screenshotRequestCallback = callback;
         };
         Scene.prototype.update = function () {
+            // 我们在这里设置RenderTarget，这样Viewport就会与RenderTarget正确匹配
+            es.Framework.emitter.emit(es.CoreEvents.setRenderTarget, this._sceneRenderTarget);
             // 更新我们的列表，以防它们有任何变化
             this.entities.updateLists();
             for (var i = this._sceneComponents.length - 1; i >= 0; i--) {
@@ -863,9 +1051,18 @@ var es;
                 console.error("场景中没有渲染器!");
                 return;
             }
+            // 渲染器应该总是先有那些需要RenderTarget的。
+            // 他们在渲染的时候会自己清空并设置自己为当前的RenderTarget。
+            // 如果第一个Renderer想要sceneRenderTarget，我们现在就设置并清除它
+            if (this._renderers[0].wantsToRenderToSceneRenderTarget) {
+                es.Framework.emitter.emit(es.CoreEvents.setRenderTarget, this._sceneRenderTarget);
+                es.Framework.emitter.emit(es.CoreEvents.clearGraphics);
+            }
             var lastRendererHadRenderTarget = false;
             for (var i = 0; i < this._renderers.length; i++) {
                 if (lastRendererHadRenderTarget && this._renderers[i].wantsToRenderToSceneRenderTarget) {
+                    es.Framework.emitter.emit(es.CoreEvents.setRenderTarget, this._sceneRenderTarget);
+                    es.Framework.emitter.emit(es.CoreEvents.clearGraphics);
                     // 强制更新相机矩阵，以考虑到新的视口尺寸
                     if (this._renderers[i].camera != null)
                         this._renderers[i].camera.forceMatrixUpdate();
@@ -883,20 +1080,35 @@ var es;
          */
         Scene.prototype.postRender = function (finalRenderTarget) {
             if (finalRenderTarget === void 0) { finalRenderTarget = null; }
+            var enabledCounter = 0;
             for (var i = 0; i < this._afterPostProcessorRenderers.length; i++) {
+                if (i == 0) {
+                    // 我们需要在这里设置正确的RenderTarget
+                    var currentRenderTarget = es.MathHelper.isEven(enabledCounter) ? this._sceneRenderTarget : this._destinationRenderTarget;
+                    es.Framework.emitter.emit(es.CoreEvents.setRenderTarget, currentRenderTarget);
+                }
                 if (this._afterPostProcessorRenderers[i].camera != null)
                     this._afterPostProcessorRenderers[i].camera.forceMatrixUpdate();
                 this._afterPostProcessorRenderers[i].render(this);
             }
             // 如果我们有一个截图请求，在最终渲染到回缓冲区之前处理它
             if (this._screenshotRequestCallback != null) {
-                // TODO: 实现各平台的截图方式
+                var currentRenderTarget = es.MathHelper.isEven(enabledCounter) ? this._sceneRenderTarget : this._destinationRenderTarget;
+                this._screenshotRequestCallback(currentRenderTarget.value);
                 this._screenshotRequestCallback = null;
             }
             // 将我们的最终结果渲染到后置缓冲区，或者让我们的委托来做
             if (this._finalRenderDelegate != null) {
+                var currentRenderTarget = es.MathHelper.isEven(enabledCounter) ? this._sceneRenderTarget : this._destinationRenderTarget;
+                this._finalRenderDelegate.handleFinalRender(finalRenderTarget, currentRenderTarget, this._finalRenderDestinationRect);
             }
             else {
+                var currentRenderTarget = es.MathHelper.isEven(enabledCounter) ? this._sceneRenderTarget : this._destinationRenderTarget;
+                es.Framework.emitter.emit(es.CoreEvents.setRenderTarget, finalRenderTarget);
+                es.Framework.emitter.emit(es.CoreEvents.clearGraphics);
+                es.Framework.batcher.begin(null);
+                es.Framework.batcher.draw(currentRenderTarget, new es.Vector2(this._finalRenderDestinationRect.x, this._finalRenderDestinationRect.y), 0xffffff, 0, es.Vector2.zero, new es.Vector2(this._finalRenderDestinationRect.width, this._finalRenderDestinationRect.height));
+                es.Framework.batcher.end();
             }
         };
         /**
@@ -1077,6 +1289,10 @@ var es;
         Scene.prototype.getEntityProcessor = function () {
             return this.entityProcessors.getProcessor();
         };
+        /**
+         * 用于所有场景的默认分辨率策略
+         */
+        Scene._defaultSceneResolutionPolicy = SceneResolutionPolicy.none;
         return Scene;
     }());
     es.Scene = Scene;
@@ -7976,69 +8192,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    /**
-     * 用于包装事件的一个小类
-     */
-    var FuncPack = /** @class */ (function () {
-        function FuncPack(func, context) {
-            this.func = func;
-            this.context = context;
-        }
-        return FuncPack;
-    }());
-    es.FuncPack = FuncPack;
-    /**
-     * 用于事件管理
-     */
-    var Emitter = /** @class */ (function () {
-        function Emitter() {
-            this._messageTable = new Map();
-        }
-        /**
-         * 开始监听项
-         * @param eventType 监听类型
-         * @param handler 监听函数
-         * @param context 监听上下文
-         */
-        Emitter.prototype.addObserver = function (eventType, handler, context) {
-            var list = this._messageTable.get(eventType);
-            if (!list) {
-                list = [];
-                this._messageTable.set(eventType, list);
-            }
-            if (list.findIndex(function (funcPack) { return funcPack.func == handler; }) != -1)
-                console.warn("您试图添加相同的观察者两次");
-            list.push(new FuncPack(handler, context));
-        };
-        /**
-         * 移除监听项
-         * @param eventType 事件类型
-         * @param handler 事件函数
-         */
-        Emitter.prototype.removeObserver = function (eventType, handler) {
-            var messageData = this._messageTable.get(eventType);
-            var index = messageData.findIndex(function (data) { return data.func == handler; });
-            if (index != -1)
-                new linq.List(messageData).removeAt(index);
-        };
-        /**
-         * 触发该事件
-         * @param eventType 事件类型
-         * @param data 事件数据
-         */
-        Emitter.prototype.emit = function (eventType, data) {
-            var list = this._messageTable.get(eventType);
-            if (list) {
-                for (var i = list.length - 1; i >= 0; i--)
-                    list[i].func.call(list[i].context, data);
-            }
-        };
-        return Emitter;
-    }());
-    es.Emitter = Emitter;
-})(es || (es = {}));
-var es;
-(function (es) {
     var Edge;
     (function (Edge) {
         Edge[Edge["top"] = 0] = "top";
@@ -8215,9 +8368,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    /**
-     * 使得number/string/boolean类型作为对象引用来进行传递
-     */
     var Ref = /** @class */ (function () {
         function Ref(value) {
             this.value = value;
@@ -8225,6 +8375,29 @@ var es;
         return Ref;
     }());
     es.Ref = Ref;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Screen = /** @class */ (function () {
+        function Screen() {
+        }
+        Object.defineProperty(Screen, "size", {
+            get: function () {
+                return new es.Vector2(this.width, this.height);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Screen, "center", {
+            get: function () {
+                return new es.Vector2(this.width / 2, this.height / 2);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return Screen;
+    }());
+    es.Screen = Screen;
 })(es || (es = {}));
 var es;
 (function (es) {

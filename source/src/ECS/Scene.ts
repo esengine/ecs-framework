@@ -1,4 +1,15 @@
 module es {
+    export enum SceneResolutionPolicy {
+        /**
+         * 默认情况下，RenderTarget与屏幕大小匹配。RenderTarget与屏幕大小相匹配
+         */
+        none,
+        /**
+         * 该应用程序采用最适合设计分辨率的宽度和高度
+         */
+        bestFit
+    }
+
     /** 场景 */
     export class Scene {
         /**
@@ -11,6 +22,10 @@ module es {
         public readonly entities: EntityList;
         /** 管理当前在场景中的所有RenderableComponents的列表 Entitys */
         public readonly renderableComponents: RenderableComponentList;
+        /**
+         * 如果ResolutionPolicy是完美的像素，这将被设置为为它计算的比例
+         */
+        public pixelPerfectScale: number = 1;
         /**
          * 如果设置了，最终渲染到屏幕上的时间可以推迟到这个委托。
          * 这实际上只在最终渲染可能需要全屏大小效果的情况下有用，即使使用了一个小的后置缓冲区
@@ -34,7 +49,31 @@ module es {
          * 管理所有实体处理器
          */
         public readonly entityProcessors: EntityProcessorList;
+        /**
+         * 所有场景的默认分辨率大小
+         */
+        private static _defaultDesignResolutionSize: Vector2;
+        private static _defaultDesignBleedSize: Vector2;
+        /**
+         * 用于所有场景的默认分辨率策略
+         */
+        private static _defaultSceneResolutionPolicy: SceneResolutionPolicy = SceneResolutionPolicy.none;
+        /**
+         * 场景的解析策略
+         */
+        private _resolutionPolicy: SceneResolutionPolicy;
+        /**
+         * 场景使用的设计分辨率大小
+         */
+        private _designResolutionSize: Vector2;
+        private _designBleedSize: Vector2;
+        /**
+         * 这将根据分辨率策略进行设置，并用于RenderTarget的最终输出
+         */
+        private _finalRenderDestinationRect: Rectangle;
 
+        private _sceneRenderTarget: Ref<any>;
+        private _destinationRenderTarget: Ref<any>;
         private _screenshotRequestCallback: (texture) => void;
 
         public readonly _sceneComponents: SceneComponent[] = [];
@@ -42,10 +81,31 @@ module es {
         public readonly _afterPostProcessorRenderers: IRenderer[] = [];
         public _didSceneBegin: boolean;
 
+        /**
+         * 设置新场景将使用的默认设计尺寸和分辨率策略，水平/垂直Bleed仅与BestFit相关
+         * @param width 
+         * @param height 
+         * @param sceneResolutionPolicy 
+         * @param horizontalBleed 
+         * @param vertialcalBleed 
+         */
+        public static setDefaultDesignResolution(width: number, height: number,
+            sceneResolutionPolicy: SceneResolutionPolicy,
+            horizontalBleed: number = 0, vertialcalBleed: number = 0) {
+            this._defaultDesignBleedSize = new Vector2(width, height);
+            this._defaultSceneResolutionPolicy = sceneResolutionPolicy;
+            if (this._defaultSceneResolutionPolicy == SceneResolutionPolicy.bestFit)
+                this._defaultDesignBleedSize = new Vector2(horizontalBleed, vertialcalBleed);
+        }
+
         constructor() {
             this.entities = new EntityList(this);
             this.renderableComponents = new RenderableComponentList();
             this.entityProcessors = new EntityProcessorList();
+
+            this._resolutionPolicy = Scene._defaultSceneResolutionPolicy;
+            this._designResolutionSize = Scene._defaultDesignResolutionSize;
+            this._designBleedSize = Scene._defaultDesignBleedSize;
 
             this.initialize();
         }
@@ -72,11 +132,15 @@ module es {
 
         public begin() {
             if (this._renderers.length == 0) {
+                Framework.emitter.emit(CoreEvents.addDefaultRender);
                 console.warn("场景开始时没有渲染器");
             }
 
             Physics.reset();
             this.updateResolutionScaler();
+            Framework.emitter.emit(CoreEvents.setRenderTarget, this._sceneRenderTarget);
+            Framework.emitter.addObserver(CoreEvents.graphicsDeviceReset, this.updateResolutionScaler, this);
+            Framework.emitter.addObserver(CoreEvents.orientationChanged, this.updateResolutionScaler, this);
 
             if (this.entityProcessors != null)
                 this.entityProcessors.begin();
@@ -92,6 +156,7 @@ module es {
             for (let i = 0; i < this._renderers.length; i++)
                 this._renderers[i].unload();
 
+            Framework.emitter.removeObserver(CoreEvents.graphicsDeviceReset, this.updateResolutionScaler);
             this.entities.removeAllEntities();
 
             for (let i = 0; i < this._sceneComponents.length; i++) {
@@ -100,6 +165,8 @@ module es {
             this._sceneComponents.length = 0;
 
             this.camera = null;
+            Framework.emitter.emit(CoreEvents.disposeRenderTarget, this._sceneRenderTarget);
+            Framework.emitter.emit(CoreEvents.disposeRenderTarget, this._destinationRenderTarget);
             Physics.clear();
 
             if (this.entityProcessors)
@@ -109,7 +176,91 @@ module es {
         }
 
         public updateResolutionScaler() {
+            let designSize = this._designResolutionSize;
+            let screenSize = new Vector2(Screen.width, Screen.height);
+            let screenAspectRatio = screenSize.x / screenSize.y;
 
+            let renderTargetWidth = screenSize.x;
+            let renderTargetHeight = screenSize.y;
+
+            let resolutionScaleX = screenSize.x / designSize.x;
+            let resolutionScaleY = screenSize.y / designSize.y;
+
+            let rectCalculated = false;
+
+            // 计算PixelPerfect变体所使用的比例
+            this.pixelPerfectScale = 1;
+            if (this._resolutionPolicy != SceneResolutionPolicy.none) {
+                if (designSize.x / designSize.y > screenAspectRatio)
+                    this.pixelPerfectScale = screenSize.x / designSize.x;
+                else
+                    this.pixelPerfectScale = screenSize.y / designSize.y;
+
+                if (this.pixelPerfectScale == 0)
+                    this.pixelPerfectScale = 1;
+            }
+
+            switch (this._resolutionPolicy) {
+                case SceneResolutionPolicy.none:
+                    this._finalRenderDestinationRect.x = this._finalRenderDestinationRect.y = 0;
+                    this._finalRenderDestinationRect.width = screenSize.x;
+                    this._finalRenderDestinationRect.height = screenSize.y;
+                    rectCalculated = true;
+                    break;
+                case SceneResolutionPolicy.bestFit:
+                    let safeScaleX = screenSize.x / (designSize.x - this._designBleedSize.x);
+                    let safeScaleY = screenSize.y / (designSize.y - this._designBleedSize.y);
+
+                    let resolutionScale = Math.max(resolutionScaleX, resolutionScaleY);
+                    let safeScale = Math.min(safeScaleX, safeScaleY);
+
+                    resolutionScaleX = resolutionScaleY = Math.min(resolutionScale, safeScale);
+
+                    renderTargetWidth = designSize.x;
+                    renderTargetHeight = designSize.y;
+
+                    break;
+            }
+
+            // 如果我们还没有计算出一个矩形
+            if (!rectCalculated) {
+                // 计算RenderTarget的显示矩形
+                let renderWidth = designSize.x * resolutionScaleX;
+                let renderHeight = designSize.y * resolutionScaleY;
+
+                this._finalRenderDestinationRect = new Rectangle((screenSize.x - renderWidth) / 2,
+                    (screenSize.y - renderHeight) / 2, renderWidth, renderHeight);
+            }
+
+            // 在Input类中设置一些值，将鼠标位置转换为我们的缩放分辨率
+            let scaleX = renderTargetWidth / this._finalRenderDestinationRect.width;
+            let scaleY = renderTargetHeight / this._finalRenderDestinationRect.height;
+
+            Framework.emitter.emit(CoreEvents.resolutionScale, new Vector2(scaleX, scaleY));
+            Framework.emitter.emit(CoreEvents.resolutionOffset, this._finalRenderDestinationRect.location);
+
+            // 调整我们的RenderTargets大小
+            if (this._sceneRenderTarget != null)
+                Framework.emitter.emit(CoreEvents.disposeRenderTarget, this._sceneRenderTarget);
+            Framework.emitter.emit(CoreEvents.createRenderTarget, this._sceneRenderTarget, renderTargetWidth, renderTargetHeight);
+
+            // 只有在已经存在的情况下才会创建 destinationRenderTarget
+            if (this._destinationRenderTarget != null) {
+                Framework.emitter.emit(CoreEvents.disposeRenderTarget, this._destinationRenderTarget);
+                Framework.emitter.emit(CoreEvents.createRenderTarget, this._destinationRenderTarget, renderTargetWidth, renderTargetHeight);
+            }
+
+            // 通知渲染器、后处理器和FinalRenderDelegate渲染纹理尺寸的变化
+            for (let i = 0; i < this._renderers.length; i++)
+                this._renderers[i].onSceneBackBufferSizeChanged(renderTargetWidth, renderTargetHeight);
+
+            for (let i = 0; i < this._afterPostProcessorRenderers.length; i++)
+                this._afterPostProcessorRenderers[i].onSceneBackBufferSizeChanged(renderTargetWidth, renderTargetHeight);
+
+            if (this._finalRenderDelegate != null)
+                this._finalRenderDelegate.onSceneBackBufferSizeChanged(renderTargetWidth, renderTargetHeight);
+
+            this.camera.onSceneRenderTargetSizeChanged(renderTargetWidth, renderTargetHeight);
         }
 
         /**
@@ -122,6 +273,9 @@ module es {
         }
 
         public update() {
+            // 我们在这里设置RenderTarget，这样Viewport就会与RenderTarget正确匹配
+            Framework.emitter.emit(CoreEvents.setRenderTarget, this._sceneRenderTarget);
+
             // 更新我们的列表，以防它们有任何变化
             this.entities.updateLists();
 
@@ -150,9 +304,20 @@ module es {
                 return;
             }
 
+            // 渲染器应该总是先有那些需要RenderTarget的。
+            // 他们在渲染的时候会自己清空并设置自己为当前的RenderTarget。
+            // 如果第一个Renderer想要sceneRenderTarget，我们现在就设置并清除它
+            if (this._renderers[0].wantsToRenderToSceneRenderTarget) {
+                Framework.emitter.emit(CoreEvents.setRenderTarget, this._sceneRenderTarget);
+                Framework.emitter.emit(CoreEvents.clearGraphics);
+            }
+
             let lastRendererHadRenderTarget = false;
             for (let i = 0; i < this._renderers.length; i++) {
                 if (lastRendererHadRenderTarget && this._renderers[i].wantsToRenderToSceneRenderTarget) {
+                    Framework.emitter.emit(CoreEvents.setRenderTarget, this._sceneRenderTarget);
+                    Framework.emitter.emit(CoreEvents.clearGraphics);
+
                     // 强制更新相机矩阵，以考虑到新的视口尺寸
                     if (this._renderers[i].camera != null)
                         this._renderers[i].camera.forceMatrixUpdate();
@@ -171,7 +336,15 @@ module es {
          * @param finalRenderTarget 
          */
         public postRender(finalRenderTarget = null) {
+            let enabledCounter = 0;
+
             for (let i = 0; i < this._afterPostProcessorRenderers.length; i++) {
+                if (i == 0) {
+                    // 我们需要在这里设置正确的RenderTarget
+                    let currentRenderTarget = MathHelper.isEven(enabledCounter) ? this._sceneRenderTarget : this._destinationRenderTarget;
+                    Framework.emitter.emit(CoreEvents.setRenderTarget, currentRenderTarget);
+                }
+
                 if (this._afterPostProcessorRenderers[i].camera != null)
                     this._afterPostProcessorRenderers[i].camera.forceMatrixUpdate();
                 this._afterPostProcessorRenderers[i].render(this);
@@ -179,15 +352,28 @@ module es {
 
             // 如果我们有一个截图请求，在最终渲染到回缓冲区之前处理它
             if (this._screenshotRequestCallback != null) {
-                // TODO: 实现各平台的截图方式
+                let currentRenderTarget = MathHelper.isEven(enabledCounter) ? this._sceneRenderTarget : this._destinationRenderTarget;
+                this._screenshotRequestCallback(currentRenderTarget.value);
                 this._screenshotRequestCallback = null;
             }
 
             // 将我们的最终结果渲染到后置缓冲区，或者让我们的委托来做
             if (this._finalRenderDelegate != null) {
-
+                let currentRenderTarget = MathHelper.isEven(enabledCounter) ? this._sceneRenderTarget : this._destinationRenderTarget;
+                this._finalRenderDelegate.handleFinalRender(finalRenderTarget, currentRenderTarget, this._finalRenderDestinationRect);
             } else {
+                let currentRenderTarget = MathHelper.isEven(enabledCounter) ? this._sceneRenderTarget : this._destinationRenderTarget;
+                Framework.emitter.emit(CoreEvents.setRenderTarget, finalRenderTarget);
+                Framework.emitter.emit(CoreEvents.clearGraphics);
 
+                Framework.batcher.begin(null);
+                Framework.batcher.draw(currentRenderTarget,
+                    new Vector2(this._finalRenderDestinationRect.x, this._finalRenderDestinationRect.y),
+                    0xffffff,
+                    0,
+                    Vector2.zero,
+                    new Vector2(this._finalRenderDestinationRect.width, this._finalRenderDestinationRect.height));
+                Framework.batcher.end();
             }
         }
 

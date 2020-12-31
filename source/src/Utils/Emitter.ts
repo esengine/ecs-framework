@@ -59,7 +59,7 @@ module es {
          * @param eventType 事件类型
          * @param data 事件数据
          */
-        public emit(eventType: T, data?: any) {
+        public emit(eventType: T, ...data: any[]) {
             let list: FuncPack[] = this._messageTable.get(eventType);
             if (list) {
                 for (let i = list.length - 1; i >= 0; i--)
