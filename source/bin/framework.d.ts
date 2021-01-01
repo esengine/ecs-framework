@@ -166,7 +166,8 @@ declare module es {
         disposeRenderTarget = 7,
         resolutionScale = 8,
         resolutionOffset = 9,
-        createRenderTarget = 10
+        createRenderTarget = 10,
+        createCamera = 11
     }
 }
 declare module es {
@@ -352,6 +353,154 @@ declare module es {
         equals(other: Entity): boolean;
         getHashCode(): number;
         toString(): string;
+    }
+}
+declare module es {
+    /** 2d 向量 */
+    class Vector2 implements IEquatable<Vector2> {
+        x: number;
+        y: number;
+        /**
+         * 从两个值构造一个带有X和Y的二维向量。
+         * @param x 二维空间中的x坐标
+         * @param y 二维空间的y坐标
+         */
+        constructor(x?: number, y?: number);
+        static readonly zero: Vector2;
+        static readonly one: Vector2;
+        static readonly unitX: Vector2;
+        static readonly unitY: Vector2;
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
+        static add(value1: Vector2, value2: Vector2): Vector2;
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
+        static divide(value1: Vector2, value2: Vector2): Vector2;
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
+        static multiply(value1: Vector2, value2: Vector2): Vector2;
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
+        static subtract(value1: Vector2, value2: Vector2): Vector2;
+        /**
+         * 创建一个新的Vector2
+         * 它包含来自另一个向量的标准化值。
+         * @param value
+         */
+        static normalize(value: Vector2): Vector2;
+        /**
+         * 返回两个向量的点积
+         * @param value1
+         * @param value2
+         */
+        static dot(value1: Vector2, value2: Vector2): number;
+        /**
+         * 返回两个向量之间距离的平方
+         * @param value1
+         * @param value2
+         */
+        static distanceSquared(value1: Vector2, value2: Vector2): number;
+        /**
+         * 将指定的值限制在一个范围内
+         * @param value1
+         * @param min
+         * @param max
+         */
+        static clamp(value1: Vector2, min: Vector2, max: Vector2): Vector2;
+        /**
+         * 创建一个新的Vector2，其中包含指定向量的线性插值
+         * @param value1 第一个向量
+         * @param value2 第二个向量
+         * @param amount 加权值(0.0-1.0之间)
+         * @returns 指定向量的线性插值结果
+         */
+        static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
+        /**
+         * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换。
+         * @param position
+         * @param matrix
+         */
+        static transform(position: Vector2, matrix: Matrix2D): Vector2;
+        /**
+         * 返回两个向量之间的距离
+         * @param value1
+         * @param value2
+         * @returns 两个向量之间的距离
+         */
+        static distance(value1: Vector2, value2: Vector2): number;
+        /**
+         * 返回两个向量之间的角度，单位是度数
+         * @param from
+         * @param to
+         */
+        static angle(from: Vector2, to: Vector2): number;
+        /**
+         * 创建一个包含指定向量反转的新Vector2
+         * @param value
+         * @returns 矢量反演的结果
+         */
+        static negate(value: Vector2): Vector2;
+        /**
+         *
+         * @param value
+         */
+        add(value: Vector2): Vector2;
+        /**
+         *
+         * @param value
+         */
+        divide(value: Vector2): Vector2;
+        /**
+         *
+         * @param value
+         */
+        multiply(value: Vector2): Vector2;
+        /**
+         * 从当前Vector2减去一个Vector2
+         * @param value 要减去的Vector2
+         * @returns 当前Vector2
+         */
+        subtract(value: Vector2): this;
+        /**
+         * 将这个Vector2变成一个方向相同的单位向量
+         */
+        normalize(): void;
+        /** 返回它的长度 */
+        length(): number;
+        /**
+         * 返回该Vector2的平方长度
+         * @returns 这个Vector2的平方长度
+         */
+        lengthSquared(): number;
+        /**
+         * 四舍五入X和Y值
+         */
+        round(): Vector2;
+        /**
+         * 返回以自己为中心点的左右角，单位为度
+         * @param left
+         * @param right
+         */
+        angleBetween(left: Vector2, right: Vector2): number;
+        /**
+         * 比较当前实例是否等于指定的对象
+         * @param other 要比较的对象
+         * @returns 如果实例相同true 否则false
+         */
+        equals(other: Vector2 | object): boolean;
+        clone(): Vector2;
     }
 }
 declare module es {
@@ -2633,154 +2782,6 @@ declare module es {
          * 将余数重置为0
          */
         reset(): void;
-    }
-}
-declare module es {
-    /** 2d 向量 */
-    class Vector2 implements IEquatable<Vector2> {
-        x: number;
-        y: number;
-        /**
-         * 从两个值构造一个带有X和Y的二维向量。
-         * @param x 二维空间中的x坐标
-         * @param y 二维空间的y坐标
-         */
-        constructor(x?: number, y?: number);
-        static readonly zero: Vector2;
-        static readonly one: Vector2;
-        static readonly unitX: Vector2;
-        static readonly unitY: Vector2;
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        static add(value1: Vector2, value2: Vector2): Vector2;
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        static divide(value1: Vector2, value2: Vector2): Vector2;
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        static multiply(value1: Vector2, value2: Vector2): Vector2;
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        static subtract(value1: Vector2, value2: Vector2): Vector2;
-        /**
-         * 创建一个新的Vector2
-         * 它包含来自另一个向量的标准化值。
-         * @param value
-         */
-        static normalize(value: Vector2): Vector2;
-        /**
-         * 返回两个向量的点积
-         * @param value1
-         * @param value2
-         */
-        static dot(value1: Vector2, value2: Vector2): number;
-        /**
-         * 返回两个向量之间距离的平方
-         * @param value1
-         * @param value2
-         */
-        static distanceSquared(value1: Vector2, value2: Vector2): number;
-        /**
-         * 将指定的值限制在一个范围内
-         * @param value1
-         * @param min
-         * @param max
-         */
-        static clamp(value1: Vector2, min: Vector2, max: Vector2): Vector2;
-        /**
-         * 创建一个新的Vector2，其中包含指定向量的线性插值
-         * @param value1 第一个向量
-         * @param value2 第二个向量
-         * @param amount 加权值(0.0-1.0之间)
-         * @returns 指定向量的线性插值结果
-         */
-        static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
-        /**
-         * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换。
-         * @param position
-         * @param matrix
-         */
-        static transform(position: Vector2, matrix: Matrix2D): Vector2;
-        /**
-         * 返回两个向量之间的距离
-         * @param value1
-         * @param value2
-         * @returns 两个向量之间的距离
-         */
-        static distance(value1: Vector2, value2: Vector2): number;
-        /**
-         * 返回两个向量之间的角度，单位是度数
-         * @param from
-         * @param to
-         */
-        static angle(from: Vector2, to: Vector2): number;
-        /**
-         * 创建一个包含指定向量反转的新Vector2
-         * @param value
-         * @returns 矢量反演的结果
-         */
-        static negate(value: Vector2): Vector2;
-        /**
-         *
-         * @param value
-         */
-        add(value: Vector2): Vector2;
-        /**
-         *
-         * @param value
-         */
-        divide(value: Vector2): Vector2;
-        /**
-         *
-         * @param value
-         */
-        multiply(value: Vector2): Vector2;
-        /**
-         * 从当前Vector2减去一个Vector2
-         * @param value 要减去的Vector2
-         * @returns 当前Vector2
-         */
-        subtract(value: Vector2): this;
-        /**
-         * 将这个Vector2变成一个方向相同的单位向量
-         */
-        normalize(): void;
-        /** 返回它的长度 */
-        length(): number;
-        /**
-         * 返回该Vector2的平方长度
-         * @returns 这个Vector2的平方长度
-         */
-        lengthSquared(): number;
-        /**
-         * 四舍五入X和Y值
-         */
-        round(): Vector2;
-        /**
-         * 返回以自己为中心点的左右角，单位为度
-         * @param left
-         * @param right
-         */
-        angleBetween(left: Vector2, right: Vector2): number;
-        /**
-         * 比较当前实例是否等于指定的对象
-         * @param other 要比较的对象
-         * @returns 如果实例相同true 否则false
-         */
-        equals(other: Vector2 | object): boolean;
-        clone(): Vector2;
     }
 }
 declare module es {

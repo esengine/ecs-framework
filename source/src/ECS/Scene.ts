@@ -1,3 +1,4 @@
+///<reference path="../Math/Vector2.ts" />
 module es {
     export enum SceneResolutionPolicy {
         /**
@@ -52,8 +53,8 @@ module es {
         /**
          * 所有场景的默认分辨率大小
          */
-        private static _defaultDesignResolutionSize: Vector2;
-        private static _defaultDesignBleedSize: Vector2;
+        private static _defaultDesignResolutionSize: Vector2 = Vector2.zero;
+        private static _defaultDesignBleedSize: Vector2 = Vector2.zero;
         /**
          * 用于所有场景的默认分辨率策略
          */
@@ -65,15 +66,15 @@ module es {
         /**
          * 场景使用的设计分辨率大小
          */
-        private _designResolutionSize: Vector2;
-        private _designBleedSize: Vector2;
+        private _designResolutionSize: Vector2 = Vector2.zero;
+        private _designBleedSize: Vector2 = Vector2.zero;
         /**
          * 这将根据分辨率策略进行设置，并用于RenderTarget的最终输出
          */
-        private _finalRenderDestinationRect: Rectangle;
+        private _finalRenderDestinationRect: Rectangle = Rectangle.empty;
 
-        private _sceneRenderTarget: Ref<any>;
-        private _destinationRenderTarget: Ref<any>;
+        private _sceneRenderTarget: Ref<any> = new Ref(null);
+        private _destinationRenderTarget: Ref<any> = new Ref(null);
         private _screenshotRequestCallback: (texture) => void;
 
         public readonly _sceneComponents: SceneComponent[] = [];
@@ -102,6 +103,8 @@ module es {
             this.entities = new EntityList(this);
             this.renderableComponents = new RenderableComponentList();
             this.entityProcessors = new EntityProcessorList();
+
+            Framework.emitter.emit(CoreEvents.createCamera, this);
 
             this._resolutionPolicy = Scene._defaultSceneResolutionPolicy;
             this._designResolutionSize = Scene._defaultDesignResolutionSize;

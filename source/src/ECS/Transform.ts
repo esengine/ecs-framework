@@ -8,10 +8,10 @@ module transform {
 
 module es {
     export enum DirtyType {
-        clean,
-        positionDirty,
-        scaleDirty,
-        rotationDirty,
+        clean = 0,
+        positionDirty = 1,
+        scaleDirty = 2,
+        rotationDirty = 4,
     }
 
     export class Transform {

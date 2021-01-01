@@ -13,3 +13,6 @@
 [submodule "engine_support/egret"]
 	path = engine_support/egret
 	url = https://github.com/esengine/egret-ecs-ext.git
+[submodule "extensions/ecs-tween"]
+	path = extensions/ecs-tween
+	url = https://github.com/esengine/ecs-tween

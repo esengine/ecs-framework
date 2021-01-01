@@ -1,24 +1,4 @@
 "use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __values = (this && this.__values) || function (o) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
-    if (m) return m.call(o);
-    return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-};
 var __read = (this && this.__read) || function (o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
     if (!m) return o;
@@ -38,6 +18,26 @@ var __read = (this && this.__read) || function (o, n) {
 var __spread = (this && this.__spread) || function () {
     for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
     return ar;
+};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __values = (this && this.__values) || function (o) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
+    if (m) return m.call(o);
+    return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
 };
 var es;
 (function (es) {
@@ -96,10 +96,11 @@ var es;
             for (var _i = 1; _i < arguments.length; _i++) {
                 data[_i - 1] = arguments[_i];
             }
+            var _a;
             var list = this._messageTable.get(eventType);
             if (list) {
                 for (var i = list.length - 1; i >= 0; i--)
-                    list[i].func.call(list[i].context, data);
+                    (_a = list[i].func).call.apply(_a, __spread([list[i].context], data));
             }
         };
         return Emitter;
@@ -379,6 +380,7 @@ var es;
         CoreEvents[CoreEvents["resolutionScale"] = 8] = "resolutionScale";
         CoreEvents[CoreEvents["resolutionOffset"] = 9] = "resolutionOffset";
         CoreEvents[CoreEvents["createRenderTarget"] = 10] = "createRenderTarget";
+        CoreEvents[CoreEvents["createCamera"] = 11] = "createCamera";
     })(CoreEvents = es.CoreEvents || (es.CoreEvents = {}));
 })(es || (es = {}));
 var es;
@@ -840,6 +842,271 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /** 2d 向量 */
+    var Vector2 = /** @class */ (function () {
+        /**
+         * 从两个值构造一个带有X和Y的二维向量。
+         * @param x 二维空间中的x坐标
+         * @param y 二维空间的y坐标
+         */
+        function Vector2(x, y) {
+            this.x = 0;
+            this.y = 0;
+            this.x = x ? x : 0;
+            this.y = y != undefined ? y : this.x;
+        }
+        Object.defineProperty(Vector2, "zero", {
+            get: function () {
+                return new Vector2(0, 0);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Vector2, "one", {
+            get: function () {
+                return new Vector2(1, 1);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Vector2, "unitX", {
+            get: function () {
+                return new Vector2(1, 0);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Vector2, "unitY", {
+            get: function () {
+                return new Vector2(0, 1);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
+        Vector2.add = function (value1, value2) {
+            var result = Vector2.zero;
+            result.x = value1.x + value2.x;
+            result.y = value1.y + value2.y;
+            return result;
+        };
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
+        Vector2.divide = function (value1, value2) {
+            var result = Vector2.zero;
+            result.x = value1.x / value2.x;
+            result.y = value1.y / value2.y;
+            return result;
+        };
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
+        Vector2.multiply = function (value1, value2) {
+            var result = new Vector2(0, 0);
+            result.x = value1.x * value2.x;
+            result.y = value1.y * value2.y;
+            return result;
+        };
+        /**
+         *
+         * @param value1
+         * @param value2
+         */
+        Vector2.subtract = function (value1, value2) {
+            var result = new Vector2(0, 0);
+            result.x = value1.x - value2.x;
+            result.y = value1.y - value2.y;
+            return result;
+        };
+        /**
+         * 创建一个新的Vector2
+         * 它包含来自另一个向量的标准化值。
+         * @param value
+         */
+        Vector2.normalize = function (value) {
+            var nValue = new Vector2(value.x, value.y);
+            var val = 1 / Math.sqrt((nValue.x * nValue.x) + (nValue.y * nValue.y));
+            nValue.x *= val;
+            nValue.y *= val;
+            return nValue;
+        };
+        /**
+         * 返回两个向量的点积
+         * @param value1
+         * @param value2
+         */
+        Vector2.dot = function (value1, value2) {
+            return (value1.x * value2.x) + (value1.y * value2.y);
+        };
+        /**
+         * 返回两个向量之间距离的平方
+         * @param value1
+         * @param value2
+         */
+        Vector2.distanceSquared = function (value1, value2) {
+            var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
+            return (v1 * v1) + (v2 * v2);
+        };
+        /**
+         * 将指定的值限制在一个范围内
+         * @param value1
+         * @param min
+         * @param max
+         */
+        Vector2.clamp = function (value1, min, max) {
+            return new Vector2(es.MathHelper.clamp(value1.x, min.x, max.x), es.MathHelper.clamp(value1.y, min.y, max.y));
+        };
+        /**
+         * 创建一个新的Vector2，其中包含指定向量的线性插值
+         * @param value1 第一个向量
+         * @param value2 第二个向量
+         * @param amount 加权值(0.0-1.0之间)
+         * @returns 指定向量的线性插值结果
+         */
+        Vector2.lerp = function (value1, value2, amount) {
+            return new Vector2(es.MathHelper.lerp(value1.x, value2.x, amount), es.MathHelper.lerp(value1.y, value2.y, amount));
+        };
+        /**
+         * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换。
+         * @param position
+         * @param matrix
+         */
+        Vector2.transform = function (position, matrix) {
+            return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31, (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32);
+        };
+        /**
+         * 返回两个向量之间的距离
+         * @param value1
+         * @param value2
+         * @returns 两个向量之间的距离
+         */
+        Vector2.distance = function (value1, value2) {
+            var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
+            return Math.sqrt((v1 * v1) + (v2 * v2));
+        };
+        /**
+         * 返回两个向量之间的角度，单位是度数
+         * @param from
+         * @param to
+         */
+        Vector2.angle = function (from, to) {
+            from = Vector2.normalize(from);
+            to = Vector2.normalize(to);
+            return Math.acos(es.MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
+        };
+        /**
+         * 创建一个包含指定向量反转的新Vector2
+         * @param value
+         * @returns 矢量反演的结果
+         */
+        Vector2.negate = function (value) {
+            value.x = -value.x;
+            value.y = -value.y;
+            return value;
+        };
+        /**
+         *
+         * @param value
+         */
+        Vector2.prototype.add = function (value) {
+            this.x += value.x;
+            this.y += value.y;
+            return this;
+        };
+        /**
+         *
+         * @param value
+         */
+        Vector2.prototype.divide = function (value) {
+            this.x /= value.x;
+            this.y /= value.y;
+            return this;
+        };
+        /**
+         *
+         * @param value
+         */
+        Vector2.prototype.multiply = function (value) {
+            this.x *= value.x;
+            this.y *= value.y;
+            return this;
+        };
+        /**
+         * 从当前Vector2减去一个Vector2
+         * @param value 要减去的Vector2
+         * @returns 当前Vector2
+         */
+        Vector2.prototype.subtract = function (value) {
+            this.x -= value.x;
+            this.y -= value.y;
+            return this;
+        };
+        /**
+         * 将这个Vector2变成一个方向相同的单位向量
+         */
+        Vector2.prototype.normalize = function () {
+            var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
+            this.x *= val;
+            this.y *= val;
+        };
+        /** 返回它的长度 */
+        Vector2.prototype.length = function () {
+            return Math.sqrt((this.x * this.x) + (this.y * this.y));
+        };
+        /**
+         * 返回该Vector2的平方长度
+         * @returns 这个Vector2的平方长度
+         */
+        Vector2.prototype.lengthSquared = function () {
+            return (this.x * this.x) + (this.y * this.y);
+        };
+        /**
+         * 四舍五入X和Y值
+         */
+        Vector2.prototype.round = function () {
+            return new Vector2(Math.round(this.x), Math.round(this.y));
+        };
+        /**
+         * 返回以自己为中心点的左右角，单位为度
+         * @param left
+         * @param right
+         */
+        Vector2.prototype.angleBetween = function (left, right) {
+            var one = Vector2.subtract(left, this);
+            var two = Vector2.subtract(right, this);
+            return es.Vector2Ext.angle(one, two);
+        };
+        /**
+         * 比较当前实例是否等于指定的对象
+         * @param other 要比较的对象
+         * @returns 如果实例相同true 否则false
+         */
+        Vector2.prototype.equals = function (other) {
+            if (other instanceof Vector2) {
+                return other.x == this.x && other.y == this.y;
+            }
+            return false;
+        };
+        Vector2.prototype.clone = function () {
+            return new Vector2(this.x, this.y);
+        };
+        return Vector2;
+    }());
+    es.Vector2 = Vector2;
+})(es || (es = {}));
+///<reference path="../Math/Vector2.ts" />
+var es;
+///<reference path="../Math/Vector2.ts" />
+(function (es) {
     var SceneResolutionPolicy;
     (function (SceneResolutionPolicy) {
         /**
@@ -858,12 +1125,24 @@ var es;
              * 如果ResolutionPolicy是完美的像素，这将被设置为为它计算的比例
              */
             this.pixelPerfectScale = 1;
+            /**
+             * 场景使用的设计分辨率大小
+             */
+            this._designResolutionSize = es.Vector2.zero;
+            this._designBleedSize = es.Vector2.zero;
+            /**
+             * 这将根据分辨率策略进行设置，并用于RenderTarget的最终输出
+             */
+            this._finalRenderDestinationRect = es.Rectangle.empty;
+            this._sceneRenderTarget = new es.Ref(null);
+            this._destinationRenderTarget = new es.Ref(null);
             this._sceneComponents = [];
             this._renderers = [];
             this._afterPostProcessorRenderers = [];
             this.entities = new es.EntityList(this);
             this.renderableComponents = new es.RenderableComponentList();
             this.entityProcessors = new es.EntityProcessorList();
+            es.Framework.emitter.emit(es.CoreEvents.createCamera, this);
             this._resolutionPolicy = Scene._defaultSceneResolutionPolicy;
             this._designResolutionSize = Scene._defaultDesignResolutionSize;
             this._designBleedSize = Scene._defaultDesignBleedSize;
@@ -1289,6 +1568,11 @@ var es;
         Scene.prototype.getEntityProcessor = function () {
             return this.entityProcessors.getProcessor();
         };
+        /**
+         * 所有场景的默认分辨率大小
+         */
+        Scene._defaultDesignResolutionSize = es.Vector2.zero;
+        Scene._defaultDesignBleedSize = es.Vector2.zero;
         /**
          * 用于所有场景的默认分辨率策略
          */
@@ -6073,269 +6357,6 @@ var es;
         return SubpixelVector2;
     }());
     es.SubpixelVector2 = SubpixelVector2;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /** 2d 向量 */
-    var Vector2 = /** @class */ (function () {
-        /**
-         * 从两个值构造一个带有X和Y的二维向量。
-         * @param x 二维空间中的x坐标
-         * @param y 二维空间的y坐标
-         */
-        function Vector2(x, y) {
-            this.x = 0;
-            this.y = 0;
-            this.x = x ? x : 0;
-            this.y = y != undefined ? y : this.x;
-        }
-        Object.defineProperty(Vector2, "zero", {
-            get: function () {
-                return new Vector2(0, 0);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Vector2, "one", {
-            get: function () {
-                return new Vector2(1, 1);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Vector2, "unitX", {
-            get: function () {
-                return new Vector2(1, 0);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Vector2, "unitY", {
-            get: function () {
-                return new Vector2(0, 1);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        Vector2.add = function (value1, value2) {
-            var result = Vector2.zero;
-            result.x = value1.x + value2.x;
-            result.y = value1.y + value2.y;
-            return result;
-        };
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        Vector2.divide = function (value1, value2) {
-            var result = Vector2.zero;
-            result.x = value1.x / value2.x;
-            result.y = value1.y / value2.y;
-            return result;
-        };
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        Vector2.multiply = function (value1, value2) {
-            var result = new Vector2(0, 0);
-            result.x = value1.x * value2.x;
-            result.y = value1.y * value2.y;
-            return result;
-        };
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        Vector2.subtract = function (value1, value2) {
-            var result = new Vector2(0, 0);
-            result.x = value1.x - value2.x;
-            result.y = value1.y - value2.y;
-            return result;
-        };
-        /**
-         * 创建一个新的Vector2
-         * 它包含来自另一个向量的标准化值。
-         * @param value
-         */
-        Vector2.normalize = function (value) {
-            var nValue = new Vector2(value.x, value.y);
-            var val = 1 / Math.sqrt((nValue.x * nValue.x) + (nValue.y * nValue.y));
-            nValue.x *= val;
-            nValue.y *= val;
-            return nValue;
-        };
-        /**
-         * 返回两个向量的点积
-         * @param value1
-         * @param value2
-         */
-        Vector2.dot = function (value1, value2) {
-            return (value1.x * value2.x) + (value1.y * value2.y);
-        };
-        /**
-         * 返回两个向量之间距离的平方
-         * @param value1
-         * @param value2
-         */
-        Vector2.distanceSquared = function (value1, value2) {
-            var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
-            return (v1 * v1) + (v2 * v2);
-        };
-        /**
-         * 将指定的值限制在一个范围内
-         * @param value1
-         * @param min
-         * @param max
-         */
-        Vector2.clamp = function (value1, min, max) {
-            return new Vector2(es.MathHelper.clamp(value1.x, min.x, max.x), es.MathHelper.clamp(value1.y, min.y, max.y));
-        };
-        /**
-         * 创建一个新的Vector2，其中包含指定向量的线性插值
-         * @param value1 第一个向量
-         * @param value2 第二个向量
-         * @param amount 加权值(0.0-1.0之间)
-         * @returns 指定向量的线性插值结果
-         */
-        Vector2.lerp = function (value1, value2, amount) {
-            return new Vector2(es.MathHelper.lerp(value1.x, value2.x, amount), es.MathHelper.lerp(value1.y, value2.y, amount));
-        };
-        /**
-         * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换。
-         * @param position
-         * @param matrix
-         */
-        Vector2.transform = function (position, matrix) {
-            return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31, (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32);
-        };
-        /**
-         * 返回两个向量之间的距离
-         * @param value1
-         * @param value2
-         * @returns 两个向量之间的距离
-         */
-        Vector2.distance = function (value1, value2) {
-            var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
-            return Math.sqrt((v1 * v1) + (v2 * v2));
-        };
-        /**
-         * 返回两个向量之间的角度，单位是度数
-         * @param from
-         * @param to
-         */
-        Vector2.angle = function (from, to) {
-            from = Vector2.normalize(from);
-            to = Vector2.normalize(to);
-            return Math.acos(es.MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
-        };
-        /**
-         * 创建一个包含指定向量反转的新Vector2
-         * @param value
-         * @returns 矢量反演的结果
-         */
-        Vector2.negate = function (value) {
-            value.x = -value.x;
-            value.y = -value.y;
-            return value;
-        };
-        /**
-         *
-         * @param value
-         */
-        Vector2.prototype.add = function (value) {
-            this.x += value.x;
-            this.y += value.y;
-            return this;
-        };
-        /**
-         *
-         * @param value
-         */
-        Vector2.prototype.divide = function (value) {
-            this.x /= value.x;
-            this.y /= value.y;
-            return this;
-        };
-        /**
-         *
-         * @param value
-         */
-        Vector2.prototype.multiply = function (value) {
-            this.x *= value.x;
-            this.y *= value.y;
-            return this;
-        };
-        /**
-         * 从当前Vector2减去一个Vector2
-         * @param value 要减去的Vector2
-         * @returns 当前Vector2
-         */
-        Vector2.prototype.subtract = function (value) {
-            this.x -= value.x;
-            this.y -= value.y;
-            return this;
-        };
-        /**
-         * 将这个Vector2变成一个方向相同的单位向量
-         */
-        Vector2.prototype.normalize = function () {
-            var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
-            this.x *= val;
-            this.y *= val;
-        };
-        /** 返回它的长度 */
-        Vector2.prototype.length = function () {
-            return Math.sqrt((this.x * this.x) + (this.y * this.y));
-        };
-        /**
-         * 返回该Vector2的平方长度
-         * @returns 这个Vector2的平方长度
-         */
-        Vector2.prototype.lengthSquared = function () {
-            return (this.x * this.x) + (this.y * this.y);
-        };
-        /**
-         * 四舍五入X和Y值
-         */
-        Vector2.prototype.round = function () {
-            return new Vector2(Math.round(this.x), Math.round(this.y));
-        };
-        /**
-         * 返回以自己为中心点的左右角，单位为度
-         * @param left
-         * @param right
-         */
-        Vector2.prototype.angleBetween = function (left, right) {
-            var one = Vector2.subtract(left, this);
-            var two = Vector2.subtract(right, this);
-            return es.Vector2Ext.angle(one, two);
-        };
-        /**
-         * 比较当前实例是否等于指定的对象
-         * @param other 要比较的对象
-         * @returns 如果实例相同true 否则false
-         */
-        Vector2.prototype.equals = function (other) {
-            if (other instanceof Vector2) {
-                return other.x == this.x && other.y == this.y;
-            }
-            return false;
-        };
-        Vector2.prototype.clone = function () {
-            return new Vector2(this.x, this.y);
-        };
-        return Vector2;
-    }());
-    es.Vector2 = Vector2;
 })(es || (es = {}));
 var es;
 (function (es) {

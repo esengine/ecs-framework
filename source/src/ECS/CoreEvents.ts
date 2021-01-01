@@ -23,5 +23,6 @@ module es {
         resolutionScale,
         resolutionOffset,
         createRenderTarget,
+        createCamera,
     }
 }
