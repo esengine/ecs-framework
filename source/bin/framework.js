@@ -381,6 +381,7 @@ var es;
         CoreEvents[CoreEvents["resolutionOffset"] = 9] = "resolutionOffset";
         CoreEvents[CoreEvents["createRenderTarget"] = 10] = "createRenderTarget";
         CoreEvents[CoreEvents["createCamera"] = 11] = "createCamera";
+        CoreEvents[CoreEvents["rendererSizeChanged"] = 12] = "rendererSizeChanged";
     })(CoreEvents = es.CoreEvents || (es.CoreEvents = {}));
 })(es || (es = {}));
 var es;
@@ -1139,6 +1140,7 @@ var es;
             this._sceneComponents = [];
             this._renderers = [];
             this._afterPostProcessorRenderers = [];
+            this.currentRenderId = new es.Ref(null);
             this.entities = new es.EntityList(this);
             this.renderableComponents = new es.RenderableComponentList();
             this.entityProcessors = new es.EntityProcessorList();
@@ -1385,8 +1387,8 @@ var es;
                 var currentRenderTarget = es.MathHelper.isEven(enabledCounter) ? this._sceneRenderTarget : this._destinationRenderTarget;
                 es.Framework.emitter.emit(es.CoreEvents.setRenderTarget, finalRenderTarget);
                 es.Framework.emitter.emit(es.CoreEvents.clearGraphics);
-                es.Framework.batcher.begin(null);
-                es.Framework.batcher.draw(currentRenderTarget, new es.Vector2(this._finalRenderDestinationRect.x, this._finalRenderDestinationRect.y), 0xffffff, 0, es.Vector2.zero, new es.Vector2(this._finalRenderDestinationRect.width, this._finalRenderDestinationRect.height));
+                es.Framework.batcher.begin(this.currentRenderId, null);
+                es.Framework.batcher.draw(currentRenderTarget.value, new es.Vector2(this._finalRenderDestinationRect.x, this._finalRenderDestinationRect.y), 0xffffff, 0, es.Vector2.zero, new es.Vector2(this._finalRenderDestinationRect.width, this._finalRenderDestinationRect.height));
                 es.Framework.batcher.end();
             }
         };
@@ -1453,6 +1455,8 @@ var es;
                 });
             }
             renderer.onAddedToScene(this);
+            if (this._didSceneBegin)
+                es.Framework.emitter.emit(es.CoreEvents.rendererSizeChanged, this._sceneRenderTarget.value);
             return renderer;
         };
         /**
@@ -1475,12 +1479,14 @@ var es;
          * @param renderer
          */
         Scene.prototype.removeRenderer = function (renderer) {
-            es.Insist.isTrue(new linq.List(this._renderers).contains(renderer) ||
-                new linq.List(this._afterPostProcessorRenderers).contains(renderer));
+            var afterProcessLinqList = new linq.List(this._afterPostProcessorRenderers);
+            var rendererLinqList = new linq.List(this._renderers);
+            es.Insist.isTrue(rendererLinqList.contains(renderer) ||
+                afterProcessLinqList.contains(renderer));
             if (renderer.wantsToRenderAfterPostProcessors)
-                new linq.List(this._afterPostProcessorRenderers).remove(renderer);
+                afterProcessLinqList.remove(renderer);
             else
-                new linq.List(this._renderers).remove(renderer);
+                rendererLinqList.remove(renderer);
             renderer.unload();
         };
         /**
@@ -1597,7 +1603,7 @@ var es;
         DirtyType[DirtyType["clean"] = 0] = "clean";
         DirtyType[DirtyType["positionDirty"] = 1] = "positionDirty";
         DirtyType[DirtyType["scaleDirty"] = 2] = "scaleDirty";
-        DirtyType[DirtyType["rotationDirty"] = 3] = "rotationDirty";
+        DirtyType[DirtyType["rotationDirty"] = 4] = "rotationDirty";
     })(DirtyType = es.DirtyType || (es.DirtyType = {}));
     var Transform = /** @class */ (function () {
         function Transform(entity) {
@@ -3077,45 +3083,17 @@ var es;
     var RenderableComponent = /** @class */ (function (_super) {
         __extends(RenderableComponent, _super);
         function RenderableComponent() {
-            var _this = _super !== null && _super.apply(this, arguments) || this;
+            var _this = _super.call(this) || this;
+            /**
+             * 渲染时传递给批处理程序的颜色
+             */
+            _this.color = 0xffffff;
             _this.debugRenderEnabled = true;
+            _this._localOffset = es.Vector2.zero;
+            _this._bounds = es.Rectangle.empty;
             _this._areBoundsDirty = true;
             return _this;
         }
-        Object.defineProperty(RenderableComponent.prototype, "width", {
-            /**
-             * 不重写bounds属性的子类必须实现这个！RenderableComponent的宽度。
-             */
-            get: function () {
-                return this.bounds.width;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(RenderableComponent.prototype, "height", {
-            /**
-             * 不重写bounds属性的子类必须实现这个!
-             */
-            get: function () {
-                return this.bounds.height;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(RenderableComponent.prototype, "bounds", {
-            /**
-             * 包裹此对象的AABB。用来进行相机筛选。
-             */
-            get: function () {
-                if (this._areBoundsDirty) {
-                    this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, es.Vector2.zero, this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
-                    this._areBoundsDirty = false;
-                }
-                return this._bounds;
-            },
-            enumerable: true,
-            configurable: true
-        });
         Object.defineProperty(RenderableComponent.prototype, "layerDepth", {
             /**
              * 标准的Batcher图层深度，0为前面，1为后面。
@@ -3282,6 +3260,7 @@ var es;
                 }
             }
         };
+        RenderableComponent.renderIdGenerator = 0;
         return RenderableComponent;
     }(es.Component));
     es.RenderableComponent = RenderableComponent;
@@ -3622,6 +3601,8 @@ var es;
                     var component = _c.value;
                     if (!component)
                         continue;
+                    if (component instanceof es.RenderableComponent)
+                        new linq.List(this._entity.scene.renderableComponents.buffer).remove(component);
                     // 处理IUpdatable
                     if (es.isIUpdatable(component))
                         new linq.List(this._updatableComponents).remove(component);
@@ -3642,6 +3623,8 @@ var es;
             try {
                 for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var component = _c.value;
+                    if (component instanceof es.RenderableComponent)
+                        this._entity.scene.renderableComponents.buffer.push(component);
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
                     this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
@@ -3670,6 +3653,8 @@ var es;
             if (this._componentsToAdd.length > 0) {
                 for (var i = 0, count = this._componentsToAdd.length; i < count; i++) {
                     var component = this._componentsToAdd[i];
+                    if (component instanceof es.RenderableComponent)
+                        this._entity.scene.renderableComponents.buffer.push(component);
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
                     this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
@@ -3697,8 +3682,8 @@ var es;
             }
         };
         ComponentList.prototype.handleRemove = function (component) {
-            if (!component)
-                return;
+            if (component instanceof es.RenderableComponent)
+                new linq.List(this._entity.scene.renderableComponents.buffer).remove(component);
             if (es.isIUpdatable(component))
                 new linq.List(this._updatableComponents).remove(component);
             this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
@@ -4353,6 +4338,13 @@ var es;
         Object.defineProperty(RenderableComponentList.prototype, "count", {
             get: function () {
                 return this._components.length;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponentList.prototype, "buffer", {
+            get: function () {
+                return this._components;
             },
             enumerable: true,
             configurable: true

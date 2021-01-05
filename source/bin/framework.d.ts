@@ -167,7 +167,8 @@ declare module es {
         resolutionScale = 8,
         resolutionOffset = 9,
         createRenderTarget = 10,
-        createCamera = 11
+        createCamera = 11,
+        rendererSizeChanged = 12
     }
 }
 declare module es {
@@ -568,7 +569,8 @@ declare module es {
         readonly _sceneComponents: SceneComponent[];
         _renderers: IRenderer[];
         readonly _afterPostProcessorRenderers: IRenderer[];
-        _didSceneBegin: boolean;
+        private _didSceneBegin;
+        private currentRenderId;
         /**
          * 设置新场景将使用的默认设计尺寸和分辨率策略，水平/垂直Bleed仅与BestFit相关
          * @param width
@@ -713,7 +715,7 @@ declare module es {
         clean = 0,
         positionDirty = 1,
         scaleDirty = 2,
-        rotationDirty = 3
+        rotationDirty = 4
     }
     class Transform {
         /** 与此转换关联的实体 */
@@ -1376,18 +1378,19 @@ declare module es {
      * 非常重要！子类必须覆盖width/height或bounds! 子类必须覆盖width/height或bounds!
      */
     abstract class RenderableComponent extends Component implements IRenderable, IComparer<RenderableComponent> {
+        static renderIdGenerator: number;
         /**
          * 不重写bounds属性的子类必须实现这个！RenderableComponent的宽度。
          */
-        readonly width: number;
+        abstract readonly width: any;
         /**
          * 不重写bounds属性的子类必须实现这个!
          */
-        readonly height: number;
+        abstract readonly height: any;
         /**
          * 包裹此对象的AABB。用来进行相机筛选。
          */
-        readonly bounds: Rectangle;
+        abstract readonly bounds: any;
         /**
          * 标准的Batcher图层深度，0为前面，1为后面。
          * 改变这个值会触发场景中可渲染组件列表的排序。
@@ -1398,6 +1401,10 @@ declare module es {
          * 请注意，这意味着更高的renderLayers首先被发送到Batcher。
          */
         renderLayer: number;
+        /**
+         * 渲染时传递给批处理程序的颜色
+         */
+        color: number;
         /**
          * 由渲染器使用，用于指定该精灵的渲染方式
          */
@@ -1411,6 +1418,7 @@ declare module es {
          * 状态的改变最终会调用onBecameVisible/onBecameInvisible方法
          */
         isVisible: boolean;
+        constructor();
         debugRenderEnabled: boolean;
         protected _localOffset: Vector2;
         protected _layerDepth: number;
@@ -1794,6 +1802,7 @@ declare module es {
         private _unsortedRenderLayers;
         private _componentsNeedSort;
         readonly count: number;
+        readonly buffer: IRenderable[];
         get(index: number): IRenderable;
         add(component: IRenderable): void;
         remove(component: IRenderable): void;
@@ -2003,7 +2012,7 @@ declare module es {
          */
         shouldRoundDestinations: boolean;
         disposed(): any;
-        begin(effect: any, transformationMatrix?: Matrix, disableBatching?: boolean): any;
+        begin(id: Ref<number>, effect: any, transformationMatrix?: Matrix, disableBatching?: boolean): any;
         end(): any;
         prepRenderState(): any;
         /**
@@ -2013,10 +2022,7 @@ declare module es {
         drawHollowRect(rect: Rectangle, color: number, thickness?: number): any;
         drawHollowBounds(x: number, y: number, width: number, height: number, color: number, thickness: number): any;
         drawLine(start: Vector2, end: Vector2, color: number, thickness: any): any;
-        drawLineAngle(start: Vector2, radians: number, length: number, color: number, thickness: number): any;
         draw(texture: any, position: Vector2, color?: number, rotation?: number, origin?: Vector2, scale?: Vector2, effects?: any): any;
-        flushBatch(): any;
-        drawPrimitives(texture: any, baseSprite: number, batchSize: number): any;
         drawPixel(position: Vector2, color: number, size?: number): any;
         drawPolygon(position: Vector2, points: Vector2[], color: number, closePoly?: boolean, thickness?: number): any;
         drawCircle(position: Vector2, radius: number, color: number, thickness?: number, resolution?: number): any;

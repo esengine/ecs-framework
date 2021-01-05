@@ -80,7 +80,9 @@ module es {
         public readonly _sceneComponents: SceneComponent[] = [];
         public _renderers: IRenderer[] = [];
         public readonly _afterPostProcessorRenderers: IRenderer[] = [];
-        public _didSceneBegin: boolean;
+        private _didSceneBegin: boolean;
+
+        private currentRenderId: Ref<number> = new Ref(null);
 
         /**
          * 设置新场景将使用的默认设计尺寸和分辨率策略，水平/垂直Bleed仅与BestFit相关
@@ -369,8 +371,8 @@ module es {
                 Framework.emitter.emit(CoreEvents.setRenderTarget, finalRenderTarget);
                 Framework.emitter.emit(CoreEvents.clearGraphics);
 
-                Framework.batcher.begin(null);
-                Framework.batcher.draw(currentRenderTarget,
+                Framework.batcher.begin(this.currentRenderId, null);
+                Framework.batcher.draw(currentRenderTarget.value,
                     new Vector2(this._finalRenderDestinationRect.x, this._finalRenderDestinationRect.y),
                     0xffffff,
                     0,
@@ -451,6 +453,9 @@ module es {
 
             renderer.onAddedToScene(this);
 
+            if (this._didSceneBegin)
+                Framework.emitter.emit(CoreEvents.rendererSizeChanged, this._sceneRenderTarget.value);
+
             return renderer;
         }
 
@@ -477,13 +482,15 @@ module es {
          * @param renderer 
          */
         public removeRenderer(renderer: IRenderer) {
-            Insist.isTrue(new linq.List(this._renderers).contains(renderer) ||
-                new linq.List(this._afterPostProcessorRenderers).contains(renderer));
+            let afterProcessLinqList = new linq.List(this._afterPostProcessorRenderers);
+            let rendererLinqList = new linq.List(this._renderers);
+            Insist.isTrue(rendererLinqList.contains(renderer) ||
+                afterProcessLinqList.contains(renderer));
 
             if (renderer.wantsToRenderAfterPostProcessors)
-                new linq.List(this._afterPostProcessorRenderers).remove(renderer);
+                afterProcessLinqList.remove(renderer);
             else
-                new linq.List(this._renderers).remove(renderer);
+                rendererLinqList.remove(renderer);
 
             renderer.unload();
         }

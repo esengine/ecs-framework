@@ -19,6 +19,10 @@ module es {
             return this._components.length;
         }
 
+        public get buffer(){
+            return this._components;
+        }
+
         public get(index: number): IRenderable {
             return this._components[index];
         }

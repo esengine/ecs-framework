@@ -4,32 +4,21 @@ module es {
      * 非常重要！子类必须覆盖width/height或bounds! 子类必须覆盖width/height或bounds!
      */
     export abstract class RenderableComponent extends Component implements IRenderable, IComparer<RenderableComponent> {
+        public static renderIdGenerator: number = 0;
         /**
          * 不重写bounds属性的子类必须实现这个！RenderableComponent的宽度。
          */
-        public get width() {
-            return this.bounds.width;
-        }
+        public abstract get width();
 
         /**
          * 不重写bounds属性的子类必须实现这个!
          */
-        public get height() {
-            return this.bounds.height;
-        }
+        public abstract get height();
 
         /**
          * 包裹此对象的AABB。用来进行相机筛选。
          */
-        public get bounds(): Rectangle {
-            if (this._areBoundsDirty) {
-                this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, Vector2.zero,
-                    this.entity.transform.scale, this.entity.transform.rotation, this.width, this.height);
-                this._areBoundsDirty = false;
-            }
-
-            return this._bounds;
-        }
+        public abstract get bounds();
 
         /**
          * 标准的Batcher图层深度，0为前面，1为后面。
@@ -52,6 +41,11 @@ module es {
         public set renderLayer(value: number) {
             this.setRenderLayer(value);
         }
+
+        /**
+         * 渲染时传递给批处理程序的颜色
+         */
+        public color: number = 0xffffff;
 
         /**
          * 由渲染器使用，用于指定该精灵的渲染方式
@@ -84,12 +78,16 @@ module es {
             }
         }
 
+        constructor() {
+            super();
+        }
+
         public debugRenderEnabled: boolean = true;
 
-        protected _localOffset: Vector2;
+        protected _localOffset: Vector2 = Vector2.zero;
         protected _layerDepth: number;
         protected _renderLayer: number;
-        protected _bounds: Rectangle;
+        protected _bounds: Rectangle = Rectangle.empty;
         protected _isVisble: boolean;
 
         protected _areBoundsDirty: boolean = true;

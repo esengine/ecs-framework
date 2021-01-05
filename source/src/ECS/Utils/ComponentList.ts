@@ -82,6 +82,9 @@ module es {
             for (let component of this._components) {
                 if (!component) continue;
 
+                if (component instanceof RenderableComponent)
+                    new linq.List(this._entity.scene.renderableComponents.buffer).remove(component);
+
                 // 处理IUpdatable
                 if (isIUpdatable(component))
                     new linq.List(this._updatableComponents).remove(component);
@@ -93,6 +96,9 @@ module es {
 
         public registerAllComponents() {
             for (let component of this._components) {
+                if (component instanceof RenderableComponent)
+                    this._entity.scene.renderableComponents.buffer.push(component);
+
                 if (isIUpdatable(component))
                     this._updatableComponents.push(component);
 
@@ -117,6 +123,9 @@ module es {
             if (this._componentsToAdd.length > 0) {
                 for (let i = 0, count = this._componentsToAdd.length; i < count; i++) {
                     let component = this._componentsToAdd[i];
+
+                    if (component instanceof RenderableComponent)
+                        this._entity.scene.renderableComponents.buffer.push(component);
 
                     if (isIUpdatable(component))
                         this._updatableComponents.push(component);
@@ -153,7 +162,8 @@ module es {
         }
 
         public handleRemove(component: Component) {
-            if (!component) return;
+            if (component instanceof RenderableComponent)
+                new linq.List(this._entity.scene.renderableComponents.buffer).remove(component);
 
             if (isIUpdatable(component))
                 new linq.List(this._updatableComponents).remove(component);

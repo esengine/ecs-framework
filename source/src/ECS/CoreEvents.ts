@@ -24,5 +24,6 @@ module es {
         resolutionOffset,
         createRenderTarget,
         createCamera,
+        rendererSizeChanged,
     }
 }
