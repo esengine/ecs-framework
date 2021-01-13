@@ -381,14 +381,6 @@ module es {
         }
 
         /**
-         * 自定义渲染器可以选择是否调用它
-         * @param batcher 
-         */
-        public debugRender(batcher: IBatcher) {
-            this.components.debugRender(batcher);
-        }
-
-        /**
          * 将组件添加到组件列表中。返回组件。
          * @param component
          */

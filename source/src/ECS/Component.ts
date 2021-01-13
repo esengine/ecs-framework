@@ -78,9 +78,6 @@ module es {
         public onEntityTransformChanged(comp: transform.Component) {
         }
 
-        public debugRender(batcher: IBatcher) {
-        }
-
         /**
          *当父实体或此组件启用时调用
          */

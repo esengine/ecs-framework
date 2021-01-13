@@ -40,13 +40,6 @@ module es {
             return this;
         }
 
-        public debugRender(batcher: IBatcher) {
-            batcher.drawHollowRect(this.bounds, Debug.colliderBounds, 1);
-            batcher.drawCircle(this.shape.position, (this.shape as Circle).radius, Debug.colliderEdge, 1);
-            batcher.drawPixel(this.entity.transform.position, Debug.colliderPosition, 4);
-            batcher.drawPixel(this.shape.position, Debug.colliderCenter, 2);
-        }
-
         public toString() {
             return `[CircleCollider: bounds: ${this.bounds}, radius: ${(this.shape as Circle).radius}]`
         }

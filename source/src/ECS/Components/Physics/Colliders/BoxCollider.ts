@@ -84,14 +84,6 @@ module es {
             }
         }
 
-        public debugRender(batcher: IBatcher) {
-            let poly = this.shape as Polygon;
-            batcher.drawHollowRect(this.bounds, Debug.colliderBounds, 1);
-            batcher.drawPolygon(this.shape.position, poly.points, Debug.colliderEdge, true, 1);
-            batcher.drawPixel(this.entity.transform.position, Debug.colliderPosition, 4);
-            batcher.drawPixel(Vector2.add(this.entity.transform.position, this.shape.center), Debug.colliderCenter, 2);
-        }
-
         public toString() {
             return `[BoxCollider: bounds: ${this.bounds}]`;
         }

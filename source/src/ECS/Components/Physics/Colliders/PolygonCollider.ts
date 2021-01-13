@@ -23,13 +23,5 @@ module es {
             Polygon.recenterPolygonVerts(points);
             this.shape = new Polygon(points);
         }
-
-        public debugRender(batcher: IBatcher) {
-            let poly = this.shape as Polygon;
-            batcher.drawHollowRect(this.bounds, Debug.colliderBounds, 1);
-            batcher.drawPolygon(this.shape.position, poly.points, Debug.colliderEdge, true, 1);
-            batcher.drawPixel(this.entity.transform.position, Debug.colliderPosition, 4);
-            batcher.drawPixel(this.shape.position, Debug.colliderCenter, 2);
-        }
     }
 }
