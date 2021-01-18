@@ -12,10 +12,6 @@ module es {
          * 此组件附加的实体
          */
         public entity: Entity;
-        /**
-         * 更新该组件的时间间隔。这与实体的更新间隔无关。
-         */
-        public updateInterval: number = 1;
 
         /**
          * 快速访问 this.entity.transform
