@@ -3,7 +3,7 @@ module es {
      * 我们在这里存储了各种系统的默认颜色，如对撞机调试渲染、Debug.drawText等。
      * 命名方式尽可能采用CLASS-THING，以明确它的使用位置
      */
-    export class Debug {
+    export class DebugDefault {
         public static debugText: number = 0xffffff;
 
         public static colliderBounds: number = 0xffffff * 0.3;

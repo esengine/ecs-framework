@@ -56,10 +56,7 @@ module es {
          * @param entity
          */
         public remove(entity: Entity) {
-            if (!this._entitiesToRemove.contains(entity)) {
-                console.warn(`您正在尝试删除已经删除的实体(${entity.name})`);
-                return;
-            }
+            Debug.warnIf(this._entitiesToRemove.contains(entity), `您正在尝试删除已经删除的实体(${entity.name})`);
 
             // 防止在同一帧中添加或删除实体
             if (this._entitiesToAdded.contains(entity)) {

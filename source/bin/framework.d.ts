@@ -94,11 +94,26 @@ declare module es {
     }
 }
 declare module es {
+    enum LogType {
+        error = 0,
+        warn = 1,
+        log = 2,
+        info = 3,
+        trace = 4
+    }
+    class Debug {
+        static warnIf(condition: boolean, format: string, ...args: any[]): void;
+        static warn(format: string, ...args: any[]): void;
+        static error(format: string, ...args: any[]): void;
+        static log(type: LogType, format: string, ...args: any[]): void;
+    }
+}
+declare module es {
     /**
      * 我们在这里存储了各种系统的默认颜色，如对撞机调试渲染、Debug.drawText等。
      * 命名方式尽可能采用CLASS-THING，以明确它的使用位置
      */
-    class Debug {
+    class DebugDefault {
         static debugText: number;
         static colliderBounds: number;
         static colliderEdge: number;

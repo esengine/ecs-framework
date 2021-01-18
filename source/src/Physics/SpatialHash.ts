@@ -75,9 +75,8 @@ module es {
                 for (let y = p1.y; y <= p2.y; y++) {
                     // 单元格应该始终存在，因为这个碰撞器应该在所有查询的单元格中
                     let cell = this.cellAtPosition(x, y);
-                    if (!cell)
-                        console.log(`从不存在碰撞器的单元格中移除碰撞器: [${collider}]`);
-                    else
+                    Insist.isNotNull(cell, `从不存在碰撞器的单元格中移除碰撞器: [${collider}]`);
+                    if (cell != null)
                         new linq.List(cell).remove(collider);
                 }
             }

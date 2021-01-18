@@ -81,10 +81,7 @@ module es {
          * @param value
          */
         public static set scene(value: Scene) {
-            if (!value) {
-                console.error("场景不能为空");
-                return;
-            }
+            Insist.isNotNull(value, "场景不能为空");
 
             if (this._instance._scene == null) {
                 this._instance._scene = value;

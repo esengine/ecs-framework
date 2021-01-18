@@ -145,12 +145,9 @@ module es {
          * @param component
          */
         public removeSceneComponent(component: SceneComponent) {
-            if (!new linq.List(this._sceneComponents).contains(component)) {
-                console.warn(`SceneComponent${component}不在SceneComponents列表中!`);
-                return;
-            }
-
-            new linq.List(this._sceneComponents).remove(component);
+            const sceneComponentList = new linq.List(this._sceneComponents);
+            Insist.isTrue(sceneComponentList.contains(component), `SceneComponent${component}不在SceneComponents列表中!`);
+            sceneComponentList.remove(component);
             component.onRemovedFromScene();
         }
 
