@@ -126,10 +126,7 @@ var es;
              * @param value
              */
             set: function (value) {
-                if (!value) {
-                    console.error("场景不能为空");
-                    return;
-                }
+                es.Insist.isNotNull(value, "场景不能为空");
                 if (this._instance._scene == null) {
                     this._instance._scene = value;
                     this._instance.onSceneChanged();
@@ -250,25 +247,89 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var LogType;
+    (function (LogType) {
+        LogType[LogType["error"] = 0] = "error";
+        LogType[LogType["warn"] = 1] = "warn";
+        LogType[LogType["log"] = 2] = "log";
+        LogType[LogType["info"] = 3] = "info";
+        LogType[LogType["trace"] = 4] = "trace";
+    })(LogType = es.LogType || (es.LogType = {}));
+    var Debug = /** @class */ (function () {
+        function Debug() {
+        }
+        Debug.warnIf = function (condition, format) {
+            var args = [];
+            for (var _i = 2; _i < arguments.length; _i++) {
+                args[_i - 2] = arguments[_i];
+            }
+            if (condition)
+                this.log(LogType.warn, format, args);
+        };
+        Debug.warn = function (format) {
+            var args = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                args[_i - 1] = arguments[_i];
+            }
+            this.log(LogType.warn, format, args);
+        };
+        Debug.error = function (format) {
+            var args = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                args[_i - 1] = arguments[_i];
+            }
+            this.log(LogType.error, format, args);
+        };
+        Debug.log = function (type, format) {
+            var args = [];
+            for (var _i = 2; _i < arguments.length; _i++) {
+                args[_i - 2] = arguments[_i];
+            }
+            switch (type) {
+                case LogType.error:
+                    console.error(type + ": " + StringUtils.format(format, args));
+                    break;
+                case LogType.warn:
+                    console.warn(type + ": " + StringUtils.format(format, args));
+                    break;
+                case LogType.log:
+                    console.log(type + ": " + StringUtils.format(format, args));
+                    break;
+                case LogType.info:
+                    console.info(type + ": " + StringUtils.format(format, args));
+                    break;
+                case LogType.trace:
+                    console.trace(type + ": " + StringUtils.format(format, args));
+                    break;
+                default:
+                    throw new Error('argument out of range');
+            }
+        };
+        return Debug;
+    }());
+    es.Debug = Debug;
+})(es || (es = {}));
+var es;
+(function (es) {
     /**
      * 我们在这里存储了各种系统的默认颜色，如对撞机调试渲染、Debug.drawText等。
      * 命名方式尽可能采用CLASS-THING，以明确它的使用位置
      */
-    var Debug = /** @class */ (function () {
-        function Debug() {
+    var DebugDefault = /** @class */ (function () {
+        function DebugDefault() {
         }
-        Debug.debugText = 0xffffff;
-        Debug.colliderBounds = 0xffffff * 0.3;
-        Debug.colliderEdge = 0x8B0000;
-        Debug.colliderPosition = 0xFFFF00;
-        Debug.colliderCenter = 0xFF0000;
-        Debug.renderableBounds = 0xFFFF00;
-        Debug.renderableCenter = 0x9932CC;
-        Debug.verletParticle = 0xDC345E;
-        Debug.verletConstraintEdge = 0x433E36;
-        return Debug;
+        DebugDefault.debugText = 0xffffff;
+        DebugDefault.colliderBounds = 0xffffff * 0.3;
+        DebugDefault.colliderEdge = 0x8B0000;
+        DebugDefault.colliderPosition = 0xFFFF00;
+        DebugDefault.colliderCenter = 0xFF0000;
+        DebugDefault.renderableBounds = 0xFFFF00;
+        DebugDefault.renderableCenter = 0x9932CC;
+        DebugDefault.verletParticle = 0xDC345E;
+        DebugDefault.verletConstraintEdge = 0x433E36;
+        return DebugDefault;
     }());
-    es.Debug = Debug;
+    es.DebugDefault = DebugDefault;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -1312,11 +1373,9 @@ var es;
          * @param component
          */
         Scene.prototype.removeSceneComponent = function (component) {
-            if (!new linq.List(this._sceneComponents).contains(component)) {
-                console.warn("SceneComponent" + component + "\u4E0D\u5728SceneComponents\u5217\u8868\u4E2D!");
-                return;
-            }
-            new linq.List(this._sceneComponents).remove(component);
+            var sceneComponentList = new linq.List(this._sceneComponents);
+            es.Insist.isTrue(sceneComponentList.contains(component), "SceneComponent" + component + "\u4E0D\u5728SceneComponents\u5217\u8868\u4E2D!");
+            sceneComponentList.remove(component);
             component.onRemovedFromScene();
         };
         /**
@@ -2141,9 +2200,7 @@ var es;
         };
         ArcadeRigidbody.prototype.onAddedToEntity = function () {
             this._collider = this.entity.getComponent(es.Collider);
-            if (this._collider == null) {
-                console.warn("ArcadeRigidbody 没有 Collider。ArcadeRigidbody需要一个Collider!");
-            }
+            es.Debug.warnIf(this._collider == null, "ArcadeRigidbody 没有 Collider。ArcadeRigidbody需要一个Collider!");
         };
         ArcadeRigidbody.prototype.update = function () {
             var e_1, _a;
@@ -2401,8 +2458,7 @@ var es;
         }
         ProjectileMover.prototype.onAddedToEntity = function () {
             this._collider = this.entity.getComponent(es.Collider);
-            if (!this._collider)
-                console.warn("ProjectileMover没有Collider。ProjectilMover需要一个Collider!");
+            es.Debug.warnIf(this._collider == null, "ProjectileMover没有Collider。ProjectilMover需要一个Collider!");
         };
         /**
          * 在考虑到碰撞的情况下移动实体
@@ -3133,8 +3189,7 @@ var es;
         ComponentList.prototype.remove = function (component) {
             var componentToRemove = new linq.List(this._componentsToRemove);
             var componentToAdd = new linq.List(this._componentsToAdd);
-            if (componentToRemove.contains(component))
-                console.warn("\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u4E00\u4E2A\u60A8\u5DF2\u7ECF\u5220\u9664\u7684\u7EC4\u4EF6(" + component + ")");
+            es.Debug.warnIf(componentToRemove.contains(component), "\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u4E00\u4E2A\u60A8\u5DF2\u7ECF\u5220\u9664\u7684\u7EC4\u4EF6(" + component + ")");
             // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
             if (componentToAdd.contains(component)) {
                 componentToAdd.remove(component);
@@ -3440,10 +3495,7 @@ var es;
          * @param entity
          */
         EntityList.prototype.remove = function (entity) {
-            if (!this._entitiesToRemove.contains(entity)) {
-                console.warn("\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u5DF2\u7ECF\u5220\u9664\u7684\u5B9E\u4F53(" + entity.name + ")");
-                return;
-            }
+            es.Debug.warnIf(this._entitiesToRemove.contains(entity), "\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u5DF2\u7ECF\u5220\u9664\u7684\u5B9E\u4F53(" + entity.name + ")");
             // 防止在同一帧中添加或删除实体
             if (this._entitiesToAdded.contains(entity)) {
                 this._entitiesToAdded.remove(entity);
@@ -6384,9 +6436,8 @@ var es;
                 for (var y = p1.y; y <= p2.y; y++) {
                     // 单元格应该始终存在，因为这个碰撞器应该在所有查询的单元格中
                     var cell = this.cellAtPosition(x, y);
-                    if (!cell)
-                        console.log("\u4ECE\u4E0D\u5B58\u5728\u78B0\u649E\u5668\u7684\u5355\u5143\u683C\u4E2D\u79FB\u9664\u78B0\u649E\u5668: [" + collider + "]");
-                    else
+                    es.Insist.isNotNull(cell, "\u4ECE\u4E0D\u5B58\u5728\u78B0\u649E\u5668\u7684\u5355\u5143\u683C\u4E2D\u79FB\u9664\u78B0\u649E\u5668: [" + collider + "]");
+                    if (cell != null)
                         new linq.List(cell).remove(collider);
                 }
             }
@@ -7689,8 +7740,7 @@ var es;
                 list = [];
                 this._messageTable.set(eventType, list);
             }
-            if (list.findIndex(function (funcPack) { return funcPack.func == handler; }) != -1)
-                console.warn("您试图添加相同的观察者两次");
+            es.Insist.isFalse(list.findIndex(function (funcPack) { return funcPack.func == handler; }) != -1, "您试图添加相同的观察者两次");
             list.push(new FuncPack(handler, context));
         };
         /**

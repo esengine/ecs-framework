@@ -52,8 +52,7 @@ module es {
         public remove(component: Component) {
             let componentToRemove = new linq.List(this._componentsToRemove);
             let componentToAdd = new linq.List(this._componentsToAdd);
-            if (componentToRemove.contains(component))
-                console.warn(`您正在尝试删除一个您已经删除的组件(${component})`);
+            Debug.warnIf(componentToRemove.contains(component), `您正在尝试删除一个您已经删除的组件(${component})`);
 
             // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
             if (componentToAdd.contains(component)) {

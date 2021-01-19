@@ -9,8 +9,7 @@ module es {
 
         public onAddedToEntity() {
             this._collider = this.entity.getComponent<Collider>(Collider);
-            if (!this._collider)
-                console.warn("ProjectileMover没有Collider。ProjectilMover需要一个Collider!");
+            Debug.warnIf(this._collider == null, "ProjectileMover没有Collider。ProjectilMover需要一个Collider!");
         }
 
         /**
