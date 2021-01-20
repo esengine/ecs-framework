@@ -1,4 +1,4 @@
-namespace stopwatch {
+namespace es {
     /**
      * 记录时间的持续时间，一些设计灵感来自物理秒表。
      */
@@ -141,7 +141,7 @@ namespace stopwatch {
          */
         private calculatePendingSlice(endStopwatchTime?: number): Slice {
             if (this._pendingSliceStartStopwatchTime === undefined) {
-                return Object.freeze({startTime: 0, endTime: 0, duration: 0});
+                return Object.freeze({ startTime: 0, endTime: 0, duration: 0 });
             }
 
             if (endStopwatchTime === undefined) {

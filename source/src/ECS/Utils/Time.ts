@@ -13,10 +13,15 @@ module es {
         public static frameCount = 0;
         /** 自场景加载以来的总时间 */
         public static timeSinceSceneLoad: number = 0;
-        private static _lastTime = 0;
+        private static _lastTime = -1;
 
         public static update(currentTime: number) {
-            let dt = (currentTime - this._lastTime) / 1000;
+            if (currentTime == -1)
+                currentTime = Date.now();
+            if (this._lastTime == -1)
+                this._lastTime = currentTime;
+
+            let dt = currentTime - this._lastTime;
             this.totalTime += dt;
             this.deltaTime = dt * this.timeScale;
             this.unscaledDeltaTime = dt;

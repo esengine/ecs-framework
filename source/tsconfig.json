@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "experimentalDecorators": false,
     "downlevelIteration": true,
     "importHelpers": true,
     "pretty": true,

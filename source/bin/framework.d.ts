@@ -18,11 +18,16 @@ declare module es {
         /**
          * 简化对内部类的全局内容实例的访问
          */
-        static _instance: Core;
+        private static _instance;
         /**
          * 用于确定是否应该使用EntitySystems
          */
         static entitySystemsEnabled: boolean;
+        /**
+         * 是否正在debug模式
+         * 仅允许在create时进行更改
+         */
+        readonly debug: boolean;
         _nextScene: Scene;
         /**
          * 用于凝聚GraphicsDeviceReset事件
@@ -34,9 +39,7 @@ declare module es {
         _globalManagers: GlobalManager[];
         _coroutineManager: CoroutineManager;
         _timerManager: TimerManager;
-        width: number;
-        height: number;
-        constructor(width: number, height: number, enableEntitySystems?: boolean);
+        private constructor();
         /**
          * 提供对单例/游戏实例的访问
          * @constructor
@@ -55,6 +58,10 @@ declare module es {
         * @param value
         */
         static scene: Scene;
+        /**
+         * 默认实现创建核心
+         */
+        static create(debug?: boolean): Core;
         /**
          * 添加一个全局管理器对象，它的更新方法将调用场景前的每一帧。
          * @param manager
@@ -84,6 +91,8 @@ declare module es {
          * @param onTime
          */
         static schedule(timeInSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer) => void): Timer;
+        startDebugUpdate(): void;
+        endDebugUpdate(): void;
         startDebugDraw(): void;
         /**
          * 在一个场景结束后，下一个场景开始之前调用
@@ -150,10 +159,6 @@ declare module es {
          * 此组件附加的实体
          */
         entity: Entity;
-        /**
-         * 更新该组件的时间间隔。这与实体的更新间隔无关。
-         */
-        updateInterval: number;
         /**
          * 快速访问 this.entity.transform
          */
@@ -3237,7 +3242,7 @@ declare module es {
         private initialize;
     }
 }
-declare namespace stopwatch {
+declare namespace es {
     /**
      * 记录时间的持续时间，一些设计灵感来自物理秒表。
      */
@@ -3348,6 +3353,71 @@ declare namespace stopwatch {
         readonly endTime: number;
         /** 该切片的运行时间 */
         readonly duration: number;
+    }
+}
+declare module es {
+    class TimeRuler {
+        /**
+         * 最大条数
+         */
+        static readonly maxBars: number;
+        /**
+         * 每条的最大样本数
+         */
+        static readonly maxSamples: number;
+        /**
+         *
+         */
+        static readonly maxNestCall: number;
+        /**
+         * 最大显示帧数
+         */
+        static readonly maxSampleFrames: number;
+        /**
+         * 拍摄快照的时间（以帧数为单位）
+         */
+        static readonly logSnapDuration: number;
+        private logs;
+        private prevLog;
+        private curLog;
+        private frameCount;
+        private stopwatch;
+        private markers;
+        private markerNameToIdMap;
+        enabled: boolean;
+        private static _instance;
+        static readonly Instance: TimeRuler;
+        /**
+         * 你想在Game.Update方法的开头调用StartFrame。
+         * 但是当游戏在固定时间步长模式下运行缓慢时，Game.Update会被多次调用。
+         * 在这种情况下，我们应该忽略StartFrame的调用，为了做到这一点，我们只需要跟踪StartFrame的调用次数
+         */
+        private updateCount;
+        constructor();
+        startFrame(): void;
+        /**
+         * 开始测量时间
+         * @param markerName
+         * @param color
+         * @param barIndex
+         */
+        beginMark(markerName: string, color: number, barIndex?: number): void;
+        /**
+         * 停止测量
+         * @param markerName
+         * @param barIndex
+         */
+        endMark(markerName: string, barIndex?: number): void;
+        /**
+         * 获取给定条形指数和标记名称的平均时间
+         * @param barIndex
+         * @param markerName
+         */
+        getAverageTime(barIndex: number, markerName: string): number;
+        /**
+         * 重置标记记录
+         */
+        resetLog(): void;
     }
 }
 declare module es {

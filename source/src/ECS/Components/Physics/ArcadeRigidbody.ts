@@ -5,11 +5,11 @@ module es {
      */
     export class ArcadeRigidbody extends Component implements IUpdatable {
         /** 这个刚体的质量。质量为0，则是一个不可移动的物体 */
-        public get mass(){
+        public get mass() {
             return this._mass;
         }
 
-        public set mass(value: number){
+        public set mass(value: number) {
             this.setMass(value);
         }
 
@@ -20,18 +20,18 @@ module es {
             return this._elasticity;
         }
 
-        public set elasticiy(value: number){
+        public set elasticiy(value: number) {
             this.setElasticity(value);
         }
 
         /**
          * 0 - 1范围。0表示没有摩擦力，1表示物体会停止在原地
          */
-        public get friction(){
+        public get friction() {
             return this._friction;
         }
 
-        public set friction(value: number){
+        public set friction(value: number) {
             this.setFriction(value);
         }
 
@@ -42,7 +42,7 @@ module es {
             return this._glue;
         }
 
-        public set glue(value: number){
+        public set glue(value: number) {
             this.setGlue(value);
         }
 
@@ -59,7 +59,7 @@ module es {
         /**
          * 质量为0的刚体被认为是不可移动的。改变速度和碰撞对它们没有影响
          */
-        public get isImmovable(){
+        public get isImmovable() {
             return this._mass < 0.0001;
         }
 
@@ -70,7 +70,7 @@ module es {
         public _inverseMass: number = 0;
         public _collider: Collider;
 
-        constructor(){
+        constructor() {
             super();
             this._inverseMass = 1 / this._mass;
         }
@@ -84,7 +84,7 @@ module es {
 
             if (this._mass > 0.0001)
                 this._inverseMass = 1 / this._mass;
-            else 
+            else
                 this._inverseMass = 0;
             return this;
         }
@@ -127,12 +127,12 @@ module es {
             }
         }
 
-        public onAddedToEntity(){
+        public onAddedToEntity() {
             this._collider = this.entity.getComponent<es.Collider>(es.Collider);
             Debug.warnIf(this._collider == null, "ArcadeRigidbody 没有 Collider。ArcadeRigidbody需要一个Collider!");
         }
 
-        public update(){
+        public update() {
             if (this.isImmovable || this._collider == null) {
                 this.velocity = Vector2.zero;
                 return;
@@ -145,7 +145,7 @@ module es {
             let collisionResult = new CollisionResult();
 
             // 捞取我们在新的位置上可能会碰撞到的任何东西
-            let neighbors = Physics.boxcastBroadphaseExcludingSelfNonRect(this._collider, this._collider.collidesWithLayers.value);   
+            let neighbors = Physics.boxcastBroadphaseExcludingSelfNonRect(this._collider, this._collider.collidesWithLayers.value);
             for (let neighbor of neighbors) {
                 // 如果邻近的对撞机是同一个实体，则忽略它
                 if (neighbor.entity.equals(this.entity)) {
@@ -166,7 +166,7 @@ module es {
                         this.velocity = Vector2.add(this.velocity, relativeVelocity);
                     }
                 }
-            }        
+            }
         }
 
         /**
@@ -177,7 +177,7 @@ module es {
         public processOverlap(other: ArcadeRigidbody, minimumTranslationVector: Vector2) {
             if (this.isImmovable) {
                 other.entity.transform.position = Vector2.add(other.entity.transform.position, minimumTranslationVector);
-            }else if(other.isImmovable) {
+            } else if (other.isImmovable) {
                 this.entity.transform.position = Vector2.subtract(this.entity.transform.position, minimumTranslationVector);
             } else {
                 this.entity.transform.position = Vector2.subtract(this.entity.transform.position, Vector2.multiply(minimumTranslationVector, Vector2Ext.halfVector()));
@@ -213,7 +213,7 @@ module es {
          * @param minimumTranslationVector 
          * @param responseVelocity 
          */
-        public calculateResponseVelocity(relativeVelocity: Vector2, minimumTranslationVector: Vector2, responseVelocity: Vector2 = new Vector2()){
+        public calculateResponseVelocity(relativeVelocity: Vector2, minimumTranslationVector: Vector2, responseVelocity: Vector2 = new Vector2()) {
             // 首先，我们得到反方向的归一化MTV：表面法线
             let inverseMTV = Vector2.multiply(minimumTranslationVector, new Vector2(-1));
             let normal = Vector2.normalize(inverseMTV);

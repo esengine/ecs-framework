@@ -18,12 +18,16 @@ module es {
         /**
          * 简化对内部类的全局内容实例的访问
          */
-        public static _instance: Core;
+        private static _instance: Core;
         /**
          * 用于确定是否应该使用EntitySystems
          */
         public static entitySystemsEnabled: boolean;
-
+        /**
+         * 是否正在debug模式
+         * 仅允许在create时进行更改
+         */
+        public readonly debug: boolean;
         public _nextScene: Scene;
         /**
          * 用于凝聚GraphicsDeviceReset事件
@@ -35,13 +39,8 @@ module es {
         public _globalManagers: GlobalManager[] = [];
         public _coroutineManager: CoroutineManager = new CoroutineManager();
         public _timerManager: TimerManager = new TimerManager();
-        public width: number;
-        public height: number;
 
-        constructor(width: number, height: number, enableEntitySystems: boolean = true) {
-            this.width = width;
-            this.height = height;
-
+        private constructor(debug: boolean = true, enableEntitySystems: boolean = true) {
             Core._instance = this;
             Core.emitter = new Emitter<CoreEvents>();
             Core.emitter.addObserver(CoreEvents.frameUpdated, this.update, this);
@@ -50,6 +49,7 @@ module es {
             Core.registerGlobalManager(this._timerManager);
             Core.entitySystemsEnabled = enableEntitySystems;
 
+            this.debug = debug;
             this.initialize();
         }
 
@@ -90,6 +90,16 @@ module es {
             } else {
                 this._instance._nextScene = value;
             }
+        }
+
+        /**
+         * 默认实现创建核心
+         */
+        public static create(debug: boolean = true): Core {
+            if (this._instance == null) {
+                this._instance = new es.Core(debug);
+            }
+            return this._instance;
         }
 
         /**
@@ -142,7 +152,19 @@ module es {
             return this._instance._timerManager.schedule(timeInSeconds, repeats, context, onTime);
         }
 
+        public startDebugUpdate() {
+            if (!this.debug) return;
+            TimeRuler.Instance.startFrame();
+            TimeRuler.Instance.beginMark('update', 0x00ff00);
+        }
+
+        public endDebugUpdate() {
+            if (!this.debug) return;
+            TimeRuler.Instance.endMark('update');
+        }
+
         public startDebugDraw() {
+            if (!this.debug) return;
             this._frameCounter++;
             this._frameCounterElapsedTime += Time.deltaTime;
             if (this._frameCounterElapsedTime >= 1) {
@@ -167,8 +189,10 @@ module es {
 
         }
 
-        protected async update(currentTime?: number) {
-            if (currentTime != null) Time.update(currentTime);
+        protected async update(currentTime: number = -1) {
+            this.startDebugUpdate();
+
+            Time.update(currentTime);
             if (this._scene != null) {
                 for (let i = this._globalManagers.length - 1; i >= 0; i--) {
                     if (this._globalManagers[i].enabled)
@@ -188,6 +212,7 @@ module es {
                 }
             }
 
+            this.endDebugUpdate();
             this.startDebugDraw();
         }
     }
