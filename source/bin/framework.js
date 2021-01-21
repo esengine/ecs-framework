@@ -10180,10 +10180,10 @@ var RandomUtils = /** @class */ (function () {
         return Math.floor(this.random() * n) * step + Math.min(start, stop);
     };
     /**
-     * 返回a 到 b直间的随机整数，包括 a 和 b
+     * 返回a 到 b之间的随机整数，包括 a 和 b
      * @param a
      * @param b
-     * @return [a, b] 直接的随机整数
+     * @return [a, b] 之间的随机整数
      *
      */
     RandomUtils.randint = function (a, b) {

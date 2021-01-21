@@ -26,10 +26,10 @@ class RandomUtils {
     }
 
     /**
-     * 返回a 到 b直间的随机整数，包括 a 和 b
+     * 返回a 到 b之间的随机整数，包括 a 和 b
      * @param a
      * @param b
-     * @return [a, b] 直接的随机整数
+     * @return [a, b] 之间的随机整数
      *
      */
     public static randint(a: number, b: number): number {
