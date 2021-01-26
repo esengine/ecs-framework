@@ -396,7 +396,7 @@ module es {
          * @param type
          */
         public getComponent<T extends Component>(type): T {
-            return this.components.getComponent(type, false) as T;
+            return this.components.getComponent(type, false);
         }
 
         /**
