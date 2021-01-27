@@ -11,6 +11,9 @@ module es {
 
         private _scene: Scene;
 
+        /**
+         * 这个系统所属的场景
+         */
         public get scene() {
             return this._scene;
         }
@@ -45,42 +48,53 @@ module es {
             this.onAdded(entity);
         }
 
-        public onAdded(entity: Entity) {
-        }
+        public onAdded(entity: Entity) { }
 
         public remove(entity: Entity) {
             new linq.List(this._entities).remove(entity);
             this.onRemoved(entity);
         }
 
-        public onRemoved(entity: Entity) {
-
-        }
+        public onRemoved(entity: Entity) { }
 
         public update() {
-            this.begin();
-            this.process(this._entities);
+            if (this.checkProcessing()) {
+                this.begin();
+                this.process(this._entities);
+            }
         }
 
         public lateUpdate() {
-            this.lateProcess(this._entities);
-            this.end();
+            if (this.checkProcessing()) {
+                this.lateProcess(this._entities);
+                this.end();
+            }
         }
 
-        protected begin() {
+        /**
+         * 在系统处理开始前调用
+         * 在下一个系统开始处理或新的处理回合开始之前（以先到者为准），使用此方法创建的任何实体都不会激活
+         */
+        protected begin() { }
 
-        }
+        protected process(entities: Entity[]) { }
 
-        protected process(entities: Entity[]) {
+        protected lateProcess(entities: Entity[]) { }
 
-        }
+        /**
+         * 系统处理完毕后调用
+         */
+        protected end() { }
 
-        protected lateProcess(entities: Entity[]) {
-
-        }
-
-        protected end() {
-
+        /**
+         * 系统是否需要处理
+         * 
+         * 在启用系统时有用，但仅偶尔需要处理
+         * 这只影响处理，不影响事件或订阅列表
+         * @returns 如果系统应该处理，则为true，如果不处理则为false。
+         */
+        protected checkProcessing() {
+            return true;
         }
     }
 }

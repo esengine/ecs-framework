@@ -352,6 +352,11 @@ declare module es {
          */
         update(): void;
         /**
+         * 创建组件的新实例。返回实例组件
+         * @param componentType
+         */
+        createComponent<T extends Component>(componentType: new () => T): T;
+        /**
          * 将组件添加到组件列表中。返回组件。
          * @param component
          */
@@ -858,15 +863,6 @@ declare module es {
     }
 }
 declare module es {
-    class ComponentPool<T extends PooledComponent> {
-        private _cache;
-        private _type;
-        constructor(typeClass: any);
-        obtain(): T;
-        free(component: T): void;
-    }
-}
-declare module es {
     /**
      * 接口，当添加到一个Component时，只要Component和实体被启用，它就会在每个框架中调用更新方法。
      */
@@ -882,12 +878,6 @@ declare module es {
         compare(a: IUpdatable, b: IUpdatable): number;
     }
     var isIUpdatable: (props: any) => props is IUpdatable;
-}
-declare module es {
-    /** 回收实例的组件类型。 */
-    abstract class PooledComponent extends Component {
-        abstract reset(): any;
-    }
 }
 declare module es {
     class SceneComponent implements IComparer<SceneComponent> {
@@ -1272,6 +1262,9 @@ declare module es {
         private _entities;
         constructor(matcher?: Matcher);
         private _scene;
+        /**
+         * 这个系统所属的场景
+         */
         scene: Scene;
         private _matcher;
         readonly matcher: Matcher;
@@ -1283,10 +1276,96 @@ declare module es {
         onRemoved(entity: Entity): void;
         update(): void;
         lateUpdate(): void;
+        /**
+         * 在系统处理开始前调用
+         * 在下一个系统开始处理或新的处理回合开始之前（以先到者为准），使用此方法创建的任何实体都不会激活
+         */
         protected begin(): void;
         protected process(entities: Entity[]): void;
         protected lateProcess(entities: Entity[]): void;
+        /**
+         * 系统处理完毕后调用
+         */
         protected end(): void;
+        /**
+         * 系统是否需要处理
+         *
+         * 在启用系统时有用，但仅偶尔需要处理
+         * 这只影响处理，不影响事件或订阅列表
+         * @returns 如果系统应该处理，则为true，如果不处理则为false。
+         */
+        protected checkProcessing(): boolean;
+    }
+}
+declare module es {
+    /**
+     * 追踪每个实体的冷却时间，当实体的计时器耗尽时进行处理
+     *
+     * 一个示例系统将是ExpirationSystem，该系统将在特定生存期后删除实体。
+     * 你不必运行会为每个实体递减timeLeft值的系统
+     * 而只需使用此系统在寿命最短的实体时在将来执行
+     * 然后重置系统在未来的某一个最短命实体的时间运行
+     *
+     * 另一个例子是一个动画系统
+     * 你知道什么时候你必须对某个实体进行动画制作，比如300毫秒内。
+     * 所以你可以设置系统以300毫秒为单位运行来执行动画
+     *
+     * 这将在某些情况下节省CPU周期
+     */
+    abstract class DelayedIteratingSystem extends EntitySystem {
+        /**
+         * 一个实体应被处理的时间
+         */
+        private delay;
+        /**
+         * 如果系统正在运行，并倒计时延迟
+         */
+        private running;
+        /**
+         * 倒计时
+         */
+        private acc;
+        constructor(matcher: Matcher);
+        protected process(entities: Entity[]): void;
+        protected checkProcessing(): boolean;
+        /**
+         * 只有当提供的延迟比系统当前计划执行的时间短时，才会重新启动系统。
+         * 如果系统已经停止（不运行），那么提供的延迟将被用来重新启动系统，无论其值如何
+         * 如果系统已经在倒计时，并且提供的延迟大于剩余时间，系统将忽略它。
+         * 如果提供的延迟时间短于剩余时间，系统将重新启动，以提供的延迟时间运行。
+         * @param offeredDelay
+         */
+        offerDelay(offeredDelay: number): void;
+        /**
+         * 处理本系统感兴趣的实体
+         * 从实体定义的延迟中抽象出accumulativeDelta
+         * @param entity
+         * @param accumulatedDelta 本系统最后一次执行后的delta时间
+         */
+        protected abstract processDelta(entity: Entity, accumulatedDelta: number): any;
+        protected abstract processExpired(entity: Entity): any;
+        /**
+         * 返回该实体处理前的延迟时间
+         * @param entity
+         */
+        protected abstract getRemainingDelay(entity: Entity): number;
+        /**
+         * 获取系统被命令处理实体后的初始延迟
+         */
+        getInitialTimeDelay(): number;
+        /**
+         * 获取系统计划运行前的时间
+         * 如果系统没有运行，则返回零
+         */
+        getRemainingTimeUntilProcessing(): number;
+        /**
+         * 检查系统是否正在倒计时处理
+         */
+        isRunning(): boolean;
+        /**
+         * 停止系统运行，中止当前倒计时
+         */
+        stop(): void;
     }
 }
 declare module es {
@@ -1310,6 +1389,46 @@ declare module es {
          */
         protected process(entities: Entity[]): void;
         protected lateProcess(entities: Entity[]): void;
+    }
+}
+declare module es {
+    /**
+     * 实体系统以一定的时间间隔进行处理
+     */
+    abstract class IntervalSystem extends EntitySystem {
+        /**
+         * 累积增量以跟踪间隔
+         */
+        protected acc: number;
+        /**
+         * 更新之间需要等待多长时间
+         */
+        private readonly interval;
+        private intervalDelta;
+        constructor(matcher: Matcher, interval: number);
+        protected checkProcessing(): boolean;
+        /**
+         * 获取本系统上次处理后的实际delta值
+         */
+        protected getIntervalDelta(): number;
+    }
+}
+declare module es {
+    /**
+     * 每x个ticks处理一个实体的子集
+     *
+     * 典型的用法是每隔一定的时间间隔重新生成弹药或生命值
+     * 而无需在每个游戏循环中都进行
+     * 而是每100毫秒一次或每秒
+     */
+    abstract class IntervalIteratingSystem extends IntervalSystem {
+        constructor(matcher: Matcher, interval: number);
+        /**
+         * 处理本系统感兴趣的实体
+         * @param entity
+         */
+        abstract processEntity(entity: Entity): any;
+        protected process(entities: Entity[]): void;
     }
 }
 declare module es {

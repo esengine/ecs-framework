@@ -381,6 +381,16 @@ module es {
         }
 
         /**
+         * 创建组件的新实例。返回实例组件
+         * @param componentType 
+         */
+        public createComponent<T extends Component>(componentType: new () => T): T {
+            let component = new componentType();
+            this.addComponent(component);
+            return component;
+        }
+
+        /**
          * 将组件添加到组件列表中。返回组件。
          * @param component
          */
