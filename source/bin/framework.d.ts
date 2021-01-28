@@ -1469,6 +1469,127 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * 性能优化的位组实现。某些操作是以不安全为前缀的, 这些方法不执行验证，主要是在内部利用来优化实体ID位集的访问
+     */
+    class BitVector {
+        private words;
+        /**
+         * 创建一个初始大小足够大的bitset，以明确表示0到nbits-1范围内指数的bit
+         * @param nbits nbits 位集的初始大小
+         */
+        constructor(nbits?: number | BitVector);
+        /**
+         *
+         * @param index 位的索引
+         * @returns 该位是否被设置
+         */
+        get(index: number): boolean;
+        /**
+         *
+         * @param index 位的索引
+         */
+        set(index: number, value?: boolean): void;
+        /**
+         *
+         * @param index 位的索引
+         * @returns 该位是否被设置
+         */
+        unsafeGet(index: number): boolean;
+        /**
+         *
+         * @param index 要设置的位的索引
+         */
+        unsafeSet(index: number): void;
+        /**
+         *
+         * @param index 要翻转的位的索引
+         */
+        flip(index: number): void;
+        /**
+         * 要清除的位的索引
+         * @param index
+         */
+        clear(index?: number): void;
+        /**
+         * 返回该位组的 "逻辑大小"：位组中最高设置位的索引加1。如果比特集不包含集合位，则返回0
+         */
+        length(): number;
+        /**
+         * @returns 如果这个位组中没有设置为true的位，则为true
+         */
+        isEmpty(): boolean;
+        /**
+         * 返回在指定的起始索引上或之后出现的第一个被设置为真的位的索引。
+         * 如果不存在这样的位，则返回-1
+         * @param fromIndex
+         */
+        nextSetBit(fromIndex: number): number;
+        /**
+         * 返回在指定的起始索引上或之后发生的第一个被设置为false的位的索引
+         * @param fromIndex
+         */
+        nextClearBit(fromIndex: number): number;
+        /**
+         * 对这个目标位集和参数位集进行逻辑AND。
+         * 这个位集被修改，使它的每一个位都有值为真，如果且仅当它最初的值为真，并且位集参数中的相应位也有值为真
+         * @param other
+         */
+        and(other: BitVector): void;
+        /**
+         * 清除该位集的所有位，其对应的位被设置在指定的位集中
+         * @param other
+         */
+        andNot(other: BitVector): void;
+        /**
+         * 用位集参数执行这个位集的逻辑OR。
+         * 如果且仅当位集参数中的位已经有值为真或位集参数中的对应位有值为真时，该位集才会被修改，从而使位集中的位有值为真
+         * @param other
+         */
+        or(other: BitVector): void;
+        /**
+         * 用位集参数对这个位集进行逻辑XOR。
+         * 这个位集被修改了，所以如果且仅当以下语句之一成立时，位集中的一个位的值为真
+         * @param other
+         */
+        xor(other: BitVector): void;
+        /**
+         * 如果指定的BitVector有任何位被设置为true，并且在这个BitVector中也被设置为true，则返回true
+         * @param other
+         */
+        intersects(other: BitVector): boolean;
+        /**
+         * 如果这个位集是指定位集的超级集，即它的所有位都被设置为真，那么返回true
+         * @param other
+         */
+        containsAll(other: BitVector): boolean;
+        cardinality(): number;
+        hashCode(): number;
+        private bitCount;
+        /**
+         * 返回二进制补码二进制表示形式中最高位（“最左端”）一位之前的零位数量
+         * @param i
+         */
+        private numberOfLeadingZeros;
+        /**
+         * 返回指定二进制数的补码二进制表示形式中最低序（“最右”）一位之后的零位数量
+         * @param i
+         */
+        numberOfTrailingZeros(i: number): number;
+        /**
+         *
+         * @param index 要清除的位的索引
+         */
+        unsafeClear(index: number): void;
+        /**
+         * 增长支持数组，使其能够容纳所请求的位
+         * @param bits 位数
+         */
+        ensureCapacity(bits: number): void;
+        private checkCapacity;
+    }
+}
+declare module es {
     class ComponentList {
         /**
          * 组件列表的全局updateOrder排序
