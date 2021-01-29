@@ -1988,6 +1988,33 @@ declare class TimeUtils {
 }
 declare module es {
     /**
+     * 开辟一个新线程
+     * 注意：它无法获得主线程中的上下文
+     */
+    class WorkerUtils {
+        /** 正在执行的队列 */
+        private static readonly pendingJobs;
+        private static jobIdGen;
+        /**
+         * 创建一个worker
+         * @param doFunc worker所能做的事情
+         *
+         * @example const worker = es.WorkerUtils.makeWorker(()=>{
+         *      onmessage = ({data: {jobId, meesage}}) => {
+         *          // worker内做的事
+         *          console.log('我是线程', message, jobId);
+         *      };
+         * });
+         *
+         * worker('主线程发送消息').then(message => {
+         *      console.log('主线程收到消息', message);
+         * });
+         */
+        static makeWorker(doFunc: Function): (...message: any[]) => Promise<{}>;
+    }
+}
+declare module es {
+    /**
      * 三次方和二次方贝塞尔帮助器(cubic and quadratic bezier helper)
      */
     class Bezier {

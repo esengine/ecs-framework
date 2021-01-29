@@ -4949,6 +4949,58 @@ var TimeUtils = /** @class */ (function () {
 var es;
 (function (es) {
     /**
+     * 开辟一个新线程
+     * 注意：它无法获得主线程中的上下文
+     */
+    var WorkerUtils = /** @class */ (function () {
+        function WorkerUtils() {
+        }
+        /**
+         * 创建一个worker
+         * @param doFunc worker所能做的事情
+         *
+         * @example const worker = es.WorkerUtils.makeWorker(()=>{
+         *      onmessage = ({data: {jobId, meesage}}) => {
+         *          // worker内做的事
+         *          console.log('我是线程', message, jobId);
+         *      };
+         * });
+         *
+         * worker('主线程发送消息').then(message => {
+         *      console.log('主线程收到消息', message);
+         * });
+         */
+        WorkerUtils.makeWorker = function (doFunc) {
+            var _this = this;
+            var worker = new Worker(URL.createObjectURL(new Blob(["(" + doFunc.toString() + ")()"])));
+            worker.onmessage = function (_a) {
+                var _b = _a.data, result = _b.result, jobId = _b.jobId;
+                if (typeof _this.pendingJobs[jobId] == 'function')
+                    _this.pendingJobs[jobId](result);
+                delete _this.pendingJobs[jobId];
+            };
+            return function () {
+                var message = [];
+                for (var _i = 0; _i < arguments.length; _i++) {
+                    message[_i] = arguments[_i];
+                }
+                return new Promise(function (resolve) {
+                    var jobId = _this.jobIdGen++;
+                    _this.pendingJobs[jobId] = resolve;
+                    worker.postMessage({ jobId: jobId, message: message });
+                });
+            };
+        };
+        /** 正在执行的队列 */
+        WorkerUtils.pendingJobs = {};
+        WorkerUtils.jobIdGen = 0;
+        return WorkerUtils;
+    }());
+    es.WorkerUtils = WorkerUtils;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
      * 三次方和二次方贝塞尔帮助器(cubic and quadratic bezier helper)
      */
     var Bezier = /** @class */ (function () {
