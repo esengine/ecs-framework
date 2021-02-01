@@ -3175,6 +3175,90 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * JobSystem使用实体的子集调用Execute（entities），并在指定数量的线程上分配工作负载。
+     */
+    var JobSystem = /** @class */ (function (_super) {
+        __extends(JobSystem, _super);
+        function JobSystem(matcher, threads) {
+            var _this = _super.call(this, matcher) || this;
+            _this._threads = threads;
+            _this._jobs = new Array(threads);
+            for (var i = 0; i < _this._jobs.length; i++) {
+                _this._jobs[i] = new Job();
+            }
+            _this._executeStr = JSON.stringify(_this.execute, function (key, val) {
+                if (typeof val === 'function') {
+                    return val + '';
+                }
+                return val;
+            });
+            return _this;
+        }
+        JobSystem.prototype.process = function (entities) {
+            var _this = this;
+            var remainder = entities.length & this._threads;
+            var slice = entities.length / this._threads + (remainder == 0 ? 0 : 1);
+            var _loop_2 = function (t) {
+                var from = t * slice;
+                var to = from + slice;
+                if (to > entities.length) {
+                    to = entities.length;
+                }
+                var job = this_1._jobs[t];
+                job.set(entities, from, to, this_1._executeStr, this_1);
+                if (from != to) {
+                    var worker_1 = es.WorkerUtils.makeWorker(this_1.queueOnThread);
+                    var workerDo = es.WorkerUtils.workerMessage(worker_1);
+                    workerDo(job).then(function (message) {
+                        var job = message;
+                        _this.resetJob(job);
+                        worker_1.terminate();
+                    }).catch(function (err) {
+                        job.err = err;
+                        worker_1.terminate();
+                    });
+                }
+            };
+            var this_1 = this;
+            for (var t = 0; t < this._threads; t++) {
+                _loop_2(t);
+            }
+        };
+        JobSystem.prototype.queueOnThread = function () {
+            onmessage = function (_a) {
+                var _b = _a.data, jobId = _b.jobId, message = _b.message;
+                var job = message[0];
+                var executeFunc = JSON.parse(job.execute, function (k, v) {
+                    if (v.indexOf && v.indexOf('function') > -1) {
+                        return eval("(function(){return " + v + " })()");
+                    }
+                    return v;
+                });
+                for (var i = job.from; i < job.to; i++) {
+                    executeFunc.call(job.context, job.entities[i]);
+                }
+                postMessage({ jobId: jobId, result: message }, null);
+            };
+        };
+        return JobSystem;
+    }(es.EntitySystem));
+    es.JobSystem = JobSystem;
+    var Job = /** @class */ (function () {
+        function Job() {
+        }
+        Job.prototype.set = function (entities, from, to, execute, context) {
+            this.entities = entities;
+            this.from = from;
+            this.to = to;
+            this.execute = execute;
+            this.context = context;
+        };
+        return Job;
+    }());
+})(es || (es = {}));
+var es;
+(function (es) {
     var PassiveSystem = /** @class */ (function (_super) {
         __extends(PassiveSystem, _super);
         function PassiveSystem() {
@@ -4089,7 +4173,8 @@ var es;
         };
         EntityList.prototype.removeFromTagList = function (entity) {
             var list = this._entityDict.get(entity.tag);
-            list.delete(entity);
+            if (list)
+                list.delete(entity);
         };
         EntityList.prototype.update = function () {
             var e_11, _a;
@@ -4960,21 +5045,13 @@ var es;
         /**
          * 创建一个worker
          * @param doFunc worker所能做的事情
-         *
-         * @example const worker = es.WorkerUtils.makeWorker(()=>{
-         *      onmessage = ({data: {jobId, meesage}}) => {
-         *          // worker内做的事
-         *          console.log('我是线程', message, jobId);
-         *      };
-         * });
-         *
-         * worker('主线程发送消息').then(message => {
-         *      console.log('主线程收到消息', message);
-         * });
          */
         WorkerUtils.makeWorker = function (doFunc) {
-            var _this = this;
             var worker = new Worker(URL.createObjectURL(new Blob(["(" + doFunc.toString() + ")()"])));
+            return worker;
+        };
+        WorkerUtils.workerMessage = function (worker) {
+            var _this = this;
             worker.onmessage = function (_a) {
                 var _b = _a.data, result = _b.result, jobId = _b.jobId;
                 if (typeof _this.pendingJobs[jobId] == 'function')

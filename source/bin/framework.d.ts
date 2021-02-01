@@ -1432,6 +1432,41 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * JobSystem使用实体的子集调用Execute（entities），并在指定数量的线程上分配工作负载。
+     */
+    abstract class JobSystem extends EntitySystem {
+        readonly _threads: number;
+        readonly _jobs: Job[];
+        readonly _executeStr: string;
+        constructor(matcher: Matcher, threads: number);
+        protected process(entities: Entity[]): void;
+        private queueOnThread;
+        /**
+         * 当操作完成时，改变的值需要用户进行手动传递
+         * 由于worker数据无法共享，所以这块需要特殊处理
+         * @example this.test = job[0].context.test;
+         * @param job
+         */
+        protected abstract resetJob(job: Job): any;
+        /**
+         * 对指定实体进行多线程操作
+         * @param entity
+         */
+        protected abstract execute(entity: Entity): any;
+    }
+    class Job {
+        entities: Entity[];
+        from: number;
+        to: number;
+        worker: Worker;
+        execute: string;
+        err: string;
+        context: any;
+        set(entities: Entity[], from: number, to: number, execute: string, context: any): void;
+    }
+}
+declare module es {
     abstract class PassiveSystem extends EntitySystem {
         onChanged(entity: Entity): void;
         protected process(entities: Entity[]): void;
@@ -1998,19 +2033,9 @@ declare module es {
         /**
          * 创建一个worker
          * @param doFunc worker所能做的事情
-         *
-         * @example const worker = es.WorkerUtils.makeWorker(()=>{
-         *      onmessage = ({data: {jobId, meesage}}) => {
-         *          // worker内做的事
-         *          console.log('我是线程', message, jobId);
-         *      };
-         * });
-         *
-         * worker('主线程发送消息').then(message => {
-         *      console.log('主线程收到消息', message);
-         * });
          */
-        static makeWorker(doFunc: Function): (...message: any[]) => Promise<{}>;
+        static makeWorker(doFunc: Function): Worker;
+        static workerMessage(worker: Worker): (...message: any[]) => Promise<{}>;
     }
 }
 declare module es {

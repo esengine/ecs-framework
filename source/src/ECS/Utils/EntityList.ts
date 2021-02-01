@@ -115,7 +115,8 @@ module es {
 
         public removeFromTagList(entity: Entity) {
             let list = this._entityDict.get(entity.tag);
-            list.delete(entity);
+            if (list)
+                list.delete(entity);
         }
 
         public update() {

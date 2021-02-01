@@ -11,21 +11,14 @@ module es {
         /**
          * 创建一个worker
          * @param doFunc worker所能做的事情
-         * 
-         * @example const worker = es.WorkerUtils.makeWorker(()=>{
-         *      onmessage = ({data: {jobId, meesage}}) => {
-         *          // worker内做的事
-         *          console.log('我是线程', message, jobId);
-         *      };
-         * });
-         * 
-         * worker('主线程发送消息').then(message => {
-         *      console.log('主线程收到消息', message);
-         * });
          */
         public static makeWorker(doFunc: Function) {
             const worker = new Worker(URL.createObjectURL(new Blob([`(${doFunc.toString()})()`])));
 
+            return worker;
+        }
+
+        public static workerMessage(worker: Worker) {
             worker.onmessage = ({ data: { result, jobId } }) => {
                 if (typeof this.pendingJobs[jobId] == 'function')
                     this.pendingJobs[jobId](result);
