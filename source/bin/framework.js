@@ -4078,23 +4078,18 @@ var es;
         EntityList.prototype.getTagList = function (tag) {
             var list = this._entityDict.get(tag);
             if (!list) {
-                list = [];
+                list = new Set();
                 this._entityDict.set(tag, list);
             }
             return list;
         };
         EntityList.prototype.addToTagList = function (entity) {
-            var list = this.getTagList(entity.tag);
-            if (list.findIndex(function (e) { return e.id == entity.id; }) == -1) {
-                list.push(entity);
-                this._unsortedTags.add(entity.tag);
-            }
+            this.getTagList(entity.tag).add(entity);
+            this._unsortedTags.add(entity.tag);
         };
         EntityList.prototype.removeFromTagList = function (entity) {
             var list = this._entityDict.get(entity.tag);
-            if (list) {
-                new linq.List(list).remove(entity);
-            }
+            list.delete(entity);
         };
         EntityList.prototype.update = function () {
             var e_11, _a;
@@ -4144,11 +4139,6 @@ var es;
                 this._entities.sort(es.Entity.entityComparer.compare);
                 this._isEntityListUnsorted = false;
             }
-            // 根据需要对标签列表进行排序
-            if (this._unsortedTags.size > 0) {
-                this._unsortedTags.forEach(function (value) { return _this._entityDict.get(value).sort(function (a, b) { return a.compareTo(b); }); });
-                this._unsortedTags.clear();
-            }
         };
         /**
          * 返回第一个找到的名字为name的实体。如果没有找到则返回null
@@ -4172,11 +4162,23 @@ var es;
          * @param tag
          */
         EntityList.prototype.entitiesWithTag = function (tag) {
+            var e_12, _a;
             var list = this.getTagList(tag);
             var returnList = es.ListPool.obtain();
             returnList.length = this._entities.length;
-            for (var i = 0; i < list.length; i++)
-                returnList.push(list[i]);
+            try {
+                for (var list_1 = __values(list), list_1_1 = list_1.next(); !list_1_1.done; list_1_1 = list_1.next()) {
+                    var entity = list_1_1.value;
+                    returnList.push(entity);
+                }
+            }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            finally {
+                try {
+                    if (list_1_1 && !list_1_1.done && (_a = list_1.return)) _a.call(list_1);
+                }
+                finally { if (e_12) throw e_12.error; }
+            }
             return returnList;
         };
         /**
@@ -7151,7 +7153,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
-            var e_12, _a;
+            var e_13, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location;
             var resultCounter = 0;
@@ -7182,12 +7184,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_12) throw e_12.error; }
+                finally { if (e_13) throw e_13.error; }
             }
             return resultCounter;
         };
@@ -7199,7 +7201,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_13, _a;
+            var e_14, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -7232,12 +7234,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_13) throw e_13.error; }
+                finally { if (e_14) throw e_14.error; }
             }
             return resultCounter;
         };
@@ -9072,7 +9074,7 @@ var es;
          * 重置标记记录
          */
         TimeRuler.prototype.resetLog = function () {
-            var e_14, _a;
+            var e_15, _a;
             if (!es.Core.Instance.debug)
                 return;
             try {
@@ -9090,12 +9092,12 @@ var es;
                     }
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_15) throw e_15.error; }
             }
         };
         /**
@@ -11685,7 +11687,7 @@ var linq;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_15, _a;
+            var e_16, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -11693,12 +11695,12 @@ var linq;
                     result.add(x);
                 }
             }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_15) throw e_15.error; }
+                finally { if (e_16) throw e_16.error; }
             }
             return result;
         };
@@ -11947,7 +11949,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_16, _a;
+            var e_17, _a;
             var output = es.ListPool.obtain();
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -11986,12 +11988,12 @@ var es;
                         }
                     }
                 }
-                catch (e_16_1) { e_16 = { error: e_16_1 }; }
+                catch (e_17_1) { e_17 = { error: e_17_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_16) throw e_16.error; }
+                    finally { if (e_17) throw e_17.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -12107,7 +12109,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_17, _a;
+            var e_18, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -12125,12 +12127,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_17_1) { e_17 = { error: e_17_1 }; }
+            catch (e_18_1) { e_18 = { error: e_18_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_17) throw e_17.error; }
+                finally { if (e_18) throw e_18.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

@@ -20,7 +20,7 @@ module es {
         /**
          * 通过标签跟踪实体，便于检索
          */
-        public _entityDict: Map<number, Entity[]> = new Map<number, Entity[]>();
+        public _entityDict: Map<number, Set<Entity>> = new Map<number, Set<Entity>>();
         public _unsortedTags: Set<number> = new Set<number>();
 
         constructor(scene: Scene) {
@@ -101,7 +101,7 @@ module es {
         public getTagList(tag: number) {
             let list = this._entityDict.get(tag);
             if (!list) {
-                list = [];
+                list = new Set();
                 this._entityDict.set(tag, list);
             }
 
@@ -109,18 +109,13 @@ module es {
         }
 
         public addToTagList(entity: Entity) {
-            let list = this.getTagList(entity.tag);
-            if (list.findIndex(e => e.id == entity.id) == -1) {
-                list.push(entity);
-                this._unsortedTags.add(entity.tag);
-            }
+            this.getTagList(entity.tag).add(entity);
+            this._unsortedTags.add(entity.tag);
         }
 
         public removeFromTagList(entity: Entity) {
             let list = this._entityDict.get(entity.tag);
-            if (list) {
-                new linq.List(list).remove(entity);
-            }
+            list.delete(entity);
         }
 
         public update() {
@@ -168,13 +163,6 @@ module es {
                 this._entities.sort(Entity.entityComparer.compare);
                 this._isEntityListUnsorted = false;
             }
-
-            // 根据需要对标签列表进行排序
-            if (this._unsortedTags.size > 0) {
-                this._unsortedTags.forEach(value => this._entityDict.get(value).sort((a, b) => a.compareTo(b)));
-
-                this._unsortedTags.clear();
-            }
         }
 
         /**
@@ -206,8 +194,9 @@ module es {
 
             let returnList = ListPool.obtain<Entity>();
             returnList.length = this._entities.length;
-            for (let i = 0; i < list.length; i++)
-                returnList.push(list[i]);
+            for (let entity of list) {
+                returnList.push(entity);
+            }
 
             return returnList;
         }

@@ -10,7 +10,7 @@ module es {
          * @param type
          * @param cacheCount
          */
-        public static warmCache(type: any, cacheCount: number){
+        public static warmCache(type: any, cacheCount: number) {
             cacheCount -= this._objectQueue.length;
             if (cacheCount > 0) {
                 for (let i = 0; i < cacheCount; i++) {
@@ -23,7 +23,7 @@ module es {
          * 将缓存修剪为cacheCount项目
          * @param cacheCount
          */
-        public static trimCache(cacheCount: number){
+        public static trimCache(cacheCount: number) {
             while (cacheCount > this._objectQueue.length)
                 this._objectQueue.shift();
         }
@@ -52,7 +52,7 @@ module es {
         public static free<T>(obj: T) {
             this._objectQueue.unshift(obj);
 
-            if (isIPoolable(obj)){
+            if (isIPoolable(obj)) {
                 obj["reset"]();
             }
         }

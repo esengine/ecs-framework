@@ -1683,7 +1683,7 @@ declare module es {
         /**
          * 通过标签跟踪实体，便于检索
          */
-        _entityDict: Map<number, Entity[]>;
+        _entityDict: Map<number, Set<Entity>>;
         _unsortedTags: Set<number>;
         constructor(scene: Scene);
         readonly count: number;
@@ -1709,7 +1709,7 @@ declare module es {
          * @param entity
          */
         contains(entity: Entity): boolean;
-        getTagList(tag: number): Entity[];
+        getTagList(tag: number): Set<Entity>;
         addToTagList(entity: Entity): void;
         removeFromTagList(entity: Entity): void;
         update(): void;
