@@ -405,8 +405,19 @@ module es {
          * 获取类型T的第一个组件并返回它。如果没有找到组件，则返回null。
          * @param type
          */
-        public getComponent<T extends Component>(type): T {
+        public getComponent<T extends Component>(type: any): T {
             return this.components.getComponent(type, false);
+        }
+
+        /**
+         * 尝试获取T类型的组件。如果未找到任何组件，则返回false
+         * @param type 
+         * @param outComponent 
+         * @returns 
+         */
+        public tryGetComponent<T extends Component>(type: any, outComponent: Ref<T>): boolean {
+            outComponent.value = this.components.getComponent<T>(type, false);
+            return outComponent.value != null;
         }
 
         /**

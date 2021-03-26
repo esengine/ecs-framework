@@ -942,6 +942,16 @@ var es;
             return this.components.getComponent(type, false);
         };
         /**
+         * 尝试获取T类型的组件。如果未找到任何组件，则返回false
+         * @param type
+         * @param outComponent
+         * @returns
+         */
+        Entity.prototype.tryGetComponent = function (type, outComponent) {
+            outComponent.value = this.components.getComponent(type, false);
+            return outComponent.value != null;
+        };
+        /**
          * 检查实体是否具有该组件
          * @param type
          */

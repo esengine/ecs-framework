@@ -365,6 +365,13 @@ declare module es {
          */
         getComponent<T extends Component>(type: any): T;
         /**
+         * 尝试获取T类型的组件。如果未找到任何组件，则返回false
+         * @param type
+         * @param outComponent
+         * @returns
+         */
+        tryGetComponent<T extends Component>(type: any, outComponent: Ref<T>): boolean;
+        /**
          * 检查实体是否具有该组件
          * @param type
          */
