@@ -91,8 +91,6 @@ declare module es {
          * @param onTime
          */
         static schedule(timeInSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer) => void): Timer;
-        startDebugUpdate(): void;
-        endDebugUpdate(): void;
         startDebugDraw(): void;
         /**
          * 在一个场景结束后，下一个场景开始之前调用
@@ -1934,6 +1932,8 @@ declare module es {
         static deltaTime: number;
         /** 时间刻度缩放 */
         static timeScale: number;
+        /** DeltaTime可以为的最大值 */
+        static maxDeltaTime: number;
         /** 已传递的帧总数 */
         static frameCount: number;
         /** 自场景加载以来的总时间 */
@@ -3645,71 +3645,6 @@ declare namespace es {
         readonly endTime: number;
         /** 该切片的运行时间 */
         readonly duration: number;
-    }
-}
-declare module es {
-    class TimeRuler {
-        /**
-         * 最大条数
-         */
-        static readonly maxBars: number;
-        /**
-         * 每条的最大样本数
-         */
-        static readonly maxSamples: number;
-        /**
-         *
-         */
-        static readonly maxNestCall: number;
-        /**
-         * 最大显示帧数
-         */
-        static readonly maxSampleFrames: number;
-        /**
-         * 拍摄快照的时间（以帧数为单位）
-         */
-        static readonly logSnapDuration: number;
-        private logs;
-        private prevLog;
-        private curLog;
-        private frameCount;
-        private stopwatch;
-        private markers;
-        private markerNameToIdMap;
-        enabled: boolean;
-        private static _instance;
-        static readonly Instance: TimeRuler;
-        /**
-         * 你想在Game.Update方法的开头调用StartFrame。
-         * 但是当游戏在固定时间步长模式下运行缓慢时，Game.Update会被多次调用。
-         * 在这种情况下，我们应该忽略StartFrame的调用，为了做到这一点，我们只需要跟踪StartFrame的调用次数
-         */
-        private updateCount;
-        constructor();
-        startFrame(): void;
-        /**
-         * 开始测量时间
-         * @param markerName
-         * @param color
-         * @param barIndex
-         */
-        beginMark(markerName: string, color: number, barIndex?: number): void;
-        /**
-         * 停止测量
-         * @param markerName
-         * @param barIndex
-         */
-        endMark(markerName: string, barIndex?: number): void;
-        /**
-         * 获取给定条形指数和标记名称的平均时间
-         * @param barIndex
-         * @param markerName
-         */
-        getAverageTime(barIndex: number, markerName: string): number;
-        /**
-         * 重置标记记录
-         */
-        resetLog(): void;
     }
 }
 declare module es {

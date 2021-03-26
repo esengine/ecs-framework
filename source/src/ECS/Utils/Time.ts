@@ -9,6 +9,8 @@ module es {
         public static deltaTime: number = 0;
         /** 时间刻度缩放 */
         public static timeScale = 1;
+        /** DeltaTime可以为的最大值 */
+        public static maxDeltaTime = Number.MAX_VALUE;
         /** 已传递的帧总数 */
         public static frameCount = 0;
         /** 自场景加载以来的总时间 */
@@ -22,6 +24,8 @@ module es {
                 this._lastTime = currentTime;
 
             let dt = currentTime - this._lastTime;
+            if (dt > this.maxDeltaTime)
+                dt = this.maxDeltaTime;
             this.totalTime += dt;
             this.deltaTime = dt * this.timeScale;
             this.unscaledDeltaTime = dt;

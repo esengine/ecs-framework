@@ -152,17 +152,6 @@ module es {
             return this._instance._timerManager.schedule(timeInSeconds, repeats, context, onTime);
         }
 
-        public startDebugUpdate() {
-            if (!this.debug) return;
-            TimeRuler.Instance.startFrame();
-            TimeRuler.Instance.beginMark('update', 0x00ff00);
-        }
-
-        public endDebugUpdate() {
-            if (!this.debug) return;
-            TimeRuler.Instance.endMark('update');
-        }
-
         public startDebugDraw() {
             if (!this.debug) return;
             this._frameCounter++;
@@ -190,8 +179,6 @@ module es {
         }
 
         protected async update(currentTime: number = -1) {
-            this.startDebugUpdate();
-
             Time.update(currentTime);
             if (this._scene != null) {
                 for (let i = this._globalManagers.length - 1; i >= 0; i--) {
@@ -212,7 +199,6 @@ module es {
                 }
             }
 
-            this.endDebugUpdate();
             this.startDebugDraw();
         }
     }

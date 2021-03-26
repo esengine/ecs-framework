@@ -196,17 +196,6 @@ var es;
             if (context === void 0) { context = null; }
             return this._instance._timerManager.schedule(timeInSeconds, repeats, context, onTime);
         };
-        Core.prototype.startDebugUpdate = function () {
-            if (!this.debug)
-                return;
-            es.TimeRuler.Instance.startFrame();
-            es.TimeRuler.Instance.beginMark('update', 0x00ff00);
-        };
-        Core.prototype.endDebugUpdate = function () {
-            if (!this.debug)
-                return;
-            es.TimeRuler.Instance.endMark('update');
-        };
         Core.prototype.startDebugDraw = function () {
             if (!this.debug)
                 return;
@@ -236,7 +225,6 @@ var es;
             return __awaiter(this, void 0, void 0, function () {
                 var i;
                 return __generator(this, function (_a) {
-                    this.startDebugUpdate();
                     es.Time.update(currentTime);
                     if (this._scene != null) {
                         for (i = this._globalManagers.length - 1; i >= 0; i--) {
@@ -252,7 +240,6 @@ var es;
                             this._scene.begin();
                         }
                     }
-                    this.endDebugUpdate();
                     this.startDebugDraw();
                     return [2 /*return*/];
                 });
@@ -4786,6 +4773,8 @@ var es;
             if (this._lastTime == -1)
                 this._lastTime = currentTime;
             var dt = currentTime - this._lastTime;
+            if (dt > this.maxDeltaTime)
+                dt = this.maxDeltaTime;
             this.totalTime += dt;
             this.deltaTime = dt * this.timeScale;
             this.unscaledDeltaTime = dt;
@@ -4812,6 +4801,8 @@ var es;
         Time.deltaTime = 0;
         /** 时间刻度缩放 */
         Time.timeScale = 1;
+        /** DeltaTime可以为的最大值 */
+        Time.maxDeltaTime = Number.MAX_VALUE;
         /** 已传递的帧总数 */
         Time.frameCount = 0;
         /** 自场景加载以来的总时间 */
@@ -8983,294 +8974,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var TimeRuler = /** @class */ (function () {
-        function TimeRuler() {
-            //当前帧数
-            this.frameCount = 0;
-            // 测量时间的秒表
-            this.stopwatch = new es.Stopwatch;
-            // 标记信息阵列
-            this.markers = [];
-            // 从标记名称映射到标记ID的词典
-            this.markerNameToIdMap = new Map();
-            this.enabled = true;
-            /**
-             * 你想在Game.Update方法的开头调用StartFrame。
-             * 但是当游戏在固定时间步长模式下运行缓慢时，Game.Update会被多次调用。
-             * 在这种情况下，我们应该忽略StartFrame的调用，为了做到这一点，我们只需要跟踪StartFrame的调用次数
-             */
-            this.updateCount = 0;
-            this.logs = new Array(2);
-            for (var i = 0; i < this.logs.length; ++i)
-                this.logs[i] = new FrameLog();
-        }
-        Object.defineProperty(TimeRuler, "Instance", {
-            get: function () {
-                if (!this._instance)
-                    this._instance = new TimeRuler();
-                return this._instance;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        TimeRuler.prototype.startFrame = function () {
-            if (!es.Core.Instance.debug)
-                return;
-            // 当这个方法被多次调用时，我们跳过复位帧
-            var count = this.updateCount++;
-            if (this.enabled && (1 < count && count < TimeRuler.maxSampleFrames))
-                return;
-            // 更新当前帧记录
-            this.prevLog = this.logs[this.frameCount++ & 0x1];
-            this.curLog = this.logs[this.frameCount & 0x1];
-            var endFrameTime = this.stopwatch.getTime();
-            // 更新标记并创建日志
-            for (var barIdx = 0; barIdx < this.prevLog.bars.length; ++barIdx) {
-                var prevBar = this.prevLog.bars[barIdx];
-                var nextBar = this.curLog.bars[barIdx];
-                // 重新打开前一帧中没有被调用的EndMark的标记
-                for (var nest = 0; nest < prevBar.nestCount; ++nest) {
-                    var markerIdx = prevBar.markerNests[nest];
-                    prevBar.markers[markerIdx].endTime = endFrameTime;
-                    nextBar.markerNests[nest] = nest;
-                    nextBar.markers[nest].markerId = prevBar.markers[markerIdx].markerId;
-                    nextBar.markers[nest].beginTime = 0;
-                    nextBar.markers[nest].endTime = -1;
-                    nextBar.markers[nest].color = prevBar.markers[markerIdx].color;
-                }
-                // 更新标记记录
-                for (var markerIdx = 0; markerIdx < prevBar.markCount; ++markerIdx) {
-                    var duration = prevBar.markers[markerIdx].endTime - prevBar.markers[markerIdx].beginTime;
-                    var markerId = prevBar.markers[markerIdx].markerId;
-                    var m = this.markers[markerId];
-                    m.logs[barIdx].color = prevBar.markers[markerIdx].color;
-                    if (!m.logs[barIdx].initialized) {
-                        // 第一帧流程
-                        m.logs[barIdx].min = duration;
-                        m.logs[barIdx].max = duration;
-                        m.logs[barIdx].avg = duration;
-                        m.logs[barIdx].initialized = true;
-                    }
-                    else {
-                        // 第一帧后处理
-                        m.logs[barIdx].min = Math.min(m.logs[barIdx].min, duration);
-                        m.logs[barIdx].max = Math.min(m.logs[barIdx].max, duration);
-                        m.logs[barIdx].avg += duration;
-                        m.logs[barIdx].avg *= 0.5;
-                        if (m.logs[barIdx].samples++ >= TimeRuler.logSnapDuration) {
-                            m.logs[barIdx].snapMin = m.logs[barIdx].min;
-                            m.logs[barIdx].snapMax = m.logs[barIdx].max;
-                            m.logs[barIdx].snapAvg = m.logs[barIdx].avg;
-                            m.logs[barIdx].samples = 0;
-                        }
-                    }
-                }
-                nextBar.markCount = prevBar.nestCount;
-                nextBar.nestCount = prevBar.nestCount;
-            }
-            this.stopwatch.reset();
-            this.stopwatch.start();
-        };
-        /**
-         * 开始测量时间
-         * @param markerName
-         * @param color
-         * @param barIndex
-         */
-        TimeRuler.prototype.beginMark = function (markerName, color, barIndex) {
-            if (barIndex === void 0) { barIndex = 0; }
-            if (!es.Core.Instance.debug)
-                return;
-            if (barIndex < 0 || barIndex >= TimeRuler.maxBars)
-                throw new Error('barIndex 越位');
-            var bar = this.curLog.bars[barIndex];
-            if (bar.markCount >= TimeRuler.maxSamples) {
-                throw new Error('超出样本数.\n 要么设置更大的数字为TimeRuler.MaxSmpale，要么降低样本数');
-            }
-            if (bar.nestCount >= TimeRuler.maxNestCall) {
-                throw new Error('nestCount超出.\n 要么将大的设置为TimeRuler.MaxNestCall，要么将小的设置为NestCall');
-            }
-            // 获取已注册的标记
-            var markerId = this.markerNameToIdMap.get(markerName);
-            if (markerId == null) {
-                // 如果这个标记没有注册，就注册这个
-                markerId = this.markers.length;
-                this.markerNameToIdMap.set(markerName, markerId);
-                this.markers.push(new MarkerInfo(markerName));
-            }
-            // 开始测量
-            bar.markerNests[bar.nestCount++] = bar.markCount;
-            // 填充标记参数
-            bar.markers[bar.markCount].markerId = markerId;
-            bar.markers[bar.markCount].color = color;
-            bar.markers[bar.markCount].beginTime = this.stopwatch.getTime();
-            bar.markers[bar.markCount].endTime = -1;
-            bar.markCount++;
-        };
-        /**
-         * 停止测量
-         * @param markerName
-         * @param barIndex
-         */
-        TimeRuler.prototype.endMark = function (markerName, barIndex) {
-            if (barIndex === void 0) { barIndex = 0; }
-            if (!es.Core.Instance.debug)
-                return;
-            if (barIndex < 0 || barIndex >= TimeRuler.maxBars)
-                throw new Error('barIndex 越位');
-            var bar = this.curLog.bars[barIndex];
-            if (bar.nestCount <= 0) {
-                throw new Error('在调用结束标记方法之前调用beginMark方法');
-            }
-            var markerId = this.markerNameToIdMap.get(markerName);
-            if (markerId == null) {
-                throw new Error("\u6807\u8BB0" + markerName + "\u6CA1\u6709\u6CE8\u518C\u3002\u8BF7\u786E\u8BA4\u60A8\u6307\u5B9A\u7684\u540D\u79F0\u4E0EBeginMark\u65B9\u6CD5\u4F7F\u7528\u7684\u540D\u79F0\u76F8\u540C");
-            }
-            var markerIdx = bar.markerNests[--bar.nestCount];
-            if (bar.markers[markerIdx].markerId != markerId) {
-                throw new Error('beginMark/endMark方法的调用顺序不正确. beginMark(A), beginMark(B), endMark(B), endMark(A).但你不能像这样叫它 beginMark(A), beginMark(B), endMark(A), endMark(B)');
-            }
-            bar.markers[markerIdx].endTime = this.stopwatch.getTime();
-        };
-        /**
-         * 获取给定条形指数和标记名称的平均时间
-         * @param barIndex
-         * @param markerName
-         */
-        TimeRuler.prototype.getAverageTime = function (barIndex, markerName) {
-            if (barIndex < 0 || barIndex >= TimeRuler.maxBars)
-                throw new Error('barIndex 越位');
-            var result = 0;
-            var markerId = this.markerNameToIdMap.get(markerName);
-            if (markerId != null) {
-                result = this.markers[markerId].logs[barIndex].avg;
-            }
-            return result;
-        };
-        /**
-         * 重置标记记录
-         */
-        TimeRuler.prototype.resetLog = function () {
-            var e_15, _a;
-            if (!es.Core.Instance.debug)
-                return;
-            try {
-                for (var _b = __values(this.markers), _c = _b.next(); !_c.done; _c = _b.next()) {
-                    var markerInfo = _c.value;
-                    for (var i = 0; i < markerInfo.logs.length; ++i) {
-                        markerInfo.logs[i].initialized = false;
-                        markerInfo.logs[i].snapMin = 0;
-                        markerInfo.logs[i].snapMax = 0;
-                        markerInfo.logs[i].snapAvg = 0;
-                        markerInfo.logs[i].min = 0;
-                        markerInfo.logs[i].max = 0;
-                        markerInfo.logs[i].avg = 0;
-                        markerInfo.logs[i].samples = 0;
-                    }
-                }
-            }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
-            finally {
-                try {
-                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
-                }
-                finally { if (e_15) throw e_15.error; }
-            }
-        };
-        /**
-         * 最大条数
-         */
-        TimeRuler.maxBars = 8;
-        /**
-         * 每条的最大样本数
-         */
-        TimeRuler.maxSamples = 256;
-        /**
-         *
-         */
-        TimeRuler.maxNestCall = 32;
-        /**
-         * 最大显示帧数
-         */
-        TimeRuler.maxSampleFrames = 4;
-        /**
-         * 拍摄快照的时间（以帧数为单位）
-         */
-        TimeRuler.logSnapDuration = 120;
-        return TimeRuler;
-    }());
-    es.TimeRuler = TimeRuler;
-    /**
-     * 标记信息
-     */
-    var MarkerInfo = /** @class */ (function () {
-        function MarkerInfo(name) {
-            this.logs = new Array(TimeRuler.maxBars);
-            this.name = name;
-            for (var i = 0; i < TimeRuler.maxBars; ++i)
-                this.logs[i] = new MarkerLog();
-        }
-        return MarkerInfo;
-    }());
-    /**
-     * 标记日志信息
-     */
-    var MarkerLog = /** @class */ (function () {
-        function MarkerLog() {
-            this.snapMin = 0;
-            this.snapMax = 0;
-            this.snapAvg = 0;
-            this.min = 0;
-            this.max = 0;
-            this.avg = 0;
-            this.samples = 0;
-            this.color = 0x000000;
-            this.initialized = false;
-        }
-        return MarkerLog;
-    }());
-    /**
-     * 帧记录信息
-     */
-    var FrameLog = /** @class */ (function () {
-        function FrameLog() {
-            this.bars = new Array(TimeRuler.maxBars);
-            for (var i = 0; i < TimeRuler.maxBars; ++i)
-                this.bars[i] = new MarkerCollection();
-        }
-        return FrameLog;
-    }());
-    /**
-     * 收集标记
-     */
-    var MarkerCollection = /** @class */ (function () {
-        function MarkerCollection() {
-            // 标记收集
-            this.markers = new Array(TimeRuler.maxSamples);
-            this.markCount = 0;
-            this.markerNests = new Array(TimeRuler.maxNestCall);
-            this.nestCount = 0;
-            this.markerNests.fill(0);
-            for (var i = 0; i < TimeRuler.maxSamples; ++i)
-                this.markers[i] = new Marker();
-        }
-        return MarkerCollection;
-    }());
-    /**
-     * 标记结构
-     */
-    var Marker = /** @class */ (function () {
-        function Marker() {
-            this.markerId = 0;
-            this.beginTime = 0;
-            this.endTime = 0;
-            this.color = 0x000000;
-        }
-        return Marker;
-    }());
-})(es || (es = {}));
-var es;
-(function (es) {
     /**
      * 创建这个字典的原因只有一个：
      * 我需要一个能让我直接以数组的形式对值进行迭代的字典，而不需要生成一个数组或使用迭代器。
@@ -11764,7 +11467,7 @@ var linq;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_16, _a;
+            var e_15, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -11772,12 +11475,12 @@ var linq;
                     result.add(x);
                 }
             }
-            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_16) throw e_16.error; }
+                finally { if (e_15) throw e_15.error; }
             }
             return result;
         };
@@ -12026,7 +11729,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_17, _a;
+            var e_16, _a;
             var output = es.ListPool.obtain();
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -12065,12 +11768,12 @@ var es;
                         }
                     }
                 }
-                catch (e_17_1) { e_17 = { error: e_17_1 }; }
+                catch (e_16_1) { e_16 = { error: e_16_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_17) throw e_17.error; }
+                    finally { if (e_16) throw e_16.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -12186,7 +11889,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_18, _a;
+            var e_17, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -12204,12 +11907,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_18_1) { e_18 = { error: e_18_1 }; }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_18) throw e_18.error; }
+                finally { if (e_17) throw e_17.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。
