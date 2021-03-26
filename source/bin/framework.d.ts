@@ -656,6 +656,12 @@ declare module es {
          */
         findComponentsOfType<T extends Component>(type: any): T[];
         /**
+         * 返回场景中包含特定组件的实体列表
+         * @param type
+         * @returns
+         */
+        findEntitiesOfComponent(...types: any[]): Entity[];
+        /**
          * 在场景中添加一个EntitySystem处理器
          * @param processor 处理器
          */
@@ -1782,6 +1788,12 @@ declare module es {
          * @param type
          */
         findComponentsOfType<T extends Component>(type: any): T[];
+        /**
+         * 返回场景中包含特定组件的实体列表
+         * @param types
+         * @returns
+         */
+        findEntitesOfComponent(...types: any[]): Entity[];
     }
 }
 declare module es {

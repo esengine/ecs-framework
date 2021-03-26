@@ -225,6 +225,15 @@ module es {
         }
 
         /**
+         * 返回场景中包含特定组件的实体列表
+         * @param type 
+         * @returns 
+         */
+        public findEntitiesOfComponent(...types): Entity[] {
+            return this.entities.findEntitesOfComponent(...types);
+        }
+
+        /**
          * 在场景中添加一个EntitySystem处理器
          * @param processor 处理器
          */

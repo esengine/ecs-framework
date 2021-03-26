@@ -269,5 +269,50 @@ module es {
 
             return comps;
         }
+
+        /**
+         * 返回场景中包含特定组件的实体列表
+         * @param types 
+         * @returns 
+         */
+        public findEntitesOfComponent(...types): Entity[] {
+            let entities = [];
+            for (let i = 0; i < this._entities.length; i++) {
+                if (this._entities[i].enabled) {
+                    let meet = true;
+                    for (let type of types) {
+                        let hasComp = this._entities[i].hasComponent(type);
+                        if (!hasComp) {
+                            meet = false;
+                            break;
+                        }
+                    }
+
+                    if (meet) {
+                        entities.push(this._entities[i]);
+                    }
+                }
+            }
+
+            for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
+                let entity: Entity = this._entitiesToAdded.toArray()[i];
+                if (entity.enabled) {
+                    let meet = true;
+                    for (let type of types) {
+                        let hasComp = entity.hasComponent(type);
+                        if (!hasComp) {
+                            meet = false;
+                            break;
+                        }
+                    }
+
+                    if (meet) {
+                        entities.push(entity);
+                    }
+                }
+            }
+
+            return entities;
+        }
     }
 }
