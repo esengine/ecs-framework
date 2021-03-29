@@ -649,12 +649,12 @@ declare module es {
          * 返回第一个启用加载的类型为T的组件
          * @param type
          */
-        findComponentOfType<T extends Component>(type: any): T;
+        findComponentOfType<T extends Component>(type: new (...args: any[]) => T): T;
         /**
          * 返回类型为T的所有已启用已加载组件的列表
          * @param type
          */
-        findComponentsOfType<T extends Component>(type: any): T[];
+        findComponentsOfType<T extends Component>(type: new (...args: any[]) => T): T[];
         /**
          * 返回场景中包含特定组件的实体列表
          * @param type
@@ -3974,119 +3974,121 @@ declare module es {
         isContainedIn(a: Rectangle, b: Rectangle): boolean;
     }
 }
-declare class ArrayUtils {
-    /**
-     * 执行冒泡排序
-     * @param ary
-     */
-    static bubbleSort(ary: number[]): void;
-    /**
-     * 执行插入排序
-     * @param ary
-     */
-    static insertionSort(ary: number[]): void;
-    /**
-     * 执行二分搜索
-     * @param ary 搜索的数组（必须排序过）
-     * @param value 需要搜索的值
-     * @returns 返回匹配结果的数组索引
-     */
-    static binarySearch(ary: number[], value: number): number;
-    /**
-     * 返回匹配项的索引
-     * @param ary
-     * @param num
-     */
-    static findElementIndex(ary: any[], num: any): any;
-    /**
-     * 返回数组中最大值的索引
-     * @param ary
-     */
-    static getMaxElementIndex(ary: number[]): number;
-    /**
-     * 返回数组中最小值的索引
-     * @param ary
-     */
-    static getMinElementIndex(ary: number[]): number;
-    /**
-     * 返回一个"唯一性"数组
-     * @param ary 需要唯一性的数组
-     * @returns 唯一性的数组
-     *
-     * @tutorial
-     * 比如: [1, 2, 2, 3, 4]
-     * 返回: [1, 2, 3, 4]
-     */
-    static getUniqueAry(ary: number[]): number[];
-    /**
-     * 返回2个数组中不同的部分
-     * 比如数组A = [1, 2, 3, 4, 6]
-     *    数组B = [0, 2, 1, 3, 4]
-     * 返回[6, 0]
-     * @param    aryA
-     * @param    aryB
-     * @return
-     */
-    static getDifferAry(aryA: number[], aryB: number[]): number[];
-    /**
-     * 交换数组元素
-     * @param    array    目标数组
-     * @param    index1    交换后的索引
-     * @param    index2    交换前的索引
-     */
-    static swap(array: any[], index1: number, index2: number): void;
-    /**
-     * 清除列表
-     * @param ary
-     */
-    static clearList(ary: any[]): void;
-    /**
-     * 克隆一个数组
-     * @param    ary 需要克隆的数组
-     * @return  克隆的数组
-     */
-    static cloneList(ary: any[]): any[];
-    /**
-     * 判断2个数组是否相同
-     * @param ary1 数组1
-     * @param ary2 数组2
-     */
-    static equals(ary1: number[], ary2: number[]): Boolean;
-    /**
-     * 根据索引插入元素，索引和索引后的元素都向后移动一位
-     * @param ary
-     * @param index 插入索引
-     * @param value 插入的元素
-     * @returns 插入的元素 未插入则返回空
-     */
-    static insert(ary: any[], index: number, value: any): any;
-    /**
-     * 打乱数组 Fisher–Yates shuffle
-     * @param list
-     */
-    static shuffle<T>(list: T[]): void;
-    /**
-     * 如果项目已经在列表中，返回false，如果成功添加，返回true
-     * @param list
-     * @param item
-     */
-    static addIfNotPresent<T>(list: T[], item: T): boolean;
-    /**
-     * 返回列表中的最后一项。列表中至少应该有一个项目
-     * @param list
-     */
-    static lastItem<T>(list: T[]): T;
-    /**
-     * 从列表中随机获取一个项目。不清空检查列表!
-     * @param list
-     */
-    static randomItem<T>(list: T[]): T;
-    /**
-     * 从列表中随机获取物品。不清空检查列表，也不验证列表数是否大于项目数。返回的List可以通过ListPool.free放回池中
-     * @param list
-     * @param itemCount 从列表中返回的随机项目的数量
-     */
-    static randomItems<T>(list: T[], itemCount: number): T[];
+declare module es {
+    class ArrayUtils {
+        /**
+         * 执行冒泡排序
+         * @param ary
+         */
+        static bubbleSort(ary: number[]): void;
+        /**
+         * 执行插入排序
+         * @param ary
+         */
+        static insertionSort(ary: number[]): void;
+        /**
+         * 执行二分搜索
+         * @param ary 搜索的数组（必须排序过）
+         * @param value 需要搜索的值
+         * @returns 返回匹配结果的数组索引
+         */
+        static binarySearch(ary: number[], value: number): number;
+        /**
+         * 返回匹配项的索引
+         * @param ary
+         * @param num
+         */
+        static findElementIndex(ary: any[], num: any): any;
+        /**
+         * 返回数组中最大值的索引
+         * @param ary
+         */
+        static getMaxElementIndex(ary: number[]): number;
+        /**
+         * 返回数组中最小值的索引
+         * @param ary
+         */
+        static getMinElementIndex(ary: number[]): number;
+        /**
+         * 返回一个"唯一性"数组
+         * @param ary 需要唯一性的数组
+         * @returns 唯一性的数组
+         *
+         * @tutorial
+         * 比如: [1, 2, 2, 3, 4]
+         * 返回: [1, 2, 3, 4]
+         */
+        static getUniqueAry(ary: number[]): number[];
+        /**
+         * 返回2个数组中不同的部分
+         * 比如数组A = [1, 2, 3, 4, 6]
+         *    数组B = [0, 2, 1, 3, 4]
+         * 返回[6, 0]
+         * @param    aryA
+         * @param    aryB
+         * @return
+         */
+        static getDifferAry(aryA: number[], aryB: number[]): number[];
+        /**
+         * 交换数组元素
+         * @param    array    目标数组
+         * @param    index1    交换后的索引
+         * @param    index2    交换前的索引
+         */
+        static swap(array: any[], index1: number, index2: number): void;
+        /**
+         * 清除列表
+         * @param ary
+         */
+        static clearList(ary: any[]): void;
+        /**
+         * 克隆一个数组
+         * @param    ary 需要克隆的数组
+         * @return  克隆的数组
+         */
+        static cloneList(ary: any[]): any[];
+        /**
+         * 判断2个数组是否相同
+         * @param ary1 数组1
+         * @param ary2 数组2
+         */
+        static equals(ary1: number[], ary2: number[]): Boolean;
+        /**
+         * 根据索引插入元素，索引和索引后的元素都向后移动一位
+         * @param ary
+         * @param index 插入索引
+         * @param value 插入的元素
+         * @returns 插入的元素 未插入则返回空
+         */
+        static insert(ary: any[], index: number, value: any): any;
+        /**
+         * 打乱数组 Fisher–Yates shuffle
+         * @param list
+         */
+        static shuffle<T>(list: T[]): void;
+        /**
+         * 如果项目已经在列表中，返回false，如果成功添加，返回true
+         * @param list
+         * @param item
+         */
+        static addIfNotPresent<T>(list: T[], item: T): boolean;
+        /**
+         * 返回列表中的最后一项。列表中至少应该有一个项目
+         * @param list
+         */
+        static lastItem<T>(list: T[]): T;
+        /**
+         * 从列表中随机获取一个项目。不清空检查列表!
+         * @param list
+         */
+        static randomItem<T>(list: T[]): T;
+        /**
+         * 从列表中随机获取物品。不清空检查列表，也不验证列表数是否大于项目数。返回的List可以通过ListPool.free放回池中
+         * @param list
+         * @param itemCount 从列表中返回的随机项目的数量
+         */
+        static randomItems<T>(list: T[], itemCount: number): T[];
+    }
 }
 declare module es {
     class Base64Utils {
@@ -4146,74 +4148,76 @@ declare module es {
         static toNumber(value: any): number;
     }
 }
-declare class RandomUtils {
-    /**
-     * 在 start 与 stop之间取一个随机整数，可以用step指定间隔， 但不包括较大的端点（start与stop较大的一个）
-     * 如
-     * this.randrange(1, 10, 3)
-     * 则返回的可能是   1 或  4 或  7  , 注意 这里面不会返回10，因为是10是大端点
-     *
-     * @param start
-     * @param stop
-     * @param step
-     * @return 假设 start < stop,  [start, stop) 区间内的随机整数
-     *
-     */
-    static randrange(start: number, stop: number, step?: number): number;
-    /**
-     * 返回a 到 b之间的随机整数，包括 a 和 b
-     * @param a
-     * @param b
-     * @return [a, b] 之间的随机整数
-     *
-     */
-    static randint(a: number, b: number): number;
-    /**
-     * 返回 a - b之间的随机数，不包括  Math.max(a, b)
-     * @param a
-     * @param b
-     * @return 假设 a < b, [a, b)
-     */
-    static randnum(a: number, b: number): number;
-    /**
-     * 打乱数组
-     * @param array
-     * @return
-     */
-    static shuffle(array: any[]): any[];
-    /**
-     * 从序列中随机取一个元素
-     * @param sequence 可以是 数组、 vector，等只要是有length属性，并且可以用数字索引获取元素的对象，
-     *                 另外，字符串也是允许的。
-     * @return 序列中的某一个元素
-     *
-     */
-    static choice(sequence: any): any;
-    /**
-     * 对列表中的元素进行随机采æ ?
-     * <pre>
-     * this.sample([1, 2, 3, 4, 5],  3)  // Choose 3 elements
-     * [4, 1, 5]
-     * </pre>
-     * @param sequence
-     * @param num
-     * @return
-     *
-     */
-    static sample(sequence: any[], num: number): any[];
-    /**
-     * 返回 0.0 - 1.0 之间的随机数，等同于 Math.random()
-     * @return Math.random()
-     *
-     */
-    static random(): number;
-    /**
-     * 计算概率
-     * @param    chance 概率
-     * @return
-     */
-    static boolean(chance?: number): boolean;
-    private static _randomCompare;
+declare module es {
+    class RandomUtils {
+        /**
+         * 在 start 与 stop之间取一个随机整数，可以用step指定间隔， 但不包括较大的端点（start与stop较大的一个）
+         * 如
+         * this.randrange(1, 10, 3)
+         * 则返回的可能是   1 或  4 或  7  , 注意 这里面不会返回10，因为是10是大端点
+         *
+         * @param start
+         * @param stop
+         * @param step
+         * @return 假设 start < stop,  [start, stop) 区间内的随机整数
+         *
+         */
+        static randrange(start: number, stop: number, step?: number): number;
+        /**
+         * 返回a 到 b之间的随机整数，包括 a 和 b
+         * @param a
+         * @param b
+         * @return [a, b] 之间的随机整数
+         *
+         */
+        static randint(a: number, b: number): number;
+        /**
+         * 返回 a - b之间的随机数，不包括  Math.max(a, b)
+         * @param a
+         * @param b
+         * @return 假设 a < b, [a, b)
+         */
+        static randnum(a: number, b: number): number;
+        /**
+         * 打乱数组
+         * @param array
+         * @return
+         */
+        static shuffle(array: any[]): any[];
+        /**
+         * 从序列中随机取一个元素
+         * @param sequence 可以是 数组、 vector，等只要是有length属性，并且可以用数字索引获取元素的对象，
+         *                 另外，字符串也是允许的。
+         * @return 序列中的某一个元素
+         *
+         */
+        static choice(sequence: any): any;
+        /**
+         * 对列表中的元素进行随机采æ ?
+         * <pre>
+         * this.sample([1, 2, 3, 4, 5],  3)  // Choose 3 elements
+         * [4, 1, 5]
+         * </pre>
+         * @param sequence
+         * @param num
+         * @return
+         *
+         */
+        static sample(sequence: any[], num: number): any[];
+        /**
+         * 返回 0.0 - 1.0 之间的随机数，等同于 Math.random()
+         * @return Math.random()
+         *
+         */
+        static random(): number;
+        /**
+         * 计算概率
+         * @param    chance 概率
+         * @return
+         */
+        static boolean(chance?: number): boolean;
+        private static _randomCompare;
+    }
 }
 declare module es {
     class RectangleExt {

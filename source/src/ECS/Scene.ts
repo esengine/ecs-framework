@@ -212,7 +212,7 @@ module es {
          * 返回第一个启用加载的类型为T的组件
          * @param type
          */
-        public findComponentOfType<T extends Component>(type): T {
+        public findComponentOfType<T extends Component>(type: new (...args) => T): T {
             return this.entities.findComponentOfType<T>(type);
         }
 
@@ -220,7 +220,7 @@ module es {
          * 返回类型为T的所有已启用已加载组件的列表
          * @param type
          */
-        public findComponentsOfType<T extends Component>(type): T[] {
+        public findComponentsOfType<T extends Component>(type: new (...args) => T): T[] {
             return this.entities.findComponentsOfType<T>(type);
         }
 

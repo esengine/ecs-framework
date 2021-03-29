@@ -10114,297 +10114,301 @@ var es;
     }());
     es.MaxRectsBinPack = MaxRectsBinPack;
 })(es || (es = {}));
-var ArrayUtils = /** @class */ (function () {
-    function ArrayUtils() {
-    }
-    /**
-     * 执行冒泡排序
-     * @param ary
-     */
-    ArrayUtils.bubbleSort = function (ary) {
-        var isExchange = false;
-        for (var i = 0; i < ary.length; i++) {
-            isExchange = false;
-            for (var j = ary.length - 1; j > i; j--) {
-                if (ary[j] < ary[j - 1]) {
-                    var temp = ary[j];
-                    ary[j] = ary[j - 1];
-                    ary[j - 1] = temp;
-                    isExchange = true;
+var es;
+(function (es) {
+    var ArrayUtils = /** @class */ (function () {
+        function ArrayUtils() {
+        }
+        /**
+         * 执行冒泡排序
+         * @param ary
+         */
+        ArrayUtils.bubbleSort = function (ary) {
+            var isExchange = false;
+            for (var i = 0; i < ary.length; i++) {
+                isExchange = false;
+                for (var j = ary.length - 1; j > i; j--) {
+                    if (ary[j] < ary[j - 1]) {
+                        var temp = ary[j];
+                        ary[j] = ary[j - 1];
+                        ary[j - 1] = temp;
+                        isExchange = true;
+                    }
                 }
+                if (!isExchange)
+                    break;
             }
-            if (!isExchange)
-                break;
-        }
-    };
-    /**
-     * 执行插入排序
-     * @param ary
-     */
-    ArrayUtils.insertionSort = function (ary) {
-        var len = ary.length;
-        for (var i = 1; i < len; i++) {
-            var val = ary[i];
-            for (var j = i; j > 0 && ary[j - 1] > val; j--) {
-                ary[j] = ary[j - 1];
+        };
+        /**
+         * 执行插入排序
+         * @param ary
+         */
+        ArrayUtils.insertionSort = function (ary) {
+            var len = ary.length;
+            for (var i = 1; i < len; i++) {
+                var val = ary[i];
+                for (var j = i; j > 0 && ary[j - 1] > val; j--) {
+                    ary[j] = ary[j - 1];
+                }
+                ary[j] = val;
             }
-            ary[j] = val;
-        }
-    };
-    /**
-     * 执行二分搜索
-     * @param ary 搜索的数组（必须排序过）
-     * @param value 需要搜索的值
-     * @returns 返回匹配结果的数组索引
-     */
-    ArrayUtils.binarySearch = function (ary, value) {
-        var startIndex = 0;
-        var endIndex = ary.length;
-        var sub = (startIndex + endIndex) >> 1;
-        while (startIndex < endIndex) {
-            if (value <= ary[sub])
-                endIndex = sub;
-            else if (value >= ary[sub])
-                startIndex = sub + 1;
-            sub = (startIndex + endIndex) >> 1;
-        }
-        if (ary[startIndex] == value)
-            return startIndex;
-        return -1;
-    };
-    /**
-     * 返回匹配项的索引
-     * @param ary
-     * @param num
-     */
-    ArrayUtils.findElementIndex = function (ary, num) {
-        var len = ary.length;
-        for (var i = 0; i < len; ++i) {
-            if (ary[i] == num)
-                return i;
-        }
-        return null;
-    };
-    /**
-     * 返回数组中最大值的索引
-     * @param ary
-     */
-    ArrayUtils.getMaxElementIndex = function (ary) {
-        var matchIndex = 0;
-        var len = ary.length;
-        for (var j = 1; j < len; j++) {
-            if (ary[j] > ary[matchIndex])
-                matchIndex = j;
-        }
-        return matchIndex;
-    };
-    /**
-     * 返回数组中最小值的索引
-     * @param ary
-     */
-    ArrayUtils.getMinElementIndex = function (ary) {
-        var matchIndex = 0;
-        var len = ary.length;
-        for (var j = 1; j < len; j++) {
-            if (ary[j] < ary[matchIndex])
-                matchIndex = j;
-        }
-        return matchIndex;
-    };
-    /**
-     * 返回一个"唯一性"数组
-     * @param ary 需要唯一性的数组
-     * @returns 唯一性的数组
-     *
-     * @tutorial
-     * 比如: [1, 2, 2, 3, 4]
-     * 返回: [1, 2, 3, 4]
-     */
-    ArrayUtils.getUniqueAry = function (ary) {
-        var uAry = [];
-        var newAry = [];
-        var count = ary.length;
-        for (var i = 0; i < count; ++i) {
-            var value = ary[i];
-            if (uAry.indexOf(value) == -1)
-                uAry.push(value);
-        }
-        count = uAry.length;
-        for (var i = count - 1; i >= 0; --i) {
-            newAry.unshift(uAry[i]);
-        }
-        return newAry;
-    };
-    /**
-     * 返回2个数组中不同的部分
-     * 比如数组A = [1, 2, 3, 4, 6]
-     *    数组B = [0, 2, 1, 3, 4]
-     * 返回[6, 0]
-     * @param    aryA
-     * @param    aryB
-     * @return
-     */
-    ArrayUtils.getDifferAry = function (aryA, aryB) {
-        aryA = this.getUniqueAry(aryA);
-        aryB = this.getUniqueAry(aryB);
-        var ary = aryA.concat(aryB);
-        var uObj = {};
-        var newAry = [];
-        var count = ary.length;
-        for (var j = 0; j < count; ++j) {
-            if (!uObj[ary[j]]) {
-                uObj[ary[j]] = {};
-                uObj[ary[j]].count = 0;
-                uObj[ary[j]].key = ary[j];
-                uObj[ary[j]].count++;
+        };
+        /**
+         * 执行二分搜索
+         * @param ary 搜索的数组（必须排序过）
+         * @param value 需要搜索的值
+         * @returns 返回匹配结果的数组索引
+         */
+        ArrayUtils.binarySearch = function (ary, value) {
+            var startIndex = 0;
+            var endIndex = ary.length;
+            var sub = (startIndex + endIndex) >> 1;
+            while (startIndex < endIndex) {
+                if (value <= ary[sub])
+                    endIndex = sub;
+                else if (value >= ary[sub])
+                    startIndex = sub + 1;
+                sub = (startIndex + endIndex) >> 1;
             }
-            else {
-                if (uObj[ary[j]] instanceof Object) {
+            if (ary[startIndex] == value)
+                return startIndex;
+            return -1;
+        };
+        /**
+         * 返回匹配项的索引
+         * @param ary
+         * @param num
+         */
+        ArrayUtils.findElementIndex = function (ary, num) {
+            var len = ary.length;
+            for (var i = 0; i < len; ++i) {
+                if (ary[i] == num)
+                    return i;
+            }
+            return null;
+        };
+        /**
+         * 返回数组中最大值的索引
+         * @param ary
+         */
+        ArrayUtils.getMaxElementIndex = function (ary) {
+            var matchIndex = 0;
+            var len = ary.length;
+            for (var j = 1; j < len; j++) {
+                if (ary[j] > ary[matchIndex])
+                    matchIndex = j;
+            }
+            return matchIndex;
+        };
+        /**
+         * 返回数组中最小值的索引
+         * @param ary
+         */
+        ArrayUtils.getMinElementIndex = function (ary) {
+            var matchIndex = 0;
+            var len = ary.length;
+            for (var j = 1; j < len; j++) {
+                if (ary[j] < ary[matchIndex])
+                    matchIndex = j;
+            }
+            return matchIndex;
+        };
+        /**
+         * 返回一个"唯一性"数组
+         * @param ary 需要唯一性的数组
+         * @returns 唯一性的数组
+         *
+         * @tutorial
+         * 比如: [1, 2, 2, 3, 4]
+         * 返回: [1, 2, 3, 4]
+         */
+        ArrayUtils.getUniqueAry = function (ary) {
+            var uAry = [];
+            var newAry = [];
+            var count = ary.length;
+            for (var i = 0; i < count; ++i) {
+                var value = ary[i];
+                if (uAry.indexOf(value) == -1)
+                    uAry.push(value);
+            }
+            count = uAry.length;
+            for (var i = count - 1; i >= 0; --i) {
+                newAry.unshift(uAry[i]);
+            }
+            return newAry;
+        };
+        /**
+         * 返回2个数组中不同的部分
+         * 比如数组A = [1, 2, 3, 4, 6]
+         *    数组B = [0, 2, 1, 3, 4]
+         * 返回[6, 0]
+         * @param    aryA
+         * @param    aryB
+         * @return
+         */
+        ArrayUtils.getDifferAry = function (aryA, aryB) {
+            aryA = this.getUniqueAry(aryA);
+            aryB = this.getUniqueAry(aryB);
+            var ary = aryA.concat(aryB);
+            var uObj = {};
+            var newAry = [];
+            var count = ary.length;
+            for (var j = 0; j < count; ++j) {
+                if (!uObj[ary[j]]) {
+                    uObj[ary[j]] = {};
+                    uObj[ary[j]].count = 0;
+                    uObj[ary[j]].key = ary[j];
                     uObj[ary[j]].count++;
                 }
+                else {
+                    if (uObj[ary[j]] instanceof Object) {
+                        uObj[ary[j]].count++;
+                    }
+                }
             }
-        }
-        for (var i in uObj) {
-            if (uObj[i].count != 2) {
-                newAry.unshift(uObj[i].key);
+            for (var i in uObj) {
+                if (uObj[i].count != 2) {
+                    newAry.unshift(uObj[i].key);
+                }
             }
-        }
-        return newAry;
-    };
-    /**
-     * 交换数组元素
-     * @param    array    目标数组
-     * @param    index1    交换后的索引
-     * @param    index2    交换前的索引
-     */
-    ArrayUtils.swap = function (array, index1, index2) {
-        var temp = array[index1];
-        array[index1] = array[index2];
-        array[index2] = temp;
-    };
-    /**
-     * 清除列表
-     * @param ary
-     */
-    ArrayUtils.clearList = function (ary) {
-        if (!ary)
-            return;
-        var length = ary.length;
-        for (var i = length - 1; i >= 0; i -= 1) {
-            ary.splice(i, 1);
-        }
-    };
-    /**
-     * 克隆一个数组
-     * @param    ary 需要克隆的数组
-     * @return  克隆的数组
-     */
-    ArrayUtils.cloneList = function (ary) {
-        if (!ary)
-            return null;
-        return ary.slice(0, ary.length);
-    };
-    /**
-     * 判断2个数组是否相同
-     * @param ary1 数组1
-     * @param ary2 数组2
-     */
-    ArrayUtils.equals = function (ary1, ary2) {
-        if (ary1 == ary2)
-            return true;
-        var length = ary1.length;
-        if (length != ary2.length)
-            return false;
-        while (length--) {
-            if (ary1[length] != ary2[length])
+            return newAry;
+        };
+        /**
+         * 交换数组元素
+         * @param    array    目标数组
+         * @param    index1    交换后的索引
+         * @param    index2    交换前的索引
+         */
+        ArrayUtils.swap = function (array, index1, index2) {
+            var temp = array[index1];
+            array[index1] = array[index2];
+            array[index2] = temp;
+        };
+        /**
+         * 清除列表
+         * @param ary
+         */
+        ArrayUtils.clearList = function (ary) {
+            if (!ary)
+                return;
+            var length = ary.length;
+            for (var i = length - 1; i >= 0; i -= 1) {
+                ary.splice(i, 1);
+            }
+        };
+        /**
+         * 克隆一个数组
+         * @param    ary 需要克隆的数组
+         * @return  克隆的数组
+         */
+        ArrayUtils.cloneList = function (ary) {
+            if (!ary)
+                return null;
+            return ary.slice(0, ary.length);
+        };
+        /**
+         * 判断2个数组是否相同
+         * @param ary1 数组1
+         * @param ary2 数组2
+         */
+        ArrayUtils.equals = function (ary1, ary2) {
+            if (ary1 == ary2)
+                return true;
+            var length = ary1.length;
+            if (length != ary2.length)
                 return false;
-        }
-        return true;
-    };
-    /**
-     * 根据索引插入元素，索引和索引后的元素都向后移动一位
-     * @param ary
-     * @param index 插入索引
-     * @param value 插入的元素
-     * @returns 插入的元素 未插入则返回空
-     */
-    ArrayUtils.insert = function (ary, index, value) {
-        if (!ary)
-            return null;
-        var length = ary.length;
-        if (index > length)
-            index = length;
-        if (index < 0)
-            index = 0;
-        if (index == length)
-            ary.push(value); //插入最后
-        else if (index == 0)
-            ary.unshift(value); //插入头
-        else {
-            for (var i = length - 1; i >= index; i -= 1) {
-                ary[i + 1] = ary[i];
+            while (length--) {
+                if (ary1[length] != ary2[length])
+                    return false;
             }
-            ary[index] = value;
-        }
-        return value;
-    };
-    /**
-     * 打乱数组 Fisher–Yates shuffle
-     * @param list
-     */
-    ArrayUtils.shuffle = function (list) {
-        var n = list.length;
-        while (n > 1) {
-            n--;
-            var k = RandomUtils.randint(0, n + 1);
-            var value = list[k];
-            list[k] = list[n];
-            list[n] = value;
-        }
-    };
-    /**
-     * 如果项目已经在列表中，返回false，如果成功添加，返回true
-     * @param list
-     * @param item
-     */
-    ArrayUtils.addIfNotPresent = function (list, item) {
-        if (new es.List(list).contains(item))
-            return false;
-        list.push(item);
-        return true;
-    };
-    /**
-     * 返回列表中的最后一项。列表中至少应该有一个项目
-     * @param list
-     */
-    ArrayUtils.lastItem = function (list) {
-        return list[list.length - 1];
-    };
-    /**
-     * 从列表中随机获取一个项目。不清空检查列表!
-     * @param list
-     */
-    ArrayUtils.randomItem = function (list) {
-        return list[RandomUtils.randint(0, list.length - 1)];
-    };
-    /**
-     * 从列表中随机获取物品。不清空检查列表，也不验证列表数是否大于项目数。返回的List可以通过ListPool.free放回池中
-     * @param list
-     * @param itemCount 从列表中返回的随机项目的数量
-     */
-    ArrayUtils.randomItems = function (list, itemCount) {
-        var set = new Set();
-        while (set.size != itemCount) {
-            var item = this.randomItem(list);
-            if (!set.has(item))
-                set.add(item);
-        }
-        var items = es.ListPool.obtain();
-        set.forEach(function (value) { return items.push(value); });
-        return items;
-    };
-    return ArrayUtils;
-}());
+            return true;
+        };
+        /**
+         * 根据索引插入元素，索引和索引后的元素都向后移动一位
+         * @param ary
+         * @param index 插入索引
+         * @param value 插入的元素
+         * @returns 插入的元素 未插入则返回空
+         */
+        ArrayUtils.insert = function (ary, index, value) {
+            if (!ary)
+                return null;
+            var length = ary.length;
+            if (index > length)
+                index = length;
+            if (index < 0)
+                index = 0;
+            if (index == length)
+                ary.push(value); //插入最后
+            else if (index == 0)
+                ary.unshift(value); //插入头
+            else {
+                for (var i = length - 1; i >= index; i -= 1) {
+                    ary[i + 1] = ary[i];
+                }
+                ary[index] = value;
+            }
+            return value;
+        };
+        /**
+         * 打乱数组 Fisher–Yates shuffle
+         * @param list
+         */
+        ArrayUtils.shuffle = function (list) {
+            var n = list.length;
+            while (n > 1) {
+                n--;
+                var k = es.RandomUtils.randint(0, n + 1);
+                var value = list[k];
+                list[k] = list[n];
+                list[n] = value;
+            }
+        };
+        /**
+         * 如果项目已经在列表中，返回false，如果成功添加，返回true
+         * @param list
+         * @param item
+         */
+        ArrayUtils.addIfNotPresent = function (list, item) {
+            if (new es.List(list).contains(item))
+                return false;
+            list.push(item);
+            return true;
+        };
+        /**
+         * 返回列表中的最后一项。列表中至少应该有一个项目
+         * @param list
+         */
+        ArrayUtils.lastItem = function (list) {
+            return list[list.length - 1];
+        };
+        /**
+         * 从列表中随机获取一个项目。不清空检查列表!
+         * @param list
+         */
+        ArrayUtils.randomItem = function (list) {
+            return list[es.RandomUtils.randint(0, list.length - 1)];
+        };
+        /**
+         * 从列表中随机获取物品。不清空检查列表，也不验证列表数是否大于项目数。返回的List可以通过ListPool.free放回池中
+         * @param list
+         * @param itemCount 从列表中返回的随机项目的数量
+         */
+        ArrayUtils.randomItems = function (list, itemCount) {
+            var set = new Set();
+            while (set.size != itemCount) {
+                var item = this.randomItem(list);
+                if (!set.has(item))
+                    set.add(item);
+            }
+            var items = es.ListPool.obtain();
+            set.forEach(function (value) { return items.push(value); });
+            return items;
+        };
+        return ArrayUtils;
+    }());
+    es.ArrayUtils = ArrayUtils;
+})(es || (es = {}));
 var es;
 (function (es) {
     var Base64Utils = /** @class */ (function () {
@@ -10578,131 +10582,135 @@ var es;
     }());
     es.NumberExtension = NumberExtension;
 })(es || (es = {}));
-var RandomUtils = /** @class */ (function () {
-    function RandomUtils() {
-    }
-    /**
-     * 在 start 与 stop之间取一个随机整数，可以用step指定间隔， 但不包括较大的端点（start与stop较大的一个）
-     * 如
-     * this.randrange(1, 10, 3)
-     * 则返回的可能是   1 或  4 或  7  , 注意 这里面不会返回10，因为是10是大端点
-     *
-     * @param start
-     * @param stop
-     * @param step
-     * @return 假设 start < stop,  [start, stop) 区间内的随机整数
-     *
-     */
-    RandomUtils.randrange = function (start, stop, step) {
-        if (step === void 0) { step = 1; }
-        if (step == 0)
-            throw new Error('step 不能为 0');
-        var width = stop - start;
-        if (width == 0)
-            throw new Error('没有可用的范围(' + start + ',' + stop + ')');
-        if (width < 0)
-            width = start - stop;
-        var n = Math.floor((width + step - 1) / step);
-        return Math.floor(this.random() * n) * step + Math.min(start, stop);
-    };
-    /**
-     * 返回a 到 b之间的随机整数，包括 a 和 b
-     * @param a
-     * @param b
-     * @return [a, b] 之间的随机整数
-     *
-     */
-    RandomUtils.randint = function (a, b) {
-        a = Math.floor(a);
-        b = Math.floor(b);
-        if (a > b)
-            a++;
-        else
-            b++;
-        return this.randrange(a, b);
-    };
-    /**
-     * 返回 a - b之间的随机数，不包括  Math.max(a, b)
-     * @param a
-     * @param b
-     * @return 假设 a < b, [a, b)
-     */
-    RandomUtils.randnum = function (a, b) {
-        return this.random() * (b - a) + a;
-    };
-    /**
-     * 打乱数组
-     * @param array
-     * @return
-     */
-    RandomUtils.shuffle = function (array) {
-        array.sort(this._randomCompare);
-        return array;
-    };
-    /**
-     * 从序列中随机取一个元素
-     * @param sequence 可以是 数组、 vector，等只要是有length属性，并且可以用数字索引获取元素的对象，
-     *                 另外，字符串也是允许的。
-     * @return 序列中的某一个元素
-     *
-     */
-    RandomUtils.choice = function (sequence) {
-        if (!sequence.hasOwnProperty("length"))
-            throw new Error('无法对此对象执行此操作');
-        var index = Math.floor(this.random() * sequence.length);
-        if (sequence instanceof String)
-            return String(sequence).charAt(index);
-        else
-            return sequence[index];
-    };
-    /**
-     * 对列表中的元素进行随机采æ ?
-     * <pre>
-     * this.sample([1, 2, 3, 4, 5],  3)  // Choose 3 elements
-     * [4, 1, 5]
-     * </pre>
-     * @param sequence
-     * @param num
-     * @return
-     *
-     */
-    RandomUtils.sample = function (sequence, num) {
-        var len = sequence.length;
-        if (num <= 0 || len < num)
-            throw new Error("采样数量不够");
-        var selected = [];
-        var indices = [];
-        for (var i = 0; i < num; i++) {
-            var index = Math.floor(this.random() * len);
-            while (indices.indexOf(index) >= 0)
-                index = Math.floor(this.random() * len);
-            selected.push(sequence[index]);
-            indices.push(index);
+var es;
+(function (es) {
+    var RandomUtils = /** @class */ (function () {
+        function RandomUtils() {
         }
-        return selected;
-    };
-    /**
-     * 返回 0.0 - 1.0 之间的随机数，等同于 Math.random()
-     * @return Math.random()
-     *
-     */
-    RandomUtils.random = function () {
-        return Math.random();
-    };
-    /**
-     * 计算概率
-     * @param    chance 概率
-     * @return
-     */
-    RandomUtils.boolean = function (chance) {
-        if (chance === void 0) { chance = .5; }
-        return (this.random() < chance) ? true : false;
-    };
-    RandomUtils._randomCompare = function (a, b) {
-        return (this.random() > .5) ? 1 : -1;
-    };
-    return RandomUtils;
-}());
+        /**
+         * 在 start 与 stop之间取一个随机整数，可以用step指定间隔， 但不包括较大的端点（start与stop较大的一个）
+         * 如
+         * this.randrange(1, 10, 3)
+         * 则返回的可能是   1 或  4 或  7  , 注意 这里面不会返回10，因为是10是大端点
+         *
+         * @param start
+         * @param stop
+         * @param step
+         * @return 假设 start < stop,  [start, stop) 区间内的随机整数
+         *
+         */
+        RandomUtils.randrange = function (start, stop, step) {
+            if (step === void 0) { step = 1; }
+            if (step == 0)
+                throw new Error('step 不能为 0');
+            var width = stop - start;
+            if (width == 0)
+                throw new Error('没有可用的范围(' + start + ',' + stop + ')');
+            if (width < 0)
+                width = start - stop;
+            var n = Math.floor((width + step - 1) / step);
+            return Math.floor(this.random() * n) * step + Math.min(start, stop);
+        };
+        /**
+         * 返回a 到 b之间的随机整数，包括 a 和 b
+         * @param a
+         * @param b
+         * @return [a, b] 之间的随机整数
+         *
+         */
+        RandomUtils.randint = function (a, b) {
+            a = Math.floor(a);
+            b = Math.floor(b);
+            if (a > b)
+                a++;
+            else
+                b++;
+            return this.randrange(a, b);
+        };
+        /**
+         * 返回 a - b之间的随机数，不包括  Math.max(a, b)
+         * @param a
+         * @param b
+         * @return 假设 a < b, [a, b)
+         */
+        RandomUtils.randnum = function (a, b) {
+            return this.random() * (b - a) + a;
+        };
+        /**
+         * 打乱数组
+         * @param array
+         * @return
+         */
+        RandomUtils.shuffle = function (array) {
+            array.sort(this._randomCompare);
+            return array;
+        };
+        /**
+         * 从序列中随机取一个元素
+         * @param sequence 可以是 数组、 vector，等只要是有length属性，并且可以用数字索引获取元素的对象，
+         *                 另外，字符串也是允许的。
+         * @return 序列中的某一个元素
+         *
+         */
+        RandomUtils.choice = function (sequence) {
+            if (!sequence.hasOwnProperty("length"))
+                throw new Error('无法对此对象执行此操作');
+            var index = Math.floor(this.random() * sequence.length);
+            if (sequence instanceof String)
+                return String(sequence).charAt(index);
+            else
+                return sequence[index];
+        };
+        /**
+         * 对列表中的元素进行随机采æ ?
+         * <pre>
+         * this.sample([1, 2, 3, 4, 5],  3)  // Choose 3 elements
+         * [4, 1, 5]
+         * </pre>
+         * @param sequence
+         * @param num
+         * @return
+         *
+         */
+        RandomUtils.sample = function (sequence, num) {
+            var len = sequence.length;
+            if (num <= 0 || len < num)
+                throw new Error("采样数量不够");
+            var selected = [];
+            var indices = [];
+            for (var i = 0; i < num; i++) {
+                var index = Math.floor(this.random() * len);
+                while (indices.indexOf(index) >= 0)
+                    index = Math.floor(this.random() * len);
+                selected.push(sequence[index]);
+                indices.push(index);
+            }
+            return selected;
+        };
+        /**
+         * 返回 0.0 - 1.0 之间的随机数，等同于 Math.random()
+         * @return Math.random()
+         *
+         */
+        RandomUtils.random = function () {
+            return Math.random();
+        };
+        /**
+         * 计算概率
+         * @param    chance 概率
+         * @return
+         */
+        RandomUtils.boolean = function (chance) {
+            if (chance === void 0) { chance = .5; }
+            return (this.random() < chance) ? true : false;
+        };
+        RandomUtils._randomCompare = function (a, b) {
+            return (this.random() > .5) ? 1 : -1;
+        };
+        return RandomUtils;
+    }());
+    es.RandomUtils = RandomUtils;
+})(es || (es = {}));
 var es;
 (function (es) {
     var RectangleExt = /** @class */ (function () {
