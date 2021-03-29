@@ -116,7 +116,7 @@ module es {
          * @param manager
          */
         public static unregisterGlobalManager(manager: es.GlobalManager) {
-            new linq.List(this._instance._globalManagers).remove(manager);
+            new es.List(this._instance._globalManagers).remove(manager);
             manager.enabled = false;
         }
 

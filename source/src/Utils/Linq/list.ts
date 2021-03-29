@@ -1,4 +1,4 @@
-module linq {
+module es {
     type PredicateType<T> = (value?: T, index?: number, list?: T[]) => boolean
 
     export class List<T> {

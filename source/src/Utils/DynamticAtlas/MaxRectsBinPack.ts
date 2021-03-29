@@ -40,7 +40,7 @@ module es {
             let numRectanglesToProcess = this.freeRectangles.length;
             for (let i = 0; i < numRectanglesToProcess; ++i) {
                 if (this.splitFreeNode(this.freeRectangles[i], newNode)) {
-                    new linq.List(this.freeRectangles).removeAt(i);
+                    new es.List(this.freeRectangles).removeAt(i);
                     --i;
                     --numRectanglesToProcess;
                 }
@@ -142,12 +142,12 @@ module es {
             for (let i = 0; i < this.freeRectangles.length; ++i)
                 for (let j = i + 1; j < this.freeRectangles.length; ++j) {
                     if (this.isContainedIn(this.freeRectangles[i], this.freeRectangles[j])) {
-                        new linq.List(this.freeRectangles).removeAt(i);
+                        new es.List(this.freeRectangles).removeAt(i);
                         --i;
                         break;
                     }
                     if (this.isContainedIn(this.freeRectangles[j], this.freeRectangles[i])) {
-                        new linq.List(this.freeRectangles).removeAt(j);
+                        new es.List(this.freeRectangles).removeAt(j);
                         --j;
                     }
                 }

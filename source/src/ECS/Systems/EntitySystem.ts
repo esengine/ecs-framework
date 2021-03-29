@@ -34,7 +34,7 @@ module es {
         }
 
         public onChanged(entity: Entity) {
-            let contains = new linq.List(this._entities).contains(entity);
+            let contains = new es.List(this._entities).contains(entity);
             let interest = this._matcher.isInterestedEntity(entity);
 
             if (interest && !contains)
@@ -51,7 +51,7 @@ module es {
         public onAdded(entity: Entity) { }
 
         public remove(entity: Entity) {
-            new linq.List(this._entities).remove(entity);
+            new es.List(this._entities).remove(entity);
             this.onRemoved(entity);
         }
 

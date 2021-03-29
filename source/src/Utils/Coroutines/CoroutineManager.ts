@@ -101,7 +101,7 @@ module es {
                     this._shouldRunNextFrame.push(coroutine);
             }
 
-            let linqCoroutines = new linq.List(this._unblockedCoroutines);
+            let linqCoroutines = new es.List(this._unblockedCoroutines);
             linqCoroutines.clear();
             linqCoroutines.addRange(this._shouldRunNextFrame);
             this._shouldRunNextFrame.length = 0;

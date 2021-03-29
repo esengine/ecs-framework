@@ -9,7 +9,7 @@ module es {
             for (let i = this._timers.length - 1; i >= 0; i --){
                 if (this._timers[i].tick()){
                     this._timers[i].unload();
-                    new linq.List(this._timers).removeAt(i);
+                    new es.List(this._timers).removeAt(i);
                 }
             }
         }

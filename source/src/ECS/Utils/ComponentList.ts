@@ -50,8 +50,8 @@ module es {
         }
 
         public remove(component: Component) {
-            let componentToRemove = new linq.List(this._componentsToRemove);
-            let componentToAdd = new linq.List(this._componentsToAdd);
+            let componentToRemove = new es.List(this._componentsToRemove);
+            let componentToAdd = new es.List(this._componentsToAdd);
             Debug.warnIf(componentToRemove.contains(component), `您正在尝试删除一个您已经删除的组件(${component})`);
 
             // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
@@ -83,7 +83,7 @@ module es {
 
                 // 处理IUpdatable
                 if (isIUpdatable(component))
-                    new linq.List(this._updatableComponents).remove(component);
+                    new es.List(this._updatableComponents).remove(component);
 
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
                 this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
@@ -107,7 +107,7 @@ module es {
             if (this._componentsToRemove.length > 0) {
                 for (let i = 0; i < this._componentsToRemove.length; i++) {
                     this.handleRemove(this._componentsToRemove[i]);
-                    new linq.List(this._components).remove(this._componentsToRemove[i]);
+                    new es.List(this._components).remove(this._componentsToRemove[i]);
                 }
 
                 this._componentsToRemove.length = 0;
@@ -153,7 +153,7 @@ module es {
 
         public handleRemove(component: Component) {
             if (isIUpdatable(component))
-                new linq.List(this._updatableComponents).remove(component);
+                new es.List(this._updatableComponents).remove(component);
 
             this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);

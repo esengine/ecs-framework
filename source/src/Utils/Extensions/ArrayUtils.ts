@@ -254,7 +254,7 @@ class ArrayUtils {
      * @param item 
      */
     public static addIfNotPresent<T>(list: T[], item: T) {
-        if (new linq.List(list).contains(item))
+        if (new es.List(list).contains(item))
             return false;
 
         list.push(item);

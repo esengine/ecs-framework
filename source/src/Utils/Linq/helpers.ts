@@ -1,4 +1,4 @@
-module linq {
+module es {
     /**
      * 检查传递的参数是否为对象
      */

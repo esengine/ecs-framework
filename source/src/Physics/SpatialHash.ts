@@ -77,7 +77,7 @@ module es {
                     let cell = this.cellAtPosition(x, y);
                     Insist.isNotNull(cell, `从不存在碰撞器的单元格中移除碰撞器: [${collider}]`);
                     if (cell != null)
-                        new linq.List(cell).remove(collider);
+                        new es.List(cell).remove(collider);
                 }
             }
         }
@@ -325,7 +325,7 @@ module es {
          */
         public remove(obj: Collider) {
             this._store.forEach(list => {
-                let linqList = new linq.List(list);
+                let linqList = new es.List(list);
                 if (linqList.contains(obj))
                     linqList.remove(obj);
             })
@@ -379,7 +379,7 @@ module es {
                 let potential = cell[i];
 
                 // 管理我们已经处理过的碰撞器
-                if (new linq.List(this._checkedColliders).contains(potential))
+                if (new es.List(this._checkedColliders).contains(potential))
                     continue;
 
                 this._checkedColliders.push(potential);

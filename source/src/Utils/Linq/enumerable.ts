@@ -1,4 +1,4 @@
-module linq {
+module es {
     export class Enumerable {
         /**
          * 在指定范围内生成一个整数序列。

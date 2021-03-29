@@ -95,7 +95,7 @@ module es {
          * @param entity
          */
         public contains(entity: Entity): boolean {
-            return new linq.List(this._entities).contains(entity) || this._entitiesToAdded.contains(entity);
+            return new es.List(this._entities).contains(entity) || this._entitiesToAdded.contains(entity);
         }
 
         public getTagList(tag: number) {
@@ -133,7 +133,7 @@ module es {
                     this.removeFromTagList(entity);
 
                     // 处理常规实体列表
-                    new linq.List(this._entities).remove(entity);
+                    new es.List(this._entities).remove(entity);
                     entity.onRemovedFromScene();
                     entity.scene = null;
 

@@ -50,7 +50,7 @@ module es {
             let messageData = this._messageTable.get(eventType);
             let index = messageData.findIndex(data => data.func == handler);
             if (index != -1)
-                new linq.List(messageData).removeAt(index);
+                new es.List(messageData).removeAt(index);
         }
 
         /**

@@ -162,7 +162,7 @@ var es;
          * @param manager
          */
         Core.unregisterGlobalManager = function (manager) {
-            new linq.List(this._instance._globalManagers).remove(manager);
+            new es.List(this._instance._globalManagers).remove(manager);
             manager.enabled = false;
         };
         /**
@@ -1400,7 +1400,7 @@ var es;
          * @param component
          */
         Scene.prototype.removeSceneComponent = function (component) {
-            var sceneComponentList = new linq.List(this._sceneComponents);
+            var sceneComponentList = new es.List(this._sceneComponents);
             es.Insist.isTrue(sceneComponentList.contains(component), "SceneComponent" + component + "\u4E0D\u5728SceneComponents\u5217\u8868\u4E2D!");
             sceneComponentList.remove(component);
             component.onRemovedFromScene();
@@ -1418,7 +1418,7 @@ var es;
          * @param entity
          */
         Scene.prototype.addEntity = function (entity) {
-            es.Insist.isFalse(new linq.List(this.entities.buffer).contains(entity), "\u60A8\u8BD5\u56FE\u5C06\u540C\u4E00\u5B9E\u4F53\u6DFB\u52A0\u5230\u573A\u666F\u4E24\u6B21: " + entity);
+            es.Insist.isFalse(new es.List(this.entities.buffer).contains(entity), "\u60A8\u8BD5\u56FE\u5C06\u540C\u4E00\u5B9E\u4F53\u6DFB\u52A0\u5230\u573A\u666F\u4E24\u6B21: " + entity);
             this.entities.add(entity);
             entity.scene = this;
             for (var i = 0; i < entity.transform.childCount; i++)
@@ -1776,7 +1776,7 @@ var es;
             if (this._parent == parent)
                 return this;
             if (!this._parent) {
-                var children = new linq.List(this._parent._children);
+                var children = new es.List(this._parent._children);
                 children.remove(this);
                 children.add(this);
             }
@@ -2872,7 +2872,7 @@ var es;
             var _this = _super.call(this) || this;
             // 第一点和最后一点决不能相同。我们想要一个开放的多边形
             var isPolygonClosed = points[0] == points[points.length - 1];
-            var linqPoints = new linq.List(points);
+            var linqPoints = new es.List(points);
             // 最后一个移除
             if (isPolygonClosed)
                 linqPoints.remove(linqPoints.last());
@@ -2920,7 +2920,7 @@ var es;
         EntitySystem.prototype.initialize = function () {
         };
         EntitySystem.prototype.onChanged = function (entity) {
-            var contains = new linq.List(this._entities).contains(entity);
+            var contains = new es.List(this._entities).contains(entity);
             var interest = this._matcher.isInterestedEntity(entity);
             if (interest && !contains)
                 this.add(entity);
@@ -2933,7 +2933,7 @@ var es;
         };
         EntitySystem.prototype.onAdded = function (entity) { };
         EntitySystem.prototype.remove = function (entity) {
-            new linq.List(this._entities).remove(entity);
+            new es.List(this._entities).remove(entity);
             this.onRemoved(entity);
         };
         EntitySystem.prototype.onRemoved = function (entity) { };
@@ -3827,8 +3827,8 @@ var es;
             this._componentsToAdd.push(component);
         };
         ComponentList.prototype.remove = function (component) {
-            var componentToRemove = new linq.List(this._componentsToRemove);
-            var componentToAdd = new linq.List(this._componentsToAdd);
+            var componentToRemove = new es.List(this._componentsToRemove);
+            var componentToAdd = new es.List(this._componentsToAdd);
             es.Debug.warnIf(componentToRemove.contains(component), "\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u4E00\u4E2A\u60A8\u5DF2\u7ECF\u5220\u9664\u7684\u7EC4\u4EF6(" + component + ")");
             // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
             if (componentToAdd.contains(component)) {
@@ -3858,7 +3858,7 @@ var es;
                         continue;
                     // 处理IUpdatable
                     if (es.isIUpdatable(component))
-                        new linq.List(this._updatableComponents).remove(component);
+                        new es.List(this._updatableComponents).remove(component);
                     this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
                     this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
                 }
@@ -3897,7 +3897,7 @@ var es;
             if (this._componentsToRemove.length > 0) {
                 for (var i = 0; i < this._componentsToRemove.length; i++) {
                     this.handleRemove(this._componentsToRemove[i]);
-                    new linq.List(this._components).remove(this._componentsToRemove[i]);
+                    new es.List(this._components).remove(this._componentsToRemove[i]);
                 }
                 this._componentsToRemove.length = 0;
             }
@@ -3932,7 +3932,7 @@ var es;
         };
         ComponentList.prototype.handleRemove = function (component) {
             if (es.isIUpdatable(component))
-                new linq.List(this._updatableComponents).remove(component);
+                new es.List(this._updatableComponents).remove(component);
             this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             component.onRemovedFromEntity();
@@ -4167,7 +4167,7 @@ var es;
          * @param entity
          */
         EntityList.prototype.contains = function (entity) {
-            return new linq.List(this._entities).contains(entity) || this._entitiesToAdded.contains(entity);
+            return new es.List(this._entities).contains(entity) || this._entitiesToAdded.contains(entity);
         };
         EntityList.prototype.getTagList = function (tag) {
             var list = this._entityDict.get(tag);
@@ -4210,7 +4210,7 @@ var es;
                     // 处理标签列表
                     _this.removeFromTagList(entity);
                     // 处理常规实体列表
-                    new linq.List(_this._entities).remove(entity);
+                    new es.List(_this._entities).remove(entity);
                     entity.onRemovedFromScene();
                     entity.scene = null;
                     _this.scene.entityProcessors.onEntityRemoved(entity);
@@ -4414,7 +4414,7 @@ var es;
             this._processors.push(processor);
         };
         EntityProcessorList.prototype.remove = function (processor) {
-            new linq.List(this._processors).remove(processor);
+            new es.List(this._processors).remove(processor);
         };
         EntityProcessorList.prototype.onComponentAdded = function (entity) {
             this.notifyEntityChanged(entity);
@@ -7198,7 +7198,7 @@ var es;
                     var cell = this.cellAtPosition(x, y);
                     es.Insist.isNotNull(cell, "\u4ECE\u4E0D\u5B58\u5728\u78B0\u649E\u5668\u7684\u5355\u5143\u683C\u4E2D\u79FB\u9664\u78B0\u649E\u5668: [" + collider + "]");
                     if (cell != null)
-                        new linq.List(cell).remove(collider);
+                        new es.List(cell).remove(collider);
                 }
             }
         };
@@ -7445,7 +7445,7 @@ var es;
          */
         NumberDictionary.prototype.remove = function (obj) {
             this._store.forEach(function (list) {
-                var linqList = new linq.List(list);
+                var linqList = new es.List(list);
                 if (linqList.contains(obj))
                     linqList.remove(obj);
             });
@@ -7488,7 +7488,7 @@ var es;
             for (var i = 0; i < cell.length; i++) {
                 var potential = cell[i];
                 // 管理我们已经处理过的碰撞器
-                if (new linq.List(this._checkedColliders).contains(potential))
+                if (new es.List(this._checkedColliders).contains(potential))
                     continue;
                 this._checkedColliders.push(potential);
                 // 只有当我们被设置为这样做时才会点击触发器
@@ -8512,7 +8512,7 @@ var es;
             var messageData = this._messageTable.get(eventType);
             var index = messageData.findIndex(function (data) { return data.func == handler; });
             if (index != -1)
-                new linq.List(messageData).removeAt(index);
+                new es.List(messageData).removeAt(index);
         };
         /**
          * 触发该事件
@@ -8544,27 +8544,6 @@ var es;
         Edge[Edge["left"] = 2] = "left";
         Edge[Edge["right"] = 3] = "right";
     })(Edge = es.Edge || (es.Edge = {}));
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Enumerable = /** @class */ (function () {
-        function Enumerable() {
-        }
-        /**
-         * 生成包含一个重复值的序列
-         * @param element 要重复的值
-         * @param count 在生成的序列中重复该值的次数
-         */
-        Enumerable.repeat = function (element, count) {
-            var result = [];
-            while (count--) {
-                result.push(element);
-            }
-            return result;
-        };
-        return Enumerable;
-    }());
-    es.Enumerable = Enumerable;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -9949,7 +9928,7 @@ var es;
                 if (this.tickCoroutine(coroutine))
                     this._shouldRunNextFrame.push(coroutine);
             }
-            var linqCoroutines = new linq.List(this._unblockedCoroutines);
+            var linqCoroutines = new es.List(this._unblockedCoroutines);
             linqCoroutines.clear();
             linqCoroutines.addRange(this._shouldRunNextFrame);
             this._shouldRunNextFrame.length = 0;
@@ -10031,7 +10010,7 @@ var es;
             var numRectanglesToProcess = this.freeRectangles.length;
             for (var i = 0; i < numRectanglesToProcess; ++i) {
                 if (this.splitFreeNode(this.freeRectangles[i], newNode)) {
-                    new linq.List(this.freeRectangles).removeAt(i);
+                    new es.List(this.freeRectangles).removeAt(i);
                     --i;
                     --numRectanglesToProcess;
                 }
@@ -10116,12 +10095,12 @@ var es;
             for (var i = 0; i < this.freeRectangles.length; ++i)
                 for (var j = i + 1; j < this.freeRectangles.length; ++j) {
                     if (this.isContainedIn(this.freeRectangles[i], this.freeRectangles[j])) {
-                        new linq.List(this.freeRectangles).removeAt(i);
+                        new es.List(this.freeRectangles).removeAt(i);
                         --i;
                         break;
                     }
                     if (this.isContainedIn(this.freeRectangles[j], this.freeRectangles[i])) {
-                        new linq.List(this.freeRectangles).removeAt(j);
+                        new es.List(this.freeRectangles).removeAt(j);
                         --j;
                     }
                 }
@@ -10389,7 +10368,7 @@ var ArrayUtils = /** @class */ (function () {
      * @param item
      */
     ArrayUtils.addIfNotPresent = function (list, item) {
-        if (new linq.List(list).contains(item))
+        if (new es.List(list).contains(item))
             return false;
         list.push(item);
         return true;
@@ -11091,8 +11070,8 @@ var es;
     }());
     es.Vector2Ext = Vector2Ext;
 })(es || (es = {}));
-var linq;
-(function (linq) {
+var es;
+(function (es) {
     var Enumerable = /** @class */ (function () {
         function Enumerable() {
         }
@@ -11100,7 +11079,7 @@ var linq;
          * 在指定范围内生成一个整数序列。
          */
         Enumerable.range = function (start, count) {
-            var result = new linq.List();
+            var result = new es.List();
             while (count--) {
                 result.add(start++);
             }
@@ -11110,7 +11089,7 @@ var linq;
          * 生成包含一个重复值的序列。
          */
         Enumerable.repeat = function (element, count) {
-            var result = new linq.List();
+            var result = new es.List();
             while (count--) {
                 result.add(element);
             }
@@ -11118,18 +11097,18 @@ var linq;
         };
         return Enumerable;
     }());
-    linq.Enumerable = Enumerable;
-})(linq || (linq = {}));
-var linq;
-(function (linq) {
+    es.Enumerable = Enumerable;
+})(es || (es = {}));
+var es;
+(function (es) {
     /**
      * 检查传递的参数是否为对象
      */
-    linq.isObj = function (x) { return !!x && typeof x === 'object'; };
+    es.isObj = function (x) { return !!x && typeof x === 'object'; };
     /**
      * 创建一个否定谓词结果的函数
      */
-    linq.negate = function (pred) { return function () {
+    es.negate = function (pred) { return function () {
         var args = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
@@ -11139,10 +11118,10 @@ var linq;
     /**
      * 比较器助手
      */
-    linq.composeComparers = function (previousComparer, currentComparer) { return function (a, b) {
+    es.composeComparers = function (previousComparer, currentComparer) { return function (a, b) {
         return previousComparer(a, b) || currentComparer(a, b);
     }; };
-    linq.keyComparer = function (_keySelector, descending) { return function (a, b) {
+    es.keyComparer = function (_keySelector, descending) { return function (a, b) {
         var sortKeyA = _keySelector(a);
         var sortKeyB = _keySelector(b);
         if (sortKeyA > sortKeyB) {
@@ -11155,9 +11134,9 @@ var linq;
             return 0;
         }
     }; };
-})(linq || (linq = {}));
-var linq;
-(function (linq) {
+})(es || (es = {}));
+var es;
+(function (es) {
     var List = /** @class */ (function () {
         /**
          * 默认为列表的元素
@@ -11400,7 +11379,7 @@ var linq;
          * 根据键按升序对序列中的元素进行排序。
          */
         List.prototype.orderBy = function (keySelector, comparer) {
-            if (comparer === void 0) { comparer = linq.keyComparer(keySelector, false); }
+            if (comparer === void 0) { comparer = es.keyComparer(keySelector, false); }
             // tslint:disable-next-line: no-use-before-declare
             return new OrderedList(this._elements, comparer);
         };
@@ -11408,7 +11387,7 @@ var linq;
          * 根据键值降序对序列中的元素进行排序。
          */
         List.prototype.orderByDescending = function (keySelector, comparer) {
-            if (comparer === void 0) { comparer = linq.keyComparer(keySelector, true); }
+            if (comparer === void 0) { comparer = es.keyComparer(keySelector, true); }
             // tslint:disable-next-line: no-use-before-declare
             return new OrderedList(this._elements, comparer);
         };
@@ -11436,7 +11415,7 @@ var linq;
          * 删除与指定谓词定义的条件匹配的所有元素。
          */
         List.prototype.removeAll = function (predicate) {
-            return this.where(linq.negate(predicate));
+            return this.where(es.negate(predicate));
         };
         /**
          * 删除列表指定索引处的元素。
@@ -11601,7 +11580,7 @@ var linq;
         };
         return List;
     }());
-    linq.List = List;
+    es.List = List;
     /**
      * 表示已排序的序列。该类的方法是通过使用延迟执行来实现的。
      * 即时返回值是一个存储执行操作所需的所有信息的对象。
@@ -11620,19 +11599,19 @@ var linq;
          * @override
          */
         OrderedList.prototype.thenBy = function (keySelector) {
-            return new OrderedList(this._elements, linq.composeComparers(this._comparer, linq.keyComparer(keySelector, false)));
+            return new OrderedList(this._elements, es.composeComparers(this._comparer, es.keyComparer(keySelector, false)));
         };
         /**
          * 根据键值按降序对序列中的元素执行后续排序。
          * @override
          */
         OrderedList.prototype.thenByDescending = function (keySelector) {
-            return new OrderedList(this._elements, linq.composeComparers(this._comparer, linq.keyComparer(keySelector, true)));
+            return new OrderedList(this._elements, es.composeComparers(this._comparer, es.keyComparer(keySelector, true)));
         };
         return OrderedList;
     }(List));
-    linq.OrderedList = OrderedList;
-})(linq || (linq = {}));
+    es.OrderedList = OrderedList;
+})(es || (es = {}));
 var es;
 (function (es) {
     /**
@@ -12080,7 +12059,7 @@ var es;
             for (var i = this._timers.length - 1; i >= 0; i--) {
                 if (this._timers[i].tick()) {
                     this._timers[i].unload();
-                    new linq.List(this._timers).removeAt(i);
+                    new es.List(this._timers).removeAt(i);
                 }
             }
         };

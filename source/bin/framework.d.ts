@@ -3392,16 +3392,6 @@ declare module es {
     }
 }
 declare module es {
-    class Enumerable {
-        /**
-         * 生成包含一个重复值的序列
-         * @param element 要重复的值
-         * @param count 在生成的序列中重复该值的次数
-         */
-        static repeat<T>(element: T, count: number): any[];
-    }
-}
-declare module es {
     class EqualityComparer<T> implements IEqualityComparer<T> {
         static default<T>(): EqualityComparer<T>;
         protected constructor();
@@ -4373,7 +4363,7 @@ declare module es {
         static round(vec: Vector2): Vector2;
     }
 }
-declare module linq {
+declare module es {
     class Enumerable {
         /**
          * 在指定范围内生成一个整数序列。
@@ -4385,7 +4375,7 @@ declare module linq {
         static repeat<T>(element: T, count: number): List<T>;
     }
 }
-declare module linq {
+declare module es {
     /**
      * 检查传递的参数是否为对象
      */
@@ -4400,7 +4390,7 @@ declare module linq {
     const composeComparers: <T>(previousComparer: (a: T, b: T) => number, currentComparer: (a: T, b: T) => number) => (a: T, b: T) => number;
     const keyComparer: <T>(_keySelector: (key: T) => string, descending?: boolean) => (a: T, b: T) => number;
 }
-declare module linq {
+declare module es {
     type PredicateType<T> = (value?: T, index?: number, list?: T[]) => boolean;
     class List<T> {
         protected _elements: T[];
