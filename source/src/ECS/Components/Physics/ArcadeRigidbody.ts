@@ -128,7 +128,7 @@ module es {
         }
 
         public onAddedToEntity() {
-            this._collider = this.entity.getComponent<es.Collider>(es.Collider);
+            this._collider = this.entity.getComponent(es.Collider);
             Debug.warnIf(this._collider == null, "ArcadeRigidbody 没有 Collider。ArcadeRigidbody需要一个Collider!");
         }
 

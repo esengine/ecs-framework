@@ -353,7 +353,7 @@ declare module es {
          * 创建组件的新实例。返回实例组件
          * @param componentType
          */
-        createComponent<T extends Component>(componentType: new () => T): T;
+        createComponent<T extends Component>(componentType: new (...args: any[]) => T): T;
         /**
          * 将组件添加到组件列表中。返回组件。
          * @param component
@@ -363,14 +363,14 @@ declare module es {
          * 获取类型T的第一个组件并返回它。如果没有找到组件，则返回null。
          * @param type
          */
-        getComponent<T extends Component>(type: any): T;
+        getComponent<T extends Component>(type: new (...args: any[]) => T): T;
         /**
          * 尝试获取T类型的组件。如果未找到任何组件，则返回false
          * @param type
          * @param outComponent
          * @returns
          */
-        tryGetComponent<T extends Component>(type: any, outComponent: Ref<T>): boolean;
+        tryGetComponent<T extends Component>(type: new (...args: any[]) => T, outComponent: Ref<T>): boolean;
         /**
          * 检查实体是否具有该组件
          * @param type
@@ -1100,7 +1100,7 @@ declare module es {
     }
 }
 declare module es {
-    abstract class Collider extends Component {
+    class Collider extends Component {
         /**
          * 对撞机的基本形状
          */

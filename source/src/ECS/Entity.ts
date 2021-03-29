@@ -384,7 +384,7 @@ module es {
          * 创建组件的新实例。返回实例组件
          * @param componentType 
          */
-        public createComponent<T extends Component>(componentType: new () => T): T {
+        public createComponent<T extends Component>(componentType: new (...args) => T): T {
             let component = new componentType();
             this.addComponent(component);
             return component;
@@ -405,7 +405,7 @@ module es {
          * 获取类型T的第一个组件并返回它。如果没有找到组件，则返回null。
          * @param type
          */
-        public getComponent<T extends Component>(type: any): T {
+        public getComponent<T extends Component>(type: new (...args) => T): T {
             return this.components.getComponent(type, false);
         }
 
@@ -415,7 +415,7 @@ module es {
          * @param outComponent 
          * @returns 
          */
-        public tryGetComponent<T extends Component>(type: any, outComponent: Ref<T>): boolean {
+        public tryGetComponent<T extends Component>(type: new (...args) => T, outComponent: Ref<T>): boolean {
             outComponent.value = this.components.getComponent<T>(type, false);
             return outComponent.value != null;
         }

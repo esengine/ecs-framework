@@ -1,5 +1,5 @@
 module es {
-    export abstract class Collider extends Component {
+    export class Collider extends Component {
         /**
          * 对撞机的基本形状
          */
