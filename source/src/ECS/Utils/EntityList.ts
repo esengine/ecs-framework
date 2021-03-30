@@ -194,12 +194,26 @@ module es {
             let list = this.getTagList(tag);
 
             let returnList = ListPool.obtain<Entity>();
-            returnList.length = this._entities.length;
             for (let entity of list) {
                 returnList.push(entity);
             }
 
             return returnList;
+        }
+
+        /**
+         * 返回第一个找到该tag的实体
+         * @param tag 
+         * @returns 
+         */
+        public entityWithTag(tag: number) {
+            let list = this.getTagList(tag);
+
+            for (let entity of list) {
+                return entity;
+            }
+
+            return null;
         }
 
         /**

@@ -641,6 +641,12 @@ declare module es {
          */
         findEntitiesWithTag(tag: number): Entity[];
         /**
+         * 返回提一个具有该标记的实体
+         * @param tag
+         * @returns
+         */
+        findEntityWithTag(tag: number): Entity;
+        /**
          * 返回类型为T的所有实体
          * @param type
          */
@@ -1771,6 +1777,12 @@ declare module es {
          * @param tag
          */
         entitiesWithTag(tag: number): Entity[];
+        /**
+         * 返回第一个找到该tag的实体
+         * @param tag
+         * @returns
+         */
+        entityWithTag(tag: number): Entity;
         /**
          * 返回一个T类型的所有实体的列表。
          * 返回的List可以通过ListPool.free放回池中。

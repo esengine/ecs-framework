@@ -266,9 +266,13 @@ module es {
             if (this._parent == parent)
                 return this;
 
-            if (!this._parent) {
+            if (this._parent != null) {
                 let children = new es.List(this._parent._children);
                 children.remove(this);
+            }
+
+            if (parent != null) {
+                let children = new es.List(parent._children);
                 children.add(this);
             }
 

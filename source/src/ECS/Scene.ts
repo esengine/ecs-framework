@@ -201,6 +201,15 @@ module es {
         }
 
         /**
+         * 返回提一个具有该标记的实体
+         * @param tag 
+         * @returns 
+         */
+        public findEntityWithTag(tag: number): Entity {
+            return this.entities.entityWithTag(tag);
+        }
+ 
+        /**
          * 返回类型为T的所有实体
          * @param type
          */
