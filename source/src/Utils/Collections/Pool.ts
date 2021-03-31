@@ -2,7 +2,7 @@ module es {
     /**
      * 用于池任何对象
      */
-    export class Pool<T> {
+    export class Pool {
         private static _objectQueue = [];
 
         /**
@@ -10,7 +10,7 @@ module es {
          * @param type
          * @param cacheCount
          */
-        public static warmCache(type: any, cacheCount: number) {
+        public static warmCache<T>(type: new (...args) => T, cacheCount: number) {
             cacheCount -= this._objectQueue.length;
             if (cacheCount > 0) {
                 for (let i = 0; i < cacheCount; i++) {
@@ -38,7 +38,7 @@ module es {
         /**
          * 如果可以的话，从堆栈中弹出一个项
          */
-        public static obtain<T>(type: any): T {
+        public static obtain<T>(type: new (...args) => T): T {
             if (this._objectQueue.length > 0)
                 return this._objectQueue.shift();
 

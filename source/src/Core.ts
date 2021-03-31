@@ -124,7 +124,7 @@ module es {
          * 获取类型为T的全局管理器
          * @param type
          */
-        public static getGlobalManager<T extends es.GlobalManager>(type): T {
+        public static getGlobalManager<T extends es.GlobalManager>(type: new (...args) => T): T {
             for (let i = 0; i < this._instance._globalManagers.length; i++) {
                 if (this._instance._globalManagers[i] instanceof type)
                     return this._instance._globalManagers[i] as T;

@@ -76,7 +76,7 @@ declare module es {
          * 获取类型为T的全局管理器
          * @param type
          */
-        static getGlobalManager<T extends es.GlobalManager>(type: any): T;
+        static getGlobalManager<T extends es.GlobalManager>(type: new (...args: any[]) => T): T;
         /**
          * 启动一个coroutine。Coroutine可以将number延时几秒或延时到其他startCoroutine.Yielding
          * null将使coroutine在下一帧被执行。
@@ -3792,14 +3792,14 @@ declare module es {
     /**
      * 用于池任何对象
      */
-    class Pool<T> {
+    class Pool {
         private static _objectQueue;
         /**
          * 预热缓存，使用最大的cacheCount对象填充缓存
          * @param type
          * @param cacheCount
          */
-        static warmCache(type: any, cacheCount: number): void;
+        static warmCache<T>(type: new (...args: any[]) => T, cacheCount: number): void;
         /**
          * 将缓存修剪为cacheCount项目
          * @param cacheCount
@@ -3812,7 +3812,7 @@ declare module es {
         /**
          * 如果可以的话，从堆栈中弹出一个项
          */
-        static obtain<T>(type: any): T;
+        static obtain<T>(type: new (...args: any[]) => T): T;
         /**
          * 将项推回堆栈
          * @param obj

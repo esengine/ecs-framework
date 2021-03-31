@@ -2906,6 +2906,7 @@ var es;
         function EntitySystem(matcher) {
             this._entities = [];
             this._matcher = matcher ? matcher : es.Matcher.empty();
+            this.initialize();
         }
         Object.defineProperty(EntitySystem.prototype, "scene", {
             /**

@@ -7,6 +7,7 @@ module es {
 
         constructor(matcher?: Matcher) {
             this._matcher = matcher ? matcher : Matcher.empty();
+            this.initialize();
         }
 
         private _scene: Scene;
