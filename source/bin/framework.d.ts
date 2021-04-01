@@ -375,12 +375,12 @@ declare module es {
          * 检查实体是否具有该组件
          * @param type
          */
-        hasComponent<T extends Component>(type: any): boolean;
+        hasComponent<T extends Component>(type: new (...args: any[]) => T): boolean;
         /**
          * 获取类型T的第一个组件并返回它。如果没有找到组件，将创建组件。
          * @param type
          */
-        getOrCreateComponent<T extends Component>(type: any): T;
+        getOrCreateComponent<T extends Component>(type: new (...args: any[]) => T): T;
         /**
          * 获取typeName类型的所有组件，但不使用列表分配
          * @param typeName

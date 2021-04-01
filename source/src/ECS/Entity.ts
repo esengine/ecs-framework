@@ -424,7 +424,7 @@ module es {
          * 检查实体是否具有该组件
          * @param type
          */
-        public hasComponent<T extends Component>(type) {
+        public hasComponent<T extends Component>(type: new (...args) => T) {
             return this.components.getComponent<T>(type, false) != null;
         }
 
@@ -432,7 +432,7 @@ module es {
          * 获取类型T的第一个组件并返回它。如果没有找到组件，将创建组件。
          * @param type
          */
-        public getOrCreateComponent<T extends Component>(type) {
+        public getOrCreateComponent<T extends Component>(type: new (...args) => T) {
             let comp = this.components.getComponent<T>(type, true);
             if (!comp) {
                 comp = this.addComponent<T>(new type());

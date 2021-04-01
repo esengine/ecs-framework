@@ -88,6 +88,11 @@ class MoveSystem extends es.EntityProcessingSystem {
         // 因为在构造函数中有一个Matcher匹配器，在你初始化MoveSystem的时候需要你传入匹配的对象. 见下方如何定义匹配带MoveComponent的匹配器
 
         // 该方法每帧都会执行，请确保您的操作尽可能的小或者在使用大数据时采用缓存的方法进行获取操作
+        const moveComponent = entity.getComponent(MovementComponent);
+        if (!moveComponent.enabled)
+            return;
+
+        // 根据moveComponent的数据执行移动的逻辑
     }
 }
 ```
