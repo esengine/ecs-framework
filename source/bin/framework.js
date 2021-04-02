@@ -942,6 +942,14 @@ var es;
             return this.components.getComponent(type, false);
         };
         /**
+         *  获取类型T的第一个并已加入场景的组件并返回它。如果没有找到组件，则返回null。
+         * @param type
+         * @returns
+         */
+        Entity.prototype.getComponentInScene = function (type) {
+            return this.components.getComponent(type, true);
+        };
+        /**
          * 尝试获取T类型的组件。如果未找到任何组件，则返回false
          * @param type
          * @param outComponent
@@ -4037,8 +4045,10 @@ var es;
         ComponentList.prototype.update = function () {
             this.updateLists();
             for (var i = 0; i < this._updatableComponents.length; i++) {
-                if (this._updatableComponents[i].enabled)
-                    this._updatableComponents[i].update();
+                var component = this._updatableComponents[i];
+                if (component.enabled) {
+                    component.update();
+                }
             }
         };
         ComponentList.prototype.onEntityTransformChanged = function (comp) {

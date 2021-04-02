@@ -365,6 +365,12 @@ declare module es {
          */
         getComponent<T extends Component>(type: new (...args: any[]) => T): T;
         /**
+         *  获取类型T的第一个并已加入场景的组件并返回它。如果没有找到组件，则返回null。
+         * @param type
+         * @returns
+         */
+        getComponentInScene<T extends Component>(type: new (...args: any[]) => T): T;
+        /**
          * 尝试获取T类型的组件。如果未找到任何组件，则返回false
          * @param type
          * @param outComponent
