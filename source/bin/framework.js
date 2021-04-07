@@ -2913,6 +2913,9 @@ var es;
     var EntitySystem = /** @class */ (function () {
         function EntitySystem(matcher) {
             this._entities = [];
+            this._startTime = 0;
+            this._endTime = 0;
+            this._useTime = 0;
             this._matcher = matcher ? matcher : es.Matcher.empty();
             this.initialize();
         }
@@ -2933,6 +2936,14 @@ var es;
         Object.defineProperty(EntitySystem.prototype, "matcher", {
             get: function () {
                 return this._matcher;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EntitySystem.prototype, "useTime", {
+            /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
+            get: function () {
+                return this._useTime;
             },
             enumerable: true,
             configurable: true
@@ -2973,13 +2984,22 @@ var es;
          * 在系统处理开始前调用
          * 在下一个系统开始处理或新的处理回合开始之前（以先到者为准），使用此方法创建的任何实体都不会激活
          */
-        EntitySystem.prototype.begin = function () { };
+        EntitySystem.prototype.begin = function () {
+            if (!es.Core.Instance.debug)
+                return;
+            this._startTime = Date.now();
+        };
         EntitySystem.prototype.process = function (entities) { };
         EntitySystem.prototype.lateProcess = function (entities) { };
         /**
          * 系统处理完毕后调用
          */
-        EntitySystem.prototype.end = function () { };
+        EntitySystem.prototype.end = function () {
+            if (!es.Core.Instance.debug)
+                return;
+            this._endTime = Date.now();
+            this._useTime = this._endTime - this._startTime;
+        };
         /**
          * 系统是否需要处理
          *
@@ -4045,10 +4065,8 @@ var es;
         ComponentList.prototype.update = function () {
             this.updateLists();
             for (var i = 0; i < this._updatableComponents.length; i++) {
-                var component = this._updatableComponents[i];
-                if (component.enabled) {
-                    component.update();
-                }
+                if (this._updatableComponents[i].enabled)
+                    this._updatableComponents[i].update();
             }
         };
         ComponentList.prototype.onEntityTransformChanged = function (comp) {

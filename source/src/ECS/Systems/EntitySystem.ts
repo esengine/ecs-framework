@@ -30,6 +30,14 @@ module es {
             return this._matcher;
         }
 
+        private _startTime = 0;
+        private _endTime = 0;
+        private _useTime = 0;
+        /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
+        public get useTime() {
+            return this._useTime;
+        }
+
         public initialize() {
 
         }
@@ -76,7 +84,12 @@ module es {
          * 在系统处理开始前调用
          * 在下一个系统开始处理或新的处理回合开始之前（以先到者为准），使用此方法创建的任何实体都不会激活
          */
-        protected begin() { }
+        protected begin() { 
+            if (!Core.Instance.debug)
+                return;
+
+            this._startTime = Date.now();
+        }
 
         protected process(entities: Entity[]) { }
 
@@ -85,7 +98,13 @@ module es {
         /**
          * 系统处理完毕后调用
          */
-        protected end() { }
+        protected end() { 
+            if (!Core.Instance.debug)
+                return;
+
+            this._endTime = Date.now();
+            this._useTime = this._endTime - this._startTime;
+        }
 
         /**
          * 系统是否需要处理

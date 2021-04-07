@@ -1291,6 +1291,11 @@ declare module es {
         scene: Scene;
         private _matcher;
         readonly matcher: Matcher;
+        private _startTime;
+        private _endTime;
+        private _useTime;
+        /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
+        readonly useTime: number;
         initialize(): void;
         onChanged(entity: Entity): void;
         add(entity: Entity): void;
@@ -1816,7 +1821,7 @@ declare module es {
 }
 declare module es {
     class EntityProcessorList {
-        protected _processors: EntitySystem[];
+        _processors: EntitySystem[];
         add(processor: EntitySystem): void;
         remove(processor: EntitySystem): void;
         onComponentAdded(entity: Entity): void;
