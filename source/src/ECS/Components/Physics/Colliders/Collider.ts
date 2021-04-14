@@ -212,5 +212,24 @@ module es {
 
             return false;
         }
+
+        /**
+         * 检查此碰撞器是否与场景中的其他碰撞器碰撞。它相交的第一个碰撞器将在碰撞结果中返回碰撞数据。
+         * @param result 
+         */
+        public collidesWithAny(result: CollisionResult = new CollisionResult()) {
+            // 在我们的新位置上获取我们可能会碰到的任何东西 
+            let neighbors = Physics.boxcastBroadphaseExcludingSelfNonRect(this, this.collidesWithLayers.value);
+
+            for (let neighbor of neighbors) {
+                if (neighbor.isTrigger)
+                    continue;
+
+                if (this.collidesWithNonMotion(neighbor, result))
+                    return true;
+            }
+
+            return false;
+        }
     }
 }

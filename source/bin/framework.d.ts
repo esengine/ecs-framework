@@ -1213,6 +1213,11 @@ declare module es {
          * @param result
          */
         collidesWithNonMotion(collider: Collider, result?: CollisionResult): boolean;
+        /**
+         * 检查此碰撞器是否与场景中的其他碰撞器碰撞。它相交的第一个碰撞器将在碰撞结果中返回碰撞数据。
+         * @param result
+         */
+        collidesWithAny(result?: CollisionResult): boolean;
     }
 }
 declare module es {

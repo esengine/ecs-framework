@@ -2729,6 +2729,33 @@ var es;
             }
             return false;
         };
+        /**
+         * 检查此碰撞器是否与场景中的其他碰撞器碰撞。它相交的第一个碰撞器将在碰撞结果中返回碰撞数据。
+         * @param result
+         */
+        Collider.prototype.collidesWithAny = function (result) {
+            if (result === void 0) { result = new es.CollisionResult(); }
+            var e_5, _a;
+            // 在我们的新位置上获取我们可能会碰到的任何东西 
+            var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this, this.collidesWithLayers.value);
+            try {
+                for (var neighbors_3 = __values(neighbors), neighbors_3_1 = neighbors_3.next(); !neighbors_3_1.done; neighbors_3_1 = neighbors_3.next()) {
+                    var neighbor = neighbors_3_1.value;
+                    if (neighbor.isTrigger)
+                        continue;
+                    if (this.collidesWithNonMotion(neighbor, result))
+                        return true;
+                }
+            }
+            catch (e_5_1) { e_5 = { error: e_5_1 }; }
+            finally {
+                try {
+                    if (neighbors_3_1 && !neighbors_3_1.done && (_a = neighbors_3.return)) _a.call(neighbors_3);
+                }
+                finally { if (e_5) throw e_5.error; }
+            }
+            return false;
+        };
         return Collider;
     }(es.Component));
     es.Collider = Collider;
@@ -3890,7 +3917,7 @@ var es;
             this._componentsToRemove.length = 0;
         };
         ComponentList.prototype.deregisterAllComponents = function () {
-            var e_5, _a;
+            var e_6, _a;
             try {
                 for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var component = _c.value;
@@ -3903,16 +3930,16 @@ var es;
                     this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
                 }
             }
-            catch (e_5_1) { e_5 = { error: e_5_1 }; }
+            catch (e_6_1) { e_6 = { error: e_6_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_5) throw e_5.error; }
+                finally { if (e_6) throw e_6.error; }
             }
         };
         ComponentList.prototype.registerAllComponents = function () {
-            var e_6, _a;
+            var e_7, _a;
             try {
                 for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var component = _c.value;
@@ -3922,12 +3949,12 @@ var es;
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                 }
             }
-            catch (e_6_1) { e_6 = { error: e_6_1 }; }
+            catch (e_7_1) { e_7 = { error: e_7_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_6) throw e_6.error; }
+                finally { if (e_7) throw e_7.error; }
             }
         };
         /**
@@ -3986,7 +4013,7 @@ var es;
          * @param onlyReturnInitializedComponents
          */
         ComponentList.prototype.getComponent = function (type, onlyReturnInitializedComponents) {
-            var e_7, _a, e_8, _b;
+            var e_8, _a, e_9, _b;
             try {
                 for (var _c = __values(this._components), _d = _c.next(); !_d.done; _d = _c.next()) {
                     var component = _d.value;
@@ -3994,12 +4021,12 @@ var es;
                         return component;
                 }
             }
-            catch (e_7_1) { e_7 = { error: e_7_1 }; }
+            catch (e_8_1) { e_8 = { error: e_8_1 }; }
             finally {
                 try {
                     if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
-                finally { if (e_7) throw e_7.error; }
+                finally { if (e_8) throw e_8.error; }
             }
             // 我们可以选择检查挂起的组件，以防addComponent和getComponent在同一个框架中被调用
             if (!onlyReturnInitializedComponents) {
@@ -4010,12 +4037,12 @@ var es;
                             return component;
                     }
                 }
-                catch (e_8_1) { e_8 = { error: e_8_1 }; }
+                catch (e_9_1) { e_9 = { error: e_9_1 }; }
                 finally {
                     try {
                         if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                     }
-                    finally { if (e_8) throw e_8.error; }
+                    finally { if (e_9) throw e_9.error; }
                 }
             }
             return null;
@@ -4026,7 +4053,7 @@ var es;
          * @param components
          */
         ComponentList.prototype.getComponents = function (typeName, components) {
-            var e_9, _a, e_10, _b;
+            var e_10, _a, e_11, _b;
             if (!components)
                 components = [];
             try {
@@ -4037,12 +4064,12 @@ var es;
                     }
                 }
             }
-            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            catch (e_10_1) { e_10 = { error: e_10_1 }; }
             finally {
                 try {
                     if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
-                finally { if (e_9) throw e_9.error; }
+                finally { if (e_10) throw e_10.error; }
             }
             try {
                 // 我们还检查了待处理的组件，以防在同一帧中调用addComponent和getComponent
@@ -4053,12 +4080,12 @@ var es;
                     }
                 }
             }
-            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+            catch (e_11_1) { e_11 = { error: e_11_1 }; }
             finally {
                 try {
                     if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                 }
-                finally { if (e_10) throw e_10.error; }
+                finally { if (e_11) throw e_11.error; }
             }
             return components;
         };
@@ -4227,7 +4254,7 @@ var es;
                 list.delete(entity);
         };
         EntityList.prototype.update = function () {
-            var e_11, _a;
+            var e_12, _a;
             try {
                 for (var _b = __values(this._entities), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var entity = _c.value;
@@ -4235,12 +4262,12 @@ var es;
                         entity.update();
                 }
             }
-            catch (e_11_1) { e_11 = { error: e_11_1 }; }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_11) throw e_11.error; }
+                finally { if (e_12) throw e_12.error; }
             }
         };
         EntityList.prototype.updateLists = function () {
@@ -4297,7 +4324,7 @@ var es;
          * @param tag
          */
         EntityList.prototype.entitiesWithTag = function (tag) {
-            var e_12, _a;
+            var e_13, _a;
             var list = this.getTagList(tag);
             var returnList = es.ListPool.obtain();
             try {
@@ -4306,12 +4333,12 @@ var es;
                     returnList.push(entity);
                 }
             }
-            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
                     if (list_1_1 && !list_1_1.done && (_a = list_1.return)) _a.call(list_1);
                 }
-                finally { if (e_12) throw e_12.error; }
+                finally { if (e_13) throw e_13.error; }
             }
             return returnList;
         };
@@ -4321,7 +4348,7 @@ var es;
          * @returns
          */
         EntityList.prototype.entityWithTag = function (tag) {
-            var e_13, _a;
+            var e_14, _a;
             var list = this.getTagList(tag);
             try {
                 for (var list_2 = __values(list), list_2_1 = list_2.next(); !list_2_1.done; list_2_1 = list_2.next()) {
@@ -4329,12 +4356,12 @@ var es;
                     return entity;
                 }
             }
-            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (list_2_1 && !list_2_1.done && (_a = list_2.return)) _a.call(list_2);
                 }
-                finally { if (e_13) throw e_13.error; }
+                finally { if (e_14) throw e_14.error; }
             }
             return null;
         };
@@ -4407,7 +4434,7 @@ var es;
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var e_14, _a, e_15, _b;
+            var e_15, _a, e_16, _b;
             var entities = [];
             for (var i = 0; i < this._entities.length; i++) {
                 if (this._entities[i].enabled) {
@@ -4422,12 +4449,12 @@ var es;
                             }
                         }
                     }
-                    catch (e_14_1) { e_14 = { error: e_14_1 }; }
+                    catch (e_15_1) { e_15 = { error: e_15_1 }; }
                     finally {
                         try {
                             if (types_1_1 && !types_1_1.done && (_a = types_1.return)) _a.call(types_1);
                         }
-                        finally { if (e_14) throw e_14.error; }
+                        finally { if (e_15) throw e_15.error; }
                     }
                     if (meet) {
                         entities.push(this._entities[i]);
@@ -4448,12 +4475,12 @@ var es;
                             }
                         }
                     }
-                    catch (e_15_1) { e_15 = { error: e_15_1 }; }
+                    catch (e_16_1) { e_16 = { error: e_16_1 }; }
                     finally {
                         try {
                             if (types_2_1 && !types_2_1.done && (_b = types_2.return)) _b.call(types_2);
                         }
-                        finally { if (e_15) throw e_15.error; }
+                        finally { if (e_16) throw e_16.error; }
                     }
                     if (meet) {
                         entities.push(entity);
@@ -7371,7 +7398,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
-            var e_16, _a;
+            var e_17, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location;
             var resultCounter = 0;
@@ -7402,12 +7429,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_16) throw e_16.error; }
+                finally { if (e_17) throw e_17.error; }
             }
             return resultCounter;
         };
@@ -7419,7 +7446,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_17, _a;
+            var e_18, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -7452,12 +7479,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_17_1) { e_17 = { error: e_17_1 }; }
+            catch (e_18_1) { e_18 = { error: e_18_1 }; }
             finally {
                 try {
                     if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_17) throw e_17.error; }
+                finally { if (e_18) throw e_18.error; }
             }
             return resultCounter;
         };
@@ -11604,7 +11631,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_18, _a;
+            var e_19, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -11612,12 +11639,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_18_1) { e_18 = { error: e_18_1 }; }
+            catch (e_19_1) { e_19 = { error: e_19_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_18) throw e_18.error; }
+                finally { if (e_19) throw e_19.error; }
             }
             return result;
         };
@@ -11866,7 +11893,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_19, _a;
+            var e_20, _a;
             var output = es.ListPool.obtain();
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -11905,12 +11932,12 @@ var es;
                         }
                     }
                 }
-                catch (e_19_1) { e_19 = { error: e_19_1 }; }
+                catch (e_20_1) { e_20 = { error: e_20_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_19) throw e_19.error; }
+                    finally { if (e_20) throw e_20.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -12026,7 +12053,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_20, _a;
+            var e_21, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -12044,12 +12071,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_20_1) { e_20 = { error: e_20_1 }; }
+            catch (e_21_1) { e_21 = { error: e_21_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_20) throw e_20.error; }
+                finally { if (e_21) throw e_21.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。
