@@ -3421,112 +3421,106 @@ var es;
      */
     var BitSet = /** @class */ (function () {
         function BitSet(nbits) {
-            if (nbits === void 0) { nbits = 64; }
-            var length = nbits >> 6;
-            if ((nbits & BitSet.LONG_MASK) != 0)
-                length++;
-            this._bits = new Array(length);
-            this._bits.fill(0);
+            if (nbits === void 0) { nbits = 0; }
+            this.words_ = [];
         }
-        BitSet.prototype.and = function (bs) {
-            var max = Math.min(this._bits.length, bs._bits.length);
-            var i;
-            for (var i_1 = 0; i_1 < max; ++i_1)
-                this._bits[i_1] &= bs._bits[i_1];
-            while (i < this._bits.length)
-                this._bits[i++] = 0;
-        };
-        BitSet.prototype.andNot = function (bs) {
-            var i = Math.min(this._bits.length, bs._bits.length);
-            while (--i >= 0)
-                this._bits[i] &= ~bs._bits[i];
-        };
-        BitSet.prototype.cardinality = function () {
-            var card = 0;
-            for (var i = this._bits.length - 1; i >= 0; i--) {
-                var a = this._bits[i];
-                if (a == 0)
-                    continue;
-                if (a == -1) {
-                    card += 64;
-                    continue;
+        BitSet.prototype.clear = function (bitIndex) {
+            if (bitIndex === null) {
+                var words = this.words_;
+                var wordsInUse = words.length;
+                while (wordsInUse > 0) {
+                    words[--wordsInUse] = 0;
                 }
-                a = ((a >> 1) & 0x5555555555555555) + (a & 0x5555555555555555);
-                a = ((a >> 2) & 0x3333333333333333) + (a & 0x3333333333333333);
-                var b = ((a >> 32) + a) >>> 0;
-                b = ((b >> 4) & 0x0f0f0f0f) + (b & 0x0f0f0f0f);
-                b = ((b >> 8) & 0x00ff00ff) + (b & 0x00ff00ff);
-                card += ((b >> 16) & 0x0000ffff) + (b & 0x0000ffff);
+                return;
             }
-            return card;
+            var wordIndex = bitIndex >> BitSet.ADDRESS_BITS_PER_WORD;
+            this.words_[wordIndex] &= ~(1 << bitIndex);
         };
-        BitSet.prototype.clear = function (pos) {
-            if (pos != undefined) {
-                var offset = pos >> 6;
-                this.ensure(offset);
-                this._bits[offset] &= ~(1 << pos);
-            }
-            else {
-                for (var i = 0; i < this._bits.length; i++)
-                    this._bits[i] = 0;
-            }
-        };
-        BitSet.prototype.get = function (pos) {
-            var offset = pos >> 6;
-            if (offset >= this._bits.length)
-                return false;
-            return (this._bits[offset] & (1 << pos)) != 0;
+        BitSet.prototype.get = function (bitIndex) {
+            var wordIndex = bitIndex >> BitSet.ADDRESS_BITS_PER_WORD;
+            var words = this.words_;
+            var wordsInUse = words.length;
+            return wordIndex < wordsInUse && (words[wordIndex] & (1 << bitIndex)) != 0;
         };
         BitSet.prototype.intersects = function (set) {
-            var i = Math.min(this._bits.length, set._bits.length);
-            while (--i >= 0) {
-                if ((this._bits[i] & set._bits[i]) != 0)
+            var words = this.words_;
+            var wordsInUse = words.length;
+            for (var i = Math.min(wordsInUse, set.words_.length) - 1; i >= 0; i--)
+                if ((words[i] & set.words_[i]) != 0)
                     return true;
-            }
             return false;
         };
         BitSet.prototype.isEmpty = function () {
-            for (var i = this._bits.length - 1; i >= 0; i--) {
-                if (this._bits[i])
-                    return false;
-            }
-            return true;
+            return this.words_.length === 0;
         };
-        BitSet.prototype.nextSetBit = function (from) {
-            var offset = from >> 6;
-            var mask = 1 << from;
-            while (offset < this._bits.length) {
-                var h = this._bits[offset];
-                do {
-                    if ((h & mask) != 0)
-                        return from;
-                    mask <<= 1;
-                    from++;
-                } while (mask != 0);
-                mask = 1;
-                offset++;
+        BitSet.prototype.nextSetBit = function (fromIndex) {
+            var u = fromIndex >> BitSet.ADDRESS_BITS_PER_WORD;
+            var words = this.words_;
+            var wordsInUse = words.length;
+            var word = words[u] & (BitSet.WORD_MASK << fromIndex);
+            while (true) {
+                if (word !== 0)
+                    return u * BitSet.BITS_PER_WORD + this.numberOfTrailingZeros(word);
+                if (++u === wordsInUse)
+                    return -1;
+                word = words[u];
             }
-            return -1;
         };
-        BitSet.prototype.set = function (pos, value) {
+        BitSet.prototype.numberOfTrailingZeros = function (i) {
+            if (i == 0)
+                return 64;
+            var x = i;
+            var y;
+            var n = 63;
+            y = x << 32;
+            if (y != 0) {
+                n -= 32;
+                x = y;
+            }
+            y = x << 16;
+            if (y != 0) {
+                n -= 16;
+                x = y;
+            }
+            y = x << 8;
+            if (y != 0) {
+                n -= 8;
+                x = y;
+            }
+            y = x << 4;
+            if (y != 0) {
+                n -= 4;
+                x = y;
+            }
+            y = x << 2;
+            if (y != 0) {
+                n -= 2;
+                x = y;
+            }
+            return n - ((x << 1) >>> 63);
+        };
+        BitSet.prototype.set = function (bitIndex, value) {
             if (value === void 0) { value = true; }
+            var wordIndex = bitIndex >> BitSet.ADDRESS_BITS_PER_WORD;
+            var words = this.words_;
+            var wordsInUse = words.length;
+            var wordsRequired = wordIndex + 1;
+            if (wordsInUse < wordsRequired) {
+                words.length = Math.max(2 * wordsInUse, wordsRequired);
+                for (var i = wordsInUse, l = words.length; i < l; i++) {
+                    words[i] = 0;
+                }
+            }
             if (value) {
-                var offset = pos >> 6;
-                this.ensure(offset);
-                this._bits[offset] |= 1 << pos;
+                return (words[wordIndex] |= 1 << bitIndex);
             }
             else {
-                this.clear(pos);
+                return (words[wordIndex] &= ~(1 << bitIndex));
             }
         };
-        BitSet.prototype.ensure = function (lastElt) {
-            if (lastElt >= this._bits.length) {
-                var startIndex = this._bits.length;
-                this._bits.length = lastElt + 1;
-                this._bits.fill(0, startIndex, lastElt + 1);
-            }
-        };
-        BitSet.LONG_MASK = 0x3f;
+        BitSet.ADDRESS_BITS_PER_WORD = 5;
+        BitSet.BITS_PER_WORD = 1 << BitSet.ADDRESS_BITS_PER_WORD; // 32
+        BitSet.WORD_MASK = 0xffffffff;
         return BitSet;
     }());
     es.BitSet = BitSet;
@@ -6813,12 +6807,12 @@ var es;
                 this._tempTriggerList.length = 0;
                 if (collisionPair.second.entity) {
                     es.TriggerListenerHelper.getITriggerListener(collisionPair.second.entity, this._tempTriggerList);
-                    for (var i_2 = 0; i_2 < this._tempTriggerList.length; i_2++) {
+                    for (var i_1 = 0; i_1 < this._tempTriggerList.length; i_1++) {
                         if (isEntering) {
-                            this._tempTriggerList[i_2].onTriggerEnter(collisionPair.first, collisionPair.second);
+                            this._tempTriggerList[i_1].onTriggerEnter(collisionPair.first, collisionPair.second);
                         }
                         else {
-                            this._tempTriggerList[i_2].onTriggerExit(collisionPair.first, collisionPair.second);
+                            this._tempTriggerList[i_1].onTriggerExit(collisionPair.first, collisionPair.second);
                         }
                     }
                     this._tempTriggerList.length = 0;

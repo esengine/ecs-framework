@@ -5,131 +5,113 @@ module es {
      * 它是由一个位向量实现的，但同样可以把它看成是一个非负整数的集合;集合中的每个整数由对应索引处的集合位表示。该结构的大小由集合中的最大整数决定。
      */
     export class BitSet {
-        private static LONG_MASK: number = 0x3f;
-        private _bits: number[];
+        private static ADDRESS_BITS_PER_WORD = 5;
+        private static BITS_PER_WORD = 1 << BitSet.ADDRESS_BITS_PER_WORD; // 32
+        private static WORD_MASK : number = 0xffffffff;
+        private words_: number[];
 
-        constructor(nbits: number = 64) {
-            let length = nbits >> 6;
-            if ((nbits & BitSet.LONG_MASK) != 0)
-                length++;
-
-            this._bits = new Array(length);
-            this._bits.fill(0);
+        constructor(nbits: number = 0) {
+            this.words_ = [];
         }
 
-        public and(bs: BitSet) {
-            let max = Math.min(this._bits.length, bs._bits.length);
-            let i;
-            for (let i = 0; i < max; ++i)
-                this._bits[i] &= bs._bits[i];
-
-            while (i < this._bits.length)
-                this._bits[i++] = 0;
-        }
-
-        public andNot(bs: BitSet) {
-            let i = Math.min(this._bits.length, bs._bits.length);
-            while (--i >= 0)
-                this._bits[i] &= ~bs._bits[i];
-        }
-
-        public cardinality(): number {
-            let card = 0;
-            for (let i = this._bits.length - 1; i >= 0; i--) {
-                let a = this._bits[i];
-
-                if (a == 0)
-                    continue;
-
-                if (a == -1) {
-                    card += 64;
-                    continue;
+        public clear(bitIndex?: number) {
+            if (bitIndex === null) {
+                const words = this.words_;
+                let wordsInUse = words.length;
+                while (wordsInUse > 0) {
+                    words[--wordsInUse] = 0;
                 }
-
-                a = ((a >> 1) & 0x5555555555555555) + (a & 0x5555555555555555);
-                a = ((a >> 2) & 0x3333333333333333) + (a & 0x3333333333333333);
-                let b = ((a >> 32) + a) >>> 0;
-                b = ((b >> 4) & 0x0f0f0f0f) + (b & 0x0f0f0f0f);
-                b = ((b >> 8) & 0x00ff00ff) + (b & 0x00ff00ff);
-                card += ((b >> 16) & 0x0000ffff) + (b & 0x0000ffff);
+                return;
             }
-
-            return card;
+    
+            const wordIndex = bitIndex >> BitSet.ADDRESS_BITS_PER_WORD;
+            this.words_[wordIndex] &= ~(1 << bitIndex);
         }
 
-        public clear(pos?: number) {
-            if (pos != undefined) {
-                let offset = pos >> 6;
-                this.ensure(offset);
-                this._bits[offset] &= ~(1 << pos);
-            } else {
-                for (let i = 0; i < this._bits.length; i++)
-                    this._bits[i] = 0;
-            }
-        }
-
-        public get(pos: number): boolean {
-            let offset = pos >> 6;
-            if (offset >= this._bits.length)
-                return false;
-
-            return (this._bits[offset] & (1 << pos)) != 0;
+        public get(bitIndex: number): boolean {
+            const wordIndex = bitIndex >> BitSet.ADDRESS_BITS_PER_WORD;
+            const words = this.words_;
+            const wordsInUse = words.length;
+    
+            return wordIndex < wordsInUse && (words[wordIndex] & (1 << bitIndex)) != 0;
         }
 
         public intersects(set: BitSet) {
-            let i = Math.min(this._bits.length, set._bits.length);
-            while (--i >= 0) {
-                if ((this._bits[i] & set._bits[i]) != 0)
-                    return true;
-            }
+            const words = this.words_;
+            const wordsInUse = words.length;
 
+            for (let i = Math.min(wordsInUse, set.words_.length) - 1; i >= 0; i--)
+                if ((words[i] & set.words_[i]) != 0) return true;
             return false;
         }
 
         public isEmpty(): boolean {
-            for (let i = this._bits.length - 1; i >= 0; i--) {
-                if (this._bits[i])
-                    return false;
-            }
-
-            return true;
+            return this.words_.length === 0;
         }
 
-        public nextSetBit(from: number) {
-            let offset = from >> 6;
-            let mask = 1 << from;
-            while (offset < this._bits.length) {
-                let h = this._bits[offset];
-                do {
-                    if ((h & mask) != 0)
-                        return from;
+        public nextSetBit(fromIndex: number) {
+            let u = fromIndex >> BitSet.ADDRESS_BITS_PER_WORD;
+            const words = this.words_;
+            const wordsInUse = words.length;
 
-                    mask <<= 1;
-                    from++;
-                } while (mask != 0);
-
-                mask = 1;
-                offset++;
+            let word = words[u] & (BitSet.WORD_MASK << fromIndex);
+            while (true) {
+                if (word !== 0) return u * BitSet.BITS_PER_WORD + this.numberOfTrailingZeros(word);
+                if (++u === wordsInUse) return -1;
+                word = words[u];
             }
-
-            return -1;
         }
 
-        public set(pos: number, value: boolean = true) {
+        private numberOfTrailingZeros(i: number): number {
+            if (i == 0) return 64;
+            let x: number = i;
+            let y: number;
+            let n = 63;
+            y = x << 32;
+            if (y != 0) {
+                n -= 32;
+                x = y;
+            }
+            y = x << 16;
+            if (y != 0) {
+                n -= 16;
+                x = y;
+            }
+            y = x << 8;
+            if (y != 0) {
+                n -= 8;
+                x = y;
+            }
+            y = x << 4;
+            if (y != 0) {
+                n -= 4;
+                x = y;
+            }
+            y = x << 2;
+            if (y != 0) {
+                n -= 2;
+                x = y;
+            }
+            return n - ((x << 1) >>> 63);
+        }
+
+        public set(bitIndex: number, value: boolean = true) {
+            const wordIndex = bitIndex >> BitSet.ADDRESS_BITS_PER_WORD;
+            const words = this.words_;
+            const wordsInUse = words.length;
+            const wordsRequired = wordIndex + 1;
+    
+            if (wordsInUse < wordsRequired) {
+                words.length = Math.max(2 * wordsInUse, wordsRequired);
+                for (let i = wordsInUse, l = words.length; i < l; i++) {
+                    words[i] = 0;
+                }
+            }
+    
             if (value) {
-                let offset = pos >> 6;
-                this.ensure(offset);
-                this._bits[offset] |= 1 << pos;
+                return (words[wordIndex] |= 1 << bitIndex);
             } else {
-                this.clear(pos);
-            }
-        }
-
-        private ensure(lastElt: number) {
-            if (lastElt >= this._bits.length) {
-                let startIndex = this._bits.length;
-                this._bits.length = lastElt + 1;
-                this._bits.fill(0, startIndex, lastElt + 1);
+                return (words[wordIndex] &= ~(1 << bitIndex));
             }
         }
     }

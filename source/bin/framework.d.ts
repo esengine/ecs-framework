@@ -1528,19 +1528,18 @@ declare module es {
      * 它是由一个位向量实现的，但同样可以把它看成是一个非负整数的集合;集合中的每个整数由对应索引处的集合位表示。该结构的大小由集合中的最大整数决定。
      */
     class BitSet {
-        private static LONG_MASK;
-        private _bits;
+        private static ADDRESS_BITS_PER_WORD;
+        private static BITS_PER_WORD;
+        private static WORD_MASK;
+        private words_;
         constructor(nbits?: number);
-        and(bs: BitSet): void;
-        andNot(bs: BitSet): void;
-        cardinality(): number;
-        clear(pos?: number): void;
-        get(pos: number): boolean;
+        clear(bitIndex?: number): void;
+        get(bitIndex: number): boolean;
         intersects(set: BitSet): boolean;
         isEmpty(): boolean;
-        nextSetBit(from: number): number;
-        set(pos: number, value?: boolean): void;
-        private ensure;
+        nextSetBit(fromIndex: number): number;
+        private numberOfTrailingZeros;
+        set(bitIndex: number, value?: boolean): number;
     }
 }
 declare module es {
