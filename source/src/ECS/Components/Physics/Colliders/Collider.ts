@@ -214,10 +214,45 @@ module es {
         }
 
         /**
+         * 检查此碰撞器是否已应用运动（增量运动矢量）与任何碰撞器发生碰撞。 
+         * 如果是这样，则将返回true，并且将使用碰撞数据填充结果。 运动将设置为碰撞器在碰撞之前可以行进的最大距离。 
+         * @param motion 
+         * @param result 
+         */
+        public collidesWithAny(motion: Vector2, result: CollisionResult) {
+            // 在我们的新位置上获取我们可能会碰到的任何东西 
+            let colliderBounds = this.bounds.clone();
+            colliderBounds.x += motion.x;
+            colliderBounds.y += motion.y;
+            let neighbors = Physics.boxcastBroadphaseExcludingSelf(this, colliderBounds, this.collidesWithLayers.value);
+
+            // 更改形状位置，使其处于移动后的位置，以便我们检查是否有重叠 
+            let oldPosition = this.shape.position.clone();
+            this.shape.position = Vector2.add(this.shape.position, motion);
+
+            let didCollide = false;
+            for (let neighbor of neighbors) {
+                if (neighbor.isTrigger)
+                    continue;
+
+                if (this.collidesWithNonMotion(neighbor, result)) {
+                    motion = Vector2.subtract(motion, result.minimumTranslationVector);
+                    this.shape.position = Vector2.subtract(this.shape.position, result.minimumTranslationVector);
+                    didCollide = true;
+                }
+            }
+
+            // 将形状位置返回到检查之前的位置 
+            this.shape.position = oldPosition;
+
+            return didCollide;
+        }
+
+        /**
          * 检查此碰撞器是否与场景中的其他碰撞器碰撞。它相交的第一个碰撞器将在碰撞结果中返回碰撞数据。
          * @param result 
          */
-        public collidesWithAny(result: CollisionResult = new CollisionResult()) {
+        public collidesWithAnyNonMotion(result: CollisionResult = new CollisionResult()) {
             // 在我们的新位置上获取我们可能会碰到的任何东西 
             let neighbors = Physics.boxcastBroadphaseExcludingSelfNonRect(this, this.collidesWithLayers.value);
 

@@ -1214,10 +1214,17 @@ declare module es {
          */
         collidesWithNonMotion(collider: Collider, result?: CollisionResult): boolean;
         /**
+         * 检查此碰撞器是否已应用运动（增量运动矢量）与任何碰撞器发生碰撞。
+         * 如果是这样，则将返回true，并且将使用碰撞数据填充结果。 运动将设置为碰撞器在碰撞之前可以行进的最大距离。
+         * @param motion
+         * @param result
+         */
+        collidesWithAny(motion: Vector2, result: CollisionResult): boolean;
+        /**
          * 检查此碰撞器是否与场景中的其他碰撞器碰撞。它相交的第一个碰撞器将在碰撞结果中返回碰撞数据。
          * @param result
          */
-        collidesWithAny(result?: CollisionResult): boolean;
+        collidesWithAnyNonMotion(result?: CollisionResult): boolean;
     }
 }
 declare module es {
