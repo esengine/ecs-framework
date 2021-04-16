@@ -1,16 +1,5 @@
 ///<reference path="../Math/Vector2.ts" />
 module es {
-    export enum SceneResolutionPolicy {
-        /**
-         * 默认情况下，RenderTarget与屏幕大小匹配。RenderTarget与屏幕大小相匹配
-         */
-        none,
-        /**
-         * 该应用程序采用最适合设计分辨率的宽度和高度
-         */
-        bestFit
-    }
-
     /** 场景 */
     export class Scene {
         /**
@@ -207,14 +196,6 @@ module es {
          */
         public findEntityWithTag(tag: number): Entity {
             return this.entities.entityWithTag(tag);
-        }
- 
-        /**
-         * 返回类型为T的所有实体
-         * @param type
-         */
-        public entitiesOfType<T extends Entity>(type): T[] {
-            return this.entities.entitiesOfType<T>(type);
         }
 
         /**

@@ -544,6 +544,33 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var ComponentType = /** @class */ (function () {
+        function ComponentType(type, index) {
+            this.index_ = 0;
+            if (index !== undefined) {
+                this.index_ = ComponentType.INDEX++;
+            }
+            else {
+                this.index_ = index;
+            }
+            this.type_ = type;
+        }
+        ComponentType.prototype.getName = function () {
+            return es.getClassName(this.type_);
+        };
+        ComponentType.prototype.getIndex = function () {
+            return this.index_;
+        };
+        ComponentType.prototype.toString = function () {
+            return "ComponentType[" + es.getClassName(ComponentType) + "] (" + this.index_ + ")";
+        };
+        ComponentType.INDEX = 0;
+        return ComponentType;
+    }());
+    es.ComponentType = ComponentType;
+})(es || (es = {}));
+var es;
+(function (es) {
     var CoreEvents;
     (function (CoreEvents) {
         /**
@@ -583,6 +610,7 @@ var es;
             this.transform = new es.Transform(this);
             this.name = name;
             this.id = Entity._idGenerator++;
+            this.systemBits_ = new es.BitSet();
             this.componentBits = new es.BitSet();
         }
         Object.defineProperty(Entity.prototype, "isDestroyed", {
@@ -646,6 +674,9 @@ var es;
             enumerable: true,
             configurable: true
         });
+        Entity.prototype.getSystemBits = function () {
+            return this.systemBits_;
+        };
         Object.defineProperty(Entity.prototype, "parent", {
             get: function () {
                 return this.transform.parent;
@@ -1300,17 +1331,6 @@ var es;
 var es;
 ///<reference path="../Math/Vector2.ts" />
 (function (es) {
-    var SceneResolutionPolicy;
-    (function (SceneResolutionPolicy) {
-        /**
-         * 默认情况下，RenderTarget与屏幕大小匹配。RenderTarget与屏幕大小相匹配
-         */
-        SceneResolutionPolicy[SceneResolutionPolicy["none"] = 0] = "none";
-        /**
-         * 该应用程序采用最适合设计分辨率的宽度和高度
-         */
-        SceneResolutionPolicy[SceneResolutionPolicy["bestFit"] = 1] = "bestFit";
-    })(SceneResolutionPolicy = es.SceneResolutionPolicy || (es.SceneResolutionPolicy = {}));
     /** 场景 */
     var Scene = /** @class */ (function () {
         function Scene() {
@@ -1462,13 +1482,6 @@ var es;
          */
         Scene.prototype.findEntityWithTag = function (tag) {
             return this.entities.entityWithTag(tag);
-        };
-        /**
-         * 返回类型为T的所有实体
-         * @param type
-         */
-        Scene.prototype.entitiesOfType = function (type) {
-            return this.entities.entitiesOfType(type);
         };
         /**
          * 返回第一个启用加载的类型为T的组件
@@ -2974,6 +2987,115 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    function decode(key) {
+        switch (typeof key) {
+            case "boolean":
+                return "" + key;
+            case "number":
+                return "" + key;
+            case "string":
+                return "" + key;
+            case "function":
+                return es.getClassName(key);
+            default:
+                key.uuid = key.uuid ? key.uuid : es.UUID.randomUUID();
+                return key.uuid;
+        }
+    }
+    var HashMap = /** @class */ (function () {
+        function HashMap() {
+            this.clear();
+        }
+        HashMap.prototype.clear = function () {
+            this.map_ = {};
+            this.keys_ = {};
+        };
+        HashMap.prototype.values = function () {
+            var result = [];
+            var map = this.map_;
+            for (var key in map) {
+                result.push(map[key]);
+            }
+            return result;
+        };
+        HashMap.prototype.contains = function (value) {
+            var map = this.map_;
+            for (var key in map) {
+                if (value === map[key]) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        HashMap.prototype.containsKey = function (key) {
+            return decode(key) in this.map_;
+        };
+        HashMap.prototype.containsValue = function (value) {
+            var map = this.map_;
+            for (var key in map) {
+                if (value === map[key]) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        HashMap.prototype.get = function (key) {
+            return this.map_[decode(key)];
+        };
+        HashMap.prototype.isEmpty = function () {
+            return Object.keys(this.map_).length === 0;
+        };
+        HashMap.prototype.keys = function () {
+            var keys = this.map_;
+            var result = [];
+            for (var key in keys) {
+                result.push(keys[key]);
+            }
+            return result;
+        };
+        /**
+         * if key is a string, use as is, else use key.id_ or key.name
+         */
+        HashMap.prototype.put = function (key, value) {
+            var k = decode(key);
+            this.map_[k] = value;
+            this.keys_[k] = key;
+        };
+        HashMap.prototype.remove = function (key) {
+            var map = this.map_;
+            var k = decode(key);
+            var value = map[k];
+            delete map[k];
+            delete this.keys_[k];
+            return value;
+        };
+        HashMap.prototype.size = function () {
+            return Object.keys(this.map_).length;
+        };
+        return HashMap;
+    }());
+    es.HashMap = HashMap;
+})(es || (es = {}));
+///<reference path="../../Utils/Collections/HashMap.ts"/>
+var es;
+///<reference path="../../Utils/Collections/HashMap.ts"/>
+(function (es_1) {
+    var SystemIndexManager = /** @class */ (function () {
+        function SystemIndexManager() {
+        }
+        SystemIndexManager.getIndexFor = function (es) {
+            var index = SystemIndexManager.indices.get(es);
+            if (index === undefined) {
+                index = SystemIndexManager.INDEX++;
+                SystemIndexManager.indices.put(es, index);
+            }
+            return index;
+        };
+        SystemIndexManager.INDEX = 0;
+        SystemIndexManager.indices = new es_1.HashMap();
+        return SystemIndexManager;
+    }());
+    es_1.SystemIndexManager = SystemIndexManager;
     /**
      * 追踪实体的子集，但不实现任何排序或迭代。
      */
@@ -2983,7 +3105,8 @@ var es;
             this._startTime = 0;
             this._endTime = 0;
             this._useTime = 0;
-            this._matcher = matcher ? matcher : es.Matcher.empty();
+            this._matcher = matcher ? matcher : es_1.Matcher.empty();
+            this.systemIndex_ = SystemIndexManager.getIndexFor(this.constructor);
             this.initialize();
         }
         Object.defineProperty(EntitySystem.prototype, "scene", {
@@ -3018,7 +3141,7 @@ var es;
         EntitySystem.prototype.initialize = function () {
         };
         EntitySystem.prototype.onChanged = function (entity) {
-            var contains = new es.List(this._entities).contains(entity);
+            var contains = entity.getSystemBits().get(this.systemIndex_);
             var interest = this._matcher.isInterestedEntity(entity);
             if (interest && !contains)
                 this.add(entity);
@@ -3027,11 +3150,13 @@ var es;
         };
         EntitySystem.prototype.add = function (entity) {
             this._entities.push(entity);
+            entity.getSystemBits().set(this.systemIndex_);
             this.onAdded(entity);
         };
         EntitySystem.prototype.onAdded = function (entity) { };
         EntitySystem.prototype.remove = function (entity) {
             new es.List(this._entities).remove(entity);
+            entity.getSystemBits().clear(this.systemIndex_);
             this.onRemoved(entity);
         };
         EntitySystem.prototype.onRemoved = function (entity) { };
@@ -3052,7 +3177,7 @@ var es;
          * 在下一个系统开始处理或新的处理回合开始之前（以先到者为准），使用此方法创建的任何实体都不会激活
          */
         EntitySystem.prototype.begin = function () {
-            if (!es.Core.Instance.debug)
+            if (!es_1.Core.Instance.debug)
                 return;
             this._startTime = Date.now();
         };
@@ -3062,7 +3187,7 @@ var es;
          * 系统处理完毕后调用
          */
         EntitySystem.prototype.end = function () {
-            if (!es.Core.Instance.debug)
+            if (!es_1.Core.Instance.debug)
                 return;
             this._endTime = Date.now();
             this._useTime = this._endTime - this._startTime;
@@ -3079,7 +3204,7 @@ var es;
         };
         return EntitySystem;
     }());
-    es.EntitySystem = EntitySystem;
+    es_1.EntitySystem = EntitySystem;
 })(es || (es = {}));
 ///<reference path="./EntitySystem.ts"/>
 var es;
@@ -4026,10 +4151,10 @@ var es;
                 }
                 this._tempBufferList.length = 0;
             }
-            if (this._isComponentListUnsorted) {
-                this._updatableComponents.sort(ComponentList.compareUpdatableOrder.compare);
-                this._isComponentListUnsorted = false;
-            }
+            // if (this._isComponentListUnsorted) {
+            //     this._updatableComponents.sort(ComponentList.compareUpdatableOrder.compare);
+            //     this._isComponentListUnsorted = false;
+            // }
         };
         ComponentList.prototype.handleRemove = function (component) {
             if (es.isIUpdatable(component))
@@ -4192,11 +4317,12 @@ var es;
             /**
              * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
              */
-            this._entitiesToAdded = new es.HashSet();
+            // public _entitiesToAdded: Entity[] = [];
+            this._entitiesToAdded = {};
             /**
              * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
              */
-            this._entitiesToRemove = new es.HashSet();
+            this._entitiesToRemove = {};
             /**
              * 通过标签跟踪实体，便于检索
              */
@@ -4229,28 +4355,27 @@ var es;
          * @param entity
          */
         EntityList.prototype.add = function (entity) {
-            this._entitiesToAdded.add(entity);
+            this._entitiesToAdded[entity.id] = entity;
         };
         /**
          * 从列表中删除一个实体。所有的生命周期方法将在下一帧中被调用
          * @param entity
          */
         EntityList.prototype.remove = function (entity) {
-            es.Debug.warnIf(this._entitiesToRemove.contains(entity), "\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u5DF2\u7ECF\u5220\u9664\u7684\u5B9E\u4F53(" + entity.name + ")");
             // 防止在同一帧中添加或删除实体
-            if (this._entitiesToAdded.contains(entity)) {
-                this._entitiesToAdded.remove(entity);
+            if (this._entitiesToAdded[entity.id]) {
+                delete this._entitiesToAdded[entity.id];
                 return;
             }
-            if (!this._entitiesToRemove.contains(entity))
-                this._entitiesToRemove.add(entity);
+            if (!this._entitiesToRemove[entity.id])
+                this._entitiesToRemove[entity.id] = entity;
         };
         /**
          * 从实体列表中删除所有实体
          */
         EntityList.prototype.removeAllEntities = function () {
             this._unsortedTags.clear();
-            this._entitiesToAdded.clear();
+            this._entitiesToAdded = {};
             this._isEntityListUnsorted = false;
             // 为什么我们要在这里更新列表？主要是为了处理在场景切换前被分离的实体。
             // 它们仍然会在_entitiesToRemove列表中，这将由updateLists处理。
@@ -4268,7 +4393,7 @@ var es;
          * @param entity
          */
         EntityList.prototype.contains = function (entity) {
-            return new es.List(this._entities).contains(entity) || this._entitiesToAdded.contains(entity);
+            return !!this._entitiesToAdded[entity.id];
         };
         EntityList.prototype.getTagList = function (tag) {
             var list = this._entityDict.get(tag);
@@ -4305,36 +4430,32 @@ var es;
             }
         };
         EntityList.prototype.updateLists = function () {
-            var _this = this;
-            if (this._entitiesToRemove.getCount() > 0) {
-                this._entitiesToRemove.toArray().forEach(function (entity) {
-                    // 处理标签列表
-                    _this.removeFromTagList(entity);
-                    // 处理常规实体列表
-                    new es.List(_this._entities).remove(entity);
-                    entity.onRemovedFromScene();
-                    entity.scene = null;
-                    _this.scene.entityProcessors.onEntityRemoved(entity);
-                });
-                this._entitiesToRemove.clear();
+            for (var i in this._entitiesToRemove) {
+                var entity = this._entitiesToRemove[i];
+                this.removeFromTagList(entity);
+                // 处理常规实体列表
+                new es.List(this._entities).remove(entity);
+                entity.onRemovedFromScene();
+                entity.scene = null;
+                this.scene.entityProcessors.onEntityRemoved(entity);
             }
-            if (this._entitiesToAdded.getCount() > 0) {
-                this._entitiesToAdded.toArray().forEach(function (entity) {
-                    _this._entities.push(entity);
-                    entity.scene = _this.scene;
-                    _this.addToTagList(entity);
-                    _this.scene.entityProcessors.onEntityAdded(entity);
-                });
-                this._entitiesToAdded.toArray().forEach(function (entity) {
-                    entity.onAddedToScene();
-                });
-                this._entitiesToAdded.clear();
-                this._isEntityListUnsorted = true;
+            this._entitiesToRemove = {};
+            for (var i in this._entitiesToAdded) {
+                var entity = this._entitiesToAdded[i];
+                this._entities.push(entity);
+                entity.scene = this.scene;
+                this.addToTagList(entity);
+                this.scene.entityProcessors.onEntityAdded(entity);
             }
-            if (this._isEntityListUnsorted) {
-                this._entities.sort(es.Entity.entityComparer.compare);
-                this._isEntityListUnsorted = false;
+            for (var i in this._entitiesToAdded) {
+                this._entitiesToAdded[i].onAddedToScene();
             }
+            this._entitiesToAdded = {};
+            // this._isEntityListUnsorted = true;
+            // if (this._isEntityListUnsorted) {
+            //     this._entities.sort(Entity.entityComparer.compare);
+            //     this._isEntityListUnsorted = false;
+            // }
         };
         /**
          * 返回第一个找到的名字为name的实体。如果没有找到则返回null
@@ -4345,8 +4466,13 @@ var es;
                 if (this._entities[i].name == name)
                     return this._entities[i];
             }
-            for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
-                var entity = this._entitiesToAdded.toArray()[i];
+            // for (let i = 0; i < this._entitiesToAdded.size; i++) {
+            //     let entity = this._entitiesToAdded.values;
+            //     if (entity.name == name)
+            //         return entity;
+            // }
+            for (var i in this._entitiesToAdded) {
+                var entity = this._entitiesToAdded[i];
                 if (entity.name == name)
                     return entity;
             }
@@ -4400,25 +4526,6 @@ var es;
             return null;
         };
         /**
-         * 返回一个T类型的所有实体的列表。
-         * 返回的List可以通过ListPool.free放回池中。
-         * @param type
-         */
-        EntityList.prototype.entitiesOfType = function (type) {
-            var list = es.ListPool.obtain();
-            for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities[i] instanceof type)
-                    list.push(this._entities[i]);
-            }
-            for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
-                var entity = this._entitiesToAdded.toArray()[i];
-                if (es.TypeUtils.getType(entity) instanceof type) {
-                    list.push(entity);
-                }
-            }
-            return list;
-        };
-        /**
          * 返回在场景中找到的第一个T类型的组件。
          * @param type
          */
@@ -4430,8 +4537,16 @@ var es;
                         return comp;
                 }
             }
-            for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
-                var entity = this._entitiesToAdded.toArray()[i];
+            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
+            //     let entity: Entity = this._entitiesToAdded.toArray()[i];
+            //     if (entity.enabled) {
+            //         let comp = entity.getComponent<T>(type);
+            //         if (comp)
+            //             return comp;
+            //     }
+            // }
+            for (var i in this._entitiesToAdded) {
+                var entity = this._entitiesToAdded[i];
                 if (entity.enabled) {
                     var comp = entity.getComponent(type);
                     if (comp)
@@ -4451,8 +4566,13 @@ var es;
                 if (this._entities[i].enabled)
                     this._entities[i].getComponents(type, comps);
             }
-            for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
-                var entity = this._entitiesToAdded.toArray()[i];
+            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
+            //     let entity = this._entitiesToAdded.toArray()[i];
+            //     if (entity.enabled)
+            //         entity.getComponents(type, comps);
+            // }
+            for (var i in this._entitiesToAdded) {
+                var entity = this._entitiesToAdded[i];
                 if (entity.enabled)
                     entity.getComponents(type, comps);
             }
@@ -4495,8 +4615,24 @@ var es;
                     }
                 }
             }
-            for (var i = 0; i < this._entitiesToAdded.getCount(); i++) {
-                var entity = this._entitiesToAdded.toArray()[i];
+            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
+            //     let entity: Entity = this._entitiesToAdded.toArray()[i];
+            //     if (entity.enabled) {
+            //         let meet = true;
+            //         for (let type of types) {
+            //             let hasComp = entity.hasComponent(type);
+            //             if (!hasComp) {
+            //                 meet = false;
+            //                 break;
+            //             }
+            //         }
+            //         if (meet) {
+            //             entities.push(entity);
+            //         }
+            //     }
+            // }
+            for (var i in this._entitiesToAdded) {
+                var entity = this._entitiesToAdded[i];
                 if (entity.enabled) {
                     var meet = true;
                     try {
@@ -8980,6 +9116,307 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var hex = [
+        // hex identity values 0-255
+        "00",
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "0a",
+        "0b",
+        "0c",
+        "0d",
+        "0e",
+        "0f",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "1a",
+        "1b",
+        "1c",
+        "1d",
+        "1e",
+        "1f",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "2a",
+        "2b",
+        "2c",
+        "2d",
+        "2e",
+        "2f",
+        "30",
+        "31",
+        "32",
+        "33",
+        "34",
+        "35",
+        "36",
+        "37",
+        "38",
+        "39",
+        "3a",
+        "3b",
+        "3c",
+        "3d",
+        "3e",
+        "3f",
+        "40",
+        "41",
+        "42",
+        "43",
+        "44",
+        "45",
+        "46",
+        "47",
+        "48",
+        "49",
+        "4a",
+        "4b",
+        "4c",
+        "4d",
+        "4e",
+        "4f",
+        "50",
+        "51",
+        "52",
+        "53",
+        "54",
+        "55",
+        "56",
+        "57",
+        "58",
+        "59",
+        "5a",
+        "5b",
+        "5c",
+        "5d",
+        "5e",
+        "5f",
+        "60",
+        "61",
+        "62",
+        "63",
+        "64",
+        "65",
+        "66",
+        "67",
+        "68",
+        "69",
+        "6a",
+        "6b",
+        "6c",
+        "6d",
+        "6e",
+        "6f",
+        "70",
+        "71",
+        "72",
+        "73",
+        "74",
+        "75",
+        "76",
+        "77",
+        "78",
+        "79",
+        "7a",
+        "7b",
+        "7c",
+        "7d",
+        "7e",
+        "7f",
+        "80",
+        "81",
+        "82",
+        "83",
+        "84",
+        "85",
+        "86",
+        "87",
+        "88",
+        "89",
+        "8a",
+        "8b",
+        "8c",
+        "8d",
+        "8e",
+        "8f",
+        "90",
+        "91",
+        "92",
+        "93",
+        "94",
+        "95",
+        "96",
+        "97",
+        "98",
+        "99",
+        "9a",
+        "9b",
+        "9c",
+        "9d",
+        "9e",
+        "9f",
+        "a0",
+        "a1",
+        "a2",
+        "a3",
+        "a4",
+        "a5",
+        "a6",
+        "a7",
+        "a8",
+        "a9",
+        "aa",
+        "ab",
+        "ac",
+        "ad",
+        "ae",
+        "af",
+        "b0",
+        "b1",
+        "b2",
+        "b3",
+        "b4",
+        "b5",
+        "b6",
+        "b7",
+        "b8",
+        "b9",
+        "ba",
+        "bb",
+        "bc",
+        "bd",
+        "be",
+        "bf",
+        "c0",
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5",
+        "c6",
+        "c7",
+        "c8",
+        "c9",
+        "ca",
+        "cb",
+        "cc",
+        "cd",
+        "ce",
+        "cf",
+        "d0",
+        "d1",
+        "d2",
+        "d3",
+        "d4",
+        "d5",
+        "d6",
+        "d7",
+        "d8",
+        "d9",
+        "da",
+        "db",
+        "dc",
+        "dd",
+        "de",
+        "df",
+        "e0",
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9",
+        "ea",
+        "eb",
+        "ec",
+        "ed",
+        "ee",
+        "ef",
+        "f0",
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
+        "f6",
+        "f7",
+        "f8",
+        "f9",
+        "fa",
+        "fb",
+        "fc",
+        "fd",
+        "fe",
+        "ff",
+    ];
+    var UUID = /** @class */ (function () {
+        function UUID() {
+        }
+        UUID.randomUUID = function () {
+            var d0 = (Math.random() * 0xffffffff) | 0;
+            var d1 = (Math.random() * 0xffffffff) | 0;
+            var d2 = (Math.random() * 0xffffffff) | 0;
+            var d3 = (Math.random() * 0xffffffff) | 0;
+            return (hex[d0 & 0xff] +
+                hex[(d0 >> 8) & 0xff] +
+                hex[(d0 >> 16) & 0xff] +
+                hex[(d0 >> 24) & 0xff] +
+                "-" +
+                hex[d1 & 0xff] +
+                hex[(d1 >> 8) & 0xff] +
+                "-" +
+                hex[((d1 >> 16) & 0x0f) | 0x40] +
+                hex[(d1 >> 24) & 0xff] +
+                "-" +
+                hex[(d2 & 0x3f) | 0x80] +
+                hex[(d2 >> 8) & 0xff] +
+                "-" +
+                hex[(d2 >> 16) & 0xff] +
+                hex[(d2 >> 24) & 0xff] +
+                hex[d3 & 0xff] +
+                hex[(d3 >> 8) & 0xff] +
+                hex[(d3 >> 16) & 0xff] +
+                hex[(d3 >> 24) & 0xff]);
+        };
+        return UUID;
+    }());
+    es.UUID = UUID;
+})(es || (es = {}));
+var es;
+(function (es) {
+    function getClassName(klass) {
+        return klass.className || klass.name;
+    }
+    es.getClassName = getClassName;
+})(es || (es = {}));
+var es;
+(function (es) {
     /**
      * 记录时间的持续时间，一些设计灵感来自物理秒表。
      */
@@ -9161,6 +9598,139 @@ var es;
     es.setDefaultSystemTimeGetter = setDefaultSystemTimeGetter;
     /** 所有新实例的默认“getSystemTime”实现 */
     var _defaultSystemTimeGetter = Date.now;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Bag = /** @class */ (function () {
+        function Bag(capacity) {
+            if (capacity === void 0) { capacity = 64; }
+            this.size_ = 0;
+            this.length = 0;
+            this.array = [];
+            this.length = capacity;
+        }
+        Bag.prototype.removeAt = function (index) {
+            var e = this.array[index];
+            this.array[index] = this.array[--this.size_];
+            this.array[this.size_] = null;
+            return e;
+        };
+        Bag.prototype.remove = function (e) {
+            var i;
+            var e2;
+            var size = this.size_;
+            for (i = 0; i < size; i++) {
+                e2 = this.array[i];
+                if (e == e2) {
+                    this.array[i] = this.array[--this.size_];
+                    this.array[this.size_] = null;
+                    return true;
+                }
+            }
+            return false;
+        };
+        Bag.prototype.removeLast = function () {
+            if (this.size_ > 0) {
+                var e = this.array[--this.size_];
+                this.array[this.size_] = null;
+                return e;
+            }
+            return null;
+        };
+        Bag.prototype.contains = function (e) {
+            var i;
+            var size;
+            for (i = 0, size = this.size_; size > i; i++) {
+                if (e === this.array[i]) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        Bag.prototype.removeAll = function (bag) {
+            var modified = false;
+            var i;
+            var j;
+            var l;
+            var e1;
+            var e2;
+            for (i = 0, l = bag.size(); i < l; i++) {
+                e1 = bag[i];
+                for (j = 0; j < this.size_; j++) {
+                    e2 = this.array[j];
+                    if (e1 === e2) {
+                        this.removeAt(j);
+                        j--;
+                        modified = true;
+                        break;
+                    }
+                }
+            }
+            return modified;
+        };
+        Bag.prototype.get = function (index) {
+            if (index >= this.length) {
+                throw new Error("ArrayIndexOutOfBoundsException");
+            }
+            return this.array[index];
+        };
+        Bag.prototype.safeGet = function (index) {
+            if (index >= this.length) {
+                this.grow((index * 7) / 4 + 1);
+            }
+            return this.array[index];
+        };
+        Bag.prototype.size = function () {
+            return this.size_;
+        };
+        Bag.prototype.getCapacity = function () {
+            return this.length;
+        };
+        Bag.prototype.isIndexWithinBounds = function (index) {
+            return index < this.getCapacity();
+        };
+        Bag.prototype.isEmpty = function () {
+            return this.size_ == 0;
+        };
+        Bag.prototype.add = function (e) {
+            if (this.size_ === this.length) {
+                this.grow();
+            }
+            this.array[this.size_++] = e;
+        };
+        Bag.prototype.set = function (index, e) {
+            if (index >= this.length) {
+                this.grow(index * 2);
+            }
+            this.size_ = index + 1;
+            this.array[index] = e;
+        };
+        Bag.prototype.grow = function (newCapacity) {
+            if (newCapacity === void 0) { newCapacity = ~~((this.length * 3) / 2) + 1; }
+            this.length = ~~newCapacity;
+        };
+        Bag.prototype.ensureCapacity = function (index) {
+            if (index >= this.length) {
+                this.grow(index * 2);
+            }
+        };
+        Bag.prototype.clear = function () {
+            var i;
+            var size;
+            for (i = 0, size = this.size_; i < size; i++) {
+                this.array[i] = null;
+            }
+            this.size_ = 0;
+        };
+        Bag.prototype.addAll = function (items) {
+            var i;
+            for (i = 0; items.size() > i; i++) {
+                this.add(items.get(i));
+            }
+        };
+        return Bag;
+    }());
+    es.Bag = Bag;
 })(es || (es = {}));
 var es;
 (function (es) {

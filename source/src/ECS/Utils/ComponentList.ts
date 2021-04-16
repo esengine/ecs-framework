@@ -145,10 +145,10 @@ module es {
                 this._tempBufferList.length = 0;
             }
 
-            if (this._isComponentListUnsorted) {
-                this._updatableComponents.sort(ComponentList.compareUpdatableOrder.compare);
-                this._isComponentListUnsorted = false;
-            }
+            // if (this._isComponentListUnsorted) {
+            //     this._updatableComponents.sort(ComponentList.compareUpdatableOrder.compare);
+            //     this._isComponentListUnsorted = false;
+            // }
         }
 
         public handleRemove(component: Component) {

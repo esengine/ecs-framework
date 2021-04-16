@@ -39,6 +39,7 @@ module es {
          * 返回一个BitSet实例，包含实体拥有的组件的位
          */
         public componentBits: BitSet;
+        private systemBits_: BitSet;
 
         constructor(name: string) {
             this.components = new ComponentList(this);
@@ -46,6 +47,7 @@ module es {
             this.name = name;
             this.id = Entity._idGenerator++;
 
+            this.systemBits_ = new BitSet();
             this.componentBits = new BitSet();
         }
 
@@ -107,6 +109,10 @@ module es {
          */
         public set updateOrder(value: number) {
             this.setUpdateOrder(value);
+        }
+
+        public getSystemBits(): BitSet {
+            return this.systemBits_;
         }
 
         public get parent(): Transform {

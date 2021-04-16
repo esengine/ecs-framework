@@ -204,6 +204,17 @@ declare module es {
     }
 }
 declare module es {
+    class ComponentType {
+        static INDEX: number;
+        private index_;
+        private type_;
+        constructor(type: Class, index?: number);
+        getName(): string;
+        getIndex(): number;
+        toString(): string;
+    }
+}
+declare module es {
     enum CoreEvents {
         /**
          * 当场景发生变化时触发
@@ -250,6 +261,7 @@ declare module es {
          * 返回一个BitSet实例，包含实体拥有的组件的位
          */
         componentBits: BitSet;
+        private systemBits_;
         constructor(name: string);
         _isDestroyed: boolean;
         /**
@@ -283,6 +295,7 @@ declare module es {
         * @param value
         */
         updateOrder: number;
+        getSystemBits(): BitSet;
         parent: Transform;
         readonly childCount: number;
         position: Vector2;
@@ -562,16 +575,6 @@ declare module es {
     }
 }
 declare module es {
-    enum SceneResolutionPolicy {
-        /**
-         * 默认情况下，RenderTarget与屏幕大小匹配。RenderTarget与屏幕大小相匹配
-         */
-        none = 0,
-        /**
-         * 该应用程序采用最适合设计分辨率的宽度和高度
-         */
-        bestFit = 1
-    }
     /** 场景 */
     class Scene {
         /**
@@ -652,11 +655,6 @@ declare module es {
          * @returns
          */
         findEntityWithTag(tag: number): Entity;
-        /**
-         * 返回类型为T的所有实体
-         * @param type
-         */
-        entitiesOfType<T extends Entity>(type: any): T[];
         /**
          * 返回第一个启用加载的类型为T的组件
          * @param type
@@ -1290,11 +1288,49 @@ declare module es {
     }
 }
 declare module es {
+    interface Map<K, V> {
+        clear(): void;
+        containsKey(key: any): boolean;
+        containsValue(value: any): boolean;
+        get(key: any): V;
+        isEmpty(): boolean;
+        put(key: any, value: any): void;
+        remove(key: any): V;
+        size(): number;
+        values(): V[];
+    }
+    class HashMap<K, V> implements Map<K, V> {
+        private map_;
+        private keys_;
+        constructor();
+        clear(): void;
+        values(): V[];
+        contains(value: any): boolean;
+        containsKey(key: any): boolean;
+        containsValue(value: any): boolean;
+        get(key: K): V;
+        isEmpty(): boolean;
+        keys(): K[];
+        /**
+         * if key is a string, use as is, else use key.id_ or key.name
+         */
+        put(key: any, value: any): void;
+        remove(key: any): V;
+        size(): number;
+    }
+}
+declare module es {
+    class SystemIndexManager {
+        static INDEX: number;
+        private static indices;
+        static getIndexFor(es: Class): number;
+    }
     /**
      * 追踪实体的子集，但不实现任何排序或迭代。
      */
     abstract class EntitySystem {
         private _entities;
+        private systemIndex_;
         constructor(matcher?: Matcher);
         private _scene;
         /**
@@ -1745,11 +1781,15 @@ declare module es {
         /**
          * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        _entitiesToAdded: HashSet<Entity>;
+        _entitiesToAdded: {
+            [index: number]: Entity;
+        };
         /**
          * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        _entitiesToRemove: HashSet<Entity>;
+        _entitiesToRemove: {
+            [index: number]: Entity;
+        };
         /**
          * 标志，用于确定我们是否需要在这一帧中对实体进行排序
          */
@@ -1805,12 +1845,6 @@ declare module es {
          * @returns
          */
         entityWithTag(tag: number): Entity;
-        /**
-         * 返回一个T类型的所有实体的列表。
-         * 返回的List可以通过ListPool.free放回池中。
-         * @param type
-         */
-        entitiesOfType<T extends Entity>(type: any): T[];
         /**
          * 返回在场景中找到的第一个T类型的组件。
          * @param type
@@ -3577,6 +3611,16 @@ declare module es {
         private initialize;
     }
 }
+declare module es {
+    class UUID {
+        static randomUUID(): string;
+    }
+}
+declare module es {
+    interface Class extends Function {
+    }
+    function getClassName(klass: any): string;
+}
 declare namespace es {
     /**
      * 记录时间的持续时间，一些设计灵感来自物理秒表。
@@ -3691,6 +3735,31 @@ declare namespace es {
     }
 }
 declare module es {
+    class Bag<E> implements ImmutableBag<E> {
+        size_: number;
+        length: number;
+        private array;
+        constructor(capacity?: number);
+        removeAt(index: number): E;
+        remove(e: E): boolean;
+        removeLast(): E;
+        contains(e: E): boolean;
+        removeAll(bag: ImmutableBag<E>): boolean;
+        get(index: number): E;
+        safeGet(index: number): E;
+        size(): number;
+        getCapacity(): number;
+        isIndexWithinBounds(index: number): boolean;
+        isEmpty(): boolean;
+        add(e: E): void;
+        set(index: number, e: E): void;
+        grow(newCapacity?: number): void;
+        ensureCapacity(index: number): void;
+        clear(): void;
+        addAll(items: ImmutableBag<E>): void;
+    }
+}
+declare module es {
     /**
      * 创建这个字典的原因只有一个：
      * 我需要一个能让我直接以数组的形式对值进行迭代的字典，而不需要生成一个数组或使用迭代器。
@@ -3735,6 +3804,14 @@ declare module es {
         previous: number;
         next: number;
         constructor(key: any, hash: number, previousNode?: number);
+    }
+}
+declare module es {
+    interface ImmutableBag<E> {
+        get(index: number): E;
+        size(): number;
+        isEmpty(): boolean;
+        contains(e: E): boolean;
     }
 }
 declare module es {

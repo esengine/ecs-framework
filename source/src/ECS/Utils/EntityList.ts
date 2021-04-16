@@ -8,11 +8,12 @@ module es {
         /**
          * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        public _entitiesToAdded: HashSet<Entity> = new HashSet<Entity>();
+        // public _entitiesToAdded: Entity[] = [];
+        public _entitiesToAdded: {[index: number]: Entity} = {};
         /**
          * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        public _entitiesToRemove: HashSet<Entity> = new HashSet<Entity>();
+        public _entitiesToRemove: {[index: number]: Entity} = {};
         /**
          * 标志，用于确定我们是否需要在这一帧中对实体进行排序
          */
@@ -48,7 +49,7 @@ module es {
          * @param entity
          */
         public add(entity: Entity) {
-            this._entitiesToAdded.add(entity);
+            this._entitiesToAdded[entity.id] = entity;
         }
 
         /**
@@ -56,16 +57,14 @@ module es {
          * @param entity
          */
         public remove(entity: Entity) {
-            Debug.warnIf(this._entitiesToRemove.contains(entity), `您正在尝试删除已经删除的实体(${entity.name})`);
-
             // 防止在同一帧中添加或删除实体
-            if (this._entitiesToAdded.contains(entity)) {
-                this._entitiesToAdded.remove(entity);
+            if (this._entitiesToAdded[entity.id]) {
+                delete this._entitiesToAdded[entity.id];
                 return;
             }
 
-            if (!this._entitiesToRemove.contains(entity))
-                this._entitiesToRemove.add(entity);
+            if (!this._entitiesToRemove[entity.id])
+                this._entitiesToRemove[entity.id] = entity;
         }
 
         /**
@@ -73,7 +72,7 @@ module es {
          */
         public removeAllEntities() {
             this._unsortedTags.clear();
-            this._entitiesToAdded.clear();
+            this._entitiesToAdded = {};
             this._isEntityListUnsorted = false;
 
             // 为什么我们要在这里更新列表？主要是为了处理在场景切换前被分离的实体。
@@ -95,7 +94,7 @@ module es {
          * @param entity
          */
         public contains(entity: Entity): boolean {
-            return new es.List(this._entities).contains(entity) || this._entitiesToAdded.contains(entity);
+            return !!this._entitiesToAdded[entity.id];
         }
 
         public getTagList(tag: number) {
@@ -127,43 +126,40 @@ module es {
         }
 
         public updateLists() {
-            if (this._entitiesToRemove.getCount() > 0) {
-                this._entitiesToRemove.toArray().forEach(entity => {
-                    // 处理标签列表
-                    this.removeFromTagList(entity);
+            for (let i in this._entitiesToRemove) {
+                let entity = this._entitiesToRemove[i];
+                this.removeFromTagList(entity);
 
-                    // 处理常规实体列表
-                    new es.List(this._entities).remove(entity);
-                    entity.onRemovedFromScene();
-                    entity.scene = null;
+                // 处理常规实体列表
+                new es.List(this._entities).remove(entity);
+                entity.onRemovedFromScene();
+                entity.scene = null;
 
-                    this.scene.entityProcessors.onEntityRemoved(entity);
-                });
-                this._entitiesToRemove.clear();
+                this.scene.entityProcessors.onEntityRemoved(entity);
+            }
+            this._entitiesToRemove = {};
+
+            for (let i in this._entitiesToAdded) {
+                let entity = this._entitiesToAdded[i];
+                this._entities.push(entity);
+                entity.scene = this.scene;
+
+                this.addToTagList(entity);
+
+                this.scene.entityProcessors.onEntityAdded(entity);
             }
 
-            if (this._entitiesToAdded.getCount() > 0) {
-                this._entitiesToAdded.toArray().forEach(entity => {
-                    this._entities.push(entity);
-                    entity.scene = this.scene;
-
-                    this.addToTagList(entity);
-
-                    this.scene.entityProcessors.onEntityAdded(entity);
-                });
-
-                this._entitiesToAdded.toArray().forEach(entity => {
-                    entity.onAddedToScene();
-                })
-
-                this._entitiesToAdded.clear();
-                this._isEntityListUnsorted = true;
+            for (let i in this._entitiesToAdded) {
+                this._entitiesToAdded[i].onAddedToScene();
             }
 
-            if (this._isEntityListUnsorted) {
-                this._entities.sort(Entity.entityComparer.compare);
-                this._isEntityListUnsorted = false;
-            }
+            this._entitiesToAdded = {};
+            // this._isEntityListUnsorted = true;
+
+            // if (this._isEntityListUnsorted) {
+            //     this._entities.sort(Entity.entityComparer.compare);
+            //     this._isEntityListUnsorted = false;
+            // }
         }
 
         /**
@@ -176,8 +172,13 @@ module es {
                     return this._entities[i];
             }
 
-            for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
-                let entity = this._entitiesToAdded.toArray()[i];
+            // for (let i = 0; i < this._entitiesToAdded.size; i++) {
+            //     let entity = this._entitiesToAdded.values;
+            //     if (entity.name == name)
+            //         return entity;
+            // }
+            for (let i in this._entitiesToAdded) {
+                let entity = this._entitiesToAdded[i];
                 if (entity.name == name)
                     return entity;
             }
@@ -217,28 +218,6 @@ module es {
         }
 
         /**
-         * 返回一个T类型的所有实体的列表。
-         * 返回的List可以通过ListPool.free放回池中。
-         * @param type
-         */
-        public entitiesOfType<T extends Entity>(type): T[] {
-            let list = ListPool.obtain<T>();
-            for (let i = 0; i < this._entities.length; i++) {
-                if (this._entities[i] instanceof type)
-                    list.push(this._entities[i] as T);
-            }
-
-            for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
-                let entity = this._entitiesToAdded.toArray()[i];
-                if (TypeUtils.getType(entity) instanceof type) {
-                    list.push(entity as T);
-                }
-            }
-
-            return list;
-        }
-
-        /**
          * 返回在场景中找到的第一个T类型的组件。
          * @param type
          */
@@ -251,8 +230,17 @@ module es {
                 }
             }
 
-            for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
-                let entity: Entity = this._entitiesToAdded.toArray()[i];
+            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
+            //     let entity: Entity = this._entitiesToAdded.toArray()[i];
+            //     if (entity.enabled) {
+            //         let comp = entity.getComponent<T>(type);
+            //         if (comp)
+            //             return comp;
+            //     }
+            // }
+
+            for (let i in this._entitiesToAdded) {
+                let entity = this._entitiesToAdded[i];
                 if (entity.enabled) {
                     let comp = entity.getComponent<T>(type);
                     if (comp)
@@ -275,8 +263,14 @@ module es {
                     this._entities[i].getComponents(type, comps);
             }
 
-            for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
-                let entity = this._entitiesToAdded.toArray()[i];
+            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
+            //     let entity = this._entitiesToAdded.toArray()[i];
+            //     if (entity.enabled)
+            //         entity.getComponents(type, comps);
+            // }
+
+            for (let i in this._entitiesToAdded) {
+                let entity = this._entitiesToAdded[i];
                 if (entity.enabled)
                     entity.getComponents(type, comps);
             }
@@ -308,8 +302,26 @@ module es {
                 }
             }
 
-            for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
-                let entity: Entity = this._entitiesToAdded.toArray()[i];
+            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
+            //     let entity: Entity = this._entitiesToAdded.toArray()[i];
+            //     if (entity.enabled) {
+            //         let meet = true;
+            //         for (let type of types) {
+            //             let hasComp = entity.hasComponent(type);
+            //             if (!hasComp) {
+            //                 meet = false;
+            //                 break;
+            //             }
+            //         }
+
+            //         if (meet) {
+            //             entities.push(entity);
+            //         }
+            //     }
+            // }
+
+            for (let i in this._entitiesToAdded) {
+                let entity = this._entitiesToAdded[i];
                 if (entity.enabled) {
                     let meet = true;
                     for (let type of types) {
