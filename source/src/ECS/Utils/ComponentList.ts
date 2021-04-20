@@ -18,11 +18,11 @@ module es {
         /**
          * 添加到此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
          */
-        public _componentsToAdd: Component[] = [];
+        public _componentsToAdd: {[index: number]: Component} = {};
         /**
          * 标记要删除此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
          */
-        public _componentsToRemove: Component[] = [];
+        public _componentsToRemove: {[index: number]: Component} = {};
         public _tempBufferList: Component[] = [];
         /**
          * 用于确定是否需要对该框架中的组件进行排序的标志
@@ -46,21 +46,19 @@ module es {
         }
 
         public add(component: Component) {
-            this._componentsToAdd.push(component);
+            this._componentsToAdd[component.id] = component;
         }
 
         public remove(component: Component) {
-            let componentToRemove = new es.List(this._componentsToRemove);
-            let componentToAdd = new es.List(this._componentsToAdd);
-            Debug.warnIf(componentToRemove.contains(component), `您正在尝试删除一个您已经删除的组件(${component})`);
-
+            Debug.warnIf(!!this._componentsToRemove[component.id], `您正在尝试删除一个您已经删除的组件(${component})`);
+// 
             // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
-            if (componentToAdd.contains(component)) {
-                componentToAdd.remove(component);
+            if (this._componentsToAdd[component.id]) {
+                delete this._componentsToAdd[component.id];
                 return;
             }
 
-            componentToRemove.add(component);
+            this._componentsToRemove[component.id] = component;
         }
 
         /**
@@ -73,8 +71,8 @@ module es {
 
             this._components.length = 0;
             this._updatableComponents.length = 0;
-            this._componentsToAdd.length = 0;
-            this._componentsToRemove.length = 0;
+            this._componentsToAdd = {};
+            this._componentsToRemove =  {};
         }
 
         public deregisterAllComponents() {
@@ -104,51 +102,48 @@ module es {
          * 处理任何需要删除或添加的组件
          */
         public updateLists() {
-            if (this._componentsToRemove.length > 0) {
-                for (let i = 0; i < this._componentsToRemove.length; i++) {
-                    this.handleRemove(this._componentsToRemove[i]);
-                    new es.List(this._components).remove(this._componentsToRemove[i]);
-                }
-
-                this._componentsToRemove.length = 0;
-            }
-
-            if (this._componentsToAdd.length > 0) {
-                for (let i = 0, count = this._componentsToAdd.length; i < count; i++) {
-                    let component = this._componentsToAdd[i];
-
-                    if (isIUpdatable(component))
-                        this._updatableComponents.push(component);
-
-                    this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
-                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
-
-                    this._components.push(component);
-                    this._tempBufferList.push(component);
-                }
-
-                // 在调用onAddedToEntity之前清除，以防添加更多组件
-                this._componentsToAdd.length = 0;
-                this._isComponentListUnsorted = true;
-
-                // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
-                for (let i = 0; i < this._tempBufferList.length; i++) {
-                    let component = this._tempBufferList[i];
-                    component.onAddedToEntity();
-
-                    // enabled检查实体和组件
-                    if (component.enabled) {
-                        component.onEnabled();
+            for (let i in this._componentsToRemove) {
+                let component = this._componentsToRemove[i];
+                this.handleRemove(component);
+                for (let index = 0; index < this._components.length; index ++) {
+                    if (this._components[index].id == component.id) {
+                        this._components.splice(index, 1);
+                        break;
                     }
                 }
-
-                this._tempBufferList.length = 0;
             }
 
-            // if (this._isComponentListUnsorted) {
-            //     this._updatableComponents.sort(ComponentList.compareUpdatableOrder.compare);
-            //     this._isComponentListUnsorted = false;
-            // }
+            this._componentsToRemove = {};
+
+            for (let i in this._componentsToAdd) {
+                let component = this._componentsToAdd[i];
+
+                if (isIUpdatable(component))
+                    this._updatableComponents.push(component);
+
+                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
+                this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+
+                this._components.push(component);
+                this._tempBufferList.push(component);
+            }
+
+             // 在调用onAddedToEntity之前清除，以防添加更多组件
+             this._componentsToAdd = {};
+             this._isComponentListUnsorted = true;
+
+             // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
+             for (let i = 0; i < this._tempBufferList.length; i++) {
+                 let component = this._tempBufferList[i];
+                 component.onAddedToEntity();
+
+                 // enabled检查实体和组件
+                 if (component.enabled) {
+                     component.onEnabled();
+                 }
+             }
+
+             this._tempBufferList.length = 0;
         }
 
         public handleRemove(component: Component) {
@@ -178,7 +173,8 @@ module es {
 
             // 我们可以选择检查挂起的组件，以防addComponent和getComponent在同一个框架中被调用
             if (!onlyReturnInitializedComponents) {
-                for (let component of this._componentsToAdd) {
+                for (let i in this._componentsToAdd) {
+                    let component = this._componentsToAdd[i];
                     if (component instanceof type)
                         return component as T;
                 }
@@ -203,7 +199,8 @@ module es {
             }
 
             // 我们还检查了待处理的组件，以防在同一帧中调用addComponent和getComponent
-            for (let component of this._componentsToAdd) {
+            for (let i in this._componentsToAdd) {
+                let component = this._componentsToAdd[i];
                 if (component instanceof typeName) {
                     components.push(component);
                 }
@@ -226,9 +223,10 @@ module es {
                     this._components[i].onEntityTransformChanged(comp);
             }
 
-            for (let i = 0; i < this._componentsToAdd.length; i++) {
-                if (this._componentsToAdd[i].enabled)
-                    this._componentsToAdd[i].onEntityTransformChanged(comp);
+            for (let i in this._componentsToAdd) {
+                let component = this._componentsToAdd[i];
+                if (component.enabled)
+                    component.onEntityTransformChanged(comp);
             }
         }
 

@@ -8,10 +8,19 @@ module es {
      *      - onRemovedFromEntity
      */
     export abstract class Component {
+        public static _idGenerator: number = 0;
+        /**
+         * 此组件的唯一标识
+         */
+        public readonly id: number;
         /**
          * 此组件附加的实体
          */
         public entity: Entity;
+
+        constructor() {
+            this.id = Component._idGenerator++;
+        }
 
         /**
          * 快速访问 this.entity.transform

@@ -7,10 +7,7 @@ declare module es {
          * 核心发射器。只发出核心级别的事件
          */
         static emitter: Emitter<CoreEvents>;
-        /**
-         * 启用/禁用焦点丢失时的暂停。如果为真，则不调用更新或渲染方法
-         */
-        static pauseOnFocusLost: boolean;
+        static paused: boolean;
         /**
          * 是否启用调试渲染
          */
@@ -153,10 +150,16 @@ declare module es {
      *      - onRemovedFromEntity
      */
     abstract class Component {
+        static _idGenerator: number;
+        /**
+         * 此组件的唯一标识
+         */
+        readonly id: number;
         /**
          * 此组件附加的实体
          */
         entity: Entity;
+        constructor();
         /**
          * 快速访问 this.entity.transform
          */
@@ -1717,11 +1720,15 @@ declare module es {
         /**
          * 添加到此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
          */
-        _componentsToAdd: Component[];
+        _componentsToAdd: {
+            [index: number]: Component;
+        };
         /**
          * 标记要删除此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
          */
-        _componentsToRemove: Component[];
+        _componentsToRemove: {
+            [index: number]: Component;
+        };
         _tempBufferList: Component[];
         /**
          * 用于确定是否需要对该框架中的组件进行排序的标志

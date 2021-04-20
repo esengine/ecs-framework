@@ -29,7 +29,8 @@ module es {
                 }
             }
 
-            for (let component of entity.components._componentsToAdd) {
+            for (let i in entity.components._componentsToAdd) {
+                let component = entity.components._componentsToAdd[i];
                 if (isITriggerListener(component)) {
                     components.push(component);
                 }

@@ -7,10 +7,7 @@ module es {
          * 核心发射器。只发出核心级别的事件
          */
         public static emitter: Emitter<CoreEvents>;
-        /**
-         * 启用/禁用焦点丢失时的暂停。如果为真，则不调用更新或渲染方法
-         */
-        public static pauseOnFocusLost = true;
+        public static paused = false;
         /**
          * 是否启用调试渲染
          */
@@ -179,6 +176,10 @@ module es {
         }
 
         protected async update(currentTime: number = -1) {
+            if (Core.paused) {
+                return;
+            }
+
             Time.update(currentTime);
             if (this._scene != null) {
                 for (let i = this._globalManagers.length - 1; i >= 0; i--) {
