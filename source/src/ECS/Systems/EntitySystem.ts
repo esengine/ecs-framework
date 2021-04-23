@@ -60,7 +60,7 @@ module es {
         }
 
         public onChanged(entity: Entity) {
-            let contains = entity.getSystemBits().get(this.systemIndex_);
+            let contains = new es.List(this._entities).contains(entity);
             let interest = this._matcher.isInterestedEntity(entity);
 
             if (interest && !contains)
@@ -71,7 +71,6 @@ module es {
 
         public add(entity: Entity) {
             this._entities.push(entity);
-            entity.getSystemBits().set(this.systemIndex_);
             this.onAdded(entity);
         }
 
@@ -79,7 +78,6 @@ module es {
 
         public remove(entity: Entity) {
             new es.List(this._entities).remove(entity);
-            entity.getSystemBits().clear(this.systemIndex_);
             this.onRemoved(entity);
         }
 

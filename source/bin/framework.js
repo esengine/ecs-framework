@@ -3134,7 +3134,7 @@ var es;
         EntitySystem.prototype.initialize = function () {
         };
         EntitySystem.prototype.onChanged = function (entity) {
-            var contains = entity.getSystemBits().get(this.systemIndex_);
+            var contains = new es.List(this._entities).contains(entity);
             var interest = this._matcher.isInterestedEntity(entity);
             if (interest && !contains)
                 this.add(entity);
@@ -3143,13 +3143,11 @@ var es;
         };
         EntitySystem.prototype.add = function (entity) {
             this._entities.push(entity);
-            entity.getSystemBits().set(this.systemIndex_);
             this.onAdded(entity);
         };
         EntitySystem.prototype.onAdded = function (entity) { };
         EntitySystem.prototype.remove = function (entity) {
             new es.List(this._entities).remove(entity);
-            entity.getSystemBits().clear(this.systemIndex_);
             this.onRemoved(entity);
         };
         EntitySystem.prototype.onRemoved = function (entity) { };
@@ -4253,6 +4251,34 @@ var es;
         return ComponentList;
     }());
     es.ComponentList = ComponentList;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var ComponentTypeFactory = /** @class */ (function () {
+        function ComponentTypeFactory() {
+            this.componentTypeCount_ = 0;
+            this.componentTypes_ = {};
+            this.types = new es.Bag();
+        }
+        ComponentTypeFactory.prototype.getTypeFor = function (c) {
+            if ("number" === typeof c) {
+                return this.types.get(c);
+            }
+            var type = this.componentTypes_[es.getClassName(c)];
+            if (type == null) {
+                var index = this.componentTypeCount_++;
+                type = new es.ComponentType(c, index);
+                this.componentTypes_[es.getClassName(c)] = type;
+                this.types.set(index, type);
+            }
+            return type;
+        };
+        ComponentTypeFactory.prototype.getIndexFor = function (c) {
+            return this.getTypeFor(c).getIndex();
+        };
+        return ComponentTypeFactory;
+    }());
+    es.ComponentTypeFactory = ComponentTypeFactory;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -11602,7 +11628,7 @@ var es;
         function TypeUtils() {
         }
         TypeUtils.getType = function (obj) {
-            return obj["__proto__"]["constructor"];
+            return obj.constructor;
         };
         return TypeUtils;
     }());

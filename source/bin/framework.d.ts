@@ -1772,6 +1772,16 @@ declare module es {
     }
 }
 declare module es {
+    class ComponentTypeFactory {
+        private componentTypes_;
+        private componentTypeCount_;
+        types: Bag<ComponentType>;
+        constructor();
+        getTypeFor(c: any): ComponentType;
+        getIndexFor(c: any): number;
+    }
+}
+declare module es {
     class ComponentTypeManager {
         private static _componentTypesMask;
         static add(type: any): void;
