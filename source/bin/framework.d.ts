@@ -408,7 +408,7 @@ declare module es {
          * @param typeName
          * @param componentList
          */
-        getComponents(typeName: any, componentList?: any): any;
+        getComponents(typeName: any, componentList?: any): any[];
         /**
          * 从组件列表中删除组件
          * @param component
@@ -647,6 +647,7 @@ declare module es {
          * @param name
          */
         findEntity(name: string): Entity;
+        findEntityById(id: number): Entity;
         /**
          * 返回具有给定标记的所有实体
          * @param tag
@@ -1713,6 +1714,9 @@ declare module es {
          * 添加到实体的组件列表
          */
         _components: Component[];
+        /** 记录component的快速读取列表 */
+        fastComponentsMap: Map<new (...args: any[]) => Component, Component[]>;
+        fastComponentsToAddMap: Map<new (...args: any[]) => Component, Component[]>;
         /**
          * 所有需要更新的组件列表
          */
@@ -1751,6 +1755,10 @@ declare module es {
          */
         updateLists(): void;
         handleRemove(component: Component): void;
+        private removeFastComponent;
+        private addFastComponent;
+        private removeFastComponentToAdd;
+        private addFastComponentToAdd;
         /**
          * 获取类型T的第一个组件并返回它
          * 可以选择跳过检查未初始化的组件(尚未调用onAddedToEntity方法的组件)
@@ -1764,7 +1772,7 @@ declare module es {
          * @param typeName
          * @param components
          */
-        getComponents(typeName: any, components?: any): any;
+        getComponents(typeName: any, components?: any[]): any[];
         update(): void;
         onEntityTransformChanged(comp: transform.Component): void;
         onEntityEnabled(): void;
@@ -1850,6 +1858,12 @@ declare module es {
          * @param name
          */
         findEntity(name: string): Entity;
+        /**
+         *
+         * @param id
+         * @returns
+         */
+        findEntityById(id: number): Entity;
         /**
          * 返回带有标签的所有实体的列表。如果没有实体有标签，则返回一个空列表。
          * 返回的List可以通过ListPool.free放回池中

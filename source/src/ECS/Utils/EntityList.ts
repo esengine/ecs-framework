@@ -154,12 +154,6 @@ module es {
             }
 
             this._entitiesToAdded = {};
-            // this._isEntityListUnsorted = true;
-
-            // if (this._isEntityListUnsorted) {
-            //     this._entities.sort(Entity.entityComparer.compare);
-            //     this._isEntityListUnsorted = false;
-            // }
         }
 
         /**
@@ -172,11 +166,6 @@ module es {
                     return this._entities[i];
             }
 
-            // for (let i = 0; i < this._entitiesToAdded.size; i++) {
-            //     let entity = this._entitiesToAdded.values;
-            //     if (entity.name == name)
-            //         return entity;
-            // }
             for (let i in this._entitiesToAdded) {
                 let entity = this._entitiesToAdded[i];
                 if (entity.name == name)
@@ -184,6 +173,20 @@ module es {
             }
 
             return null;
+        }
+
+        /**
+         * 
+         * @param id 
+         * @returns 
+         */
+        public findEntityById(id: number) {
+            for (let i = 0; i < this._entities.length; i ++) {
+                if (this._entities[i].id == id)
+                    return this._entities[i];
+            }
+
+            return this._entitiesToAdded[id];
         }
 
         /**

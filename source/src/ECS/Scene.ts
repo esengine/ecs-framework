@@ -181,6 +181,10 @@ module es {
             return this.entities.findEntity(name);
         }
 
+        public findEntityById(id: number): Entity {
+            return this.entities.findEntityById(id);
+        }
+
         /**
          * 返回具有给定标记的所有实体
          * @param tag

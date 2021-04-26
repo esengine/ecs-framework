@@ -11,6 +11,9 @@ module es {
          * 添加到实体的组件列表
          */
         public _components: Component[] = [];
+        /** 记录component的快速读取列表 */
+        public fastComponentsMap = new Map<new (...args: any[]) => Component, es.Component[]>();
+        public fastComponentsToAddMap = new Map<new (...args: any[]) => Component, es.Component[]>();
         /**
          * 所有需要更新的组件列表
          */
@@ -47,6 +50,7 @@ module es {
 
         public add(component: Component) {
             this._componentsToAdd[component.id] = component;
+            this.addFastComponentToAdd(component);
         }
 
         public remove(component: Component) {
@@ -55,6 +59,7 @@ module es {
             // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
             if (this._componentsToAdd[component.id]) {
                 delete this._componentsToAdd[component.id];
+                this.removeFastComponentToAdd(component);
                 return;
             }
 
@@ -69,6 +74,8 @@ module es {
                 this.handleRemove(this._components[i]);
             }
 
+            this.fastComponentsMap.clear();
+            this.fastComponentsToAddMap.clear();
             this._components.length = 0;
             this._updatableComponents.length = 0;
             this._componentsToAdd = {};
@@ -106,11 +113,13 @@ module es {
                 let component = this._componentsToRemove[i];
                 this.handleRemove(component);
                 for (let index = 0; index < this._components.length; index ++) {
-                    if (this._components[index].id == component.id) {
+                    let searchComponent = this._components[index];
+                    if (searchComponent.id == component.id) {
                         this._components.splice(index, 1);
                         break;
                     }
                 }
+                this.removeFastComponent(component);
             }
 
             this._componentsToRemove = {};
@@ -123,6 +132,7 @@ module es {
 
                 this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                this.addFastComponent(component);
 
                 this._components.push(component);
                 this._tempBufferList.push(component);
@@ -130,6 +140,7 @@ module es {
 
              // 在调用onAddedToEntity之前清除，以防添加更多组件
              this._componentsToAdd = {};
+             this.fastComponentsToAddMap.clear();
              this._isComponentListUnsorted = true;
 
              // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
@@ -157,6 +168,35 @@ module es {
             component.entity = null;
         }
 
+        private removeFastComponent(component: Component) {
+            let fastList = this.fastComponentsMap.get(TypeUtils.getType(component));
+            let fastIndex = fastList.findIndex(c => c.id == component.id);
+            if (fastIndex != -1)
+                fastList.splice(fastIndex, 1);
+        }
+
+        private addFastComponent(component: Component) {
+            let fastList = this.fastComponentsMap.get(TypeUtils.getType(component));
+            if (!fastList)
+                fastList = [];
+            fastList.push(component);
+            this.fastComponentsMap.set(TypeUtils.getType(component), fastList);
+        }
+
+        private removeFastComponentToAdd(component: Component) {
+            let fastList = this.fastComponentsToAddMap.get(TypeUtils.getType(component));
+            let fastIndex = fastList.findIndex(c => c.id == component.id);
+            if (fastIndex != -1)
+                fastList.splice(fastIndex, 1);
+        }
+
+        private addFastComponentToAdd(component: Component) {
+            let fastList = this.fastComponentsToAddMap.get(TypeUtils.getType(component));
+            if (!fastList)
+                fastList = [];
+            fastList.push(component);
+            this.fastComponentsToAddMap.set(TypeUtils.getType(component), fastList);
+        }
 
         /**
          * 获取类型T的第一个组件并返回它
@@ -166,18 +206,15 @@ module es {
          * @param onlyReturnInitializedComponents
          */
         public getComponent<T extends Component>(type, onlyReturnInitializedComponents: boolean): T {
-            for (let component of this._components) {
-                if (component instanceof type)
-                    return component as T;
-            }
+            let fastList = this.fastComponentsMap.get(type);
+            if (fastList && fastList.length > 0)
+                return fastList[0] as T;
 
             // 我们可以选择检查挂起的组件，以防addComponent和getComponent在同一个框架中被调用
             if (!onlyReturnInitializedComponents) {
-                for (let i in this._componentsToAdd) {
-                    let component = this._componentsToAdd[i];
-                    if (component instanceof type)
-                        return component as T;
-                }
+                let fastToAddList = this.fastComponentsToAddMap.get(type);
+                if (fastToAddList && fastToAddList.length > 0)
+                    return fastToAddList[0] as T;
             }
 
             return null;
@@ -188,23 +225,17 @@ module es {
          * @param typeName
          * @param components
          */
-        public getComponents(typeName: any, components?) {
+        public getComponents(typeName: any, components?: any[]) {
             if (!components)
                 components = [];
 
-            for (let component of this._components) {
-                if (component instanceof typeName) {
-                    components.push(component);
-                }
-            }
+            let fastList = this.fastComponentsMap.get(typeName);
+            if (fastList)
+                components.concat(fastList);
 
-            // 我们还检查了待处理的组件，以防在同一帧中调用addComponent和getComponent
-            for (let i in this._componentsToAdd) {
-                let component = this._componentsToAdd[i];
-                if (component instanceof typeName) {
-                    components.push(component);
-                }
-            }
+            let fastToAddList = this.fastComponentsToAddMap.get(typeName);
+            if (fastToAddList)
+                components.concat(fastToAddList);
 
             return components;
         }

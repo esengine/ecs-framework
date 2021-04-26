@@ -1470,6 +1470,9 @@ var es;
         Scene.prototype.findEntity = function (name) {
             return this.entities.findEntity(name);
         };
+        Scene.prototype.findEntityById = function (id) {
+            return this.entities.findEntityById(id);
+        };
         /**
          * 返回具有给定标记的所有实体
          * @param tag
@@ -3078,14 +3081,14 @@ var es;
         }
         SystemIndexManager.getIndexFor = function (es) {
             var index = SystemIndexManager.indices.get(es);
-            if (index === undefined) {
+            if (!index) {
                 index = SystemIndexManager.INDEX++;
-                SystemIndexManager.indices.put(es, index);
+                SystemIndexManager.indices.set(es, index);
             }
             return index;
         };
         SystemIndexManager.INDEX = 0;
-        SystemIndexManager.indices = new es_1.HashMap();
+        SystemIndexManager.indices = new Map();
         return SystemIndexManager;
     }());
     es_1.SystemIndexManager = SystemIndexManager;
@@ -3134,7 +3137,7 @@ var es;
         EntitySystem.prototype.initialize = function () {
         };
         EntitySystem.prototype.onChanged = function (entity) {
-            var contains = new es.List(this._entities).contains(entity);
+            var contains = entity.getSystemBits().get(this.systemIndex_);
             var interest = this._matcher.isInterestedEntity(entity);
             if (interest && !contains)
                 this.add(entity);
@@ -3143,11 +3146,13 @@ var es;
         };
         EntitySystem.prototype.add = function (entity) {
             this._entities.push(entity);
+            entity.getSystemBits().set(this.systemIndex_);
             this.onAdded(entity);
         };
         EntitySystem.prototype.onAdded = function (entity) { };
         EntitySystem.prototype.remove = function (entity) {
             new es.List(this._entities).remove(entity);
+            entity.getSystemBits().clear(this.systemIndex_);
             this.onRemoved(entity);
         };
         EntitySystem.prototype.onRemoved = function (entity) { };
@@ -4008,6 +4013,9 @@ var es;
              * 添加到实体的组件列表
              */
             this._components = [];
+            /** 记录component的快速读取列表 */
+            this.fastComponentsMap = new Map();
+            this.fastComponentsToAddMap = new Map();
             /**
              * 所有需要更新的组件列表
              */
@@ -4042,6 +4050,7 @@ var es;
         };
         ComponentList.prototype.add = function (component) {
             this._componentsToAdd[component.id] = component;
+            this.addFastComponentToAdd(component);
         };
         ComponentList.prototype.remove = function (component) {
             es.Debug.warnIf(!!this._componentsToRemove[component.id], "\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u4E00\u4E2A\u60A8\u5DF2\u7ECF\u5220\u9664\u7684\u7EC4\u4EF6(" + component + ")");
@@ -4049,6 +4058,7 @@ var es;
             // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
             if (this._componentsToAdd[component.id]) {
                 delete this._componentsToAdd[component.id];
+                this.removeFastComponentToAdd(component);
                 return;
             }
             this._componentsToRemove[component.id] = component;
@@ -4060,6 +4070,8 @@ var es;
             for (var i = 0; i < this._components.length; i++) {
                 this.handleRemove(this._components[i]);
             }
+            this.fastComponentsMap.clear();
+            this.fastComponentsToAddMap.clear();
             this._components.length = 0;
             this._updatableComponents.length = 0;
             this._componentsToAdd = {};
@@ -4114,11 +4126,13 @@ var es;
                 var component = this._componentsToRemove[i];
                 this.handleRemove(component);
                 for (var index = 0; index < this._components.length; index++) {
-                    if (this._components[index].id == component.id) {
+                    var searchComponent = this._components[index];
+                    if (searchComponent.id == component.id) {
                         this._components.splice(index, 1);
                         break;
                     }
                 }
+                this.removeFastComponent(component);
             }
             this._componentsToRemove = {};
             for (var i in this._componentsToAdd) {
@@ -4127,11 +4141,13 @@ var es;
                     this._updatableComponents.push(component);
                 this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                this.addFastComponent(component);
                 this._components.push(component);
                 this._tempBufferList.push(component);
             }
             // 在调用onAddedToEntity之前清除，以防添加更多组件
             this._componentsToAdd = {};
+            this.fastComponentsToAddMap.clear();
             this._isComponentListUnsorted = true;
             // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
             for (var i = 0; i < this._tempBufferList.length; i++) {
@@ -4152,6 +4168,32 @@ var es;
             component.onRemovedFromEntity();
             component.entity = null;
         };
+        ComponentList.prototype.removeFastComponent = function (component) {
+            var fastList = this.fastComponentsMap.get(es.TypeUtils.getType(component));
+            var fastIndex = fastList.findIndex(function (c) { return c.id == component.id; });
+            if (fastIndex != -1)
+                fastList.splice(fastIndex, 1);
+        };
+        ComponentList.prototype.addFastComponent = function (component) {
+            var fastList = this.fastComponentsMap.get(es.TypeUtils.getType(component));
+            if (!fastList)
+                fastList = [];
+            fastList.push(component);
+            this.fastComponentsMap.set(es.TypeUtils.getType(component), fastList);
+        };
+        ComponentList.prototype.removeFastComponentToAdd = function (component) {
+            var fastList = this.fastComponentsToAddMap.get(es.TypeUtils.getType(component));
+            var fastIndex = fastList.findIndex(function (c) { return c.id == component.id; });
+            if (fastIndex != -1)
+                fastList.splice(fastIndex, 1);
+        };
+        ComponentList.prototype.addFastComponentToAdd = function (component) {
+            var fastList = this.fastComponentsToAddMap.get(es.TypeUtils.getType(component));
+            if (!fastList)
+                fastList = [];
+            fastList.push(component);
+            this.fastComponentsToAddMap.set(es.TypeUtils.getType(component), fastList);
+        };
         /**
          * 获取类型T的第一个组件并返回它
          * 可以选择跳过检查未初始化的组件(尚未调用onAddedToEntity方法的组件)
@@ -4160,28 +4202,23 @@ var es;
          * @param onlyReturnInitializedComponents
          */
         ComponentList.prototype.getComponent = function (type, onlyReturnInitializedComponents) {
-            var e_8, _a;
-            try {
-                for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
-                    var component = _c.value;
-                    if (component instanceof type)
-                        return component;
-                }
-            }
-            catch (e_8_1) { e_8 = { error: e_8_1 }; }
-            finally {
-                try {
-                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
-                }
-                finally { if (e_8) throw e_8.error; }
-            }
+            // for (let component of this._components) {
+            //     if (component instanceof type)
+            //         return component as T;
+            // }
+            var fastList = this.fastComponentsMap.get(type);
+            if (fastList && fastList.length > 0)
+                return fastList[0];
             // 我们可以选择检查挂起的组件，以防addComponent和getComponent在同一个框架中被调用
             if (!onlyReturnInitializedComponents) {
-                for (var i in this._componentsToAdd) {
-                    var component = this._componentsToAdd[i];
-                    if (component instanceof type)
-                        return component;
-                }
+                // for (let i in this._componentsToAdd) {
+                //     let component = this._componentsToAdd[i];
+                //     if (component instanceof type)
+                //         return component as T;
+                // }
+                var fastToAddList = this.fastComponentsToAddMap.get(type);
+                if (fastToAddList && fastToAddList.length > 0)
+                    return fastToAddList[0];
             }
             return null;
         };
@@ -4191,31 +4228,26 @@ var es;
          * @param components
          */
         ComponentList.prototype.getComponents = function (typeName, components) {
-            var e_9, _a;
             if (!components)
                 components = [];
-            try {
-                for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
-                    var component = _c.value;
-                    if (component instanceof typeName) {
-                        components.push(component);
-                    }
-                }
-            }
-            catch (e_9_1) { e_9 = { error: e_9_1 }; }
-            finally {
-                try {
-                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
-                }
-                finally { if (e_9) throw e_9.error; }
-            }
+            // for (let component of this._components) {
+            //     if (component instanceof typeName) {
+            //         components.push(component);
+            //     }
+            // }
+            var fastList = this.fastComponentsMap.get(typeName);
+            if (fastList)
+                components.concat(fastList);
             // 我们还检查了待处理的组件，以防在同一帧中调用addComponent和getComponent
-            for (var i in this._componentsToAdd) {
-                var component = this._componentsToAdd[i];
-                if (component instanceof typeName) {
-                    components.push(component);
-                }
-            }
+            // for (let i in this._componentsToAdd) {
+            //     let component = this._componentsToAdd[i];
+            //     if (component instanceof typeName) {
+            //         components.push(component);
+            //     }
+            // }
+            var fastToAddList = this.fastComponentsToAddMap.get(typeName);
+            if (fastToAddList)
+                components.concat(fastToAddList);
             return components;
         };
         ComponentList.prototype.update = function () {
@@ -4412,7 +4444,7 @@ var es;
                 list.delete(entity);
         };
         EntityList.prototype.update = function () {
-            var e_10, _a;
+            var e_8, _a;
             try {
                 for (var _b = __values(this._entities), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var entity = _c.value;
@@ -4420,12 +4452,12 @@ var es;
                         entity.update();
                 }
             }
-            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+            catch (e_8_1) { e_8 = { error: e_8_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_10) throw e_10.error; }
+                finally { if (e_8) throw e_8.error; }
             }
         };
         EntityList.prototype.updateLists = function () {
@@ -4450,11 +4482,6 @@ var es;
                 this._entitiesToAdded[i].onAddedToScene();
             }
             this._entitiesToAdded = {};
-            // this._isEntityListUnsorted = true;
-            // if (this._isEntityListUnsorted) {
-            //     this._entities.sort(Entity.entityComparer.compare);
-            //     this._isEntityListUnsorted = false;
-            // }
         };
         /**
          * 返回第一个找到的名字为name的实体。如果没有找到则返回null
@@ -4465,11 +4492,6 @@ var es;
                 if (this._entities[i].name == name)
                     return this._entities[i];
             }
-            // for (let i = 0; i < this._entitiesToAdded.size; i++) {
-            //     let entity = this._entitiesToAdded.values;
-            //     if (entity.name == name)
-            //         return entity;
-            // }
             for (var i in this._entitiesToAdded) {
                 var entity = this._entitiesToAdded[i];
                 if (entity.name == name)
@@ -4478,12 +4500,24 @@ var es;
             return null;
         };
         /**
+         *
+         * @param id
+         * @returns
+         */
+        EntityList.prototype.findEntityById = function (id) {
+            for (var i = 0; i < this._entities.length; i++) {
+                if (this._entities[i].id == id)
+                    return this._entities[i];
+            }
+            return this._entitiesToAdded[id];
+        };
+        /**
          * 返回带有标签的所有实体的列表。如果没有实体有标签，则返回一个空列表。
          * 返回的List可以通过ListPool.free放回池中
          * @param tag
          */
         EntityList.prototype.entitiesWithTag = function (tag) {
-            var e_11, _a;
+            var e_9, _a;
             var list = this.getTagList(tag);
             var returnList = es.ListPool.obtain();
             try {
@@ -4492,12 +4526,12 @@ var es;
                     returnList.push(entity);
                 }
             }
-            catch (e_11_1) { e_11 = { error: e_11_1 }; }
+            catch (e_9_1) { e_9 = { error: e_9_1 }; }
             finally {
                 try {
                     if (list_1_1 && !list_1_1.done && (_a = list_1.return)) _a.call(list_1);
                 }
-                finally { if (e_11) throw e_11.error; }
+                finally { if (e_9) throw e_9.error; }
             }
             return returnList;
         };
@@ -4507,7 +4541,7 @@ var es;
          * @returns
          */
         EntityList.prototype.entityWithTag = function (tag) {
-            var e_12, _a;
+            var e_10, _a;
             var list = this.getTagList(tag);
             try {
                 for (var list_2 = __values(list), list_2_1 = list_2.next(); !list_2_1.done; list_2_1 = list_2.next()) {
@@ -4515,12 +4549,12 @@ var es;
                     return entity;
                 }
             }
-            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            catch (e_10_1) { e_10 = { error: e_10_1 }; }
             finally {
                 try {
                     if (list_2_1 && !list_2_1.done && (_a = list_2.return)) _a.call(list_2);
                 }
-                finally { if (e_12) throw e_12.error; }
+                finally { if (e_10) throw e_10.error; }
             }
             return null;
         };
@@ -4587,7 +4621,7 @@ var es;
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var e_13, _a, e_14, _b;
+            var e_11, _a, e_12, _b;
             var entities = [];
             for (var i = 0; i < this._entities.length; i++) {
                 if (this._entities[i].enabled) {
@@ -4602,12 +4636,12 @@ var es;
                             }
                         }
                     }
-                    catch (e_13_1) { e_13 = { error: e_13_1 }; }
+                    catch (e_11_1) { e_11 = { error: e_11_1 }; }
                     finally {
                         try {
                             if (types_1_1 && !types_1_1.done && (_a = types_1.return)) _a.call(types_1);
                         }
-                        finally { if (e_13) throw e_13.error; }
+                        finally { if (e_11) throw e_11.error; }
                     }
                     if (meet) {
                         entities.push(this._entities[i]);
@@ -4644,12 +4678,12 @@ var es;
                             }
                         }
                     }
-                    catch (e_14_1) { e_14 = { error: e_14_1 }; }
+                    catch (e_12_1) { e_12 = { error: e_12_1 }; }
                     finally {
                         try {
                             if (types_2_1 && !types_2_1.done && (_b = types_2.return)) _b.call(types_2);
                         }
-                        finally { if (e_14) throw e_14.error; }
+                        finally { if (e_12) throw e_12.error; }
                     }
                     if (meet) {
                         entities.push(entity);
@@ -7567,7 +7601,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
-            var e_15, _a;
+            var e_13, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location;
             var resultCounter = 0;
@@ -7598,12 +7632,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_15) throw e_15.error; }
+                finally { if (e_13) throw e_13.error; }
             }
             return resultCounter;
         };
@@ -7615,7 +7649,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_16, _a;
+            var e_14, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -7648,12 +7682,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_16) throw e_16.error; }
+                finally { if (e_14) throw e_14.error; }
             }
             return resultCounter;
         };
@@ -12234,7 +12268,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_17, _a;
+            var e_15, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -12242,12 +12276,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_17_1) { e_17 = { error: e_17_1 }; }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_17) throw e_17.error; }
+                finally { if (e_15) throw e_15.error; }
             }
             return result;
         };
@@ -12496,7 +12530,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_18, _a;
+            var e_16, _a;
             var output = es.ListPool.obtain();
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -12535,12 +12569,12 @@ var es;
                         }
                     }
                 }
-                catch (e_18_1) { e_18 = { error: e_18_1 }; }
+                catch (e_16_1) { e_16 = { error: e_16_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_18) throw e_18.error; }
+                    finally { if (e_16) throw e_16.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -12656,7 +12690,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_19, _a;
+            var e_17, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -12674,12 +12708,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_19_1) { e_19 = { error: e_19_1 }; }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_19) throw e_19.error; }
+                finally { if (e_17) throw e_17.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。
