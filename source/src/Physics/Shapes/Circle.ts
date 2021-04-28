@@ -10,7 +10,7 @@ module es {
             this._originalRadius = radius;
         }
 
-        public recalculateBounds(collider: es.Collider) {
+        public recalculateBounds(collider: Collider) {
             // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心
             this.center = collider.localOffset;
 
@@ -42,41 +42,41 @@ module es {
                 return Collisions.circleToCircle(this.position, this.radius, other.position, (other as Circle).radius);
 
             if (other instanceof Polygon)
-                return ShapeCollisions.circleToPolygon(this, other, result);
+                return ShapeCollisionsCircle.circleToPolygon(this, other, result);
 
             throw new Error(`overlaps of circle to ${other} are not supported`);
         }
 
         public collidesWithShape(other: Shape, result: CollisionResult): boolean {
             if (other instanceof Box && (other as Box).isUnrotated) {
-                return ShapeCollisions.circleToBox(this, other, result);
+                return ShapeCollisionsCircle.circleToBox(this, other, result);
             }
 
             if (other instanceof Circle) {
-                return ShapeCollisions.circleToCircle(this, other, result);
+                return ShapeCollisionsCircle.circleToCircle(this, other, result);
             }
 
             if (other instanceof Polygon) {
-                return ShapeCollisions.circleToPolygon(this, other, result);
+                return ShapeCollisionsCircle.circleToPolygon(this, other, result);
             }
 
             throw new Error(`Collisions of Circle to ${other} are not supported`);
         }
 
-        public collidesWithLine(start: es.Vector2, end: es.Vector2, hit: es.RaycastHit): boolean {
-            return ShapeCollisions.lineToCircle(start, end, this, hit);
+        public collidesWithLine(start: Vector2, end: Vector2, hit: RaycastHit): boolean {
+            return ShapeCollisionsLine.lineToCircle(start, end, this, hit);
         }
 
         /**
          * 获取所提供的点是否在此范围内
          * @param point
          */
-        public containsPoint(point: es.Vector2) {
+        public containsPoint(point: Vector2) {
             return (Vector2.subtract(point, this.position)).lengthSquared() <= this.radius * this.radius;
         }
 
         public pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean {
-            return ShapeCollisions.pointToCircle(point, this, result);
+            return ShapeCollisionsPoint.pointToCircle(point, this, result);
         }
     }
 }

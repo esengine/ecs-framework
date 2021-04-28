@@ -172,7 +172,7 @@ module es {
                 if (j == points.length)
                     j = 0;
 
-                let closest = ShapeCollisions.closestPointOnLine(points[i], points[j], point);
+                let closest = ShapeCollisionsCircle.closestPointOnLine(points[i], points[j], point);
                 tempDistanceSquared = Vector2.distanceSquared(point, closest);
 
                 if (tempDistanceSquared < distanceSquared.value) {
@@ -259,10 +259,10 @@ module es {
         public overlaps(other: Shape) {
             let result: CollisionResult = new CollisionResult();
             if (other instanceof Polygon)
-                return ShapeCollisions.polygonToPolygon(this, other, result);
+                return ShapeCollisionsPolygon.polygonToPolygon(this, other, result);
 
             if (other instanceof Circle) {
-                if (ShapeCollisions.circleToPolygon(other, this, result)) {
+                if (ShapeCollisionsCircle.circleToPolygon(other, this, result)) {
                     result.invertResult();
                     return true;
                 }
@@ -275,11 +275,11 @@ module es {
 
         public collidesWithShape(other: Shape, result: CollisionResult): boolean {
             if (other instanceof Polygon) {
-                return ShapeCollisions.polygonToPolygon(this, other, result);
+                return ShapeCollisionsPolygon.polygonToPolygon(this, other, result);
             }
 
             if (other instanceof Circle) {
-                if (ShapeCollisions.circleToPolygon(other, this, result)) {
+                if (ShapeCollisionsCircle.circleToPolygon(other, this, result)) {
                     result.invertResult();
                     return true;
                 }
@@ -291,7 +291,7 @@ module es {
         }
 
         public collidesWithLine(start: es.Vector2, end: es.Vector2, hit: es.RaycastHit): boolean {
-            return ShapeCollisions.lineToPoly(start, end, this, hit);
+            return ShapeCollisionsLine.lineToPoly(start, end, this, hit);
         }
 
         /**
@@ -316,7 +316,7 @@ module es {
         }
 
         public pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean {
-            return ShapeCollisions.pointToPoly(point, this, result);
+            return ShapeCollisionsPoint.pointToPoly(point, this, result);
         }
     }
 }

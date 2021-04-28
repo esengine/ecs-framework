@@ -3293,15 +3293,15 @@ declare module es {
         radius: number;
         _originalRadius: number;
         constructor(radius: number);
-        recalculateBounds(collider: es.Collider): void;
+        recalculateBounds(collider: Collider): void;
         overlaps(other: Shape): any;
         collidesWithShape(other: Shape, result: CollisionResult): boolean;
-        collidesWithLine(start: es.Vector2, end: es.Vector2, hit: es.RaycastHit): boolean;
+        collidesWithLine(start: Vector2, end: Vector2, hit: RaycastHit): boolean;
         /**
          * 获取所提供的点是否在此范围内
          * @param point
          */
-        containsPoint(point: es.Vector2): boolean;
+        containsPoint(point: Vector2): boolean;
         pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
     }
 }
@@ -3351,12 +3351,49 @@ declare module es {
     }
 }
 declare module es {
-    /**
-     * 各种形状的碰撞例程
-     * 大多数人都希望第一个形状位于第二个形状的空间内(即shape1)
-     * pos应该设置为shape1。pos - shape2.pos)。
-     */
-    class ShapeCollisions {
+    class ShapeCollisionsBox {
+        static boxToBox(first: Box, second: Box, result: CollisionResult): boolean;
+        /**
+         * 用second检查被deltaMovement移动的框的结果
+         * @param first
+         * @param second
+         * @param movement
+         * @param hit
+         */
+        static boxToBoxCast(first: Box, second: Box, movement: Vector2, hit: RaycastHit): boolean;
+        private static minkowskiDifference;
+    }
+}
+declare module es {
+    class ShapeCollisionsCircle {
+        static circleToCircle(first: Circle, second: Circle, result?: CollisionResult): boolean;
+        /**
+         * 适用于中心在框内的圆，也适用于与框外中心重合的圆。
+         * @param circle
+         * @param box
+         * @param result
+         */
+        static circleToBox(circle: Circle, box: Box, result?: CollisionResult): boolean;
+        static circleToPolygon(circle: Circle, polygon: Polygon, result?: CollisionResult): boolean;
+        static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
+    }
+}
+declare module es {
+    class ShapeCollisionsLine {
+        static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit?: RaycastHit): boolean;
+        static lineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2, intersection: Vector2): boolean;
+        static lineToCircle(start: Vector2, end: Vector2, s: Circle, hit: RaycastHit): boolean;
+    }
+}
+declare module es {
+    class ShapeCollisionsPoint {
+        static pointToCircle(point: Vector2, circle: Circle, result: CollisionResult): boolean;
+        static pointToBox(point: Vector2, box: Box, result?: CollisionResult): boolean;
+        static pointToPoly(point: Vector2, poly: Polygon, result?: CollisionResult): boolean;
+    }
+}
+declare module es {
+    class ShapeCollisionsPolygon {
         /**
          * 检查两个多边形之间的碰撞
          * @param first
@@ -3364,14 +3401,6 @@ declare module es {
          * @param result
          */
         static polygonToPolygon(first: Polygon, second: Polygon, result: CollisionResult): boolean;
-        /**
-         * 计算[minA, maxA]和[minB, maxB]之间的距离。如果间隔重叠，距离是负的
-         * @param minA
-         * @param maxA
-         * @param minB
-         * @param maxB
-         */
-        static intervalDistance(minA: number, maxA: number, minB: number, maxB: any): number;
         /**
          * 计算一个多边形在一个轴上的投影，并返回一个[min，max]区间
          * @param axis
@@ -3381,67 +3410,13 @@ declare module es {
          */
         static getInterval(axis: Vector2, polygon: Polygon, min: Ref<number>, max: Ref<number>): void;
         /**
-         *
-         * @param circle
-         * @param polygon
-         * @param result
+         * 计算[minA, maxA]和[minB, maxB]之间的距离。如果间隔重叠，距离是负的
+         * @param minA
+         * @param maxA
+         * @param minB
+         * @param maxB
          */
-        static circleToPolygon(circle: Circle, polygon: Polygon, result?: CollisionResult): boolean;
-        /**
-         * 适用于中心在框内的圆，也适用于与框外中心重合的圆。
-         * @param circle
-         * @param box
-         * @param result
-         */
-        static circleToBox(circle: Circle, box: Box, result?: CollisionResult): boolean;
-        /**
-         *
-         * @param point
-         * @param circle
-         * @param result
-         */
-        static pointToCircle(point: Vector2, circle: Circle, result: CollisionResult): boolean;
-        static pointToBox(point: Vector2, box: Box, result: CollisionResult): boolean;
-        /**
-         *
-         * @param lineA
-         * @param lineB
-         * @param closestTo
-         */
-        static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
-        /**
-         *
-         * @param point
-         * @param poly
-         * @param result
-         */
-        static pointToPoly(point: Vector2, poly: Polygon, result: CollisionResult): boolean;
-        /**
-         *
-         * @param first
-         * @param second
-         * @param result
-         */
-        static circleToCircle(first: Circle, second: Circle, result?: CollisionResult): boolean;
-        /**
-         *
-         * @param first
-         * @param second
-         * @param result
-         */
-        static boxToBox(first: Box, second: Box, result: CollisionResult): boolean;
-        private static minkowskiDifference;
-        static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit?: RaycastHit): boolean;
-        static lineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2, intersection: Vector2): boolean;
-        static lineToCircle(start: Vector2, end: Vector2, s: Circle, hit: RaycastHit): boolean;
-        /**
-         * 用second检查被deltaMovement移动的框的结果
-         * @param first
-         * @param second
-         * @param movement
-         * @param hit
-         */
-        static boxToBoxCast(first: Box, second: Box, movement: Vector2, hit: RaycastHit): boolean;
+        static intervalDistance(minA: number, maxA: number, minB: number, maxB: any): number;
     }
 }
 declare module es {
