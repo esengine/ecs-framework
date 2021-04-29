@@ -2342,8 +2342,10 @@ declare module es {
          * @param rightMax
          */
         static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number;
-        static lerp(value1: number, value2: number, amount: number): number;
+        static lerp(from: number, to: number, t: number): number;
+        static inverseLerp(from: number, to: number, t: number): number;
         static clamp(value: number, min: number, max: number): number;
+        static snap(value: number, increment: number): number;
         /**
          * 给定圆心、半径和角度，得到圆周上的一个点。0度是3点钟。
          * @param circleCenter

@@ -231,11 +231,11 @@ module es {
 
             let fastList = this.fastComponentsMap.get(typeName);
             if (fastList)
-                components.concat(fastList);
+                components = components.concat(fastList);
 
             let fastToAddList = this.fastComponentsToAddMap.get(typeName);
             if (fastToAddList)
-                components.concat(fastToAddList);
+                components =components.concat(fastToAddList);
 
             return components;
         }

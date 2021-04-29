@@ -4223,10 +4223,10 @@ var es;
                 components = [];
             var fastList = this.fastComponentsMap.get(typeName);
             if (fastList)
-                components.concat(fastList);
+                components = components.concat(fastList);
             var fastToAddList = this.fastComponentsToAddMap.get(typeName);
             if (fastToAddList)
-                components.concat(fastToAddList);
+                components = components.concat(fastToAddList);
             return components;
         };
         ComponentList.prototype.update = function () {
@@ -5741,8 +5741,23 @@ var es;
         MathHelper.map = function (value, leftMin, leftMax, rightMin, rightMax) {
             return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
         };
-        MathHelper.lerp = function (value1, value2, amount) {
-            return value1 + (value2 - value1) * amount;
+        MathHelper.lerp = function (from, to, t) {
+            return from + (to - from) * this.clamp01(t);
+        };
+        MathHelper.inverseLerp = function (from, to, t) {
+            if (from < to) {
+                if (t < from)
+                    return 0;
+                else if (t > to)
+                    return 1;
+            }
+            else {
+                if (t < to)
+                    return 1;
+                else if (t > from)
+                    return 0;
+            }
+            return (t - from) / (to - from);
         };
         MathHelper.clamp = function (value, min, max) {
             if (value < min)
@@ -5750,6 +5765,9 @@ var es;
             if (value > max)
                 return max;
             return value;
+        };
+        MathHelper.snap = function (value, increment) {
+            return Math.round(value / increment) * increment;
         };
         /**
          * 给定圆心、半径和角度，得到圆周上的一个点。0度是3点钟。

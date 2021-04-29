@@ -36,8 +36,24 @@ module es {
             return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
         }
 
-        public static lerp(value1: number, value2: number, amount: number) {
-            return value1 + (value2 - value1) * amount;
+        public static lerp(from: number, to: number, t: number) {
+            return from + (to - from) * this.clamp01(t);
+        }
+
+        public static inverseLerp(from: number, to: number, t: number) {
+            if (from < to) {
+                if (t < from)
+                    return 0;
+                else if(t > to)
+                    return 1;
+            } else {
+                if (t < to)
+                    return 1;
+                else if(t > from)
+                    return 0;
+            }
+
+            return (t - from) / (to - from);
         }
 
         public static clamp(value: number, min: number, max: number) {
@@ -48,6 +64,10 @@ module es {
                 return max;
 
             return value;
+        }
+
+        public static snap(value: number, increment: number) {
+            return Math.round(value / increment) * increment;
         }
 
         /**
@@ -157,5 +177,6 @@ module es {
         public static repeat(t: number, length: number) {
             return t - Math.floor(t / length) * length;
         }
+
     }
 }
