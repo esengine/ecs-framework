@@ -2343,6 +2343,37 @@ declare module es {
          */
         static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number;
         static lerp(from: number, to: number, t: number): number;
+        /**
+         * 使度数的角度在a和b之间
+         * 用于处理360度环绕
+         * @param a
+         * @param b
+         * @param t
+         * @returns
+         */
+        static lerpAngle(a: number, b: number, t: number): number;
+        /**
+         * 使弧度的角度在a和b之间
+         * @param a
+         * @param b
+         * @param t
+         * @returns
+         */
+        static lerpAngleRadians(a: number, b: number, t: number): number;
+        /**
+         * 循环t使其不大于长度且不小于0
+         * @param t
+         * @param length
+         * @returns
+         */
+        static pingPong(t: number, length: number): number;
+        /**
+         * 如果value> = threshold返回其符号，否则返回0
+         * @param value
+         * @param threshold
+         * @returns
+         */
+        static signThreshold(value: number, threshold: number): number;
         static inverseLerp(from: number, to: number, t: number): number;
         static clamp(value: number, min: number, max: number): number;
         static snap(value: number, increment: number): number;
@@ -2391,17 +2422,106 @@ declare module es {
          */
         static approach(start: number, end: number, shift: number): number;
         /**
+         * 通过偏移量钳位结果并选择最短路径，将起始角度向终止角度移动，起始值可以小于或大于终止值。
+         * 示例1：开始是30，结束是100，移位是25，结果为55
+         * 示例2：开始是340，结束是30，移位是25，结果是5（365换为5）
+         * @param start
+         * @param end
+         * @param shift
+         * @returns
+         */
+        static approachAngle(start: number, end: number, shift: number): number;
+        /**
+         * 通过将偏移量（全部以弧度为单位）夹住结果并选择最短路径，起始角度朝向终止角度。
+         * 起始值可以小于或大于终止值。
+         * 此方法的工作方式与“角度”方法非常相似，唯一的区别是使用弧度代替度，并以2 * Pi代替360。
+         * @param start
+         * @param end
+         * @param shift
+         * @returns
+         */
+        static approachAngleRadians(start: number, end: number, shift: number): number;
+        /**
+         * 使用可接受的检查公差检查两个值是否大致相同
+         * @param value1
+         * @param value2
+         * @param tolerance
+         * @returns
+         */
+        static approximately(value1: number, value2: number, tolerance?: number): boolean;
+        /**
          * 计算两个给定角之间的最短差值（度数）
          * @param current
          * @param target
          */
         static deltaAngle(current: number, target: number): number;
         /**
+         * 计算以弧度为单位的两个给定角度之间的最短差
+         * @param current
+         * @param target
+         * @returns
+         */
+        static deltaAngleRadians(current: number, target: number): number;
+        /**
          * 循环t，使其永远不大于长度，永远不小于0
          * @param t
          * @param length
          */
         static repeat(t: number, length: number): number;
+        /**
+         * 将值绕一圈移动的助手
+         * @param position
+         * @param speed
+         * @returns
+         */
+        static rotateAround(position: Vector2, speed: number): Vector2;
+        /**
+         * 旋转是相对于当前位置而不是总旋转。
+         * 例如，如果您当前处于90度并且想要旋转到135度，则可以使用45度而不是135度的角度
+         * @param point
+         * @param center
+         * @param angleIndegrees
+         */
+        static rotateAround2(point: Vector2, center: Vector2, angleIndegrees: number): Vector2;
+        /**
+         * 根据圆的中心，半径和角度在圆的圆周上得到一个点。 0度是3点钟方向
+         * @param circleCenter
+         * @param radius
+         * @param angleInDegrees
+         */
+        static pointOnCircle(circleCenter: Vector2, radius: number, angleInDegrees: number): Vector2;
+        /**
+         * 根据圆的中心，半径和角度在圆的圆周上得到一个点。 0弧度是3点钟方向
+         * @param circleCenter
+         * @param radius
+         * @param angleInRadians
+         * @returns
+         */
+        static pointOnCircleRadians(circleCenter: Vector2, radius: number, angleInRadians: number): Vector2;
+        /**
+         * lissajou曲线
+         * @param xFrequency
+         * @param yFrequency
+         * @param xMagnitude
+         * @param yMagnitude
+         * @param phase
+         * @returns
+         */
+        static lissajou(xFrequency?: number, yFrequency?: number, xMagnitude?: number, yMagnitude?: number, phase?: number): Vector2;
+        /**
+         * lissajou曲线的阻尼形式，其振荡随时间在0和最大幅度之间。
+         * 为获得最佳效果，阻尼应在0到1之间。
+         * 振荡间隔是动画循环的一半完成的时间（以秒为单位）。
+         * @param xFrequency
+         * @param yFrequency
+         * @param xMagnitude
+         * @param yMagnitude
+         * @param phase
+         * @param damping
+         * @param oscillationInterval
+         * @returns
+         */
+        static lissajouDamped(xFrequency?: number, yFrequency?: number, xMagnitude?: number, yMagnitude?: number, phase?: number, damping?: number, oscillationInterval?: number): Vector2;
     }
 }
 declare module es {
