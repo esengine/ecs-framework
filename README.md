@@ -101,6 +101,7 @@ class MoveSystem extends es.EntityProcessingSystem {
 
 ```typescript
 // 这里你可以传入多个组件类型
+// one 满足
 const matcher = Matcher.empty().all(MovementComponent);
 ```
 
@@ -161,8 +162,8 @@ if( hit.Collider != null )
 // 碰撞结果将包含一些非常有用的信息，例如被撞的collider，表面命中的法线和最小平移矢量（MTV）。 MTV可用于将碰撞实体直接移动到命中的碰撞器附近。 
 let collisionResult = null;
 
-// 进行检查以查看entity.getComponent<Collider>（实体上的第一个碰撞器）是否与场景中的任何其他碰撞器发生碰撞。请注意，如果您有多个碰撞器，则可以获取并遍历它们，而不是仅检查第一个碰撞器。 
-if( entity.getComponent<Collider>().collidesWithAny( deltaMovement, collisionResult ) )
+// 进行检查以查看entity.getComponent(Collider)（实体上的第一个碰撞器）是否与场景中的任何其他碰撞器发生碰撞。请注意，如果您有多个碰撞器，则可以获取并遍历它们，而不是仅检查第一个碰撞器。 
+if( entity.getComponent(Collider).collidesWithAny( deltaMovement, collisionResult ) )
 {
 	// 记录CollisionResult。 您可能需要使用它来添加一些粒子效果或与您的游戏相关的任何其他内容。
 	console.log( `collision result: ${collisionResult}` );
@@ -178,7 +179,7 @@ entity.position = Vector2.add(entity.position, deltaMovement);
 let collisionResult = null;
 
 // 进行检查以查看entity.getComponent<Collider>是否与一些其他Collider发生碰撞 
-if( entity.getComponent<Collider>().collidesWith( someOtherCollider, deltaMovement, collisionResult ) )
+if( entity.getComponent(Collider).collidesWith( someOtherCollider, deltaMovement, collisionResult ) )
 {
 	// 将实体移动到与命中Collider相邻的位置，然后记录CollisionResult 
 	entity.position = Vector2.add(entity.position, Vector2.substract(deltaMovement, collisionResult.minimumTranslationVector));
@@ -189,12 +190,12 @@ if( entity.getComponent<Collider>().collidesWith( someOtherCollider, deltaMoveme
 
 ```ts
 // 在我们自身以外的位置获取可能与之重叠的任何东西
-let neighborColliders = Physics.boxcastBroadphaseExcludingSelf( entity.getComponent<Collider>() );
+let neighborColliders = Physics.boxcastBroadphaseExcludingSelf( entity.getComponent(Collider) );
 
 // 遍历并检查每个对撞机是否重叠 
 for( let collider of neighborColliders )
 {
-	if( entity.getComponent<Collider>().overlaps( collider ) )
+	if( entity.getComponent(Collider).overlaps( collider ) )
 		console.log( `我们正在重叠一个collider : ${collider}` );
 }
 ```
