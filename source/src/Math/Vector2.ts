@@ -67,6 +67,19 @@ module es {
         }
 
         /**
+         * 
+         * @param value1 
+         * @param value2 
+         * @returns 
+         */
+        public static multiplyScaler(value1: Vector2, value2: number) {
+            let result = new Vector2(0, 0);
+            result.x = value1.x * value2;
+            result.y = value1.x * value2;
+            return result;
+        }
+
+        /**
          *
          * @param value1
          * @param value2
@@ -203,6 +216,17 @@ module es {
         public multiply(value: Vector2): Vector2 {
             this.x *= value.x;
             this.y *= value.y;
+            return this;
+        }
+
+        /**
+         * 
+         * @param value 
+         * @returns 
+         */
+        public multiplyScaler(value: number): Vector2 {
+            this.x *= value;
+            this.y *= value;
             return this;
         }
 

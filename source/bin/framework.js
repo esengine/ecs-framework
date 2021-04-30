@@ -1146,6 +1146,18 @@ var es;
          *
          * @param value1
          * @param value2
+         * @returns
+         */
+        Vector2.multiplyScaler = function (value1, value2) {
+            var result = new Vector2(0, 0);
+            result.x = value1.x * value2;
+            result.y = value1.x * value2;
+            return result;
+        };
+        /**
+         *
+         * @param value1
+         * @param value2
          */
         Vector2.subtract = function (value1, value2) {
             var result = new Vector2(0, 0);
@@ -1264,6 +1276,16 @@ var es;
         Vector2.prototype.multiply = function (value) {
             this.x *= value.x;
             this.y *= value.y;
+            return this;
+        };
+        /**
+         *
+         * @param value
+         * @returns
+         */
+        Vector2.prototype.multiplyScaler = function (value) {
+            this.x *= value;
+            this.y *= value;
             return this;
         };
         /**
@@ -2236,8 +2258,8 @@ var es;
          */
         ArcadeRigidbody.prototype.addImpulse = function (force) {
             if (!this.isImmovable) {
-                this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiply(force, new es.Vector2(100000))
-                    .multiply(new es.Vector2(this._inverseMass * es.Time.deltaTime)));
+                this.velocity = this.velocity.add(es.Vector2.multiplyScaler(force, 100000)
+                    .multiplyScaler(this._inverseMass * es.Time.deltaTime * es.Time.deltaTime));
             }
         };
         ArcadeRigidbody.prototype.onAddedToEntity = function () {
@@ -2251,8 +2273,8 @@ var es;
                 return;
             }
             if (this.shouldUseGravity)
-                this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiply(es.Physics.gravity, new es.Vector2(es.Time.deltaTime)));
-            this.entity.transform.position = es.Vector2.add(this.entity.transform.position, es.Vector2.multiply(this.velocity, new es.Vector2(es.Time.deltaTime)));
+                this.velocity = this.velocity.add(es.Vector2.multiplyScaler(es.Physics.gravity, es.Time.deltaTime));
+            this.entity.transform.position = this.entity.transform.position.add(es.Vector2.multiplyScaler(this.velocity, es.Time.deltaTime));
             var collisionResult = new es.CollisionResult();
             // 捞取我们在新的位置上可能会碰撞到的任何东西
             var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this._collider, this._collider.collidesWithLayers.value);
@@ -2272,10 +2294,10 @@ var es;
                         }
                         else {
                             // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                            this.entity.transform.position = es.Vector2.subtract(this.entity.transform.position, collisionResult.minimumTranslationVector);
+                            this.entity.transform.position = this.entity.transform.position.subtract(collisionResult.minimumTranslationVector);
                             var relativeVelocity = this.velocity.clone();
                             this.calculateResponseVelocity(relativeVelocity, collisionResult.minimumTranslationVector, relativeVelocity);
-                            this.velocity = es.Vector2.add(this.velocity, relativeVelocity);
+                            this.velocity = this.velocity.add(relativeVelocity);
                         }
                     }
                 }
@@ -2295,14 +2317,14 @@ var es;
          */
         ArcadeRigidbody.prototype.processOverlap = function (other, minimumTranslationVector) {
             if (this.isImmovable) {
-                other.entity.transform.position = es.Vector2.add(other.entity.transform.position, minimumTranslationVector);
+                other.entity.transform.position = other.entity.transform.position.add(minimumTranslationVector);
             }
             else if (other.isImmovable) {
-                this.entity.transform.position = es.Vector2.subtract(this.entity.transform.position, minimumTranslationVector);
+                this.entity.transform.position = this.entity.transform.position.subtract(minimumTranslationVector);
             }
             else {
-                this.entity.transform.position = es.Vector2.subtract(this.entity.transform.position, es.Vector2.multiply(minimumTranslationVector, es.Vector2Ext.halfVector()));
-                other.entity.transform.position = es.Vector2.add(other.entity.transform.position, es.Vector2.multiply(minimumTranslationVector, es.Vector2Ext.halfVector()));
+                this.entity.transform.position = this.entity.transform.position.subtract(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                other.entity.transform.position = other.entity.transform.position.add(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
             }
         };
         /**
@@ -2320,8 +2342,8 @@ var es;
             var totalinverseMass = this._inverseMass + other._inverseMass;
             var ourResponseFraction = this._inverseMass / totalinverseMass;
             var otherResponseFraction = other._inverseMass / totalinverseMass;
-            this.velocity = es.Vector2.add(this.velocity, new es.Vector2(relativeVelocity.x * ourResponseFraction, relativeVelocity.y * ourResponseFraction));
-            other.velocity = es.Vector2.subtract(other.velocity, new es.Vector2(relativeVelocity.x * otherResponseFraction, relativeVelocity.y * otherResponseFraction));
+            this.velocity = this.velocity.add(es.Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
+            other.velocity = other.velocity.subtract(es.Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
         };
         /**
          *  给定两个物体和MTV之间的相对速度，本方法修改相对速度，使其成为碰撞响应
@@ -2332,12 +2354,12 @@ var es;
         ArcadeRigidbody.prototype.calculateResponseVelocity = function (relativeVelocity, minimumTranslationVector, responseVelocity) {
             if (responseVelocity === void 0) { responseVelocity = new es.Vector2(); }
             // 首先，我们得到反方向的归一化MTV：表面法线
-            var inverseMTV = es.Vector2.multiply(minimumTranslationVector, new es.Vector2(-1));
+            var inverseMTV = es.Vector2.multiplyScaler(minimumTranslationVector, -1);
             var normal = es.Vector2.normalize(inverseMTV);
             // 速度是沿碰撞法线和碰撞平面分解的。
             // 弹性将影响沿法线的响应（法线速度分量），摩擦力将影响速度的切向分量（切向速度分量）
             var n = es.Vector2.dot(relativeVelocity, normal);
-            var normalVelocityComponent = new es.Vector2(normal.x * n, normal.y * n);
+            var normalVelocityComponent = es.Vector2.multiplyScaler(normal, n);
             var tangentialVelocityComponent = es.Vector2.subtract(relativeVelocity, normalVelocityComponent);
             if (n > 0)
                 normalVelocityComponent = es.Vector2.zero;
@@ -2346,11 +2368,8 @@ var es;
             if (tangentialVelocityComponent.lengthSquared() < this._glue)
                 coefficientOfFriction = 1.01;
             // 弹性影响速度的法向分量，摩擦力影响速度的切向分量
-            var t = es.Vector2.multiply(new es.Vector2((1 + this._elasticity)), normalVelocityComponent)
-                .multiply(new es.Vector2(-1))
-                .subtract(es.Vector2.multiply(new es.Vector2(coefficientOfFriction), tangentialVelocityComponent));
-            responseVelocity.x = t.x;
-            relativeVelocity.y = t.y;
+            responseVelocity = es.Vector2.multiplyScaler(normalVelocityComponent, -(1 + this._elasticity))
+                .subtract(es.Vector2.multiplyScaler(tangentialVelocityComponent, coefficientOfFriction));
         };
         return ArcadeRigidbody;
     }(es.Component));
@@ -5131,7 +5150,7 @@ var es;
                 currentTime = Date.now();
             if (this._lastTime == -1)
                 this._lastTime = currentTime;
-            var dt = currentTime - this._lastTime;
+            var dt = (currentTime - this._lastTime) / 1000;
             if (dt > this.maxDeltaTime)
                 dt = this.maxDeltaTime;
             this.totalTime += dt;

@@ -23,7 +23,7 @@ module es {
             if (this._lastTime == -1)
                 this._lastTime = currentTime;
 
-            let dt = currentTime - this._lastTime;
+            let dt = (currentTime - this._lastTime) / 1000;
             if (dt > this.maxDeltaTime)
                 dt = this.maxDeltaTime;
             this.totalTime += dt;

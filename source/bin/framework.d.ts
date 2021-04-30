@@ -466,6 +466,13 @@ declare module es {
          *
          * @param value1
          * @param value2
+         * @returns
+         */
+        static multiplyScaler(value1: Vector2, value2: number): Vector2;
+        /**
+         *
+         * @param value1
+         * @param value2
          */
         static subtract(value1: Vector2, value2: Vector2): Vector2;
         /**
@@ -541,6 +548,12 @@ declare module es {
          * @param value
          */
         multiply(value: Vector2): Vector2;
+        /**
+         *
+         * @param value
+         * @returns
+         */
+        multiplyScaler(value: number): Vector2;
         /**
          * 从当前Vector2减去一个Vector2
          * @param value 要减去的Vector2
