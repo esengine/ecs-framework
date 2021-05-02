@@ -5750,7 +5750,7 @@ var es;
             return degrees * 0.017453292519943295769236907684886;
         };
         /**
-         * mapps值(在leftMin - leftMax范围内)到rightMin - rightMax范围内的值
+         * 将值（在leftMin-leftMax范围内）映射到一个在rightMin-rightMax范围内的值
          * @param value
          * @param leftMin
          * @param leftMax
@@ -5759,6 +5759,27 @@ var es;
          */
         MathHelper.map = function (value, leftMin, leftMax, rightMin, rightMax) {
             return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
+        };
+        /**
+         * 将值从任意范围映射到0到1范围
+         * @param value
+         * @param min
+         * @param max
+         * @returns
+         */
+        MathHelper.map01 = function (value, min, max) {
+            return (value - min) * 1 / (max - min);
+        };
+        /**
+         * 将值从某个任意范围映射到1到0范围
+         * 这相当于map01的取反
+         * @param value
+         * @param min
+         * @param max
+         * @returns
+         */
+        MathHelper.map10 = function (value, min, max) {
+            return 1 - this.map01(value, min, max);
         };
         MathHelper.lerp = function (from, to, t) {
             return from + (to - from) * this.clamp01(t);
@@ -5855,6 +5876,25 @@ var es;
             return value % 2 == 0;
         };
         /**
+         * 如果值是奇数，则返回true
+         * @param value
+         * @returns
+         */
+        MathHelper.isOdd = function (value) {
+            return value % 2 != 0;
+        };
+        /**
+         * 将值四舍五入并返回它和四舍五入后的数值
+         * @param value
+         * @param roundedAmount
+         * @returns
+         */
+        MathHelper.roundWithRoundedAmount = function (value, roundedAmount) {
+            var rounded = Math.round(value);
+            roundedAmount.value = value - (rounded * Math.round(value / rounded));
+            return rounded;
+        };
+        /**
          * 数值限定在0-1之间
          * @param value
          */
@@ -5881,6 +5921,36 @@ var es;
             if (t == length)
                 return 0;
             return t;
+        };
+        /**
+         * 递减t并确保其始终大于或等于0且小于长度
+         * @param t
+         * @param length
+         * @returns
+         */
+        MathHelper.decrementWithWrap = function (t, length) {
+            t--;
+            if (t < 0)
+                return length - 1;
+            return t;
+        };
+        /**
+         * 返回sqrt（x * x + y * y）
+         * @param x
+         * @param y
+         * @returns
+         */
+        MathHelper.hypotenuse = function (x, y) {
+            return Math.sqrt(x * x + y * y);
+        };
+        MathHelper.closestPowerOfTwoGreaterThan = function (x) {
+            x--;
+            x |= (x >> 1);
+            x |= (x >> 2);
+            x |= (x >> 4);
+            x |= (x >> 8);
+            x |= (x >> 16);
+            return (x + 1);
         };
         /**
          * 以roundToNearest为步长，将值舍入到最接近的数字。例如：在125中找到127到最近的5个结果
@@ -5961,6 +6031,16 @@ var es;
             if (num > 180)
                 num -= 360;
             return num;
+        };
+        /**
+         * 检查值是否介于最小值/最大值（包括最小值/最大值）之间
+         * @param value
+         * @param min
+         * @param max
+         * @returns
+         */
+        MathHelper.between = function (value, min, max) {
+            return value >= min && value <= max;
         };
         /**
          * 计算以弧度为单位的两个给定角度之间的最短差
@@ -11840,6 +11920,115 @@ var es;
             var depthY = distanceY > 0 ? minDistanceY - distanceY : -minDistanceY - distanceY;
             return new es.Vector2(depthX, depthY);
         };
+        RectangleExt.getClosestPointOnBoundsToOrigin = function (rect) {
+            var max = this.getMax(rect);
+            var minDist = Math.abs(rect.location.x);
+            var boundsPoint = new es.Vector2(rect.location.x, 0);
+            if (Math.abs(max.x) < minDist) {
+                minDist = Math.abs(max.x);
+                boundsPoint.x = max.x;
+                boundsPoint.y = 0;
+            }
+            if (Math.abs(max.y) < minDist) {
+                minDist = Math.abs(max.y);
+                boundsPoint.x = 0;
+                boundsPoint.y = max.y;
+            }
+            if (Math.abs(rect.location.y) < minDist) {
+                minDist = Math.abs(rect.location.y);
+                boundsPoint.x = 0;
+                boundsPoint.y = rect.location.y;
+            }
+            return boundsPoint;
+        };
+        /**
+         * 将Rectangle中或上的最接近点返回给定点
+         * @param rect
+         * @param point
+         */
+        RectangleExt.getClosestPointOnRectangleToPoint = function (rect, point) {
+            // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
+            var res = new es.Vector2();
+            res.x = es.MathHelper.clamp(point.x, rect.left, rect.right);
+            res.y = es.MathHelper.clamp(point.y, rect.top, rect.bottom);
+            return res;
+        };
+        /**
+         * 获取矩形边界上与给定点最接近的点
+         * @param rect
+         * @param point
+         */
+        RectangleExt.getClosestPointOnRectangleBorderToPoint = function (rect, point) {
+            // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
+            var res = new es.Vector2();
+            res.x = es.MathHelper.clamp(point.x, rect.left, rect.right);
+            res.y = es.MathHelper.clamp(point.y, rect.top, rect.bottom);
+            // 如果点在矩形内，我们需要将res推到边框，因为它将在矩形内 
+            if (rect.contains(res.x, res.y)) {
+                var dl = rect.x - rect.left;
+                var dr = rect.right - res.x;
+                var dt = res.y - rect.top;
+                var db = rect.bottom - res.y;
+                var min = Math.min(dl, dr, dt, db);
+                if (min == dt)
+                    res.y = rect.top;
+                else if (min == db)
+                    res.y = rect.bottom;
+                else if (min == dl)
+                    res.x == rect.left;
+                else
+                    res.x = rect.right;
+            }
+            return res;
+        };
+        RectangleExt.getMax = function (rect) {
+            return new es.Vector2(rect.right, rect.bottom);
+        };
+        /**
+         * 以Vector2的形式获取矩形的中心点
+         * @param rect
+         * @returns
+         */
+        RectangleExt.getCenter = function (rect) {
+            return new es.Vector2(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        };
+        /**
+         * 给定多边形的点即可计算边界
+         * @param points
+         */
+        RectangleExt.boundsFromPolygonPoints = function (points) {
+            // 我们需要找到最小/最大x / y值 
+            var minX = Number.POSITIVE_INFINITY;
+            var minY = Number.POSITIVE_INFINITY;
+            var maxX = Number.NEGATIVE_INFINITY;
+            var maxY = Number.NEGATIVE_INFINITY;
+            for (var i = 0; i < points.length; i++) {
+                var pt = points[i];
+                if (pt.x < minX)
+                    minX = pt.x;
+                if (pt.x > maxX)
+                    maxX = pt.x;
+                if (pt.y < minY)
+                    minY = pt.y;
+                if (pt.y > maxY)
+                    maxY = pt.y;
+            }
+            return this.fromMinMaxVector(new es.Vector2(minX, minY), new es.Vector2(maxX, maxY));
+        };
+        /**
+         * 缩放矩形
+         * @param rect
+         * @param scale
+         */
+        RectangleExt.scale = function (rect, scale) {
+            rect.x = rect.x * scale.x;
+            rect.y = rect.y * scale.y;
+            rect.width = rect.width * scale.x;
+            rect.height = rect.height * scale.y;
+        };
+        RectangleExt.translate = function (rect, vec) {
+            rect.location.add(vec);
+        };
         return RectangleExt;
     }());
     es.RectangleExt = RectangleExt;
@@ -11925,6 +12114,17 @@ var es;
             this.normalize(from);
             this.normalize(to);
             return Math.acos(es.MathHelper.clamp(es.Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
+        };
+        /**
+         * 返回以自度为中心的左右角度
+         * @param self
+         * @param left
+         * @param right
+         */
+        Vector2Ext.angleBetween = function (self, left, right) {
+            var one = es.Vector2.subtract(left, self);
+            var two = es.Vector2.subtract(right, self);
+            return this.angle(one, two);
         };
         /**
          * 给定两条直线(ab和cd)，求交点

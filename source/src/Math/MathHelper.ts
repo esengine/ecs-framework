@@ -25,7 +25,7 @@ module es {
         }
 
         /**
-         * mapps值(在leftMin - leftMax范围内)到rightMin - rightMax范围内的值
+         * 将值（在leftMin-leftMax范围内）映射到一个在rightMin-rightMax范围内的值 
          * @param value
          * @param leftMin
          * @param leftMax
@@ -34,6 +34,29 @@ module es {
          */
         public static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number) {
             return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
+        }
+
+        /**
+         * 将值从任意范围映射到0到1范围 
+         * @param value 
+         * @param min 
+         * @param max 
+         * @returns 
+         */
+        public static map01(value: number, min: number, max: number) {
+            return (value - min) * 1 / (max - min);
+        }
+
+        /**
+         * 将值从某个任意范围映射到1到0范围
+         * 这相当于map01的取反
+         * @param value 
+         * @param min 
+         * @param max 
+         * @returns 
+         */
+        public static map10(value: number, min: number, max: number) {
+            return 1 - this.map01(value, min, max);
         }
 
         public static lerp(from: number, to: number, t: number) {
@@ -146,6 +169,27 @@ module es {
         }
 
         /**
+         * 如果值是奇数，则返回true 
+         * @param value 
+         * @returns 
+         */
+        public static isOdd(value: number) {
+            return value % 2 != 0;
+        }
+
+        /**
+         * 将值四舍五入并返回它和四舍五入后的数值
+         * @param value 
+         * @param roundedAmount 
+         * @returns 
+         */
+        public static roundWithRoundedAmount(value: number, roundedAmount: Ref<number>) {
+            let rounded = Math.round(value);
+            roundedAmount.value = value - (rounded * Math.round(value/ rounded));
+            return rounded;
+        }
+
+        /**
          * 数值限定在0-1之间
          * @param value
          */
@@ -178,6 +222,41 @@ module es {
                 return 0;
 
             return t;
+        }
+
+        /**
+         * 递减t并确保其始终大于或等于0且小于长度 
+         * @param t 
+         * @param length 
+         * @returns 
+         */
+        public static decrementWithWrap(t: number, length: number) {
+            t --;
+            if (t < 0)
+                return length - 1;
+
+            return t;
+        }
+
+        /**
+         * 返回sqrt（x * x + y * y） 
+         * @param x 
+         * @param y 
+         * @returns 
+         */
+        public static hypotenuse(x: number, y: number) {
+            return Math.sqrt(x * x + y * y);
+        }
+
+        public static closestPowerOfTwoGreaterThan(x: number) {
+            x --;
+            x |= (x >> 1);
+            x |= (x >> 2);
+            x |= (x >> 4);
+            x |= (x >> 8);
+            x |= (x >> 16);
+            
+            return (x + 1);
         }
 
         /**
@@ -267,6 +346,17 @@ module es {
                 num -= 360;
 
             return num;
+        }
+
+        /**
+         * 检查值是否介于最小值/最大值（包括最小值/最大值）之间 
+         * @param value 
+         * @param min 
+         * @param max 
+         * @returns 
+         */
+        public static between(value: number, min: number, max: number) {
+            return value >= min && value <= max;
         }
 
         /**

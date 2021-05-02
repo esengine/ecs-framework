@@ -2347,7 +2347,7 @@ declare module es {
          */
         static toRadians(degrees: number): number;
         /**
-         * mapps值(在leftMin - leftMax范围内)到rightMin - rightMax范围内的值
+         * 将值（在leftMin-leftMax范围内）映射到一个在rightMin-rightMax范围内的值
          * @param value
          * @param leftMin
          * @param leftMax
@@ -2355,6 +2355,23 @@ declare module es {
          * @param rightMax
          */
         static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number;
+        /**
+         * 将值从任意范围映射到0到1范围
+         * @param value
+         * @param min
+         * @param max
+         * @returns
+         */
+        static map01(value: number, min: number, max: number): number;
+        /**
+         * 将值从某个任意范围映射到1到0范围
+         * 这相当于map01的取反
+         * @param value
+         * @param min
+         * @param max
+         * @returns
+         */
+        static map10(value: number, min: number, max: number): number;
         static lerp(from: number, to: number, t: number): number;
         /**
          * 使度数的角度在a和b之间
@@ -2403,6 +2420,19 @@ declare module es {
          */
         static isEven(value: number): boolean;
         /**
+         * 如果值是奇数，则返回true
+         * @param value
+         * @returns
+         */
+        static isOdd(value: number): boolean;
+        /**
+         * 将值四舍五入并返回它和四舍五入后的数值
+         * @param value
+         * @param roundedAmount
+         * @returns
+         */
+        static roundWithRoundedAmount(value: number, roundedAmount: Ref<number>): number;
+        /**
          * 数值限定在0-1之间
          * @param value
          */
@@ -2415,6 +2445,21 @@ declare module es {
          * @param length
          */
         static incrementWithWrap(t: number, length: number): number;
+        /**
+         * 递减t并确保其始终大于或等于0且小于长度
+         * @param t
+         * @param length
+         * @returns
+         */
+        static decrementWithWrap(t: number, length: number): number;
+        /**
+         * 返回sqrt（x * x + y * y）
+         * @param x
+         * @param y
+         * @returns
+         */
+        static hypotenuse(x: number, y: number): number;
+        static closestPowerOfTwoGreaterThan(x: number): number;
         /**
          * 以roundToNearest为步长，将值舍入到最接近的数字。例如：在125中找到127到最近的5个结果
          * @param value
@@ -2468,6 +2513,14 @@ declare module es {
          * @param target
          */
         static deltaAngle(current: number, target: number): number;
+        /**
+         * 检查值是否介于最小值/最大值（包括最小值/最大值）之间
+         * @param value
+         * @param min
+         * @param max
+         * @returns
+         */
+        static between(value: number, min: number, max: number): boolean;
         /**
          * 计算以弧度为单位的两个给定角度之间的最短差
          * @param current
@@ -4532,6 +4585,38 @@ declare module es {
          * 如果矩形不相交，则返回Vector2.zero。
          */
         static getIntersectionDepth(rectA: Rectangle, rectB: Rectangle): Vector2;
+        static getClosestPointOnBoundsToOrigin(rect: Rectangle): Vector2;
+        /**
+         * 将Rectangle中或上的最接近点返回给定点
+         * @param rect
+         * @param point
+         */
+        static getClosestPointOnRectangleToPoint(rect: Rectangle, point: Vector2): Vector2;
+        /**
+         * 获取矩形边界上与给定点最接近的点
+         * @param rect
+         * @param point
+         */
+        static getClosestPointOnRectangleBorderToPoint(rect: Rectangle, point: Vector2): Vector2;
+        static getMax(rect: Rectangle): Vector2;
+        /**
+         * 以Vector2的形式获取矩形的中心点
+         * @param rect
+         * @returns
+         */
+        static getCenter(rect: Rectangle): Vector2;
+        /**
+         * 给定多边形的点即可计算边界
+         * @param points
+         */
+        static boundsFromPolygonPoints(points: Vector2[]): Rectangle;
+        /**
+         * 缩放矩形
+         * @param rect
+         * @param scale
+         */
+        static scale(rect: Rectangle, scale: Vector2): void;
+        static translate(rect: Rectangle, vec: Vector2): void;
     }
 }
 declare module es {
@@ -4577,6 +4662,13 @@ declare module es {
          * @param to
          */
         static angle(from: Vector2, to: Vector2): number;
+        /**
+         * 返回以自度为中心的左右角度
+         * @param self
+         * @param left
+         * @param right
+         */
+        static angleBetween(self: Vector2, left: Vector2, right: Vector2): number;
         /**
          * 给定两条直线(ab和cd)，求交点
          * @param a

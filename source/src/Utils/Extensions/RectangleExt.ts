@@ -104,7 +104,7 @@ module es {
             let maxX = Number.NEGATIVE_INFINITY;
             let maxY = Number.NEGATIVE_INFINITY;
 
-            for (let i = 0; i < points.length; i ++) {
+            for (let i = 0; i < points.length; i++) {
                 let pt = points[i];
 
                 if (pt.x < minX)
@@ -136,7 +136,7 @@ module es {
          * @param deltaX 
          * @param deltaY 
          */
-        public static getSweptBroadphaseBounds(rect: Rectangle, deltaX: number, deltaY: number){
+        public static getSweptBroadphaseBounds(rect: Rectangle, deltaX: number, deltaY: number) {
             let broadphasebox = Rectangle.empty;
 
             broadphasebox.x = deltaX > 0 ? rect.x : rect.x + deltaX;
@@ -215,6 +215,135 @@ module es {
             let depthY = distanceY > 0 ? minDistanceY - distanceY : -minDistanceY - distanceY;
 
             return new Vector2(depthX, depthY);
+        }
+
+        public static getClosestPointOnBoundsToOrigin(rect: Rectangle) {
+            let max = this.getMax(rect);
+            let minDist = Math.abs(rect.location.x);
+            let boundsPoint = new Vector2(rect.location.x, 0);
+
+            if (Math.abs(max.x) < minDist) {
+                minDist = Math.abs(max.x);
+                boundsPoint.x = max.x;
+                boundsPoint.y = 0;
+            }
+
+            if (Math.abs(max.y) < minDist) {
+                minDist = Math.abs(max.y);
+                boundsPoint.x = 0;
+                boundsPoint.y = max.y;
+            }
+
+            if (Math.abs(rect.location.y) < minDist) {
+                minDist = Math.abs(rect.location.y);
+                boundsPoint.x = 0;
+                boundsPoint.y = rect.location.y;
+            }
+
+            return boundsPoint;
+        }
+
+        /**
+         * 将Rectangle中或上的最接近点返回给定点 
+         * @param rect 
+         * @param point 
+         */
+        public static getClosestPointOnRectangleToPoint(rect: Rectangle, point: Vector2) {
+            // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
+            let res = new Vector2();
+            res.x = MathHelper.clamp(point.x, rect.left, rect.right)
+            res.y = MathHelper.clamp(point.y, rect.top, rect.bottom);
+
+            return res;
+        }
+
+        /**
+         * 获取矩形边界上与给定点最接近的点 
+         * @param rect 
+         * @param point 
+         */
+        public static getClosestPointOnRectangleBorderToPoint(rect: Rectangle, point: Vector2) {
+            // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
+            let res = new Vector2();
+            res.x = MathHelper.clamp(point.x, rect.left, rect.right)
+            res.y = MathHelper.clamp(point.y, rect.top, rect.bottom);
+
+            // 如果点在矩形内，我们需要将res推到边框，因为它将在矩形内 
+            if (rect.contains(res.x, res.y)) {
+                let dl = rect.x - rect.left;
+                let dr = rect.right - res.x;
+                let dt = res.y - rect.top;
+                let db = rect.bottom - res.y;
+
+                let min = Math.min(dl, dr, dt, db);
+                if (min == dt)
+                    res.y = rect.top;
+                else if (min == db)
+                    res.y = rect.bottom;
+                else if (min == dl)
+                    res.x == rect.left;
+                else
+                    res.x = rect.right;
+            }
+
+            return res;
+        }
+
+        public static getMax(rect: Rectangle) {
+            return new Vector2(rect.right, rect.bottom);
+        }
+
+        /**
+         * 以Vector2的形式获取矩形的中心点 
+         * @param rect 
+         * @returns 
+         */
+        public static getCenter(rect: Rectangle) {
+            return new Vector2(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        }
+
+        /**
+         * 给定多边形的点即可计算边界 
+         * @param points 
+         */
+        public static boundsFromPolygonPoints(points: Vector2[]) {
+            // 我们需要找到最小/最大x / y值 
+            let minX = Number.POSITIVE_INFINITY;
+            let minY = Number.POSITIVE_INFINITY;
+            let maxX = Number.NEGATIVE_INFINITY;
+            let maxY = Number.NEGATIVE_INFINITY;
+
+            for (let i = 0; i < points.length; i++) {
+                let pt = points[i];
+
+                if (pt.x < minX)
+                    minX = pt.x;
+                if (pt.x > maxX)
+                    maxX = pt.x
+
+                if (pt.y < minY)
+                    minY = pt.y;
+                if (pt.y > maxY)
+                    maxY = pt.y;
+            }
+
+            return this.fromMinMaxVector(new Vector2(minX, minY), new Vector2(maxX, maxY));
+        }
+
+        /**
+         * 缩放矩形 
+         * @param rect 
+         * @param scale 
+         */
+        public static scale(rect: Rectangle, scale: Vector2) {
+            rect.x = rect.x * scale.x;
+            rect.y = rect.y * scale.y;
+            rect.width = rect.width * scale.x;
+            rect.height = rect.height * scale.y;
+        }
+
+        public static translate(rect: Rectangle, vec: Vector2) {
+            rect.location.add(vec);
         }
     }
 }
