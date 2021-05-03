@@ -25,6 +25,35 @@ module es {
         }
 
         /**
+         * 返回由给定三角形和两个归一化重心（面积）坐标定义的点的一个轴的笛卡尔坐标
+         * @param value1 
+         * @param value2 
+         * @param value3 
+         * @param amount1 
+         * @param amount2 
+         */
+        public static barycentric(value1: number, value2: number, value3: number, amount1: number, amount2: number) {
+            return value1 + (value2 - value1) * amount1 + (value3 - value1) * amount2;
+        }
+
+        /**
+         * 使用指定位置执行Catmull-Rom插值
+         * @param value1 
+         * @param value2 
+         * @param value3 
+         * @param value4 
+         * @param amount 
+         */
+        public static catmullRom(value1: number, value2: number, value3: number, value4: number, amount: number) {
+            // 使用来自http://www.mvps.org/directx/articles/catmull/的公式 
+            let amountSquared = amount * amount;
+            let amountCubed = amountSquared * amount;
+            return (0.5 * (2 * value2 + (value3 - value1) * amount +
+                (2 * value1 - 5 * value2 + 4 * value3 - value4) * amountSquared +
+                (3 * value2 - value1 - 3 * value3 + value4) * amountCubed));
+        }
+
+        /**
          * 将值（在leftMin-leftMax范围内）映射到一个在rightMin-rightMax范围内的值 
          * @param value
          * @param leftMin
@@ -57,6 +86,43 @@ module es {
          */
         public static map10(value: number, min: number, max: number) {
             return 1 - this.map01(value, min, max);
+        }
+
+        /**
+         * 使用三次方程在两个值之间进行插值
+         * @param value1 
+         * @param value2 
+         * @param amount 
+         */
+        public static smoothStep(value1: number, value2: number, amount: number) {
+            let result = this.clamp(amount, 0, 1);
+            result = MathHelper.hermite(value1, 0, value2, 0, result);
+
+            return result;
+        }
+
+        /**
+         * 将给定角度减小到π到-π之间的值
+         * @param angle 
+         */
+        public static wrapAngle(angle: number) {
+            if ((angle > -Math.PI) && (angle <= Math.PI))
+                return angle;
+            angle %= Math.PI * 2;
+            if (angle <= -Math.PI)
+                return angle + 2 * Math.PI;
+            if (angle > Math.PI)
+                return angle - 2 * Math.PI;
+            return angle;
+        }
+
+        /**
+         * 确定值是否以2为底
+         * @param value 
+         * @returns 
+         */
+        public static isPowerOfTwo(value: number) {
+            return (value > 0) && ((value % (value - 1)) == 0);
         }
 
         public static lerp(from: number, to: number, t: number) {
@@ -122,16 +188,24 @@ module es {
             if (from < to) {
                 if (t < from)
                     return 0;
-                else if(t > to)
+                else if (t > to)
                     return 1;
             } else {
                 if (t < to)
                     return 1;
-                else if(t > from)
+                else if (t > from)
                     return 0;
             }
 
             return (t - from) / (to - from);
+        }
+
+        /** 
+         * 在两个值之间线性插值
+         * 此方法是MathHelper.Lerp的效率较低，更精确的版本。
+         */
+        public static lerpPrecise(value1: number, value2: number, amount: number) {
+            return ((1 - amount) * value1) + (value2 * amount);
         }
 
         public static clamp(value: number, min: number, max: number) {
@@ -185,7 +259,7 @@ module es {
          */
         public static roundWithRoundedAmount(value: number, roundedAmount: Ref<number>) {
             let rounded = Math.round(value);
-            roundedAmount.value = value - (rounded * Math.round(value/ rounded));
+            roundedAmount.value = value - (rounded * Math.round(value / rounded));
             return rounded;
         }
 
@@ -231,7 +305,7 @@ module es {
          * @returns 
          */
         public static decrementWithWrap(t: number, length: number) {
-            t --;
+            t--;
             if (t < 0)
                 return length - 1;
 
@@ -249,13 +323,13 @@ module es {
         }
 
         public static closestPowerOfTwoGreaterThan(x: number) {
-            x --;
+            x--;
             x |= (x >> 1);
             x |= (x >> 2);
             x |= (x >> 4);
             x |= (x >> 8);
             x |= (x >> 16);
-            
+
             return (x + 1);
         }
 
@@ -465,16 +539,56 @@ module es {
          * @param oscillationInterval 
          * @returns 
          */
-        public static lissajouDamped(xFrequency: number = 2, yFrequency: number = 3, xMagnitude: number = 1, 
+        public static lissajouDamped(xFrequency: number = 2, yFrequency: number = 3, xMagnitude: number = 1,
             yMagnitude: number = 1, phase: number = 0.5, damping: number = 0,
             oscillationInterval: number = 5) {
-                let wrappedTime = this.pingPong(Time.totalTime, oscillationInterval);
-                let damped = Math.pow(Math.E, -damping * wrappedTime);
+            let wrappedTime = this.pingPong(Time.totalTime, oscillationInterval);
+            let damped = Math.pow(Math.E, -damping * wrappedTime);
 
-                let x = damped * Math.sin(Time.totalTime * xFrequency + phase) * xMagnitude;
-                let y = damped * Math.cos(Time.totalTime * yFrequency) * yMagnitude;
+            let x = damped * Math.sin(Time.totalTime * xFrequency + phase) * xMagnitude;
+            let y = damped * Math.cos(Time.totalTime * yFrequency) * yMagnitude;
 
-                return new Vector2(x, y);
+            return new Vector2(x, y);
+        }
+
+        /**
+         * 执行Hermite样条插值
+         * @param value1 
+         * @param tangent1 
+         * @param value2 
+         * @param tangent2 
+         * @param amount 
+         * @returns 
+         */
+        public static hermite(value1: number, tangent1: number, value2: number, tangent2: number, amount: number) {
+            let v1 = value1, v2 = value2, t1 = tangent1, t2 = tangent2, s = amount, result;
+            let sCubed = s * s * s;
+            let sSquared = s * s;
+
+            if (amount == 0)
+                result = value1;
+            else if (amount == 1)
+                result = value2;
+            else
+                result = (2 * v1 - 2 * v2 + t2 + t1) * sCubed +
+                    (3 * v2 - 3 * v1 - 2 * t1 - t2) * sSquared +
+                    t1 * s +
+                    v1;
+
+            return result;
+        }
+
+        /**
+         * 此函数用于确保数不是NaN或无穷大
+         * @param x 
+         * @returns 
+         */
+        public static isValid(x: number) {
+            if (Number.isNaN(x)) {
+                return false;
+            }
+
+            return !Number.isFinite(x);
         }
     }
 }

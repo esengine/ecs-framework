@@ -509,11 +509,25 @@ declare module es {
          */
         static lerp(value1: Vector2, value2: Vector2, amount: number): Vector2;
         /**
+         * 创建一个新的Vector2，其中包含指定矢量的线性插值
+         * @param value1
+         * @param value2
+         * @param amount
+         * @returns
+         */
+        static lerpPrecise(value1: Vector2, value2: Vector2, amount: number): Vector2;
+        /**
          * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换。
          * @param position
          * @param matrix
          */
         static transform(position: Vector2, matrix: Matrix2D): Vector2;
+        /**
+         * 创建一个新的Vector2，其中包含由指定的Matrix转换的指定法线
+         * @param normal
+         * @param matrix
+         */
+        static transformNormal(normal: Vector2, matrix: Matrix): Vector2;
         /**
          * 返回两个向量之间的距离
          * @param value1
@@ -533,6 +547,21 @@ declare module es {
          * @returns 矢量反演的结果
          */
         static negate(value: Vector2): Vector2;
+        /**
+         * 创建一个新的Vector2，其中包含给定矢量和法线的反射矢量
+         * @param vector
+         * @param normal
+         * @returns
+         */
+        static reflect(vector: Vector2, normal: Vector2): Vector2;
+        /**
+         * 创建一个新的Vector2，其中包含指定矢量的三次插值
+         * @param value1
+         * @param value2
+         * @param amount
+         * @returns
+         */
+        static smoothStep(value1: Vector2, value2: Vector2, amount: number): Vector2;
         /**
          *
          * @param value
@@ -587,6 +616,31 @@ declare module es {
          * @returns 如果实例相同true 否则false
          */
         equals(other: Vector2 | object): boolean;
+        isValid(): boolean;
+        /**
+         * 创建一个新的Vector2，其中包含来自两个向量的最小值
+         * @param value1
+         * @param value2
+         * @returns
+         */
+        static min(value1: Vector2, value2: Vector2): Vector2;
+        /**
+         * 创建一个新的Vector2，其中包含两个向量的最大值
+         * @param value1
+         * @param value2
+         * @returns
+         */
+        static max(value1: Vector2, value2: Vector2): Vector2;
+        /**
+         * 创建一个新的Vector2，其中包含Hermite样条插值
+         * @param value1
+         * @param tangent1
+         * @param value2
+         * @param tangent2
+         * @param amount
+         * @returns
+         */
+        static hermite(value1: Vector2, tangent1: Vector2, value2: Vector2, tangent2: Vector2, amount: number): Vector2;
         clone(): Vector2;
     }
 }
@@ -2347,6 +2401,24 @@ declare module es {
          */
         static toRadians(degrees: number): number;
         /**
+         * 返回由给定三角形和两个归一化重心（面积）坐标定义的点的一个轴的笛卡尔坐标
+         * @param value1
+         * @param value2
+         * @param value3
+         * @param amount1
+         * @param amount2
+         */
+        static barycentric(value1: number, value2: number, value3: number, amount1: number, amount2: number): number;
+        /**
+         * 使用指定位置执行Catmull-Rom插值
+         * @param value1
+         * @param value2
+         * @param value3
+         * @param value4
+         * @param amount
+         */
+        static catmullRom(value1: number, value2: number, value3: number, value4: number, amount: number): number;
+        /**
          * 将值（在leftMin-leftMax范围内）映射到一个在rightMin-rightMax范围内的值
          * @param value
          * @param leftMin
@@ -2372,6 +2444,24 @@ declare module es {
          * @returns
          */
         static map10(value: number, min: number, max: number): number;
+        /**
+         * 使用三次方程在两个值之间进行插值
+         * @param value1
+         * @param value2
+         * @param amount
+         */
+        static smoothStep(value1: number, value2: number, amount: number): number;
+        /**
+         * 将给定角度减小到π到-π之间的值
+         * @param angle
+         */
+        static wrapAngle(angle: number): number;
+        /**
+         * 确定值是否以2为底
+         * @param value
+         * @returns
+         */
+        static isPowerOfTwo(value: number): boolean;
         static lerp(from: number, to: number, t: number): number;
         /**
          * 使度数的角度在a和b之间
@@ -2405,6 +2495,11 @@ declare module es {
          */
         static signThreshold(value: number, threshold: number): number;
         static inverseLerp(from: number, to: number, t: number): number;
+        /**
+         * 在两个值之间线性插值
+         * 此方法是MathHelper.Lerp的效率较低，更精确的版本。
+         */
+        static lerpPrecise(value1: number, value2: number, amount: number): number;
         static clamp(value: number, min: number, max: number): number;
         static snap(value: number, increment: number): number;
         /**
@@ -2588,6 +2683,22 @@ declare module es {
          * @returns
          */
         static lissajouDamped(xFrequency?: number, yFrequency?: number, xMagnitude?: number, yMagnitude?: number, phase?: number, damping?: number, oscillationInterval?: number): Vector2;
+        /**
+         * 执行Hermite样条插值
+         * @param value1
+         * @param tangent1
+         * @param value2
+         * @param tangent2
+         * @param amount
+         * @returns
+         */
+        static hermite(value1: number, tangent1: number, value2: number, tangent2: number, amount: number): any;
+        /**
+         * 此函数用于确保数不是NaN或无穷大
+         * @param x
+         * @returns
+         */
+        static isValid(x: number): boolean;
     }
 }
 declare module es {

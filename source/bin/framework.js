@@ -1214,12 +1214,30 @@ var es;
             return new Vector2(es.MathHelper.lerp(value1.x, value2.x, amount), es.MathHelper.lerp(value1.y, value2.y, amount));
         };
         /**
+         * 创建一个新的Vector2，其中包含指定矢量的线性插值
+         * @param value1
+         * @param value2
+         * @param amount
+         * @returns
+         */
+        Vector2.lerpPrecise = function (value1, value2, amount) {
+            return new Vector2(es.MathHelper.lerpPrecise(value1.x, value2.x, amount), es.MathHelper.lerpPrecise(value1.y, value2.y, amount));
+        };
+        /**
          * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换。
          * @param position
          * @param matrix
          */
         Vector2.transform = function (position, matrix) {
             return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31, (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32);
+        };
+        /**
+         * 创建一个新的Vector2，其中包含由指定的Matrix转换的指定法线
+         * @param normal
+         * @param matrix
+         */
+        Vector2.transformNormal = function (normal, matrix) {
+            return new Vector2((normal.x * matrix.m11) + (normal.y * matrix.m21), (normal.x * matrix.m12) + (normal.y * matrix.m22));
         };
         /**
          * 返回两个向量之间的距离
@@ -1250,6 +1268,29 @@ var es;
             value.x = -value.x;
             value.y = -value.y;
             return value;
+        };
+        /**
+         * 创建一个新的Vector2，其中包含给定矢量和法线的反射矢量
+         * @param vector
+         * @param normal
+         * @returns
+         */
+        Vector2.reflect = function (vector, normal) {
+            var result = new Vector2();
+            var val = 2 * ((vector.x * normal.x) + (vector.y * normal.y));
+            result.x = vector.x - (normal.x * val);
+            result.y = vector.y - (normal.y * val);
+            return result;
+        };
+        /**
+         * 创建一个新的Vector2，其中包含指定矢量的三次插值
+         * @param value1
+         * @param value2
+         * @param amount
+         * @returns
+         */
+        Vector2.smoothStep = function (value1, value2, amount) {
+            return new Vector2(es.MathHelper.smoothStep(value1.x, value2.x, amount), es.MathHelper.smoothStep(value1.y, value2.y, amount));
         };
         /**
          *
@@ -1343,6 +1384,39 @@ var es;
                 return other.x == this.x && other.y == this.y;
             }
             return false;
+        };
+        Vector2.prototype.isValid = function () {
+            return es.MathHelper.isValid(this.x) && es.MathHelper.isValid(this.y);
+        };
+        /**
+         * 创建一个新的Vector2，其中包含来自两个向量的最小值
+         * @param value1
+         * @param value2
+         * @returns
+         */
+        Vector2.min = function (value1, value2) {
+            return new Vector2(value1.x < value2.x ? value1.x : value2.x, value1.y < value2.y ? value1.y : value2.y);
+        };
+        /**
+         * 创建一个新的Vector2，其中包含两个向量的最大值
+         * @param value1
+         * @param value2
+         * @returns
+         */
+        Vector2.max = function (value1, value2) {
+            return new Vector2(value1.x > value2.x ? value1.x : value2.x, value1.y > value2.y ? value1.y : value2.y);
+        };
+        /**
+         * 创建一个新的Vector2，其中包含Hermite样条插值
+         * @param value1
+         * @param tangent1
+         * @param value2
+         * @param tangent2
+         * @param amount
+         * @returns
+         */
+        Vector2.hermite = function (value1, tangent1, value2, tangent2, amount) {
+            return new Vector2(es.MathHelper.hermite(value1.x, tangent1.x, value2.x, tangent2.x, amount), es.MathHelper.hermite(value1.y, tangent1.y, value2.y, tangent2.y, amount));
         };
         Vector2.prototype.clone = function () {
             return new Vector2(this.x, this.y);
@@ -5750,6 +5824,33 @@ var es;
             return degrees * 0.017453292519943295769236907684886;
         };
         /**
+         * 返回由给定三角形和两个归一化重心（面积）坐标定义的点的一个轴的笛卡尔坐标
+         * @param value1
+         * @param value2
+         * @param value3
+         * @param amount1
+         * @param amount2
+         */
+        MathHelper.barycentric = function (value1, value2, value3, amount1, amount2) {
+            return value1 + (value2 - value1) * amount1 + (value3 - value1) * amount2;
+        };
+        /**
+         * 使用指定位置执行Catmull-Rom插值
+         * @param value1
+         * @param value2
+         * @param value3
+         * @param value4
+         * @param amount
+         */
+        MathHelper.catmullRom = function (value1, value2, value3, value4, amount) {
+            // 使用来自http://www.mvps.org/directx/articles/catmull/的公式 
+            var amountSquared = amount * amount;
+            var amountCubed = amountSquared * amount;
+            return (0.5 * (2 * value2 + (value3 - value1) * amount +
+                (2 * value1 - 5 * value2 + 4 * value3 - value4) * amountSquared +
+                (3 * value2 - value1 - 3 * value3 + value4) * amountCubed));
+        };
+        /**
          * 将值（在leftMin-leftMax范围内）映射到一个在rightMin-rightMax范围内的值
          * @param value
          * @param leftMin
@@ -5780,6 +5881,39 @@ var es;
          */
         MathHelper.map10 = function (value, min, max) {
             return 1 - this.map01(value, min, max);
+        };
+        /**
+         * 使用三次方程在两个值之间进行插值
+         * @param value1
+         * @param value2
+         * @param amount
+         */
+        MathHelper.smoothStep = function (value1, value2, amount) {
+            var result = this.clamp(amount, 0, 1);
+            result = MathHelper.hermite(value1, 0, value2, 0, result);
+            return result;
+        };
+        /**
+         * 将给定角度减小到π到-π之间的值
+         * @param angle
+         */
+        MathHelper.wrapAngle = function (angle) {
+            if ((angle > -Math.PI) && (angle <= Math.PI))
+                return angle;
+            angle %= Math.PI * 2;
+            if (angle <= -Math.PI)
+                return angle + 2 * Math.PI;
+            if (angle > Math.PI)
+                return angle - 2 * Math.PI;
+            return angle;
+        };
+        /**
+         * 确定值是否以2为底
+         * @param value
+         * @returns
+         */
+        MathHelper.isPowerOfTwo = function (value) {
+            return (value > 0) && ((value % (value - 1)) == 0);
         };
         MathHelper.lerp = function (from, to, t) {
             return from + (to - from) * this.clamp01(t);
@@ -5847,6 +5981,13 @@ var es;
                     return 0;
             }
             return (t - from) / (to - from);
+        };
+        /**
+         * 在两个值之间线性插值
+         * 此方法是MathHelper.Lerp的效率较低，更精确的版本。
+         */
+        MathHelper.lerpPrecise = function (value1, value2, amount) {
+            return ((1 - amount) * value1) + (value2 * amount);
         };
         MathHelper.clamp = function (value, min, max) {
             if (value < min)
@@ -6154,6 +6295,41 @@ var es;
             var x = damped * Math.sin(es.Time.totalTime * xFrequency + phase) * xMagnitude;
             var y = damped * Math.cos(es.Time.totalTime * yFrequency) * yMagnitude;
             return new es.Vector2(x, y);
+        };
+        /**
+         * 执行Hermite样条插值
+         * @param value1
+         * @param tangent1
+         * @param value2
+         * @param tangent2
+         * @param amount
+         * @returns
+         */
+        MathHelper.hermite = function (value1, tangent1, value2, tangent2, amount) {
+            var v1 = value1, v2 = value2, t1 = tangent1, t2 = tangent2, s = amount, result;
+            var sCubed = s * s * s;
+            var sSquared = s * s;
+            if (amount == 0)
+                result = value1;
+            else if (amount == 1)
+                result = value2;
+            else
+                result = (2 * v1 - 2 * v2 + t2 + t1) * sCubed +
+                    (3 * v2 - 3 * v1 - 2 * t1 - t2) * sSquared +
+                    t1 * s +
+                    v1;
+            return result;
+        };
+        /**
+         * 此函数用于确保数不是NaN或无穷大
+         * @param x
+         * @returns
+         */
+        MathHelper.isValid = function (x) {
+            if (Number.isNaN(x)) {
+                return false;
+            }
+            return !Number.isFinite(x);
         };
         MathHelper.Epsilon = 0.00001;
         MathHelper.Rad2Deg = 57.29578;
