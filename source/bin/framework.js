@@ -1142,6 +1142,18 @@ var es;
          *
          * @param value1
          * @param value2
+         * @returns
+         */
+        Vector2.multiplyScaler = function (value1, value2) {
+            var result = new Vector2(0, 0);
+            result.x = value1.x * value2;
+            result.y = value1.x * value2;
+            return result;
+        };
+        /**
+         *
+         * @param value1
+         * @param value2
          */
         Vector2.subtract = function (value1, value2) {
             var result = new Vector2(0, 0);
@@ -1198,12 +1210,30 @@ var es;
             return new Vector2(es.MathHelper.lerp(value1.x, value2.x, amount), es.MathHelper.lerp(value1.y, value2.y, amount));
         };
         /**
+         * 创建一个新的Vector2，其中包含指定矢量的线性插值
+         * @param value1
+         * @param value2
+         * @param amount
+         * @returns
+         */
+        Vector2.lerpPrecise = function (value1, value2, amount) {
+            return new Vector2(es.MathHelper.lerpPrecise(value1.x, value2.x, amount), es.MathHelper.lerpPrecise(value1.y, value2.y, amount));
+        };
+        /**
          * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换。
          * @param position
          * @param matrix
          */
         Vector2.transform = function (position, matrix) {
             return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31, (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32);
+        };
+        /**
+         * 创建一个新的Vector2，其中包含由指定的Matrix转换的指定法线
+         * @param normal
+         * @param matrix
+         */
+        Vector2.transformNormal = function (normal, matrix) {
+            return new Vector2((normal.x * matrix.m11) + (normal.y * matrix.m21), (normal.x * matrix.m12) + (normal.y * matrix.m22));
         };
         /**
          * 返回两个向量之间的距离
@@ -1236,6 +1266,29 @@ var es;
             return value;
         };
         /**
+         * 创建一个新的Vector2，其中包含给定矢量和法线的反射矢量
+         * @param vector
+         * @param normal
+         * @returns
+         */
+        Vector2.reflect = function (vector, normal) {
+            var result = new Vector2();
+            var val = 2 * ((vector.x * normal.x) + (vector.y * normal.y));
+            result.x = vector.x - (normal.x * val);
+            result.y = vector.y - (normal.y * val);
+            return result;
+        };
+        /**
+         * 创建一个新的Vector2，其中包含指定矢量的三次插值
+         * @param value1
+         * @param value2
+         * @param amount
+         * @returns
+         */
+        Vector2.smoothStep = function (value1, value2, amount) {
+            return new Vector2(es.MathHelper.smoothStep(value1.x, value2.x, amount), es.MathHelper.smoothStep(value1.y, value2.y, amount));
+        };
+        /**
          *
          * @param value
          */
@@ -1260,6 +1313,16 @@ var es;
         Vector2.prototype.multiply = function (value) {
             this.x *= value.x;
             this.y *= value.y;
+            return this;
+        };
+        /**
+         *
+         * @param value
+         * @returns
+         */
+        Vector2.prototype.multiplyScaler = function (value) {
+            this.x *= value;
+            this.y *= value;
             return this;
         };
         /**
@@ -1317,6 +1380,39 @@ var es;
                 return other.x == this.x && other.y == this.y;
             }
             return false;
+        };
+        Vector2.prototype.isValid = function () {
+            return es.MathHelper.isValid(this.x) && es.MathHelper.isValid(this.y);
+        };
+        /**
+         * 创建一个新的Vector2，其中包含来自两个向量的最小值
+         * @param value1
+         * @param value2
+         * @returns
+         */
+        Vector2.min = function (value1, value2) {
+            return new Vector2(value1.x < value2.x ? value1.x : value2.x, value1.y < value2.y ? value1.y : value2.y);
+        };
+        /**
+         * 创建一个新的Vector2，其中包含两个向量的最大值
+         * @param value1
+         * @param value2
+         * @returns
+         */
+        Vector2.max = function (value1, value2) {
+            return new Vector2(value1.x > value2.x ? value1.x : value2.x, value1.y > value2.y ? value1.y : value2.y);
+        };
+        /**
+         * 创建一个新的Vector2，其中包含Hermite样条插值
+         * @param value1
+         * @param tangent1
+         * @param value2
+         * @param tangent2
+         * @param amount
+         * @returns
+         */
+        Vector2.hermite = function (value1, tangent1, value2, tangent2, amount) {
+            return new Vector2(es.MathHelper.hermite(value1.x, tangent1.x, value2.x, tangent2.x, amount), es.MathHelper.hermite(value1.y, tangent1.y, value2.y, tangent2.y, amount));
         };
         Vector2.prototype.clone = function () {
             return new Vector2(this.x, this.y);
@@ -2232,8 +2328,8 @@ var es;
          */
         ArcadeRigidbody.prototype.addImpulse = function (force) {
             if (!this.isImmovable) {
-                this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiply(force, new es.Vector2(100000))
-                    .multiply(new es.Vector2(this._inverseMass * es.Time.deltaTime)));
+                this.velocity = this.velocity.add(es.Vector2.multiplyScaler(force, 100000)
+                    .multiplyScaler(this._inverseMass * es.Time.deltaTime * es.Time.deltaTime));
             }
         };
         ArcadeRigidbody.prototype.onAddedToEntity = function () {
@@ -2247,8 +2343,8 @@ var es;
                 return;
             }
             if (this.shouldUseGravity)
-                this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiply(es.Physics.gravity, new es.Vector2(es.Time.deltaTime)));
-            this.entity.transform.position = es.Vector2.add(this.entity.transform.position, es.Vector2.multiply(this.velocity, new es.Vector2(es.Time.deltaTime)));
+                this.velocity = this.velocity.add(es.Vector2.multiplyScaler(es.Physics.gravity, es.Time.deltaTime));
+            this.entity.transform.position = this.entity.transform.position.add(es.Vector2.multiplyScaler(this.velocity, es.Time.deltaTime));
             var collisionResult = new es.CollisionResult();
             // 捞取我们在新的位置上可能会碰撞到的任何东西
             var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this._collider, this._collider.collidesWithLayers.value);
@@ -2268,10 +2364,10 @@ var es;
                         }
                         else {
                             // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                            this.entity.transform.position = es.Vector2.subtract(this.entity.transform.position, collisionResult.minimumTranslationVector);
+                            this.entity.transform.position = this.entity.transform.position.subtract(collisionResult.minimumTranslationVector);
                             var relativeVelocity = this.velocity.clone();
                             this.calculateResponseVelocity(relativeVelocity, collisionResult.minimumTranslationVector, relativeVelocity);
-                            this.velocity = es.Vector2.add(this.velocity, relativeVelocity);
+                            this.velocity = this.velocity.add(relativeVelocity);
                         }
                     }
                 }
@@ -2291,14 +2387,14 @@ var es;
          */
         ArcadeRigidbody.prototype.processOverlap = function (other, minimumTranslationVector) {
             if (this.isImmovable) {
-                other.entity.transform.position = es.Vector2.add(other.entity.transform.position, minimumTranslationVector);
+                other.entity.transform.position = other.entity.transform.position.add(minimumTranslationVector);
             }
             else if (other.isImmovable) {
-                this.entity.transform.position = es.Vector2.subtract(this.entity.transform.position, minimumTranslationVector);
+                this.entity.transform.position = this.entity.transform.position.subtract(minimumTranslationVector);
             }
             else {
-                this.entity.transform.position = es.Vector2.subtract(this.entity.transform.position, es.Vector2.multiply(minimumTranslationVector, es.Vector2Ext.halfVector()));
-                other.entity.transform.position = es.Vector2.add(other.entity.transform.position, es.Vector2.multiply(minimumTranslationVector, es.Vector2Ext.halfVector()));
+                this.entity.transform.position = this.entity.transform.position.subtract(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                other.entity.transform.position = other.entity.transform.position.add(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
             }
         };
         /**
@@ -2316,8 +2412,8 @@ var es;
             var totalinverseMass = this._inverseMass + other._inverseMass;
             var ourResponseFraction = this._inverseMass / totalinverseMass;
             var otherResponseFraction = other._inverseMass / totalinverseMass;
-            this.velocity = es.Vector2.add(this.velocity, new es.Vector2(relativeVelocity.x * ourResponseFraction, relativeVelocity.y * ourResponseFraction));
-            other.velocity = es.Vector2.subtract(other.velocity, new es.Vector2(relativeVelocity.x * otherResponseFraction, relativeVelocity.y * otherResponseFraction));
+            this.velocity = this.velocity.add(es.Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
+            other.velocity = other.velocity.subtract(es.Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
         };
         /**
          *  给定两个物体和MTV之间的相对速度，本方法修改相对速度，使其成为碰撞响应
@@ -2328,12 +2424,12 @@ var es;
         ArcadeRigidbody.prototype.calculateResponseVelocity = function (relativeVelocity, minimumTranslationVector, responseVelocity) {
             if (responseVelocity === void 0) { responseVelocity = new es.Vector2(); }
             // 首先，我们得到反方向的归一化MTV：表面法线
-            var inverseMTV = es.Vector2.multiply(minimumTranslationVector, new es.Vector2(-1));
+            var inverseMTV = es.Vector2.multiplyScaler(minimumTranslationVector, -1);
             var normal = es.Vector2.normalize(inverseMTV);
             // 速度是沿碰撞法线和碰撞平面分解的。
             // 弹性将影响沿法线的响应（法线速度分量），摩擦力将影响速度的切向分量（切向速度分量）
             var n = es.Vector2.dot(relativeVelocity, normal);
-            var normalVelocityComponent = new es.Vector2(normal.x * n, normal.y * n);
+            var normalVelocityComponent = es.Vector2.multiplyScaler(normal, n);
             var tangentialVelocityComponent = es.Vector2.subtract(relativeVelocity, normalVelocityComponent);
             if (n > 0)
                 normalVelocityComponent = es.Vector2.zero;
@@ -2342,11 +2438,8 @@ var es;
             if (tangentialVelocityComponent.lengthSquared() < this._glue)
                 coefficientOfFriction = 1.01;
             // 弹性影响速度的法向分量，摩擦力影响速度的切向分量
-            var t = es.Vector2.multiply(new es.Vector2((1 + this._elasticity)), normalVelocityComponent)
-                .multiply(new es.Vector2(-1))
-                .subtract(es.Vector2.multiply(new es.Vector2(coefficientOfFriction), tangentialVelocityComponent));
-            responseVelocity.x = t.x;
-            relativeVelocity.y = t.y;
+            responseVelocity = es.Vector2.multiplyScaler(normalVelocityComponent, -(1 + this._elasticity))
+                .subtract(es.Vector2.multiplyScaler(tangentialVelocityComponent, coefficientOfFriction));
         };
         return ArcadeRigidbody;
     }(es.Component));
@@ -4732,7 +4825,7 @@ var es;
                 currentTime = Date.now();
             if (this._lastTime == -1)
                 this._lastTime = currentTime;
-            var dt = currentTime - this._lastTime;
+            var dt = (currentTime - this._lastTime) / 1000;
             if (dt > this.maxDeltaTime)
                 dt = this.maxDeltaTime;
             this.totalTime += dt;
@@ -5332,7 +5425,34 @@ var es;
             return degrees * 0.017453292519943295769236907684886;
         };
         /**
-         * mapps值(在leftMin - leftMax范围内)到rightMin - rightMax范围内的值
+         * 返回由给定三角形和两个归一化重心（面积）坐标定义的点的一个轴的笛卡尔坐标
+         * @param value1
+         * @param value2
+         * @param value3
+         * @param amount1
+         * @param amount2
+         */
+        MathHelper.barycentric = function (value1, value2, value3, amount1, amount2) {
+            return value1 + (value2 - value1) * amount1 + (value3 - value1) * amount2;
+        };
+        /**
+         * 使用指定位置执行Catmull-Rom插值
+         * @param value1
+         * @param value2
+         * @param value3
+         * @param value4
+         * @param amount
+         */
+        MathHelper.catmullRom = function (value1, value2, value3, value4, amount) {
+            // 使用来自http://www.mvps.org/directx/articles/catmull/的公式 
+            var amountSquared = amount * amount;
+            var amountCubed = amountSquared * amount;
+            return (0.5 * (2 * value2 + (value3 - value1) * amount +
+                (2 * value1 - 5 * value2 + 4 * value3 - value4) * amountSquared +
+                (3 * value2 - value1 - 3 * value3 + value4) * amountCubed));
+        };
+        /**
+         * 将值（在leftMin-leftMax范围内）映射到一个在rightMin-rightMax范围内的值
          * @param value
          * @param leftMin
          * @param leftMax
@@ -5341,6 +5461,60 @@ var es;
          */
         MathHelper.map = function (value, leftMin, leftMax, rightMin, rightMax) {
             return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
+        };
+        /**
+         * 将值从任意范围映射到0到1范围
+         * @param value
+         * @param min
+         * @param max
+         * @returns
+         */
+        MathHelper.map01 = function (value, min, max) {
+            return (value - min) * 1 / (max - min);
+        };
+        /**
+         * 将值从某个任意范围映射到1到0范围
+         * 这相当于map01的取反
+         * @param value
+         * @param min
+         * @param max
+         * @returns
+         */
+        MathHelper.map10 = function (value, min, max) {
+            return 1 - this.map01(value, min, max);
+        };
+        /**
+         * 使用三次方程在两个值之间进行插值
+         * @param value1
+         * @param value2
+         * @param amount
+         */
+        MathHelper.smoothStep = function (value1, value2, amount) {
+            var result = this.clamp(amount, 0, 1);
+            result = MathHelper.hermite(value1, 0, value2, 0, result);
+            return result;
+        };
+        /**
+         * 将给定角度减小到π到-π之间的值
+         * @param angle
+         */
+        MathHelper.wrapAngle = function (angle) {
+            if ((angle > -Math.PI) && (angle <= Math.PI))
+                return angle;
+            angle %= Math.PI * 2;
+            if (angle <= -Math.PI)
+                return angle + 2 * Math.PI;
+            if (angle > Math.PI)
+                return angle - 2 * Math.PI;
+            return angle;
+        };
+        /**
+         * 确定值是否以2为底
+         * @param value
+         * @returns
+         */
+        MathHelper.isPowerOfTwo = function (value) {
+            return (value > 0) && ((value % (value - 1)) == 0);
         };
         MathHelper.lerp = function (from, to, t) {
             return from + (to - from) * this.clamp01(t);
@@ -5409,6 +5583,13 @@ var es;
             }
             return (t - from) / (to - from);
         };
+        /**
+         * 在两个值之间线性插值
+         * 此方法是MathHelper.Lerp的效率较低，更精确的版本。
+         */
+        MathHelper.lerpPrecise = function (value1, value2, amount) {
+            return ((1 - amount) * value1) + (value2 * amount);
+        };
         MathHelper.clamp = function (value, min, max) {
             if (value < min)
                 return min;
@@ -5437,6 +5618,25 @@ var es;
             return value % 2 == 0;
         };
         /**
+         * 如果值是奇数，则返回true
+         * @param value
+         * @returns
+         */
+        MathHelper.isOdd = function (value) {
+            return value % 2 != 0;
+        };
+        /**
+         * 将值四舍五入并返回它和四舍五入后的数值
+         * @param value
+         * @param roundedAmount
+         * @returns
+         */
+        MathHelper.roundWithRoundedAmount = function (value, roundedAmount) {
+            var rounded = Math.round(value);
+            roundedAmount.value = value - (rounded * Math.round(value / rounded));
+            return rounded;
+        };
+        /**
          * 数值限定在0-1之间
          * @param value
          */
@@ -5463,6 +5663,36 @@ var es;
             if (t == length)
                 return 0;
             return t;
+        };
+        /**
+         * 递减t并确保其始终大于或等于0且小于长度
+         * @param t
+         * @param length
+         * @returns
+         */
+        MathHelper.decrementWithWrap = function (t, length) {
+            t--;
+            if (t < 0)
+                return length - 1;
+            return t;
+        };
+        /**
+         * 返回sqrt（x * x + y * y）
+         * @param x
+         * @param y
+         * @returns
+         */
+        MathHelper.hypotenuse = function (x, y) {
+            return Math.sqrt(x * x + y * y);
+        };
+        MathHelper.closestPowerOfTwoGreaterThan = function (x) {
+            x--;
+            x |= (x >> 1);
+            x |= (x >> 2);
+            x |= (x >> 4);
+            x |= (x >> 8);
+            x |= (x >> 16);
+            return (x + 1);
         };
         /**
          * 以roundToNearest为步长，将值舍入到最接近的数字。例如：在125中找到127到最近的5个结果
@@ -5543,6 +5773,16 @@ var es;
             if (num > 180)
                 num -= 360;
             return num;
+        };
+        /**
+         * 检查值是否介于最小值/最大值（包括最小值/最大值）之间
+         * @param value
+         * @param min
+         * @param max
+         * @returns
+         */
+        MathHelper.between = function (value, min, max) {
+            return value >= min && value <= max;
         };
         /**
          * 计算以弧度为单位的两个给定角度之间的最短差
@@ -5656,6 +5896,41 @@ var es;
             var x = damped * Math.sin(es.Time.totalTime * xFrequency + phase) * xMagnitude;
             var y = damped * Math.cos(es.Time.totalTime * yFrequency) * yMagnitude;
             return new es.Vector2(x, y);
+        };
+        /**
+         * 执行Hermite样条插值
+         * @param value1
+         * @param tangent1
+         * @param value2
+         * @param tangent2
+         * @param amount
+         * @returns
+         */
+        MathHelper.hermite = function (value1, tangent1, value2, tangent2, amount) {
+            var v1 = value1, v2 = value2, t1 = tangent1, t2 = tangent2, s = amount, result;
+            var sCubed = s * s * s;
+            var sSquared = s * s;
+            if (amount == 0)
+                result = value1;
+            else if (amount == 1)
+                result = value2;
+            else
+                result = (2 * v1 - 2 * v2 + t2 + t1) * sCubed +
+                    (3 * v2 - 3 * v1 - 2 * t1 - t2) * sSquared +
+                    t1 * s +
+                    v1;
+            return result;
+        };
+        /**
+         * 此函数用于确保数不是NaN或无穷大
+         * @param x
+         * @returns
+         */
+        MathHelper.isValid = function (x) {
+            if (Number.isNaN(x)) {
+                return false;
+            }
+            return !Number.isFinite(x);
         };
         MathHelper.Epsilon = 0.00001;
         MathHelper.Rad2Deg = 57.29578;
@@ -11422,6 +11697,115 @@ var es;
             var depthY = distanceY > 0 ? minDistanceY - distanceY : -minDistanceY - distanceY;
             return new es.Vector2(depthX, depthY);
         };
+        RectangleExt.getClosestPointOnBoundsToOrigin = function (rect) {
+            var max = this.getMax(rect);
+            var minDist = Math.abs(rect.location.x);
+            var boundsPoint = new es.Vector2(rect.location.x, 0);
+            if (Math.abs(max.x) < minDist) {
+                minDist = Math.abs(max.x);
+                boundsPoint.x = max.x;
+                boundsPoint.y = 0;
+            }
+            if (Math.abs(max.y) < minDist) {
+                minDist = Math.abs(max.y);
+                boundsPoint.x = 0;
+                boundsPoint.y = max.y;
+            }
+            if (Math.abs(rect.location.y) < minDist) {
+                minDist = Math.abs(rect.location.y);
+                boundsPoint.x = 0;
+                boundsPoint.y = rect.location.y;
+            }
+            return boundsPoint;
+        };
+        /**
+         * 将Rectangle中或上的最接近点返回给定点
+         * @param rect
+         * @param point
+         */
+        RectangleExt.getClosestPointOnRectangleToPoint = function (rect, point) {
+            // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
+            var res = new es.Vector2();
+            res.x = es.MathHelper.clamp(point.x, rect.left, rect.right);
+            res.y = es.MathHelper.clamp(point.y, rect.top, rect.bottom);
+            return res;
+        };
+        /**
+         * 获取矩形边界上与给定点最接近的点
+         * @param rect
+         * @param point
+         */
+        RectangleExt.getClosestPointOnRectangleBorderToPoint = function (rect, point) {
+            // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
+            var res = new es.Vector2();
+            res.x = es.MathHelper.clamp(point.x, rect.left, rect.right);
+            res.y = es.MathHelper.clamp(point.y, rect.top, rect.bottom);
+            // 如果点在矩形内，我们需要将res推到边框，因为它将在矩形内 
+            if (rect.contains(res.x, res.y)) {
+                var dl = rect.x - rect.left;
+                var dr = rect.right - res.x;
+                var dt = res.y - rect.top;
+                var db = rect.bottom - res.y;
+                var min = Math.min(dl, dr, dt, db);
+                if (min == dt)
+                    res.y = rect.top;
+                else if (min == db)
+                    res.y = rect.bottom;
+                else if (min == dl)
+                    res.x == rect.left;
+                else
+                    res.x = rect.right;
+            }
+            return res;
+        };
+        RectangleExt.getMax = function (rect) {
+            return new es.Vector2(rect.right, rect.bottom);
+        };
+        /**
+         * 以Vector2的形式获取矩形的中心点
+         * @param rect
+         * @returns
+         */
+        RectangleExt.getCenter = function (rect) {
+            return new es.Vector2(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        };
+        /**
+         * 给定多边形的点即可计算边界
+         * @param points
+         */
+        RectangleExt.boundsFromPolygonPoints = function (points) {
+            // 我们需要找到最小/最大x / y值 
+            var minX = Number.POSITIVE_INFINITY;
+            var minY = Number.POSITIVE_INFINITY;
+            var maxX = Number.NEGATIVE_INFINITY;
+            var maxY = Number.NEGATIVE_INFINITY;
+            for (var i = 0; i < points.length; i++) {
+                var pt = points[i];
+                if (pt.x < minX)
+                    minX = pt.x;
+                if (pt.x > maxX)
+                    maxX = pt.x;
+                if (pt.y < minY)
+                    minY = pt.y;
+                if (pt.y > maxY)
+                    maxY = pt.y;
+            }
+            return this.fromMinMaxVector(new es.Vector2(minX, minY), new es.Vector2(maxX, maxY));
+        };
+        /**
+         * 缩放矩形
+         * @param rect
+         * @param scale
+         */
+        RectangleExt.scale = function (rect, scale) {
+            rect.x = rect.x * scale.x;
+            rect.y = rect.y * scale.y;
+            rect.width = rect.width * scale.x;
+            rect.height = rect.height * scale.y;
+        };
+        RectangleExt.translate = function (rect, vec) {
+            rect.location.add(vec);
+        };
         return RectangleExt;
     }());
     es.RectangleExt = RectangleExt;
@@ -11507,6 +11891,17 @@ var es;
             this.normalize(from);
             this.normalize(to);
             return Math.acos(es.MathHelper.clamp(es.Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
+        };
+        /**
+         * 返回以自度为中心的左右角度
+         * @param self
+         * @param left
+         * @param right
+         */
+        Vector2Ext.angleBetween = function (self, left, right) {
+            var one = es.Vector2.subtract(left, self);
+            var two = es.Vector2.subtract(right, self);
+            return this.angle(one, two);
         };
         /**
          * 给定两条直线(ab和cd)，求交点

@@ -122,8 +122,8 @@ module es {
          */
         public addImpulse(force: Vector2) {
             if (!this.isImmovable) {
-                this.velocity = Vector2.add(this.velocity, Vector2.multiply(force, new Vector2(100000))
-                    .multiply(new Vector2(this._inverseMass * Time.deltaTime)));
+                this.velocity = this.velocity.add(Vector2.multiplyScaler(force, 100000)
+                    .multiplyScaler(this._inverseMass * Time.deltaTime * Time.deltaTime));
             }
         }
 
@@ -139,9 +139,9 @@ module es {
             }
 
             if (this.shouldUseGravity)
-                this.velocity = Vector2.add(this.velocity, Vector2.multiply(Physics.gravity, new Vector2(Time.deltaTime)));
+                this.velocity = this.velocity.add(Vector2.multiplyScaler(Physics.gravity, Time.deltaTime));
 
-            this.entity.transform.position = Vector2.add(this.entity.transform.position, Vector2.multiply(this.velocity, new Vector2(Time.deltaTime)));
+            this.entity.transform.position = this.entity.transform.position.add(Vector2.multiplyScaler(this.velocity, Time.deltaTime));
             let collisionResult = new CollisionResult();
 
             // 捞取我们在新的位置上可能会碰撞到的任何东西
@@ -154,16 +154,16 @@ module es {
 
                 if (this._collider.collidesWithNonMotion(neighbor, collisionResult)) {
                     // 如果附近有一个ArcadeRigidbody，我们就会处理完整的碰撞响应。如果没有，我们会根据附近是不可移动的来计算事情
-                    let neighborRigidbody = neighbor.entity.getComponent<ArcadeRigidbody>(ArcadeRigidbody);
+                    let neighborRigidbody = neighbor.entity.getComponent(ArcadeRigidbody);
                     if (neighborRigidbody != null) {
                         this.processOverlap(neighborRigidbody, collisionResult.minimumTranslationVector);
                         this.processCollision(neighborRigidbody, collisionResult.minimumTranslationVector);
                     } else {
                         // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                        this.entity.transform.position = Vector2.subtract(this.entity.transform.position, collisionResult.minimumTranslationVector);
+                        this.entity.transform.position = this.entity.transform.position.subtract(collisionResult.minimumTranslationVector);
                         let relativeVelocity = this.velocity.clone();
                         this.calculateResponseVelocity(relativeVelocity, collisionResult.minimumTranslationVector, relativeVelocity);
-                        this.velocity = Vector2.add(this.velocity, relativeVelocity);
+                        this.velocity = this.velocity.add(relativeVelocity);
                     }
                 }
             }
@@ -176,12 +176,12 @@ module es {
          */
         public processOverlap(other: ArcadeRigidbody, minimumTranslationVector: Vector2) {
             if (this.isImmovable) {
-                other.entity.transform.position = Vector2.add(other.entity.transform.position, minimumTranslationVector);
+                other.entity.transform.position = other.entity.transform.position.add(minimumTranslationVector);
             } else if (other.isImmovable) {
-                this.entity.transform.position = Vector2.subtract(this.entity.transform.position, minimumTranslationVector);
+                this.entity.transform.position = this.entity.transform.position.subtract(minimumTranslationVector);
             } else {
-                this.entity.transform.position = Vector2.subtract(this.entity.transform.position, Vector2.multiply(minimumTranslationVector, Vector2Ext.halfVector()));
-                other.entity.transform.position = Vector2.add(other.entity.transform.position, Vector2.multiply(minimumTranslationVector, Vector2Ext.halfVector()));
+                this.entity.transform.position = this.entity.transform.position.subtract(Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                other.entity.transform.position = other.entity.transform.position.add(Vector2.multiplyScaler(minimumTranslationVector, 0.5));
             }
         }
 
@@ -203,8 +203,8 @@ module es {
             let ourResponseFraction = this._inverseMass / totalinverseMass;
             let otherResponseFraction = other._inverseMass / totalinverseMass;
 
-            this.velocity = Vector2.add(this.velocity, new Vector2(relativeVelocity.x * ourResponseFraction, relativeVelocity.y * ourResponseFraction));
-            other.velocity = Vector2.subtract(other.velocity, new Vector2(relativeVelocity.x * otherResponseFraction, relativeVelocity.y * otherResponseFraction));
+            this.velocity = this.velocity.add(Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
+            other.velocity = other.velocity.subtract(Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
         }
 
         /**
@@ -215,14 +215,14 @@ module es {
          */
         public calculateResponseVelocity(relativeVelocity: Vector2, minimumTranslationVector: Vector2, responseVelocity: Vector2 = new Vector2()) {
             // 首先，我们得到反方向的归一化MTV：表面法线
-            let inverseMTV = Vector2.multiply(minimumTranslationVector, new Vector2(-1));
+            let inverseMTV = Vector2.multiplyScaler(minimumTranslationVector, -1);
             let normal = Vector2.normalize(inverseMTV);
 
             // 速度是沿碰撞法线和碰撞平面分解的。
             // 弹性将影响沿法线的响应（法线速度分量），摩擦力将影响速度的切向分量（切向速度分量）
             let n = Vector2.dot(relativeVelocity, normal);
 
-            let normalVelocityComponent = new Vector2(normal.x * n, normal.y * n);
+            let normalVelocityComponent = Vector2.multiplyScaler(normal, n);
             let tangentialVelocityComponent = Vector2.subtract(relativeVelocity, normalVelocityComponent);
 
             if (n > 0)
@@ -234,11 +234,8 @@ module es {
                 coefficientOfFriction = 1.01;
 
             // 弹性影响速度的法向分量，摩擦力影响速度的切向分量
-            let t = Vector2.multiply(new Vector2((1 + this._elasticity)), normalVelocityComponent)
-                .multiply(new Vector2(-1))
-                .subtract(Vector2.multiply(new Vector2(coefficientOfFriction), tangentialVelocityComponent));
-            responseVelocity.x = t.x;
-            relativeVelocity.y = t.y;
+            responseVelocity = Vector2.multiplyScaler(normalVelocityComponent, -(1 + this._elasticity))
+                .subtract(Vector2.multiplyScaler(tangentialVelocityComponent, coefficientOfFriction));
         }
     }
 }

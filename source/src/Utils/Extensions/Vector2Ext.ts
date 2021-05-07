@@ -52,6 +52,18 @@ module es {
         }
 
         /**
+         * 返回以自度为中心的左右角度 
+         * @param self 
+         * @param left 
+         * @param right 
+         */
+        public static angleBetween(self: Vector2, left: Vector2, right: Vector2) {
+            let one = Vector2.subtract(left, self);
+            let two = Vector2.subtract(right, self);
+            return this.angle(one, two);
+        }
+
+        /**
          * 给定两条直线(ab和cd)，求交点
          * @param a 
          * @param b 

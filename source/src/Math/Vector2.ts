@@ -67,6 +67,19 @@ module es {
         }
 
         /**
+         * 
+         * @param value1 
+         * @param value2 
+         * @returns 
+         */
+        public static multiplyScaler(value1: Vector2, value2: number) {
+            let result = new Vector2(0, 0);
+            result.x = value1.x * value2;
+            result.y = value1.x * value2;
+            return result;
+        }
+
+        /**
          *
          * @param value1
          * @param value2
@@ -133,6 +146,18 @@ module es {
         }
 
         /**
+         * 创建一个新的Vector2，其中包含指定矢量的线性插值
+         * @param value1 
+         * @param value2 
+         * @param amount 
+         * @returns 
+         */
+        public static lerpPrecise(value1: Vector2, value2: Vector2, amount: number) {
+            return new Vector2(MathHelper.lerpPrecise(value1.x, value2.x, amount),
+                MathHelper.lerpPrecise(value1.y, value2.y, amount));
+        }
+
+        /**
          * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换。
          * @param position
          * @param matrix
@@ -140,6 +165,16 @@ module es {
         public static transform(position: Vector2, matrix: Matrix2D) {
             return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31,
                 (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32);
+        }
+
+        /**
+         * 创建一个新的Vector2，其中包含由指定的Matrix转换的指定法线
+         * @param normal 
+         * @param matrix 
+         */
+        public static transformNormal(normal: Vector2, matrix: Matrix) {
+            return new Vector2((normal.x * matrix.m11) + (normal.y * matrix.m21),
+                (normal.x * matrix.m12) + (normal.y * matrix.m22));
         }
 
         /**
@@ -177,6 +212,32 @@ module es {
         }
 
         /**
+         * 创建一个新的Vector2，其中包含给定矢量和法线的反射矢量
+         * @param vector 
+         * @param normal 
+         * @returns 
+         */
+        public static reflect(vector: Vector2, normal: Vector2) {
+            let result: Vector2 = new Vector2();
+            let val = 2 * ((vector.x * normal.x) + (vector.y * normal.y));
+            result.x = vector.x - (normal.x * val);
+            result.y = vector.y - (normal.y * val);
+            return result;
+        }
+
+        /**
+         * 创建一个新的Vector2，其中包含指定矢量的三次插值
+         * @param value1 
+         * @param value2 
+         * @param amount 
+         * @returns 
+         */
+        public static smoothStep(value1: Vector2, value2: Vector2, amount: number) {
+            return new Vector2(MathHelper.smoothStep(value1.x, value2.x, amount),
+                MathHelper.smoothStep(value1.y, value2.y, amount));
+        }
+
+        /**
          *
          * @param value
          */
@@ -203,6 +264,17 @@ module es {
         public multiply(value: Vector2): Vector2 {
             this.x *= value.x;
             this.y *= value.y;
+            return this;
+        }
+
+        /**
+         * 
+         * @param value 
+         * @returns 
+         */
+        public multiplyScaler(value: number): Vector2 {
+            this.x *= value;
+            this.y *= value;
             return this;
         }
 
@@ -268,6 +340,46 @@ module es {
             }
             
             return false;
+        }
+
+        public isValid(): boolean {
+            return MathHelper.isValid(this.x) && MathHelper.isValid(this.y);
+        }
+
+        /**
+         * 创建一个新的Vector2，其中包含来自两个向量的最小值
+         * @param value1 
+         * @param value2 
+         * @returns 
+         */
+        public static min(value1: Vector2, value2: Vector2) {
+            return new Vector2(value1.x < value2.x ? value1.x : value2.x,
+                value1.y < value2.y ? value1.y : value2.y);
+        }
+
+        /**
+         * 创建一个新的Vector2，其中包含两个向量的最大值
+         * @param value1 
+         * @param value2 
+         * @returns 
+         */
+        public static max(value1: Vector2, value2: Vector2) {
+            return new Vector2(value1.x > value2.x ? value1.x : value2.x,
+                value1.y > value2.y ? value1.y : value2.y);
+        }
+
+        /**
+         * 创建一个新的Vector2，其中包含Hermite样条插值
+         * @param value1 
+         * @param tangent1 
+         * @param value2 
+         * @param tangent2 
+         * @param amount 
+         * @returns 
+         */
+        public static hermite(value1: Vector2, tangent1: Vector2, value2: Vector2, tangent2: Vector2, amount: number){
+            return new Vector2(MathHelper.hermite(value1.x, tangent1.x, value2.x, tangent2.x, amount),
+                MathHelper.hermite(value1.y, tangent1.y, value2.y, tangent2.y, amount));
         }
 
         public clone(): Vector2 {
