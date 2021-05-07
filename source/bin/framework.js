@@ -610,10 +610,9 @@ var es;
             this._updateOrder = 0;
             this.components = new es.ComponentList(this);
             this.transform = new es.Transform(this);
+            this.componentBits = new es.Bits();
             this.name = name;
             this.id = Entity._idGenerator++;
-            this.systemBits_ = new es.BitSet();
-            this.componentBits = new es.BitSet();
         }
         Object.defineProperty(Entity.prototype, "isDestroyed", {
             /**
@@ -676,9 +675,6 @@ var es;
             enumerable: true,
             configurable: true
         });
-        Entity.prototype.getSystemBits = function () {
-            return this.systemBits_;
-        };
         Object.defineProperty(Entity.prototype, "parent", {
             get: function () {
                 return this.transform.parent;
@@ -3075,23 +3071,7 @@ var es;
 ///<reference path="../../Utils/Collections/HashMap.ts"/>
 var es;
 ///<reference path="../../Utils/Collections/HashMap.ts"/>
-(function (es_1) {
-    var SystemIndexManager = /** @class */ (function () {
-        function SystemIndexManager() {
-        }
-        SystemIndexManager.getIndexFor = function (es) {
-            var index = SystemIndexManager.indices.get(es);
-            if (!index) {
-                index = SystemIndexManager.INDEX++;
-                SystemIndexManager.indices.set(es, index);
-            }
-            return index;
-        };
-        SystemIndexManager.INDEX = 0;
-        SystemIndexManager.indices = new Map();
-        return SystemIndexManager;
-    }());
-    es_1.SystemIndexManager = SystemIndexManager;
+(function (es) {
     /**
      * 追踪实体的子集，但不实现任何排序或迭代。
      */
@@ -3101,8 +3081,7 @@ var es;
             this._startTime = 0;
             this._endTime = 0;
             this._useTime = 0;
-            this._matcher = matcher ? matcher : es_1.Matcher.empty();
-            this.systemIndex_ = SystemIndexManager.getIndexFor(this.constructor);
+            this._matcher = matcher ? matcher : es.Matcher.empty();
             this.initialize();
         }
         Object.defineProperty(EntitySystem.prototype, "scene", {
@@ -3137,7 +3116,7 @@ var es;
         EntitySystem.prototype.initialize = function () {
         };
         EntitySystem.prototype.onChanged = function (entity) {
-            var contains = entity.getSystemBits().get(this.systemIndex_);
+            var contains = !!this._entities.find(function (e) { return e.id == entity.id; });
             var interest = this._matcher.isInterestedEntity(entity);
             if (interest && !contains)
                 this.add(entity);
@@ -3145,14 +3124,13 @@ var es;
                 this.remove(entity);
         };
         EntitySystem.prototype.add = function (entity) {
-            this._entities.push(entity);
-            entity.getSystemBits().set(this.systemIndex_);
+            if (!this._entities.find(function (e) { return e.id == entity.id; }))
+                this._entities.push(entity);
             this.onAdded(entity);
         };
         EntitySystem.prototype.onAdded = function (entity) { };
         EntitySystem.prototype.remove = function (entity) {
             new es.List(this._entities).remove(entity);
-            entity.getSystemBits().clear(this.systemIndex_);
             this.onRemoved(entity);
         };
         EntitySystem.prototype.onRemoved = function (entity) { };
@@ -3173,7 +3151,7 @@ var es;
          * 在下一个系统开始处理或新的处理回合开始之前（以先到者为准），使用此方法创建的任何实体都不会激活
          */
         EntitySystem.prototype.begin = function () {
-            if (!es_1.Core.Instance.debug)
+            if (!es.Core.Instance.debug)
                 return;
             this._startTime = Date.now();
         };
@@ -3183,7 +3161,7 @@ var es;
          * 系统处理完毕后调用
          */
         EntitySystem.prototype.end = function () {
-            if (!es_1.Core.Instance.debug)
+            if (!es.Core.Instance.debug)
                 return;
             this._endTime = Date.now();
             this._useTime = this._endTime - this._startTime;
@@ -3200,7 +3178,7 @@ var es;
         };
         return EntitySystem;
     }());
-    es_1.EntitySystem = EntitySystem;
+    es.EntitySystem = EntitySystem;
 })(es || (es = {}));
 ///<reference path="./EntitySystem.ts"/>
 var es;
@@ -3535,473 +3513,20 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    /**
-     * 这个类可以从两方面来考虑。你可以把它看成一个位向量或者一组非负整数。这个名字有点误导人。
-     *
-     * 它是由一个位向量实现的，但同样可以把它看成是一个非负整数的集合;集合中的每个整数由对应索引处的集合位表示。该结构的大小由集合中的最大整数决定。
-     */
-    var BitSet = /** @class */ (function () {
-        function BitSet(nbits) {
-            if (nbits === void 0) { nbits = 0; }
-            this.words_ = [];
+    var Bits = /** @class */ (function () {
+        function Bits() {
+            this._bit = {};
         }
-        BitSet.prototype.clear = function (bitIndex) {
-            if (bitIndex === null) {
-                var words = this.words_;
-                var wordsInUse = words.length;
-                while (wordsInUse > 0) {
-                    words[--wordsInUse] = 0;
-                }
-                return;
-            }
-            var wordIndex = bitIndex >> BitSet.ADDRESS_BITS_PER_WORD;
-            this.words_[wordIndex] &= ~(1 << bitIndex);
+        Bits.prototype.set = function (index, value) {
+            this._bit[index] = value;
         };
-        BitSet.prototype.get = function (bitIndex) {
-            var wordIndex = bitIndex >> BitSet.ADDRESS_BITS_PER_WORD;
-            var words = this.words_;
-            var wordsInUse = words.length;
-            return wordIndex < wordsInUse && (words[wordIndex] & (1 << bitIndex)) != 0;
+        Bits.prototype.get = function (index) {
+            var v = this._bit[index];
+            return v == null ? 0 : v;
         };
-        BitSet.prototype.intersects = function (set) {
-            var words = this.words_;
-            var wordsInUse = words.length;
-            for (var i = Math.min(wordsInUse, set.words_.length) - 1; i >= 0; i--)
-                if ((words[i] & set.words_[i]) != 0)
-                    return true;
-            return false;
-        };
-        BitSet.prototype.isEmpty = function () {
-            return this.words_.length === 0;
-        };
-        BitSet.prototype.nextSetBit = function (fromIndex) {
-            var u = fromIndex >> BitSet.ADDRESS_BITS_PER_WORD;
-            var words = this.words_;
-            var wordsInUse = words.length;
-            var word = words[u] & (BitSet.WORD_MASK << fromIndex);
-            while (true) {
-                if (word !== 0)
-                    return u * BitSet.BITS_PER_WORD + this.numberOfTrailingZeros(word);
-                if (++u === wordsInUse)
-                    return -1;
-                word = words[u];
-            }
-        };
-        BitSet.prototype.numberOfTrailingZeros = function (i) {
-            if (i == 0)
-                return 64;
-            var x = i;
-            var y;
-            var n = 63;
-            y = x << 32;
-            if (y != 0) {
-                n -= 32;
-                x = y;
-            }
-            y = x << 16;
-            if (y != 0) {
-                n -= 16;
-                x = y;
-            }
-            y = x << 8;
-            if (y != 0) {
-                n -= 8;
-                x = y;
-            }
-            y = x << 4;
-            if (y != 0) {
-                n -= 4;
-                x = y;
-            }
-            y = x << 2;
-            if (y != 0) {
-                n -= 2;
-                x = y;
-            }
-            return n - ((x << 1) >>> 63);
-        };
-        BitSet.prototype.set = function (bitIndex, value) {
-            if (value === void 0) { value = true; }
-            var wordIndex = bitIndex >> BitSet.ADDRESS_BITS_PER_WORD;
-            var words = this.words_;
-            var wordsInUse = words.length;
-            var wordsRequired = wordIndex + 1;
-            if (wordsInUse < wordsRequired) {
-                words.length = Math.max(2 * wordsInUse, wordsRequired);
-                for (var i = wordsInUse, l = words.length; i < l; i++) {
-                    words[i] = 0;
-                }
-            }
-            if (value) {
-                return (words[wordIndex] |= 1 << bitIndex);
-            }
-            else {
-                return (words[wordIndex] &= ~(1 << bitIndex));
-            }
-        };
-        BitSet.ADDRESS_BITS_PER_WORD = 5;
-        BitSet.BITS_PER_WORD = 1 << BitSet.ADDRESS_BITS_PER_WORD; // 32
-        BitSet.WORD_MASK = 0xffffffff;
-        return BitSet;
+        return Bits;
     }());
-    es.BitSet = BitSet;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 性能优化的位组实现。某些操作是以不安全为前缀的, 这些方法不执行验证，主要是在内部利用来优化实体ID位集的访问
-     */
-    var BitVector = /** @class */ (function () {
-        /**
-         * 创建一个初始大小足够大的bitset，以明确表示0到nbits-1范围内指数的bit
-         * @param nbits nbits 位集的初始大小
-         */
-        function BitVector(nbits) {
-            this.words = [0];
-            if (nbits) {
-                if (typeof nbits == 'number')
-                    this.checkCapacity(nbits >>> 6);
-                else {
-                    // 基于另一个位向量创建一个位集
-                    this.words = nbits.words.slice(0);
-                }
-            }
-        }
-        /**
-         *
-         * @param index 位的索引
-         * @returns 该位是否被设置
-         */
-        BitVector.prototype.get = function (index) {
-            var word = index >>> 6;
-            return word < this.words.length &&
-                (this.words[word] & (1 << index)) != 0;
-        };
-        /**
-         *
-         * @param index 位的索引
-         */
-        BitVector.prototype.set = function (index, value) {
-            if (value === void 0) { value = true; }
-            if (value) {
-                var word = index >>> 6;
-                this.checkCapacity(word);
-                this.words[word] |= 1 << index;
-            }
-            else {
-                this.clear(index);
-            }
-        };
-        /**
-         *
-         * @param index 位的索引
-         * @returns 该位是否被设置
-         */
-        BitVector.prototype.unsafeGet = function (index) {
-            return (this.words[index >>> 6] & (1 << index)) != 0;
-        };
-        /**
-         *
-         * @param index 要设置的位的索引
-         */
-        BitVector.prototype.unsafeSet = function (index) {
-            this.words[index >>> 6] |= 1 << index;
-        };
-        /**
-         *
-         * @param index 要翻转的位的索引
-         */
-        BitVector.prototype.flip = function (index) {
-            var word = index >>> 6;
-            this.checkCapacity(word);
-            this.words[word] ^= 1 << index;
-        };
-        /**
-         * 要清除的位的索引
-         * @param index
-         */
-        BitVector.prototype.clear = function (index) {
-            if (index != null) {
-                var word = index >>> 6;
-                if (word >= this.words.length)
-                    return;
-                this.words[word] &= ~(1 << index);
-            }
-            else {
-                this.words.fill(0);
-            }
-        };
-        /**
-         * 返回该位组的 "逻辑大小"：位组中最高设置位的索引加1。如果比特集不包含集合位，则返回0
-         */
-        BitVector.prototype.length = function () {
-            var bits = this.words.slice(0);
-            for (var word = bits.length - 1; word >= 0; --word) {
-                var bitsAtWord = bits[word];
-                if (bitsAtWord != 0)
-                    return (word << 6) + 64 - this.numberOfLeadingZeros(bitsAtWord);
-            }
-            return 0;
-        };
-        /**
-         * @returns 如果这个位组中没有设置为true的位，则为true
-         */
-        BitVector.prototype.isEmpty = function () {
-            var bits = this.words.slice(0);
-            var length = bits.length;
-            for (var i = 0; i < length; i++) {
-                if (bits[i] != 0)
-                    return false;
-            }
-            return true;
-        };
-        /**
-         * 返回在指定的起始索引上或之后出现的第一个被设置为真的位的索引。
-         * 如果不存在这样的位，则返回-1
-         * @param fromIndex
-         */
-        BitVector.prototype.nextSetBit = function (fromIndex) {
-            var word = fromIndex >>> 6;
-            if (word >= this.words.length)
-                return -1;
-            var bitmap = this.words[word] >>> fromIndex;
-            if (bitmap != 0)
-                return fromIndex + this.numberOfTrailingZeros(bitmap);
-            for (var i = 1 + word; i < this.words.length; i++) {
-                bitmap = this.words[i];
-                if (bitmap != 0) {
-                    return i * 64 + this.numberOfTrailingZeros(bitmap);
-                }
-            }
-            return -1;
-        };
-        /**
-         * 返回在指定的起始索引上或之后发生的第一个被设置为false的位的索引
-         * @param fromIndex
-         */
-        BitVector.prototype.nextClearBit = function (fromIndex) {
-            var word = fromIndex >>> 6;
-            if (word >= this.words.length)
-                return Math.min(fromIndex, this.words.length << 6);
-            var bitmap = ~(this.words[word] >>> fromIndex);
-            if (bitmap != 0)
-                return fromIndex + this.numberOfTrailingZeros(bitmap);
-            for (var i = 1 + word; i < this.words.length; i++) {
-                bitmap = ~this.words[i];
-                if (bitmap != 0) {
-                    return i * 64 + this.numberOfTrailingZeros(bitmap);
-                }
-            }
-            return Math.min(fromIndex, this.words.length << 6);
-        };
-        /**
-         * 对这个目标位集和参数位集进行逻辑AND。
-         * 这个位集被修改，使它的每一个位都有值为真，如果且仅当它最初的值为真，并且位集参数中的相应位也有值为真
-         * @param other
-         */
-        BitVector.prototype.and = function (other) {
-            var commonWords = Math.min(this.words.length, other.words.length);
-            for (var i = 0; commonWords > i; i++) {
-                this.words[i] &= other.words[i];
-            }
-            if (this.words.length > commonWords) {
-                for (var i = commonWords, s = this.words.length; s > i; i++) {
-                    this.words[i] = 0;
-                }
-            }
-        };
-        /**
-         * 清除该位集的所有位，其对应的位被设置在指定的位集中
-         * @param other
-         */
-        BitVector.prototype.andNot = function (other) {
-            var commonWords = Math.min(this.words.length, other.words.length);
-            for (var i = 0; commonWords > i; i++)
-                this.words[i] &= ~other.words[i];
-        };
-        /**
-         * 用位集参数执行这个位集的逻辑OR。
-         * 如果且仅当位集参数中的位已经有值为真或位集参数中的对应位有值为真时，该位集才会被修改，从而使位集中的位有值为真
-         * @param other
-         */
-        BitVector.prototype.or = function (other) {
-            var commonWords = Math.min(this.words.length, other.words.length);
-            for (var i = 0; commonWords > i; i++)
-                this.words[i] |= other.words[i];
-            if (commonWords < other.words.length) {
-                this.checkCapacity(other.words.length);
-                for (var i = commonWords, s = other.words.length; s > i; i++) {
-                    this.words[i] = other.words[i];
-                }
-            }
-        };
-        /**
-         * 用位集参数对这个位集进行逻辑XOR。
-         * 这个位集被修改了，所以如果且仅当以下语句之一成立时，位集中的一个位的值为真
-         * @param other
-         */
-        BitVector.prototype.xor = function (other) {
-            var commonWords = Math.min(this.words.length, other.words.length);
-            for (var i = 0; commonWords > i; i++)
-                this.words[i] ^= other.words[i];
-            if (commonWords < other.words.length) {
-                this.checkCapacity(other.words.length);
-                for (var i = commonWords, s = other.words.length; s > i; i++) {
-                    this.words[i] = other.words[i];
-                }
-            }
-        };
-        /**
-         * 如果指定的BitVector有任何位被设置为true，并且在这个BitVector中也被设置为true，则返回true
-         * @param other
-         */
-        BitVector.prototype.intersects = function (other) {
-            var bits = this.words.slice(0);
-            var otherBits = other.words;
-            for (var i = 0, s = Math.min(bits.length, otherBits.length); s > i; i++) {
-                if ((bits[i] & otherBits[i]) != 0)
-                    return true;
-            }
-            return false;
-        };
-        /**
-         * 如果这个位集是指定位集的超级集，即它的所有位都被设置为真，那么返回true
-         * @param other
-         */
-        BitVector.prototype.containsAll = function (other) {
-            var bits = this.words.slice(0);
-            var otherBits = other.words;
-            var otherBitsLength = otherBits.length;
-            var bitsLength = bits.length;
-            for (var i = bitsLength; i < otherBitsLength; i++) {
-                if (otherBits[i] != 0) {
-                    return false;
-                }
-            }
-            for (var i = 0, s = Math.min(bitsLength, otherBitsLength); s > i; i++) {
-                if ((bits[i] & otherBits[i]) != otherBits[i]) {
-                    return false;
-                }
-            }
-            return true;
-        };
-        BitVector.prototype.cardinality = function () {
-            var count = 0;
-            for (var i = 0; i < this.words.length; i++)
-                count += this.bitCount(this.words[i]);
-            return count;
-        };
-        BitVector.prototype.hashCode = function () {
-            var word = this.length() >>> 6;
-            var hash = 0;
-            for (var i = 0; word >= i; i++)
-                hash = 127 * hash + (this.words[i] ^ (this.words[i] >>> 32));
-            return hash;
-        };
-        BitVector.prototype.bitCount = function (i) {
-            i = i - ((i >>> 1) & 0x55555555);
-            i = (i & 0x33333333) + ((i >>> 2) & 0x33333333);
-            i = (i + (i >>> 4)) & 0x0f0f0f0f;
-            i = i + (i >>> 8);
-            i = i + (i >>> 16);
-            return i & 0x3f;
-        };
-        /**
-         * 返回二进制补码二进制表示形式中最高位（“最左端”）一位之前的零位数量
-         * @param i
-         */
-        BitVector.prototype.numberOfLeadingZeros = function (i) {
-            if (i == 0)
-                return 64;
-            var n = 1;
-            var x = i >>> 32;
-            if (x == 0) {
-                n += 32;
-                x = i;
-            }
-            if (x >>> 16 == 0) {
-                n += 16;
-                x <<= 16;
-            }
-            if (x >>> 24 == 0) {
-                n += 8;
-                x <<= 8;
-            }
-            if (x >>> 28 == 0) {
-                n += 4;
-                x <<= 4;
-            }
-            if (x >>> 30 == 0) {
-                n += 2;
-                x <<= 2;
-            }
-            n -= x >>> 31;
-            return n;
-        };
-        /**
-         * 返回指定二进制数的补码二进制表示形式中最低序（“最右”）一位之后的零位数量
-         * @param i
-         */
-        BitVector.prototype.numberOfTrailingZeros = function (i) {
-            var x = 0, y = 0;
-            if (i == 0)
-                return 64;
-            var n = 63;
-            y = i;
-            if (y != 0) {
-                n = n - 32;
-                x = y;
-            }
-            else
-                x = (i >>> 32);
-            y = x << 16;
-            if (y != 0) {
-                n = n - 16;
-                x = y;
-            }
-            y = x << 8;
-            if (y != 0) {
-                n = n - 8;
-                x = y;
-            }
-            y = x << 4;
-            if (y != 0) {
-                n = n - 4;
-                x = y;
-            }
-            y = x << 2;
-            if (y != 0) {
-                n = n - 2;
-                x = y;
-            }
-            return n - ((x << 1) >>> 31);
-        };
-        /**
-         *
-         * @param index 要清除的位的索引
-         */
-        BitVector.prototype.unsafeClear = function (index) {
-            this.words[index >>> 6] &= ~(1 << index);
-        };
-        /**
-         * 增长支持数组，使其能够容纳所请求的位
-         * @param bits 位数
-         */
-        BitVector.prototype.ensureCapacity = function (bits) {
-            this.checkCapacity(bits >>> 6);
-        };
-        BitVector.prototype.checkCapacity = function (len) {
-            if (len >= this.words.length) {
-                var newBits = new Array(len + 1);
-                for (var i = 0; i < this.words.length; i++) {
-                    newBits[i] = this.words[i];
-                }
-                this.words = newBits;
-            }
-        };
-        return BitVector;
-    }());
-    es.BitVector = BitVector;
+    es.Bits = Bits;
 })(es || (es = {}));
 ///<reference path="../Components/IUpdatable.ts" />
 var es;
@@ -4013,9 +3538,6 @@ var es;
              * 添加到实体的组件列表
              */
             this._components = [];
-            /** 记录component的快速读取列表 */
-            this.fastComponentsMap = new Map();
-            this.fastComponentsToAddMap = new Map();
             /**
              * 所有需要更新的组件列表
              */
@@ -4029,6 +3551,8 @@ var es;
              */
             this._componentsToRemove = {};
             this._tempBufferList = [];
+            this.componentsByType = new Map();
+            this.componentsToAddByType = new Map();
             this._entity = entity;
         }
         Object.defineProperty(ComponentList.prototype, "count", {
@@ -4050,15 +3574,12 @@ var es;
         };
         ComponentList.prototype.add = function (component) {
             this._componentsToAdd[component.id] = component;
-            this.addFastComponentToAdd(component);
+            this.addComponentsToAddByType(component);
         };
         ComponentList.prototype.remove = function (component) {
-            es.Debug.warnIf(!!this._componentsToRemove[component.id], "\u60A8\u6B63\u5728\u5C1D\u8BD5\u5220\u9664\u4E00\u4E2A\u60A8\u5DF2\u7ECF\u5220\u9664\u7684\u7EC4\u4EF6(" + component + ")");
-            // 
-            // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
             if (this._componentsToAdd[component.id]) {
                 delete this._componentsToAdd[component.id];
-                this.removeFastComponentToAdd(component);
+                this.removeComponentsToAddByType(component);
                 return;
             }
             this._componentsToRemove[component.id] = component;
@@ -4070,8 +3591,8 @@ var es;
             for (var i = 0; i < this._components.length; i++) {
                 this.handleRemove(this._components[i]);
             }
-            this.fastComponentsMap.clear();
-            this.fastComponentsToAddMap.clear();
+            this.componentsByType.clear();
+            this.componentsToAddByType.clear();
             this._components.length = 0;
             this._updatableComponents.length = 0;
             this._componentsToAdd = {};
@@ -4087,7 +3608,7 @@ var es;
                     // 处理IUpdatable
                     if (es.isIUpdatable(component))
                         new es.List(this._updatableComponents).remove(component);
-                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
+                    this.decreaseBits(component);
                     this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
                 }
             }
@@ -4106,7 +3627,7 @@ var es;
                     var component = _c.value;
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
-                    this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
+                    this.addBits(component);
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                 }
             }
@@ -4117,6 +3638,16 @@ var es;
                 }
                 finally { if (e_7) throw e_7.error; }
             }
+        };
+        ComponentList.prototype.decreaseBits = function (component) {
+            var bits = this._entity.componentBits;
+            var typeIndex = es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component));
+            bits.set(typeIndex, bits.get(typeIndex) - 1);
+        };
+        ComponentList.prototype.addBits = function (component) {
+            var bits = this._entity.componentBits;
+            var typeIndex = es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component));
+            bits.set(typeIndex, bits.get(typeIndex) + 1);
         };
         /**
          * 处理任何需要删除或添加的组件
@@ -4132,22 +3663,22 @@ var es;
                         break;
                     }
                 }
-                this.removeFastComponent(component);
+                this.removeComponentsByType(component);
             }
             this._componentsToRemove = {};
             for (var i in this._componentsToAdd) {
                 var component = this._componentsToAdd[i];
                 if (es.isIUpdatable(component))
                     this._updatableComponents.push(component);
-                this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)));
+                this.addBits(component);
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
-                this.addFastComponent(component);
+                this.addComponentsByType(component);
                 this._components.push(component);
                 this._tempBufferList.push(component);
             }
             // 在调用onAddedToEntity之前清除，以防添加更多组件
             this._componentsToAdd = {};
-            this.fastComponentsToAddMap.clear();
+            this.componentsToAddByType.clear();
             this._isComponentListUnsorted = true;
             // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
             for (var i = 0; i < this._tempBufferList.length; i++) {
@@ -4163,36 +3694,38 @@ var es;
         ComponentList.prototype.handleRemove = function (component) {
             if (es.isIUpdatable(component))
                 new es.List(this._updatableComponents).remove(component);
-            this._entity.componentBits.set(es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component)), false);
+            this.decreaseBits(component);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             component.onRemovedFromEntity();
             component.entity = null;
         };
-        ComponentList.prototype.removeFastComponent = function (component) {
-            var fastList = this.fastComponentsMap.get(es.TypeUtils.getType(component));
+        ComponentList.prototype.removeComponentsByType = function (component) {
+            var fastList = this.componentsByType.get(es.TypeUtils.getType(component));
             var fastIndex = fastList.findIndex(function (c) { return c.id == component.id; });
-            if (fastIndex != -1)
+            if (fastIndex != -1) {
                 fastList.splice(fastIndex, 1);
+            }
         };
-        ComponentList.prototype.addFastComponent = function (component) {
-            var fastList = this.fastComponentsMap.get(es.TypeUtils.getType(component));
+        ComponentList.prototype.addComponentsByType = function (component) {
+            var fastList = this.componentsByType.get(es.TypeUtils.getType(component));
             if (!fastList)
                 fastList = [];
             fastList.push(component);
-            this.fastComponentsMap.set(es.TypeUtils.getType(component), fastList);
+            this.componentsByType.set(es.TypeUtils.getType(component), fastList);
         };
-        ComponentList.prototype.removeFastComponentToAdd = function (component) {
-            var fastList = this.fastComponentsToAddMap.get(es.TypeUtils.getType(component));
+        ComponentList.prototype.removeComponentsToAddByType = function (component) {
+            var fastList = this.componentsToAddByType.get(es.TypeUtils.getType(component));
             var fastIndex = fastList.findIndex(function (c) { return c.id == component.id; });
-            if (fastIndex != -1)
+            if (fastIndex != -1) {
                 fastList.splice(fastIndex, 1);
+            }
         };
-        ComponentList.prototype.addFastComponentToAdd = function (component) {
-            var fastList = this.fastComponentsToAddMap.get(es.TypeUtils.getType(component));
+        ComponentList.prototype.addComponentsToAddByType = function (component) {
+            var fastList = this.componentsToAddByType.get(es.TypeUtils.getType(component));
             if (!fastList)
                 fastList = [];
             fastList.push(component);
-            this.fastComponentsToAddMap.set(es.TypeUtils.getType(component), fastList);
+            this.componentsToAddByType.set(es.TypeUtils.getType(component), fastList);
         };
         /**
          * 获取类型T的第一个组件并返回它
@@ -4202,12 +3735,12 @@ var es;
          * @param onlyReturnInitializedComponents
          */
         ComponentList.prototype.getComponent = function (type, onlyReturnInitializedComponents) {
-            var fastList = this.fastComponentsMap.get(type);
+            var fastList = this.componentsByType.get(type);
             if (fastList && fastList.length > 0)
                 return fastList[0];
             // 我们可以选择检查挂起的组件，以防addComponent和getComponent在同一个框架中被调用
             if (!onlyReturnInitializedComponents) {
-                var fastToAddList = this.fastComponentsToAddMap.get(type);
+                var fastToAddList = this.componentsToAddByType.get(type);
                 if (fastToAddList && fastToAddList.length > 0)
                     return fastToAddList[0];
             }
@@ -4221,10 +3754,10 @@ var es;
         ComponentList.prototype.getComponents = function (typeName, components) {
             if (!components)
                 components = [];
-            var fastList = this.fastComponentsMap.get(typeName);
+            var fastList = this.componentsByType.get(typeName);
             if (fastList)
                 components = components.concat(fastList);
-            var fastToAddList = this.fastComponentsToAddMap.get(typeName);
+            var fastToAddList = this.componentsToAddByType.get(typeName);
             if (fastToAddList)
                 components = components.concat(fastToAddList);
             return components;
@@ -4825,9 +4358,9 @@ var es;
 (function (es) {
     var Matcher = /** @class */ (function () {
         function Matcher() {
-            this.allSet = new es.BitSet();
-            this.exclusionSet = new es.BitSet();
-            this.oneSet = new es.BitSet();
+            this.allSet = [];
+            this.exclusionSet = [];
+            this.oneSet = [];
         }
         Matcher.empty = function () {
             return new Matcher();
@@ -4844,53 +4377,121 @@ var es;
         Matcher.prototype.isInterestedEntity = function (e) {
             return this.isInterested(e.componentBits);
         };
-        Matcher.prototype.isInterested = function (componentBits) {
-            // 检查实体是否拥有该方面中定义的所有组件
-            if (!this.allSet.isEmpty()) {
-                for (var i = this.allSet.nextSetBit(0); i >= 0; i = this.allSet.nextSetBit(i + 1)) {
-                    if (!componentBits.get(i))
-                        return false;
+        Matcher.prototype.isInterested = function (components) {
+            var e_13, _a, e_14, _b, e_15, _c;
+            if (this.allSet.length != 0) {
+                try {
+                    for (var _d = __values(this.allSet), _e = _d.next(); !_e.done; _e = _d.next()) {
+                        var s = _e.value;
+                        if (!components.get(es.ComponentTypeManager.getIndexFor(s)))
+                            return false;
+                    }
+                }
+                catch (e_13_1) { e_13 = { error: e_13_1 }; }
+                finally {
+                    try {
+                        if (_e && !_e.done && (_a = _d.return)) _a.call(_d);
+                    }
+                    finally { if (e_13) throw e_13.error; }
                 }
             }
-            // 如果我们仍然感兴趣，检查该实体是否拥有任何一个排除组件，如果有，那么系统就不感兴趣
-            if (!this.exclusionSet.isEmpty() && this.exclusionSet.intersects(componentBits))
-                return false;
-            // 如果我们仍然感兴趣，检查该实体是否拥有oneSet中的任何一个组件。如果是，系统就会感兴趣
-            if (!this.oneSet.isEmpty() && !this.oneSet.intersects(componentBits))
-                return false;
+            if (this.exclusionSet.length != 0) {
+                try {
+                    for (var _f = __values(this.exclusionSet), _g = _f.next(); !_g.done; _g = _f.next()) {
+                        var s = _g.value;
+                        if (components.get(es.ComponentTypeManager.getIndexFor(s)))
+                            return false;
+                    }
+                }
+                catch (e_14_1) { e_14 = { error: e_14_1 }; }
+                finally {
+                    try {
+                        if (_g && !_g.done && (_b = _f.return)) _b.call(_f);
+                    }
+                    finally { if (e_14) throw e_14.error; }
+                }
+            }
+            if (this.oneSet.length != 0) {
+                try {
+                    for (var _h = __values(this.oneSet), _j = _h.next(); !_j.done; _j = _h.next()) {
+                        var s = _j.value;
+                        if (components.get(es.ComponentTypeManager.getIndexFor(s)))
+                            return true;
+                    }
+                }
+                catch (e_15_1) { e_15 = { error: e_15_1 }; }
+                finally {
+                    try {
+                        if (_j && !_j.done && (_c = _h.return)) _c.call(_h);
+                    }
+                    finally { if (e_15) throw e_15.error; }
+                }
+            }
             return true;
         };
         Matcher.prototype.all = function () {
-            var _this = this;
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            types.forEach(function (type) {
-                _this.allSet.set(es.ComponentTypeManager.getIndexFor(type));
-            });
+            var e_16, _a;
+            var t;
+            try {
+                for (var types_3 = __values(types), types_3_1 = types_3.next(); !types_3_1.done; types_3_1 = types_3.next()) {
+                    t = types_3_1.value;
+                    this.allSet.push(t);
+                }
+            }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            finally {
+                try {
+                    if (types_3_1 && !types_3_1.done && (_a = types_3.return)) _a.call(types_3);
+                }
+                finally { if (e_16) throw e_16.error; }
+            }
             return this;
         };
         Matcher.prototype.exclude = function () {
-            var _this = this;
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            types.forEach(function (type) {
-                _this.exclusionSet.set(es.ComponentTypeManager.getIndexFor(type));
-            });
+            var e_17, _a;
+            var t;
+            try {
+                for (var types_4 = __values(types), types_4_1 = types_4.next(); !types_4_1.done; types_4_1 = types_4.next()) {
+                    t = types_4_1.value;
+                    this.exclusionSet.push(t);
+                }
+            }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
+            finally {
+                try {
+                    if (types_4_1 && !types_4_1.done && (_a = types_4.return)) _a.call(types_4);
+                }
+                finally { if (e_17) throw e_17.error; }
+            }
             return this;
         };
         Matcher.prototype.one = function () {
-            var _this = this;
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            types.forEach(function (type) {
-                _this.oneSet.set(es.ComponentTypeManager.getIndexFor(type));
-            });
+            var e_18, _a;
+            try {
+                for (var types_5 = __values(types), types_5_1 = types_5.next(); !types_5_1.done; types_5_1 = types_5.next()) {
+                    var t = types_5_1.value;
+                    this.oneSet.push(t);
+                }
+            }
+            catch (e_18_1) { e_18 = { error: e_18_1 }; }
+            finally {
+                try {
+                    if (types_5_1 && !types_5_1.done && (_a = types_5.return)) _a.call(types_5);
+                }
+                finally { if (e_18) throw e_18.error; }
+            }
             return this;
         };
         return Matcher;
@@ -7793,7 +7394,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
-            var e_13, _a;
+            var e_19, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location;
             var resultCounter = 0;
@@ -7824,12 +7425,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            catch (e_19_1) { e_19 = { error: e_19_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_13) throw e_13.error; }
+                finally { if (e_19) throw e_19.error; }
             }
             return resultCounter;
         };
@@ -7841,7 +7442,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_14, _a;
+            var e_20, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -7874,12 +7475,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_20_1) { e_20 = { error: e_20_1 }; }
             finally {
                 try {
                     if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_20) throw e_20.error; }
             }
             return resultCounter;
         };
@@ -12457,7 +12058,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_15, _a;
+            var e_21, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -12465,12 +12066,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            catch (e_21_1) { e_21 = { error: e_21_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_15) throw e_15.error; }
+                finally { if (e_21) throw e_21.error; }
             }
             return result;
         };
@@ -12719,7 +12320,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_16, _a;
+            var e_22, _a;
             var output = es.ListPool.obtain();
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -12758,12 +12359,12 @@ var es;
                         }
                     }
                 }
-                catch (e_16_1) { e_16 = { error: e_16_1 }; }
+                catch (e_22_1) { e_22 = { error: e_22_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_16) throw e_16.error; }
+                    finally { if (e_22) throw e_22.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -12879,7 +12480,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_17, _a;
+            var e_23, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -12897,12 +12498,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_17_1) { e_17 = { error: e_17_1 }; }
+            catch (e_23_1) { e_23 = { error: e_23_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_17) throw e_17.error; }
+                finally { if (e_23) throw e_23.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

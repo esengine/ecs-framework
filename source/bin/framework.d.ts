@@ -260,11 +260,7 @@ declare module es {
          * 指定应该调用这个entity update方法的频率。1表示每一帧，2表示每一帧，以此类推
          */
         updateInterval: number;
-        /**
-         * 返回一个BitSet实例，包含实体拥有的组件的位
-         */
-        componentBits: BitSet;
-        private systemBits_;
+        componentBits: Bits;
         constructor(name: string);
         _isDestroyed: boolean;
         /**
@@ -298,7 +294,6 @@ declare module es {
         * @param value
         */
         updateOrder: number;
-        getSystemBits(): BitSet;
         parent: Transform;
         readonly childCount: number;
         position: Vector2;
@@ -1324,17 +1319,11 @@ declare module es {
     }
 }
 declare module es {
-    class SystemIndexManager {
-        static INDEX: number;
-        private static indices;
-        static getIndexFor(es: Class): number;
-    }
     /**
      * 追踪实体的子集，但不实现任何排序或迭代。
      */
     abstract class EntitySystem {
         private _entities;
-        private systemIndex_;
         constructor(matcher?: Matcher);
         private _scene;
         /**
@@ -1562,145 +1551,10 @@ declare module es {
     }
 }
 declare module es {
-    /**
-     * 这个类可以从两方面来考虑。你可以把它看成一个位向量或者一组非负整数。这个名字有点误导人。
-     *
-     * 它是由一个位向量实现的，但同样可以把它看成是一个非负整数的集合;集合中的每个整数由对应索引处的集合位表示。该结构的大小由集合中的最大整数决定。
-     */
-    class BitSet {
-        private static ADDRESS_BITS_PER_WORD;
-        private static BITS_PER_WORD;
-        private static WORD_MASK;
-        private words_;
-        constructor(nbits?: number);
-        clear(bitIndex?: number): void;
-        get(bitIndex: number): boolean;
-        intersects(set: BitSet): boolean;
-        isEmpty(): boolean;
-        nextSetBit(fromIndex: number): number;
-        private numberOfTrailingZeros;
-        set(bitIndex: number, value?: boolean): number;
-    }
-}
-declare module es {
-    /**
-     * 性能优化的位组实现。某些操作是以不安全为前缀的, 这些方法不执行验证，主要是在内部利用来优化实体ID位集的访问
-     */
-    class BitVector {
-        private words;
-        /**
-         * 创建一个初始大小足够大的bitset，以明确表示0到nbits-1范围内指数的bit
-         * @param nbits nbits 位集的初始大小
-         */
-        constructor(nbits?: number | BitVector);
-        /**
-         *
-         * @param index 位的索引
-         * @returns 该位是否被设置
-         */
-        get(index: number): boolean;
-        /**
-         *
-         * @param index 位的索引
-         */
-        set(index: number, value?: boolean): void;
-        /**
-         *
-         * @param index 位的索引
-         * @returns 该位是否被设置
-         */
-        unsafeGet(index: number): boolean;
-        /**
-         *
-         * @param index 要设置的位的索引
-         */
-        unsafeSet(index: number): void;
-        /**
-         *
-         * @param index 要翻转的位的索引
-         */
-        flip(index: number): void;
-        /**
-         * 要清除的位的索引
-         * @param index
-         */
-        clear(index?: number): void;
-        /**
-         * 返回该位组的 "逻辑大小"：位组中最高设置位的索引加1。如果比特集不包含集合位，则返回0
-         */
-        length(): number;
-        /**
-         * @returns 如果这个位组中没有设置为true的位，则为true
-         */
-        isEmpty(): boolean;
-        /**
-         * 返回在指定的起始索引上或之后出现的第一个被设置为真的位的索引。
-         * 如果不存在这样的位，则返回-1
-         * @param fromIndex
-         */
-        nextSetBit(fromIndex: number): number;
-        /**
-         * 返回在指定的起始索引上或之后发生的第一个被设置为false的位的索引
-         * @param fromIndex
-         */
-        nextClearBit(fromIndex: number): number;
-        /**
-         * 对这个目标位集和参数位集进行逻辑AND。
-         * 这个位集被修改，使它的每一个位都有值为真，如果且仅当它最初的值为真，并且位集参数中的相应位也有值为真
-         * @param other
-         */
-        and(other: BitVector): void;
-        /**
-         * 清除该位集的所有位，其对应的位被设置在指定的位集中
-         * @param other
-         */
-        andNot(other: BitVector): void;
-        /**
-         * 用位集参数执行这个位集的逻辑OR。
-         * 如果且仅当位集参数中的位已经有值为真或位集参数中的对应位有值为真时，该位集才会被修改，从而使位集中的位有值为真
-         * @param other
-         */
-        or(other: BitVector): void;
-        /**
-         * 用位集参数对这个位集进行逻辑XOR。
-         * 这个位集被修改了，所以如果且仅当以下语句之一成立时，位集中的一个位的值为真
-         * @param other
-         */
-        xor(other: BitVector): void;
-        /**
-         * 如果指定的BitVector有任何位被设置为true，并且在这个BitVector中也被设置为true，则返回true
-         * @param other
-         */
-        intersects(other: BitVector): boolean;
-        /**
-         * 如果这个位集是指定位集的超级集，即它的所有位都被设置为真，那么返回true
-         * @param other
-         */
-        containsAll(other: BitVector): boolean;
-        cardinality(): number;
-        hashCode(): number;
-        private bitCount;
-        /**
-         * 返回二进制补码二进制表示形式中最高位（“最左端”）一位之前的零位数量
-         * @param i
-         */
-        private numberOfLeadingZeros;
-        /**
-         * 返回指定二进制数的补码二进制表示形式中最低序（“最右”）一位之后的零位数量
-         * @param i
-         */
-        numberOfTrailingZeros(i: number): number;
-        /**
-         *
-         * @param index 要清除的位的索引
-         */
-        unsafeClear(index: number): void;
-        /**
-         * 增长支持数组，使其能够容纳所请求的位
-         * @param bits 位数
-         */
-        ensureCapacity(bits: number): void;
-        private checkCapacity;
+    class Bits {
+        private _bit;
+        set(index: number, value: number): void;
+        get(index: number): number;
     }
 }
 declare module es {
@@ -1714,9 +1568,6 @@ declare module es {
          * 添加到实体的组件列表
          */
         _components: Component[];
-        /** 记录component的快速读取列表 */
-        fastComponentsMap: Map<new (...args: any[]) => Component, Component[]>;
-        fastComponentsToAddMap: Map<new (...args: any[]) => Component, Component[]>;
         /**
          * 所有需要更新的组件列表
          */
@@ -1738,6 +1589,8 @@ declare module es {
          * 用于确定是否需要对该框架中的组件进行排序的标志
          */
         _isComponentListUnsorted: boolean;
+        private componentsByType;
+        private componentsToAddByType;
         constructor(entity: Entity);
         readonly count: number;
         readonly buffer: Component[];
@@ -1750,15 +1603,17 @@ declare module es {
         removeAllComponents(): void;
         deregisterAllComponents(): void;
         registerAllComponents(): void;
+        private decreaseBits;
+        private addBits;
         /**
          * 处理任何需要删除或添加的组件
          */
         updateLists(): void;
         handleRemove(component: Component): void;
-        private removeFastComponent;
-        private addFastComponent;
-        private removeFastComponentToAdd;
-        private addFastComponentToAdd;
+        private removeComponentsByType;
+        private addComponentsByType;
+        private removeComponentsToAddByType;
+        private addComponentsToAddByType;
         /**
          * 获取类型T的第一个组件并返回它
          * 可以选择跳过检查未初始化的组件(尚未调用onAddedToEntity方法的组件)
@@ -1943,15 +1798,15 @@ declare module es {
 }
 declare module es {
     class Matcher {
-        protected allSet: BitSet;
-        protected exclusionSet: BitSet;
-        protected oneSet: BitSet;
+        protected allSet: (new (...args: any[]) => Component)[];
+        protected exclusionSet: (new (...args: any[]) => Component)[];
+        protected oneSet: (new (...args: any[]) => Component)[];
         static empty(): Matcher;
-        getAllSet(): BitSet;
-        getExclusionSet(): BitSet;
-        getOneSet(): BitSet;
+        getAllSet(): (new (...args: any[]) => Component)[];
+        getExclusionSet(): (new (...args: any[]) => Component)[];
+        getOneSet(): (new (...args: any[]) => Component)[];
         isInterestedEntity(e: Entity): boolean;
-        isInterested(componentBits: BitSet): boolean;
+        isInterested(components: Bits): boolean;
         all(...types: any[]): Matcher;
         exclude(...types: any[]): this;
         one(...types: any[]): this;

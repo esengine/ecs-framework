@@ -11,9 +11,6 @@ module es {
          * 添加到实体的组件列表
          */
         public _components: Component[] = [];
-        /** 记录component的快速读取列表 */
-        public fastComponentsMap = new Map<new (...args: any[]) => Component, es.Component[]>();
-        public fastComponentsToAddMap = new Map<new (...args: any[]) => Component, es.Component[]>();
         /**
          * 所有需要更新的组件列表
          */
@@ -21,16 +18,18 @@ module es {
         /**
          * 添加到此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
          */
-        public _componentsToAdd: {[index: number]: Component} = {};
+        public _componentsToAdd: { [index: number]: Component } = {};
         /**
          * 标记要删除此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
          */
-        public _componentsToRemove: {[index: number]: Component} = {};
+        public _componentsToRemove: { [index: number]: Component } = {};
         public _tempBufferList: Component[] = [];
         /**
          * 用于确定是否需要对该框架中的组件进行排序的标志
          */
         public _isComponentListUnsorted: boolean;
+        private componentsByType = new Map<new (...args: any[]) => Component, es.Component[]>();
+        private componentsToAddByType = new Map<new (...args: any[]) => Component, es.Component[]>();
 
         constructor(entity: Entity) {
             this._entity = entity;
@@ -50,16 +49,13 @@ module es {
 
         public add(component: Component) {
             this._componentsToAdd[component.id] = component;
-            this.addFastComponentToAdd(component);
+            this.addComponentsToAddByType(component);
         }
 
         public remove(component: Component) {
-            Debug.warnIf(!!this._componentsToRemove[component.id], `您正在尝试删除一个您已经删除的组件(${component})`);
-// 
-            // 这可能不是一个活动的组件，所以我们必须注意它是否还没有被处理，它可能正在同一帧中被删除
             if (this._componentsToAdd[component.id]) {
                 delete this._componentsToAdd[component.id];
-                this.removeFastComponentToAdd(component);
+                this.removeComponentsToAddByType(component);
                 return;
             }
 
@@ -74,12 +70,12 @@ module es {
                 this.handleRemove(this._components[i]);
             }
 
-            this.fastComponentsMap.clear();
-            this.fastComponentsToAddMap.clear();
+            this.componentsByType.clear();
+            this.componentsToAddByType.clear();
             this._components.length = 0;
             this._updatableComponents.length = 0;
             this._componentsToAdd = {};
-            this._componentsToRemove =  {};
+            this._componentsToRemove = {};
         }
 
         public deregisterAllComponents() {
@@ -90,7 +86,7 @@ module es {
                 if (isIUpdatable(component))
                     new es.List(this._updatableComponents).remove(component);
 
-                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
+                this.decreaseBits(component);
                 this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             }
         }
@@ -100,9 +96,21 @@ module es {
                 if (isIUpdatable(component))
                     this._updatableComponents.push(component);
 
-                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
+                this.addBits(component);
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
             }
+        }
+
+        private decreaseBits(component: Component) {
+            let bits = this._entity.componentBits;
+            let typeIndex = ComponentTypeManager.getIndexFor(TypeUtils.getType(component));
+            bits.set(typeIndex, bits.get(typeIndex) - 1);
+        }
+
+        private addBits(component: Component) {
+            let bits = this._entity.componentBits;
+            let typeIndex = ComponentTypeManager.getIndexFor(TypeUtils.getType(component));
+            bits.set(typeIndex, bits.get(typeIndex) + 1);
         }
 
         /**
@@ -112,14 +120,14 @@ module es {
             for (let i in this._componentsToRemove) {
                 let component = this._componentsToRemove[i];
                 this.handleRemove(component);
-                for (let index = 0; index < this._components.length; index ++) {
+                for (let index = 0; index < this._components.length; index++) {
                     let searchComponent = this._components[index];
                     if (searchComponent.id == component.id) {
                         this._components.splice(index, 1);
                         break;
                     }
                 }
-                this.removeFastComponent(component);
+                this.removeComponentsByType(component);
             }
 
             this._componentsToRemove = {};
@@ -130,72 +138,72 @@ module es {
                 if (isIUpdatable(component))
                     this._updatableComponents.push(component);
 
-                this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)));
+                this.addBits(component);
                 this._entity.scene.entityProcessors.onComponentAdded(this._entity);
-                this.addFastComponent(component);
 
+                this.addComponentsByType(component);
                 this._components.push(component);
                 this._tempBufferList.push(component);
             }
 
-             // 在调用onAddedToEntity之前清除，以防添加更多组件
-             this._componentsToAdd = {};
-             this.fastComponentsToAddMap.clear();
-             this._isComponentListUnsorted = true;
+            // 在调用onAddedToEntity之前清除，以防添加更多组件
+            this._componentsToAdd = {};
+            this.componentsToAddByType.clear();
+            this._isComponentListUnsorted = true;
 
-             // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
-             for (let i = 0; i < this._tempBufferList.length; i++) {
-                 let component = this._tempBufferList[i];
-                 component.onAddedToEntity();
+            // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
+            for (let i = 0; i < this._tempBufferList.length; i++) {
+                let component = this._tempBufferList[i];
+                component.onAddedToEntity();
 
-                 // enabled检查实体和组件
-                 if (component.enabled) {
-                     component.onEnabled();
-                 }
-             }
+                // enabled检查实体和组件
+                if (component.enabled) {
+                    component.onEnabled();
+                }
+            }
 
-             this._tempBufferList.length = 0;
+            this._tempBufferList.length = 0;
         }
 
         public handleRemove(component: Component) {
             if (isIUpdatable(component))
                 new es.List(this._updatableComponents).remove(component);
 
-            this._entity.componentBits.set(ComponentTypeManager.getIndexFor(TypeUtils.getType(component)), false);
+            this.decreaseBits(component);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
 
             component.onRemovedFromEntity();
             component.entity = null;
         }
 
-        private removeFastComponent(component: Component) {
-            let fastList = this.fastComponentsMap.get(TypeUtils.getType(component));
+        private removeComponentsByType(component: Component) {
+            let fastList = this.componentsByType.get(TypeUtils.getType(component));
             let fastIndex = fastList.findIndex(c => c.id == component.id);
-            if (fastIndex != -1)
+            if (fastIndex != -1) {
                 fastList.splice(fastIndex, 1);
+            }
         }
 
-        private addFastComponent(component: Component) {
-            let fastList = this.fastComponentsMap.get(TypeUtils.getType(component));
-            if (!fastList)
-                fastList = [];
+        private addComponentsByType(component: Component) {
+            let fastList = this.componentsByType.get(TypeUtils.getType(component));
+            if (!fastList) fastList = [];
             fastList.push(component);
-            this.fastComponentsMap.set(TypeUtils.getType(component), fastList);
+            this.componentsByType.set(TypeUtils.getType(component), fastList);
         }
 
-        private removeFastComponentToAdd(component: Component) {
-            let fastList = this.fastComponentsToAddMap.get(TypeUtils.getType(component));
+        private removeComponentsToAddByType(component: Component) {
+            let fastList = this.componentsToAddByType.get(TypeUtils.getType(component));
             let fastIndex = fastList.findIndex(c => c.id == component.id);
-            if (fastIndex != -1)
+            if (fastIndex != -1) {
                 fastList.splice(fastIndex, 1);
+            }
         }
 
-        private addFastComponentToAdd(component: Component) {
-            let fastList = this.fastComponentsToAddMap.get(TypeUtils.getType(component));
-            if (!fastList)
-                fastList = [];
+        private addComponentsToAddByType(component: Component) {
+            let fastList = this.componentsToAddByType.get(TypeUtils.getType(component));
+            if (!fastList) fastList = [];
             fastList.push(component);
-            this.fastComponentsToAddMap.set(TypeUtils.getType(component), fastList);
+            this.componentsToAddByType.set(TypeUtils.getType(component), fastList);
         }
 
         /**
@@ -206,13 +214,13 @@ module es {
          * @param onlyReturnInitializedComponents
          */
         public getComponent<T extends Component>(type, onlyReturnInitializedComponents: boolean): T {
-            let fastList = this.fastComponentsMap.get(type);
+            let fastList = this.componentsByType.get(type);
             if (fastList && fastList.length > 0)
                 return fastList[0] as T;
 
             // 我们可以选择检查挂起的组件，以防addComponent和getComponent在同一个框架中被调用
             if (!onlyReturnInitializedComponents) {
-                let fastToAddList = this.fastComponentsToAddMap.get(type);
+                let fastToAddList = this.componentsToAddByType.get(type);
                 if (fastToAddList && fastToAddList.length > 0)
                     return fastToAddList[0] as T;
             }
@@ -229,13 +237,13 @@ module es {
             if (!components)
                 components = [];
 
-            let fastList = this.fastComponentsMap.get(typeName);
+            let fastList = this.componentsByType.get(typeName);
             if (fastList)
                 components = components.concat(fastList);
 
-            let fastToAddList = this.fastComponentsToAddMap.get(typeName);
+            let fastToAddList = this.componentsToAddByType.get(typeName);
             if (fastToAddList)
-                components =components.concat(fastToAddList);
+                components = components.concat(fastToAddList);
 
             return components;
         }

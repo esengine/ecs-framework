@@ -35,20 +35,14 @@ module es {
          * 指定应该调用这个entity update方法的频率。1表示每一帧，2表示每一帧，以此类推
          */
         public updateInterval: number = 1;
-        /**
-         * 返回一个BitSet实例，包含实体拥有的组件的位
-         */
-        public componentBits: BitSet;
-        private systemBits_: BitSet;
+        public componentBits: Bits;
 
         constructor(name: string) {
             this.components = new ComponentList(this);
             this.transform = new Transform(this);
+            this.componentBits = new Bits();
             this.name = name;
             this.id = Entity._idGenerator++;
-
-            this.systemBits_ = new BitSet();
-            this.componentBits = new BitSet();
         }
 
         public _isDestroyed: boolean;
@@ -109,10 +103,6 @@ module es {
          */
         public set updateOrder(value: number) {
             this.setUpdateOrder(value);
-        }
-
-        public getSystemBits(): BitSet {
-            return this.systemBits_;
         }
 
         public get parent(): Transform {

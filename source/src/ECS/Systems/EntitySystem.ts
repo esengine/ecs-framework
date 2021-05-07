@@ -1,29 +1,13 @@
 ///<reference path="../../Utils/Collections/HashMap.ts"/>
 module es {
-    export class SystemIndexManager {
-        public static INDEX = 0;
-        private static indices: Map<Function, number> = new Map<Function, number>();
-    
-        public static getIndexFor(es: Class): number {
-            let index: number = SystemIndexManager.indices.get(es);
-            if (!index) {
-                index = SystemIndexManager.INDEX++;
-                SystemIndexManager.indices.set(es, index);
-            }
-            return index;
-        }
-    }
-
     /**
      * 追踪实体的子集，但不实现任何排序或迭代。
      */
     export abstract class EntitySystem {
         private _entities: Entity[] = [];
-        private systemIndex_: number;
 
         constructor(matcher?: Matcher) {
             this._matcher = matcher ? matcher : Matcher.empty();
-            this.systemIndex_ = SystemIndexManager.getIndexFor(this.constructor);
             this.initialize();
         }
 
@@ -60,7 +44,7 @@ module es {
         }
 
         public onChanged(entity: Entity) {
-            let contains = entity.getSystemBits().get(this.systemIndex_);
+            let contains = !!this._entities.find(e => e.id == entity.id);
             let interest = this._matcher.isInterestedEntity(entity);
 
             if (interest && !contains)
@@ -70,8 +54,8 @@ module es {
         }
 
         public add(entity: Entity) {
-            this._entities.push(entity);
-            entity.getSystemBits().set(this.systemIndex_);
+            if (!this._entities.find(e => e.id == entity.id))
+                this._entities.push(entity);
             this.onAdded(entity);
         }
 
@@ -79,7 +63,6 @@ module es {
 
         public remove(entity: Entity) {
             new es.List(this._entities).remove(entity);
-            entity.getSystemBits().clear(this.systemIndex_);
             this.onRemoved(entity);
         }
 
