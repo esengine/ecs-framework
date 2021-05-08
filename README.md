@@ -38,7 +38,7 @@ es.Core.scene = new MainScene();
 框架的大部分围绕着实体组件系统（ECS）。ECS与您可能使用过的任何其他ECS均不同，所以我为您再以下详细介绍。
 
 ### Scene
-ECS的根源。可以将场景视为游戏的不同部分，例如菜单，级别，信用等。场景管理实体，并在适当的时间调用它们的方法。您也可以使用场景通过findEntity和findEntitiesByTag方法定位实体。
+ECS的根源。可以将场景视为游戏的不同部分，在适当的时间调用它们的方法。您也可以使用场景通过findEntity和findEntitiesByTag方法定位实体。
 
 场景可以包含一种称为场景组件的特殊类型的组件。 SceneComponent通过add / get / removeSceneComponent方法进行管理。可以将场景组件视为简化组件。它包含少量可重写的生命周期方法（onEnabled / onDisabled / update / onRemovedFromScene）。当您需要一个位于场景级别但不需要实体容器的对象时，可以使用这些对象。 
 
