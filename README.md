@@ -1,7 +1,13 @@
-这是一套ecs游戏框架，里面包含ECS框架用于管理场景实体，一些常用2D碰撞检测及游戏中常用的工具
+ecs-framework 的目标是成为功能强大的框架。它为您构建游戏提供了坚实的基础。它包括的许多功能包括：
 
-# 项目规划及讨论
-- [点击参与及查看](https://github.com/esengine/ecs-framework/discussions/36)
+- 完整的场景/实体/组件系统
+- SpatialHash用于超快速的广相物理学查找。您永远不会看到它，因为它在幕后起作用，但是您仍然会喜欢它，因为它可以通过射线广播或重叠检查迅速找到您附近的所有事物。
+- AABB，圆和多边形碰撞/触发检测
+- 高效的协程，可在多个帧或动画定时中分解大型任务（Core.startCoroutine）
+- 通过Astar和广度优先搜索提供寻路支持，以查找图块地图或您自己的自定义格式 ( 参见 https://github.com/esengine/ecs-astar )
+- tween系统。任何number / Vector / 矩形/字段或属性都可以tween。 （参见 https://github.com/esengine/ecs-tween）
+- 针对核心事件的优化的事件发射器（发射器类），您也可以将其添加到自己的任何类中
+- 延迟和重复任务的调度程序（核心调度方法）
 
 ## 交流群
 点击链接加入群聊【ecs游戏框架交流】：https://jq.qq.com/?_wv=1027&k=29w1Nud6
@@ -27,6 +33,41 @@ es.Core.scene = new MainScene();
 ```
 
 至此框架已完全开始运作，您可以使用框架内所有提供的方法。
+
+## Scene/Entity/Component
+框架的大部分围绕着实体组件系统（ECS）。ECS与您可能使用过的任何其他ECS均不同，所以我为您再以下详细介绍。
+
+### Scene
+ECS的根源。可以将场景视为游戏的不同部分，例如菜单，级别，信用等。场景管理实体，并在适当的时间调用它们的方法。您也可以使用场景通过findEntity和findEntitiesByTag方法定位实体。
+
+场景可以包含一种称为场景组件的特殊类型的组件。 SceneComponent通过add / get / removeSceneComponent方法进行管理。可以将场景组件视为简化组件。它包含少量可重写的生命周期方法（onEnabled / onDisabled / update / onRemovedFromScene）。当您需要一个位于场景级别但不需要实体容器的对象时，可以使用这些对象。 
+
+### Entity
+将实体添加到场景中/从场景中删除，并由场景进行管理。 您可以子类化Entity，也可以只创建一个Entity实例，然后向其中添加任何必需的组件（通过addComponent，然后通过getComponent检索）。 在实体的最基本层次上，可以将其视为组件的容器。 实体具有一系列在整个生命周期中的不同时间被场景调用的方法。
+
+实体生命周期方法： 
+- onAddedToScene：在将所有未决的实体更改提交后将实体添加到场景中时调用
+- onRemovedFromScene：当实体从场景中移除时调用
+- update：只要启用了实体，就会每帧调用
+
+实体上的一些关键/重要属性如下： 
+
+- updateOrder：控制实体的顺序。 这会影响在每个实体上调用更新的顺序以及标签列表的顺序。
+- tag：随便使用它。 以后可以使用它在场景中查询具有特定标签（Scene.findEntitiesByTag）的所有实体。
+- updateInterval：指定应多久调用一次此Entities更新方法。 1表示每帧，2表示每两帧，依此类推 
+
+### Component
+组件添加到实体并由实体管理。 它们构成了您游戏的重点，并且基本上是可重用的代码块，这些代码决定了实体的行为方式。
+
+组件生命周期方法： 
+
+- initialize：在创建组件并分配Entity字段但在onAddedToEntity之前调用
+- onAddedToEntity：在将所有未决组件更改提交后将组件添加到实体时调用
+- onRemovedFromEntity：当组件从其实体中移除时调用。 在这里进行所有清理。
+- onEntityPositionChanged：在实体位置更改时调用。 这使组件可以知道它们是由于父实体移动而移动的。
+- update：只要启用了实体和组件并且组件实现IUpdatable，就会每帧调用
+- onEnabled：在启用父实体或组件时调用
+- onDisabled：在禁用父实体或组件时调用 
 
 ## ECS框架的基本使用
 
@@ -199,6 +240,29 @@ for( let collider of neighborColliders )
 		console.log( `我们正在重叠一个collider : ${collider}` );
 }
 ```
+
+## TimerManager
+TimerManager是一个简单的帮助器，使您可以传递一个动作，该动作可以被一次调用，也可以不带延迟地重复调用。 使用Core.schedule方法可以轻松访问TimerManager。 当您调用schedule时，您将返回一个ITimer对象，该对象具有一个stop方法，该方法可用于停止计时器再次触发。 
+
+## CoroutineManager
+CoroutineManager允许您传入生成器函数，然后在每帧中对其执行，从而使您可以将长时间运行的任务分解为较小的任务。 启动协程的入口点是Core.startCoroutine，它使用一个方法返回ICoroutine对象：stop。 协程的执行可以在任何时候使用yield语句暂停。 您可以发出对Coroutine.waitForSeconds的调用，这将使执行延迟N秒，或者您可以发出对Start Coroutine的调用以暂停直到另一个协程完成。 
+
+## Emitter
+Core提供了一个在某些关键时刻触发事件的发射器。 通过Core.emitter.addObserver和Core.emitter.removeObserver进行访问。 CoreEvents枚举定义了所有可用事件。
+
+发射器类也可以在自己的类中使用。 您可以通过number，enum或任何结构键输入事件。 
+
+## Global Managers
+框架使您可以添加一个全局管理器对象，该对象将具有一个更新方法，Scene.update之前的每帧执行。 您应该保留场景更改的任何系统都可以放在此处。 框架拥有自己的几种系统设置作为全局管理器，包括：调度程序，协程管理器。 您可以通过Core.registerGlobalManager和Core.unregisterGlobalManager注册/注销全局管理器。 
+
+## Time
+Time类提供对deltaTime，unscaledDeltaTime，timeScale和其他一些有用属性的静态访问。 为了易于使用，它还提供了一个altDeltaTime / altTimeScale，以便您可以进行多个不同的时间轴，而不必自己进行管理。 
+
+## Debug
+Debug类提供日志记录。 Insist类提供各种断言条件。 您可以在整个代码中自由使用它们。 
+
+## Flags
+您是否喜欢将大量数据打包为单个number的功能，但讨厌处理该数据的语法？ Flags类可以为您提供帮助。 它包括用于处理number的辅助方法，以检查是否设置了位以及设置/取消设置了它们。 处理Collider.physicsLayer非常方便。 
 
 ### 示例地址
 
