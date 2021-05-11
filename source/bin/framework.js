@@ -600,7 +600,7 @@ var es;
     }());
     es.EntityComparer = EntityComparer;
     var Entity = /** @class */ (function () {
-        function Entity(name) {
+        function Entity(name, id) {
             /**
              * 指定应该调用这个entity update方法的频率。1表示每一帧，2表示每一帧，以此类推
              */
@@ -612,7 +612,7 @@ var es;
             this.transform = new es.Transform(this);
             this.componentBits = new es.Bits();
             this.name = name;
-            this.id = Entity._idGenerator++;
+            this.id = id;
         }
         Object.defineProperty(Entity.prototype, "isDestroyed", {
             /**
@@ -896,6 +896,7 @@ var es;
          */
         Entity.prototype.destroy = function () {
             this._isDestroyed = true;
+            this.scene.identifierPool.checkIn(this.id);
             this.scene.entities.remove(this);
             this.transform.parent = null;
             // 销毁所有子项
@@ -1056,7 +1057,6 @@ var es;
         Entity.prototype.toString = function () {
             return "[Entity: name: " + this.name + ", tag: " + this.tag + ", enabled: " + this.enabled + ", depth: " + this.updateOrder + "]";
         };
-        Entity._idGenerator = 0;
         Entity.entityComparer = new EntityComparer();
         return Entity;
     }());
@@ -1431,6 +1431,7 @@ var es;
             this._sceneComponents = [];
             this.entities = new es.EntityList(this);
             this.entityProcessors = new es.EntityProcessorList();
+            this.identifierPool = new es.IdentifierPool();
             this.initialize();
         }
         /**
@@ -1532,7 +1533,7 @@ var es;
          * @param name
          */
         Scene.prototype.createEntity = function (name) {
-            var entity = new es.Entity(name);
+            var entity = new es.Entity(name, this.identifierPool.checkOut());
             return this.addEntity(entity);
         };
         /**
@@ -4446,6 +4447,26 @@ var es;
         return HashHelpers;
     }());
     es.HashHelpers = HashHelpers;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var IdentifierPool = /** @class */ (function () {
+        function IdentifierPool() {
+            this.nextAvailableId_ = 0;
+            this.ids = new es.Bag();
+        }
+        IdentifierPool.prototype.checkOut = function () {
+            if (this.ids.size() > 0) {
+                return this.ids.removeLast();
+            }
+            return this.nextAvailableId_++;
+        };
+        IdentifierPool.prototype.checkIn = function (id) {
+            this.ids.add(id);
+        };
+        return IdentifierPool;
+    }());
+    es.IdentifierPool = IdentifierPool;
 })(es || (es = {}));
 var es;
 (function (es) {

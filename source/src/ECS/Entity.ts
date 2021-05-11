@@ -9,7 +9,6 @@ module es {
     }
 
     export class Entity implements IEqualityComparable {
-        public static _idGenerator: number = 0;
         public static entityComparer: IComparer<Entity> = new EntityComparer();
         /**
          * 当前实体所属的场景
@@ -37,12 +36,12 @@ module es {
         public updateInterval: number = 1;
         public componentBits: Bits;
 
-        constructor(name: string) {
+        constructor(name: string, id: number) {
             this.components = new ComponentList(this);
             this.transform = new Transform(this);
             this.componentBits = new Bits();
             this.name = name;
-            this.id = Entity._idGenerator++;
+            this.id = id;
         }
 
         public _isDestroyed: boolean;
@@ -319,6 +318,7 @@ module es {
          */
         public destroy() {
             this._isDestroyed = true;
+            this.scene.identifierPool.checkIn(this.id);
             this.scene.entities.remove(this);
             this.transform.parent = null;
 

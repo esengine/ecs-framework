@@ -13,11 +13,13 @@ module es {
         public readonly entityProcessors: EntityProcessorList;
 
         public readonly _sceneComponents: SceneComponent[] = [];
+        public readonly identifierPool: IdentifierPool;
         private _didSceneBegin: boolean;
 
         constructor() {
             this.entities = new EntityList(this);
             this.entityProcessors = new EntityProcessorList();
+            this.identifierPool = new IdentifierPool();
 
             this.initialize();
         }
@@ -145,7 +147,7 @@ module es {
          * @param name
          */
         public createEntity(name: string) {
-            let entity = new Entity(name);
+            let entity = new Entity(name, this.identifierPool.checkOut());
             return this.addEntity(entity);
         }
 

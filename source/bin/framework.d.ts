@@ -234,7 +234,6 @@ declare module es {
         compare(self: Entity, other: Entity): number;
     }
     class Entity implements IEqualityComparable {
-        static _idGenerator: number;
         static entityComparer: IComparer<Entity>;
         /**
          * 当前实体所属的场景
@@ -261,7 +260,7 @@ declare module es {
          */
         updateInterval: number;
         componentBits: Bits;
-        constructor(name: string);
+        constructor(name: string, id: number);
         _isDestroyed: boolean;
         /**
          * 如果调用了destroy，那么在下一次处理实体之前这将一直为true
@@ -651,6 +650,7 @@ declare module es {
          */
         readonly entityProcessors: EntityProcessorList;
         readonly _sceneComponents: SceneComponent[];
+        readonly identifierPool: IdentifierPool;
         private _didSceneBegin;
         constructor();
         /**
@@ -1861,6 +1861,15 @@ declare module es {
          */
         static expandPrime(oldSize: number): number;
         static getHashCode(str: any): number;
+    }
+}
+declare module es {
+    class IdentifierPool {
+        private ids;
+        private nextAvailableId_;
+        constructor();
+        checkOut(): number;
+        checkIn(id: number): void;
     }
 }
 declare module es {
