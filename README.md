@@ -38,7 +38,7 @@ es.Core.scene = new MainScene();
 框架的大部分围绕着实体组件系统（ECS）。ECS与您可能使用过的任何其他ECS均不同，所以我为您再以下详细介绍。
 
 ### Scene
-ECS的根源。可以将场景视为游戏的不同部分，例如菜单，级别，信用等。场景管理实体，并在适当的时间调用它们的方法。您也可以使用场景通过findEntity和findEntitiesByTag方法定位实体。
+ECS的根源。可以将场景视为游戏的不同部分，在适当的时间调用它们的方法。您也可以使用场景通过findEntity和findEntitiesByTag方法定位实体。
 
 场景可以包含一种称为场景组件的特殊类型的组件。 SceneComponent通过add / get / removeSceneComponent方法进行管理。可以将场景组件视为简化组件。它包含少量可重写的生命周期方法（onEnabled / onDisabled / update / onRemovedFromScene）。当您需要一个位于场景级别但不需要实体容器的对象时，可以使用这些对象。 
 
@@ -273,24 +273,3 @@ Debug类提供日志记录。 Insist类提供各种断言条件。 您可以在�
 
 #### [基于ecs-framework开发的astar/BreadthFirst/Dijkstra/GOAP目标导向计划 路径寻找库](https://github.com/esengine/ecs-astar)
 #### [基于ecs-framework开发的AI（BehaviourTree、UtilityAI）系统](https://github.com/esengine/BehaviourTree-ai))
-
-## 关于用ecs框架（typescript/javascript）
-ecs 是功能强大的实体组件系统。typescript与其他语言不同，因此我对ecs的设计尽可能的支持typescript特性。虽然ecs拥有标准实体组件系统，但在细节上有很大不同。创建标准ecs通常处于原始速度、缓存位置和其他性能原因。使用typescript，我们没有struct，因为没有必要匹配标准实体组件系统的设计方式，因为我们对内存布局没有那种控制。
-
-ecs更灵活，可以更好的集中、组织、排序和过滤游戏中的对象。ecs让您拥有轻量级实体和组件，这些组件可以由系统批量处理。
-例如，您在制作一个射手，您可能会有几十到几百个子弹，这些作为轻量级实体由系统批量处理。
-
-所以ecs在设计当中拥有四种重要类型：世界（Scene），过滤器（Matcher），系统（System）和实体(Entity)
-
-## [世界（Scene）](https://github.com/esengine/egret-framework/wiki/%E5%9C%BA%E6%99%AF-Scene)
-Scene是ecs包含系统和实体最外面的容器。
-
-## 实体（Entity）
-实体只由系统处理。
-
-## 组件(Component)
-组件应该只包含数据而没有逻辑代码。对数据进行逻辑是系统的工作。
-
-## 系统（System）
-ecs中的系统会不断的更新实体。系统使用过滤器选择某些实体，然后仅更新那些选择的实体。
-
