@@ -1651,6 +1651,8 @@ declare module es {
         _componentsToRemove: {
             [index: number]: Component;
         };
+        _componentsToAddList: Component[];
+        _componentsToRemoveList: Component[];
         _tempBufferList: Component[];
         /**
          * 用于确定是否需要对该框架中的组件进行排序的标志
@@ -1737,6 +1739,8 @@ declare module es {
         _entitiesToRemove: {
             [index: number]: Entity;
         };
+        _entitiesToAddedList: Entity[];
+        _entitiesToRemoveList: Entity[];
         /**
          * 标志，用于确定我们是否需要在这一帧中对实体进行排序
          */

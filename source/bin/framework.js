@@ -3644,6 +3644,8 @@ var es;
              * 标记要删除此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
              */
             this._componentsToRemove = {};
+            this._componentsToAddList = [];
+            this._componentsToRemoveList = [];
             this._tempBufferList = [];
             this.componentsByType = new Map();
             this.componentsToAddByType = new Map();
@@ -3668,22 +3670,38 @@ var es;
         };
         ComponentList.prototype.add = function (component) {
             this._componentsToAdd[component.id] = component;
+            this._componentsToAddList.push(component);
             this.addComponentsToAddByType(component);
         };
         ComponentList.prototype.remove = function (component) {
             if (this._componentsToAdd[component.id]) {
+                var index = this._componentsToAddList.findIndex(function (c) { return c.id == component.id; });
+                if (index != -1)
+                    this._componentsToAddList.splice(index, 1);
                 delete this._componentsToAdd[component.id];
                 this.removeComponentsToAddByType(component);
                 return;
             }
             this._componentsToRemove[component.id] = component;
+            this._componentsToRemoveList.push(component);
         };
         /**
          * 立即从组件列表中删除所有组件
          */
         ComponentList.prototype.removeAllComponents = function () {
-            for (var i = 0; i < this._components.length; i++) {
-                this.handleRemove(this._components[i]);
+            var e_6, _a;
+            try {
+                for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var component = _c.value;
+                    this.handleRemove(component);
+                }
+            }
+            catch (e_6_1) { e_6 = { error: e_6_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_6) throw e_6.error; }
             }
             this.componentsByType.clear();
             this.componentsToAddByType.clear();
@@ -3691,9 +3709,11 @@ var es;
             this._updatableComponents.length = 0;
             this._componentsToAdd = {};
             this._componentsToRemove = {};
+            this._componentsToAddList.length = 0;
+            this._componentsToRemoveList.length = 0;
         };
         ComponentList.prototype.deregisterAllComponents = function () {
-            var e_6, _a;
+            var e_7, _a;
             try {
                 for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var component = _c.value;
@@ -3706,16 +3726,16 @@ var es;
                     this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
                 }
             }
-            catch (e_6_1) { e_6 = { error: e_6_1 }; }
+            catch (e_7_1) { e_7 = { error: e_7_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_6) throw e_6.error; }
+                finally { if (e_7) throw e_7.error; }
             }
         };
         ComponentList.prototype.registerAllComponents = function () {
-            var e_7, _a;
+            var e_8, _a;
             try {
                 for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var component = _c.value;
@@ -3725,12 +3745,12 @@ var es;
                     this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                 }
             }
-            catch (e_7_1) { e_7 = { error: e_7_1 }; }
+            catch (e_8_1) { e_8 = { error: e_8_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_7) throw e_7.error; }
+                finally { if (e_8) throw e_8.error; }
             }
         };
         ComponentList.prototype.decreaseBits = function (component) {
@@ -3747,47 +3767,58 @@ var es;
          * 处理任何需要删除或添加的组件
          */
         ComponentList.prototype.updateLists = function () {
-            for (var i in this._componentsToRemove) {
-                var component = this._componentsToRemove[i];
-                this.handleRemove(component);
-                for (var index = 0; index < this._components.length; index++) {
-                    var searchComponent = this._components[index];
-                    if (searchComponent.id == component.id) {
-                        this._components.splice(index, 1);
-                        break;
+            if (this._componentsToRemoveList.length > 0) {
+                var _loop_3 = function (i, l) {
+                    var component = this_2._componentsToRemoveList[i];
+                    this_2.handleRemove(component);
+                    var index = this_2._components.findIndex(function (c) { return c.id == component.id; });
+                    if (index != -1)
+                        this_2._components.splice(index, 1);
+                    this_2.removeComponentsByType(component);
+                };
+                var this_2 = this;
+                for (var i = 0, l = this._componentsToRemoveList.length; i < l; ++i) {
+                    _loop_3(i, l);
+                }
+                this._componentsToRemove = {};
+                this._componentsToRemoveList.length = 0;
+            }
+            if (this._componentsToAddList.length > 0) {
+                for (var i = 0, l = this._componentsToAddList.length; i < l; ++i) {
+                    var component = this._componentsToAddList[i];
+                    if (es.isIUpdatable(component))
+                        this._updatableComponents.push(component);
+                    this.addBits(component);
+                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                    this.addComponentsByType(component);
+                    this._components.push(component);
+                    this._tempBufferList.push(component);
+                }
+                // 在调用onAddedToEntity之前清除，以防添加更多组件
+                this._componentsToAdd = {};
+                this._componentsToAddList.length = 0;
+                this.componentsToAddByType.clear();
+                this._isComponentListUnsorted = true;
+            }
+            if (this._tempBufferList.length > 0) {
+                // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
+                for (var i = 0, l = this._tempBufferList.length; i < l; ++i) {
+                    var component = this._tempBufferList[i];
+                    component.onAddedToEntity();
+                    // enabled检查实体和组件
+                    if (component.enabled) {
+                        component.onEnabled();
                     }
                 }
-                this.removeComponentsByType(component);
+                this._tempBufferList.length = 0;
             }
-            this._componentsToRemove = {};
-            for (var i in this._componentsToAdd) {
-                var component = this._componentsToAdd[i];
-                if (es.isIUpdatable(component))
-                    this._updatableComponents.push(component);
-                this.addBits(component);
-                this._entity.scene.entityProcessors.onComponentAdded(this._entity);
-                this.addComponentsByType(component);
-                this._components.push(component);
-                this._tempBufferList.push(component);
-            }
-            // 在调用onAddedToEntity之前清除，以防添加更多组件
-            this._componentsToAdd = {};
-            this.componentsToAddByType.clear();
-            this._isComponentListUnsorted = true;
-            // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
-            for (var i = 0; i < this._tempBufferList.length; i++) {
-                var component = this._tempBufferList[i];
-                component.onAddedToEntity();
-                // enabled检查实体和组件
-                if (component.enabled) {
-                    component.onEnabled();
-                }
-            }
-            this._tempBufferList.length = 0;
         };
         ComponentList.prototype.handleRemove = function (component) {
-            if (es.isIUpdatable(component))
-                new es.List(this._updatableComponents).remove(component);
+            if (es.isIUpdatable(component) && this._updatableComponents.length > 0) {
+                var index = this._updatableComponents.findIndex(function (c) { return c.id == component.id; });
+                if (index != -1)
+                    this._updatableComponents.splice(index, 1);
+            }
             this.decreaseBits(component);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
             component.onRemovedFromEntity();
@@ -3858,29 +3889,73 @@ var es;
         };
         ComponentList.prototype.update = function () {
             this.updateLists();
-            for (var i = 0; i < this._updatableComponents.length; i++) {
-                if (this._updatableComponents[i].enabled)
-                    this._updatableComponents[i].update();
-            }
+            // for (let updateComponent of this._updatableComponents) {
+            //     if (updateComponent.enabled)
+            //         updateComponent.update();
+            // }
         };
         ComponentList.prototype.onEntityTransformChanged = function (comp) {
-            for (var i = 0; i < this._components.length; i++) {
-                if (this._components[i].enabled)
-                    this._components[i].onEntityTransformChanged(comp);
+            var e_9, _a, e_10, _b;
+            try {
+                for (var _c = __values(this._components), _d = _c.next(); !_d.done; _d = _c.next()) {
+                    var component = _d.value;
+                    if (component.enabled)
+                        component.onEntityTransformChanged(comp);
+                }
             }
-            for (var i in this._componentsToAdd) {
-                var component = this._componentsToAdd[i];
-                if (component.enabled)
-                    component.onEntityTransformChanged(comp);
+            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            finally {
+                try {
+                    if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+                }
+                finally { if (e_9) throw e_9.error; }
+            }
+            try {
+                for (var _e = __values(this._componentsToAddList), _f = _e.next(); !_f.done; _f = _e.next()) {
+                    var component = _f.value;
+                    if (component.enabled)
+                        component.onEntityTransformChanged(comp);
+                }
+            }
+            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+            finally {
+                try {
+                    if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                }
+                finally { if (e_10) throw e_10.error; }
             }
         };
         ComponentList.prototype.onEntityEnabled = function () {
-            for (var i = 0; i < this._components.length; i++)
-                this._components[i].onEnabled();
+            var e_11, _a;
+            try {
+                for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var component = _c.value;
+                    component.onEnabled();
+                }
+            }
+            catch (e_11_1) { e_11 = { error: e_11_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_11) throw e_11.error; }
+            }
         };
         ComponentList.prototype.onEntityDisabled = function () {
-            for (var i = 0; i < this._components.length; i++)
-                this._components[i].onDisabled();
+            var e_12, _a;
+            try {
+                for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var component = _c.value;
+                    component.onDisabled();
+                }
+            }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_12) throw e_12.error; }
+            }
         };
         /**
          * 组件列表的全局updateOrder排序
@@ -3954,12 +4029,13 @@ var es;
             /**
              * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
              */
-            // public _entitiesToAdded: Entity[] = [];
             this._entitiesToAdded = {};
             /**
              * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
              */
             this._entitiesToRemove = {};
+            this._entitiesToAddedList = [];
+            this._entitiesToRemoveList = [];
             /**
              * 通过标签跟踪实体，便于检索
              */
@@ -3993,6 +4069,7 @@ var es;
          */
         EntityList.prototype.add = function (entity) {
             this._entitiesToAdded[entity.id] = entity;
+            this._entitiesToAddedList.push(entity);
         };
         /**
          * 从列表中删除一个实体。所有的生命周期方法将在下一帧中被调用
@@ -4001,9 +4078,13 @@ var es;
         EntityList.prototype.remove = function (entity) {
             // 防止在同一帧中添加或删除实体
             if (this._entitiesToAdded[entity.id]) {
+                var index = this._entitiesToAddedList.findIndex(function (e) { return e.id == entity.id; });
+                if (index != -1)
+                    this._entitiesToAddedList.splice(index, 1);
                 delete this._entitiesToAdded[entity.id];
                 return;
             }
+            this._entitiesToRemoveList.push(entity);
             if (!this._entitiesToRemove[entity.id])
                 this._entitiesToRemove[entity.id] = entity;
         };
@@ -4013,6 +4094,7 @@ var es;
         EntityList.prototype.removeAllEntities = function () {
             this._unsortedTags.clear();
             this._entitiesToAdded = {};
+            this._entitiesToAddedList.length = 0;
             this._isEntityListUnsorted = false;
             // 为什么我们要在这里更新列表？主要是为了处理在场景切换前被分离的实体。
             // 它们仍然会在_entitiesToRemove列表中，这将由updateLists处理。
@@ -4050,56 +4132,60 @@ var es;
                 list.delete(entity);
         };
         EntityList.prototype.update = function () {
-            var e_8, _a;
-            try {
-                for (var _b = __values(this._entities), _c = _b.next(); !_c.done; _c = _b.next()) {
-                    var entity = _c.value;
-                    if (entity.enabled && (entity.updateInterval == 1 || es.Time.frameCount % entity.updateInterval == 0))
-                        entity.update();
-                }
-            }
-            catch (e_8_1) { e_8 = { error: e_8_1 }; }
-            finally {
-                try {
-                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
-                }
-                finally { if (e_8) throw e_8.error; }
+            for (var i = 0, s = this._entities.length; i < s; ++i) {
+                var entity = this._entities[i];
+                if (entity.enabled && (entity.updateInterval == 1 || es.Time.frameCount % entity.updateInterval == 0))
+                    entity.update();
             }
         };
         EntityList.prototype.updateLists = function () {
-            for (var i in this._entitiesToRemove) {
-                var entity = this._entitiesToRemove[i];
-                this.removeFromTagList(entity);
-                // 处理常规实体列表
-                new es.List(this._entities).remove(entity);
-                entity.onRemovedFromScene();
-                entity.scene = null;
-                this.scene.entityProcessors.onEntityRemoved(entity);
+            if (this._entitiesToRemoveList.length > 0) {
+                var _loop_4 = function (i, s) {
+                    var entity = this_3._entitiesToRemoveList[i];
+                    this_3.removeFromTagList(entity);
+                    // 处理常规实体列表
+                    var index = this_3._entities.findIndex(function (e) { return e.id == entity.id; });
+                    if (index != -1)
+                        this_3._entities.splice(index, 1);
+                    entity.onRemovedFromScene();
+                    entity.scene = null;
+                    this_3.scene.entityProcessors.onEntityRemoved(entity);
+                };
+                var this_3 = this;
+                for (var i = 0, s = this._entitiesToRemoveList.length; i < s; ++i) {
+                    _loop_4(i, s);
+                }
+                this._entitiesToRemove = {};
+                this._entitiesToRemoveList.length = 0;
             }
-            this._entitiesToRemove = {};
-            for (var i in this._entitiesToAdded) {
-                var entity = this._entitiesToAdded[i];
-                this._entities.push(entity);
-                entity.scene = this.scene;
-                this.addToTagList(entity);
-                this.scene.entityProcessors.onEntityAdded(entity);
+            if (this._entitiesToAddedList.length > 0) {
+                for (var i = 0, s = this._entitiesToAddedList.length; i < s; ++i) {
+                    var entity = this._entitiesToAddedList[i];
+                    this._entities.push(entity);
+                    entity.scene = this.scene;
+                    this.addToTagList(entity);
+                    this.scene.entityProcessors.onEntityAdded(entity);
+                }
+                for (var i = 0, s = this._entitiesToAddedList.length; i < s; ++i) {
+                    var entity = this._entitiesToAddedList[i];
+                    entity.onAddedToScene();
+                }
+                this._entitiesToAdded = {};
+                this._entitiesToAddedList.length = 0;
             }
-            for (var i in this._entitiesToAdded) {
-                this._entitiesToAdded[i].onAddedToScene();
-            }
-            this._entitiesToAdded = {};
         };
         /**
          * 返回第一个找到的名字为name的实体。如果没有找到则返回null
          * @param name
          */
         EntityList.prototype.findEntity = function (name) {
-            for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].name == name)
-                    return this._entities[i];
+            for (var i = 0, s = this._entities.length; i < s; ++i) {
+                var entity = this._entities[i];
+                if (entity[i].name == name)
+                    return entity;
             }
-            for (var i in this._entitiesToAdded) {
-                var entity = this._entitiesToAdded[i];
+            for (var i = 0, s = this._entitiesToAddedList.length; i < s; ++i) {
+                var entity = this._entitiesToAddedList[i];
                 if (entity.name == name)
                     return entity;
             }
@@ -4111,9 +4197,10 @@ var es;
          * @returns
          */
         EntityList.prototype.findEntityById = function (id) {
-            for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].id == id)
-                    return this._entities[i];
+            for (var i = 0, s = this._entities.length; i < s; ++i) {
+                var entity = this._entities[i];
+                if (entity.id == id)
+                    return entity;
             }
             return this._entitiesToAdded[id];
         };
@@ -4123,7 +4210,7 @@ var es;
          * @param tag
          */
         EntityList.prototype.entitiesWithTag = function (tag) {
-            var e_9, _a;
+            var e_13, _a;
             var list = this.getTagList(tag);
             var returnList = es.ListPool.obtain();
             try {
@@ -4132,12 +4219,12 @@ var es;
                     returnList.push(entity);
                 }
             }
-            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
                     if (list_1_1 && !list_1_1.done && (_a = list_1.return)) _a.call(list_1);
                 }
-                finally { if (e_9) throw e_9.error; }
+                finally { if (e_13) throw e_13.error; }
             }
             return returnList;
         };
@@ -4147,7 +4234,7 @@ var es;
          * @returns
          */
         EntityList.prototype.entityWithTag = function (tag) {
-            var e_10, _a;
+            var e_14, _a;
             var list = this.getTagList(tag);
             try {
                 for (var list_2 = __values(list), list_2_1 = list_2.next(); !list_2_1.done; list_2_1 = list_2.next()) {
@@ -4155,12 +4242,12 @@ var es;
                     return entity;
                 }
             }
-            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (list_2_1 && !list_2_1.done && (_a = list_2.return)) _a.call(list_2);
                 }
-                finally { if (e_10) throw e_10.error; }
+                finally { if (e_14) throw e_14.error; }
             }
             return null;
         };
@@ -4169,23 +4256,16 @@ var es;
          * @param type
          */
         EntityList.prototype.findComponentOfType = function (type) {
-            for (var i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].enabled) {
-                    var comp = this._entities[i].getComponent(type);
+            for (var i = 0, s = this._entities.length; i < s; i++) {
+                var entity = this._entities[i];
+                if (entity.enabled) {
+                    var comp = entity.getComponent(type);
                     if (comp)
                         return comp;
                 }
             }
-            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
-            //     let entity: Entity = this._entitiesToAdded.toArray()[i];
-            //     if (entity.enabled) {
-            //         let comp = entity.getComponent<T>(type);
-            //         if (comp)
-            //             return comp;
-            //     }
-            // }
-            for (var i in this._entitiesToAdded) {
-                var entity = this._entitiesToAdded[i];
+            for (var i = 0; i < this._entitiesToAddedList.length; i++) {
+                var entity = this._entitiesToAddedList[i];
                 if (entity.enabled) {
                     var comp = entity.getComponent(type);
                     if (comp)
@@ -4200,20 +4280,25 @@ var es;
          * @param type
          */
         EntityList.prototype.findComponentsOfType = function (type) {
+            var e_15, _a;
             var comps = es.ListPool.obtain();
             for (var i = 0; i < this._entities.length; i++) {
                 if (this._entities[i].enabled)
                     this._entities[i].getComponents(type, comps);
             }
-            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
-            //     let entity = this._entitiesToAdded.toArray()[i];
-            //     if (entity.enabled)
-            //         entity.getComponents(type, comps);
-            // }
-            for (var i in this._entitiesToAdded) {
-                var entity = this._entitiesToAdded[i];
-                if (entity.enabled)
-                    entity.getComponents(type, comps);
+            try {
+                for (var _b = __values(this._entitiesToAddedList), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var entity = _c.value;
+                    if (entity.enabled)
+                        entity.getComponents(type, comps);
+                }
+            }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_15) throw e_15.error; }
             }
             return comps;
         };
@@ -4227,7 +4312,7 @@ var es;
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var e_11, _a, e_12, _b;
+            var e_16, _a, e_17, _b, e_18, _c;
             var entities = [];
             for (var i = 0; i < this._entities.length; i++) {
                 if (this._entities[i].enabled) {
@@ -4242,59 +4327,52 @@ var es;
                             }
                         }
                     }
-                    catch (e_11_1) { e_11 = { error: e_11_1 }; }
+                    catch (e_16_1) { e_16 = { error: e_16_1 }; }
                     finally {
                         try {
                             if (types_1_1 && !types_1_1.done && (_a = types_1.return)) _a.call(types_1);
                         }
-                        finally { if (e_11) throw e_11.error; }
+                        finally { if (e_16) throw e_16.error; }
                     }
                     if (meet) {
                         entities.push(this._entities[i]);
                     }
                 }
             }
-            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
-            //     let entity: Entity = this._entitiesToAdded.toArray()[i];
-            //     if (entity.enabled) {
-            //         let meet = true;
-            //         for (let type of types) {
-            //             let hasComp = entity.hasComponent(type);
-            //             if (!hasComp) {
-            //                 meet = false;
-            //                 break;
-            //             }
-            //         }
-            //         if (meet) {
-            //             entities.push(entity);
-            //         }
-            //     }
-            // }
-            for (var i in this._entitiesToAdded) {
-                var entity = this._entitiesToAdded[i];
-                if (entity.enabled) {
-                    var meet = true;
-                    try {
-                        for (var types_2 = __values(types), types_2_1 = types_2.next(); !types_2_1.done; types_2_1 = types_2.next()) {
-                            var type = types_2_1.value;
-                            var hasComp = entity.hasComponent(type);
-                            if (!hasComp) {
-                                meet = false;
-                                break;
+            try {
+                for (var _d = __values(this._entitiesToAddedList), _e = _d.next(); !_e.done; _e = _d.next()) {
+                    var entity = _e.value;
+                    if (entity.enabled) {
+                        var meet = true;
+                        try {
+                            for (var types_2 = __values(types), types_2_1 = types_2.next(); !types_2_1.done; types_2_1 = types_2.next()) {
+                                var type = types_2_1.value;
+                                var hasComp = entity.hasComponent(type);
+                                if (!hasComp) {
+                                    meet = false;
+                                    break;
+                                }
                             }
                         }
-                    }
-                    catch (e_12_1) { e_12 = { error: e_12_1 }; }
-                    finally {
-                        try {
-                            if (types_2_1 && !types_2_1.done && (_b = types_2.return)) _b.call(types_2);
+                        catch (e_18_1) { e_18 = { error: e_18_1 }; }
+                        finally {
+                            try {
+                                if (types_2_1 && !types_2_1.done && (_c = types_2.return)) _c.call(types_2);
+                            }
+                            finally { if (e_18) throw e_18.error; }
                         }
-                        finally { if (e_12) throw e_12.error; }
-                    }
-                    if (meet) {
-                        entities.push(entity);
+                        if (meet) {
+                            entities.push(entity);
+                        }
                     }
                 }
+            }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
+            finally {
+                try {
+                    if (_e && !_e.done && (_b = _d.return)) _b.call(_d);
+                }
+                finally { if (e_17) throw e_17.error; }
             }
             return entities;
         };
@@ -4329,19 +4407,25 @@ var es;
         EntityProcessorList.prototype.begin = function () {
         };
         EntityProcessorList.prototype.update = function () {
-            for (var i = 0; i < this._processors.length; i++) {
+            if (this._processors.length == 0)
+                return;
+            for (var i = 0, s = this._processors.length; i < s; ++i) {
                 this._processors[i].update();
             }
         };
         EntityProcessorList.prototype.lateUpdate = function () {
-            for (var i = 0; i < this._processors.length; i++) {
+            if (this._processors.length == 0)
+                return;
+            for (var i = 0, s = this._processors.length; i < s; ++i) {
                 this._processors[i].lateUpdate();
             }
         };
         EntityProcessorList.prototype.end = function () {
         };
         EntityProcessorList.prototype.getProcessor = function () {
-            for (var i = 0; i < this._processors.length; i++) {
+            if (this._processors.length == 0)
+                return null;
+            for (var i = 0, s = this._processors.length; i < s; ++i) {
                 var processor = this._processors[i];
                 if (processor instanceof es.EntitySystem)
                     return processor;
@@ -4349,12 +4433,16 @@ var es;
             return null;
         };
         EntityProcessorList.prototype.notifyEntityChanged = function (entity) {
-            for (var i = 0; i < this._processors.length; i++) {
+            if (this._processors.length == 0)
+                return;
+            for (var i = 0, s = this._processors.length; i < s; ++i) {
                 this._processors[i].onChanged(entity);
             }
         };
         EntityProcessorList.prototype.removeFromProcessors = function (entity) {
-            for (var i = 0; i < this._processors.length; i++) {
+            if (this._processors.length == 0)
+                return;
+            for (var i = 0, s = this._processors.length; i < s; ++i) {
                 this._processors[i].remove(entity);
             }
         };
@@ -4492,7 +4580,7 @@ var es;
             return this.isInterested(e.componentBits);
         };
         Matcher.prototype.isInterested = function (components) {
-            var e_13, _a, e_14, _b, e_15, _c;
+            var e_19, _a, e_20, _b, e_21, _c;
             if (this.allSet.length != 0) {
                 try {
                     for (var _d = __values(this.allSet), _e = _d.next(); !_e.done; _e = _d.next()) {
@@ -4501,12 +4589,12 @@ var es;
                             return false;
                     }
                 }
-                catch (e_13_1) { e_13 = { error: e_13_1 }; }
+                catch (e_19_1) { e_19 = { error: e_19_1 }; }
                 finally {
                     try {
                         if (_e && !_e.done && (_a = _d.return)) _a.call(_d);
                     }
-                    finally { if (e_13) throw e_13.error; }
+                    finally { if (e_19) throw e_19.error; }
                 }
             }
             if (this.exclusionSet.length != 0) {
@@ -4517,12 +4605,12 @@ var es;
                             return false;
                     }
                 }
-                catch (e_14_1) { e_14 = { error: e_14_1 }; }
+                catch (e_20_1) { e_20 = { error: e_20_1 }; }
                 finally {
                     try {
                         if (_g && !_g.done && (_b = _f.return)) _b.call(_f);
                     }
-                    finally { if (e_14) throw e_14.error; }
+                    finally { if (e_20) throw e_20.error; }
                 }
             }
             if (this.oneSet.length != 0) {
@@ -4533,12 +4621,12 @@ var es;
                             return true;
                     }
                 }
-                catch (e_15_1) { e_15 = { error: e_15_1 }; }
+                catch (e_21_1) { e_21 = { error: e_21_1 }; }
                 finally {
                     try {
                         if (_j && !_j.done && (_c = _h.return)) _c.call(_h);
                     }
-                    finally { if (e_15) throw e_15.error; }
+                    finally { if (e_21) throw e_21.error; }
                 }
             }
             return true;
@@ -4548,7 +4636,7 @@ var es;
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var e_16, _a;
+            var e_22, _a;
             var t;
             try {
                 for (var types_3 = __values(types), types_3_1 = types_3.next(); !types_3_1.done; types_3_1 = types_3.next()) {
@@ -4556,12 +4644,12 @@ var es;
                     this.allSet.push(t);
                 }
             }
-            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            catch (e_22_1) { e_22 = { error: e_22_1 }; }
             finally {
                 try {
                     if (types_3_1 && !types_3_1.done && (_a = types_3.return)) _a.call(types_3);
                 }
-                finally { if (e_16) throw e_16.error; }
+                finally { if (e_22) throw e_22.error; }
             }
             return this;
         };
@@ -4570,7 +4658,7 @@ var es;
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var e_17, _a;
+            var e_23, _a;
             var t;
             try {
                 for (var types_4 = __values(types), types_4_1 = types_4.next(); !types_4_1.done; types_4_1 = types_4.next()) {
@@ -4578,12 +4666,12 @@ var es;
                     this.exclusionSet.push(t);
                 }
             }
-            catch (e_17_1) { e_17 = { error: e_17_1 }; }
+            catch (e_23_1) { e_23 = { error: e_23_1 }; }
             finally {
                 try {
                     if (types_4_1 && !types_4_1.done && (_a = types_4.return)) _a.call(types_4);
                 }
-                finally { if (e_17) throw e_17.error; }
+                finally { if (e_23) throw e_23.error; }
             }
             return this;
         };
@@ -4592,19 +4680,19 @@ var es;
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var e_18, _a;
+            var e_24, _a;
             try {
                 for (var types_5 = __values(types), types_5_1 = types_5.next(); !types_5_1.done; types_5_1 = types_5.next()) {
                     var t = types_5_1.value;
                     this.oneSet.push(t);
                 }
             }
-            catch (e_18_1) { e_18 = { error: e_18_1 }; }
+            catch (e_24_1) { e_24 = { error: e_24_1 }; }
             finally {
                 try {
                     if (types_5_1 && !types_5_1.done && (_a = types_5.return)) _a.call(types_5);
                 }
-                finally { if (e_18) throw e_18.error; }
+                finally { if (e_24) throw e_24.error; }
             }
             return this;
         };
@@ -7690,7 +7778,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
-            var e_19, _a;
+            var e_25, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location;
             var resultCounter = 0;
@@ -7721,12 +7809,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_19_1) { e_19 = { error: e_19_1 }; }
+            catch (e_25_1) { e_25 = { error: e_25_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_19) throw e_19.error; }
+                finally { if (e_25) throw e_25.error; }
             }
             return resultCounter;
         };
@@ -7738,7 +7826,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_20, _a;
+            var e_26, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -7771,12 +7859,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_20_1) { e_20 = { error: e_20_1 }; }
+            catch (e_26_1) { e_26 = { error: e_26_1 }; }
             finally {
                 try {
                     if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_20) throw e_20.error; }
+                finally { if (e_26) throw e_26.error; }
             }
             return resultCounter;
         };
@@ -12474,7 +12562,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_21, _a;
+            var e_27, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -12482,12 +12570,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_21_1) { e_21 = { error: e_21_1 }; }
+            catch (e_27_1) { e_27 = { error: e_27_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_21) throw e_21.error; }
+                finally { if (e_27) throw e_27.error; }
             }
             return result;
         };
@@ -12736,7 +12824,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_22, _a;
+            var e_28, _a;
             var output = es.ListPool.obtain();
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -12775,12 +12863,12 @@ var es;
                         }
                     }
                 }
-                catch (e_22_1) { e_22 = { error: e_22_1 }; }
+                catch (e_28_1) { e_28 = { error: e_28_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_22) throw e_22.error; }
+                    finally { if (e_28) throw e_28.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -12896,7 +12984,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_23, _a;
+            var e_29, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -12914,12 +13002,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_23_1) { e_23 = { error: e_23_1 }; }
+            catch (e_29_1) { e_29 = { error: e_29_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_23) throw e_23.error; }
+                finally { if (e_29) throw e_29.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

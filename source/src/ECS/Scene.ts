@@ -88,7 +88,7 @@ module es {
 
             // 更新我们的实体组
             this.entities.update();
-
+            
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
         }

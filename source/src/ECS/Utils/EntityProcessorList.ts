@@ -31,13 +31,19 @@ module es {
         }
 
         public update() {
-            for (let i = 0; i < this._processors.length; i++) {
+            if (this._processors.length == 0)
+                return;
+
+            for (let i = 0, s = this._processors.length; i < s; ++ i) {
                 this._processors[i].update();
             }
         }
 
         public lateUpdate() {
-            for (let i = 0; i < this._processors.length; i++) {
+            if (this._processors.length == 0)
+                return;
+
+            for (let i = 0, s = this._processors.length; i < s; ++ i) {
                 this._processors[i].lateUpdate();
             }
         }
@@ -47,7 +53,10 @@ module es {
         }
 
         public getProcessor<T extends EntitySystem>(): T {
-            for (let i = 0; i < this._processors.length; i++) {
+            if (this._processors.length == 0)
+                return null;
+
+            for (let i = 0, s = this._processors.length; i < s; ++ i) {
                 let processor = this._processors[i];
                 if (processor instanceof EntitySystem)
                     return processor as T;
@@ -57,13 +66,19 @@ module es {
         }
 
         protected notifyEntityChanged(entity: Entity) {
-            for (let i = 0; i < this._processors.length; i++) {
+            if (this._processors.length == 0) 
+                return;
+            
+            for (let i = 0, s = this._processors.length; i < s; ++ i) {
                 this._processors[i].onChanged(entity);
             }
         }
 
         protected removeFromProcessors(entity: Entity) {
-            for (let i = 0; i < this._processors.length; i++) {
+            if (this._processors.length == 0) 
+                return;
+            
+            for (let i = 0, s = this._processors.length; i < s; ++ i) {
                 this._processors[i].remove(entity);
             }
         }

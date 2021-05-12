@@ -8,12 +8,13 @@ module es {
         /**
          * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
-        // public _entitiesToAdded: Entity[] = [];
         public _entitiesToAdded: {[index: number]: Entity} = {};
         /**
          * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
          */
         public _entitiesToRemove: {[index: number]: Entity} = {};
+        public _entitiesToAddedList: Entity[] = [];
+        public _entitiesToRemoveList: Entity[] = [];
         /**
          * 标志，用于确定我们是否需要在这一帧中对实体进行排序
          */
@@ -50,6 +51,7 @@ module es {
          */
         public add(entity: Entity) {
             this._entitiesToAdded[entity.id] = entity;
+            this._entitiesToAddedList.push(entity);
         }
 
         /**
@@ -59,10 +61,14 @@ module es {
         public remove(entity: Entity) {
             // 防止在同一帧中添加或删除实体
             if (this._entitiesToAdded[entity.id]) {
+                let index = this._entitiesToAddedList.findIndex(e => e.id == entity.id);
+                if (index != -1)
+                    this._entitiesToAddedList.splice(index, 1);
                 delete this._entitiesToAdded[entity.id];
                 return;
             }
 
+            this._entitiesToRemoveList.push(entity);
             if (!this._entitiesToRemove[entity.id])
                 this._entitiesToRemove[entity.id] = entity;
         }
@@ -73,6 +79,7 @@ module es {
         public removeAllEntities() {
             this._unsortedTags.clear();
             this._entitiesToAdded = {};
+            this._entitiesToAddedList.length = 0;
             this._isEntityListUnsorted = false;
 
             // 为什么我们要在这里更新列表？主要是为了处理在场景切换前被分离的实体。
@@ -119,41 +126,52 @@ module es {
         }
 
         public update() {
-            for (let entity of this._entities) {
+            for (let i = 0, s = this._entities.length; i < s; ++ i) {
+                let entity = this._entities[i];
                 if (entity.enabled && (entity.updateInterval == 1 || Time.frameCount % entity.updateInterval == 0))
                     entity.update();
             }
         }
 
         public updateLists() {
-            for (let i in this._entitiesToRemove) {
-                let entity = this._entitiesToRemove[i];
-                this.removeFromTagList(entity);
-
-                // 处理常规实体列表
-                new es.List(this._entities).remove(entity);
-                entity.onRemovedFromScene();
-                entity.scene = null;
-
-                this.scene.entityProcessors.onEntityRemoved(entity);
-            }
-            this._entitiesToRemove = {};
-
-            for (let i in this._entitiesToAdded) {
-                let entity = this._entitiesToAdded[i];
-                this._entities.push(entity);
-                entity.scene = this.scene;
-
-                this.addToTagList(entity);
-
-                this.scene.entityProcessors.onEntityAdded(entity);
+            if (this._entitiesToRemoveList.length > 0) {
+                for (let i = 0, s = this._entitiesToRemoveList.length; i < s; ++ i) {
+                    let entity =  this._entitiesToRemoveList[i];
+                    this.removeFromTagList(entity);
+    
+                    // 处理常规实体列表
+                    let index = this._entities.findIndex(e => e.id == entity.id);
+                    if (index != -1)
+                        this._entities.splice(index, 1);
+                    entity.onRemovedFromScene();
+                    entity.scene = null;
+    
+                    this.scene.entityProcessors.onEntityRemoved(entity);
+                }
+    
+                this._entitiesToRemove = {};
+                this._entitiesToRemoveList.length = 0;
             }
 
-            for (let i in this._entitiesToAdded) {
-                this._entitiesToAdded[i].onAddedToScene();
-            }
+            if (this._entitiesToAddedList.length > 0) {
+                for (let i = 0, s = this._entitiesToAddedList.length; i < s; ++ i) {
+                    let entity = this._entitiesToAddedList[i];
+                    this._entities.push(entity);
+                    entity.scene = this.scene;
+    
+                    this.addToTagList(entity);
+    
+                    this.scene.entityProcessors.onEntityAdded(entity);
+                }
+    
+                for (let i = 0, s = this._entitiesToAddedList.length; i < s; ++ i) {
+                    let entity = this._entitiesToAddedList[i];
+                    entity.onAddedToScene();
+                }
 
-            this._entitiesToAdded = {};
+                this._entitiesToAdded = {};
+                this._entitiesToAddedList.length = 0;
+            }
         }
 
         /**
@@ -161,13 +179,14 @@ module es {
          * @param name
          */
         public findEntity(name: string) {
-            for (let i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].name == name)
-                    return this._entities[i];
+            for (let i = 0, s = this._entities.length; i < s; ++ i) {
+                let entity = this._entities[i];
+                if (entity[i].name == name)
+                    return entity;
             }
 
-            for (let i in this._entitiesToAdded) {
-                let entity = this._entitiesToAdded[i];
+            for (let i = 0, s = this._entitiesToAddedList.length; i < s; ++ i) {
+                let entity = this._entitiesToAddedList[i];
                 if (entity.name == name)
                     return entity;
             }
@@ -181,9 +200,10 @@ module es {
          * @returns 
          */
         public findEntityById(id: number) {
-            for (let i = 0; i < this._entities.length; i ++) {
-                if (this._entities[i].id == id)
-                    return this._entities[i];
+            for (let i = 0, s = this._entities.length; i < s; ++ i) {
+                let entity = this._entities[i];
+                if (entity.id == id)
+                    return entity;
             }
 
             return this._entitiesToAdded[id];
@@ -225,25 +245,17 @@ module es {
          * @param type
          */
         public findComponentOfType<T extends Component>(type): T {
-            for (let i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].enabled) {
-                    let comp = this._entities[i].getComponent<T>(type);
+            for (let i = 0, s = this._entities.length; i < s; i++) {
+                let entity = this._entities[i];
+                if (entity.enabled) {
+                    let comp = entity.getComponent<T>(type);
                     if (comp)
                         return comp;
                 }
             }
 
-            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
-            //     let entity: Entity = this._entitiesToAdded.toArray()[i];
-            //     if (entity.enabled) {
-            //         let comp = entity.getComponent<T>(type);
-            //         if (comp)
-            //             return comp;
-            //     }
-            // }
-
-            for (let i in this._entitiesToAdded) {
-                let entity = this._entitiesToAdded[i];
+            for (let i = 0; i < this._entitiesToAddedList.length; i++) {
+                let entity = this._entitiesToAddedList[i];
                 if (entity.enabled) {
                     let comp = entity.getComponent<T>(type);
                     if (comp)
@@ -266,14 +278,7 @@ module es {
                     this._entities[i].getComponents(type, comps);
             }
 
-            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
-            //     let entity = this._entitiesToAdded.toArray()[i];
-            //     if (entity.enabled)
-            //         entity.getComponents(type, comps);
-            // }
-
-            for (let i in this._entitiesToAdded) {
-                let entity = this._entitiesToAdded[i];
+            for (let entity of this._entitiesToAddedList) {
                 if (entity.enabled)
                     entity.getComponents(type, comps);
             }
@@ -305,26 +310,7 @@ module es {
                 }
             }
 
-            // for (let i = 0; i < this._entitiesToAdded.getCount(); i++) {
-            //     let entity: Entity = this._entitiesToAdded.toArray()[i];
-            //     if (entity.enabled) {
-            //         let meet = true;
-            //         for (let type of types) {
-            //             let hasComp = entity.hasComponent(type);
-            //             if (!hasComp) {
-            //                 meet = false;
-            //                 break;
-            //             }
-            //         }
-
-            //         if (meet) {
-            //             entities.push(entity);
-            //         }
-            //     }
-            // }
-
-            for (let i in this._entitiesToAdded) {
-                let entity = this._entitiesToAdded[i];
+            for (let entity of this._entitiesToAddedList) {
                 if (entity.enabled) {
                     let meet = true;
                     for (let type of types) {

@@ -23,6 +23,8 @@ module es {
          * 标记要删除此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
          */
         public _componentsToRemove: { [index: number]: Component } = {};
+        public _componentsToAddList: Component[] = [];
+        public _componentsToRemoveList: Component[] = [];
         public _tempBufferList: Component[] = [];
         /**
          * 用于确定是否需要对该框架中的组件进行排序的标志
@@ -49,25 +51,30 @@ module es {
 
         public add(component: Component) {
             this._componentsToAdd[component.id] = component;
+            this._componentsToAddList.push(component);
             this.addComponentsToAddByType(component);
         }
 
         public remove(component: Component) {
             if (this._componentsToAdd[component.id]) {
+                let index = this._componentsToAddList.findIndex(c => c.id == component.id);
+                if (index != -1)
+                    this._componentsToAddList.splice(index, 1);
                 delete this._componentsToAdd[component.id];
                 this.removeComponentsToAddByType(component);
                 return;
             }
 
             this._componentsToRemove[component.id] = component;
+            this._componentsToRemoveList.push(component);
         }
 
         /**
          * 立即从组件列表中删除所有组件
          */
         public removeAllComponents() {
-            for (let i = 0; i < this._components.length; i++) {
-                this.handleRemove(this._components[i]);
+            for (let component of this._components) {
+                this.handleRemove(component);
             }
 
             this.componentsByType.clear();
@@ -76,6 +83,8 @@ module es {
             this._updatableComponents.length = 0;
             this._componentsToAdd = {};
             this._componentsToRemove = {};
+            this._componentsToAddList.length = 0;
+            this._componentsToRemoveList.length = 0;
         }
 
         public deregisterAllComponents() {
@@ -117,58 +126,64 @@ module es {
          * 处理任何需要删除或添加的组件
          */
         public updateLists() {
-            for (let i in this._componentsToRemove) {
-                let component = this._componentsToRemove[i];
-                this.handleRemove(component);
-                for (let index = 0; index < this._components.length; index++) {
-                    let searchComponent = this._components[index];
-                    if (searchComponent.id == component.id) {
+            if (this._componentsToRemoveList.length > 0) {
+                for (let i = 0, l = this._componentsToRemoveList.length; i < l; ++ i) {
+                    let component = this._componentsToRemoveList[i];
+                    this.handleRemove(component);
+                    let index = this._components.findIndex(c => c.id == component.id);
+                    if (index != -1)
                         this._components.splice(index, 1);
-                        break;
+                    this.removeComponentsByType(component);
+                }
+    
+                this._componentsToRemove = {};
+                this._componentsToRemoveList.length = 0;
+            }
+
+            if (this._componentsToAddList.length > 0) {
+                for (let i = 0, l = this._componentsToAddList.length; i < l; ++ i) {
+                    let component = this._componentsToAddList[i];
+                    if (isIUpdatable(component))
+                        this._updatableComponents.push(component);
+    
+                    this.addBits(component);
+                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+    
+                    this.addComponentsByType(component);
+                    this._components.push(component);
+                    this._tempBufferList.push(component);
+                }
+    
+                // 在调用onAddedToEntity之前清除，以防添加更多组件
+                this._componentsToAdd = {};
+                this._componentsToAddList.length = 0;
+                this.componentsToAddByType.clear();
+                this._isComponentListUnsorted = true;
+            }
+
+            if (this._tempBufferList.length > 0) {
+                // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
+                for (let i = 0, l = this._tempBufferList.length; i < l; ++ i) {
+                    let component = this._tempBufferList[i];
+                    component.onAddedToEntity();
+
+                    // enabled检查实体和组件
+                    if (component.enabled) {
+                        component.onEnabled();
                     }
                 }
-                this.removeComponentsByType(component);
+
+                this._tempBufferList.length = 0;
             }
-
-            this._componentsToRemove = {};
-
-            for (let i in this._componentsToAdd) {
-                let component = this._componentsToAdd[i];
-
-                if (isIUpdatable(component))
-                    this._updatableComponents.push(component);
-
-                this.addBits(component);
-                this._entity.scene.entityProcessors.onComponentAdded(this._entity);
-
-                this.addComponentsByType(component);
-                this._components.push(component);
-                this._tempBufferList.push(component);
-            }
-
-            // 在调用onAddedToEntity之前清除，以防添加更多组件
-            this._componentsToAdd = {};
-            this.componentsToAddByType.clear();
-            this._isComponentListUnsorted = true;
-
-            // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
-            for (let i = 0; i < this._tempBufferList.length; i++) {
-                let component = this._tempBufferList[i];
-                component.onAddedToEntity();
-
-                // enabled检查实体和组件
-                if (component.enabled) {
-                    component.onEnabled();
-                }
-            }
-
-            this._tempBufferList.length = 0;
         }
 
         public handleRemove(component: Component) {
-            if (isIUpdatable(component))
-                new es.List(this._updatableComponents).remove(component);
-
+            if (isIUpdatable(component) && this._updatableComponents.length > 0) {
+                let index = this._updatableComponents.findIndex((c) => (<any>c as Component).id == component.id);
+                if (index != -1)
+                    this._updatableComponents.splice(index, 1);
+            }
+                
             this.decreaseBits(component);
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
 
@@ -250,33 +265,32 @@ module es {
 
         public update() {
             this.updateLists();
-            for (let i = 0; i < this._updatableComponents.length; i++) {
-                if (this._updatableComponents[i].enabled)
-                    this._updatableComponents[i].update();
-            }
+            // for (let updateComponent of this._updatableComponents) {
+            //     if (updateComponent.enabled)
+            //         updateComponent.update();
+            // }
         }
 
         public onEntityTransformChanged(comp: transform.Component) {
-            for (let i = 0; i < this._components.length; i++) {
-                if (this._components[i].enabled)
-                    this._components[i].onEntityTransformChanged(comp);
+            for (let component of this._components) {
+                if (component.enabled)
+                    component.onEntityTransformChanged(comp);
             }
 
-            for (let i in this._componentsToAdd) {
-                let component = this._componentsToAdd[i];
+            for (let component of this._componentsToAddList) {
                 if (component.enabled)
                     component.onEntityTransformChanged(comp);
             }
         }
 
         public onEntityEnabled() {
-            for (let i = 0; i < this._components.length; i++)
-                this._components[i].onEnabled();
+            for (let component of this._components)
+                component.onEnabled();
         }
 
         public onEntityDisabled() {
-            for (let i = 0; i < this._components.length; i++)
-                this._components[i].onDisabled();
+            for (let component of this._components)
+                component.onDisabled();
         }
     }
 }
