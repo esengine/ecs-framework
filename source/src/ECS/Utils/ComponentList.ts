@@ -265,10 +265,13 @@ module es {
 
         public update() {
             this.updateLists();
-            // for (let updateComponent of this._updatableComponents) {
-            //     if (updateComponent.enabled)
-            //         updateComponent.update();
-            // }
+            if (this._updatableComponents.length > 0) {
+                for (let i = 0, s = this._updatableComponents.length; i < s; ++ i) {
+                    let updateComponent = this._updatableComponents[i];
+                    if (updateComponent.enabled)
+                        updateComponent.update();
+                }
+            }
         }
 
         public onEntityTransformChanged(comp: transform.Component) {
