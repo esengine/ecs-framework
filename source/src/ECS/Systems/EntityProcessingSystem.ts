@@ -27,11 +27,23 @@ module es {
          * @param entities
          */
         protected process(entities: Entity[]) {
-            entities.forEach(entity => this.processEntity(entity));
+            if (entities.length == 0)
+                return;
+            
+            for (let i = 0, s = entities.length; i < s; ++ i) {
+                let entity = entities[i];
+                this.processEntity(entity);
+            }
         }
 
         protected lateProcess(entities: Entity[]) {
-            entities.forEach(entity => this.lateProcessEntity(entity));
+            if (entities.length == 0)
+                return;
+
+            for (let i = 0, s = entities.length; i < s; ++ i) {
+                let entity = entities[i];
+                this.lateProcessEntity(entity);
+            }
         }
     }
 }

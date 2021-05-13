@@ -26,22 +26,25 @@ module es {
 
         public isInterested(components: Bits) {
             if (this.allSet.length != 0) {
-                for (let s of this.allSet) {
-                    if (!components.get(ComponentTypeManager.getIndexFor(s)))
+                for (let i = 0, s = this.allSet.length; i < s; ++ i) {
+                    let type = this.allSet[i];
+                    if (!components.get(ComponentTypeManager.getIndexFor(type)))
                         return false;
                 }
             }
 
             if (this.exclusionSet.length != 0) {
-                for (let s of this.exclusionSet) {
-                    if (components.get(ComponentTypeManager.getIndexFor(s)))
+                for (let i = 0, s = this.exclusionSet.length; i < s; ++ i) {
+                    let type = this.exclusionSet[i];
+                    if (components.get(ComponentTypeManager.getIndexFor(type)))
                         return false;
                 }
             }
 
             if (this.oneSet.length != 0) {
-                for (let s of this.oneSet) {
-                    if (components.get(ComponentTypeManager.getIndexFor(s)))
+                for (let i = 0, s = this.oneSet.length; i < s; ++ i) {
+                    let type = this.oneSet[i];
+                    if (components.get(ComponentTypeManager.getIndexFor(type)))
                         return true;
                 }
             }
@@ -51,7 +54,8 @@ module es {
 
         public all(...types: any[]): Matcher {
             let t;
-            for (t of types) {
+            for (let i = 0, s = types.length; i < s; ++ i) {
+                t = types[i];
                 this.allSet.push(t);
             }
 
@@ -60,7 +64,8 @@ module es {
 
         public exclude(...types: any[]) {
             let t;
-            for (t of types) {
+            for (let i = 0, s = types.length; i < s; ++ i) {
+                t = types[i];
                 this.exclusionSet.push(t);
             }
 
@@ -68,7 +73,8 @@ module es {
         }
 
         public one(...types: any[]) {
-            for (const t of types) {
+            for (let i = 0, s = types.length; i < s; ++ i) {
+                const t = types[i];
                 this.oneSet.push(t);
             }
 

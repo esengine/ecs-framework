@@ -250,8 +250,8 @@ module es {
         /**
          * 获取EntitySystem处理器
          */
-        public getEntityProcessor<T extends EntitySystem>(): T {
-            return this.entityProcessors.getProcessor<T>();
+        public getEntityProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T {
+            return this.entityProcessors.getProcessor<T>(type);
         }
     }
 }

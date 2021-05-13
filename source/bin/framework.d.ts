@@ -750,7 +750,7 @@ declare module es {
         /**
          * 获取EntitySystem处理器
          */
-        getEntityProcessor<T extends EntitySystem>(): T;
+        getEntityProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T;
     }
 }
 declare module transform {
@@ -1834,7 +1834,7 @@ declare module es {
         update(): void;
         lateUpdate(): void;
         end(): void;
-        getProcessor<T extends EntitySystem>(): T;
+        getProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T;
         protected notifyEntityChanged(entity: Entity): void;
         protected removeFromProcessors(entity: Entity): void;
     }

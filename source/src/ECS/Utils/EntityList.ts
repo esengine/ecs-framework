@@ -179,16 +179,20 @@ module es {
          * @param name
          */
         public findEntity(name: string) {
-            for (let i = 0, s = this._entities.length; i < s; ++ i) {
-                let entity = this._entities[i];
-                if (entity[i].name == name)
-                    return entity;
+            if (this._entities.length > 0) {
+                for (let i = 0, s = this._entities.length; i < s; ++ i) {
+                    let entity = this._entities[i];
+                    if (entity.name == name)
+                        return entity;
+                }
             }
-
-            for (let i = 0, s = this._entitiesToAddedList.length; i < s; ++ i) {
-                let entity = this._entitiesToAddedList[i];
-                if (entity.name == name)
-                    return entity;
+            
+            if (this._entitiesToAddedList.length > 0) {
+                for (let i = 0, s = this._entitiesToAddedList.length; i < s; ++ i) {
+                    let entity = this._entitiesToAddedList[i];
+                    if (entity.name == name)
+                        return entity;
+                }
             }
 
             return null;
@@ -200,12 +204,14 @@ module es {
          * @returns 
          */
         public findEntityById(id: number) {
-            for (let i = 0, s = this._entities.length; i < s; ++ i) {
-                let entity = this._entities[i];
-                if (entity.id == id)
-                    return entity;
+            if (this._entities.length > 0) {
+                for (let i = 0, s = this._entities.length; i < s; ++ i) {
+                    let entity = this._entities[i];
+                    if (entity.id == id)
+                        return entity;
+                }
             }
-
+            
             return this._entitiesToAdded[id];
         }
 
@@ -218,10 +224,12 @@ module es {
             let list = this.getTagList(tag);
 
             let returnList = ListPool.obtain<Entity>();
-            for (let entity of list) {
-                returnList.push(entity);
+            if (list.size > 0) {
+                for (let entity of list) {
+                    returnList.push(entity);
+                }
             }
-
+           
             return returnList;
         }
 
@@ -233,8 +241,10 @@ module es {
         public entityWithTag(tag: number) {
             let list = this.getTagList(tag);
 
-            for (let entity of list) {
-                return entity;
+            if (list.size > 0) {
+                for (let entity of list) {
+                    return entity;
+                }
             }
 
             return null;
@@ -245,21 +255,25 @@ module es {
          * @param type
          */
         public findComponentOfType<T extends Component>(type): T {
-            for (let i = 0, s = this._entities.length; i < s; i++) {
-                let entity = this._entities[i];
-                if (entity.enabled) {
-                    let comp = entity.getComponent<T>(type);
-                    if (comp)
-                        return comp;
+            if (this._entities.length > 0 ){
+                for (let i = 0, s = this._entities.length; i < s; i++) {
+                    let entity = this._entities[i];
+                    if (entity.enabled) {
+                        let comp = entity.getComponent<T>(type);
+                        if (comp)
+                            return comp;
+                    }
                 }
             }
-
-            for (let i = 0; i < this._entitiesToAddedList.length; i++) {
-                let entity = this._entitiesToAddedList[i];
-                if (entity.enabled) {
-                    let comp = entity.getComponent<T>(type);
-                    if (comp)
-                        return comp;
+            
+            if (this._entitiesToAddedList.length > 0) {
+                for (let i = 0; i < this._entitiesToAddedList.length; i++) {
+                    let entity = this._entitiesToAddedList[i];
+                    if (entity.enabled) {
+                        let comp = entity.getComponent<T>(type);
+                        if (comp)
+                            return comp;
+                    }
                 }
             }
 
@@ -273,14 +287,20 @@ module es {
          */
         public findComponentsOfType<T extends Component>(type): T[] {
             let comps = ListPool.obtain<T>();
-            for (let i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].enabled)
-                    this._entities[i].getComponents(type, comps);
+            if (this._entities.length > 0) {
+                for (let i = 0, s = this._entities.length; i < s; i++) {
+                    let entity = this._entities[i];
+                    if (entity.enabled)
+                        entity.getComponents(type, comps);
+                }
             }
 
-            for (let entity of this._entitiesToAddedList) {
-                if (entity.enabled)
-                    entity.getComponents(type, comps);
+            if (this._entitiesToAddedList.length > 0) {
+                for (let i = 0, s = this._entitiesToAddedList.length; i < s; i ++) {
+                    let entity = this._entitiesToAddedList[i];
+                    if (entity.enabled)
+                        entity.getComponents(type, comps);
+                }
             }
 
             return comps;
@@ -291,41 +311,51 @@ module es {
          * @param types 
          * @returns 
          */
-        public findEntitesOfComponent(...types): Entity[] {
+        public findEntitesOfComponent(...types: any[]): Entity[] {
             let entities = [];
-            for (let i = 0; i < this._entities.length; i++) {
-                if (this._entities[i].enabled) {
-                    let meet = true;
-                    for (let type of types) {
-                        let hasComp = this._entities[i].hasComponent(type);
-                        if (!hasComp) {
-                            meet = false;
-                            break;
+            if (this._entities.length > 0) {
+                for (let i = 0, s = this._entities.length; i < s; i++) {
+                    if (this._entities[i].enabled) {
+                        let meet = true;
+                        if (types.length > 0)
+                            for (let t = 0, ts = types.length; t < ts; t ++) {
+                                let type = types[t];
+                                let hasComp = this._entities[i].hasComponent(type);
+                                if (!hasComp) {
+                                    meet = false;
+                                    break;
+                                }
+                            }
+    
+                        if (meet) {
+                            entities.push(this._entities[i]);
                         }
-                    }
-
-                    if (meet) {
-                        entities.push(this._entities[i]);
                     }
                 }
             }
-
-            for (let entity of this._entitiesToAddedList) {
-                if (entity.enabled) {
-                    let meet = true;
-                    for (let type of types) {
-                        let hasComp = entity.hasComponent(type);
-                        if (!hasComp) {
-                            meet = false;
-                            break;
+            
+            if (this._entitiesToAddedList.length > 0) {
+                for (let i = 0, s = this._entitiesToAddedList.length; i < s; i ++) {
+                    let entity = this._entitiesToAddedList[i];
+                    if (entity.enabled) {
+                        let meet = true;
+                        if (types.length > 0)
+                            for (let t = 0, ts = types.length; t < ts; t ++) {
+                                let type = types[t];
+                                let hasComp = entity.hasComponent(type);
+                                if (!hasComp) {
+                                    meet = false;
+                                    break;
+                                }
+                            }
+    
+                        if (meet) {
+                            entities.push(entity);
                         }
-                    }
-
-                    if (meet) {
-                        entities.push(entity);
                     }
                 }
             }
+            
 
             return entities;
         }

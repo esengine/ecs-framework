@@ -18,12 +18,19 @@ module es {
         private static _lastTime = -1;
 
         public static update(currentTime: number) {
-            if (currentTime == -1)
+            if (currentTime == -1) {
                 currentTime = Date.now();
+            }
             if (this._lastTime == -1)
                 this._lastTime = currentTime;
 
-            let dt = (currentTime - this._lastTime) / 1000;
+            let dt = 0;
+            if (currentTime == -1) {
+                dt = (currentTime - this._lastTime) / 1000;
+            } else {
+                dt = currentTime;
+            }
+            
             if (dt > this.maxDeltaTime)
                 dt = this.maxDeltaTime;
             this.totalTime += dt;

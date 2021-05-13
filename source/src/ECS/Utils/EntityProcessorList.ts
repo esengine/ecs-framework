@@ -52,13 +52,13 @@ module es {
 
         }
 
-        public getProcessor<T extends EntitySystem>(): T {
+        public getProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T {
             if (this._processors.length == 0)
                 return null;
 
             for (let i = 0, s = this._processors.length; i < s; ++ i) {
                 let processor = this._processors[i];
-                if (processor instanceof EntitySystem)
+                if (processor instanceof type)
                     return processor as T;
             }
 

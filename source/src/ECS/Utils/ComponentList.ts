@@ -73,40 +73,48 @@ module es {
          * 立即从组件列表中删除所有组件
          */
         public removeAllComponents() {
-            for (let component of this._components) {
-                this.handleRemove(component);
-            }
+            if (this._components.length > 0) {
+                for (let i = 0, s = this._components.length; i < s; ++ i) {
+                    this.handleRemove(this._components[i]);
+                }
 
-            this.componentsByType.clear();
-            this.componentsToAddByType.clear();
-            this._components.length = 0;
-            this._updatableComponents.length = 0;
-            this._componentsToAdd = {};
-            this._componentsToRemove = {};
-            this._componentsToAddList.length = 0;
-            this._componentsToRemoveList.length = 0;
+                this.componentsByType.clear();
+                this.componentsToAddByType.clear();
+                this._components.length = 0;
+                this._updatableComponents.length = 0;
+                this._componentsToAdd = {};
+                this._componentsToRemove = {};
+                this._componentsToAddList.length = 0;
+                this._componentsToRemoveList.length = 0;
+            }
         }
 
         public deregisterAllComponents() {
-            for (let component of this._components) {
-                if (!component) continue;
-
-                // 处理IUpdatable
-                if (isIUpdatable(component))
-                    new es.List(this._updatableComponents).remove(component);
-
-                this.decreaseBits(component);
-                this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+            if (this._components.length > 0) {
+                for (let i = 0, s = this._components.length; i < s; ++ i) {
+                    let component = this._components[i];
+                    if (!component) continue;
+    
+                    // 处理IUpdatable
+                    if (isIUpdatable(component))
+                        new es.List(this._updatableComponents).remove(component);
+    
+                    this.decreaseBits(component);
+                    this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+                }
             }
         }
 
         public registerAllComponents() {
-            for (let component of this._components) {
-                if (isIUpdatable(component))
-                    this._updatableComponents.push(component);
-
-                this.addBits(component);
-                this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+            if (this._components.length > 0) {
+                for (let i = 0, s = this._components.length; i < s; ++ i) {
+                    let component = this._components[i];
+                    if (isIUpdatable(component))
+                        this._updatableComponents.push(component);
+    
+                    this.addBits(component);
+                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                }
             }
         }
 
@@ -275,25 +283,35 @@ module es {
         }
 
         public onEntityTransformChanged(comp: transform.Component) {
-            for (let component of this._components) {
-                if (component.enabled)
-                    component.onEntityTransformChanged(comp);
+            if (this._components.length > 0 ){
+                for (let i = 0, s = this._components.length; i < s; ++ i) {
+                    let component = this._components[i];
+                    if (component.enabled)
+                        component.onEntityTransformChanged(comp);
+                }
             }
-
-            for (let component of this._componentsToAddList) {
-                if (component.enabled)
-                    component.onEntityTransformChanged(comp);
+            
+            if (this._componentsToAddList.length > 0) {
+                for (let i = 0, s = this._componentsToAddList.length; i < s; ++ i) {
+                    let component = this._componentsToAddList[i];
+                    if (component.enabled)
+                        component.onEntityTransformChanged(comp);
+                }
             }
         }
 
         public onEntityEnabled() {
-            for (let component of this._components)
-                component.onEnabled();
+            if (this._components.length > 0) {
+                for (let i = 0, s = this._components.length; i < s; i ++)
+                    this._components[i].onEnabled();
+            }
         }
 
         public onEntityDisabled() {
-            for (let component of this._components)
-                component.onDisabled();
+            if (this._components.length > 0) {
+                for (let i = 0, s = this._components.length; i < s; i ++)
+                    this._components[i].onDisabled();
+            }
         }
     }
 }
