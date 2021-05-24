@@ -7,8 +7,8 @@ module es {
             if (collided) {
                 result.normal = Vector2.normalize(Vector2.subtract(point, circle.position));
                 let depth = sumOfRadii - Math.sqrt(distanceSquared);
-                result.minimumTranslationVector = Vector2.multiply(new Vector2(-depth, -depth), result.normal);
-                result.point = Vector2.add(circle.position, Vector2.multiply(result.normal, new Vector2(circle.radius, circle.radius)));
+                result.minimumTranslationVector = Vector2.multiplyScaler(result.normal, -depth);
+                result.point = Vector2.add(circle.position, Vector2.multiplyScaler(result.normal, circle.radius));
 
                 return true;
             }

@@ -33,7 +33,7 @@ module es {
             return true;
         }
 
-        public static lineToLineIntersection(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2, intersection: Vector2 = new Vector2()): boolean {
+        public static lineToLineIntersection(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2, intersection: Vector2 = es.Vector2.zero): boolean {
             intersection.x = 0;
             intersection.y = 0;
 

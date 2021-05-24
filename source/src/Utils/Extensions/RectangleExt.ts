@@ -250,7 +250,7 @@ module es {
          */
         public static getClosestPointOnRectangleToPoint(rect: Rectangle, point: Vector2) {
             // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
-            let res = new Vector2();
+            let res = es.Vector2.zero;
             res.x = MathHelper.clamp(point.x, rect.left, rect.right)
             res.y = MathHelper.clamp(point.y, rect.top, rect.bottom);
 
@@ -264,7 +264,7 @@ module es {
          */
         public static getClosestPointOnRectangleBorderToPoint(rect: Rectangle, point: Vector2) {
             // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
-            let res = new Vector2();
+            let res = es.Vector2.zero;
             res.x = MathHelper.clamp(point.x, rect.left, rect.right)
             res.y = MathHelper.clamp(point.y, rect.top, rect.bottom);
 

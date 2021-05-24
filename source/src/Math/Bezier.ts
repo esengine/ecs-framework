@@ -96,16 +96,16 @@ module es {
         private static recursiveGetOptimizedDrawingPoints(start: Vector2, firstCtrlPoint: Vector2, secondCtrlPoint: Vector2,
                                                           end: Vector2, points: Vector2[], distanceTolerance: number) {
             // 计算线段的所有中点
-            let pt12 = Vector2.divide(Vector2.add(start, firstCtrlPoint), new Vector2(2));
-            let pt23 = Vector2.divide(Vector2.add(firstCtrlPoint, secondCtrlPoint), new Vector2(2));
-            let pt34 = Vector2.divide(Vector2.add(secondCtrlPoint, end), new Vector2(2));
+            let pt12 = Vector2.divideScaler(Vector2.add(start, firstCtrlPoint), 2);
+            let pt23 = Vector2.divideScaler(Vector2.add(firstCtrlPoint, secondCtrlPoint), 2);
+            let pt34 = Vector2.divideScaler(Vector2.add(secondCtrlPoint, end), 2);
 
             // 计算新半直线的中点
-            let pt123 = Vector2.divide(Vector2.add(pt12, pt23), new Vector2(2));
-            let pt234 = Vector2.divide(Vector2.add(pt23, pt34), new Vector2(2));
+            let pt123 = Vector2.divideScaler(Vector2.add(pt12, pt23), 2);
+            let pt234 = Vector2.divideScaler(Vector2.add(pt23, pt34), 2);
 
             // 最后再细分最后两个中点。如果我们满足我们的距离公差，这将是我们使用的最后一点。
-            let pt1234 = Vector2.divide(Vector2.add(pt123, pt234), new Vector2(2));
+            let pt1234 = Vector2.divideScaler(Vector2.add(pt123, pt234), 2);
 
             // 试着用一条直线来近似整个三次曲线
             let deltaLine = Vector2.subtract(end, start);

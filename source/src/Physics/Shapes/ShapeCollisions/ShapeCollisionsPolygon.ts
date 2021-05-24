@@ -12,7 +12,7 @@ module es {
             let firstEdges = first.edgeNormals.slice();
             let secondEdges = second.edgeNormals.slice();
             let minIntervalDistance = Number.POSITIVE_INFINITY;
-            let translationAxis = new Vector2();
+            let translationAxis = es.Vector2.zero;
             let polygonOffset = Vector2.subtract(first.position, second.position);
             let axis: Vector2;
 

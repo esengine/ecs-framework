@@ -56,7 +56,7 @@ module es {
             if (u < 0 || u > 1)
                 return false;
 
-            intersection = Vector2.add(a1, Vector2.multiply(new Vector2(t), b));
+            intersection = Vector2.add(a1, Vector2.multiplyScaler(b, t));
 
             return true;
         }
@@ -64,7 +64,7 @@ module es {
         public static lineToCircle(start: Vector2, end: Vector2, s: Circle, hit: RaycastHit): boolean{
             // 计算这里的长度并分别对d进行标准化，因为如果我们命中了我们需要它来得到分数
             let lineLength = Vector2.distance(start, end);
-            let d = Vector2.divide(Vector2.subtract(end, start), new Vector2(lineLength));
+            let d = Vector2.divideScaler(Vector2.subtract(end, start), lineLength);
             let m = Vector2.subtract(start, s.position);
             let b = Vector2.dot(m, d);
             let c = Vector2.dot(m, m) - s.radius * s.radius;
@@ -85,7 +85,7 @@ module es {
             if (hit.fraction < 0)
                 hit.fraction = 0;
 
-            hit.point = Vector2.add(start, Vector2.multiply(new Vector2(hit.fraction), d));
+            hit.point = Vector2.add(start, Vector2.multiplyScaler(d, hit.fraction));
             hit.distance = Vector2.distance(start, hit.point);
             hit.normal = Vector2.normalize(Vector2.subtract(hit.point, s.position));
             hit.fraction = hit.distance / lineLength;

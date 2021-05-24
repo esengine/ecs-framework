@@ -450,6 +450,7 @@ declare module es {
          * @param value2
          */
         static divide(value1: Vector2, value2: Vector2): Vector2;
+        static divideScaler(value1: Vector2, value2: number): Vector2;
         /**
          *
          * @param value1
@@ -566,6 +567,7 @@ declare module es {
          * @param value
          */
         divide(value: Vector2): Vector2;
+        divideScaler(value: number): Vector2;
         /**
          *
          * @param value
@@ -2675,6 +2677,7 @@ declare module es {
         substract(matrix: Matrix2D): Matrix2D;
         divide(matrix: Matrix2D): Matrix2D;
         multiply(matrix: Matrix2D): Matrix2D;
+        static multiply(matrix1: Matrix2D, matrix2: Matrix2D, result: Matrix2D): Matrix2D;
         determinant(): number;
         /**
          * 创建一个新的Matrix2D，包含指定矩阵中的线性插值。

@@ -228,6 +228,28 @@ module es {
             return this;
         }
 
+        public static multiply(matrix1: Matrix2D, matrix2: Matrix2D, result: Matrix2D) {
+            let m11 = (matrix1.m11 * matrix2.m11) + (matrix1.m12 * matrix2.m21);
+            let m12 = (matrix1.m11 * matrix2.m12) + (matrix1.m12 * matrix2.m22);
+
+            let m21 = (matrix1.m21 * matrix2.m11) + (matrix1.m22 * matrix2.m21);
+            let m22 = (matrix1.m21 * matrix2.m12) + (matrix1.m22 * matrix2.m22);
+
+            let m31 = (matrix1.m31 * matrix2.m11) + (matrix1.m32 * matrix2.m21) + matrix2.m31;
+            let m32 = (matrix1.m31 * matrix2.m12) + (matrix1.m32 * matrix2.m22) + matrix2.m32;
+
+            result.m11 = m11;
+            result.m12 = m12;
+
+            result.m21 = m21;
+            result.m22 = m22;
+
+            result.m31 = m31;
+            result.m32 = m32;
+
+            return result;
+        }
+
         public determinant() {
             return this.m11 * this.m22 - this.m12 * this.m21;
         }

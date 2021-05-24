@@ -34,7 +34,7 @@ module es {
                 if (mtv.equals(Vector2.zero))
                     return false;
 
-                hit.normal = new Vector2(-mtv.x);
+                hit.normal = new Vector2(-mtv.x, -mtv.y);
                 hit.normal.normalize();
                 hit.distance = 0;
                 hit.fraction = 0;
@@ -42,14 +42,14 @@ module es {
                 return true;
             } else {
                 // 射线投射移动矢量
-                let ray = new Ray2D(Vector2.zero, new Vector2(-movement.x));
+                let ray = new Ray2D(Vector2.zero, new Vector2(-movement.x, -movement.y));
                 let fraction = new Ref(0);
                 if (minkowskiDiff.rayIntersects(ray, fraction) && fraction.value <= 1) {
                     hit.fraction = fraction.value;
                     hit.distance = movement.length() * fraction.value;
                     hit.normal = new Vector2(-movement.x, -movement.y);
                     hit.normal.normalize();
-                    hit.centroid = Vector2.add(first.bounds.center, Vector2.multiply(movement, new Vector2(fraction.value)));
+                    hit.centroid = Vector2.add(first.bounds.center, Vector2.multiplyScaler(movement, fraction.value));
 
                     return true;
                 }

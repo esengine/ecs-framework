@@ -11,7 +11,7 @@ module es {
                 return false;
 
             // 求交点
-            let point = Vector2.add(ray.start, Vector2.multiply(ray.direction, new Vector2(time.value)));
+            let point = Vector2.add(ray.start, Vector2.multiplyScaler(ray.direction, time.value));
 
             // 计算交点p位于b的哪个最小面和最大面之外。注意，u和v不能有相同的位集，它们之间必须至少有一个位集。
             let u, v = 0;
@@ -49,7 +49,7 @@ module es {
          * @param n 
          */
         public static corner(b: Rectangle, n: number){
-            let p = new Vector2();
+            let p = es.Vector2.zero;
             p.x = (n & 1) == 0 ? b.right : b.left;
             p.y = (n & 1) == 0 ? b.bottom : b.top;
             return p;

@@ -7,8 +7,8 @@ module es {
             if (collided) {
                 result.normal = Vector2.normalize(Vector2.subtract(first.position, second.position));
                 let depth = sumOfRadii - Math.sqrt(distanceSquared);
-                result.minimumTranslationVector = Vector2.multiply(new Vector2(-depth), result.normal);
-                result.point = Vector2.add(second.position, Vector2.multiply(result.normal, new Vector2(second.radius)));
+                result.minimumTranslationVector = Vector2.multiplyScaler(result.normal, -depth);
+                result.point = Vector2.add(second.position, Vector2.multiplyScaler(result.normal, second.radius));
 
                 // 这可以得到实际的碰撞点，可能有用也可能没用，所以我们暂时把它留在这里
                 // let collisionPointX = ((first.position.x * second.radius) + (second.position.x * first.radius)) / sumOfRadii;
@@ -35,7 +35,7 @@ module es {
                 result.point = closestPointOnBounds.clone();
 
                 // 计算MTV。找出安全的、非碰撞的位置，并从中得到MTV
-                let safePlace = Vector2.add(closestPointOnBounds, Vector2.multiply(result.normal, new Vector2(circle.radius)));
+                let safePlace = Vector2.add(closestPointOnBounds, Vector2.multiplyScaler(result.normal, circle.radius));
                 result.minimumTranslationVector = Vector2.subtract(circle.position, safePlace);
 
                 return true;
@@ -45,14 +45,14 @@ module es {
             
             // 看框上的点距圆的半径是否小于圆的半径
             if (sqrDistance == 0) {
-                result.minimumTranslationVector = Vector2.multiply(result.normal, new Vector2(circle.radius));
+                result.minimumTranslationVector = Vector2.multiplyScaler(result.normal, circle.radius);
             } else if (sqrDistance <= circle.radius * circle.radius) {
                 result.normal = Vector2.subtract(circle.position, closestPointOnBounds);
                 let depth = result.normal.length() - circle.radius;
 
                 result.point = closestPointOnBounds;
                 Vector2Ext.normalize(result.normal);
-                result.minimumTranslationVector = Vector2.multiply(new Vector2(depth), result.normal);
+                result.minimumTranslationVector = Vector2.multiplyScaler(result.normal, depth);
 
                 return true;
             }
@@ -85,7 +85,7 @@ module es {
                     mtv = new Vector2(result.normal.x * circle.radius, result.normal.y * circle.radius);
                 } else {
                     let distance = Math.sqrt(distanceSquared.value);
-                    mtv = Vector2.subtract(new Vector2(-1), Vector2.subtract(poly2Circle, closestPoint))
+                    mtv = Vector2.multiplyScaler(Vector2.subtract(poly2Circle, closestPoint), -1)
                         .multiply(new Vector2((circle.radius - distance) / distance));
                 }
             }
@@ -102,7 +102,7 @@ module es {
             let t = Vector2.dot(w, v) / Vector2.dot(v, v);
             t = MathHelper.clamp(t, 0, 1);
 
-            return Vector2.add(lineA, Vector2.multiply(v, new Vector2(t)));
+            return Vector2.add(lineA, Vector2.multiplyScaler(v, t));
         }
     }
 }

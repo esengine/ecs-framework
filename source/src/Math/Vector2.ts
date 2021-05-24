@@ -9,9 +9,9 @@ module es {
          * @param x 二维空间中的x坐标
          * @param y 二维空间的y坐标
          */
-        constructor(x?: number, y?: number) {
-            this.x = x ? x : 0;
-            this.y = y != undefined ? y : this.x;
+        constructor(x: number = 0, y: number = 0) {
+            this.x = x;
+            this.y = y;
         }
 
         public static get zero() {
@@ -54,13 +54,20 @@ module es {
             return result;
         }
 
+        public static divideScaler(value1: Vector2, value2: number) {
+            let result: Vector2 = Vector2.zero;
+            result.x = value1.x / value2;
+            result.y = value1.y / value2;
+            return result;
+        }
+
         /**
          *
          * @param value1
          * @param value2
          */
         public static multiply(value1: Vector2, value2: Vector2) {
-            let result: Vector2 = new Vector2(0, 0);
+            let result: Vector2 = es.Vector2.zero;
             result.x = value1.x * value2.x;
             result.y = value1.y * value2.y;
             return result;
@@ -73,7 +80,7 @@ module es {
          * @returns 
          */
         public static multiplyScaler(value1: Vector2, value2: number) {
-            let result = new Vector2(0, 0);
+            let result = es.Vector2.zero;
             result.x = value1.x * value2;
             result.y = value1.x * value2;
             return result;
@@ -85,7 +92,7 @@ module es {
          * @param value2
          */
         public static subtract(value1: Vector2, value2: Vector2) {
-            let result: Vector2 = new Vector2(0, 0);
+            let result: Vector2 = es.Vector2.zero;
             result.x = value1.x - value2.x;
             result.y = value1.y - value2.y;
             return result;
@@ -218,7 +225,7 @@ module es {
          * @returns 
          */
         public static reflect(vector: Vector2, normal: Vector2) {
-            let result: Vector2 = new Vector2();
+            let result: Vector2 = es.Vector2.zero;
             let val = 2 * ((vector.x * normal.x) + (vector.y * normal.y));
             result.x = vector.x - (normal.x * val);
             result.y = vector.y - (normal.y * val);
@@ -254,6 +261,12 @@ module es {
         public divide(value: Vector2): Vector2 {
             this.x /= value.x;
             this.y /= value.y;
+            return this;
+        }
+
+        public divideScaler(value: number): Vector2 {
+            this.x /= value;
+            this.y /= value;
             return this;
         }
 

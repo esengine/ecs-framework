@@ -54,7 +54,7 @@ module es {
         /**
          * 该刚体的速度
          */
-        public velocity: Vector2 = new Vector2();
+        public velocity: Vector2 = es.Vector2.zero;
 
         /**
          * 质量为0的刚体被认为是不可移动的。改变速度和碰撞对它们没有影响
@@ -213,7 +213,7 @@ module es {
          * @param minimumTranslationVector 
          * @param responseVelocity 
          */
-        public calculateResponseVelocity(relativeVelocity: Vector2, minimumTranslationVector: Vector2, responseVelocity: Vector2 = new Vector2()) {
+        public calculateResponseVelocity(relativeVelocity: Vector2, minimumTranslationVector: Vector2, responseVelocity: Vector2 = es.Vector2.zero) {
             // 首先，我们得到反方向的归一化MTV：表面法线
             let inverseMTV = Vector2.multiplyScaler(minimumTranslationVector, -1);
             let normal = Vector2.normalize(inverseMTV);

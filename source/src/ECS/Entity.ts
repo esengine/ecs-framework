@@ -245,7 +245,7 @@ module es {
             if (scale instanceof Vector2) {
                 this.transform.setScale(scale);
             } else {
-                this.transform.setScale(new Vector2(scale));
+                this.transform.setScale(new Vector2(scale, scale));
             }
 
             return this;
@@ -257,7 +257,7 @@ module es {
             if (scale instanceof Vector2) {
                 this.transform.setLocalScale(scale);
             } else {
-                this.transform.setLocalScale(new Vector2(scale));
+                this.transform.setLocalScale(new Vector2(scale, scale));
             }
 
             return this;

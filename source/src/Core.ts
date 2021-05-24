@@ -122,9 +122,10 @@ module es {
          * @param type
          */
         public static getGlobalManager<T extends es.GlobalManager>(type: new (...args) => T): T {
-            for (let i = 0; i < this._instance._globalManagers.length; i++) {
-                if (this._instance._globalManagers[i] instanceof type)
-                    return this._instance._globalManagers[i] as T;
+            for (let i = 0, s = Core._instance._globalManagers.length; i < s; ++ i) {
+                let manager = Core._instance._globalManagers[i];
+                if (manager instanceof type)
+                    return manager;
             }
             return null;
         }

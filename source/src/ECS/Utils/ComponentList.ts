@@ -77,16 +77,16 @@ module es {
                 for (let i = 0, s = this._components.length; i < s; ++ i) {
                     this.handleRemove(this._components[i]);
                 }
-
-                this.componentsByType.clear();
-                this.componentsToAddByType.clear();
-                this._components.length = 0;
-                this._updatableComponents.length = 0;
-                this._componentsToAdd = {};
-                this._componentsToRemove = {};
-                this._componentsToAddList.length = 0;
-                this._componentsToRemoveList.length = 0;
             }
+
+            this.componentsByType.clear();
+            this.componentsToAddByType.clear();
+            this._components.length = 0;
+            this._updatableComponents.length = 0;
+            this._componentsToAdd = {};
+            this._componentsToRemove = {};
+            this._componentsToAddList.length = 0;
+            this._componentsToRemoveList.length = 0;
         }
 
         public deregisterAllComponents() {

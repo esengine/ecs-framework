@@ -304,7 +304,7 @@ module es {
          */
         public getClosestPointOnRectangleToPoint(point: Vector2) {
             // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
-            let res = new Vector2();
+            let res = es.Vector2.zero;
             res.x = MathHelper.clamp(point.x, this.left, this.right);
             res.y = MathHelper.clamp(point.y, this.top, this.bottom);
 
@@ -319,7 +319,7 @@ module es {
          */
         public getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2 {
             // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
-            let res = new Vector2();
+            let res = es.Vector2.zero;
             res.x = MathHelper.clamp(point.x, this.left, this.right);
             res.y = MathHelper.clamp(point.y, this.top, this.bottom);
 
