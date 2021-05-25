@@ -456,6 +456,10 @@ module es {
             return t - Math.floor(t / length) * length;
         }
 
+        public static floorToInt(f: number) {
+            return Math.trunc(Math.floor(f));
+        }
+
         /**
          * 将值绕一圈移动的助手
          * @param position 

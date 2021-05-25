@@ -5814,6 +5814,9 @@ var es;
         MathHelper.repeat = function (t, length) {
             return t - Math.floor(t / length) * length;
         };
+        MathHelper.floorToInt = function (f) {
+            return Math.trunc(Math.floor(f));
+        };
         /**
          * 将值绕一圈移动的助手
          * @param position
@@ -6814,10 +6817,10 @@ var es;
         };
         Rectangle.prototype.calculateBounds = function (parentPosition, position, origin, scale, rotation, width, height) {
             if (rotation == 0) {
-                this.x = parentPosition.x + position.x - origin.x * scale.x;
-                this.y = parentPosition.y + position.y - origin.y * scale.y;
-                this.width = width * scale.x;
-                this.height = height * scale.y;
+                this.x = Math.trunc(parentPosition.x + position.x - origin.x * scale.x);
+                this.y = Math.trunc(parentPosition.y + position.y - origin.y * scale.y);
+                this.width = Math.trunc(width * scale.x);
+                this.height = Math.trunc(height * scale.y);
             }
             else {
                 // 我们需要找到我们的绝对最小/最大值，并据此创建边界
@@ -6841,13 +6844,13 @@ var es;
                 es.Vector2Ext.transformR(bottomLeft, this._transformMat, bottomLeft);
                 es.Vector2Ext.transformR(bottomRight, this._transformMat, bottomRight);
                 // 找出最小值和最大值，这样我们就可以计算出我们的边界框。
-                var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-                var maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                var minX = Math.trunc(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                var maxX = Math.trunc(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                var minY = Math.trunc(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                var maxY = Math.trunc(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
                 this.location = new es.Vector2(minX, minY);
-                this.width = maxX - minX;
-                this.height = maxY - minY;
+                this.width = Math.trunc(maxX - minX);
+                this.height = Math.trunc(maxY - minY);
             }
         };
         /**
@@ -6931,7 +6934,7 @@ var es;
          * 获取这个矩形的哈希码
          */
         Rectangle.prototype.getHashCode = function () {
-            return (this.x ^ this.y ^ this.width ^ this.height);
+            return (Math.trunc(this.x) ^ Math.trunc(this.y) ^ Math.trunc(this.width) ^ Math.trunc(this.height));
         };
         Rectangle.prototype.clone = function () {
             return new Rectangle(this.x, this.y, this.width, this.height);
@@ -6960,7 +6963,7 @@ var es;
          */
         SubpixelFloat.prototype.update = function (amount) {
             this.remainder += amount;
-            var motion = Math.floor(Math.trunc(this.remainder));
+            var motion = Math.trunc(this.remainder);
             this.remainder -= motion;
             amount = motion;
             return amount;
@@ -7670,11 +7673,11 @@ var es;
             }
             while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
                 if (tMaxX < tMaxY) {
-                    currentCell.x = Math.floor(es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
+                    currentCell.x = Math.trunc(es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
                     tMaxX += tDeltaX;
                 }
                 else {
-                    currentCell.y = Math.floor(es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
+                    currentCell.y = Math.trunc(es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
                     tMaxY += tDeltaY;
                 }
                 cell = this.cellAtPosition(currentCell.x, currentCell.y);
@@ -7790,7 +7793,7 @@ var es;
          * @param y
          */
         SpatialHash.prototype.cellCoords = function (x, y) {
-            return new es.Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
+            return new es.Vector2(es.MathHelper.floorToInt(x * this._inverseCellSize), es.MathHelper.floorToInt(y * this._inverseCellSize));
         };
         /**
          * 获取世界空间x,y值的单元格。
@@ -11763,8 +11766,8 @@ var es;
         RectangleExt.getClosestPointOnRectangleBorderToPoint = function (rect, point) {
             // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
             var res = es.Vector2.zero;
-            res.x = es.MathHelper.clamp(point.x, rect.left, rect.right);
-            res.y = es.MathHelper.clamp(point.y, rect.top, rect.bottom);
+            res.x = es.MathHelper.clamp(Math.trunc(point.x), rect.left, rect.right);
+            res.y = es.MathHelper.clamp(Math.trunc(point.y), rect.top, rect.bottom);
             // 如果点在矩形内，我们需要将res推到边框，因为它将在矩形内 
             if (rect.contains(res.x, res.y)) {
                 var dl = rect.x - rect.left;
@@ -11815,7 +11818,7 @@ var es;
                 if (pt.y > maxY)
                     maxY = pt.y;
             }
-            return this.fromMinMaxVector(new es.Vector2(minX, minY), new es.Vector2(maxX, maxY));
+            return this.fromMinMaxVector(new es.Vector2(Math.trunc(minX), Math.trunc(minY)), new es.Vector2(Math.trunc(maxX), Math.trunc(maxY)));
         };
         /**
          * 缩放矩形
@@ -11823,10 +11826,10 @@ var es;
          * @param scale
          */
         RectangleExt.scale = function (rect, scale) {
-            rect.x = rect.x * scale.x;
-            rect.y = rect.y * scale.y;
-            rect.width = rect.width * scale.x;
-            rect.height = rect.height * scale.y;
+            rect.x = Math.trunc(rect.x * scale.x);
+            rect.y = Math.trunc(rect.y * scale.y);
+            rect.width = Math.trunc(rect.width * scale.x);
+            rect.height = Math.trunc(rect.height * scale.y);
         };
         RectangleExt.translate = function (rect, vec) {
             rect.location.add(vec);

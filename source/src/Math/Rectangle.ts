@@ -411,10 +411,10 @@ module es {
         public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2,
             rotation: number, width: number, height: number) {
             if (rotation == 0) {
-                this.x = parentPosition.x + position.x - origin.x * scale.x;
-                this.y = parentPosition.y + position.y - origin.y * scale.y;
-                this.width = width * scale.x;
-                this.height = height * scale.y;
+                this.x = Math.trunc(parentPosition.x + position.x - origin.x * scale.x);
+                this.y = Math.trunc(parentPosition.y + position.y - origin.y * scale.y);
+                this.width = Math.trunc(width * scale.x);
+                this.height = Math.trunc(height * scale.y);
             } else {
                 // 我们需要找到我们的绝对最小/最大值，并据此创建边界
                 let worldPosX = parentPosition.x + position.x;
@@ -441,14 +441,14 @@ module es {
                 Vector2Ext.transformR(bottomRight, this._transformMat, bottomRight);
 
                 // 找出最小值和最大值，这样我们就可以计算出我们的边界框。
-                let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                let minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-                let maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                let minX = Math.trunc(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                let maxX = Math.trunc(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                let minY = Math.trunc(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                let maxY = Math.trunc(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
 
                 this.location = new Vector2(minX, minY);
-                this.width = maxX - minX;
-                this.height = maxY - minY;
+                this.width = Math.trunc(maxX - minX);
+                this.height = Math.trunc(maxY - minY);
             }
         }
 
@@ -549,7 +549,7 @@ module es {
          * 获取这个矩形的哈希码
          */
         public getHashCode(): number{
-            return (this.x ^ this.y ^ this.width ^ this.height);
+            return (Math.trunc(this.x) ^ Math.trunc(this.y) ^ Math.trunc(this.width) ^ Math.trunc(this.height));
         }
 
         public clone(): Rectangle {

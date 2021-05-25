@@ -2499,6 +2499,7 @@ declare module es {
          * @param length
          */
         static repeat(t: number, length: number): number;
+        static floorToInt(f: number): number;
         /**
          * 将值绕一圈移动的助手
          * @param position

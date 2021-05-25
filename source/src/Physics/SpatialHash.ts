@@ -181,11 +181,11 @@ module es {
 
             while (currentCell.x != lastCell.x || currentCell.y != lastCell.y){
                 if (tMaxX < tMaxY){
-                    currentCell.x = Math.floor(MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
+                    currentCell.x = Math.trunc(MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
 
                     tMaxX += tDeltaX;
                 }else{
-                    currentCell.y = Math.floor(MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
+                    currentCell.y = Math.trunc(MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
 
                     tMaxY += tDeltaY;
                 }
@@ -286,7 +286,7 @@ module es {
          * @param y
          */
         public cellCoords(x: number, y: number): Vector2 {
-            return new Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
+            return new Vector2(MathHelper.floorToInt(x * this._inverseCellSize), MathHelper.floorToInt(y * this._inverseCellSize));
         }
 
         /**

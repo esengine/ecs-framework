@@ -265,8 +265,8 @@ module es {
         public static getClosestPointOnRectangleBorderToPoint(rect: Rectangle, point: Vector2) {
             // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
             let res = es.Vector2.zero;
-            res.x = MathHelper.clamp(point.x, rect.left, rect.right)
-            res.y = MathHelper.clamp(point.y, rect.top, rect.bottom);
+            res.x = MathHelper.clamp(Math.trunc(point.x), rect.left, rect.right)
+            res.y = MathHelper.clamp(Math.trunc(point.y), rect.top, rect.bottom);
 
             // 如果点在矩形内，我们需要将res推到边框，因为它将在矩形内 
             if (rect.contains(res.x, res.y)) {
@@ -327,7 +327,7 @@ module es {
                     maxY = pt.y;
             }
 
-            return this.fromMinMaxVector(new Vector2(minX, minY), new Vector2(maxX, maxY));
+            return this.fromMinMaxVector(new Vector2(Math.trunc(minX), Math.trunc(minY)), new Vector2(Math.trunc(maxX), Math.trunc(maxY)));
         }
 
         /**
@@ -336,10 +336,10 @@ module es {
          * @param scale 
          */
         public static scale(rect: Rectangle, scale: Vector2) {
-            rect.x = rect.x * scale.x;
-            rect.y = rect.y * scale.y;
-            rect.width = rect.width * scale.x;
-            rect.height = rect.height * scale.y;
+            rect.x = Math.trunc(rect.x * scale.x);
+            rect.y = Math.trunc(rect.y * scale.y);
+            rect.width = Math.trunc(rect.width * scale.x);
+            rect.height = Math.trunc(rect.height * scale.y);
         }
 
         public static translate(rect: Rectangle, vec: Vector2) {
