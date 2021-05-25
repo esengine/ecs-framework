@@ -269,6 +269,9 @@ Debug类提供日志记录。 Insist类提供各种断言条件。 您可以在�
 #### [laya-demo](https://github.com/esengine/ecs-laya-demo)
 #### [egret-demo](https://github.com/esengine/ecs-egret-demo)
 
+### 渲染集成框架
+#### [cocos-framework](https://github.com/esengine/cocos-framework)
+
 ## 扩展库
 
 #### [基于ecs-framework开发的astar/BreadthFirst/Dijkstra/GOAP目标导向计划 路径寻找库](https://github.com/esengine/ecs-astar)
