@@ -1,5 +1,5 @@
 module es {
-    export class Collider extends Component {
+    export abstract class Collider extends Component {
         /**
          * 对撞机的基本形状
          */
@@ -59,10 +59,10 @@ module es {
         }
 
         public get bounds(): Rectangle {
-            if (this._isPositionDirty || this._isRotationDirty) {
+            // if (this._isPositionDirty || this._isRotationDirty) {
                 this.shape.recalculateBounds(this);
-                this._isPositionDirty = this._isRotationDirty = false;
-            }
+                // this._isPositionDirty = this._isRotationDirty = false;
+            // }
 
             return this.shape.bounds;
         }
@@ -114,6 +114,33 @@ module es {
         }
 
         public onAddedToEntity() {
+            if (this._colliderRequiresAutoSizing) {
+                let renderable = null;
+                for (let i = 0; i < this.entity.components.buffer.length; i ++) {
+                    let component = this.entity.components.buffer[i];
+                    if (component instanceof RenderableComponent){
+                        renderable = component;
+                        break;
+                    }
+                }
+
+                if (renderable != null) {
+                    let renderableBounds = renderable.bounds.clone();
+
+                    let width = renderableBounds.width / this.entity.transform.scale.x;
+                    let height = renderableBounds.height / this.entity.transform.scale.y;
+
+                    if (this instanceof CircleCollider) {
+                        this.radius = Math.max(width, height) * 0.5;
+                        this.localOffset = Vector2.subtract(renderableBounds.center, this.entity.transform.position);
+                    } else if (this instanceof BoxCollider) {
+                        this.width = width;
+                        this.height = height;
+
+                        this.localOffset = Vector2.subtract(renderableBounds.center, this.entity.transform.position);
+                    }
+                }
+            }
             this._isParentEntityAddedToScene = true;
             this.registerColliderWithPhysicsSystem();
         }

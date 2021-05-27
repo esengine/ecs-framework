@@ -376,6 +376,10 @@ module es {
             this.components.update();
         }
 
+        public debugRender(batcher: IBatcher) {
+            this.components.debugRender(batcher);
+        }
+
         /**
          * 创建组件的新实例。返回实例组件
          * @param componentType 

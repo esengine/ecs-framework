@@ -3,7 +3,7 @@ module es {
     export class Physics {
         public static _spatialHash: SpatialHash;
         /** 用于在全局范围内存储重力值的方便字段 */
-        public static gravity = new Vector2(0, 300);
+        public static gravity = new Vector2(0, -300);
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
         public static spatialHashCellSize = 100;
         /** 接受layerMask的所有方法的默认值 */
@@ -40,6 +40,10 @@ module es {
          */
         public static clear() {
             this._spatialHash.clear();
+        }
+
+        public static debugDraw(secondsToDisplay) {
+            this._spatialHash.debugDraw(secondsToDisplay);
         }
 
         /**

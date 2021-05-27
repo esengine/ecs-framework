@@ -19,7 +19,15 @@ module es {
          * @param collisionResult
          */
         public calculateMovement(motion: Vector2, collisionResult: CollisionResult): boolean {
-            if (this.entity.getComponent(Collider) == null || this._triggerHelper == null) {
+            let collider = null;
+            for (let i = 0; i < this.entity.components.buffer.length; i++) {
+                let component = this.entity.components.buffer[i];
+                if (component instanceof Collider) {
+                    collider = component;
+                    break;
+                }
+            }
+            if (collider == null || this._triggerHelper == null) {
                 return false;
             }
 

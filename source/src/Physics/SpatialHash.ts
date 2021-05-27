@@ -94,6 +94,21 @@ module es {
             this._cellDict.clear();
         }
 
+        public debugDraw(secondsToDisplay: number) {
+            for (let x = this.gridBounds.x; x <= this.gridBounds.right; x ++) {
+                for (let y = this.gridBounds.y; y <= this.gridBounds.bottom; y ++) {
+                    let cell = this.cellAtPosition(x, y);
+                    if (cell != null && cell.length > 0)
+                        this.debugDrawCellDetails(x, y, secondsToDisplay);
+                }
+            }
+        }
+
+        private debugDrawCellDetails(x: number, y: number, secondsToDisplay: number = 0.5) {
+            Graphics.instance.batcher.drawHollowRect(x * this._cellSize, y * this._cellSize, this._cellSize, this._cellSize, new Color(255, 0, 0), secondsToDisplay);
+            Graphics.instance.batcher.end();
+        }
+
         /**
          * 返回边框与单元格相交的所有对象
          * @param bounds
@@ -174,18 +189,18 @@ module es {
             // 开始遍历并返回交叉单元格。
             let cell = this.cellAtPosition(currentCell.x, currentCell.y);
 
-            if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)){
+            if (cell != null && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)){
                 this._raycastParser.reset();
                 return this._raycastParser.hitCounter;
             }
 
             while (currentCell.x != lastCell.x || currentCell.y != lastCell.y){
                 if (tMaxX < tMaxY){
-                    currentCell.x = Math.trunc(MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
+                    currentCell.x = MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX));
 
                     tMaxX += tDeltaX;
                 }else{
-                    currentCell.y = Math.trunc(MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
+                    currentCell.y = MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY));
 
                     tMaxY += tDeltaY;
                 }

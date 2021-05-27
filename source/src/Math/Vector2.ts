@@ -82,7 +82,7 @@ module es {
         public static multiplyScaler(value1: Vector2, value2: number) {
             let result = es.Vector2.zero;
             result.x = value1.x * value2;
-            result.y = value1.x * value2;
+            result.y = value1.y * value2;
             return result;
         }
 

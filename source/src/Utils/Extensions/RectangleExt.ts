@@ -330,6 +330,52 @@ module es {
             return this.fromMinMaxVector(new Vector2(Math.trunc(minX), Math.trunc(minY)), new Vector2(Math.trunc(maxX), Math.trunc(maxY)));
         }
 
+        public static calculateBounds(rect: Rectangle, parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2,
+            rotation: number, width: number, height: number) {
+            if (rotation == 0) {
+                rect.x = Math.trunc(parentPosition.x + position.x - origin.x * scale.x);
+                rect.y = Math.trunc(parentPosition.y + position.y - origin.y * scale.y);
+                rect.width = Math.trunc(width * scale.x);
+                rect.height = Math.trunc(height * scale.y);
+            } else {
+                // 我们需要找到我们的绝对最小/最大值，并据此创建边界
+                let worldPosX = parentPosition.x + position.x;
+                let worldPosY = parentPosition.y + position.y;
+
+                let tempMat: Matrix2D;
+                
+                // 考虑到原点，将参考点设置为世界参考
+                let transformMatrix = Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
+                tempMat = Matrix2D.createScale(scale.x, scale.y);
+                transformMatrix = transformMatrix.multiply(tempMat);
+                tempMat = Matrix2D.createRotation(rotation);
+                transformMatrix =transformMatrix.multiply(tempMat);
+                tempMat = Matrix2D.createTranslation(worldPosX, worldPosY);
+                transformMatrix = transformMatrix.multiply(tempMat);
+
+                // TODO: 我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角
+                let topLeft = new Vector2(worldPosX, worldPosY);
+                let topRight = new Vector2(worldPosX + width, worldPosY);
+                let bottomLeft = new Vector2(worldPosX, worldPosY + height);
+                let bottomRight = new Vector2(worldPosX + width, worldPosY + height);
+
+                Vector2Ext.transformR(topLeft, transformMatrix, topLeft);
+                Vector2Ext.transformR(topRight, transformMatrix, topRight);
+                Vector2Ext.transformR(bottomLeft, transformMatrix, bottomLeft);
+                Vector2Ext.transformR(bottomRight, transformMatrix, bottomRight);
+
+                // 找出最小值和最大值，这样我们就可以计算出我们的边界框。
+                let minX = Math.trunc(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                let maxX = Math.trunc(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                let minY = Math.trunc(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                let maxY = Math.trunc(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+
+                rect.location = new Vector2(minX, minY);
+                rect.width = Math.trunc(maxX - minX);
+                rect.height = Math.trunc(maxY - minY);
+            }
+        }
+
         /**
          * 缩放矩形 
          * @param rect 

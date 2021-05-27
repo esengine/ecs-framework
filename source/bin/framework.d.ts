@@ -194,6 +194,7 @@ declare module es {
          * @param comp
          */
         onEntityTransformChanged(comp: transform.Component): void;
+        debugRender(batcher: IBatcher): void;
         /**
          *当父实体或此组件启用时调用
          */
@@ -359,6 +360,7 @@ declare module es {
          * 每帧进行调用进行更新组件
          */
         update(): void;
+        debugRender(batcher: IBatcher): void;
         /**
          * 创建组件的新实例。返回实例组件
          * @param componentType
@@ -643,15 +645,14 @@ declare module es {
 declare module es {
     /** 场景 */
     class Scene {
-        /**
-         * 这个场景中的实体列表
-         */
+        camera: ICamera;
+        /** 这个场景中的实体列表 */
         readonly entities: EntityList;
-        /**
-         * 管理所有实体处理器
-         */
+        readonly renderableComponents: RenderableComponentList;
+        /** 管理所有实体处理器 */
         readonly entityProcessors: EntityProcessorList;
         readonly _sceneComponents: SceneComponent[];
+        _renderers: Renderer[];
         readonly identifierPool: IdentifierPool;
         private _didSceneBegin;
         constructor();
@@ -672,6 +673,10 @@ declare module es {
         begin(): void;
         end(): void;
         update(): void;
+        render(): void;
+        addRenderer<T extends Renderer>(renderer: T): T;
+        getRenderer<T extends Renderer>(type: new (...args: any[]) => T): T;
+        removeRenderer(renderer: Renderer): void;
         /**
          * 向组件列表添加并返回SceneComponent
          * @param component
@@ -1076,6 +1081,7 @@ declare module es {
          * @param value
          */
         setGlue(value: number): ArcadeRigidbody;
+        setVelocity(velocity: Vector2): ArcadeRigidbody;
         /**
          * 用刚体的质量给刚体加上一个瞬间的力脉冲。力是一个加速度，单位是每秒像素每秒。将力乘以100000，使数值使用更合理
          * @param force
@@ -1178,7 +1184,7 @@ declare module es {
     }
 }
 declare module es {
-    class Collider extends Component {
+    abstract class Collider extends Component {
         /**
          * 对撞机的基本形状
          */
@@ -1302,7 +1308,7 @@ declare module es {
          * @param width
          * @param height
          */
-        constructor(x: number, y: number, width: number, height: number);
+        constructor(x?: number, y?: number, width?: number, height?: number);
         width: number;
         height: number;
         /**
@@ -1321,6 +1327,7 @@ declare module es {
          * @param height
          */
         setHeight(height: number): void;
+        debugRender(batcher: IBatcher): void;
         toString(): string;
     }
 }
@@ -1333,13 +1340,14 @@ declare module es {
          *
          * @param radius
          */
-        constructor(radius: number);
+        constructor(radius?: number);
         radius: number;
         /**
          * 设置圆的半径
          * @param radius
          */
         setRadius(radius: number): CircleCollider;
+        debugRender(batcher: IBatcher): void;
         toString(): string;
     }
 }
@@ -1353,6 +1361,40 @@ declare module es {
          * @param points
          */
         constructor(points: Vector2[]);
+    }
+}
+declare module es {
+    interface IRenderable {
+        enabled: boolean;
+        renderLayer: number;
+        isVisibleFromCamera(camera: ICamera): boolean;
+        render(batcher: IBatcher, camera: ICamera): void;
+        debugRender(batcher: IBatcher): void;
+    }
+}
+declare module es {
+    abstract class RenderableComponent extends es.Component implements IRenderable {
+        getwidth(): number;
+        getheight(): number;
+        protected _bounds: es.Rectangle;
+        getbounds(): es.Rectangle;
+        readonly bounds: Rectangle;
+        protected _areBoundsDirty: boolean;
+        renderLayer: number;
+        protected _renderLayer: number;
+        onEntityTransformChanged(comp: transform.Component): void;
+        localOffset: es.Vector2;
+        setLocalOffset(offset: es.Vector2): this;
+        isVisible: boolean;
+        debugRenderEnabled: boolean;
+        protected _isVisible: boolean;
+        protected _localOffset: es.Vector2;
+        abstract render(batcher: IBatcher, camera: ICamera): void;
+        protected onBecameVisible(): void;
+        protected onBecameInvisible(): void;
+        setRenderLayer(renderLayer: number): RenderableComponent;
+        isVisibleFromCamera(cam: ICamera): boolean;
+        debugRender(batcher: IBatcher): void;
     }
 }
 declare module es {
@@ -1703,6 +1745,7 @@ declare module es {
         onEntityTransformChanged(comp: transform.Component): void;
         onEntityEnabled(): void;
         onEntityDisabled(): void;
+        debugRender(batcher: IBatcher): void;
     }
 }
 declare module es {
@@ -1892,6 +1935,24 @@ declare module es {
         all(...types: any[]): Matcher;
         exclude(...types: any[]): this;
         one(...types: any[]): this;
+    }
+}
+declare module es {
+    class RenderableComponentList {
+        private _components;
+        private _componentsByRenderLayer;
+        private _unsortedRenderLayers;
+        private _componentsNeedSort;
+        readonly count: number;
+        get(index: number): IRenderable;
+        add(component: IRenderable): void;
+        remove(component: IRenderable): void;
+        updateRenderableRenderLayer(component: IRenderable, oldRenderLayer: number, newRenderLayer: number): void;
+        setRenderLayerNeedsComponentSort(renderLayer: number): void;
+        setNeedsComponentSort(): void;
+        private addToRenderLayerList;
+        componentsWithRenderLayer(renderLayer: number): IRenderable[];
+        updateLists(): void;
     }
 }
 declare class StringUtils {
@@ -2091,6 +2152,62 @@ declare module es {
          */
         static makeWorker(doFunc: Function): Worker;
         static workerMessage(worker: Worker): (...message: any[]) => Promise<{}>;
+    }
+}
+declare module es {
+    class Graphics {
+        static instance: Graphics;
+        batcher: IBatcher;
+        constructor(batcher: IBatcher);
+    }
+}
+declare module es {
+    class Color {
+        a: number;
+        r: number;
+        g: number;
+        b: number;
+        constructor(r: number, g: number, b: number, a?: number);
+    }
+}
+declare module es {
+    interface IBatcher {
+        begin(cam: ICamera): any;
+        end(): any;
+        drawPoints(points: Vector2[], color: Color, thickness?: number): any;
+        drawPolygon(poisition: Vector2, points: Vector2[], color: Color, closePoly: boolean, thickness?: number): any;
+        drawHollowRect(x: number, y: number, width: number, height: number, color: Color, thickness?: number): any;
+        drawCircle(position: Vector2, raidus: number, color: Color, thickness?: number): any;
+        drawCircleLow(position: es.Vector2, radius: number, color: Color, thickness?: number, resolution?: number): any;
+        drawRect(x: number, y: number, width: number, height: number, color: Color): any;
+        drawLine(start: Vector2, end: Vector2, color: Color, thickness: number): any;
+        drawPixel(position: Vector2, color: Color, size?: number): any;
+    }
+}
+declare module es {
+    interface ICamera extends Component {
+        bounds: Rectangle;
+    }
+}
+declare module es {
+    abstract class Renderer {
+        camera: ICamera;
+        readonly renderOrder: number;
+        shouldDebugRender: boolean;
+        constructor(renderOrder: number, camera: ICamera);
+        onAddedToScene(scene: es.Scene): void;
+        unload(): void;
+        protected beginRender(cam: ICamera): void;
+        protected endRender(): void;
+        abstract render(scene: Scene): void;
+        protected renderAfterStateCheck(renderable: IRenderable, cam: ICamera): void;
+        protected debugRender(scene: Scene): void;
+    }
+}
+declare module es {
+    class DefaultRenderer extends Renderer {
+        constructor(renderOrder?: number, camera?: ICamera);
+        render(scene: Scene): void;
     }
 }
 declare module es {
@@ -2657,18 +2774,21 @@ declare module es {
          * @param radians
          */
         static createRotation(radians: number): Matrix2D;
+        static createRotationOut(radians: number, result: Matrix2D): void;
         /**
          * 创建一个新的缩放矩阵2D
          * @param xScale
          * @param yScale
          */
         static createScale(xScale: number, yScale: number): Matrix2D;
+        static createScaleOut(xScale: number, yScale: number, result: Matrix2D): void;
         /**
          * 创建一个新的平移矩阵2D
          * @param xPosition
          * @param yPosition
          */
         static createTranslation(xPosition: number, yPosition: number): Matrix2D;
+        static createTranslationOut(position: Vector2, result: Matrix2D): void;
         static invert(matrix: Matrix2D): Matrix2D;
         /**
          * 创建一个新的matrix, 它包含两个矩阵的和。
@@ -3078,6 +3198,7 @@ declare module es {
          * 从SpatialHash中移除所有碰撞器
          */
         static clear(): void;
+        static debugDraw(secondsToDisplay: any): void;
         /**
          * 检查是否有对撞机落在一个圆形区域内。返回遇到的第一个对撞机
          * @param center
@@ -3222,6 +3343,8 @@ declare module es {
          */
         removeWithBruteForce(obj: Collider): void;
         clear(): void;
+        debugDraw(secondsToDisplay: number): void;
+        private debugDrawCellDetails;
         /**
          * 返回边框与单元格相交的所有对象
          * @param bounds
@@ -4593,6 +4716,7 @@ declare module es {
          * @param points
          */
         static boundsFromPolygonPoints(points: Vector2[]): Rectangle;
+        static calculateBounds(rect: Rectangle, parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2, rotation: number, width: number, height: number): void;
         /**
          * 缩放矩形
          * @param rect

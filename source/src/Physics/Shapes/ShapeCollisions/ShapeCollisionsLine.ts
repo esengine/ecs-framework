@@ -16,7 +16,7 @@ module es {
                     // TODO: 这是得到分数的正确和最有效的方法吗?
                     // 先检查x分数。如果是NaN，就用y代替
                     let distanceFraction = (intersection.x - start.x) / (end.x - start.x);
-                    if (Number.isNaN(distanceFraction) || Number.isFinite(distanceFraction))
+                    if (Number.isNaN(distanceFraction) || Math.abs(distanceFraction) == Infinity)
                         distanceFraction = (intersection.y - start.y) / (end.y - start.y);
 
                     if (distanceFraction < fraction){
@@ -56,7 +56,9 @@ module es {
             if (u < 0 || u > 1)
                 return false;
 
-            intersection = Vector2.add(a1, Vector2.multiplyScaler(b, t));
+            let r = Vector2.add(a1, Vector2.multiplyScaler(b, t));
+            intersection.x = r.x;
+            intersection.y = r.y;
 
             return true;
         }

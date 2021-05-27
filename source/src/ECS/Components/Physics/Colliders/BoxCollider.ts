@@ -8,10 +8,15 @@ module es {
          * @param width 
          * @param height 
          */
-        constructor(x: number, y: number, width: number, height: number) {
+        constructor(x: number = 0, y: number = 0, width: number = 1, height: number = 1) {
             super();
 
-            this._localOffset = new Vector2(x + width / 2, y + height / 2);
+            if (width == 1 && height == 1) {
+                this._colliderRequiresAutoSizing = true;
+            } else {
+                this._localOffset = new Vector2(x + width / 2, y + height / 2);
+            }
+            
             this.shape = new Box(width, height);
         }
 
@@ -61,7 +66,7 @@ module es {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(width, box.height);
                 this._isPositionDirty = true;
-                if (this.entity && this._isParentEntityAddedToScene)
+                if (this.entity != null && this._isParentEntityAddedToScene)
                     Physics.updateCollider(this);
             }
 
@@ -82,6 +87,18 @@ module es {
                 if (this.entity && this._isParentEntityAddedToScene)
                     Physics.updateCollider(this);
             }
+        }
+
+        public debugRender(batcher: IBatcher) {
+            let poly = this.shape as Polygon;
+            batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new Color(76, 76, 76, 76), 2);
+            batcher.end();
+			batcher.drawPolygon(this.shape.position, poly.points, new Color(139, 0, 0, 255), true, 2);
+            batcher.end();
+			batcher.drawPixel(this.entity.position, new Color(255, 255, 0), 4);
+            batcher.end();
+			batcher.drawPixel(es.Vector2.add(this.transform.position, this.shape.center), new Color(255, 0, 0), 2);
+            batcher.end();
         }
 
         public toString() {

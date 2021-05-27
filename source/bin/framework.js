@@ -512,6 +512,7 @@ var es;
          */
         Component.prototype.onEntityTransformChanged = function (comp) {
         };
+        Component.prototype.debugRender = function (batcher) { };
         /**
          *当父实体或此组件启用时调用
          */
@@ -946,6 +947,9 @@ var es;
         Entity.prototype.update = function () {
             this.components.update();
         };
+        Entity.prototype.debugRender = function (batcher) {
+            this.components.debugRender(batcher);
+        };
         /**
          * 创建组件的新实例。返回实例组件
          * @param componentType
@@ -1156,7 +1160,7 @@ var es;
         Vector2.multiplyScaler = function (value1, value2) {
             var result = es.Vector2.zero;
             result.x = value1.x * value2;
-            result.y = value1.x * value2;
+            result.y = value1.y * value2;
             return result;
         };
         /**
@@ -1443,7 +1447,9 @@ var es;
     var Scene = /** @class */ (function () {
         function Scene() {
             this._sceneComponents = [];
+            this._renderers = [];
             this.entities = new es.EntityList(this);
+            this.renderableComponents = new es.RenderableComponentList();
             this.entityProcessors = new es.EntityProcessorList();
             this.identifierPool = new es.IdentifierPool();
             this.initialize();
@@ -1466,6 +1472,9 @@ var es;
         Scene.prototype.unload = function () {
         };
         Scene.prototype.begin = function () {
+            if (this._renderers.length == 0) {
+                this.addRenderer(new es.DefaultRenderer());
+            }
             es.Physics.reset();
             if (this.entityProcessors != null)
                 this.entityProcessors.begin();
@@ -1474,11 +1483,14 @@ var es;
         };
         Scene.prototype.end = function () {
             this._didSceneBegin = false;
+            for (var i = 0; i < this._renderers.length; i++)
+                this._renderers[i].unload();
             this.entities.removeAllEntities();
             for (var i = 0; i < this._sceneComponents.length; i++) {
                 this._sceneComponents[i].onRemovedFromScene();
             }
             this._sceneComponents.length = 0;
+            this.camera = null;
             es.Physics.clear();
             if (this.entityProcessors)
                 this.entityProcessors.end();
@@ -1498,6 +1510,30 @@ var es;
             this.entities.update();
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
+            this.renderableComponents.updateLists();
+            this.render();
+        };
+        Scene.prototype.render = function () {
+            for (var i = 0; i < this._renderers.length; i++) {
+                this._renderers[i].render(this);
+            }
+        };
+        Scene.prototype.addRenderer = function (renderer) {
+            this._renderers.push(renderer);
+            this._renderers.sort(function (self, other) { return self.renderOrder - other.renderOrder; });
+            renderer.onAddedToScene(this);
+            return renderer;
+        };
+        Scene.prototype.getRenderer = function (type) {
+            for (var i = 0; i < this._renderers.length; i++) {
+                if (this._renderers[i] instanceof type)
+                    return this._renderers[i];
+            }
+            return null;
+        };
+        Scene.prototype.removeRenderer = function (renderer) {
+            new es.List(this._renderers).remove(renderer);
+            renderer.unload();
         };
         /**
          * 向组件列表添加并返回SceneComponent
@@ -1758,7 +1794,7 @@ var es;
         Object.defineProperty(Transform.prototype, "worldToLocalTransform", {
             get: function () {
                 if (this._worldToLocalDirty) {
-                    if (!this.parent) {
+                    if (this.parent == null) {
                         this._worldToLocalTransform = es.Matrix2D.identity;
                     }
                     else {
@@ -1914,15 +1950,16 @@ var es;
          * @param parent
          */
         Transform.prototype.setParent = function (parent) {
+            var _this = this;
             if (this._parent == parent)
                 return this;
             if (this._parent != null) {
-                var children = new es.List(this._parent._children);
-                children.remove(this);
+                var index = this._parent._children.findIndex(function (t) { return t == _this; });
+                if (index != -1)
+                    this._parent._children.splice(index, 1);
             }
             if (parent != null) {
-                var children = new es.List(parent._children);
-                children.add(this);
+                parent._children.push(this);
             }
             this._parent = parent;
             this.setDirty(DirtyType.positionDirty);
@@ -1939,7 +1976,7 @@ var es;
                 return this;
             this._position = position;
             if (this.parent != null) {
-                this.localPosition = es.Vector2.transform(this._position, this._worldToLocalTransform);
+                this.localPosition = es.Vector2.transform(this._position, this.worldToLocalTransform);
             }
             else {
                 this.localPosition = position;
@@ -1965,7 +2002,7 @@ var es;
          */
         Transform.prototype.setRotation = function (radians) {
             this._rotation = radians;
-            if (this.parent) {
+            if (this.parent != null) {
                 this.localRotation = this.parent.rotation + radians;
             }
             else {
@@ -2012,7 +2049,7 @@ var es;
          */
         Transform.prototype.setScale = function (scale) {
             this._scale = scale;
-            if (this.parent) {
+            if (this.parent != null) {
                 this.localScale = es.Vector2.divide(scale, this.parent._scale);
             }
             else {
@@ -2337,18 +2374,29 @@ var es;
             this._glue = es.MathHelper.clamp(value, 0, 10);
             return this;
         };
+        ArcadeRigidbody.prototype.setVelocity = function (velocity) {
+            this.velocity = velocity;
+            return this;
+        };
         /**
          * 用刚体的质量给刚体加上一个瞬间的力脉冲。力是一个加速度，单位是每秒像素每秒。将力乘以100000，使数值使用更合理
          * @param force
          */
         ArcadeRigidbody.prototype.addImpulse = function (force) {
             if (!this.isImmovable) {
-                this.velocity = this.velocity.add(es.Vector2.multiplyScaler(force, 100000)
+                this.velocity.add(es.Vector2.multiplyScaler(force, 100000)
                     .multiplyScaler(this._inverseMass * es.Time.deltaTime * es.Time.deltaTime));
             }
         };
         ArcadeRigidbody.prototype.onAddedToEntity = function () {
-            this._collider = this.entity.getComponent(es.Collider);
+            this._collider = null;
+            for (var i = 0; i < this.entity.components.buffer.length; i++) {
+                var component = this.entity.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    this._collider = component;
+                    break;
+                }
+            }
             es.Debug.warnIf(this._collider == null, "ArcadeRigidbody 没有 Collider。ArcadeRigidbody需要一个Collider!");
         };
         ArcadeRigidbody.prototype.update = function () {
@@ -2358,8 +2406,8 @@ var es;
                 return;
             }
             if (this.shouldUseGravity)
-                this.velocity = this.velocity.add(es.Vector2.multiplyScaler(es.Physics.gravity, es.Time.deltaTime));
-            this.entity.transform.position = this.entity.transform.position.add(es.Vector2.multiplyScaler(this.velocity, es.Time.deltaTime));
+                this.velocity.add(es.Vector2.multiplyScaler(es.Physics.gravity, es.Time.deltaTime));
+            this.entity.position = this.entity.position.add(es.Vector2.multiplyScaler(this.velocity, es.Time.deltaTime));
             var collisionResult = new es.CollisionResult();
             // 捞取我们在新的位置上可能会碰撞到的任何东西
             var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this._collider, this._collider.collidesWithLayers.value);
@@ -2379,10 +2427,10 @@ var es;
                         }
                         else {
                             // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                            this.entity.transform.position = this.entity.transform.position.subtract(collisionResult.minimumTranslationVector);
+                            this.entity.position = this.entity.position.subtract(collisionResult.minimumTranslationVector);
                             var relativeVelocity = this.velocity.clone();
                             this.calculateResponseVelocity(relativeVelocity, collisionResult.minimumTranslationVector, relativeVelocity);
-                            this.velocity = this.velocity.add(relativeVelocity);
+                            this.velocity.add(relativeVelocity);
                         }
                     }
                 }
@@ -2402,14 +2450,14 @@ var es;
          */
         ArcadeRigidbody.prototype.processOverlap = function (other, minimumTranslationVector) {
             if (this.isImmovable) {
-                other.entity.transform.position = other.entity.transform.position.add(minimumTranslationVector);
+                other.entity.position = other.entity.position.add(minimumTranslationVector);
             }
             else if (other.isImmovable) {
-                this.entity.transform.position = this.entity.transform.position.subtract(minimumTranslationVector);
+                this.entity.position = this.entity.position.subtract(minimumTranslationVector);
             }
             else {
-                this.entity.transform.position = this.entity.transform.position.subtract(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
-                other.entity.transform.position = other.entity.transform.position.add(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                this.entity.position = this.entity.position.subtract(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                other.entity.position = other.entity.position.add(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
             }
         };
         /**
@@ -2427,8 +2475,8 @@ var es;
             var totalinverseMass = this._inverseMass + other._inverseMass;
             var ourResponseFraction = this._inverseMass / totalinverseMass;
             var otherResponseFraction = other._inverseMass / totalinverseMass;
-            this.velocity = this.velocity.add(es.Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
-            other.velocity = other.velocity.subtract(es.Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
+            this.velocity.add(es.Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
+            other.velocity.subtract(es.Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
         };
         /**
          *  给定两个物体和MTV之间的相对速度，本方法修改相对速度，使其成为碰撞响应
@@ -2453,8 +2501,10 @@ var es;
             if (tangentialVelocityComponent.lengthSquared() < this._glue)
                 coefficientOfFriction = 1.01;
             // 弹性影响速度的法向分量，摩擦力影响速度的切向分量
-            responseVelocity = es.Vector2.multiplyScaler(normalVelocityComponent, -(1 + this._elasticity))
+            var r = es.Vector2.multiplyScaler(normalVelocityComponent, -(1 + this._elasticity))
                 .subtract(es.Vector2.multiplyScaler(tangentialVelocityComponent, coefficientOfFriction));
+            responseVelocity.x = r.x;
+            responseVelocity.y = r.y;
         };
         return ArcadeRigidbody;
     }(es.Component));
@@ -2518,28 +2568,36 @@ var es;
          * @param collisionResult
          */
         Mover.prototype.calculateMovement = function (motion, collisionResult) {
-            if (this.entity.getComponent(es.Collider) == null || this._triggerHelper == null) {
+            var collider = null;
+            for (var i = 0; i < this.entity.components.buffer.length; i++) {
+                var component = this.entity.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    collider = component;
+                    break;
+                }
+            }
+            if (collider == null || this._triggerHelper == null) {
                 return false;
             }
             // 移动所有的非触发碰撞器并获得最近的碰撞
             var colliders = this.entity.getComponents(es.Collider);
             var _loop_1 = function (i) {
-                var collider = colliders[i];
+                var collider_1 = colliders[i];
                 // 不检测触发器 在我们移动后会重新访问它
-                if (collider.isTrigger)
+                if (collider_1.isTrigger)
                     return "continue";
                 // 获取我们在新位置可能发生碰撞的任何东西
-                var bounds = collider.bounds.clone();
+                var bounds = collider_1.bounds.clone();
                 bounds.x += motion.x;
                 bounds.y += motion.y;
-                var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
+                var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider_1, bounds, collider_1.collidesWithLayers.value);
                 neighbors.forEach(function (value) {
                     var neighbor = value;
                     // 不检测触发器
                     if (neighbor.isTrigger)
                         return;
                     var _internalcollisionResult = new es.CollisionResult();
-                    if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
+                    if (collider_1.collidesWith(neighbor, motion, _internalcollisionResult)) {
                         // 如果碰撞 则退回之前的移动量
                         motion.subtract(_internalcollisionResult.minimumTranslationVector);
                         // 如果我们碰到多个对象，为了简单起见，只取第一个。
@@ -2594,7 +2652,15 @@ var es;
             return _this;
         }
         ProjectileMover.prototype.onAddedToEntity = function () {
-            this._collider = this.entity.getComponent(es.Collider);
+            var collider = null;
+            for (var i = 0; i < this.entity.components.buffer.length; i++) {
+                var component = this.entity.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    collider = component;
+                    break;
+                }
+            }
+            this._collider = collider;
             es.Debug.warnIf(this._collider == null, "ProjectileMover没有Collider。ProjectilMover需要一个Collider!");
         };
         /**
@@ -2703,10 +2769,10 @@ var es;
         });
         Object.defineProperty(Collider.prototype, "bounds", {
             get: function () {
-                if (this._isPositionDirty || this._isRotationDirty) {
-                    this.shape.recalculateBounds(this);
-                    this._isPositionDirty = this._isRotationDirty = false;
-                }
+                // if (this._isPositionDirty || this._isRotationDirty) {
+                this.shape.recalculateBounds(this);
+                // this._isPositionDirty = this._isRotationDirty = false;
+                // }
                 return this.shape.bounds;
             },
             enumerable: true,
@@ -2756,6 +2822,30 @@ var es;
             return this;
         };
         Collider.prototype.onAddedToEntity = function () {
+            if (this._colliderRequiresAutoSizing) {
+                var renderable = null;
+                for (var i = 0; i < this.entity.components.buffer.length; i++) {
+                    var component = this.entity.components.buffer[i];
+                    if (component instanceof es.RenderableComponent) {
+                        renderable = component;
+                        break;
+                    }
+                }
+                if (renderable != null) {
+                    var renderableBounds = renderable.bounds.clone();
+                    var width = renderableBounds.width / this.entity.transform.scale.x;
+                    var height = renderableBounds.height / this.entity.transform.scale.y;
+                    if (this instanceof es.CircleCollider) {
+                        this.radius = Math.max(width, height) * 0.5;
+                        this.localOffset = es.Vector2.subtract(renderableBounds.center, this.entity.transform.position);
+                    }
+                    else if (this instanceof es.BoxCollider) {
+                        this.width = width;
+                        this.height = height;
+                        this.localOffset = es.Vector2.subtract(renderableBounds.center, this.entity.transform.position);
+                    }
+                }
+            }
             this._isParentEntityAddedToScene = true;
             this.registerColliderWithPhysicsSystem();
         };
@@ -2927,8 +3017,17 @@ var es;
          * @param height
          */
         function BoxCollider(x, y, width, height) {
+            if (x === void 0) { x = 0; }
+            if (y === void 0) { y = 0; }
+            if (width === void 0) { width = 1; }
+            if (height === void 0) { height = 1; }
             var _this = _super.call(this) || this;
-            _this._localOffset = new es.Vector2(x + width / 2, y + height / 2);
+            if (width == 1 && height == 1) {
+                _this._colliderRequiresAutoSizing = true;
+            }
+            else {
+                _this._localOffset = new es.Vector2(x + width / 2, y + height / 2);
+            }
             _this.shape = new es.Box(width, height);
             return _this;
         }
@@ -2980,7 +3079,7 @@ var es;
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(width, box.height);
                 this._isPositionDirty = true;
-                if (this.entity && this._isParentEntityAddedToScene)
+                if (this.entity != null && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
             return this;
@@ -2999,6 +3098,17 @@ var es;
                 if (this.entity && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
+        };
+        BoxCollider.prototype.debugRender = function (batcher) {
+            var poly = this.shape;
+            batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new es.Color(76, 76, 76, 76), 2);
+            batcher.end();
+            batcher.drawPolygon(this.shape.position, poly.points, new es.Color(139, 0, 0, 255), true, 2);
+            batcher.end();
+            batcher.drawPixel(this.entity.position, new es.Color(255, 255, 0), 4);
+            batcher.end();
+            batcher.drawPixel(es.Vector2.add(this.transform.position, this.shape.center), new es.Color(255, 0, 0), 2);
+            batcher.end();
         };
         BoxCollider.prototype.toString = function () {
             return "[BoxCollider: bounds: " + this.bounds + "]";
@@ -3019,8 +3129,12 @@ var es;
          * @param radius
          */
         function CircleCollider(radius) {
+            if (radius === void 0) { radius = 1; }
             var _this = _super.call(this) || this;
             _this.shape = new es.Circle(radius);
+            if (radius == 1) {
+                _this._colliderRequiresAutoSizing = true;
+            }
             return _this;
         }
         Object.defineProperty(CircleCollider.prototype, "radius", {
@@ -3048,6 +3162,16 @@ var es;
                     es.Physics.updateCollider(this);
             }
             return this;
+        };
+        CircleCollider.prototype.debugRender = function (batcher) {
+            batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new es.Color(76, 76, 76, 76), 2);
+            batcher.end();
+            batcher.drawCircle(this.shape.position, this.radius, new es.Color(139, 0, 0), 2);
+            batcher.end();
+            batcher.drawPixel(this.entity.transform.position, new es.Color(255, 255, 0), 4);
+            batcher.end();
+            batcher.drawPixel(this.shape.position, new es.Color(255, 0, 0), 2);
+            batcher.end();
         };
         CircleCollider.prototype.toString = function () {
             return "[CircleCollider: bounds: " + this.bounds + ", radius: " + this.shape.radius + "]";
@@ -3084,6 +3208,127 @@ var es;
         return PolygonCollider;
     }(es.Collider));
     es.PolygonCollider = PolygonCollider;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var RenderableComponent = /** @class */ (function (_super) {
+        __extends(RenderableComponent, _super);
+        function RenderableComponent() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this._bounds = new es.Rectangle();
+            _this._areBoundsDirty = true;
+            _this._renderLayer = 0;
+            _this.debugRenderEnabled = true;
+            _this._isVisible = false;
+            _this._localOffset = new es.Vector2();
+            return _this;
+        }
+        RenderableComponent.prototype.getwidth = function () {
+            return this.bounds.width;
+        };
+        RenderableComponent.prototype.getheight = function () {
+            return this.bounds.height;
+        };
+        RenderableComponent.prototype.getbounds = function () {
+            if (this._areBoundsDirty) {
+                this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new es.Vector2(this.getwidth() / 2, this.getheight() / 2), this.entity.transform.scale, this.entity.transform.rotation, this.getwidth(), this.getheight());
+                this._areBoundsDirty = false;
+            }
+            return this._bounds;
+        };
+        Object.defineProperty(RenderableComponent.prototype, "bounds", {
+            get: function () {
+                return this.getbounds();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "renderLayer", {
+            get: function () {
+                return this._renderLayer;
+            },
+            set: function (value) {
+                this.setRenderLayer(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
+            this._areBoundsDirty = true;
+        };
+        Object.defineProperty(RenderableComponent.prototype, "localOffset", {
+            get: function () {
+                return this._localOffset;
+            },
+            set: function (value) {
+                this.setLocalOffset(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RenderableComponent.prototype.setLocalOffset = function (offset) {
+            if (!this._localOffset.equals(offset)) {
+                this._localOffset = offset;
+                this._areBoundsDirty = true;
+            }
+            return this;
+        };
+        Object.defineProperty(RenderableComponent.prototype, "isVisible", {
+            get: function () {
+                return this._isVisible;
+            },
+            set: function (value) {
+                if (this._isVisible != value) {
+                    this._isVisible = value;
+                    if (this._isVisible) {
+                        this.onBecameVisible();
+                    }
+                    else {
+                        this.onBecameInvisible();
+                    }
+                }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RenderableComponent.prototype.onBecameVisible = function () {
+        };
+        RenderableComponent.prototype.onBecameInvisible = function () {
+        };
+        RenderableComponent.prototype.setRenderLayer = function (renderLayer) {
+            if (renderLayer != this._renderLayer) {
+                var oldRenderLayer = this._renderLayer;
+                this._renderLayer = renderLayer;
+                if (this.entity != null && this.entity.scene != null)
+                    es.Core.scene.renderableComponents.updateRenderableRenderLayer(this, oldRenderLayer, this._renderLayer);
+            }
+            return this;
+        };
+        RenderableComponent.prototype.isVisibleFromCamera = function (cam) {
+            this.isVisible = cam.bounds.intersects(this.bounds);
+            return this.isVisible;
+        };
+        RenderableComponent.prototype.debugRender = function (batcher) {
+            if (!this.debugRenderEnabled)
+                return;
+            var collider = null;
+            for (var i = 0; i < this.entity.components.buffer.length; i++) {
+                var component = this.entity.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    collider = component;
+                    break;
+                }
+            }
+            if (collider == null) {
+                batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new es.Color(255, 255, 0));
+                batcher.end();
+            }
+            batcher.drawPixel(es.Vector2.add(this.entity.transform.position, this._localOffset), new es.Color(153, 50, 204), 4);
+            batcher.end();
+        };
+        return RenderableComponent;
+    }(es.Component));
+    es.RenderableComponent = RenderableComponent;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -3731,6 +3976,8 @@ var es;
                     var component = this._components[i];
                     if (!component)
                         continue;
+                    if (component instanceof es.RenderableComponent)
+                        this._entity.scene.renderableComponents.remove(component);
                     // 处理IUpdatable
                     if (es.isIUpdatable(component))
                         new es.List(this._updatableComponents).remove(component);
@@ -3743,6 +3990,8 @@ var es;
             if (this._components.length > 0) {
                 for (var i = 0, s = this._components.length; i < s; ++i) {
                     var component = this._components[i];
+                    if (component instanceof es.RenderableComponent)
+                        this._entity.scene.renderableComponents.remove(component);
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
                     this.addBits(component);
@@ -3783,6 +4032,8 @@ var es;
             if (this._componentsToAddList.length > 0) {
                 for (var i = 0, l = this._componentsToAddList.length; i < l; ++i) {
                     var component = this._componentsToAddList[i];
+                    if (component instanceof es.RenderableComponent)
+                        this._entity.scene.renderableComponents.add(component);
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
                     this.addBits(component);
@@ -3811,6 +4062,8 @@ var es;
             }
         };
         ComponentList.prototype.handleRemove = function (component) {
+            if (component instanceof es.RenderableComponent)
+                this._entity.scene.renderableComponents.remove(component);
             if (es.isIUpdatable(component) && this._updatableComponents.length > 0) {
                 var index = this._updatableComponents.findIndex(function (c) { return c.id == component.id; });
                 if (index != -1)
@@ -3920,6 +4173,13 @@ var es;
             if (this._components.length > 0) {
                 for (var i = 0, s = this._components.length; i < s; i++)
                     this._components[i].onDisabled();
+            }
+        };
+        ComponentList.prototype.debugRender = function (batcher) {
+            for (var i = 0; i < this._components.length; i++) {
+                if (this._components[i].enabled) {
+                    this._components[i].debugRender(batcher);
+                }
             }
         };
         /**
@@ -4594,6 +4854,82 @@ var es;
     }());
     es.Matcher = Matcher;
 })(es || (es = {}));
+var es;
+(function (es) {
+    var RenderableComponentList = /** @class */ (function () {
+        function RenderableComponentList() {
+            this._components = [];
+            this._componentsByRenderLayer = new Map();
+            this._unsortedRenderLayers = [];
+            this._componentsNeedSort = true;
+        }
+        Object.defineProperty(RenderableComponentList.prototype, "count", {
+            get: function () {
+                return this._components.length;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RenderableComponentList.prototype.get = function (index) {
+            return this._components[index];
+        };
+        RenderableComponentList.prototype.add = function (component) {
+            this._components.push(component);
+            this.addToRenderLayerList(component, component.renderLayer);
+        };
+        RenderableComponentList.prototype.remove = function (component) {
+            new es.List(this._components).remove(component);
+            new es.List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);
+        };
+        RenderableComponentList.prototype.updateRenderableRenderLayer = function (component, oldRenderLayer, newRenderLayer) {
+            if (this._componentsByRenderLayer.has(oldRenderLayer) && new es.List(this._componentsByRenderLayer.get(oldRenderLayer)).contains(component)) {
+                new es.List(this._componentsByRenderLayer.get(oldRenderLayer)).remove(component);
+                this.addToRenderLayerList(component, newRenderLayer);
+            }
+        };
+        RenderableComponentList.prototype.setRenderLayerNeedsComponentSort = function (renderLayer) {
+            var unsortedRenderLayersList = new es.List(this._unsortedRenderLayers);
+            if (!unsortedRenderLayersList.contains(renderLayer))
+                unsortedRenderLayersList.add(renderLayer);
+            this._componentsNeedSort = true;
+        };
+        RenderableComponentList.prototype.setNeedsComponentSort = function () {
+            this._componentsNeedSort = true;
+        };
+        RenderableComponentList.prototype.addToRenderLayerList = function (component, renderLayer) {
+            var list = this.componentsWithRenderLayer(renderLayer);
+            es.Insist.isFalse(!!list.find(function (c) { return c == component; }), "组件renderLayer列表已包含此组件");
+            list.push(component);
+            var unsortedRenderLayersList = new es.List(this._unsortedRenderLayers);
+            if (!unsortedRenderLayersList.contains(renderLayer))
+                unsortedRenderLayersList.add(renderLayer);
+            this._componentsNeedSort = true;
+        };
+        RenderableComponentList.prototype.componentsWithRenderLayer = function (renderLayer) {
+            if (!this._componentsByRenderLayer.get(renderLayer)) {
+                this._componentsByRenderLayer.set(renderLayer, []);
+            }
+            return this._componentsByRenderLayer.get(renderLayer);
+        };
+        RenderableComponentList.prototype.updateLists = function () {
+            if (this._componentsNeedSort) {
+                this._components.sort(function (self, other) { return other.renderLayer - self.renderLayer; });
+                this._componentsNeedSort = false;
+            }
+            if (this._unsortedRenderLayers.length > 0) {
+                for (var i = 0, count = this._unsortedRenderLayers.length; i < count; i++) {
+                    var renderLayerComponents = this._componentsByRenderLayer.get(this._unsortedRenderLayers[i]);
+                    if (renderLayerComponents) {
+                        renderLayerComponents.sort(function (self, other) { return other.renderLayer - self.renderLayer; });
+                    }
+                    this._unsortedRenderLayers.length = 0;
+                }
+            }
+        };
+        return RenderableComponentList;
+    }());
+    es.RenderableComponentList = RenderableComponentList;
+})(es || (es = {}));
 var StringUtils = /** @class */ (function () {
     function StringUtils() {
     }
@@ -5130,6 +5466,93 @@ var es;
         return WorkerUtils;
     }());
     es.WorkerUtils = WorkerUtils;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Graphics = /** @class */ (function () {
+        function Graphics(batcher) {
+            this.batcher = batcher;
+        }
+        return Graphics;
+    }());
+    es.Graphics = Graphics;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Color = /** @class */ (function () {
+        function Color(r, g, b, a) {
+            if (a === void 0) { a = 255; }
+            this.a = 255;
+            this.r = 255;
+            this.g = 255;
+            this.b = 255;
+            this.a = a;
+            this.r = r;
+            this.g = g;
+            this.b = b;
+        }
+        return Color;
+    }());
+    es.Color = Color;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Renderer = /** @class */ (function () {
+        function Renderer(renderOrder, camera) {
+            this.renderOrder = 0;
+            this.shouldDebugRender = true;
+            this.renderOrder = renderOrder;
+            this.camera = camera;
+        }
+        Renderer.prototype.onAddedToScene = function (scene) { };
+        Renderer.prototype.unload = function () { };
+        Renderer.prototype.beginRender = function (cam) {
+            es.Graphics.instance.batcher.begin(cam);
+        };
+        Renderer.prototype.endRender = function () {
+            es.Graphics.instance.batcher.end();
+        };
+        Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
+            renderable.render(es.Graphics.instance.batcher, cam);
+        };
+        Renderer.prototype.debugRender = function (scene) {
+            for (var i = 0; i < scene.entities.count; i++) {
+                var entity = scene.entities.buffer[i];
+                if (entity.enabled) {
+                    entity.debugRender(es.Graphics.instance.batcher);
+                }
+            }
+        };
+        return Renderer;
+    }());
+    es.Renderer = Renderer;
+})(es || (es = {}));
+///<reference path="Renderer.ts" />
+var es;
+///<reference path="Renderer.ts" />
+(function (es) {
+    var DefaultRenderer = /** @class */ (function (_super) {
+        __extends(DefaultRenderer, _super);
+        function DefaultRenderer(renderOrder, camera) {
+            if (renderOrder === void 0) { renderOrder = 0; }
+            if (camera === void 0) { camera = null; }
+            return _super.call(this, renderOrder, camera) || this;
+        }
+        DefaultRenderer.prototype.render = function (scene) {
+            var cam = this.camera ? this.camera : scene.camera;
+            this.beginRender(cam);
+            for (var i = 0; i < scene.renderableComponents.count; i++) {
+                var renderable = scene.renderableComponents.get(i);
+                if (renderable.enabled && renderable.isVisibleFromCamera(scene.camera))
+                    this.renderAfterStateCheck(renderable, cam);
+            }
+            if (this.shouldDebugRender && es.Core.debugRenderEndabled)
+                this.debugRender(scene);
+            this.endRender();
+        };
+        return DefaultRenderer;
+    }(es.Renderer));
+    es.DefaultRenderer = DefaultRenderer;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -6148,6 +6571,14 @@ var es;
             result.m22 = val1;
             return result;
         };
+        Matrix2D.createRotationOut = function (radians, result) {
+            var val1 = Math.cos(radians);
+            var val2 = Math.sin(radians);
+            result.m11 = val1;
+            result.m12 = val2;
+            result.m21 = -val2;
+            result.m22 = val1;
+        };
         /**
          * 创建一个新的缩放矩阵2D
          * @param xScale
@@ -6163,6 +6594,14 @@ var es;
             result.m32 = 0;
             return result;
         };
+        Matrix2D.createScaleOut = function (xScale, yScale, result) {
+            result.m11 = xScale;
+            result.m12 = 0;
+            result.m21 = 0;
+            result.m22 = yScale;
+            result.m31 = 0;
+            result.m32 = 0;
+        };
         /**
          * 创建一个新的平移矩阵2D
          * @param xPosition
@@ -6177,6 +6616,14 @@ var es;
             result.m31 = xPosition;
             result.m32 = yPosition;
             return result;
+        };
+        Matrix2D.createTranslationOut = function (position, result) {
+            result.m11 = 1;
+            result.m12 = 0;
+            result.m21 = 0;
+            result.m22 = 1;
+            result.m31 = position.x;
+            result.m32 = position.y;
         };
         Matrix2D.invert = function (matrix) {
             var det = 1 / matrix.determinant();
@@ -7333,6 +7780,9 @@ var es;
         Physics.clear = function () {
             this._spatialHash.clear();
         };
+        Physics.debugDraw = function (secondsToDisplay) {
+            this._spatialHash.debugDraw(secondsToDisplay);
+        };
         /**
          * 检查是否有对撞机落在一个圆形区域内。返回遇到的第一个对撞机
          * @param center
@@ -7478,7 +7928,7 @@ var es;
             return this._spatialHash.overlapRectangle(rect, results, layerMask);
         };
         /** 用于在全局范围内存储重力值的方便字段 */
-        Physics.gravity = new es.Vector2(0, 300);
+        Physics.gravity = new es.Vector2(0, -300);
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
         Physics.spatialHashCellSize = 100;
         /** 接受layerMask的所有方法的默认值 */
@@ -7600,6 +8050,20 @@ var es;
         SpatialHash.prototype.clear = function () {
             this._cellDict.clear();
         };
+        SpatialHash.prototype.debugDraw = function (secondsToDisplay) {
+            for (var x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
+                for (var y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
+                    var cell = this.cellAtPosition(x, y);
+                    if (cell != null && cell.length > 0)
+                        this.debugDrawCellDetails(x, y, secondsToDisplay);
+                }
+            }
+        };
+        SpatialHash.prototype.debugDrawCellDetails = function (x, y, secondsToDisplay) {
+            if (secondsToDisplay === void 0) { secondsToDisplay = 0.5; }
+            es.Graphics.instance.batcher.drawHollowRect(x * this._cellSize, y * this._cellSize, this._cellSize, this._cellSize, new es.Color(255, 0, 0), secondsToDisplay);
+            es.Graphics.instance.batcher.end();
+        };
         /**
          * 返回边框与单元格相交的所有对象
          * @param bounds
@@ -7667,17 +8131,17 @@ var es;
             var tDeltaY = ray.direction.y != 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
             // 开始遍历并返回交叉单元格。
             var cell = this.cellAtPosition(currentCell.x, currentCell.y);
-            if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
+            if (cell != null && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
                 this._raycastParser.reset();
                 return this._raycastParser.hitCounter;
             }
             while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
                 if (tMaxX < tMaxY) {
-                    currentCell.x = Math.trunc(es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
+                    currentCell.x = es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX));
                     tMaxX += tDeltaX;
                 }
                 else {
-                    currentCell.y = Math.trunc(es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
+                    currentCell.y = es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY));
                     tMaxY += tDeltaY;
                 }
                 cell = this.cellAtPosition(currentCell.x, currentCell.y);
@@ -8646,7 +9110,7 @@ var es;
                     // TODO: 这是得到分数的正确和最有效的方法吗?
                     // 先检查x分数。如果是NaN，就用y代替
                     var distanceFraction = (intersection.x - start.x) / (end.x - start.x);
-                    if (Number.isNaN(distanceFraction) || Number.isFinite(distanceFraction))
+                    if (Number.isNaN(distanceFraction) || Math.abs(distanceFraction) == Infinity)
                         distanceFraction = (intersection.y - start.y) / (end.y - start.y);
                     if (distanceFraction < fraction) {
                         var edge = es.Vector2.subtract(edge2, edge1);
@@ -8678,7 +9142,9 @@ var es;
             var u = (c.x * b.y - c.y * b.x) / bDotDPerp;
             if (u < 0 || u > 1)
                 return false;
-            intersection = es.Vector2.add(a1, es.Vector2.multiplyScaler(b, t));
+            var r = es.Vector2.add(a1, es.Vector2.multiplyScaler(b, t));
+            intersection.x = r.x;
+            intersection.y = r.y;
             return true;
         };
         ShapeCollisionsLine.lineToCircle = function (start, end, s, hit) {
@@ -11819,6 +12285,45 @@ var es;
                     maxY = pt.y;
             }
             return this.fromMinMaxVector(new es.Vector2(Math.trunc(minX), Math.trunc(minY)), new es.Vector2(Math.trunc(maxX), Math.trunc(maxY)));
+        };
+        RectangleExt.calculateBounds = function (rect, parentPosition, position, origin, scale, rotation, width, height) {
+            if (rotation == 0) {
+                rect.x = Math.trunc(parentPosition.x + position.x - origin.x * scale.x);
+                rect.y = Math.trunc(parentPosition.y + position.y - origin.y * scale.y);
+                rect.width = Math.trunc(width * scale.x);
+                rect.height = Math.trunc(height * scale.y);
+            }
+            else {
+                // 我们需要找到我们的绝对最小/最大值，并据此创建边界
+                var worldPosX = parentPosition.x + position.x;
+                var worldPosY = parentPosition.y + position.y;
+                var tempMat = void 0;
+                // 考虑到原点，将参考点设置为世界参考
+                var transformMatrix = es.Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
+                tempMat = es.Matrix2D.createScale(scale.x, scale.y);
+                transformMatrix = transformMatrix.multiply(tempMat);
+                tempMat = es.Matrix2D.createRotation(rotation);
+                transformMatrix = transformMatrix.multiply(tempMat);
+                tempMat = es.Matrix2D.createTranslation(worldPosX, worldPosY);
+                transformMatrix = transformMatrix.multiply(tempMat);
+                // TODO: 我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角
+                var topLeft = new es.Vector2(worldPosX, worldPosY);
+                var topRight = new es.Vector2(worldPosX + width, worldPosY);
+                var bottomLeft = new es.Vector2(worldPosX, worldPosY + height);
+                var bottomRight = new es.Vector2(worldPosX + width, worldPosY + height);
+                es.Vector2Ext.transformR(topLeft, transformMatrix, topLeft);
+                es.Vector2Ext.transformR(topRight, transformMatrix, topRight);
+                es.Vector2Ext.transformR(bottomLeft, transformMatrix, bottomLeft);
+                es.Vector2Ext.transformR(bottomRight, transformMatrix, bottomRight);
+                // 找出最小值和最大值，这样我们就可以计算出我们的边界框。
+                var minX = Math.trunc(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                var maxX = Math.trunc(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                var minY = Math.trunc(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                var maxY = Math.trunc(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                rect.location = new es.Vector2(minX, minY);
+                rect.width = Math.trunc(maxX - minX);
+                rect.height = Math.trunc(maxY - minY);
+            }
         };
         /**
          * 缩放矩形

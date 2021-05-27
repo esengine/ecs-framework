@@ -116,19 +116,31 @@ module es {
             return this;
         }
 
+        public setVelocity(velocity: Vector2): ArcadeRigidbody {
+            this.velocity = velocity;
+            return this;
+        }
+
         /**
          * 用刚体的质量给刚体加上一个瞬间的力脉冲。力是一个加速度，单位是每秒像素每秒。将力乘以100000，使数值使用更合理
          * @param force 
          */
         public addImpulse(force: Vector2) {
             if (!this.isImmovable) {
-                this.velocity = this.velocity.add(Vector2.multiplyScaler(force, 100000)
+                this.velocity.add(Vector2.multiplyScaler(force, 100000)
                     .multiplyScaler(this._inverseMass * Time.deltaTime * Time.deltaTime));
             }
         }
 
         public onAddedToEntity() {
-            this._collider = this.entity.getComponent(es.Collider);
+            this._collider = null;
+            for (let i = 0; i < this.entity.components.buffer.length; i++) {
+                let component = this.entity.components.buffer[i];
+                if (component instanceof Collider) {
+                    this._collider = component;
+                    break;
+                }
+            }
             Debug.warnIf(this._collider == null, "ArcadeRigidbody 没有 Collider。ArcadeRigidbody需要一个Collider!");
         }
 
@@ -139,9 +151,9 @@ module es {
             }
 
             if (this.shouldUseGravity)
-                this.velocity = this.velocity.add(Vector2.multiplyScaler(Physics.gravity, Time.deltaTime));
+                this.velocity.add(Vector2.multiplyScaler(Physics.gravity, Time.deltaTime));
 
-            this.entity.transform.position = this.entity.transform.position.add(Vector2.multiplyScaler(this.velocity, Time.deltaTime));
+            this.entity.position = this.entity.position.add(Vector2.multiplyScaler(this.velocity, Time.deltaTime));
             let collisionResult = new CollisionResult();
 
             // 捞取我们在新的位置上可能会碰撞到的任何东西
@@ -160,10 +172,10 @@ module es {
                         this.processCollision(neighborRigidbody, collisionResult.minimumTranslationVector);
                     } else {
                         // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                        this.entity.transform.position = this.entity.transform.position.subtract(collisionResult.minimumTranslationVector);
+                        this.entity.position = this.entity.position.subtract(collisionResult.minimumTranslationVector);
                         let relativeVelocity = this.velocity.clone();
                         this.calculateResponseVelocity(relativeVelocity, collisionResult.minimumTranslationVector, relativeVelocity);
-                        this.velocity = this.velocity.add(relativeVelocity);
+                        this.velocity.add(relativeVelocity);
                     }
                 }
             }
@@ -176,12 +188,12 @@ module es {
          */
         public processOverlap(other: ArcadeRigidbody, minimumTranslationVector: Vector2) {
             if (this.isImmovable) {
-                other.entity.transform.position = other.entity.transform.position.add(minimumTranslationVector);
+                other.entity.position = other.entity.position.add(minimumTranslationVector);
             } else if (other.isImmovable) {
-                this.entity.transform.position = this.entity.transform.position.subtract(minimumTranslationVector);
+                this.entity.position = this.entity.position.subtract(minimumTranslationVector);
             } else {
-                this.entity.transform.position = this.entity.transform.position.subtract(Vector2.multiplyScaler(minimumTranslationVector, 0.5));
-                other.entity.transform.position = other.entity.transform.position.add(Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                this.entity.position = this.entity.position.subtract(Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                other.entity.position = other.entity.position.add(Vector2.multiplyScaler(minimumTranslationVector, 0.5));
             }
         }
 
@@ -203,8 +215,8 @@ module es {
             let ourResponseFraction = this._inverseMass / totalinverseMass;
             let otherResponseFraction = other._inverseMass / totalinverseMass;
 
-            this.velocity = this.velocity.add(Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
-            other.velocity = other.velocity.subtract(Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
+            this.velocity.add(Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
+            other.velocity.subtract(Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
         }
 
         /**
@@ -234,8 +246,10 @@ module es {
                 coefficientOfFriction = 1.01;
 
             // 弹性影响速度的法向分量，摩擦力影响速度的切向分量
-            responseVelocity = Vector2.multiplyScaler(normalVelocityComponent, -(1 + this._elasticity))
+            let r =  Vector2.multiplyScaler(normalVelocityComponent, -(1 + this._elasticity))
                 .subtract(Vector2.multiplyScaler(tangentialVelocityComponent, coefficientOfFriction));
+            responseVelocity.x = r.x;
+            responseVelocity.y = r.y;
         }
     }
 }

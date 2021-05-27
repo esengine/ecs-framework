@@ -109,6 +109,16 @@ module es {
             return result;
         }
 
+        public static createRotationOut(radians: number, result: Matrix2D) {
+            let val1 = Math.cos(radians);
+            let val2 = Math.sin(radians);
+
+            result.m11 = val1;
+            result.m12 = val2;
+            result.m21 = -val2;
+            result.m22 = val1;
+        }
+
         /**
          * 创建一个新的缩放矩阵2D
          * @param xScale 
@@ -128,6 +138,17 @@ module es {
             return result;
         }
 
+        public static createScaleOut(xScale: number, yScale: number, result: Matrix2D) {
+            result.m11 = xScale;
+            result.m12 = 0;
+
+            result.m21 = 0;
+            result.m22 = yScale;
+
+            result.m31 = 0;
+            result.m32 = 0;
+        }
+
         /**
          * 创建一个新的平移矩阵2D
          * @param xPosition 
@@ -145,6 +166,17 @@ module es {
             result.m32 = yPosition;
 
             return result;
+        }
+
+        public static createTranslationOut(position: Vector2, result: Matrix2D) {
+            result.m11 = 1;
+            result.m12 = 0;
+
+            result.m21 = 0;
+            result.m22 = 1;
+
+            result.m31 = position.x;
+            result.m32 = position.y;
         }
 
         public static invert(matrix: Matrix2D) {

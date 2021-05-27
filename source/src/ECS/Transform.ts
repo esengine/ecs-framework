@@ -106,7 +106,7 @@ module es {
 
         public get worldToLocalTransform(): Matrix2D {
             if (this._worldToLocalDirty) {
-                if (!this.parent) {
+                if (this.parent == null) {
                     this._worldToLocalTransform = Matrix2D.identity;
                 } else {
                     this.parent.updateTransform();
@@ -267,13 +267,13 @@ module es {
                 return this;
 
             if (this._parent != null) {
-                let children = new es.List(this._parent._children);
-                children.remove(this);
+                const index = this._parent._children.findIndex(t => t == this);
+                if (index != -1)
+                    this._parent._children.splice(index, 1);
             }
 
             if (parent != null) {
-                let children = new es.List(parent._children);
-                children.add(this);
+                parent._children.push(this);
             }
 
             this._parent = parent;
@@ -294,7 +294,7 @@ module es {
 
             this._position = position;
             if (this.parent != null) {
-                this.localPosition = Vector2.transform(this._position, this._worldToLocalTransform);
+                this.localPosition = Vector2.transform(this._position, this.worldToLocalTransform);
             } else {
                 this.localPosition = position;
             }
@@ -325,7 +325,7 @@ module es {
          */
         public setRotation(radians: number): Transform {
             this._rotation = radians;
-            if (this.parent) {
+            if (this.parent != null) {
                 this.localRotation = this.parent.rotation + radians;
             } else {
                 this.localRotation = radians;
@@ -378,7 +378,7 @@ module es {
          */
         public setScale(scale: Vector2): Transform {
             this._scale = scale;
-            if (this.parent) {
+            if (this.parent != null) {
                 this.localScale = Vector2.divide(scale, this.parent._scale);
             } else {
                 this.localScale = scale;
