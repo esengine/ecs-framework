@@ -5536,13 +5536,13 @@ var es;
             renderable.render(es.Graphics.instance.batcher, cam);
         };
         Renderer.prototype.debugRender = function (scene) {
+            es.Physics.debugDraw(2);
             for (var i = 0; i < scene.entities.count; i++) {
                 var entity = scene.entities.buffer[i];
                 if (entity.enabled) {
                     entity.debugRender(es.Graphics.instance.batcher);
                 }
             }
-            es.Physics.debugDraw(2);
         };
         return Renderer;
     }());
@@ -8192,8 +8192,10 @@ var es;
                 for (var potentials_1 = __values(potentials), potentials_1_1 = potentials_1.next(); !potentials_1_1.done; potentials_1_1 = potentials_1.next()) {
                     var collider = potentials_1_1.value;
                     if (collider instanceof es.BoxCollider) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
+                        if (collider.shape.overlaps(this._overlapTestCircle)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
                     }
                     else if (collider instanceof es.CircleCollider) {
                         if (es.Collisions.rectToCircle(rect, collider.bounds.center, collider.bounds.width * 0.5)) {

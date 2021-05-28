@@ -28,14 +28,14 @@ module es {
         }
     
         protected debugRender(scene: Scene) {
+            es.Physics.debugDraw(2);
+            
             for (let i = 0; i < scene.entities.count; i ++) {
                 let entity = scene.entities.buffer[i];
                 if (entity.enabled) {
                     entity.debugRender(Graphics.instance.batcher);
                 }
             }
-
-            es.Physics.debugDraw(2);
         }
     }
 }
