@@ -948,6 +948,8 @@ var es;
             this.components.update();
         };
         Entity.prototype.debugRender = function (batcher) {
+            if (!batcher)
+                return;
             this.components.debugRender(batcher);
         };
         /**
@@ -4196,6 +4198,8 @@ var es;
             }
         };
         ComponentList.prototype.debugRender = function (batcher) {
+            if (!batcher)
+                return;
             for (var i = 0; i < this._components.length; i++) {
                 if (this._components[i].enabled) {
                     this._components[i].debugRender(batcher);
@@ -5527,15 +5531,23 @@ var es;
         Renderer.prototype.onAddedToScene = function (scene) { };
         Renderer.prototype.unload = function () { };
         Renderer.prototype.beginRender = function (cam) {
+            if (!es.Graphics.instance)
+                return;
             es.Graphics.instance.batcher.begin(cam);
         };
         Renderer.prototype.endRender = function () {
+            if (!es.Graphics.instance)
+                return;
             es.Graphics.instance.batcher.end();
         };
         Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
+            if (!es.Graphics.instance)
+                return;
             renderable.render(es.Graphics.instance.batcher, cam);
         };
         Renderer.prototype.debugRender = function (scene) {
+            if (!es.Graphics.instance)
+                return;
             es.Physics.debugDraw(2);
             for (var i = 0; i < scene.entities.count; i++) {
                 var entity = scene.entities.buffer[i];

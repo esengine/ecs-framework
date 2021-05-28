@@ -327,6 +327,7 @@ module es {
         }
 
         public debugRender(batcher: IBatcher) {
+            if (!batcher) return;
             for (let i = 0; i < this._components.length; i ++) {
                 if (this._components[i].enabled) {
                     this._components[i].debugRender(batcher);

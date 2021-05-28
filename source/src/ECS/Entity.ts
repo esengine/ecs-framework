@@ -377,6 +377,7 @@ module es {
         }
 
         public debugRender(batcher: IBatcher) {
+            if (!batcher) return;
             this.components.debugRender(batcher);
         }
 
