@@ -231,10 +231,8 @@ module es {
             let potentials = this.aabbBroadphase(rect, null, layerMask);
             for (let collider of potentials) {
                 if (collider instanceof BoxCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)) {
-                        results[resultCounter] = collider;
-                        resultCounter ++;
-                    }
+                    results[resultCounter] = collider;
+                    resultCounter ++;
                 } else if(collider instanceof CircleCollider) {
                     if (Collisions.rectToCircle(rect, collider.bounds.center, collider.bounds.width * 0.5)) {
                         results[resultCounter] = collider;
@@ -273,8 +271,10 @@ module es {
             let potentials = this.aabbBroadphase(bounds, null, layerMask);
             for (let collider of potentials) {
                 if (collider instanceof BoxCollider) {
-                    results[resultCounter] = collider;
-                    resultCounter++;
+                    if (collider.shape.overlaps(this._overlapTestCircle)) {
+                        results[resultCounter] = collider;
+                        resultCounter++;
+                    }
                 } else if (collider instanceof CircleCollider) {
                     if (collider.shape.overlaps(this._overlapTestCircle)) {
                         results[resultCounter] = collider;

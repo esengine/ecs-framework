@@ -8192,10 +8192,8 @@ var es;
                 for (var potentials_1 = __values(potentials), potentials_1_1 = potentials_1.next(); !potentials_1_1.done; potentials_1_1 = potentials_1.next()) {
                     var collider = potentials_1_1.value;
                     if (collider instanceof es.BoxCollider) {
-                        if (collider.shape.overlaps(this._overlapTestCircle)) {
-                            results[resultCounter] = collider;
-                            resultCounter++;
-                        }
+                        results[resultCounter] = collider;
+                        resultCounter++;
                     }
                     else if (collider instanceof es.CircleCollider) {
                         if (es.Collisions.rectToCircle(rect, collider.bounds.center, collider.bounds.width * 0.5)) {
@@ -8243,8 +8241,10 @@ var es;
                 for (var potentials_2 = __values(potentials), potentials_2_1 = potentials_2.next(); !potentials_2_1.done; potentials_2_1 = potentials_2.next()) {
                     var collider = potentials_2_1.value;
                     if (collider instanceof es.BoxCollider) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
+                        if (collider.shape.overlaps(this._overlapTestCircle)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
                     }
                     else if (collider instanceof es.CircleCollider) {
                         if (collider.shape.overlaps(this._overlapTestCircle)) {
