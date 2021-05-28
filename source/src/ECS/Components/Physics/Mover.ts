@@ -32,7 +32,13 @@ module es {
             }
 
             // 移动所有的非触发碰撞器并获得最近的碰撞
-            let colliders: Collider[] = this.entity.getComponents(Collider);
+            let colliders: Collider[] = [];
+            for (let i = 0; i < this.entity.components.buffer.length; i ++) {
+                let component = this.entity.components.buffer[i];
+                if (component instanceof Collider) {
+                    colliders.push(component);
+                }
+            }
             for (let i = 0; i < colliders.length; i++) {
                 let collider = colliders[i];
 
@@ -46,8 +52,7 @@ module es {
                 bounds.y += motion.y;
                 let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
 
-                neighbors.forEach(value => {
-                    let neighbor = value;
+                for (let neighbor of neighbors) {
                     // 不检测触发器
                     if (neighbor.isTrigger)
                         return;
@@ -62,7 +67,7 @@ module es {
                             collisionResult = _internalcollisionResult;
                         }
                     }
-                });
+                }
             }
 
             ListPool.free(colliders);
