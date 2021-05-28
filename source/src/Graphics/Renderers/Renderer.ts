@@ -34,6 +34,8 @@ module es {
                     entity.debugRender(Graphics.instance.batcher);
                 }
             }
+
+            es.Physics.debugDraw(2);
         }
     }
 }

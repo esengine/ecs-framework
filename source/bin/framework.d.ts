@@ -3392,12 +3392,8 @@ declare module es {
          */
         cellAtPosition(x: number, y: number, createCellIfEmpty?: boolean): Collider[];
     }
-    /**
-     * 包装一个Unit32，列表碰撞器字典
-     * 它的主要目的是将int、int x、y坐标散列到单个Uint32键中，使用O(1)查找。
-     */
     class NumberDictionary {
-        _store: Map<number, Collider[]>;
+        _store: Map<string, Collider[]>;
         add(x: number, y: number, list: Collider[]): void;
         /**
          * 使用蛮力方法从字典存储列表中移除碰撞器
@@ -3405,7 +3401,7 @@ declare module es {
          */
         remove(obj: Collider): void;
         tryGetValue(x: number, y: number): Collider[];
-        getKey(x: number, y: number): number;
+        getKey(x: number, y: number): string;
         /**
          * 清除字典数据
          */

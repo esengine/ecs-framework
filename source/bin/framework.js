@@ -5542,6 +5542,7 @@ var es;
                     entity.debugRender(es.Graphics.instance.batcher);
                 }
             }
+            es.Physics.debugDraw(2);
         };
         return Renderer;
     }());
@@ -5566,8 +5567,9 @@ var es;
                 if (renderable.enabled && renderable.isVisibleFromCamera(scene.camera))
                     this.renderAfterStateCheck(renderable, cam);
             }
-            if (this.shouldDebugRender && es.Core.debugRenderEndabled)
+            if (this.shouldDebugRender && es.Core.debugRenderEndabled) {
                 this.debugRender(scene);
+            }
             this.endRender();
         };
         return DefaultRenderer;
@@ -8300,10 +8302,6 @@ var es;
         return SpatialHash;
     }());
     es.SpatialHash = SpatialHash;
-    /**
-     * 包装一个Unit32，列表碰撞器字典
-     * 它的主要目的是将int、int x、y坐标散列到单个Uint32键中，使用O(1)查找。
-     */
     var NumberDictionary = /** @class */ (function () {
         function NumberDictionary() {
             this._store = new Map();
@@ -8326,7 +8324,7 @@ var es;
             return this._store.get(this.getKey(x, y));
         };
         NumberDictionary.prototype.getKey = function (x, y) {
-            return x << 16 | (y >>> 0);
+            return x + "_" + y;
         };
         /**
          * 清除字典数据
