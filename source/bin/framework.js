@@ -1705,6 +1705,10 @@ var es;
     var Transform = /** @class */ (function () {
         function Transform(entity) {
             /**
+             * 值会根据位置、旋转和比例自动重新计算
+             */
+            this._localTransform = es.Matrix2D.identity;
+            /**
              * 值将自动从本地和父矩阵重新计算。
              */
             this._worldTransform = es.Matrix2D.identity;
@@ -2090,8 +2094,8 @@ var es;
                         this._scaleMatrix = es.Matrix2D.createScale(this._localScale.x, this._localScale.y);
                         this._localScaleDirty = false;
                     }
-                    this._localTransform = this._scaleMatrix.multiply(this._rotationMatrix);
-                    this._localTransform = this._localTransform.multiply(this._translationMatrix);
+                    es.Matrix2D.multiply(this._scaleMatrix, this._rotationMatrix, this._localTransform);
+                    es.Matrix2D.multiply(this._localTransform, this._translationMatrix, this._localTransform);
                     if (this.parent == null) {
                         this._worldTransform = this._localTransform;
                         this._rotation = this._localRotation;
@@ -2101,7 +2105,7 @@ var es;
                     this._localDirty = false;
                 }
                 if (this.parent != null) {
-                    this._worldTransform = this._localTransform.multiply(this.parent._worldTransform);
+                    es.Matrix2D.multiply(this._localTransform, this.parent._worldTransform, this._worldTransform);
                     this._rotation = this._localRotation + this.parent._rotation;
                     this._scale = es.Vector2.multiply(this.parent._scale, this._localScale);
                     this._worldInverseDirty = true;
@@ -2135,8 +2139,8 @@ var es;
          * @param transform
          */
         Transform.prototype.copyFrom = function (transform) {
-            this._position = transform.position;
-            this._localPosition = transform._localPosition;
+            this._position = transform.position.clone();
+            this._localPosition = transform._localPosition.clone();
             this._rotation = transform._rotation;
             this._localRotation = transform._localRotation;
             this._scale = transform._scale;
@@ -2384,7 +2388,7 @@ var es;
          */
         ArcadeRigidbody.prototype.addImpulse = function (force) {
             if (!this.isImmovable) {
-                this.velocity.add(es.Vector2.multiplyScaler(force, 100000)
+                this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiplyScaler(force, 100000)
                     .multiplyScaler(this._inverseMass * es.Time.deltaTime * es.Time.deltaTime));
             }
         };
@@ -2406,8 +2410,8 @@ var es;
                 return;
             }
             if (this.shouldUseGravity)
-                this.velocity.add(es.Vector2.multiplyScaler(es.Physics.gravity, es.Time.deltaTime));
-            this.entity.position = this.entity.position.add(es.Vector2.multiplyScaler(this.velocity, es.Time.deltaTime));
+                this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiplyScaler(es.Physics.gravity, es.Time.deltaTime));
+            this.entity.position = es.Vector2.add(this.entity.position, es.Vector2.multiplyScaler(this.velocity, es.Time.deltaTime));
             var collisionResult = new es.CollisionResult();
             // 捞取我们在新的位置上可能会碰撞到的任何东西
             var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this._collider, this._collider.collidesWithLayers.value);
@@ -2427,7 +2431,7 @@ var es;
                         }
                         else {
                             // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                            this.entity.position = this.entity.position.subtract(collisionResult.minimumTranslationVector);
+                            this.entity.position = es.Vector2.subtract(this.entity.position, collisionResult.minimumTranslationVector);
                             var relativeVelocity = this.velocity.clone();
                             this.calculateResponseVelocity(relativeVelocity, collisionResult.minimumTranslationVector, relativeVelocity);
                             this.velocity.add(relativeVelocity);
@@ -2450,14 +2454,14 @@ var es;
          */
         ArcadeRigidbody.prototype.processOverlap = function (other, minimumTranslationVector) {
             if (this.isImmovable) {
-                other.entity.position = other.entity.position.add(minimumTranslationVector);
+                other.entity.position = es.Vector2.add(other.entity.position, minimumTranslationVector);
             }
             else if (other.isImmovable) {
-                this.entity.position = this.entity.position.subtract(minimumTranslationVector);
+                other.entity.position = es.Vector2.subtract(other.entity.position, minimumTranslationVector);
             }
             else {
-                this.entity.position = this.entity.position.subtract(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
-                other.entity.position = other.entity.position.add(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                this.entity.position = es.Vector2.subtract(this.entity.position, es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                other.entity.position = es.Vector2.add(other.entity.position, es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
             }
         };
         /**
@@ -2475,8 +2479,8 @@ var es;
             var totalinverseMass = this._inverseMass + other._inverseMass;
             var ourResponseFraction = this._inverseMass / totalinverseMass;
             var otherResponseFraction = other._inverseMass / totalinverseMass;
-            this.velocity.add(es.Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
-            other.velocity.subtract(es.Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
+            this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
+            other.velocity = es.Vector2.subtract(other.velocity, es.Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
         };
         /**
          *  给定两个物体和MTV之间的相对速度，本方法修改相对速度，使其成为碰撞响应
@@ -2769,10 +2773,10 @@ var es;
         });
         Object.defineProperty(Collider.prototype, "bounds", {
             get: function () {
-                // if (this._isPositionDirty || this._isRotationDirty) {
-                this.shape.recalculateBounds(this);
-                // this._isPositionDirty = this._isRotationDirty = false;
-                // }
+                if (this._isPositionDirty || this._isRotationDirty) {
+                    this.shape.recalculateBounds(this);
+                    this._isPositionDirty = this._isRotationDirty = false;
+                }
                 return this.shape.bounds;
             },
             enumerable: true,
@@ -2916,7 +2920,7 @@ var es;
             if (didCollide)
                 result.collider = collider;
             // 将图形位置返回到检查前的位置
-            this.entity.position = oldPosition;
+            this.entity.position = oldPosition.clone();
             return didCollide;
         };
         /**
@@ -2969,7 +2973,7 @@ var es;
                 finally { if (e_4) throw e_4.error; }
             }
             // 将形状位置返回到检查之前的位置 
-            this.shape.position = oldPosition;
+            this.shape.position = oldPosition.clone();
             return didCollide;
         };
         /**
@@ -7837,7 +7841,7 @@ var es;
          */
         Physics.boxcastBroadphaseExcludingSelfNonRect = function (collider, layerMask) {
             if (layerMask === void 0) { layerMask = this.allLayers; }
-            var bounds = collider.bounds.clone();
+            var bounds = collider.bounds;
             return this._spatialHash.aabbBroadphase(bounds, collider, layerMask);
         };
         /**
@@ -7849,7 +7853,7 @@ var es;
          */
         Physics.boxcastBroadphaseExcludingSelfDelta = function (collider, deltaX, deltaY, layerMask) {
             if (layerMask === void 0) { layerMask = Physics.allLayers; }
-            var colliderBounds = collider.bounds.clone();
+            var colliderBounds = collider.bounds;
             var sweptBounds = colliderBounds.getSweptBroadphaseBounds(deltaX, deltaY);
             return this._spatialHash.aabbBroadphase(sweptBounds, collider, layerMask);
         };
@@ -8163,7 +8167,7 @@ var es;
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
             var e_8, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
-            this._overlapTestBox.position = rect.location;
+            this._overlapTestBox.position = rect.location.clone();
             var resultCounter = 0;
             var potentials = this.aabbBroadphase(rect, null, layerMask);
             try {
@@ -8212,7 +8216,7 @@ var es;
             var e_9, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
-            this._overlapTestCircle.position = circleCenter;
+            this._overlapTestCircle.position = circleCenter.clone();
             var resultCounter = 0;
             var potentials = this.aabbBroadphase(bounds, null, layerMask);
             try {

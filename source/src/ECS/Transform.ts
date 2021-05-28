@@ -28,7 +28,7 @@ module es {
         /**
          * 值会根据位置、旋转和比例自动重新计算
          */
-        public _localTransform: Matrix2D;
+        public _localTransform: Matrix2D = Matrix2D.identity;
         /**
          * 值将自动从本地和父矩阵重新计算。
          */
@@ -426,8 +426,8 @@ module es {
                         this._localScaleDirty = false;
                     }
 
-                    this._localTransform = this._scaleMatrix.multiply(this._rotationMatrix);
-                    this._localTransform = this._localTransform.multiply(this._translationMatrix);
+                    es.Matrix2D.multiply(this._scaleMatrix, this._rotationMatrix, this._localTransform);
+                    es.Matrix2D.multiply(this._localTransform, this._translationMatrix, this._localTransform);
 
                     if (this.parent == null) {
                         this._worldTransform = this._localTransform;
@@ -440,8 +440,7 @@ module es {
                 }
 
                 if (this.parent != null) {
-                    this._worldTransform = this._localTransform.multiply(this.parent._worldTransform);
-
+                    es.Matrix2D.multiply(this._localTransform, this.parent._worldTransform, this._worldTransform);
                     this._rotation = this._localRotation + this.parent._rotation;
                     this._scale = Vector2.multiply(this.parent._scale, this._localScale);
                     this._worldInverseDirty = true;
@@ -480,8 +479,8 @@ module es {
          * @param transform
          */
         public copyFrom(transform: Transform) {
-            this._position = transform.position;
-            this._localPosition = transform._localPosition;
+            this._position = transform.position.clone();
+            this._localPosition = transform._localPosition.clone();
             this._rotation = transform._rotation;
             this._localRotation = transform._localRotation;
             this._scale = transform._scale;

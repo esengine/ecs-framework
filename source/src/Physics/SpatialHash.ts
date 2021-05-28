@@ -225,7 +225,7 @@ module es {
          */
         public overlapRectangle(rect: Rectangle, results: Collider[], layerMask: number) {
             this._overlapTestBox.updateBox(rect.width, rect.height);
-            this._overlapTestBox.position = rect.location;
+            this._overlapTestBox.position = rect.location.clone();
 
             let resultCounter = 0;
             let potentials = this.aabbBroadphase(rect, null, layerMask);
@@ -265,7 +265,7 @@ module es {
             let bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
 
             this._overlapTestCircle.radius = radius;
-            this._overlapTestCircle.position = circleCenter;
+            this._overlapTestCircle.position = circleCenter.clone();
 
             let resultCounter = 0;
             let potentials = this.aabbBroadphase(bounds, null, layerMask);

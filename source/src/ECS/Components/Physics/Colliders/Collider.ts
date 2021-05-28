@@ -59,10 +59,10 @@ module es {
         }
 
         public get bounds(): Rectangle {
-            // if (this._isPositionDirty || this._isRotationDirty) {
+            if (this._isPositionDirty || this._isRotationDirty) {
                 this.shape.recalculateBounds(this);
-                // this._isPositionDirty = this._isRotationDirty = false;
-            // }
+                this._isPositionDirty = this._isRotationDirty = false;
+            }
 
             return this.shape.bounds;
         }
@@ -221,7 +221,7 @@ module es {
                 result.collider = collider;
 
             // 将图形位置返回到检查前的位置
-            this.entity.position = oldPosition;
+            this.entity.position = oldPosition.clone();
 
             return didCollide;
         }
@@ -270,7 +270,7 @@ module es {
             }
 
             // 将形状位置返回到检查之前的位置 
-            this.shape.position = oldPosition;
+            this.shape.position = oldPosition.clone();
 
             return didCollide;
         }

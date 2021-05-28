@@ -127,7 +127,7 @@ module es {
          */
         public addImpulse(force: Vector2) {
             if (!this.isImmovable) {
-                this.velocity.add(Vector2.multiplyScaler(force, 100000)
+                this.velocity = Vector2.add(this.velocity, Vector2.multiplyScaler(force, 100000)
                     .multiplyScaler(this._inverseMass * Time.deltaTime * Time.deltaTime));
             }
         }
@@ -151,9 +151,9 @@ module es {
             }
 
             if (this.shouldUseGravity)
-                this.velocity.add(Vector2.multiplyScaler(Physics.gravity, Time.deltaTime));
+                this.velocity = Vector2.add(this.velocity, Vector2.multiplyScaler(Physics.gravity, Time.deltaTime));
 
-            this.entity.position = this.entity.position.add(Vector2.multiplyScaler(this.velocity, Time.deltaTime));
+            this.entity.position = Vector2.add(this.entity.position, Vector2.multiplyScaler(this.velocity, Time.deltaTime));
             let collisionResult = new CollisionResult();
 
             // 捞取我们在新的位置上可能会碰撞到的任何东西
@@ -172,7 +172,7 @@ module es {
                         this.processCollision(neighborRigidbody, collisionResult.minimumTranslationVector);
                     } else {
                         // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                        this.entity.position = this.entity.position.subtract(collisionResult.minimumTranslationVector);
+                        this.entity.position = Vector2.subtract(this.entity.position, collisionResult.minimumTranslationVector);
                         let relativeVelocity = this.velocity.clone();
                         this.calculateResponseVelocity(relativeVelocity, collisionResult.minimumTranslationVector, relativeVelocity);
                         this.velocity.add(relativeVelocity);
@@ -188,12 +188,12 @@ module es {
          */
         public processOverlap(other: ArcadeRigidbody, minimumTranslationVector: Vector2) {
             if (this.isImmovable) {
-                other.entity.position = other.entity.position.add(minimumTranslationVector);
+                other.entity.position = Vector2.add(other.entity.position, minimumTranslationVector);
             } else if (other.isImmovable) {
-                this.entity.position = this.entity.position.subtract(minimumTranslationVector);
+                other.entity.position = Vector2.subtract(other.entity.position, minimumTranslationVector);
             } else {
-                this.entity.position = this.entity.position.subtract(Vector2.multiplyScaler(minimumTranslationVector, 0.5));
-                other.entity.position = other.entity.position.add(Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                this.entity.position = Vector2.subtract(this.entity.position, Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                other.entity.position = Vector2.add(other.entity.position, Vector2.multiplyScaler(minimumTranslationVector, 0.5));
             }
         }
 
@@ -215,8 +215,8 @@ module es {
             let ourResponseFraction = this._inverseMass / totalinverseMass;
             let otherResponseFraction = other._inverseMass / totalinverseMass;
 
-            this.velocity.add(Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
-            other.velocity.subtract(Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
+            this.velocity = Vector2.add(this.velocity, Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
+            other.velocity = Vector2.subtract(other.velocity, Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
         }
 
         /**
