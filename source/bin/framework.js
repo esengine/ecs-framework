@@ -585,6 +585,10 @@ var es;
          * 每帧更新事件
          */
         CoreEvents[CoreEvents["frameUpdated"] = 1] = "frameUpdated";
+        /**
+         * 当渲染发生时触发
+         */
+        CoreEvents[CoreEvents["renderChanged"] = 2] = "renderChanged";
     })(CoreEvents = es.CoreEvents || (es.CoreEvents = {}));
 })(es || (es = {}));
 var es;
@@ -5525,8 +5529,10 @@ var es;
         function Renderer(renderOrder, camera) {
             this.renderOrder = 0;
             this.shouldDebugRender = true;
+            this.renderDirty = true;
             this.renderOrder = renderOrder;
             this.camera = camera;
+            es.Core.emitter.addObserver(es.CoreEvents.renderChanged, this.onRenderChanged, this);
         }
         Renderer.prototype.onAddedToScene = function (scene) { };
         Renderer.prototype.unload = function () { };
@@ -5539,6 +5545,9 @@ var es;
             if (!es.Graphics.instance)
                 return;
             es.Graphics.instance.batcher.end();
+        };
+        Renderer.prototype.onRenderChanged = function () {
+            this.renderDirty = true;
         };
         Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
             if (!es.Graphics.instance)
@@ -5572,6 +5581,9 @@ var es;
             return _super.call(this, renderOrder, camera) || this;
         }
         DefaultRenderer.prototype.render = function (scene) {
+            if (!this.renderDirty)
+                return;
+            this.renderDirty = false;
             var cam = this.camera ? this.camera : scene.camera;
             this.beginRender(cam);
             for (var i = 0; i < scene.renderableComponents.count; i++) {
@@ -6205,6 +6217,15 @@ var es;
             return this.repeat(this.approach(start, start + deltaAngle, shift), 360);
         };
         /**
+         * 将此 Vector 投影到另一个 Vector 上
+         * @param other
+         */
+        MathHelper.project = function (self, other) {
+            var amt = es.Vector2.dot(self, other) / other.lengthSquared();
+            var vec = new es.Vector2(amt * other.x, amt * other.y);
+            return vec;
+        };
+        /**
          * 通过将偏移量（全部以弧度为单位）夹住结果并选择最短路径，起始角度朝向终止角度。
          * 起始值可以小于或大于终止值。
          * 此方法的工作方式与“角度”方法非常相似，唯一的区别是使用弧度代替度，并以2 * Pi代替360。
@@ -6419,8 +6440,31 @@ var es;
      * 代表右手4x4浮点矩阵，可以存储平移、比例和旋转信息
      */
     var Matrix = /** @class */ (function () {
-        function Matrix() {
+        function Matrix(m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44) {
+            this.m11 = m11;
+            this.m12 = m12;
+            this.m13 = m13;
+            this.m14 = m14;
+            this.m21 = m21;
+            this.m22 = m22;
+            this.m23 = m23;
+            this.m24 = m24;
+            this.m31 = m31;
+            this.m32 = m32;
+            this.m33 = m33;
+            this.m34 = m34;
+            this.m41 = m41;
+            this.m42 = m42;
+            this.m43 = m43;
+            this.m44 = m44;
         }
+        Object.defineProperty(Matrix, "Identity", {
+            get: function () {
+                return this.identity;
+            },
+            enumerable: true,
+            configurable: true
+        });
         /**
          * 为自定义的正交视图创建一个新的投影矩阵
          * @param left
@@ -6447,6 +6491,33 @@ var es;
             result.m42 = (top + bottom) / (bottom - top);
             result.m43 = zNearPlane / (zNearPlane - zFarPlane);
             result.m44 = 1;
+        };
+        Matrix.createTranslation = function (position, result) {
+            result.m11 = 1;
+            result.m12 = 0;
+            result.m13 = 0;
+            result.m14 = 0;
+            result.m21 = 0;
+            result.m22 = 1;
+            result.m23 = 0;
+            result.m24 = 0;
+            result.m31 = 0;
+            result.m32 = 0;
+            result.m33 = 1;
+            result.m34 = 0;
+            result.m41 = position.x;
+            result.m42 = position.y;
+            result.m43 = 0;
+            result.m44 = 1;
+        };
+        Matrix.createRotationZ = function (radians, result) {
+            result = Matrix.Identity;
+            var val1 = Math.cos(radians);
+            var val2 = Math.sin(radians);
+            result.m11 = val1;
+            result.m12 = val2;
+            result.m21 = -val2;
+            result.m22 = val1;
         };
         /**
          * 创建一个新的矩阵，其中包含两个矩阵的乘法。
@@ -6489,6 +6560,7 @@ var es;
             result.m43 = m43;
             result.m44 = m44;
         };
+        Matrix.identity = new Matrix(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
         return Matrix;
     }());
     es.Matrix = Matrix;
@@ -7815,7 +7887,8 @@ var es;
             this._spatialHash.clear();
         };
         Physics.debugDraw = function (secondsToDisplay) {
-            this._spatialHash.debugDraw(secondsToDisplay);
+            if (this.debugRender)
+                this._spatialHash.debugDraw(secondsToDisplay);
         };
         /**
          * 检查是否有对撞机落在一个圆形区域内。返回遇到的第一个对撞机
@@ -7975,6 +8048,7 @@ var es;
          * 在碰撞器中开始的射线/直线是否强制转换检测到那些碰撞器
          */
         Physics.raycastsStartInColliders = false;
+        Physics.debugRender = false;
         /**
          * 我们保留它以避免在每次raycast发生时分配它
          */

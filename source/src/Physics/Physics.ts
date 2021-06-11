@@ -16,6 +16,7 @@ module es {
          * 在碰撞器中开始的射线/直线是否强制转换检测到那些碰撞器
          */
         public static raycastsStartInColliders = false;
+        public static debugRender: boolean = false;
         /**
          * 我们保留它以避免在每次raycast发生时分配它
          */
@@ -43,7 +44,8 @@ module es {
         }
 
         public static debugDraw(secondsToDisplay) {
-            this._spatialHash.debugDraw(secondsToDisplay);
+            if (this.debugRender)
+                this._spatialHash.debugDraw(secondsToDisplay);
         }
 
         /**

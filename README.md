@@ -9,6 +9,9 @@ ecs-framework 的目标是成为功能强大的框架。它为您构建游戏提
 - 针对核心事件的优化的事件发射器（发射器类），您也可以将其添加到自己的任何类中
 - 延迟和重复任务的调度程序（核心调度方法）
 
+## 关于ECS-FRAMEWORK
+该项目由Nez项目由C#转为Typescript。感谢该项目提供的思路：https://github.com/prime31/Nez
+
 ## 交流群
 点击链接加入群聊【ecs游戏框架交流】：https://jq.qq.com/?_wv=1027&k=29w1Nud6
 

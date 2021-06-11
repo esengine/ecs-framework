@@ -227,7 +227,11 @@ declare module es {
         /**
          * 每帧更新事件
          */
-        frameUpdated = 1
+        frameUpdated = 1,
+        /**
+         * 当渲染发生时触发
+         */
+        renderChanged = 2
     }
 }
 declare module es {
@@ -2194,11 +2198,13 @@ declare module es {
         camera: ICamera;
         readonly renderOrder: number;
         shouldDebugRender: boolean;
+        protected renderDirty: boolean;
         constructor(renderOrder: number, camera: ICamera);
         onAddedToScene(scene: es.Scene): void;
         unload(): void;
         protected beginRender(cam: ICamera): void;
         protected endRender(): void;
+        protected onRenderChanged(): void;
         abstract render(scene: Scene): void;
         protected renderAfterStateCheck(renderable: IRenderable, cam: ICamera): void;
         protected debugRender(scene: Scene): void;
@@ -2572,6 +2578,11 @@ declare module es {
          */
         static approachAngle(start: number, end: number, shift: number): number;
         /**
+         * 将此 Vector 投影到另一个 Vector 上
+         * @param other
+         */
+        static project(self: Vector2, other: Vector2): Vector2;
+        /**
          * 通过将偏移量（全部以弧度为单位）夹住结果并选择最短路径，起始角度朝向终止角度。
          * 起始值可以小于或大于终止值。
          * 此方法的工作方式与“角度”方法非常相似，唯一的区别是使用弧度代替度，并以2 * Pi代替360。
@@ -2694,6 +2705,8 @@ declare module es {
      * 代表右手4x4浮点矩阵，可以存储平移、比例和旋转信息
      */
     class Matrix {
+        private static identity;
+        static readonly Identity: Matrix;
         m11: number;
         m12: number;
         m13: number;
@@ -2710,6 +2723,7 @@ declare module es {
         m42: number;
         m43: number;
         m44: number;
+        constructor(m11?: any, m12?: any, m13?: any, m14?: any, m21?: any, m22?: any, m23?: any, m24?: any, m31?: any, m32?: any, m33?: any, m34?: any, m41?: any, m42?: any, m43?: any, m44?: any);
         /**
          * 为自定义的正交视图创建一个新的投影矩阵
          * @param left
@@ -2719,6 +2733,8 @@ declare module es {
          * @param result
          */
         static createOrthographicOffCenter(left: number, right: number, bottom: number, top: number, zNearPlane: number, zFarPlane: number, result?: Matrix): void;
+        static createTranslation(position: Vector2, result: Matrix): void;
+        static createRotationZ(radians: number, result: Matrix): void;
         /**
          * 创建一个新的矩阵，其中包含两个矩阵的乘法。
          * @param matrix1
@@ -3185,6 +3201,7 @@ declare module es {
          * 在碰撞器中开始的射线/直线是否强制转换检测到那些碰撞器
          */
         static raycastsStartInColliders: boolean;
+        static debugRender: boolean;
         /**
          * 我们保留它以避免在每次raycast发生时分配它
          */

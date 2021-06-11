@@ -382,6 +382,16 @@ module es {
         }
 
         /**
+         * 将 Vector 投影到另一个 Vector 上
+         * @param other 
+         */
+        public static project(self: Vector2, other: Vector2) {
+            let amt = Vector2.dot(self, other) / other.lengthSquared();
+            let vec = new Vector2(amt * other.x, amt * other.y);
+            return vec;
+        }
+
+        /**
          * 通过将偏移量（全部以弧度为单位）夹住结果并选择最短路径，起始角度朝向终止角度。
          * 起始值可以小于或大于终止值。 
          * 此方法的工作方式与“角度”方法非常相似，唯一的区别是使用弧度代替度，并以2 * Pi代替360。 

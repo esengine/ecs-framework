@@ -6,6 +6,10 @@ module es {
         }
     
         public render(scene: Scene): void {
+            if (!this.renderDirty)
+                return;
+
+            this.renderDirty = false;
             let cam = this.camera ? this.camera : scene.camera;
             this.beginRender(cam);
     

@@ -3,10 +3,13 @@ module es {
         public camera: ICamera;
         public readonly renderOrder: number = 0;
         public shouldDebugRender: boolean = true;
+        protected renderDirty: boolean = true;
     
         constructor(renderOrder: number, camera: ICamera) {
             this.renderOrder = renderOrder;
             this.camera = camera;
+
+            Core.emitter.addObserver(CoreEvents.renderChanged, this.onRenderChanged, this);
         }
     
         public onAddedToScene(scene: es.Scene) { }
@@ -25,6 +28,10 @@ module es {
                 return;
 
             Graphics.instance.batcher.end();
+        }
+
+        protected onRenderChanged() {
+            this.renderDirty = true;
         }
     
         public abstract render(scene: Scene): void;

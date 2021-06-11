@@ -8,5 +8,9 @@ module es {
          * 每帧更新事件
          */
         frameUpdated,
+        /**
+         * 当渲染发生时触发
+         */
+        renderChanged,
     }
 }
