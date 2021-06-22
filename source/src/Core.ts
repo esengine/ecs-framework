@@ -37,7 +37,7 @@ module es {
         public _coroutineManager: CoroutineManager = new CoroutineManager();
         public _timerManager: TimerManager = new TimerManager();
 
-        private constructor(debug: boolean = true, enableEntitySystems: boolean = true) {
+        private constructor(debug: boolean = true, enableEntitySystems: boolean = true, remoteUrl: string = "") {
             Core._instance = this;
             Core.emitter = new Emitter<CoreEvents>();
             Core.emitter.addObserver(CoreEvents.frameUpdated, this.update, this);

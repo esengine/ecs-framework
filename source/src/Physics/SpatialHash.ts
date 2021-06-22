@@ -22,7 +22,7 @@ module es {
         /**
          * 保存所有数据的字典
          */
-        public _cellDict: NumberDictionary = new NumberDictionary();
+        public _cellDict: NumberDictionary<Collider> = new NumberDictionary<Collider>();
         /**
          * 用于返回冲突信息的共享HashSet
          */
@@ -325,10 +325,10 @@ module es {
         }
     }
 
-    export class NumberDictionary {
-        public _store: Map<string, Collider[]> = new Map<string, Collider[]>();
+    export class NumberDictionary<T> {
+        public _store: Map<string, T[]> = new Map<string, T[]>();
 
-        public add(x: number, y: number, list: Collider[]) {
+        public add(x: number, y: number, list: T[]) {
             this._store.set(this.getKey(x, y), list);
         }
 
@@ -336,7 +336,7 @@ module es {
          * 使用蛮力方法从字典存储列表中移除碰撞器
          * @param obj
          */
-        public remove(obj: Collider) {
+        public remove(obj: T) {
             this._store.forEach(list => {
                 let linqList = new es.List(list);
                 if (linqList.contains(obj))
@@ -344,7 +344,7 @@ module es {
             })
         }
 
-        public tryGetValue(x: number, y: number): Collider[] {
+        public tryGetValue(x: number, y: number): T[] {
             return this._store.get(this.getKey(x, y));
         }
 

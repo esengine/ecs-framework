@@ -2167,11 +2167,227 @@ declare module es {
 }
 declare module es {
     class Color {
-        a: number;
+        /**
+         * 红色通道
+         */
         r: number;
+        /**
+         * 绿色通道
+         */
         g: number;
+        /**
+         * 蓝色通道
+         */
         b: number;
+        /**
+         * 透明度通道 (仅0-1之间)
+         */
+        a: number;
+        /**
+         * 色调
+         */
+        h: number;
+        /**
+         * 饱和
+         */
+        s: number;
+        /**
+         * 亮度
+         */
+        l: number;
+        /**
+         * 从 r, g, b, a 创建一个新的 Color 实例
+         *
+         * @param r  颜色的红色分量 (0-255)
+         * @param g  颜色的绿色成分 (0-255)
+         * @param b  颜色的蓝色分量 (0-255)
+         * @param a  颜色的 alpha 分量 (0-1.0)
+         */
         constructor(r: number, g: number, b: number, a?: number);
+        /**
+         * 从 r, g, b, a 创建一个新的 Color 实例
+         *
+         * @param r  颜色的红色分量 (0-255)
+         * @param g  颜色的绿色成分 (0-255)
+         * @param b  颜色的蓝色分量 (0-255)
+         * @param a  颜色的 alpha 分量 (0-1.0)
+         */
+        static fromRGB(r: number, g: number, b: number, a?: number): Color;
+        /**
+         * 从十六进制字符串创建一个新的 Color 实例
+         *
+         * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的
+         */
+        static createFromHex(hex: string): Color;
+        /**
+         * 从 hsl 值创建一个新的 Color 实例
+         *
+         * @param h  色调表示 [0-1]
+         * @param s  饱和度表示为 [0-1]
+         * @param l  亮度表示 [0-1]
+         * @param a  透明度表示 [0-1]
+         */
+        static fromHSL(h: number, s: number, l: number, a?: number): Color;
+        /**
+         * 将当前颜色调亮指定的量
+         *
+         * @param factor
+         */
+        lighten(factor?: number): Color;
+        /**
+         * 将当前颜色变暗指定的量
+         *
+         * @param factor
+         */
+        darken(factor?: number): Color;
+        /**
+         * 使当前颜色饱和指定的量
+         *
+         * @param factor
+         */
+        saturate(factor?: number): Color;
+        /**
+         * 按指定量降低当前颜色的饱和度
+         *
+         * @param factor
+         */
+        desaturate(factor?: number): Color;
+        /**
+         * 将一种颜色乘以另一种颜色，得到更深的颜色
+         *
+         * @param color
+         */
+        mulitiply(color: Color): Color;
+        /**
+         * 筛选另一种颜色，导致颜色较浅
+         *
+         * @param color
+         */
+        screen(color: Color): Color;
+        /**
+         * 反转当前颜色
+         */
+        invert(): Color;
+        /**
+         * 将当前颜色与另一个颜色平均
+         *
+         * @param color
+         */
+        average(color: Color): Color;
+        /**
+         * 返回颜色的 CSS 字符串表示形式。
+         *
+         * @param format
+         */
+        toString(format?: 'rgb' | 'hsl' | 'hex'): string;
+        /**
+         * 返回颜色分量的十六进制值
+         * @param c
+         * @see https://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
+         */
+        private _componentToHex;
+        /**
+         *返回颜色的十六进制表示
+         */
+        toHex(): string;
+        /**
+         * 从十六进制字符串设置颜色
+         *
+         * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的
+         */
+        fromHex(hex: string): void;
+        /**
+         * 返回颜色的 RGBA 表示
+         */
+        toRGBA(): string;
+        /**
+         * 返回颜色的 HSLA 表示
+         */
+        toHSLA(): string;
+        /**
+         * 返回颜色的 CSS 字符串表示形式
+         */
+        fillStyle(): string;
+        /**
+         * 返回当前颜色的克隆
+         */
+        clone(): Color;
+        /**
+         * Black (#000000)
+         */
+        static Black: Color;
+        /**
+         * White (#FFFFFF)
+         */
+        static White: Color;
+        /**
+         * Gray (#808080)
+         */
+        static Gray: Color;
+        /**
+         * Light gray (#D3D3D3)
+         */
+        static LightGray: Color;
+        /**
+         * Dark gray (#A9A9A9)
+         */
+        static DarkGray: Color;
+        /**
+         * Yellow (#FFFF00)
+         */
+        static Yellow: Color;
+        /**
+         * Orange (#FFA500)
+         */
+        static Orange: Color;
+        /**
+         * Red (#FF0000)
+         */
+        static Red: Color;
+        /**
+         * Vermillion (#FF5B31)
+         */
+        static Vermillion: Color;
+        /**
+         * Rose (#FF007F)
+         */
+        static Rose: Color;
+        /**
+         * Magenta (#FF00FF)
+         */
+        static Magenta: Color;
+        /**
+         * Violet (#7F00FF)
+         */
+        static Violet: Color;
+        /**
+         * Blue (#0000FF)
+         */
+        static Blue: Color;
+        /**
+         * Azure (#007FFF)
+         */
+        static Azure: Color;
+        /**
+         * Cyan (#00FFFF)
+         */
+        static Cyan: Color;
+        /**
+         * Viridian (#59978F)
+         */
+        static Viridian: Color;
+        /**
+         * Green (#00FF00)
+         */
+        static Green: Color;
+        /**
+         * Chartreuse (#7FFF00)
+         */
+        static Chartreuse: Color;
+        /**
+         * Transparent (#FFFFFF00)
+         */
+        static Transparent: Color;
     }
 }
 declare module es {
@@ -2578,7 +2794,7 @@ declare module es {
          */
         static approachAngle(start: number, end: number, shift: number): number;
         /**
-         * 将此 Vector 投影到另一个 Vector 上
+         * 将 Vector 投影到另一个 Vector 上
          * @param other
          */
         static project(self: Vector2, other: Vector2): Vector2;
@@ -3338,7 +3554,7 @@ declare module es {
         /**
          * 保存所有数据的字典
          */
-        _cellDict: NumberDictionary;
+        _cellDict: NumberDictionary<Collider>;
         /**
          * 用于返回冲突信息的共享HashSet
          */
@@ -3409,15 +3625,15 @@ declare module es {
          */
         cellAtPosition(x: number, y: number, createCellIfEmpty?: boolean): Collider[];
     }
-    class NumberDictionary {
-        _store: Map<string, Collider[]>;
-        add(x: number, y: number, list: Collider[]): void;
+    class NumberDictionary<T> {
+        _store: Map<string, T[]>;
+        add(x: number, y: number, list: T[]): void;
         /**
          * 使用蛮力方法从字典存储列表中移除碰撞器
          * @param obj
          */
-        remove(obj: Collider): void;
-        tryGetValue(x: number, y: number): Collider[];
+        remove(obj: T): void;
+        tryGetValue(x: number, y: number): T[];
         getKey(x: number, y: number): string;
         /**
          * 清除字典数据
