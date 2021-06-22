@@ -156,6 +156,18 @@ module es {
             return this._hitArray[0];
         }
 
+        public static linecastIgnoreCollider(start: Vector2,end: Vector2,layerMask: number = this.allLayers,ignoredColliders: Set<Collider> = null): RaycastHit {
+            this._hitArray[0].reset();
+            Physics.linecastAllIgnoreCollider(
+              start,
+              end,
+              this._hitArray,
+              layerMask,
+              ignoredColliders
+            );
+            return this._hitArray[0].clone();
+          }
+
         /**
          * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组
          * @param start
@@ -171,6 +183,16 @@ module es {
 
             return this._spatialHash.linecast(start, end, hits, layerMask);
         }
+
+        public static linecastAllIgnoreCollider(start: Vector2,end: Vector2,hits: RaycastHit[],layerMask: number = this.allLayers,ignoredColliders: Set<Collider> = null): number {
+            return this._spatialHash.linecastIgnoreCollider(
+              start,
+              end,
+              hits,
+              layerMask,
+              ignoredColliders
+            );
+          }
 
         /**
          * 检查是否有对撞机落在一个矩形区域中

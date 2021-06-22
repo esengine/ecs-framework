@@ -80,10 +80,9 @@ var es;
      *  全局核心类
      */
     var Core = /** @class */ (function () {
-        function Core(debug, enableEntitySystems, remoteUrl) {
+        function Core(debug, enableEntitySystems) {
             if (debug === void 0) { debug = true; }
             if (enableEntitySystems === void 0) { enableEntitySystems = true; }
-            if (remoteUrl === void 0) { remoteUrl = ""; }
             /**
              * 全局访问系统
              */
@@ -1119,6 +1118,34 @@ var es;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Vector2, "up", {
+            get: function () {
+                return new Vector2(0, -1);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Vector2, "down", {
+            get: function () {
+                return new Vector2(0, 1);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Vector2, "left", {
+            get: function () {
+                return new Vector2(-1, 0);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Vector2, "right", {
+            get: function () {
+                return new Vector2(1, 0);
+            },
+            enumerable: true,
+            configurable: true
+        });
         /**
          *
          * @param value1
@@ -1438,6 +1465,13 @@ var es;
          */
         Vector2.hermite = function (value1, tangent1, value2, tangent2, amount) {
             return new Vector2(es.MathHelper.hermite(value1.x, tangent1.x, value2.x, tangent2.x, amount), es.MathHelper.hermite(value1.y, tangent1.y, value2.y, tangent2.y, amount));
+        };
+        Vector2.unsignedAngle = function (from, to, round) {
+            if (round === void 0) { round = true; }
+            from.normalize();
+            to.normalize();
+            var angle = Math.acos(es.MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
+            return round ? Math.round(angle) : angle;
         };
         Vector2.prototype.clone = function () {
             return new Vector2(this.x, this.y);
@@ -2523,6 +2557,421 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var CharacterRaycastOrigins = /** @class */ (function () {
+        function CharacterRaycastOrigins() {
+            this.topLeft = es.Vector2.zero;
+            this.bottomRight = es.Vector2.zero;
+            this.bottomLeft = es.Vector2.zero;
+        }
+        return CharacterRaycastOrigins;
+    }());
+    var CharacterCollisionState2D = /** @class */ (function () {
+        function CharacterCollisionState2D() {
+            this.right = false;
+            this.left = false;
+            this.above = false;
+            this.below = false;
+            this.becameGroundedThisFrame = false;
+            this.wasGroundedLastFrame = false;
+            this.movingDownSlope = false;
+            this.slopeAngle = 0;
+        }
+        CharacterCollisionState2D.prototype.hasCollision = function () {
+            return this.below || this.right || this.left || this.above;
+        };
+        CharacterCollisionState2D.prototype.reset = function () {
+            this.right = this.left = false;
+            this.above = this.below = false;
+            this.becameGroundedThisFrame = this.movingDownSlope = false;
+            this.slopeAngle = 0;
+        };
+        CharacterCollisionState2D.prototype.toString = function () {
+            return "[CharacterCollisionState2D] r: " + this.right + ", l: " + this.left + ", a: " + this.above + ", b: " + this.below + ", movingDownSlope: " + this.movingDownSlope + ", angle: " + this.slopeAngle + ", wasGroundedLastFrame: " + this.wasGroundedLastFrame + ", becameGroundedThisFrame: " + this.becameGroundedThisFrame;
+        };
+        return CharacterCollisionState2D;
+    }());
+    var CharacterController = /** @class */ (function () {
+        function CharacterController(player, skinWidth, platformMask, onewayPlatformMask, triggerMask) {
+            if (platformMask === void 0) { platformMask = -1; }
+            if (onewayPlatformMask === void 0) { onewayPlatformMask = -1; }
+            if (triggerMask === void 0) { triggerMask = -1; }
+            this.ignoredColliders = new Set();
+            /**
+             * CC2D 可以爬升的最大坡度角
+             */
+            this.slopeLimit = 30;
+            /**
+             * 构成跳跃的帧之间垂直运动变化的阈值
+             */
+            this.jumpingThreshold = -7;
+            this.totalHorizontalRays = 5;
+            this.totalVerticalRays = 3;
+            this.collisionState = new CharacterCollisionState2D();
+            this.velocity = new es.Vector2(0, 0);
+            this._skinWidth = 0.02;
+            this.kSkinWidthFloatFudgeFactor = 0.001;
+            /**
+             * 我们的光线投射原点角的支架（TR、TL、BR、BL）
+             */
+            this._raycastOrigins = new CharacterRaycastOrigins();
+            /**
+             * 存储我们在移动过程中命中的光线投射
+             */
+            this._raycastHit = new es.RaycastHit();
+            /**
+             * 我们使用这个标志来标记我们正在爬坡的情况，我们修改了 delta.y 以允许爬升。
+             * 原因是，如果我们到达斜坡的尽头，我们可以进行调整以保持接地
+             */
+            this._isGoingUpSlope = false;
+            this._isWarpingToGround = true;
+            this.platformMask = -1;
+            this.triggerMask = -1;
+            this.oneWayPlatformMask = -1;
+            this.rayOriginSkinMutiplier = 4;
+            this.onTriggerEnterEvent = new es.ObservableT();
+            this.onTriggerExitEvent = new es.ObservableT();
+            this.onControllerCollidedEvent = new es.ObservableT();
+            this.platformMask = platformMask;
+            this.oneWayPlatformMask = onewayPlatformMask;
+            this.triggerMask = triggerMask;
+            // 将我们的单向平台添加到我们的普通平台掩码中，以便我们可以从上方降落 
+            this.platformMask |= this.oneWayPlatformMask;
+            this._player = player;
+            var collider = null;
+            for (var i = 0; i < this._player.components.buffer.length; i++) {
+                var component = this._player.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    collider = component;
+                    break;
+                }
+            }
+            collider.isTrigger = false;
+            if (collider instanceof es.BoxCollider) {
+                this._collider = collider;
+            }
+            else {
+                throw new Error('player collider must be box');
+            }
+            // 在这里，我们触发了具有主体的 setter 的属性 
+            this.skinWidth = skinWidth || collider.width * 0.05;
+            this._slopeLimitTangent = Math.tan(75 * es.MathHelper.Deg2Rad);
+            this._triggerHelper = new es.ColliderTriggerHelper(this._player);
+            // 我们想设置我们的 CC2D 忽略所有碰撞层，除了我们的 triggerMask 
+            for (var i = 0; i < 32; i++) {
+                // 查看我们的 triggerMask 是否包含此层，如果不包含则忽略它 
+                if ((this.triggerMask & (1 << i)) === 0) {
+                    es.Flags.unsetFlag(this._collider.collidesWithLayers, i);
+                }
+            }
+        }
+        Object.defineProperty(CharacterController.prototype, "skinWidth", {
+            /**
+             * 定义距离碰撞射线的边缘有多远。
+             * 如果使用 0 范围进行投射，则通常会导致不需要的光线击中（例如，直接从表面水平投射的足部碰撞器可能会导致击中）
+             */
+            get: function () {
+                return this._skinWidth;
+            },
+            set: function (value) {
+                this._skinWidth = value;
+                this.recalculateDistanceBetweenRays();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(CharacterController.prototype, "isGrounded", {
+            get: function () {
+                return this.collisionState.below;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(CharacterController.prototype, "raycastHitsThisFrame", {
+            get: function () {
+                return this._raycastHitsThisFrame;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        CharacterController.prototype.onTriggerEnter = function (other, local) {
+            this.onTriggerEnterEvent.notify(other);
+        };
+        CharacterController.prototype.onTriggerExit = function (other, local) {
+            this.onTriggerExitEvent.notify(other);
+        };
+        /**
+         * 尝试将角色移动到位置 + deltaMovement。 任何挡路的碰撞器都会在遇到时导致运动停止
+         * @param deltaMovement
+         * @param deltaTime
+         */
+        CharacterController.prototype.move = function (deltaMovement, deltaTime) {
+            this.collisionState.wasGroundedLastFrame = this.collisionState.below;
+            this.collisionState.reset();
+            this._raycastHitsThisFrame = [];
+            this._isGoingUpSlope = false;
+            this.primeRaycastOrigins();
+            if (deltaMovement.y > 0 && this.collisionState.wasGroundedLastFrame) {
+                deltaMovement = this.handleVerticalSlope(deltaMovement);
+            }
+            if (deltaMovement.x !== 0) {
+                deltaMovement = this.moveHorizontally(deltaMovement);
+            }
+            if (deltaMovement.y !== 0) {
+                deltaMovement = this.moveVertically(deltaMovement);
+            }
+            this._player.setPosition(this._player.position.x + deltaMovement.x, this._player.position.y + deltaMovement.y);
+            if (deltaTime > 0) {
+                this.velocity.x = deltaMovement.x / deltaTime;
+                this.velocity.y = deltaMovement.y / deltaTime;
+            }
+            if (!this.collisionState.wasGroundedLastFrame &&
+                this.collisionState.below) {
+                this.collisionState.becameGroundedThisFrame = true;
+            }
+            if (this._isGoingUpSlope) {
+                this.velocity.y = 0;
+            }
+            if (!this._isWarpingToGround) {
+                this._triggerHelper.update();
+            }
+            for (var i = 0; i < this._raycastHitsThisFrame.length; i++) {
+                this.onControllerCollidedEvent.notify(this._raycastHitsThisFrame[i]);
+            }
+            if (this.ignoreOneWayPlatformsTime > 0) {
+                this.ignoreOneWayPlatformsTime -= deltaTime;
+            }
+        };
+        /**
+         * 直接向下移动直到接地
+         * @param maxDistance
+         */
+        CharacterController.prototype.warpToGrounded = function (maxDistance) {
+            if (maxDistance === void 0) { maxDistance = 1000; }
+            this.ignoreOneWayPlatformsTime = 0;
+            this._isWarpingToGround = true;
+            var delta = 0;
+            do {
+                delta += 1;
+                this.move(new es.Vector2(0, 1), 0.02);
+                if (delta > maxDistance) {
+                    break;
+                }
+            } while (!this.isGrounded);
+            this._isWarpingToGround = false;
+        };
+        /**
+         * 这应该在您必须在运行时修改 BoxCollider2D 的任何时候调用。
+         * 它将重新计算用于碰撞检测的光线之间的距离。
+         * 它也用于 skinWidth setter，以防在运行时更改。
+         */
+        CharacterController.prototype.recalculateDistanceBetweenRays = function () {
+            var colliderUsableHeight = this._collider.height * Math.abs(this._player.scale.y) -
+                2 * this._skinWidth;
+            this._verticalDistanceBetweenRays =
+                colliderUsableHeight / (this.totalHorizontalRays - 1);
+            var colliderUsableWidth = this._collider.width * Math.abs(this._player.scale.x) -
+                2 * this._skinWidth;
+            this._horizontalDistanceBetweenRays =
+                colliderUsableWidth / (this.totalVerticalRays - 1);
+        };
+        /**
+         * 将 raycastOrigins 重置为由 skinWidth 插入的框碰撞器的当前范围。
+         * 插入它是为了避免从直接接触另一个碰撞器的位置投射光线，从而导致不稳定的法线数据。
+         */
+        CharacterController.prototype.primeRaycastOrigins = function () {
+            var rect = this._collider.bounds;
+            this._raycastOrigins.topLeft = new es.Vector2(rect.x + this._skinWidth, rect.y + this._skinWidth);
+            this._raycastOrigins.bottomRight = new es.Vector2(rect.right - this._skinWidth, rect.bottom - this._skinWidth);
+            this._raycastOrigins.bottomLeft = new es.Vector2(rect.x + this._skinWidth, rect.bottom - this._skinWidth);
+        };
+        /**
+         * 我们必须在这方面使用一些技巧。
+         * 光线必须从我们的碰撞器（skinWidth）内部的一小段距离投射，以避免零距离光线会得到错误的法线。
+         * 由于这个小偏移，我们必须增加光线距离 skinWidth 然后记住在实际移动玩家之前从 deltaMovement 中删除 skinWidth
+         * @param deltaMovement
+         * @returns
+         */
+        CharacterController.prototype.moveHorizontally = function (deltaMovement) {
+            var isGoingRight = deltaMovement.x > 0;
+            var rayDistance = Math.abs(deltaMovement.x) +
+                this._skinWidth * this.rayOriginSkinMutiplier;
+            var rayDirection = isGoingRight ? es.Vector2.right : es.Vector2.left;
+            var initialRayOriginY = this._raycastOrigins.bottomLeft.y;
+            var initialRayOriginX = isGoingRight
+                ? this._raycastOrigins.bottomRight.x -
+                    this._skinWidth * (this.rayOriginSkinMutiplier - 1)
+                : this._raycastOrigins.bottomLeft.x +
+                    this._skinWidth * (this.rayOriginSkinMutiplier - 1);
+            for (var i = 0; i < this.totalHorizontalRays; i++) {
+                var ray = new es.Vector2(initialRayOriginX, initialRayOriginY - i * this._verticalDistanceBetweenRays);
+                // if we are grounded we will include oneWayPlatforms
+                // only on the first ray (the bottom one). this will allow us to
+                // walk up sloped oneWayPlatforms
+                if (i === 0 &&
+                    this.supportSlopedOneWayPlatforms &&
+                    this.collisionState.wasGroundedLastFrame) {
+                    this._raycastHit = es.Physics.linecastIgnoreCollider(ray, ray.add(rayDirection.multiplyScaler(rayDistance)), this.platformMask, this.ignoredColliders);
+                }
+                else {
+                    this._raycastHit = es.Physics.linecastIgnoreCollider(ray, ray.add(rayDirection.multiplyScaler(rayDistance)), this.platformMask & ~this.oneWayPlatformMask, this.ignoredColliders);
+                }
+                if (this._raycastHit.collider) {
+                    if (i === 0 &&
+                        this.handleHorizontalSlope(deltaMovement, es.Vector2.unsignedAngle(this._raycastHit.normal, es.Vector2.up))) {
+                        this._raycastHitsThisFrame.push(this._raycastHit);
+                        break;
+                    }
+                    deltaMovement.x = this._raycastHit.point.x - ray.x;
+                    rayDistance = Math.abs(deltaMovement.x);
+                    if (isGoingRight) {
+                        deltaMovement.x -= this._skinWidth * this.rayOriginSkinMutiplier;
+                        this.collisionState.right = true;
+                    }
+                    else {
+                        deltaMovement.x += this._skinWidth * this.rayOriginSkinMutiplier;
+                        this.collisionState.left = true;
+                    }
+                    this._raycastHitsThisFrame.push(this._raycastHit);
+                    if (rayDistance <
+                        this._skinWidth * this.rayOriginSkinMutiplier +
+                            this.kSkinWidthFloatFudgeFactor) {
+                        break;
+                    }
+                }
+            }
+            return deltaMovement;
+        };
+        CharacterController.prototype.moveVertically = function (deltaMovement) {
+            var isGoingUp = deltaMovement.y < 0;
+            var rayDistance = Math.abs(deltaMovement.y) +
+                this._skinWidth * this.rayOriginSkinMutiplier;
+            var rayDirection = isGoingUp ? es.Vector2.up : es.Vector2.down;
+            var initialRayOriginX = this._raycastOrigins.topLeft.x;
+            var initialRayOriginY = isGoingUp
+                ? this._raycastOrigins.topLeft.y +
+                    this._skinWidth * (this.rayOriginSkinMutiplier - 1)
+                : this._raycastOrigins.bottomLeft.y -
+                    this._skinWidth * (this.rayOriginSkinMutiplier - 1);
+            initialRayOriginX += deltaMovement.x;
+            var mask = this.platformMask;
+            if (isGoingUp || this.ignoreOneWayPlatformsTime > 0) {
+                mask &= ~this.oneWayPlatformMask;
+            }
+            for (var i = 0; i < this.totalVerticalRays; i++) {
+                var rayStart = new es.Vector2(initialRayOriginX + i * this._horizontalDistanceBetweenRays, initialRayOriginY);
+                this._raycastHit = es.Physics.linecastIgnoreCollider(rayStart, rayStart.add(rayDirection.multiplyScaler(rayDistance)), mask, this.ignoredColliders);
+                if (this._raycastHit.collider) {
+                    deltaMovement.y = this._raycastHit.point.y - rayStart.y;
+                    rayDistance = Math.abs(deltaMovement.y);
+                    if (isGoingUp) {
+                        deltaMovement.y += this._skinWidth * this.rayOriginSkinMutiplier;
+                        this.collisionState.above = true;
+                    }
+                    else {
+                        deltaMovement.y -= this._skinWidth * this.rayOriginSkinMutiplier;
+                        this.collisionState.below = true;
+                    }
+                    this._raycastHitsThisFrame.push(this._raycastHit);
+                    if (!isGoingUp && deltaMovement.y < -0.00001) {
+                        this._isGoingUpSlope = true;
+                    }
+                    if (rayDistance <
+                        this._skinWidth * this.rayOriginSkinMutiplier +
+                            this.kSkinWidthFloatFudgeFactor) {
+                        break;
+                    }
+                }
+            }
+            return deltaMovement;
+        };
+        /**
+         * 检查 BoxCollider2D 下的中心点是否存在坡度。
+         * 如果找到一个，则调整 deltaMovement 以便玩家保持接地，并考虑slopeSpeedModifier 以加快移动速度。
+         * @param deltaMovement
+         * @returns
+         */
+        CharacterController.prototype.handleVerticalSlope = function (deltaMovement) {
+            var centerOfCollider = (this._raycastOrigins.bottomLeft.x +
+                this._raycastOrigins.bottomRight.x) *
+                0.5;
+            var rayDirection = es.Vector2.down;
+            var slopeCheckRayDistance = this._slopeLimitTangent *
+                (this._raycastOrigins.bottomRight.x - centerOfCollider);
+            var slopeRay = new es.Vector2(centerOfCollider, this._raycastOrigins.bottomLeft.y);
+            this._raycastHit = es.Physics.linecastIgnoreCollider(slopeRay, slopeRay.add(rayDirection.multiplyScaler(slopeCheckRayDistance)), this.platformMask, this.ignoredColliders);
+            if (this._raycastHit.collider) {
+                var angle = es.Vector2.unsignedAngle(this._raycastHit.normal, es.Vector2.up);
+                if (angle === 0) {
+                    return deltaMovement;
+                }
+                var isMovingDownSlope = Math.sign(this._raycastHit.normal.x) === Math.sign(deltaMovement.x);
+                if (isMovingDownSlope) {
+                    var slopeModifier = this.slopeSpeedMultiplier
+                        ? this.slopeSpeedMultiplier.lerp(-angle)
+                        : 1;
+                    deltaMovement.y +=
+                        this._raycastHit.point.y - slopeRay.y - this.skinWidth;
+                    deltaMovement.x *= slopeModifier;
+                    this.collisionState.movingDownSlope = true;
+                    this.collisionState.slopeAngle = angle;
+                }
+            }
+            return deltaMovement;
+        };
+        /**
+         * 如果我们要上坡，则处理调整 deltaMovement
+         * @param deltaMovement
+         * @param angle
+         * @returns
+         */
+        CharacterController.prototype.handleHorizontalSlope = function (deltaMovement, angle) {
+            if (Math.round(angle) === 90) {
+                return false;
+            }
+            if (angle < this.slopeLimit) {
+                if (deltaMovement.y > this.jumpingThreshold) {
+                    var slopeModifier = this.slopeSpeedMultiplier
+                        ? this.slopeSpeedMultiplier.lerp(angle)
+                        : 1;
+                    deltaMovement.x *= slopeModifier;
+                    deltaMovement.y = Math.abs(Math.tan(angle * es.MathHelper.Deg2Rad) * deltaMovement.x);
+                    var isGoingRight = deltaMovement.x > 0;
+                    var ray = isGoingRight
+                        ? this._raycastOrigins.bottomRight
+                        : this._raycastOrigins.bottomLeft;
+                    var raycastHit = null;
+                    if (this.supportSlopedOneWayPlatforms &&
+                        this.collisionState.wasGroundedLastFrame) {
+                        raycastHit = es.Physics.linecastIgnoreCollider(ray, ray.add(deltaMovement), this.platformMask, this.ignoredColliders);
+                    }
+                    else {
+                        raycastHit = es.Physics.linecastIgnoreCollider(ray, ray.add(deltaMovement), this.platformMask & ~this.oneWayPlatformMask, this.ignoredColliders);
+                    }
+                    if (raycastHit.collider) {
+                        deltaMovement.x = raycastHit.point.x - ray.x;
+                        deltaMovement.y = raycastHit.point.y - ray.y;
+                        if (isGoingRight) {
+                            deltaMovement.x -= this._skinWidth;
+                        }
+                        else {
+                            deltaMovement.x += this._skinWidth;
+                        }
+                    }
+                    this._isGoingUpSlope = true;
+                    this.collisionState.below = true;
+                }
+            }
+            else {
+                deltaMovement.x = 0;
+            }
+            return true;
+        };
+        return CharacterController;
+    }());
+    es.CharacterController = CharacterController;
+})(es || (es = {}));
+var es;
+(function (es) {
     var TriggerListenerHelper = /** @class */ (function () {
         function TriggerListenerHelper() {
         }
@@ -2745,6 +3194,7 @@ var es;
         __extends(Collider, _super);
         function Collider() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this._isEnabled = true;
             /**
              * 如果这个碰撞器是一个触发器，它将不会引起碰撞，但它仍然会触发事件
              */
@@ -6378,6 +6828,9 @@ var es;
         MathHelper.lerp = function (from, to, t) {
             return from + (to - from) * this.clamp01(t);
         };
+        MathHelper.betterLerp = function (a, b, t, epsilon) {
+            return Math.abs(a - b) < epsilon ? b : MathHelper.lerp(a, b, t);
+        };
         /**
          * 使度数的角度在a和b之间
          * 用于处理360度环绕
@@ -6802,6 +7255,48 @@ var es;
                 return false;
             }
             return !Number.isFinite(x);
+        };
+        MathHelper.smoothDamp = function (current, target, currentVelocity, smoothTime, maxSpeed, deltaTime) {
+            smoothTime = Math.max(0.0001, smoothTime);
+            var num = 2 / smoothTime;
+            var num2 = num * deltaTime;
+            var num3 = 1 /
+                (1 + (num2 + (0.48 * (num2 * num2) + 0.235 * (num2 * (num2 * num2)))));
+            var num4 = current - target;
+            var num5 = target;
+            var num6 = maxSpeed * smoothTime;
+            num4 = this.clamp(num4, num6 * -1, num6);
+            target = current - num4;
+            var num7 = (currentVelocity + num * num4) * deltaTime;
+            currentVelocity = (currentVelocity - num * num7) * num3;
+            var num8 = target + (num4 + num7) * num3;
+            if (num5 - current > 0 === num8 > num5) {
+                num8 = num5;
+                currentVelocity = (num8 - num5) / deltaTime;
+            }
+            return { value: num8, currentVelocity: currentVelocity };
+        };
+        MathHelper.smoothDampVector = function (current, target, currentVelocity, smoothTime, maxSpeed, deltaTime) {
+            var v = es.Vector2.zero;
+            var resX = this.smoothDamp(current.x, target.x, currentVelocity.x, smoothTime, maxSpeed, deltaTime);
+            v.x = resX.value;
+            currentVelocity.x = resX.currentVelocity;
+            var resY = this.smoothDamp(current.y, target.y, currentVelocity.y, smoothTime, maxSpeed, deltaTime);
+            v.y = resY.value;
+            currentVelocity.y = resY.currentVelocity;
+            return v;
+        };
+        /**
+         * 将值（在 leftMin - leftMax 范围内）映射到 rightMin - rightMax 范围内的值
+         * @param value
+         * @param leftMin
+         * @param leftMax
+         * @param rightMin
+         * @param rightMax
+         * @returns
+         */
+        MathHelper.mapMinMax = function (value, leftMin, leftMax, rightMin, rightMax) {
+            return rightMin + ((MathHelper.clamp(value, leftMin, leftMax) - leftMin) * (rightMax - rightMin)) / (leftMax - leftMin);
         };
         MathHelper.Epsilon = 0.00001;
         MathHelper.Rad2Deg = 57.29578;
@@ -8237,9 +8732,21 @@ var es;
             this.point = point;
             this.normal = normal;
         };
+        RaycastHit.prototype.setAllValues = function (collider, fraction, distance, point, normal) {
+            this.collider = collider;
+            this.fraction = fraction;
+            this.distance = distance;
+            this.point = point;
+            this.normal = normal;
+        };
         RaycastHit.prototype.reset = function () {
             this.collider = null;
             this.fraction = this.distance = 0;
+        };
+        RaycastHit.prototype.clone = function () {
+            var hit = new RaycastHit();
+            hit.setAllValues(this.collider, this.fraction, this.distance, this.point, this.normal);
+            return hit;
         };
         RaycastHit.prototype.toString = function () {
             return "[RaycastHit] fraction: " + this.fraction + ", distance: " + this.distance + ", normal: " + this.normal + ", centroid: " + this.centroid + ", point: " + this.point;
@@ -8374,6 +8881,13 @@ var es;
             this.linecastAll(start, end, this._hitArray, layerMask);
             return this._hitArray[0];
         };
+        Physics.linecastIgnoreCollider = function (start, end, layerMask, ignoredColliders) {
+            if (layerMask === void 0) { layerMask = this.allLayers; }
+            if (ignoredColliders === void 0) { ignoredColliders = null; }
+            this._hitArray[0].reset();
+            Physics.linecastAllIgnoreCollider(start, end, this._hitArray, layerMask, ignoredColliders);
+            return this._hitArray[0].clone();
+        };
         /**
          * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组
          * @param start
@@ -8388,6 +8902,11 @@ var es;
                 return 0;
             }
             return this._spatialHash.linecast(start, end, hits, layerMask);
+        };
+        Physics.linecastAllIgnoreCollider = function (start, end, hits, layerMask, ignoredColliders) {
+            if (layerMask === void 0) { layerMask = this.allLayers; }
+            if (ignoredColliders === void 0) { ignoredColliders = null; }
+            return this._spatialHash.linecastIgnoreCollider(start, end, hits, layerMask, ignoredColliders);
         };
         /**
          * 检查是否有对撞机落在一个矩形区域中
@@ -8642,6 +9161,60 @@ var es;
             this._raycastParser.reset();
             return this._raycastParser.hitCounter;
         };
+        SpatialHash.prototype.linecastIgnoreCollider = function (start, end, hits, layerMask, ignoredColliders) {
+            start = start.clone();
+            var ray = new es.Ray2D(start, end);
+            this._raycastParser.startIgnoreCollider(ray, hits, layerMask, ignoredColliders);
+            start.x = start.x * this._inverseCellSize;
+            start.y = start.y * this._inverseCellSize;
+            var endCell = this.cellCoords(end.x, end.y);
+            var intX = Math.floor(start.x);
+            var intY = Math.floor(start.y);
+            var stepX = Math.sign(ray.direction.x);
+            var stepY = Math.sign(ray.direction.y);
+            if (intX === endCell.x) {
+                stepX = 0;
+            }
+            if (intY === endCell.y) {
+                stepY = 0;
+            }
+            var boundaryX = intX + (stepX > 0 ? 1 : 0);
+            var boundaryY = intY + (stepY > 0 ? 1 : 0);
+            var tMaxX = (boundaryX - start.x) / ray.direction.x;
+            var tMaxY = (boundaryY - start.y) / ray.direction.y;
+            if (ray.direction.x === 0 || stepX === 0) {
+                tMaxX = Number.POSITIVE_INFINITY;
+            }
+            if (ray.direction.y === 0 || stepY === 0) {
+                tMaxY = Number.POSITIVE_INFINITY;
+            }
+            var tDeltaX = stepX / ray.direction.x;
+            var tDeltaY = stepY / ray.direction.y;
+            var cell = this.cellAtPosition(intX, intY);
+            if (cell && this._raycastParser.checkRayIntersection(intX, intY, cell)) {
+                this._raycastParser.reset();
+                return this._raycastParser.hitCounter;
+            }
+            var n = 0;
+            while ((intX !== endCell.x || intY !== endCell.y) && n < 100) {
+                if (tMaxX < tMaxY) {
+                    intX = intX + stepX;
+                    tMaxX = tMaxX + tDeltaX;
+                }
+                else {
+                    intY = intY + stepY;
+                    tMaxY = tMaxY + tDeltaY;
+                }
+                cell = this.cellAtPosition(intX, intY);
+                if (cell && this._raycastParser.checkRayIntersection(intX, intY, cell)) {
+                    this._raycastParser.reset();
+                    return this._raycastParser.hitCounter;
+                }
+                n++;
+            }
+            this._raycastParser.reset();
+            return this._raycastParser.hitCounter;
+        };
         /**
          * 获取所有在指定矩形范围内的碰撞器
          * @param rect
@@ -8813,6 +9386,13 @@ var es;
             this._ray = ray;
             this._hits = hits;
             this._layerMask = layerMask;
+            this.hitCounter = 0;
+        };
+        RaycastResultParser.prototype.startIgnoreCollider = function (ray, hits, layerMask, ignoredColliders) {
+            this._ray = ray;
+            this._hits = hits;
+            this._layerMask = layerMask;
+            this._ignoredColliders = ignoredColliders;
             this.hitCounter = 0;
         };
         /**
@@ -9807,6 +10387,44 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var AnimCurve = /** @class */ (function () {
+        function AnimCurve(points) {
+            if (points.length < 2) {
+                throw new Error('curve length must be >= 2');
+            }
+            points.sort(function (a, b) {
+                return a.t - b.t;
+            });
+            if (points[0].t !== 0) {
+                throw new Error('curve must start with 0');
+            }
+            if (points[points.length - 1].t !== 1) {
+                throw new Error('curve must end with 1');
+            }
+            this._points = points;
+        }
+        Object.defineProperty(AnimCurve.prototype, "points", {
+            get: function () {
+                return this._points;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        AnimCurve.prototype.lerp = function (t) {
+            for (var i = 1; i < this._points.length; i++) {
+                if (t <= this._points[i].t) {
+                    var m = es.MathHelper.map01(t, this._points[i - 1].t, this._points[i].t);
+                    return es.MathHelper.lerp(this._points[i - 1].value, this._points[i].value, m);
+                }
+            }
+            throw new Error('should never be here');
+        };
+        return AnimCurve;
+    }());
+    es.AnimCurve = AnimCurve;
+})(es || (es = {}));
+var es;
+(function (es) {
     /**
      * 用于包装事件的一个小类
      */
@@ -10026,6 +10644,177 @@ var es;
         return Hash;
     }());
     es.Hash = Hash;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Observable = /** @class */ (function () {
+        function Observable() {
+            this._listeners = [];
+        }
+        Observable.prototype.addListener = function (caller, callback) {
+            if (this._listeners.findIndex(function (listener) {
+                return listener.callback === callback && listener.caller === caller;
+            }) === -1) {
+                this._listeners.push({ caller: caller, callback: callback });
+            }
+        };
+        Observable.prototype.removeListener = function (caller, callback) {
+            var index = this._listeners.findIndex(function (listener) { return listener.callback === callback && listener.caller === caller; });
+            if (index >= 0) {
+                this._listeners.splice(index, 1);
+            }
+        };
+        Observable.prototype.clearListener = function () {
+            this._listeners = [];
+        };
+        Observable.prototype.clearListenerWithCaller = function (caller) {
+            for (var i = this._listeners.length - 1; i >= 0; i--) {
+                var listener = this._listeners[i];
+                if (listener.caller === caller) {
+                    this._listeners.splice(i, 1);
+                }
+            }
+        };
+        Observable.prototype.notify = function () {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i] = arguments[_i];
+            }
+            var _a;
+            for (var i = this._listeners.length - 1; i >= 0; i--) {
+                var listener = this._listeners[i];
+                if (listener.caller) {
+                    (_a = listener.callback).call.apply(_a, __spread([listener.caller], args));
+                }
+                else {
+                    listener.callback.apply(listener, __spread(args));
+                }
+            }
+        };
+        return Observable;
+    }());
+    es.Observable = Observable;
+    var ObservableT = /** @class */ (function (_super) {
+        __extends(ObservableT, _super);
+        function ObservableT() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        ObservableT.prototype.addListener = function (caller, callback) {
+            _super.prototype.addListener.call(this, caller, callback);
+        };
+        ObservableT.prototype.removeListener = function (caller, callback) {
+            _super.prototype.removeListener.call(this, caller, callback);
+        };
+        ObservableT.prototype.notify = function (arg) {
+            _super.prototype.notify.call(this, arg);
+        };
+        return ObservableT;
+    }(Observable));
+    es.ObservableT = ObservableT;
+    var ObservableTT = /** @class */ (function (_super) {
+        __extends(ObservableTT, _super);
+        function ObservableTT() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        ObservableTT.prototype.addListener = function (caller, callback) {
+            _super.prototype.addListener.call(this, caller, callback);
+        };
+        ObservableTT.prototype.removeListener = function (caller, callback) {
+            _super.prototype.removeListener.call(this, caller, callback);
+        };
+        ObservableTT.prototype.notify = function (arg1, arg2) {
+            _super.prototype.notify.call(this, arg1, arg2);
+        };
+        return ObservableTT;
+    }(Observable));
+    es.ObservableTT = ObservableTT;
+    var Command = /** @class */ (function () {
+        function Command(caller, action) {
+            this.bindAction(caller, action);
+            this._onExec = new Observable();
+        }
+        Command.prototype.bindAction = function (caller, action) {
+            this._caller = caller;
+            this._action = action;
+        };
+        Command.prototype.dispatch = function () {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i] = arguments[_i];
+            }
+            var _a;
+            if (this._action) {
+                if (this._caller) {
+                    (_a = this._action).call.apply(_a, __spread([this._caller], args));
+                }
+                else {
+                    this._action.apply(this, __spread(args));
+                }
+                this._onExec.notify();
+            }
+            else {
+                console.warn('command not bind with an action');
+            }
+        };
+        Command.prototype.addListener = function (caller, callback) {
+            this._onExec.addListener(caller, callback);
+        };
+        Command.prototype.removeListener = function (caller, callback) {
+            this._onExec.removeListener(caller, callback);
+        };
+        Command.prototype.clearListener = function () {
+            this._onExec.clearListener();
+        };
+        Command.prototype.clearListenerWithCaller = function (caller) {
+            this._onExec.clearListenerWithCaller(caller);
+        };
+        return Command;
+    }());
+    es.Command = Command;
+    var ValueChangeCommand = /** @class */ (function () {
+        function ValueChangeCommand(value) {
+            this._onValueChange = new Observable();
+            this._value = value;
+        }
+        Object.defineProperty(ValueChangeCommand.prototype, "onValueChange", {
+            get: function () {
+                return this._onValueChange;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ValueChangeCommand.prototype, "value", {
+            get: function () {
+                return this._value;
+            },
+            set: function (newValue) {
+                this._value = newValue;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        ValueChangeCommand.prototype.dispatch = function (value) {
+            if (value !== this._value) {
+                var oldValue = this._value;
+                this._value = value;
+                this._onValueChange.notify(this._value, oldValue);
+            }
+        };
+        ValueChangeCommand.prototype.addListener = function (caller, callback) {
+            this._onValueChange.addListener(caller, callback);
+        };
+        ValueChangeCommand.prototype.removeListener = function (caller, callback) {
+            this._onValueChange.removeListener(caller, callback);
+        };
+        ValueChangeCommand.prototype.clearListener = function () {
+            this._onValueChange.clearListener();
+        };
+        ValueChangeCommand.prototype.clearListenerWithCaller = function (caller) {
+            this._onValueChange.clearListenerWithCaller(caller);
+        };
+        return ValueChangeCommand;
+    }());
+    es.ValueChangeCommand = ValueChangeCommand;
 })(es || (es = {}));
 var es;
 (function (es) {

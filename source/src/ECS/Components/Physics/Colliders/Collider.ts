@@ -1,5 +1,6 @@
 module es {
     export abstract class Collider extends Component {
+        protected _isEnabled: boolean = true;
         /**
          * 对撞机的基本形状
          */

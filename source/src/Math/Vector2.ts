@@ -30,6 +30,22 @@ module es {
             return new Vector2(0, 1);
         }
 
+        public static get up() {
+            return new Vector2(0, -1);
+        }
+
+        public static get down() {
+            return new Vector2(0, 1);
+        }
+
+        public static get left() {
+            return new Vector2(-1, 0);
+        }
+
+        public static get right() {
+            return new Vector2(1, 0);
+        }
+
         /**
          *
          * @param value1
@@ -200,7 +216,7 @@ module es {
          * @param from
          * @param to
          */
-        public static angle(from: Vector2, to: Vector2): number{
+        public static angle(from: Vector2, to: Vector2): number {
             from = Vector2.normalize(from);
             to = Vector2.normalize(to);
             return Math.acos(MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * MathHelper.Rad2Deg;
@@ -348,10 +364,10 @@ module es {
          * @returns 如果实例相同true 否则false 
          */
         public equals(other: Vector2 | object): boolean {
-            if (other instanceof Vector2){
+            if (other instanceof Vector2) {
                 return other.x == this.x && other.y == this.y;
             }
-            
+
             return false;
         }
 
@@ -390,10 +406,19 @@ module es {
          * @param amount 
          * @returns 
          */
-        public static hermite(value1: Vector2, tangent1: Vector2, value2: Vector2, tangent2: Vector2, amount: number){
+        public static hermite(value1: Vector2, tangent1: Vector2, value2: Vector2, tangent2: Vector2, amount: number) {
             return new Vector2(MathHelper.hermite(value1.x, tangent1.x, value2.x, tangent2.x, amount),
                 MathHelper.hermite(value1.y, tangent1.y, value2.y, tangent2.y, amount));
         }
+
+        public static unsignedAngle(from: Vector2, to: Vector2, round: boolean = true) {
+            from.normalize();
+            to.normalize();
+            const angle =
+                Math.acos(MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * MathHelper.Rad2Deg;
+            return round ? Math.round(angle) : angle;
+        }
+
 
         public clone(): Vector2 {
             return new Vector2(this.x, this.y);

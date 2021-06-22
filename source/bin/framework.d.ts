@@ -444,6 +444,10 @@ declare module es {
         static readonly one: Vector2;
         static readonly unitX: Vector2;
         static readonly unitY: Vector2;
+        static readonly up: Vector2;
+        static readonly down: Vector2;
+        static readonly left: Vector2;
+        static readonly right: Vector2;
         /**
          *
          * @param value1
@@ -643,6 +647,7 @@ declare module es {
          * @returns
          */
         static hermite(value1: Vector2, tangent1: Vector2, value2: Vector2, tangent2: Vector2, amount: number): Vector2;
+        static unsignedAngle(from: Vector2, to: Vector2, round?: boolean): number;
         clone(): Vector2;
     }
 }
@@ -1115,6 +1120,138 @@ declare module es {
     }
 }
 declare module es {
+    class CharacterCollisionState2D {
+        right: boolean;
+        left: boolean;
+        above: boolean;
+        below: boolean;
+        becameGroundedThisFrame: boolean;
+        wasGroundedLastFrame: boolean;
+        movingDownSlope: boolean;
+        slopeAngle: number;
+        hasCollision(): boolean;
+        reset(): void;
+        toString(): string;
+    }
+    class CharacterController implements ITriggerListener {
+        onControllerCollidedEvent: ObservableT<RaycastHit>;
+        onTriggerEnterEvent: ObservableT<Collider>;
+        onTriggerExitEvent: ObservableT<Collider>;
+        /**
+         * 如果为 true，则在垂直移动单帧时将忽略平台的一种方式
+         */
+        ignoreOneWayPlatformsTime: number;
+        supportSlopedOneWayPlatforms: boolean;
+        ignoredColliders: Set<Collider>;
+        /**
+         * 定义距离碰撞射线的边缘有多远。
+         * 如果使用 0 范围进行投射，则通常会导致不需要的光线击中（例如，直接从表面水平投射的足部碰撞器可能会导致击中）
+         */
+        skinWidth: number;
+        /**
+         * CC2D 可以爬升的最大坡度角
+         */
+        slopeLimit: number;
+        /**
+         * 构成跳跃的帧之间垂直运动变化的阈值
+         */
+        jumpingThreshold: number;
+        /**
+         * 基于斜率乘以速度的曲线（负 = 下坡和正 = 上坡）
+         */
+        slopeSpeedMultiplier: AnimCurve;
+        totalHorizontalRays: number;
+        totalVerticalRays: number;
+        collisionState: CharacterCollisionState2D;
+        velocity: Vector2;
+        readonly isGrounded: boolean;
+        readonly raycastHitsThisFrame: RaycastHit[];
+        constructor(player: Entity, skinWidth?: number, platformMask?: number, onewayPlatformMask?: number, triggerMask?: number);
+        onTriggerEnter(other: Collider, local: Collider): void;
+        onTriggerExit(other: Collider, local: Collider): void;
+        /**
+         * 尝试将角色移动到位置 + deltaMovement。 任何挡路的碰撞器都会在遇到时导致运动停止
+         * @param deltaMovement
+         * @param deltaTime
+         */
+        move(deltaMovement: Vector2, deltaTime: number): void;
+        /**
+         * 直接向下移动直到接地
+         * @param maxDistance
+         */
+        warpToGrounded(maxDistance?: number): void;
+        /**
+         * 这应该在您必须在运行时修改 BoxCollider2D 的任何时候调用。
+         * 它将重新计算用于碰撞检测的光线之间的距离。
+         * 它也用于 skinWidth setter，以防在运行时更改。
+         */
+        recalculateDistanceBetweenRays(): void;
+        /**
+         * 将 raycastOrigins 重置为由 skinWidth 插入的框碰撞器的当前范围。
+         * 插入它是为了避免从直接接触另一个碰撞器的位置投射光线，从而导致不稳定的法线数据。
+         */
+        private primeRaycastOrigins;
+        /**
+         * 我们必须在这方面使用一些技巧。
+         * 光线必须从我们的碰撞器（skinWidth）内部的一小段距离投射，以避免零距离光线会得到错误的法线。
+         * 由于这个小偏移，我们必须增加光线距离 skinWidth 然后记住在实际移动玩家之前从 deltaMovement 中删除 skinWidth
+         * @param deltaMovement
+         * @returns
+         */
+        private moveHorizontally;
+        private moveVertically;
+        /**
+         * 检查 BoxCollider2D 下的中心点是否存在坡度。
+         * 如果找到一个，则调整 deltaMovement 以便玩家保持接地，并考虑slopeSpeedModifier 以加快移动速度。
+         * @param deltaMovement
+         * @returns
+         */
+        private handleVerticalSlope;
+        /**
+         * 如果我们要上坡，则处理调整 deltaMovement
+         * @param deltaMovement
+         * @param angle
+         * @returns
+         */
+        private handleHorizontalSlope;
+        private _player;
+        private _collider;
+        private _skinWidth;
+        private _triggerHelper;
+        /**
+         * 这用于计算为检查坡度而投射的向下光线。
+         * 我们使用有点随意的值 75 度来计算检查斜率的射线的长度。
+         */
+        private _slopeLimitTangent;
+        private readonly kSkinWidthFloatFudgeFactor;
+        /**
+         * 我们的光线投射原点角的支架（TR、TL、BR、BL）
+         */
+        private _raycastOrigins;
+        /**
+         * 存储我们在移动过程中命中的光线投射
+         */
+        private _raycastHit;
+        /**
+         * 存储此帧发生的任何光线投射命中。
+         * 我们必须存储它们，以防我们遇到水平和垂直移动的碰撞，以便我们可以在设置所有碰撞状态后发送事件
+         */
+        private _raycastHitsThisFrame;
+        private _verticalDistanceBetweenRays;
+        private _horizontalDistanceBetweenRays;
+        /**
+         * 我们使用这个标志来标记我们正在爬坡的情况，我们修改了 delta.y 以允许爬升。
+         * 原因是，如果我们到达斜坡的尽头，我们可以进行调整以保持接地
+         */
+        private _isGoingUpSlope;
+        private _isWarpingToGround;
+        private platformMask;
+        private triggerMask;
+        private oneWayPlatformMask;
+        private readonly rayOriginSkinMutiplier;
+    }
+}
+declare module es {
     /**
      * 当添加到组件时，每当实体上的冲突器与另一个组件重叠/退出时，将调用这些方法。
      * ITriggerListener方法将在实现接口的触发器实体上的任何组件上调用。
@@ -1189,6 +1326,7 @@ declare module es {
 }
 declare module es {
     abstract class Collider extends Component {
+        protected _isEnabled: boolean;
         /**
          * 对撞机的基本形状
          */
@@ -2672,6 +2810,7 @@ declare module es {
          */
         static isPowerOfTwo(value: number): boolean;
         static lerp(from: number, to: number, t: number): number;
+        static betterLerp(a: number, b: number, t: number, epsilon: number): number;
         /**
          * 使度数的角度在a和b之间
          * 用于处理360度环绕
@@ -2914,6 +3053,21 @@ declare module es {
          * @returns
          */
         static isValid(x: number): boolean;
+        static smoothDamp(current: number, target: number, currentVelocity: number, smoothTime: number, maxSpeed: number, deltaTime: number): {
+            value: number;
+            currentVelocity: number;
+        };
+        static smoothDampVector(current: Vector2, target: Vector2, currentVelocity: Vector2, smoothTime: number, maxSpeed: number, deltaTime: number): Vector2;
+        /**
+         * 将值（在 leftMin - leftMax 范围内）映射到 rightMin - rightMax 范围内的值
+         * @param value
+         * @param leftMin
+         * @param leftMax
+         * @param rightMin
+         * @param rightMax
+         * @returns
+         */
+        static mapMinMax(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: any): number;
     }
 }
 declare module es {
@@ -3396,7 +3550,9 @@ declare module es {
         constructor(collider?: Collider, fraction?: number, distance?: number, point?: Vector2, normal?: Vector2);
         setValues(collider: Collider, fraction: number, distance: number, point: Vector2): void;
         setValuesNonCollider(fraction: number, distance: number, point: Vector2, normal: Vector2): void;
+        setAllValues(collider: Collider, fraction: number, distance: number, point: Vector2, normal: Vector2): void;
         reset(): void;
+        clone(): RaycastHit;
         toString(): string;
     }
 }
@@ -3497,6 +3653,7 @@ declare module es {
          * @param layerMask
          */
         static linecast(start: Vector2, end: Vector2, layerMask?: number): RaycastHit;
+        static linecastIgnoreCollider(start: Vector2, end: Vector2, layerMask?: number, ignoredColliders?: Set<Collider>): RaycastHit;
         /**
          * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组
          * @param start
@@ -3505,6 +3662,7 @@ declare module es {
          * @param layerMask
          */
         static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask?: number): number;
+        static linecastAllIgnoreCollider(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask?: number, ignoredColliders?: Set<Collider>): number;
         /**
          * 检查是否有对撞机落在一个矩形区域中
          * @param rect
@@ -3595,6 +3753,7 @@ declare module es {
          * @param layerMask
          */
         linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number): number;
+        linecastIgnoreCollider(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): number;
         /**
          * 获取所有在指定矩形范围内的碰撞器
          * @param rect
@@ -3649,7 +3808,9 @@ declare module es {
         _cellHits: RaycastHit[];
         _ray: Ray2D;
         _layerMask: number;
+        private _ignoredColliders;
         start(ray: Ray2D, hits: RaycastHit[], layerMask: number): void;
+        startIgnoreCollider(ray: Ray2D, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): void;
         /**
          * 如果hits数组被填充，返回true。单元格不能为空!
          * @param cellX
@@ -3943,6 +4104,18 @@ declare module es {
     }
 }
 declare module es {
+    interface IAnimFrame {
+        t: number;
+        value: number;
+    }
+    class AnimCurve {
+        readonly points: IAnimFrame[];
+        constructor(points: IAnimFrame[]);
+        lerp(t: number): number;
+        _points: IAnimFrame[];
+    }
+}
+declare module es {
     /**
      * 用于包装事件的一个小类
      */
@@ -4085,6 +4258,61 @@ declare module es {
      */
     interface IEquatable<T> {
         equals(other: T): boolean;
+    }
+}
+declare module es {
+    interface IListener {
+        caller: object;
+        callback: Function;
+    }
+    interface IObservable {
+        addListener(caller: object, callback: Function): any;
+        removeListener(caller: object, callback: Function): any;
+        clearListener(): any;
+        clearListenerWithCaller(caller: object): any;
+    }
+    class Observable implements IObservable {
+        constructor();
+        addListener(caller: object, callback: Function): void;
+        removeListener(caller: object, callback: Function): void;
+        clearListener(): void;
+        clearListenerWithCaller(caller: object): void;
+        notify(...args: any[]): void;
+        private _listeners;
+    }
+    class ObservableT<T> extends Observable {
+        addListener(caller: object, callback: (arg: T) => void): void;
+        removeListener(caller: object, callback: (arg: T) => void): void;
+        notify(arg: T): void;
+    }
+    class ObservableTT<T, R> extends Observable {
+        addListener(caller: object, callback: (arg1: T, arg2: R) => void): void;
+        removeListener(caller: object, callback: (arg: T, arg2: R) => void): void;
+        notify(arg1: T, arg2: R): void;
+    }
+    class Command implements IObservable {
+        constructor(caller: object, action: Function);
+        bindAction(caller: object, action: Function): void;
+        dispatch(...args: any[]): void;
+        addListener(caller: object, callback: Function): void;
+        removeListener(caller: object, callback: Function): void;
+        clearListener(): void;
+        clearListenerWithCaller(caller: object): void;
+        private _onExec;
+        private _caller;
+        private _action;
+    }
+    class ValueChangeCommand<T> implements IObservable {
+        constructor(value: T);
+        readonly onValueChange: Observable;
+        value: T;
+        dispatch(value: T): void;
+        addListener(caller: object, callback: Function): void;
+        removeListener(caller: object, callback: Function): void;
+        clearListener(): void;
+        clearListenerWithCaller(caller: object): void;
+        private _onValueChange;
+        private _value;
     }
 }
 declare module es {

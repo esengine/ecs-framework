@@ -95,8 +95,8 @@ module es {
         }
 
         public debugDraw(secondsToDisplay: number) {
-            for (let x = this.gridBounds.x; x <= this.gridBounds.right; x ++) {
-                for (let y = this.gridBounds.y; y <= this.gridBounds.bottom; y ++) {
+            for (let x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
+                for (let y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
                     let cell = this.cellAtPosition(x, y);
                     if (cell != null && cell.length > 0)
                         this.debugDrawCellDetails(x, y, secondsToDisplay);
@@ -154,7 +154,7 @@ module es {
          * @param hits
          * @param layerMask
          */
-        public linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number){
+        public linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number) {
             let ray = new Ray2D(start, end);
             this._raycastParser.start(ray, hits, layerMask);
 
@@ -189,24 +189,24 @@ module es {
             // 开始遍历并返回交叉单元格。
             let cell = this.cellAtPosition(currentCell.x, currentCell.y);
 
-            if (cell != null && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)){
+            if (cell != null && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
                 this._raycastParser.reset();
                 return this._raycastParser.hitCounter;
             }
 
-            while (currentCell.x != lastCell.x || currentCell.y != lastCell.y){
-                if (tMaxX < tMaxY){
+            while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
+                if (tMaxX < tMaxY) {
                     currentCell.x = MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX));
 
                     tMaxX += tDeltaX;
-                }else{
+                } else {
                     currentCell.y = MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY));
 
                     tMaxY += tDeltaY;
                 }
 
                 cell = this.cellAtPosition(currentCell.x, currentCell.y);
-                if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)){
+                if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
                     this._raycastParser.reset();
                     return this._raycastParser.hitCounter;
                 }
@@ -216,6 +216,68 @@ module es {
             this._raycastParser.reset();
             return this._raycastParser.hitCounter;
         }
+
+        public linecastIgnoreCollider(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): number {
+            start = start.clone();
+            const ray = new Ray2D(start, end);
+            this._raycastParser.startIgnoreCollider(ray, hits, layerMask, ignoredColliders);
+            start.x = start.x * this._inverseCellSize;
+            start.y = start.y * this._inverseCellSize;
+            const endCell = this.cellCoords(end.x, end.y);
+            let intX = Math.floor(start.x);
+            let intY = Math.floor(start.y);
+            let stepX = Math.sign(ray.direction.x);
+            let stepY = Math.sign(ray.direction.y);
+            if (intX === endCell.x) {
+                stepX = 0;
+            }
+
+            if (intY === endCell.y) {
+                stepY = 0;
+            }
+
+            const boundaryX = intX + (stepX > 0 ? 1 : 0);
+            const boundaryY = intY + (stepY > 0 ? 1 : 0);
+
+            let tMaxX = (boundaryX - start.x) / ray.direction.x;
+            let tMaxY = (boundaryY - start.y) / ray.direction.y;
+            if (ray.direction.x === 0 || stepX === 0) {
+                tMaxX = Number.POSITIVE_INFINITY;
+            }
+            if (ray.direction.y === 0 || stepY === 0) {
+                tMaxY = Number.POSITIVE_INFINITY;
+            }
+
+            const tDeltaX = stepX / ray.direction.x;
+            const tDeltaY = stepY / ray.direction.y;
+            let cell = this.cellAtPosition(intX, intY);
+            if (cell && this._raycastParser.checkRayIntersection(intX, intY, cell)) {
+                this._raycastParser.reset();
+                return this._raycastParser.hitCounter;
+            }
+
+            let n = 0;
+            while ((intX !== endCell.x || intY !== endCell.y) && n < 100) {
+                if (tMaxX < tMaxY) {
+                    intX = intX + stepX;
+                    tMaxX = tMaxX + tDeltaX;
+                } else {
+                    intY = intY + stepY;
+                    tMaxY = tMaxY + tDeltaY;
+                }
+
+                cell = this.cellAtPosition(intX, intY);
+                if (cell && this._raycastParser.checkRayIntersection(intX, intY, cell)) {
+                    this._raycastParser.reset();
+                    return this._raycastParser.hitCounter;
+                }
+                n++;
+            }
+
+            this._raycastParser.reset();
+            return this._raycastParser.hitCounter;
+        }
+
 
         /**
          * 获取所有在指定矩形范围内的碰撞器
@@ -232,16 +294,16 @@ module es {
             for (let collider of potentials) {
                 if (collider instanceof BoxCollider) {
                     results[resultCounter] = collider;
-                    resultCounter ++;
-                } else if(collider instanceof CircleCollider) {
+                    resultCounter++;
+                } else if (collider instanceof CircleCollider) {
                     if (Collisions.rectToCircle(rect, collider.bounds.center, collider.bounds.width * 0.5)) {
                         results[resultCounter] = collider;
-                        resultCounter ++;
+                        resultCounter++;
                     }
-                } else if(collider instanceof PolygonCollider) {
+                } else if (collider instanceof PolygonCollider) {
                     if (collider.shape.overlaps(this._overlapTestBox)) {
                         results[resultCounter] = collider;
-                        resultCounter ++;
+                        resultCounter++;
                     }
                 } else {
                     throw new Error("overlapRectangle对这个类型没有实现!");
@@ -348,7 +410,7 @@ module es {
             return this._store.get(this.getKey(x, y));
         }
 
-        public getKey(x: number, y: number){
+        public getKey(x: number, y: number) {
             return `${x}_${y}`;
         }
 
@@ -372,11 +434,20 @@ module es {
         public _cellHits: RaycastHit[] = [];
         public _ray: Ray2D;
         public _layerMask: number;
+        private _ignoredColliders: Set<Collider>;
 
         public start(ray: Ray2D, hits: RaycastHit[], layerMask: number) {
             this._ray = ray;
             this._hits = hits;
             this._layerMask = layerMask;
+            this.hitCounter = 0;
+        }
+
+        public startIgnoreCollider(ray: Ray2D, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>) {
+            this._ray = ray;
+            this._hits = hits;
+            this._layerMask = layerMask;
+            this._ignoredColliders = ignoredColliders;
             this.hitCounter = 0;
         }
 
@@ -408,7 +479,7 @@ module es {
                 // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
                 // 在做形状测试之前先做一个边界检查
                 let colliderBounds = potential.bounds.clone();
-                if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1){
+                if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1) {
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
                         // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
                         if (!Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
@@ -427,11 +498,11 @@ module es {
 
             // 所有处理单元完成。对结果进行排序并将命中结果打包到结果数组中
             this._cellHits.sort(RaycastResultParser.compareRaycastHits);
-            for (let i = 0; i < this._cellHits.length; i ++){
+            for (let i = 0; i < this._cellHits.length; i++) {
                 this._hits[this.hitCounter] = this._cellHits[i];
 
                 // 增加命中计数器，如果它已经达到数组大小的限制，我们就完成了
-                this.hitCounter ++;
+                this.hitCounter++;
                 if (this.hitCounter == this._hits.length)
                     return true;
             }
@@ -439,7 +510,7 @@ module es {
             return false;
         }
 
-        public reset(){
+        public reset() {
             this._hits = null;
             this._checkedColliders.length = 0;
             this._cellHits.length = 0;

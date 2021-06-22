@@ -129,6 +129,10 @@ module es {
             return from + (to - from) * this.clamp01(t);
         }
 
+        public static betterLerp(a: number, b: number, t: number, epsilon: number): number {
+            return Math.abs(a - b) < epsilon ? b : MathHelper.lerp(a, b, t);
+        }
+
         /**
          * 使度数的角度在a和b之间
          * 用于处理360度环绕 
@@ -603,6 +607,69 @@ module es {
             }
 
             return !Number.isFinite(x);
+        }
+
+        public static smoothDamp(current: number, target: number, currentVelocity: number, smoothTime: number, maxSpeed: number, deltaTime: number): { value: number; currentVelocity: number } {
+            smoothTime = Math.max(0.0001, smoothTime);
+            const num: number = 2 / smoothTime;
+            const num2: number = num * deltaTime;
+            const num3: number =
+                1 /
+                (1 + (num2 + (0.48 * (num2 * num2) + 0.235 * (num2 * (num2 * num2)))));
+            let num4: number = current - target;
+            const num5: number = target;
+            const num6: number = maxSpeed * smoothTime;
+            num4 = this.clamp(num4, num6 * -1, num6);
+            target = current - num4;
+            const num7: number = (currentVelocity + num * num4) * deltaTime;
+            currentVelocity = (currentVelocity - num * num7) * num3;
+            let num8: number = target + (num4 + num7) * num3;
+            if (num5 - current > 0 === num8 > num5) {
+                num8 = num5;
+                currentVelocity = (num8 - num5) / deltaTime;
+            }
+            return { value: num8, currentVelocity };
+        }
+
+        public static smoothDampVector(current: Vector2, target: Vector2, currentVelocity: Vector2, smoothTime: number, maxSpeed: number, deltaTime: number): Vector2 {
+            const v = Vector2.zero;
+
+            const resX = this.smoothDamp(
+                current.x,
+                target.x,
+                currentVelocity.x,
+                smoothTime,
+                maxSpeed,
+                deltaTime
+            );
+            v.x = resX.value;
+            currentVelocity.x = resX.currentVelocity;
+
+            const resY = this.smoothDamp(
+                current.y,
+                target.y,
+                currentVelocity.y,
+                smoothTime,
+                maxSpeed,
+                deltaTime
+            );
+            v.y = resY.value;
+            currentVelocity.y = resY.currentVelocity;
+
+            return v;
+        }
+
+        /**
+         * 将值（在 leftMin - leftMax 范围内）映射到 rightMin - rightMax 范围内的值 
+         * @param value 
+         * @param leftMin 
+         * @param leftMax 
+         * @param rightMin 
+         * @param rightMax 
+         * @returns 
+         */
+        public static mapMinMax(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax): number {
+            return rightMin + ((MathHelper.clamp(value, leftMin, leftMax) - leftMin) * (rightMax - rightMin)) / (leftMax - leftMin);
         }
     }
 }
