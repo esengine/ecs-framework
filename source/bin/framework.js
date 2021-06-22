@@ -3194,7 +3194,6 @@ var es;
         __extends(Collider, _super);
         function Collider() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
-            _this._isEnabled = true;
             /**
              * 如果这个碰撞器是一个触发器，它将不会引起碰撞，但它仍然会触发事件
              */

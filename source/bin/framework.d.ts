@@ -1326,7 +1326,6 @@ declare module es {
 }
 declare module es {
     abstract class Collider extends Component {
-        protected _isEnabled: boolean;
         /**
          * 对撞机的基本形状
          */
