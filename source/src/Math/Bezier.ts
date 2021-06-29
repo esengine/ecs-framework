@@ -14,8 +14,8 @@ module es {
             t = MathHelper.clamp01(t);
             let oneMinusT = 1 - t;
             return new Vector2(oneMinusT * oneMinusT).multiply(p0)
-                .add(new Vector2(2 * oneMinusT * t).multiply(p1))
-                .add(new Vector2(t * t).multiply(p2));
+                .addEqual(new Vector2(2 * oneMinusT * t).multiply(p1))
+                .addEqual(new Vector2(t * t).multiply(p2));
         }
 
         /**
@@ -31,9 +31,9 @@ module es {
             t = MathHelper.clamp01(t);
             let oneMinusT = 1 - t;
             return new Vector2(oneMinusT * oneMinusT * oneMinusT).multiply(start)
-                .add(new Vector2(3 * oneMinusT * oneMinusT * t).multiply(firstControlPoint))
-                .add(new Vector2(3 * oneMinusT * t * t).multiply(secondControlPoint))
-                .add(new Vector2(t * t * t).multiply(end));
+                .addEqual(new Vector2(3 * oneMinusT * oneMinusT * t).multiply(firstControlPoint))
+                .addEqual(new Vector2(3 * oneMinusT * t * t).multiply(secondControlPoint))
+                .addEqual(new Vector2(t * t * t).multiply(end));
         }
 
         /**
@@ -45,7 +45,7 @@ module es {
          */
         public static getFirstDerivative(p0: Vector2, p1: Vector2, p2: Vector2, t: number) {
             return new Vector2(2 * (1 - t)).multiply(Vector2.subtract(p1, p0))
-                .add(new Vector2(2 * t).multiply(Vector2.subtract(p2, p1)));
+                .addEqual(new Vector2(2 * t).multiply(Vector2.subtract(p2, p1)));
         }
 
         /**
@@ -61,8 +61,8 @@ module es {
             t = MathHelper.clamp01(t);
             let oneMunusT = 1 - t;
             return new Vector2(3 * oneMunusT * oneMunusT).multiply(Vector2.subtract(firstControlPoint, start))
-                .add(new Vector2(6 * oneMunusT * t).multiply(Vector2.subtract(secondControlPoint, firstControlPoint)))
-                .add(new Vector2(3 * t * t).multiply(Vector2.subtract(end, secondControlPoint)));
+                .addEqual(new Vector2(6 * oneMunusT * t).multiply(Vector2.subtract(secondControlPoint, firstControlPoint)))
+                .addEqual(new Vector2(3 * t * t).multiply(Vector2.subtract(end, secondControlPoint)));
         }
 
         /**

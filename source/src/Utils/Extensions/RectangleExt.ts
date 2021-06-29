@@ -389,7 +389,7 @@ module es {
         }
 
         public static translate(rect: Rectangle, vec: Vector2) {
-            rect.location.add(vec);
+            rect.location.addEqual(vec);
         }
     }
 }

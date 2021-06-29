@@ -567,11 +567,13 @@ declare module es {
          * @returns
          */
         static smoothStep(value1: Vector2, value2: Vector2, amount: number): Vector2;
+        setTo(x: number, y: number): void;
         /**
          *
          * @param value
          */
-        add(value: Vector2): Vector2;
+        add(v: Vector2): Vector2;
+        addEqual(v: Vector2): Vector2;
         /**
          *
          * @param value
@@ -594,13 +596,22 @@ declare module es {
          * @param value 要减去的Vector2
          * @returns 当前Vector2
          */
-        subtract(value: Vector2): this;
+        sub(value: Vector2): Vector2;
+        subEqual(v: Vector2): Vector2;
+        /**
+         *
+         * @param size
+         * @returns
+         */
+        scale(size: number): Vector2;
         /**
          * 将这个Vector2变成一个方向相同的单位向量
          */
-        normalize(): void;
+        normalize(): this;
         /** 返回它的长度 */
         length(): number;
+        magnitude(): number;
+        distance(v?: Vector2): number;
         /**
          * 返回该Vector2的平方长度
          * @returns 这个Vector2的平方长度
@@ -1116,7 +1127,7 @@ declare module es {
          * @param minimumTranslationVector
          * @param responseVelocity
          */
-        calculateResponseVelocity(relativeVelocity: Vector2, minimumTranslationVector: Vector2, responseVelocity?: Vector2): void;
+        calculateResponseVelocity(relativeVelocity: Vector2, minimumTranslationVector: Vector2): Vector2;
     }
 }
 declare module es {
@@ -3607,7 +3618,7 @@ declare module es {
          * @param rect
          * @param layerMask
          */
-        static boxcastBroadphase(rect: Rectangle, layerMask?: number): Set<Collider>;
+        static boxcastBroadphase(rect: Rectangle, layerMask?: number): Collider[];
         /**
          * 返回所有被边界交错的碰撞器，但不包括传入的碰撞器（self）。
          * 如果你想为其他查询自己创建扫描边界，这个方法很有用
@@ -3615,13 +3626,13 @@ declare module es {
          * @param rect
          * @param layerMask
          */
-        static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Set<Collider>;
+        static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Collider[];
         /**
          * 返回所有边界与 collider.bounds 相交的碰撞器，但不包括传入的碰撞器(self)
          * @param collider
          * @param layerMask
          */
-        static boxcastBroadphaseExcludingSelfNonRect(collider: Collider, layerMask?: number): Set<Collider>;
+        static boxcastBroadphaseExcludingSelfNonRect(collider: Collider, layerMask?: number): Collider[];
         /**
          * 返回所有被 collider.bounds 扩展为包含 deltaX/deltaY 的碰撞器，但不包括传入的碰撞器（self）
          * @param collider
@@ -3629,7 +3640,7 @@ declare module es {
          * @param deltaY
          * @param layerMask
          */
-        static boxcastBroadphaseExcludingSelfDelta(collider: Collider, deltaX: number, deltaY: number, layerMask?: number): Set<Collider>;
+        static boxcastBroadphaseExcludingSelfDelta(collider: Collider, deltaX: number, deltaY: number, layerMask?: number): Collider[];
         /**
          * 将对撞机添加到物理系统中
          * @param collider
@@ -3741,7 +3752,7 @@ declare module es {
          * @param excludeCollider
          * @param layerMask
          */
-        aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Set<Collider>;
+        aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
         /**
          * 通过空间散列投掷一条线，并将该线碰到的任何碰撞器填入碰撞数组
          * https://github.com/francisengelmann/fast_voxel_traversal/blob/master/main.cpp
@@ -4091,7 +4102,10 @@ declare module es {
          * @param min
          * @param max
          */
-        static getInterval(axis: Vector2, polygon: Polygon, min: Ref<number>, max: Ref<number>): void;
+        static getInterval(axis: Vector2, polygon: Polygon): {
+            min: number;
+            max: number;
+        };
         /**
          * 计算[minA, maxA]和[minB, maxB]之间的距离。如果间隔重叠，距离是负的
          * @param minA
@@ -4099,7 +4113,7 @@ declare module es {
          * @param minB
          * @param maxB
          */
-        static intervalDistance(minA: number, maxA: number, minB: number, maxB: any): number;
+        static intervalDistance(minA: number, maxA: number, minB: number, maxB: number): number;
     }
 }
 declare module es {

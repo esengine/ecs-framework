@@ -26,7 +26,7 @@ module es {
                 let collider = colliders[i];
 
                 let neighbors = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-                for (let j = 0; j < neighbors.size; j++) {
+                for (let j = 0; j < neighbors.length; j++) {
                     let neighbor = neighbors[j];
                     // 我们至少需要一个碰撞器作为触发器
                     if (!collider.isTrigger && !neighbor.isTrigger)

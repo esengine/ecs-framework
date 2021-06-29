@@ -34,10 +34,10 @@ module es {
             if (index % 3 == 0) {
                 let delta = Vector2.subtract(point, this._points[index]);
                 if (index > 0)
-                    this._points[index - 1].add(delta);
+                    this._points[index - 1].addEqual(delta);
                 
                 if (index + 1 < this._points.length)
-                    this._points[index + 1].add(delta);
+                    this._points[index + 1].addEqual(delta);
             }
 
             this._points[index] = point;

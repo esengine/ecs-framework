@@ -94,8 +94,8 @@ module es {
         public setLocalOffset(offset: Vector2): Collider {
             if (!this._localOffset.equals(offset)) {
                 this.unregisterColliderWithPhysicsSystem();
-                this._localOffset = offset;
-                this._localOffsetLength = this._localOffset.length();
+                this._localOffset.setTo(offset.x, offset.y);
+                this._localOffsetLength = this._localOffset.magnitude();
                 this._isPositionDirty = true;
                 this.registerColliderWithPhysicsSystem();
             }
@@ -213,15 +213,15 @@ module es {
          */
         public collidesWith(collider: Collider, motion: Vector2, result: CollisionResult = new CollisionResult()): boolean {
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
-            let oldPosition = this.entity.position.clone();
-            this.entity.position = Vector2.add(this.entity.position, motion);
+            const oldPosition = this.entity.position;
+            this.entity.position = this.entity.position.add(motion);
 
-            let didCollide = this.shape.collidesWithShape(collider.shape, result);
+            const didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)
                 result.collider = collider;
 
             // 将图形位置返回到检查前的位置
-            this.entity.position = oldPosition.clone();
+            this.entity.position = oldPosition;
 
             return didCollide;
         }
@@ -237,6 +237,7 @@ module es {
                 return true;
             }
 
+            result.collider = null;
             return false;
         }
 

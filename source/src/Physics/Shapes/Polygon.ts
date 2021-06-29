@@ -54,7 +54,10 @@ module es {
             this.points = points;
             this.recalculateCenterAndEdgeNormals();
 
-            this._originalPoints = this.points.slice();
+            this._originalPoints = [];
+            this.points.forEach(p => {
+                this._originalPoints.push(p.clone());
+            });
         }
 
         /**
@@ -301,7 +304,7 @@ module es {
          */
         public containsPoint(point: Vector2) {
             // 将点归一化到多边形坐标空间中
-            point.subtract(this.position);
+            point.sub(this.position);
 
             let isInside = false;
             for (let i = 0, j = this.points.length - 1; i < this.points.length; j = i++) {

@@ -294,9 +294,8 @@ module es {
                     initialRayOriginY - i * this._verticalDistanceBetweenRays
                 );
 
-                // if we are grounded we will include oneWayPlatforms
-                // only on the first ray (the bottom one). this will allow us to
-                // walk up sloped oneWayPlatforms
+                // 如果我们接地，我们将只在第一条射线（底部）上包含 oneWayPlatforms。 
+                // 允许我们走上倾斜的 oneWayPlatforms 
                 if (
                     i === 0 &&
                     this.supportSlopedOneWayPlatforms &&

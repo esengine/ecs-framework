@@ -1214,11 +1214,13 @@ var es;
          * @param value
          */
         Vector2.normalize = function (value) {
-            var nValue = new Vector2(value.x, value.y);
-            var val = 1 / Math.sqrt((nValue.x * nValue.x) + (nValue.y * nValue.y));
-            nValue.x *= val;
-            nValue.y *= val;
-            return nValue;
+            var d = value.distance();
+            if (d > 0) {
+                return new Vector2(value.x / d, value.y / d);
+            }
+            else {
+                return new Vector2(0, 1);
+            }
         };
         /**
          * 返回两个向量的点积
@@ -1335,13 +1337,20 @@ var es;
         Vector2.smoothStep = function (value1, value2, amount) {
             return new Vector2(es.MathHelper.smoothStep(value1.x, value2.x, amount), es.MathHelper.smoothStep(value1.y, value2.y, amount));
         };
+        Vector2.prototype.setTo = function (x, y) {
+            this.x = x;
+            this.y = y;
+        };
         /**
          *
          * @param value
          */
-        Vector2.prototype.add = function (value) {
-            this.x += value.x;
-            this.y += value.y;
+        Vector2.prototype.add = function (v) {
+            return new Vector2(this.x + v.x, this.y + v.y);
+        };
+        Vector2.prototype.addEqual = function (v) {
+            this.x += v.x;
+            this.y += v.y;
             return this;
         };
         /**
@@ -1382,22 +1391,48 @@ var es;
          * @param value 要减去的Vector2
          * @returns 当前Vector2
          */
-        Vector2.prototype.subtract = function (value) {
-            this.x -= value.x;
-            this.y -= value.y;
+        Vector2.prototype.sub = function (value) {
+            return new Vector2(this.x - value.x, this.y - value.y);
+        };
+        Vector2.prototype.subEqual = function (v) {
+            this.x -= v.x;
+            this.y -= v.y;
             return this;
+        };
+        /**
+         *
+         * @param size
+         * @returns
+         */
+        Vector2.prototype.scale = function (size) {
+            return new Vector2(this.x * size, this.y * size);
         };
         /**
          * 将这个Vector2变成一个方向相同的单位向量
          */
         Vector2.prototype.normalize = function () {
-            var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
-            this.x *= val;
-            this.y *= val;
+            var d = this.distance();
+            if (d > 0) {
+                this.setTo(this.x / d, this.y / d);
+                return this;
+            }
+            else {
+                this.setTo(0, 1);
+                return this;
+            }
         };
         /** 返回它的长度 */
         Vector2.prototype.length = function () {
             return Math.sqrt((this.x * this.x) + (this.y * this.y));
+        };
+        Vector2.prototype.magnitude = function () {
+            return this.distance();
+        };
+        Vector2.prototype.distance = function (v) {
+            if (!v) {
+                v = Vector2.zero;
+            }
+            return Math.sqrt(Math.pow(this.x - v.x, 2) + Math.pow(this.y - v.y, 2));
         };
         /**
          * 返回该Vector2的平方长度
@@ -2451,14 +2486,16 @@ var es;
                 return;
             }
             if (this.shouldUseGravity)
-                this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiplyScaler(es.Physics.gravity, es.Time.deltaTime));
+                this.velocity.addEqual(es.Physics.gravity.scale(es.Time.deltaTime));
             this.entity.position = es.Vector2.add(this.entity.position, es.Vector2.multiplyScaler(this.velocity, es.Time.deltaTime));
             var collisionResult = new es.CollisionResult();
             // 捞取我们在新的位置上可能会碰撞到的任何东西
-            var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this._collider, this._collider.collidesWithLayers.value);
+            var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(this._collider, this._collider.bounds, this._collider.collidesWithLayers.value);
             try {
                 for (var neighbors_1 = __values(neighbors), neighbors_1_1 = neighbors_1.next(); !neighbors_1_1.done; neighbors_1_1 = neighbors_1.next()) {
                     var neighbor = neighbors_1_1.value;
+                    if (!neighbor)
+                        continue;
                     // 如果邻近的对撞机是同一个实体，则忽略它
                     if (neighbor.entity.equals(this.entity)) {
                         continue;
@@ -2473,9 +2510,8 @@ var es;
                         else {
                             // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
                             this.entity.position = es.Vector2.subtract(this.entity.position, collisionResult.minimumTranslationVector);
-                            var relativeVelocity = this.velocity.clone();
-                            this.calculateResponseVelocity(relativeVelocity, collisionResult.minimumTranslationVector, relativeVelocity);
-                            this.velocity.add(relativeVelocity);
+                            var relativeVelocity = this.calculateResponseVelocity(this.velocity, collisionResult.minimumTranslationVector);
+                            this.velocity.addEqual(relativeVelocity);
                         }
                     }
                 }
@@ -2495,14 +2531,14 @@ var es;
          */
         ArcadeRigidbody.prototype.processOverlap = function (other, minimumTranslationVector) {
             if (this.isImmovable) {
-                other.entity.position = es.Vector2.add(other.entity.position, minimumTranslationVector);
+                other.entity.position = other.entity.position.add(minimumTranslationVector);
             }
             else if (other.isImmovable) {
-                other.entity.position = es.Vector2.subtract(other.entity.position, minimumTranslationVector);
+                this.entity.position = this.entity.position.sub(minimumTranslationVector);
             }
             else {
-                this.entity.position = es.Vector2.subtract(this.entity.position, es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
-                other.entity.position = es.Vector2.add(other.entity.position, es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                this.entity.position = this.entity.position.sub(minimumTranslationVector.scale(0.5));
+                other.entity.position = other.entity.position.add(minimumTranslationVector.scale(0.5));
             }
         };
         /**
@@ -2515,13 +2551,13 @@ var es;
             // 计算的基础是沿碰撞表面法线反射的物体的相对速度。
             // 然后，响应的一部分会根据质量加到每个物体上
             var relativeVelocity = es.Vector2.subtract(this.velocity, other.velocity);
-            this.calculateResponseVelocity(relativeVelocity, minimumTranslationVector, relativeVelocity);
+            relativeVelocity = this.calculateResponseVelocity(relativeVelocity, minimumTranslationVector);
             // 现在，我们使用质量来线性缩放两个刚体上的响应
             var totalinverseMass = this._inverseMass + other._inverseMass;
             var ourResponseFraction = this._inverseMass / totalinverseMass;
             var otherResponseFraction = other._inverseMass / totalinverseMass;
-            this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
-            other.velocity = es.Vector2.subtract(other.velocity, es.Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
+            this.velocity = es.Vector2.add(this.velocity, relativeVelocity.scale(ourResponseFraction));
+            other.velocity = es.Vector2.subtract(other.velocity, relativeVelocity.scale(otherResponseFraction));
         };
         /**
          *  给定两个物体和MTV之间的相对速度，本方法修改相对速度，使其成为碰撞响应
@@ -2529,8 +2565,7 @@ var es;
          * @param minimumTranslationVector
          * @param responseVelocity
          */
-        ArcadeRigidbody.prototype.calculateResponseVelocity = function (relativeVelocity, minimumTranslationVector, responseVelocity) {
-            if (responseVelocity === void 0) { responseVelocity = es.Vector2.zero; }
+        ArcadeRigidbody.prototype.calculateResponseVelocity = function (relativeVelocity, minimumTranslationVector) {
             // 首先，我们得到反方向的归一化MTV：表面法线
             var inverseMTV = es.Vector2.multiplyScaler(minimumTranslationVector, -1);
             var normal = es.Vector2.normalize(inverseMTV);
@@ -2546,10 +2581,10 @@ var es;
             if (tangentialVelocityComponent.lengthSquared() < this._glue)
                 coefficientOfFriction = 1.01;
             // 弹性影响速度的法向分量，摩擦力影响速度的切向分量
-            var r = es.Vector2.multiplyScaler(normalVelocityComponent, -(1 + this._elasticity))
-                .subtract(es.Vector2.multiplyScaler(tangentialVelocityComponent, coefficientOfFriction));
-            responseVelocity.x = r.x;
-            responseVelocity.y = r.y;
+            return normalVelocityComponent
+                .scale(1 + this._elasticity)
+                .sub(tangentialVelocityComponent.scale(coefficientOfFriction))
+                .scale(-1);
         };
         return ArcadeRigidbody;
     }(es.Component));
@@ -2804,9 +2839,8 @@ var es;
                     this._skinWidth * (this.rayOriginSkinMutiplier - 1);
             for (var i = 0; i < this.totalHorizontalRays; i++) {
                 var ray = new es.Vector2(initialRayOriginX, initialRayOriginY - i * this._verticalDistanceBetweenRays);
-                // if we are grounded we will include oneWayPlatforms
-                // only on the first ray (the bottom one). this will allow us to
-                // walk up sloped oneWayPlatforms
+                // 如果我们接地，我们将只在第一条射线（底部）上包含 oneWayPlatforms。 
+                // 允许我们走上倾斜的 oneWayPlatforms 
                 if (i === 0 &&
                     this.supportSlopedOneWayPlatforms &&
                     this.collisionState.wasGroundedLastFrame) {
@@ -3067,7 +3101,7 @@ var es;
                         var _internalcollisionResult = new es.CollisionResult();
                         if (collider_1.collidesWith(neighbor, motion, _internalcollisionResult)) {
                             // 如果碰撞 则退回之前的移动量
-                            motion.subtract(_internalcollisionResult.minimumTranslationVector);
+                            motion.sub(_internalcollisionResult.minimumTranslationVector);
                             // 如果我们碰到多个对象，为了简单起见，只取第一个。
                             if (_internalcollisionResult.collider != null) {
                                 collisionResult.collider = _internalcollisionResult.collider;
@@ -3281,8 +3315,8 @@ var es;
         Collider.prototype.setLocalOffset = function (offset) {
             if (!this._localOffset.equals(offset)) {
                 this.unregisterColliderWithPhysicsSystem();
-                this._localOffset = offset;
-                this._localOffsetLength = this._localOffset.length();
+                this._localOffset.setTo(offset.x, offset.y);
+                this._localOffsetLength = this._localOffset.magnitude();
                 this._isPositionDirty = true;
                 this.registerColliderWithPhysicsSystem();
             }
@@ -3386,13 +3420,13 @@ var es;
         Collider.prototype.collidesWith = function (collider, motion, result) {
             if (result === void 0) { result = new es.CollisionResult(); }
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
-            var oldPosition = this.entity.position.clone();
-            this.entity.position = es.Vector2.add(this.entity.position, motion);
+            var oldPosition = this.entity.position;
+            this.entity.position = this.entity.position.add(motion);
             var didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)
                 result.collider = collider;
             // 将图形位置返回到检查前的位置
-            this.entity.position = oldPosition.clone();
+            this.entity.position = oldPosition;
             return didCollide;
         };
         /**
@@ -3406,6 +3440,7 @@ var es;
                 result.collider = collider;
                 return true;
             }
+            result.collider = null;
             return false;
         };
         /**
@@ -3671,10 +3706,9 @@ var es;
             var _this = _super.call(this) || this;
             // 第一点和最后一点决不能相同。我们想要一个开放的多边形
             var isPolygonClosed = points[0] == points[points.length - 1];
-            var linqPoints = new es.List(points);
             // 最后一个移除
             if (isPolygonClosed)
-                linqPoints.remove(linqPoints.last());
+                points = points.slice(0, points.length - 1);
             var center = es.Polygon.findPolygonCenter(points);
             _this.setLocalOffset(center);
             es.Polygon.recenterPolygonVerts(points);
@@ -6448,8 +6482,8 @@ var es;
             t = es.MathHelper.clamp01(t);
             var oneMinusT = 1 - t;
             return new es.Vector2(oneMinusT * oneMinusT).multiply(p0)
-                .add(new es.Vector2(2 * oneMinusT * t).multiply(p1))
-                .add(new es.Vector2(t * t).multiply(p2));
+                .addEqual(new es.Vector2(2 * oneMinusT * t).multiply(p1))
+                .addEqual(new es.Vector2(t * t).multiply(p2));
         };
         /**
          * 求解一个立方体曲率
@@ -6463,9 +6497,9 @@ var es;
             t = es.MathHelper.clamp01(t);
             var oneMinusT = 1 - t;
             return new es.Vector2(oneMinusT * oneMinusT * oneMinusT).multiply(start)
-                .add(new es.Vector2(3 * oneMinusT * oneMinusT * t).multiply(firstControlPoint))
-                .add(new es.Vector2(3 * oneMinusT * t * t).multiply(secondControlPoint))
-                .add(new es.Vector2(t * t * t).multiply(end));
+                .addEqual(new es.Vector2(3 * oneMinusT * oneMinusT * t).multiply(firstControlPoint))
+                .addEqual(new es.Vector2(3 * oneMinusT * t * t).multiply(secondControlPoint))
+                .addEqual(new es.Vector2(t * t * t).multiply(end));
         };
         /**
          * 得到二次贝塞尔函数的一阶导数
@@ -6476,7 +6510,7 @@ var es;
          */
         Bezier.getFirstDerivative = function (p0, p1, p2, t) {
             return new es.Vector2(2 * (1 - t)).multiply(es.Vector2.subtract(p1, p0))
-                .add(new es.Vector2(2 * t).multiply(es.Vector2.subtract(p2, p1)));
+                .addEqual(new es.Vector2(2 * t).multiply(es.Vector2.subtract(p2, p1)));
         };
         /**
          * 得到一个三次贝塞尔函数的一阶导数
@@ -6490,8 +6524,8 @@ var es;
             t = es.MathHelper.clamp01(t);
             var oneMunusT = 1 - t;
             return new es.Vector2(3 * oneMunusT * oneMunusT).multiply(es.Vector2.subtract(firstControlPoint, start))
-                .add(new es.Vector2(6 * oneMunusT * t).multiply(es.Vector2.subtract(secondControlPoint, firstControlPoint)))
-                .add(new es.Vector2(3 * t * t).multiply(es.Vector2.subtract(end, secondControlPoint)));
+                .addEqual(new es.Vector2(6 * oneMunusT * t).multiply(es.Vector2.subtract(secondControlPoint, firstControlPoint)))
+                .addEqual(new es.Vector2(3 * t * t).multiply(es.Vector2.subtract(end, secondControlPoint)));
         };
         /**
          * 递归地细分bezier曲线，直到满足距离校正
@@ -6582,9 +6616,9 @@ var es;
             if (index % 3 == 0) {
                 var delta = es.Vector2.subtract(point, this._points[index]);
                 if (index > 0)
-                    this._points[index - 1].add(delta);
+                    this._points[index - 1].addEqual(delta);
                 if (index + 1 < this._points.length)
-                    this._points[index + 1].add(delta);
+                    this._points[index + 1].addEqual(delta);
             }
             this._points[index] = point;
         };
@@ -8456,7 +8490,7 @@ var es;
             for (var i = 0; i < colliders.length; i++) {
                 var collider = colliders[i];
                 var neighbors = es.Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-                for (var j = 0; j < neighbors.size; j++) {
+                for (var j = 0; j < neighbors.length; j++) {
                     var neighbor = neighbors[j];
                     // 我们至少需要一个碰撞器作为触发器
                     if (!collider.isTrigger && !neighbor.isTrigger)
@@ -9083,7 +9117,7 @@ var es;
             for (var x = p1.x; x <= p2.x; x++) {
                 for (var y = p1.y; y <= p2.y; y++) {
                     var cell = this.cellAtPosition(x, y);
-                    if (cell == null)
+                    if (!cell)
                         continue;
                     // 当cell不为空。循环并取回所有碰撞器
                     for (var i = 0; i < cell.length; i++) {
@@ -9097,7 +9131,7 @@ var es;
                     }
                 }
             }
-            return this._tempHashSet;
+            return Array.from(this._tempHashSet);
         };
         /**
          * 通过空间散列投掷一条线，并将该线碰到的任何碰撞器填入碰撞数组
@@ -9319,7 +9353,7 @@ var es;
          * @param y
          */
         SpatialHash.prototype.cellCoords = function (x, y) {
-            return new es.Vector2(es.MathHelper.floorToInt(x * this._inverseCellSize), es.MathHelper.floorToInt(y * this._inverseCellSize));
+            return new es.Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
         };
         /**
          * 获取世界空间x,y值的单元格。
@@ -9504,9 +9538,13 @@ var es;
          * @param points
          */
         Polygon.prototype.setPoints = function (points) {
+            var _this = this;
             this.points = points;
             this.recalculateCenterAndEdgeNormals();
-            this._originalPoints = this.points.slice();
+            this._originalPoints = [];
+            this.points.forEach(function (p) {
+                _this._originalPoints.push(p.clone());
+            });
         };
         /**
          * 重新计算多边形中心
@@ -9708,7 +9746,7 @@ var es;
          */
         Polygon.prototype.containsPoint = function (point) {
             // 将点归一化到多边形坐标空间中
-            point.subtract(this.position);
+            point.sub(this.position);
             var isInside = false;
             for (var i = 0, j = this.points.length - 1; i < this.points.length; j = i++) {
                 if (((this.points[i].y > point.y) != (this.points[j].y > point.y)) &&
@@ -10297,8 +10335,8 @@ var es;
          */
         ShapeCollisionsPolygon.polygonToPolygon = function (first, second, result) {
             var isIntersecting = true;
-            var firstEdges = first.edgeNormals.slice();
-            var secondEdges = second.edgeNormals.slice();
+            var firstEdges = first.edgeNormals;
+            var secondEdges = second.edgeNormals;
             var minIntervalDistance = Number.POSITIVE_INFINITY;
             var translationAxis = es.Vector2.zero;
             var polygonOffset = es.Vector2.subtract(first.position, second.position);
@@ -10307,26 +10345,17 @@ var es;
             for (var edgeIndex = 0; edgeIndex < firstEdges.length + secondEdges.length; edgeIndex++) {
                 // 1. 找出当前多边形是否相交
                 // 多边形的归一化轴垂直于缓存给我们的当前边
-                if (edgeIndex < firstEdges.length) {
-                    axis = firstEdges[edgeIndex];
-                }
-                else {
-                    axis = secondEdges[edgeIndex - firstEdges.length];
-                }
+                axis = edgeIndex < firstEdges.length ? firstEdges[edgeIndex] : secondEdges[edgeIndex - firstEdges.length];
                 // 求多边形在当前轴上的投影
-                var minA = new es.Ref(0);
-                var minB = new es.Ref(0);
-                var maxA = new es.Ref(0);
-                var maxB = new es.Ref(0);
                 var intervalDist = 0;
-                this.getInterval(axis, first, minA, maxA);
-                this.getInterval(axis, second, minB, maxB);
+                var _a = this.getInterval(axis, first), minA = _a.min, maxA = _a.max;
+                var _b = this.getInterval(axis, second), minB = _b.min, maxB = _b.max;
                 // 将区间设为第二个多边形的空间。由轴上投影的位置差偏移。
                 var relativeIntervalOffset = es.Vector2.dot(polygonOffset, axis);
-                minA.value += relativeIntervalOffset;
-                maxA.value += relativeIntervalOffset;
+                minA += relativeIntervalOffset;
+                maxA += relativeIntervalOffset;
                 // 检查多边形投影是否正在相交
-                intervalDist = this.intervalDistance(minA.value, maxA.value, minB.value, maxB.value);
+                intervalDist = this.intervalDistance(minA, maxA, minB, maxB);
                 if (intervalDist > 0)
                     isIntersecting = false;
                 // 对于多对多数据类型转换，添加一个Vector2?参数称为deltaMovement。为了提高速度，我们这里不使用它
@@ -10338,14 +10367,14 @@ var es;
                 intervalDist = Math.abs(intervalDist);
                 if (intervalDist < minIntervalDistance) {
                     minIntervalDistance = intervalDist;
-                    translationAxis = axis;
+                    translationAxis.setTo(axis.x, axis.y);
                     if (es.Vector2.dot(translationAxis, polygonOffset) < 0)
-                        translationAxis = new es.Vector2(-translationAxis.x, -translationAxis.y);
+                        translationAxis = translationAxis.scale(-1);
                 }
             }
             // 利用最小平移向量对多边形进行推入。
             result.normal = translationAxis;
-            result.minimumTranslationVector = new es.Vector2(-translationAxis.x * minIntervalDistance, -translationAxis.y * minIntervalDistance);
+            result.minimumTranslationVector = translationAxis.scale(minIntervalDistance * -1);
             return true;
         };
         /**
@@ -10355,18 +10384,22 @@ var es;
          * @param min
          * @param max
          */
-        ShapeCollisionsPolygon.getInterval = function (axis, polygon, min, max) {
-            var dot = es.Vector2.dot(polygon.points[0], axis);
-            min.value = max.value = dot;
+        ShapeCollisionsPolygon.getInterval = function (axis, polygon) {
+            var res = { min: 0, max: 0 };
+            var dot;
+            dot = es.Vector2.dot(polygon.points[0], axis);
+            res.max = dot;
+            res.min = dot;
             for (var i = 1; i < polygon.points.length; i++) {
                 dot = es.Vector2.dot(polygon.points[i], axis);
-                if (dot < min.value) {
-                    min.value = dot;
+                if (dot < res.min) {
+                    res.min = dot;
                 }
-                else if (dot > max.value) {
-                    max.value = dot;
+                else if (dot > res.max) {
+                    res.max = dot;
                 }
             }
+            return res;
         };
         /**
          * 计算[minA, maxA]和[minB, maxB]之间的距离。如果间隔重叠，距离是负的
@@ -13611,7 +13644,7 @@ var es;
             rect.height = Math.trunc(rect.height * scale.y);
         };
         RectangleExt.translate = function (rect, vec) {
-            rect.location.add(vec);
+            rect.location.addEqual(vec);
         };
         return RectangleExt;
     }());
@@ -14453,9 +14486,9 @@ var es;
             var angle = Math.atan2(dirToCircle.y, dirToCircle.x);
             var stepSize = Math.PI / this.lineCountForCircleApproximation;
             var startAngle = angle + es.MathHelper.PiOver2;
-            var lastPt = es.MathHelper.angleToVector(startAngle, radius).add(position);
+            var lastPt = es.MathHelper.angleToVector(startAngle, radius).addEqual(position);
             for (var i = 1; i < this.lineCountForCircleApproximation; i++) {
-                var nextPt = es.MathHelper.angleToVector(startAngle + i * stepSize, radius).add(position);
+                var nextPt = es.MathHelper.angleToVector(startAngle + i * stepSize, radius).addEqual(position);
                 this.addLineOccluder(lastPt, nextPt);
                 lastPt = nextPt;
             }

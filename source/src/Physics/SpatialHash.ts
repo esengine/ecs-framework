@@ -115,7 +115,7 @@ module es {
          * @param excludeCollider
          * @param layerMask
          */
-        public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Set<Collider> {
+        public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[] {
             this._tempHashSet.clear();
 
             let p1 = this.cellCoords(bounds.x, bounds.y);
@@ -124,12 +124,12 @@ module es {
             for (let x = p1.x; x <= p2.x; x++) {
                 for (let y = p1.y; y <= p2.y; y++) {
                     let cell = this.cellAtPosition(x, y);
-                    if (cell == null)
+                    if (!cell)
                         continue;
 
                     // 当cell不为空。循环并取回所有碰撞器
                     for (let i = 0; i < cell.length; i++) {
-                        let collider = cell[i];
+                        const collider = cell[i];
 
                         // 如果它是自身或者如果它不匹配我们的层掩码 跳过这个碰撞器
                         if (collider == excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer.value))
@@ -142,7 +142,7 @@ module es {
                 }
             }
 
-            return this._tempHashSet;
+            return Array.from(this._tempHashSet);
         }
 
         /**
@@ -365,7 +365,7 @@ module es {
          * @param y
          */
         public cellCoords(x: number, y: number): Vector2 {
-            return new Vector2(MathHelper.floorToInt(x * this._inverseCellSize), MathHelper.floorToInt(y * this._inverseCellSize));
+            return new Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
         }
 
         /**

@@ -68,9 +68,9 @@ module es {
 
             let stepSize = Math.PI / this.lineCountForCircleApproximation;
             let startAngle = angle + MathHelper.PiOver2;
-            let lastPt = MathHelper.angleToVector(startAngle, radius).add(position);
+            let lastPt = MathHelper.angleToVector(startAngle, radius).addEqual(position);
             for (let i = 1; i < this.lineCountForCircleApproximation; i ++) {
-                let nextPt = MathHelper.angleToVector(startAngle + i * stepSize, radius).add(position);
+                let nextPt = MathHelper.angleToVector(startAngle + i * stepSize, radius).addEqual(position);
                 this.addLineOccluder(lastPt, nextPt);
                 lastPt = nextPt;
             }

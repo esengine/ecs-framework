@@ -120,11 +120,12 @@ module es {
          * @param value
          */
         public static normalize(value: Vector2) {
-            let nValue = new Vector2(value.x, value.y);
-            let val = 1 / Math.sqrt((nValue.x * nValue.x) + (nValue.y * nValue.y));
-            nValue.x *= val;
-            nValue.y *= val;
-            return nValue;
+            const d = value.distance();
+            if (d > 0) {
+                return new Vector2(value.x / d, value.y / d);
+            } else {
+                return new Vector2(0, 1);
+            }
         }
 
         /**
@@ -260,13 +261,22 @@ module es {
                 MathHelper.smoothStep(value1.y, value2.y, amount));
         }
 
+        public setTo(x: number, y: number) {
+            this.x = x;
+            this.y = y;
+        }
+
         /**
          *
          * @param value
          */
-        public add(value: Vector2): Vector2 {
-            this.x += value.x;
-            this.y += value.y;
+        public add(v: Vector2): Vector2 {
+            return new Vector2(this.x + v.x, this.y + v.y);
+        }
+
+        public addEqual(v: Vector2): Vector2 {
+            this.x += v.x;
+            this.y += v.y;
             return this;
         }
 
@@ -312,24 +322,54 @@ module es {
          * @param value 要减去的Vector2
          * @returns 当前Vector2
          */
-        public subtract(value: Vector2) {
-            this.x -= value.x;
-            this.y -= value.y;
+        public sub(value: Vector2) {
+            return new Vector2(this.x - value.x, this.y - value.y);
+        }
+
+        public subEqual(v: Vector2): Vector2 {
+            this.x -= v.x;
+            this.y -= v.y;
             return this;
+        }
+
+        /**
+         * 
+         * @param size 
+         * @returns 
+         */
+        public scale(size: number): Vector2 {
+            return new Vector2(this.x * size, this.y * size);
         }
 
         /** 
          * 将这个Vector2变成一个方向相同的单位向量
          */
         public normalize() {
-            let val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
-            this.x *= val;
-            this.y *= val;
+            const d = this.distance();
+            if (d > 0) {
+                this.setTo(this.x / d, this.y / d);
+                return this;
+            } else {
+                this.setTo(0, 1);
+                return this;
+            }
         }
 
         /** 返回它的长度 */
         public length() {
             return Math.sqrt((this.x * this.x) + (this.y * this.y));
+        }
+
+        public magnitude(): number {
+            return this.distance();
+          }
+
+        public distance(v?: Vector2): number {
+            if (!v) {
+                v = Vector2.zero;
+            }
+
+            return Math.sqrt(Math.pow(this.x - v.x, 2) + Math.pow(this.y - v.y, 2));
         }
 
         /**
