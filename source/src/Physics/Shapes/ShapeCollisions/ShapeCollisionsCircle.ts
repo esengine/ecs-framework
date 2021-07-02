@@ -1,19 +1,46 @@
 module es {
     export class ShapeCollisionsCircle {
-        public static circleToCircle(first: Circle, second: Circle, result: CollisionResult = new CollisionResult()): boolean {
-            let distanceSquared = Vector2.distanceSquared(first.position, second.position);
-            let sumOfRadii = first.radius + second.radius;
-            let collided = distanceSquared < sumOfRadii * sumOfRadii;
-            if (collided) {
-                result.normal = Vector2.normalize(Vector2.subtract(first.position, second.position));
-                let depth = sumOfRadii - Math.sqrt(distanceSquared);
-                result.minimumTranslationVector = Vector2.multiplyScaler(result.normal, -depth);
-                result.point = Vector2.add(second.position, Vector2.multiplyScaler(result.normal, second.radius));
+        public static circleToCircleCast(first: Circle,second: Circle,deltaMovement: Vector2,hit: RaycastHit): boolean {
+            let endPointOfCast = first.position.add(deltaMovement);
+            let d = this.closestPointOnLine(first.position,endPointOfCast,second.position);
 
-                // 这可以得到实际的碰撞点，可能有用也可能没用，所以我们暂时把它留在这里
-                // let collisionPointX = ((first.position.x * second.radius) + (second.position.x * first.radius)) / sumOfRadii;
-                // let collisionPointY = ((first.position.y * second.radius) + (second.position.y * first.radius)) / sumOfRadii;
-                // result.point = new Vector2(collisionPointX, collisionPointY);
+            let closestDistanceSquared = Vector2.sqrDistance(second.position, d);
+            const sumOfRadiiSquared = (first.radius + second.radius) * (first.radius + second.radius);
+            if (closestDistanceSquared <= sumOfRadiiSquared) {
+                const normalizedDeltaMovement = deltaMovement.normalize();
+                if (d === endPointOfCast) {
+                    endPointOfCast = first.position.add(
+                    deltaMovement.add(normalizedDeltaMovement.scale(second.radius))
+                    );
+                    d = this.closestPointOnLine(
+                    first.position,
+                    endPointOfCast,
+                    second.position
+                    );
+                    closestDistanceSquared = Vector2.sqrDistance(second.position, d);
+                }
+
+                const backDist = Math.sqrt(sumOfRadiiSquared - closestDistanceSquared);
+                hit.centroid = d.sub(normalizedDeltaMovement.scale(backDist));
+                hit.normal = hit.centroid.sub(second.position).normalize();
+                hit.fraction = (hit.centroid.x - first.position.x) / deltaMovement.x;
+                hit.distance = Vector2.distance(first.position, hit.centroid);
+                hit.point = second.position.add(hit.normal.scale(second.radius));
+                return true;
+            }
+
+            return false;
+          }
+
+        public static circleToCircle(first: Circle, second: Circle, result: CollisionResult = new CollisionResult()): boolean {
+            const distanceSquared = Vector2.sqrDistance(first.position, second.position);
+            const sumOfRadii = first.radius + second.radius;
+            const collided = distanceSquared < sumOfRadii * sumOfRadii;
+            if (collided) {
+                result.normal = first.position.sub(second.position).normalize();
+                const depth = sumOfRadii - Math.sqrt(distanceSquared);
+                result.minimumTranslationVector = result.normal.scale(-depth);
+                result.point = second.position.add(result.normal.scale(second.radius));
 
                 return true;
             }
@@ -28,31 +55,31 @@ module es {
          * @param result
          */
          public static circleToBox(circle: Circle, box: Box, result: CollisionResult = new CollisionResult()): boolean {
-            let closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
+            const closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
 
             // 先处理中心在盒子里的圆，如果我们是包含的, 它的成本更低，
             if (box.containsPoint(circle.position)) {
-                result.point = closestPointOnBounds.clone();
+                result.point = closestPointOnBounds;
 
                 // 计算MTV。找出安全的、非碰撞的位置，并从中得到MTV
-                let safePlace = Vector2.add(closestPointOnBounds, Vector2.multiplyScaler(result.normal, circle.radius));
-                result.minimumTranslationVector = Vector2.subtract(circle.position, safePlace);
+                const safePlace = closestPointOnBounds.add(result.normal.scale(circle.radius));
+                result.minimumTranslationVector = circle.position.sub(safePlace);
 
                 return true;
             }
 
-            let sqrDistance = Vector2.distanceSquared(closestPointOnBounds, circle.position);
+            const sqrDistance = Vector2.sqrDistance(closestPointOnBounds, circle.position);
             
             // 看框上的点距圆的半径是否小于圆的半径
             if (sqrDistance == 0) {
-                result.minimumTranslationVector = Vector2.multiplyScaler(result.normal, circle.radius);
+                result.minimumTranslationVector = result.normal.scale(circle.radius);
             } else if (sqrDistance <= circle.radius * circle.radius) {
-                result.normal = Vector2.subtract(circle.position, closestPointOnBounds);
-                let depth = result.normal.length() - circle.radius;
+                result.normal = circle.position.sub(closestPointOnBounds);
+                const depth = result.normal.magnitude() - circle.radius;
 
                 result.point = closestPointOnBounds;
-                Vector2Ext.normalize(result.normal);
-                result.minimumTranslationVector = Vector2.multiplyScaler(result.normal, depth);
+                result.normal = result.normal.normalize();
+                result.minimumTranslationVector = result.normal.scale(depth);
 
                 return true;
             }
@@ -62,47 +89,47 @@ module es {
 
         public static circleToPolygon(circle: Circle, polygon: Polygon, result: CollisionResult = new CollisionResult()): boolean {
             // 圆圈在多边形中的位置坐标
-            let poly2Circle = Vector2.subtract(circle.position, polygon.position);
+            const poly2Circle = circle.position.sub(polygon.position);
 
             // 首先，我们需要找到从圆到多边形的最近距离
-            let distanceSquared = new Ref(0);
-            let closestPoint = Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle, distanceSquared, result.normal);
+            const res =  Polygon.getClosestPointOnPolygonToPoint(polygon.points,poly2Circle);
+            result.normal = res.edgeNormal;
 
             // 确保距离的平方小于半径的平方，否则我们不会相撞。
             // 请注意，如果圆完全包含在多边形中，距离可能大于半径。
             // 正因为如此，我们还要确保圆的位置不在多边形内。
-            let circleCenterInsidePoly = polygon.containsPoint(circle.position);
-            if (distanceSquared.value > circle.radius * circle.radius && !circleCenterInsidePoly)
+            const circleCenterInsidePoly = polygon.containsPoint(circle.position);
+            if (res.distanceSquared > circle.radius * circle.radius && !circleCenterInsidePoly)
                 return false;
 
             // 算出MTV。我们要注意处理完全包含在多边形中的圆或包含其中心的圆
             let mtv: Vector2;
             if (circleCenterInsidePoly) {
-                mtv = Vector2.multiply(result.normal, new Vector2(Math.sqrt(distanceSquared.value) - circle.radius));
+                mtv = result.normal.scale(Math.sqrt(res.distanceSquared) - circle.radius);
             } else {
                 // 如果我们没有距离，这意味着圆心在多边形的边缘上。只需根据它的半径移动它
-                if (distanceSquared.value == 0) {
-                    mtv = new Vector2(result.normal.x * circle.radius, result.normal.y * circle.radius);
+                if (res.distanceSquared === 0) {
+                    mtv = result.normal.scale(circle.radius);
                 } else {
-                    let distance = Math.sqrt(distanceSquared.value);
-                    mtv = Vector2.multiplyScaler(Vector2.subtract(poly2Circle, closestPoint), -1)
-                        .multiply(new Vector2((circle.radius - distance) / distance));
+                    const distance = Math.sqrt(res.distanceSquared);
+                    mtv = poly2Circle
+                        .sub(res.closestPoint)
+                        .scale(((circle.radius - distance) / distance) * -1);
                 }
             }
 
             result.minimumTranslationVector = mtv;
-            result.point = Vector2.add(closestPoint, polygon.position);
+            result.point = res.closestPoint.add(polygon.position);
 
             return true;
         }
 
         public static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2 {
-            let v = Vector2.subtract(lineB, lineA);
-            let w = Vector2.subtract(closestTo, lineA);
-            let t = Vector2.dot(w, v) / Vector2.dot(v, v);
+            const v = lineB.sub(lineA);
+            const w = closestTo.sub(lineA);
+            let t = w.dot(v) / v.dot(v);
             t = MathHelper.clamp(t, 0, 1);
-
-            return Vector2.add(lineA, Vector2.multiplyScaler(v, t));
+            return lineA.add(v.scaleEqual(t));
         }
     }
 }

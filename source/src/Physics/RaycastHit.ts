@@ -38,22 +38,15 @@ module es {
             this.centroid = Vector2.zero;
         }
 
-        public setValues(collider: Collider, fraction: number, distance: number, point: Vector2) {
+        public setAllValues(collider: Collider, fraction: number, distance: number, point: Vector2, normal: Vector2) {
             this.collider = collider;
-            this.fraction = fraction;
-            this.distance = distance;
-            this.point = point;
-        }
-
-        public setValuesNonCollider(fraction: number, distance: number, point: Vector2, normal: Vector2) {
             this.fraction = fraction;
             this.distance = distance;
             this.point = point;
             this.normal = normal;
         }
 
-        public setAllValues(collider: Collider, fraction: number, distance: number, point: Vector2, normal: Vector2) {
-            this.collider = collider;
+        public setValues(fraction: number, distance: number, point: Vector2, normal: Vector2) {
             this.fraction = fraction;
             this.distance = distance;
             this.point = point;

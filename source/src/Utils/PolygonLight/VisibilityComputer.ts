@@ -63,7 +63,7 @@ module es {
          * @param radius 
          */
         public addCircleOccluder(position: Vector2, radius: number){
-            let dirToCircle = Vector2.subtract(position, this._origin);
+            let dirToCircle = position.sub(this._origin);
             let angle = Math.atan2(dirToCircle.y, dirToCircle.x);
 
             let stepSize = Math.PI / this.lineCountForCircleApproximation;

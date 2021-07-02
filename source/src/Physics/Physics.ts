@@ -150,23 +150,19 @@ module es {
          * @param end
          * @param layerMask
          */
-        public static linecast(start: Vector2, end: Vector2, layerMask: number = Physics.allLayers): RaycastHit{
+        public static linecast(start: Vector2, end: Vector2, layerMask: number = this.allLayers, ignoredColliders: Set<Collider> = null): RaycastHit {
             this._hitArray[0].reset();
             this.linecastAll(start, end, this._hitArray, layerMask);
-            return this._hitArray[0];
-        }
-
-        public static linecastIgnoreCollider(start: Vector2,end: Vector2,layerMask: number = this.allLayers,ignoredColliders: Set<Collider> = null): RaycastHit {
             this._hitArray[0].reset();
-            Physics.linecastAllIgnoreCollider(
-              start,
-              end,
-              this._hitArray,
-              layerMask,
-              ignoredColliders
+            Physics.linecastAll(
+                start,
+                end,
+                this._hitArray,
+                layerMask,
+                ignoredColliders
             );
             return this._hitArray[0].clone();
-          }
+        }
 
         /**
          * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组
@@ -175,24 +171,15 @@ module es {
          * @param hits
          * @param layerMask
          */
-        public static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number = Physics.allLayers){
-            if (hits.length == 0){
-                console.warn("传入了一个空的hits数组。没有点击会被返回");
-                return 0;
-            }
-
-            return this._spatialHash.linecast(start, end, hits, layerMask);
-        }
-
-        public static linecastAllIgnoreCollider(start: Vector2,end: Vector2,hits: RaycastHit[],layerMask: number = this.allLayers,ignoredColliders: Set<Collider> = null): number {
-            return this._spatialHash.linecastIgnoreCollider(
-              start,
-              end,
-              hits,
-              layerMask,
-              ignoredColliders
+        public static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number = this.allLayers, ignoredColliders: Set<Collider> = null) {
+            return this._spatialHash.linecast(
+                start,
+                end,
+                hits,
+                layerMask,
+                ignoredColliders
             );
-          }
+        }
 
         /**
          * 检查是否有对撞机落在一个矩形区域中
@@ -212,7 +199,7 @@ module es {
          * @param layerMask 
          */
         public static overlapRectangleAll(rect: Rectangle, results: Collider[], layerMask: number = Physics.allLayers) {
-            if (results.length == 0){
+            if (results.length == 0) {
                 console.warn("传入了一个空的结果数组。不会返回任何结果");
                 return 0;
             }

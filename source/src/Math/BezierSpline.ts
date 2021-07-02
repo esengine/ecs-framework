@@ -10,19 +10,20 @@ module es {
          * 在这个过程中，t被修改为在曲线段的范围内。
          * @param t 
          */
-        public pointIndexAtTime(t: Ref<number>): number {
-            let i = 0;
-            if (t.value >= 1) {
-                t.value = 1;
-                i = this._points.length - 4;
+        public pointIndexAtTime(t: number): {time: number, range: number} {
+            const res = {time: 0, range: 0};
+            if (t >= 1) {
+                t = 1;
+                res.range = this._points.length - 4;
             } else {
-                t.value = MathHelper.clamp01(t.value) * this._curveCount;
-                i = ~~t;
-                t.value -= i;
-                i *= 3;
+                t = MathHelper.clamp01(t) * this._curveCount;
+                res.range = Math.floor(t);
+                t -= res.range;
+                res.range *= 3;
             }
 
-            return i;
+            res.time = t;
+            return res;
         }
 
         /**
@@ -32,7 +33,7 @@ module es {
          */
         public setControlPoint(index: number, point: Vector2) {
             if (index % 3 == 0) {
-                let delta = Vector2.subtract(point, this._points[index]);
+                const delta = point.sub(this._points[index]);
                 if (index > 0)
                     this._points[index - 1].addEqual(delta);
                 
@@ -48,7 +49,8 @@ module es {
          * @param t 
          */
         public getPointAtTime(t: number): Vector2{
-            let i = this.pointIndexAtTime(new Ref(t));
+            const res = this.pointIndexAtTime(t);
+            const i = res.range;
             return Bezier.getPointThree(this._points[i], this._points[i + 1], this._points[i + 2],
                     this._points[i + 3], t);
         }
@@ -58,7 +60,8 @@ module es {
          * @param t 
          */
         public getVelocityAtTime(t: number): Vector2 {
-            let i = this.pointIndexAtTime(new Ref(t));
+            const res = this.pointIndexAtTime(t);
+            const i = res.range;
             return Bezier.getFirstDerivativeThree(this._points[i], this._points[i + 1], this._points[i + 2],
                 this._points[i + 3], t);
         }
@@ -68,7 +71,7 @@ module es {
          * @param t 
          */
         public getDirectionAtTime(t: number) {
-            return Vector2.normalize(this.getVelocityAtTime(t));
+            return this.getVelocityAtTime(t).normalize();
         }
 
         /**

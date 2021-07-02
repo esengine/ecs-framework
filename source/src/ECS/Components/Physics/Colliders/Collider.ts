@@ -1,5 +1,7 @@
 module es {
     export abstract class Collider extends Component {
+        public static readonly lateSortOrder = 999;
+        public castSortOrder: number = 0;
         /**
          * 对撞机的基本形状
          */
@@ -132,12 +134,12 @@ module es {
 
                     if (this instanceof CircleCollider) {
                         this.radius = Math.max(width, height) * 0.5;
-                        this.localOffset = Vector2.subtract(renderableBounds.center, this.entity.transform.position);
+                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
                     } else if (this instanceof BoxCollider) {
                         this.width = width;
                         this.height = height;
 
-                        this.localOffset = Vector2.subtract(renderableBounds.center, this.entity.transform.position);
+                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
                     }
                 }
             }
@@ -264,8 +266,8 @@ module es {
                     continue;
 
                 if (this.collidesWithNonMotion(neighbor, result)) {
-                    motion = Vector2.subtract(motion, result.minimumTranslationVector);
-                    this.shape.position = Vector2.subtract(this.shape.position, result.minimumTranslationVector);
+                    motion = motion.sub(result.minimumTranslationVector);
+                    this.shape.position = this.shape.position.sub(result.minimumTranslationVector);
                     didCollide = true;
                 }
             }

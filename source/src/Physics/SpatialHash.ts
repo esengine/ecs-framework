@@ -118,12 +118,12 @@ module es {
         public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[] {
             this._tempHashSet.clear();
 
-            let p1 = this.cellCoords(bounds.x, bounds.y);
-            let p2 = this.cellCoords(bounds.right, bounds.bottom);
+            const p1 = this.cellCoords(bounds.x, bounds.y);
+            const p2 = this.cellCoords(bounds.right, bounds.bottom);
 
             for (let x = p1.x; x <= p2.x; x++) {
                 for (let y = p1.y; y <= p2.y; y++) {
-                    let cell = this.cellAtPosition(x, y);
+                    const cell = this.cellAtPosition(x, y);
                     if (!cell)
                         continue;
 
@@ -154,9 +154,9 @@ module es {
          * @param hits
          * @param layerMask
          */
-        public linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number) {
+        public linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>) {
             let ray = new Ray2D(start, end);
-            this._raycastParser.start(ray, hits, layerMask);
+            this._raycastParser.start(ray, hits, layerMask, ignoredColliders);
 
             // 获取我们的起始/结束位置，与我们的网格在同一空间内
             let currentCell = this.cellCoords(start.x, start.y);
@@ -213,67 +213,6 @@ module es {
             }
 
             // 复位
-            this._raycastParser.reset();
-            return this._raycastParser.hitCounter;
-        }
-
-        public linecastIgnoreCollider(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): number {
-            start = start.clone();
-            const ray = new Ray2D(start, end);
-            this._raycastParser.startIgnoreCollider(ray, hits, layerMask, ignoredColliders);
-            start.x = start.x * this._inverseCellSize;
-            start.y = start.y * this._inverseCellSize;
-            const endCell = this.cellCoords(end.x, end.y);
-            let intX = Math.floor(start.x);
-            let intY = Math.floor(start.y);
-            let stepX = Math.sign(ray.direction.x);
-            let stepY = Math.sign(ray.direction.y);
-            if (intX === endCell.x) {
-                stepX = 0;
-            }
-
-            if (intY === endCell.y) {
-                stepY = 0;
-            }
-
-            const boundaryX = intX + (stepX > 0 ? 1 : 0);
-            const boundaryY = intY + (stepY > 0 ? 1 : 0);
-
-            let tMaxX = (boundaryX - start.x) / ray.direction.x;
-            let tMaxY = (boundaryY - start.y) / ray.direction.y;
-            if (ray.direction.x === 0 || stepX === 0) {
-                tMaxX = Number.POSITIVE_INFINITY;
-            }
-            if (ray.direction.y === 0 || stepY === 0) {
-                tMaxY = Number.POSITIVE_INFINITY;
-            }
-
-            const tDeltaX = stepX / ray.direction.x;
-            const tDeltaY = stepY / ray.direction.y;
-            let cell = this.cellAtPosition(intX, intY);
-            if (cell && this._raycastParser.checkRayIntersection(intX, intY, cell)) {
-                this._raycastParser.reset();
-                return this._raycastParser.hitCounter;
-            }
-
-            let n = 0;
-            while ((intX !== endCell.x || intY !== endCell.y) && n < 100) {
-                if (tMaxX < tMaxY) {
-                    intX = intX + stepX;
-                    tMaxX = tMaxX + tDeltaX;
-                } else {
-                    intY = intY + stepY;
-                    tMaxY = tMaxY + tDeltaY;
-                }
-
-                cell = this.cellAtPosition(intX, intY);
-                if (cell && this._raycastParser.checkRayIntersection(intX, intY, cell)) {
-                    this._raycastParser.reset();
-                    return this._raycastParser.hitCounter;
-                }
-                n++;
-            }
-
             this._raycastParser.reset();
             return this._raycastParser.hitCounter;
         }
@@ -425,7 +364,11 @@ module es {
     export class RaycastResultParser {
         public hitCounter: number;
         public static compareRaycastHits = (a: RaycastHit, b: RaycastHit) => {
-            return a.distance - b.distance;
+            if (a.distance !== b.distance) {
+                return a.distance - b.distance;
+            } else {
+                return a.collider.castSortOrder - b.collider.castSortOrder;
+            }
         };
 
         public _hits: RaycastHit[];
@@ -436,14 +379,7 @@ module es {
         public _layerMask: number;
         private _ignoredColliders: Set<Collider>;
 
-        public start(ray: Ray2D, hits: RaycastHit[], layerMask: number) {
-            this._ray = ray;
-            this._hits = hits;
-            this._layerMask = layerMask;
-            this.hitCounter = 0;
-        }
-
-        public startIgnoreCollider(ray: Ray2D, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>) {
+        public start(ray: Ray2D, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>) {
             this._ray = ray;
             this._hits = hits;
             this._layerMask = layerMask;
@@ -458,9 +394,8 @@ module es {
          * @param cell
          */
         public checkRayIntersection(cellX: number, cellY: number, cell: Collider[]): boolean {
-            let fraction: Ref<number> = new Ref(0);
             for (let i = 0; i < cell.length; i++) {
-                let potential = cell[i];
+                const potential = cell[i];
 
                 // 管理我们已经处理过的碰撞器
                 if (new es.List(this._checkedColliders).contains(potential))
@@ -475,11 +410,16 @@ module es {
                 if (!Flags.isFlagSet(this._layerMask, potential.physicsLayer.value))
                     continue;
 
+                if (this._ignoredColliders && this._ignoredColliders.has(potential)) {
+                    continue;
+                }
+
                 // TODO: rayIntersects的性能够吗?需要测试它。Collisions.rectToLine可能更快
                 // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
                 // 在做形状测试之前先做一个边界检查
-                let colliderBounds = potential.bounds.clone();
-                if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1) {
+                const colliderBounds = potential.bounds;
+                const res = colliderBounds.rayIntersects(this._ray);
+                if (res.intersected && res.distance <= 1) {
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
                         // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
                         if (!Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
@@ -493,7 +433,7 @@ module es {
                 }
             }
 
-            if (this._cellHits.length == 0)
+            if (this._cellHits.length === 0)
                 return false;
 
             // 所有处理单元完成。对结果进行排序并将命中结果打包到结果数组中
@@ -503,7 +443,7 @@ module es {
 
                 // 增加命中计数器，如果它已经达到数组大小的限制，我们就完成了
                 this.hitCounter++;
-                if (this.hitCounter == this._hits.length)
+                if (this.hitCounter === this._hits.length)
                     return true;
             }
 
@@ -514,6 +454,7 @@ module es {
             this._hits = null;
             this._checkedColliders.length = 0;
             this._cellHits.length = 0;
+            this._ignoredColliders = null;
         }
     }
 }

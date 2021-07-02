@@ -12,8 +12,8 @@ module es {
             const firstEdges = first.edgeNormals;
             const secondEdges = second.edgeNormals;
             let minIntervalDistance = Number.POSITIVE_INFINITY;
-            let translationAxis = es.Vector2.zero;
-            let polygonOffset = Vector2.subtract(first.position, second.position);
+            let translationAxis = Vector2.zero;
+            let polygonOffset = first.position.sub(second.position);
             let axis: Vector2;
 
             // 循环穿过两个多边形的所有边
@@ -28,7 +28,7 @@ module es {
                 const {min: minB, max: maxB} = this.getInterval(axis, second);
 
                 // 将区间设为第二个多边形的空间。由轴上投影的位置差偏移。
-                let relativeIntervalOffset = Vector2.dot(polygonOffset, axis);
+                const relativeIntervalOffset = polygonOffset.dot(axis);
                 minA += relativeIntervalOffset;
                 maxA += relativeIntervalOffset;
 
@@ -50,14 +50,14 @@ module es {
                     minIntervalDistance = intervalDist;
                     translationAxis.setTo(axis.x, axis.y);
 
-                    if (Vector2.dot(translationAxis, polygonOffset) < 0)
+                    if (translationAxis.dot(polygonOffset) < 0)
                         translationAxis = translationAxis.scale(-1);
                 }
             }
 
             // 利用最小平移向量对多边形进行推入。
             result.normal = translationAxis;
-            result.minimumTranslationVector = translationAxis.scale(minIntervalDistance * -1);
+            result.minimumTranslationVector = translationAxis.scale(-minIntervalDistance);
 
             return true;
         }
@@ -72,11 +72,11 @@ module es {
         public static getInterval(axis: Vector2, polygon: Polygon): {min: number, max: number} {
             const res = {min: 0, max: 0};
             let dot: number;
-            dot = Vector2.dot( polygon.points[0], axis);
+            dot = polygon.points[0].dot(axis);
             res.max = dot;
             res.min = dot;
             for (let i = 1; i < polygon.points.length; i++) {
-                dot = Vector2.dot(polygon.points[i], axis);
+                dot = polygon.points[i].dot(axis);
                 if (dot < res.min) {
                     res.min = dot;
                 } else if (dot > res.max) {

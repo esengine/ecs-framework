@@ -16,7 +16,28 @@ module es {
          * 返回标识矩阵
          */
         public static get identity(): Matrix2D {
-            return new Matrix2D(1, 0, 0, 1, 0, 0);
+            return new Matrix2D().setIdentity();
+        }
+
+        public setIdentity(): Matrix2D {
+            return this.setValues(1, 0, 0, 1, 0, 0);
+        }
+
+        public setValues(
+            m11: number,
+            m12: number,
+            m21: number,
+            m22: number,
+            m31: number,
+            m32: number
+        ): Matrix2D {
+            this.m11 = m11;
+            this.m12 = m12;
+            this.m21 = m21;
+            this.m22 = m22;
+            this.m31 = m31;
+            this.m32 = m32;
+            return this;
         }
 
         /**
@@ -38,7 +59,7 @@ module es {
             return Math.atan2(this.m21, this.m11);
         }
 
-        public set rotation(value: number){
+        public set rotation(value: number) {
             let val1 = Math.cos(value);
             let val2 = Math.sin(value);
 
@@ -72,41 +93,17 @@ module es {
         }
 
         /**
-         * 构建一个矩阵
-         * @param m11 
-         * @param m12 
-         * @param m21 
-         * @param m22 
-         * @param m31 
-         * @param m32 
-         */
-        constructor(m11: number, m12: number, m21: number, m22: number, m31: number, m32: number){
-            this.m11 = m11;
-            this.m12 = m12;
-            
-            this.m21 = m21;
-            this.m22 = m22;
-            
-            this.m31 = m31;
-            this.m32 = m32;
-        }
-
-        /**
          * 创建一个新的围绕Z轴的旋转矩阵2D
          * @param radians 
          */
-        public static createRotation(radians: number){
-            let result: Matrix2D = this.identity;
-
-            let val1 = Math.cos(radians);
-            let val2 = Math.sin(radians);
-
+        public static createRotation(radians: number, result: Matrix2D) {
+            result.setIdentity();
+            const val1 = Math.cos(radians);
+            const val2 = Math.sin(radians);
             result.m11 = val1;
             result.m12 = val2;
-            result.m21 = -val2;
+            result.m21 = val2 * -1;
             result.m22 = val1;
-
-            return result;
         }
 
         public static createRotationOut(radians: number, result: Matrix2D) {
@@ -124,18 +121,13 @@ module es {
          * @param xScale 
          * @param yScale 
          */
-        public static createScale(xScale: number, yScale: number){
-            let result: Matrix2D = this.identity;
+        public static createScale(xScale: number, yScale: number, result: Matrix2D) {
             result.m11 = xScale;
             result.m12 = 0;
-
             result.m21 = 0;
             result.m22 = yScale;
-
             result.m31 = 0;
             result.m32 = 0;
-
-            return result;
         }
 
         public static createScaleOut(xScale: number, yScale: number, result: Matrix2D) {
@@ -154,14 +146,11 @@ module es {
          * @param xPosition 
          * @param yPosition 
          */
-        public static createTranslation(xPosition: number, yPosition: number) {
-            let result: Matrix2D = this.identity;
+        public static createTranslation(xPosition: number, yPosition: number, result: Matrix2D) {
             result.m11 = 1;
             result.m12 = 0;
-
             result.m21 = 0;
             result.m22 = 1;
-
             result.m31 = xPosition;
             result.m32 = yPosition;
 
@@ -261,14 +250,14 @@ module es {
         }
 
         public static multiply(matrix1: Matrix2D, matrix2: Matrix2D, result: Matrix2D) {
-            let m11 = (matrix1.m11 * matrix2.m11) + (matrix1.m12 * matrix2.m21);
-            let m12 = (matrix1.m11 * matrix2.m12) + (matrix1.m12 * matrix2.m22);
+            const m11 = (matrix1.m11 * matrix2.m11) + (matrix1.m12 * matrix2.m21);
+            const m12 = (matrix1.m11 * matrix2.m12) + (matrix1.m12 * matrix2.m22);
 
-            let m21 = (matrix1.m21 * matrix2.m11) + (matrix1.m22 * matrix2.m21);
-            let m22 = (matrix1.m21 * matrix2.m12) + (matrix1.m22 * matrix2.m22);
+            const m21 = (matrix1.m21 * matrix2.m11) + (matrix1.m22 * matrix2.m21);
+            const m22 = (matrix1.m21 * matrix2.m12) + (matrix1.m22 * matrix2.m22);
 
-            let m31 = (matrix1.m31 * matrix2.m11) + (matrix1.m32 * matrix2.m21) + matrix2.m31;
-            let m32 = (matrix1.m31 * matrix2.m12) + (matrix1.m32 * matrix2.m22) + matrix2.m32;
+            const m31 = (matrix1.m31 * matrix2.m11) + (matrix1.m32 * matrix2.m21) + matrix2.m31;
+            const m32 = (matrix1.m31 * matrix2.m12) + (matrix1.m32 * matrix2.m22) + matrix2.m32;
 
             result.m11 = m11;
             result.m12 = m12;
@@ -278,8 +267,6 @@ module es {
 
             result.m31 = m31;
             result.m32 = m32;
-
-            return result;
         }
 
         public determinant() {
@@ -292,10 +279,10 @@ module es {
          * @param matrix2 
          * @param amount 
          */
-        public static lerp(matrix1: Matrix2D, matrix2: Matrix2D, amount: number){
+        public static lerp(matrix1: Matrix2D, matrix2: Matrix2D, amount: number) {
             matrix1.m11 = matrix1.m11 + ((matrix2.m11 - matrix1.m11) * amount);
             matrix1.m12 = matrix1.m12 + ((matrix2.m12 - matrix1.m12) * amount);
-            
+
             matrix1.m21 = matrix1.m21 + ((matrix2.m21 - matrix1.m21) * amount);
             matrix1.m22 = matrix1.m22 + ((matrix2.m22 - matrix1.m22) * amount);
 
@@ -321,8 +308,9 @@ module es {
             return ret;
         }
 
-        public mutiplyTranslation(x: number, y: number){
-            let trans = Matrix2D.createTranslation(x, y);
+        public mutiplyTranslation(x: number, y: number) {
+            let trans = new Matrix2D();
+            Matrix2D.createTranslation(x, y, trans);
             return MatrixHelper.mutiply(this, trans);
         }
 
@@ -330,7 +318,7 @@ module es {
          * 比较当前实例是否等于指定的Matrix2D
          * @param other 
          */
-        public equals(other: Matrix2D){
+        public equals(other: Matrix2D) {
             return this == other;
         }
 

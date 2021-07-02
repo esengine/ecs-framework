@@ -107,8 +107,8 @@ module es {
         }
 
         // temp 用于计算边界的矩阵
-        public _tempMat: Matrix2D;
-        public _transformMat: Matrix2D;
+        public _tempMat: Matrix2D = new Matrix2D();
+        public _transformMat: Matrix2D = new Matrix2D();
 
         /**
          * 创建一个新的Rectanglestruct实例，指定位置、宽度和高度。
@@ -213,49 +213,50 @@ module es {
                 this.top < value.bottom;
         }
 
-        public rayIntersects(ray: Ray2D, distance: Ref<number>): boolean {
-            distance.value = 0;
+        public rayIntersects(ray: Ray2D): { intersected: boolean; distance: number } {
+            const res = {intersected: false, distance: 0};
             let maxValue = Number.MAX_VALUE;
 
             if (Math.abs(ray.direction.x) < 1E-06) {
                 if ((ray.start.x < this.x) || (ray.start.x > this.x + this.width))
-                    return false;
+                    return res;
             } else {
-                let num11 = 1 / ray.direction.x;
+                const num11 = 1 / ray.direction.x;
                 let num8 = (this.x - ray.start.x) * num11;
                 let num7 = (this.x + this.width - ray.start.x) * num11;
                 if (num8 > num7) {
-                    let num14 = num8;
+                    const num14 = num8;
                     num8 = num7;
                     num7 = num14;
                 }
 
-                distance.value = Math.max(num8, distance.value);
+                res.distance = Math.max(num8, res.distance);
                 maxValue = Math.min(num7, maxValue);
-                if (distance.value > maxValue)
-                    return false;
+                if (res.distance > maxValue)
+                    return res;
             }
 
-            if (Math.abs(ray.direction.y) < 1E-06) {
+            if (Math.abs(ray.direction.y) < 1e-06) {
                 if ((ray.start.y < this.y) || (ray.start.y > this.y + this.height))
-                    return false;
+                    return res;
             } else {
-                let num10 = 1 / ray.direction.y;
+                const num10 = 1 / ray.direction.y;
                 let num6 = (this.y - ray.start.y) * num10;
                 let num5 = (this.y + this.height - ray.start.y) * num10;
                 if (num6 > num5) {
-                    let num13 = num6;
+                    const num13 = num6;
                     num6 = num5;
                     num5 = num13;
                 }
 
-                distance.value = Math.max(num6, distance.value);
+                res.distance = Math.max(num6, res.distance);
                 maxValue = Math.max(num5, maxValue);
-                if (distance.value > maxValue)
-                    return false;
+                if (res.distance > maxValue)
+                    return res;
             }
 
-            return true;
+            res.intersected = true;
+            return res;
         }
 
         /**
@@ -421,12 +422,12 @@ module es {
                 let worldPosY = parentPosition.y + position.y;
 
                 // 考虑到原点，将参考点设置为世界参考
-                this._transformMat = Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
-                this._tempMat = Matrix2D.createScale(scale.x, scale.y);
+                Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y, this._transformMat);
+                Matrix2D.createScale(scale.x, scale.y, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
-                this._tempMat = Matrix2D.createRotation(rotation);
+                Matrix2D.createRotation(rotation, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
-                this._tempMat = Matrix2D.createTranslation(worldPosX, worldPosY);
+                Matrix2D.createTranslation(worldPosX, worldPosY, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
 
                 // TODO: 我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角

@@ -7,7 +7,7 @@ module es {
          * @param c
          */
         public static isTriangleCCW(a: Vector2, center: Vector2, c: Vector2) {
-            return this.cross(Vector2.subtract(center, a), Vector2.subtract(c, center)) < 0;
+            return this.cross(center.sub(a), c.sub(center)) < 0;
         }
 
         public static halfVector(): Vector2 {
@@ -48,7 +48,7 @@ module es {
         public static angle(from: Vector2, to: Vector2) {
             this.normalize(from);
             this.normalize(to);
-            return Math.acos(MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * MathHelper.Rad2Deg;
+            return Math.acos(MathHelper.clamp(from.dot(to), -1, 1)) * MathHelper.Rad2Deg;
         }
 
         /**
@@ -58,8 +58,8 @@ module es {
          * @param right 
          */
         public static angleBetween(self: Vector2, left: Vector2, right: Vector2) {
-            let one = Vector2.subtract(left, self);
-            let two = Vector2.subtract(right, self);
+            const one = left.sub(self);
+            const two = right.sub(self);
             return this.angle(one, two);
         }
 

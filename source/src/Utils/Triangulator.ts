@@ -13,15 +13,15 @@ module es {
 
         public static testPointTriangle(point: Vector2, a: Vector2, b: Vector2, c: Vector2): boolean {
             // 如果点在AB的右边，那么外边的三角形是
-            if (Vector2Ext.cross(Vector2.subtract(point, a), Vector2.subtract(b, a)) < 0)
+            if (Vector2Ext.cross(point.sub(a), b.sub(a)) < 0)
                 return false;
 
             // 如果点在BC的右边，则在三角形的外侧
-            if (Vector2Ext.cross(Vector2.subtract(point, b), Vector2.subtract(c, b)) < 0)
+            if (Vector2Ext.cross(point.sub(b), c.sub(b)) < 0)
                 return false;
 
             // 如果点在ca的右边，则在三角形的外面
-            if (Vector2Ext.cross(Vector2.subtract(point, c), Vector2.subtract(a, c)) < 0)
+            if (Vector2Ext.cross(point.sub(c), a.sub(c)) < 0)
                 return false;
 
             // 点在三角形上

@@ -462,42 +462,11 @@ declare module es {
         static divide(value1: Vector2, value2: Vector2): Vector2;
         static divideScaler(value1: Vector2, value2: number): Vector2;
         /**
-         *
-         * @param value1
-         * @param value2
-         */
-        static multiply(value1: Vector2, value2: Vector2): Vector2;
-        /**
-         *
-         * @param value1
-         * @param value2
-         * @returns
-         */
-        static multiplyScaler(value1: Vector2, value2: number): Vector2;
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        static subtract(value1: Vector2, value2: Vector2): Vector2;
-        /**
-         * 创建一个新的Vector2
-         * 它包含来自另一个向量的标准化值。
-         * @param value
-         */
-        static normalize(value: Vector2): Vector2;
-        /**
-         * 返回两个向量的点积
-         * @param value1
-         * @param value2
-         */
-        static dot(value1: Vector2, value2: Vector2): number;
-        /**
          * 返回两个向量之间距离的平方
          * @param value1
          * @param value2
          */
-        static distanceSquared(value1: Vector2, value2: Vector2): number;
+        static sqrDistance(value1: Vector2, value2: Vector2): number;
         /**
          * 将指定的值限制在一个范围内
          * @param value1
@@ -539,7 +508,7 @@ declare module es {
          * @param value2
          * @returns 两个向量之间的距离
          */
-        static distance(value1: Vector2, value2: Vector2): number;
+        static distance(vec1: Vector2, vec2: Vector2): number;
         /**
          * 返回两个向量之间的角度，单位是度数
          * @param from
@@ -568,6 +537,7 @@ declare module es {
          */
         static smoothStep(value1: Vector2, value2: Vector2, amount: number): Vector2;
         setTo(x: number, y: number): void;
+        negate(): Vector2;
         /**
          *
          * @param value
@@ -598,18 +568,20 @@ declare module es {
          */
         sub(value: Vector2): Vector2;
         subEqual(v: Vector2): Vector2;
+        dot(v: Vector2): number;
         /**
          *
          * @param size
          * @returns
          */
         scale(size: number): Vector2;
+        scaleEqual(size: number): Vector2;
+        transform(matrix: Matrix2D): Vector2;
+        normalize(): Vector2;
         /**
          * 将这个Vector2变成一个方向相同的单位向量
          */
-        normalize(): this;
-        /** 返回它的长度 */
-        length(): number;
+        normalizeEqual(): Vector2;
         magnitude(): number;
         distance(v?: Vector2): number;
         /**
@@ -632,7 +604,7 @@ declare module es {
          * @param other 要比较的对象
          * @returns 如果实例相同true 否则false
          */
-        equals(other: Vector2 | object): boolean;
+        equals(other: Vector2, tolerance?: number): boolean;
         isValid(): boolean;
         /**
          * 创建一个新的Vector2，其中包含来自两个向量的最小值
@@ -1337,6 +1309,8 @@ declare module es {
 }
 declare module es {
     abstract class Collider extends Component {
+        static readonly lateSortOrder: number;
+        castSortOrder: number;
         /**
          * 对撞机的基本形状
          */
@@ -2652,7 +2626,10 @@ declare module es {
          * 在这个过程中，t被修改为在曲线段的范围内。
          * @param t
          */
-        pointIndexAtTime(t: Ref<number>): number;
+        pointIndexAtTime(t: number): {
+            time: number;
+            range: number;
+        };
         /**
          * 设置一个控制点，考虑到这是否是一个共享点，如果是，则适当调整
          * @param index
@@ -3078,6 +3055,7 @@ declare module es {
          * @returns
          */
         static mapMinMax(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: any): number;
+        static fromAngle(angle: number): Vector2;
     }
 }
 declare module es {
@@ -3139,6 +3117,8 @@ declare module es {
          * 返回标识矩阵
          */
         static readonly identity: Matrix2D;
+        setIdentity(): Matrix2D;
+        setValues(m11: number, m12: number, m21: number, m22: number, m31: number, m32: number): Matrix2D;
         /**
          * 储存在该矩阵中的位置
          */
@@ -3156,34 +3136,24 @@ declare module es {
          */
         scale: Vector2;
         /**
-         * 构建一个矩阵
-         * @param m11
-         * @param m12
-         * @param m21
-         * @param m22
-         * @param m31
-         * @param m32
-         */
-        constructor(m11: number, m12: number, m21: number, m22: number, m31: number, m32: number);
-        /**
          * 创建一个新的围绕Z轴的旋转矩阵2D
          * @param radians
          */
-        static createRotation(radians: number): Matrix2D;
+        static createRotation(radians: number, result: Matrix2D): void;
         static createRotationOut(radians: number, result: Matrix2D): void;
         /**
          * 创建一个新的缩放矩阵2D
          * @param xScale
          * @param yScale
          */
-        static createScale(xScale: number, yScale: number): Matrix2D;
+        static createScale(xScale: number, yScale: number, result: Matrix2D): void;
         static createScaleOut(xScale: number, yScale: number, result: Matrix2D): void;
         /**
          * 创建一个新的平移矩阵2D
          * @param xPosition
          * @param yPosition
          */
-        static createTranslation(xPosition: number, yPosition: number): Matrix2D;
+        static createTranslation(xPosition: number, yPosition: number, result: Matrix2D): Matrix2D;
         static createTranslationOut(position: Vector2, result: Matrix2D): void;
         static invert(matrix: Matrix2D): Matrix2D;
         /**
@@ -3194,7 +3164,7 @@ declare module es {
         substract(matrix: Matrix2D): Matrix2D;
         divide(matrix: Matrix2D): Matrix2D;
         multiply(matrix: Matrix2D): Matrix2D;
-        static multiply(matrix1: Matrix2D, matrix2: Matrix2D, result: Matrix2D): Matrix2D;
+        static multiply(matrix1: Matrix2D, matrix2: Matrix2D, result: Matrix2D): void;
         determinant(): number;
         /**
          * 创建一个新的Matrix2D，包含指定矩阵中的线性插值。
@@ -3353,7 +3323,10 @@ declare module es {
          * @param value 另一个用于测试的矩形
          */
         intersects(value: Rectangle): boolean;
-        rayIntersects(ray: Ray2D, distance: Ref<number>): boolean;
+        rayIntersects(ray: Ray2D): {
+            intersected: boolean;
+            distance: number;
+        };
         /**
          * 获取所提供的矩形是否在此矩形的边界内
          * @param value
@@ -3558,9 +3531,8 @@ declare module es {
          */
         centroid: Vector2;
         constructor(collider?: Collider, fraction?: number, distance?: number, point?: Vector2, normal?: Vector2);
-        setValues(collider: Collider, fraction: number, distance: number, point: Vector2): void;
-        setValuesNonCollider(fraction: number, distance: number, point: Vector2, normal: Vector2): void;
         setAllValues(collider: Collider, fraction: number, distance: number, point: Vector2, normal: Vector2): void;
+        setValues(fraction: number, distance: number, point: Vector2, normal: Vector2): void;
         reset(): void;
         clone(): RaycastHit;
         toString(): string;
@@ -3662,8 +3634,7 @@ declare module es {
          * @param end
          * @param layerMask
          */
-        static linecast(start: Vector2, end: Vector2, layerMask?: number): RaycastHit;
-        static linecastIgnoreCollider(start: Vector2, end: Vector2, layerMask?: number, ignoredColliders?: Set<Collider>): RaycastHit;
+        static linecast(start: Vector2, end: Vector2, layerMask?: number, ignoredColliders?: Set<Collider>): RaycastHit;
         /**
          * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组
          * @param start
@@ -3671,8 +3642,7 @@ declare module es {
          * @param hits
          * @param layerMask
          */
-        static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask?: number): number;
-        static linecastAllIgnoreCollider(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask?: number, ignoredColliders?: Set<Collider>): number;
+        static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask?: number, ignoredColliders?: Set<Collider>): number;
         /**
          * 检查是否有对撞机落在一个矩形区域中
          * @param rect
@@ -3693,10 +3663,13 @@ declare module es {
      * 不是真正的射线(射线只有开始和方向)，作为一条线和射线。
      */
     class Ray2D {
-        start: Vector2;
-        end: Vector2;
-        direction: Vector2;
-        constructor(position: Vector2, end: Vector2);
+        readonly start: Vector2;
+        readonly direction: Vector2;
+        readonly end: Vector2;
+        constructor(pos: Vector2, end: Vector2);
+        private _start;
+        private _direction;
+        private _end;
     }
 }
 declare module es {
@@ -3762,8 +3735,7 @@ declare module es {
          * @param hits
          * @param layerMask
          */
-        linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number): number;
-        linecastIgnoreCollider(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): number;
+        linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): number;
         /**
          * 获取所有在指定矩形范围内的碰撞器
          * @param rect
@@ -3819,8 +3791,7 @@ declare module es {
         _ray: Ray2D;
         _layerMask: number;
         private _ignoredColliders;
-        start(ray: Ray2D, hits: RaycastHit[], layerMask: number): void;
-        startIgnoreCollider(ray: Ray2D, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): void;
+        start(ray: Ray2D, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): void;
         /**
          * 如果hits数组被填充，返回true。单元格不能为空!
          * @param cellX
@@ -3935,7 +3906,11 @@ declare module es {
          * @param distanceSquared
          * @param edgeNormal
          */
-        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: Ref<number>, edgeNormal: Vector2): Vector2;
+        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): {
+            distanceSquared: number;
+            edgeNormal: Vector2;
+            closestPoint: Vector2;
+        };
         /**
          * 旋转原始点并复制旋转的值到旋转的点
          * @param radians
@@ -3991,6 +3966,7 @@ declare module es {
         overlaps(other: Shape): any;
         collidesWithShape(other: Shape, result: CollisionResult): boolean;
         collidesWithLine(start: Vector2, end: Vector2, hit: RaycastHit): boolean;
+        getPointAlongEdge(angle: number): Vector2;
         /**
          * 获取所提供的点是否在此范围内
          * @param point
@@ -4017,18 +3993,20 @@ declare module es {
          * 不是所有冲突类型都使用!在依赖这个字段之前，请检查ShapeCollisions切割类!
          */
         point: Vector2;
+        reset(): void;
+        cloneTo(cr: CollisionResult): void;
         /**
          * 改变最小平移向量，如果没有相同方向上的运动，它将移除平移的x分量。
          * @param deltaMovement
          */
-        removeHorizontal(deltaMovement: Vector2): void;
-        invertResult(): this;
+        removeHorizontalTranslation(deltaMovement: Vector2): void;
+        invertResult(): void;
         toString(): string;
     }
 }
 declare module es {
     class RealtimeCollisions {
-        static intersectMovingCircleBox(s: Circle, b: Box, movement: Vector2, time: Ref<number>): boolean;
+        static intersectMovingCircleBox(s: Circle, b: Box, movement: Vector2, time: number): boolean;
         /**
          * 支持函数，返回索引为n的矩形vert
          * @param b
@@ -4060,6 +4038,7 @@ declare module es {
 }
 declare module es {
     class ShapeCollisionsCircle {
+        static circleToCircleCast(first: Circle, second: Circle, deltaMovement: Vector2, hit: RaycastHit): boolean;
         static circleToCircle(first: Circle, second: Circle, result?: CollisionResult): boolean;
         /**
          * 适用于中心在框内的圆，也适用于与框外中心重合的圆。

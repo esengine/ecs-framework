@@ -1175,69 +1175,12 @@ var es;
             return result;
         };
         /**
-         *
-         * @param value1
-         * @param value2
-         */
-        Vector2.multiply = function (value1, value2) {
-            var result = es.Vector2.zero;
-            result.x = value1.x * value2.x;
-            result.y = value1.y * value2.y;
-            return result;
-        };
-        /**
-         *
-         * @param value1
-         * @param value2
-         * @returns
-         */
-        Vector2.multiplyScaler = function (value1, value2) {
-            var result = es.Vector2.zero;
-            result.x = value1.x * value2;
-            result.y = value1.y * value2;
-            return result;
-        };
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        Vector2.subtract = function (value1, value2) {
-            var result = es.Vector2.zero;
-            result.x = value1.x - value2.x;
-            result.y = value1.y - value2.y;
-            return result;
-        };
-        /**
-         * 创建一个新的Vector2
-         * 它包含来自另一个向量的标准化值。
-         * @param value
-         */
-        Vector2.normalize = function (value) {
-            var d = value.distance();
-            if (d > 0) {
-                return new Vector2(value.x / d, value.y / d);
-            }
-            else {
-                return new Vector2(0, 1);
-            }
-        };
-        /**
-         * 返回两个向量的点积
-         * @param value1
-         * @param value2
-         */
-        Vector2.dot = function (value1, value2) {
-            return (value1.x * value2.x) + (value1.y * value2.y);
-        };
-        /**
          * 返回两个向量之间距离的平方
          * @param value1
          * @param value2
          */
-        Vector2.distanceSquared = function (value1, value2) {
-            var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
-            return (v1 * v1) + (v2 * v2);
+        Vector2.sqrDistance = function (value1, value2) {
+            return Math.pow(value1.x - value2.x, 2) + Math.pow(value1.y - value2.y, 2);
         };
         /**
          * 将指定的值限制在一个范围内
@@ -1290,9 +1233,8 @@ var es;
          * @param value2
          * @returns 两个向量之间的距离
          */
-        Vector2.distance = function (value1, value2) {
-            var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
-            return Math.sqrt((v1 * v1) + (v2 * v2));
+        Vector2.distance = function (vec1, vec2) {
+            return Math.sqrt(Math.pow(vec1.x - vec2.x, 2) + Math.pow(vec1.y - vec2.y, 2));
         };
         /**
          * 返回两个向量之间的角度，单位是度数
@@ -1300,9 +1242,9 @@ var es;
          * @param to
          */
         Vector2.angle = function (from, to) {
-            from = Vector2.normalize(from);
-            to = Vector2.normalize(to);
-            return Math.acos(es.MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
+            from = from.normalize();
+            to = to.normalize();
+            return Math.acos(es.MathHelper.clamp(from.dot(to), -1, 1)) * es.MathHelper.Rad2Deg;
         };
         /**
          * 创建一个包含指定向量反转的新Vector2
@@ -1341,6 +1283,9 @@ var es;
             this.x = x;
             this.y = y;
         };
+        Vector2.prototype.negate = function () {
+            return this.scale(-1);
+        };
         /**
          *
          * @param value
@@ -1372,9 +1317,7 @@ var es;
          * @param value
          */
         Vector2.prototype.multiply = function (value) {
-            this.x *= value.x;
-            this.y *= value.y;
-            return this;
+            return new Vector2(value.x * this.x, value.y * this.y);
         };
         /**
          *
@@ -1399,6 +1342,9 @@ var es;
             this.y -= v.y;
             return this;
         };
+        Vector2.prototype.dot = function (v) {
+            return this.x * v.x + this.y * v.y;
+        };
         /**
          *
          * @param size
@@ -1407,10 +1353,27 @@ var es;
         Vector2.prototype.scale = function (size) {
             return new Vector2(this.x * size, this.y * size);
         };
+        Vector2.prototype.scaleEqual = function (size) {
+            this.x *= size;
+            this.y *= size;
+            return this;
+        };
+        Vector2.prototype.transform = function (matrix) {
+            return new Vector2(this.x * matrix.m11 + this.y * matrix.m21 + matrix.m31, this.x * matrix.m12 + this.y * matrix.m22 + matrix.m32);
+        };
+        Vector2.prototype.normalize = function () {
+            var d = this.distance();
+            if (d > 0) {
+                return new Vector2(this.x / d, this.y / d);
+            }
+            else {
+                return new Vector2(0, 1);
+            }
+        };
         /**
          * 将这个Vector2变成一个方向相同的单位向量
          */
-        Vector2.prototype.normalize = function () {
+        Vector2.prototype.normalizeEqual = function () {
             var d = this.distance();
             if (d > 0) {
                 this.setTo(this.x / d, this.y / d);
@@ -1420,10 +1383,6 @@ var es;
                 this.setTo(0, 1);
                 return this;
             }
-        };
-        /** 返回它的长度 */
-        Vector2.prototype.length = function () {
-            return Math.sqrt((this.x * this.x) + (this.y * this.y));
         };
         Vector2.prototype.magnitude = function () {
             return this.distance();
@@ -1453,8 +1412,8 @@ var es;
          * @param right
          */
         Vector2.prototype.angleBetween = function (left, right) {
-            var one = Vector2.subtract(left, this);
-            var two = Vector2.subtract(right, this);
+            var one = left.sub(this);
+            var two = right.sub(this);
             return es.Vector2Ext.angle(one, two);
         };
         /**
@@ -1462,11 +1421,9 @@ var es;
          * @param other 要比较的对象
          * @returns 如果实例相同true 否则false
          */
-        Vector2.prototype.equals = function (other) {
-            if (other instanceof Vector2) {
-                return other.x == this.x && other.y == this.y;
-            }
-            return false;
+        Vector2.prototype.equals = function (other, tolerance) {
+            if (tolerance === void 0) { tolerance = 0.001; }
+            return Math.abs(this.x - other.x) <= tolerance && Math.abs(this.y - other.y) <= tolerance;
         };
         Vector2.prototype.isValid = function () {
             return es.MathHelper.isValid(this.x) && es.MathHelper.isValid(this.y);
@@ -1503,9 +1460,9 @@ var es;
         };
         Vector2.unsignedAngle = function (from, to, round) {
             if (round === void 0) { round = true; }
-            from.normalize();
-            to.normalize();
-            var angle = Math.acos(es.MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
+            from.normalizeEqual();
+            to.normalizeEqual();
+            var angle = Math.acos(es.MathHelper.clamp(from.dot(to), -1, 1)) * es.MathHelper.Rad2Deg;
             return round ? Math.round(angle) : angle;
         };
         Vector2.prototype.clone = function () {
@@ -2103,8 +2060,8 @@ var es;
          */
         Transform.prototype.lookAt = function (pos) {
             var sign = this.position.x > pos.x ? -1 : 1;
-            var vectorToAlignTo = es.Vector2.normalize(es.Vector2.subtract(this.position, pos));
-            this.rotation = sign * Math.acos(es.Vector2.dot(vectorToAlignTo, es.Vector2.unitY));
+            var vectorToAlignTo = this.position.sub(pos).normalize();
+            this.rotation = sign * Math.acos(vectorToAlignTo.dot(es.Vector2.unitY));
         };
         /**
          * 相对于父变换的旋转设置变换的旋转。如果转换没有父元素，则与transform.rotation相同
@@ -2159,15 +2116,15 @@ var es;
                     this.parent.updateTransform();
                 if (this._localDirty) {
                     if (this._localPositionDirty) {
-                        this._translationMatrix = es.Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y);
+                        es.Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y, this._translationMatrix);
                         this._localPositionDirty = false;
                     }
                     if (this._localRotationDirty) {
-                        this._rotationMatrix = es.Matrix2D.createRotation(this._localRotation);
+                        es.Matrix2D.createRotation(this._localRotation, this._rotationMatrix);
                         this._localRotationDirty = false;
                     }
                     if (this._localScaleDirty) {
-                        this._scaleMatrix = es.Matrix2D.createScale(this._localScale.x, this._localScale.y);
+                        es.Matrix2D.createScale(this._localScale.x, this._localScale.y, this._scaleMatrix);
                         this._localScaleDirty = false;
                     }
                     es.Matrix2D.multiply(this._scaleMatrix, this._rotationMatrix, this._localTransform);
@@ -2183,7 +2140,8 @@ var es;
                 if (this.parent != null) {
                     es.Matrix2D.multiply(this._localTransform, this.parent._worldTransform, this._worldTransform);
                     this._rotation = this._localRotation + this.parent._rotation;
-                    this._scale = es.Vector2.multiply(this.parent._scale, this._localScale);
+                    this._scale = this.parent._scale.multiply(this._localScale);
+                    ;
                     this._worldInverseDirty = true;
                 }
                 this._worldToLocalDirty = true;
@@ -2195,13 +2153,13 @@ var es;
             if ((this.hierarchyDirty & dirtyFlagType) == 0) {
                 this.hierarchyDirty |= dirtyFlagType;
                 switch (dirtyFlagType) {
-                    case es.DirtyType.positionDirty:
+                    case DirtyType.positionDirty:
                         this.entity.onTransformChanged(transform.Component.position);
                         break;
-                    case es.DirtyType.rotationDirty:
+                    case DirtyType.rotationDirty:
                         this.entity.onTransformChanged(transform.Component.rotation);
                         break;
-                    case es.DirtyType.scaleDirty:
+                    case DirtyType.scaleDirty:
                         this.entity.onTransformChanged(transform.Component.scale);
                         break;
                 }
@@ -2464,8 +2422,7 @@ var es;
          */
         ArcadeRigidbody.prototype.addImpulse = function (force) {
             if (!this.isImmovable) {
-                this.velocity = es.Vector2.add(this.velocity, es.Vector2.multiplyScaler(force, 100000)
-                    .multiplyScaler(this._inverseMass * es.Time.deltaTime * es.Time.deltaTime));
+                this.velocity.addEqual(force.scale(100000 * (this._inverseMass * (es.Time.deltaTime * es.Time.deltaTime))));
             }
         };
         ArcadeRigidbody.prototype.onAddedToEntity = function () {
@@ -2487,7 +2444,7 @@ var es;
             }
             if (this.shouldUseGravity)
                 this.velocity.addEqual(es.Physics.gravity.scale(es.Time.deltaTime));
-            this.entity.position = es.Vector2.add(this.entity.position, es.Vector2.multiplyScaler(this.velocity, es.Time.deltaTime));
+            this.entity.position = this.entity.position.add(this.velocity.scale(es.Time.deltaTime));
             var collisionResult = new es.CollisionResult();
             // 捞取我们在新的位置上可能会碰撞到的任何东西
             var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(this._collider, this._collider.bounds, this._collider.collidesWithLayers.value);
@@ -2509,7 +2466,7 @@ var es;
                         }
                         else {
                             // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                            this.entity.position = es.Vector2.subtract(this.entity.position, collisionResult.minimumTranslationVector);
+                            this.entity.position = this.entity.position.sub(collisionResult.minimumTranslationVector);
                             var relativeVelocity = this.calculateResponseVelocity(this.velocity, collisionResult.minimumTranslationVector);
                             this.velocity.addEqual(relativeVelocity);
                         }
@@ -2550,14 +2507,14 @@ var es;
             // 我们计算两个相撞物体的响应。
             // 计算的基础是沿碰撞表面法线反射的物体的相对速度。
             // 然后，响应的一部分会根据质量加到每个物体上
-            var relativeVelocity = es.Vector2.subtract(this.velocity, other.velocity);
+            var relativeVelocity = this.velocity.sub(other.velocity);
             relativeVelocity = this.calculateResponseVelocity(relativeVelocity, minimumTranslationVector);
             // 现在，我们使用质量来线性缩放两个刚体上的响应
             var totalinverseMass = this._inverseMass + other._inverseMass;
             var ourResponseFraction = this._inverseMass / totalinverseMass;
             var otherResponseFraction = other._inverseMass / totalinverseMass;
-            this.velocity = es.Vector2.add(this.velocity, relativeVelocity.scale(ourResponseFraction));
-            other.velocity = es.Vector2.subtract(other.velocity, relativeVelocity.scale(otherResponseFraction));
+            this.velocity = this.velocity.add(relativeVelocity.scale(ourResponseFraction));
+            other.velocity = other.velocity.sub(relativeVelocity.scale(otherResponseFraction));
         };
         /**
          *  给定两个物体和MTV之间的相对速度，本方法修改相对速度，使其成为碰撞响应
@@ -2567,13 +2524,13 @@ var es;
          */
         ArcadeRigidbody.prototype.calculateResponseVelocity = function (relativeVelocity, minimumTranslationVector) {
             // 首先，我们得到反方向的归一化MTV：表面法线
-            var inverseMTV = es.Vector2.multiplyScaler(minimumTranslationVector, -1);
-            var normal = es.Vector2.normalize(inverseMTV);
+            var inverseMTV = minimumTranslationVector.scale(-1);
+            var normal = inverseMTV.normalize();
             // 速度是沿碰撞法线和碰撞平面分解的。
             // 弹性将影响沿法线的响应（法线速度分量），摩擦力将影响速度的切向分量（切向速度分量）
-            var n = es.Vector2.dot(relativeVelocity, normal);
-            var normalVelocityComponent = es.Vector2.multiplyScaler(normal, n);
-            var tangentialVelocityComponent = es.Vector2.subtract(relativeVelocity, normalVelocityComponent);
+            var n = relativeVelocity.dot(normal);
+            var normalVelocityComponent = normal.scale(n);
+            var tangentialVelocityComponent = relativeVelocity.sub(normalVelocityComponent);
             if (n > 0)
                 normalVelocityComponent = es.Vector2.zero;
             // 如果切向分量的平方幅度小于glue，那么我们就把摩擦力提升到最大
@@ -2844,10 +2801,10 @@ var es;
                 if (i === 0 &&
                     this.supportSlopedOneWayPlatforms &&
                     this.collisionState.wasGroundedLastFrame) {
-                    this._raycastHit = es.Physics.linecastIgnoreCollider(ray, ray.add(rayDirection.multiplyScaler(rayDistance)), this.platformMask, this.ignoredColliders);
+                    this._raycastHit = es.Physics.linecast(ray, ray.add(rayDirection.scaleEqual(rayDistance)), this.platformMask, this.ignoredColliders);
                 }
                 else {
-                    this._raycastHit = es.Physics.linecastIgnoreCollider(ray, ray.add(rayDirection.multiplyScaler(rayDistance)), this.platformMask & ~this.oneWayPlatformMask, this.ignoredColliders);
+                    this._raycastHit = es.Physics.linecast(ray, ray.add(rayDirection.scaleEqual(rayDistance)), this.platformMask & ~this.oneWayPlatformMask, this.ignoredColliders);
                 }
                 if (this._raycastHit.collider) {
                     if (i === 0 &&
@@ -2893,7 +2850,7 @@ var es;
             }
             for (var i = 0; i < this.totalVerticalRays; i++) {
                 var rayStart = new es.Vector2(initialRayOriginX + i * this._horizontalDistanceBetweenRays, initialRayOriginY);
-                this._raycastHit = es.Physics.linecastIgnoreCollider(rayStart, rayStart.add(rayDirection.multiplyScaler(rayDistance)), mask, this.ignoredColliders);
+                this._raycastHit = es.Physics.linecast(rayStart, rayStart.add(rayDirection.scaleEqual(rayDistance)), mask, this.ignoredColliders);
                 if (this._raycastHit.collider) {
                     deltaMovement.y = this._raycastHit.point.y - rayStart.y;
                     rayDistance = Math.abs(deltaMovement.y);
@@ -2932,7 +2889,7 @@ var es;
             var slopeCheckRayDistance = this._slopeLimitTangent *
                 (this._raycastOrigins.bottomRight.x - centerOfCollider);
             var slopeRay = new es.Vector2(centerOfCollider, this._raycastOrigins.bottomLeft.y);
-            this._raycastHit = es.Physics.linecastIgnoreCollider(slopeRay, slopeRay.add(rayDirection.multiplyScaler(slopeCheckRayDistance)), this.platformMask, this.ignoredColliders);
+            this._raycastHit = es.Physics.linecast(slopeRay, slopeRay.add(rayDirection.scaleEqual(slopeCheckRayDistance)), this.platformMask, this.ignoredColliders);
             if (this._raycastHit.collider) {
                 var angle = es.Vector2.unsignedAngle(this._raycastHit.normal, es.Vector2.up);
                 if (angle === 0) {
@@ -2976,10 +2933,10 @@ var es;
                     var raycastHit = null;
                     if (this.supportSlopedOneWayPlatforms &&
                         this.collisionState.wasGroundedLastFrame) {
-                        raycastHit = es.Physics.linecastIgnoreCollider(ray, ray.add(deltaMovement), this.platformMask, this.ignoredColliders);
+                        raycastHit = es.Physics.linecast(ray, ray.add(deltaMovement), this.platformMask, this.ignoredColliders);
                     }
                     else {
-                        raycastHit = es.Physics.linecastIgnoreCollider(ray, ray.add(deltaMovement), this.platformMask & ~this.oneWayPlatformMask, this.ignoredColliders);
+                        raycastHit = es.Physics.linecast(ray, ray.add(deltaMovement), this.platformMask & ~this.oneWayPlatformMask, this.ignoredColliders);
                     }
                     if (raycastHit.collider) {
                         deltaMovement.x = raycastHit.point.x - ray.x;
@@ -3228,6 +3185,7 @@ var es;
         __extends(Collider, _super);
         function Collider() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.castSortOrder = 0;
             /**
              * 如果这个碰撞器是一个触发器，它将不会引起碰撞，但它仍然会触发事件
              */
@@ -3347,12 +3305,12 @@ var es;
                     var height = renderableBounds.height / this.entity.transform.scale.y;
                     if (this instanceof es.CircleCollider) {
                         this.radius = Math.max(width, height) * 0.5;
-                        this.localOffset = es.Vector2.subtract(renderableBounds.center, this.entity.transform.position);
+                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
                     }
                     else if (this instanceof es.BoxCollider) {
                         this.width = width;
                         this.height = height;
-                        this.localOffset = es.Vector2.subtract(renderableBounds.center, this.entity.transform.position);
+                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
                     }
                 }
             }
@@ -3466,8 +3424,8 @@ var es;
                     if (neighbor.isTrigger)
                         continue;
                     if (this.collidesWithNonMotion(neighbor, result)) {
-                        motion = es.Vector2.subtract(motion, result.minimumTranslationVector);
-                        this.shape.position = es.Vector2.subtract(this.shape.position, result.minimumTranslationVector);
+                        motion = motion.sub(result.minimumTranslationVector);
+                        this.shape.position = this.shape.position.sub(result.minimumTranslationVector);
                         didCollide = true;
                     }
                 }
@@ -3510,6 +3468,7 @@ var es;
             }
             return false;
         };
+        Collider.lateSortOrder = 999;
         return Collider;
     }(es.Component));
     es.Collider = Collider;
@@ -6509,8 +6468,8 @@ var es;
          * @param t
          */
         Bezier.getFirstDerivative = function (p0, p1, p2, t) {
-            return new es.Vector2(2 * (1 - t)).multiply(es.Vector2.subtract(p1, p0))
-                .addEqual(new es.Vector2(2 * t).multiply(es.Vector2.subtract(p2, p1)));
+            return p1.sub(p0).scale(2 * (1 - t))
+                .addEqual(p2.sub(p1).scale(2 * t));
         };
         /**
          * 得到一个三次贝塞尔函数的一阶导数
@@ -6523,9 +6482,9 @@ var es;
         Bezier.getFirstDerivativeThree = function (start, firstControlPoint, secondControlPoint, end, t) {
             t = es.MathHelper.clamp01(t);
             var oneMunusT = 1 - t;
-            return new es.Vector2(3 * oneMunusT * oneMunusT).multiply(es.Vector2.subtract(firstControlPoint, start))
-                .addEqual(new es.Vector2(6 * oneMunusT * t).multiply(es.Vector2.subtract(secondControlPoint, firstControlPoint)))
-                .addEqual(new es.Vector2(3 * t * t).multiply(es.Vector2.subtract(end, secondControlPoint)));
+            return firstControlPoint.sub(start).scale(3 * oneMunusT * oneMunusT)
+                .addEqual(secondControlPoint.sub(firstControlPoint).scale(6 * oneMunusT * t))
+                .addEqual(end.sub(secondControlPoint).scale(3 * t * t));
         };
         /**
          * 递归地细分bezier曲线，直到满足距离校正
@@ -6555,16 +6514,16 @@ var es;
          */
         Bezier.recursiveGetOptimizedDrawingPoints = function (start, firstCtrlPoint, secondCtrlPoint, end, points, distanceTolerance) {
             // 计算线段的所有中点
-            var pt12 = es.Vector2.divideScaler(es.Vector2.add(start, firstCtrlPoint), 2);
-            var pt23 = es.Vector2.divideScaler(es.Vector2.add(firstCtrlPoint, secondCtrlPoint), 2);
-            var pt34 = es.Vector2.divideScaler(es.Vector2.add(secondCtrlPoint, end), 2);
+            var pt12 = es.Vector2.divideScaler(start.add(firstCtrlPoint), 2);
+            var pt23 = es.Vector2.divideScaler(firstCtrlPoint.add(secondCtrlPoint), 2);
+            var pt34 = es.Vector2.divideScaler(secondCtrlPoint.add(end), 2);
             // 计算新半直线的中点
-            var pt123 = es.Vector2.divideScaler(es.Vector2.add(pt12, pt23), 2);
-            var pt234 = es.Vector2.divideScaler(es.Vector2.add(pt23, pt34), 2);
+            var pt123 = es.Vector2.divideScaler(pt12.add(pt23), 2);
+            var pt234 = es.Vector2.divideScaler(pt23.add(pt34), 2);
             // 最后再细分最后两个中点。如果我们满足我们的距离公差，这将是我们使用的最后一点。
-            var pt1234 = es.Vector2.divideScaler(es.Vector2.add(pt123, pt234), 2);
+            var pt1234 = es.Vector2.divideScaler(pt123.add(pt234), 2);
             // 试着用一条直线来近似整个三次曲线
-            var deltaLine = es.Vector2.subtract(end, start);
+            var deltaLine = end.sub(start);
             var d2 = Math.abs(((firstCtrlPoint.x, end.x) * deltaLine.y - (firstCtrlPoint.y - end.y) * deltaLine.x));
             var d3 = Math.abs(((secondCtrlPoint.x - end.x) * deltaLine.y - (secondCtrlPoint.y - end.y) * deltaLine.x));
             if ((d2 + d3) * (d2 + d3) < distanceTolerance * (deltaLine.x * deltaLine.x + deltaLine.y * deltaLine.y)) {
@@ -6594,18 +6553,19 @@ var es;
          * @param t
          */
         BezierSpline.prototype.pointIndexAtTime = function (t) {
-            var i = 0;
-            if (t.value >= 1) {
-                t.value = 1;
-                i = this._points.length - 4;
+            var res = { time: 0, range: 0 };
+            if (t >= 1) {
+                t = 1;
+                res.range = this._points.length - 4;
             }
             else {
-                t.value = es.MathHelper.clamp01(t.value) * this._curveCount;
-                i = ~~t;
-                t.value -= i;
-                i *= 3;
+                t = es.MathHelper.clamp01(t) * this._curveCount;
+                res.range = Math.floor(t);
+                t -= res.range;
+                res.range *= 3;
             }
-            return i;
+            res.time = t;
+            return res;
         };
         /**
          * 设置一个控制点，考虑到这是否是一个共享点，如果是，则适当调整
@@ -6614,7 +6574,7 @@ var es;
          */
         BezierSpline.prototype.setControlPoint = function (index, point) {
             if (index % 3 == 0) {
-                var delta = es.Vector2.subtract(point, this._points[index]);
+                var delta = point.sub(this._points[index]);
                 if (index > 0)
                     this._points[index - 1].addEqual(delta);
                 if (index + 1 < this._points.length)
@@ -6627,7 +6587,8 @@ var es;
          * @param t
          */
         BezierSpline.prototype.getPointAtTime = function (t) {
-            var i = this.pointIndexAtTime(new es.Ref(t));
+            var res = this.pointIndexAtTime(t);
+            var i = res.range;
             return es.Bezier.getPointThree(this._points[i], this._points[i + 1], this._points[i + 2], this._points[i + 3], t);
         };
         /**
@@ -6635,7 +6596,8 @@ var es;
          * @param t
          */
         BezierSpline.prototype.getVelocityAtTime = function (t) {
-            var i = this.pointIndexAtTime(new es.Ref(t));
+            var res = this.pointIndexAtTime(t);
+            var i = res.range;
             return es.Bezier.getFirstDerivativeThree(this._points[i], this._points[i + 1], this._points[i + 2], this._points[i + 3], t);
         };
         /**
@@ -6643,7 +6605,7 @@ var es;
          * @param t
          */
         BezierSpline.prototype.getDirectionAtTime = function (t) {
-            return es.Vector2.normalize(this.getVelocityAtTime(t));
+            return this.getVelocityAtTime(t).normalize();
         };
         /**
          * 在贝塞尔曲线上添加一条曲线
@@ -7087,8 +7049,8 @@ var es;
          * @param other
          */
         MathHelper.project = function (self, other) {
-            var amt = es.Vector2.dot(self, other) / other.lengthSquared();
-            var vec = new es.Vector2(amt * other.x, amt * other.y);
+            var amt = self.dot(other) / other.lengthSquared();
+            var vec = other.scale(amt);
             return vec;
         };
         /**
@@ -7287,7 +7249,7 @@ var es;
             if (Number.isNaN(x)) {
                 return false;
             }
-            return !Number.isFinite(x);
+            return x !== Infinity;
         };
         MathHelper.smoothDamp = function (current, target, currentVelocity, smoothTime, maxSpeed, deltaTime) {
             smoothTime = Math.max(0.0001, smoothTime);
@@ -7330,6 +7292,9 @@ var es;
          */
         MathHelper.mapMinMax = function (value, leftMin, leftMax, rightMin, rightMax) {
             return rightMin + ((MathHelper.clamp(value, leftMin, leftMax) - leftMin) * (rightMax - rightMin)) / (leftMax - leftMin);
+        };
+        MathHelper.fromAngle = function (angle) {
+            return new es.Vector2(Math.cos(angle), Math.sin(angle)).normalizeEqual();
         };
         MathHelper.Epsilon = 0.00001;
         MathHelper.Rad2Deg = 57.29578;
@@ -7479,39 +7444,36 @@ var es;
      * 表示右手3 * 3的浮点矩阵，可以存储平移、缩放和旋转信息。
      */
     var Matrix2D = /** @class */ (function () {
-        /**
-         * 构建一个矩阵
-         * @param m11
-         * @param m12
-         * @param m21
-         * @param m22
-         * @param m31
-         * @param m32
-         */
-        function Matrix2D(m11, m12, m21, m22, m31, m32) {
+        function Matrix2D() {
             this.m11 = 0; // x 缩放
             this.m12 = 0;
             this.m21 = 0;
             this.m22 = 0;
             this.m31 = 0;
             this.m32 = 0;
-            this.m11 = m11;
-            this.m12 = m12;
-            this.m21 = m21;
-            this.m22 = m22;
-            this.m31 = m31;
-            this.m32 = m32;
         }
         Object.defineProperty(Matrix2D, "identity", {
             /**
              * 返回标识矩阵
              */
             get: function () {
-                return new Matrix2D(1, 0, 0, 1, 0, 0);
+                return new Matrix2D().setIdentity();
             },
             enumerable: true,
             configurable: true
         });
+        Matrix2D.prototype.setIdentity = function () {
+            return this.setValues(1, 0, 0, 1, 0, 0);
+        };
+        Matrix2D.prototype.setValues = function (m11, m12, m21, m22, m31, m32) {
+            this.m11 = m11;
+            this.m12 = m12;
+            this.m21 = m21;
+            this.m22 = m22;
+            this.m31 = m31;
+            this.m32 = m32;
+            return this;
+        };
         Object.defineProperty(Matrix2D.prototype, "translation", {
             /**
              * 储存在该矩阵中的位置
@@ -7575,15 +7537,14 @@ var es;
          * 创建一个新的围绕Z轴的旋转矩阵2D
          * @param radians
          */
-        Matrix2D.createRotation = function (radians) {
-            var result = this.identity;
+        Matrix2D.createRotation = function (radians, result) {
+            result.setIdentity();
             var val1 = Math.cos(radians);
             var val2 = Math.sin(radians);
             result.m11 = val1;
             result.m12 = val2;
-            result.m21 = -val2;
+            result.m21 = val2 * -1;
             result.m22 = val1;
-            return result;
         };
         Matrix2D.createRotationOut = function (radians, result) {
             var val1 = Math.cos(radians);
@@ -7598,15 +7559,13 @@ var es;
          * @param xScale
          * @param yScale
          */
-        Matrix2D.createScale = function (xScale, yScale) {
-            var result = this.identity;
+        Matrix2D.createScale = function (xScale, yScale, result) {
             result.m11 = xScale;
             result.m12 = 0;
             result.m21 = 0;
             result.m22 = yScale;
             result.m31 = 0;
             result.m32 = 0;
-            return result;
         };
         Matrix2D.createScaleOut = function (xScale, yScale, result) {
             result.m11 = xScale;
@@ -7621,8 +7580,7 @@ var es;
          * @param xPosition
          * @param yPosition
          */
-        Matrix2D.createTranslation = function (xPosition, yPosition) {
-            var result = this.identity;
+        Matrix2D.createTranslation = function (xPosition, yPosition, result) {
             result.m11 = 1;
             result.m12 = 0;
             result.m21 = 0;
@@ -7709,7 +7667,6 @@ var es;
             result.m22 = m22;
             result.m31 = m31;
             result.m32 = m32;
-            return result;
         };
         Matrix2D.prototype.determinant = function () {
             return this.m11 * this.m22 - this.m12 * this.m21;
@@ -7744,7 +7701,8 @@ var es;
             return ret;
         };
         Matrix2D.prototype.mutiplyTranslation = function (x, y) {
-            var trans = Matrix2D.createTranslation(x, y);
+            var trans = new Matrix2D();
+            Matrix2D.createTranslation(x, y, trans);
             return es.MatrixHelper.mutiply(this, trans);
         };
         /**
@@ -7897,6 +7855,9 @@ var es;
              * 该矩形的高度
              */
             this.height = 0;
+            // temp 用于计算边界的矩阵
+            this._tempMat = new es.Matrix2D();
+            this._transformMat = new es.Matrix2D();
             this.x = x;
             this.y = y;
             this.width = width;
@@ -8097,12 +8058,12 @@ var es;
                 value.top < this.bottom &&
                 this.top < value.bottom;
         };
-        Rectangle.prototype.rayIntersects = function (ray, distance) {
-            distance.value = 0;
+        Rectangle.prototype.rayIntersects = function (ray) {
+            var res = { intersected: false, distance: 0 };
             var maxValue = Number.MAX_VALUE;
             if (Math.abs(ray.direction.x) < 1E-06) {
                 if ((ray.start.x < this.x) || (ray.start.x > this.x + this.width))
-                    return false;
+                    return res;
             }
             else {
                 var num11 = 1 / ray.direction.x;
@@ -8113,14 +8074,14 @@ var es;
                     num8 = num7;
                     num7 = num14;
                 }
-                distance.value = Math.max(num8, distance.value);
+                res.distance = Math.max(num8, res.distance);
                 maxValue = Math.min(num7, maxValue);
-                if (distance.value > maxValue)
-                    return false;
+                if (res.distance > maxValue)
+                    return res;
             }
-            if (Math.abs(ray.direction.y) < 1E-06) {
+            if (Math.abs(ray.direction.y) < 1e-06) {
                 if ((ray.start.y < this.y) || (ray.start.y > this.y + this.height))
-                    return false;
+                    return res;
             }
             else {
                 var num10 = 1 / ray.direction.y;
@@ -8131,12 +8092,13 @@ var es;
                     num6 = num5;
                     num5 = num13;
                 }
-                distance.value = Math.max(num6, distance.value);
+                res.distance = Math.max(num6, res.distance);
                 maxValue = Math.max(num5, maxValue);
-                if (distance.value > maxValue)
-                    return false;
+                if (res.distance > maxValue)
+                    return res;
             }
-            return true;
+            res.intersected = true;
+            return res;
         };
         /**
          * 获取所提供的矩形是否在此矩形的边界内
@@ -8288,12 +8250,12 @@ var es;
                 var worldPosX = parentPosition.x + position.x;
                 var worldPosY = parentPosition.y + position.y;
                 // 考虑到原点，将参考点设置为世界参考
-                this._transformMat = es.Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
-                this._tempMat = es.Matrix2D.createScale(scale.x, scale.y);
+                es.Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y, this._transformMat);
+                es.Matrix2D.createScale(scale.x, scale.y, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
-                this._tempMat = es.Matrix2D.createRotation(rotation);
+                es.Matrix2D.createRotation(rotation, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
-                this._tempMat = es.Matrix2D.createTranslation(worldPosX, worldPosY);
+                es.Matrix2D.createTranslation(worldPosX, worldPosY, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
                 // TODO: 我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角
                 var topLeft = new es.Vector2(worldPosX, worldPosY);
@@ -8484,12 +8446,14 @@ var es;
          * 它将处理任何与Collider重叠的ITriggerListeners。
          */
         ColliderTriggerHelper.prototype.update = function () {
+            var e_9, _a;
+            var lateColliders = [];
             // 对所有实体.colliders进行重叠检查，这些实体.colliders是触发器，与所有宽相碰撞器，无论是否触发器。   
             // 任何重叠都会导致触发事件
             var colliders = this._entity.getComponents(es.Collider);
             for (var i = 0; i < colliders.length; i++) {
                 var collider = colliders[i];
-                var neighbors = es.Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
+                var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider.bounds, collider.collidesWithLayers);
                 for (var j = 0; j < neighbors.length; j++) {
                     var neighbor = neighbors[j];
                     // 我们至少需要一个碰撞器作为触发器
@@ -8500,13 +8464,31 @@ var es;
                         // 如果我们的某一个集合中已经有了这个对子（前一个或当前的触发交叉点），就不要调用输入事件了
                         var shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) &&
                             !this._previousTriggerIntersections.contains(pair);
-                        if (shouldReportTriggerEvent)
-                            this.notifyTriggerListeners(pair, true);
+                        if (shouldReportTriggerEvent) {
+                            if (neighbor.castSortOrder >= es.Collider.lateSortOrder) {
+                                lateColliders.push(pair);
+                            }
+                            else {
+                                this.notifyTriggerListeners(pair, true);
+                            }
+                        }
                         this._activeTriggerIntersections.add(pair);
                     }
                 }
             }
-            es.ListPool.free(colliders);
+            try {
+                for (var lateColliders_1 = __values(lateColliders), lateColliders_1_1 = lateColliders_1.next(); !lateColliders_1_1.done; lateColliders_1_1 = lateColliders_1.next()) {
+                    var pair = lateColliders_1_1.value;
+                    this.notifyTriggerListeners(pair, true);
+                }
+            }
+            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            finally {
+                try {
+                    if (lateColliders_1_1 && !lateColliders_1_1.done && (_a = lateColliders_1.return)) _a.call(lateColliders_1);
+                }
+                finally { if (e_9) throw e_9.error; }
+            }
             this.checkForExitedColliders();
         };
         ColliderTriggerHelper.prototype.checkForExitedColliders = function () {
@@ -8567,58 +8549,60 @@ var es;
         function Collisions() {
         }
         Collisions.lineToLine = function (a1, a2, b1, b2) {
-            var b = es.Vector2.subtract(a2, a1);
-            var d = es.Vector2.subtract(b2, b1);
+            var b = a2.sub(a1);
+            var d = b2.sub(b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
             // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
                 return false;
-            var c = es.Vector2.subtract(b1, a1);
+            var c = b1.sub(a1);
             var t = (c.x * d.y - c.y * d.x) / bDotDPerp;
-            if (t < 0 || t > 1)
+            if (t < 0 || t > 1) {
                 return false;
+            }
             var u = (c.x * b.y - c.y * b.x) / bDotDPerp;
-            if (u < 0 || u > 1)
+            if (u < 0 || u > 1) {
                 return false;
+            }
             return true;
         };
         Collisions.lineToLineIntersection = function (a1, a2, b1, b2, intersection) {
             if (intersection === void 0) { intersection = es.Vector2.zero; }
             intersection.x = 0;
             intersection.y = 0;
-            var b = es.Vector2.subtract(a2, a1);
-            var d = es.Vector2.subtract(b2, b1);
+            var b = a2.sub(a1);
+            var d = b2.sub(b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
             // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
                 return false;
-            var c = es.Vector2.subtract(b1, a1);
+            var c = b1.sub(a1);
             var t = (c.x * d.y - c.y * d.x) / bDotDPerp;
             if (t < 0 || t > 1)
                 return false;
             var u = (c.x * b.y - c.y * b.x) / bDotDPerp;
             if (u < 0 || u > 1)
                 return false;
-            var temp = es.Vector2.add(a1, new es.Vector2(t * b.x, t * b.y));
+            var temp = a1.add(b.scale(t));
             intersection.x = temp.x;
             intersection.y = temp.y;
             return true;
         };
         Collisions.closestPointOnLine = function (lineA, lineB, closestTo) {
-            var v = es.Vector2.subtract(lineB, lineA);
-            var w = es.Vector2.subtract(closestTo, lineA);
-            var t = es.Vector2.dot(w, v) / es.Vector2.dot(v, v);
+            var v = lineB.sub(lineA);
+            var w = closestTo.sub(lineA);
+            var t = w.dot(v) / v.dot(v);
             t = es.MathHelper.clamp(t, 0, 1);
-            return es.Vector2.add(lineA, new es.Vector2(v.x * t, v.y * t));
+            return lineA.add(v.scale(t));
         };
         Collisions.circleToCircle = function (circleCenter1, circleRadius1, circleCenter2, circleRadius2) {
-            return es.Vector2.distanceSquared(circleCenter1, circleCenter2) < (circleRadius1 + circleRadius2) * (circleRadius1 + circleRadius2);
+            return es.Vector2.sqrDistance(circleCenter1, circleCenter2) < (circleRadius1 + circleRadius2) * (circleRadius1 + circleRadius2);
         };
         Collisions.circleToLine = function (circleCenter, radius, lineFrom, lineTo) {
-            return es.Vector2.distanceSquared(circleCenter, this.closestPointOnLine(lineFrom, lineTo, circleCenter)) < radius * radius;
+            return es.Vector2.sqrDistance(circleCenter, this.closestPointOnLine(lineFrom, lineTo, circleCenter)) < radius * radius;
         };
         Collisions.circleToPoint = function (circleCenter, radius, point) {
-            return es.Vector2.distanceSquared(circleCenter, point) < radius * radius;
+            return es.Vector2.sqrDistance(circleCenter, point) < radius * radius;
         };
         Collisions.rectToCircle = function (rect, cPosition, cRadius) {
             // 检查矩形是否包含圆的中心点
@@ -8628,25 +8612,25 @@ var es;
             var edgeFrom;
             var edgeTo;
             var sector = this.getSector(rect.x, rect.y, rect.width, rect.height, cPosition);
-            if ((sector & PointSectors.top) != 0) {
+            if ((sector & PointSectors.top) !== 0) {
                 edgeFrom = new es.Vector2(rect.x, rect.y);
                 edgeTo = new es.Vector2(rect.x + rect.width, rect.y);
                 if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
                     return true;
             }
-            if ((sector & PointSectors.bottom) != 0) {
+            if ((sector & PointSectors.bottom) !== 0) {
                 edgeFrom = new es.Vector2(rect.x, rect.y + rect.width);
                 edgeTo = new es.Vector2(rect.x + rect.width, rect.y + rect.height);
                 if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
                     return true;
             }
-            if ((sector & PointSectors.left) != 0) {
+            if ((sector & PointSectors.left) !== 0) {
                 edgeFrom = new es.Vector2(rect.x, rect.y);
                 edgeTo = new es.Vector2(rect.x, rect.y + rect.height);
                 if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
                     return true;
             }
-            if ((sector & PointSectors.right) != 0) {
+            if ((sector & PointSectors.right) !== 0) {
                 edgeFrom = new es.Vector2(rect.x + rect.width, rect.y);
                 edgeTo = new es.Vector2(rect.x + rect.width, rect.y + rect.height);
                 if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
@@ -8753,20 +8737,14 @@ var es;
             this.point = point;
             this.centroid = es.Vector2.zero;
         }
-        RaycastHit.prototype.setValues = function (collider, fraction, distance, point) {
+        RaycastHit.prototype.setAllValues = function (collider, fraction, distance, point, normal) {
             this.collider = collider;
-            this.fraction = fraction;
-            this.distance = distance;
-            this.point = point;
-        };
-        RaycastHit.prototype.setValuesNonCollider = function (fraction, distance, point, normal) {
             this.fraction = fraction;
             this.distance = distance;
             this.point = point;
             this.normal = normal;
         };
-        RaycastHit.prototype.setAllValues = function (collider, fraction, distance, point, normal) {
-            this.collider = collider;
+        RaycastHit.prototype.setValues = function (fraction, distance, point, normal) {
             this.fraction = fraction;
             this.distance = distance;
             this.point = point;
@@ -8908,17 +8886,13 @@ var es;
          * @param end
          * @param layerMask
          */
-        Physics.linecast = function (start, end, layerMask) {
-            if (layerMask === void 0) { layerMask = Physics.allLayers; }
-            this._hitArray[0].reset();
-            this.linecastAll(start, end, this._hitArray, layerMask);
-            return this._hitArray[0];
-        };
-        Physics.linecastIgnoreCollider = function (start, end, layerMask, ignoredColliders) {
+        Physics.linecast = function (start, end, layerMask, ignoredColliders) {
             if (layerMask === void 0) { layerMask = this.allLayers; }
             if (ignoredColliders === void 0) { ignoredColliders = null; }
             this._hitArray[0].reset();
-            Physics.linecastAllIgnoreCollider(start, end, this._hitArray, layerMask, ignoredColliders);
+            this.linecastAll(start, end, this._hitArray, layerMask);
+            this._hitArray[0].reset();
+            Physics.linecastAll(start, end, this._hitArray, layerMask, ignoredColliders);
             return this._hitArray[0].clone();
         };
         /**
@@ -8928,18 +8902,10 @@ var es;
          * @param hits
          * @param layerMask
          */
-        Physics.linecastAll = function (start, end, hits, layerMask) {
-            if (layerMask === void 0) { layerMask = Physics.allLayers; }
-            if (hits.length == 0) {
-                console.warn("传入了一个空的hits数组。没有点击会被返回");
-                return 0;
-            }
-            return this._spatialHash.linecast(start, end, hits, layerMask);
-        };
-        Physics.linecastAllIgnoreCollider = function (start, end, hits, layerMask, ignoredColliders) {
+        Physics.linecastAll = function (start, end, hits, layerMask, ignoredColliders) {
             if (layerMask === void 0) { layerMask = this.allLayers; }
             if (ignoredColliders === void 0) { ignoredColliders = null; }
-            return this._spatialHash.linecastIgnoreCollider(start, end, hits, layerMask, ignoredColliders);
+            return this._spatialHash.linecast(start, end, hits, layerMask, ignoredColliders);
         };
         /**
          * 检查是否有对撞机落在一个矩形区域中
@@ -9003,11 +8969,32 @@ var es;
      * 不是真正的射线(射线只有开始和方向)，作为一条线和射线。
      */
     var Ray2D = /** @class */ (function () {
-        function Ray2D(position, end) {
-            this.start = position;
-            this.end = end;
-            this.direction = es.Vector2.subtract(this.end, this.start);
+        function Ray2D(pos, end) {
+            this._start = pos.clone();
+            this._end = end.clone();
+            this._direction = this._end.sub(this._start);
         }
+        Object.defineProperty(Ray2D.prototype, "start", {
+            get: function () {
+                return this._start;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Ray2D.prototype, "direction", {
+            get: function () {
+                return this._direction;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Ray2D.prototype, "end", {
+            get: function () {
+                return this._end;
+            },
+            enumerable: true,
+            configurable: true
+        });
         return Ray2D;
     }());
     es.Ray2D = Ray2D;
@@ -9142,9 +9129,9 @@ var es;
          * @param hits
          * @param layerMask
          */
-        SpatialHash.prototype.linecast = function (start, end, hits, layerMask) {
+        SpatialHash.prototype.linecast = function (start, end, hits, layerMask, ignoredColliders) {
             var ray = new es.Ray2D(start, end);
-            this._raycastParser.start(ray, hits, layerMask);
+            this._raycastParser.start(ray, hits, layerMask, ignoredColliders);
             // 获取我们的起始/结束位置，与我们的网格在同一空间内
             var currentCell = this.cellCoords(start.x, start.y);
             var lastCell = this.cellCoords(end.x, end.y);
@@ -9194,60 +9181,6 @@ var es;
             this._raycastParser.reset();
             return this._raycastParser.hitCounter;
         };
-        SpatialHash.prototype.linecastIgnoreCollider = function (start, end, hits, layerMask, ignoredColliders) {
-            start = start.clone();
-            var ray = new es.Ray2D(start, end);
-            this._raycastParser.startIgnoreCollider(ray, hits, layerMask, ignoredColliders);
-            start.x = start.x * this._inverseCellSize;
-            start.y = start.y * this._inverseCellSize;
-            var endCell = this.cellCoords(end.x, end.y);
-            var intX = Math.floor(start.x);
-            var intY = Math.floor(start.y);
-            var stepX = Math.sign(ray.direction.x);
-            var stepY = Math.sign(ray.direction.y);
-            if (intX === endCell.x) {
-                stepX = 0;
-            }
-            if (intY === endCell.y) {
-                stepY = 0;
-            }
-            var boundaryX = intX + (stepX > 0 ? 1 : 0);
-            var boundaryY = intY + (stepY > 0 ? 1 : 0);
-            var tMaxX = (boundaryX - start.x) / ray.direction.x;
-            var tMaxY = (boundaryY - start.y) / ray.direction.y;
-            if (ray.direction.x === 0 || stepX === 0) {
-                tMaxX = Number.POSITIVE_INFINITY;
-            }
-            if (ray.direction.y === 0 || stepY === 0) {
-                tMaxY = Number.POSITIVE_INFINITY;
-            }
-            var tDeltaX = stepX / ray.direction.x;
-            var tDeltaY = stepY / ray.direction.y;
-            var cell = this.cellAtPosition(intX, intY);
-            if (cell && this._raycastParser.checkRayIntersection(intX, intY, cell)) {
-                this._raycastParser.reset();
-                return this._raycastParser.hitCounter;
-            }
-            var n = 0;
-            while ((intX !== endCell.x || intY !== endCell.y) && n < 100) {
-                if (tMaxX < tMaxY) {
-                    intX = intX + stepX;
-                    tMaxX = tMaxX + tDeltaX;
-                }
-                else {
-                    intY = intY + stepY;
-                    tMaxY = tMaxY + tDeltaY;
-                }
-                cell = this.cellAtPosition(intX, intY);
-                if (cell && this._raycastParser.checkRayIntersection(intX, intY, cell)) {
-                    this._raycastParser.reset();
-                    return this._raycastParser.hitCounter;
-                }
-                n++;
-            }
-            this._raycastParser.reset();
-            return this._raycastParser.hitCounter;
-        };
         /**
          * 获取所有在指定矩形范围内的碰撞器
          * @param rect
@@ -9255,7 +9188,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
-            var e_9, _a;
+            var e_10, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location.clone();
             var resultCounter = 0;
@@ -9286,12 +9219,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            catch (e_10_1) { e_10 = { error: e_10_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_9) throw e_9.error; }
+                finally { if (e_10) throw e_10.error; }
             }
             return resultCounter;
         };
@@ -9303,7 +9236,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_10, _a;
+            var e_11, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter.clone();
@@ -9338,12 +9271,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+            catch (e_11_1) { e_11 = { error: e_11_1 }; }
             finally {
                 try {
                     if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_10) throw e_10.error; }
+                finally { if (e_11) throw e_11.error; }
             }
             return resultCounter;
         };
@@ -9415,13 +9348,7 @@ var es;
             this._checkedColliders = [];
             this._cellHits = [];
         }
-        RaycastResultParser.prototype.start = function (ray, hits, layerMask) {
-            this._ray = ray;
-            this._hits = hits;
-            this._layerMask = layerMask;
-            this.hitCounter = 0;
-        };
-        RaycastResultParser.prototype.startIgnoreCollider = function (ray, hits, layerMask, ignoredColliders) {
+        RaycastResultParser.prototype.start = function (ray, hits, layerMask, ignoredColliders) {
             this._ray = ray;
             this._hits = hits;
             this._layerMask = layerMask;
@@ -9435,7 +9362,6 @@ var es;
          * @param cell
          */
         RaycastResultParser.prototype.checkRayIntersection = function (cellX, cellY, cell) {
-            var fraction = new es.Ref(0);
             for (var i = 0; i < cell.length; i++) {
                 var potential = cell[i];
                 // 管理我们已经处理过的碰撞器
@@ -9448,11 +9374,15 @@ var es;
                 // 确保碰撞器在图层蒙版上
                 if (!es.Flags.isFlagSet(this._layerMask, potential.physicsLayer.value))
                     continue;
+                if (this._ignoredColliders && this._ignoredColliders.has(potential)) {
+                    continue;
+                }
                 // TODO: rayIntersects的性能够吗?需要测试它。Collisions.rectToLine可能更快
                 // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
                 // 在做形状测试之前先做一个边界检查
-                var colliderBounds = potential.bounds.clone();
-                if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1) {
+                var colliderBounds = potential.bounds;
+                var res = colliderBounds.rayIntersects(this._ray);
+                if (res.intersected && res.distance <= 1) {
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
                         // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
                         if (!es.Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
@@ -9463,7 +9393,7 @@ var es;
                     }
                 }
             }
-            if (this._cellHits.length == 0)
+            if (this._cellHits.length === 0)
                 return false;
             // 所有处理单元完成。对结果进行排序并将命中结果打包到结果数组中
             this._cellHits.sort(RaycastResultParser.compareRaycastHits);
@@ -9471,7 +9401,7 @@ var es;
                 this._hits[this.hitCounter] = this._cellHits[i];
                 // 增加命中计数器，如果它已经达到数组大小的限制，我们就完成了
                 this.hitCounter++;
-                if (this.hitCounter == this._hits.length)
+                if (this.hitCounter === this._hits.length)
                     return true;
             }
             return false;
@@ -9480,9 +9410,15 @@ var es;
             this._hits = null;
             this._checkedColliders.length = 0;
             this._cellHits.length = 0;
+            this._ignoredColliders = null;
         };
         RaycastResultParser.compareRaycastHits = function (a, b) {
-            return a.distance - b.distance;
+            if (a.distance !== b.distance) {
+                return a.distance - b.distance;
+            }
+            else {
+                return a.collider.castSortOrder - b.collider.castSortOrder;
+            }
         };
         return RaycastResultParser;
     }());
@@ -9595,7 +9531,7 @@ var es;
         Polygon.recenterPolygonVerts = function (points) {
             var center = this.findPolygonCenter(points);
             for (var i = 0; i < points.length; i++)
-                points[i] = es.Vector2.subtract(points[i], center);
+                points[i] = points[i].sub(center);
         };
         /**
          * 找到多边形的中心。注意，这对于正则多边形是准确的。不规则多边形没有中心。
@@ -9616,9 +9552,9 @@ var es;
          */
         Polygon.getFarthestPointInDirection = function (points, direction) {
             var index = 0;
-            var maxDot = es.Vector2.dot(points[index], direction);
+            var maxDot = points[index].dot(direction);
             for (var i = 1; i < points.length; i++) {
-                var dot = es.Vector2.dot(points[i], direction);
+                var dot = points[i].dot(direction);
                 if (dot > maxDot) {
                     maxDot = dot;
                     index = i;
@@ -9635,29 +9571,30 @@ var es;
          * @param distanceSquared
          * @param edgeNormal
          */
-        Polygon.getClosestPointOnPolygonToPoint = function (points, point, distanceSquared, edgeNormal) {
-            distanceSquared.value = Number.MAX_VALUE;
-            edgeNormal.x = 0;
-            edgeNormal.y = 0;
-            var closestPoint = es.Vector2.zero;
+        Polygon.getClosestPointOnPolygonToPoint = function (points, point) {
+            var res = {
+                distanceSquared: Number.MAX_VALUE,
+                edgeNormal: es.Vector2.zero,
+                closestPoint: es.Vector2.zero,
+            };
             var tempDistanceSquared = 0;
             for (var i = 0; i < points.length; i++) {
                 var j = i + 1;
-                if (j == points.length)
+                if (j === points.length)
                     j = 0;
                 var closest = es.ShapeCollisionsCircle.closestPointOnLine(points[i], points[j], point);
-                tempDistanceSquared = es.Vector2.distanceSquared(point, closest);
-                if (tempDistanceSquared < distanceSquared.value) {
-                    distanceSquared.value = tempDistanceSquared;
-                    closestPoint = closest;
+                tempDistanceSquared = es.Vector2.sqrDistance(point, closest);
+                if (tempDistanceSquared < res.distanceSquared) {
+                    res.distanceSquared = tempDistanceSquared;
+                    res.closestPoint = closest;
                     // 求直线的法线
-                    var line = es.Vector2.subtract(points[j], points[i]);
-                    edgeNormal.x = -line.y;
-                    edgeNormal.y = line.x;
+                    var line = points[j].sub(points[i]);
+                    res.edgeNormal.x = line.y;
+                    res.edgeNormal.y = -line.x;
                 }
             }
-            es.Vector2Ext.normalize(edgeNormal);
-            return closestPoint;
+            res.edgeNormal = res.edgeNormal.normalize();
+            return res;
         };
         /**
          * 旋转原始点并复制旋转的值到旋转的点
@@ -9674,41 +9611,47 @@ var es;
             }
         };
         Polygon.prototype.recalculateBounds = function (collider) {
+            var _this = this;
             // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
-            this.center = collider.localOffset.clone();
+            this.center = collider.localOffset;
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 var hasUnitScale = true;
-                var tempMat = void 0;
-                var combinedMatrix = es.Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
+                var tempMat = new es.Matrix2D();
+                var combinedMatrix_1 = new es.Matrix2D();
+                es.Matrix2D.createTranslation(this._polygonCenter.x * -1, this._polygonCenter.y * -1, combinedMatrix_1);
                 if (!collider.entity.transform.scale.equals(es.Vector2.one)) {
-                    tempMat = es.Matrix2D.createScale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
-                    combinedMatrix = combinedMatrix.multiply(tempMat);
+                    es.Matrix2D.createScale(collider.entity.scale.x, collider.entity.scale.y, tempMat);
+                    es.Matrix2D.multiply(combinedMatrix_1, tempMat, combinedMatrix_1);
                     hasUnitScale = false;
                     // 缩放偏移量并将其设置为中心。如果我们有旋转，它会在下面重置
-                    this.center = es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale);
+                    var scaledOffset = new es.Vector2(collider.localOffset.x * collider.entity.scale.x, collider.localOffset.y * collider.entity.scale.y);
+                    this.center = scaledOffset;
                 }
                 if (collider.entity.transform.rotation != 0) {
-                    tempMat = es.Matrix2D.createRotation(collider.entity.transform.rotation);
-                    combinedMatrix = combinedMatrix.multiply(tempMat);
+                    es.Matrix2D.createRotation(es.MathHelper.Deg2Rad * collider.entity.rotation, tempMat);
+                    es.Matrix2D.multiply(combinedMatrix_1, tempMat, combinedMatrix_1);
                     // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动
                     // 我们的偏移使角度为0我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
                     var offsetAngle = Math.atan2(collider.localOffset.y * collider.entity.transform.scale.y, collider.localOffset.x * collider.entity.transform.scale.x) * es.MathHelper.Rad2Deg;
                     var offsetLength = hasUnitScale ? collider._localOffsetLength :
-                        es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
+                        collider.localOffset.multiply(collider.entity.transform.scale).magnitude();
                     this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
                 }
-                tempMat = es.Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
-                combinedMatrix = combinedMatrix.multiply(tempMat);
+                es.Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y, tempMat);
+                es.Matrix2D.multiply(combinedMatrix_1, tempMat, combinedMatrix_1);
                 // 最后变换原始点
-                es.Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
+                this.points = [];
+                this._originalPoints.forEach(function (p) {
+                    _this.points.push(p.transform(combinedMatrix_1));
+                });
                 this.isUnrotated = collider.entity.transform.rotation == 0;
                 // 如果旋转的话，我们只需要重建边的法线
                 if (collider._isRotationDirty)
                     this._areEdgeNormalsDirty = true;
             }
-            this.position = es.Vector2.add(collider.entity.transform.position, this.center);
+            this.position = collider.transform.position.add(this.center);
             this.bounds = es.Rectangle.rectEncompassingPoints(this.points);
-            this.bounds.location = es.Vector2.add(this.bounds.location, this.position);
+            this.bounds.location = this.bounds.location.add(this.position);
         };
         Polygon.prototype.overlaps = function (other) {
             var result = new es.CollisionResult();
@@ -9746,10 +9689,10 @@ var es;
          */
         Polygon.prototype.containsPoint = function (point) {
             // 将点归一化到多边形坐标空间中
-            point.sub(this.position);
+            point = point.sub(this.position);
             var isInside = false;
             for (var i = 0, j = this.points.length - 1; i < this.points.length; j = i++) {
-                if (((this.points[i].y > point.y) != (this.points[j].y > point.y)) &&
+                if (((this.points[i].y > point.y) !== (this.points[j].y > point.y)) &&
                     (point.x < (this.points[j].x - this.points[i].x) * (point.y - this.points[i].y) / (this.points[j].y - this.points[i].y) +
                         this.points[i].x)) {
                     isInside = !isInside;
@@ -9863,17 +9806,17 @@ var es;
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 // 我们只将直线缩放为一个圆，所以我们将使用最大值
                 var scale = collider.entity.transform.scale;
-                var hasUnitScale = scale.x == 1 && scale.y == 1;
+                var hasUnitScale = scale.x === 1 && scale.y === 1;
                 var maxScale = Math.max(scale.x, scale.y);
                 this.radius = this._originalRadius * maxScale;
-                if (collider.entity.transform.rotation != 0) {
+                if (collider.entity.transform.rotation !== 0) {
                     // 为了处理偏移原点的旋转，我们只需要将圆心围绕(0,0)在一个圆上移动，我们的偏移量就是0角
                     var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * es.MathHelper.Rad2Deg;
-                    var offsetLength = hasUnitScale ? collider._localOffsetLength : es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
-                    this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
+                    var offsetLength = hasUnitScale ? collider._localOffsetLength : collider.localOffset.multiply(collider.entity.transform.scale).magnitude();
+                    this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotation + offsetAngle);
                 }
             }
-            this.position = es.Vector2.add(collider.entity.transform.position, this.center);
+            this.position = collider.transform.position.add(this.center);
             this.bounds = new es.Rectangle(this.position.x - this.radius, this.position.y - this.radius, this.radius * 2, this.radius * 2);
         };
         Circle.prototype.overlaps = function (other) {
@@ -9901,12 +9844,15 @@ var es;
         Circle.prototype.collidesWithLine = function (start, end, hit) {
             return es.ShapeCollisionsLine.lineToCircle(start, end, this, hit);
         };
+        Circle.prototype.getPointAlongEdge = function (angle) {
+            return new es.Vector2(this.position.x + this.radius * Math.cos(angle), this.position.y + this.radius * Math.sin(angle));
+        };
         /**
          * 获取所提供的点是否在此范围内
          * @param point
          */
         Circle.prototype.containsPoint = function (point) {
-            return (es.Vector2.subtract(point, this.position)).lengthSquared() <= this.radius * this.radius;
+            return (point.sub(this.position)).lengthSquared() <= this.radius * this.radius;
         };
         Circle.prototype.pointCollidesWithShape = function (point, result) {
             return es.ShapeCollisionsPoint.pointToCircle(point, this, result);
@@ -9932,14 +9878,33 @@ var es;
              */
             this.point = es.Vector2.zero;
         }
+        CollisionResult.prototype.reset = function () {
+            this.collider = null;
+            this.normal.setTo(0, 0);
+            this.minimumTranslationVector.setTo(0, 0);
+            if (this.point) {
+                this.point.setTo(0, 0);
+            }
+        };
+        CollisionResult.prototype.cloneTo = function (cr) {
+            cr.collider = this.collider;
+            cr.normal.setTo(this.normal.x, this.normal.y);
+            cr.minimumTranslationVector.setTo(this.minimumTranslationVector.x, this.minimumTranslationVector.y);
+            if (this.point) {
+                if (!cr.point) {
+                    cr.point = new es.Vector2(0, 0);
+                }
+                cr.point.setTo(this.point.x, this.point.y);
+            }
+        };
         /**
          * 改变最小平移向量，如果没有相同方向上的运动，它将移除平移的x分量。
          * @param deltaMovement
          */
-        CollisionResult.prototype.removeHorizontal = function (deltaMovement) {
+        CollisionResult.prototype.removeHorizontalTranslation = function (deltaMovement) {
             // 检查是否需要横向移动，如果需要，移除并固定响应
-            if (Math.sign(this.normal.x) != Math.sign(deltaMovement.x) || (deltaMovement.x == 0 && this.normal.x != 0)) {
-                var responseDistance = this.minimumTranslationVector.length();
+            if (Math.sign(this.normal.x) !== Math.sign(deltaMovement.x) || (deltaMovement.x === 0 && this.normal.x !== 0)) {
+                var responseDistance = this.minimumTranslationVector.magnitude();
                 var fix = responseDistance / this.normal.y;
                 // 检查一些边界情况。因为我们除以法线 使得x == 1和一个非常小的y这将导致一个巨大的固定值
                 if (Math.abs(this.normal.x) != 1 && Math.abs(fix) < Math.abs(deltaMovement.y * 3)) {
@@ -9948,9 +9913,8 @@ var es;
             }
         };
         CollisionResult.prototype.invertResult = function () {
-            this.minimumTranslationVector = es.Vector2.negate(this.minimumTranslationVector);
-            this.normal = es.Vector2.negate(this.normal);
-            return this;
+            this.minimumTranslationVector = this.minimumTranslationVector.negate();
+            this.normal = this.normal.negate();
         };
         CollisionResult.prototype.toString = function () {
             return "[CollisionResult] normal: " + this.normal + ", minimumTranslationVector: " + this.minimumTranslationVector;
@@ -9966,14 +9930,15 @@ var es;
         }
         RealtimeCollisions.intersectMovingCircleBox = function (s, b, movement, time) {
             // 计算将b按球面半径r扩大后的AABB
-            var e = b.bounds.clone();
+            var e = b.bounds;
             e.inflate(s.radius, s.radius);
             // 将射线与展开的矩形e相交，如果射线错过了e，则以无交点退出，否则得到交点p和时间t作为结果。
-            var ray = new es.Ray2D(es.Vector2.subtract(s.position, movement), s.position);
-            if (!e.rayIntersects(ray, time) && time.value > 1)
+            var ray = new es.Ray2D(s.position.sub(movement), s.position);
+            var res = e.rayIntersects(ray);
+            if (!res.intersected && res.distance > 1)
                 return false;
             // 求交点
-            var point = es.Vector2.add(ray.start, es.Vector2.multiplyScaler(ray.direction, time.value));
+            var point = ray.start.add(ray.direction.scale(time));
             // 计算交点p位于b的哪个最小面和最大面之外。注意，u和v不能有相同的位集，它们之间必须至少有一个位集。
             var u, v = 0;
             if (point.x < b.bounds.left)
@@ -10020,8 +9985,8 @@ var es;
             // 找出离球心最近的点
             point = box.bounds.getClosestPointOnRectangleToPoint(cirlce.position);
             // 圆和方块相交，如果圆心到点的距离小于圆的半径，则圆和方块相交
-            var v = es.Vector2.subtract(point, cirlce.position);
-            var dist = es.Vector2.dot(v, v);
+            var v = point.sub(cirlce.position);
+            var dist = v.dot(v);
             return dist <= cirlce.radius * cirlce.radius;
         };
         return RealtimeCollisions;
@@ -10040,8 +10005,8 @@ var es;
                 result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
                 if (result.minimumTranslationVector.equals(es.Vector2.zero))
                     return false;
-                result.normal = new es.Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
-                result.normal.normalize();
+                result.normal = result.minimumTranslationVector.scale(-1);
+                result.normal = result.normal.normalize();
                 return true;
             }
             return false;
@@ -10062,21 +10027,21 @@ var es;
                 if (mtv.equals(es.Vector2.zero))
                     return false;
                 hit.normal = new es.Vector2(-mtv.x, -mtv.y);
-                hit.normal.normalize();
+                hit.normal = hit.normal.normalize();
                 hit.distance = 0;
                 hit.fraction = 0;
                 return true;
             }
             else {
                 // 射线投射移动矢量
-                var ray = new es.Ray2D(es.Vector2.zero, new es.Vector2(-movement.x, -movement.y));
-                var fraction = new es.Ref(0);
-                if (minkowskiDiff.rayIntersects(ray, fraction) && fraction.value <= 1) {
-                    hit.fraction = fraction.value;
-                    hit.distance = movement.length() * fraction.value;
-                    hit.normal = new es.Vector2(-movement.x, -movement.y);
-                    hit.normal.normalize();
-                    hit.centroid = es.Vector2.add(first.bounds.center, es.Vector2.multiplyScaler(movement, fraction.value));
+                var ray = new es.Ray2D(es.Vector2.zero, movement.scale(-1));
+                var res = minkowskiDiff.rayIntersects(ray);
+                if (res.intersected && res.distance <= 1) {
+                    hit.fraction = res.distance;
+                    hit.distance = movement.magnitude() * res.distance;
+                    hit.normal = movement.scale(-1);
+                    hit.normal = hit.normal.normalize();
+                    hit.centroid = first.bounds.center.add(movement.scale(res.distance));
                     return true;
                 }
             }
@@ -10085,9 +10050,9 @@ var es;
         ShapeCollisionsBox.minkowskiDifference = function (first, second) {
             // 我们需要第一个框的左上角
             // 碰撞器只会修改运动的位置所以我们需要用位置来计算出运动是什么。
-            var positionOffset = es.Vector2.subtract(first.position, es.Vector2.add(first.bounds.location, new es.Vector2(first.bounds.size.x / 2, first.bounds.size.y / 2)));
-            var topLeft = es.Vector2.subtract(es.Vector2.add(first.bounds.location, positionOffset), second.bounds.max);
-            var fullSize = es.Vector2.add(first.bounds.size, second.bounds.size);
+            var positionOffset = first.position.sub(first.bounds.center);
+            var topLeft = first.bounds.location.add(positionOffset.sub(second.bounds.max));
+            var fullSize = first.bounds.size.add(second.bounds.size);
             return new es.Rectangle(topLeft.x, topLeft.y, fullSize.x, fullSize.y);
         };
         return ShapeCollisionsBox;
@@ -10099,20 +10064,38 @@ var es;
     var ShapeCollisionsCircle = /** @class */ (function () {
         function ShapeCollisionsCircle() {
         }
+        ShapeCollisionsCircle.circleToCircleCast = function (first, second, deltaMovement, hit) {
+            var endPointOfCast = first.position.add(deltaMovement);
+            var d = this.closestPointOnLine(first.position, endPointOfCast, second.position);
+            var closestDistanceSquared = es.Vector2.sqrDistance(second.position, d);
+            var sumOfRadiiSquared = (first.radius + second.radius) * (first.radius + second.radius);
+            if (closestDistanceSquared <= sumOfRadiiSquared) {
+                var normalizedDeltaMovement = deltaMovement.normalize();
+                if (d === endPointOfCast) {
+                    endPointOfCast = first.position.add(deltaMovement.add(normalizedDeltaMovement.scale(second.radius)));
+                    d = this.closestPointOnLine(first.position, endPointOfCast, second.position);
+                    closestDistanceSquared = es.Vector2.sqrDistance(second.position, d);
+                }
+                var backDist = Math.sqrt(sumOfRadiiSquared - closestDistanceSquared);
+                hit.centroid = d.sub(normalizedDeltaMovement.scale(backDist));
+                hit.normal = hit.centroid.sub(second.position).normalize();
+                hit.fraction = (hit.centroid.x - first.position.x) / deltaMovement.x;
+                hit.distance = es.Vector2.distance(first.position, hit.centroid);
+                hit.point = second.position.add(hit.normal.scale(second.radius));
+                return true;
+            }
+            return false;
+        };
         ShapeCollisionsCircle.circleToCircle = function (first, second, result) {
             if (result === void 0) { result = new es.CollisionResult(); }
-            var distanceSquared = es.Vector2.distanceSquared(first.position, second.position);
+            var distanceSquared = es.Vector2.sqrDistance(first.position, second.position);
             var sumOfRadii = first.radius + second.radius;
             var collided = distanceSquared < sumOfRadii * sumOfRadii;
             if (collided) {
-                result.normal = es.Vector2.normalize(es.Vector2.subtract(first.position, second.position));
+                result.normal = first.position.sub(second.position).normalize();
                 var depth = sumOfRadii - Math.sqrt(distanceSquared);
-                result.minimumTranslationVector = es.Vector2.multiplyScaler(result.normal, -depth);
-                result.point = es.Vector2.add(second.position, es.Vector2.multiplyScaler(result.normal, second.radius));
-                // 这可以得到实际的碰撞点，可能有用也可能没用，所以我们暂时把它留在这里
-                // let collisionPointX = ((first.position.x * second.radius) + (second.position.x * first.radius)) / sumOfRadii;
-                // let collisionPointY = ((first.position.y * second.radius) + (second.position.y * first.radius)) / sumOfRadii;
-                // result.point = new Vector2(collisionPointX, collisionPointY);
+                result.minimumTranslationVector = result.normal.scale(-depth);
+                result.point = second.position.add(result.normal.scale(second.radius));
                 return true;
             }
             return false;
@@ -10128,23 +10111,23 @@ var es;
             var closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
             // 先处理中心在盒子里的圆，如果我们是包含的, 它的成本更低，
             if (box.containsPoint(circle.position)) {
-                result.point = closestPointOnBounds.clone();
+                result.point = closestPointOnBounds;
                 // 计算MTV。找出安全的、非碰撞的位置，并从中得到MTV
-                var safePlace = es.Vector2.add(closestPointOnBounds, es.Vector2.multiplyScaler(result.normal, circle.radius));
-                result.minimumTranslationVector = es.Vector2.subtract(circle.position, safePlace);
+                var safePlace = closestPointOnBounds.add(result.normal.scale(circle.radius));
+                result.minimumTranslationVector = circle.position.sub(safePlace);
                 return true;
             }
-            var sqrDistance = es.Vector2.distanceSquared(closestPointOnBounds, circle.position);
+            var sqrDistance = es.Vector2.sqrDistance(closestPointOnBounds, circle.position);
             // 看框上的点距圆的半径是否小于圆的半径
             if (sqrDistance == 0) {
-                result.minimumTranslationVector = es.Vector2.multiplyScaler(result.normal, circle.radius);
+                result.minimumTranslationVector = result.normal.scale(circle.radius);
             }
             else if (sqrDistance <= circle.radius * circle.radius) {
-                result.normal = es.Vector2.subtract(circle.position, closestPointOnBounds);
-                var depth = result.normal.length() - circle.radius;
+                result.normal = circle.position.sub(closestPointOnBounds);
+                var depth = result.normal.magnitude() - circle.radius;
                 result.point = closestPointOnBounds;
-                es.Vector2Ext.normalize(result.normal);
-                result.minimumTranslationVector = es.Vector2.multiplyScaler(result.normal, depth);
+                result.normal = result.normal.normalize();
+                result.minimumTranslationVector = result.normal.scale(depth);
                 return true;
             }
             return false;
@@ -10152,42 +10135,43 @@ var es;
         ShapeCollisionsCircle.circleToPolygon = function (circle, polygon, result) {
             if (result === void 0) { result = new es.CollisionResult(); }
             // 圆圈在多边形中的位置坐标
-            var poly2Circle = es.Vector2.subtract(circle.position, polygon.position);
+            var poly2Circle = circle.position.sub(polygon.position);
             // 首先，我们需要找到从圆到多边形的最近距离
-            var distanceSquared = new es.Ref(0);
-            var closestPoint = es.Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle, distanceSquared, result.normal);
+            var res = es.Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle);
+            result.normal = res.edgeNormal;
             // 确保距离的平方小于半径的平方，否则我们不会相撞。
             // 请注意，如果圆完全包含在多边形中，距离可能大于半径。
             // 正因为如此，我们还要确保圆的位置不在多边形内。
             var circleCenterInsidePoly = polygon.containsPoint(circle.position);
-            if (distanceSquared.value > circle.radius * circle.radius && !circleCenterInsidePoly)
+            if (res.distanceSquared > circle.radius * circle.radius && !circleCenterInsidePoly)
                 return false;
             // 算出MTV。我们要注意处理完全包含在多边形中的圆或包含其中心的圆
             var mtv;
             if (circleCenterInsidePoly) {
-                mtv = es.Vector2.multiply(result.normal, new es.Vector2(Math.sqrt(distanceSquared.value) - circle.radius));
+                mtv = result.normal.scale(Math.sqrt(res.distanceSquared) - circle.radius);
             }
             else {
                 // 如果我们没有距离，这意味着圆心在多边形的边缘上。只需根据它的半径移动它
-                if (distanceSquared.value == 0) {
-                    mtv = new es.Vector2(result.normal.x * circle.radius, result.normal.y * circle.radius);
+                if (res.distanceSquared === 0) {
+                    mtv = result.normal.scale(circle.radius);
                 }
                 else {
-                    var distance = Math.sqrt(distanceSquared.value);
-                    mtv = es.Vector2.multiplyScaler(es.Vector2.subtract(poly2Circle, closestPoint), -1)
-                        .multiply(new es.Vector2((circle.radius - distance) / distance));
+                    var distance = Math.sqrt(res.distanceSquared);
+                    mtv = poly2Circle
+                        .sub(res.closestPoint)
+                        .scale(((circle.radius - distance) / distance) * -1);
                 }
             }
             result.minimumTranslationVector = mtv;
-            result.point = es.Vector2.add(closestPoint, polygon.position);
+            result.point = res.closestPoint.add(polygon.position);
             return true;
         };
         ShapeCollisionsCircle.closestPointOnLine = function (lineA, lineB, closestTo) {
-            var v = es.Vector2.subtract(lineB, lineA);
-            var w = es.Vector2.subtract(closestTo, lineA);
-            var t = es.Vector2.dot(w, v) / es.Vector2.dot(v, v);
+            var v = lineB.sub(lineA);
+            var w = closestTo.sub(lineA);
+            var t = w.dot(v) / v.dot(v);
             t = es.MathHelper.clamp(t, 0, 1);
-            return es.Vector2.add(lineA, es.Vector2.multiplyScaler(v, t));
+            return lineA.add(v.scaleEqual(t));
         };
         return ShapeCollisionsCircle;
     }());
@@ -10208,7 +10192,7 @@ var es;
                 var edge1 = es.Vector2.add(polygon.position, polygon.points[j]);
                 var edge2 = es.Vector2.add(polygon.position, polygon.points[i]);
                 var intersection = es.Vector2.zero;
-                if (this.lineToLine(edge1, edge2, start, end, intersection)) {
+                if (ShapeCollisionsLine.lineToLine(edge1, edge2, start, end, intersection)) {
                     hasIntersection = true;
                     // TODO: 这是得到分数的正确和最有效的方法吗?
                     // 先检查x分数。如果是NaN，就用y代替
@@ -10216,7 +10200,7 @@ var es;
                     if (Number.isNaN(distanceFraction) || Math.abs(distanceFraction) == Infinity)
                         distanceFraction = (intersection.y - start.y) / (end.y - start.y);
                     if (distanceFraction < fraction) {
-                        var edge = es.Vector2.subtract(edge2, edge1);
+                        var edge = edge2.sub(edge1);
                         normal = new es.Vector2(edge.y, -edge.x);
                         fraction = distanceFraction;
                         intersectionPoint = intersection;
@@ -10224,28 +10208,28 @@ var es;
                 }
             }
             if (hasIntersection) {
-                normal.normalize();
+                normal = normal.normalize();
                 var distance = es.Vector2.distance(start, intersectionPoint);
-                hit.setValuesNonCollider(fraction, distance, intersectionPoint, normal);
+                hit.setValues(fraction, distance, intersectionPoint, normal);
                 return true;
             }
             return false;
         };
         ShapeCollisionsLine.lineToLine = function (a1, a2, b1, b2, intersection) {
-            var b = es.Vector2.subtract(a2, a1);
-            var d = es.Vector2.subtract(b2, b1);
+            var b = a2.sub(a1);
+            var d = b2.sub(b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
             // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
                 return false;
-            var c = es.Vector2.subtract(b1, a1);
+            var c = b1.sub(a1);
             var t = (c.x * d.y - c.y * d.x) / bDotDPerp;
             if (t < 0 || t > 1)
                 return false;
             var u = (c.x * b.y - c.y * b.x) / bDotDPerp;
             if (u < 0 || u > 1)
                 return false;
-            var r = es.Vector2.add(a1, es.Vector2.multiplyScaler(b, t));
+            var r = a1.add(b.scale(t));
             intersection.x = r.x;
             intersection.y = r.y;
             return true;
@@ -10253,10 +10237,10 @@ var es;
         ShapeCollisionsLine.lineToCircle = function (start, end, s, hit) {
             // 计算这里的长度并分别对d进行标准化，因为如果我们命中了我们需要它来得到分数
             var lineLength = es.Vector2.distance(start, end);
-            var d = es.Vector2.divideScaler(es.Vector2.subtract(end, start), lineLength);
-            var m = es.Vector2.subtract(start, s.position);
-            var b = es.Vector2.dot(m, d);
-            var c = es.Vector2.dot(m, m) - s.radius * s.radius;
+            var d = es.Vector2.divideScaler(end.sub(start), lineLength);
+            var m = start.sub(s.position);
+            var b = m.dot(d);
+            var c = m.dot(m) - s.radius * s.radius;
             // 如果r的原点在s之外，(c>0)和r指向s (b>0) 则返回
             if (c > 0 && b > 0)
                 return false;
@@ -10269,9 +10253,9 @@ var es;
             // 如果分数为负数，射线从圈内开始，
             if (hit.fraction < 0)
                 hit.fraction = 0;
-            hit.point = es.Vector2.add(start, es.Vector2.multiplyScaler(d, hit.fraction));
+            hit.point = start.add(d.scale(hit.fraction));
             hit.distance = es.Vector2.distance(start, hit.point);
-            hit.normal = es.Vector2.normalize(es.Vector2.subtract(hit.point, s.position));
+            hit.normal = hit.point.sub(s.position).normalize();
             hit.fraction = hit.distance / lineLength;
             return true;
         };
@@ -10285,14 +10269,15 @@ var es;
         function ShapeCollisionsPoint() {
         }
         ShapeCollisionsPoint.pointToCircle = function (point, circle, result) {
-            var distanceSquared = es.Vector2.distanceSquared(point, circle.position);
+            var distanceSquared = es.Vector2.sqrDistance(point, circle.position);
             var sumOfRadii = 1 + circle.radius;
             var collided = distanceSquared < sumOfRadii * sumOfRadii;
             if (collided) {
-                result.normal = es.Vector2.normalize(es.Vector2.subtract(point, circle.position));
+                result.normal = point.sub(circle.position).normalize();
                 var depth = sumOfRadii - Math.sqrt(distanceSquared);
-                result.minimumTranslationVector = es.Vector2.multiplyScaler(result.normal, -depth);
-                result.point = es.Vector2.add(circle.position, es.Vector2.multiplyScaler(result.normal, circle.radius));
+                result.minimumTranslationVector = result.normal.scale(-depth);
+                ;
+                result.point = circle.position.add(result.normal.scale(circle.radius));
                 return true;
             }
             return false;
@@ -10302,7 +10287,7 @@ var es;
             if (box.containsPoint(point)) {
                 // 在方框的空间里找到点
                 result.point = box.bounds.getClosestPointOnRectangleBorderToPoint(point, result.normal);
-                result.minimumTranslationVector = es.Vector2.subtract(point, result.point);
+                result.minimumTranslationVector = point.sub(result.point);
                 return true;
             }
             return false;
@@ -10310,10 +10295,10 @@ var es;
         ShapeCollisionsPoint.pointToPoly = function (point, poly, result) {
             if (result === void 0) { result = new es.CollisionResult(); }
             if (poly.containsPoint(point)) {
-                var distanceSquared = new es.Ref(0);
-                var closestPoint = es.Polygon.getClosestPointOnPolygonToPoint(poly.points, es.Vector2.subtract(point, poly.position), distanceSquared, result.normal);
-                result.minimumTranslationVector = new es.Vector2(result.normal.x * Math.sqrt(distanceSquared.value), result.normal.y * Math.sqrt(distanceSquared.value));
-                result.point = es.Vector2.add(closestPoint, poly.position);
+                var res = es.Polygon.getClosestPointOnPolygonToPoint(poly.points, point.sub(poly.position));
+                result.normal = res.edgeNormal;
+                result.minimumTranslationVector = result.normal.scale(Math.sqrt(res.distanceSquared));
+                result.point = res.closestPoint.sub(poly.position);
                 return true;
             }
             return false;
@@ -10339,7 +10324,7 @@ var es;
             var secondEdges = second.edgeNormals;
             var minIntervalDistance = Number.POSITIVE_INFINITY;
             var translationAxis = es.Vector2.zero;
-            var polygonOffset = es.Vector2.subtract(first.position, second.position);
+            var polygonOffset = first.position.sub(second.position);
             var axis;
             // 循环穿过两个多边形的所有边
             for (var edgeIndex = 0; edgeIndex < firstEdges.length + secondEdges.length; edgeIndex++) {
@@ -10351,7 +10336,7 @@ var es;
                 var _a = this.getInterval(axis, first), minA = _a.min, maxA = _a.max;
                 var _b = this.getInterval(axis, second), minB = _b.min, maxB = _b.max;
                 // 将区间设为第二个多边形的空间。由轴上投影的位置差偏移。
-                var relativeIntervalOffset = es.Vector2.dot(polygonOffset, axis);
+                var relativeIntervalOffset = polygonOffset.dot(axis);
                 minA += relativeIntervalOffset;
                 maxA += relativeIntervalOffset;
                 // 检查多边形投影是否正在相交
@@ -10368,13 +10353,13 @@ var es;
                 if (intervalDist < minIntervalDistance) {
                     minIntervalDistance = intervalDist;
                     translationAxis.setTo(axis.x, axis.y);
-                    if (es.Vector2.dot(translationAxis, polygonOffset) < 0)
+                    if (translationAxis.dot(polygonOffset) < 0)
                         translationAxis = translationAxis.scale(-1);
                 }
             }
             // 利用最小平移向量对多边形进行推入。
             result.normal = translationAxis;
-            result.minimumTranslationVector = translationAxis.scale(minIntervalDistance * -1);
+            result.minimumTranslationVector = translationAxis.scale(-minIntervalDistance);
             return true;
         };
         /**
@@ -10387,11 +10372,11 @@ var es;
         ShapeCollisionsPolygon.getInterval = function (axis, polygon) {
             var res = { min: 0, max: 0 };
             var dot;
-            dot = es.Vector2.dot(polygon.points[0], axis);
+            dot = polygon.points[0].dot(axis);
             res.max = dot;
             res.min = dot;
             for (var i = 1; i < polygon.points.length; i++) {
-                dot = es.Vector2.dot(polygon.points[i], axis);
+                dot = polygon.points[i].dot(axis);
                 if (dot < res.min) {
                     res.min = dot;
                 }
@@ -10926,13 +10911,13 @@ var es;
         }
         Triangulator.testPointTriangle = function (point, a, b, c) {
             // 如果点在AB的右边，那么外边的三角形是
-            if (es.Vector2Ext.cross(es.Vector2.subtract(point, a), es.Vector2.subtract(b, a)) < 0)
+            if (es.Vector2Ext.cross(point.sub(a), b.sub(a)) < 0)
                 return false;
             // 如果点在BC的右边，则在三角形的外侧
-            if (es.Vector2Ext.cross(es.Vector2.subtract(point, b), es.Vector2.subtract(c, b)) < 0)
+            if (es.Vector2Ext.cross(point.sub(b), c.sub(b)) < 0)
                 return false;
             // 如果点在ca的右边，则在三角形的外面
-            if (es.Vector2Ext.cross(es.Vector2.subtract(point, c), es.Vector2.subtract(a, c)) < 0)
+            if (es.Vector2Ext.cross(point.sub(c), a.sub(c)) < 0)
                 return false;
             // 点在三角形上
             return true;
@@ -13694,7 +13679,7 @@ var es;
          * @param c
          */
         Vector2Ext.isTriangleCCW = function (a, center, c) {
-            return this.cross(es.Vector2.subtract(center, a), es.Vector2.subtract(c, center)) < 0;
+            return this.cross(center.sub(a), c.sub(center)) < 0;
         };
         Vector2Ext.halfVector = function () {
             return new es.Vector2(0.5, 0.5);
@@ -13730,7 +13715,7 @@ var es;
         Vector2Ext.angle = function (from, to) {
             this.normalize(from);
             this.normalize(to);
-            return Math.acos(es.MathHelper.clamp(es.Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
+            return Math.acos(es.MathHelper.clamp(from.dot(to), -1, 1)) * es.MathHelper.Rad2Deg;
         };
         /**
          * 返回以自度为中心的左右角度
@@ -13739,8 +13724,8 @@ var es;
          * @param right
          */
         Vector2Ext.angleBetween = function (self, left, right) {
-            var one = es.Vector2.subtract(left, self);
-            var two = es.Vector2.subtract(right, self);
+            var one = left.sub(self);
+            var two = right.sub(self);
             return this.angle(one, two);
         };
         /**
@@ -14293,7 +14278,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_11, _a;
+            var e_12, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -14301,12 +14286,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_11_1) { e_11 = { error: e_11_1 }; }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_11) throw e_11.error; }
+                finally { if (e_12) throw e_12.error; }
             }
             return result;
         };
@@ -14482,7 +14467,7 @@ var es;
          * @param radius
          */
         VisibilityComputer.prototype.addCircleOccluder = function (position, radius) {
-            var dirToCircle = es.Vector2.subtract(position, this._origin);
+            var dirToCircle = position.sub(this._origin);
             var angle = Math.atan2(dirToCircle.y, dirToCircle.x);
             var stepSize = Math.PI / this.lineCountForCircleApproximation;
             var startAngle = angle + es.MathHelper.PiOver2;
@@ -14555,7 +14540,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_12, _a;
+            var e_13, _a;
             var output = es.ListPool.obtain();
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -14594,12 +14579,12 @@ var es;
                         }
                     }
                 }
-                catch (e_12_1) { e_12 = { error: e_12_1 }; }
+                catch (e_13_1) { e_13 = { error: e_13_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_12) throw e_12.error; }
+                    finally { if (e_13) throw e_13.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -14715,7 +14700,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_13, _a;
+            var e_14, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -14733,12 +14718,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_13) throw e_13.error; }
+                finally { if (e_14) throw e_14.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

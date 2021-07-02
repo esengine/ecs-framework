@@ -347,9 +347,9 @@ module es {
          * @param pos
          */
         public lookAt(pos: Vector2) {
-            let sign = this.position.x > pos.x ? -1 : 1;
-            let vectorToAlignTo = Vector2.normalize(Vector2.subtract(this.position, pos));
-            this.rotation = sign * Math.acos(Vector2.dot(vectorToAlignTo, Vector2.unitY));
+            const sign = this.position.x > pos.x ? -1 : 1;
+            const vectorToAlignTo = this.position.sub(pos).normalize();
+            this.rotation = sign * Math.acos(vectorToAlignTo.dot(Vector2.unitY));
         }
 
         /**
@@ -412,22 +412,22 @@ module es {
 
                 if (this._localDirty) {
                     if (this._localPositionDirty) {
-                        this._translationMatrix = Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y);
+                        Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y, this._translationMatrix);
                         this._localPositionDirty = false;
                     }
 
                     if (this._localRotationDirty) {
-                        this._rotationMatrix = Matrix2D.createRotation(this._localRotation);
+                        Matrix2D.createRotation(this._localRotation, this._rotationMatrix);
                         this._localRotationDirty = false;
                     }
 
                     if (this._localScaleDirty) {
-                        this._scaleMatrix = Matrix2D.createScale(this._localScale.x, this._localScale.y);
+                        Matrix2D.createScale(this._localScale.x, this._localScale.y, this._scaleMatrix);
                         this._localScaleDirty = false;
                     }
 
-                    es.Matrix2D.multiply(this._scaleMatrix, this._rotationMatrix, this._localTransform);
-                    es.Matrix2D.multiply(this._localTransform, this._translationMatrix, this._localTransform);
+                    Matrix2D.multiply(this._scaleMatrix, this._rotationMatrix, this._localTransform);
+                    Matrix2D.multiply(this._localTransform, this._translationMatrix, this._localTransform);
 
                     if (this.parent == null) {
                         this._worldTransform = this._localTransform;
@@ -440,9 +440,9 @@ module es {
                 }
 
                 if (this.parent != null) {
-                    es.Matrix2D.multiply(this._localTransform, this.parent._worldTransform, this._worldTransform);
+                    Matrix2D.multiply(this._localTransform, this.parent._worldTransform, this._worldTransform);
                     this._rotation = this._localRotation + this.parent._rotation;
-                    this._scale = Vector2.multiply(this.parent._scale, this._localScale);
+                    this._scale = this.parent._scale.multiply(this._localScale);;
                     this._worldInverseDirty = true;
                 }
 
@@ -457,13 +457,13 @@ module es {
                 this.hierarchyDirty |= dirtyFlagType;
 
                 switch (dirtyFlagType) {
-                    case es.DirtyType.positionDirty:
+                    case DirtyType.positionDirty:
                         this.entity.onTransformChanged(transform.Component.position);
                         break;
-                    case es.DirtyType.rotationDirty:
+                    case DirtyType.rotationDirty:
                         this.entity.onTransformChanged(transform.Component.rotation);
                         break;
-                    case es.DirtyType.scaleDirty:
+                    case DirtyType.scaleDirty:
                         this.entity.onTransformChanged(transform.Component.scale);
                         break;
                 }

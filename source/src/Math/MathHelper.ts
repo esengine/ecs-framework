@@ -390,8 +390,8 @@ module es {
          * @param other 
          */
         public static project(self: Vector2, other: Vector2) {
-            let amt = Vector2.dot(self, other) / other.lengthSquared();
-            let vec = new Vector2(amt * other.x, amt * other.y);
+            let amt = self.dot(other) / other.lengthSquared();
+            let vec = other.scale(amt);
             return vec;
         }
 
@@ -606,7 +606,7 @@ module es {
                 return false;
             }
 
-            return !Number.isFinite(x);
+            return x !== Infinity;
         }
 
         public static smoothDamp(current: number, target: number, currentVelocity: number, smoothTime: number, maxSpeed: number, deltaTime: number): { value: number; currentVelocity: number } {
@@ -670,6 +670,10 @@ module es {
          */
         public static mapMinMax(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax): number {
             return rightMin + ((MathHelper.clamp(value, leftMin, leftMax) - leftMin) * (rightMax - rightMin)) / (leftMax - leftMin);
+        }
+
+        public static fromAngle(angle: number) {
+            return new Vector2(Math.cos(angle), Math.sin(angle)).normalizeEqual();
         }
     }
 }

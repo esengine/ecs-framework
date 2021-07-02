@@ -301,16 +301,16 @@ module es {
                     this.supportSlopedOneWayPlatforms &&
                     this.collisionState.wasGroundedLastFrame
                 ) {
-                    this._raycastHit = Physics.linecastIgnoreCollider(
+                    this._raycastHit = Physics.linecast(
                         ray,
-                        ray.add(rayDirection.multiplyScaler(rayDistance)),
+                        ray.add(rayDirection.scaleEqual(rayDistance)),
                         this.platformMask,
                         this.ignoredColliders
                     );
                 } else {
-                    this._raycastHit = Physics.linecastIgnoreCollider(
+                    this._raycastHit = Physics.linecast(
                         ray,
-                        ray.add(rayDirection.multiplyScaler(rayDistance)),
+                        ray.add(rayDirection.scaleEqual(rayDistance)),
                         this.platformMask & ~this.oneWayPlatformMask,
                         this.ignoredColliders
                     );
@@ -380,9 +380,9 @@ module es {
                     initialRayOriginX + i * this._horizontalDistanceBetweenRays,
                     initialRayOriginY
                 );
-                this._raycastHit = Physics.linecastIgnoreCollider(
+                this._raycastHit = Physics.linecast(
                     rayStart,
-                    rayStart.add(rayDirection.multiplyScaler(rayDistance)),
+                    rayStart.add(rayDirection.scaleEqual(rayDistance)),
                     mask,
                     this.ignoredColliders
                 );
@@ -439,9 +439,9 @@ module es {
                 this._raycastOrigins.bottomLeft.y
             );
 
-            this._raycastHit = Physics.linecastIgnoreCollider(
+            this._raycastHit = Physics.linecast(
                 slopeRay,
-                slopeRay.add(rayDirection.multiplyScaler(slopeCheckRayDistance)),
+                slopeRay.add(rayDirection.scaleEqual(slopeCheckRayDistance)),
                 this.platformMask,
                 this.ignoredColliders
             );
@@ -502,14 +502,14 @@ module es {
                         this.supportSlopedOneWayPlatforms &&
                         this.collisionState.wasGroundedLastFrame
                     ) {
-                        raycastHit = Physics.linecastIgnoreCollider(
+                        raycastHit = Physics.linecast(
                             ray,
                             ray.add(deltaMovement),
                             this.platformMask,
                             this.ignoredColliders
                         );
                     } else {
-                        raycastHit = Physics.linecastIgnoreCollider(
+                        raycastHit = Physics.linecast(
                             ray,
                             ray.add(deltaMovement),
                             this.platformMask & ~this.oneWayPlatformMask,
