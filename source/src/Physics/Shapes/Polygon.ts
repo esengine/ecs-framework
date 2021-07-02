@@ -34,6 +34,10 @@ module es {
             this.isBox = isBox;
         }
 
+        public create(vertCount: number, radius: number) {
+            Polygon.buildSymmetricalPolygon(vertCount, radius);
+          }
+
         public _edgeNormals: Vector2[];
 
         /**
@@ -99,10 +103,10 @@ module es {
          * @param radius
          */
         public static buildSymmetricalPolygon(vertCount: number, radius: number) {
-            let verts = new Array(vertCount);
+            const verts = new Array(vertCount);
 
             for (let i = 0; i < vertCount; i++) {
-                let a = 2 * Math.PI * (i / vertCount);
+                const a = 2 * Math.PI * (i / vertCount);
                 verts[i] = new Vector2(Math.cos(a) * radius, Math.sin(a) * radius);
             }
 

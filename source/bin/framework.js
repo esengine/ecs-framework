@@ -1303,14 +1303,10 @@ var es;
          * @param value
          */
         Vector2.prototype.divide = function (value) {
-            this.x /= value.x;
-            this.y /= value.y;
-            return this;
+            return new Vector2(this.x / value.x, this.y / value.y);
         };
         Vector2.prototype.divideScaler = function (value) {
-            this.x /= value;
-            this.y /= value;
-            return this;
+            return new Vector2(this.x / value, this.y / value);
         };
         /**
          *
@@ -9456,6 +9452,9 @@ var es;
             _this.isBox = isBox;
             return _this;
         }
+        Polygon.prototype.create = function (vertCount, radius) {
+            Polygon.buildSymmetricalPolygon(vertCount, radius);
+        };
         Object.defineProperty(Polygon.prototype, "edgeNormals", {
             /**
              * 边缘法线用于SAT碰撞检测。缓存它们用于避免squareRoots
@@ -10401,6 +10400,471 @@ var es;
         return ShapeCollisionsPolygon;
     }());
     es.ShapeCollisionsPolygon = ShapeCollisionsPolygon;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Particle = /** @class */ (function () {
+        function Particle(position) {
+            this.mass = 1;
+            this.collidesWithColliders = true;
+            this.position = new es.Vector2(position.x, position.y);
+            this.lastPosition = new es.Vector2(position.x, position.y);
+        }
+        Particle.prototype.applyForce = function (force) {
+            this.acceleration = this.acceleration.add(force.divideScaler(this.mass));
+        };
+        Particle.prototype.pin = function () {
+            this.isPinned = true;
+            this.pinnedPosition = this.position;
+            return this;
+        };
+        Particle.prototype.pinTo = function (position) {
+            this.isPinned = true;
+            this.pinnedPosition = position;
+            this.position = this.pinnedPosition;
+            return this;
+        };
+        Particle.prototype.unpin = function () {
+            this.isPinned = false;
+            return this;
+        };
+        return Particle;
+    }());
+    es.Particle = Particle;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var VerletWorld = /** @class */ (function () {
+        function VerletWorld(simulationBounds) {
+            if (simulationBounds === void 0) { simulationBounds = null; }
+            this.gravity = new es.Vector2(0, 980);
+            this.constraintIterations = 3;
+            this.maximumStepIterations = 5;
+            this.allowDragging = true;
+            this.selectionRadiusSquared = 20 * 20;
+            this._composites = [];
+            this._tempCircle = new es.Circle(1);
+            this._fixedDeltaTime = 1 / 60;
+            this.simulationBounds = simulationBounds;
+            this._fixedDeltaTime = Math.pow(this._fixedDeltaTime, 2);
+        }
+        VerletWorld.prototype.update = function () {
+            this.updateTiming();
+            if (this.allowDragging)
+                this.handleDragging();
+            for (var iteration = 1; iteration <= this._iterationSteps; iteration++) {
+                for (var i = this._composites.length - 1; i >= 0; i--) {
+                    var composite = this._composites[i];
+                    for (var s = 0; s < this.constraintIterations; s++)
+                        composite.solveConstraints();
+                    composite.updateParticles(this._fixedDeltaTimeSq, this.gravity);
+                    composite.handleConstraintCollisions();
+                    for (var j = 0; j < composite.particles.length; j++) {
+                        var p = composite.particles[j];
+                        if (this.simulationBounds) {
+                            this.constrainParticleToBounds(p);
+                        }
+                        if (p.collidesWithColliders)
+                            this.handleCollisions(p, composite.collidesWithLayers);
+                    }
+                }
+            }
+        };
+        VerletWorld.prototype.constrainParticleToBounds = function (p) {
+            var tempPos = p.position;
+            var bounds = this.simulationBounds;
+            if (p.radius == 0) {
+                if (tempPos.y > bounds.height)
+                    tempPos.y = bounds.height;
+                else if (tempPos.y < bounds.y)
+                    tempPos.y = bounds.y;
+                if (tempPos.x < bounds.x)
+                    tempPos.x = bounds.x;
+                else if (tempPos.x > bounds.width)
+                    tempPos.x = bounds.width;
+            }
+            else {
+                if (tempPos.y < bounds.y + p.radius)
+                    tempPos.y = 2 * (bounds.y + p.radius) - tempPos.y;
+                if (tempPos.y > bounds.height - p.radius)
+                    tempPos.y = 2 * (bounds.height - p.radius) - tempPos.y;
+                if (tempPos.x > bounds.width - p.radius)
+                    tempPos.x = 2 * (bounds.width - p.radius) - tempPos.x;
+                if (tempPos.x < bounds.x + p.radius)
+                    tempPos.x = 2 * (bounds.x + p.radius) - tempPos.x;
+            }
+            p.position = tempPos;
+        };
+        VerletWorld.prototype.handleCollisions = function (p, collidesWithLayers) {
+            var collidedCount = es.Physics.overlapCircleAll(p.position, p.radius, VerletWorld._colliders, collidesWithLayers);
+            for (var i = 0; i < collidedCount; i++) {
+                var collider = VerletWorld._colliders[i];
+                if (collider.isTrigger)
+                    continue;
+                var collisionResult = new es.CollisionResult();
+                if (p.radius < 2) {
+                    if (collider.shape.pointCollidesWithShape(p.position, collisionResult)) {
+                        p.position = p.position.sub(collisionResult.minimumTranslationVector);
+                    }
+                }
+                else {
+                    this._tempCircle.radius = p.radius;
+                    this._tempCircle.position = p.position;
+                    if (this._tempCircle.collidesWithShape(collider.shape, collisionResult)) {
+                        p.position = p.position.sub(collisionResult.minimumTranslationVector);
+                    }
+                }
+            }
+        };
+        VerletWorld.prototype.updateTiming = function () {
+            this._leftOverTime += es.Time.deltaTime;
+            this._iterationSteps = Math.trunc(this._leftOverTime / this._fixedDeltaTime);
+            this._leftOverTime -= this._iterationSteps * this._fixedDeltaTime;
+            this._iterationSteps = Math.min(this._iterationSteps, this.maximumStepIterations);
+        };
+        VerletWorld.prototype.addComposite = function (composite) {
+            this._composites.push(composite);
+            return composite;
+        };
+        VerletWorld.prototype.removeComposite = function (composite) {
+            var index = this._composites.indexOf(composite);
+            this._composites.splice(index, 1);
+        };
+        VerletWorld.prototype.handleDragging = function () {
+        };
+        VerletWorld.prototype.getNearestParticle = function (position) {
+            var nearestSquaredDistance = this.selectionRadiusSquared;
+            var particle = null;
+            for (var j = 0; j < this._composites.length; j++) {
+                var particles = this._composites[j].particles;
+                for (var i = 0; i < particles.length; i++) {
+                    var p = particles[i];
+                    var squaredDistanceToParticle = es.Vector2.sqrDistance(p.position, position);
+                    if (squaredDistanceToParticle <= this.selectionRadiusSquared &&
+                        (particle == null || squaredDistanceToParticle < nearestSquaredDistance)) {
+                        particle = p;
+                        nearestSquaredDistance = squaredDistanceToParticle;
+                    }
+                }
+            }
+            return particle;
+        };
+        VerletWorld.prototype.debugRender = function (batcher) {
+            for (var i = 0; i < this._composites.length; i++) {
+                this._composites[i].debugRender(batcher);
+            }
+            if (this.allowDragging) {
+                if (this._draggedParticle != null) {
+                    batcher.drawCircle(this._draggedParticle.position, 8, es.Color.White);
+                }
+            }
+        };
+        VerletWorld._colliders = [];
+        return VerletWorld;
+    }());
+    es.VerletWorld = VerletWorld;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Composite = /** @class */ (function () {
+        function Composite() {
+            this.friction = new es.Vector2(0.98, 1);
+            this.drawParticles = true;
+            this.drawConstraints = true;
+            this.collidesWithLayers = es.Physics.allLayers;
+            this.particles = [];
+            this._constraints = [];
+        }
+        Composite.prototype.addParticle = function (particle) {
+            this.particles.push(particle);
+            return particle;
+        };
+        Composite.prototype.removeParticle = function (particle) {
+            var index = this.particles.indexOf(particle);
+            this.particles.splice(index, 1);
+        };
+        Composite.prototype.removeAll = function () {
+            this.particles.length = 0;
+            this._constraints.length = 0;
+        };
+        Composite.prototype.addConstraint = function (constraint) {
+            this._constraints.push(constraint);
+            constraint.composite = this;
+            return constraint;
+        };
+        Composite.prototype.removeConstraint = function (constraint) {
+            var index = this._constraints.indexOf(constraint);
+            this._constraints.splice(index, 1);
+        };
+        Composite.prototype.applyForce = function (force) {
+            for (var j = 0; j < this.particles.length; j++)
+                this.particles[j].applyForce(force);
+        };
+        Composite.prototype.solveConstraints = function () {
+            for (var i = this._constraints.length - 1; i >= 0; i--)
+                this._constraints[i].solve();
+        };
+        Composite.prototype.updateParticles = function (deltaTimeSquared, gravity) {
+            for (var j = 0; j < this.particles.length; j++) {
+                var p = this.particles[j];
+                if (p.isPinned) {
+                    p.position = p.pinnedPosition;
+                    continue;
+                }
+                p.applyForce(gravity.scale(p.mass));
+                var vel = p.position.sub(p.lastPosition).multiply(this.friction);
+                var nextPos = p.position.add(vel).add(p.acceleration.scale(0.5 * deltaTimeSquared));
+                p.lastPosition = p.position;
+                p.position = nextPos;
+                p.acceleration.x = p.acceleration.y = 0;
+            }
+        };
+        Composite.prototype.handleConstraintCollisions = function () {
+            for (var i = this._constraints.length - 1; i >= 0; i--) {
+                if (this._constraints[i].collidesWithColliders)
+                    this._constraints[i].handleCollisions(this.collidesWithLayers);
+            }
+        };
+        Composite.prototype.debugRender = function (batcher) {
+            if (this.drawConstraints) {
+                for (var i = 0; i < this._constraints.length; i++)
+                    this._constraints[i].debugRender(batcher);
+            }
+            if (this.drawParticles) {
+                for (var i = 0; i < this.particles.length; i++) {
+                    if (this.particles[i].radius == 0)
+                        batcher.drawPixel(this.particles[i].position, new es.Color(220, 52, 94), 4);
+                    else
+                        batcher.drawCircleLow(this.particles[i].position, this.particles[i].radius, new es.Color(220, 52, 94), 1, 4);
+                }
+            }
+        };
+        return Composite;
+    }());
+    es.Composite = Composite;
+})(es || (es = {}));
+///<reference path="./Composite.ts" />
+var es;
+///<reference path="./Composite.ts" />
+(function (es) {
+    var Ball = /** @class */ (function (_super) {
+        __extends(Ball, _super);
+        function Ball(position, radius) {
+            if (radius === void 0) { radius = 10; }
+            var _this = _super.call(this) || this;
+            _this.addParticle(new es.Particle(position)).radius = radius;
+            return _this;
+        }
+        return Ball;
+    }(es.Composite));
+    es.Ball = Ball;
+})(es || (es = {}));
+///<reference path="./Composite.ts" />
+var es;
+///<reference path="./Composite.ts" />
+(function (es) {
+    var VerletBox = /** @class */ (function (_super) {
+        __extends(VerletBox, _super);
+        function VerletBox(center, width, height, borderStiffness, diagonalStiffness) {
+            if (borderStiffness === void 0) { borderStiffness = 0.2; }
+            if (diagonalStiffness === void 0) { diagonalStiffness = 0.5; }
+            var _this = _super.call(this) || this;
+            var tl = _this.addParticle(new es.Particle(center.add(new es.Vector2(-width / 2, -height / 2))));
+            var tr = _this.addParticle(new es.Particle(center.add(new es.Vector2(width / 2, -height / 2))));
+            var br = _this.addParticle(new es.Particle(center.add(new es.Vector2(width / 2, height / 2))));
+            var bl = _this.addParticle(new es.Particle(center.add(new es.Vector2(-width / 2, height / 2))));
+            _this.addConstraint(new es.DistanceConstraint(tl, tr, borderStiffness));
+            _this.addConstraint(new es.DistanceConstraint(tr, br, borderStiffness));
+            _this.addConstraint(new es.DistanceConstraint(br, bl, borderStiffness));
+            _this.addConstraint(new es.DistanceConstraint(bl, tl, borderStiffness));
+            _this.addConstraint(new es.DistanceConstraint(tl, br, diagonalStiffness))
+                .setCollidesWithColliders(false);
+            _this.addConstraint(new es.DistanceConstraint(bl, tr, diagonalStiffness))
+                .setCollidesWithColliders(false);
+            return _this;
+        }
+        return VerletBox;
+    }(es.Composite));
+    es.VerletBox = VerletBox;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var LineSegments = /** @class */ (function (_super) {
+        __extends(LineSegments, _super);
+        function LineSegments(vertices, stiffness) {
+            var _this = _super.call(this) || this;
+            for (var i = 0; i < vertices.length; i++) {
+                var p = new es.Particle(vertices[i]);
+                _this.addParticle(p);
+                if (i > 0)
+                    _this.addConstraint(new es.DistanceConstraint(_this.particles[i], _this.particles[i - 1], stiffness));
+            }
+            return _this;
+        }
+        LineSegments.prototype.pinParticleAtIndex = function (index) {
+            this.particles[index].pin();
+            return this;
+        };
+        return LineSegments;
+    }(es.Composite));
+    es.LineSegments = LineSegments;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Constraint = /** @class */ (function () {
+        function Constraint() {
+            this.collidesWithColliders = true;
+        }
+        Constraint.prototype.handleCollisions = function (collidesWithLayers) {
+        };
+        Constraint.prototype.debugRender = function (batcher) {
+        };
+        return Constraint;
+    }());
+    es.Constraint = Constraint;
+})(es || (es = {}));
+///<reference path="./Constraint.ts" />
+var es;
+///<reference path="./Constraint.ts" />
+(function (es) {
+    var AngleConstraint = /** @class */ (function (_super) {
+        __extends(AngleConstraint, _super);
+        function AngleConstraint(a, center, c, stiffness) {
+            var _this = _super.call(this) || this;
+            _this._particleA = a;
+            _this._centerParticle = center;
+            _this._particleC = c;
+            _this.stiffness = stiffness;
+            _this.collidesWithColliders = false;
+            _this.angleInRadius = _this.angleBetweenParticles();
+            return _this;
+        }
+        AngleConstraint.prototype.angleBetweenParticles = function () {
+            var first = this._particleA.position.sub(this._centerParticle.position);
+            var second = this._particleC.position.sub(this._centerParticle.position);
+            return Math.atan2(first.x * second.y - first.y * second.x, first.x * second.x + first.y * second.y);
+        };
+        AngleConstraint.prototype.solve = function () {
+            var angleBetween = this.angleBetweenParticles();
+            var diff = angleBetween - this.angleInRadius;
+            if (diff <= -Math.PI)
+                diff += 2 * Math.PI;
+            else if (diff >= Math.PI)
+                diff -= 2 * Math.PI;
+            diff *= this.stiffness;
+            this._particleA.position = es.MathHelper.rotateAround2(this._particleA.position, this._centerParticle.position, diff);
+            this._particleC.position = es.MathHelper.rotateAround2(this._particleC.position, this._centerParticle.position, -diff);
+            this._centerParticle.position = es.MathHelper.rotateAround2(this._centerParticle.position, this._particleA.position, diff);
+            this._centerParticle.position = es.MathHelper.rotateAround2(this._centerParticle.position, this._particleC.position, -diff);
+        };
+        return AngleConstraint;
+    }(es.Constraint));
+    es.AngleConstraint = AngleConstraint;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var DistanceConstraint = /** @class */ (function (_super) {
+        __extends(DistanceConstraint, _super);
+        function DistanceConstraint(first, second, stiffness, distance) {
+            if (distance === void 0) { distance = -1; }
+            var _this = _super.call(this) || this;
+            _this.tearSensitivity = Number.POSITIVE_INFINITY;
+            _this.totalPointsToApproximateCollisionsWith = 5;
+            DistanceConstraint._polygon.create(2, 1);
+            _this._particleOne = first;
+            _this._particleTwo = second;
+            _this.stiffness = stiffness;
+            if (distance > -1)
+                _this.restingDistance = distance;
+            else
+                _this.restingDistance = es.Vector2.distance(first.position, second.position);
+            return _this;
+        }
+        DistanceConstraint.create = function (a, center, c, stiffness, angleInDegrees) {
+            var aToCenter = es.Vector2.distance(a.position, center.position);
+            var cToCenter = es.Vector2.distance(c.position, center.position);
+            var distance = Math.sqrt(aToCenter * aToCenter + cToCenter * cToCenter - (2 * aToCenter * cToCenter * Math.cos(angleInDegrees * es.MathHelper.Deg2Rad)));
+            return new DistanceConstraint(a, c, stiffness, distance);
+        };
+        DistanceConstraint.prototype.setTearSensitivity = function (tearSensitivity) {
+            this.tearSensitivity = tearSensitivity;
+            return this;
+        };
+        DistanceConstraint.prototype.setCollidesWithColliders = function (collidesWithColliders) {
+            this.collidesWithColliders = collidesWithColliders;
+            return this;
+        };
+        DistanceConstraint.prototype.setShouldApproximateCollisionsWithPoints = function (shouldApproximateCollisionsWithPoints) {
+            this.shouldApproximateCollisionsWithPoints = shouldApproximateCollisionsWithPoints;
+            return this;
+        };
+        DistanceConstraint.prototype.solve = function () {
+            var diff = this._particleOne.position.sub(this._particleTwo.position);
+            var d = diff.magnitude();
+            var difference = (this.restingDistance - d) / d;
+            if (d / this.restingDistance > this.tearSensitivity) {
+                this.composite.removeConstraint(this);
+                return;
+            }
+            var im1 = 1 / this._particleOne.mass;
+            var im2 = 1 / this._particleTwo.mass;
+            var scalarP1 = (im1 / (im1 + im2)) * this.stiffness;
+            var scalarP2 = this.stiffness - scalarP1;
+            this._particleOne.position = this._particleOne.position.add(diff.scale(scalarP1 * difference));
+            this._particleTwo.position = this._particleTwo.position.sub(diff.scale(scalarP2 * difference));
+        };
+        DistanceConstraint.prototype.handleCollisions = function (collidesWithLayers) {
+            if (this.shouldApproximateCollisionsWithPoints) {
+                this.approximateCollisionsWithPoints(collidesWithLayers);
+                return;
+            }
+            var minX = Math.min(this._particleOne.position.x, this._particleTwo.position.x);
+            var maxX = Math.max(this._particleOne.position.x, this._particleTwo.position.x);
+            var minY = Math.min(this._particleOne.position.y, this._particleTwo.position.y);
+            var maxY = Math.max(this._particleOne.position.y, this._particleTwo.position.y);
+            DistanceConstraint._polygon.bounds = es.Rectangle.fromMinMax(minX, minY, maxX, maxY);
+            var midPoint;
+            this.preparePolygonForCollisionChecks(midPoint);
+            var colliders = es.Physics.boxcastBroadphase(DistanceConstraint._polygon.bounds, collidesWithLayers);
+            for (var i = 0; i < colliders.length; i++) {
+                var collider = colliders[i];
+                var result = new es.CollisionResult();
+                if (DistanceConstraint._polygon.collidesWithShape(collider.shape, result)) {
+                    this._particleOne.position = this._particleOne.position.sub(result.minimumTranslationVector);
+                    this._particleTwo.position = this._particleTwo.position.sub(result.minimumTranslationVector);
+                }
+            }
+        };
+        DistanceConstraint.prototype.approximateCollisionsWithPoints = function (collidesWithLayers) {
+            var pt;
+            for (var j = 0; j < this.totalPointsToApproximateCollisionsWith - 1; j++) {
+                pt = es.Vector2.lerp(this._particleOne.position, this._particleTwo.position, (j + 1) / this.totalPointsToApproximateCollisionsWith);
+                var collidedCount = es.Physics.overlapCircleAll(pt, 3, es.VerletWorld._colliders, collidesWithLayers);
+                for (var i = 0; i < collidedCount; i++) {
+                    var collider = es.VerletWorld._colliders[i];
+                    var collisionResult = new es.CollisionResult();
+                    if (collider.shape.pointCollidesWithShape(pt, collisionResult)) {
+                        this._particleOne.position = this._particleOne.position.sub(collisionResult.minimumTranslationVector);
+                        this._particleTwo.position = this._particleTwo.position.sub(collisionResult.minimumTranslationVector);
+                    }
+                }
+            }
+        };
+        DistanceConstraint.prototype.preparePolygonForCollisionChecks = function (midPoint) {
+            var tempMidPoint = es.Vector2.lerp(this._particleOne.position, this._particleTwo.position, 0.5);
+            midPoint.setTo(tempMidPoint.x, tempMidPoint.y);
+            DistanceConstraint._polygon.position = midPoint;
+            DistanceConstraint._polygon.points[0] = this._particleOne.position.sub(DistanceConstraint._polygon.position);
+            DistanceConstraint._polygon.points[1] = this._particleTwo.position.sub(DistanceConstraint._polygon.position);
+            DistanceConstraint._polygon.recalculateCenterAndEdgeNormals();
+        };
+        DistanceConstraint.prototype.debugRender = function (batcher) {
+            batcher.drawLine(this._particleOne.position, this._particleTwo.position, new es.Color(67, 62, 54), 1);
+        };
+        DistanceConstraint._polygon = new es.Polygon([]);
+        return DistanceConstraint;
+    }(es.Constraint));
+    es.DistanceConstraint = DistanceConstraint;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -13591,12 +14055,13 @@ var es;
                 var worldPosY = parentPosition.y + position.y;
                 var tempMat = void 0;
                 // 考虑到原点，将参考点设置为世界参考
-                var transformMatrix = es.Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
-                tempMat = es.Matrix2D.createScale(scale.x, scale.y);
+                var transformMatrix = new es.Matrix2D();
+                es.Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y, transformMatrix);
+                es.Matrix2D.createScale(scale.x, scale.y, tempMat);
                 transformMatrix = transformMatrix.multiply(tempMat);
-                tempMat = es.Matrix2D.createRotation(rotation);
+                es.Matrix2D.createRotation(rotation, tempMat);
                 transformMatrix = transformMatrix.multiply(tempMat);
-                tempMat = es.Matrix2D.createTranslation(worldPosX, worldPosY);
+                es.Matrix2D.createTranslation(worldPosX, worldPosY, tempMat);
                 transformMatrix = transformMatrix.multiply(tempMat);
                 // TODO: 我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角
                 var topLeft = new es.Vector2(worldPosX, worldPosY);

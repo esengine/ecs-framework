@@ -3854,6 +3854,7 @@ declare module es {
          * @param isBox
          */
         constructor(points: Vector2[], isBox?: boolean);
+        create(vertCount: number, radius: number): void;
         _edgeNormals: Vector2[];
         /**
          * 边缘法线用于SAT碰撞检测。缓存它们用于避免squareRoots
@@ -4093,6 +4094,133 @@ declare module es {
          * @param maxB
          */
         static intervalDistance(minA: number, maxA: number, minB: number, maxB: number): number;
+    }
+}
+declare module es {
+    class Particle {
+        position: Vector2;
+        lastPosition: Vector2;
+        mass: number;
+        radius: number;
+        collidesWithColliders: boolean;
+        isPinned: boolean;
+        acceleration: Vector2;
+        pinnedPosition: Vector2;
+        constructor(position: {
+            x: number;
+            y: number;
+        });
+        applyForce(force: Vector2): void;
+        pin(): Particle;
+        pinTo(position: Vector2): Particle;
+        unpin(): Particle;
+    }
+}
+declare module es {
+    class VerletWorld {
+        gravity: Vector2;
+        constraintIterations: number;
+        maximumStepIterations: number;
+        simulationBounds: Rectangle;
+        allowDragging: boolean;
+        selectionRadiusSquared: number;
+        _draggedParticle: Particle;
+        _composites: Composite[];
+        static _colliders: Collider[];
+        _tempCircle: Circle;
+        _leftOverTime: number;
+        _fixedDeltaTime: number;
+        _iterationSteps: number;
+        _fixedDeltaTimeSq: number;
+        constructor(simulationBounds?: Rectangle);
+        update(): void;
+        constrainParticleToBounds(p: Particle): void;
+        handleCollisions(p: Particle, collidesWithLayers: number): void;
+        updateTiming(): void;
+        addComposite<T extends Composite>(composite: T): T;
+        removeComposite(composite: Composite): void;
+        handleDragging(): void;
+        getNearestParticle(position: Vector2): Particle;
+        debugRender(batcher: IBatcher): void;
+    }
+}
+declare module es {
+    class Composite {
+        friction: Vector2;
+        drawParticles: boolean;
+        drawConstraints: boolean;
+        collidesWithLayers: number;
+        particles: Particle[];
+        _constraints: Constraint[];
+        addParticle(particle: Particle): Particle;
+        removeParticle(particle: Particle): void;
+        removeAll(): void;
+        addConstraint<T extends Constraint>(constraint: T): T;
+        removeConstraint(constraint: Constraint): void;
+        applyForce(force: Vector2): void;
+        solveConstraints(): void;
+        updateParticles(deltaTimeSquared: number, gravity: Vector2): void;
+        handleConstraintCollisions(): void;
+        debugRender(batcher: IBatcher): void;
+    }
+}
+declare module es {
+    class Ball extends Composite {
+        constructor(position: Vector2, radius?: number);
+    }
+}
+declare module es {
+    class VerletBox extends es.Composite {
+        constructor(center: es.Vector2, width: number, height: number, borderStiffness?: number, diagonalStiffness?: number);
+    }
+}
+declare module es {
+    class LineSegments extends Composite {
+        constructor(vertices: Vector2[], stiffness: number);
+        pinParticleAtIndex(index: number): LineSegments;
+    }
+}
+declare module es {
+    abstract class Constraint {
+        composite: Composite;
+        collidesWithColliders: boolean;
+        abstract solve(): void;
+        handleCollisions(collidesWithLayers: number): void;
+        debugRender(batcher: IBatcher): void;
+    }
+}
+declare module es {
+    class AngleConstraint extends Constraint {
+        stiffness: number;
+        angleInRadius: number;
+        _particleA: Particle;
+        _centerParticle: Particle;
+        _particleC: Particle;
+        constructor(a: Particle, center: Particle, c: Particle, stiffness: number);
+        angleBetweenParticles(): number;
+        solve(): void;
+    }
+}
+declare module es {
+    class DistanceConstraint extends Constraint {
+        stiffness: number;
+        restingDistance: number;
+        tearSensitivity: number;
+        shouldApproximateCollisionsWithPoints: boolean;
+        totalPointsToApproximateCollisionsWith: number;
+        _particleOne: Particle;
+        _particleTwo: Particle;
+        static _polygon: Polygon;
+        constructor(first: Particle, second: Particle, stiffness: number, distance?: number);
+        static create(a: Particle, center: Particle, c: Particle, stiffness: number, angleInDegrees: number): DistanceConstraint;
+        setTearSensitivity(tearSensitivity: number): this;
+        setCollidesWithColliders(collidesWithColliders: boolean): this;
+        setShouldApproximateCollisionsWithPoints(shouldApproximateCollisionsWithPoints: boolean): this;
+        solve(): void;
+        handleCollisions(collidesWithLayers: number): void;
+        approximateCollisionsWithPoints(collidesWithLayers: number): void;
+        preparePolygonForCollisionChecks(midPoint: Vector2): void;
+        debugRender(batcher: IBatcher): void;
     }
 }
 declare module es {

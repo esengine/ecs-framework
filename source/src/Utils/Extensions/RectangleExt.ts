@@ -345,12 +345,13 @@ module es {
                 let tempMat: Matrix2D;
                 
                 // 考虑到原点，将参考点设置为世界参考
-                let transformMatrix = Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
-                tempMat = Matrix2D.createScale(scale.x, scale.y);
+                let transformMatrix = new Matrix2D();
+                Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y, transformMatrix);
+                Matrix2D.createScale(scale.x, scale.y, tempMat);
                 transformMatrix = transformMatrix.multiply(tempMat);
-                tempMat = Matrix2D.createRotation(rotation);
+                Matrix2D.createRotation(rotation, tempMat);
                 transformMatrix =transformMatrix.multiply(tempMat);
-                tempMat = Matrix2D.createTranslation(worldPosX, worldPosY);
+                Matrix2D.createTranslation(worldPosX, worldPosY, tempMat);
                 transformMatrix = transformMatrix.multiply(tempMat);
 
                 // TODO: 我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角

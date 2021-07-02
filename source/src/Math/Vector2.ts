@@ -227,15 +227,11 @@ module es {
          * @param value
          */
         public divide(value: Vector2): Vector2 {
-            this.x /= value.x;
-            this.y /= value.y;
-            return this;
+            return new Vector2(this.x / value.x, this.y / value.y);
         }
 
         public divideScaler(value: number): Vector2 {
-            this.x /= value;
-            this.y /= value;
-            return this;
+            return new Vector2(this.x / value, this.y / value);
         }
 
         /**
