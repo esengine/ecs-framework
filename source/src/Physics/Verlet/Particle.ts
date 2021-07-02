@@ -1,13 +1,13 @@
 module es {
     export class Particle {
-        public position: Vector2;
-        public lastPosition: Vector2;
+        public position: Vector2 = Vector2.zero;
+        public lastPosition: Vector2 = Vector2.zero;
         public mass = 1;
-        public radius: number;
+        public radius: number = 0;
         public collidesWithColliders: boolean = true;
-        public isPinned: boolean;
-        public acceleration: Vector2;
-        public pinnedPosition: Vector2;
+        public isPinned: boolean = false;
+        public acceleration: Vector2 = Vector2.zero;
+        public pinnedPosition: Vector2 = Vector2.zero;
 
         constructor(position: {x: number, y: number}) {
             this.position = new Vector2(position.x, position.y);

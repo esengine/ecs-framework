@@ -263,13 +263,13 @@ module es {
          * @param layerMask
          */
         public overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask): number {
-            let bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
+            const bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
 
             this._overlapTestCircle.radius = radius;
-            this._overlapTestCircle.position = circleCenter.clone();
+            this._overlapTestCircle.position = circleCenter;
 
             let resultCounter = 0;
-            let potentials = this.aabbBroadphase(bounds, null, layerMask);
+            const potentials = this.aabbBroadphase(bounds, null, layerMask);
             for (let collider of potentials) {
                 if (collider instanceof BoxCollider) {
                     if (collider.shape.overlaps(this._overlapTestCircle)) {
@@ -291,7 +291,7 @@ module es {
                 }
 
                 // 如果我们所有的结果数据有了则返回
-                if (resultCounter == results.length)
+                if (resultCounter === results.length)
                     return resultCounter;
             }
 

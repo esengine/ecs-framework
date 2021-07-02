@@ -35,7 +35,7 @@ module es {
         public _worldTransform = Matrix2D.identity;
         public _rotationMatrix: Matrix2D = Matrix2D.identity;
         public _translationMatrix: Matrix2D = Matrix2D.identity;
-        public _scaleMatrix: Matrix2D;
+        public _scaleMatrix: Matrix2D = Matrix2D.identity;
         public _children: Transform[] = [];
 
         constructor(entity: Entity) {

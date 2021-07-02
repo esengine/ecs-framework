@@ -1,9 +1,9 @@
 module es {
     export class DistanceConstraint extends Constraint {
-        public stiffness: number;
-        public restingDistance: number;
+        public stiffness: number = 0;
+        public restingDistance: number = 0;
         public tearSensitivity = Number.POSITIVE_INFINITY;
-        public shouldApproximateCollisionsWithPoints: boolean;
+        public shouldApproximateCollisionsWithPoints: boolean = false;
         public totalPointsToApproximateCollisionsWith = 5;
         _particleOne: Particle;
         _particleTwo: Particle;
@@ -20,12 +20,12 @@ module es {
             if (distance > -1)
                 this.restingDistance = distance;
             else
-                this.restingDistance = Vector2.distance(first.position, second.position);
+                this.restingDistance = first.position.distance(second.position);
         }
 
         public static create(a: Particle, center: Particle, c: Particle, stiffness: number, angleInDegrees: number) {
-            const aToCenter = Vector2.distance(a.position, center.position);
-            const cToCenter = Vector2.distance(c.position, center.position);
+            const aToCenter = a.position.distance(center.position);
+            const cToCenter = c.position.distance(center.position);
             const distance = Math.sqrt(aToCenter * aToCenter + cToCenter * cToCenter - (2 * aToCenter * cToCenter * Math.cos(angleInDegrees * MathHelper.Deg2Rad)));
 
             return new DistanceConstraint(a, c, stiffness, distance);
@@ -48,7 +48,7 @@ module es {
         
         public solve(): void {
             const diff = this._particleOne.position.sub(this._particleTwo.position);
-            const d = diff.magnitude();
+            const d = diff.distance();
 
             const difference = (this.restingDistance - d) / d;
             if (d / this.restingDistance > this.tearSensitivity) {
@@ -77,7 +77,7 @@ module es {
             const maxY = Math.max(this._particleOne.position.y, this._particleTwo.position.y);
             DistanceConstraint._polygon.bounds = Rectangle.fromMinMax(minX, minY, maxX, maxY);
 
-            let midPoint: Vector2;
+            let midPoint: Vector2 = Vector2.zero;
             this.preparePolygonForCollisionChecks(midPoint);
 
             const colliders = Physics.boxcastBroadphase(DistanceConstraint._polygon.bounds, collidesWithLayers);

@@ -1743,6 +1743,7 @@ var es;
             this._worldTransform = es.Matrix2D.identity;
             this._rotationMatrix = es.Matrix2D.identity;
             this._translationMatrix = es.Matrix2D.identity;
+            this._scaleMatrix = es.Matrix2D.identity;
             this._children = [];
             this._worldToLocalTransform = es.Matrix2D.identity;
             this._worldInverseTransform = es.Matrix2D.identity;
@@ -8803,13 +8804,9 @@ var es;
          * @param results
          * @param layerMask
          */
-        Physics.overlapCircleAll = function (center, randius, results, layerMask) {
-            if (layerMask === void 0) { layerMask = -1; }
-            if (results.length == 0) {
-                console.warn("传入了一个空的结果数组。不会返回任何结果");
-                return;
-            }
-            return this._spatialHash.overlapCircle(center, randius, results, layerMask);
+        Physics.overlapCircleAll = function (center, radius, results, layerMask) {
+            if (layerMask === void 0) { layerMask = this.allLayers; }
+            return this._spatialHash.overlapCircle(center, radius, results, layerMask);
         };
         /**
          * 返回所有碰撞器与边界相交的碰撞器。bounds。请注意，这是一个broadphase检查，所以它只检查边界，不做单个碰撞到碰撞器的检查!
@@ -9235,7 +9232,7 @@ var es;
             var e_11, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
-            this._overlapTestCircle.position = circleCenter.clone();
+            this._overlapTestCircle.position = circleCenter;
             var resultCounter = 0;
             var potentials = this.aabbBroadphase(bounds, null, layerMask);
             try {
@@ -9263,7 +9260,7 @@ var es;
                         throw new Error("对这个对撞机类型的overlapCircle没有实现!");
                     }
                     // 如果我们所有的结果数据有了则返回
-                    if (resultCounter == results.length)
+                    if (resultCounter === results.length)
                         return resultCounter;
                 }
             }
@@ -10405,8 +10402,14 @@ var es;
 (function (es) {
     var Particle = /** @class */ (function () {
         function Particle(position) {
+            this.position = es.Vector2.zero;
+            this.lastPosition = es.Vector2.zero;
             this.mass = 1;
+            this.radius = 0;
             this.collidesWithColliders = true;
+            this.isPinned = false;
+            this.acceleration = es.Vector2.zero;
+            this.pinnedPosition = es.Vector2.zero;
             this.position = new es.Vector2(position.x, position.y);
             this.lastPosition = new es.Vector2(position.x, position.y);
         }
@@ -10437,16 +10440,19 @@ var es;
     var VerletWorld = /** @class */ (function () {
         function VerletWorld(simulationBounds) {
             if (simulationBounds === void 0) { simulationBounds = null; }
-            this.gravity = new es.Vector2(0, 980);
+            this.gravity = new es.Vector2(0, -980);
             this.constraintIterations = 3;
             this.maximumStepIterations = 5;
             this.allowDragging = true;
             this.selectionRadiusSquared = 20 * 20;
             this._composites = [];
             this._tempCircle = new es.Circle(1);
+            this._leftOverTime = 0;
             this._fixedDeltaTime = 1 / 60;
+            this._iterationSteps = 0;
+            this._fixedDeltaTimeSq = 0;
             this.simulationBounds = simulationBounds;
-            this._fixedDeltaTime = Math.pow(this._fixedDeltaTime, 2);
+            this._fixedDeltaTimeSq = Math.pow(this._fixedDeltaTime, 2);
         }
         VerletWorld.prototype.update = function () {
             this.updateTiming();
@@ -10531,6 +10537,8 @@ var es;
             this._composites.splice(index, 1);
         };
         VerletWorld.prototype.handleDragging = function () {
+            if (this.onHandleDrag)
+                this.onHandleDrag();
         };
         VerletWorld.prototype.getNearestParticle = function (position) {
             var nearestSquaredDistance = this.selectionRadiusSquared;
@@ -10731,6 +10739,8 @@ var es;
         __extends(AngleConstraint, _super);
         function AngleConstraint(a, center, c, stiffness) {
             var _this = _super.call(this) || this;
+            _this.stiffness = 0;
+            _this.angleInRadius = 0;
             _this._particleA = a;
             _this._centerParticle = center;
             _this._particleC = c;
@@ -10768,7 +10778,10 @@ var es;
         function DistanceConstraint(first, second, stiffness, distance) {
             if (distance === void 0) { distance = -1; }
             var _this = _super.call(this) || this;
+            _this.stiffness = 0;
+            _this.restingDistance = 0;
             _this.tearSensitivity = Number.POSITIVE_INFINITY;
+            _this.shouldApproximateCollisionsWithPoints = false;
             _this.totalPointsToApproximateCollisionsWith = 5;
             DistanceConstraint._polygon.create(2, 1);
             _this._particleOne = first;
@@ -10777,12 +10790,12 @@ var es;
             if (distance > -1)
                 _this.restingDistance = distance;
             else
-                _this.restingDistance = es.Vector2.distance(first.position, second.position);
+                _this.restingDistance = first.position.distance(second.position);
             return _this;
         }
         DistanceConstraint.create = function (a, center, c, stiffness, angleInDegrees) {
-            var aToCenter = es.Vector2.distance(a.position, center.position);
-            var cToCenter = es.Vector2.distance(c.position, center.position);
+            var aToCenter = a.position.distance(center.position);
+            var cToCenter = c.position.distance(center.position);
             var distance = Math.sqrt(aToCenter * aToCenter + cToCenter * cToCenter - (2 * aToCenter * cToCenter * Math.cos(angleInDegrees * es.MathHelper.Deg2Rad)));
             return new DistanceConstraint(a, c, stiffness, distance);
         };
@@ -10800,7 +10813,7 @@ var es;
         };
         DistanceConstraint.prototype.solve = function () {
             var diff = this._particleOne.position.sub(this._particleTwo.position);
-            var d = diff.magnitude();
+            var d = diff.distance();
             var difference = (this.restingDistance - d) / d;
             if (d / this.restingDistance > this.tearSensitivity) {
                 this.composite.removeConstraint(this);
@@ -10823,7 +10836,7 @@ var es;
             var minY = Math.min(this._particleOne.position.y, this._particleTwo.position.y);
             var maxY = Math.max(this._particleOne.position.y, this._particleTwo.position.y);
             DistanceConstraint._polygon.bounds = es.Rectangle.fromMinMax(minX, minY, maxX, maxY);
-            var midPoint;
+            var midPoint = es.Vector2.zero;
             this.preparePolygonForCollisionChecks(midPoint);
             var colliders = es.Physics.boxcastBroadphase(DistanceConstraint._polygon.bounds, collidesWithLayers);
             for (var i = 0; i < colliders.length; i++) {

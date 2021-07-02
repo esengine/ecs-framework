@@ -1,6 +1,6 @@
 module es {
     export class VerletWorld {
-        public gravity: Vector2 = new Vector2(0, 980);
+        public gravity: Vector2 = new Vector2(0, -980);
         public constraintIterations = 3;
         public maximumStepIterations = 5;
         public simulationBounds: Rectangle;
@@ -11,14 +11,16 @@ module es {
         public static _colliders: Collider[] = [];
         _tempCircle: Circle = new Circle(1);
 
-        _leftOverTime: number;
+        _leftOverTime: number = 0;
         _fixedDeltaTime: number = 1 / 60;
-        _iterationSteps: number;
-        _fixedDeltaTimeSq: number;
+        _iterationSteps: number = 0;
+        _fixedDeltaTimeSq: number = 0;
+
+        onHandleDrag: Function;
 
         constructor(simulationBounds: Rectangle = null) {
             this.simulationBounds = simulationBounds;
-            this._fixedDeltaTime = Math.pow(this._fixedDeltaTime, 2);
+            this._fixedDeltaTimeSq = Math.pow(this._fixedDeltaTime, 2);
         }
 
         public update() {
@@ -122,7 +124,8 @@ module es {
         }
 
         handleDragging() {
-
+            if (this.onHandleDrag)
+                this.onHandleDrag();
         }
 
         public getNearestParticle(position: Vector2) {

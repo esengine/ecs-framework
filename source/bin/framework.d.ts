@@ -3584,7 +3584,7 @@ declare module es {
          * @param results
          * @param layerMask
          */
-        static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
+        static overlapCircleAll(center: Vector2, radius: number, results: Collider[], layerMask?: number): number;
         /**
          * 返回所有碰撞器与边界相交的碰撞器。bounds。请注意，这是一个broadphase检查，所以它只检查边界，不做单个碰撞到碰撞器的检查!
          * @param rect
@@ -4132,6 +4132,7 @@ declare module es {
         _fixedDeltaTime: number;
         _iterationSteps: number;
         _fixedDeltaTimeSq: number;
+        onHandleDrag: Function;
         constructor(simulationBounds?: Rectangle);
         update(): void;
         constrainParticleToBounds(p: Particle): void;
