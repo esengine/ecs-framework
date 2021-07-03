@@ -96,6 +96,7 @@ var es;
             Core.emitter = new es.Emitter();
             Core.emitter.addObserver(es.CoreEvents.frameUpdated, this.update, this);
             Core.registerGlobalManager(this._coroutineManager);
+            Core.registerGlobalManager(new es.TweenManager());
             Core.registerGlobalManager(this._timerManager);
             Core.entitySystemsEnabled = enableEntitySystems;
             this.debug = debug;
@@ -1052,6 +1053,54 @@ var es;
             for (var i = 0; i < this.components.count; i++) {
                 this.removeComponent(this.components.buffer[i]);
             }
+        };
+        Entity.prototype.tweenPositionTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.position);
+            tween.initialize(tween, to, duration);
+            return tween;
+        };
+        Entity.prototype.tweenLocalPositionTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.localPosition);
+            tween.initialize(tween, to, duration);
+            return tween;
+        };
+        Entity.prototype.tweenScaleTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            if (typeof (to) == 'number') {
+                return this.tweenScaleTo(new es.Vector2(to, to), duration);
+            }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.scale);
+            tween.initialize(tween, to, duration);
+            return tween;
+        };
+        Entity.prototype.tweenLocalScaleTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            if (typeof (to) == 'number') {
+                return this.tweenLocalScaleTo(new es.Vector2(to, to), duration);
+            }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.localScale);
+            tween.initialize(tween, to, duration);
+            return tween;
+        };
+        Entity.prototype.tweenRotationDegreesTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.rotationDegrees);
+            tween.initialize(tween, new es.Vector2(to, to), duration);
+            return tween;
+        };
+        Entity.prototype.tweenLocalRotationDegreesTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.localRotationDegrees);
+            tween.initialize(tween, new es.Vector2(to, to), duration);
+            return tween;
         };
         Entity.prototype.compareTo = function (other) {
             var compare = this._updateOrder - other._updateOrder;
@@ -3683,6 +3732,7 @@ var es;
             var _this = _super !== null && _super.apply(this, arguments) || this;
             _this._bounds = new es.Rectangle();
             _this._areBoundsDirty = true;
+            _this.color = es.Color.White;
             _this._renderLayer = 0;
             _this.debugRenderEnabled = true;
             _this._isVisible = false;
@@ -3791,6 +3841,12 @@ var es;
             }
             batcher.drawPixel(es.Vector2.add(this.entity.transform.position, this._localOffset), new es.Color(153, 50, 204), 4);
             batcher.end();
+        };
+        RenderableComponent.prototype.tweenColorTo = function (to, duration) {
+            var tween = es.Pool.obtain(es.RenderableColorTween);
+            tween.setTarget(this);
+            tween.initialize(tween, to, duration);
+            return tween;
         };
         return RenderableComponent;
     }(es.Component));
@@ -6437,9 +6493,9 @@ var es;
         Bezier.getPoint = function (p0, p1, p2, t) {
             t = es.MathHelper.clamp01(t);
             var oneMinusT = 1 - t;
-            return new es.Vector2(oneMinusT * oneMinusT).multiply(p0)
-                .addEqual(new es.Vector2(2 * oneMinusT * t).multiply(p1))
-                .addEqual(new es.Vector2(t * t).multiply(p2));
+            return p0.scale(oneMinusT * oneMinusT)
+                .addEqual(p1.scale(2 * oneMinusT * t))
+                .addEqual(p2.scale(t * t));
         };
         /**
          * 求解一个立方体曲率
@@ -6452,10 +6508,10 @@ var es;
         Bezier.getPointThree = function (start, firstControlPoint, secondControlPoint, end, t) {
             t = es.MathHelper.clamp01(t);
             var oneMinusT = 1 - t;
-            return new es.Vector2(oneMinusT * oneMinusT * oneMinusT).multiply(start)
-                .addEqual(new es.Vector2(3 * oneMinusT * oneMinusT * t).multiply(firstControlPoint))
-                .addEqual(new es.Vector2(3 * oneMinusT * t * t).multiply(secondControlPoint))
-                .addEqual(new es.Vector2(t * t * t).multiply(end));
+            return start.scale(oneMinusT * oneMinusT * oneMinusT)
+                .addEqual(firstControlPoint.scale(3 * oneMinusT * oneMinusT * t))
+                .addEqual(secondControlPoint.scale(3 * oneMinusT * t * t))
+                .addEqual(end.scale(t * t * t));
         };
         /**
          * 得到二次贝塞尔函数的一阶导数
@@ -10881,6 +10937,1351 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * AbstractTweenable作为你可能想做的任何可以执行的自定义类的基础。
+     * 这些类不同于ITweens，因为他们没有实现ITweenT接口。
+     * 它只是说一个AbstractTweenable不仅仅是将一个值从开始移动到结束。
+     * 它可以做任何需要每帧执行的事情。
+     */
+    var AbstractTweenable = /** @class */ (function () {
+        function AbstractTweenable() {
+        }
+        AbstractTweenable.prototype.recycleSelf = function () {
+        };
+        AbstractTweenable.prototype.isRunning = function () {
+            return this._isCurrentlyManagedByTweenManager && !this._isPaused;
+        };
+        AbstractTweenable.prototype.start = function () {
+            if (this._isCurrentlyManagedByTweenManager) {
+                this._isPaused = false;
+                return;
+            }
+            es.TweenManager.addTween(this);
+            this._isCurrentlyManagedByTweenManager = true;
+            this._isPaused = false;
+        };
+        AbstractTweenable.prototype.pause = function () {
+            this._isPaused = true;
+        };
+        AbstractTweenable.prototype.resume = function () {
+            this._isPaused = false;
+        };
+        AbstractTweenable.prototype.stop = function (bringToCompletion) {
+            if (bringToCompletion === void 0) { bringToCompletion = false; }
+            es.TweenManager.removeTween(this);
+            this._isCurrentlyManagedByTweenManager = false;
+            this._isPaused = true;
+        };
+        return AbstractTweenable;
+    }());
+    es.AbstractTweenable = AbstractTweenable;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 通用ITweenTarget用于所有属性tweens。
+     */
+    var PropertyTarget = /** @class */ (function () {
+        function PropertyTarget(target, propertyName) {
+            this._target = target;
+            this._propertyName = propertyName;
+        }
+        PropertyTarget.prototype.getTargetObject = function () {
+            return this._target;
+        };
+        PropertyTarget.prototype.setTweenedValue = function (value) {
+            this._target[this._propertyName] = value;
+        };
+        PropertyTarget.prototype.getTweenedValue = function () {
+            return this._target[this._propertyName];
+        };
+        return PropertyTarget;
+    }());
+    var PropertyTweens = /** @class */ (function () {
+        function PropertyTweens() {
+        }
+        PropertyTweens.NumberPropertyTo = function (self, memberName, to, duration) {
+            var tweenTarget = new PropertyTarget(self, memberName);
+            var tween = es.TweenManager.cacheNumberTweens ? es.Pool.obtain(es.NumberTween) : new es.NumberTween();
+            tween.initialize(tweenTarget, to, duration);
+            return tween;
+        };
+        PropertyTweens.Vector2PropertyTo = function (self, memeberName, to, duration) {
+            var tweenTarget = new PropertyTarget(self, memeberName);
+            var tween = es.TweenManager.cacheVector2Tweens ? es.Pool.obtain(es.Vector2Tween) : new es.Vector2Tween();
+            tween.initialize(tweenTarget, to, duration);
+            return tween;
+        };
+        return PropertyTweens;
+    }());
+    es.PropertyTweens = PropertyTweens;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var LoopType;
+    (function (LoopType) {
+        LoopType[LoopType["none"] = 0] = "none";
+        LoopType[LoopType["restartFromBeginning"] = 1] = "restartFromBeginning";
+        LoopType[LoopType["pingpong"] = 2] = "pingpong";
+    })(LoopType = es.LoopType || (es.LoopType = {}));
+    var TweenState;
+    (function (TweenState) {
+        TweenState[TweenState["running"] = 0] = "running";
+        TweenState[TweenState["paused"] = 1] = "paused";
+        TweenState[TweenState["complete"] = 2] = "complete";
+    })(TweenState = es.TweenState || (es.TweenState = {}));
+    var Tween = /** @class */ (function () {
+        function Tween() {
+            this._shouldRecycleTween = true;
+            this._tweenState = TweenState.complete;
+            this._timeScale = 1;
+        }
+        Tween.prototype.setEaseType = function (easeType) {
+            this._easeType = easeType;
+            return this;
+        };
+        Tween.prototype.setDelay = function (delay) {
+            this._delay = delay;
+            this._elapsedTime = -this._delay;
+            return this;
+        };
+        Tween.prototype.setDuration = function (duration) {
+            this._duration = duration;
+            return this;
+        };
+        Tween.prototype.setTimeScale = function (timeSclae) {
+            this._timeScale = timeSclae;
+            return this;
+        };
+        Tween.prototype.setIsTimeScaleIndependent = function () {
+            this._isTimeScaleIndependent = true;
+            return this;
+        };
+        Tween.prototype.setCompletionHandler = function (completeHandler) {
+            this._completionHandler = completeHandler;
+            return this;
+        };
+        Tween.prototype.setLoops = function (loopType, loops, delayBetweenLoops) {
+            if (loops === void 0) { loops = 1; }
+            if (delayBetweenLoops === void 0) { delayBetweenLoops = 0; }
+            this._loopType = loopType;
+            this._delayBetweenLoops = delayBetweenLoops;
+            if (loops < 0)
+                loops = -1;
+            if (loopType == LoopType.pingpong)
+                loops = loops * 2;
+            this._loops = loops;
+            return this;
+        };
+        Tween.prototype.setLoopCompletionHanlder = function (loopCompleteHandler) {
+            this._loopCompleteHandler = loopCompleteHandler;
+            return this;
+        };
+        Tween.prototype.setFrom = function (from) {
+            this._isFromValueOverridden = true;
+            this._fromValue = from;
+            return this;
+        };
+        Tween.prototype.prepareForReuse = function (from, to, duration) {
+            this.initialize(this._target, to, duration);
+            return this;
+        };
+        Tween.prototype.setRecycleTween = function (shouldRecycleTween) {
+            this._shouldRecycleTween = shouldRecycleTween;
+            return this;
+        };
+        Tween.prototype.setContext = function (context) {
+            this.context = context;
+            return this;
+        };
+        Tween.prototype.setNextTween = function (nextTween) {
+            this._nextTween = nextTween;
+            return this;
+        };
+        Tween.prototype.tick = function () {
+            if (this._tweenState == TweenState.paused)
+                return false;
+            // 当我们进行循环时，我们会在0和持续时间之间限制数值
+            var elapsedTimeExcess = 0;
+            if (!this._isRunningInReverse && this._elapsedTime >= this._duration) {
+                elapsedTimeExcess = this._elapsedTime - this._duration;
+                this._elapsedTime = this._duration;
+                this._tweenState = TweenState.complete;
+            }
+            else if (this._isRunningInReverse && this._elapsedTime <= 0) {
+                elapsedTimeExcess = 0 - this._elapsedTime;
+                this._elapsedTime = 0;
+                this._tweenState = TweenState.complete;
+            }
+            // 当我们延迟开始tween的时候，经过的时间会是负数，所以不要更新这个值。
+            if (this._elapsedTime >= 0 && this._elapsedTime <= this._duration) {
+                this.updateValue();
+            }
+            // 如果我们有一个loopType，并且我们是Complete（意味着我们达到了0或持续时间）处理循环。
+            // handleLooping将采取任何多余的elapsedTime，并将其因子化，并在必要时调用udpateValue来保持tween的完美准确性
+            if (this._loopType != LoopType.none && this._tweenState == TweenState.complete && this._loops != 0) {
+                this.handleLooping(elapsedTimeExcess);
+            }
+            var deltaTime = this._isTimeScaleIndependent ? es.Time.unscaledDeltaTime : es.Time.deltaTime;
+            deltaTime *= this._timeScale;
+            // 我们需要减去deltaTime
+            if (this._isRunningInReverse)
+                this._elapsedTime -= deltaTime;
+            else
+                this._elapsedTime += deltaTime;
+            if (this._tweenState == TweenState.complete) {
+                this._completionHandler && this._completionHandler(this);
+                // 如果我们有一个nextTween，把它添加到TweenManager中，这样它就可以开始运行了
+                if (this._nextTween != null) {
+                    this._nextTween.start();
+                    this._nextTween = null;
+                }
+                return true;
+            }
+            return false;
+        };
+        Tween.prototype.recycleSelf = function () {
+            if (this._shouldRecycleTween) {
+                this._target = null;
+                this._nextTween = null;
+            }
+        };
+        Tween.prototype.isRunning = function () {
+            return this._tweenState == TweenState.running;
+        };
+        Tween.prototype.start = function () {
+            if (!this._isFromValueOverridden)
+                this._fromValue = this._target.getTargetObject();
+            if (this._tweenState == TweenState.complete) {
+                this._tweenState = TweenState.running;
+                es.TweenManager.addTween(this);
+            }
+        };
+        Tween.prototype.pause = function () {
+            this._tweenState = TweenState.paused;
+        };
+        Tween.prototype.resume = function () {
+            this._tweenState = TweenState.running;
+        };
+        Tween.prototype.stop = function (bringToCompletion) {
+            if (bringToCompletion === void 0) { bringToCompletion = false; }
+            this._tweenState = TweenState.complete;
+            if (bringToCompletion) {
+                // 如果我们逆向运行，我们在0处结束，否则我们进入持续时间
+                this._elapsedTime = this._isRunningInReverse ? 0 : this._duration;
+                this._loopType = LoopType.none;
+                this._loops = 0;
+                // TweenManager将在下一个tick上进行删除处理
+            }
+            else {
+                es.TweenManager.removeTween(this);
+            }
+        };
+        Tween.prototype.jumpToElapsedTime = function (elapsedTime) {
+            this._elapsedTime = es.MathHelper.clamp(elapsedTime, 0, this._duration);
+            this.updateValue();
+        };
+        /**
+         * 反转当前的tween，如果是向前走，就会向后走，反之亦然
+         */
+        Tween.prototype.reverseTween = function () {
+            this._isRunningInReverse = !this._isRunningInReverse;
+        };
+        /**
+         * 当通过StartCoroutine调用时，这将一直持续到tween完成
+         */
+        Tween.prototype.waitForCompletion = function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!(this._tweenState != TweenState.complete)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, null];
+                    case 1:
+                        _a.sent();
+                        return [3 /*break*/, 0];
+                    case 2: return [2 /*return*/];
+                }
+            });
+        };
+        Tween.prototype.getTargetObject = function () {
+            return this._target.getTargetObject();
+        };
+        Tween.prototype.resetState = function () {
+            this.context = null;
+            this._completionHandler = this._loopCompleteHandler = null;
+            this._isFromValueOverridden = false;
+            this._isTimeScaleIndependent = false;
+            this._tweenState = TweenState.complete;
+            // TODO: 我认为在没有得到用户同意的情况下，我们绝对不应该从_shouldRecycleTween=false。需要研究和思考
+            // this._shouldRecycleTween = true;
+            this._isRelative = false;
+            this._easeType = es.TweenManager.defaultEaseType;
+            if (this._nextTween != null) {
+                this._nextTween.recycleSelf();
+                this._nextTween = null;
+            }
+            this._delay = 0;
+            this._duration = 0;
+            this._timeScale = 1;
+            this._elapsedTime = 0;
+            this._loopType = LoopType.none;
+            this._delayBetweenLoops = 0;
+            this._loops = 0;
+            this._isRunningInReverse = false;
+        };
+        /**
+         * 将所有状态重置为默认值，并根据传入的参数设置初始状态。
+         * 这个方法作为一个切入点，这样Tween子类就可以调用它，这样tweens就可以被回收。
+         * 当回收时，构造函数不会再被调用，所以这个方法封装了构造函数要做的事情
+         * @param target
+         * @param to
+         * @param duration
+         */
+        Tween.prototype.initialize = function (target, to, duration) {
+            // 重置状态，以防我们被回收
+            this.resetState();
+            this._target = target;
+            this._toValue = to;
+            this._duration = duration;
+        };
+        /**
+         * 处理循环逻辑
+         * @param elapsedTimeExcess
+         */
+        Tween.prototype.handleLooping = function (elapsedTimeExcess) {
+            this._loops--;
+            if (this._loopType == LoopType.pingpong) {
+                this.reverseTween();
+            }
+            if (this._loopType == LoopType.restartFromBeginning || this._loops % 2 == 0) {
+                this._loopCompleteHandler && this._completionHandler(this);
+            }
+            // 如果我们还有循环要处理，就把我们的状态重置为Running，这样我们就可以继续处理它们了
+            if (this._loops != 0) {
+                this._tweenState = TweenState.running;
+                // 现在，我们需要设置我们的经过时间，并考虑到我们的elapsedTimeExcess
+                if (this._loopType == LoopType.restartFromBeginning) {
+                    this._elapsedTime = elapsedTimeExcess - this._delayBetweenLoops;
+                }
+                else {
+                    if (this._isRunningInReverse)
+                        this._elapsedTime += this._delayBetweenLoops - elapsedTimeExcess;
+                    else
+                        this._elapsedTime = elapsedTimeExcess - this._delayBetweenLoops;
+                }
+                // 如果我们有一个elapsedTimeExcess，并且没有delayBetweenLoops，则更新该值
+                if (this._delayBetweenLoops == 0 && elapsedTimeExcess > 0) {
+                    this.updateValue();
+                }
+            }
+        };
+        return Tween;
+    }());
+    es.Tween = Tween;
+})(es || (es = {}));
+///<reference path="./Tween.ts"/>
+var es;
+///<reference path="./Tween.ts"/>
+(function (es) {
+    var NumberTween = /** @class */ (function (_super) {
+        __extends(NumberTween, _super);
+        function NumberTween(target, to, duration) {
+            var _this = _super.call(this) || this;
+            _this.initialize(target, to, duration);
+            return _this;
+        }
+        NumberTween.create = function () {
+            return es.TweenManager.cacheNumberTweens ? es.Pool.obtain(NumberTween) : new NumberTween();
+        };
+        NumberTween.prototype.setIsRelative = function () {
+            this._isRelative = true;
+            this._toValue += this._fromValue;
+            return this;
+        };
+        NumberTween.prototype.updateValue = function () {
+            this._target.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+        };
+        NumberTween.prototype.recycleSelf = function () {
+            _super.prototype.recycleSelf.call(this);
+            if (this._shouldRecycleTween && es.TweenManager.cacheNumberTweens)
+                es.Pool.free(this);
+        };
+        return NumberTween;
+    }(es.Tween));
+    es.NumberTween = NumberTween;
+    var Vector2Tween = /** @class */ (function (_super) {
+        __extends(Vector2Tween, _super);
+        function Vector2Tween(target, to, duration) {
+            var _this = _super.call(this) || this;
+            _this.initialize(target, to, duration);
+            return _this;
+        }
+        Vector2Tween.create = function () {
+            return es.TweenManager.cacheVector2Tweens ? es.Pool.obtain(Vector2Tween) : new Vector2Tween();
+        };
+        Vector2Tween.prototype.setIsRelative = function () {
+            this._isRelative = true;
+            this._toValue.add(this._fromValue);
+            return this;
+        };
+        Vector2Tween.prototype.updateValue = function () {
+            this._target.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+        };
+        Vector2Tween.prototype.recycleSelf = function () {
+            _super.prototype.recycleSelf.call(this);
+            if (this._shouldRecycleTween && es.TweenManager.cacheVector2Tweens)
+                es.Pool.free(this);
+        };
+        return Vector2Tween;
+    }(es.Tween));
+    es.Vector2Tween = Vector2Tween;
+    var RectangleTween = /** @class */ (function (_super) {
+        __extends(RectangleTween, _super);
+        function RectangleTween(target, to, duration) {
+            var _this = _super.call(this) || this;
+            _this.initialize(target, to, duration);
+            return _this;
+        }
+        RectangleTween.create = function () {
+            return es.TweenManager.cacheRectTweens ? es.Pool.obtain(RectangleTween) : new RectangleTween();
+        };
+        RectangleTween.prototype.setIsRelative = function () {
+            this._isRelative = true;
+            this._toValue = new es.Rectangle(this._toValue.x + this._fromValue.x, this._toValue.y + this._fromValue.y, this._toValue.width + this._fromValue.width, this._toValue.height + this._fromValue.height);
+            return this;
+        };
+        RectangleTween.prototype.updateValue = function () {
+            this._target.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+        };
+        RectangleTween.prototype.recycleSelf = function () {
+            _super.prototype.recycleSelf.call(this);
+            if (this._shouldRecycleTween && es.TweenManager.cacheRectTweens)
+                es.Pool.free(this);
+        };
+        return RectangleTween;
+    }(es.Tween));
+    es.RectangleTween = RectangleTween;
+    var ColorTween = /** @class */ (function (_super) {
+        __extends(ColorTween, _super);
+        function ColorTween(target, to, duration) {
+            var _this = _super.call(this) || this;
+            _this.initialize(target, to, duration);
+            return _this;
+        }
+        ColorTween.create = function () {
+            return es.TweenManager.cacheColorTweens ? es.Pool.obtain(ColorTween) : new ColorTween();
+        };
+        ColorTween.prototype.setIsRelative = function () {
+            this._isRelative = true;
+            this._toValue.r += this._fromValue.r;
+            this._toValue.g += this._fromValue.g;
+            this._toValue.b += this._fromValue.b;
+            this._toValue.a += this._fromValue.a;
+            return this;
+        };
+        ColorTween.prototype.updateValue = function () {
+            this._target.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+        };
+        return ColorTween;
+    }(es.Tween));
+    es.ColorTween = ColorTween;
+})(es || (es = {}));
+///<reference path="./Tweens.ts"/>
+var es;
+///<reference path="./Tweens.ts"/>
+(function (es) {
+    var RenderableColorTween = /** @class */ (function (_super) {
+        __extends(RenderableColorTween, _super);
+        function RenderableColorTween() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        RenderableColorTween.prototype.setTweenedValue = function (value) {
+            this._renderable.color = value;
+        };
+        RenderableColorTween.prototype.getTweenedValue = function () {
+            return this._renderable.color;
+        };
+        RenderableColorTween.prototype.getTargetObject = function () {
+            return this._renderable;
+        };
+        RenderableColorTween.prototype.updateValue = function () {
+            this.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+        };
+        RenderableColorTween.prototype.setTarget = function (renderable) {
+            this._renderable = renderable;
+        };
+        RenderableColorTween.prototype.recycleSelf = function () {
+            if (this._shouldRecycleTween) {
+                this._renderable = null;
+                this._target = null;
+                this._nextTween = null;
+            }
+            if (this._shouldRecycleTween && es.TweenManager.cacheColorTweens) {
+                es.Pool.free(this);
+            }
+        };
+        return RenderableColorTween;
+    }(es.ColorTween));
+    es.RenderableColorTween = RenderableColorTween;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TransformSpringTween = /** @class */ (function (_super) {
+        __extends(TransformSpringTween, _super);
+        function TransformSpringTween(transform, targetType, targetValue) {
+            var _this = _super.call(this) || this;
+            // 阻尼比（dampingRatio）和角频率（angularFrequency）的配置是公开的，以便于在设计时进行调整
+            /**
+             * 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
+             */
+            _this.dampingRatio = 0.23;
+            /**
+             * 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定角频率
+             */
+            _this.angularFrequency = 25;
+            _this._transform = transform;
+            _this._targetType = targetType;
+            _this.setTargetValue(targetValue);
+            return _this;
+        }
+        Object.defineProperty(TransformSpringTween.prototype, "targetType", {
+            get: function () {
+                return this._targetType;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /**
+         * 你可以在任何时候调用setTargetValue来重置目标值到一个新的Vector2。
+         * 如果你没有调用start来添加spring tween，它会为你调用
+         * @param targetValue
+         */
+        TransformSpringTween.prototype.setTargetValue = function (targetValue) {
+            this._velocity = es.Vector2.zero;
+            this._targetValue = targetValue;
+            if (!this._isCurrentlyManagedByTweenManager)
+                this.start();
+        };
+        /**
+         * lambda应该是振荡幅度减少50%时的理想持续时间
+         * @param lambda
+         */
+        TransformSpringTween.prototype.updateDampingRatioWithHalfLife = function (lambda) {
+            this.dampingRatio = (-lambda / this.angularFrequency) * Math.log(0.5);
+        };
+        TransformSpringTween.prototype.tick = function () {
+            if (!this._isPaused)
+                this.setTweenedValue(es.Lerps.fastSpring(this.getCurrentValueOfTweenedTargetType(), this._targetValue, this._velocity, this.dampingRatio, this.angularFrequency));
+            return false;
+        };
+        TransformSpringTween.prototype.setTweenedValue = function (value) {
+            switch (this._targetType) {
+                case es.TransformTargetType.position:
+                    this._transform.position = value;
+                    break;
+                case es.TransformTargetType.localPosition:
+                    this._transform.localPosition = value;
+                    break;
+                case es.TransformTargetType.scale:
+                    this._transform.scale = value;
+                    break;
+                case es.TransformTargetType.localScale:
+                    this._transform.localScale = value;
+                    break;
+                case es.TransformTargetType.rotationDegrees:
+                    this._transform.rotationDegrees = value.x;
+                case es.TransformTargetType.localRotationDegrees:
+                    this._transform.localRotationDegrees = value.x;
+                    break;
+            }
+        };
+        TransformSpringTween.prototype.getCurrentValueOfTweenedTargetType = function () {
+            switch (this._targetType) {
+                case es.TransformTargetType.position:
+                    return this._transform.position;
+                case es.TransformTargetType.localPosition:
+                    return this._transform.localPosition;
+                case es.TransformTargetType.scale:
+                    return this._transform.scale;
+                case es.TransformTargetType.localScale:
+                    return this._transform.localScale;
+                case es.TransformTargetType.rotationDegrees:
+                    return new es.Vector2(this._transform.rotationDegrees);
+                case es.TransformTargetType.localRotationDegrees:
+                    return new es.Vector2(this._transform.localRotationDegrees, 0);
+                default:
+                    return es.Vector2.zero;
+            }
+        };
+        return TransformSpringTween;
+    }(es.AbstractTweenable));
+    es.TransformSpringTween = TransformSpringTween;
+})(es || (es = {}));
+///<reference path="./Tweens.ts"/>
+var es;
+///<reference path="./Tweens.ts"/>
+(function (es) {
+    /**
+     * 对任何与Transform相关的属性tweens都是有用的枚举
+     */
+    var TransformTargetType;
+    (function (TransformTargetType) {
+        TransformTargetType[TransformTargetType["position"] = 0] = "position";
+        TransformTargetType[TransformTargetType["localPosition"] = 1] = "localPosition";
+        TransformTargetType[TransformTargetType["scale"] = 2] = "scale";
+        TransformTargetType[TransformTargetType["localScale"] = 3] = "localScale";
+        TransformTargetType[TransformTargetType["rotationDegrees"] = 4] = "rotationDegrees";
+        TransformTargetType[TransformTargetType["localRotationDegrees"] = 5] = "localRotationDegrees";
+    })(TransformTargetType = es.TransformTargetType || (es.TransformTargetType = {}));
+    /**
+     * 这是一个特殊的情况，因为Transform是迄今为止最被ween的对象。
+     * 我们将Tween和ITweenTarget封装在一个单一的、可缓存的类中
+     */
+    var TransformVector2Tween = /** @class */ (function (_super) {
+        __extends(TransformVector2Tween, _super);
+        function TransformVector2Tween() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        TransformVector2Tween.prototype.setTweenedValue = function (value) {
+            switch (this._targetType) {
+                case TransformTargetType.position:
+                    this._transform.position = value;
+                    break;
+                case TransformTargetType.localPosition:
+                    this._transform.localPosition = value;
+                    break;
+                case TransformTargetType.scale:
+                    this._transform.scale = value;
+                    break;
+                case TransformTargetType.localScale:
+                    this._transform.localScale = value;
+                    break;
+                case TransformTargetType.rotationDegrees:
+                    this._transform.rotationDegrees = value.x;
+                case TransformTargetType.localRotationDegrees:
+                    this._transform.localRotationDegrees = value.x;
+                    break;
+            }
+        };
+        TransformVector2Tween.prototype.getTweenedValue = function () {
+            switch (this._targetType) {
+                case TransformTargetType.position:
+                    return this._transform.position;
+                case TransformTargetType.localPosition:
+                    return this._transform.localPosition;
+                case TransformTargetType.scale:
+                    return this._transform.scale;
+                case TransformTargetType.localScale:
+                    return this._transform.localScale;
+                case TransformTargetType.rotationDegrees:
+                    return new es.Vector2(this._transform.rotationDegrees, this._transform.rotationDegrees);
+                case TransformTargetType.localRotationDegrees:
+                    return new es.Vector2(this._transform.localRotationDegrees, 0);
+            }
+        };
+        TransformVector2Tween.prototype.getTargetObject = function () {
+            return this._transform;
+        };
+        TransformVector2Tween.prototype.setTargetAndType = function (transform, targetType) {
+            this._transform = transform;
+            this._targetType = targetType;
+        };
+        TransformVector2Tween.prototype.updateValue = function () {
+            // 非相对角勒普的特殊情况，使他们采取尽可能短的旋转
+            if ((this._targetType == TransformTargetType.rotationDegrees ||
+                this._targetType == TransformTargetType.localRotationDegrees) && !this._isRelative) {
+                this.setTweenedValue(es.Lerps.easeAngle(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+            }
+            else {
+                this.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+            }
+        };
+        TransformVector2Tween.prototype.recycleSelf = function () {
+            if (this._shouldRecycleTween) {
+                this._target = null;
+                this._nextTween = null;
+                this._transform = null;
+                es.Pool.free(this);
+            }
+        };
+        return TransformVector2Tween;
+    }(es.Vector2Tween));
+    es.TransformVector2Tween = TransformVector2Tween;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var EaseType;
+    (function (EaseType) {
+        EaseType[EaseType["linear"] = 0] = "linear";
+        EaseType[EaseType["sineIn"] = 1] = "sineIn";
+        EaseType[EaseType["sineOut"] = 2] = "sineOut";
+        EaseType[EaseType["sineInOut"] = 3] = "sineInOut";
+        EaseType[EaseType["quadIn"] = 4] = "quadIn";
+        EaseType[EaseType["quadOut"] = 5] = "quadOut";
+        EaseType[EaseType["quadInOut"] = 6] = "quadInOut";
+        EaseType[EaseType["quintIn"] = 7] = "quintIn";
+        EaseType[EaseType["quintOut"] = 8] = "quintOut";
+        EaseType[EaseType["quintInOut"] = 9] = "quintInOut";
+        EaseType[EaseType["cubicIn"] = 10] = "cubicIn";
+        EaseType[EaseType["cubicOut"] = 11] = "cubicOut";
+        EaseType[EaseType["cubicInOut"] = 12] = "cubicInOut";
+        EaseType[EaseType["quartIn"] = 13] = "quartIn";
+        EaseType[EaseType["quartOut"] = 14] = "quartOut";
+        EaseType[EaseType["quartInOut"] = 15] = "quartInOut";
+        EaseType[EaseType["expoIn"] = 16] = "expoIn";
+        EaseType[EaseType["expoOut"] = 17] = "expoOut";
+        EaseType[EaseType["expoInOut"] = 18] = "expoInOut";
+        EaseType[EaseType["circleIn"] = 19] = "circleIn";
+        EaseType[EaseType["circleOut"] = 20] = "circleOut";
+        EaseType[EaseType["circleInOut"] = 21] = "circleInOut";
+        EaseType[EaseType["elasticIn"] = 22] = "elasticIn";
+        EaseType[EaseType["elasticOut"] = 23] = "elasticOut";
+        EaseType[EaseType["elasticInOut"] = 24] = "elasticInOut";
+        EaseType[EaseType["punch"] = 25] = "punch";
+        EaseType[EaseType["backIn"] = 26] = "backIn";
+        EaseType[EaseType["backOut"] = 27] = "backOut";
+        EaseType[EaseType["backInOut"] = 28] = "backInOut";
+        EaseType[EaseType["bounceIn"] = 29] = "bounceIn";
+        EaseType[EaseType["bounceOut"] = 30] = "bounceOut";
+        EaseType[EaseType["bounceInOut"] = 31] = "bounceInOut";
+    })(EaseType = es.EaseType || (es.EaseType = {}));
+    /**
+     * 助手的一个方法，它接收一个EaseType，并通过给定的持续时间和时间参数来应用该Ease方程。
+     * 我们这样做是为了避免传来传去的Funcs为垃圾收集器制造大量垃圾
+     */
+    var EaseHelper = /** @class */ (function () {
+        function EaseHelper() {
+        }
+        /**
+         * 返回 easeType 的相反 EaseType
+         * @param easeType
+         */
+        EaseHelper.oppositeEaseType = function (easeType) {
+            switch (easeType) {
+                case EaseType.linear:
+                    return easeType;
+                case EaseType.backIn:
+                    return EaseType.backOut;
+                case EaseType.backOut:
+                    return EaseType.backIn;
+                case EaseType.backInOut:
+                    return easeType;
+                case EaseType.bounceIn:
+                    return EaseType.bounceOut;
+                case EaseType.bounceOut:
+                    return EaseType.bounceIn;
+                case EaseType.bounceInOut:
+                    return easeType;
+                case EaseType.circleIn:
+                    return EaseType.circleOut;
+                case EaseType.circleOut:
+                    return EaseType.circleIn;
+                case EaseType.circleInOut:
+                    return easeType;
+                case EaseType.cubicIn:
+                    return EaseType.cubicOut;
+                case EaseType.cubicOut:
+                    return EaseType.cubicIn;
+                case EaseType.circleInOut:
+                    return easeType;
+                case EaseType.punch:
+                    return easeType;
+                case EaseType.expoIn:
+                    return EaseType.expoOut;
+                case EaseType.expoOut:
+                    return EaseType.expoIn;
+                case EaseType.expoInOut:
+                    return easeType;
+                case EaseType.quadIn:
+                    return EaseType.quadOut;
+                case EaseType.quadOut:
+                    return EaseType.quadIn;
+                case EaseType.quadInOut:
+                    return easeType;
+                case EaseType.quartIn:
+                    return EaseType.quadOut;
+                case EaseType.quartOut:
+                    return EaseType.quartIn;
+                case EaseType.quadInOut:
+                    return easeType;
+                case EaseType.sineIn:
+                    return EaseType.sineOut;
+                case EaseType.sineOut:
+                    return EaseType.sineIn;
+                case EaseType.sineInOut:
+                    return easeType;
+                default:
+                    return easeType;
+            }
+        };
+        EaseHelper.ease = function (easeType, t, duration) {
+            switch (easeType) {
+                case EaseType.linear:
+                    return es.Easing.Linear.easeNone(t, duration);
+                case EaseType.backIn:
+                    return es.Easing.Back.easeIn(t, duration);
+                case EaseType.backOut:
+                    return es.Easing.Back.easeOut(t, duration);
+                case EaseType.backInOut:
+                    return es.Easing.Back.easeInOut(t, duration);
+                case EaseType.bounceIn:
+                    return es.Easing.Bounce.easeIn(t, duration);
+                case EaseType.bounceOut:
+                    return es.Easing.Bounce.easeOut(t, duration);
+                case EaseType.bounceInOut:
+                    return es.Easing.Bounce.easeInOut(t, duration);
+                case EaseType.circleIn:
+                    return es.Easing.Circular.easeIn(t, duration);
+                case EaseType.circleOut:
+                    return es.Easing.Circular.easeOut(t, duration);
+                case EaseType.circleInOut:
+                    return es.Easing.Circular.easeInOut(t, duration);
+                case EaseType.cubicIn:
+                    return es.Easing.Cubic.easeIn(t, duration);
+                case EaseType.cubicOut:
+                    return es.Easing.Cubic.easeOut(t, duration);
+                case EaseType.cubicInOut:
+                    return es.Easing.Cubic.easeInOut(t, duration);
+                case EaseType.elasticIn:
+                    return es.Easing.Elastic.easeIn(t, duration);
+                case EaseType.elasticOut:
+                    return es.Easing.Elastic.easeOut(t, duration);
+                case EaseType.elasticInOut:
+                    return es.Easing.Elastic.easeInOut(t, duration);
+                case EaseType.punch:
+                    return es.Easing.Elastic.punch(t, duration);
+                case EaseType.expoIn:
+                    return es.Easing.Exponential.easeIn(t, duration);
+                case EaseType.expoOut:
+                    return es.Easing.Exponential.easeOut(t, duration);
+                case EaseType.expoInOut:
+                    return es.Easing.Exponential.easeInOut(t, duration);
+                case EaseType.quadIn:
+                    return es.Easing.Quadratic.easeIn(t, duration);
+                case EaseType.quadOut:
+                    return es.Easing.Quadratic.easeOut(t, duration);
+                case EaseType.quadInOut:
+                    return es.Easing.Quadratic.easeInOut(t, duration);
+                case EaseType.quadIn:
+                    return es.Easing.Quadratic.easeIn(t, duration);
+                case EaseType.quadOut:
+                    return es.Easing.Quadratic.easeOut(t, duration);
+                case EaseType.quadInOut:
+                    return es.Easing.Quadratic.easeInOut(t, duration);
+                case EaseType.quintIn:
+                    return es.Easing.Quintic.easeIn(t, duration);
+                case EaseType.quintOut:
+                    return es.Easing.Quintic.easeOut(t, duration);
+                case EaseType.quintInOut:
+                    return es.Easing.Quintic.easeInOut(t, duration);
+                case EaseType.sineIn:
+                    return es.Easing.Sinusoidal.easeIn(t, duration);
+                case EaseType.sineOut:
+                    return es.Easing.Sinusoidal.easeOut(t, duration);
+                case EaseType.sineInOut:
+                    return es.Easing.Sinusoidal.easeInOut(t, duration);
+                default:
+                    return es.Easing.Linear.easeNone(t, duration);
+            }
+        };
+        return EaseHelper;
+    }());
+    es.EaseHelper = EaseHelper;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var GlobalManager = /** @class */ (function () {
+        function GlobalManager() {
+        }
+        Object.defineProperty(GlobalManager.prototype, "enabled", {
+            /**
+             * 如果true则启用了GlobalManager。
+             * 状态的改变会导致调用OnEnabled/OnDisable
+             */
+            get: function () {
+                return this._enabled;
+            },
+            /**
+             * 如果true则启用了GlobalManager。
+             * 状态的改变会导致调用OnEnabled/OnDisable
+             * @param value
+             */
+            set: function (value) {
+                this.setEnabled(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /**
+         * 启用/禁用这个GlobalManager
+         * @param isEnabled
+         */
+        GlobalManager.prototype.setEnabled = function (isEnabled) {
+            if (this._enabled != isEnabled) {
+                this._enabled = isEnabled;
+                if (this._enabled) {
+                    this.onEnabled();
+                }
+                else {
+                    this.onDisabled();
+                }
+            }
+        };
+        /**
+         * 此GlobalManager启用时调用
+         */
+        GlobalManager.prototype.onEnabled = function () {
+        };
+        /**
+         * 此GlobalManager禁用时调用
+         */
+        GlobalManager.prototype.onDisabled = function () {
+        };
+        /**
+         * 在frame .update之前调用每一帧
+         */
+        GlobalManager.prototype.update = function () {
+        };
+        return GlobalManager;
+    }());
+    es.GlobalManager = GlobalManager;
+})(es || (es = {}));
+///<reference path="./Easing/EaseType.ts" />
+///<reference path="../Utils/GlobalManager.ts"/>
+var es;
+///<reference path="./Easing/EaseType.ts" />
+///<reference path="../Utils/GlobalManager.ts"/>
+(function (es) {
+    var TweenManager = /** @class */ (function (_super) {
+        __extends(TweenManager, _super);
+        function TweenManager() {
+            var _this = _super.call(this) || this;
+            /**
+             * 当前所有活跃用户的内部列表
+             */
+            _this._activeTweens = [];
+            _this._tempTweens = [];
+            TweenManager._instance = _this;
+            return _this;
+        }
+        TweenManager.prototype.update = function () {
+            this._isUpdating = true;
+            // 反向循环，这样我们就可以把完成的weens删除了
+            for (var i = this._activeTweens.length - 1; i >= 0; --i) {
+                var tween = this._activeTweens[i];
+                if (tween.tick())
+                    this._tempTweens.push(tween);
+            }
+            this._isUpdating = false;
+            for (var i = 0; i < this._tempTweens.length; i++) {
+                this._tempTweens[i].recycleSelf();
+                new es.List(this._activeTweens).remove(this._tempTweens[i]);
+            }
+            this._tempTweens.length = 0;
+        };
+        /**
+         * 将一个tween添加到活动tweens列表中
+         * @param tween
+         */
+        TweenManager.addTween = function (tween) {
+            TweenManager._instance._activeTweens.push(tween);
+        };
+        /**
+         * 从当前的tweens列表中删除一个tween
+         * @param tween
+         */
+        TweenManager.removeTween = function (tween) {
+            if (TweenManager._instance._isUpdating) {
+                TweenManager._instance._tempTweens.push(tween);
+            }
+            else {
+                tween.recycleSelf();
+                new es.List(TweenManager._instance._activeTweens).remove(tween);
+            }
+        };
+        /**
+         * 停止所有的tween并选择地把他们全部完成
+         * @param bringToCompletion
+         */
+        TweenManager.stopAllTweens = function (bringToCompletion) {
+            if (bringToCompletion === void 0) { bringToCompletion = false; }
+            for (var i = TweenManager._instance._activeTweens.length - 1; i >= 0; --i)
+                TweenManager._instance._activeTweens[i].stop(bringToCompletion);
+        };
+        /**
+         * 返回具有特定上下文的所有tweens。
+         * Tweens以ITweenable的形式返回，因为这就是TweenManager所知道的所有内容
+         * @param context
+         */
+        TweenManager.allTweensWithContext = function (context) {
+            var foundTweens = [];
+            for (var i = 0; i < TweenManager._instance._activeTweens.length; i++) {
+                if (TweenManager._instance._activeTweens[i].context == context)
+                    foundTweens.push(TweenManager._instance._activeTweens[i]);
+            }
+            return foundTweens;
+        };
+        /**
+         * 停止所有给定上下文的tweens
+         * @param context
+         * @param bringToCompletion
+         */
+        TweenManager.stopAllTweensWithContext = function (context, bringToCompletion) {
+            if (bringToCompletion === void 0) { bringToCompletion = false; }
+            for (var i = TweenManager._instance._activeTweens.length - 1; i >= 0; --i) {
+                if (TweenManager._instance._activeTweens[i].context == context)
+                    TweenManager._instance._activeTweens[i].stop(bringToCompletion);
+            }
+        };
+        /**
+         * 返回具有特定目标的所有tweens。
+         * Tweens以ITweenControl的形式返回，因为TweenManager只知道这些
+         * @param target
+         */
+        TweenManager.allTweenWithTarget = function (target) {
+            var foundTweens = [];
+            for (var i = 0; i < TweenManager._instance._activeTweens.length; i++) {
+                if (TweenManager._instance._activeTweens[i]) {
+                    var tweenControl = TweenManager._instance._activeTweens[i];
+                    if (tweenControl.getTargetObject() == target)
+                        foundTweens.push(TweenManager._instance._activeTweens[i]);
+                }
+            }
+            return foundTweens;
+        };
+        /**
+         * 停止所有具有TweenManager知道的特定目标的tweens
+         * @param target
+         * @param bringToCompletion
+         */
+        TweenManager.stopAllTweensWithTarget = function (target, bringToCompletion) {
+            if (bringToCompletion === void 0) { bringToCompletion = false; }
+            for (var i = TweenManager._instance._activeTweens.length - 1; i >= 0; --i) {
+                if (TweenManager._instance._activeTweens[i]) {
+                    var tweenControl = TweenManager._instance._activeTweens[i];
+                    if (tweenControl.getTargetObject() == target)
+                        tweenControl.stop(bringToCompletion);
+                }
+            }
+        };
+        TweenManager.defaultEaseType = es.EaseType.quartIn;
+        /**
+         * 如果为真，当加载新关卡时，活动的tween列表将被清除
+         */
+        TweenManager.removeAllTweensOnLevelLoad = false;
+        /**
+         * 这里支持各种类型的自动缓存。请
+         * 注意，只有在使用扩展方法启动tweens时，或者在做自定义tweens时从缓存中获取tween时，缓存才会起作用。
+         * 关于如何获取缓存的tween，请参见扩展方法的实现
+         */
+        TweenManager.cacheNumberTweens = true;
+        TweenManager.cacheVector2Tweens = true;
+        TweenManager.cacheColorTweens = true;
+        TweenManager.cacheRectTweens = false;
+        return TweenManager;
+    }(es.GlobalManager));
+    es.TweenManager = TweenManager;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 标准缓和方程通过将b和c参数（起始值和变化值）用0和1替换，然后进行简化。
+     * 这样做的目的是为了让我们可以得到一个0 - 1之间的原始值（除了弹性/反弹故意超过界限），然后用这个值来lerp任何东西
+     */
+    var Easing;
+    (function (Easing) {
+        var Linear = /** @class */ (function () {
+            function Linear() {
+            }
+            Linear.easeNone = function (t, d) {
+                return t / d;
+            };
+            return Linear;
+        }());
+        Easing.Linear = Linear;
+        var Quadratic = /** @class */ (function () {
+            function Quadratic() {
+            }
+            Quadratic.easeIn = function (t, d) {
+                return (t /= d) * t;
+            };
+            Quadratic.easeOut = function (t, d) {
+                return -1 * (t /= d) * (t - 2);
+            };
+            Quadratic.easeInOut = function (t, d) {
+                if ((t /= d / 2) < 1)
+                    return 0.5 * t * t;
+                return -0.5 * ((--t) * (t - 2) - 1);
+            };
+            return Quadratic;
+        }());
+        Easing.Quadratic = Quadratic;
+        var Back = /** @class */ (function () {
+            function Back() {
+            }
+            Back.easeIn = function (t, d) {
+                return (t /= d) * t * ((1.70158 + 1) * t - 1.70158);
+            };
+            Back.easeOut = function (t, d) {
+                return ((t = t / d - 1) * t * ((1.70158 + 1) * t + 1.70158) + 1);
+            };
+            Back.easeInOut = function (t, d) {
+                var s = 1.70158;
+                if ((t /= d / 2) < 1) {
+                    return 0.5 * (t * t * (((s *= (1.525)) + 1) * t - s));
+                }
+                return 0.5 * ((t -= 2) * t * (((s *= (1.525)) + 1) * t + s) + 2);
+            };
+            return Back;
+        }());
+        Easing.Back = Back;
+        var Bounce = /** @class */ (function () {
+            function Bounce() {
+            }
+            Bounce.easeOut = function (t, d) {
+                if ((t /= d) < (1 / 2.75)) {
+                    return (7.5625 * t * t);
+                }
+                else if (t < (2 / 2.75)) {
+                    return (7.5625 * (t -= (1.5 / 2.75)) * t + 0.75);
+                }
+                else if (t < (2.5 / 2.75)) {
+                    return (7.5625 * (t -= (2.25 / 2.75)) * t + 0.9375);
+                }
+                else {
+                    return (7.5625 * (t -= (2.625 / 2.75)) * t + 0.984375);
+                }
+            };
+            Bounce.easeIn = function (t, d) {
+                return 1 - this.easeOut(d - t, d);
+            };
+            Bounce.easeInOut = function (t, d) {
+                if (t < d / 2)
+                    return this.easeIn(t * 2, d) * 0.5;
+                else
+                    return this.easeOut(t * 2 - d, d) * 0.5 + 1 * 0.5;
+            };
+            return Bounce;
+        }());
+        Easing.Bounce = Bounce;
+        var Circular = /** @class */ (function () {
+            function Circular() {
+            }
+            Circular.easeIn = function (t, d) {
+                return -(Math.sqrt(1 - (t /= d) * t) - 1);
+            };
+            Circular.easeOut = function (t, d) {
+                return Math.sqrt(1 - (t = t / d - 1) * t);
+            };
+            Circular.easeInOut = function (t, d) {
+                if ((t /= d / 2) < 1)
+                    return -0.5 * (Math.sqrt(1 - t * t) - 1);
+                return 0.5 * (Math.sqrt(1 - (t -= 2) * t) + 1);
+            };
+            return Circular;
+        }());
+        Easing.Circular = Circular;
+        var Cubic = /** @class */ (function () {
+            function Cubic() {
+            }
+            Cubic.easeIn = function (t, d) {
+                return (t /= d) * t * t;
+            };
+            Cubic.easeOut = function (t, d) {
+                return ((t = t / d - 1) * t * t + 1);
+            };
+            Cubic.easeInOut = function (t, d) {
+                if ((t /= d / 2) < 1)
+                    return 0.5 * t * t * t;
+                return 0.5 * ((t -= 2) * t * t + 2);
+            };
+            return Cubic;
+        }());
+        Easing.Cubic = Cubic;
+        var Elastic = /** @class */ (function () {
+            function Elastic() {
+            }
+            Elastic.easeIn = function (t, d) {
+                if (t == 0)
+                    return 0;
+                if ((t /= d) == 1)
+                    return 1;
+                var p = d * 0.3;
+                var s = p / 4;
+                return -(1 * Math.pow(2, 10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p));
+            };
+            Elastic.easeOut = function (t, d) {
+                if (t == 0)
+                    return 0;
+                if ((t /= d) == 1)
+                    return 1;
+                var p = d * 0.3;
+                var s = p / 4;
+                return (1 * Math.pow(2, -10 * t) * Math.sin((t * d - s) * (2 * Math.PI) / p) + 1);
+            };
+            Elastic.easeInOut = function (t, d) {
+                if (t == 0)
+                    return 0;
+                if ((t /= d / 2) == 2)
+                    return 1;
+                var p = d * (0.3 * 1.5);
+                var s = p / 4;
+                if (t < 1)
+                    return -0.5 * (Math.pow(2, 10 * (t -= 1)) * Math.sin(t * d - s) * (2 * Math.PI) / p);
+                return (Math.pow(2, -10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p) * 0.5 + 1);
+            };
+            Elastic.punch = function (t, d) {
+                if (t == 0)
+                    return 0;
+                if ((t /= d) == 1)
+                    return 0;
+                var p = 0.3;
+                return (Math.pow(2, -10 * t) * Math.sin(t * (2 * Math.PI) / p));
+            };
+            return Elastic;
+        }());
+        Easing.Elastic = Elastic;
+        var Exponential = /** @class */ (function () {
+            function Exponential() {
+            }
+            Exponential.easeIn = function (t, d) {
+                return (t == 0) ? 0 : Math.pow(2, 10 * (t / d - 1));
+            };
+            Exponential.easeOut = function (t, d) {
+                return t == d ? 1 : (-Math.pow(2, -10 * t / d) + 1);
+            };
+            Exponential.easeInOut = function (t, d) {
+                if (t == 0)
+                    return 0;
+                if (t == d)
+                    return 1;
+                if ((t /= d / 2) < 1) {
+                    return 0.5 * Math.pow(2, 10 * (t - 1));
+                }
+                return 0.5 * (-Math.pow(2, -10 * --t) + 2);
+            };
+            return Exponential;
+        }());
+        Easing.Exponential = Exponential;
+        var Quartic = /** @class */ (function () {
+            function Quartic() {
+            }
+            Quartic.easeIn = function (t, d) {
+                return (t /= d) * t * t * t;
+            };
+            Quartic.easeOut = function (t, d) {
+                return -1 * ((t = t / d - 1) * t * t * t - 1);
+            };
+            Quartic.easeInOut = function (t, d) {
+                t /= d / 2;
+                if (t < 1)
+                    return 0.5 * t * t * t * t;
+                t -= 2;
+                return -0.5 * (t * t * t * t - 2);
+            };
+            return Quartic;
+        }());
+        Easing.Quartic = Quartic;
+        var Quintic = /** @class */ (function () {
+            function Quintic() {
+            }
+            Quintic.easeIn = function (t, d) {
+                return (t /= d) * t * t * t * t;
+            };
+            Quintic.easeOut = function (t, d) {
+                return ((t = t / d - 1) * t * t * t * t + 1);
+            };
+            Quintic.easeInOut = function (t, d) {
+                if ((t /= d / 2) < 1)
+                    return 0.5 * t * t * t * t * t;
+                return 0.5 * ((t -= 2) * t * t * t * t + 2);
+            };
+            return Quintic;
+        }());
+        Easing.Quintic = Quintic;
+        var Sinusoidal = /** @class */ (function () {
+            function Sinusoidal() {
+            }
+            Sinusoidal.easeIn = function (t, d) {
+                return -1 * Math.cos(t / d * (Math.PI / 2)) + 1;
+            };
+            Sinusoidal.easeOut = function (t, d) {
+                return Math.sin(t / d * (Math.PI / 2));
+            };
+            Sinusoidal.easeInOut = function (t, d) {
+                return -0.5 * (Math.cos(Math.PI * t / d) - 1);
+            };
+            return Sinusoidal;
+        }());
+        Easing.Sinusoidal = Sinusoidal;
+    })(Easing = es.Easing || (es.Easing = {}));
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 一系列静态方法来处理所有常见的tween类型结构，以及它们的unclamped lerps.unclamped lerps对于超过0-1范围的bounce、elastic或其他tweens是必需的
+     */
+    var Lerps = /** @class */ (function () {
+        function Lerps() {
+        }
+        Lerps.lerp = function (from, to, t) {
+            if (typeof (from) == "number" && typeof (to) == "number") {
+                return from + (to - from) * t;
+            }
+            if (from instanceof es.Color && to instanceof es.Color) {
+                var t255 = t * 255;
+                return new es.Color(from.r + (to.r - from.r) * t255 / 255, from.g + (to.g - from.g) * t255 / 255, from.b + (to.b - from.b) * t255 / 255, from.a + (to.a - from.a) * t255 / 255);
+            }
+            if (from instanceof es.Rectangle && to instanceof es.Rectangle) {
+                return new es.Rectangle((from.x + (to.x - from.x) * t), (from.y + (to.x - from.y) * t), (from.width + (to.width - from.width) * t), (from.height + (to.height - from.height) * t));
+            }
+            if (from instanceof es.Vector2 && to instanceof es.Vector2) {
+                return new es.Vector2(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t);
+            }
+        };
+        Lerps.angleLerp = function (from, to, t) {
+            // 我们计算这个lerp的最短角差
+            var toMinusFrom = new es.Vector2(es.MathHelper.deltaAngle(from.x, to.x), es.MathHelper.deltaAngle(from.y, to.y));
+            return new es.Vector2(from.x + toMinusFrom.x * t, from.y + toMinusFrom.y * t);
+        };
+        Lerps.ease = function (easeType, from, to, t, duration) {
+            if (typeof (from) == 'number' && typeof (to) == "number") {
+                return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
+            }
+            if (from instanceof es.Vector2 && to instanceof es.Vector2) {
+                return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
+            }
+            if (from instanceof es.Rectangle && to instanceof es.Rectangle) {
+                return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
+            }
+            if (from instanceof es.Color && to instanceof es.Color) {
+                return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
+            }
+        };
+        Lerps.easeAngle = function (easeType, from, to, t, duration) {
+            return this.angleLerp(from, to, es.EaseHelper.ease(easeType, t, duration));
+        };
+        /**
+         * 使用半隐式欧拉方法。速度较慢，但总是很稳定。见
+         * http://allenchou.net/2015/04/game-math-more-on-numeric-springing/
+         * @param currentValue
+         * @param targetValue
+         * @param velocity Velocity的引用。如果在两次调用之间改变targetValue，请务必将其重置为0
+         * @param dampingRatio 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
+         * @param angularFrequency 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定
+         */
+        Lerps.fastSpring = function (currentValue, targetValue, velocity, dampingRatio, angularFrequency) {
+            velocity.add(velocity.scale(-2 * es.Time.deltaTime * dampingRatio * angularFrequency)
+                .add(targetValue.sub(currentValue).scale(es.Time.deltaTime * angularFrequency * angularFrequency)));
+            currentValue.add(velocity.scale(es.Time.deltaTime));
+            return currentValue;
+        };
+        return Lerps;
+    }());
+    es.Lerps = Lerps;
+})(es || (es = {}));
+var es;
+(function (es) {
     var AnimCurve = /** @class */ (function () {
         function AnimCurve(points) {
             if (points.length < 2) {
@@ -11051,64 +12452,6 @@ var es;
         return EqualityComparer;
     }());
     es.EqualityComparer = EqualityComparer;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var GlobalManager = /** @class */ (function () {
-        function GlobalManager() {
-        }
-        Object.defineProperty(GlobalManager.prototype, "enabled", {
-            /**
-             * 如果true则启用了GlobalManager。
-             * 状态的改变会导致调用OnEnabled/OnDisable
-             */
-            get: function () {
-                return this._enabled;
-            },
-            /**
-             * 如果true则启用了GlobalManager。
-             * 状态的改变会导致调用OnEnabled/OnDisable
-             * @param value
-             */
-            set: function (value) {
-                this.setEnabled(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /**
-         * 启用/禁用这个GlobalManager
-         * @param isEnabled
-         */
-        GlobalManager.prototype.setEnabled = function (isEnabled) {
-            if (this._enabled != isEnabled) {
-                this._enabled = isEnabled;
-                if (this._enabled) {
-                    this.onEnabled();
-                }
-                else {
-                    this.onDisabled();
-                }
-            }
-        };
-        /**
-         * 此GlobalManager启用时调用
-         */
-        GlobalManager.prototype.onEnabled = function () {
-        };
-        /**
-         * 此GlobalManager禁用时调用
-         */
-        GlobalManager.prototype.onDisabled = function () {
-        };
-        /**
-         * 在frame .update之前调用每一帧
-         */
-        GlobalManager.prototype.update = function () {
-        };
-        return GlobalManager;
-    }());
-    es.GlobalManager = GlobalManager;
 })(es || (es = {}));
 var es;
 (function (es) {

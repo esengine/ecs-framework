@@ -423,6 +423,14 @@ declare module es {
          * 从实体中删除所有组件
          */
         removeAllComponents(): void;
+        tweenPositionTo(to: Vector2, duration?: number): ITween<Vector2>;
+        tweenLocalPositionTo(to: Vector2, duration?: number): ITween<Vector2>;
+        tweenScaleTo(to: Vector2, duration?: number): any;
+        tweenScaleTo(to: number, duration?: number): any;
+        tweenLocalScaleTo(to: Vector2, duration?: any): any;
+        tweenLocalScaleTo(to: number, duration?: any): any;
+        tweenRotationDegreesTo(to: number, duration?: number): TransformVector2Tween;
+        tweenLocalRotationDegreesTo(to: number, duration?: number): TransformVector2Tween;
         compareTo(other: Entity): number;
         equals(other: Entity): boolean;
         getHashCode(): number;
@@ -1506,6 +1514,7 @@ declare module es {
         getbounds(): es.Rectangle;
         readonly bounds: Rectangle;
         protected _areBoundsDirty: boolean;
+        color: Color;
         renderLayer: number;
         protected _renderLayer: number;
         onEntityTransformChanged(comp: transform.Component): void;
@@ -1521,6 +1530,7 @@ declare module es {
         setRenderLayer(renderLayer: number): RenderableComponent;
         isVisibleFromCamera(cam: ICamera): boolean;
         debugRender(batcher: IBatcher): void;
+        tweenColorTo(to: Color, duration: number): RenderableColorTween;
     }
 }
 declare module es {
@@ -4225,6 +4235,612 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * AbstractTweenable作为你可能想做的任何可以执行的自定义类的基础。
+     * 这些类不同于ITweens，因为他们没有实现ITweenT接口。
+     * 它只是说一个AbstractTweenable不仅仅是将一个值从开始移动到结束。
+     * 它可以做任何需要每帧执行的事情。
+     */
+    abstract class AbstractTweenable implements ITweenable {
+        protected _isPaused: boolean;
+        /**
+         * abstractTweenable在完成后往往会被保留下来。
+         * 这个标志可以让它们在内部知道自己当前是否被TweenManager盯上了，以便在必要时可以重新添加自己。
+         */
+        protected _isCurrentlyManagedByTweenManager: boolean;
+        abstract tick(): boolean;
+        recycleSelf(): void;
+        isRunning(): boolean;
+        start(): void;
+        pause(): void;
+        resume(): void;
+        stop(bringToCompletion?: boolean): void;
+    }
+}
+declare module es {
+    class PropertyTweens {
+        static NumberPropertyTo(self: any, memberName: string, to: number, duration: number): ITween<number>;
+        static Vector2PropertyTo(self: any, memeberName: string, to: Vector2, duration: number): ITween<Vector2>;
+    }
+}
+declare module es {
+    enum LoopType {
+        none = 0,
+        restartFromBeginning = 1,
+        pingpong = 2
+    }
+    enum TweenState {
+        running = 0,
+        paused = 1,
+        complete = 2
+    }
+    abstract class Tween<T> implements ITweenable, ITween<T> {
+        protected _target: ITweenTarget<T>;
+        protected _isFromValueOverridden: boolean;
+        protected _fromValue: T;
+        protected _toValue: T;
+        protected _easeType: EaseType;
+        protected _shouldRecycleTween: boolean;
+        protected _isRelative: boolean;
+        protected _completionHandler: (tween: ITween<T>) => void;
+        protected _loopCompleteHandler: (tween: ITween<T>) => void;
+        protected _nextTween: ITweenable;
+        protected _tweenState: TweenState;
+        private _isTimeScaleIndependent;
+        protected _delay: number;
+        protected _duration: number;
+        protected _timeScale: number;
+        protected _elapsedTime: number;
+        protected _loopType: LoopType;
+        protected _loops: number;
+        protected _delayBetweenLoops: number;
+        private _isRunningInReverse;
+        context: any;
+        setEaseType(easeType: EaseType): ITween<T>;
+        setDelay(delay: number): ITween<T>;
+        setDuration(duration: number): ITween<T>;
+        setTimeScale(timeSclae: number): ITween<T>;
+        setIsTimeScaleIndependent(): ITween<T>;
+        setCompletionHandler(completeHandler: (tween: ITween<T>) => void): ITween<T>;
+        setLoops(loopType: LoopType, loops?: number, delayBetweenLoops?: number): ITween<T>;
+        setLoopCompletionHanlder(loopCompleteHandler: (tween: ITween<T>) => void): ITween<T>;
+        setFrom(from: T): ITween<T>;
+        prepareForReuse(from: T, to: T, duration: number): ITween<T>;
+        setRecycleTween(shouldRecycleTween: boolean): ITween<T>;
+        abstract setIsRelative(): ITween<T>;
+        setContext(context: any): ITween<T>;
+        setNextTween(nextTween: ITweenable): ITween<T>;
+        tick(): boolean;
+        recycleSelf(): void;
+        isRunning(): boolean;
+        start(): void;
+        pause(): void;
+        resume(): void;
+        stop(bringToCompletion?: boolean): void;
+        jumpToElapsedTime(elapsedTime: any): void;
+        /**
+         * 反转当前的tween，如果是向前走，就会向后走，反之亦然
+         */
+        reverseTween(): void;
+        /**
+         * 当通过StartCoroutine调用时，这将一直持续到tween完成
+         */
+        waitForCompletion(): IterableIterator<any>;
+        getTargetObject(): any;
+        private resetState;
+        /**
+         * 将所有状态重置为默认值，并根据传入的参数设置初始状态。
+         * 这个方法作为一个切入点，这样Tween子类就可以调用它，这样tweens就可以被回收。
+         * 当回收时，构造函数不会再被调用，所以这个方法封装了构造函数要做的事情
+         * @param target
+         * @param to
+         * @param duration
+         */
+        initialize(target: ITweenTarget<T>, to: T, duration: number): void;
+        /**
+         * 处理循环逻辑
+         * @param elapsedTimeExcess
+         */
+        private handleLooping;
+        protected abstract updateValue(): any;
+    }
+}
+declare module es {
+    class NumberTween extends Tween<number> {
+        static create(): NumberTween;
+        constructor(target?: ITweenTarget<number>, to?: number, duration?: number);
+        setIsRelative(): ITween<number>;
+        protected updateValue(): void;
+        recycleSelf(): void;
+    }
+    class Vector2Tween extends Tween<Vector2> {
+        static create(): Vector2Tween;
+        constructor(target?: ITweenTarget<Vector2>, to?: Vector2, duration?: number);
+        setIsRelative(): ITween<Vector2>;
+        protected updateValue(): void;
+        recycleSelf(): void;
+    }
+    class RectangleTween extends Tween<Rectangle> {
+        static create(): RectangleTween;
+        constructor(target?: ITweenTarget<Rectangle>, to?: Rectangle, duration?: number);
+        setIsRelative(): ITween<Rectangle>;
+        protected updateValue(): void;
+        recycleSelf(): void;
+    }
+    class ColorTween extends Tween<Color> {
+        static create(): ColorTween;
+        constructor(target?: ITweenTarget<Color>, to?: Color, duration?: number);
+        setIsRelative(): this;
+        protected updateValue(): void;
+    }
+}
+declare module es {
+    class RenderableColorTween extends ColorTween implements ITweenTarget<Color> {
+        _renderable: RenderableComponent;
+        setTweenedValue(value: Color): void;
+        getTweenedValue(): Color;
+        getTargetObject(): RenderableComponent;
+        updateValue(): void;
+        setTarget(renderable: RenderableComponent): void;
+        recycleSelf(): void;
+    }
+}
+declare module es {
+    class TransformSpringTween extends AbstractTweenable {
+        readonly targetType: TransformTargetType;
+        private _transform;
+        private _targetType;
+        private _targetValue;
+        private _velocity;
+        /**
+         * 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
+         */
+        dampingRatio: number;
+        /**
+         * 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定角频率
+         */
+        angularFrequency: number;
+        constructor(transform: Transform, targetType: TransformTargetType, targetValue: Vector2);
+        /**
+         * 你可以在任何时候调用setTargetValue来重置目标值到一个新的Vector2。
+         * 如果你没有调用start来添加spring tween，它会为你调用
+         * @param targetValue
+         */
+        setTargetValue(targetValue: Vector2): void;
+        /**
+         * lambda应该是振荡幅度减少50%时的理想持续时间
+         * @param lambda
+         */
+        updateDampingRatioWithHalfLife(lambda: number): void;
+        tick(): boolean;
+        private setTweenedValue;
+        private getCurrentValueOfTweenedTargetType;
+    }
+}
+declare module es {
+    /**
+     * 对任何与Transform相关的属性tweens都是有用的枚举
+     */
+    enum TransformTargetType {
+        position = 0,
+        localPosition = 1,
+        scale = 2,
+        localScale = 3,
+        rotationDegrees = 4,
+        localRotationDegrees = 5
+    }
+    /**
+     * 这是一个特殊的情况，因为Transform是迄今为止最被ween的对象。
+     * 我们将Tween和ITweenTarget封装在一个单一的、可缓存的类中
+     */
+    class TransformVector2Tween extends Vector2Tween implements ITweenTarget<Vector2> {
+        private _transform;
+        private _targetType;
+        setTweenedValue(value: Vector2): void;
+        getTweenedValue(): Vector2;
+        getTargetObject(): Transform;
+        setTargetAndType(transform: Transform, targetType: TransformTargetType): void;
+        protected updateValue(): void;
+        recycleSelf(): void;
+    }
+}
+declare module es {
+    enum EaseType {
+        linear = 0,
+        sineIn = 1,
+        sineOut = 2,
+        sineInOut = 3,
+        quadIn = 4,
+        quadOut = 5,
+        quadInOut = 6,
+        quintIn = 7,
+        quintOut = 8,
+        quintInOut = 9,
+        cubicIn = 10,
+        cubicOut = 11,
+        cubicInOut = 12,
+        quartIn = 13,
+        quartOut = 14,
+        quartInOut = 15,
+        expoIn = 16,
+        expoOut = 17,
+        expoInOut = 18,
+        circleIn = 19,
+        circleOut = 20,
+        circleInOut = 21,
+        elasticIn = 22,
+        elasticOut = 23,
+        elasticInOut = 24,
+        punch = 25,
+        backIn = 26,
+        backOut = 27,
+        backInOut = 28,
+        bounceIn = 29,
+        bounceOut = 30,
+        bounceInOut = 31
+    }
+    /**
+     * 助手的一个方法，它接收一个EaseType，并通过给定的持续时间和时间参数来应用该Ease方程。
+     * 我们这样做是为了避免传来传去的Funcs为垃圾收集器制造大量垃圾
+     */
+    class EaseHelper {
+        /**
+         * 返回 easeType 的相反 EaseType
+         * @param easeType
+         */
+        static oppositeEaseType(easeType: EaseType): EaseType.linear | EaseType.sineIn | EaseType.sineOut | EaseType.sineInOut | EaseType.quadIn | EaseType.quadOut | EaseType.quadInOut | EaseType.quintIn | EaseType.quintOut | EaseType.quintInOut | EaseType.cubicIn | EaseType.cubicOut | EaseType.cubicInOut | EaseType.quartIn | EaseType.quartInOut | EaseType.expoIn | EaseType.expoOut | EaseType.expoInOut | EaseType.circleIn | EaseType.circleOut | EaseType.circleInOut | EaseType.elasticIn | EaseType.elasticOut | EaseType.elasticInOut | EaseType.punch | EaseType.backIn | EaseType.backOut | EaseType.backInOut | EaseType.bounceIn | EaseType.bounceOut | EaseType.bounceInOut;
+        static ease(easeType: EaseType, t: number, duration: number): number;
+    }
+}
+declare module es {
+    class GlobalManager {
+        _enabled: boolean;
+        /**
+         * 如果true则启用了GlobalManager。
+         * 状态的改变会导致调用OnEnabled/OnDisable
+         */
+        /**
+        * 如果true则启用了GlobalManager。
+        * 状态的改变会导致调用OnEnabled/OnDisable
+        * @param value
+        */
+        enabled: boolean;
+        /**
+         * 启用/禁用这个GlobalManager
+         * @param isEnabled
+         */
+        setEnabled(isEnabled: boolean): void;
+        /**
+         * 此GlobalManager启用时调用
+         */
+        onEnabled(): void;
+        /**
+         * 此GlobalManager禁用时调用
+         */
+        onDisabled(): void;
+        /**
+         * 在frame .update之前调用每一帧
+         */
+        update(): void;
+    }
+}
+declare module es {
+    class TweenManager extends GlobalManager {
+        static defaultEaseType: EaseType;
+        /**
+         * 如果为真，当加载新关卡时，活动的tween列表将被清除
+         */
+        static removeAllTweensOnLevelLoad: boolean;
+        /**
+         * 这里支持各种类型的自动缓存。请
+         * 注意，只有在使用扩展方法启动tweens时，或者在做自定义tweens时从缓存中获取tween时，缓存才会起作用。
+         * 关于如何获取缓存的tween，请参见扩展方法的实现
+         */
+        static cacheNumberTweens: boolean;
+        static cacheVector2Tweens: boolean;
+        static cacheColorTweens: boolean;
+        static cacheRectTweens: boolean;
+        /**
+         * 当前所有活跃用户的内部列表
+         */
+        private _activeTweens;
+        private _tempTweens;
+        /**
+         * 标志表示tween更新循环正在运行
+         */
+        private _isUpdating;
+        /**
+         * 便于暴露一个静态的API以方便访问
+         */
+        private static _instance;
+        constructor();
+        update(): void;
+        /**
+         * 将一个tween添加到活动tweens列表中
+         * @param tween
+         */
+        static addTween(tween: ITweenable): void;
+        /**
+         * 从当前的tweens列表中删除一个tween
+         * @param tween
+         */
+        static removeTween(tween: ITweenable): void;
+        /**
+         * 停止所有的tween并选择地把他们全部完成
+         * @param bringToCompletion
+         */
+        static stopAllTweens(bringToCompletion?: boolean): void;
+        /**
+         * 返回具有特定上下文的所有tweens。
+         * Tweens以ITweenable的形式返回，因为这就是TweenManager所知道的所有内容
+         * @param context
+         */
+        static allTweensWithContext(context: any): ITweenable[];
+        /**
+         * 停止所有给定上下文的tweens
+         * @param context
+         * @param bringToCompletion
+         */
+        static stopAllTweensWithContext(context: any, bringToCompletion?: boolean): void;
+        /**
+         * 返回具有特定目标的所有tweens。
+         * Tweens以ITweenControl的形式返回，因为TweenManager只知道这些
+         * @param target
+         */
+        static allTweenWithTarget(target: any): ITweenable[];
+        /**
+         * 停止所有具有TweenManager知道的特定目标的tweens
+         * @param target
+         * @param bringToCompletion
+         */
+        static stopAllTweensWithTarget(target: any, bringToCompletion?: boolean): void;
+    }
+}
+declare module es {
+    /**
+     * 标准缓和方程通过将b和c参数（起始值和变化值）用0和1替换，然后进行简化。
+     * 这样做的目的是为了让我们可以得到一个0 - 1之间的原始值（除了弹性/反弹故意超过界限），然后用这个值来lerp任何东西
+     */
+    module Easing {
+        class Linear {
+            static easeNone(t: number, d: number): number;
+        }
+        class Quadratic {
+            static easeIn(t: number, d: number): number;
+            static easeOut(t: number, d: number): number;
+            static easeInOut(t: number, d: number): number;
+        }
+        class Back {
+            static easeIn(t: number, d: number): number;
+            static easeOut(t: number, d: number): number;
+            static easeInOut(t: number, d: number): number;
+        }
+        class Bounce {
+            static easeOut(t: number, d: number): number;
+            static easeIn(t: number, d: number): number;
+            static easeInOut(t: number, d: number): number;
+        }
+        class Circular {
+            static easeIn(t: number, d: number): number;
+            static easeOut(t: number, d: number): number;
+            static easeInOut(t: number, d: number): number;
+        }
+        class Cubic {
+            static easeIn(t: number, d: number): number;
+            static easeOut(t: number, d: number): number;
+            static easeInOut(t: number, d: number): number;
+        }
+        class Elastic {
+            static easeIn(t: number, d: number): number;
+            static easeOut(t: number, d: number): number;
+            static easeInOut(t: number, d: number): number;
+            static punch(t: number, d: number): number;
+        }
+        class Exponential {
+            static easeIn(t: number, d: number): number;
+            static easeOut(t: number, d: number): number;
+            static easeInOut(t: number, d: number): number;
+        }
+        class Quartic {
+            static easeIn(t: number, d: number): number;
+            static easeOut(t: number, d: number): number;
+            static easeInOut(t: number, d: number): number;
+        }
+        class Quintic {
+            static easeIn(t: number, d: number): number;
+            static easeOut(t: number, d: number): number;
+            static easeInOut(t: number, d: number): number;
+        }
+        class Sinusoidal {
+            static easeIn(t: number, d: number): number;
+            static easeOut(t: number, d: number): number;
+            static easeInOut(t: number, d: number): number;
+        }
+    }
+}
+declare module es {
+    /**
+     * 一系列静态方法来处理所有常见的tween类型结构，以及它们的unclamped lerps.unclamped lerps对于超过0-1范围的bounce、elastic或其他tweens是必需的
+     */
+    class Lerps {
+        static lerp(from: Color, to: Color, t: number): any;
+        static lerp(from: number, to: number, t: number): any;
+        static lerp(from: Rectangle, to: Rectangle, t: number): any;
+        static lerp(from: Vector2, to: Vector2, t: number): any;
+        static angleLerp(from: Vector2, to: Vector2, t: number): Vector2;
+        static ease(easeType: EaseType, from: Rectangle, to: Rectangle, t: number, duration: number): any;
+        static ease(easeType: EaseType, from: Vector2, to: Vector2, t: number, duration: number): any;
+        static ease(easeType: EaseType, from: number, to: number, t: number, duration: number): any;
+        static ease(easeType: EaseType, from: Color, to: Color, t: number, duration: number): any;
+        static easeAngle(easeType: EaseType, from: Vector2, to: Vector2, t: number, duration: number): Vector2;
+        /**
+         * 使用半隐式欧拉方法。速度较慢，但总是很稳定。见
+         * http://allenchou.net/2015/04/game-math-more-on-numeric-springing/
+         * @param currentValue
+         * @param targetValue
+         * @param velocity Velocity的引用。如果在两次调用之间改变targetValue，请务必将其重置为0
+         * @param dampingRatio 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
+         * @param angularFrequency 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定
+         */
+        static fastSpring(currentValue: Vector2, targetValue: Vector2, velocity: Vector2, dampingRatio: number, angularFrequency: number): Vector2;
+    }
+}
+declare module es {
+    /**
+     * 一系列强类型、可链式的方法来设置各种tween属性
+     */
+    interface ITween<T> extends ITweenControl {
+        /**
+         * 设置该tween的易用性类型
+         * @param easeType
+         */
+        setEaseType(easeType: EaseType): ITween<T>;
+        /**
+         * 设置启动tween前的延迟
+         * @param delay
+         */
+        setDelay(delay: number): ITween<T>;
+        /**
+         * 设置tween的持续时间
+         * @param duration
+         */
+        setDuration(duration: number): ITween<T>;
+        /**
+         * 设置这个tween使用的timeScale。
+         * TimeScale将与Time.deltaTime/Time.unscaledDeltaTime相乘，从而得到tween实际使用的delta时间
+         * @param timeScale
+         */
+        setTimeScale(timeScale: number): ITween<T>;
+        /**
+         * 设置tween使用Time.unscaledDeltaTime代替Time.deltaTime
+         */
+        setIsTimeScaleIndependent(): ITween<T>;
+        /**
+         * 设置当tween完成时应该调用的动作
+         * @param completionHandler
+         */
+        setCompletionHandler(completionHandler: (tween: ITween<T>) => void): ITween<T>;
+        /**
+         * 设置tween的循环类型。一个pingpong循环意味着从开始-结束-开始
+         * @param loopType
+         * @param loops
+         * @param delayBetweenLoops
+         */
+        setLoops(loopType: LoopType, loops: number, delayBetweenLoops: number): ITween<T>;
+        /**
+         * 设置tween的起始位置
+         * @param from
+         */
+        setFrom(from: T): ITween<T>;
+        /**
+         * 通过重置tween的from/to值和持续时间，为重复使用tween做准备。
+         * @param from
+         * @param to
+         * @param duration
+         */
+        prepareForReuse(from: T, to: T, duration: number): ITween<T>;
+        /**
+         * 如果为true(默认值)，tween将在使用后被回收。
+         * 如果在TweenManager类中进行了配置，所有的Tween<T>子类都有自己相关的自动缓存
+         * @param shouldRecycleTween
+         */
+        setRecycleTween(shouldRecycleTween: boolean): ITween<T>;
+        /**
+         * 帮助程序，只是将tween的to值设置为相对于其当前值的+从使tween
+         */
+        setIsRelative(): ITween<T>;
+        /**
+         * 允许你通过tween.context.context来设置任何可检索的对象引用。
+         * 这对于避免完成处理程序方法的闭包分配是很方便的。
+         * 你也可以在TweenManager中搜索具有特定上下文的所有tweens
+         * @param context
+         */
+        setContext(context: any): ITween<T>;
+        /**
+         * 允许你添加一个tween，这个tween完成后会被运行。
+         * 注意 nextTween 必须是一个 ITweenable! 同时注意，所有的ITweenT都是ITweenable
+         * @param nextTween
+         */
+        setNextTween(nextTween: ITweenable): ITween<T>;
+    }
+}
+declare module es {
+    /**
+     * 更多具体的Tween播放控制在这里
+     */
+    interface ITweenControl extends ITweenable {
+        /**
+         * 当使用匿名方法时，您可以在任何回调（如完成处理程序）中使用该属性来避免分配
+         */
+        context: any;
+        /**
+         * 将tween扭曲为elapsedTime，并将其限制在0和duration之间，无论tween对象是暂停、完成还是运行，都会立即更新
+         * @param elapsedTime 所用时间
+         */
+        jumpToElapsedTime(elapsedTime: number): any;
+        /**
+         * 当从StartCoroutine调用时，它将直到tween完成
+         */
+        waitForCompletion(): any;
+        /**
+         *  获取tween的目标，如果TweenTargets不一定都是一个对象，则为null，它的唯一真正用途是让TweenManager按目标查找tweens的列表
+         */
+        getTargetObject(): any;
+    }
+}
+declare module es {
+    /**
+     * 任何想要被weened的对象都需要实现这个功能。
+     * TweenManager内部喜欢做一个简单的对象来实现这个接口，并存储一个对被tweened对象的引用
+     */
+    interface ITweenTarget<T> {
+        /**
+         * 在你选择的对象上设置最终的tweened值
+         * @param value
+         */
+        setTweenedValue(value: T): any;
+        getTweenedValue(): T;
+        /**
+         * 获取tween的目标，如果TweenTargets不一定都是一个对象，则为null，它的唯一真正用途是让TweenManager按目标查找tweens的列表
+         */
+        getTargetObject(): any;
+    }
+}
+declare module es {
+    interface ITweenable {
+        /**
+         * 就像内部的Update一样，每一帧都被TweenManager调用
+         */
+        tick(): boolean;
+        /**
+         * 当一个tween被移除时，由TweenManager调用。子
+         * 类可以选择自己回收。子类应该首先在其实现中检查_shouldRecycleTween bool!
+         */
+        recycleSelf(): any;
+        /**
+         * 检查是否有tween在运行
+         */
+        isRunning(): boolean;
+        /**
+         * 启动tween
+         */
+        start(): any;
+        /**
+         * 暂停
+         */
+        pause(): any;
+        /**
+         * 暂停后恢复tween
+         */
+        resume(): any;
+        /**
+         * 停止tween，并可选择将其完成
+         * @param bringToCompletion
+         */
+        stop(bringToCompletion: boolean): any;
+    }
+}
+declare module es {
     interface IAnimFrame {
         t: number;
         value: number;
@@ -4291,38 +4907,6 @@ declare module es {
         private _getHashCodeForNumber;
         private _getHashCodeForString;
         private forOwn;
-    }
-}
-declare module es {
-    class GlobalManager {
-        _enabled: boolean;
-        /**
-         * 如果true则启用了GlobalManager。
-         * 状态的改变会导致调用OnEnabled/OnDisable
-         */
-        /**
-        * 如果true则启用了GlobalManager。
-        * 状态的改变会导致调用OnEnabled/OnDisable
-        * @param value
-        */
-        enabled: boolean;
-        /**
-         * 启用/禁用这个GlobalManager
-         * @param isEnabled
-         */
-        setEnabled(isEnabled: boolean): void;
-        /**
-         * 此GlobalManager启用时调用
-         */
-        onEnabled(): void;
-        /**
-         * 此GlobalManager禁用时调用
-         */
-        onDisabled(): void;
-        /**
-         * 在frame .update之前调用每一帧
-         */
-        update(): void;
     }
 }
 declare module es {

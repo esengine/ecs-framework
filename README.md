@@ -5,12 +5,9 @@ ecs-framework 的目标是成为功能强大的框架。它为您构建游戏提
 - AABB，圆和多边形碰撞/触发检测
 - 高效的协程，可在多个帧或动画定时中分解大型任务（Core.startCoroutine）
 - 通过Astar和广度优先搜索提供寻路支持，以查找图块地图或您自己的自定义格式 ( 参见 https://github.com/esengine/ecs-astar )
-- tween系统。任何number / Vector / 矩形/字段或属性都可以tween。 （参见 https://github.com/esengine/ecs-tween）
+- tween系统。任何number / Vector / 矩形/字段或属性都可以tween。
 - 针对核心事件的优化的事件发射器（发射器类），您也可以将其添加到自己的任何类中
 - 延迟和重复任务的调度程序（核心调度方法）
-
-## 关于ECS-FRAMEWORK
-该项目由Nez项目由C#转为Typescript。感谢该项目提供的思路：https://github.com/prime31/Nez
 
 ## 交流群
 点击链接加入群聊【ecs游戏框架交流】：https://jq.qq.com/?_wv=1027&k=29w1Nud6

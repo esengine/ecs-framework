@@ -3,7 +3,7 @@ module es {
     export class AngleConstraint extends Constraint {
         public stiffness: number = 0;
         public angleInRadius: number = 0;
-        
+
         _particleA: Particle;
         _centerParticle: Particle;
         _particleC: Particle;

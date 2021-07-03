@@ -13,9 +13,9 @@ module es {
         public static getPoint(p0: Vector2, p1: Vector2, p2: Vector2, t: number): Vector2 {
             t = MathHelper.clamp01(t);
             let oneMinusT = 1 - t;
-            return new Vector2(oneMinusT * oneMinusT).multiply(p0)
-                .addEqual(new Vector2(2 * oneMinusT * t).multiply(p1))
-                .addEqual(new Vector2(t * t).multiply(p2));
+            return p0.scale(oneMinusT * oneMinusT)
+                .addEqual(p1.scale(2 * oneMinusT * t))
+                .addEqual(p2.scale(t * t));
         }
 
         /**
@@ -29,11 +29,11 @@ module es {
         public static getPointThree(start: Vector2, firstControlPoint: Vector2, secondControlPoint: Vector2, 
             end: Vector2, t: number): Vector2 {
             t = MathHelper.clamp01(t);
-            let oneMinusT = 1 - t;
-            return new Vector2(oneMinusT * oneMinusT * oneMinusT).multiply(start)
-                .addEqual(new Vector2(3 * oneMinusT * oneMinusT * t).multiply(firstControlPoint))
-                .addEqual(new Vector2(3 * oneMinusT * t * t).multiply(secondControlPoint))
-                .addEqual(new Vector2(t * t * t).multiply(end));
+            const oneMinusT = 1 - t;
+            return start.scale(oneMinusT * oneMinusT * oneMinusT)
+                .addEqual(firstControlPoint.scale(3 * oneMinusT * oneMinusT * t))
+                .addEqual(secondControlPoint.scale(3 * oneMinusT * t * t))
+                .addEqual(end.scale(t * t * t));
         }
 
         /**

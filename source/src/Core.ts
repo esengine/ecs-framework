@@ -43,6 +43,7 @@ module es {
             Core.emitter.addObserver(CoreEvents.frameUpdated, this.update, this);
 
             Core.registerGlobalManager(this._coroutineManager);
+            Core.registerGlobalManager(new TweenManager());
             Core.registerGlobalManager(this._timerManager);
             Core.entitySystemsEnabled = enableEntitySystems;
 
