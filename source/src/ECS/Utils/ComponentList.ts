@@ -294,7 +294,7 @@ module es {
             }
         }
 
-        public onEntityTransformChanged(comp: transform.Component) {
+        public onEntityTransformChanged(comp: ComponentTransform) {
             if (this._components.length > 0 ){
                 for (let i = 0, s = this._components.length; i < s; ++ i) {
                     let component = this._components[i];

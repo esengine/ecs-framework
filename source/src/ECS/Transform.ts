@@ -1,12 +1,10 @@
-module transform {
-    export enum Component {
+module es {
+    export enum ComponentTransform {
         position,
         scale,
         rotation,
     }
-}
 
-module es {
     export enum DirtyType {
         clean = 0,
         positionDirty = 1,
@@ -458,13 +456,13 @@ module es {
 
                 switch (dirtyFlagType) {
                     case DirtyType.positionDirty:
-                        this.entity.onTransformChanged(transform.Component.position);
+                        this.entity.onTransformChanged(ComponentTransform.position);
                         break;
                     case DirtyType.rotationDirty:
-                        this.entity.onTransformChanged(transform.Component.rotation);
+                        this.entity.onTransformChanged(ComponentTransform.rotation);
                         break;
                     case DirtyType.scaleDirty:
-                        this.entity.onTransformChanged(transform.Component.scale);
+                        this.entity.onTransformChanged(ComponentTransform.scale);
                         break;
                 }
 

@@ -152,15 +152,15 @@ module es {
             this._isParentEntityAddedToScene = false;
         }
 
-        public onEntityTransformChanged(comp: transform.Component) {
+        public onEntityTransformChanged(comp: ComponentTransform) {
             switch (comp) {
-                case transform.Component.position:
+                case ComponentTransform.position:
                     this._isPositionDirty = true;
                     break;
-                case transform.Component.scale:
+                case ComponentTransform.scale:
                     this._isPositionDirty = true;
                     break;
-                case transform.Component.rotation:
+                case ComponentTransform.rotation:
                     this._isRotationDirty = true;
                     break;
             }

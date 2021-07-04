@@ -32,7 +32,7 @@ module es {
 
         protected _renderLayer: number = 0;
 
-        public onEntityTransformChanged(comp: transform.Component) {
+        public onEntityTransformChanged(comp: ComponentTransform) {
             this._areBoundsDirty = true;
         }
 

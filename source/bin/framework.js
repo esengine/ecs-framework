@@ -1762,17 +1762,14 @@ var es;
     }());
     es.Scene = Scene;
 })(es || (es = {}));
-var transform;
-(function (transform) {
-    var Component;
-    (function (Component) {
-        Component[Component["position"] = 0] = "position";
-        Component[Component["scale"] = 1] = "scale";
-        Component[Component["rotation"] = 2] = "rotation";
-    })(Component = transform.Component || (transform.Component = {}));
-})(transform || (transform = {}));
 var es;
 (function (es) {
+    var ComponentTransform;
+    (function (ComponentTransform) {
+        ComponentTransform[ComponentTransform["position"] = 0] = "position";
+        ComponentTransform[ComponentTransform["scale"] = 1] = "scale";
+        ComponentTransform[ComponentTransform["rotation"] = 2] = "rotation";
+    })(ComponentTransform = es.ComponentTransform || (es.ComponentTransform = {}));
     var DirtyType;
     (function (DirtyType) {
         DirtyType[DirtyType["clean"] = 0] = "clean";
@@ -2200,13 +2197,13 @@ var es;
                 this.hierarchyDirty |= dirtyFlagType;
                 switch (dirtyFlagType) {
                     case DirtyType.positionDirty:
-                        this.entity.onTransformChanged(transform.Component.position);
+                        this.entity.onTransformChanged(ComponentTransform.position);
                         break;
                     case DirtyType.rotationDirty:
-                        this.entity.onTransformChanged(transform.Component.rotation);
+                        this.entity.onTransformChanged(ComponentTransform.rotation);
                         break;
                     case DirtyType.scaleDirty:
-                        this.entity.onTransformChanged(transform.Component.scale);
+                        this.entity.onTransformChanged(ComponentTransform.scale);
                         break;
                 }
                 // 告诉子项发生了变换
@@ -3369,13 +3366,13 @@ var es;
         };
         Collider.prototype.onEntityTransformChanged = function (comp) {
             switch (comp) {
-                case transform.Component.position:
+                case es.ComponentTransform.position:
                     this._isPositionDirty = true;
                     break;
-                case transform.Component.scale:
+                case es.ComponentTransform.scale:
                     this._isPositionDirty = true;
                     break;
-                case transform.Component.rotation:
+                case es.ComponentTransform.rotation:
                     this._isRotationDirty = true;
                     break;
             }
@@ -10772,6 +10769,32 @@ var es;
         return LineSegments;
     }(es.Composite));
     es.LineSegments = LineSegments;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Tire = /** @class */ (function (_super) {
+        __extends(Tire, _super);
+        function Tire(origin, radius, segments, spokeStiffness, treadStiffness) {
+            if (spokeStiffness === void 0) { spokeStiffness = 1; }
+            if (treadStiffness === void 0) { treadStiffness = 1; }
+            var _this = _super.call(this) || this;
+            var stride = 2 * Math.PI / segments;
+            for (var i = 0; i < segments; i++) {
+                var theta = i * stride;
+                _this.addParticle(new es.Particle(new es.Vector2(origin.x + Math.cos(theta) * radius, origin.y + Math.sin(theta) * radius)));
+            }
+            var centerParticle = _this.addParticle(new es.Particle(origin));
+            for (var i = 0; i < segments; i++) {
+                _this.addConstraint(new es.DistanceConstraint(_this.particles[i], _this.particles[(i + 1) % segments], treadStiffness));
+                _this.addConstraint(new es.DistanceConstraint(_this.particles[i], centerParticle, spokeStiffness))
+                    .setCollidesWithColliders(false);
+                _this.addConstraint(new es.DistanceConstraint(_this.particles[i], _this.particles[(i + 5) % segments], treadStiffness));
+            }
+            return _this;
+        }
+        return Tire;
+    }(es.Composite));
+    es.Tire = Tire;
 })(es || (es = {}));
 var es;
 (function (es) {

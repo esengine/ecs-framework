@@ -192,7 +192,7 @@ module es {
             return this.transform.worldToLocalTransform;
         }
 
-        public onTransformChanged(comp: transform.Component) {
+        public onTransformChanged(comp: ComponentTransform) {
             // 通知我们的子项改变了位置
             this.components.onEntityTransformChanged(comp);
         }
