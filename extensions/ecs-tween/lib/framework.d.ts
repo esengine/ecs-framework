@@ -4184,9 +4184,19 @@ declare module es {
     }
 }
 declare module es {
+    class Cloth extends Composite {
+        constructor(topLeftPosition: Vector2, width: number, height: number, segments?: number, stiffness?: number, tearSensitivity?: number, connectHorizontalParticles?: boolean);
+    }
+}
+declare module es {
     class LineSegments extends Composite {
         constructor(vertices: Vector2[], stiffness: number);
         pinParticleAtIndex(index: number): LineSegments;
+    }
+}
+declare module es {
+    class Ragdoll extends Composite {
+        constructor(x: number, y: number, bodyHeight: number);
     }
 }
 declare module es {

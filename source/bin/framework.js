@@ -10750,6 +10750,41 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Cloth = /** @class */ (function (_super) {
+        __extends(Cloth, _super);
+        function Cloth(topLeftPosition, width, height, segments, stiffness, tearSensitivity, connectHorizontalParticles) {
+            if (segments === void 0) { segments = 20; }
+            if (stiffness === void 0) { stiffness = 0.25; }
+            if (tearSensitivity === void 0) { tearSensitivity = 5; }
+            if (connectHorizontalParticles === void 0) { connectHorizontalParticles = true; }
+            var _this = _super.call(this) || this;
+            var xStride = width / segments;
+            var yStride = height / segments;
+            for (var y = 0; y < segments; y++) {
+                for (var x = 0; x < segments; x++) {
+                    var px = topLeftPosition.x + x * xStride;
+                    var py = topLeftPosition.y + y + yStride;
+                    var particle = _this.addParticle(new es.Particle(new es.Vector2(px, py)));
+                    if (connectHorizontalParticles && x > 0)
+                        _this.addConstraint(new es.DistanceConstraint(_this.particles[y * segments + x], _this.particles[y * segments + x - 1], stiffness))
+                            .setTearSensitivity(tearSensitivity)
+                            .setCollidesWithColliders(false);
+                    if (y > 0)
+                        _this.addConstraint(new es.DistanceConstraint(_this.particles[y * segments + x], _this.particles[(y - 1) * segments + x], stiffness))
+                            .setTearSensitivity(tearSensitivity)
+                            .setCollidesWithColliders(false);
+                    if (y == 0)
+                        particle.pin();
+                }
+            }
+            return _this;
+        }
+        return Cloth;
+    }(es.Composite));
+    es.Cloth = Cloth;
+})(es || (es = {}));
+var es;
+(function (es) {
     var LineSegments = /** @class */ (function (_super) {
         __extends(LineSegments, _super);
         function LineSegments(vertices, stiffness) {
@@ -10769,6 +10804,58 @@ var es;
         return LineSegments;
     }(es.Composite));
     es.LineSegments = LineSegments;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Ragdoll = /** @class */ (function (_super) {
+        __extends(Ragdoll, _super);
+        function Ragdoll(x, y, bodyHeight) {
+            var _this = _super.call(this) || this;
+            var headLength = bodyHeight / 7.5;
+            var head = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            head.radius = headLength * 0.75;
+            head.mass = 4;
+            var shoulder = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            shoulder.mass = 26;
+            _this.addConstraint(new es.DistanceConstraint(head, shoulder, 1, 5 / 4 * headLength));
+            var elbowLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            var elbowRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            elbowLeft.mass = 2;
+            elbowRight.mass = 2;
+            _this.addConstraint(new es.DistanceConstraint(elbowLeft, shoulder, 1, headLength * 3 / 2));
+            _this.addConstraint(new es.DistanceConstraint(elbowRight, shoulder, 1, headLength * 3 / 2));
+            var handLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            var handRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            handLeft.mass = 2;
+            handRight.mass = 2;
+            _this.addConstraint(new es.DistanceConstraint(handLeft, elbowLeft, 1, headLength * 2));
+            _this.addConstraint(new es.DistanceConstraint(handRight, elbowRight, 1, headLength * 2));
+            var pelvis = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            pelvis.mass = 15;
+            _this.addConstraint(new es.DistanceConstraint(pelvis, shoulder, 0.8, headLength * 3.5));
+            _this.addConstraint(new es.DistanceConstraint(pelvis, head, 0.02, bodyHeight * 2))
+                .setCollidesWithColliders(false);
+            var kneeLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            var kneeRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            kneeLeft.mass = 10;
+            kneeRight.mass = 10;
+            _this.addConstraint(new es.DistanceConstraint(kneeLeft, pelvis, 1, headLength * 2));
+            _this.addConstraint(new es.DistanceConstraint(kneeRight, pelvis, 1, headLength * 2));
+            var footLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            var footRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            footLeft.mass = 5;
+            footRight.mass = 5;
+            _this.addConstraint(new es.DistanceConstraint(footLeft, kneeLeft, 1, headLength * 2));
+            _this.addConstraint(new es.DistanceConstraint(footRight, kneeRight, 1, headLength * 2));
+            _this.addConstraint(new es.DistanceConstraint(footLeft, shoulder, 0.001, bodyHeight * 2))
+                .setCollidesWithColliders(false);
+            _this.addConstraint(new es.DistanceConstraint(footLeft, shoulder, 0.001, bodyHeight * 2))
+                .setCollidesWithColliders(false);
+            return _this;
+        }
+        return Ragdoll;
+    }(es.Composite));
+    es.Ragdoll = Ragdoll;
 })(es || (es = {}));
 var es;
 (function (es) {
