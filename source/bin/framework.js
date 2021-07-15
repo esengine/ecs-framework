@@ -96,6 +96,7 @@ var es;
             Core.emitter = new es.Emitter();
             Core.emitter.addObserver(es.CoreEvents.frameUpdated, this.update, this);
             Core.registerGlobalManager(this._coroutineManager);
+            Core.registerGlobalManager(new es.TweenManager());
             Core.registerGlobalManager(this._timerManager);
             Core.entitySystemsEnabled = enableEntitySystems;
             this.debug = debug;
@@ -170,9 +171,10 @@ var es;
          * @param type
          */
         Core.getGlobalManager = function (type) {
-            for (var i = 0; i < this._instance._globalManagers.length; i++) {
-                if (this._instance._globalManagers[i] instanceof type)
-                    return this._instance._globalManagers[i];
+            for (var i = 0, s = Core._instance._globalManagers.length; i < s; ++i) {
+                var manager = Core._instance._globalManagers[i];
+                if (manager instanceof type)
+                    return manager;
             }
             return null;
         };
@@ -511,6 +513,7 @@ var es;
          */
         Component.prototype.onEntityTransformChanged = function (comp) {
         };
+        Component.prototype.debugRender = function (batcher) { };
         /**
          *当父实体或此组件启用时调用
          */
@@ -583,6 +586,10 @@ var es;
          * 每帧更新事件
          */
         CoreEvents[CoreEvents["frameUpdated"] = 1] = "frameUpdated";
+        /**
+         * 当渲染发生时触发
+         */
+        CoreEvents[CoreEvents["renderChanged"] = 2] = "renderChanged";
     })(CoreEvents = es.CoreEvents || (es.CoreEvents = {}));
 })(es || (es = {}));
 var es;
@@ -835,7 +842,7 @@ var es;
                 this.transform.setScale(scale);
             }
             else {
-                this.transform.setScale(new es.Vector2(scale));
+                this.transform.setScale(new es.Vector2(scale, scale));
             }
             return this;
         };
@@ -844,7 +851,7 @@ var es;
                 this.transform.setLocalScale(scale);
             }
             else {
-                this.transform.setLocalScale(new es.Vector2(scale));
+                this.transform.setLocalScale(new es.Vector2(scale, scale));
             }
             return this;
         };
@@ -945,6 +952,11 @@ var es;
         Entity.prototype.update = function () {
             this.components.update();
         };
+        Entity.prototype.debugRender = function (batcher) {
+            if (!batcher)
+                return;
+            this.components.debugRender(batcher);
+        };
         /**
          * 创建组件的新实例。返回实例组件
          * @param componentType
@@ -1042,6 +1054,54 @@ var es;
                 this.removeComponent(this.components.buffer[i]);
             }
         };
+        Entity.prototype.tweenPositionTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.position);
+            tween.initialize(tween, to, duration);
+            return tween;
+        };
+        Entity.prototype.tweenLocalPositionTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.localPosition);
+            tween.initialize(tween, to, duration);
+            return tween;
+        };
+        Entity.prototype.tweenScaleTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            if (typeof (to) == 'number') {
+                return this.tweenScaleTo(new es.Vector2(to, to), duration);
+            }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.scale);
+            tween.initialize(tween, to, duration);
+            return tween;
+        };
+        Entity.prototype.tweenLocalScaleTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            if (typeof (to) == 'number') {
+                return this.tweenLocalScaleTo(new es.Vector2(to, to), duration);
+            }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.localScale);
+            tween.initialize(tween, to, duration);
+            return tween;
+        };
+        Entity.prototype.tweenRotationDegreesTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.rotationDegrees);
+            tween.initialize(tween, new es.Vector2(to, to), duration);
+            return tween;
+        };
+        Entity.prototype.tweenLocalRotationDegreesTo = function (to, duration) {
+            if (duration === void 0) { duration = 0.3; }
+            var tween = es.Pool.obtain(es.TransformVector2Tween);
+            tween.setTargetAndType(this.transform, es.TransformTargetType.localRotationDegrees);
+            tween.initialize(tween, new es.Vector2(to, to), duration);
+            return tween;
+        };
         Entity.prototype.compareTo = function (other) {
             var compare = this._updateOrder - other._updateOrder;
             if (compare == 0)
@@ -1072,10 +1132,12 @@ var es;
          * @param y 二维空间的y坐标
          */
         function Vector2(x, y) {
+            if (x === void 0) { x = 0; }
+            if (y === void 0) { y = 0; }
             this.x = 0;
             this.y = 0;
-            this.x = x ? x : 0;
-            this.y = y != undefined ? y : this.x;
+            this.x = x;
+            this.y = y;
         }
         Object.defineProperty(Vector2, "zero", {
             get: function () {
@@ -1105,6 +1167,34 @@ var es;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Vector2, "up", {
+            get: function () {
+                return new Vector2(0, -1);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Vector2, "down", {
+            get: function () {
+                return new Vector2(0, 1);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Vector2, "left", {
+            get: function () {
+                return new Vector2(-1, 0);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Vector2, "right", {
+            get: function () {
+                return new Vector2(1, 0);
+            },
+            enumerable: true,
+            configurable: true
+        });
         /**
          *
          * @param value1
@@ -1127,68 +1217,19 @@ var es;
             result.y = value1.y / value2.y;
             return result;
         };
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        Vector2.multiply = function (value1, value2) {
-            var result = new Vector2(0, 0);
-            result.x = value1.x * value2.x;
-            result.y = value1.y * value2.y;
+        Vector2.divideScaler = function (value1, value2) {
+            var result = Vector2.zero;
+            result.x = value1.x / value2;
+            result.y = value1.y / value2;
             return result;
-        };
-        /**
-         *
-         * @param value1
-         * @param value2
-         * @returns
-         */
-        Vector2.multiplyScaler = function (value1, value2) {
-            var result = new Vector2(0, 0);
-            result.x = value1.x * value2;
-            result.y = value1.x * value2;
-            return result;
-        };
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        Vector2.subtract = function (value1, value2) {
-            var result = new Vector2(0, 0);
-            result.x = value1.x - value2.x;
-            result.y = value1.y - value2.y;
-            return result;
-        };
-        /**
-         * 创建一个新的Vector2
-         * 它包含来自另一个向量的标准化值。
-         * @param value
-         */
-        Vector2.normalize = function (value) {
-            var nValue = new Vector2(value.x, value.y);
-            var val = 1 / Math.sqrt((nValue.x * nValue.x) + (nValue.y * nValue.y));
-            nValue.x *= val;
-            nValue.y *= val;
-            return nValue;
-        };
-        /**
-         * 返回两个向量的点积
-         * @param value1
-         * @param value2
-         */
-        Vector2.dot = function (value1, value2) {
-            return (value1.x * value2.x) + (value1.y * value2.y);
         };
         /**
          * 返回两个向量之间距离的平方
          * @param value1
          * @param value2
          */
-        Vector2.distanceSquared = function (value1, value2) {
-            var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
-            return (v1 * v1) + (v2 * v2);
+        Vector2.sqrDistance = function (value1, value2) {
+            return Math.pow(value1.x - value2.x, 2) + Math.pow(value1.y - value2.y, 2);
         };
         /**
          * 将指定的值限制在一个范围内
@@ -1241,9 +1282,8 @@ var es;
          * @param value2
          * @returns 两个向量之间的距离
          */
-        Vector2.distance = function (value1, value2) {
-            var v1 = value1.x - value2.x, v2 = value1.y - value2.y;
-            return Math.sqrt((v1 * v1) + (v2 * v2));
+        Vector2.distance = function (vec1, vec2) {
+            return Math.sqrt(Math.pow(vec1.x - vec2.x, 2) + Math.pow(vec1.y - vec2.y, 2));
         };
         /**
          * 返回两个向量之间的角度，单位是度数
@@ -1251,9 +1291,9 @@ var es;
          * @param to
          */
         Vector2.angle = function (from, to) {
-            from = Vector2.normalize(from);
-            to = Vector2.normalize(to);
-            return Math.acos(es.MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
+            from = from.normalize();
+            to = to.normalize();
+            return Math.acos(es.MathHelper.clamp(from.dot(to), -1, 1)) * es.MathHelper.Rad2Deg;
         };
         /**
          * 创建一个包含指定向量反转的新Vector2
@@ -1272,7 +1312,7 @@ var es;
          * @returns
          */
         Vector2.reflect = function (vector, normal) {
-            var result = new Vector2();
+            var result = es.Vector2.zero;
             var val = 2 * ((vector.x * normal.x) + (vector.y * normal.y));
             result.x = vector.x - (normal.x * val);
             result.y = vector.y - (normal.y * val);
@@ -1288,13 +1328,23 @@ var es;
         Vector2.smoothStep = function (value1, value2, amount) {
             return new Vector2(es.MathHelper.smoothStep(value1.x, value2.x, amount), es.MathHelper.smoothStep(value1.y, value2.y, amount));
         };
+        Vector2.prototype.setTo = function (x, y) {
+            this.x = x;
+            this.y = y;
+        };
+        Vector2.prototype.negate = function () {
+            return this.scale(-1);
+        };
         /**
          *
          * @param value
          */
-        Vector2.prototype.add = function (value) {
-            this.x += value.x;
-            this.y += value.y;
+        Vector2.prototype.add = function (v) {
+            return new Vector2(this.x + v.x, this.y + v.y);
+        };
+        Vector2.prototype.addEqual = function (v) {
+            this.x += v.x;
+            this.y += v.y;
             return this;
         };
         /**
@@ -1302,18 +1352,17 @@ var es;
          * @param value
          */
         Vector2.prototype.divide = function (value) {
-            this.x /= value.x;
-            this.y /= value.y;
-            return this;
+            return new Vector2(this.x / value.x, this.y / value.y);
+        };
+        Vector2.prototype.divideScaler = function (value) {
+            return new Vector2(this.x / value, this.y / value);
         };
         /**
          *
          * @param value
          */
         Vector2.prototype.multiply = function (value) {
-            this.x *= value.x;
-            this.y *= value.y;
-            return this;
+            return new Vector2(value.x * this.x, value.y * this.y);
         };
         /**
          *
@@ -1330,22 +1379,64 @@ var es;
          * @param value 要减去的Vector2
          * @returns 当前Vector2
          */
-        Vector2.prototype.subtract = function (value) {
-            this.x -= value.x;
-            this.y -= value.y;
+        Vector2.prototype.sub = function (value) {
+            return new Vector2(this.x - value.x, this.y - value.y);
+        };
+        Vector2.prototype.subEqual = function (v) {
+            this.x -= v.x;
+            this.y -= v.y;
             return this;
+        };
+        Vector2.prototype.dot = function (v) {
+            return this.x * v.x + this.y * v.y;
+        };
+        /**
+         *
+         * @param size
+         * @returns
+         */
+        Vector2.prototype.scale = function (size) {
+            return new Vector2(this.x * size, this.y * size);
+        };
+        Vector2.prototype.scaleEqual = function (size) {
+            this.x *= size;
+            this.y *= size;
+            return this;
+        };
+        Vector2.prototype.transform = function (matrix) {
+            return new Vector2(this.x * matrix.m11 + this.y * matrix.m21 + matrix.m31, this.x * matrix.m12 + this.y * matrix.m22 + matrix.m32);
+        };
+        Vector2.prototype.normalize = function () {
+            var d = this.distance();
+            if (d > 0) {
+                return new Vector2(this.x / d, this.y / d);
+            }
+            else {
+                return new Vector2(0, 1);
+            }
         };
         /**
          * 将这个Vector2变成一个方向相同的单位向量
          */
-        Vector2.prototype.normalize = function () {
-            var val = 1 / Math.sqrt((this.x * this.x) + (this.y * this.y));
-            this.x *= val;
-            this.y *= val;
+        Vector2.prototype.normalizeEqual = function () {
+            var d = this.distance();
+            if (d > 0) {
+                this.setTo(this.x / d, this.y / d);
+                return this;
+            }
+            else {
+                this.setTo(0, 1);
+                return this;
+            }
         };
-        /** 返回它的长度 */
-        Vector2.prototype.length = function () {
-            return Math.sqrt((this.x * this.x) + (this.y * this.y));
+        Vector2.prototype.magnitude = function () {
+            return this.distance();
+        };
+        Vector2.prototype.distance = function (v) {
+            if (!v) {
+                v = Vector2.zero;
+            }
+            return Math.sqrt(Math.pow(this.x - v.x, 2) + Math.pow(this.y - v.y, 2));
         };
         /**
          * 返回该Vector2的平方长度
@@ -1366,8 +1457,8 @@ var es;
          * @param right
          */
         Vector2.prototype.angleBetween = function (left, right) {
-            var one = Vector2.subtract(left, this);
-            var two = Vector2.subtract(right, this);
+            var one = left.sub(this);
+            var two = right.sub(this);
             return es.Vector2Ext.angle(one, two);
         };
         /**
@@ -1375,11 +1466,9 @@ var es;
          * @param other 要比较的对象
          * @returns 如果实例相同true 否则false
          */
-        Vector2.prototype.equals = function (other) {
-            if (other instanceof Vector2) {
-                return other.x == this.x && other.y == this.y;
-            }
-            return false;
+        Vector2.prototype.equals = function (other, tolerance) {
+            if (tolerance === void 0) { tolerance = 0.001; }
+            return Math.abs(this.x - other.x) <= tolerance && Math.abs(this.y - other.y) <= tolerance;
         };
         Vector2.prototype.isValid = function () {
             return es.MathHelper.isValid(this.x) && es.MathHelper.isValid(this.y);
@@ -1414,6 +1503,13 @@ var es;
         Vector2.hermite = function (value1, tangent1, value2, tangent2, amount) {
             return new Vector2(es.MathHelper.hermite(value1.x, tangent1.x, value2.x, tangent2.x, amount), es.MathHelper.hermite(value1.y, tangent1.y, value2.y, tangent2.y, amount));
         };
+        Vector2.unsignedAngle = function (from, to, round) {
+            if (round === void 0) { round = true; }
+            from.normalizeEqual();
+            to.normalizeEqual();
+            var angle = Math.acos(es.MathHelper.clamp(from.dot(to), -1, 1)) * es.MathHelper.Rad2Deg;
+            return round ? Math.round(angle) : angle;
+        };
         Vector2.prototype.clone = function () {
             return new Vector2(this.x, this.y);
         };
@@ -1429,7 +1525,9 @@ var es;
     var Scene = /** @class */ (function () {
         function Scene() {
             this._sceneComponents = [];
+            this._renderers = [];
             this.entities = new es.EntityList(this);
+            this.renderableComponents = new es.RenderableComponentList();
             this.entityProcessors = new es.EntityProcessorList();
             this.identifierPool = new es.IdentifierPool();
             this.initialize();
@@ -1452,6 +1550,9 @@ var es;
         Scene.prototype.unload = function () {
         };
         Scene.prototype.begin = function () {
+            if (this._renderers.length == 0) {
+                this.addRenderer(new es.DefaultRenderer());
+            }
             es.Physics.reset();
             if (this.entityProcessors != null)
                 this.entityProcessors.begin();
@@ -1460,11 +1561,14 @@ var es;
         };
         Scene.prototype.end = function () {
             this._didSceneBegin = false;
+            for (var i = 0; i < this._renderers.length; i++)
+                this._renderers[i].unload();
             this.entities.removeAllEntities();
             for (var i = 0; i < this._sceneComponents.length; i++) {
                 this._sceneComponents[i].onRemovedFromScene();
             }
             this._sceneComponents.length = 0;
+            this.camera = null;
             es.Physics.clear();
             if (this.entityProcessors)
                 this.entityProcessors.end();
@@ -1484,6 +1588,30 @@ var es;
             this.entities.update();
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
+            this.renderableComponents.updateLists();
+            this.render();
+        };
+        Scene.prototype.render = function () {
+            for (var i = 0; i < this._renderers.length; i++) {
+                this._renderers[i].render(this);
+            }
+        };
+        Scene.prototype.addRenderer = function (renderer) {
+            this._renderers.push(renderer);
+            this._renderers.sort(function (self, other) { return self.renderOrder - other.renderOrder; });
+            renderer.onAddedToScene(this);
+            return renderer;
+        };
+        Scene.prototype.getRenderer = function (type) {
+            for (var i = 0; i < this._renderers.length; i++) {
+                if (this._renderers[i] instanceof type)
+                    return this._renderers[i];
+            }
+            return null;
+        };
+        Scene.prototype.removeRenderer = function (renderer) {
+            new es.List(this._renderers).remove(renderer);
+            renderer.unload();
         };
         /**
          * 向组件列表添加并返回SceneComponent
@@ -1634,17 +1762,14 @@ var es;
     }());
     es.Scene = Scene;
 })(es || (es = {}));
-var transform;
-(function (transform) {
-    var Component;
-    (function (Component) {
-        Component[Component["position"] = 0] = "position";
-        Component[Component["scale"] = 1] = "scale";
-        Component[Component["rotation"] = 2] = "rotation";
-    })(Component = transform.Component || (transform.Component = {}));
-})(transform || (transform = {}));
 var es;
 (function (es) {
+    var ComponentTransform;
+    (function (ComponentTransform) {
+        ComponentTransform[ComponentTransform["position"] = 0] = "position";
+        ComponentTransform[ComponentTransform["scale"] = 1] = "scale";
+        ComponentTransform[ComponentTransform["rotation"] = 2] = "rotation";
+    })(ComponentTransform = es.ComponentTransform || (es.ComponentTransform = {}));
     var DirtyType;
     (function (DirtyType) {
         DirtyType[DirtyType["clean"] = 0] = "clean";
@@ -1655,11 +1780,16 @@ var es;
     var Transform = /** @class */ (function () {
         function Transform(entity) {
             /**
+             * 值会根据位置、旋转和比例自动重新计算
+             */
+            this._localTransform = es.Matrix2D.identity;
+            /**
              * 值将自动从本地和父矩阵重新计算。
              */
             this._worldTransform = es.Matrix2D.identity;
             this._rotationMatrix = es.Matrix2D.identity;
             this._translationMatrix = es.Matrix2D.identity;
+            this._scaleMatrix = es.Matrix2D.identity;
             this._children = [];
             this._worldToLocalTransform = es.Matrix2D.identity;
             this._worldInverseTransform = es.Matrix2D.identity;
@@ -1744,7 +1874,7 @@ var es;
         Object.defineProperty(Transform.prototype, "worldToLocalTransform", {
             get: function () {
                 if (this._worldToLocalDirty) {
-                    if (!this.parent) {
+                    if (this.parent == null) {
                         this._worldToLocalTransform = es.Matrix2D.identity;
                     }
                     else {
@@ -1900,15 +2030,16 @@ var es;
          * @param parent
          */
         Transform.prototype.setParent = function (parent) {
+            var _this = this;
             if (this._parent == parent)
                 return this;
             if (this._parent != null) {
-                var children = new es.List(this._parent._children);
-                children.remove(this);
+                var index = this._parent._children.findIndex(function (t) { return t == _this; });
+                if (index != -1)
+                    this._parent._children.splice(index, 1);
             }
             if (parent != null) {
-                var children = new es.List(parent._children);
-                children.add(this);
+                parent._children.push(this);
             }
             this._parent = parent;
             this.setDirty(DirtyType.positionDirty);
@@ -1925,7 +2056,7 @@ var es;
                 return this;
             this._position = position;
             if (this.parent != null) {
-                this.localPosition = es.Vector2.transform(this._position, this._worldToLocalTransform);
+                this.localPosition = es.Vector2.transform(this._position, this.worldToLocalTransform);
             }
             else {
                 this.localPosition = position;
@@ -1951,7 +2082,7 @@ var es;
          */
         Transform.prototype.setRotation = function (radians) {
             this._rotation = radians;
-            if (this.parent) {
+            if (this.parent != null) {
                 this.localRotation = this.parent.rotation + radians;
             }
             else {
@@ -1972,8 +2103,8 @@ var es;
          */
         Transform.prototype.lookAt = function (pos) {
             var sign = this.position.x > pos.x ? -1 : 1;
-            var vectorToAlignTo = es.Vector2.normalize(es.Vector2.subtract(this.position, pos));
-            this.rotation = sign * Math.acos(es.Vector2.dot(vectorToAlignTo, es.Vector2.unitY));
+            var vectorToAlignTo = this.position.sub(pos).normalize();
+            this.rotation = sign * Math.acos(vectorToAlignTo.dot(es.Vector2.unitY));
         };
         /**
          * 相对于父变换的旋转设置变换的旋转。如果转换没有父元素，则与transform.rotation相同
@@ -1998,7 +2129,7 @@ var es;
          */
         Transform.prototype.setScale = function (scale) {
             this._scale = scale;
-            if (this.parent) {
+            if (this.parent != null) {
                 this.localScale = es.Vector2.divide(scale, this.parent._scale);
             }
             else {
@@ -2028,19 +2159,19 @@ var es;
                     this.parent.updateTransform();
                 if (this._localDirty) {
                     if (this._localPositionDirty) {
-                        this._translationMatrix = es.Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y);
+                        es.Matrix2D.createTranslation(this._localPosition.x, this._localPosition.y, this._translationMatrix);
                         this._localPositionDirty = false;
                     }
                     if (this._localRotationDirty) {
-                        this._rotationMatrix = es.Matrix2D.createRotation(this._localRotation);
+                        es.Matrix2D.createRotation(this._localRotation, this._rotationMatrix);
                         this._localRotationDirty = false;
                     }
                     if (this._localScaleDirty) {
-                        this._scaleMatrix = es.Matrix2D.createScale(this._localScale.x, this._localScale.y);
+                        es.Matrix2D.createScale(this._localScale.x, this._localScale.y, this._scaleMatrix);
                         this._localScaleDirty = false;
                     }
-                    this._localTransform = this._scaleMatrix.multiply(this._rotationMatrix);
-                    this._localTransform = this._localTransform.multiply(this._translationMatrix);
+                    es.Matrix2D.multiply(this._scaleMatrix, this._rotationMatrix, this._localTransform);
+                    es.Matrix2D.multiply(this._localTransform, this._translationMatrix, this._localTransform);
                     if (this.parent == null) {
                         this._worldTransform = this._localTransform;
                         this._rotation = this._localRotation;
@@ -2050,9 +2181,10 @@ var es;
                     this._localDirty = false;
                 }
                 if (this.parent != null) {
-                    this._worldTransform = this._localTransform.multiply(this.parent._worldTransform);
+                    es.Matrix2D.multiply(this._localTransform, this.parent._worldTransform, this._worldTransform);
                     this._rotation = this._localRotation + this.parent._rotation;
-                    this._scale = es.Vector2.multiply(this.parent._scale, this._localScale);
+                    this._scale = this.parent._scale.multiply(this._localScale);
+                    ;
                     this._worldInverseDirty = true;
                 }
                 this._worldToLocalDirty = true;
@@ -2064,14 +2196,14 @@ var es;
             if ((this.hierarchyDirty & dirtyFlagType) == 0) {
                 this.hierarchyDirty |= dirtyFlagType;
                 switch (dirtyFlagType) {
-                    case es.DirtyType.positionDirty:
-                        this.entity.onTransformChanged(transform.Component.position);
+                    case DirtyType.positionDirty:
+                        this.entity.onTransformChanged(ComponentTransform.position);
                         break;
-                    case es.DirtyType.rotationDirty:
-                        this.entity.onTransformChanged(transform.Component.rotation);
+                    case DirtyType.rotationDirty:
+                        this.entity.onTransformChanged(ComponentTransform.rotation);
                         break;
-                    case es.DirtyType.scaleDirty:
-                        this.entity.onTransformChanged(transform.Component.scale);
+                    case DirtyType.scaleDirty:
+                        this.entity.onTransformChanged(ComponentTransform.scale);
                         break;
                 }
                 // 告诉子项发生了变换
@@ -2084,8 +2216,8 @@ var es;
          * @param transform
          */
         Transform.prototype.copyFrom = function (transform) {
-            this._position = transform.position;
-            this._localPosition = transform._localPosition;
+            this._position = transform.position.clone();
+            this._localPosition = transform._localPosition.clone();
             this._rotation = transform._rotation;
             this._localRotation = transform._localRotation;
             this._scale = transform._scale;
@@ -2214,7 +2346,7 @@ var es;
             /**
              * 该刚体的速度
              */
-            _this.velocity = new es.Vector2();
+            _this.velocity = es.Vector2.zero;
             _this._mass = 10;
             _this._elasticity = 0.5;
             _this._friction = 0.5;
@@ -2323,18 +2455,28 @@ var es;
             this._glue = es.MathHelper.clamp(value, 0, 10);
             return this;
         };
+        ArcadeRigidbody.prototype.setVelocity = function (velocity) {
+            this.velocity = velocity;
+            return this;
+        };
         /**
          * 用刚体的质量给刚体加上一个瞬间的力脉冲。力是一个加速度，单位是每秒像素每秒。将力乘以100000，使数值使用更合理
          * @param force
          */
         ArcadeRigidbody.prototype.addImpulse = function (force) {
             if (!this.isImmovable) {
-                this.velocity = this.velocity.add(es.Vector2.multiplyScaler(force, 100000)
-                    .multiplyScaler(this._inverseMass * es.Time.deltaTime * es.Time.deltaTime));
+                this.velocity.addEqual(force.scale(100000 * (this._inverseMass * (es.Time.deltaTime * es.Time.deltaTime))));
             }
         };
         ArcadeRigidbody.prototype.onAddedToEntity = function () {
-            this._collider = this.entity.getComponent(es.Collider);
+            this._collider = null;
+            for (var i = 0; i < this.entity.components.buffer.length; i++) {
+                var component = this.entity.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    this._collider = component;
+                    break;
+                }
+            }
             es.Debug.warnIf(this._collider == null, "ArcadeRigidbody 没有 Collider。ArcadeRigidbody需要一个Collider!");
         };
         ArcadeRigidbody.prototype.update = function () {
@@ -2344,14 +2486,16 @@ var es;
                 return;
             }
             if (this.shouldUseGravity)
-                this.velocity = this.velocity.add(es.Vector2.multiplyScaler(es.Physics.gravity, es.Time.deltaTime));
-            this.entity.transform.position = this.entity.transform.position.add(es.Vector2.multiplyScaler(this.velocity, es.Time.deltaTime));
+                this.velocity.addEqual(es.Physics.gravity.scale(es.Time.deltaTime));
+            this.entity.position = this.entity.position.add(this.velocity.scale(es.Time.deltaTime));
             var collisionResult = new es.CollisionResult();
             // 捞取我们在新的位置上可能会碰撞到的任何东西
-            var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this._collider, this._collider.collidesWithLayers.value);
+            var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(this._collider, this._collider.bounds, this._collider.collidesWithLayers.value);
             try {
                 for (var neighbors_1 = __values(neighbors), neighbors_1_1 = neighbors_1.next(); !neighbors_1_1.done; neighbors_1_1 = neighbors_1.next()) {
                     var neighbor = neighbors_1_1.value;
+                    if (!neighbor)
+                        continue;
                     // 如果邻近的对撞机是同一个实体，则忽略它
                     if (neighbor.entity.equals(this.entity)) {
                         continue;
@@ -2365,10 +2509,9 @@ var es;
                         }
                         else {
                             // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                            this.entity.transform.position = this.entity.transform.position.subtract(collisionResult.minimumTranslationVector);
-                            var relativeVelocity = this.velocity.clone();
-                            this.calculateResponseVelocity(relativeVelocity, collisionResult.minimumTranslationVector, relativeVelocity);
-                            this.velocity = this.velocity.add(relativeVelocity);
+                            this.entity.position = this.entity.position.sub(collisionResult.minimumTranslationVector);
+                            var relativeVelocity = this.calculateResponseVelocity(this.velocity, collisionResult.minimumTranslationVector);
+                            this.velocity.addEqual(relativeVelocity);
                         }
                     }
                 }
@@ -2388,14 +2531,14 @@ var es;
          */
         ArcadeRigidbody.prototype.processOverlap = function (other, minimumTranslationVector) {
             if (this.isImmovable) {
-                other.entity.transform.position = other.entity.transform.position.add(minimumTranslationVector);
+                other.entity.position = other.entity.position.add(minimumTranslationVector);
             }
             else if (other.isImmovable) {
-                this.entity.transform.position = this.entity.transform.position.subtract(minimumTranslationVector);
+                this.entity.position = this.entity.position.sub(minimumTranslationVector);
             }
             else {
-                this.entity.transform.position = this.entity.transform.position.subtract(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
-                other.entity.transform.position = other.entity.transform.position.add(es.Vector2.multiplyScaler(minimumTranslationVector, 0.5));
+                this.entity.position = this.entity.position.sub(minimumTranslationVector.scale(0.5));
+                other.entity.position = other.entity.position.add(minimumTranslationVector.scale(0.5));
             }
         };
         /**
@@ -2407,14 +2550,14 @@ var es;
             // 我们计算两个相撞物体的响应。
             // 计算的基础是沿碰撞表面法线反射的物体的相对速度。
             // 然后，响应的一部分会根据质量加到每个物体上
-            var relativeVelocity = es.Vector2.subtract(this.velocity, other.velocity);
-            this.calculateResponseVelocity(relativeVelocity, minimumTranslationVector, relativeVelocity);
+            var relativeVelocity = this.velocity.sub(other.velocity);
+            relativeVelocity = this.calculateResponseVelocity(relativeVelocity, minimumTranslationVector);
             // 现在，我们使用质量来线性缩放两个刚体上的响应
             var totalinverseMass = this._inverseMass + other._inverseMass;
             var ourResponseFraction = this._inverseMass / totalinverseMass;
             var otherResponseFraction = other._inverseMass / totalinverseMass;
-            this.velocity = this.velocity.add(es.Vector2.multiplyScaler(relativeVelocity, ourResponseFraction));
-            other.velocity = other.velocity.subtract(es.Vector2.multiplyScaler(relativeVelocity, otherResponseFraction));
+            this.velocity = this.velocity.add(relativeVelocity.scale(ourResponseFraction));
+            other.velocity = other.velocity.sub(relativeVelocity.scale(otherResponseFraction));
         };
         /**
          *  给定两个物体和MTV之间的相对速度，本方法修改相对速度，使其成为碰撞响应
@@ -2422,16 +2565,15 @@ var es;
          * @param minimumTranslationVector
          * @param responseVelocity
          */
-        ArcadeRigidbody.prototype.calculateResponseVelocity = function (relativeVelocity, minimumTranslationVector, responseVelocity) {
-            if (responseVelocity === void 0) { responseVelocity = new es.Vector2(); }
+        ArcadeRigidbody.prototype.calculateResponseVelocity = function (relativeVelocity, minimumTranslationVector) {
             // 首先，我们得到反方向的归一化MTV：表面法线
-            var inverseMTV = es.Vector2.multiplyScaler(minimumTranslationVector, -1);
-            var normal = es.Vector2.normalize(inverseMTV);
+            var inverseMTV = minimumTranslationVector.scale(-1);
+            var normal = inverseMTV.normalize();
             // 速度是沿碰撞法线和碰撞平面分解的。
             // 弹性将影响沿法线的响应（法线速度分量），摩擦力将影响速度的切向分量（切向速度分量）
-            var n = es.Vector2.dot(relativeVelocity, normal);
-            var normalVelocityComponent = es.Vector2.multiplyScaler(normal, n);
-            var tangentialVelocityComponent = es.Vector2.subtract(relativeVelocity, normalVelocityComponent);
+            var n = relativeVelocity.dot(normal);
+            var normalVelocityComponent = normal.scale(n);
+            var tangentialVelocityComponent = relativeVelocity.sub(normalVelocityComponent);
             if (n > 0)
                 normalVelocityComponent = es.Vector2.zero;
             // 如果切向分量的平方幅度小于glue，那么我们就把摩擦力提升到最大
@@ -2439,12 +2581,428 @@ var es;
             if (tangentialVelocityComponent.lengthSquared() < this._glue)
                 coefficientOfFriction = 1.01;
             // 弹性影响速度的法向分量，摩擦力影响速度的切向分量
-            responseVelocity = es.Vector2.multiplyScaler(normalVelocityComponent, -(1 + this._elasticity))
-                .subtract(es.Vector2.multiplyScaler(tangentialVelocityComponent, coefficientOfFriction));
+            return normalVelocityComponent
+                .scale(1 + this._elasticity)
+                .sub(tangentialVelocityComponent.scale(coefficientOfFriction))
+                .scale(-1);
         };
         return ArcadeRigidbody;
     }(es.Component));
     es.ArcadeRigidbody = ArcadeRigidbody;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var CharacterRaycastOrigins = /** @class */ (function () {
+        function CharacterRaycastOrigins() {
+            this.topLeft = es.Vector2.zero;
+            this.bottomRight = es.Vector2.zero;
+            this.bottomLeft = es.Vector2.zero;
+        }
+        return CharacterRaycastOrigins;
+    }());
+    var CharacterCollisionState2D = /** @class */ (function () {
+        function CharacterCollisionState2D() {
+            this.right = false;
+            this.left = false;
+            this.above = false;
+            this.below = false;
+            this.becameGroundedThisFrame = false;
+            this.wasGroundedLastFrame = false;
+            this.movingDownSlope = false;
+            this.slopeAngle = 0;
+        }
+        CharacterCollisionState2D.prototype.hasCollision = function () {
+            return this.below || this.right || this.left || this.above;
+        };
+        CharacterCollisionState2D.prototype.reset = function () {
+            this.right = this.left = false;
+            this.above = this.below = false;
+            this.becameGroundedThisFrame = this.movingDownSlope = false;
+            this.slopeAngle = 0;
+        };
+        CharacterCollisionState2D.prototype.toString = function () {
+            return "[CharacterCollisionState2D] r: " + this.right + ", l: " + this.left + ", a: " + this.above + ", b: " + this.below + ", movingDownSlope: " + this.movingDownSlope + ", angle: " + this.slopeAngle + ", wasGroundedLastFrame: " + this.wasGroundedLastFrame + ", becameGroundedThisFrame: " + this.becameGroundedThisFrame;
+        };
+        return CharacterCollisionState2D;
+    }());
+    var CharacterController = /** @class */ (function () {
+        function CharacterController(player, skinWidth, platformMask, onewayPlatformMask, triggerMask) {
+            if (platformMask === void 0) { platformMask = -1; }
+            if (onewayPlatformMask === void 0) { onewayPlatformMask = -1; }
+            if (triggerMask === void 0) { triggerMask = -1; }
+            this.ignoredColliders = new Set();
+            /**
+             * CC2D 可以爬升的最大坡度角
+             */
+            this.slopeLimit = 30;
+            /**
+             * 构成跳跃的帧之间垂直运动变化的阈值
+             */
+            this.jumpingThreshold = -7;
+            this.totalHorizontalRays = 5;
+            this.totalVerticalRays = 3;
+            this.collisionState = new CharacterCollisionState2D();
+            this.velocity = new es.Vector2(0, 0);
+            this._skinWidth = 0.02;
+            this.kSkinWidthFloatFudgeFactor = 0.001;
+            /**
+             * 我们的光线投射原点角的支架（TR、TL、BR、BL）
+             */
+            this._raycastOrigins = new CharacterRaycastOrigins();
+            /**
+             * 存储我们在移动过程中命中的光线投射
+             */
+            this._raycastHit = new es.RaycastHit();
+            /**
+             * 我们使用这个标志来标记我们正在爬坡的情况，我们修改了 delta.y 以允许爬升。
+             * 原因是，如果我们到达斜坡的尽头，我们可以进行调整以保持接地
+             */
+            this._isGoingUpSlope = false;
+            this._isWarpingToGround = true;
+            this.platformMask = -1;
+            this.triggerMask = -1;
+            this.oneWayPlatformMask = -1;
+            this.rayOriginSkinMutiplier = 4;
+            this.onTriggerEnterEvent = new es.ObservableT();
+            this.onTriggerExitEvent = new es.ObservableT();
+            this.onControllerCollidedEvent = new es.ObservableT();
+            this.platformMask = platformMask;
+            this.oneWayPlatformMask = onewayPlatformMask;
+            this.triggerMask = triggerMask;
+            // 将我们的单向平台添加到我们的普通平台掩码中，以便我们可以从上方降落 
+            this.platformMask |= this.oneWayPlatformMask;
+            this._player = player;
+            var collider = null;
+            for (var i = 0; i < this._player.components.buffer.length; i++) {
+                var component = this._player.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    collider = component;
+                    break;
+                }
+            }
+            collider.isTrigger = false;
+            if (collider instanceof es.BoxCollider) {
+                this._collider = collider;
+            }
+            else {
+                throw new Error('player collider must be box');
+            }
+            // 在这里，我们触发了具有主体的 setter 的属性 
+            this.skinWidth = skinWidth || collider.width * 0.05;
+            this._slopeLimitTangent = Math.tan(75 * es.MathHelper.Deg2Rad);
+            this._triggerHelper = new es.ColliderTriggerHelper(this._player);
+            // 我们想设置我们的 CC2D 忽略所有碰撞层，除了我们的 triggerMask 
+            for (var i = 0; i < 32; i++) {
+                // 查看我们的 triggerMask 是否包含此层，如果不包含则忽略它 
+                if ((this.triggerMask & (1 << i)) === 0) {
+                    es.Flags.unsetFlag(this._collider.collidesWithLayers, i);
+                }
+            }
+        }
+        Object.defineProperty(CharacterController.prototype, "skinWidth", {
+            /**
+             * 定义距离碰撞射线的边缘有多远。
+             * 如果使用 0 范围进行投射，则通常会导致不需要的光线击中（例如，直接从表面水平投射的足部碰撞器可能会导致击中）
+             */
+            get: function () {
+                return this._skinWidth;
+            },
+            set: function (value) {
+                this._skinWidth = value;
+                this.recalculateDistanceBetweenRays();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(CharacterController.prototype, "isGrounded", {
+            get: function () {
+                return this.collisionState.below;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(CharacterController.prototype, "raycastHitsThisFrame", {
+            get: function () {
+                return this._raycastHitsThisFrame;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        CharacterController.prototype.onTriggerEnter = function (other, local) {
+            this.onTriggerEnterEvent.notify(other);
+        };
+        CharacterController.prototype.onTriggerExit = function (other, local) {
+            this.onTriggerExitEvent.notify(other);
+        };
+        /**
+         * 尝试将角色移动到位置 + deltaMovement。 任何挡路的碰撞器都会在遇到时导致运动停止
+         * @param deltaMovement
+         * @param deltaTime
+         */
+        CharacterController.prototype.move = function (deltaMovement, deltaTime) {
+            this.collisionState.wasGroundedLastFrame = this.collisionState.below;
+            this.collisionState.reset();
+            this._raycastHitsThisFrame = [];
+            this._isGoingUpSlope = false;
+            this.primeRaycastOrigins();
+            if (deltaMovement.y > 0 && this.collisionState.wasGroundedLastFrame) {
+                deltaMovement = this.handleVerticalSlope(deltaMovement);
+            }
+            if (deltaMovement.x !== 0) {
+                deltaMovement = this.moveHorizontally(deltaMovement);
+            }
+            if (deltaMovement.y !== 0) {
+                deltaMovement = this.moveVertically(deltaMovement);
+            }
+            this._player.setPosition(this._player.position.x + deltaMovement.x, this._player.position.y + deltaMovement.y);
+            if (deltaTime > 0) {
+                this.velocity.x = deltaMovement.x / deltaTime;
+                this.velocity.y = deltaMovement.y / deltaTime;
+            }
+            if (!this.collisionState.wasGroundedLastFrame &&
+                this.collisionState.below) {
+                this.collisionState.becameGroundedThisFrame = true;
+            }
+            if (this._isGoingUpSlope) {
+                this.velocity.y = 0;
+            }
+            if (!this._isWarpingToGround) {
+                this._triggerHelper.update();
+            }
+            for (var i = 0; i < this._raycastHitsThisFrame.length; i++) {
+                this.onControllerCollidedEvent.notify(this._raycastHitsThisFrame[i]);
+            }
+            if (this.ignoreOneWayPlatformsTime > 0) {
+                this.ignoreOneWayPlatformsTime -= deltaTime;
+            }
+        };
+        /**
+         * 直接向下移动直到接地
+         * @param maxDistance
+         */
+        CharacterController.prototype.warpToGrounded = function (maxDistance) {
+            if (maxDistance === void 0) { maxDistance = 1000; }
+            this.ignoreOneWayPlatformsTime = 0;
+            this._isWarpingToGround = true;
+            var delta = 0;
+            do {
+                delta += 1;
+                this.move(new es.Vector2(0, 1), 0.02);
+                if (delta > maxDistance) {
+                    break;
+                }
+            } while (!this.isGrounded);
+            this._isWarpingToGround = false;
+        };
+        /**
+         * 这应该在您必须在运行时修改 BoxCollider2D 的任何时候调用。
+         * 它将重新计算用于碰撞检测的光线之间的距离。
+         * 它也用于 skinWidth setter，以防在运行时更改。
+         */
+        CharacterController.prototype.recalculateDistanceBetweenRays = function () {
+            var colliderUsableHeight = this._collider.height * Math.abs(this._player.scale.y) -
+                2 * this._skinWidth;
+            this._verticalDistanceBetweenRays =
+                colliderUsableHeight / (this.totalHorizontalRays - 1);
+            var colliderUsableWidth = this._collider.width * Math.abs(this._player.scale.x) -
+                2 * this._skinWidth;
+            this._horizontalDistanceBetweenRays =
+                colliderUsableWidth / (this.totalVerticalRays - 1);
+        };
+        /**
+         * 将 raycastOrigins 重置为由 skinWidth 插入的框碰撞器的当前范围。
+         * 插入它是为了避免从直接接触另一个碰撞器的位置投射光线，从而导致不稳定的法线数据。
+         */
+        CharacterController.prototype.primeRaycastOrigins = function () {
+            var rect = this._collider.bounds;
+            this._raycastOrigins.topLeft = new es.Vector2(rect.x + this._skinWidth, rect.y + this._skinWidth);
+            this._raycastOrigins.bottomRight = new es.Vector2(rect.right - this._skinWidth, rect.bottom - this._skinWidth);
+            this._raycastOrigins.bottomLeft = new es.Vector2(rect.x + this._skinWidth, rect.bottom - this._skinWidth);
+        };
+        /**
+         * 我们必须在这方面使用一些技巧。
+         * 光线必须从我们的碰撞器（skinWidth）内部的一小段距离投射，以避免零距离光线会得到错误的法线。
+         * 由于这个小偏移，我们必须增加光线距离 skinWidth 然后记住在实际移动玩家之前从 deltaMovement 中删除 skinWidth
+         * @param deltaMovement
+         * @returns
+         */
+        CharacterController.prototype.moveHorizontally = function (deltaMovement) {
+            var isGoingRight = deltaMovement.x > 0;
+            var rayDistance = Math.abs(deltaMovement.x) +
+                this._skinWidth * this.rayOriginSkinMutiplier;
+            var rayDirection = isGoingRight ? es.Vector2.right : es.Vector2.left;
+            var initialRayOriginY = this._raycastOrigins.bottomLeft.y;
+            var initialRayOriginX = isGoingRight
+                ? this._raycastOrigins.bottomRight.x -
+                    this._skinWidth * (this.rayOriginSkinMutiplier - 1)
+                : this._raycastOrigins.bottomLeft.x +
+                    this._skinWidth * (this.rayOriginSkinMutiplier - 1);
+            for (var i = 0; i < this.totalHorizontalRays; i++) {
+                var ray = new es.Vector2(initialRayOriginX, initialRayOriginY - i * this._verticalDistanceBetweenRays);
+                // 如果我们接地，我们将只在第一条射线（底部）上包含 oneWayPlatforms。 
+                // 允许我们走上倾斜的 oneWayPlatforms 
+                if (i === 0 &&
+                    this.supportSlopedOneWayPlatforms &&
+                    this.collisionState.wasGroundedLastFrame) {
+                    this._raycastHit = es.Physics.linecast(ray, ray.add(rayDirection.scaleEqual(rayDistance)), this.platformMask, this.ignoredColliders);
+                }
+                else {
+                    this._raycastHit = es.Physics.linecast(ray, ray.add(rayDirection.scaleEqual(rayDistance)), this.platformMask & ~this.oneWayPlatformMask, this.ignoredColliders);
+                }
+                if (this._raycastHit.collider) {
+                    if (i === 0 &&
+                        this.handleHorizontalSlope(deltaMovement, es.Vector2.unsignedAngle(this._raycastHit.normal, es.Vector2.up))) {
+                        this._raycastHitsThisFrame.push(this._raycastHit);
+                        break;
+                    }
+                    deltaMovement.x = this._raycastHit.point.x - ray.x;
+                    rayDistance = Math.abs(deltaMovement.x);
+                    if (isGoingRight) {
+                        deltaMovement.x -= this._skinWidth * this.rayOriginSkinMutiplier;
+                        this.collisionState.right = true;
+                    }
+                    else {
+                        deltaMovement.x += this._skinWidth * this.rayOriginSkinMutiplier;
+                        this.collisionState.left = true;
+                    }
+                    this._raycastHitsThisFrame.push(this._raycastHit);
+                    if (rayDistance <
+                        this._skinWidth * this.rayOriginSkinMutiplier +
+                            this.kSkinWidthFloatFudgeFactor) {
+                        break;
+                    }
+                }
+            }
+            return deltaMovement;
+        };
+        CharacterController.prototype.moveVertically = function (deltaMovement) {
+            var isGoingUp = deltaMovement.y < 0;
+            var rayDistance = Math.abs(deltaMovement.y) +
+                this._skinWidth * this.rayOriginSkinMutiplier;
+            var rayDirection = isGoingUp ? es.Vector2.up : es.Vector2.down;
+            var initialRayOriginX = this._raycastOrigins.topLeft.x;
+            var initialRayOriginY = isGoingUp
+                ? this._raycastOrigins.topLeft.y +
+                    this._skinWidth * (this.rayOriginSkinMutiplier - 1)
+                : this._raycastOrigins.bottomLeft.y -
+                    this._skinWidth * (this.rayOriginSkinMutiplier - 1);
+            initialRayOriginX += deltaMovement.x;
+            var mask = this.platformMask;
+            if (isGoingUp || this.ignoreOneWayPlatformsTime > 0) {
+                mask &= ~this.oneWayPlatformMask;
+            }
+            for (var i = 0; i < this.totalVerticalRays; i++) {
+                var rayStart = new es.Vector2(initialRayOriginX + i * this._horizontalDistanceBetweenRays, initialRayOriginY);
+                this._raycastHit = es.Physics.linecast(rayStart, rayStart.add(rayDirection.scaleEqual(rayDistance)), mask, this.ignoredColliders);
+                if (this._raycastHit.collider) {
+                    deltaMovement.y = this._raycastHit.point.y - rayStart.y;
+                    rayDistance = Math.abs(deltaMovement.y);
+                    if (isGoingUp) {
+                        deltaMovement.y += this._skinWidth * this.rayOriginSkinMutiplier;
+                        this.collisionState.above = true;
+                    }
+                    else {
+                        deltaMovement.y -= this._skinWidth * this.rayOriginSkinMutiplier;
+                        this.collisionState.below = true;
+                    }
+                    this._raycastHitsThisFrame.push(this._raycastHit);
+                    if (!isGoingUp && deltaMovement.y < -0.00001) {
+                        this._isGoingUpSlope = true;
+                    }
+                    if (rayDistance <
+                        this._skinWidth * this.rayOriginSkinMutiplier +
+                            this.kSkinWidthFloatFudgeFactor) {
+                        break;
+                    }
+                }
+            }
+            return deltaMovement;
+        };
+        /**
+         * 检查 BoxCollider2D 下的中心点是否存在坡度。
+         * 如果找到一个，则调整 deltaMovement 以便玩家保持接地，并考虑slopeSpeedModifier 以加快移动速度。
+         * @param deltaMovement
+         * @returns
+         */
+        CharacterController.prototype.handleVerticalSlope = function (deltaMovement) {
+            var centerOfCollider = (this._raycastOrigins.bottomLeft.x +
+                this._raycastOrigins.bottomRight.x) *
+                0.5;
+            var rayDirection = es.Vector2.down;
+            var slopeCheckRayDistance = this._slopeLimitTangent *
+                (this._raycastOrigins.bottomRight.x - centerOfCollider);
+            var slopeRay = new es.Vector2(centerOfCollider, this._raycastOrigins.bottomLeft.y);
+            this._raycastHit = es.Physics.linecast(slopeRay, slopeRay.add(rayDirection.scaleEqual(slopeCheckRayDistance)), this.platformMask, this.ignoredColliders);
+            if (this._raycastHit.collider) {
+                var angle = es.Vector2.unsignedAngle(this._raycastHit.normal, es.Vector2.up);
+                if (angle === 0) {
+                    return deltaMovement;
+                }
+                var isMovingDownSlope = Math.sign(this._raycastHit.normal.x) === Math.sign(deltaMovement.x);
+                if (isMovingDownSlope) {
+                    var slopeModifier = this.slopeSpeedMultiplier
+                        ? this.slopeSpeedMultiplier.lerp(-angle)
+                        : 1;
+                    deltaMovement.y +=
+                        this._raycastHit.point.y - slopeRay.y - this.skinWidth;
+                    deltaMovement.x *= slopeModifier;
+                    this.collisionState.movingDownSlope = true;
+                    this.collisionState.slopeAngle = angle;
+                }
+            }
+            return deltaMovement;
+        };
+        /**
+         * 如果我们要上坡，则处理调整 deltaMovement
+         * @param deltaMovement
+         * @param angle
+         * @returns
+         */
+        CharacterController.prototype.handleHorizontalSlope = function (deltaMovement, angle) {
+            if (Math.round(angle) === 90) {
+                return false;
+            }
+            if (angle < this.slopeLimit) {
+                if (deltaMovement.y > this.jumpingThreshold) {
+                    var slopeModifier = this.slopeSpeedMultiplier
+                        ? this.slopeSpeedMultiplier.lerp(angle)
+                        : 1;
+                    deltaMovement.x *= slopeModifier;
+                    deltaMovement.y = Math.abs(Math.tan(angle * es.MathHelper.Deg2Rad) * deltaMovement.x);
+                    var isGoingRight = deltaMovement.x > 0;
+                    var ray = isGoingRight
+                        ? this._raycastOrigins.bottomRight
+                        : this._raycastOrigins.bottomLeft;
+                    var raycastHit = null;
+                    if (this.supportSlopedOneWayPlatforms &&
+                        this.collisionState.wasGroundedLastFrame) {
+                        raycastHit = es.Physics.linecast(ray, ray.add(deltaMovement), this.platformMask, this.ignoredColliders);
+                    }
+                    else {
+                        raycastHit = es.Physics.linecast(ray, ray.add(deltaMovement), this.platformMask & ~this.oneWayPlatformMask, this.ignoredColliders);
+                    }
+                    if (raycastHit.collider) {
+                        deltaMovement.x = raycastHit.point.x - ray.x;
+                        deltaMovement.y = raycastHit.point.y - ray.y;
+                        if (isGoingRight) {
+                            deltaMovement.x -= this._skinWidth;
+                        }
+                        else {
+                            deltaMovement.x += this._skinWidth;
+                        }
+                    }
+                    this._isGoingUpSlope = true;
+                    this.collisionState.below = true;
+                }
+            }
+            else {
+                deltaMovement.x = 0;
+            }
+            return true;
+        };
+        return CharacterController;
+    }());
+    es.CharacterController = CharacterController;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -2504,39 +3062,63 @@ var es;
          * @param collisionResult
          */
         Mover.prototype.calculateMovement = function (motion, collisionResult) {
-            if (this.entity.getComponent(es.Collider) == null || this._triggerHelper == null) {
+            var e_3, _a;
+            var collider = null;
+            for (var i = 0; i < this.entity.components.buffer.length; i++) {
+                var component = this.entity.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    collider = component;
+                    break;
+                }
+            }
+            if (collider == null || this._triggerHelper == null) {
                 return false;
             }
             // 移动所有的非触发碰撞器并获得最近的碰撞
-            var colliders = this.entity.getComponents(es.Collider);
-            var _loop_1 = function (i) {
-                var collider = colliders[i];
+            var colliders = [];
+            for (var i = 0; i < this.entity.components.buffer.length; i++) {
+                var component = this.entity.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    colliders.push(component);
+                }
+            }
+            for (var i = 0; i < colliders.length; i++) {
+                var collider_1 = colliders[i];
                 // 不检测触发器 在我们移动后会重新访问它
-                if (collider.isTrigger)
-                    return "continue";
+                if (collider_1.isTrigger)
+                    continue;
                 // 获取我们在新位置可能发生碰撞的任何东西
-                var bounds = collider.bounds.clone();
+                var bounds = collider_1.bounds.clone();
                 bounds.x += motion.x;
                 bounds.y += motion.y;
-                var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
-                neighbors.forEach(function (value) {
-                    var neighbor = value;
-                    // 不检测触发器
-                    if (neighbor.isTrigger)
-                        return;
-                    var _internalcollisionResult = new es.CollisionResult();
-                    if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
-                        // 如果碰撞 则退回之前的移动量
-                        motion.subtract(_internalcollisionResult.minimumTranslationVector);
-                        // 如果我们碰到多个对象，为了简单起见，只取第一个。
-                        if (_internalcollisionResult.collider != null) {
-                            collisionResult = _internalcollisionResult;
+                var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider_1, bounds, collider_1.collidesWithLayers.value);
+                try {
+                    for (var neighbors_2 = __values(neighbors), neighbors_2_1 = neighbors_2.next(); !neighbors_2_1.done; neighbors_2_1 = neighbors_2.next()) {
+                        var neighbor = neighbors_2_1.value;
+                        // 不检测触发器
+                        if (neighbor.isTrigger)
+                            return;
+                        var _internalcollisionResult = new es.CollisionResult();
+                        if (collider_1.collidesWith(neighbor, motion, _internalcollisionResult)) {
+                            // 如果碰撞 则退回之前的移动量
+                            motion.sub(_internalcollisionResult.minimumTranslationVector);
+                            // 如果我们碰到多个对象，为了简单起见，只取第一个。
+                            if (_internalcollisionResult.collider != null) {
+                                collisionResult.collider = _internalcollisionResult.collider;
+                                collisionResult.minimumTranslationVector = _internalcollisionResult.minimumTranslationVector;
+                                collisionResult.normal = _internalcollisionResult.normal;
+                                collisionResult.point = _internalcollisionResult.point;
+                            }
                         }
                     }
-                });
-            };
-            for (var i = 0; i < colliders.length; i++) {
-                _loop_1(i);
+                }
+                catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                finally {
+                    try {
+                        if (neighbors_2_1 && !neighbors_2_1.done && (_a = neighbors_2.return)) _a.call(neighbors_2);
+                    }
+                    finally { if (e_3) throw e_3.error; }
+                }
             }
             es.ListPool.free(colliders);
             return collisionResult.collider != null;
@@ -2580,7 +3162,15 @@ var es;
             return _this;
         }
         ProjectileMover.prototype.onAddedToEntity = function () {
-            this._collider = this.entity.getComponent(es.Collider);
+            var collider = null;
+            for (var i = 0; i < this.entity.components.buffer.length; i++) {
+                var component = this.entity.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    collider = component;
+                    break;
+                }
+            }
+            this._collider = collider;
             es.Debug.warnIf(this._collider == null, "ProjectileMover没有Collider。ProjectilMover需要一个Collider!");
         };
         /**
@@ -2588,7 +3178,7 @@ var es;
          * @param motion
          */
         ProjectileMover.prototype.move = function (motion) {
-            var e_3, _a;
+            var e_4, _a;
             if (this._collider == null)
                 return false;
             var didCollide = false;
@@ -2597,20 +3187,20 @@ var es;
             // 获取任何可能在新位置发生碰撞的东西
             var neighbors = es.Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers.value);
             try {
-                for (var neighbors_2 = __values(neighbors), neighbors_2_1 = neighbors_2.next(); !neighbors_2_1.done; neighbors_2_1 = neighbors_2.next()) {
-                    var neighbor = neighbors_2_1.value;
+                for (var neighbors_3 = __values(neighbors), neighbors_3_1 = neighbors_3.next(); !neighbors_3_1.done; neighbors_3_1 = neighbors_3.next()) {
+                    var neighbor = neighbors_3_1.value;
                     if (this._collider.overlaps(neighbor) && neighbor.enabled) {
                         didCollide = true;
                         this.notifyTriggerListeners(this._collider, neighbor);
                     }
                 }
             }
-            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+            catch (e_4_1) { e_4 = { error: e_4_1 }; }
             finally {
                 try {
-                    if (neighbors_2_1 && !neighbors_2_1.done && (_a = neighbors_2.return)) _a.call(neighbors_2);
+                    if (neighbors_3_1 && !neighbors_3_1.done && (_a = neighbors_3.return)) _a.call(neighbors_3);
                 }
-                finally { if (e_3) throw e_3.error; }
+                finally { if (e_4) throw e_4.error; }
             }
             return didCollide;
         };
@@ -2638,6 +3228,7 @@ var es;
         __extends(Collider, _super);
         function Collider() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.castSortOrder = 0;
             /**
              * 如果这个碰撞器是一个触发器，它将不会引起碰撞，但它仍然会触发事件
              */
@@ -2725,8 +3316,8 @@ var es;
         Collider.prototype.setLocalOffset = function (offset) {
             if (!this._localOffset.equals(offset)) {
                 this.unregisterColliderWithPhysicsSystem();
-                this._localOffset = offset;
-                this._localOffsetLength = this._localOffset.length();
+                this._localOffset.setTo(offset.x, offset.y);
+                this._localOffsetLength = this._localOffset.magnitude();
                 this._isPositionDirty = true;
                 this.registerColliderWithPhysicsSystem();
             }
@@ -2742,6 +3333,30 @@ var es;
             return this;
         };
         Collider.prototype.onAddedToEntity = function () {
+            if (this._colliderRequiresAutoSizing) {
+                var renderable = null;
+                for (var i = 0; i < this.entity.components.buffer.length; i++) {
+                    var component = this.entity.components.buffer[i];
+                    if (component instanceof es.RenderableComponent) {
+                        renderable = component;
+                        break;
+                    }
+                }
+                if (renderable != null) {
+                    var renderableBounds = renderable.bounds.clone();
+                    var width = renderableBounds.width / this.entity.transform.scale.x;
+                    var height = renderableBounds.height / this.entity.transform.scale.y;
+                    if (this instanceof es.CircleCollider) {
+                        this.radius = Math.max(width, height) * 0.5;
+                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
+                    }
+                    else if (this instanceof es.BoxCollider) {
+                        this.width = width;
+                        this.height = height;
+                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
+                    }
+                }
+            }
             this._isParentEntityAddedToScene = true;
             this.registerColliderWithPhysicsSystem();
         };
@@ -2751,13 +3366,13 @@ var es;
         };
         Collider.prototype.onEntityTransformChanged = function (comp) {
             switch (comp) {
-                case transform.Component.position:
+                case es.ComponentTransform.position:
                     this._isPositionDirty = true;
                     break;
-                case transform.Component.scale:
+                case es.ComponentTransform.scale:
                     this._isPositionDirty = true;
                     break;
-                case transform.Component.rotation:
+                case es.ComponentTransform.rotation:
                     this._isRotationDirty = true;
                     break;
             }
@@ -2806,8 +3421,8 @@ var es;
         Collider.prototype.collidesWith = function (collider, motion, result) {
             if (result === void 0) { result = new es.CollisionResult(); }
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
-            var oldPosition = this.entity.position.clone();
-            this.entity.position = es.Vector2.add(this.entity.position, motion);
+            var oldPosition = this.entity.position;
+            this.entity.position = this.entity.position.add(motion);
             var didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)
                 result.collider = collider;
@@ -2826,6 +3441,7 @@ var es;
                 result.collider = collider;
                 return true;
             }
+            result.collider = null;
             return false;
         };
         /**
@@ -2835,7 +3451,7 @@ var es;
          * @param result
          */
         Collider.prototype.collidesWithAny = function (motion, result) {
-            var e_4, _a;
+            var e_5, _a;
             // 在我们的新位置上获取我们可能会碰到的任何东西 
             var colliderBounds = this.bounds.clone();
             colliderBounds.x += motion.x;
@@ -2846,44 +3462,15 @@ var es;
             this.shape.position = es.Vector2.add(this.shape.position, motion);
             var didCollide = false;
             try {
-                for (var neighbors_3 = __values(neighbors), neighbors_3_1 = neighbors_3.next(); !neighbors_3_1.done; neighbors_3_1 = neighbors_3.next()) {
-                    var neighbor = neighbors_3_1.value;
-                    if (neighbor.isTrigger)
-                        continue;
-                    if (this.collidesWithNonMotion(neighbor, result)) {
-                        motion = es.Vector2.subtract(motion, result.minimumTranslationVector);
-                        this.shape.position = es.Vector2.subtract(this.shape.position, result.minimumTranslationVector);
-                        didCollide = true;
-                    }
-                }
-            }
-            catch (e_4_1) { e_4 = { error: e_4_1 }; }
-            finally {
-                try {
-                    if (neighbors_3_1 && !neighbors_3_1.done && (_a = neighbors_3.return)) _a.call(neighbors_3);
-                }
-                finally { if (e_4) throw e_4.error; }
-            }
-            // 将形状位置返回到检查之前的位置 
-            this.shape.position = oldPosition;
-            return didCollide;
-        };
-        /**
-         * 检查此碰撞器是否与场景中的其他碰撞器碰撞。它相交的第一个碰撞器将在碰撞结果中返回碰撞数据。
-         * @param result
-         */
-        Collider.prototype.collidesWithAnyNonMotion = function (result) {
-            if (result === void 0) { result = new es.CollisionResult(); }
-            var e_5, _a;
-            // 在我们的新位置上获取我们可能会碰到的任何东西 
-            var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this, this.collidesWithLayers.value);
-            try {
                 for (var neighbors_4 = __values(neighbors), neighbors_4_1 = neighbors_4.next(); !neighbors_4_1.done; neighbors_4_1 = neighbors_4.next()) {
                     var neighbor = neighbors_4_1.value;
                     if (neighbor.isTrigger)
                         continue;
-                    if (this.collidesWithNonMotion(neighbor, result))
-                        return true;
+                    if (this.collidesWithNonMotion(neighbor, result)) {
+                        motion = motion.sub(result.minimumTranslationVector);
+                        this.shape.position = this.shape.position.sub(result.minimumTranslationVector);
+                        didCollide = true;
+                    }
                 }
             }
             catch (e_5_1) { e_5 = { error: e_5_1 }; }
@@ -2893,8 +3480,38 @@ var es;
                 }
                 finally { if (e_5) throw e_5.error; }
             }
+            // 将形状位置返回到检查之前的位置 
+            this.shape.position = oldPosition.clone();
+            return didCollide;
+        };
+        /**
+         * 检查此碰撞器是否与场景中的其他碰撞器碰撞。它相交的第一个碰撞器将在碰撞结果中返回碰撞数据。
+         * @param result
+         */
+        Collider.prototype.collidesWithAnyNonMotion = function (result) {
+            if (result === void 0) { result = new es.CollisionResult(); }
+            var e_6, _a;
+            // 在我们的新位置上获取我们可能会碰到的任何东西 
+            var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this, this.collidesWithLayers.value);
+            try {
+                for (var neighbors_5 = __values(neighbors), neighbors_5_1 = neighbors_5.next(); !neighbors_5_1.done; neighbors_5_1 = neighbors_5.next()) {
+                    var neighbor = neighbors_5_1.value;
+                    if (neighbor.isTrigger)
+                        continue;
+                    if (this.collidesWithNonMotion(neighbor, result))
+                        return true;
+                }
+            }
+            catch (e_6_1) { e_6 = { error: e_6_1 }; }
+            finally {
+                try {
+                    if (neighbors_5_1 && !neighbors_5_1.done && (_a = neighbors_5.return)) _a.call(neighbors_5);
+                }
+                finally { if (e_6) throw e_6.error; }
+            }
             return false;
         };
+        Collider.lateSortOrder = 999;
         return Collider;
     }(es.Component));
     es.Collider = Collider;
@@ -2913,8 +3530,17 @@ var es;
          * @param height
          */
         function BoxCollider(x, y, width, height) {
+            if (x === void 0) { x = 0; }
+            if (y === void 0) { y = 0; }
+            if (width === void 0) { width = 1; }
+            if (height === void 0) { height = 1; }
             var _this = _super.call(this) || this;
-            _this._localOffset = new es.Vector2(x + width / 2, y + height / 2);
+            if (width == 1 && height == 1) {
+                _this._colliderRequiresAutoSizing = true;
+            }
+            else {
+                _this._localOffset = new es.Vector2(x + width / 2, y + height / 2);
+            }
             _this.shape = new es.Box(width, height);
             return _this;
         }
@@ -2966,7 +3592,7 @@ var es;
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
                 box.updateBox(width, box.height);
                 this._isPositionDirty = true;
-                if (this.entity && this._isParentEntityAddedToScene)
+                if (this.entity != null && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
             return this;
@@ -2985,6 +3611,17 @@ var es;
                 if (this.entity && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
+        };
+        BoxCollider.prototype.debugRender = function (batcher) {
+            var poly = this.shape;
+            batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new es.Color(76, 76, 76, 76), 2);
+            batcher.end();
+            batcher.drawPolygon(this.shape.position, poly.points, new es.Color(139, 0, 0, 255), true, 2);
+            batcher.end();
+            batcher.drawPixel(this.entity.position, new es.Color(255, 255, 0), 4);
+            batcher.end();
+            batcher.drawPixel(es.Vector2.add(this.transform.position, this.shape.center), new es.Color(255, 0, 0), 2);
+            batcher.end();
         };
         BoxCollider.prototype.toString = function () {
             return "[BoxCollider: bounds: " + this.bounds + "]";
@@ -3005,8 +3642,12 @@ var es;
          * @param radius
          */
         function CircleCollider(radius) {
+            if (radius === void 0) { radius = 1; }
             var _this = _super.call(this) || this;
             _this.shape = new es.Circle(radius);
+            if (radius == 1) {
+                _this._colliderRequiresAutoSizing = true;
+            }
             return _this;
         }
         Object.defineProperty(CircleCollider.prototype, "radius", {
@@ -3035,6 +3676,16 @@ var es;
             }
             return this;
         };
+        CircleCollider.prototype.debugRender = function (batcher) {
+            batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new es.Color(76, 76, 76, 76), 2);
+            batcher.end();
+            batcher.drawCircle(this.shape.position, this.radius, new es.Color(139, 0, 0), 2);
+            batcher.end();
+            batcher.drawPixel(this.entity.transform.position, new es.Color(255, 255, 0), 4);
+            batcher.end();
+            batcher.drawPixel(this.shape.position, new es.Color(255, 0, 0), 2);
+            batcher.end();
+        };
         CircleCollider.prototype.toString = function () {
             return "[CircleCollider: bounds: " + this.bounds + ", radius: " + this.shape.radius + "]";
         };
@@ -3057,10 +3708,9 @@ var es;
             var _this = _super.call(this) || this;
             // 第一点和最后一点决不能相同。我们想要一个开放的多边形
             var isPolygonClosed = points[0] == points[points.length - 1];
-            var linqPoints = new es.List(points);
             // 最后一个移除
             if (isPolygonClosed)
-                linqPoints.remove(linqPoints.last());
+                points = points.slice(0, points.length - 1);
             var center = es.Polygon.findPolygonCenter(points);
             _this.setLocalOffset(center);
             es.Polygon.recenterPolygonVerts(points);
@@ -3070,6 +3720,134 @@ var es;
         return PolygonCollider;
     }(es.Collider));
     es.PolygonCollider = PolygonCollider;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var RenderableComponent = /** @class */ (function (_super) {
+        __extends(RenderableComponent, _super);
+        function RenderableComponent() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this._bounds = new es.Rectangle();
+            _this._areBoundsDirty = true;
+            _this.color = es.Color.White;
+            _this._renderLayer = 0;
+            _this.debugRenderEnabled = true;
+            _this._isVisible = false;
+            _this._localOffset = new es.Vector2();
+            return _this;
+        }
+        RenderableComponent.prototype.getwidth = function () {
+            return this.bounds.width;
+        };
+        RenderableComponent.prototype.getheight = function () {
+            return this.bounds.height;
+        };
+        RenderableComponent.prototype.getbounds = function () {
+            if (this._areBoundsDirty) {
+                this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new es.Vector2(this.getwidth() / 2, this.getheight() / 2), this.entity.transform.scale, this.entity.transform.rotation, this.getwidth(), this.getheight());
+                this._areBoundsDirty = false;
+            }
+            return this._bounds;
+        };
+        Object.defineProperty(RenderableComponent.prototype, "bounds", {
+            get: function () {
+                return this.getbounds();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RenderableComponent.prototype, "renderLayer", {
+            get: function () {
+                return this._renderLayer;
+            },
+            set: function (value) {
+                this.setRenderLayer(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
+            this._areBoundsDirty = true;
+        };
+        Object.defineProperty(RenderableComponent.prototype, "localOffset", {
+            get: function () {
+                return this._localOffset;
+            },
+            set: function (value) {
+                this.setLocalOffset(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RenderableComponent.prototype.setLocalOffset = function (offset) {
+            if (!this._localOffset.equals(offset)) {
+                this._localOffset = offset;
+                this._areBoundsDirty = true;
+            }
+            return this;
+        };
+        Object.defineProperty(RenderableComponent.prototype, "isVisible", {
+            get: function () {
+                return this._isVisible;
+            },
+            set: function (value) {
+                if (this._isVisible != value) {
+                    this._isVisible = value;
+                    if (this._isVisible) {
+                        this.onBecameVisible();
+                    }
+                    else {
+                        this.onBecameInvisible();
+                    }
+                }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RenderableComponent.prototype.onBecameVisible = function () {
+        };
+        RenderableComponent.prototype.onBecameInvisible = function () {
+        };
+        RenderableComponent.prototype.setRenderLayer = function (renderLayer) {
+            if (renderLayer != this._renderLayer) {
+                var oldRenderLayer = this._renderLayer;
+                this._renderLayer = renderLayer;
+                if (this.entity != null && this.entity.scene != null)
+                    es.Core.scene.renderableComponents.updateRenderableRenderLayer(this, oldRenderLayer, this._renderLayer);
+            }
+            return this;
+        };
+        RenderableComponent.prototype.isVisibleFromCamera = function (cam) {
+            this.isVisible = cam.bounds.intersects(this.bounds);
+            return this.isVisible;
+        };
+        RenderableComponent.prototype.debugRender = function (batcher) {
+            if (!this.debugRenderEnabled)
+                return;
+            var collider = null;
+            for (var i = 0; i < this.entity.components.buffer.length; i++) {
+                var component = this.entity.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    collider = component;
+                    break;
+                }
+            }
+            if (collider == null) {
+                batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new es.Color(255, 255, 0));
+                batcher.end();
+            }
+            batcher.drawPixel(es.Vector2.add(this.entity.transform.position, this._localOffset), new es.Color(153, 50, 204), 4);
+            batcher.end();
+        };
+        RenderableComponent.prototype.tweenColorTo = function (to, duration) {
+            var tween = es.Pool.obtain(es.RenderableColorTween);
+            tween.setTarget(this);
+            tween.initialize(tween, to, duration);
+            return tween;
+        };
+        return RenderableComponent;
+    }(es.Component));
+    es.RenderableComponent = RenderableComponent;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -3517,7 +4295,7 @@ var es;
             var _this = this;
             var remainder = entities.length & this._threads;
             var slice = entities.length / this._threads + (remainder == 0 ? 0 : 1);
-            var _loop_2 = function (t) {
+            var _loop_1 = function (t) {
                 var from = t * slice;
                 var to = from + slice;
                 if (to > entities.length) {
@@ -3540,7 +4318,7 @@ var es;
             };
             var this_1 = this;
             for (var t = 0; t < this._threads; t++) {
-                _loop_2(t);
+                _loop_1(t);
             }
         };
         JobSystem.prototype.queueOnThread = function () {
@@ -3701,15 +4479,15 @@ var es;
                 for (var i = 0, s = this._components.length; i < s; ++i) {
                     this.handleRemove(this._components[i]);
                 }
-                this.componentsByType.clear();
-                this.componentsToAddByType.clear();
-                this._components.length = 0;
-                this._updatableComponents.length = 0;
-                this._componentsToAdd = {};
-                this._componentsToRemove = {};
-                this._componentsToAddList.length = 0;
-                this._componentsToRemoveList.length = 0;
             }
+            this.componentsByType.clear();
+            this.componentsToAddByType.clear();
+            this._components.length = 0;
+            this._updatableComponents.length = 0;
+            this._componentsToAdd = {};
+            this._componentsToRemove = {};
+            this._componentsToAddList.length = 0;
+            this._componentsToRemoveList.length = 0;
         };
         ComponentList.prototype.deregisterAllComponents = function () {
             if (this._components.length > 0) {
@@ -3717,6 +4495,8 @@ var es;
                     var component = this._components[i];
                     if (!component)
                         continue;
+                    if (component instanceof es.RenderableComponent)
+                        this._entity.scene.renderableComponents.remove(component);
                     // 处理IUpdatable
                     if (es.isIUpdatable(component))
                         new es.List(this._updatableComponents).remove(component);
@@ -3729,6 +4509,8 @@ var es;
             if (this._components.length > 0) {
                 for (var i = 0, s = this._components.length; i < s; ++i) {
                     var component = this._components[i];
+                    if (component instanceof es.RenderableComponent)
+                        this._entity.scene.renderableComponents.remove(component);
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
                     this.addBits(component);
@@ -3751,7 +4533,7 @@ var es;
          */
         ComponentList.prototype.updateLists = function () {
             if (this._componentsToRemoveList.length > 0) {
-                var _loop_3 = function (i, l) {
+                var _loop_2 = function (i, l) {
                     var component = this_2._componentsToRemoveList[i];
                     this_2.handleRemove(component);
                     var index = this_2._components.findIndex(function (c) { return c.id == component.id; });
@@ -3761,7 +4543,7 @@ var es;
                 };
                 var this_2 = this;
                 for (var i = 0, l = this._componentsToRemoveList.length; i < l; ++i) {
-                    _loop_3(i, l);
+                    _loop_2(i, l);
                 }
                 this._componentsToRemove = {};
                 this._componentsToRemoveList.length = 0;
@@ -3769,6 +4551,8 @@ var es;
             if (this._componentsToAddList.length > 0) {
                 for (var i = 0, l = this._componentsToAddList.length; i < l; ++i) {
                     var component = this._componentsToAddList[i];
+                    if (component instanceof es.RenderableComponent)
+                        this._entity.scene.renderableComponents.add(component);
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
                     this.addBits(component);
@@ -3797,6 +4581,8 @@ var es;
             }
         };
         ComponentList.prototype.handleRemove = function (component) {
+            if (component instanceof es.RenderableComponent)
+                this._entity.scene.renderableComponents.remove(component);
             if (es.isIUpdatable(component) && this._updatableComponents.length > 0) {
                 var index = this._updatableComponents.findIndex(function (c) { return c.id == component.id; });
                 if (index != -1)
@@ -3906,6 +4692,15 @@ var es;
             if (this._components.length > 0) {
                 for (var i = 0, s = this._components.length; i < s; i++)
                     this._components[i].onDisabled();
+            }
+        };
+        ComponentList.prototype.debugRender = function (batcher) {
+            if (!batcher)
+                return;
+            for (var i = 0; i < this._components.length; i++) {
+                if (this._components[i].enabled) {
+                    this._components[i].debugRender(batcher);
+                }
             }
         };
         /**
@@ -4091,7 +4886,7 @@ var es;
         };
         EntityList.prototype.updateLists = function () {
             if (this._entitiesToRemoveList.length > 0) {
-                var _loop_4 = function (i, s) {
+                var _loop_3 = function (i, s) {
                     var entity = this_3._entitiesToRemoveList[i];
                     this_3.removeFromTagList(entity);
                     // 处理常规实体列表
@@ -4104,7 +4899,7 @@ var es;
                 };
                 var this_3 = this;
                 for (var i = 0, s = this._entitiesToRemoveList.length; i < s; ++i) {
-                    _loop_4(i, s);
+                    _loop_3(i, s);
                 }
                 this._entitiesToRemove = {};
                 this._entitiesToRemoveList.length = 0;
@@ -4167,7 +4962,7 @@ var es;
          * @param tag
          */
         EntityList.prototype.entitiesWithTag = function (tag) {
-            var e_6, _a;
+            var e_7, _a;
             var list = this.getTagList(tag);
             var returnList = es.ListPool.obtain();
             if (list.size > 0) {
@@ -4177,12 +4972,12 @@ var es;
                         returnList.push(entity);
                     }
                 }
-                catch (e_6_1) { e_6 = { error: e_6_1 }; }
+                catch (e_7_1) { e_7 = { error: e_7_1 }; }
                 finally {
                     try {
                         if (list_1_1 && !list_1_1.done && (_a = list_1.return)) _a.call(list_1);
                     }
-                    finally { if (e_6) throw e_6.error; }
+                    finally { if (e_7) throw e_7.error; }
                 }
             }
             return returnList;
@@ -4193,7 +4988,7 @@ var es;
          * @returns
          */
         EntityList.prototype.entityWithTag = function (tag) {
-            var e_7, _a;
+            var e_8, _a;
             var list = this.getTagList(tag);
             if (list.size > 0) {
                 try {
@@ -4202,12 +4997,12 @@ var es;
                         return entity;
                     }
                 }
-                catch (e_7_1) { e_7 = { error: e_7_1 }; }
+                catch (e_8_1) { e_8 = { error: e_8_1 }; }
                 finally {
                     try {
                         if (list_2_1 && !list_2_1.done && (_a = list_2.return)) _a.call(list_2);
                     }
-                    finally { if (e_7) throw e_7.error; }
+                    finally { if (e_8) throw e_8.error; }
                 }
             }
             return null;
@@ -4579,6 +5374,82 @@ var es;
         return Matcher;
     }());
     es.Matcher = Matcher;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var RenderableComponentList = /** @class */ (function () {
+        function RenderableComponentList() {
+            this._components = [];
+            this._componentsByRenderLayer = new Map();
+            this._unsortedRenderLayers = [];
+            this._componentsNeedSort = true;
+        }
+        Object.defineProperty(RenderableComponentList.prototype, "count", {
+            get: function () {
+                return this._components.length;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RenderableComponentList.prototype.get = function (index) {
+            return this._components[index];
+        };
+        RenderableComponentList.prototype.add = function (component) {
+            this._components.push(component);
+            this.addToRenderLayerList(component, component.renderLayer);
+        };
+        RenderableComponentList.prototype.remove = function (component) {
+            new es.List(this._components).remove(component);
+            new es.List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);
+        };
+        RenderableComponentList.prototype.updateRenderableRenderLayer = function (component, oldRenderLayer, newRenderLayer) {
+            if (this._componentsByRenderLayer.has(oldRenderLayer) && new es.List(this._componentsByRenderLayer.get(oldRenderLayer)).contains(component)) {
+                new es.List(this._componentsByRenderLayer.get(oldRenderLayer)).remove(component);
+                this.addToRenderLayerList(component, newRenderLayer);
+            }
+        };
+        RenderableComponentList.prototype.setRenderLayerNeedsComponentSort = function (renderLayer) {
+            var unsortedRenderLayersList = new es.List(this._unsortedRenderLayers);
+            if (!unsortedRenderLayersList.contains(renderLayer))
+                unsortedRenderLayersList.add(renderLayer);
+            this._componentsNeedSort = true;
+        };
+        RenderableComponentList.prototype.setNeedsComponentSort = function () {
+            this._componentsNeedSort = true;
+        };
+        RenderableComponentList.prototype.addToRenderLayerList = function (component, renderLayer) {
+            var list = this.componentsWithRenderLayer(renderLayer);
+            es.Insist.isFalse(!!list.find(function (c) { return c == component; }), "组件renderLayer列表已包含此组件");
+            list.push(component);
+            var unsortedRenderLayersList = new es.List(this._unsortedRenderLayers);
+            if (!unsortedRenderLayersList.contains(renderLayer))
+                unsortedRenderLayersList.add(renderLayer);
+            this._componentsNeedSort = true;
+        };
+        RenderableComponentList.prototype.componentsWithRenderLayer = function (renderLayer) {
+            if (!this._componentsByRenderLayer.get(renderLayer)) {
+                this._componentsByRenderLayer.set(renderLayer, []);
+            }
+            return this._componentsByRenderLayer.get(renderLayer);
+        };
+        RenderableComponentList.prototype.updateLists = function () {
+            if (this._componentsNeedSort) {
+                this._components.sort(function (self, other) { return other.renderLayer - self.renderLayer; });
+                this._componentsNeedSort = false;
+            }
+            if (this._unsortedRenderLayers.length > 0) {
+                for (var i = 0, count = this._unsortedRenderLayers.length; i < count; i++) {
+                    var renderLayerComponents = this._componentsByRenderLayer.get(this._unsortedRenderLayers[i]);
+                    if (renderLayerComponents) {
+                        renderLayerComponents.sort(function (self, other) { return other.renderLayer - self.renderLayer; });
+                    }
+                    this._unsortedRenderLayers.length = 0;
+                }
+            }
+        };
+        return RenderableComponentList;
+    }());
+    es.RenderableComponentList = RenderableComponentList;
 })(es || (es = {}));
 var StringUtils = /** @class */ (function () {
     function StringUtils() {
@@ -5119,6 +5990,490 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Graphics = /** @class */ (function () {
+        function Graphics(batcher) {
+            this.batcher = batcher;
+        }
+        return Graphics;
+    }());
+    es.Graphics = Graphics;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Color = /** @class */ (function () {
+        /**
+         * 从 r, g, b, a 创建一个新的 Color 实例
+         *
+         * @param r  颜色的红色分量 (0-255)
+         * @param g  颜色的绿色成分 (0-255)
+         * @param b  颜色的蓝色分量 (0-255)
+         * @param a  颜色的 alpha 分量 (0-1.0)
+         */
+        function Color(r, g, b, a) {
+            this.r = r;
+            this.g = g;
+            this.b = b;
+            this.a = a != null ? a : 1;
+        }
+        /**
+         * 从 r, g, b, a 创建一个新的 Color 实例
+         *
+         * @param r  颜色的红色分量 (0-255)
+         * @param g  颜色的绿色成分 (0-255)
+         * @param b  颜色的蓝色分量 (0-255)
+         * @param a  颜色的 alpha 分量 (0-1.0)
+         */
+        Color.fromRGB = function (r, g, b, a) {
+            return new Color(r, g, b, a);
+        };
+        /**
+         * 从十六进制字符串创建一个新的 Color 实例
+         *
+         * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的
+         */
+        Color.createFromHex = function (hex) {
+            var color = new Color(1, 1, 1);
+            color.fromHex(hex);
+            return color;
+        };
+        /**
+         * 从 hsl 值创建一个新的 Color 实例
+         *
+         * @param h  色调表示 [0-1]
+         * @param s  饱和度表示为 [0-1]
+         * @param l  亮度表示 [0-1]
+         * @param a  透明度表示 [0-1]
+         */
+        Color.fromHSL = function (h, s, l, a) {
+            if (a === void 0) { a = 1.0; }
+            var temp = new HSLColor(h, s, l, a);
+            return temp.toRGBA();
+        };
+        /**
+         * 将当前颜色调亮指定的量
+         *
+         * @param factor
+         */
+        Color.prototype.lighten = function (factor) {
+            if (factor === void 0) { factor = 0.1; }
+            var temp = HSLColor.fromRGBA(this.r, this.g, this.b, this.a);
+            temp.l += temp.l * factor;
+            return temp.toRGBA();
+        };
+        /**
+         * 将当前颜色变暗指定的量
+         *
+         * @param factor
+         */
+        Color.prototype.darken = function (factor) {
+            if (factor === void 0) { factor = 0.1; }
+            var temp = HSLColor.fromRGBA(this.r, this.g, this.b, this.a);
+            temp.l -= temp.l * factor;
+            return temp.toRGBA();
+        };
+        /**
+         * 使当前颜色饱和指定的量
+         *
+         * @param factor
+         */
+        Color.prototype.saturate = function (factor) {
+            if (factor === void 0) { factor = 0.1; }
+            var temp = HSLColor.fromRGBA(this.r, this.g, this.b, this.a);
+            temp.s += temp.s * factor;
+            return temp.toRGBA();
+        };
+        /**
+         * 按指定量降低当前颜色的饱和度
+         *
+         * @param factor
+         */
+        Color.prototype.desaturate = function (factor) {
+            if (factor === void 0) { factor = 0.1; }
+            var temp = HSLColor.fromRGBA(this.r, this.g, this.b, this.a);
+            temp.s -= temp.s * factor;
+            return temp.toRGBA();
+        };
+        /**
+         * 将一种颜色乘以另一种颜色，得到更深的颜色
+         *
+         * @param color
+         */
+        Color.prototype.mulitiply = function (color) {
+            var newR = (((color.r / 255) * this.r) / 255) * 255;
+            var newG = (((color.g / 255) * this.g) / 255) * 255;
+            var newB = (((color.b / 255) * this.b) / 255) * 255;
+            var newA = color.a * this.a;
+            return new Color(newR, newG, newB, newA);
+        };
+        /**
+         * 筛选另一种颜色，导致颜色较浅
+         *
+         * @param color
+         */
+        Color.prototype.screen = function (color) {
+            var color1 = color.invert();
+            var color2 = color.invert();
+            return color1.mulitiply(color2).invert();
+        };
+        /**
+         * 反转当前颜色
+         */
+        Color.prototype.invert = function () {
+            return new Color(255 - this.r, 255 - this.g, 255 - this.b, 1.0 - this.a);
+        };
+        /**
+         * 将当前颜色与另一个颜色平均
+         *
+         * @param color
+         */
+        Color.prototype.average = function (color) {
+            var newR = (color.r + this.r) / 2;
+            var newG = (color.g + this.g) / 2;
+            var newB = (color.b + this.b) / 2;
+            var newA = (color.a + this.a) / 2;
+            return new Color(newR, newG, newB, newA);
+        };
+        /**
+         * 返回颜色的 CSS 字符串表示形式。
+         *
+         * @param format
+         */
+        Color.prototype.toString = function (format) {
+            if (format === void 0) { format = 'rgb'; }
+            switch (format) {
+                case 'rgb':
+                    return this.toRGBA();
+                case 'hsl':
+                    return this.toHSLA();
+                case 'hex':
+                    return this.toHex();
+                default:
+                    throw new Error('Invalid Color format');
+            }
+        };
+        /**
+         * 返回颜色分量的十六进制值
+         * @param c
+         * @see https://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
+         */
+        Color.prototype._componentToHex = function (c) {
+            var hex = c.toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        };
+        /**
+         *返回颜色的十六进制表示
+         */
+        Color.prototype.toHex = function () {
+            return ('#' +
+                this._componentToHex(this.r) +
+                this._componentToHex(this.g) +
+                this._componentToHex(this.b) +
+                this._componentToHex(this.a));
+        };
+        /**
+         * 从十六进制字符串设置颜色
+         *
+         * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的
+         */
+        Color.prototype.fromHex = function (hex) {
+            var hexRegEx = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})?$/i;
+            var match = hex.match(hexRegEx);
+            if (match) {
+                var r = parseInt(match[1], 16);
+                var g = parseInt(match[2], 16);
+                var b = parseInt(match[3], 16);
+                var a = 1;
+                if (match[4]) {
+                    a = parseInt(match[4], 16) / 255;
+                }
+                this.r = r;
+                this.g = g;
+                this.b = b;
+                this.a = a;
+            }
+            else {
+                throw new Error('Invalid hex string: ' + hex);
+            }
+        };
+        /**
+         * 返回颜色的 RGBA 表示
+         */
+        Color.prototype.toRGBA = function () {
+            var result = String(this.r.toFixed(0)) +
+                ', ' +
+                String(this.g.toFixed(0)) +
+                ', ' +
+                String(this.b.toFixed(0));
+            if (this.a !== undefined || this.a != null) {
+                return 'rgba(' + result + ', ' + String(this.a) + ')';
+            }
+            return 'rgb(' + result + ')';
+        };
+        /**
+         * 返回颜色的 HSLA 表示
+         */
+        Color.prototype.toHSLA = function () {
+            return HSLColor.fromRGBA(this.r, this.g, this.b, this.a).toString();
+        };
+        /**
+         * 返回颜色的 CSS 字符串表示形式
+         */
+        Color.prototype.fillStyle = function () {
+            return this.toString();
+        };
+        /**
+         * 返回当前颜色的克隆
+         */
+        Color.prototype.clone = function () {
+            return new Color(this.r, this.g, this.b, this.a);
+        };
+        /**
+         * Black (#000000)
+         */
+        Color.Black = Color.createFromHex('#000000');
+        /**
+         * White (#FFFFFF)
+         */
+        Color.White = Color.createFromHex('#FFFFFF');
+        /**
+         * Gray (#808080)
+         */
+        Color.Gray = Color.createFromHex('#808080');
+        /**
+         * Light gray (#D3D3D3)
+         */
+        Color.LightGray = Color.createFromHex('#D3D3D3');
+        /**
+         * Dark gray (#A9A9A9)
+         */
+        Color.DarkGray = Color.createFromHex('#A9A9A9');
+        /**
+         * Yellow (#FFFF00)
+         */
+        Color.Yellow = Color.createFromHex('#FFFF00');
+        /**
+         * Orange (#FFA500)
+         */
+        Color.Orange = Color.createFromHex('#FFA500');
+        /**
+         * Red (#FF0000)
+         */
+        Color.Red = Color.createFromHex('#FF0000');
+        /**
+         * Vermillion (#FF5B31)
+         */
+        Color.Vermillion = Color.createFromHex('#FF5B31');
+        /**
+         * Rose (#FF007F)
+         */
+        Color.Rose = Color.createFromHex('#FF007F');
+        /**
+         * Magenta (#FF00FF)
+         */
+        Color.Magenta = Color.createFromHex('#FF00FF');
+        /**
+         * Violet (#7F00FF)
+         */
+        Color.Violet = Color.createFromHex('#7F00FF');
+        /**
+         * Blue (#0000FF)
+         */
+        Color.Blue = Color.createFromHex('#0000FF');
+        /**
+         * Azure (#007FFF)
+         */
+        Color.Azure = Color.createFromHex('#007FFF');
+        /**
+         * Cyan (#00FFFF)
+         */
+        Color.Cyan = Color.createFromHex('#00FFFF');
+        /**
+         * Viridian (#59978F)
+         */
+        Color.Viridian = Color.createFromHex('#59978F');
+        /**
+         * Green (#00FF00)
+         */
+        Color.Green = Color.createFromHex('#00FF00');
+        /**
+         * Chartreuse (#7FFF00)
+         */
+        Color.Chartreuse = Color.createFromHex('#7FFF00');
+        /**
+         * Transparent (#FFFFFF00)
+         */
+        Color.Transparent = Color.createFromHex('#FFFFFF00');
+        return Color;
+    }());
+    es.Color = Color;
+    /**
+     * 内部 HSL 颜色表示
+     *
+     * http://en.wikipedia.org/wiki/HSL_and_HSV
+     * http://axonflux.com/handy-rgb-to-hsl-and-rgb-to-hsv-color-model-c
+     */
+    var HSLColor = /** @class */ (function () {
+        function HSLColor(h, s, l, a) {
+            this.h = h;
+            this.s = s;
+            this.l = l;
+            this.a = a;
+        }
+        HSLColor.hue2rgb = function (p, q, t) {
+            if (t < 0) {
+                t += 1;
+            }
+            if (t > 1) {
+                t -= 1;
+            }
+            if (t < 1 / 6) {
+                return p + (q - p) * 6 * t;
+            }
+            if (t < 1 / 2) {
+                return q;
+            }
+            if (t < 2 / 3) {
+                return p + (q - p) * (2 / 3 - t) * 6;
+            }
+            return p;
+        };
+        HSLColor.fromRGBA = function (r, g, b, a) {
+            r /= 255;
+            g /= 255;
+            b /= 255;
+            var max = Math.max(r, g, b);
+            var min = Math.min(r, g, b);
+            var h = (max + min) / 2;
+            var s = h;
+            var l = h;
+            if (max === min) {
+                h = s = 0; // achromatic
+            }
+            else {
+                var d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r:
+                        h = (g - b) / d + (g < b ? 6 : 0);
+                        break;
+                    case g:
+                        h = (b - r) / d + 2;
+                        break;
+                    case b:
+                        h = (r - g) / d + 4;
+                        break;
+                }
+                h /= 6;
+            }
+            return new HSLColor(h, s, l, a);
+        };
+        HSLColor.prototype.toRGBA = function () {
+            var r;
+            var g;
+            var b;
+            if (this.s === 0) {
+                r = g = b = this.l; // achromatic
+            }
+            else {
+                var q = this.l < 0.5
+                    ? this.l * (1 + this.s)
+                    : this.l + this.s - this.l * this.s;
+                var p = 2 * this.l - q;
+                r = HSLColor.hue2rgb(p, q, this.h + 1 / 3);
+                g = HSLColor.hue2rgb(p, q, this.h);
+                b = HSLColor.hue2rgb(p, q, this.h - 1 / 3);
+            }
+            return new Color(r * 255, g * 255, b * 255, this.a);
+        };
+        HSLColor.prototype.toString = function () {
+            var h = this.h.toFixed(0);
+            var s = this.s.toFixed(0);
+            var l = this.l.toFixed(0);
+            var a = this.a.toFixed(0);
+            return "hsla(" + h + ", " + s + ", " + l + ", " + a + ")";
+        };
+        return HSLColor;
+    }());
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Renderer = /** @class */ (function () {
+        function Renderer(renderOrder, camera) {
+            this.renderOrder = 0;
+            this.shouldDebugRender = true;
+            this.renderDirty = true;
+            this.renderOrder = renderOrder;
+            this.camera = camera;
+            es.Core.emitter.addObserver(es.CoreEvents.renderChanged, this.onRenderChanged, this);
+        }
+        Renderer.prototype.onAddedToScene = function (scene) { };
+        Renderer.prototype.unload = function () { };
+        Renderer.prototype.beginRender = function (cam) {
+            if (!es.Graphics.instance)
+                return;
+            es.Graphics.instance.batcher.begin(cam);
+        };
+        Renderer.prototype.endRender = function () {
+            if (!es.Graphics.instance)
+                return;
+            es.Graphics.instance.batcher.end();
+        };
+        Renderer.prototype.onRenderChanged = function () {
+            this.renderDirty = true;
+        };
+        Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
+            if (!es.Graphics.instance)
+                return;
+            renderable.render(es.Graphics.instance.batcher, cam);
+        };
+        Renderer.prototype.debugRender = function (scene) {
+            if (!es.Graphics.instance)
+                return;
+            es.Physics.debugDraw(2);
+            for (var i = 0; i < scene.entities.count; i++) {
+                var entity = scene.entities.buffer[i];
+                if (entity.enabled) {
+                    entity.debugRender(es.Graphics.instance.batcher);
+                }
+            }
+        };
+        return Renderer;
+    }());
+    es.Renderer = Renderer;
+})(es || (es = {}));
+///<reference path="Renderer.ts" />
+var es;
+///<reference path="Renderer.ts" />
+(function (es) {
+    var DefaultRenderer = /** @class */ (function (_super) {
+        __extends(DefaultRenderer, _super);
+        function DefaultRenderer(renderOrder, camera) {
+            if (renderOrder === void 0) { renderOrder = 0; }
+            if (camera === void 0) { camera = null; }
+            return _super.call(this, renderOrder, camera) || this;
+        }
+        DefaultRenderer.prototype.render = function (scene) {
+            if (!this.renderDirty)
+                return;
+            this.renderDirty = false;
+            var cam = this.camera ? this.camera : scene.camera;
+            this.beginRender(cam);
+            for (var i = 0; i < scene.renderableComponents.count; i++) {
+                var renderable = scene.renderableComponents.get(i);
+                if (renderable.enabled && renderable.isVisibleFromCamera(scene.camera))
+                    this.renderAfterStateCheck(renderable, cam);
+            }
+            if (this.shouldDebugRender && es.Core.debugRenderEndabled) {
+                this.debugRender(scene);
+            }
+            this.endRender();
+        };
+        return DefaultRenderer;
+    }(es.Renderer));
+    es.DefaultRenderer = DefaultRenderer;
+})(es || (es = {}));
+var es;
+(function (es) {
     /**
      * 三次方和二次方贝塞尔帮助器(cubic and quadratic bezier helper)
      */
@@ -5135,9 +6490,9 @@ var es;
         Bezier.getPoint = function (p0, p1, p2, t) {
             t = es.MathHelper.clamp01(t);
             var oneMinusT = 1 - t;
-            return new es.Vector2(oneMinusT * oneMinusT).multiply(p0)
-                .add(new es.Vector2(2 * oneMinusT * t).multiply(p1))
-                .add(new es.Vector2(t * t).multiply(p2));
+            return p0.scale(oneMinusT * oneMinusT)
+                .addEqual(p1.scale(2 * oneMinusT * t))
+                .addEqual(p2.scale(t * t));
         };
         /**
          * 求解一个立方体曲率
@@ -5150,10 +6505,10 @@ var es;
         Bezier.getPointThree = function (start, firstControlPoint, secondControlPoint, end, t) {
             t = es.MathHelper.clamp01(t);
             var oneMinusT = 1 - t;
-            return new es.Vector2(oneMinusT * oneMinusT * oneMinusT).multiply(start)
-                .add(new es.Vector2(3 * oneMinusT * oneMinusT * t).multiply(firstControlPoint))
-                .add(new es.Vector2(3 * oneMinusT * t * t).multiply(secondControlPoint))
-                .add(new es.Vector2(t * t * t).multiply(end));
+            return start.scale(oneMinusT * oneMinusT * oneMinusT)
+                .addEqual(firstControlPoint.scale(3 * oneMinusT * oneMinusT * t))
+                .addEqual(secondControlPoint.scale(3 * oneMinusT * t * t))
+                .addEqual(end.scale(t * t * t));
         };
         /**
          * 得到二次贝塞尔函数的一阶导数
@@ -5163,8 +6518,8 @@ var es;
          * @param t
          */
         Bezier.getFirstDerivative = function (p0, p1, p2, t) {
-            return new es.Vector2(2 * (1 - t)).multiply(es.Vector2.subtract(p1, p0))
-                .add(new es.Vector2(2 * t).multiply(es.Vector2.subtract(p2, p1)));
+            return p1.sub(p0).scale(2 * (1 - t))
+                .addEqual(p2.sub(p1).scale(2 * t));
         };
         /**
          * 得到一个三次贝塞尔函数的一阶导数
@@ -5177,9 +6532,9 @@ var es;
         Bezier.getFirstDerivativeThree = function (start, firstControlPoint, secondControlPoint, end, t) {
             t = es.MathHelper.clamp01(t);
             var oneMunusT = 1 - t;
-            return new es.Vector2(3 * oneMunusT * oneMunusT).multiply(es.Vector2.subtract(firstControlPoint, start))
-                .add(new es.Vector2(6 * oneMunusT * t).multiply(es.Vector2.subtract(secondControlPoint, firstControlPoint)))
-                .add(new es.Vector2(3 * t * t).multiply(es.Vector2.subtract(end, secondControlPoint)));
+            return firstControlPoint.sub(start).scale(3 * oneMunusT * oneMunusT)
+                .addEqual(secondControlPoint.sub(firstControlPoint).scale(6 * oneMunusT * t))
+                .addEqual(end.sub(secondControlPoint).scale(3 * t * t));
         };
         /**
          * 递归地细分bezier曲线，直到满足距离校正
@@ -5209,16 +6564,16 @@ var es;
          */
         Bezier.recursiveGetOptimizedDrawingPoints = function (start, firstCtrlPoint, secondCtrlPoint, end, points, distanceTolerance) {
             // 计算线段的所有中点
-            var pt12 = es.Vector2.divide(es.Vector2.add(start, firstCtrlPoint), new es.Vector2(2));
-            var pt23 = es.Vector2.divide(es.Vector2.add(firstCtrlPoint, secondCtrlPoint), new es.Vector2(2));
-            var pt34 = es.Vector2.divide(es.Vector2.add(secondCtrlPoint, end), new es.Vector2(2));
+            var pt12 = es.Vector2.divideScaler(start.add(firstCtrlPoint), 2);
+            var pt23 = es.Vector2.divideScaler(firstCtrlPoint.add(secondCtrlPoint), 2);
+            var pt34 = es.Vector2.divideScaler(secondCtrlPoint.add(end), 2);
             // 计算新半直线的中点
-            var pt123 = es.Vector2.divide(es.Vector2.add(pt12, pt23), new es.Vector2(2));
-            var pt234 = es.Vector2.divide(es.Vector2.add(pt23, pt34), new es.Vector2(2));
+            var pt123 = es.Vector2.divideScaler(pt12.add(pt23), 2);
+            var pt234 = es.Vector2.divideScaler(pt23.add(pt34), 2);
             // 最后再细分最后两个中点。如果我们满足我们的距离公差，这将是我们使用的最后一点。
-            var pt1234 = es.Vector2.divide(es.Vector2.add(pt123, pt234), new es.Vector2(2));
+            var pt1234 = es.Vector2.divideScaler(pt123.add(pt234), 2);
             // 试着用一条直线来近似整个三次曲线
-            var deltaLine = es.Vector2.subtract(end, start);
+            var deltaLine = end.sub(start);
             var d2 = Math.abs(((firstCtrlPoint.x, end.x) * deltaLine.y - (firstCtrlPoint.y - end.y) * deltaLine.x));
             var d3 = Math.abs(((secondCtrlPoint.x - end.x) * deltaLine.y - (secondCtrlPoint.y - end.y) * deltaLine.x));
             if ((d2 + d3) * (d2 + d3) < distanceTolerance * (deltaLine.x * deltaLine.x + deltaLine.y * deltaLine.y)) {
@@ -5248,18 +6603,19 @@ var es;
          * @param t
          */
         BezierSpline.prototype.pointIndexAtTime = function (t) {
-            var i = 0;
-            if (t.value >= 1) {
-                t.value = 1;
-                i = this._points.length - 4;
+            var res = { time: 0, range: 0 };
+            if (t >= 1) {
+                t = 1;
+                res.range = this._points.length - 4;
             }
             else {
-                t.value = es.MathHelper.clamp01(t.value) * this._curveCount;
-                i = ~~t;
-                t.value -= i;
-                i *= 3;
+                t = es.MathHelper.clamp01(t) * this._curveCount;
+                res.range = Math.floor(t);
+                t -= res.range;
+                res.range *= 3;
             }
-            return i;
+            res.time = t;
+            return res;
         };
         /**
          * 设置一个控制点，考虑到这是否是一个共享点，如果是，则适当调整
@@ -5268,11 +6624,11 @@ var es;
          */
         BezierSpline.prototype.setControlPoint = function (index, point) {
             if (index % 3 == 0) {
-                var delta = es.Vector2.subtract(point, this._points[index]);
+                var delta = point.sub(this._points[index]);
                 if (index > 0)
-                    this._points[index - 1].add(delta);
+                    this._points[index - 1].addEqual(delta);
                 if (index + 1 < this._points.length)
-                    this._points[index + 1].add(delta);
+                    this._points[index + 1].addEqual(delta);
             }
             this._points[index] = point;
         };
@@ -5281,7 +6637,8 @@ var es;
          * @param t
          */
         BezierSpline.prototype.getPointAtTime = function (t) {
-            var i = this.pointIndexAtTime(new es.Ref(t));
+            var res = this.pointIndexAtTime(t);
+            var i = res.range;
             return es.Bezier.getPointThree(this._points[i], this._points[i + 1], this._points[i + 2], this._points[i + 3], t);
         };
         /**
@@ -5289,7 +6646,8 @@ var es;
          * @param t
          */
         BezierSpline.prototype.getVelocityAtTime = function (t) {
-            var i = this.pointIndexAtTime(new es.Ref(t));
+            var res = this.pointIndexAtTime(t);
+            var i = res.range;
             return es.Bezier.getFirstDerivativeThree(this._points[i], this._points[i + 1], this._points[i + 2], this._points[i + 3], t);
         };
         /**
@@ -5297,7 +6655,7 @@ var es;
          * @param t
          */
         BezierSpline.prototype.getDirectionAtTime = function (t) {
-            return es.Vector2.normalize(this.getVelocityAtTime(t));
+            return this.getVelocityAtTime(t).normalize();
         };
         /**
          * 在贝塞尔曲线上添加一条曲线
@@ -5514,6 +6872,9 @@ var es;
         };
         MathHelper.lerp = function (from, to, t) {
             return from + (to - from) * this.clamp01(t);
+        };
+        MathHelper.betterLerp = function (a, b, t, epsilon) {
+            return Math.abs(a - b) < epsilon ? b : MathHelper.lerp(a, b, t);
         };
         /**
          * 使度数的角度在a和b之间
@@ -5734,6 +7095,15 @@ var es;
             return this.repeat(this.approach(start, start + deltaAngle, shift), 360);
         };
         /**
+         * 将 Vector 投影到另一个 Vector 上
+         * @param other
+         */
+        MathHelper.project = function (self, other) {
+            var amt = self.dot(other) / other.lengthSquared();
+            var vec = other.scale(amt);
+            return vec;
+        };
+        /**
          * 通过将偏移量（全部以弧度为单位）夹住结果并选择最短路径，起始角度朝向终止角度。
          * 起始值可以小于或大于终止值。
          * 此方法的工作方式与“角度”方法非常相似，唯一的区别是使用弧度代替度，并以2 * Pi代替360。
@@ -5799,6 +7169,9 @@ var es;
          */
         MathHelper.repeat = function (t, length) {
             return t - Math.floor(t / length) * length;
+        };
+        MathHelper.floorToInt = function (f) {
+            return Math.trunc(Math.floor(f));
         };
         /**
          * 将值绕一圈移动的助手
@@ -5926,7 +7299,52 @@ var es;
             if (Number.isNaN(x)) {
                 return false;
             }
-            return !Number.isFinite(x);
+            return x !== Infinity;
+        };
+        MathHelper.smoothDamp = function (current, target, currentVelocity, smoothTime, maxSpeed, deltaTime) {
+            smoothTime = Math.max(0.0001, smoothTime);
+            var num = 2 / smoothTime;
+            var num2 = num * deltaTime;
+            var num3 = 1 /
+                (1 + (num2 + (0.48 * (num2 * num2) + 0.235 * (num2 * (num2 * num2)))));
+            var num4 = current - target;
+            var num5 = target;
+            var num6 = maxSpeed * smoothTime;
+            num4 = this.clamp(num4, num6 * -1, num6);
+            target = current - num4;
+            var num7 = (currentVelocity + num * num4) * deltaTime;
+            currentVelocity = (currentVelocity - num * num7) * num3;
+            var num8 = target + (num4 + num7) * num3;
+            if (num5 - current > 0 === num8 > num5) {
+                num8 = num5;
+                currentVelocity = (num8 - num5) / deltaTime;
+            }
+            return { value: num8, currentVelocity: currentVelocity };
+        };
+        MathHelper.smoothDampVector = function (current, target, currentVelocity, smoothTime, maxSpeed, deltaTime) {
+            var v = es.Vector2.zero;
+            var resX = this.smoothDamp(current.x, target.x, currentVelocity.x, smoothTime, maxSpeed, deltaTime);
+            v.x = resX.value;
+            currentVelocity.x = resX.currentVelocity;
+            var resY = this.smoothDamp(current.y, target.y, currentVelocity.y, smoothTime, maxSpeed, deltaTime);
+            v.y = resY.value;
+            currentVelocity.y = resY.currentVelocity;
+            return v;
+        };
+        /**
+         * 将值（在 leftMin - leftMax 范围内）映射到 rightMin - rightMax 范围内的值
+         * @param value
+         * @param leftMin
+         * @param leftMax
+         * @param rightMin
+         * @param rightMax
+         * @returns
+         */
+        MathHelper.mapMinMax = function (value, leftMin, leftMax, rightMin, rightMax) {
+            return rightMin + ((MathHelper.clamp(value, leftMin, leftMax) - leftMin) * (rightMax - rightMin)) / (leftMax - leftMin);
+        };
+        MathHelper.fromAngle = function (angle) {
+            return new es.Vector2(Math.cos(angle), Math.sin(angle)).normalizeEqual();
         };
         MathHelper.Epsilon = 0.00001;
         MathHelper.Rad2Deg = 57.29578;
@@ -5945,8 +7363,31 @@ var es;
      * 代表右手4x4浮点矩阵，可以存储平移、比例和旋转信息
      */
     var Matrix = /** @class */ (function () {
-        function Matrix() {
+        function Matrix(m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44) {
+            this.m11 = m11;
+            this.m12 = m12;
+            this.m13 = m13;
+            this.m14 = m14;
+            this.m21 = m21;
+            this.m22 = m22;
+            this.m23 = m23;
+            this.m24 = m24;
+            this.m31 = m31;
+            this.m32 = m32;
+            this.m33 = m33;
+            this.m34 = m34;
+            this.m41 = m41;
+            this.m42 = m42;
+            this.m43 = m43;
+            this.m44 = m44;
         }
+        Object.defineProperty(Matrix, "Identity", {
+            get: function () {
+                return this.identity;
+            },
+            enumerable: true,
+            configurable: true
+        });
         /**
          * 为自定义的正交视图创建一个新的投影矩阵
          * @param left
@@ -5973,6 +7414,33 @@ var es;
             result.m42 = (top + bottom) / (bottom - top);
             result.m43 = zNearPlane / (zNearPlane - zFarPlane);
             result.m44 = 1;
+        };
+        Matrix.createTranslation = function (position, result) {
+            result.m11 = 1;
+            result.m12 = 0;
+            result.m13 = 0;
+            result.m14 = 0;
+            result.m21 = 0;
+            result.m22 = 1;
+            result.m23 = 0;
+            result.m24 = 0;
+            result.m31 = 0;
+            result.m32 = 0;
+            result.m33 = 1;
+            result.m34 = 0;
+            result.m41 = position.x;
+            result.m42 = position.y;
+            result.m43 = 0;
+            result.m44 = 1;
+        };
+        Matrix.createRotationZ = function (radians, result) {
+            result = Matrix.Identity;
+            var val1 = Math.cos(radians);
+            var val2 = Math.sin(radians);
+            result.m11 = val1;
+            result.m12 = val2;
+            result.m21 = -val2;
+            result.m22 = val1;
         };
         /**
          * 创建一个新的矩阵，其中包含两个矩阵的乘法。
@@ -6015,6 +7483,7 @@ var es;
             result.m43 = m43;
             result.m44 = m44;
         };
+        Matrix.identity = new Matrix(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
         return Matrix;
     }());
     es.Matrix = Matrix;
@@ -6025,39 +7494,36 @@ var es;
      * 表示右手3 * 3的浮点矩阵，可以存储平移、缩放和旋转信息。
      */
     var Matrix2D = /** @class */ (function () {
-        /**
-         * 构建一个矩阵
-         * @param m11
-         * @param m12
-         * @param m21
-         * @param m22
-         * @param m31
-         * @param m32
-         */
-        function Matrix2D(m11, m12, m21, m22, m31, m32) {
+        function Matrix2D() {
             this.m11 = 0; // x 缩放
             this.m12 = 0;
             this.m21 = 0;
             this.m22 = 0;
             this.m31 = 0;
             this.m32 = 0;
-            this.m11 = m11;
-            this.m12 = m12;
-            this.m21 = m21;
-            this.m22 = m22;
-            this.m31 = m31;
-            this.m32 = m32;
         }
         Object.defineProperty(Matrix2D, "identity", {
             /**
              * 返回标识矩阵
              */
             get: function () {
-                return new Matrix2D(1, 0, 0, 1, 0, 0);
+                return new Matrix2D().setIdentity();
             },
             enumerable: true,
             configurable: true
         });
+        Matrix2D.prototype.setIdentity = function () {
+            return this.setValues(1, 0, 0, 1, 0, 0);
+        };
+        Matrix2D.prototype.setValues = function (m11, m12, m21, m22, m31, m32) {
+            this.m11 = m11;
+            this.m12 = m12;
+            this.m21 = m21;
+            this.m22 = m22;
+            this.m31 = m31;
+            this.m32 = m32;
+            return this;
+        };
         Object.defineProperty(Matrix2D.prototype, "translation", {
             /**
              * 储存在该矩阵中的位置
@@ -6121,38 +7587,50 @@ var es;
          * 创建一个新的围绕Z轴的旋转矩阵2D
          * @param radians
          */
-        Matrix2D.createRotation = function (radians) {
-            var result = this.identity;
+        Matrix2D.createRotation = function (radians, result) {
+            result.setIdentity();
+            var val1 = Math.cos(radians);
+            var val2 = Math.sin(radians);
+            result.m11 = val1;
+            result.m12 = val2;
+            result.m21 = val2 * -1;
+            result.m22 = val1;
+        };
+        Matrix2D.createRotationOut = function (radians, result) {
             var val1 = Math.cos(radians);
             var val2 = Math.sin(radians);
             result.m11 = val1;
             result.m12 = val2;
             result.m21 = -val2;
             result.m22 = val1;
-            return result;
         };
         /**
          * 创建一个新的缩放矩阵2D
          * @param xScale
          * @param yScale
          */
-        Matrix2D.createScale = function (xScale, yScale) {
-            var result = this.identity;
+        Matrix2D.createScale = function (xScale, yScale, result) {
             result.m11 = xScale;
             result.m12 = 0;
             result.m21 = 0;
             result.m22 = yScale;
             result.m31 = 0;
             result.m32 = 0;
-            return result;
+        };
+        Matrix2D.createScaleOut = function (xScale, yScale, result) {
+            result.m11 = xScale;
+            result.m12 = 0;
+            result.m21 = 0;
+            result.m22 = yScale;
+            result.m31 = 0;
+            result.m32 = 0;
         };
         /**
          * 创建一个新的平移矩阵2D
          * @param xPosition
          * @param yPosition
          */
-        Matrix2D.createTranslation = function (xPosition, yPosition) {
-            var result = this.identity;
+        Matrix2D.createTranslation = function (xPosition, yPosition, result) {
             result.m11 = 1;
             result.m12 = 0;
             result.m21 = 0;
@@ -6160,6 +7638,14 @@ var es;
             result.m31 = xPosition;
             result.m32 = yPosition;
             return result;
+        };
+        Matrix2D.createTranslationOut = function (position, result) {
+            result.m11 = 1;
+            result.m12 = 0;
+            result.m21 = 0;
+            result.m22 = 1;
+            result.m31 = position.x;
+            result.m32 = position.y;
         };
         Matrix2D.invert = function (matrix) {
             var det = 1 / matrix.determinant();
@@ -6218,6 +7704,20 @@ var es;
             this.m32 = m32;
             return this;
         };
+        Matrix2D.multiply = function (matrix1, matrix2, result) {
+            var m11 = (matrix1.m11 * matrix2.m11) + (matrix1.m12 * matrix2.m21);
+            var m12 = (matrix1.m11 * matrix2.m12) + (matrix1.m12 * matrix2.m22);
+            var m21 = (matrix1.m21 * matrix2.m11) + (matrix1.m22 * matrix2.m21);
+            var m22 = (matrix1.m21 * matrix2.m12) + (matrix1.m22 * matrix2.m22);
+            var m31 = (matrix1.m31 * matrix2.m11) + (matrix1.m32 * matrix2.m21) + matrix2.m31;
+            var m32 = (matrix1.m31 * matrix2.m12) + (matrix1.m32 * matrix2.m22) + matrix2.m32;
+            result.m11 = m11;
+            result.m12 = m12;
+            result.m21 = m21;
+            result.m22 = m22;
+            result.m31 = m31;
+            result.m32 = m32;
+        };
         Matrix2D.prototype.determinant = function () {
             return this.m11 * this.m22 - this.m12 * this.m21;
         };
@@ -6251,7 +7751,8 @@ var es;
             return ret;
         };
         Matrix2D.prototype.mutiplyTranslation = function (x, y) {
-            var trans = Matrix2D.createTranslation(x, y);
+            var trans = new Matrix2D();
+            Matrix2D.createTranslation(x, y, trans);
             return es.MatrixHelper.mutiply(this, trans);
         };
         /**
@@ -6404,6 +7905,9 @@ var es;
              * 该矩形的高度
              */
             this.height = 0;
+            // temp 用于计算边界的矩阵
+            this._tempMat = new es.Matrix2D();
+            this._transformMat = new es.Matrix2D();
             this.x = x;
             this.y = y;
             this.width = width;
@@ -6604,12 +8108,12 @@ var es;
                 value.top < this.bottom &&
                 this.top < value.bottom;
         };
-        Rectangle.prototype.rayIntersects = function (ray, distance) {
-            distance.value = 0;
+        Rectangle.prototype.rayIntersects = function (ray) {
+            var res = { intersected: false, distance: 0 };
             var maxValue = Number.MAX_VALUE;
             if (Math.abs(ray.direction.x) < 1E-06) {
                 if ((ray.start.x < this.x) || (ray.start.x > this.x + this.width))
-                    return false;
+                    return res;
             }
             else {
                 var num11 = 1 / ray.direction.x;
@@ -6620,14 +8124,14 @@ var es;
                     num8 = num7;
                     num7 = num14;
                 }
-                distance.value = Math.max(num8, distance.value);
+                res.distance = Math.max(num8, res.distance);
                 maxValue = Math.min(num7, maxValue);
-                if (distance.value > maxValue)
-                    return false;
+                if (res.distance > maxValue)
+                    return res;
             }
-            if (Math.abs(ray.direction.y) < 1E-06) {
+            if (Math.abs(ray.direction.y) < 1e-06) {
                 if ((ray.start.y < this.y) || (ray.start.y > this.y + this.height))
-                    return false;
+                    return res;
             }
             else {
                 var num10 = 1 / ray.direction.y;
@@ -6638,12 +8142,13 @@ var es;
                     num6 = num5;
                     num5 = num13;
                 }
-                distance.value = Math.max(num6, distance.value);
+                res.distance = Math.max(num6, res.distance);
                 maxValue = Math.max(num5, maxValue);
-                if (distance.value > maxValue)
-                    return false;
+                if (res.distance > maxValue)
+                    return res;
             }
-            return true;
+            res.intersected = true;
+            return res;
         };
         /**
          * 获取所提供的矩形是否在此矩形的边界内
@@ -6684,7 +8189,7 @@ var es;
          */
         Rectangle.prototype.getClosestPointOnRectangleToPoint = function (point) {
             // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
-            var res = new es.Vector2();
+            var res = es.Vector2.zero;
             res.x = es.MathHelper.clamp(point.x, this.left, this.right);
             res.y = es.MathHelper.clamp(point.y, this.top, this.bottom);
             return res;
@@ -6697,7 +8202,7 @@ var es;
          */
         Rectangle.prototype.getClosestPointOnRectangleBorderToPoint = function (point, edgeNormal) {
             // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
-            var res = new es.Vector2();
+            var res = es.Vector2.zero;
             res.x = es.MathHelper.clamp(point.x, this.left, this.right);
             res.y = es.MathHelper.clamp(point.y, this.top, this.bottom);
             // 如果点在矩形内，我们需要将res推到边界上，因为它将在矩形内
@@ -6785,22 +8290,22 @@ var es;
         };
         Rectangle.prototype.calculateBounds = function (parentPosition, position, origin, scale, rotation, width, height) {
             if (rotation == 0) {
-                this.x = parentPosition.x + position.x - origin.x * scale.x;
-                this.y = parentPosition.y + position.y - origin.y * scale.y;
-                this.width = width * scale.x;
-                this.height = height * scale.y;
+                this.x = Math.trunc(parentPosition.x + position.x - origin.x * scale.x);
+                this.y = Math.trunc(parentPosition.y + position.y - origin.y * scale.y);
+                this.width = Math.trunc(width * scale.x);
+                this.height = Math.trunc(height * scale.y);
             }
             else {
                 // 我们需要找到我们的绝对最小/最大值，并据此创建边界
                 var worldPosX = parentPosition.x + position.x;
                 var worldPosY = parentPosition.y + position.y;
                 // 考虑到原点，将参考点设置为世界参考
-                this._transformMat = es.Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
-                this._tempMat = es.Matrix2D.createScale(scale.x, scale.y);
+                es.Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y, this._transformMat);
+                es.Matrix2D.createScale(scale.x, scale.y, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
-                this._tempMat = es.Matrix2D.createRotation(rotation);
+                es.Matrix2D.createRotation(rotation, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
-                this._tempMat = es.Matrix2D.createTranslation(worldPosX, worldPosY);
+                es.Matrix2D.createTranslation(worldPosX, worldPosY, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
                 // TODO: 我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角
                 var topLeft = new es.Vector2(worldPosX, worldPosY);
@@ -6812,13 +8317,13 @@ var es;
                 es.Vector2Ext.transformR(bottomLeft, this._transformMat, bottomLeft);
                 es.Vector2Ext.transformR(bottomRight, this._transformMat, bottomRight);
                 // 找出最小值和最大值，这样我们就可以计算出我们的边界框。
-                var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-                var maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                var minX = Math.trunc(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                var maxX = Math.trunc(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                var minY = Math.trunc(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                var maxY = Math.trunc(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
                 this.location = new es.Vector2(minX, minY);
-                this.width = maxX - minX;
-                this.height = maxY - minY;
+                this.width = Math.trunc(maxX - minX);
+                this.height = Math.trunc(maxY - minY);
             }
         };
         /**
@@ -6902,7 +8407,7 @@ var es;
          * 获取这个矩形的哈希码
          */
         Rectangle.prototype.getHashCode = function () {
-            return (this.x ^ this.y ^ this.width ^ this.height);
+            return (Math.trunc(this.x) ^ Math.trunc(this.y) ^ Math.trunc(this.width) ^ Math.trunc(this.height));
         };
         Rectangle.prototype.clone = function () {
             return new Rectangle(this.x, this.y, this.width, this.height);
@@ -6931,7 +8436,7 @@ var es;
          */
         SubpixelFloat.prototype.update = function (amount) {
             this.remainder += amount;
-            var motion = Math.floor(Math.trunc(this.remainder));
+            var motion = Math.trunc(this.remainder);
             this.remainder -= motion;
             amount = motion;
             return amount;
@@ -6991,13 +8496,15 @@ var es;
          * 它将处理任何与Collider重叠的ITriggerListeners。
          */
         ColliderTriggerHelper.prototype.update = function () {
+            var e_9, _a;
+            var lateColliders = [];
             // 对所有实体.colliders进行重叠检查，这些实体.colliders是触发器，与所有宽相碰撞器，无论是否触发器。   
             // 任何重叠都会导致触发事件
             var colliders = this._entity.getComponents(es.Collider);
             for (var i = 0; i < colliders.length; i++) {
                 var collider = colliders[i];
-                var neighbors = es.Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-                for (var j = 0; j < neighbors.size; j++) {
+                var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider.bounds, collider.collidesWithLayers);
+                for (var j = 0; j < neighbors.length; j++) {
                     var neighbor = neighbors[j];
                     // 我们至少需要一个碰撞器作为触发器
                     if (!collider.isTrigger && !neighbor.isTrigger)
@@ -7007,13 +8514,31 @@ var es;
                         // 如果我们的某一个集合中已经有了这个对子（前一个或当前的触发交叉点），就不要调用输入事件了
                         var shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) &&
                             !this._previousTriggerIntersections.contains(pair);
-                        if (shouldReportTriggerEvent)
-                            this.notifyTriggerListeners(pair, true);
+                        if (shouldReportTriggerEvent) {
+                            if (neighbor.castSortOrder >= es.Collider.lateSortOrder) {
+                                lateColliders.push(pair);
+                            }
+                            else {
+                                this.notifyTriggerListeners(pair, true);
+                            }
+                        }
                         this._activeTriggerIntersections.add(pair);
                     }
                 }
             }
-            es.ListPool.free(colliders);
+            try {
+                for (var lateColliders_1 = __values(lateColliders), lateColliders_1_1 = lateColliders_1.next(); !lateColliders_1_1.done; lateColliders_1_1 = lateColliders_1.next()) {
+                    var pair = lateColliders_1_1.value;
+                    this.notifyTriggerListeners(pair, true);
+                }
+            }
+            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            finally {
+                try {
+                    if (lateColliders_1_1 && !lateColliders_1_1.done && (_a = lateColliders_1.return)) _a.call(lateColliders_1);
+                }
+                finally { if (e_9) throw e_9.error; }
+            }
             this.checkForExitedColliders();
         };
         ColliderTriggerHelper.prototype.checkForExitedColliders = function () {
@@ -7074,58 +8599,60 @@ var es;
         function Collisions() {
         }
         Collisions.lineToLine = function (a1, a2, b1, b2) {
-            var b = es.Vector2.subtract(a2, a1);
-            var d = es.Vector2.subtract(b2, b1);
+            var b = a2.sub(a1);
+            var d = b2.sub(b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
             // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
                 return false;
-            var c = es.Vector2.subtract(b1, a1);
+            var c = b1.sub(a1);
             var t = (c.x * d.y - c.y * d.x) / bDotDPerp;
-            if (t < 0 || t > 1)
+            if (t < 0 || t > 1) {
                 return false;
+            }
             var u = (c.x * b.y - c.y * b.x) / bDotDPerp;
-            if (u < 0 || u > 1)
+            if (u < 0 || u > 1) {
                 return false;
+            }
             return true;
         };
         Collisions.lineToLineIntersection = function (a1, a2, b1, b2, intersection) {
-            if (intersection === void 0) { intersection = new es.Vector2(); }
+            if (intersection === void 0) { intersection = es.Vector2.zero; }
             intersection.x = 0;
             intersection.y = 0;
-            var b = es.Vector2.subtract(a2, a1);
-            var d = es.Vector2.subtract(b2, b1);
+            var b = a2.sub(a1);
+            var d = b2.sub(b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
             // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
                 return false;
-            var c = es.Vector2.subtract(b1, a1);
+            var c = b1.sub(a1);
             var t = (c.x * d.y - c.y * d.x) / bDotDPerp;
             if (t < 0 || t > 1)
                 return false;
             var u = (c.x * b.y - c.y * b.x) / bDotDPerp;
             if (u < 0 || u > 1)
                 return false;
-            var temp = es.Vector2.add(a1, new es.Vector2(t * b.x, t * b.y));
+            var temp = a1.add(b.scale(t));
             intersection.x = temp.x;
             intersection.y = temp.y;
             return true;
         };
         Collisions.closestPointOnLine = function (lineA, lineB, closestTo) {
-            var v = es.Vector2.subtract(lineB, lineA);
-            var w = es.Vector2.subtract(closestTo, lineA);
-            var t = es.Vector2.dot(w, v) / es.Vector2.dot(v, v);
+            var v = lineB.sub(lineA);
+            var w = closestTo.sub(lineA);
+            var t = w.dot(v) / v.dot(v);
             t = es.MathHelper.clamp(t, 0, 1);
-            return es.Vector2.add(lineA, new es.Vector2(v.x * t, v.y * t));
+            return lineA.add(v.scale(t));
         };
         Collisions.circleToCircle = function (circleCenter1, circleRadius1, circleCenter2, circleRadius2) {
-            return es.Vector2.distanceSquared(circleCenter1, circleCenter2) < (circleRadius1 + circleRadius2) * (circleRadius1 + circleRadius2);
+            return es.Vector2.sqrDistance(circleCenter1, circleCenter2) < (circleRadius1 + circleRadius2) * (circleRadius1 + circleRadius2);
         };
         Collisions.circleToLine = function (circleCenter, radius, lineFrom, lineTo) {
-            return es.Vector2.distanceSquared(circleCenter, this.closestPointOnLine(lineFrom, lineTo, circleCenter)) < radius * radius;
+            return es.Vector2.sqrDistance(circleCenter, this.closestPointOnLine(lineFrom, lineTo, circleCenter)) < radius * radius;
         };
         Collisions.circleToPoint = function (circleCenter, radius, point) {
-            return es.Vector2.distanceSquared(circleCenter, point) < radius * radius;
+            return es.Vector2.sqrDistance(circleCenter, point) < radius * radius;
         };
         Collisions.rectToCircle = function (rect, cPosition, cRadius) {
             // 检查矩形是否包含圆的中心点
@@ -7135,25 +8662,25 @@ var es;
             var edgeFrom;
             var edgeTo;
             var sector = this.getSector(rect.x, rect.y, rect.width, rect.height, cPosition);
-            if ((sector & PointSectors.top) != 0) {
+            if ((sector & PointSectors.top) !== 0) {
                 edgeFrom = new es.Vector2(rect.x, rect.y);
                 edgeTo = new es.Vector2(rect.x + rect.width, rect.y);
                 if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
                     return true;
             }
-            if ((sector & PointSectors.bottom) != 0) {
+            if ((sector & PointSectors.bottom) !== 0) {
                 edgeFrom = new es.Vector2(rect.x, rect.y + rect.width);
                 edgeTo = new es.Vector2(rect.x + rect.width, rect.y + rect.height);
                 if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
                     return true;
             }
-            if ((sector & PointSectors.left) != 0) {
+            if ((sector & PointSectors.left) !== 0) {
                 edgeFrom = new es.Vector2(rect.x, rect.y);
                 edgeTo = new es.Vector2(rect.x, rect.y + rect.height);
                 if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
                     return true;
             }
-            if ((sector & PointSectors.right) != 0) {
+            if ((sector & PointSectors.right) !== 0) {
                 edgeFrom = new es.Vector2(rect.x + rect.width, rect.y);
                 edgeTo = new es.Vector2(rect.x + rect.width, rect.y + rect.height);
                 if (this.circleToLine(cPosition, cRadius, edgeFrom, edgeTo))
@@ -7260,13 +8787,14 @@ var es;
             this.point = point;
             this.centroid = es.Vector2.zero;
         }
-        RaycastHit.prototype.setValues = function (collider, fraction, distance, point) {
+        RaycastHit.prototype.setAllValues = function (collider, fraction, distance, point, normal) {
             this.collider = collider;
             this.fraction = fraction;
             this.distance = distance;
             this.point = point;
+            this.normal = normal;
         };
-        RaycastHit.prototype.setValuesNonCollider = function (fraction, distance, point, normal) {
+        RaycastHit.prototype.setValues = function (fraction, distance, point, normal) {
             this.fraction = fraction;
             this.distance = distance;
             this.point = point;
@@ -7275,6 +8803,11 @@ var es;
         RaycastHit.prototype.reset = function () {
             this.collider = null;
             this.fraction = this.distance = 0;
+        };
+        RaycastHit.prototype.clone = function () {
+            var hit = new RaycastHit();
+            hit.setAllValues(this.collider, this.fraction, this.distance, this.point, this.normal);
+            return hit;
         };
         RaycastHit.prototype.toString = function () {
             return "[RaycastHit] fraction: " + this.fraction + ", distance: " + this.distance + ", normal: " + this.normal + ", centroid: " + this.centroid + ", point: " + this.point;
@@ -7301,6 +8834,10 @@ var es;
         Physics.clear = function () {
             this._spatialHash.clear();
         };
+        Physics.debugDraw = function (secondsToDisplay) {
+            if (this.debugRender)
+                this._spatialHash.debugDraw(secondsToDisplay);
+        };
         /**
          * 检查是否有对撞机落在一个圆形区域内。返回遇到的第一个对撞机
          * @param center
@@ -7320,13 +8857,9 @@ var es;
          * @param results
          * @param layerMask
          */
-        Physics.overlapCircleAll = function (center, randius, results, layerMask) {
-            if (layerMask === void 0) { layerMask = -1; }
-            if (results.length == 0) {
-                console.warn("传入了一个空的结果数组。不会返回任何结果");
-                return;
-            }
-            return this._spatialHash.overlapCircle(center, randius, results, layerMask);
+        Physics.overlapCircleAll = function (center, radius, results, layerMask) {
+            if (layerMask === void 0) { layerMask = this.allLayers; }
+            return this._spatialHash.overlapCircle(center, radius, results, layerMask);
         };
         /**
          * 返回所有碰撞器与边界相交的碰撞器。bounds。请注意，这是一个broadphase检查，所以它只检查边界，不做单个碰撞到碰撞器的检查!
@@ -7355,7 +8888,7 @@ var es;
          */
         Physics.boxcastBroadphaseExcludingSelfNonRect = function (collider, layerMask) {
             if (layerMask === void 0) { layerMask = this.allLayers; }
-            var bounds = collider.bounds.clone();
+            var bounds = collider.bounds;
             return this._spatialHash.aabbBroadphase(bounds, collider, layerMask);
         };
         /**
@@ -7367,7 +8900,7 @@ var es;
          */
         Physics.boxcastBroadphaseExcludingSelfDelta = function (collider, deltaX, deltaY, layerMask) {
             if (layerMask === void 0) { layerMask = Physics.allLayers; }
-            var colliderBounds = collider.bounds.clone();
+            var colliderBounds = collider.bounds;
             var sweptBounds = colliderBounds.getSweptBroadphaseBounds(deltaX, deltaY);
             return this._spatialHash.aabbBroadphase(sweptBounds, collider, layerMask);
         };
@@ -7399,11 +8932,14 @@ var es;
          * @param end
          * @param layerMask
          */
-        Physics.linecast = function (start, end, layerMask) {
-            if (layerMask === void 0) { layerMask = Physics.allLayers; }
+        Physics.linecast = function (start, end, layerMask, ignoredColliders) {
+            if (layerMask === void 0) { layerMask = this.allLayers; }
+            if (ignoredColliders === void 0) { ignoredColliders = null; }
             this._hitArray[0].reset();
             this.linecastAll(start, end, this._hitArray, layerMask);
-            return this._hitArray[0];
+            this._hitArray[0].reset();
+            Physics.linecastAll(start, end, this._hitArray, layerMask, ignoredColliders);
+            return this._hitArray[0].clone();
         };
         /**
          * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组
@@ -7412,13 +8948,10 @@ var es;
          * @param hits
          * @param layerMask
          */
-        Physics.linecastAll = function (start, end, hits, layerMask) {
-            if (layerMask === void 0) { layerMask = Physics.allLayers; }
-            if (hits.length == 0) {
-                console.warn("传入了一个空的hits数组。没有点击会被返回");
-                return 0;
-            }
-            return this._spatialHash.linecast(start, end, hits, layerMask);
+        Physics.linecastAll = function (start, end, hits, layerMask, ignoredColliders) {
+            if (layerMask === void 0) { layerMask = this.allLayers; }
+            if (ignoredColliders === void 0) { ignoredColliders = null; }
+            return this._spatialHash.linecast(start, end, hits, layerMask, ignoredColliders);
         };
         /**
          * 检查是否有对撞机落在一个矩形区域中
@@ -7446,7 +8979,7 @@ var es;
             return this._spatialHash.overlapRectangle(rect, results, layerMask);
         };
         /** 用于在全局范围内存储重力值的方便字段 */
-        Physics.gravity = new es.Vector2(0, 300);
+        Physics.gravity = new es.Vector2(0, -300);
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
         Physics.spatialHashCellSize = 100;
         /** 接受layerMask的所有方法的默认值 */
@@ -7459,6 +8992,7 @@ var es;
          * 在碰撞器中开始的射线/直线是否强制转换检测到那些碰撞器
          */
         Physics.raycastsStartInColliders = false;
+        Physics.debugRender = false;
         /**
          * 我们保留它以避免在每次raycast发生时分配它
          */
@@ -7481,11 +9015,32 @@ var es;
      * 不是真正的射线(射线只有开始和方向)，作为一条线和射线。
      */
     var Ray2D = /** @class */ (function () {
-        function Ray2D(position, end) {
-            this.start = position;
-            this.end = end;
-            this.direction = es.Vector2.subtract(this.end, this.start);
+        function Ray2D(pos, end) {
+            this._start = pos.clone();
+            this._end = end.clone();
+            this._direction = this._end.sub(this._start);
         }
+        Object.defineProperty(Ray2D.prototype, "start", {
+            get: function () {
+                return this._start;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Ray2D.prototype, "direction", {
+            get: function () {
+                return this._direction;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Ray2D.prototype, "end", {
+            get: function () {
+                return this._end;
+            },
+            enumerable: true,
+            configurable: true
+        });
         return Ray2D;
     }());
     es.Ray2D = Ray2D;
@@ -7568,6 +9123,20 @@ var es;
         SpatialHash.prototype.clear = function () {
             this._cellDict.clear();
         };
+        SpatialHash.prototype.debugDraw = function (secondsToDisplay) {
+            for (var x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
+                for (var y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
+                    var cell = this.cellAtPosition(x, y);
+                    if (cell != null && cell.length > 0)
+                        this.debugDrawCellDetails(x, y, secondsToDisplay);
+                }
+            }
+        };
+        SpatialHash.prototype.debugDrawCellDetails = function (x, y, secondsToDisplay) {
+            if (secondsToDisplay === void 0) { secondsToDisplay = 0.5; }
+            es.Graphics.instance.batcher.drawHollowRect(x * this._cellSize, y * this._cellSize, this._cellSize, this._cellSize, new es.Color(255, 0, 0), secondsToDisplay);
+            es.Graphics.instance.batcher.end();
+        };
         /**
          * 返回边框与单元格相交的所有对象
          * @param bounds
@@ -7581,7 +9150,7 @@ var es;
             for (var x = p1.x; x <= p2.x; x++) {
                 for (var y = p1.y; y <= p2.y; y++) {
                     var cell = this.cellAtPosition(x, y);
-                    if (cell == null)
+                    if (!cell)
                         continue;
                     // 当cell不为空。循环并取回所有碰撞器
                     for (var i = 0; i < cell.length; i++) {
@@ -7595,7 +9164,7 @@ var es;
                     }
                 }
             }
-            return this._tempHashSet;
+            return Array.from(this._tempHashSet);
         };
         /**
          * 通过空间散列投掷一条线，并将该线碰到的任何碰撞器填入碰撞数组
@@ -7606,9 +9175,9 @@ var es;
          * @param hits
          * @param layerMask
          */
-        SpatialHash.prototype.linecast = function (start, end, hits, layerMask) {
+        SpatialHash.prototype.linecast = function (start, end, hits, layerMask, ignoredColliders) {
             var ray = new es.Ray2D(start, end);
-            this._raycastParser.start(ray, hits, layerMask);
+            this._raycastParser.start(ray, hits, layerMask, ignoredColliders);
             // 获取我们的起始/结束位置，与我们的网格在同一空间内
             var currentCell = this.cellCoords(start.x, start.y);
             var lastCell = this.cellCoords(end.x, end.y);
@@ -7635,17 +9204,17 @@ var es;
             var tDeltaY = ray.direction.y != 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
             // 开始遍历并返回交叉单元格。
             var cell = this.cellAtPosition(currentCell.x, currentCell.y);
-            if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
+            if (cell != null && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
                 this._raycastParser.reset();
                 return this._raycastParser.hitCounter;
             }
             while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
                 if (tMaxX < tMaxY) {
-                    currentCell.x = Math.floor(es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
+                    currentCell.x = es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX));
                     tMaxX += tDeltaX;
                 }
                 else {
-                    currentCell.y = Math.floor(es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
+                    currentCell.y = es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY));
                     tMaxY += tDeltaY;
                 }
                 cell = this.cellAtPosition(currentCell.x, currentCell.y);
@@ -7665,9 +9234,9 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
-            var e_8, _a;
+            var e_10, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
-            this._overlapTestBox.position = rect.location;
+            this._overlapTestBox.position = rect.location.clone();
             var resultCounter = 0;
             var potentials = this.aabbBroadphase(rect, null, layerMask);
             try {
@@ -7696,12 +9265,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_8_1) { e_8 = { error: e_8_1 }; }
+            catch (e_10_1) { e_10 = { error: e_10_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_8) throw e_8.error; }
+                finally { if (e_10) throw e_10.error; }
             }
             return resultCounter;
         };
@@ -7713,7 +9282,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_9, _a;
+            var e_11, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -7723,8 +9292,10 @@ var es;
                 for (var potentials_2 = __values(potentials), potentials_2_1 = potentials_2.next(); !potentials_2_1.done; potentials_2_1 = potentials_2.next()) {
                     var collider = potentials_2_1.value;
                     if (collider instanceof es.BoxCollider) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
+                        if (collider.shape.overlaps(this._overlapTestCircle)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
                     }
                     else if (collider instanceof es.CircleCollider) {
                         if (collider.shape.overlaps(this._overlapTestCircle)) {
@@ -7742,16 +9313,16 @@ var es;
                         throw new Error("对这个对撞机类型的overlapCircle没有实现!");
                     }
                     // 如果我们所有的结果数据有了则返回
-                    if (resultCounter == results.length)
+                    if (resultCounter === results.length)
                         return resultCounter;
                 }
             }
-            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            catch (e_11_1) { e_11 = { error: e_11_1 }; }
             finally {
                 try {
                     if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_9) throw e_9.error; }
+                finally { if (e_11) throw e_11.error; }
             }
             return resultCounter;
         };
@@ -7784,10 +9355,6 @@ var es;
         return SpatialHash;
     }());
     es.SpatialHash = SpatialHash;
-    /**
-     * 包装一个Unit32，列表碰撞器字典
-     * 它的主要目的是将int、int x、y坐标散列到单个Uint32键中，使用O(1)查找。
-     */
     var NumberDictionary = /** @class */ (function () {
         function NumberDictionary() {
             this._store = new Map();
@@ -7810,7 +9377,7 @@ var es;
             return this._store.get(this.getKey(x, y));
         };
         NumberDictionary.prototype.getKey = function (x, y) {
-            return x << 16 | (y >>> 0);
+            return x + "_" + y;
         };
         /**
          * 清除字典数据
@@ -7827,10 +9394,11 @@ var es;
             this._checkedColliders = [];
             this._cellHits = [];
         }
-        RaycastResultParser.prototype.start = function (ray, hits, layerMask) {
+        RaycastResultParser.prototype.start = function (ray, hits, layerMask, ignoredColliders) {
             this._ray = ray;
             this._hits = hits;
             this._layerMask = layerMask;
+            this._ignoredColliders = ignoredColliders;
             this.hitCounter = 0;
         };
         /**
@@ -7840,7 +9408,6 @@ var es;
          * @param cell
          */
         RaycastResultParser.prototype.checkRayIntersection = function (cellX, cellY, cell) {
-            var fraction = new es.Ref(0);
             for (var i = 0; i < cell.length; i++) {
                 var potential = cell[i];
                 // 管理我们已经处理过的碰撞器
@@ -7853,11 +9420,15 @@ var es;
                 // 确保碰撞器在图层蒙版上
                 if (!es.Flags.isFlagSet(this._layerMask, potential.physicsLayer.value))
                     continue;
+                if (this._ignoredColliders && this._ignoredColliders.has(potential)) {
+                    continue;
+                }
                 // TODO: rayIntersects的性能够吗?需要测试它。Collisions.rectToLine可能更快
                 // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
                 // 在做形状测试之前先做一个边界检查
-                var colliderBounds = potential.bounds.clone();
-                if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1) {
+                var colliderBounds = potential.bounds;
+                var res = colliderBounds.rayIntersects(this._ray);
+                if (res.intersected && res.distance <= 1) {
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
                         // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
                         if (!es.Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
@@ -7868,7 +9439,7 @@ var es;
                     }
                 }
             }
-            if (this._cellHits.length == 0)
+            if (this._cellHits.length === 0)
                 return false;
             // 所有处理单元完成。对结果进行排序并将命中结果打包到结果数组中
             this._cellHits.sort(RaycastResultParser.compareRaycastHits);
@@ -7876,7 +9447,7 @@ var es;
                 this._hits[this.hitCounter] = this._cellHits[i];
                 // 增加命中计数器，如果它已经达到数组大小的限制，我们就完成了
                 this.hitCounter++;
-                if (this.hitCounter == this._hits.length)
+                if (this.hitCounter === this._hits.length)
                     return true;
             }
             return false;
@@ -7885,9 +9456,15 @@ var es;
             this._hits = null;
             this._checkedColliders.length = 0;
             this._cellHits.length = 0;
+            this._ignoredColliders = null;
         };
         RaycastResultParser.compareRaycastHits = function (a, b) {
-            return a.distance - b.distance;
+            if (a.distance !== b.distance) {
+                return a.distance - b.distance;
+            }
+            else {
+                return a.collider.castSortOrder - b.collider.castSortOrder;
+            }
         };
         return RaycastResultParser;
     }());
@@ -7925,6 +9502,9 @@ var es;
             _this.isBox = isBox;
             return _this;
         }
+        Polygon.prototype.create = function (vertCount, radius) {
+            Polygon.buildSymmetricalPolygon(vertCount, radius);
+        };
         Object.defineProperty(Polygon.prototype, "edgeNormals", {
             /**
              * 边缘法线用于SAT碰撞检测。缓存它们用于避免squareRoots
@@ -7943,9 +9523,13 @@ var es;
          * @param points
          */
         Polygon.prototype.setPoints = function (points) {
+            var _this = this;
             this.points = points;
             this.recalculateCenterAndEdgeNormals();
-            this._originalPoints = this.points.slice();
+            this._originalPoints = [];
+            this.points.forEach(function (p) {
+                _this._originalPoints.push(p.clone());
+            });
         };
         /**
          * 重新计算多边形中心
@@ -7996,7 +9580,7 @@ var es;
         Polygon.recenterPolygonVerts = function (points) {
             var center = this.findPolygonCenter(points);
             for (var i = 0; i < points.length; i++)
-                points[i] = es.Vector2.subtract(points[i], center);
+                points[i] = points[i].sub(center);
         };
         /**
          * 找到多边形的中心。注意，这对于正则多边形是准确的。不规则多边形没有中心。
@@ -8017,9 +9601,9 @@ var es;
          */
         Polygon.getFarthestPointInDirection = function (points, direction) {
             var index = 0;
-            var maxDot = es.Vector2.dot(points[index], direction);
+            var maxDot = points[index].dot(direction);
             for (var i = 1; i < points.length; i++) {
-                var dot = es.Vector2.dot(points[i], direction);
+                var dot = points[i].dot(direction);
                 if (dot > maxDot) {
                     maxDot = dot;
                     index = i;
@@ -8036,29 +9620,30 @@ var es;
          * @param distanceSquared
          * @param edgeNormal
          */
-        Polygon.getClosestPointOnPolygonToPoint = function (points, point, distanceSquared, edgeNormal) {
-            distanceSquared.value = Number.MAX_VALUE;
-            edgeNormal.x = 0;
-            edgeNormal.y = 0;
-            var closestPoint = es.Vector2.zero;
+        Polygon.getClosestPointOnPolygonToPoint = function (points, point) {
+            var res = {
+                distanceSquared: Number.MAX_VALUE,
+                edgeNormal: es.Vector2.zero,
+                closestPoint: es.Vector2.zero,
+            };
             var tempDistanceSquared = 0;
             for (var i = 0; i < points.length; i++) {
                 var j = i + 1;
-                if (j == points.length)
+                if (j === points.length)
                     j = 0;
                 var closest = es.ShapeCollisionsCircle.closestPointOnLine(points[i], points[j], point);
-                tempDistanceSquared = es.Vector2.distanceSquared(point, closest);
-                if (tempDistanceSquared < distanceSquared.value) {
-                    distanceSquared.value = tempDistanceSquared;
-                    closestPoint = closest;
+                tempDistanceSquared = es.Vector2.sqrDistance(point, closest);
+                if (tempDistanceSquared < res.distanceSquared) {
+                    res.distanceSquared = tempDistanceSquared;
+                    res.closestPoint = closest;
                     // 求直线的法线
-                    var line = es.Vector2.subtract(points[j], points[i]);
-                    edgeNormal.x = -line.y;
-                    edgeNormal.y = line.x;
+                    var line = points[j].sub(points[i]);
+                    res.edgeNormal.x = line.y;
+                    res.edgeNormal.y = -line.x;
                 }
             }
-            es.Vector2Ext.normalize(edgeNormal);
-            return closestPoint;
+            res.edgeNormal = res.edgeNormal.normalize();
+            return res;
         };
         /**
          * 旋转原始点并复制旋转的值到旋转的点
@@ -8075,41 +9660,47 @@ var es;
             }
         };
         Polygon.prototype.recalculateBounds = function (collider) {
+            var _this = this;
             // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
-            this.center = collider.localOffset.clone();
+            this.center = collider.localOffset;
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 var hasUnitScale = true;
-                var tempMat = void 0;
-                var combinedMatrix = es.Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
+                var tempMat = new es.Matrix2D();
+                var combinedMatrix_1 = new es.Matrix2D();
+                es.Matrix2D.createTranslation(this._polygonCenter.x * -1, this._polygonCenter.y * -1, combinedMatrix_1);
                 if (!collider.entity.transform.scale.equals(es.Vector2.one)) {
-                    tempMat = es.Matrix2D.createScale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
-                    combinedMatrix = combinedMatrix.multiply(tempMat);
+                    es.Matrix2D.createScale(collider.entity.scale.x, collider.entity.scale.y, tempMat);
+                    es.Matrix2D.multiply(combinedMatrix_1, tempMat, combinedMatrix_1);
                     hasUnitScale = false;
                     // 缩放偏移量并将其设置为中心。如果我们有旋转，它会在下面重置
-                    this.center = es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale);
+                    var scaledOffset = new es.Vector2(collider.localOffset.x * collider.entity.scale.x, collider.localOffset.y * collider.entity.scale.y);
+                    this.center = scaledOffset;
                 }
                 if (collider.entity.transform.rotation != 0) {
-                    tempMat = es.Matrix2D.createRotation(collider.entity.transform.rotation);
-                    combinedMatrix = combinedMatrix.multiply(tempMat);
+                    es.Matrix2D.createRotation(es.MathHelper.Deg2Rad * collider.entity.rotation, tempMat);
+                    es.Matrix2D.multiply(combinedMatrix_1, tempMat, combinedMatrix_1);
                     // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动
                     // 我们的偏移使角度为0我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
                     var offsetAngle = Math.atan2(collider.localOffset.y * collider.entity.transform.scale.y, collider.localOffset.x * collider.entity.transform.scale.x) * es.MathHelper.Rad2Deg;
                     var offsetLength = hasUnitScale ? collider._localOffsetLength :
-                        es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
+                        collider.localOffset.multiply(collider.entity.transform.scale).magnitude();
                     this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
                 }
-                tempMat = es.Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
-                combinedMatrix = combinedMatrix.multiply(tempMat);
+                es.Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y, tempMat);
+                es.Matrix2D.multiply(combinedMatrix_1, tempMat, combinedMatrix_1);
                 // 最后变换原始点
-                es.Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
+                this.points = [];
+                this._originalPoints.forEach(function (p) {
+                    _this.points.push(p.transform(combinedMatrix_1));
+                });
                 this.isUnrotated = collider.entity.transform.rotation == 0;
                 // 如果旋转的话，我们只需要重建边的法线
                 if (collider._isRotationDirty)
                     this._areEdgeNormalsDirty = true;
             }
-            this.position = es.Vector2.add(collider.entity.transform.position, this.center);
+            this.position = collider.transform.position.add(this.center);
             this.bounds = es.Rectangle.rectEncompassingPoints(this.points);
-            this.bounds.location = es.Vector2.add(this.bounds.location, this.position);
+            this.bounds.location = this.bounds.location.add(this.position);
         };
         Polygon.prototype.overlaps = function (other) {
             var result = new es.CollisionResult();
@@ -8147,10 +9738,10 @@ var es;
          */
         Polygon.prototype.containsPoint = function (point) {
             // 将点归一化到多边形坐标空间中
-            point.subtract(this.position);
+            point = point.sub(this.position);
             var isInside = false;
             for (var i = 0, j = this.points.length - 1; i < this.points.length; j = i++) {
-                if (((this.points[i].y > point.y) != (this.points[j].y > point.y)) &&
+                if (((this.points[i].y > point.y) !== (this.points[j].y > point.y)) &&
                     (point.x < (this.points[j].x - this.points[i].x) * (point.y - this.points[i].y) / (this.points[j].y - this.points[i].y) +
                         this.points[i].x)) {
                     isInside = !isInside;
@@ -8264,17 +9855,17 @@ var es;
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 // 我们只将直线缩放为一个圆，所以我们将使用最大值
                 var scale = collider.entity.transform.scale;
-                var hasUnitScale = scale.x == 1 && scale.y == 1;
+                var hasUnitScale = scale.x === 1 && scale.y === 1;
                 var maxScale = Math.max(scale.x, scale.y);
                 this.radius = this._originalRadius * maxScale;
-                if (collider.entity.transform.rotation != 0) {
+                if (collider.entity.transform.rotation !== 0) {
                     // 为了处理偏移原点的旋转，我们只需要将圆心围绕(0,0)在一个圆上移动，我们的偏移量就是0角
                     var offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * es.MathHelper.Rad2Deg;
-                    var offsetLength = hasUnitScale ? collider._localOffsetLength : es.Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
-                    this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
+                    var offsetLength = hasUnitScale ? collider._localOffsetLength : collider.localOffset.multiply(collider.entity.transform.scale).magnitude();
+                    this.center = es.MathHelper.pointOnCirlce(es.Vector2.zero, offsetLength, collider.entity.transform.rotation + offsetAngle);
                 }
             }
-            this.position = es.Vector2.add(collider.entity.transform.position, this.center);
+            this.position = collider.transform.position.add(this.center);
             this.bounds = new es.Rectangle(this.position.x - this.radius, this.position.y - this.radius, this.radius * 2, this.radius * 2);
         };
         Circle.prototype.overlaps = function (other) {
@@ -8302,12 +9893,15 @@ var es;
         Circle.prototype.collidesWithLine = function (start, end, hit) {
             return es.ShapeCollisionsLine.lineToCircle(start, end, this, hit);
         };
+        Circle.prototype.getPointAlongEdge = function (angle) {
+            return new es.Vector2(this.position.x + this.radius * Math.cos(angle), this.position.y + this.radius * Math.sin(angle));
+        };
         /**
          * 获取所提供的点是否在此范围内
          * @param point
          */
         Circle.prototype.containsPoint = function (point) {
-            return (es.Vector2.subtract(point, this.position)).lengthSquared() <= this.radius * this.radius;
+            return (point.sub(this.position)).lengthSquared() <= this.radius * this.radius;
         };
         Circle.prototype.pointCollidesWithShape = function (point, result) {
             return es.ShapeCollisionsPoint.pointToCircle(point, this, result);
@@ -8333,14 +9927,33 @@ var es;
              */
             this.point = es.Vector2.zero;
         }
+        CollisionResult.prototype.reset = function () {
+            this.collider = null;
+            this.normal.setTo(0, 0);
+            this.minimumTranslationVector.setTo(0, 0);
+            if (this.point) {
+                this.point.setTo(0, 0);
+            }
+        };
+        CollisionResult.prototype.cloneTo = function (cr) {
+            cr.collider = this.collider;
+            cr.normal.setTo(this.normal.x, this.normal.y);
+            cr.minimumTranslationVector.setTo(this.minimumTranslationVector.x, this.minimumTranslationVector.y);
+            if (this.point) {
+                if (!cr.point) {
+                    cr.point = new es.Vector2(0, 0);
+                }
+                cr.point.setTo(this.point.x, this.point.y);
+            }
+        };
         /**
          * 改变最小平移向量，如果没有相同方向上的运动，它将移除平移的x分量。
          * @param deltaMovement
          */
-        CollisionResult.prototype.removeHorizontal = function (deltaMovement) {
+        CollisionResult.prototype.removeHorizontalTranslation = function (deltaMovement) {
             // 检查是否需要横向移动，如果需要，移除并固定响应
-            if (Math.sign(this.normal.x) != Math.sign(deltaMovement.x) || (deltaMovement.x == 0 && this.normal.x != 0)) {
-                var responseDistance = this.minimumTranslationVector.length();
+            if (Math.sign(this.normal.x) !== Math.sign(deltaMovement.x) || (deltaMovement.x === 0 && this.normal.x !== 0)) {
+                var responseDistance = this.minimumTranslationVector.magnitude();
                 var fix = responseDistance / this.normal.y;
                 // 检查一些边界情况。因为我们除以法线 使得x == 1和一个非常小的y这将导致一个巨大的固定值
                 if (Math.abs(this.normal.x) != 1 && Math.abs(fix) < Math.abs(deltaMovement.y * 3)) {
@@ -8349,9 +9962,8 @@ var es;
             }
         };
         CollisionResult.prototype.invertResult = function () {
-            this.minimumTranslationVector = es.Vector2.negate(this.minimumTranslationVector);
-            this.normal = es.Vector2.negate(this.normal);
-            return this;
+            this.minimumTranslationVector = this.minimumTranslationVector.negate();
+            this.normal = this.normal.negate();
         };
         CollisionResult.prototype.toString = function () {
             return "[CollisionResult] normal: " + this.normal + ", minimumTranslationVector: " + this.minimumTranslationVector;
@@ -8367,14 +9979,15 @@ var es;
         }
         RealtimeCollisions.intersectMovingCircleBox = function (s, b, movement, time) {
             // 计算将b按球面半径r扩大后的AABB
-            var e = b.bounds.clone();
+            var e = b.bounds;
             e.inflate(s.radius, s.radius);
             // 将射线与展开的矩形e相交，如果射线错过了e，则以无交点退出，否则得到交点p和时间t作为结果。
-            var ray = new es.Ray2D(es.Vector2.subtract(s.position, movement), s.position);
-            if (!e.rayIntersects(ray, time) && time.value > 1)
+            var ray = new es.Ray2D(s.position.sub(movement), s.position);
+            var res = e.rayIntersects(ray);
+            if (!res.intersected && res.distance > 1)
                 return false;
             // 求交点
-            var point = es.Vector2.add(ray.start, es.Vector2.multiply(ray.direction, new es.Vector2(time.value)));
+            var point = ray.start.add(ray.direction.scale(time));
             // 计算交点p位于b的哪个最小面和最大面之外。注意，u和v不能有相同的位集，它们之间必须至少有一个位集。
             var u, v = 0;
             if (point.x < b.bounds.left)
@@ -8406,7 +10019,7 @@ var es;
          * @param n
          */
         RealtimeCollisions.corner = function (b, n) {
-            var p = new es.Vector2();
+            var p = es.Vector2.zero;
             p.x = (n & 1) == 0 ? b.right : b.left;
             p.y = (n & 1) == 0 ? b.bottom : b.top;
             return p;
@@ -8421,8 +10034,8 @@ var es;
             // 找出离球心最近的点
             point = box.bounds.getClosestPointOnRectangleToPoint(cirlce.position);
             // 圆和方块相交，如果圆心到点的距离小于圆的半径，则圆和方块相交
-            var v = es.Vector2.subtract(point, cirlce.position);
-            var dist = es.Vector2.dot(v, v);
+            var v = point.sub(cirlce.position);
+            var dist = v.dot(v);
             return dist <= cirlce.radius * cirlce.radius;
         };
         return RealtimeCollisions;
@@ -8441,8 +10054,8 @@ var es;
                 result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
                 if (result.minimumTranslationVector.equals(es.Vector2.zero))
                     return false;
-                result.normal = new es.Vector2(-result.minimumTranslationVector.x, -result.minimumTranslationVector.y);
-                result.normal.normalize();
+                result.normal = result.minimumTranslationVector.scale(-1);
+                result.normal = result.normal.normalize();
                 return true;
             }
             return false;
@@ -8462,22 +10075,22 @@ var es;
                 var mtv = minkowskiDiff.getClosestPointOnBoundsToOrigin();
                 if (mtv.equals(es.Vector2.zero))
                     return false;
-                hit.normal = new es.Vector2(-mtv.x);
-                hit.normal.normalize();
+                hit.normal = new es.Vector2(-mtv.x, -mtv.y);
+                hit.normal = hit.normal.normalize();
                 hit.distance = 0;
                 hit.fraction = 0;
                 return true;
             }
             else {
                 // 射线投射移动矢量
-                var ray = new es.Ray2D(es.Vector2.zero, new es.Vector2(-movement.x));
-                var fraction = new es.Ref(0);
-                if (minkowskiDiff.rayIntersects(ray, fraction) && fraction.value <= 1) {
-                    hit.fraction = fraction.value;
-                    hit.distance = movement.length() * fraction.value;
-                    hit.normal = new es.Vector2(-movement.x, -movement.y);
-                    hit.normal.normalize();
-                    hit.centroid = es.Vector2.add(first.bounds.center, es.Vector2.multiply(movement, new es.Vector2(fraction.value)));
+                var ray = new es.Ray2D(es.Vector2.zero, movement.scale(-1));
+                var res = minkowskiDiff.rayIntersects(ray);
+                if (res.intersected && res.distance <= 1) {
+                    hit.fraction = res.distance;
+                    hit.distance = movement.magnitude() * res.distance;
+                    hit.normal = movement.scale(-1);
+                    hit.normal = hit.normal.normalize();
+                    hit.centroid = first.bounds.center.add(movement.scale(res.distance));
                     return true;
                 }
             }
@@ -8486,9 +10099,9 @@ var es;
         ShapeCollisionsBox.minkowskiDifference = function (first, second) {
             // 我们需要第一个框的左上角
             // 碰撞器只会修改运动的位置所以我们需要用位置来计算出运动是什么。
-            var positionOffset = es.Vector2.subtract(first.position, es.Vector2.add(first.bounds.location, new es.Vector2(first.bounds.size.x / 2, first.bounds.size.y / 2)));
-            var topLeft = es.Vector2.subtract(es.Vector2.add(first.bounds.location, positionOffset), second.bounds.max);
-            var fullSize = es.Vector2.add(first.bounds.size, second.bounds.size);
+            var positionOffset = first.position.sub(first.bounds.center);
+            var topLeft = first.bounds.location.add(positionOffset.sub(second.bounds.max));
+            var fullSize = first.bounds.size.add(second.bounds.size);
             return new es.Rectangle(topLeft.x, topLeft.y, fullSize.x, fullSize.y);
         };
         return ShapeCollisionsBox;
@@ -8500,20 +10113,38 @@ var es;
     var ShapeCollisionsCircle = /** @class */ (function () {
         function ShapeCollisionsCircle() {
         }
+        ShapeCollisionsCircle.circleToCircleCast = function (first, second, deltaMovement, hit) {
+            var endPointOfCast = first.position.add(deltaMovement);
+            var d = this.closestPointOnLine(first.position, endPointOfCast, second.position);
+            var closestDistanceSquared = es.Vector2.sqrDistance(second.position, d);
+            var sumOfRadiiSquared = (first.radius + second.radius) * (first.radius + second.radius);
+            if (closestDistanceSquared <= sumOfRadiiSquared) {
+                var normalizedDeltaMovement = deltaMovement.normalize();
+                if (d === endPointOfCast) {
+                    endPointOfCast = first.position.add(deltaMovement.add(normalizedDeltaMovement.scale(second.radius)));
+                    d = this.closestPointOnLine(first.position, endPointOfCast, second.position);
+                    closestDistanceSquared = es.Vector2.sqrDistance(second.position, d);
+                }
+                var backDist = Math.sqrt(sumOfRadiiSquared - closestDistanceSquared);
+                hit.centroid = d.sub(normalizedDeltaMovement.scale(backDist));
+                hit.normal = hit.centroid.sub(second.position).normalize();
+                hit.fraction = (hit.centroid.x - first.position.x) / deltaMovement.x;
+                hit.distance = es.Vector2.distance(first.position, hit.centroid);
+                hit.point = second.position.add(hit.normal.scale(second.radius));
+                return true;
+            }
+            return false;
+        };
         ShapeCollisionsCircle.circleToCircle = function (first, second, result) {
             if (result === void 0) { result = new es.CollisionResult(); }
-            var distanceSquared = es.Vector2.distanceSquared(first.position, second.position);
+            var distanceSquared = es.Vector2.sqrDistance(first.position, second.position);
             var sumOfRadii = first.radius + second.radius;
             var collided = distanceSquared < sumOfRadii * sumOfRadii;
             if (collided) {
-                result.normal = es.Vector2.normalize(es.Vector2.subtract(first.position, second.position));
+                result.normal = first.position.sub(second.position).normalize();
                 var depth = sumOfRadii - Math.sqrt(distanceSquared);
-                result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(-depth), result.normal);
-                result.point = es.Vector2.add(second.position, es.Vector2.multiply(result.normal, new es.Vector2(second.radius)));
-                // 这可以得到实际的碰撞点，可能有用也可能没用，所以我们暂时把它留在这里
-                // let collisionPointX = ((first.position.x * second.radius) + (second.position.x * first.radius)) / sumOfRadii;
-                // let collisionPointY = ((first.position.y * second.radius) + (second.position.y * first.radius)) / sumOfRadii;
-                // result.point = new Vector2(collisionPointX, collisionPointY);
+                result.minimumTranslationVector = result.normal.scale(-depth);
+                result.point = second.position.add(result.normal.scale(second.radius));
                 return true;
             }
             return false;
@@ -8529,23 +10160,23 @@ var es;
             var closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
             // 先处理中心在盒子里的圆，如果我们是包含的, 它的成本更低，
             if (box.containsPoint(circle.position)) {
-                result.point = closestPointOnBounds.clone();
+                result.point = closestPointOnBounds;
                 // 计算MTV。找出安全的、非碰撞的位置，并从中得到MTV
-                var safePlace = es.Vector2.add(closestPointOnBounds, es.Vector2.multiply(result.normal, new es.Vector2(circle.radius)));
-                result.minimumTranslationVector = es.Vector2.subtract(circle.position, safePlace);
+                var safePlace = closestPointOnBounds.add(result.normal.scale(circle.radius));
+                result.minimumTranslationVector = circle.position.sub(safePlace);
                 return true;
             }
-            var sqrDistance = es.Vector2.distanceSquared(closestPointOnBounds, circle.position);
+            var sqrDistance = es.Vector2.sqrDistance(closestPointOnBounds, circle.position);
             // 看框上的点距圆的半径是否小于圆的半径
             if (sqrDistance == 0) {
-                result.minimumTranslationVector = es.Vector2.multiply(result.normal, new es.Vector2(circle.radius));
+                result.minimumTranslationVector = result.normal.scale(circle.radius);
             }
             else if (sqrDistance <= circle.radius * circle.radius) {
-                result.normal = es.Vector2.subtract(circle.position, closestPointOnBounds);
-                var depth = result.normal.length() - circle.radius;
+                result.normal = circle.position.sub(closestPointOnBounds);
+                var depth = result.normal.magnitude() - circle.radius;
                 result.point = closestPointOnBounds;
-                es.Vector2Ext.normalize(result.normal);
-                result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(depth), result.normal);
+                result.normal = result.normal.normalize();
+                result.minimumTranslationVector = result.normal.scale(depth);
                 return true;
             }
             return false;
@@ -8553,42 +10184,43 @@ var es;
         ShapeCollisionsCircle.circleToPolygon = function (circle, polygon, result) {
             if (result === void 0) { result = new es.CollisionResult(); }
             // 圆圈在多边形中的位置坐标
-            var poly2Circle = es.Vector2.subtract(circle.position, polygon.position);
+            var poly2Circle = circle.position.sub(polygon.position);
             // 首先，我们需要找到从圆到多边形的最近距离
-            var distanceSquared = new es.Ref(0);
-            var closestPoint = es.Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle, distanceSquared, result.normal);
+            var res = es.Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle);
+            result.normal = res.edgeNormal;
             // 确保距离的平方小于半径的平方，否则我们不会相撞。
             // 请注意，如果圆完全包含在多边形中，距离可能大于半径。
             // 正因为如此，我们还要确保圆的位置不在多边形内。
             var circleCenterInsidePoly = polygon.containsPoint(circle.position);
-            if (distanceSquared.value > circle.radius * circle.radius && !circleCenterInsidePoly)
+            if (res.distanceSquared > circle.radius * circle.radius && !circleCenterInsidePoly)
                 return false;
             // 算出MTV。我们要注意处理完全包含在多边形中的圆或包含其中心的圆
             var mtv;
             if (circleCenterInsidePoly) {
-                mtv = es.Vector2.multiply(result.normal, new es.Vector2(Math.sqrt(distanceSquared.value) - circle.radius));
+                mtv = result.normal.scale(Math.sqrt(res.distanceSquared) - circle.radius);
             }
             else {
                 // 如果我们没有距离，这意味着圆心在多边形的边缘上。只需根据它的半径移动它
-                if (distanceSquared.value == 0) {
-                    mtv = new es.Vector2(result.normal.x * circle.radius, result.normal.y * circle.radius);
+                if (res.distanceSquared === 0) {
+                    mtv = result.normal.scale(circle.radius);
                 }
                 else {
-                    var distance = Math.sqrt(distanceSquared.value);
-                    mtv = es.Vector2.subtract(new es.Vector2(-1), es.Vector2.subtract(poly2Circle, closestPoint))
-                        .multiply(new es.Vector2((circle.radius - distance) / distance));
+                    var distance = Math.sqrt(res.distanceSquared);
+                    mtv = poly2Circle
+                        .sub(res.closestPoint)
+                        .scale(((circle.radius - distance) / distance) * -1);
                 }
             }
             result.minimumTranslationVector = mtv;
-            result.point = es.Vector2.add(closestPoint, polygon.position);
+            result.point = res.closestPoint.add(polygon.position);
             return true;
         };
         ShapeCollisionsCircle.closestPointOnLine = function (lineA, lineB, closestTo) {
-            var v = es.Vector2.subtract(lineB, lineA);
-            var w = es.Vector2.subtract(closestTo, lineA);
-            var t = es.Vector2.dot(w, v) / es.Vector2.dot(v, v);
+            var v = lineB.sub(lineA);
+            var w = closestTo.sub(lineA);
+            var t = w.dot(v) / v.dot(v);
             t = es.MathHelper.clamp(t, 0, 1);
-            return es.Vector2.add(lineA, es.Vector2.multiply(v, new es.Vector2(t)));
+            return lineA.add(v.scaleEqual(t));
         };
         return ShapeCollisionsCircle;
     }());
@@ -8609,15 +10241,15 @@ var es;
                 var edge1 = es.Vector2.add(polygon.position, polygon.points[j]);
                 var edge2 = es.Vector2.add(polygon.position, polygon.points[i]);
                 var intersection = es.Vector2.zero;
-                if (this.lineToLine(edge1, edge2, start, end, intersection)) {
+                if (ShapeCollisionsLine.lineToLine(edge1, edge2, start, end, intersection)) {
                     hasIntersection = true;
                     // TODO: 这是得到分数的正确和最有效的方法吗?
                     // 先检查x分数。如果是NaN，就用y代替
                     var distanceFraction = (intersection.x - start.x) / (end.x - start.x);
-                    if (Number.isNaN(distanceFraction) || Number.isFinite(distanceFraction))
+                    if (Number.isNaN(distanceFraction) || Math.abs(distanceFraction) == Infinity)
                         distanceFraction = (intersection.y - start.y) / (end.y - start.y);
                     if (distanceFraction < fraction) {
-                        var edge = es.Vector2.subtract(edge2, edge1);
+                        var edge = edge2.sub(edge1);
                         normal = new es.Vector2(edge.y, -edge.x);
                         fraction = distanceFraction;
                         intersectionPoint = intersection;
@@ -8625,37 +10257,39 @@ var es;
                 }
             }
             if (hasIntersection) {
-                normal.normalize();
+                normal = normal.normalize();
                 var distance = es.Vector2.distance(start, intersectionPoint);
-                hit.setValuesNonCollider(fraction, distance, intersectionPoint, normal);
+                hit.setValues(fraction, distance, intersectionPoint, normal);
                 return true;
             }
             return false;
         };
         ShapeCollisionsLine.lineToLine = function (a1, a2, b1, b2, intersection) {
-            var b = es.Vector2.subtract(a2, a1);
-            var d = es.Vector2.subtract(b2, b1);
+            var b = a2.sub(a1);
+            var d = b2.sub(b1);
             var bDotDPerp = b.x * d.y - b.y * d.x;
             // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
                 return false;
-            var c = es.Vector2.subtract(b1, a1);
+            var c = b1.sub(a1);
             var t = (c.x * d.y - c.y * d.x) / bDotDPerp;
             if (t < 0 || t > 1)
                 return false;
             var u = (c.x * b.y - c.y * b.x) / bDotDPerp;
             if (u < 0 || u > 1)
                 return false;
-            intersection = es.Vector2.add(a1, es.Vector2.multiply(new es.Vector2(t), b));
+            var r = a1.add(b.scale(t));
+            intersection.x = r.x;
+            intersection.y = r.y;
             return true;
         };
         ShapeCollisionsLine.lineToCircle = function (start, end, s, hit) {
             // 计算这里的长度并分别对d进行标准化，因为如果我们命中了我们需要它来得到分数
             var lineLength = es.Vector2.distance(start, end);
-            var d = es.Vector2.divide(es.Vector2.subtract(end, start), new es.Vector2(lineLength));
-            var m = es.Vector2.subtract(start, s.position);
-            var b = es.Vector2.dot(m, d);
-            var c = es.Vector2.dot(m, m) - s.radius * s.radius;
+            var d = es.Vector2.divideScaler(end.sub(start), lineLength);
+            var m = start.sub(s.position);
+            var b = m.dot(d);
+            var c = m.dot(m) - s.radius * s.radius;
             // 如果r的原点在s之外，(c>0)和r指向s (b>0) 则返回
             if (c > 0 && b > 0)
                 return false;
@@ -8668,9 +10302,9 @@ var es;
             // 如果分数为负数，射线从圈内开始，
             if (hit.fraction < 0)
                 hit.fraction = 0;
-            hit.point = es.Vector2.add(start, es.Vector2.multiply(new es.Vector2(hit.fraction), d));
+            hit.point = start.add(d.scale(hit.fraction));
             hit.distance = es.Vector2.distance(start, hit.point);
-            hit.normal = es.Vector2.normalize(es.Vector2.subtract(hit.point, s.position));
+            hit.normal = hit.point.sub(s.position).normalize();
             hit.fraction = hit.distance / lineLength;
             return true;
         };
@@ -8684,14 +10318,15 @@ var es;
         function ShapeCollisionsPoint() {
         }
         ShapeCollisionsPoint.pointToCircle = function (point, circle, result) {
-            var distanceSquared = es.Vector2.distanceSquared(point, circle.position);
+            var distanceSquared = es.Vector2.sqrDistance(point, circle.position);
             var sumOfRadii = 1 + circle.radius;
             var collided = distanceSquared < sumOfRadii * sumOfRadii;
             if (collided) {
-                result.normal = es.Vector2.normalize(es.Vector2.subtract(point, circle.position));
+                result.normal = point.sub(circle.position).normalize();
                 var depth = sumOfRadii - Math.sqrt(distanceSquared);
-                result.minimumTranslationVector = es.Vector2.multiply(new es.Vector2(-depth, -depth), result.normal);
-                result.point = es.Vector2.add(circle.position, es.Vector2.multiply(result.normal, new es.Vector2(circle.radius, circle.radius)));
+                result.minimumTranslationVector = result.normal.scale(-depth);
+                ;
+                result.point = circle.position.add(result.normal.scale(circle.radius));
                 return true;
             }
             return false;
@@ -8701,7 +10336,7 @@ var es;
             if (box.containsPoint(point)) {
                 // 在方框的空间里找到点
                 result.point = box.bounds.getClosestPointOnRectangleBorderToPoint(point, result.normal);
-                result.minimumTranslationVector = es.Vector2.subtract(point, result.point);
+                result.minimumTranslationVector = point.sub(result.point);
                 return true;
             }
             return false;
@@ -8709,10 +10344,10 @@ var es;
         ShapeCollisionsPoint.pointToPoly = function (point, poly, result) {
             if (result === void 0) { result = new es.CollisionResult(); }
             if (poly.containsPoint(point)) {
-                var distanceSquared = new es.Ref(0);
-                var closestPoint = es.Polygon.getClosestPointOnPolygonToPoint(poly.points, es.Vector2.subtract(point, poly.position), distanceSquared, result.normal);
-                result.minimumTranslationVector = new es.Vector2(result.normal.x * Math.sqrt(distanceSquared.value), result.normal.y * Math.sqrt(distanceSquared.value));
-                result.point = es.Vector2.add(closestPoint, poly.position);
+                var res = es.Polygon.getClosestPointOnPolygonToPoint(poly.points, point.sub(poly.position));
+                result.normal = res.edgeNormal;
+                result.minimumTranslationVector = result.normal.scale(Math.sqrt(res.distanceSquared));
+                result.point = res.closestPoint.sub(poly.position);
                 return true;
             }
             return false;
@@ -8734,36 +10369,27 @@ var es;
          */
         ShapeCollisionsPolygon.polygonToPolygon = function (first, second, result) {
             var isIntersecting = true;
-            var firstEdges = first.edgeNormals.slice();
-            var secondEdges = second.edgeNormals.slice();
+            var firstEdges = first.edgeNormals;
+            var secondEdges = second.edgeNormals;
             var minIntervalDistance = Number.POSITIVE_INFINITY;
-            var translationAxis = new es.Vector2();
-            var polygonOffset = es.Vector2.subtract(first.position, second.position);
+            var translationAxis = es.Vector2.zero;
+            var polygonOffset = first.position.sub(second.position);
             var axis;
             // 循环穿过两个多边形的所有边
             for (var edgeIndex = 0; edgeIndex < firstEdges.length + secondEdges.length; edgeIndex++) {
                 // 1. 找出当前多边形是否相交
                 // 多边形的归一化轴垂直于缓存给我们的当前边
-                if (edgeIndex < firstEdges.length) {
-                    axis = firstEdges[edgeIndex];
-                }
-                else {
-                    axis = secondEdges[edgeIndex - firstEdges.length];
-                }
+                axis = edgeIndex < firstEdges.length ? firstEdges[edgeIndex] : secondEdges[edgeIndex - firstEdges.length];
                 // 求多边形在当前轴上的投影
-                var minA = new es.Ref(0);
-                var minB = new es.Ref(0);
-                var maxA = new es.Ref(0);
-                var maxB = new es.Ref(0);
                 var intervalDist = 0;
-                this.getInterval(axis, first, minA, maxA);
-                this.getInterval(axis, second, minB, maxB);
+                var _a = this.getInterval(axis, first), minA = _a.min, maxA = _a.max;
+                var _b = this.getInterval(axis, second), minB = _b.min, maxB = _b.max;
                 // 将区间设为第二个多边形的空间。由轴上投影的位置差偏移。
-                var relativeIntervalOffset = es.Vector2.dot(polygonOffset, axis);
-                minA.value += relativeIntervalOffset;
-                maxA.value += relativeIntervalOffset;
+                var relativeIntervalOffset = polygonOffset.dot(axis);
+                minA += relativeIntervalOffset;
+                maxA += relativeIntervalOffset;
                 // 检查多边形投影是否正在相交
-                intervalDist = this.intervalDistance(minA.value, maxA.value, minB.value, maxB.value);
+                intervalDist = this.intervalDistance(minA, maxA, minB, maxB);
                 if (intervalDist > 0)
                     isIntersecting = false;
                 // 对于多对多数据类型转换，添加一个Vector2?参数称为deltaMovement。为了提高速度，我们这里不使用它
@@ -8775,14 +10401,14 @@ var es;
                 intervalDist = Math.abs(intervalDist);
                 if (intervalDist < minIntervalDistance) {
                     minIntervalDistance = intervalDist;
-                    translationAxis = axis;
-                    if (es.Vector2.dot(translationAxis, polygonOffset) < 0)
-                        translationAxis = new es.Vector2(-translationAxis.x, -translationAxis.y);
+                    translationAxis.setTo(axis.x, axis.y);
+                    if (translationAxis.dot(polygonOffset) < 0)
+                        translationAxis = translationAxis.scale(-1);
                 }
             }
             // 利用最小平移向量对多边形进行推入。
             result.normal = translationAxis;
-            result.minimumTranslationVector = new es.Vector2(-translationAxis.x * minIntervalDistance, -translationAxis.y * minIntervalDistance);
+            result.minimumTranslationVector = translationAxis.scale(-minIntervalDistance);
             return true;
         };
         /**
@@ -8792,18 +10418,22 @@ var es;
          * @param min
          * @param max
          */
-        ShapeCollisionsPolygon.getInterval = function (axis, polygon, min, max) {
-            var dot = es.Vector2.dot(polygon.points[0], axis);
-            min.value = max.value = dot;
+        ShapeCollisionsPolygon.getInterval = function (axis, polygon) {
+            var res = { min: 0, max: 0 };
+            var dot;
+            dot = polygon.points[0].dot(axis);
+            res.max = dot;
+            res.min = dot;
             for (var i = 1; i < polygon.points.length; i++) {
-                dot = es.Vector2.dot(polygon.points[i], axis);
-                if (dot < min.value) {
-                    min.value = dot;
+                dot = polygon.points[i].dot(axis);
+                if (dot < res.min) {
+                    res.min = dot;
                 }
-                else if (dot > max.value) {
-                    max.value = dot;
+                else if (dot > res.max) {
+                    res.max = dot;
                 }
             }
+            return res;
         };
         /**
          * 计算[minA, maxA]和[minB, maxB]之间的距离。如果间隔重叠，距离是负的
@@ -8820,6 +10450,1983 @@ var es;
         return ShapeCollisionsPolygon;
     }());
     es.ShapeCollisionsPolygon = ShapeCollisionsPolygon;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Particle = /** @class */ (function () {
+        function Particle(position) {
+            this.position = es.Vector2.zero;
+            this.lastPosition = es.Vector2.zero;
+            this.mass = 1;
+            this.radius = 0;
+            this.collidesWithColliders = true;
+            this.isPinned = false;
+            this.acceleration = es.Vector2.zero;
+            this.pinnedPosition = es.Vector2.zero;
+            this.position = new es.Vector2(position.x, position.y);
+            this.lastPosition = new es.Vector2(position.x, position.y);
+        }
+        Particle.prototype.applyForce = function (force) {
+            this.acceleration = this.acceleration.add(force.divideScaler(this.mass));
+        };
+        Particle.prototype.pin = function () {
+            this.isPinned = true;
+            this.pinnedPosition = this.position;
+            return this;
+        };
+        Particle.prototype.pinTo = function (position) {
+            this.isPinned = true;
+            this.pinnedPosition = position;
+            this.position = this.pinnedPosition;
+            return this;
+        };
+        Particle.prototype.unpin = function () {
+            this.isPinned = false;
+            return this;
+        };
+        return Particle;
+    }());
+    es.Particle = Particle;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var VerletWorld = /** @class */ (function () {
+        function VerletWorld(simulationBounds) {
+            if (simulationBounds === void 0) { simulationBounds = null; }
+            this.gravity = new es.Vector2(0, -980);
+            this.constraintIterations = 3;
+            this.maximumStepIterations = 5;
+            this.allowDragging = true;
+            this.selectionRadiusSquared = 20 * 20;
+            this._composites = [];
+            this._tempCircle = new es.Circle(1);
+            this._leftOverTime = 0;
+            this._fixedDeltaTime = 1 / 60;
+            this._iterationSteps = 0;
+            this._fixedDeltaTimeSq = 0;
+            this.simulationBounds = simulationBounds;
+            this._fixedDeltaTimeSq = Math.pow(this._fixedDeltaTime, 2);
+        }
+        VerletWorld.prototype.update = function () {
+            this.updateTiming();
+            if (this.allowDragging)
+                this.handleDragging();
+            for (var iteration = 1; iteration <= this._iterationSteps; iteration++) {
+                for (var i = this._composites.length - 1; i >= 0; i--) {
+                    var composite = this._composites[i];
+                    for (var s = 0; s < this.constraintIterations; s++)
+                        composite.solveConstraints();
+                    composite.updateParticles(this._fixedDeltaTimeSq, this.gravity);
+                    composite.handleConstraintCollisions();
+                    for (var j = 0; j < composite.particles.length; j++) {
+                        var p = composite.particles[j];
+                        if (this.simulationBounds) {
+                            this.constrainParticleToBounds(p);
+                        }
+                        if (p.collidesWithColliders)
+                            this.handleCollisions(p, composite.collidesWithLayers);
+                    }
+                }
+            }
+        };
+        VerletWorld.prototype.constrainParticleToBounds = function (p) {
+            var tempPos = p.position;
+            var bounds = this.simulationBounds;
+            if (p.radius == 0) {
+                if (tempPos.y > bounds.height)
+                    tempPos.y = bounds.height;
+                else if (tempPos.y < bounds.y)
+                    tempPos.y = bounds.y;
+                if (tempPos.x < bounds.x)
+                    tempPos.x = bounds.x;
+                else if (tempPos.x > bounds.width)
+                    tempPos.x = bounds.width;
+            }
+            else {
+                if (tempPos.y < bounds.y + p.radius)
+                    tempPos.y = 2 * (bounds.y + p.radius) - tempPos.y;
+                if (tempPos.y > bounds.height - p.radius)
+                    tempPos.y = 2 * (bounds.height - p.radius) - tempPos.y;
+                if (tempPos.x > bounds.width - p.radius)
+                    tempPos.x = 2 * (bounds.width - p.radius) - tempPos.x;
+                if (tempPos.x < bounds.x + p.radius)
+                    tempPos.x = 2 * (bounds.x + p.radius) - tempPos.x;
+            }
+            p.position = tempPos;
+        };
+        VerletWorld.prototype.handleCollisions = function (p, collidesWithLayers) {
+            var collidedCount = es.Physics.overlapCircleAll(p.position, p.radius, VerletWorld._colliders, collidesWithLayers);
+            for (var i = 0; i < collidedCount; i++) {
+                var collider = VerletWorld._colliders[i];
+                if (collider.isTrigger)
+                    continue;
+                var collisionResult = new es.CollisionResult();
+                if (p.radius < 2) {
+                    if (collider.shape.pointCollidesWithShape(p.position, collisionResult)) {
+                        p.position = p.position.sub(collisionResult.minimumTranslationVector);
+                    }
+                }
+                else {
+                    this._tempCircle.radius = p.radius;
+                    this._tempCircle.position = p.position;
+                    if (this._tempCircle.collidesWithShape(collider.shape, collisionResult)) {
+                        p.position = p.position.sub(collisionResult.minimumTranslationVector);
+                    }
+                }
+            }
+        };
+        VerletWorld.prototype.updateTiming = function () {
+            this._leftOverTime += es.Time.deltaTime;
+            this._iterationSteps = Math.trunc(this._leftOverTime / this._fixedDeltaTime);
+            this._leftOverTime -= this._iterationSteps * this._fixedDeltaTime;
+            this._iterationSteps = Math.min(this._iterationSteps, this.maximumStepIterations);
+        };
+        VerletWorld.prototype.addComposite = function (composite) {
+            this._composites.push(composite);
+            return composite;
+        };
+        VerletWorld.prototype.removeComposite = function (composite) {
+            var index = this._composites.indexOf(composite);
+            this._composites.splice(index, 1);
+        };
+        VerletWorld.prototype.handleDragging = function () {
+            if (this.onHandleDrag)
+                this.onHandleDrag();
+        };
+        VerletWorld.prototype.getNearestParticle = function (position) {
+            var nearestSquaredDistance = this.selectionRadiusSquared;
+            var particle = null;
+            for (var j = 0; j < this._composites.length; j++) {
+                var particles = this._composites[j].particles;
+                for (var i = 0; i < particles.length; i++) {
+                    var p = particles[i];
+                    var squaredDistanceToParticle = es.Vector2.sqrDistance(p.position, position);
+                    if (squaredDistanceToParticle <= this.selectionRadiusSquared &&
+                        (particle == null || squaredDistanceToParticle < nearestSquaredDistance)) {
+                        particle = p;
+                        nearestSquaredDistance = squaredDistanceToParticle;
+                    }
+                }
+            }
+            return particle;
+        };
+        VerletWorld.prototype.debugRender = function (batcher) {
+            for (var i = 0; i < this._composites.length; i++) {
+                this._composites[i].debugRender(batcher);
+            }
+            if (this.allowDragging) {
+                if (this._draggedParticle != null) {
+                    batcher.drawCircle(this._draggedParticle.position, 8, es.Color.White);
+                }
+            }
+        };
+        VerletWorld._colliders = [];
+        return VerletWorld;
+    }());
+    es.VerletWorld = VerletWorld;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Composite = /** @class */ (function () {
+        function Composite() {
+            this.friction = new es.Vector2(0.98, 1);
+            this.drawParticles = true;
+            this.drawConstraints = true;
+            this.collidesWithLayers = es.Physics.allLayers;
+            this.particles = [];
+            this._constraints = [];
+        }
+        Composite.prototype.addParticle = function (particle) {
+            this.particles.push(particle);
+            return particle;
+        };
+        Composite.prototype.removeParticle = function (particle) {
+            var index = this.particles.indexOf(particle);
+            this.particles.splice(index, 1);
+        };
+        Composite.prototype.removeAll = function () {
+            this.particles.length = 0;
+            this._constraints.length = 0;
+        };
+        Composite.prototype.addConstraint = function (constraint) {
+            this._constraints.push(constraint);
+            constraint.composite = this;
+            return constraint;
+        };
+        Composite.prototype.removeConstraint = function (constraint) {
+            var index = this._constraints.indexOf(constraint);
+            this._constraints.splice(index, 1);
+        };
+        Composite.prototype.applyForce = function (force) {
+            for (var j = 0; j < this.particles.length; j++)
+                this.particles[j].applyForce(force);
+        };
+        Composite.prototype.solveConstraints = function () {
+            for (var i = this._constraints.length - 1; i >= 0; i--)
+                this._constraints[i].solve();
+        };
+        Composite.prototype.updateParticles = function (deltaTimeSquared, gravity) {
+            for (var j = 0; j < this.particles.length; j++) {
+                var p = this.particles[j];
+                if (p.isPinned) {
+                    p.position = p.pinnedPosition;
+                    continue;
+                }
+                p.applyForce(gravity.scale(p.mass));
+                var vel = p.position.sub(p.lastPosition).multiply(this.friction);
+                var nextPos = p.position.add(vel).add(p.acceleration.scale(0.5 * deltaTimeSquared));
+                p.lastPosition = p.position;
+                p.position = nextPos;
+                p.acceleration.x = p.acceleration.y = 0;
+            }
+        };
+        Composite.prototype.handleConstraintCollisions = function () {
+            for (var i = this._constraints.length - 1; i >= 0; i--) {
+                if (this._constraints[i].collidesWithColliders)
+                    this._constraints[i].handleCollisions(this.collidesWithLayers);
+            }
+        };
+        Composite.prototype.debugRender = function (batcher) {
+            if (this.drawConstraints) {
+                for (var i = 0; i < this._constraints.length; i++)
+                    this._constraints[i].debugRender(batcher);
+            }
+            if (this.drawParticles) {
+                for (var i = 0; i < this.particles.length; i++) {
+                    if (this.particles[i].radius == 0)
+                        batcher.drawPixel(this.particles[i].position, new es.Color(220, 52, 94), 4);
+                    else
+                        batcher.drawCircleLow(this.particles[i].position, this.particles[i].radius, new es.Color(220, 52, 94), 1, 4);
+                }
+            }
+        };
+        return Composite;
+    }());
+    es.Composite = Composite;
+})(es || (es = {}));
+///<reference path="./Composite.ts" />
+var es;
+///<reference path="./Composite.ts" />
+(function (es) {
+    var Ball = /** @class */ (function (_super) {
+        __extends(Ball, _super);
+        function Ball(position, radius) {
+            if (radius === void 0) { radius = 10; }
+            var _this = _super.call(this) || this;
+            _this.addParticle(new es.Particle(position)).radius = radius;
+            return _this;
+        }
+        return Ball;
+    }(es.Composite));
+    es.Ball = Ball;
+})(es || (es = {}));
+///<reference path="./Composite.ts" />
+var es;
+///<reference path="./Composite.ts" />
+(function (es) {
+    var VerletBox = /** @class */ (function (_super) {
+        __extends(VerletBox, _super);
+        function VerletBox(center, width, height, borderStiffness, diagonalStiffness) {
+            if (borderStiffness === void 0) { borderStiffness = 0.2; }
+            if (diagonalStiffness === void 0) { diagonalStiffness = 0.5; }
+            var _this = _super.call(this) || this;
+            var tl = _this.addParticle(new es.Particle(center.add(new es.Vector2(-width / 2, -height / 2))));
+            var tr = _this.addParticle(new es.Particle(center.add(new es.Vector2(width / 2, -height / 2))));
+            var br = _this.addParticle(new es.Particle(center.add(new es.Vector2(width / 2, height / 2))));
+            var bl = _this.addParticle(new es.Particle(center.add(new es.Vector2(-width / 2, height / 2))));
+            _this.addConstraint(new es.DistanceConstraint(tl, tr, borderStiffness));
+            _this.addConstraint(new es.DistanceConstraint(tr, br, borderStiffness));
+            _this.addConstraint(new es.DistanceConstraint(br, bl, borderStiffness));
+            _this.addConstraint(new es.DistanceConstraint(bl, tl, borderStiffness));
+            _this.addConstraint(new es.DistanceConstraint(tl, br, diagonalStiffness))
+                .setCollidesWithColliders(false);
+            _this.addConstraint(new es.DistanceConstraint(bl, tr, diagonalStiffness))
+                .setCollidesWithColliders(false);
+            return _this;
+        }
+        return VerletBox;
+    }(es.Composite));
+    es.VerletBox = VerletBox;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Cloth = /** @class */ (function (_super) {
+        __extends(Cloth, _super);
+        function Cloth(topLeftPosition, width, height, segments, stiffness, tearSensitivity, connectHorizontalParticles) {
+            if (segments === void 0) { segments = 20; }
+            if (stiffness === void 0) { stiffness = 0.25; }
+            if (tearSensitivity === void 0) { tearSensitivity = 5; }
+            if (connectHorizontalParticles === void 0) { connectHorizontalParticles = true; }
+            var _this = _super.call(this) || this;
+            var xStride = width / segments;
+            var yStride = height / segments;
+            for (var y = 0; y < segments; y++) {
+                for (var x = 0; x < segments; x++) {
+                    var px = topLeftPosition.x + x * xStride;
+                    var py = topLeftPosition.y + y + yStride;
+                    var particle = _this.addParticle(new es.Particle(new es.Vector2(px, py)));
+                    if (connectHorizontalParticles && x > 0)
+                        _this.addConstraint(new es.DistanceConstraint(_this.particles[y * segments + x], _this.particles[y * segments + x - 1], stiffness))
+                            .setTearSensitivity(tearSensitivity)
+                            .setCollidesWithColliders(false);
+                    if (y > 0)
+                        _this.addConstraint(new es.DistanceConstraint(_this.particles[y * segments + x], _this.particles[(y - 1) * segments + x], stiffness))
+                            .setTearSensitivity(tearSensitivity)
+                            .setCollidesWithColliders(false);
+                    if (y == 0)
+                        particle.pin();
+                }
+            }
+            return _this;
+        }
+        return Cloth;
+    }(es.Composite));
+    es.Cloth = Cloth;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var LineSegments = /** @class */ (function (_super) {
+        __extends(LineSegments, _super);
+        function LineSegments(vertices, stiffness) {
+            var _this = _super.call(this) || this;
+            for (var i = 0; i < vertices.length; i++) {
+                var p = new es.Particle(vertices[i]);
+                _this.addParticle(p);
+                if (i > 0)
+                    _this.addConstraint(new es.DistanceConstraint(_this.particles[i], _this.particles[i - 1], stiffness));
+            }
+            return _this;
+        }
+        LineSegments.prototype.pinParticleAtIndex = function (index) {
+            this.particles[index].pin();
+            return this;
+        };
+        return LineSegments;
+    }(es.Composite));
+    es.LineSegments = LineSegments;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Ragdoll = /** @class */ (function (_super) {
+        __extends(Ragdoll, _super);
+        function Ragdoll(x, y, bodyHeight) {
+            var _this = _super.call(this) || this;
+            var headLength = bodyHeight / 7.5;
+            var head = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            head.radius = headLength * 0.75;
+            head.mass = 4;
+            var shoulder = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            shoulder.mass = 26;
+            _this.addConstraint(new es.DistanceConstraint(head, shoulder, 1, 5 / 4 * headLength));
+            var elbowLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            var elbowRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            elbowLeft.mass = 2;
+            elbowRight.mass = 2;
+            _this.addConstraint(new es.DistanceConstraint(elbowLeft, shoulder, 1, headLength * 3 / 2));
+            _this.addConstraint(new es.DistanceConstraint(elbowRight, shoulder, 1, headLength * 3 / 2));
+            var handLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            var handRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            handLeft.mass = 2;
+            handRight.mass = 2;
+            _this.addConstraint(new es.DistanceConstraint(handLeft, elbowLeft, 1, headLength * 2));
+            _this.addConstraint(new es.DistanceConstraint(handRight, elbowRight, 1, headLength * 2));
+            var pelvis = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            pelvis.mass = 15;
+            _this.addConstraint(new es.DistanceConstraint(pelvis, shoulder, 0.8, headLength * 3.5));
+            _this.addConstraint(new es.DistanceConstraint(pelvis, head, 0.02, bodyHeight * 2))
+                .setCollidesWithColliders(false);
+            var kneeLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            var kneeRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            kneeLeft.mass = 10;
+            kneeRight.mass = 10;
+            _this.addConstraint(new es.DistanceConstraint(kneeLeft, pelvis, 1, headLength * 2));
+            _this.addConstraint(new es.DistanceConstraint(kneeRight, pelvis, 1, headLength * 2));
+            var footLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            var footRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
+            footLeft.mass = 5;
+            footRight.mass = 5;
+            _this.addConstraint(new es.DistanceConstraint(footLeft, kneeLeft, 1, headLength * 2));
+            _this.addConstraint(new es.DistanceConstraint(footRight, kneeRight, 1, headLength * 2));
+            _this.addConstraint(new es.DistanceConstraint(footLeft, shoulder, 0.001, bodyHeight * 2))
+                .setCollidesWithColliders(false);
+            _this.addConstraint(new es.DistanceConstraint(footLeft, shoulder, 0.001, bodyHeight * 2))
+                .setCollidesWithColliders(false);
+            return _this;
+        }
+        return Ragdoll;
+    }(es.Composite));
+    es.Ragdoll = Ragdoll;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Tire = /** @class */ (function (_super) {
+        __extends(Tire, _super);
+        function Tire(origin, radius, segments, spokeStiffness, treadStiffness) {
+            if (spokeStiffness === void 0) { spokeStiffness = 1; }
+            if (treadStiffness === void 0) { treadStiffness = 1; }
+            var _this = _super.call(this) || this;
+            var stride = 2 * Math.PI / segments;
+            for (var i = 0; i < segments; i++) {
+                var theta = i * stride;
+                _this.addParticle(new es.Particle(new es.Vector2(origin.x + Math.cos(theta) * radius, origin.y + Math.sin(theta) * radius)));
+            }
+            var centerParticle = _this.addParticle(new es.Particle(origin));
+            for (var i = 0; i < segments; i++) {
+                _this.addConstraint(new es.DistanceConstraint(_this.particles[i], _this.particles[(i + 1) % segments], treadStiffness));
+                _this.addConstraint(new es.DistanceConstraint(_this.particles[i], centerParticle, spokeStiffness))
+                    .setCollidesWithColliders(false);
+                _this.addConstraint(new es.DistanceConstraint(_this.particles[i], _this.particles[(i + 5) % segments], treadStiffness));
+            }
+            return _this;
+        }
+        return Tire;
+    }(es.Composite));
+    es.Tire = Tire;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Constraint = /** @class */ (function () {
+        function Constraint() {
+            this.collidesWithColliders = true;
+        }
+        Constraint.prototype.handleCollisions = function (collidesWithLayers) {
+        };
+        Constraint.prototype.debugRender = function (batcher) {
+        };
+        return Constraint;
+    }());
+    es.Constraint = Constraint;
+})(es || (es = {}));
+///<reference path="./Constraint.ts" />
+var es;
+///<reference path="./Constraint.ts" />
+(function (es) {
+    var AngleConstraint = /** @class */ (function (_super) {
+        __extends(AngleConstraint, _super);
+        function AngleConstraint(a, center, c, stiffness) {
+            var _this = _super.call(this) || this;
+            _this.stiffness = 0;
+            _this.angleInRadius = 0;
+            _this._particleA = a;
+            _this._centerParticle = center;
+            _this._particleC = c;
+            _this.stiffness = stiffness;
+            _this.collidesWithColliders = false;
+            _this.angleInRadius = _this.angleBetweenParticles();
+            return _this;
+        }
+        AngleConstraint.prototype.angleBetweenParticles = function () {
+            var first = this._particleA.position.sub(this._centerParticle.position);
+            var second = this._particleC.position.sub(this._centerParticle.position);
+            return Math.atan2(first.x * second.y - first.y * second.x, first.x * second.x + first.y * second.y);
+        };
+        AngleConstraint.prototype.solve = function () {
+            var angleBetween = this.angleBetweenParticles();
+            var diff = angleBetween - this.angleInRadius;
+            if (diff <= -Math.PI)
+                diff += 2 * Math.PI;
+            else if (diff >= Math.PI)
+                diff -= 2 * Math.PI;
+            diff *= this.stiffness;
+            this._particleA.position = es.MathHelper.rotateAround2(this._particleA.position, this._centerParticle.position, diff);
+            this._particleC.position = es.MathHelper.rotateAround2(this._particleC.position, this._centerParticle.position, -diff);
+            this._centerParticle.position = es.MathHelper.rotateAround2(this._centerParticle.position, this._particleA.position, diff);
+            this._centerParticle.position = es.MathHelper.rotateAround2(this._centerParticle.position, this._particleC.position, -diff);
+        };
+        return AngleConstraint;
+    }(es.Constraint));
+    es.AngleConstraint = AngleConstraint;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var DistanceConstraint = /** @class */ (function (_super) {
+        __extends(DistanceConstraint, _super);
+        function DistanceConstraint(first, second, stiffness, distance) {
+            if (distance === void 0) { distance = -1; }
+            var _this = _super.call(this) || this;
+            _this.stiffness = 0;
+            _this.restingDistance = 0;
+            _this.tearSensitivity = Number.POSITIVE_INFINITY;
+            _this.shouldApproximateCollisionsWithPoints = false;
+            _this.totalPointsToApproximateCollisionsWith = 5;
+            DistanceConstraint._polygon.create(2, 1);
+            _this._particleOne = first;
+            _this._particleTwo = second;
+            _this.stiffness = stiffness;
+            if (distance > -1)
+                _this.restingDistance = distance;
+            else
+                _this.restingDistance = first.position.distance(second.position);
+            return _this;
+        }
+        DistanceConstraint.create = function (a, center, c, stiffness, angleInDegrees) {
+            var aToCenter = a.position.distance(center.position);
+            var cToCenter = c.position.distance(center.position);
+            var distance = Math.sqrt(aToCenter * aToCenter + cToCenter * cToCenter - (2 * aToCenter * cToCenter * Math.cos(angleInDegrees * es.MathHelper.Deg2Rad)));
+            return new DistanceConstraint(a, c, stiffness, distance);
+        };
+        DistanceConstraint.prototype.setTearSensitivity = function (tearSensitivity) {
+            this.tearSensitivity = tearSensitivity;
+            return this;
+        };
+        DistanceConstraint.prototype.setCollidesWithColliders = function (collidesWithColliders) {
+            this.collidesWithColliders = collidesWithColliders;
+            return this;
+        };
+        DistanceConstraint.prototype.setShouldApproximateCollisionsWithPoints = function (shouldApproximateCollisionsWithPoints) {
+            this.shouldApproximateCollisionsWithPoints = shouldApproximateCollisionsWithPoints;
+            return this;
+        };
+        DistanceConstraint.prototype.solve = function () {
+            var diff = this._particleOne.position.sub(this._particleTwo.position);
+            var d = diff.distance();
+            var difference = (this.restingDistance - d) / d;
+            if (d / this.restingDistance > this.tearSensitivity) {
+                this.composite.removeConstraint(this);
+                return;
+            }
+            var im1 = 1 / this._particleOne.mass;
+            var im2 = 1 / this._particleTwo.mass;
+            var scalarP1 = (im1 / (im1 + im2)) * this.stiffness;
+            var scalarP2 = this.stiffness - scalarP1;
+            this._particleOne.position = this._particleOne.position.add(diff.scale(scalarP1 * difference));
+            this._particleTwo.position = this._particleTwo.position.sub(diff.scale(scalarP2 * difference));
+        };
+        DistanceConstraint.prototype.handleCollisions = function (collidesWithLayers) {
+            if (this.shouldApproximateCollisionsWithPoints) {
+                this.approximateCollisionsWithPoints(collidesWithLayers);
+                return;
+            }
+            var minX = Math.min(this._particleOne.position.x, this._particleTwo.position.x);
+            var maxX = Math.max(this._particleOne.position.x, this._particleTwo.position.x);
+            var minY = Math.min(this._particleOne.position.y, this._particleTwo.position.y);
+            var maxY = Math.max(this._particleOne.position.y, this._particleTwo.position.y);
+            DistanceConstraint._polygon.bounds = es.Rectangle.fromMinMax(minX, minY, maxX, maxY);
+            var midPoint = es.Vector2.zero;
+            this.preparePolygonForCollisionChecks(midPoint);
+            var colliders = es.Physics.boxcastBroadphase(DistanceConstraint._polygon.bounds, collidesWithLayers);
+            for (var i = 0; i < colliders.length; i++) {
+                var collider = colliders[i];
+                var result = new es.CollisionResult();
+                if (DistanceConstraint._polygon.collidesWithShape(collider.shape, result)) {
+                    this._particleOne.position = this._particleOne.position.sub(result.minimumTranslationVector);
+                    this._particleTwo.position = this._particleTwo.position.sub(result.minimumTranslationVector);
+                }
+            }
+        };
+        DistanceConstraint.prototype.approximateCollisionsWithPoints = function (collidesWithLayers) {
+            var pt;
+            for (var j = 0; j < this.totalPointsToApproximateCollisionsWith - 1; j++) {
+                pt = es.Vector2.lerp(this._particleOne.position, this._particleTwo.position, (j + 1) / this.totalPointsToApproximateCollisionsWith);
+                var collidedCount = es.Physics.overlapCircleAll(pt, 3, es.VerletWorld._colliders, collidesWithLayers);
+                for (var i = 0; i < collidedCount; i++) {
+                    var collider = es.VerletWorld._colliders[i];
+                    var collisionResult = new es.CollisionResult();
+                    if (collider.shape.pointCollidesWithShape(pt, collisionResult)) {
+                        this._particleOne.position = this._particleOne.position.sub(collisionResult.minimumTranslationVector);
+                        this._particleTwo.position = this._particleTwo.position.sub(collisionResult.minimumTranslationVector);
+                    }
+                }
+            }
+        };
+        DistanceConstraint.prototype.preparePolygonForCollisionChecks = function (midPoint) {
+            var tempMidPoint = es.Vector2.lerp(this._particleOne.position, this._particleTwo.position, 0.5);
+            midPoint.setTo(tempMidPoint.x, tempMidPoint.y);
+            DistanceConstraint._polygon.position = midPoint;
+            DistanceConstraint._polygon.points[0] = this._particleOne.position.sub(DistanceConstraint._polygon.position);
+            DistanceConstraint._polygon.points[1] = this._particleTwo.position.sub(DistanceConstraint._polygon.position);
+            DistanceConstraint._polygon.recalculateCenterAndEdgeNormals();
+        };
+        DistanceConstraint.prototype.debugRender = function (batcher) {
+            batcher.drawLine(this._particleOne.position, this._particleTwo.position, new es.Color(67, 62, 54), 1);
+        };
+        DistanceConstraint._polygon = new es.Polygon([]);
+        return DistanceConstraint;
+    }(es.Constraint));
+    es.DistanceConstraint = DistanceConstraint;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * AbstractTweenable作为你可能想做的任何可以执行的自定义类的基础。
+     * 这些类不同于ITweens，因为他们没有实现ITweenT接口。
+     * 它只是说一个AbstractTweenable不仅仅是将一个值从开始移动到结束。
+     * 它可以做任何需要每帧执行的事情。
+     */
+    var AbstractTweenable = /** @class */ (function () {
+        function AbstractTweenable() {
+        }
+        AbstractTweenable.prototype.recycleSelf = function () {
+        };
+        AbstractTweenable.prototype.isRunning = function () {
+            return this._isCurrentlyManagedByTweenManager && !this._isPaused;
+        };
+        AbstractTweenable.prototype.start = function () {
+            if (this._isCurrentlyManagedByTweenManager) {
+                this._isPaused = false;
+                return;
+            }
+            es.TweenManager.addTween(this);
+            this._isCurrentlyManagedByTweenManager = true;
+            this._isPaused = false;
+        };
+        AbstractTweenable.prototype.pause = function () {
+            this._isPaused = true;
+        };
+        AbstractTweenable.prototype.resume = function () {
+            this._isPaused = false;
+        };
+        AbstractTweenable.prototype.stop = function (bringToCompletion) {
+            if (bringToCompletion === void 0) { bringToCompletion = false; }
+            es.TweenManager.removeTween(this);
+            this._isCurrentlyManagedByTweenManager = false;
+            this._isPaused = true;
+        };
+        return AbstractTweenable;
+    }());
+    es.AbstractTweenable = AbstractTweenable;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 通用ITweenTarget用于所有属性tweens。
+     */
+    var PropertyTarget = /** @class */ (function () {
+        function PropertyTarget(target, propertyName) {
+            this._target = target;
+            this._propertyName = propertyName;
+        }
+        PropertyTarget.prototype.getTargetObject = function () {
+            return this._target;
+        };
+        PropertyTarget.prototype.setTweenedValue = function (value) {
+            this._target[this._propertyName] = value;
+        };
+        PropertyTarget.prototype.getTweenedValue = function () {
+            return this._target[this._propertyName];
+        };
+        return PropertyTarget;
+    }());
+    var PropertyTweens = /** @class */ (function () {
+        function PropertyTweens() {
+        }
+        PropertyTweens.NumberPropertyTo = function (self, memberName, to, duration) {
+            var tweenTarget = new PropertyTarget(self, memberName);
+            var tween = es.TweenManager.cacheNumberTweens ? es.Pool.obtain(es.NumberTween) : new es.NumberTween();
+            tween.initialize(tweenTarget, to, duration);
+            return tween;
+        };
+        PropertyTweens.Vector2PropertyTo = function (self, memeberName, to, duration) {
+            var tweenTarget = new PropertyTarget(self, memeberName);
+            var tween = es.TweenManager.cacheVector2Tweens ? es.Pool.obtain(es.Vector2Tween) : new es.Vector2Tween();
+            tween.initialize(tweenTarget, to, duration);
+            return tween;
+        };
+        return PropertyTweens;
+    }());
+    es.PropertyTweens = PropertyTweens;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var LoopType;
+    (function (LoopType) {
+        LoopType[LoopType["none"] = 0] = "none";
+        LoopType[LoopType["restartFromBeginning"] = 1] = "restartFromBeginning";
+        LoopType[LoopType["pingpong"] = 2] = "pingpong";
+    })(LoopType = es.LoopType || (es.LoopType = {}));
+    var TweenState;
+    (function (TweenState) {
+        TweenState[TweenState["running"] = 0] = "running";
+        TweenState[TweenState["paused"] = 1] = "paused";
+        TweenState[TweenState["complete"] = 2] = "complete";
+    })(TweenState = es.TweenState || (es.TweenState = {}));
+    var Tween = /** @class */ (function () {
+        function Tween() {
+            this._shouldRecycleTween = true;
+            this._tweenState = TweenState.complete;
+            this._timeScale = 1;
+        }
+        Tween.prototype.setEaseType = function (easeType) {
+            this._easeType = easeType;
+            return this;
+        };
+        Tween.prototype.setDelay = function (delay) {
+            this._delay = delay;
+            this._elapsedTime = -this._delay;
+            return this;
+        };
+        Tween.prototype.setDuration = function (duration) {
+            this._duration = duration;
+            return this;
+        };
+        Tween.prototype.setTimeScale = function (timeSclae) {
+            this._timeScale = timeSclae;
+            return this;
+        };
+        Tween.prototype.setIsTimeScaleIndependent = function () {
+            this._isTimeScaleIndependent = true;
+            return this;
+        };
+        Tween.prototype.setCompletionHandler = function (completeHandler) {
+            this._completionHandler = completeHandler;
+            return this;
+        };
+        Tween.prototype.setLoops = function (loopType, loops, delayBetweenLoops) {
+            if (loops === void 0) { loops = 1; }
+            if (delayBetweenLoops === void 0) { delayBetweenLoops = 0; }
+            this._loopType = loopType;
+            this._delayBetweenLoops = delayBetweenLoops;
+            if (loops < 0)
+                loops = -1;
+            if (loopType == LoopType.pingpong)
+                loops = loops * 2;
+            this._loops = loops;
+            return this;
+        };
+        Tween.prototype.setLoopCompletionHanlder = function (loopCompleteHandler) {
+            this._loopCompleteHandler = loopCompleteHandler;
+            return this;
+        };
+        Tween.prototype.setFrom = function (from) {
+            this._isFromValueOverridden = true;
+            this._fromValue = from;
+            return this;
+        };
+        Tween.prototype.prepareForReuse = function (from, to, duration) {
+            this.initialize(this._target, to, duration);
+            return this;
+        };
+        Tween.prototype.setRecycleTween = function (shouldRecycleTween) {
+            this._shouldRecycleTween = shouldRecycleTween;
+            return this;
+        };
+        Tween.prototype.setContext = function (context) {
+            this.context = context;
+            return this;
+        };
+        Tween.prototype.setNextTween = function (nextTween) {
+            this._nextTween = nextTween;
+            return this;
+        };
+        Tween.prototype.tick = function () {
+            if (this._tweenState == TweenState.paused)
+                return false;
+            // 当我们进行循环时，我们会在0和持续时间之间限制数值
+            var elapsedTimeExcess = 0;
+            if (!this._isRunningInReverse && this._elapsedTime >= this._duration) {
+                elapsedTimeExcess = this._elapsedTime - this._duration;
+                this._elapsedTime = this._duration;
+                this._tweenState = TweenState.complete;
+            }
+            else if (this._isRunningInReverse && this._elapsedTime <= 0) {
+                elapsedTimeExcess = 0 - this._elapsedTime;
+                this._elapsedTime = 0;
+                this._tweenState = TweenState.complete;
+            }
+            // 当我们延迟开始tween的时候，经过的时间会是负数，所以不要更新这个值。
+            if (this._elapsedTime >= 0 && this._elapsedTime <= this._duration) {
+                this.updateValue();
+            }
+            // 如果我们有一个loopType，并且我们是Complete（意味着我们达到了0或持续时间）处理循环。
+            // handleLooping将采取任何多余的elapsedTime，并将其因子化，并在必要时调用udpateValue来保持tween的完美准确性
+            if (this._loopType != LoopType.none && this._tweenState == TweenState.complete && this._loops != 0) {
+                this.handleLooping(elapsedTimeExcess);
+            }
+            var deltaTime = this._isTimeScaleIndependent ? es.Time.unscaledDeltaTime : es.Time.deltaTime;
+            deltaTime *= this._timeScale;
+            // 我们需要减去deltaTime
+            if (this._isRunningInReverse)
+                this._elapsedTime -= deltaTime;
+            else
+                this._elapsedTime += deltaTime;
+            if (this._tweenState == TweenState.complete) {
+                this._completionHandler && this._completionHandler(this);
+                // 如果我们有一个nextTween，把它添加到TweenManager中，这样它就可以开始运行了
+                if (this._nextTween != null) {
+                    this._nextTween.start();
+                    this._nextTween = null;
+                }
+                return true;
+            }
+            return false;
+        };
+        Tween.prototype.recycleSelf = function () {
+            if (this._shouldRecycleTween) {
+                this._target = null;
+                this._nextTween = null;
+            }
+        };
+        Tween.prototype.isRunning = function () {
+            return this._tweenState == TweenState.running;
+        };
+        Tween.prototype.start = function () {
+            if (!this._isFromValueOverridden)
+                this._fromValue = this._target.getTargetObject();
+            if (this._tweenState == TweenState.complete) {
+                this._tweenState = TweenState.running;
+                es.TweenManager.addTween(this);
+            }
+        };
+        Tween.prototype.pause = function () {
+            this._tweenState = TweenState.paused;
+        };
+        Tween.prototype.resume = function () {
+            this._tweenState = TweenState.running;
+        };
+        Tween.prototype.stop = function (bringToCompletion) {
+            if (bringToCompletion === void 0) { bringToCompletion = false; }
+            this._tweenState = TweenState.complete;
+            if (bringToCompletion) {
+                // 如果我们逆向运行，我们在0处结束，否则我们进入持续时间
+                this._elapsedTime = this._isRunningInReverse ? 0 : this._duration;
+                this._loopType = LoopType.none;
+                this._loops = 0;
+                // TweenManager将在下一个tick上进行删除处理
+            }
+            else {
+                es.TweenManager.removeTween(this);
+            }
+        };
+        Tween.prototype.jumpToElapsedTime = function (elapsedTime) {
+            this._elapsedTime = es.MathHelper.clamp(elapsedTime, 0, this._duration);
+            this.updateValue();
+        };
+        /**
+         * 反转当前的tween，如果是向前走，就会向后走，反之亦然
+         */
+        Tween.prototype.reverseTween = function () {
+            this._isRunningInReverse = !this._isRunningInReverse;
+        };
+        /**
+         * 当通过StartCoroutine调用时，这将一直持续到tween完成
+         */
+        Tween.prototype.waitForCompletion = function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!(this._tweenState != TweenState.complete)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, null];
+                    case 1:
+                        _a.sent();
+                        return [3 /*break*/, 0];
+                    case 2: return [2 /*return*/];
+                }
+            });
+        };
+        Tween.prototype.getTargetObject = function () {
+            return this._target.getTargetObject();
+        };
+        Tween.prototype.resetState = function () {
+            this.context = null;
+            this._completionHandler = this._loopCompleteHandler = null;
+            this._isFromValueOverridden = false;
+            this._isTimeScaleIndependent = false;
+            this._tweenState = TweenState.complete;
+            // TODO: 我认为在没有得到用户同意的情况下，我们绝对不应该从_shouldRecycleTween=false。需要研究和思考
+            // this._shouldRecycleTween = true;
+            this._isRelative = false;
+            this._easeType = es.TweenManager.defaultEaseType;
+            if (this._nextTween != null) {
+                this._nextTween.recycleSelf();
+                this._nextTween = null;
+            }
+            this._delay = 0;
+            this._duration = 0;
+            this._timeScale = 1;
+            this._elapsedTime = 0;
+            this._loopType = LoopType.none;
+            this._delayBetweenLoops = 0;
+            this._loops = 0;
+            this._isRunningInReverse = false;
+        };
+        /**
+         * 将所有状态重置为默认值，并根据传入的参数设置初始状态。
+         * 这个方法作为一个切入点，这样Tween子类就可以调用它，这样tweens就可以被回收。
+         * 当回收时，构造函数不会再被调用，所以这个方法封装了构造函数要做的事情
+         * @param target
+         * @param to
+         * @param duration
+         */
+        Tween.prototype.initialize = function (target, to, duration) {
+            // 重置状态，以防我们被回收
+            this.resetState();
+            this._target = target;
+            this._toValue = to;
+            this._duration = duration;
+        };
+        /**
+         * 处理循环逻辑
+         * @param elapsedTimeExcess
+         */
+        Tween.prototype.handleLooping = function (elapsedTimeExcess) {
+            this._loops--;
+            if (this._loopType == LoopType.pingpong) {
+                this.reverseTween();
+            }
+            if (this._loopType == LoopType.restartFromBeginning || this._loops % 2 == 0) {
+                this._loopCompleteHandler && this._completionHandler(this);
+            }
+            // 如果我们还有循环要处理，就把我们的状态重置为Running，这样我们就可以继续处理它们了
+            if (this._loops != 0) {
+                this._tweenState = TweenState.running;
+                // 现在，我们需要设置我们的经过时间，并考虑到我们的elapsedTimeExcess
+                if (this._loopType == LoopType.restartFromBeginning) {
+                    this._elapsedTime = elapsedTimeExcess - this._delayBetweenLoops;
+                }
+                else {
+                    if (this._isRunningInReverse)
+                        this._elapsedTime += this._delayBetweenLoops - elapsedTimeExcess;
+                    else
+                        this._elapsedTime = elapsedTimeExcess - this._delayBetweenLoops;
+                }
+                // 如果我们有一个elapsedTimeExcess，并且没有delayBetweenLoops，则更新该值
+                if (this._delayBetweenLoops == 0 && elapsedTimeExcess > 0) {
+                    this.updateValue();
+                }
+            }
+        };
+        return Tween;
+    }());
+    es.Tween = Tween;
+})(es || (es = {}));
+///<reference path="./Tween.ts"/>
+var es;
+///<reference path="./Tween.ts"/>
+(function (es) {
+    var NumberTween = /** @class */ (function (_super) {
+        __extends(NumberTween, _super);
+        function NumberTween(target, to, duration) {
+            var _this = _super.call(this) || this;
+            _this.initialize(target, to, duration);
+            return _this;
+        }
+        NumberTween.create = function () {
+            return es.TweenManager.cacheNumberTweens ? es.Pool.obtain(NumberTween) : new NumberTween();
+        };
+        NumberTween.prototype.setIsRelative = function () {
+            this._isRelative = true;
+            this._toValue += this._fromValue;
+            return this;
+        };
+        NumberTween.prototype.updateValue = function () {
+            this._target.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+        };
+        NumberTween.prototype.recycleSelf = function () {
+            _super.prototype.recycleSelf.call(this);
+            if (this._shouldRecycleTween && es.TweenManager.cacheNumberTweens)
+                es.Pool.free(this);
+        };
+        return NumberTween;
+    }(es.Tween));
+    es.NumberTween = NumberTween;
+    var Vector2Tween = /** @class */ (function (_super) {
+        __extends(Vector2Tween, _super);
+        function Vector2Tween(target, to, duration) {
+            var _this = _super.call(this) || this;
+            _this.initialize(target, to, duration);
+            return _this;
+        }
+        Vector2Tween.create = function () {
+            return es.TweenManager.cacheVector2Tweens ? es.Pool.obtain(Vector2Tween) : new Vector2Tween();
+        };
+        Vector2Tween.prototype.setIsRelative = function () {
+            this._isRelative = true;
+            this._toValue.add(this._fromValue);
+            return this;
+        };
+        Vector2Tween.prototype.updateValue = function () {
+            this._target.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+        };
+        Vector2Tween.prototype.recycleSelf = function () {
+            _super.prototype.recycleSelf.call(this);
+            if (this._shouldRecycleTween && es.TweenManager.cacheVector2Tweens)
+                es.Pool.free(this);
+        };
+        return Vector2Tween;
+    }(es.Tween));
+    es.Vector2Tween = Vector2Tween;
+    var RectangleTween = /** @class */ (function (_super) {
+        __extends(RectangleTween, _super);
+        function RectangleTween(target, to, duration) {
+            var _this = _super.call(this) || this;
+            _this.initialize(target, to, duration);
+            return _this;
+        }
+        RectangleTween.create = function () {
+            return es.TweenManager.cacheRectTweens ? es.Pool.obtain(RectangleTween) : new RectangleTween();
+        };
+        RectangleTween.prototype.setIsRelative = function () {
+            this._isRelative = true;
+            this._toValue = new es.Rectangle(this._toValue.x + this._fromValue.x, this._toValue.y + this._fromValue.y, this._toValue.width + this._fromValue.width, this._toValue.height + this._fromValue.height);
+            return this;
+        };
+        RectangleTween.prototype.updateValue = function () {
+            this._target.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+        };
+        RectangleTween.prototype.recycleSelf = function () {
+            _super.prototype.recycleSelf.call(this);
+            if (this._shouldRecycleTween && es.TweenManager.cacheRectTweens)
+                es.Pool.free(this);
+        };
+        return RectangleTween;
+    }(es.Tween));
+    es.RectangleTween = RectangleTween;
+    var ColorTween = /** @class */ (function (_super) {
+        __extends(ColorTween, _super);
+        function ColorTween(target, to, duration) {
+            var _this = _super.call(this) || this;
+            _this.initialize(target, to, duration);
+            return _this;
+        }
+        ColorTween.create = function () {
+            return es.TweenManager.cacheColorTweens ? es.Pool.obtain(ColorTween) : new ColorTween();
+        };
+        ColorTween.prototype.setIsRelative = function () {
+            this._isRelative = true;
+            this._toValue.r += this._fromValue.r;
+            this._toValue.g += this._fromValue.g;
+            this._toValue.b += this._fromValue.b;
+            this._toValue.a += this._fromValue.a;
+            return this;
+        };
+        ColorTween.prototype.updateValue = function () {
+            this._target.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+        };
+        return ColorTween;
+    }(es.Tween));
+    es.ColorTween = ColorTween;
+})(es || (es = {}));
+///<reference path="./Tweens.ts"/>
+var es;
+///<reference path="./Tweens.ts"/>
+(function (es) {
+    var RenderableColorTween = /** @class */ (function (_super) {
+        __extends(RenderableColorTween, _super);
+        function RenderableColorTween() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        RenderableColorTween.prototype.setTweenedValue = function (value) {
+            this._renderable.color = value;
+        };
+        RenderableColorTween.prototype.getTweenedValue = function () {
+            return this._renderable.color;
+        };
+        RenderableColorTween.prototype.getTargetObject = function () {
+            return this._renderable;
+        };
+        RenderableColorTween.prototype.updateValue = function () {
+            this.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+        };
+        RenderableColorTween.prototype.setTarget = function (renderable) {
+            this._renderable = renderable;
+        };
+        RenderableColorTween.prototype.recycleSelf = function () {
+            if (this._shouldRecycleTween) {
+                this._renderable = null;
+                this._target = null;
+                this._nextTween = null;
+            }
+            if (this._shouldRecycleTween && es.TweenManager.cacheColorTweens) {
+                es.Pool.free(this);
+            }
+        };
+        return RenderableColorTween;
+    }(es.ColorTween));
+    es.RenderableColorTween = RenderableColorTween;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TransformSpringTween = /** @class */ (function (_super) {
+        __extends(TransformSpringTween, _super);
+        function TransformSpringTween(transform, targetType, targetValue) {
+            var _this = _super.call(this) || this;
+            // 阻尼比（dampingRatio）和角频率（angularFrequency）的配置是公开的，以便于在设计时进行调整
+            /**
+             * 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
+             */
+            _this.dampingRatio = 0.23;
+            /**
+             * 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定角频率
+             */
+            _this.angularFrequency = 25;
+            _this._transform = transform;
+            _this._targetType = targetType;
+            _this.setTargetValue(targetValue);
+            return _this;
+        }
+        Object.defineProperty(TransformSpringTween.prototype, "targetType", {
+            get: function () {
+                return this._targetType;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /**
+         * 你可以在任何时候调用setTargetValue来重置目标值到一个新的Vector2。
+         * 如果你没有调用start来添加spring tween，它会为你调用
+         * @param targetValue
+         */
+        TransformSpringTween.prototype.setTargetValue = function (targetValue) {
+            this._velocity = es.Vector2.zero;
+            this._targetValue = targetValue;
+            if (!this._isCurrentlyManagedByTweenManager)
+                this.start();
+        };
+        /**
+         * lambda应该是振荡幅度减少50%时的理想持续时间
+         * @param lambda
+         */
+        TransformSpringTween.prototype.updateDampingRatioWithHalfLife = function (lambda) {
+            this.dampingRatio = (-lambda / this.angularFrequency) * Math.log(0.5);
+        };
+        TransformSpringTween.prototype.tick = function () {
+            if (!this._isPaused)
+                this.setTweenedValue(es.Lerps.fastSpring(this.getCurrentValueOfTweenedTargetType(), this._targetValue, this._velocity, this.dampingRatio, this.angularFrequency));
+            return false;
+        };
+        TransformSpringTween.prototype.setTweenedValue = function (value) {
+            switch (this._targetType) {
+                case es.TransformTargetType.position:
+                    this._transform.position = value;
+                    break;
+                case es.TransformTargetType.localPosition:
+                    this._transform.localPosition = value;
+                    break;
+                case es.TransformTargetType.scale:
+                    this._transform.scale = value;
+                    break;
+                case es.TransformTargetType.localScale:
+                    this._transform.localScale = value;
+                    break;
+                case es.TransformTargetType.rotationDegrees:
+                    this._transform.rotationDegrees = value.x;
+                case es.TransformTargetType.localRotationDegrees:
+                    this._transform.localRotationDegrees = value.x;
+                    break;
+            }
+        };
+        TransformSpringTween.prototype.getCurrentValueOfTweenedTargetType = function () {
+            switch (this._targetType) {
+                case es.TransformTargetType.position:
+                    return this._transform.position;
+                case es.TransformTargetType.localPosition:
+                    return this._transform.localPosition;
+                case es.TransformTargetType.scale:
+                    return this._transform.scale;
+                case es.TransformTargetType.localScale:
+                    return this._transform.localScale;
+                case es.TransformTargetType.rotationDegrees:
+                    return new es.Vector2(this._transform.rotationDegrees);
+                case es.TransformTargetType.localRotationDegrees:
+                    return new es.Vector2(this._transform.localRotationDegrees, 0);
+                default:
+                    return es.Vector2.zero;
+            }
+        };
+        return TransformSpringTween;
+    }(es.AbstractTweenable));
+    es.TransformSpringTween = TransformSpringTween;
+})(es || (es = {}));
+///<reference path="./Tweens.ts"/>
+var es;
+///<reference path="./Tweens.ts"/>
+(function (es) {
+    /**
+     * 对任何与Transform相关的属性tweens都是有用的枚举
+     */
+    var TransformTargetType;
+    (function (TransformTargetType) {
+        TransformTargetType[TransformTargetType["position"] = 0] = "position";
+        TransformTargetType[TransformTargetType["localPosition"] = 1] = "localPosition";
+        TransformTargetType[TransformTargetType["scale"] = 2] = "scale";
+        TransformTargetType[TransformTargetType["localScale"] = 3] = "localScale";
+        TransformTargetType[TransformTargetType["rotationDegrees"] = 4] = "rotationDegrees";
+        TransformTargetType[TransformTargetType["localRotationDegrees"] = 5] = "localRotationDegrees";
+    })(TransformTargetType = es.TransformTargetType || (es.TransformTargetType = {}));
+    /**
+     * 这是一个特殊的情况，因为Transform是迄今为止最被ween的对象。
+     * 我们将Tween和ITweenTarget封装在一个单一的、可缓存的类中
+     */
+    var TransformVector2Tween = /** @class */ (function (_super) {
+        __extends(TransformVector2Tween, _super);
+        function TransformVector2Tween() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        TransformVector2Tween.prototype.setTweenedValue = function (value) {
+            switch (this._targetType) {
+                case TransformTargetType.position:
+                    this._transform.position = value;
+                    break;
+                case TransformTargetType.localPosition:
+                    this._transform.localPosition = value;
+                    break;
+                case TransformTargetType.scale:
+                    this._transform.scale = value;
+                    break;
+                case TransformTargetType.localScale:
+                    this._transform.localScale = value;
+                    break;
+                case TransformTargetType.rotationDegrees:
+                    this._transform.rotationDegrees = value.x;
+                case TransformTargetType.localRotationDegrees:
+                    this._transform.localRotationDegrees = value.x;
+                    break;
+            }
+        };
+        TransformVector2Tween.prototype.getTweenedValue = function () {
+            switch (this._targetType) {
+                case TransformTargetType.position:
+                    return this._transform.position;
+                case TransformTargetType.localPosition:
+                    return this._transform.localPosition;
+                case TransformTargetType.scale:
+                    return this._transform.scale;
+                case TransformTargetType.localScale:
+                    return this._transform.localScale;
+                case TransformTargetType.rotationDegrees:
+                    return new es.Vector2(this._transform.rotationDegrees, this._transform.rotationDegrees);
+                case TransformTargetType.localRotationDegrees:
+                    return new es.Vector2(this._transform.localRotationDegrees, 0);
+            }
+        };
+        TransformVector2Tween.prototype.getTargetObject = function () {
+            return this._transform;
+        };
+        TransformVector2Tween.prototype.setTargetAndType = function (transform, targetType) {
+            this._transform = transform;
+            this._targetType = targetType;
+        };
+        TransformVector2Tween.prototype.updateValue = function () {
+            // 非相对角勒普的特殊情况，使他们采取尽可能短的旋转
+            if ((this._targetType == TransformTargetType.rotationDegrees ||
+                this._targetType == TransformTargetType.localRotationDegrees) && !this._isRelative) {
+                this.setTweenedValue(es.Lerps.easeAngle(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+            }
+            else {
+                this.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
+            }
+        };
+        TransformVector2Tween.prototype.recycleSelf = function () {
+            if (this._shouldRecycleTween) {
+                this._target = null;
+                this._nextTween = null;
+                this._transform = null;
+                es.Pool.free(this);
+            }
+        };
+        return TransformVector2Tween;
+    }(es.Vector2Tween));
+    es.TransformVector2Tween = TransformVector2Tween;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var EaseType;
+    (function (EaseType) {
+        EaseType[EaseType["linear"] = 0] = "linear";
+        EaseType[EaseType["sineIn"] = 1] = "sineIn";
+        EaseType[EaseType["sineOut"] = 2] = "sineOut";
+        EaseType[EaseType["sineInOut"] = 3] = "sineInOut";
+        EaseType[EaseType["quadIn"] = 4] = "quadIn";
+        EaseType[EaseType["quadOut"] = 5] = "quadOut";
+        EaseType[EaseType["quadInOut"] = 6] = "quadInOut";
+        EaseType[EaseType["quintIn"] = 7] = "quintIn";
+        EaseType[EaseType["quintOut"] = 8] = "quintOut";
+        EaseType[EaseType["quintInOut"] = 9] = "quintInOut";
+        EaseType[EaseType["cubicIn"] = 10] = "cubicIn";
+        EaseType[EaseType["cubicOut"] = 11] = "cubicOut";
+        EaseType[EaseType["cubicInOut"] = 12] = "cubicInOut";
+        EaseType[EaseType["quartIn"] = 13] = "quartIn";
+        EaseType[EaseType["quartOut"] = 14] = "quartOut";
+        EaseType[EaseType["quartInOut"] = 15] = "quartInOut";
+        EaseType[EaseType["expoIn"] = 16] = "expoIn";
+        EaseType[EaseType["expoOut"] = 17] = "expoOut";
+        EaseType[EaseType["expoInOut"] = 18] = "expoInOut";
+        EaseType[EaseType["circleIn"] = 19] = "circleIn";
+        EaseType[EaseType["circleOut"] = 20] = "circleOut";
+        EaseType[EaseType["circleInOut"] = 21] = "circleInOut";
+        EaseType[EaseType["elasticIn"] = 22] = "elasticIn";
+        EaseType[EaseType["elasticOut"] = 23] = "elasticOut";
+        EaseType[EaseType["elasticInOut"] = 24] = "elasticInOut";
+        EaseType[EaseType["punch"] = 25] = "punch";
+        EaseType[EaseType["backIn"] = 26] = "backIn";
+        EaseType[EaseType["backOut"] = 27] = "backOut";
+        EaseType[EaseType["backInOut"] = 28] = "backInOut";
+        EaseType[EaseType["bounceIn"] = 29] = "bounceIn";
+        EaseType[EaseType["bounceOut"] = 30] = "bounceOut";
+        EaseType[EaseType["bounceInOut"] = 31] = "bounceInOut";
+    })(EaseType = es.EaseType || (es.EaseType = {}));
+    /**
+     * 助手的一个方法，它接收一个EaseType，并通过给定的持续时间和时间参数来应用该Ease方程。
+     * 我们这样做是为了避免传来传去的Funcs为垃圾收集器制造大量垃圾
+     */
+    var EaseHelper = /** @class */ (function () {
+        function EaseHelper() {
+        }
+        /**
+         * 返回 easeType 的相反 EaseType
+         * @param easeType
+         */
+        EaseHelper.oppositeEaseType = function (easeType) {
+            switch (easeType) {
+                case EaseType.linear:
+                    return easeType;
+                case EaseType.backIn:
+                    return EaseType.backOut;
+                case EaseType.backOut:
+                    return EaseType.backIn;
+                case EaseType.backInOut:
+                    return easeType;
+                case EaseType.bounceIn:
+                    return EaseType.bounceOut;
+                case EaseType.bounceOut:
+                    return EaseType.bounceIn;
+                case EaseType.bounceInOut:
+                    return easeType;
+                case EaseType.circleIn:
+                    return EaseType.circleOut;
+                case EaseType.circleOut:
+                    return EaseType.circleIn;
+                case EaseType.circleInOut:
+                    return easeType;
+                case EaseType.cubicIn:
+                    return EaseType.cubicOut;
+                case EaseType.cubicOut:
+                    return EaseType.cubicIn;
+                case EaseType.circleInOut:
+                    return easeType;
+                case EaseType.punch:
+                    return easeType;
+                case EaseType.expoIn:
+                    return EaseType.expoOut;
+                case EaseType.expoOut:
+                    return EaseType.expoIn;
+                case EaseType.expoInOut:
+                    return easeType;
+                case EaseType.quadIn:
+                    return EaseType.quadOut;
+                case EaseType.quadOut:
+                    return EaseType.quadIn;
+                case EaseType.quadInOut:
+                    return easeType;
+                case EaseType.quartIn:
+                    return EaseType.quadOut;
+                case EaseType.quartOut:
+                    return EaseType.quartIn;
+                case EaseType.quadInOut:
+                    return easeType;
+                case EaseType.sineIn:
+                    return EaseType.sineOut;
+                case EaseType.sineOut:
+                    return EaseType.sineIn;
+                case EaseType.sineInOut:
+                    return easeType;
+                default:
+                    return easeType;
+            }
+        };
+        EaseHelper.ease = function (easeType, t, duration) {
+            switch (easeType) {
+                case EaseType.linear:
+                    return es.Easing.Linear.easeNone(t, duration);
+                case EaseType.backIn:
+                    return es.Easing.Back.easeIn(t, duration);
+                case EaseType.backOut:
+                    return es.Easing.Back.easeOut(t, duration);
+                case EaseType.backInOut:
+                    return es.Easing.Back.easeInOut(t, duration);
+                case EaseType.bounceIn:
+                    return es.Easing.Bounce.easeIn(t, duration);
+                case EaseType.bounceOut:
+                    return es.Easing.Bounce.easeOut(t, duration);
+                case EaseType.bounceInOut:
+                    return es.Easing.Bounce.easeInOut(t, duration);
+                case EaseType.circleIn:
+                    return es.Easing.Circular.easeIn(t, duration);
+                case EaseType.circleOut:
+                    return es.Easing.Circular.easeOut(t, duration);
+                case EaseType.circleInOut:
+                    return es.Easing.Circular.easeInOut(t, duration);
+                case EaseType.cubicIn:
+                    return es.Easing.Cubic.easeIn(t, duration);
+                case EaseType.cubicOut:
+                    return es.Easing.Cubic.easeOut(t, duration);
+                case EaseType.cubicInOut:
+                    return es.Easing.Cubic.easeInOut(t, duration);
+                case EaseType.elasticIn:
+                    return es.Easing.Elastic.easeIn(t, duration);
+                case EaseType.elasticOut:
+                    return es.Easing.Elastic.easeOut(t, duration);
+                case EaseType.elasticInOut:
+                    return es.Easing.Elastic.easeInOut(t, duration);
+                case EaseType.punch:
+                    return es.Easing.Elastic.punch(t, duration);
+                case EaseType.expoIn:
+                    return es.Easing.Exponential.easeIn(t, duration);
+                case EaseType.expoOut:
+                    return es.Easing.Exponential.easeOut(t, duration);
+                case EaseType.expoInOut:
+                    return es.Easing.Exponential.easeInOut(t, duration);
+                case EaseType.quadIn:
+                    return es.Easing.Quadratic.easeIn(t, duration);
+                case EaseType.quadOut:
+                    return es.Easing.Quadratic.easeOut(t, duration);
+                case EaseType.quadInOut:
+                    return es.Easing.Quadratic.easeInOut(t, duration);
+                case EaseType.quadIn:
+                    return es.Easing.Quadratic.easeIn(t, duration);
+                case EaseType.quadOut:
+                    return es.Easing.Quadratic.easeOut(t, duration);
+                case EaseType.quadInOut:
+                    return es.Easing.Quadratic.easeInOut(t, duration);
+                case EaseType.quintIn:
+                    return es.Easing.Quintic.easeIn(t, duration);
+                case EaseType.quintOut:
+                    return es.Easing.Quintic.easeOut(t, duration);
+                case EaseType.quintInOut:
+                    return es.Easing.Quintic.easeInOut(t, duration);
+                case EaseType.sineIn:
+                    return es.Easing.Sinusoidal.easeIn(t, duration);
+                case EaseType.sineOut:
+                    return es.Easing.Sinusoidal.easeOut(t, duration);
+                case EaseType.sineInOut:
+                    return es.Easing.Sinusoidal.easeInOut(t, duration);
+                default:
+                    return es.Easing.Linear.easeNone(t, duration);
+            }
+        };
+        return EaseHelper;
+    }());
+    es.EaseHelper = EaseHelper;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var GlobalManager = /** @class */ (function () {
+        function GlobalManager() {
+        }
+        Object.defineProperty(GlobalManager.prototype, "enabled", {
+            /**
+             * 如果true则启用了GlobalManager。
+             * 状态的改变会导致调用OnEnabled/OnDisable
+             */
+            get: function () {
+                return this._enabled;
+            },
+            /**
+             * 如果true则启用了GlobalManager。
+             * 状态的改变会导致调用OnEnabled/OnDisable
+             * @param value
+             */
+            set: function (value) {
+                this.setEnabled(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /**
+         * 启用/禁用这个GlobalManager
+         * @param isEnabled
+         */
+        GlobalManager.prototype.setEnabled = function (isEnabled) {
+            if (this._enabled != isEnabled) {
+                this._enabled = isEnabled;
+                if (this._enabled) {
+                    this.onEnabled();
+                }
+                else {
+                    this.onDisabled();
+                }
+            }
+        };
+        /**
+         * 此GlobalManager启用时调用
+         */
+        GlobalManager.prototype.onEnabled = function () {
+        };
+        /**
+         * 此GlobalManager禁用时调用
+         */
+        GlobalManager.prototype.onDisabled = function () {
+        };
+        /**
+         * 在frame .update之前调用每一帧
+         */
+        GlobalManager.prototype.update = function () {
+        };
+        return GlobalManager;
+    }());
+    es.GlobalManager = GlobalManager;
+})(es || (es = {}));
+///<reference path="./Easing/EaseType.ts" />
+///<reference path="../Utils/GlobalManager.ts"/>
+var es;
+///<reference path="./Easing/EaseType.ts" />
+///<reference path="../Utils/GlobalManager.ts"/>
+(function (es) {
+    var TweenManager = /** @class */ (function (_super) {
+        __extends(TweenManager, _super);
+        function TweenManager() {
+            var _this = _super.call(this) || this;
+            /**
+             * 当前所有活跃用户的内部列表
+             */
+            _this._activeTweens = [];
+            _this._tempTweens = [];
+            TweenManager._instance = _this;
+            return _this;
+        }
+        TweenManager.prototype.update = function () {
+            this._isUpdating = true;
+            // 反向循环，这样我们就可以把完成的weens删除了
+            for (var i = this._activeTweens.length - 1; i >= 0; --i) {
+                var tween = this._activeTweens[i];
+                if (tween.tick())
+                    this._tempTweens.push(tween);
+            }
+            this._isUpdating = false;
+            for (var i = 0; i < this._tempTweens.length; i++) {
+                this._tempTweens[i].recycleSelf();
+                new es.List(this._activeTweens).remove(this._tempTweens[i]);
+            }
+            this._tempTweens.length = 0;
+        };
+        /**
+         * 将一个tween添加到活动tweens列表中
+         * @param tween
+         */
+        TweenManager.addTween = function (tween) {
+            TweenManager._instance._activeTweens.push(tween);
+        };
+        /**
+         * 从当前的tweens列表中删除一个tween
+         * @param tween
+         */
+        TweenManager.removeTween = function (tween) {
+            if (TweenManager._instance._isUpdating) {
+                TweenManager._instance._tempTweens.push(tween);
+            }
+            else {
+                tween.recycleSelf();
+                new es.List(TweenManager._instance._activeTweens).remove(tween);
+            }
+        };
+        /**
+         * 停止所有的tween并选择地把他们全部完成
+         * @param bringToCompletion
+         */
+        TweenManager.stopAllTweens = function (bringToCompletion) {
+            if (bringToCompletion === void 0) { bringToCompletion = false; }
+            for (var i = TweenManager._instance._activeTweens.length - 1; i >= 0; --i)
+                TweenManager._instance._activeTweens[i].stop(bringToCompletion);
+        };
+        /**
+         * 返回具有特定上下文的所有tweens。
+         * Tweens以ITweenable的形式返回，因为这就是TweenManager所知道的所有内容
+         * @param context
+         */
+        TweenManager.allTweensWithContext = function (context) {
+            var foundTweens = [];
+            for (var i = 0; i < TweenManager._instance._activeTweens.length; i++) {
+                if (TweenManager._instance._activeTweens[i].context == context)
+                    foundTweens.push(TweenManager._instance._activeTweens[i]);
+            }
+            return foundTweens;
+        };
+        /**
+         * 停止所有给定上下文的tweens
+         * @param context
+         * @param bringToCompletion
+         */
+        TweenManager.stopAllTweensWithContext = function (context, bringToCompletion) {
+            if (bringToCompletion === void 0) { bringToCompletion = false; }
+            for (var i = TweenManager._instance._activeTweens.length - 1; i >= 0; --i) {
+                if (TweenManager._instance._activeTweens[i].context == context)
+                    TweenManager._instance._activeTweens[i].stop(bringToCompletion);
+            }
+        };
+        /**
+         * 返回具有特定目标的所有tweens。
+         * Tweens以ITweenControl的形式返回，因为TweenManager只知道这些
+         * @param target
+         */
+        TweenManager.allTweenWithTarget = function (target) {
+            var foundTweens = [];
+            for (var i = 0; i < TweenManager._instance._activeTweens.length; i++) {
+                if (TweenManager._instance._activeTweens[i]) {
+                    var tweenControl = TweenManager._instance._activeTweens[i];
+                    if (tweenControl.getTargetObject() == target)
+                        foundTweens.push(TweenManager._instance._activeTweens[i]);
+                }
+            }
+            return foundTweens;
+        };
+        /**
+         * 停止所有具有TweenManager知道的特定目标的tweens
+         * @param target
+         * @param bringToCompletion
+         */
+        TweenManager.stopAllTweensWithTarget = function (target, bringToCompletion) {
+            if (bringToCompletion === void 0) { bringToCompletion = false; }
+            for (var i = TweenManager._instance._activeTweens.length - 1; i >= 0; --i) {
+                if (TweenManager._instance._activeTweens[i]) {
+                    var tweenControl = TweenManager._instance._activeTweens[i];
+                    if (tweenControl.getTargetObject() == target)
+                        tweenControl.stop(bringToCompletion);
+                }
+            }
+        };
+        TweenManager.defaultEaseType = es.EaseType.quartIn;
+        /**
+         * 如果为真，当加载新关卡时，活动的tween列表将被清除
+         */
+        TweenManager.removeAllTweensOnLevelLoad = false;
+        /**
+         * 这里支持各种类型的自动缓存。请
+         * 注意，只有在使用扩展方法启动tweens时，或者在做自定义tweens时从缓存中获取tween时，缓存才会起作用。
+         * 关于如何获取缓存的tween，请参见扩展方法的实现
+         */
+        TweenManager.cacheNumberTweens = true;
+        TweenManager.cacheVector2Tweens = true;
+        TweenManager.cacheColorTweens = true;
+        TweenManager.cacheRectTweens = false;
+        return TweenManager;
+    }(es.GlobalManager));
+    es.TweenManager = TweenManager;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 标准缓和方程通过将b和c参数（起始值和变化值）用0和1替换，然后进行简化。
+     * 这样做的目的是为了让我们可以得到一个0 - 1之间的原始值（除了弹性/反弹故意超过界限），然后用这个值来lerp任何东西
+     */
+    var Easing;
+    (function (Easing) {
+        var Linear = /** @class */ (function () {
+            function Linear() {
+            }
+            Linear.easeNone = function (t, d) {
+                return t / d;
+            };
+            return Linear;
+        }());
+        Easing.Linear = Linear;
+        var Quadratic = /** @class */ (function () {
+            function Quadratic() {
+            }
+            Quadratic.easeIn = function (t, d) {
+                return (t /= d) * t;
+            };
+            Quadratic.easeOut = function (t, d) {
+                return -1 * (t /= d) * (t - 2);
+            };
+            Quadratic.easeInOut = function (t, d) {
+                if ((t /= d / 2) < 1)
+                    return 0.5 * t * t;
+                return -0.5 * ((--t) * (t - 2) - 1);
+            };
+            return Quadratic;
+        }());
+        Easing.Quadratic = Quadratic;
+        var Back = /** @class */ (function () {
+            function Back() {
+            }
+            Back.easeIn = function (t, d) {
+                return (t /= d) * t * ((1.70158 + 1) * t - 1.70158);
+            };
+            Back.easeOut = function (t, d) {
+                return ((t = t / d - 1) * t * ((1.70158 + 1) * t + 1.70158) + 1);
+            };
+            Back.easeInOut = function (t, d) {
+                var s = 1.70158;
+                if ((t /= d / 2) < 1) {
+                    return 0.5 * (t * t * (((s *= (1.525)) + 1) * t - s));
+                }
+                return 0.5 * ((t -= 2) * t * (((s *= (1.525)) + 1) * t + s) + 2);
+            };
+            return Back;
+        }());
+        Easing.Back = Back;
+        var Bounce = /** @class */ (function () {
+            function Bounce() {
+            }
+            Bounce.easeOut = function (t, d) {
+                if ((t /= d) < (1 / 2.75)) {
+                    return (7.5625 * t * t);
+                }
+                else if (t < (2 / 2.75)) {
+                    return (7.5625 * (t -= (1.5 / 2.75)) * t + 0.75);
+                }
+                else if (t < (2.5 / 2.75)) {
+                    return (7.5625 * (t -= (2.25 / 2.75)) * t + 0.9375);
+                }
+                else {
+                    return (7.5625 * (t -= (2.625 / 2.75)) * t + 0.984375);
+                }
+            };
+            Bounce.easeIn = function (t, d) {
+                return 1 - this.easeOut(d - t, d);
+            };
+            Bounce.easeInOut = function (t, d) {
+                if (t < d / 2)
+                    return this.easeIn(t * 2, d) * 0.5;
+                else
+                    return this.easeOut(t * 2 - d, d) * 0.5 + 1 * 0.5;
+            };
+            return Bounce;
+        }());
+        Easing.Bounce = Bounce;
+        var Circular = /** @class */ (function () {
+            function Circular() {
+            }
+            Circular.easeIn = function (t, d) {
+                return -(Math.sqrt(1 - (t /= d) * t) - 1);
+            };
+            Circular.easeOut = function (t, d) {
+                return Math.sqrt(1 - (t = t / d - 1) * t);
+            };
+            Circular.easeInOut = function (t, d) {
+                if ((t /= d / 2) < 1)
+                    return -0.5 * (Math.sqrt(1 - t * t) - 1);
+                return 0.5 * (Math.sqrt(1 - (t -= 2) * t) + 1);
+            };
+            return Circular;
+        }());
+        Easing.Circular = Circular;
+        var Cubic = /** @class */ (function () {
+            function Cubic() {
+            }
+            Cubic.easeIn = function (t, d) {
+                return (t /= d) * t * t;
+            };
+            Cubic.easeOut = function (t, d) {
+                return ((t = t / d - 1) * t * t + 1);
+            };
+            Cubic.easeInOut = function (t, d) {
+                if ((t /= d / 2) < 1)
+                    return 0.5 * t * t * t;
+                return 0.5 * ((t -= 2) * t * t + 2);
+            };
+            return Cubic;
+        }());
+        Easing.Cubic = Cubic;
+        var Elastic = /** @class */ (function () {
+            function Elastic() {
+            }
+            Elastic.easeIn = function (t, d) {
+                if (t == 0)
+                    return 0;
+                if ((t /= d) == 1)
+                    return 1;
+                var p = d * 0.3;
+                var s = p / 4;
+                return -(1 * Math.pow(2, 10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p));
+            };
+            Elastic.easeOut = function (t, d) {
+                if (t == 0)
+                    return 0;
+                if ((t /= d) == 1)
+                    return 1;
+                var p = d * 0.3;
+                var s = p / 4;
+                return (1 * Math.pow(2, -10 * t) * Math.sin((t * d - s) * (2 * Math.PI) / p) + 1);
+            };
+            Elastic.easeInOut = function (t, d) {
+                if (t == 0)
+                    return 0;
+                if ((t /= d / 2) == 2)
+                    return 1;
+                var p = d * (0.3 * 1.5);
+                var s = p / 4;
+                if (t < 1)
+                    return -0.5 * (Math.pow(2, 10 * (t -= 1)) * Math.sin(t * d - s) * (2 * Math.PI) / p);
+                return (Math.pow(2, -10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p) * 0.5 + 1);
+            };
+            Elastic.punch = function (t, d) {
+                if (t == 0)
+                    return 0;
+                if ((t /= d) == 1)
+                    return 0;
+                var p = 0.3;
+                return (Math.pow(2, -10 * t) * Math.sin(t * (2 * Math.PI) / p));
+            };
+            return Elastic;
+        }());
+        Easing.Elastic = Elastic;
+        var Exponential = /** @class */ (function () {
+            function Exponential() {
+            }
+            Exponential.easeIn = function (t, d) {
+                return (t == 0) ? 0 : Math.pow(2, 10 * (t / d - 1));
+            };
+            Exponential.easeOut = function (t, d) {
+                return t == d ? 1 : (-Math.pow(2, -10 * t / d) + 1);
+            };
+            Exponential.easeInOut = function (t, d) {
+                if (t == 0)
+                    return 0;
+                if (t == d)
+                    return 1;
+                if ((t /= d / 2) < 1) {
+                    return 0.5 * Math.pow(2, 10 * (t - 1));
+                }
+                return 0.5 * (-Math.pow(2, -10 * --t) + 2);
+            };
+            return Exponential;
+        }());
+        Easing.Exponential = Exponential;
+        var Quartic = /** @class */ (function () {
+            function Quartic() {
+            }
+            Quartic.easeIn = function (t, d) {
+                return (t /= d) * t * t * t;
+            };
+            Quartic.easeOut = function (t, d) {
+                return -1 * ((t = t / d - 1) * t * t * t - 1);
+            };
+            Quartic.easeInOut = function (t, d) {
+                t /= d / 2;
+                if (t < 1)
+                    return 0.5 * t * t * t * t;
+                t -= 2;
+                return -0.5 * (t * t * t * t - 2);
+            };
+            return Quartic;
+        }());
+        Easing.Quartic = Quartic;
+        var Quintic = /** @class */ (function () {
+            function Quintic() {
+            }
+            Quintic.easeIn = function (t, d) {
+                return (t /= d) * t * t * t * t;
+            };
+            Quintic.easeOut = function (t, d) {
+                return ((t = t / d - 1) * t * t * t * t + 1);
+            };
+            Quintic.easeInOut = function (t, d) {
+                if ((t /= d / 2) < 1)
+                    return 0.5 * t * t * t * t * t;
+                return 0.5 * ((t -= 2) * t * t * t * t + 2);
+            };
+            return Quintic;
+        }());
+        Easing.Quintic = Quintic;
+        var Sinusoidal = /** @class */ (function () {
+            function Sinusoidal() {
+            }
+            Sinusoidal.easeIn = function (t, d) {
+                return -1 * Math.cos(t / d * (Math.PI / 2)) + 1;
+            };
+            Sinusoidal.easeOut = function (t, d) {
+                return Math.sin(t / d * (Math.PI / 2));
+            };
+            Sinusoidal.easeInOut = function (t, d) {
+                return -0.5 * (Math.cos(Math.PI * t / d) - 1);
+            };
+            return Sinusoidal;
+        }());
+        Easing.Sinusoidal = Sinusoidal;
+    })(Easing = es.Easing || (es.Easing = {}));
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 一系列静态方法来处理所有常见的tween类型结构，以及它们的unclamped lerps.unclamped lerps对于超过0-1范围的bounce、elastic或其他tweens是必需的
+     */
+    var Lerps = /** @class */ (function () {
+        function Lerps() {
+        }
+        Lerps.lerp = function (from, to, t) {
+            if (typeof (from) == "number" && typeof (to) == "number") {
+                return from + (to - from) * t;
+            }
+            if (from instanceof es.Color && to instanceof es.Color) {
+                var t255 = t * 255;
+                return new es.Color(from.r + (to.r - from.r) * t255 / 255, from.g + (to.g - from.g) * t255 / 255, from.b + (to.b - from.b) * t255 / 255, from.a + (to.a - from.a) * t255 / 255);
+            }
+            if (from instanceof es.Rectangle && to instanceof es.Rectangle) {
+                return new es.Rectangle((from.x + (to.x - from.x) * t), (from.y + (to.x - from.y) * t), (from.width + (to.width - from.width) * t), (from.height + (to.height - from.height) * t));
+            }
+            if (from instanceof es.Vector2 && to instanceof es.Vector2) {
+                return new es.Vector2(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t);
+            }
+        };
+        Lerps.angleLerp = function (from, to, t) {
+            // 我们计算这个lerp的最短角差
+            var toMinusFrom = new es.Vector2(es.MathHelper.deltaAngle(from.x, to.x), es.MathHelper.deltaAngle(from.y, to.y));
+            return new es.Vector2(from.x + toMinusFrom.x * t, from.y + toMinusFrom.y * t);
+        };
+        Lerps.ease = function (easeType, from, to, t, duration) {
+            if (typeof (from) == 'number' && typeof (to) == "number") {
+                return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
+            }
+            if (from instanceof es.Vector2 && to instanceof es.Vector2) {
+                return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
+            }
+            if (from instanceof es.Rectangle && to instanceof es.Rectangle) {
+                return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
+            }
+            if (from instanceof es.Color && to instanceof es.Color) {
+                return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
+            }
+        };
+        Lerps.easeAngle = function (easeType, from, to, t, duration) {
+            return this.angleLerp(from, to, es.EaseHelper.ease(easeType, t, duration));
+        };
+        /**
+         * 使用半隐式欧拉方法。速度较慢，但总是很稳定。见
+         * http://allenchou.net/2015/04/game-math-more-on-numeric-springing/
+         * @param currentValue
+         * @param targetValue
+         * @param velocity Velocity的引用。如果在两次调用之间改变targetValue，请务必将其重置为0
+         * @param dampingRatio 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
+         * @param angularFrequency 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定
+         */
+        Lerps.fastSpring = function (currentValue, targetValue, velocity, dampingRatio, angularFrequency) {
+            velocity.add(velocity.scale(-2 * es.Time.deltaTime * dampingRatio * angularFrequency)
+                .add(targetValue.sub(currentValue).scale(es.Time.deltaTime * angularFrequency * angularFrequency)));
+            currentValue.add(velocity.scale(es.Time.deltaTime));
+            return currentValue;
+        };
+        return Lerps;
+    }());
+    es.Lerps = Lerps;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var AnimCurve = /** @class */ (function () {
+        function AnimCurve(points) {
+            if (points.length < 2) {
+                throw new Error('curve length must be >= 2');
+            }
+            points.sort(function (a, b) {
+                return a.t - b.t;
+            });
+            if (points[0].t !== 0) {
+                throw new Error('curve must start with 0');
+            }
+            if (points[points.length - 1].t !== 1) {
+                throw new Error('curve must end with 1');
+            }
+            this._points = points;
+        }
+        Object.defineProperty(AnimCurve.prototype, "points", {
+            get: function () {
+                return this._points;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        AnimCurve.prototype.lerp = function (t) {
+            for (var i = 1; i < this._points.length; i++) {
+                if (t <= this._points[i].t) {
+                    var m = es.MathHelper.map01(t, this._points[i - 1].t, this._points[i].t);
+                    return es.MathHelper.lerp(this._points[i - 1].value, this._points[i].value, m);
+                }
+            }
+            throw new Error('should never be here');
+        };
+        return AnimCurve;
+    }());
+    es.AnimCurve = AnimCurve;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -8958,64 +12565,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var GlobalManager = /** @class */ (function () {
-        function GlobalManager() {
-        }
-        Object.defineProperty(GlobalManager.prototype, "enabled", {
-            /**
-             * 如果true则启用了GlobalManager。
-             * 状态的改变会导致调用OnEnabled/OnDisable
-             */
-            get: function () {
-                return this._enabled;
-            },
-            /**
-             * 如果true则启用了GlobalManager。
-             * 状态的改变会导致调用OnEnabled/OnDisable
-             * @param value
-             */
-            set: function (value) {
-                this.setEnabled(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /**
-         * 启用/禁用这个GlobalManager
-         * @param isEnabled
-         */
-        GlobalManager.prototype.setEnabled = function (isEnabled) {
-            if (this._enabled != isEnabled) {
-                this._enabled = isEnabled;
-                if (this._enabled) {
-                    this.onEnabled();
-                }
-                else {
-                    this.onDisabled();
-                }
-            }
-        };
-        /**
-         * 此GlobalManager启用时调用
-         */
-        GlobalManager.prototype.onEnabled = function () {
-        };
-        /**
-         * 此GlobalManager禁用时调用
-         */
-        GlobalManager.prototype.onDisabled = function () {
-        };
-        /**
-         * 在frame .update之前调用每一帧
-         */
-        GlobalManager.prototype.update = function () {
-        };
-        return GlobalManager;
-    }());
-    es.GlobalManager = GlobalManager;
-})(es || (es = {}));
-var es;
-(function (es) {
     var Hash = /** @class */ (function () {
         function Hash() {
         }
@@ -9042,6 +12591,177 @@ var es;
         return Hash;
     }());
     es.Hash = Hash;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Observable = /** @class */ (function () {
+        function Observable() {
+            this._listeners = [];
+        }
+        Observable.prototype.addListener = function (caller, callback) {
+            if (this._listeners.findIndex(function (listener) {
+                return listener.callback === callback && listener.caller === caller;
+            }) === -1) {
+                this._listeners.push({ caller: caller, callback: callback });
+            }
+        };
+        Observable.prototype.removeListener = function (caller, callback) {
+            var index = this._listeners.findIndex(function (listener) { return listener.callback === callback && listener.caller === caller; });
+            if (index >= 0) {
+                this._listeners.splice(index, 1);
+            }
+        };
+        Observable.prototype.clearListener = function () {
+            this._listeners = [];
+        };
+        Observable.prototype.clearListenerWithCaller = function (caller) {
+            for (var i = this._listeners.length - 1; i >= 0; i--) {
+                var listener = this._listeners[i];
+                if (listener.caller === caller) {
+                    this._listeners.splice(i, 1);
+                }
+            }
+        };
+        Observable.prototype.notify = function () {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i] = arguments[_i];
+            }
+            var _a;
+            for (var i = this._listeners.length - 1; i >= 0; i--) {
+                var listener = this._listeners[i];
+                if (listener.caller) {
+                    (_a = listener.callback).call.apply(_a, __spread([listener.caller], args));
+                }
+                else {
+                    listener.callback.apply(listener, __spread(args));
+                }
+            }
+        };
+        return Observable;
+    }());
+    es.Observable = Observable;
+    var ObservableT = /** @class */ (function (_super) {
+        __extends(ObservableT, _super);
+        function ObservableT() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        ObservableT.prototype.addListener = function (caller, callback) {
+            _super.prototype.addListener.call(this, caller, callback);
+        };
+        ObservableT.prototype.removeListener = function (caller, callback) {
+            _super.prototype.removeListener.call(this, caller, callback);
+        };
+        ObservableT.prototype.notify = function (arg) {
+            _super.prototype.notify.call(this, arg);
+        };
+        return ObservableT;
+    }(Observable));
+    es.ObservableT = ObservableT;
+    var ObservableTT = /** @class */ (function (_super) {
+        __extends(ObservableTT, _super);
+        function ObservableTT() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        ObservableTT.prototype.addListener = function (caller, callback) {
+            _super.prototype.addListener.call(this, caller, callback);
+        };
+        ObservableTT.prototype.removeListener = function (caller, callback) {
+            _super.prototype.removeListener.call(this, caller, callback);
+        };
+        ObservableTT.prototype.notify = function (arg1, arg2) {
+            _super.prototype.notify.call(this, arg1, arg2);
+        };
+        return ObservableTT;
+    }(Observable));
+    es.ObservableTT = ObservableTT;
+    var Command = /** @class */ (function () {
+        function Command(caller, action) {
+            this.bindAction(caller, action);
+            this._onExec = new Observable();
+        }
+        Command.prototype.bindAction = function (caller, action) {
+            this._caller = caller;
+            this._action = action;
+        };
+        Command.prototype.dispatch = function () {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i] = arguments[_i];
+            }
+            var _a;
+            if (this._action) {
+                if (this._caller) {
+                    (_a = this._action).call.apply(_a, __spread([this._caller], args));
+                }
+                else {
+                    this._action.apply(this, __spread(args));
+                }
+                this._onExec.notify();
+            }
+            else {
+                console.warn('command not bind with an action');
+            }
+        };
+        Command.prototype.addListener = function (caller, callback) {
+            this._onExec.addListener(caller, callback);
+        };
+        Command.prototype.removeListener = function (caller, callback) {
+            this._onExec.removeListener(caller, callback);
+        };
+        Command.prototype.clearListener = function () {
+            this._onExec.clearListener();
+        };
+        Command.prototype.clearListenerWithCaller = function (caller) {
+            this._onExec.clearListenerWithCaller(caller);
+        };
+        return Command;
+    }());
+    es.Command = Command;
+    var ValueChangeCommand = /** @class */ (function () {
+        function ValueChangeCommand(value) {
+            this._onValueChange = new Observable();
+            this._value = value;
+        }
+        Object.defineProperty(ValueChangeCommand.prototype, "onValueChange", {
+            get: function () {
+                return this._onValueChange;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(ValueChangeCommand.prototype, "value", {
+            get: function () {
+                return this._value;
+            },
+            set: function (newValue) {
+                this._value = newValue;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        ValueChangeCommand.prototype.dispatch = function (value) {
+            if (value !== this._value) {
+                var oldValue = this._value;
+                this._value = value;
+                this._onValueChange.notify(this._value, oldValue);
+            }
+        };
+        ValueChangeCommand.prototype.addListener = function (caller, callback) {
+            this._onValueChange.addListener(caller, callback);
+        };
+        ValueChangeCommand.prototype.removeListener = function (caller, callback) {
+            this._onValueChange.removeListener(caller, callback);
+        };
+        ValueChangeCommand.prototype.clearListener = function () {
+            this._onValueChange.clearListener();
+        };
+        ValueChangeCommand.prototype.clearListenerWithCaller = function (caller) {
+            this._onValueChange.clearListenerWithCaller(caller);
+        };
+        return ValueChangeCommand;
+    }());
+    es.ValueChangeCommand = ValueChangeCommand;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -9121,13 +12841,13 @@ var es;
         }
         Triangulator.testPointTriangle = function (point, a, b, c) {
             // 如果点在AB的右边，那么外边的三角形是
-            if (es.Vector2Ext.cross(es.Vector2.subtract(point, a), es.Vector2.subtract(b, a)) < 0)
+            if (es.Vector2Ext.cross(point.sub(a), b.sub(a)) < 0)
                 return false;
             // 如果点在BC的右边，则在三角形的外侧
-            if (es.Vector2Ext.cross(es.Vector2.subtract(point, b), es.Vector2.subtract(c, b)) < 0)
+            if (es.Vector2Ext.cross(point.sub(b), c.sub(b)) < 0)
                 return false;
             // 如果点在ca的右边，则在三角形的外面
-            if (es.Vector2Ext.cross(es.Vector2.subtract(point, c), es.Vector2.subtract(a, c)) < 0)
+            if (es.Vector2Ext.cross(point.sub(c), a.sub(c)) < 0)
                 return false;
             // 点在三角形上
             return true;
@@ -11721,7 +15441,7 @@ var es;
          */
         RectangleExt.getClosestPointOnRectangleToPoint = function (rect, point) {
             // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
-            var res = new es.Vector2();
+            var res = es.Vector2.zero;
             res.x = es.MathHelper.clamp(point.x, rect.left, rect.right);
             res.y = es.MathHelper.clamp(point.y, rect.top, rect.bottom);
             return res;
@@ -11733,9 +15453,9 @@ var es;
          */
         RectangleExt.getClosestPointOnRectangleBorderToPoint = function (rect, point) {
             // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
-            var res = new es.Vector2();
-            res.x = es.MathHelper.clamp(point.x, rect.left, rect.right);
-            res.y = es.MathHelper.clamp(point.y, rect.top, rect.bottom);
+            var res = es.Vector2.zero;
+            res.x = es.MathHelper.clamp(Math.trunc(point.x), rect.left, rect.right);
+            res.y = es.MathHelper.clamp(Math.trunc(point.y), rect.top, rect.bottom);
             // 如果点在矩形内，我们需要将res推到边框，因为它将在矩形内 
             if (rect.contains(res.x, res.y)) {
                 var dl = rect.x - rect.left;
@@ -11786,7 +15506,47 @@ var es;
                 if (pt.y > maxY)
                     maxY = pt.y;
             }
-            return this.fromMinMaxVector(new es.Vector2(minX, minY), new es.Vector2(maxX, maxY));
+            return this.fromMinMaxVector(new es.Vector2(Math.trunc(minX), Math.trunc(minY)), new es.Vector2(Math.trunc(maxX), Math.trunc(maxY)));
+        };
+        RectangleExt.calculateBounds = function (rect, parentPosition, position, origin, scale, rotation, width, height) {
+            if (rotation == 0) {
+                rect.x = Math.trunc(parentPosition.x + position.x - origin.x * scale.x);
+                rect.y = Math.trunc(parentPosition.y + position.y - origin.y * scale.y);
+                rect.width = Math.trunc(width * scale.x);
+                rect.height = Math.trunc(height * scale.y);
+            }
+            else {
+                // 我们需要找到我们的绝对最小/最大值，并据此创建边界
+                var worldPosX = parentPosition.x + position.x;
+                var worldPosY = parentPosition.y + position.y;
+                var tempMat = void 0;
+                // 考虑到原点，将参考点设置为世界参考
+                var transformMatrix = new es.Matrix2D();
+                es.Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y, transformMatrix);
+                es.Matrix2D.createScale(scale.x, scale.y, tempMat);
+                transformMatrix = transformMatrix.multiply(tempMat);
+                es.Matrix2D.createRotation(rotation, tempMat);
+                transformMatrix = transformMatrix.multiply(tempMat);
+                es.Matrix2D.createTranslation(worldPosX, worldPosY, tempMat);
+                transformMatrix = transformMatrix.multiply(tempMat);
+                // TODO: 我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角
+                var topLeft = new es.Vector2(worldPosX, worldPosY);
+                var topRight = new es.Vector2(worldPosX + width, worldPosY);
+                var bottomLeft = new es.Vector2(worldPosX, worldPosY + height);
+                var bottomRight = new es.Vector2(worldPosX + width, worldPosY + height);
+                es.Vector2Ext.transformR(topLeft, transformMatrix, topLeft);
+                es.Vector2Ext.transformR(topRight, transformMatrix, topRight);
+                es.Vector2Ext.transformR(bottomLeft, transformMatrix, bottomLeft);
+                es.Vector2Ext.transformR(bottomRight, transformMatrix, bottomRight);
+                // 找出最小值和最大值，这样我们就可以计算出我们的边界框。
+                var minX = Math.trunc(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                var maxX = Math.trunc(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                var minY = Math.trunc(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                var maxY = Math.trunc(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                rect.location = new es.Vector2(minX, minY);
+                rect.width = Math.trunc(maxX - minX);
+                rect.height = Math.trunc(maxY - minY);
+            }
         };
         /**
          * 缩放矩形
@@ -11794,13 +15554,13 @@ var es;
          * @param scale
          */
         RectangleExt.scale = function (rect, scale) {
-            rect.x = rect.x * scale.x;
-            rect.y = rect.y * scale.y;
-            rect.width = rect.width * scale.x;
-            rect.height = rect.height * scale.y;
+            rect.x = Math.trunc(rect.x * scale.x);
+            rect.y = Math.trunc(rect.y * scale.y);
+            rect.width = Math.trunc(rect.width * scale.x);
+            rect.height = Math.trunc(rect.height * scale.y);
         };
         RectangleExt.translate = function (rect, vec) {
-            rect.location.add(vec);
+            rect.location.addEqual(vec);
         };
         return RectangleExt;
     }());
@@ -11850,7 +15610,7 @@ var es;
          * @param c
          */
         Vector2Ext.isTriangleCCW = function (a, center, c) {
-            return this.cross(es.Vector2.subtract(center, a), es.Vector2.subtract(c, center)) < 0;
+            return this.cross(center.sub(a), c.sub(center)) < 0;
         };
         Vector2Ext.halfVector = function () {
             return new es.Vector2(0.5, 0.5);
@@ -11886,7 +15646,7 @@ var es;
         Vector2Ext.angle = function (from, to) {
             this.normalize(from);
             this.normalize(to);
-            return Math.acos(es.MathHelper.clamp(es.Vector2.dot(from, to), -1, 1)) * es.MathHelper.Rad2Deg;
+            return Math.acos(es.MathHelper.clamp(from.dot(to), -1, 1)) * es.MathHelper.Rad2Deg;
         };
         /**
          * 返回以自度为中心的左右角度
@@ -11895,8 +15655,8 @@ var es;
          * @param right
          */
         Vector2Ext.angleBetween = function (self, left, right) {
-            var one = es.Vector2.subtract(left, self);
-            var two = es.Vector2.subtract(right, self);
+            var one = left.sub(self);
+            var two = right.sub(self);
             return this.angle(one, two);
         };
         /**
@@ -11908,7 +15668,7 @@ var es;
          * @param intersection
          */
         Vector2Ext.getRayIntersection = function (a, b, c, d, intersection) {
-            if (intersection === void 0) { intersection = new es.Vector2(); }
+            if (intersection === void 0) { intersection = es.Vector2.zero; }
             var dy1 = b.y - a.y;
             var dx1 = b.x - a.x;
             var dy2 = d.y - c.y;
@@ -11932,7 +15692,7 @@ var es;
         Vector2Ext.normalize = function (vec) {
             var magnitude = Math.sqrt((vec.x * vec.x) + (vec.y * vec.y));
             if (magnitude > es.MathHelper.Epsilon) {
-                vec.divide(new es.Vector2(magnitude));
+                vec.divideScaler(magnitude);
             }
             else {
                 vec.x = vec.y = 0;
@@ -11963,7 +15723,7 @@ var es;
          * @param result
          */
         Vector2Ext.transformR = function (position, matrix, result) {
-            if (result === void 0) { result = new es.Vector2(); }
+            if (result === void 0) { result = es.Vector2.zero; }
             var x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
             var y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
             result.x = x;
@@ -12449,7 +16209,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_10, _a;
+            var e_12, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -12457,12 +16217,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_10) throw e_10.error; }
+                finally { if (e_12) throw e_12.error; }
             }
             return result;
         };
@@ -12638,13 +16398,13 @@ var es;
          * @param radius
          */
         VisibilityComputer.prototype.addCircleOccluder = function (position, radius) {
-            var dirToCircle = es.Vector2.subtract(position, this._origin);
+            var dirToCircle = position.sub(this._origin);
             var angle = Math.atan2(dirToCircle.y, dirToCircle.x);
             var stepSize = Math.PI / this.lineCountForCircleApproximation;
             var startAngle = angle + es.MathHelper.PiOver2;
-            var lastPt = es.MathHelper.angleToVector(startAngle, radius).add(position);
+            var lastPt = es.MathHelper.angleToVector(startAngle, radius).addEqual(position);
             for (var i = 1; i < this.lineCountForCircleApproximation; i++) {
-                var nextPt = es.MathHelper.angleToVector(startAngle + i * stepSize, radius).add(position);
+                var nextPt = es.MathHelper.angleToVector(startAngle + i * stepSize, radius).addEqual(position);
                 this.addLineOccluder(lastPt, nextPt);
                 lastPt = nextPt;
             }
@@ -12711,7 +16471,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_11, _a;
+            var e_13, _a;
             var output = es.ListPool.obtain();
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -12750,12 +16510,12 @@ var es;
                         }
                     }
                 }
-                catch (e_11_1) { e_11 = { error: e_11_1 }; }
+                catch (e_13_1) { e_13 = { error: e_13_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_11) throw e_11.error; }
+                    finally { if (e_13) throw e_13.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -12871,7 +16631,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_12, _a;
+            var e_14, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -12889,12 +16649,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_12) throw e_12.error; }
+                finally { if (e_14) throw e_14.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

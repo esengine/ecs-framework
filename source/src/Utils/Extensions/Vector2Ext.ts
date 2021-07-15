@@ -7,7 +7,7 @@ module es {
          * @param c
          */
         public static isTriangleCCW(a: Vector2, center: Vector2, c: Vector2) {
-            return this.cross(Vector2.subtract(center, a), Vector2.subtract(c, center)) < 0;
+            return this.cross(center.sub(a), c.sub(center)) < 0;
         }
 
         public static halfVector(): Vector2 {
@@ -48,7 +48,7 @@ module es {
         public static angle(from: Vector2, to: Vector2) {
             this.normalize(from);
             this.normalize(to);
-            return Math.acos(MathHelper.clamp(Vector2.dot(from, to), -1, 1)) * MathHelper.Rad2Deg;
+            return Math.acos(MathHelper.clamp(from.dot(to), -1, 1)) * MathHelper.Rad2Deg;
         }
 
         /**
@@ -58,8 +58,8 @@ module es {
          * @param right 
          */
         public static angleBetween(self: Vector2, left: Vector2, right: Vector2) {
-            let one = Vector2.subtract(left, self);
-            let two = Vector2.subtract(right, self);
+            const one = left.sub(self);
+            const two = right.sub(self);
             return this.angle(one, two);
         }
 
@@ -71,7 +71,7 @@ module es {
          * @param d 
          * @param intersection 
          */
-        public static getRayIntersection(a: Vector2, b: Vector2, c: Vector2, d: Vector2, intersection: Vector2 = new Vector2()) {
+        public static getRayIntersection(a: Vector2, b: Vector2, c: Vector2, d: Vector2, intersection: Vector2 = es.Vector2.zero) {
             let dy1 = b.y - a.y;
             let dx1 = b.x - a.x;
             let dy2 = d.y - c.y;
@@ -99,7 +99,7 @@ module es {
         public static normalize(vec: Vector2) {
             let magnitude = Math.sqrt((vec.x * vec.x) + (vec.y * vec.y));
             if (magnitude > MathHelper.Epsilon) {
-                vec.divide(new Vector2(magnitude));
+                vec.divideScaler(magnitude);
             } else {
                 vec.x = vec.y = 0;
             }
@@ -131,7 +131,7 @@ module es {
          * @param matrix 
          * @param result 
          */
-        public static transformR(position: Vector2, matrix: Matrix2D, result: Vector2 = new Vector2()) {
+        public static transformR(position: Vector2, matrix: Matrix2D, result: Vector2 = es.Vector2.zero) {
             let x = (position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31;
             let y = (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32;
             result.x = x;

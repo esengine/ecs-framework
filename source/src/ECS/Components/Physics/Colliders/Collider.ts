@@ -1,5 +1,7 @@
 module es {
-    export class Collider extends Component {
+    export abstract class Collider extends Component {
+        public static readonly lateSortOrder = 999;
+        public castSortOrder: number = 0;
         /**
          * 对撞机的基本形状
          */
@@ -94,8 +96,8 @@ module es {
         public setLocalOffset(offset: Vector2): Collider {
             if (!this._localOffset.equals(offset)) {
                 this.unregisterColliderWithPhysicsSystem();
-                this._localOffset = offset;
-                this._localOffsetLength = this._localOffset.length();
+                this._localOffset.setTo(offset.x, offset.y);
+                this._localOffsetLength = this._localOffset.magnitude();
                 this._isPositionDirty = true;
                 this.registerColliderWithPhysicsSystem();
             }
@@ -114,6 +116,33 @@ module es {
         }
 
         public onAddedToEntity() {
+            if (this._colliderRequiresAutoSizing) {
+                let renderable = null;
+                for (let i = 0; i < this.entity.components.buffer.length; i ++) {
+                    let component = this.entity.components.buffer[i];
+                    if (component instanceof RenderableComponent){
+                        renderable = component;
+                        break;
+                    }
+                }
+
+                if (renderable != null) {
+                    let renderableBounds = renderable.bounds.clone();
+
+                    let width = renderableBounds.width / this.entity.transform.scale.x;
+                    let height = renderableBounds.height / this.entity.transform.scale.y;
+
+                    if (this instanceof CircleCollider) {
+                        this.radius = Math.max(width, height) * 0.5;
+                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
+                    } else if (this instanceof BoxCollider) {
+                        this.width = width;
+                        this.height = height;
+
+                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
+                    }
+                }
+            }
             this._isParentEntityAddedToScene = true;
             this.registerColliderWithPhysicsSystem();
         }
@@ -123,15 +152,15 @@ module es {
             this._isParentEntityAddedToScene = false;
         }
 
-        public onEntityTransformChanged(comp: transform.Component) {
+        public onEntityTransformChanged(comp: ComponentTransform) {
             switch (comp) {
-                case transform.Component.position:
+                case ComponentTransform.position:
                     this._isPositionDirty = true;
                     break;
-                case transform.Component.scale:
+                case ComponentTransform.scale:
                     this._isPositionDirty = true;
                     break;
-                case transform.Component.rotation:
+                case ComponentTransform.rotation:
                     this._isRotationDirty = true;
                     break;
             }
@@ -186,10 +215,10 @@ module es {
          */
         public collidesWith(collider: Collider, motion: Vector2, result: CollisionResult = new CollisionResult()): boolean {
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
-            let oldPosition = this.entity.position.clone();
-            this.entity.position = Vector2.add(this.entity.position, motion);
+            const oldPosition = this.entity.position;
+            this.entity.position = this.entity.position.add(motion);
 
-            let didCollide = this.shape.collidesWithShape(collider.shape, result);
+            const didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)
                 result.collider = collider;
 
@@ -210,6 +239,7 @@ module es {
                 return true;
             }
 
+            result.collider = null;
             return false;
         }
 
@@ -236,14 +266,14 @@ module es {
                     continue;
 
                 if (this.collidesWithNonMotion(neighbor, result)) {
-                    motion = Vector2.subtract(motion, result.minimumTranslationVector);
-                    this.shape.position = Vector2.subtract(this.shape.position, result.minimumTranslationVector);
+                    motion = motion.sub(result.minimumTranslationVector);
+                    this.shape.position = this.shape.position.sub(result.minimumTranslationVector);
                     didCollide = true;
                 }
             }
 
             // 将形状位置返回到检查之前的位置 
-            this.shape.position = oldPosition;
+            this.shape.position = oldPosition.clone();
 
             return didCollide;
         }

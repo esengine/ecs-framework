@@ -13,10 +13,9 @@ module es {
             // 第一点和最后一点决不能相同。我们想要一个开放的多边形
             let isPolygonClosed = points[0] == points[points.length - 1];
 
-            let linqPoints = new es.List(points);
             // 最后一个移除
             if (isPolygonClosed)
-                linqPoints.remove(linqPoints.last());
+                points = points.slice(0, points.length - 1);
 
             let center = Polygon.findPolygonCenter(points);
             this.setLocalOffset(center);

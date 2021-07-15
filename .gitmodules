@@ -10,6 +10,3 @@
 [submodule "extensions/behaviourTree-ai"]
 	path = extensions/behaviourTree-ai
 	url = https://github.com/esengine/BehaviourTree-ai
-[submodule "extensions/ecs-tween"]
-	path = extensions/ecs-tween
-	url = https://github.com/esengine/ecs-tween

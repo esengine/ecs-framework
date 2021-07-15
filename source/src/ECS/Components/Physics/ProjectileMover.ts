@@ -8,7 +8,15 @@ module es {
         private _collider: Collider;
 
         public onAddedToEntity() {
-            this._collider = this.entity.getComponent(Collider);
+            let collider = null;
+            for (let i = 0; i < this.entity.components.buffer.length; i++) {
+                let component = this.entity.components.buffer[i];
+                if (component instanceof Collider) {
+                    collider = component;
+                    break;
+                }
+            }
+            this._collider = collider;
             Debug.warnIf(this._collider == null, "ProjectileMover没有Collider。ProjectilMover需要一个Collider!");
         }
 

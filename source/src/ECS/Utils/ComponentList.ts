@@ -77,16 +77,16 @@ module es {
                 for (let i = 0, s = this._components.length; i < s; ++ i) {
                     this.handleRemove(this._components[i]);
                 }
-
-                this.componentsByType.clear();
-                this.componentsToAddByType.clear();
-                this._components.length = 0;
-                this._updatableComponents.length = 0;
-                this._componentsToAdd = {};
-                this._componentsToRemove = {};
-                this._componentsToAddList.length = 0;
-                this._componentsToRemoveList.length = 0;
             }
+
+            this.componentsByType.clear();
+            this.componentsToAddByType.clear();
+            this._components.length = 0;
+            this._updatableComponents.length = 0;
+            this._componentsToAdd = {};
+            this._componentsToRemove = {};
+            this._componentsToAddList.length = 0;
+            this._componentsToRemoveList.length = 0;
         }
 
         public deregisterAllComponents() {
@@ -95,6 +95,9 @@ module es {
                     let component = this._components[i];
                     if (!component) continue;
     
+                    if (component instanceof RenderableComponent)
+                        this._entity.scene.renderableComponents.remove(component);
+
                     // 处理IUpdatable
                     if (isIUpdatable(component))
                         new es.List(this._updatableComponents).remove(component);
@@ -109,6 +112,9 @@ module es {
             if (this._components.length > 0) {
                 for (let i = 0, s = this._components.length; i < s; ++ i) {
                     let component = this._components[i];
+                    if (component instanceof RenderableComponent)
+                        this._entity.scene.renderableComponents.remove(component);
+
                     if (isIUpdatable(component))
                         this._updatableComponents.push(component);
     
@@ -151,6 +157,9 @@ module es {
             if (this._componentsToAddList.length > 0) {
                 for (let i = 0, l = this._componentsToAddList.length; i < l; ++ i) {
                     let component = this._componentsToAddList[i];
+                    if (component instanceof RenderableComponent)
+                        this._entity.scene.renderableComponents.add(component);
+
                     if (isIUpdatable(component))
                         this._updatableComponents.push(component);
     
@@ -186,6 +195,9 @@ module es {
         }
 
         public handleRemove(component: Component) {
+            if (component instanceof RenderableComponent)
+                this._entity.scene.renderableComponents.remove(component);
+
             if (isIUpdatable(component) && this._updatableComponents.length > 0) {
                 let index = this._updatableComponents.findIndex((c) => (<any>c as Component).id == component.id);
                 if (index != -1)
@@ -282,7 +294,7 @@ module es {
             }
         }
 
-        public onEntityTransformChanged(comp: transform.Component) {
+        public onEntityTransformChanged(comp: ComponentTransform) {
             if (this._components.length > 0 ){
                 for (let i = 0, s = this._components.length; i < s; ++ i) {
                     let component = this._components[i];
@@ -311,6 +323,15 @@ module es {
             if (this._components.length > 0) {
                 for (let i = 0, s = this._components.length; i < s; i ++)
                     this._components[i].onDisabled();
+            }
+        }
+
+        public debugRender(batcher: IBatcher) {
+            if (!batcher) return;
+            for (let i = 0; i < this._components.length; i ++) {
+                if (this._components[i].enabled) {
+                    this._components[i].debugRender(batcher);
+                }
             }
         }
     }

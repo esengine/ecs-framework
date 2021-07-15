@@ -63,14 +63,14 @@ module es {
          * @param radius 
          */
         public addCircleOccluder(position: Vector2, radius: number){
-            let dirToCircle = Vector2.subtract(position, this._origin);
+            let dirToCircle = position.sub(this._origin);
             let angle = Math.atan2(dirToCircle.y, dirToCircle.x);
 
             let stepSize = Math.PI / this.lineCountForCircleApproximation;
             let startAngle = angle + MathHelper.PiOver2;
-            let lastPt = MathHelper.angleToVector(startAngle, radius).add(position);
+            let lastPt = MathHelper.angleToVector(startAngle, radius).addEqual(position);
             for (let i = 1; i < this.lineCountForCircleApproximation; i ++) {
-                let nextPt = MathHelper.angleToVector(startAngle + i * stepSize, radius).add(position);
+                let nextPt = MathHelper.angleToVector(startAngle + i * stepSize, radius).addEqual(position);
                 this.addLineOccluder(lastPt, nextPt);
                 lastPt = nextPt;
             }

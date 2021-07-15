@@ -19,35 +19,43 @@ module es {
          * 它将处理任何与Collider重叠的ITriggerListeners。
          */
         public update() {
+            const lateColliders = [];
             // 对所有实体.colliders进行重叠检查，这些实体.colliders是触发器，与所有宽相碰撞器，无论是否触发器。   
             // 任何重叠都会导致触发事件
             let colliders = this._entity.getComponents(Collider);
             for (let i = 0; i < colliders.length; i++) {
                 let collider = colliders[i];
 
-                let neighbors = Physics.boxcastBroadphase(collider.bounds, collider.collidesWithLayers);
-                for (let j = 0; j < neighbors.size; j++) {
+                let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider.bounds, collider.collidesWithLayers);
+                for (let j = 0; j < neighbors.length; j++) {
                     let neighbor = neighbors[j];
                     // 我们至少需要一个碰撞器作为触发器
                     if (!collider.isTrigger && !neighbor.isTrigger)
                         continue;
 
                     if (collider.overlaps(neighbor)) {
-                        let pair = new Pair<Collider>(collider, neighbor);
+                        const pair = new Pair<Collider>(collider, neighbor);
 
                         // 如果我们的某一个集合中已经有了这个对子（前一个或当前的触发交叉点），就不要调用输入事件了
-                        let shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) &&
+                        const shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) &&
                             !this._previousTriggerIntersections.contains(pair);
 
-                        if (shouldReportTriggerEvent)
-                            this.notifyTriggerListeners(pair, true);
+                            if (shouldReportTriggerEvent) {
+                                if (neighbor.castSortOrder >= Collider.lateSortOrder) {
+                                    lateColliders.push(pair);
+                                } else {
+                                    this.notifyTriggerListeners(pair, true);
+                                }
+                            }
 
                         this._activeTriggerIntersections.add(pair);
                     }
                 }
             }
 
-            ListPool.free(colliders);
+            for (const pair of lateColliders) {
+                this.notifyTriggerListeners(pair, true);
+            }
 
             this.checkForExitedColliders();
         }

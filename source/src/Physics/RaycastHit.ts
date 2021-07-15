@@ -30,7 +30,7 @@ module es {
          */
         public centroid: Vector2;
 
-        constructor(collider?: Collider, fraction?: number, distance?: number, point?: Vector2, normal?: Vector2){
+        constructor(collider?: Collider, fraction?: number, distance?: number, point?: Vector2, normal?: Vector2) {
             this.collider = collider;
             this.fraction = fraction;
             this.distance = distance;
@@ -38,26 +38,39 @@ module es {
             this.centroid = Vector2.zero;
         }
 
-        public setValues(collider: Collider, fraction: number, distance: number, point: Vector2){
+        public setAllValues(collider: Collider, fraction: number, distance: number, point: Vector2, normal: Vector2) {
             this.collider = collider;
-            this.fraction = fraction;
-            this.distance = distance;
-            this.point = point;
-        }
-
-        public setValuesNonCollider(fraction: number, distance: number, point: Vector2, normal: Vector2){
             this.fraction = fraction;
             this.distance = distance;
             this.point = point;
             this.normal = normal;
         }
 
-        public reset(){
+        public setValues(fraction: number, distance: number, point: Vector2, normal: Vector2) {
+            this.fraction = fraction;
+            this.distance = distance;
+            this.point = point;
+            this.normal = normal;
+        }
+
+        public reset() {
             this.collider = null;
             this.fraction = this.distance = 0;
         }
 
-        public toString(){
+        public clone(): RaycastHit {
+            const hit = new RaycastHit();
+            hit.setAllValues(
+                this.collider,
+                this.fraction,
+                this.distance,
+                this.point,
+                this.normal
+            );
+            return hit;
+        }
+
+        public toString() {
             return `[RaycastHit] fraction: ${this.fraction}, distance: ${this.distance}, normal: ${this.normal}, centroid: ${this.centroid}, point: ${this.point}`;
         }
     }

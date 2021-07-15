@@ -9,39 +9,31 @@ module es {
          public static polygonToPolygon(first: Polygon, second: Polygon, result: CollisionResult): boolean {
             let isIntersecting = true;
 
-            let firstEdges = first.edgeNormals.slice();
-            let secondEdges = second.edgeNormals.slice();
+            const firstEdges = first.edgeNormals;
+            const secondEdges = second.edgeNormals;
             let minIntervalDistance = Number.POSITIVE_INFINITY;
-            let translationAxis = new Vector2();
-            let polygonOffset = Vector2.subtract(first.position, second.position);
+            let translationAxis = Vector2.zero;
+            let polygonOffset = first.position.sub(second.position);
             let axis: Vector2;
 
             // 循环穿过两个多边形的所有边
             for (let edgeIndex = 0; edgeIndex < firstEdges.length + secondEdges.length; edgeIndex++) {
                 // 1. 找出当前多边形是否相交
                 // 多边形的归一化轴垂直于缓存给我们的当前边
-                if (edgeIndex < firstEdges.length) {
-                    axis = firstEdges[edgeIndex];
-                } else {
-                    axis = secondEdges[edgeIndex - firstEdges.length];
-                }
+                axis = edgeIndex < firstEdges.length ? firstEdges[edgeIndex] : secondEdges[edgeIndex - firstEdges.length];
 
                 // 求多边形在当前轴上的投影
-                let minA = new Ref(0);
-                let minB = new Ref(0);
-                let maxA = new Ref(0);
-                let maxB = new Ref(0);
                 let intervalDist = 0;
-                this.getInterval(axis, first, minA, maxA);
-                this.getInterval(axis, second, minB, maxB);
+                let {min: minA, max: maxA} = this.getInterval(axis, first);
+                const {min: minB, max: maxB} = this.getInterval(axis, second);
 
                 // 将区间设为第二个多边形的空间。由轴上投影的位置差偏移。
-                let relativeIntervalOffset = Vector2.dot(polygonOffset, axis);
-                minA.value += relativeIntervalOffset;
-                maxA.value += relativeIntervalOffset;
+                const relativeIntervalOffset = polygonOffset.dot(axis);
+                minA += relativeIntervalOffset;
+                maxA += relativeIntervalOffset;
 
                 // 检查多边形投影是否正在相交
-                intervalDist = this.intervalDistance(minA.value, maxA.value, minB.value, maxB.value);
+                intervalDist = this.intervalDistance(minA, maxA, minB, maxB);
                 if (intervalDist > 0)
                     isIntersecting = false;
 
@@ -56,16 +48,16 @@ module es {
                 intervalDist = Math.abs(intervalDist);
                 if (intervalDist < minIntervalDistance) {
                     minIntervalDistance = intervalDist;
-                    translationAxis = axis;
+                    translationAxis.setTo(axis.x, axis.y);
 
-                    if (Vector2.dot(translationAxis, polygonOffset) < 0)
-                        translationAxis = new Vector2(-translationAxis.x, -translationAxis.y);
+                    if (translationAxis.dot(polygonOffset) < 0)
+                        translationAxis = translationAxis.scale(-1);
                 }
             }
 
             // 利用最小平移向量对多边形进行推入。
             result.normal = translationAxis;
-            result.minimumTranslationVector = new Vector2(-translationAxis.x * minIntervalDistance, -translationAxis.y * minIntervalDistance);
+            result.minimumTranslationVector = translationAxis.scale(-minIntervalDistance);
 
             return true;
         }
@@ -77,18 +69,21 @@ module es {
          * @param min
          * @param max
          */
-        public static getInterval(axis: Vector2, polygon: Polygon, min: Ref<number>, max: Ref<number>) {
-            let dot = Vector2.dot(polygon.points[0], axis);
-            min.value = max.value = dot;
-
+        public static getInterval(axis: Vector2, polygon: Polygon): {min: number, max: number} {
+            const res = {min: 0, max: 0};
+            let dot: number;
+            dot = polygon.points[0].dot(axis);
+            res.max = dot;
+            res.min = dot;
             for (let i = 1; i < polygon.points.length; i++) {
-                dot = Vector2.dot(polygon.points[i], axis);
-                if (dot < min.value) {
-                    min.value = dot;
-                } else if (dot > max.value) {
-                    max.value = dot;
+                dot = polygon.points[i].dot(axis);
+                if (dot < res.min) {
+                    res.min = dot;
+                } else if (dot > res.max) {
+                    res.max = dot;
                 }
             }
+            return res;
         }
 
         /**
@@ -98,7 +93,7 @@ module es {
          * @param minB
          * @param maxB
          */
-         public static intervalDistance(minA: number, maxA: number, minB: number, maxB) {
+         public static intervalDistance(minA: number, maxA: number, minB: number, maxB: number) {
             if (minA < minB)
                 return minB - maxA;
 

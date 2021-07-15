@@ -7,20 +7,20 @@ module es {
             let hasIntersection = false;
 
             for (let j = polygon.points.length - 1, i = 0; i < polygon.points.length; j = i, i ++){
-                let edge1 = Vector2.add(polygon.position, polygon.points[j]);
-                let edge2 = Vector2.add(polygon.position, polygon.points[i]);
-                let intersection: Vector2 = Vector2.zero;
-                if (this.lineToLine(edge1, edge2, start, end, intersection)){
+                const edge1 = Vector2.add(polygon.position, polygon.points[j]);
+                const edge2 = Vector2.add(polygon.position, polygon.points[i]);
+                const intersection: Vector2 = Vector2.zero;
+                if (ShapeCollisionsLine.lineToLine(edge1, edge2, start, end, intersection)){
                     hasIntersection = true;
 
                     // TODO: 这是得到分数的正确和最有效的方法吗?
                     // 先检查x分数。如果是NaN，就用y代替
                     let distanceFraction = (intersection.x - start.x) / (end.x - start.x);
-                    if (Number.isNaN(distanceFraction) || Number.isFinite(distanceFraction))
+                    if (Number.isNaN(distanceFraction) || Math.abs(distanceFraction) == Infinity)
                         distanceFraction = (intersection.y - start.y) / (end.y - start.y);
 
                     if (distanceFraction < fraction){
-                        let edge = Vector2.subtract(edge2, edge1);
+                        const edge = edge2.sub(edge1);
                         normal = new Vector2(edge.y, -edge.x);
                         fraction = distanceFraction;
                         intersectionPoint = intersection;
@@ -29,9 +29,9 @@ module es {
             }
 
             if (hasIntersection){
-                normal.normalize();
-                let distance = Vector2.distance(start, intersectionPoint);
-                hit.setValuesNonCollider(fraction, distance, intersectionPoint, normal);
+                normal = normal.normalize();
+                const distance = Vector2.distance(start, intersectionPoint);
+                hit.setValues(fraction, distance, intersectionPoint, normal);
                 return true;
             }
 
@@ -39,35 +39,37 @@ module es {
         }
 
         public static lineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2, intersection: Vector2){
-            let b = Vector2.subtract(a2, a1);
-            let d = Vector2.subtract(b2, b1);
-            let bDotDPerp = b.x * d.y - b.y * d.x;
+            const b = a2.sub(a1);
+            const d = b2.sub(b1);
+            const bDotDPerp = b.x * d.y - b.y * d.x;
 
             // 如果b*d = 0，表示这两条直线平行，因此有无穷个交点
             if (bDotDPerp == 0)
                 return false;
 
-            let c = Vector2.subtract(b1, a1);
-            let t = (c.x * d.y - c.y * d.x) / bDotDPerp;
+            const c = b1.sub(a1);
+            const t = (c.x * d.y - c.y * d.x) / bDotDPerp;
             if (t < 0 || t > 1)
                 return false;
 
-            let u = (c.x * b.y - c.y * b.x) / bDotDPerp;
+            const u = (c.x * b.y - c.y * b.x) / bDotDPerp;
             if (u < 0 || u > 1)
                 return false;
 
-            intersection = Vector2.add(a1, Vector2.multiply(new Vector2(t), b));
+            const r = a1.add(b.scale(t));
+            intersection.x = r.x;
+            intersection.y = r.y;
 
             return true;
         }
 
         public static lineToCircle(start: Vector2, end: Vector2, s: Circle, hit: RaycastHit): boolean{
             // 计算这里的长度并分别对d进行标准化，因为如果我们命中了我们需要它来得到分数
-            let lineLength = Vector2.distance(start, end);
-            let d = Vector2.divide(Vector2.subtract(end, start), new Vector2(lineLength));
-            let m = Vector2.subtract(start, s.position);
-            let b = Vector2.dot(m, d);
-            let c = Vector2.dot(m, m) - s.radius * s.radius;
+            const lineLength = Vector2.distance(start, end);
+            const d = Vector2.divideScaler(end.sub(start), lineLength);
+            const m = start.sub(s.position);
+            const b = m.dot(d);
+            const c = m.dot(m) - s.radius * s.radius;
 
             // 如果r的原点在s之外，(c>0)和r指向s (b>0) 则返回
             if (c > 0 && b > 0)
@@ -85,9 +87,9 @@ module es {
             if (hit.fraction < 0)
                 hit.fraction = 0;
 
-            hit.point = Vector2.add(start, Vector2.multiply(new Vector2(hit.fraction), d));
+            hit.point = start.add(d.scale(hit.fraction));
             hit.distance = Vector2.distance(start, hit.point);
-            hit.normal = Vector2.normalize(Vector2.subtract(hit.point, s.position));
+            hit.normal = hit.point.sub(s.position).normalize();
             hit.fraction = hit.distance / lineLength;
 
             return true;

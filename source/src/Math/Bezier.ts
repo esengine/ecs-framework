@@ -13,9 +13,9 @@ module es {
         public static getPoint(p0: Vector2, p1: Vector2, p2: Vector2, t: number): Vector2 {
             t = MathHelper.clamp01(t);
             let oneMinusT = 1 - t;
-            return new Vector2(oneMinusT * oneMinusT).multiply(p0)
-                .add(new Vector2(2 * oneMinusT * t).multiply(p1))
-                .add(new Vector2(t * t).multiply(p2));
+            return p0.scale(oneMinusT * oneMinusT)
+                .addEqual(p1.scale(2 * oneMinusT * t))
+                .addEqual(p2.scale(t * t));
         }
 
         /**
@@ -29,11 +29,11 @@ module es {
         public static getPointThree(start: Vector2, firstControlPoint: Vector2, secondControlPoint: Vector2, 
             end: Vector2, t: number): Vector2 {
             t = MathHelper.clamp01(t);
-            let oneMinusT = 1 - t;
-            return new Vector2(oneMinusT * oneMinusT * oneMinusT).multiply(start)
-                .add(new Vector2(3 * oneMinusT * oneMinusT * t).multiply(firstControlPoint))
-                .add(new Vector2(3 * oneMinusT * t * t).multiply(secondControlPoint))
-                .add(new Vector2(t * t * t).multiply(end));
+            const oneMinusT = 1 - t;
+            return start.scale(oneMinusT * oneMinusT * oneMinusT)
+                .addEqual(firstControlPoint.scale(3 * oneMinusT * oneMinusT * t))
+                .addEqual(secondControlPoint.scale(3 * oneMinusT * t * t))
+                .addEqual(end.scale(t * t * t));
         }
 
         /**
@@ -44,8 +44,8 @@ module es {
          * @param t
          */
         public static getFirstDerivative(p0: Vector2, p1: Vector2, p2: Vector2, t: number) {
-            return new Vector2(2 * (1 - t)).multiply(Vector2.subtract(p1, p0))
-                .add(new Vector2(2 * t).multiply(Vector2.subtract(p2, p1)));
+            return p1.sub(p0).scale(2 * (1 - t))
+                .addEqual(p2.sub(p1).scale(2 * t));
         }
 
         /**
@@ -60,9 +60,9 @@ module es {
                                               end: Vector2, t: number) {
             t = MathHelper.clamp01(t);
             let oneMunusT = 1 - t;
-            return new Vector2(3 * oneMunusT * oneMunusT).multiply(Vector2.subtract(firstControlPoint, start))
-                .add(new Vector2(6 * oneMunusT * t).multiply(Vector2.subtract(secondControlPoint, firstControlPoint)))
-                .add(new Vector2(3 * t * t).multiply(Vector2.subtract(end, secondControlPoint)));
+            return firstControlPoint.sub(start).scale(3 * oneMunusT * oneMunusT)
+                .addEqual(secondControlPoint.sub(firstControlPoint).scale(6 * oneMunusT * t))
+                .addEqual(end.sub(secondControlPoint).scale(3 * t * t));
         }
 
         /**
@@ -96,19 +96,19 @@ module es {
         private static recursiveGetOptimizedDrawingPoints(start: Vector2, firstCtrlPoint: Vector2, secondCtrlPoint: Vector2,
                                                           end: Vector2, points: Vector2[], distanceTolerance: number) {
             // 计算线段的所有中点
-            let pt12 = Vector2.divide(Vector2.add(start, firstCtrlPoint), new Vector2(2));
-            let pt23 = Vector2.divide(Vector2.add(firstCtrlPoint, secondCtrlPoint), new Vector2(2));
-            let pt34 = Vector2.divide(Vector2.add(secondCtrlPoint, end), new Vector2(2));
+            let pt12 = Vector2.divideScaler(start.add(firstCtrlPoint), 2);
+            let pt23 = Vector2.divideScaler(firstCtrlPoint.add(secondCtrlPoint), 2);
+            let pt34 = Vector2.divideScaler(secondCtrlPoint.add(end), 2);
 
             // 计算新半直线的中点
-            let pt123 = Vector2.divide(Vector2.add(pt12, pt23), new Vector2(2));
-            let pt234 = Vector2.divide(Vector2.add(pt23, pt34), new Vector2(2));
+            let pt123 = Vector2.divideScaler(pt12.add(pt23), 2);
+            let pt234 = Vector2.divideScaler(pt23.add(pt34), 2);
 
             // 最后再细分最后两个中点。如果我们满足我们的距离公差，这将是我们使用的最后一点。
-            let pt1234 = Vector2.divide(Vector2.add(pt123, pt234), new Vector2(2));
+            let pt1234 = Vector2.divideScaler(pt123.add(pt234), 2);
 
             // 试着用一条直线来近似整个三次曲线
-            let deltaLine = Vector2.subtract(end, start);
+            let deltaLine = end.sub(start);
 
             let d2 = Math.abs(((firstCtrlPoint.x, end.x) * deltaLine.y - (firstCtrlPoint.y - end.y) * deltaLine.x));
             let d3 = Math.abs(((secondCtrlPoint.x - end.x) * deltaLine.y - (secondCtrlPoint.y - end.y) * deltaLine.x));

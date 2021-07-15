@@ -3,7 +3,7 @@ module es {
     export class Physics {
         public static _spatialHash: SpatialHash;
         /** 用于在全局范围内存储重力值的方便字段 */
-        public static gravity = new Vector2(0, 300);
+        public static gravity = new Vector2(0, -300);
         /** 调用reset并创建一个新的SpatialHash时使用的单元格大小 */
         public static spatialHashCellSize = 100;
         /** 接受layerMask的所有方法的默认值 */
@@ -16,6 +16,7 @@ module es {
          * 在碰撞器中开始的射线/直线是否强制转换检测到那些碰撞器
          */
         public static raycastsStartInColliders = false;
+        public static debugRender: boolean = false;
         /**
          * 我们保留它以避免在每次raycast发生时分配它
          */
@@ -42,6 +43,11 @@ module es {
             this._spatialHash.clear();
         }
 
+        public static debugDraw(secondsToDisplay) {
+            if (this.debugRender)
+                this._spatialHash.debugDraw(secondsToDisplay);
+        }
+
         /**
          * 检查是否有对撞机落在一个圆形区域内。返回遇到的第一个对撞机
          * @param center 
@@ -61,13 +67,13 @@ module es {
          * @param results
          * @param layerMask
          */
-        public static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask = -1) {
-            if (results.length == 0) {
-                console.warn("传入了一个空的结果数组。不会返回任何结果");
-                return;
-            }
-
-            return this._spatialHash.overlapCircle(center, randius, results, layerMask);
+        public static overlapCircleAll(center: Vector2, radius: number, results: Collider[], layerMask: number = this.allLayers) {
+            return this._spatialHash.overlapCircle(
+                center,
+                radius,
+                results,
+                layerMask
+            );
         }
 
         /**
@@ -96,7 +102,7 @@ module es {
          * @param layerMask 
          */
         public static boxcastBroadphaseExcludingSelfNonRect(collider: Collider, layerMask = this.allLayers) {
-            let bounds = collider.bounds.clone();
+            let bounds = collider.bounds;
             return this._spatialHash.aabbBroadphase(bounds, collider, layerMask);
         }
 
@@ -108,7 +114,7 @@ module es {
          * @param layerMask 
          */
         public static boxcastBroadphaseExcludingSelfDelta(collider: Collider, deltaX: number, deltaY: number, layerMask: number = Physics.allLayers) {
-            let colliderBounds = collider.bounds.clone();
+            let colliderBounds = collider.bounds;
             let sweptBounds = colliderBounds.getSweptBroadphaseBounds(deltaX, deltaY);
             return this._spatialHash.aabbBroadphase(sweptBounds, collider, layerMask);
         }
@@ -144,10 +150,18 @@ module es {
          * @param end
          * @param layerMask
          */
-        public static linecast(start: Vector2, end: Vector2, layerMask: number = Physics.allLayers): RaycastHit{
+        public static linecast(start: Vector2, end: Vector2, layerMask: number = this.allLayers, ignoredColliders: Set<Collider> = null): RaycastHit {
             this._hitArray[0].reset();
             this.linecastAll(start, end, this._hitArray, layerMask);
-            return this._hitArray[0];
+            this._hitArray[0].reset();
+            Physics.linecastAll(
+                start,
+                end,
+                this._hitArray,
+                layerMask,
+                ignoredColliders
+            );
+            return this._hitArray[0].clone();
         }
 
         /**
@@ -157,13 +171,14 @@ module es {
          * @param hits
          * @param layerMask
          */
-        public static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number = Physics.allLayers){
-            if (hits.length == 0){
-                console.warn("传入了一个空的hits数组。没有点击会被返回");
-                return 0;
-            }
-
-            return this._spatialHash.linecast(start, end, hits, layerMask);
+        public static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number = this.allLayers, ignoredColliders: Set<Collider> = null) {
+            return this._spatialHash.linecast(
+                start,
+                end,
+                hits,
+                layerMask,
+                ignoredColliders
+            );
         }
 
         /**
@@ -184,7 +199,7 @@ module es {
          * @param layerMask 
          */
         public static overlapRectangleAll(rect: Rectangle, results: Collider[], layerMask: number = Physics.allLayers) {
-            if (results.length == 0){
+            if (results.length == 0) {
                 console.warn("传入了一个空的结果数组。不会返回任何结果");
                 return 0;
             }

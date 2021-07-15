@@ -192,7 +192,7 @@ module es {
             return this.transform.worldToLocalTransform;
         }
 
-        public onTransformChanged(comp: transform.Component) {
+        public onTransformChanged(comp: ComponentTransform) {
             // 通知我们的子项改变了位置
             this.components.onEntityTransformChanged(comp);
         }
@@ -245,7 +245,7 @@ module es {
             if (scale instanceof Vector2) {
                 this.transform.setScale(scale);
             } else {
-                this.transform.setScale(new Vector2(scale));
+                this.transform.setScale(new Vector2(scale, scale));
             }
 
             return this;
@@ -257,7 +257,7 @@ module es {
             if (scale instanceof Vector2) {
                 this.transform.setLocalScale(scale);
             } else {
-                this.transform.setLocalScale(new Vector2(scale));
+                this.transform.setLocalScale(new Vector2(scale, scale));
             }
 
             return this;
@@ -376,6 +376,11 @@ module es {
             this.components.update();
         }
 
+        public debugRender(batcher: IBatcher) {
+            if (!batcher) return;
+            this.components.debugRender(batcher);
+        }
+
         /**
          * 创建组件的新实例。返回实例组件
          * @param componentType 
@@ -484,6 +489,66 @@ module es {
             for (let i = 0; i < this.components.count; i++) {
                 this.removeComponent(this.components.buffer[i]);
             }
+        }
+
+        public tweenPositionTo(to: Vector2, duration: number = 0.3): ITween<Vector2> {
+            const tween = Pool.obtain(TransformVector2Tween);
+            tween.setTargetAndType(this.transform, TransformTargetType.position);
+            tween.initialize(tween, to, duration);
+
+            return tween;
+        }
+
+        public tweenLocalPositionTo(to: Vector2, duration = 0.3): ITween<Vector2> {
+            const tween = Pool.obtain(TransformVector2Tween);
+            tween.setTargetAndType(this.transform, TransformTargetType.localPosition);
+            tween.initialize(tween, to, duration);
+
+            return tween;
+        }
+
+        public tweenScaleTo(to: Vector2, duration?: number);
+        public tweenScaleTo(to: number, duration?: number);
+        public tweenScaleTo(to: Vector2 | number, duration: number = 0.3) {
+            if (typeof (to) == 'number') {
+                return this.tweenScaleTo(new Vector2(to, to), duration);
+            }
+
+            const tween = Pool.obtain(TransformVector2Tween);
+            tween.setTargetAndType(this.transform, TransformTargetType.scale);
+            tween.initialize(tween, to, duration);
+
+            return tween;
+        }
+
+        public tweenLocalScaleTo(to: Vector2, duration?);
+        public tweenLocalScaleTo(to: number, duration?);
+        public tweenLocalScaleTo(to: Vector2 | number, duration = 0.3) {
+            if (typeof (to) == 'number') {
+                return this.tweenLocalScaleTo(new Vector2(to, to), duration);
+            }
+
+            const tween = Pool.obtain(TransformVector2Tween);
+            tween.setTargetAndType(this.transform, TransformTargetType.localScale);
+            tween.initialize(tween, to, duration);
+
+            return tween;
+        }
+
+        public tweenRotationDegreesTo(to: number, duration = 0.3) {
+            const tween = Pool.obtain(TransformVector2Tween);
+            tween.setTargetAndType(this.transform, TransformTargetType.rotationDegrees);
+            tween.initialize(tween, new Vector2(to, to), duration);
+
+            return tween;
+        }
+
+        public tweenLocalRotationDegreesTo(to: number, duration = 0.3) {
+            const tween = Pool.obtain(TransformVector2Tween);
+            tween.setTargetAndType(this.transform, TransformTargetType.localRotationDegrees);
+            tween.initialize(tween, new Vector2(to, to), duration);
+
+            return tween;
         }
 
         public compareTo(other: Entity): number {

@@ -19,12 +19,26 @@ module es {
          * @param collisionResult
          */
         public calculateMovement(motion: Vector2, collisionResult: CollisionResult): boolean {
-            if (this.entity.getComponent(Collider) == null || this._triggerHelper == null) {
+            let collider = null;
+            for (let i = 0; i < this.entity.components.buffer.length; i++) {
+                let component = this.entity.components.buffer[i];
+                if (component instanceof Collider) {
+                    collider = component;
+                    break;
+                }
+            }
+            if (collider == null || this._triggerHelper == null) {
                 return false;
             }
 
             // 移动所有的非触发碰撞器并获得最近的碰撞
-            let colliders: Collider[] = this.entity.getComponents(Collider);
+            let colliders: Collider[] = [];
+            for (let i = 0; i < this.entity.components.buffer.length; i ++) {
+                let component = this.entity.components.buffer[i];
+                if (component instanceof Collider) {
+                    colliders.push(component);
+                }
+            }
             for (let i = 0; i < colliders.length; i++) {
                 let collider = colliders[i];
 
@@ -38,8 +52,7 @@ module es {
                 bounds.y += motion.y;
                 let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
 
-                neighbors.forEach(value => {
-                    let neighbor = value;
+                for (let neighbor of neighbors) {
                     // 不检测触发器
                     if (neighbor.isTrigger)
                         return;
@@ -47,14 +60,17 @@ module es {
                     let _internalcollisionResult: CollisionResult = new CollisionResult();
                     if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
                         // 如果碰撞 则退回之前的移动量
-                        motion.subtract(_internalcollisionResult.minimumTranslationVector);
+                        motion.sub(_internalcollisionResult.minimumTranslationVector);
 
                         // 如果我们碰到多个对象，为了简单起见，只取第一个。
                         if (_internalcollisionResult.collider != null) {
-                            collisionResult = _internalcollisionResult;
+                            collisionResult.collider = _internalcollisionResult.collider;
+                            collisionResult.minimumTranslationVector = _internalcollisionResult.minimumTranslationVector;
+                            collisionResult.normal = _internalcollisionResult.normal;
+                            collisionResult.point = _internalcollisionResult.point;
                         }
                     }
-                });
+                }
             }
 
             ListPool.free(colliders);

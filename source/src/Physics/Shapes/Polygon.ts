@@ -34,6 +34,10 @@ module es {
             this.isBox = isBox;
         }
 
+        public create(vertCount: number, radius: number) {
+            Polygon.buildSymmetricalPolygon(vertCount, radius);
+          }
+
         public _edgeNormals: Vector2[];
 
         /**
@@ -54,7 +58,10 @@ module es {
             this.points = points;
             this.recalculateCenterAndEdgeNormals();
 
-            this._originalPoints = this.points.slice();
+            this._originalPoints = [];
+            this.points.forEach(p => {
+                this._originalPoints.push(p.clone());
+            });
         }
 
         /**
@@ -96,10 +103,10 @@ module es {
          * @param radius
          */
         public static buildSymmetricalPolygon(vertCount: number, radius: number) {
-            let verts = new Array(vertCount);
+            const verts = new Array(vertCount);
 
             for (let i = 0; i < vertCount; i++) {
-                let a = 2 * Math.PI * (i / vertCount);
+                const a = 2 * Math.PI * (i / vertCount);
                 verts[i] = new Vector2(Math.cos(a) * radius, Math.sin(a) * radius);
             }
 
@@ -111,9 +118,9 @@ module es {
          * @param points
          */
         public static recenterPolygonVerts(points: Vector2[]) {
-            let center = this.findPolygonCenter(points);
+            const center = this.findPolygonCenter(points);
             for (let i = 0; i < points.length; i++)
-                points[i] = Vector2.subtract(points[i], center);
+                points[i] = points[i].sub(center);
         }
 
         /**
@@ -136,13 +143,13 @@ module es {
          * @param points
          * @param direction
          */
-        public static getFarthestPointInDirection(points: Vector2[], direction: Vector2): Vector2{
+        public static getFarthestPointInDirection(points: Vector2[], direction: Vector2): Vector2 {
             let index = 0;
-            let maxDot = Vector2.dot(points[index], direction);
+            let maxDot = points[index].dot(direction);
 
-            for (let i = 1; i < points.length; i ++){
-                let dot = Vector2.dot(points[i], direction);
-                if (dot > maxDot){
+            for (let i = 1; i < points.length; i++) {
+                let dot = points[i].dot(direction);
+                if (dot > maxDot) {
                     maxDot = dot;
                     index = i;
                 }
@@ -160,35 +167,35 @@ module es {
          * @param distanceSquared
          * @param edgeNormal
          */
-        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: Ref<number>, edgeNormal: Vector2): Vector2 {
-            distanceSquared.value = Number.MAX_VALUE;
-            edgeNormal.x = 0;
-            edgeNormal.y = 0;
-            let closestPoint = Vector2.zero;
+        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): { distanceSquared: number; edgeNormal: Vector2; closestPoint: Vector2 } {
+            const res = {
+                distanceSquared: Number.MAX_VALUE,
+                edgeNormal: Vector2.zero,
+                closestPoint: Vector2.zero,
+            };
 
             let tempDistanceSquared = 0;
             for (let i = 0; i < points.length; i++) {
                 let j = i + 1;
-                if (j == points.length)
+                if (j === points.length)
                     j = 0;
 
-                let closest = ShapeCollisionsCircle.closestPointOnLine(points[i], points[j], point);
-                tempDistanceSquared = Vector2.distanceSquared(point, closest);
+                const closest = ShapeCollisionsCircle.closestPointOnLine(points[i], points[j], point);
+                tempDistanceSquared = Vector2.sqrDistance(point, closest);
 
-                if (tempDistanceSquared < distanceSquared.value) {
-                    distanceSquared.value = tempDistanceSquared;
-                    closestPoint = closest;
+                if (tempDistanceSquared < res.distanceSquared) {
+                    res.distanceSquared = tempDistanceSquared;
+                    res.closestPoint = closest;
 
                     // 求直线的法线
-                    let line = Vector2.subtract(points[j], points[i]);
-                    edgeNormal.x = -line.y;
-                    edgeNormal.y = line.x;
+                    const line = points[j].sub(points[i]);
+                    res.edgeNormal.x = line.y;
+                    res.edgeNormal.y = -line.x;
                 }
             }
 
-            Vector2Ext.normalize(edgeNormal);
-
-            return closestPoint;
+            res.edgeNormal = res.edgeNormal.normalize();
+            return res;
         }
 
         /**
@@ -197,11 +204,11 @@ module es {
          * @param originalPoints
          * @param rotatedPoints
          */
-        public static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints: Vector2[]){
+        public static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints: Vector2[]) {
             let cos = Math.cos(radians);
             let sin = Math.sin(radians);
 
-            for (let i = 0; i < originalPoints.length; i ++){
+            for (let i = 0; i < originalPoints.length; i++) {
                 let position = originalPoints[i];
                 rotatedPoints[i] = new Vector2(position.x * cos + position.y * -sin, position.x * sin + position.y * cos);
             }
@@ -209,40 +216,63 @@ module es {
 
         public recalculateBounds(collider: Collider) {
             // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
-            this.center = collider.localOffset.clone();
+            this.center = collider.localOffset;
 
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 let hasUnitScale = true;
-                let tempMat: Matrix2D;
-                let combinedMatrix = Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y);
+                const tempMat: Matrix2D = new Matrix2D();
+                const combinedMatrix: Matrix2D = new Matrix2D();
+                Matrix2D.createTranslation(
+                    this._polygonCenter.x * -1,
+                    this._polygonCenter.y * -1,
+                    combinedMatrix
+                );
 
                 if (!collider.entity.transform.scale.equals(Vector2.one)) {
-                    tempMat = Matrix2D.createScale(collider.entity.transform.scale.x, collider.entity.transform.scale.y);
-                    combinedMatrix = combinedMatrix.multiply(tempMat);
+                    Matrix2D.createScale(
+                        collider.entity.scale.x,
+                        collider.entity.scale.y,
+                        tempMat
+                    );
+                    Matrix2D.multiply(combinedMatrix, tempMat, combinedMatrix);
                     hasUnitScale = false;
 
                     // 缩放偏移量并将其设置为中心。如果我们有旋转，它会在下面重置
-                    this.center = Vector2.multiply(collider.localOffset, collider.entity.transform.scale);
+                    const scaledOffset = new Vector2(
+                        collider.localOffset.x * collider.entity.scale.x,
+                        collider.localOffset.y * collider.entity.scale.y
+                    );
+                    this.center = scaledOffset;
                 }
 
                 if (collider.entity.transform.rotation != 0) {
-                    tempMat = Matrix2D.createRotation(collider.entity.transform.rotation);
-                    combinedMatrix = combinedMatrix.multiply(tempMat);
+                    Matrix2D.createRotation(
+                        MathHelper.Deg2Rad * collider.entity.rotation,
+                        tempMat
+                    );
+                    Matrix2D.multiply(combinedMatrix, tempMat, combinedMatrix);
 
                     // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动
                     // 我们的偏移使角度为0我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
-                    let offsetAngle = Math.atan2(collider.localOffset.y * collider.entity.transform.scale.y, collider.localOffset.x * collider.entity.transform.scale.x) * MathHelper.Rad2Deg;
-                    let offsetLength = hasUnitScale ? collider._localOffsetLength :
-                        Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
+                    const offsetAngle = Math.atan2(collider.localOffset.y * collider.entity.transform.scale.y, collider.localOffset.x * collider.entity.transform.scale.x) * MathHelper.Rad2Deg;
+                    const offsetLength = hasUnitScale ? collider._localOffsetLength :
+                        collider.localOffset.multiply(collider.entity.transform.scale).magnitude();
                     this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength,
                         collider.entity.transform.rotationDegrees + offsetAngle);
                 }
 
-                tempMat = Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y);
-                combinedMatrix = combinedMatrix.multiply(tempMat);
+                Matrix2D.createTranslation(
+                    this._polygonCenter.x,
+                    this._polygonCenter.y,
+                    tempMat
+                );
+                Matrix2D.multiply(combinedMatrix, tempMat, combinedMatrix);
 
                 // 最后变换原始点
-                Vector2Ext.transform(this._originalPoints, combinedMatrix, this.points);
+                this.points = [];
+                this._originalPoints.forEach(p => {
+                    this.points.push(p.transform(combinedMatrix));
+                });
 
                 this.isUnrotated = collider.entity.transform.rotation == 0;
 
@@ -251,9 +281,9 @@ module es {
                     this._areEdgeNormalsDirty = true;
             }
 
-            this.position = Vector2.add(collider.entity.transform.position, this.center);
+            this.position = collider.transform.position.add(this.center);
             this.bounds = Rectangle.rectEncompassingPoints(this.points);
-            this.bounds.location = Vector2.add(this.bounds.location, this.position);
+            this.bounds.location = this.bounds.location.add(this.position);
         }
 
         public overlaps(other: Shape) {
@@ -301,11 +331,11 @@ module es {
          */
         public containsPoint(point: Vector2) {
             // 将点归一化到多边形坐标空间中
-            point.subtract(this.position);
+            point = point.sub(this.position);
 
             let isInside = false;
             for (let i = 0, j = this.points.length - 1; i < this.points.length; j = i++) {
-                if (((this.points[i].y > point.y) != (this.points[j].y > point.y)) &&
+                if (((this.points[i].y > point.y) !== (this.points[j].y > point.y)) &&
                     (point.x < (this.points[j].x - this.points[i].x) * (point.y - this.points[i].y) / (this.points[j].y - this.points[i].y) +
                         this.points[i].x)) {
                     isInside = !isInside;

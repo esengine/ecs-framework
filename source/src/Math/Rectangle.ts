@@ -107,8 +107,8 @@ module es {
         }
 
         // temp 用于计算边界的矩阵
-        public _tempMat: Matrix2D;
-        public _transformMat: Matrix2D;
+        public _tempMat: Matrix2D = new Matrix2D();
+        public _transformMat: Matrix2D = new Matrix2D();
 
         /**
          * 创建一个新的Rectanglestruct实例，指定位置、宽度和高度。
@@ -213,49 +213,50 @@ module es {
                 this.top < value.bottom;
         }
 
-        public rayIntersects(ray: Ray2D, distance: Ref<number>): boolean {
-            distance.value = 0;
+        public rayIntersects(ray: Ray2D): { intersected: boolean; distance: number } {
+            const res = {intersected: false, distance: 0};
             let maxValue = Number.MAX_VALUE;
 
             if (Math.abs(ray.direction.x) < 1E-06) {
                 if ((ray.start.x < this.x) || (ray.start.x > this.x + this.width))
-                    return false;
+                    return res;
             } else {
-                let num11 = 1 / ray.direction.x;
+                const num11 = 1 / ray.direction.x;
                 let num8 = (this.x - ray.start.x) * num11;
                 let num7 = (this.x + this.width - ray.start.x) * num11;
                 if (num8 > num7) {
-                    let num14 = num8;
+                    const num14 = num8;
                     num8 = num7;
                     num7 = num14;
                 }
 
-                distance.value = Math.max(num8, distance.value);
+                res.distance = Math.max(num8, res.distance);
                 maxValue = Math.min(num7, maxValue);
-                if (distance.value > maxValue)
-                    return false;
+                if (res.distance > maxValue)
+                    return res;
             }
 
-            if (Math.abs(ray.direction.y) < 1E-06) {
+            if (Math.abs(ray.direction.y) < 1e-06) {
                 if ((ray.start.y < this.y) || (ray.start.y > this.y + this.height))
-                    return false;
+                    return res;
             } else {
-                let num10 = 1 / ray.direction.y;
+                const num10 = 1 / ray.direction.y;
                 let num6 = (this.y - ray.start.y) * num10;
                 let num5 = (this.y + this.height - ray.start.y) * num10;
                 if (num6 > num5) {
-                    let num13 = num6;
+                    const num13 = num6;
                     num6 = num5;
                     num5 = num13;
                 }
 
-                distance.value = Math.max(num6, distance.value);
+                res.distance = Math.max(num6, res.distance);
                 maxValue = Math.max(num5, maxValue);
-                if (distance.value > maxValue)
-                    return false;
+                if (res.distance > maxValue)
+                    return res;
             }
 
-            return true;
+            res.intersected = true;
+            return res;
         }
 
         /**
@@ -304,7 +305,7 @@ module es {
          */
         public getClosestPointOnRectangleToPoint(point: Vector2) {
             // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
-            let res = new Vector2();
+            let res = es.Vector2.zero;
             res.x = MathHelper.clamp(point.x, this.left, this.right);
             res.y = MathHelper.clamp(point.y, this.top, this.bottom);
 
@@ -319,7 +320,7 @@ module es {
          */
         public getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2 {
             // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
-            let res = new Vector2();
+            let res = es.Vector2.zero;
             res.x = MathHelper.clamp(point.x, this.left, this.right);
             res.y = MathHelper.clamp(point.y, this.top, this.bottom);
 
@@ -411,22 +412,22 @@ module es {
         public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2,
             rotation: number, width: number, height: number) {
             if (rotation == 0) {
-                this.x = parentPosition.x + position.x - origin.x * scale.x;
-                this.y = parentPosition.y + position.y - origin.y * scale.y;
-                this.width = width * scale.x;
-                this.height = height * scale.y;
+                this.x = Math.trunc(parentPosition.x + position.x - origin.x * scale.x);
+                this.y = Math.trunc(parentPosition.y + position.y - origin.y * scale.y);
+                this.width = Math.trunc(width * scale.x);
+                this.height = Math.trunc(height * scale.y);
             } else {
                 // 我们需要找到我们的绝对最小/最大值，并据此创建边界
                 let worldPosX = parentPosition.x + position.x;
                 let worldPosY = parentPosition.y + position.y;
 
                 // 考虑到原点，将参考点设置为世界参考
-                this._transformMat = Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y);
-                this._tempMat = Matrix2D.createScale(scale.x, scale.y);
+                Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y, this._transformMat);
+                Matrix2D.createScale(scale.x, scale.y, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
-                this._tempMat = Matrix2D.createRotation(rotation);
+                Matrix2D.createRotation(rotation, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
-                this._tempMat = Matrix2D.createTranslation(worldPosX, worldPosY);
+                Matrix2D.createTranslation(worldPosX, worldPosY, this._tempMat);
                 this._transformMat = this._transformMat.multiply(this._tempMat);
 
                 // TODO: 我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角
@@ -441,14 +442,14 @@ module es {
                 Vector2Ext.transformR(bottomRight, this._transformMat, bottomRight);
 
                 // 找出最小值和最大值，这样我们就可以计算出我们的边界框。
-                let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
-                let minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
-                let maxY = Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                let minX = Math.trunc(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                let maxX = Math.trunc(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                let minY = Math.trunc(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                let maxY = Math.trunc(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
 
                 this.location = new Vector2(minX, minY);
-                this.width = maxX - minX;
-                this.height = maxY - minY;
+                this.width = Math.trunc(maxX - minX);
+                this.height = Math.trunc(maxY - minY);
             }
         }
 
@@ -549,7 +550,7 @@ module es {
          * 获取这个矩形的哈希码
          */
         public getHashCode(): number{
-            return (this.x ^ this.y ^ this.width ^ this.height);
+            return (Math.trunc(this.x) ^ Math.trunc(this.y) ^ Math.trunc(this.width) ^ Math.trunc(this.height));
         }
 
         public clone(): Rectangle {

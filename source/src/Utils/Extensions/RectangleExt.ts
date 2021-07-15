@@ -250,7 +250,7 @@ module es {
          */
         public static getClosestPointOnRectangleToPoint(rect: Rectangle, point: Vector2) {
             // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
-            let res = new Vector2();
+            let res = es.Vector2.zero;
             res.x = MathHelper.clamp(point.x, rect.left, rect.right)
             res.y = MathHelper.clamp(point.y, rect.top, rect.bottom);
 
@@ -264,9 +264,9 @@ module es {
          */
         public static getClosestPointOnRectangleBorderToPoint(rect: Rectangle, point: Vector2) {
             // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
-            let res = new Vector2();
-            res.x = MathHelper.clamp(point.x, rect.left, rect.right)
-            res.y = MathHelper.clamp(point.y, rect.top, rect.bottom);
+            let res = es.Vector2.zero;
+            res.x = MathHelper.clamp(Math.trunc(point.x), rect.left, rect.right)
+            res.y = MathHelper.clamp(Math.trunc(point.y), rect.top, rect.bottom);
 
             // 如果点在矩形内，我们需要将res推到边框，因为它将在矩形内 
             if (rect.contains(res.x, res.y)) {
@@ -327,7 +327,54 @@ module es {
                     maxY = pt.y;
             }
 
-            return this.fromMinMaxVector(new Vector2(minX, minY), new Vector2(maxX, maxY));
+            return this.fromMinMaxVector(new Vector2(Math.trunc(minX), Math.trunc(minY)), new Vector2(Math.trunc(maxX), Math.trunc(maxY)));
+        }
+
+        public static calculateBounds(rect: Rectangle, parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2,
+            rotation: number, width: number, height: number) {
+            if (rotation == 0) {
+                rect.x = Math.trunc(parentPosition.x + position.x - origin.x * scale.x);
+                rect.y = Math.trunc(parentPosition.y + position.y - origin.y * scale.y);
+                rect.width = Math.trunc(width * scale.x);
+                rect.height = Math.trunc(height * scale.y);
+            } else {
+                // 我们需要找到我们的绝对最小/最大值，并据此创建边界
+                let worldPosX = parentPosition.x + position.x;
+                let worldPosY = parentPosition.y + position.y;
+
+                let tempMat: Matrix2D;
+                
+                // 考虑到原点，将参考点设置为世界参考
+                let transformMatrix = new Matrix2D();
+                Matrix2D.createTranslation(-worldPosX - origin.x, -worldPosY - origin.y, transformMatrix);
+                Matrix2D.createScale(scale.x, scale.y, tempMat);
+                transformMatrix = transformMatrix.multiply(tempMat);
+                Matrix2D.createRotation(rotation, tempMat);
+                transformMatrix =transformMatrix.multiply(tempMat);
+                Matrix2D.createTranslation(worldPosX, worldPosY, tempMat);
+                transformMatrix = transformMatrix.multiply(tempMat);
+
+                // TODO: 我们可以把世界变换留在矩阵中，避免在世界空间中得到所有的四个角
+                let topLeft = new Vector2(worldPosX, worldPosY);
+                let topRight = new Vector2(worldPosX + width, worldPosY);
+                let bottomLeft = new Vector2(worldPosX, worldPosY + height);
+                let bottomRight = new Vector2(worldPosX + width, worldPosY + height);
+
+                Vector2Ext.transformR(topLeft, transformMatrix, topLeft);
+                Vector2Ext.transformR(topRight, transformMatrix, topRight);
+                Vector2Ext.transformR(bottomLeft, transformMatrix, bottomLeft);
+                Vector2Ext.transformR(bottomRight, transformMatrix, bottomRight);
+
+                // 找出最小值和最大值，这样我们就可以计算出我们的边界框。
+                let minX = Math.trunc(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                let maxX = Math.trunc(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                let minY = Math.trunc(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                let maxY = Math.trunc(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+
+                rect.location = new Vector2(minX, minY);
+                rect.width = Math.trunc(maxX - minX);
+                rect.height = Math.trunc(maxY - minY);
+            }
         }
 
         /**
@@ -336,14 +383,14 @@ module es {
          * @param scale 
          */
         public static scale(rect: Rectangle, scale: Vector2) {
-            rect.x = rect.x * scale.x;
-            rect.y = rect.y * scale.y;
-            rect.width = rect.width * scale.x;
-            rect.height = rect.height * scale.y;
+            rect.x = Math.trunc(rect.x * scale.x);
+            rect.y = Math.trunc(rect.y * scale.y);
+            rect.width = Math.trunc(rect.width * scale.x);
+            rect.height = Math.trunc(rect.height * scale.y);
         }
 
         public static translate(rect: Rectangle, vec: Vector2) {
-            rect.location.add(vec);
+            rect.location.addEqual(vec);
         }
     }
 }

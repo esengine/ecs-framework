@@ -16,20 +16,20 @@ module es {
 
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 // 我们只将直线缩放为一个圆，所以我们将使用最大值
-                let scale = collider.entity.transform.scale;
-                let hasUnitScale = scale.x == 1 && scale.y == 1;
-                let maxScale = Math.max(scale.x, scale.y);
+                const scale = collider.entity.transform.scale;
+                const hasUnitScale = scale.x === 1 && scale.y === 1;
+                const maxScale = Math.max(scale.x, scale.y);
                 this.radius = this._originalRadius * maxScale;
 
-                if (collider.entity.transform.rotation != 0) {
+                if (collider.entity.transform.rotation !== 0) {
                     // 为了处理偏移原点的旋转，我们只需要将圆心围绕(0,0)在一个圆上移动，我们的偏移量就是0角
-                    let offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
-                    let offsetLength = hasUnitScale ? collider._localOffsetLength : Vector2.multiply(collider.localOffset, collider.entity.transform.scale).length();
-                    this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
+                    const offsetAngle = Math.atan2(collider.localOffset.y, collider.localOffset.x) * MathHelper.Rad2Deg;
+                    const offsetLength = hasUnitScale ? collider._localOffsetLength : collider.localOffset.multiply(collider.entity.transform.scale).magnitude();
+                    this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength, collider.entity.transform.rotation + offsetAngle);
                 }
             }
 
-            this.position = Vector2.add(collider.entity.transform.position, this.center);
+            this.position = collider.transform.position.add(this.center);
             this.bounds = new Rectangle(this.position.x - this.radius, this.position.y - this.radius, this.radius * 2, this.radius * 2);
         }
 
@@ -67,12 +67,19 @@ module es {
             return ShapeCollisionsLine.lineToCircle(start, end, this, hit);
         }
 
+        public getPointAlongEdge(angle: number): Vector2 {
+            return new Vector2(
+              this.position.x + this.radius * Math.cos(angle),
+              this.position.y + this.radius * Math.sin(angle)
+            );
+          }
+
         /**
          * 获取所提供的点是否在此范围内
          * @param point
          */
         public containsPoint(point: Vector2) {
-            return (Vector2.subtract(point, this.position)).lengthSquared() <= this.radius * this.radius;
+            return (point.sub(this.position)).lengthSquared() <= this.radius * this.radius;
         }
 
         public pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean {

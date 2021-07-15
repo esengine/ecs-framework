@@ -22,7 +22,7 @@ module es {
         /**
          * 保存所有数据的字典
          */
-        public _cellDict: NumberDictionary = new NumberDictionary();
+        public _cellDict: NumberDictionary<Collider> = new NumberDictionary<Collider>();
         /**
          * 用于返回冲突信息的共享HashSet
          */
@@ -94,27 +94,42 @@ module es {
             this._cellDict.clear();
         }
 
+        public debugDraw(secondsToDisplay: number) {
+            for (let x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
+                for (let y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
+                    let cell = this.cellAtPosition(x, y);
+                    if (cell != null && cell.length > 0)
+                        this.debugDrawCellDetails(x, y, secondsToDisplay);
+                }
+            }
+        }
+
+        private debugDrawCellDetails(x: number, y: number, secondsToDisplay: number = 0.5) {
+            Graphics.instance.batcher.drawHollowRect(x * this._cellSize, y * this._cellSize, this._cellSize, this._cellSize, new Color(255, 0, 0), secondsToDisplay);
+            Graphics.instance.batcher.end();
+        }
+
         /**
          * 返回边框与单元格相交的所有对象
          * @param bounds
          * @param excludeCollider
          * @param layerMask
          */
-        public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Set<Collider> {
+        public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[] {
             this._tempHashSet.clear();
 
-            let p1 = this.cellCoords(bounds.x, bounds.y);
-            let p2 = this.cellCoords(bounds.right, bounds.bottom);
+            const p1 = this.cellCoords(bounds.x, bounds.y);
+            const p2 = this.cellCoords(bounds.right, bounds.bottom);
 
             for (let x = p1.x; x <= p2.x; x++) {
                 for (let y = p1.y; y <= p2.y; y++) {
-                    let cell = this.cellAtPosition(x, y);
-                    if (cell == null)
+                    const cell = this.cellAtPosition(x, y);
+                    if (!cell)
                         continue;
 
                     // 当cell不为空。循环并取回所有碰撞器
                     for (let i = 0; i < cell.length; i++) {
-                        let collider = cell[i];
+                        const collider = cell[i];
 
                         // 如果它是自身或者如果它不匹配我们的层掩码 跳过这个碰撞器
                         if (collider == excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer.value))
@@ -127,7 +142,7 @@ module es {
                 }
             }
 
-            return this._tempHashSet;
+            return Array.from(this._tempHashSet);
         }
 
         /**
@@ -139,9 +154,9 @@ module es {
          * @param hits
          * @param layerMask
          */
-        public linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number){
+        public linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>) {
             let ray = new Ray2D(start, end);
-            this._raycastParser.start(ray, hits, layerMask);
+            this._raycastParser.start(ray, hits, layerMask, ignoredColliders);
 
             // 获取我们的起始/结束位置，与我们的网格在同一空间内
             let currentCell = this.cellCoords(start.x, start.y);
@@ -174,24 +189,24 @@ module es {
             // 开始遍历并返回交叉单元格。
             let cell = this.cellAtPosition(currentCell.x, currentCell.y);
 
-            if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)){
+            if (cell != null && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
                 this._raycastParser.reset();
                 return this._raycastParser.hitCounter;
             }
 
-            while (currentCell.x != lastCell.x || currentCell.y != lastCell.y){
-                if (tMaxX < tMaxY){
-                    currentCell.x = Math.floor(MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
+            while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
+                if (tMaxX < tMaxY) {
+                    currentCell.x = MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX));
 
                     tMaxX += tDeltaX;
-                }else{
-                    currentCell.y = Math.floor(MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
+                } else {
+                    currentCell.y = MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY));
 
                     tMaxY += tDeltaY;
                 }
 
                 cell = this.cellAtPosition(currentCell.x, currentCell.y);
-                if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)){
+                if (cell && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
                     this._raycastParser.reset();
                     return this._raycastParser.hitCounter;
                 }
@@ -202,6 +217,7 @@ module es {
             return this._raycastParser.hitCounter;
         }
 
+
         /**
          * 获取所有在指定矩形范围内的碰撞器
          * @param rect 
@@ -210,23 +226,23 @@ module es {
          */
         public overlapRectangle(rect: Rectangle, results: Collider[], layerMask: number) {
             this._overlapTestBox.updateBox(rect.width, rect.height);
-            this._overlapTestBox.position = rect.location;
+            this._overlapTestBox.position = rect.location.clone();
 
             let resultCounter = 0;
             let potentials = this.aabbBroadphase(rect, null, layerMask);
             for (let collider of potentials) {
                 if (collider instanceof BoxCollider) {
                     results[resultCounter] = collider;
-                    resultCounter ++;
-                } else if(collider instanceof CircleCollider) {
+                    resultCounter++;
+                } else if (collider instanceof CircleCollider) {
                     if (Collisions.rectToCircle(rect, collider.bounds.center, collider.bounds.width * 0.5)) {
                         results[resultCounter] = collider;
-                        resultCounter ++;
+                        resultCounter++;
                     }
-                } else if(collider instanceof PolygonCollider) {
+                } else if (collider instanceof PolygonCollider) {
                     if (collider.shape.overlaps(this._overlapTestBox)) {
                         results[resultCounter] = collider;
-                        resultCounter ++;
+                        resultCounter++;
                     }
                 } else {
                     throw new Error("overlapRectangle对这个类型没有实现!");
@@ -247,17 +263,19 @@ module es {
          * @param layerMask
          */
         public overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask): number {
-            let bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
+            const bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
 
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
 
             let resultCounter = 0;
-            let potentials = this.aabbBroadphase(bounds, null, layerMask);
+            const potentials = this.aabbBroadphase(bounds, null, layerMask);
             for (let collider of potentials) {
                 if (collider instanceof BoxCollider) {
-                    results[resultCounter] = collider;
-                    resultCounter++;
+                    if (collider.shape.overlaps(this._overlapTestCircle)) {
+                        results[resultCounter] = collider;
+                        resultCounter++;
+                    }
                 } else if (collider instanceof CircleCollider) {
                     if (collider.shape.overlaps(this._overlapTestCircle)) {
                         results[resultCounter] = collider;
@@ -273,7 +291,7 @@ module es {
                 }
 
                 // 如果我们所有的结果数据有了则返回
-                if (resultCounter == results.length)
+                if (resultCounter === results.length)
                     return resultCounter;
             }
 
@@ -308,14 +326,10 @@ module es {
         }
     }
 
-    /**
-     * 包装一个Unit32，列表碰撞器字典
-     * 它的主要目的是将int、int x、y坐标散列到单个Uint32键中，使用O(1)查找。
-     */
-    export class NumberDictionary {
-        public _store: Map<number, Collider[]> = new Map<number, Collider[]>();
+    export class NumberDictionary<T> {
+        public _store: Map<string, T[]> = new Map<string, T[]>();
 
-        public add(x: number, y: number, list: Collider[]) {
+        public add(x: number, y: number, list: T[]) {
             this._store.set(this.getKey(x, y), list);
         }
 
@@ -323,7 +337,7 @@ module es {
          * 使用蛮力方法从字典存储列表中移除碰撞器
          * @param obj
          */
-        public remove(obj: Collider) {
+        public remove(obj: T) {
             this._store.forEach(list => {
                 let linqList = new es.List(list);
                 if (linqList.contains(obj))
@@ -331,12 +345,12 @@ module es {
             })
         }
 
-        public tryGetValue(x: number, y: number): Collider[] {
+        public tryGetValue(x: number, y: number): T[] {
             return this._store.get(this.getKey(x, y));
         }
 
-        public getKey(x: number, y: number){
-            return x << 16 | (y >>> 0);
+        public getKey(x: number, y: number) {
+            return `${x}_${y}`;
         }
 
         /**
@@ -350,7 +364,11 @@ module es {
     export class RaycastResultParser {
         public hitCounter: number;
         public static compareRaycastHits = (a: RaycastHit, b: RaycastHit) => {
-            return a.distance - b.distance;
+            if (a.distance !== b.distance) {
+                return a.distance - b.distance;
+            } else {
+                return a.collider.castSortOrder - b.collider.castSortOrder;
+            }
         };
 
         public _hits: RaycastHit[];
@@ -359,11 +377,13 @@ module es {
         public _cellHits: RaycastHit[] = [];
         public _ray: Ray2D;
         public _layerMask: number;
+        private _ignoredColliders: Set<Collider>;
 
-        public start(ray: Ray2D, hits: RaycastHit[], layerMask: number) {
+        public start(ray: Ray2D, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>) {
             this._ray = ray;
             this._hits = hits;
             this._layerMask = layerMask;
+            this._ignoredColliders = ignoredColliders;
             this.hitCounter = 0;
         }
 
@@ -374,9 +394,8 @@ module es {
          * @param cell
          */
         public checkRayIntersection(cellX: number, cellY: number, cell: Collider[]): boolean {
-            let fraction: Ref<number> = new Ref(0);
             for (let i = 0; i < cell.length; i++) {
-                let potential = cell[i];
+                const potential = cell[i];
 
                 // 管理我们已经处理过的碰撞器
                 if (new es.List(this._checkedColliders).contains(potential))
@@ -391,11 +410,16 @@ module es {
                 if (!Flags.isFlagSet(this._layerMask, potential.physicsLayer.value))
                     continue;
 
+                if (this._ignoredColliders && this._ignoredColliders.has(potential)) {
+                    continue;
+                }
+
                 // TODO: rayIntersects的性能够吗?需要测试它。Collisions.rectToLine可能更快
                 // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
                 // 在做形状测试之前先做一个边界检查
-                let colliderBounds = potential.bounds.clone();
-                if (colliderBounds.rayIntersects(this._ray, fraction) && fraction.value <= 1){
+                const colliderBounds = potential.bounds;
+                const res = colliderBounds.rayIntersects(this._ray);
+                if (res.intersected && res.distance <= 1) {
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
                         // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
                         if (!Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
@@ -409,27 +433,28 @@ module es {
                 }
             }
 
-            if (this._cellHits.length == 0)
+            if (this._cellHits.length === 0)
                 return false;
 
             // 所有处理单元完成。对结果进行排序并将命中结果打包到结果数组中
             this._cellHits.sort(RaycastResultParser.compareRaycastHits);
-            for (let i = 0; i < this._cellHits.length; i ++){
+            for (let i = 0; i < this._cellHits.length; i++) {
                 this._hits[this.hitCounter] = this._cellHits[i];
 
                 // 增加命中计数器，如果它已经达到数组大小的限制，我们就完成了
-                this.hitCounter ++;
-                if (this.hitCounter == this._hits.length)
+                this.hitCounter++;
+                if (this.hitCounter === this._hits.length)
                     return true;
             }
 
             return false;
         }
 
-        public reset(){
+        public reset() {
             this._hits = null;
             this._checkedColliders.length = 0;
             this._cellHits.length = 0;
+            this._ignoredColliders = null;
         }
     }
 }
