@@ -12,7 +12,7 @@ ecs-framework 的目标是成为功能强大的框架。它为您构建游戏提
 ## 交流群
 点击链接加入群聊【ecs游戏框架交流】：https://jq.qq.com/?_wv=1027&k=29w1Nud6
 
-## 快速开始
+## 快速开始 [进入文档](docs/getting_start.md)
 - 初始化框架
 ```typescript
 es.Core.create();
