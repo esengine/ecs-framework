@@ -66,3 +66,5 @@ es.Core.scene = new MainScene();
 # 下一章节
 - [创建实体与组件](create_entity_component.md)
 - [创建系统](system.md)
+- [全局时间Time](time.md)
+- [协程Coroutine](coroutine.md)
