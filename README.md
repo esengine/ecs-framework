@@ -15,8 +15,9 @@ ecs-framework 的目标是成为功能强大的框架。它为您构建游戏提
 - [创建系统](docs/system.md)
 - [全局时间Time](docs/time.md)
 - [协程Coroutine](docs/coroutine.md)
-- [Physics/Collision](docs/physics.md)
+- [Physics](docs/physics.md)
 - [Emitter](docs/emitter.md)
+- [Collision](docs/collision.md)
 
 ## 交流群
 点击链接加入群聊【ecs游戏框架交流】：https://jq.qq.com/?_wv=1027&k=29w1Nud6
