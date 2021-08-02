@@ -180,7 +180,7 @@ module es {
 
         public start() {
             if (!this._isFromValueOverridden)
-                this._fromValue = this._target.getTargetObject();
+                this._fromValue = this._target.getTweenedValue();
 
             if (this._tweenState == TweenState.complete) {
                 this._tweenState = TweenState.running;

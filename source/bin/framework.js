@@ -5947,6 +5947,18 @@ var TimeUtils = /** @class */ (function () {
 var es;
 (function (es) {
     /**
+     * 用于记录所有组件的属性值
+     */
+    var TypeBit = /** @class */ (function () {
+        function TypeBit() {
+        }
+        return TypeBit;
+    }());
+    es.TypeBit = TypeBit;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
      * 开辟一个新线程
      * 注意：它无法获得主线程中的上下文
      */
@@ -11261,7 +11273,7 @@ var es;
         };
         Tween.prototype.start = function () {
             if (!this._isFromValueOverridden)
-                this._fromValue = this._target.getTargetObject();
+                this._fromValue = this._target.getTweenedValue();
             if (this._tweenState == TweenState.complete) {
                 this._tweenState = TweenState.running;
                 es.TweenManager.addTween(this);

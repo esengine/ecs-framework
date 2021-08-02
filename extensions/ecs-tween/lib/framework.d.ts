@@ -2273,6 +2273,13 @@ declare class TimeUtils {
 }
 declare module es {
     /**
+     * 用于记录所有组件的属性值
+     */
+    class TypeBit {
+    }
+}
+declare module es {
+    /**
      * 开辟一个新线程
      * 注意：它无法获得主线程中的上下文
      */
