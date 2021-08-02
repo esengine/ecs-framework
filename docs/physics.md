@@ -42,7 +42,7 @@ if( entity.getComponent(Collider).collidesWithAny( deltaMovement, collisionResul
 }
 
 // 将实体移到新位置。 已经调整了deltaMovement为我们解决冲突。
-entity.position = Vector2.add(entity.position, deltaMovement);
+entity.position = entity.position.add(deltaMovement);
 ```
 
 如果您需要对碰撞发生时的情况进行更多控制，则也可以手动检查是否与其他collider发生碰撞。 请注意，执行此操作时，deltaMovement不会为您调整。 解决冲突时，您需要考虑最小平移矢量。 
@@ -54,7 +54,7 @@ let collisionResult = null;
 if( entity.getComponent(Collider).collidesWith( someOtherCollider, deltaMovement, collisionResult ) )
 {
 	// 将实体移动到与命中Collider相邻的位置，然后记录CollisionResult 
-	entity.position = Vector2.add(entity.position, Vector2.substract(deltaMovement, collisionResult.minimumTranslationVector));
+	entity.position = entity.position.add(deltaMovement.sub(collisionResult.minimumTranslationVector));
 	console.log( `collision result: ${collisionResult}` );
 }
 ```
