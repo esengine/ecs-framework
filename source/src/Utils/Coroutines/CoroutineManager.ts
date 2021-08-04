@@ -77,7 +77,7 @@ module es {
                 let coroutine = this._unblockedCoroutines[i];
 
                 if (coroutine.isDone) {
-                    Pool.free(coroutine);
+                    Pool.free(CoroutineImpl, coroutine);
                     continue;
                 }
 
@@ -116,7 +116,7 @@ module es {
         public tickCoroutine(coroutine: CoroutineImpl) {
             let chain = coroutine.enumerator.next();
             if (chain.done || coroutine.isDone) {
-                Pool.free(coroutine);
+                Pool.free(CoroutineImpl, coroutine);
                 return false;
             }
 
@@ -137,7 +137,7 @@ module es {
 
             if (typeof chain.value == 'string') {
                 if (chain.value == 'break') {
-                    Pool.free(coroutine);
+                    Pool.free(CoroutineImpl, coroutine);
                     return false;
                 }
 

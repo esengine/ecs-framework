@@ -31,7 +31,7 @@ module es {
             }
 
             if (this._shouldRecycleTween && TweenManager.cacheColorTweens) {
-                Pool.free(this);
+                Pool.free(ColorTween, this);
             }
         }
     }

@@ -11261,7 +11261,7 @@ var es;
         };
         Tween.prototype.start = function () {
             if (!this._isFromValueOverridden)
-                this._fromValue = this._target.getTargetObject();
+                this._fromValue = this._target.getTweenedValue();
             if (this._tweenState == TweenState.complete) {
                 this._tweenState = TweenState.running;
                 es.TweenManager.addTween(this);
@@ -11414,7 +11414,7 @@ var es;
         NumberTween.prototype.recycleSelf = function () {
             _super.prototype.recycleSelf.call(this);
             if (this._shouldRecycleTween && es.TweenManager.cacheNumberTweens)
-                es.Pool.free(this);
+                es.Pool.free(NumberTween, this);
         };
         return NumberTween;
     }(es.Tween));
@@ -11440,7 +11440,7 @@ var es;
         Vector2Tween.prototype.recycleSelf = function () {
             _super.prototype.recycleSelf.call(this);
             if (this._shouldRecycleTween && es.TweenManager.cacheVector2Tweens)
-                es.Pool.free(this);
+                es.Pool.free(Vector2Tween, this);
         };
         return Vector2Tween;
     }(es.Tween));
@@ -11466,7 +11466,7 @@ var es;
         RectangleTween.prototype.recycleSelf = function () {
             _super.prototype.recycleSelf.call(this);
             if (this._shouldRecycleTween && es.TweenManager.cacheRectTweens)
-                es.Pool.free(this);
+                es.Pool.free(RectangleTween, this);
         };
         return RectangleTween;
     }(es.Tween));
@@ -11527,7 +11527,7 @@ var es;
                 this._nextTween = null;
             }
             if (this._shouldRecycleTween && es.TweenManager.cacheColorTweens) {
-                es.Pool.free(this);
+                es.Pool.free(es.ColorTween, this);
             }
         };
         return RenderableColorTween;
@@ -11711,7 +11711,7 @@ var es;
                 this._target = null;
                 this._nextTween = null;
                 this._transform = null;
-                es.Pool.free(this);
+                es.Pool.free(es.Vector2Tween, this);
             }
         };
         return TransformVector2Tween;
@@ -14094,10 +14094,11 @@ var es;
          * @param cacheCount
          */
         Pool.warmCache = function (type, cacheCount) {
-            cacheCount -= this._objectQueue.length;
+            this.checkCreate(type);
+            cacheCount -= this._objectQueue.get(type).length;
             if (cacheCount > 0) {
                 for (var i = 0; i < cacheCount; i++) {
-                    this._objectQueue.unshift(new type());
+                    this._objectQueue.get(type).unshift(new type());
                 }
             }
         };
@@ -14105,35 +14106,43 @@ var es;
          * 将缓存修剪为cacheCount项目
          * @param cacheCount
          */
-        Pool.trimCache = function (cacheCount) {
-            while (cacheCount > this._objectQueue.length)
-                this._objectQueue.shift();
+        Pool.trimCache = function (type, cacheCount) {
+            this.checkCreate(type);
+            while (cacheCount > this._objectQueue.get(type).length)
+                this._objectQueue.get(type).shift();
         };
         /**
          * 清除缓存
          */
-        Pool.clearCache = function () {
-            this._objectQueue.length = 0;
+        Pool.clearCache = function (type) {
+            this.checkCreate(type);
+            this._objectQueue.get(type).length = 0;
         };
         /**
          * 如果可以的话，从堆栈中弹出一个项
          */
         Pool.obtain = function (type) {
-            if (this._objectQueue.length > 0)
-                return this._objectQueue.shift();
+            this.checkCreate(type);
+            if (this._objectQueue.get(type).length > 0)
+                return this._objectQueue.get(type).shift();
             return new type();
         };
         /**
          * 将项推回堆栈
          * @param obj
          */
-        Pool.free = function (obj) {
-            this._objectQueue.unshift(obj);
+        Pool.free = function (type, obj) {
+            this.checkCreate(type);
+            this._objectQueue.get(type).unshift(obj);
             if (es.isIPoolable(obj)) {
                 obj["reset"]();
             }
         };
-        Pool._objectQueue = [];
+        Pool.checkCreate = function (type) {
+            if (!this._objectQueue.get(type))
+                this._objectQueue.set(type, []);
+        };
+        Pool._objectQueue = new Map();
         return Pool;
     }());
     es.Pool = Pool;
@@ -14414,7 +14423,7 @@ var es;
             for (var i = 0; i < this._unblockedCoroutines.length; i++) {
                 var coroutine = this._unblockedCoroutines[i];
                 if (coroutine.isDone) {
-                    es.Pool.free(coroutine);
+                    es.Pool.free(CoroutineImpl, coroutine);
                     continue;
                 }
                 if (coroutine.waitForCoroutine != null) {
@@ -14448,7 +14457,7 @@ var es;
         CoroutineManager.prototype.tickCoroutine = function (coroutine) {
             var chain = coroutine.enumerator.next();
             if (chain.done || coroutine.isDone) {
-                es.Pool.free(coroutine);
+                es.Pool.free(CoroutineImpl, coroutine);
                 return false;
             }
             if (chain.value == null) {
@@ -14465,7 +14474,7 @@ var es;
             }
             if (typeof chain.value == 'string') {
                 if (chain.value == 'break') {
-                    es.Pool.free(coroutine);
+                    es.Pool.free(CoroutineImpl, coroutine);
                     return false;
                 }
                 return true;

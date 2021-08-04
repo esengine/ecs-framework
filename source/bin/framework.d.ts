@@ -5378,11 +5378,11 @@ declare module es {
          * 将缓存修剪为cacheCount项目
          * @param cacheCount
          */
-        static trimCache(cacheCount: number): void;
+        static trimCache<T>(type: new (...args: any[]) => T, cacheCount: number): void;
         /**
          * 清除缓存
          */
-        static clearCache(): void;
+        static clearCache<T>(type: new (...args: any[]) => T): void;
         /**
          * 如果可以的话，从堆栈中弹出一个项
          */
@@ -5391,7 +5391,8 @@ declare module es {
          * 将项推回堆栈
          * @param obj
          */
-        static free<T>(obj: T): void;
+        static free<T>(type: new (...args: any[]) => T, obj: T): void;
+        private static checkCreate;
     }
     interface IPoolable {
         /**

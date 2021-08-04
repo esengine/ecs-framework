@@ -24,7 +24,7 @@ module es {
             super.recycleSelf();
 
             if (this._shouldRecycleTween && TweenManager.cacheNumberTweens)
-                Pool.free(this);
+                Pool.free(NumberTween, this);
         }
     }
 
@@ -52,7 +52,7 @@ module es {
             super.recycleSelf();
 
             if (this._shouldRecycleTween && TweenManager.cacheVector2Tweens)
-                Pool.free(this);
+                Pool.free(Vector2Tween, this);
         }
     }
 
@@ -85,7 +85,7 @@ module es {
             super.recycleSelf();
 
             if (this._shouldRecycleTween && TweenManager.cacheRectTweens)
-                Pool.free(this);
+                Pool.free(RectangleTween, this);
         }
     }
 

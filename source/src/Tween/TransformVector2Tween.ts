@@ -83,7 +83,7 @@ module es {
                 this._target = null;
                 this._nextTween = null;
                 this._transform = null;
-                Pool.free(this);
+                Pool.free(Vector2Tween, this);
             }
         }
     }
