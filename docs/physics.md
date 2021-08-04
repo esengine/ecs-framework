@@ -21,8 +21,8 @@ SpatialHash有一个可配置的方面，它可以极大地影响其性能：单
 ### 使用物理系统
 射线检测对于检查敌人的视线、探测实体的空间环境、快速移动的子弹等各种事情都非常有用。下面是一个从头到尾投射线条的示例，如果击中某个物体，它只会记录数据：
 ```ts
-const hit = Physics.linecast( start, end );
-if( hit.Collider != null )
+const hit = es.Physics.linecast( start, end );
+if( hit.collider != null )
 	console.log( `ray hit ${hit}, entity: {hit.collider.entity}`);
 ```
 
@@ -35,14 +35,14 @@ if( hit.Collider != null )
 let collisionResult = null;
 
 // 进行检查以查看entity.getComponent(Collider)（实体上的第一个碰撞器）是否与场景中的任何其他碰撞器发生碰撞。请注意，如果您有多个碰撞器，则可以获取并遍历它们，而不是仅检查第一个碰撞器。 
-if( entity.getComponent(Collider).collidesWithAny( deltaMovement, collisionResult ) )
+if( entity.getComponent(es.Collider).collidesWithAny( deltaMovement, collisionResult ) )
 {
 	// 记录CollisionResult。 您可能需要使用它来添加一些粒子效果或与您的游戏相关的任何其他内容。
 	console.log( `collision result: ${collisionResult}` );
 }
 
 // 将实体移到新位置。 已经调整了deltaMovement为我们解决冲突。
-entity.position = Vector2.add(entity.position, deltaMovement);
+entity.position = entity.position.add(deltaMovement);
 ```
 
 如果您需要对碰撞发生时的情况进行更多控制，则也可以手动检查是否与其他collider发生碰撞。 请注意，执行此操作时，deltaMovement不会为您调整。 解决冲突时，您需要考虑最小平移矢量。 
@@ -51,10 +51,10 @@ entity.position = Vector2.add(entity.position, deltaMovement);
 let collisionResult = null;
 
 // 进行检查以查看entity.getComponent<Collider>是否与一些其他Collider发生碰撞 
-if( entity.getComponent(Collider).collidesWith( someOtherCollider, deltaMovement, collisionResult ) )
+if( entity.getComponent(es.Collider).collidesWith( someOtherCollider, deltaMovement, collisionResult ) )
 {
 	// 将实体移动到与命中Collider相邻的位置，然后记录CollisionResult 
-	entity.position = Vector2.add(entity.position, Vector2.substract(deltaMovement, collisionResult.minimumTranslationVector));
+	entity.position = entity.position.add(deltaMovement.sub(collisionResult.minimumTranslationVector));
 	console.log( `collision result: ${collisionResult}` );
 }
 ```
@@ -62,12 +62,12 @@ if( entity.getComponent(Collider).collidesWith( someOtherCollider, deltaMovement
 
 ```ts
 // 在我们自身以外的位置获取可能与之重叠的任何东西
-let neighborColliders = Physics.boxcastBroadphaseExcludingSelf( entity.getComponent(Collider) );
+let neighborColliders = es.Physics.boxcastBroadphaseExcludingSelf( entity.getComponent(es.Collider) );
 
 // 遍历并检查每个对撞机是否重叠 
 for( let collider of neighborColliders )
 {
-	if( entity.getComponent(Collider).overlaps( collider ) )
+	if( entity.getComponent(es.Collider).overlaps( collider ) )
 		console.log( `我们正在重叠一个collider : ${collider}` );
 }
 ```
