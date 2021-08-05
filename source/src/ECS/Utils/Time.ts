@@ -17,18 +17,19 @@ module es {
         public static timeSinceSceneLoad: number = 0;
         private static _lastTime = -1;
 
-        public static update(currentTime: number) {
-            if (currentTime == -1) {
-                currentTime = Date.now();
-            }
-            if (this._lastTime == -1)
-                this._lastTime = currentTime;
-
+        public static update(currentTime: number, useEngineTime: boolean) {
             let dt = 0;
-            if (currentTime == -1) {
-                dt = (currentTime - this._lastTime) / 1000;
-            } else {
+            if (useEngineTime) {
                 dt = currentTime;
+            } else {
+                if (currentTime == -1) {
+                    currentTime = Date.now();
+                }
+
+                if (this._lastTime == -1)
+                    this._lastTime = currentTime;
+
+                dt = (currentTime - this._lastTime) / 1000;
             }
             
             if (dt > this.maxDeltaTime)

@@ -230,7 +230,7 @@ var es;
                     if (Core.paused) {
                         return [2 /*return*/];
                     }
-                    es.Time.update(currentTime);
+                    es.Time.update(currentTime, currentTime != -1);
                     if (this._scene != null) {
                         for (i = this._globalManagers.length - 1; i >= 0; i--) {
                             if (this._globalManagers[i].enabled)
@@ -5680,18 +5680,18 @@ var es;
     var Time = /** @class */ (function () {
         function Time() {
         }
-        Time.update = function (currentTime) {
-            if (currentTime == -1) {
-                currentTime = Date.now();
-            }
-            if (this._lastTime == -1)
-                this._lastTime = currentTime;
+        Time.update = function (currentTime, useEngineTime) {
             var dt = 0;
-            if (currentTime == -1) {
-                dt = (currentTime - this._lastTime) / 1000;
+            if (useEngineTime) {
+                dt = currentTime;
             }
             else {
-                dt = currentTime;
+                if (currentTime == -1) {
+                    currentTime = Date.now();
+                }
+                if (this._lastTime == -1)
+                    this._lastTime = currentTime;
+                dt = (currentTime - this._lastTime) / 1000;
             }
             if (dt > this.maxDeltaTime)
                 dt = this.maxDeltaTime;

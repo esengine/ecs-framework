@@ -2189,7 +2189,7 @@ declare module es {
         /** 自场景加载以来的总时间 */
         static timeSinceSceneLoad: number;
         private static _lastTime;
-        static update(currentTime: number): void;
+        static update(currentTime: number, useEngineTime: boolean): void;
         static sceneChanged(): void;
         /**
          * 允许在间隔检查。只应该使用高于delta的间隔值，否则它将始终返回true。

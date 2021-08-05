@@ -182,7 +182,7 @@ module es {
                 return;
             }
 
-            Time.update(currentTime);
+            Time.update(currentTime, currentTime != -1);
             if (this._scene != null) {
                 for (let i = this._globalManagers.length - 1; i >= 0; i--) {
                     if (this._globalManagers[i].enabled)
