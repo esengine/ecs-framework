@@ -1314,7 +1314,7 @@ declare module es {
     }
 }
 declare module es {
-    abstract class Collider extends Component {
+    class Collider extends Component {
         static readonly lateSortOrder: number;
         castSortOrder: number;
         /**
@@ -5328,25 +5328,26 @@ declare module es {
          * 预热缓存，使用最大的cacheCount对象填充缓存
          * @param cacheCount
          */
-        static warmCache(cacheCount: number): void;
+        static warmCache<T>(type: new (...args: any[]) => T, cacheCount: number): void;
         /**
          * 将缓存修剪为cacheCount项目
          * @param cacheCount
          */
-        static trimCache(cacheCount: any): void;
+        static trimCache<T>(type: new (...args: any[]) => T, cacheCount: number): void;
         /**
          * 清除缓存
          */
-        static clearCache(): void;
+        static clearCache<T>(type: new (...args: any[]) => T): void;
         /**
          * 如果可以的话，从堆栈中弹出一个项
          */
-        static obtain<T>(): T[];
+        static obtain<T>(type: new (...args: any[]) => T): T[];
         /**
          * 将项推回堆栈
          * @param obj
          */
-        static free<T>(obj: Array<T>): void;
+        static free<T>(type: new (...args: any[]) => T, obj: Array<T>): void;
+        private static checkCreate;
     }
 }
 declare module es {
@@ -5674,7 +5675,7 @@ declare module es {
          * @param list
          * @param itemCount 从列表中返回的随机项目的数量
          */
-        static randomItems<T>(list: T[], itemCount: number): T[];
+        static randomItems<T>(type: any, list: T[], itemCount: number): T[];
     }
 }
 declare module es {

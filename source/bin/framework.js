@@ -3120,7 +3120,7 @@ var es;
                     finally { if (e_3) throw e_3.error; }
                 }
             }
-            es.ListPool.free(colliders);
+            es.ListPool.free(es.Collider, colliders);
             return collisionResult.collider != null;
         };
         /**
@@ -4964,7 +4964,7 @@ var es;
         EntityList.prototype.entitiesWithTag = function (tag) {
             var e_7, _a;
             var list = this.getTagList(tag);
-            var returnList = es.ListPool.obtain();
+            var returnList = es.ListPool.obtain(es.Entity);
             if (list.size > 0) {
                 try {
                     for (var list_1 = __values(list), list_1_1 = list_1.next(); !list_1_1.done; list_1_1 = list_1.next()) {
@@ -5040,7 +5040,7 @@ var es;
          * @param type
          */
         EntityList.prototype.findComponentsOfType = function (type) {
-            var comps = es.ListPool.obtain();
+            var comps = es.ListPool.obtain(type);
             if (this._entities.length > 0) {
                 for (var i = 0, s = this._entities.length; i < s; i++) {
                     var entity = this._entities[i];
@@ -6547,7 +6547,7 @@ var es;
          */
         Bezier.getOptimizedDrawingPoints = function (start, firstCtrlPoint, secondCtrlPoint, end, distanceTolerance) {
             if (distanceTolerance === void 0) { distanceTolerance = 1; }
-            var points = es.ListPool.obtain();
+            var points = es.ListPool.obtain(es.Vector2);
             points.push(start);
             this.recursiveGetOptimizedDrawingPoints(start, firstCtrlPoint, secondCtrlPoint, end, points, distanceTolerance);
             points.push(end);
@@ -14012,11 +14012,12 @@ var es;
          * 预热缓存，使用最大的cacheCount对象填充缓存
          * @param cacheCount
          */
-        ListPool.warmCache = function (cacheCount) {
-            cacheCount -= this._objectQueue.length;
+        ListPool.warmCache = function (type, cacheCount) {
+            this.checkCreate(type);
+            cacheCount -= this._objectQueue.get(type).length;
             if (cacheCount > 0) {
                 for (var i = 0; i < cacheCount; i++) {
-                    this._objectQueue.unshift([]);
+                    this._objectQueue.get(type).unshift([]);
                 }
             }
         };
@@ -14024,33 +14025,41 @@ var es;
          * 将缓存修剪为cacheCount项目
          * @param cacheCount
          */
-        ListPool.trimCache = function (cacheCount) {
-            while (cacheCount > this._objectQueue.length)
-                this._objectQueue.shift();
+        ListPool.trimCache = function (type, cacheCount) {
+            this.checkCreate(type);
+            while (cacheCount > this._objectQueue.get(type).length)
+                this._objectQueue.get(type).shift();
         };
         /**
          * 清除缓存
          */
-        ListPool.clearCache = function () {
-            this._objectQueue.length = 0;
+        ListPool.clearCache = function (type) {
+            this.checkCreate(type);
+            this._objectQueue.get(type).length = 0;
         };
         /**
          * 如果可以的话，从堆栈中弹出一个项
          */
-        ListPool.obtain = function () {
-            if (this._objectQueue.length > 0)
-                return this._objectQueue.shift();
+        ListPool.obtain = function (type) {
+            this.checkCreate(type);
+            if (this._objectQueue.get(type).length > 0)
+                return this._objectQueue.get(type).shift();
             return [];
         };
         /**
          * 将项推回堆栈
          * @param obj
          */
-        ListPool.free = function (obj) {
-            this._objectQueue.unshift(obj);
+        ListPool.free = function (type, obj) {
+            this.checkCreate(type);
+            this._objectQueue.get(type).unshift(obj);
             obj.length = 0;
         };
-        ListPool._objectQueue = [];
+        ListPool.checkCreate = function (type) {
+            if (!this._objectQueue.get(type))
+                this._objectQueue.set(type, []);
+        };
+        ListPool._objectQueue = new Map();
         return ListPool;
     }());
     es.ListPool = ListPool;
@@ -14910,14 +14919,14 @@ var es;
          * @param list
          * @param itemCount 从列表中返回的随机项目的数量
          */
-        ArrayUtils.randomItems = function (list, itemCount) {
+        ArrayUtils.randomItems = function (type, list, itemCount) {
             var set = new Set();
             while (set.size != itemCount) {
                 var item = this.randomItem(list);
                 if (!set.has(item))
                     set.add(item);
             }
-            var items = es.ListPool.obtain();
+            var items = es.ListPool.obtain(type);
             set.forEach(function (value) { return items.push(value); });
             return items;
         };
@@ -16481,7 +16490,7 @@ var es;
          */
         VisibilityComputer.prototype.end = function () {
             var e_13, _a;
-            var output = es.ListPool.obtain();
+            var output = es.ListPool.obtain(es.Vector2);
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
             var currentAngle = 0;

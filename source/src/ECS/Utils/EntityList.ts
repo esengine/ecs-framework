@@ -223,7 +223,7 @@ module es {
         public entitiesWithTag(tag: number) {
             let list = this.getTagList(tag);
 
-            let returnList = ListPool.obtain<Entity>();
+            let returnList = ListPool.obtain<Entity>(Entity);
             if (list.size > 0) {
                 for (let entity of list) {
                     returnList.push(entity);
@@ -286,7 +286,7 @@ module es {
          * @param type
          */
         public findComponentsOfType<T extends Component>(type): T[] {
-            let comps = ListPool.obtain<T>();
+            let comps = ListPool.obtain<T>(type);
             if (this._entities.length > 0) {
                 for (let i = 0, s = this._entities.length; i < s; i++) {
                     let entity = this._entities[i];

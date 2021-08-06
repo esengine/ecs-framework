@@ -76,7 +76,7 @@ module es {
          */
         public static getOptimizedDrawingPoints(start: Vector2, firstCtrlPoint: Vector2, secondCtrlPoint: Vector2,
                                                 end: Vector2, distanceTolerance: number = 1) {
-            let points = ListPool.obtain<Vector2>();
+            let points = ListPool.obtain<Vector2>(Vector2);
             points.push(start);
             this.recursiveGetOptimizedDrawingPoints(start, firstCtrlPoint, secondCtrlPoint, end, points, distanceTolerance);
             points.push(end);

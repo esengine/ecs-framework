@@ -1,5 +1,5 @@
 module es {
-    export abstract class Collider extends Component {
+    export class Collider extends Component {
         public static readonly lateSortOrder = 999;
         public castSortOrder: number = 0;
         /**

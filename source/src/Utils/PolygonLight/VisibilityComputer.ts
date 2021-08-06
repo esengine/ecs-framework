@@ -148,7 +148,7 @@ module es {
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         public end(): Vector2[] {
-            let output = ListPool.obtain<Vector2>();
+            let output = ListPool.obtain<Vector2>(Vector2);
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
 

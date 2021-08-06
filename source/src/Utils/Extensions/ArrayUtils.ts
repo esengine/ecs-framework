@@ -283,7 +283,7 @@ module es {
          * @param list 
          * @param itemCount 从列表中返回的随机项目的数量
          */
-        public static randomItems<T>(list: T[], itemCount: number){
+        public static randomItems<T>(type: any, list: T[], itemCount: number){
             let set = new Set<T>();
             while (set.size != itemCount) {
                 let item = this.randomItem(list);
@@ -291,7 +291,7 @@ module es {
                     set.add(item);
             }
     
-            let items = es.ListPool.obtain<T>();
+            let items = es.ListPool.obtain<T>(type);
             set.forEach(value => items.push(value));
             return items;
         }

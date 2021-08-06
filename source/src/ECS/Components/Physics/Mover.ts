@@ -73,7 +73,7 @@ module es {
                 }
             }
 
-            ListPool.free(colliders);
+            ListPool.free(Collider, colliders);
 
             return collisionResult.collider != null;
         }
