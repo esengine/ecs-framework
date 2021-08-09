@@ -562,10 +562,6 @@ module es {
             return this.compareTo(other) == 0;
         }
 
-        public getHashCode(): number {
-            return this.id;
-        }
-
         public toString(): string {
             return `[Entity: name: ${this.name}, tag: ${this.tag}, enabled: ${this.enabled}, depth: ${this.updateOrder}]`;
         }

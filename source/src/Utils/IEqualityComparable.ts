@@ -8,10 +8,5 @@ module es {
          * @param other 
          */
         equals(other: any): boolean;
-
-        /**
-         * 生成对象的哈希码
-         */
-        getHashCode(): number;
     }
 }

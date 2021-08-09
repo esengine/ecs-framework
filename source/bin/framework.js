@@ -1111,9 +1111,6 @@ var es;
         Entity.prototype.equals = function (other) {
             return this.compareTo(other) == 0;
         };
-        Entity.prototype.getHashCode = function () {
-            return this.id;
-        };
         Entity.prototype.toString = function () {
             return "[Entity: name: " + this.name + ", tag: " + this.tag + ", enabled: " + this.enabled + ", depth: " + this.updateOrder + "]";
         };
@@ -6755,6 +6752,17 @@ var es;
         Flags.invertFlags = function (self) {
             self.value = ~self.value;
         };
+        /**
+         * 打印 number 的二进制表示。 方便调试 number 标志
+         */
+        Flags.binaryStringRepresentation = function (self, leftPadWidth) {
+            if (leftPadWidth === void 0) { leftPadWidth = 10; }
+            var str = self.toString(2);
+            while (str.length < (leftPadWidth || 2)) {
+                str = '0' + str;
+            }
+            return str;
+        };
         return Flags;
     }());
     es.Flags = Flags;
@@ -8485,9 +8493,9 @@ var es;
     var ColliderTriggerHelper = /** @class */ (function () {
         function ColliderTriggerHelper(entity) {
             /** 存储当前帧中发生的所有活动交点对 */
-            this._activeTriggerIntersections = new es.HashSet();
+            this._activeTriggerIntersections = new es.PairSet();
             /** 存储前一帧的交点对，这样我们就可以在移动这一帧后检测到退出 */
-            this._previousTriggerIntersections = new es.HashSet();
+            this._previousTriggerIntersections = new es.PairSet();
             this._tempTriggerList = [];
             this._entity = entity;
         }
@@ -8500,10 +8508,10 @@ var es;
             var lateColliders = [];
             // 对所有实体.colliders进行重叠检查，这些实体.colliders是触发器，与所有宽相碰撞器，无论是否触发器。   
             // 任何重叠都会导致触发事件
-            var colliders = this._entity.getComponents(es.Collider);
+            var colliders = this.getColliders();
             for (var i = 0; i < colliders.length; i++) {
                 var collider = colliders[i];
-                var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider.bounds, collider.collidesWithLayers);
+                var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(collider, collider.bounds, collider.collidesWithLayers.value);
                 for (var j = 0; j < neighbors.length; j++) {
                     var neighbor = neighbors[j];
                     // 我们至少需要一个碰撞器作为触发器
@@ -8512,8 +8520,8 @@ var es;
                     if (collider.overlaps(neighbor)) {
                         var pair = new es.Pair(collider, neighbor);
                         // 如果我们的某一个集合中已经有了这个对子（前一个或当前的触发交叉点），就不要调用输入事件了
-                        var shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) &&
-                            !this._previousTriggerIntersections.contains(pair);
+                        var shouldReportTriggerEvent = !this._activeTriggerIntersections.has(pair) &&
+                            !this._previousTriggerIntersections.has(pair);
                         if (shouldReportTriggerEvent) {
                             if (neighbor.castSortOrder >= es.Collider.lateSortOrder) {
                                 lateColliders.push(pair);
@@ -8541,15 +8549,27 @@ var es;
             }
             this.checkForExitedColliders();
         };
-        ColliderTriggerHelper.prototype.checkForExitedColliders = function () {
-            // 删除所有与此帧交互的触发器，留下我们退出的触发器
-            this._previousTriggerIntersections.exceptWith(this._activeTriggerIntersections.toArray());
-            for (var i = 0; i < this._previousTriggerIntersections.getCount(); i++) {
-                this.notifyTriggerListeners(this._previousTriggerIntersections[i], false);
+        ColliderTriggerHelper.prototype.getColliders = function () {
+            var colliders = [];
+            for (var i = 0; i < this._entity.components.buffer.length; i++) {
+                var component = this._entity.components.buffer[i];
+                if (component instanceof es.Collider) {
+                    colliders.push(component);
+                }
             }
+            return colliders;
+        };
+        ColliderTriggerHelper.prototype.checkForExitedColliders = function () {
+            var _this = this;
+            // 删除所有与此帧交互的触发器，留下我们退出的触发器
+            this._previousTriggerIntersections.except(this._activeTriggerIntersections);
+            var all = this._previousTriggerIntersections.all;
+            all.forEach(function (pair) {
+                _this.notifyTriggerListeners(pair, false);
+            });
             this._previousTriggerIntersections.clear();
             // 添加所有当前激活的触发器
-            this._previousTriggerIntersections.unionWith(this._activeTriggerIntersections.toArray());
+            this._previousTriggerIntersections.union(this._activeTriggerIntersections);
             // 清空活动集，为下一帧做准备
             this._activeTriggerIntersections.clear();
         };
@@ -14079,15 +14099,83 @@ var es;
         };
         Pair.prototype.equals = function (other) {
             // 这两种方法在功能上应该是等价的
-            return this.first == other.first && this.second == other.second;
-        };
-        Pair.prototype.getHashCode = function () {
-            return es.EqualityComparer.default().getHashCode(this.first) * 37 +
-                es.EqualityComparer.default().getHashCode(this.second);
+            return this.first === other.first && this.second === other.second;
         };
         return Pair;
     }());
     es.Pair = Pair;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var PairSet = /** @class */ (function () {
+        function PairSet() {
+            this._all = new Array();
+        }
+        Object.defineProperty(PairSet.prototype, "all", {
+            get: function () {
+                return this._all;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        PairSet.prototype.has = function (pair) {
+            var index = this._all.findIndex(function (p) { return p.equals(pair); });
+            return index > -1;
+        };
+        PairSet.prototype.add = function (pair) {
+            if (!this.has(pair)) {
+                this._all.push(pair);
+            }
+        };
+        PairSet.prototype.remove = function (pair) {
+            var index = this._all.findIndex(function (p) { return p.equals(pair); });
+            if (index > -1) {
+                var temp = this._all[index];
+                this._all[index] = this._all[this._all.length - 1];
+                this._all[this._all.length - 1] = temp;
+                this._all = this._all.slice(0, this._all.length - 1);
+            }
+        };
+        PairSet.prototype.clear = function () {
+            this._all = [];
+        };
+        PairSet.prototype.union = function (other) {
+            var e_12, _a;
+            var otherAll = other.all;
+            try {
+                for (var otherAll_1 = __values(otherAll), otherAll_1_1 = otherAll_1.next(); !otherAll_1_1.done; otherAll_1_1 = otherAll_1.next()) {
+                    var elem = otherAll_1_1.value;
+                    this.add(elem);
+                }
+            }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            finally {
+                try {
+                    if (otherAll_1_1 && !otherAll_1_1.done && (_a = otherAll_1.return)) _a.call(otherAll_1);
+                }
+                finally { if (e_12) throw e_12.error; }
+            }
+        };
+        PairSet.prototype.except = function (other) {
+            var e_13, _a;
+            var otherAll = other.all;
+            try {
+                for (var otherAll_2 = __values(otherAll), otherAll_2_1 = otherAll_2.next(); !otherAll_2_1.done; otherAll_2_1 = otherAll_2.next()) {
+                    var elem = otherAll_2_1.value;
+                    this.remove(elem);
+                }
+            }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            finally {
+                try {
+                    if (otherAll_2_1 && !otherAll_2_1.done && (_a = otherAll_2.return)) _a.call(otherAll_2);
+                }
+                finally { if (e_13) throw e_13.error; }
+            }
+        };
+        return PairSet;
+    }());
+    es.PairSet = PairSet;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -14156,184 +14244,6 @@ var es;
     }());
     es.Pool = Pool;
     es.isIPoolable = function (props) { return typeof props['reset'] !== 'undefined'; };
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Set = /** @class */ (function () {
-        function Set(source) {
-            var _this = this;
-            this.clear();
-            if (source)
-                source.forEach(function (value) {
-                    _this.add(value);
-                });
-        }
-        Set.prototype.add = function (item) {
-            var _this = this;
-            var hashCode = this.getHashCode(item);
-            var bucket = this.buckets[hashCode];
-            if (bucket === undefined) {
-                var newBucket = new Array();
-                newBucket.push(item);
-                this.buckets[hashCode] = newBucket;
-                this.count = this.count + 1;
-                return true;
-            }
-            if (bucket.some(function (value) { return _this.areEqual(value, item); }))
-                return false;
-            bucket.push(item);
-            this.count = this.count + 1;
-            return true;
-        };
-        ;
-        Set.prototype.remove = function (item) {
-            var _this = this;
-            var hashCode = this.getHashCode(item);
-            var bucket = this.buckets[hashCode];
-            if (bucket === undefined) {
-                return false;
-            }
-            var result = false;
-            var newBucket = new Array();
-            bucket.forEach(function (value) {
-                if (!_this.areEqual(value, item))
-                    newBucket.push(item);
-                else
-                    result = true;
-            });
-            this.buckets[hashCode] = newBucket;
-            if (result)
-                this.count = this.count - 1;
-            return result;
-        };
-        Set.prototype.contains = function (item) {
-            return this.bucketsContains(this.buckets, item);
-        };
-        ;
-        Set.prototype.getCount = function () {
-            return this.count;
-        };
-        Set.prototype.clear = function () {
-            this.buckets = new Array();
-            this.count = 0;
-        };
-        Set.prototype.toArray = function () {
-            var result = new Array();
-            this.buckets.forEach(function (value) {
-                value.forEach(function (inner) {
-                    result.push(inner);
-                });
-            });
-            return result;
-        };
-        /**
-         * 从当前集合中删除指定集合中的所有元素
-         * @param other
-         */
-        Set.prototype.exceptWith = function (other) {
-            var _this = this;
-            if (other) {
-                other.forEach(function (value) {
-                    _this.remove(value);
-                });
-            }
-        };
-        /**
-         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
-         * @param other
-         */
-        Set.prototype.intersectWith = function (other) {
-            var _this = this;
-            if (other) {
-                var otherBuckets_1 = this.buildInternalBuckets(other);
-                this.toArray().forEach(function (value) {
-                    if (!_this.bucketsContains(otherBuckets_1.Buckets, value))
-                        _this.remove(value);
-                });
-            }
-            else {
-                this.clear();
-            }
-        };
-        Set.prototype.unionWith = function (other) {
-            var _this = this;
-            other.forEach(function (value) {
-                _this.add(value);
-            });
-        };
-        /**
-         * 确定当前集合是否为指定集合或数组的子集
-         * @param other
-         */
-        Set.prototype.isSubsetOf = function (other) {
-            var _this = this;
-            var otherBuckets = this.buildInternalBuckets(other);
-            return this.toArray().every(function (value) { return _this.bucketsContains(otherBuckets.Buckets, value); });
-        };
-        /**
-         * 确定当前不可变排序集是否为指定集合的超集
-         * @param other
-         */
-        Set.prototype.isSupersetOf = function (other) {
-            var _this = this;
-            return other.every(function (value) { return _this.contains(value); });
-        };
-        Set.prototype.overlaps = function (other) {
-            var _this = this;
-            return other.some(function (value) { return _this.contains(value); });
-        };
-        Set.prototype.setEquals = function (other) {
-            var _this = this;
-            var otherBuckets = this.buildInternalBuckets(other);
-            if (otherBuckets.Count !== this.count)
-                return false;
-            return other.every(function (value) { return _this.contains(value); });
-        };
-        Set.prototype.buildInternalBuckets = function (source) {
-            var _this = this;
-            var internalBuckets = new Array();
-            var internalCount = 0;
-            source.forEach(function (item) {
-                var hashCode = _this.getHashCode(item);
-                var bucket = internalBuckets[hashCode];
-                if (bucket === undefined) {
-                    var newBucket = new Array();
-                    newBucket.push(item);
-                    internalBuckets[hashCode] = newBucket;
-                    internalCount = internalCount + 1;
-                }
-                else if (!bucket.some(function (value) { return _this.areEqual(value, item); })) {
-                    bucket.push(item);
-                    internalCount = internalCount + 1;
-                }
-            });
-            return { Buckets: internalBuckets, Count: internalCount };
-        };
-        Set.prototype.bucketsContains = function (internalBuckets, item) {
-            var _this = this;
-            var hashCode = this.getHashCode(item);
-            var bucket = internalBuckets[hashCode];
-            if (bucket === undefined) {
-                return false;
-            }
-            return bucket.some(function (value) { return _this.areEqual(value, item); });
-        };
-        return Set;
-    }());
-    var HashSet = /** @class */ (function (_super) {
-        __extends(HashSet, _super);
-        function HashSet(source) {
-            return _super.call(this, source) || this;
-        }
-        HashSet.prototype.getHashCode = function (item) {
-            return item.getHashCode();
-        };
-        HashSet.prototype.areEqual = function (value1, value2) {
-            return value1.equals(value2);
-        };
-        return HashSet;
-    }(Set));
-    es.HashSet = HashSet;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -16227,7 +16137,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_12, _a;
+            var e_14, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -16235,12 +16145,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_12) throw e_12.error; }
+                finally { if (e_14) throw e_14.error; }
             }
             return result;
         };
@@ -16489,7 +16399,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_13, _a;
+            var e_15, _a;
             var output = es.ListPool.obtain(es.Vector2);
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -16528,12 +16438,12 @@ var es;
                         }
                     }
                 }
-                catch (e_13_1) { e_13 = { error: e_13_1 }; }
+                catch (e_15_1) { e_15 = { error: e_15_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_13) throw e_13.error; }
+                    finally { if (e_15) throw e_15.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -16649,7 +16559,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_14, _a;
+            var e_16, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -16667,12 +16577,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_16) throw e_16.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

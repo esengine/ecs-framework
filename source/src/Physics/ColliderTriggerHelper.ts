@@ -5,9 +5,9 @@ module es {
     export class ColliderTriggerHelper {
         private _entity: Entity;
         /** 存储当前帧中发生的所有活动交点对 */
-        private _activeTriggerIntersections: HashSet<Pair<Collider>> = new HashSet<Pair<Collider>>();
+        private _activeTriggerIntersections: PairSet<Collider> = new PairSet<Collider>();
         /** 存储前一帧的交点对，这样我们就可以在移动这一帧后检测到退出 */
-        private _previousTriggerIntersections: HashSet<Pair<Collider>> = new HashSet<Pair<Collider>>();
+        private _previousTriggerIntersections: PairSet<Collider> = new PairSet<Collider>();
         private _tempTriggerList: ITriggerListener[] = [];
 
         constructor(entity: Entity) {
@@ -22,11 +22,11 @@ module es {
             const lateColliders = [];
             // 对所有实体.colliders进行重叠检查，这些实体.colliders是触发器，与所有宽相碰撞器，无论是否触发器。   
             // 任何重叠都会导致触发事件
-            let colliders = this._entity.getComponents(Collider);
+            let colliders: Collider[] = this.getColliders();
             for (let i = 0; i < colliders.length; i++) {
                 let collider = colliders[i];
 
-                let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider.bounds, collider.collidesWithLayers);
+                let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, collider.bounds, collider.collidesWithLayers.value);
                 for (let j = 0; j < neighbors.length; j++) {
                     let neighbor = neighbors[j];
                     // 我们至少需要一个碰撞器作为触发器
@@ -37,8 +37,8 @@ module es {
                         const pair = new Pair<Collider>(collider, neighbor);
 
                         // 如果我们的某一个集合中已经有了这个对子（前一个或当前的触发交叉点），就不要调用输入事件了
-                        const shouldReportTriggerEvent = !this._activeTriggerIntersections.contains(pair) &&
-                            !this._previousTriggerIntersections.contains(pair);
+                        const shouldReportTriggerEvent = !this._activeTriggerIntersections.has(pair) &&
+                            !this._previousTriggerIntersections.has(pair);
 
                             if (shouldReportTriggerEvent) {
                                 if (neighbor.castSortOrder >= Collider.lateSortOrder) {
@@ -60,18 +60,30 @@ module es {
             this.checkForExitedColliders();
         }
 
+        private getColliders() {
+            const colliders: Collider[] = [];
+            for (let i = 0; i < this._entity.components.buffer.length; i ++) {
+                const component = this._entity.components.buffer[i];
+                if (component instanceof Collider) {
+                    colliders.push(component);
+                }
+            }
+
+            return colliders;
+        }
+
         private checkForExitedColliders() {
             // 删除所有与此帧交互的触发器，留下我们退出的触发器
-            this._previousTriggerIntersections.exceptWith(this._activeTriggerIntersections.toArray());
-
-            for (let i = 0; i < this._previousTriggerIntersections.getCount(); i++) {
-                this.notifyTriggerListeners(this._previousTriggerIntersections[i], false)
-            }
+            this._previousTriggerIntersections.except(this._activeTriggerIntersections);
+            const all = this._previousTriggerIntersections.all;
+            all.forEach(pair => {
+              this.notifyTriggerListeners(pair, false);
+            });
 
             this._previousTriggerIntersections.clear();
 
             // 添加所有当前激活的触发器
-            this._previousTriggerIntersections.unionWith(this._activeTriggerIntersections.toArray());
+            this._previousTriggerIntersections.union(this._activeTriggerIntersections);
 
             // 清空活动集，为下一帧做准备
             this._activeTriggerIntersections.clear();

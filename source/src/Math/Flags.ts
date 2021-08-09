@@ -60,5 +60,17 @@ module es {
         public static invertFlags(self: Ref<number>) {
             self.value = ~self.value;
         }
+
+        /**
+         * 打印 number 的二进制表示。 方便调试 number 标志
+         */
+        public static binaryStringRepresentation(self: number,
+            leftPadWidth: number = 10) {
+            let str = self.toString(2);
+            while (str.length < (leftPadWidth || 2)) {
+              str = '0' + str;
+            }
+            return str;
+        }
     }
 }
