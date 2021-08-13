@@ -21,6 +21,10 @@ declare module es {
          */
         static entitySystemsEnabled: boolean;
         /**
+         * egret舞台
+         */
+        static stage: egret.DisplayObjectContainer;
+        /**
          * 是否正在debug模式
          * 仅允许在create时进行更改
          */
@@ -58,7 +62,7 @@ declare module es {
         /**
          * 默认实现创建核心
          */
-        static create(debug?: boolean): Core;
+        static create(stage: egret.DisplayObjectContainer, debug?: boolean): Core;
         /**
          * 添加一个全局管理器对象，它的更新方法将调用场景前的每一帧。
          * @param manager
@@ -1496,6 +1500,7 @@ declare module es {
 }
 declare module es {
     interface IRenderable {
+        sprite: egret.Sprite;
         enabled: boolean;
         renderLayer: number;
         isVisibleFromCamera(camera: ICamera): boolean;
@@ -1505,6 +1510,7 @@ declare module es {
 }
 declare module es {
     abstract class RenderableComponent extends es.Component implements IRenderable {
+        sprite: egret.Sprite;
         getwidth(): number;
         getheight(): number;
         protected _bounds: es.Rectangle;

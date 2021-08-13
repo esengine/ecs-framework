@@ -80,7 +80,7 @@ var es;
      *  全局核心类
      */
     var Core = /** @class */ (function () {
-        function Core(debug, enableEntitySystems) {
+        function Core(stage, debug, enableEntitySystems) {
             if (debug === void 0) { debug = true; }
             if (enableEntitySystems === void 0) { enableEntitySystems = true; }
             /**
@@ -93,6 +93,7 @@ var es;
             this._frameCounter = 0;
             this._totalMemory = 0;
             Core._instance = this;
+            Core.stage = stage;
             Core.emitter = new es.Emitter();
             Core.emitter.addObserver(es.CoreEvents.frameUpdated, this.update, this);
             Core.registerGlobalManager(this._coroutineManager);
@@ -143,10 +144,10 @@ var es;
         /**
          * 默认实现创建核心
          */
-        Core.create = function (debug) {
+        Core.create = function (stage, debug) {
             if (debug === void 0) { debug = true; }
             if (this._instance == null) {
-                this._instance = new es.Core(debug);
+                this._instance = new es.Core(stage, debug);
             }
             return this._instance;
         };
@@ -3724,6 +3725,7 @@ var es;
         __extends(RenderableComponent, _super);
         function RenderableComponent() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.sprite = new egret.Sprite();
             _this._bounds = new es.Rectangle();
             _this._areBoundsDirty = true;
             _this.color = es.Color.White;
@@ -5392,10 +5394,16 @@ var es;
             return this._components[index];
         };
         RenderableComponentList.prototype.add = function (component) {
+            if (component.sprite.parent == null) {
+                es.Core.stage.addChild(component.sprite);
+            }
             this._components.push(component);
             this.addToRenderLayerList(component, component.renderLayer);
         };
         RenderableComponentList.prototype.remove = function (component) {
+            if (component.sprite.parent != null) {
+                es.Core.stage.removeChild(component.sprite);
+            }
             new es.List(this._components).remove(component);
             new es.List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);
         };

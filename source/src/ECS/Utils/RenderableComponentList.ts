@@ -14,11 +14,17 @@ module es {
         }
 
         public add(component: IRenderable) {
+            if (component.sprite.parent == null) {
+                Core.stage.addChild(component.sprite);
+            }
             this._components.push(component);
             this.addToRenderLayerList(component, component.renderLayer);
         }
 
         public remove(component: IRenderable) {
+            if (component.sprite.parent != null) {
+                Core.stage.removeChild(component.sprite);
+            }
             new List(this._components).remove(component);
             new List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);
         }

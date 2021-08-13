@@ -1,5 +1,7 @@
 module es {
     export abstract class RenderableComponent extends es.Component implements IRenderable {
+        public sprite: egret.Sprite = new egret.Sprite();
+
         public getwidth() {
             return this.bounds.width;
         }
