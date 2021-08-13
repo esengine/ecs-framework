@@ -20,6 +20,11 @@ module es {
          * 用于确定是否应该使用EntitySystems
          */
         public static entitySystemsEnabled: boolean;
+
+        /**
+         * egret舞台
+         */
+        public static stage: egret.DisplayObjectContainer;
         /**
          * 是否正在debug模式
          * 仅允许在create时进行更改
@@ -37,8 +42,9 @@ module es {
         public _coroutineManager: CoroutineManager = new CoroutineManager();
         public _timerManager: TimerManager = new TimerManager();
 
-        private constructor(debug: boolean = true, enableEntitySystems: boolean = true) {
+        private constructor(stage: egret.DisplayObjectContainer, debug: boolean = true, enableEntitySystems: boolean = true) {
             Core._instance = this;
+            Core.stage = stage;
             Core.emitter = new Emitter<CoreEvents>();
             Core.emitter.addObserver(CoreEvents.frameUpdated, this.update, this);
 
@@ -93,9 +99,9 @@ module es {
         /**
          * 默认实现创建核心
          */
-        public static create(debug: boolean = true): Core {
+        public static create(stage: egret.DisplayObjectContainer, debug: boolean = true): Core {
             if (this._instance == null) {
-                this._instance = new es.Core(debug);
+                this._instance = new es.Core(stage, debug);
             }
             return this._instance;
         }
