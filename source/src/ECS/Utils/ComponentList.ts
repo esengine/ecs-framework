@@ -113,7 +113,7 @@ module es {
                 for (let i = 0, s = this._components.length; i < s; ++ i) {
                     let component = this._components[i];
                     if (component instanceof RenderableComponent)
-                        this._entity.scene.renderableComponents.remove(component);
+                        this._entity.scene.renderableComponents.add(component);
 
                     if (isIUpdatable(component))
                         this._updatableComponents.push(component);

@@ -4509,7 +4509,7 @@ var es;
                 for (var i = 0, s = this._components.length; i < s; ++i) {
                     var component = this._components[i];
                     if (component instanceof es.RenderableComponent)
-                        this._entity.scene.renderableComponents.remove(component);
+                        this._entity.scene.renderableComponents.add(component);
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
                     this.addBits(component);
