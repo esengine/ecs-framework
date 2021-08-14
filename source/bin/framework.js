@@ -34,6 +34,16 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var __read = (this && this.__read) || function (o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
     if (!m) return o;
@@ -54,16 +64,6 @@ var __spread = (this && this.__spread) || function () {
     for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
     return ar;
 };
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 var __values = (this && this.__values) || function (o) {
     var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
     if (m) return m.call(o);
@@ -221,6 +221,21 @@ var es;
         Core.prototype.onSceneChanged = function () {
             es.Time.sceneChanged();
         };
+        Core.prototype.registerCoreEvent = function () {
+            egret.lifecycle.addLifecycleListener(function (context) {
+                context.onUpdate = function () {
+                    es.Core.emitter.emit(es.CoreEvents.frameUpdated);
+                };
+            });
+            egret.lifecycle.onPause = function () {
+                egret.ticker.pause();
+                Core.paused = true;
+            };
+            egret.lifecycle.onResume = function () {
+                egret.ticker.resume();
+                Core.paused = false;
+            };
+        };
         Core.prototype.initialize = function () {
         };
         Core.prototype.update = function (currentTime) {
@@ -240,6 +255,7 @@ var es;
                         this._scene.update();
                         if (this._nextScene != null) {
                             this._scene.end();
+                            es.Debug.log(es.LogType.info, "场景 {0} 切换至另一个场景 {1}", this._scene.name, this._nextScene.name);
                             this._scene = this._nextScene;
                             this._nextScene = null;
                             this.onSceneChanged();
@@ -300,6 +316,8 @@ var es;
             for (var _i = 2; _i < arguments.length; _i++) {
                 args[_i - 2] = arguments[_i];
             }
+            if (!es.Core.Instance.debug)
+                return;
             switch (type) {
                 case LogType.error:
                     console.error(type + ": " + StringUtils.format(format, args));
@@ -547,6 +565,271 @@ var es;
         return Component;
     }());
     es.Component = Component;
+})(es || (es = {}));
+///<reference path="Component.ts"/>
+var es;
+///<reference path="Component.ts"/>
+(function (es) {
+    var CameraInset = /** @class */ (function () {
+        function CameraInset() {
+            this.left = 0;
+            this.right = 0;
+            this.top = 0;
+            this.bottom = 0;
+        }
+        return CameraInset;
+    }());
+    var Camera = /** @class */ (function (_super) {
+        __extends(Camera, _super);
+        function Camera() {
+            var _this = _super.call(this) || this;
+            _this._transformMatrix = es.Matrix2D.identity;
+            _this._inverseTransformMatrix = es.Matrix2D.identity;
+            _this._bounds = new es.Rectangle();
+            _this._inset = new CameraInset();
+            _this._zoom = 0;
+            _this._minimumZoom = 0.3;
+            _this._maxmumZoom = 3;
+            _this._origin = es.Vector2.zero;
+            _this._ratio = es.Vector2.one;
+            _this._areMatrixesDirty = true;
+            _this._areBoundsDirty = true;
+            _this.setZoom(0);
+            _this.origin = new es.Vector2(es.Core.stage.stageWidth / 2, es.Core.stage.stageHeight / 2);
+            _this.ratio = new es.Vector2(1, 1);
+            return _this;
+        }
+        Object.defineProperty(Camera.prototype, "position", {
+            get: function () {
+                return this.entity.transform.position;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "rotation", {
+            get: function () {
+                return this.entity.transform.rotation;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "bounds", {
+            get: function () {
+                if (this._areMatrixesDirty)
+                    this.updateMatrixes();
+                if (this._areBoundsDirty) {
+                    var viewport = new es.Rectangle(0, 0, es.Core.stage.width, es.Core.stage.height);
+                    var topLeft = this.screenToWorldPoint(new es.Vector2(this._inset.left, this._inset.top));
+                    var bottomRight = this.screenToWorldPoint(new es.Vector2(viewport.width - this._inset.right, viewport.height - this._inset.bottom));
+                    if (this.entity.transform.rotation != 0) {
+                        var topRight = this.screenToWorldPoint(new es.Vector2(viewport.width - this._inset.right, this._inset.top));
+                        var bottomLeft = this.screenToWorldPoint(new es.Vector2(this._inset.left, viewport.height - this._inset.bottom));
+                        var minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                        var maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
+                        var minY = Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y);
+                        var maxY = Math.max(topLeft.x, bottomRight.y, topRight.y, bottomLeft.y);
+                        this._bounds.location = new es.Vector2(minX, minY);
+                        this._bounds.width = maxX - minX;
+                        this._bounds.height = maxY - minY;
+                    }
+                    else {
+                        this._bounds.location = topLeft;
+                        this._bounds.width = bottomRight.x - topLeft.x;
+                        this._bounds.height = bottomRight.y - topLeft.y;
+                    }
+                    this._areBoundsDirty = false;
+                }
+                return this._bounds;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "transformMatrix", {
+            get: function () {
+                if (this._areBoundsDirty)
+                    this.updateMatrixes();
+                return this._transformMatrix;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "inverseTransformMatrix", {
+            get: function () {
+                if (this._areBoundsDirty)
+                    this.updateMatrixes();
+                return this._inverseTransformMatrix;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "origin", {
+            get: function () {
+                return this._origin;
+            },
+            set: function (value) {
+                if (!this._origin.equals(value)) {
+                    this._origin = value;
+                    this._areMatrixesDirty = true;
+                }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "zoom", {
+            get: function () {
+                if (this._zoom == 0)
+                    return 1;
+                if (this._zoom < 1)
+                    return es.MathHelper.map(this._zoom, this._minimumZoom, 1, -1, 0);
+                return es.MathHelper.map(this._zoom, 1, this._maxmumZoom, 0, 1);
+            },
+            set: function (value) {
+                this.setZoom(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "rawZoom", {
+            get: function () {
+                return this._zoom;
+            },
+            set: function (value) {
+                if (value != this._zoom) {
+                    this._zoom = value;
+                    this._areMatrixesDirty = true;
+                }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "minimumZoom", {
+            get: function () {
+                return this._minimumZoom;
+            },
+            set: function (value) {
+                this.setMinimumZoom(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "maximumZoom", {
+            get: function () {
+                return this._maxmumZoom;
+            },
+            set: function (value) {
+                this.setMaximumZoom(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Camera.prototype, "ratio", {
+            get: function () {
+                return this._ratio;
+            },
+            set: function (value) {
+                this.setRatio(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Camera.prototype.onSceneRenderTargetSizeChanged = function (newWidth, newHeight) {
+            var oldOrigin = this._origin.clone();
+            this.origin = new es.Vector2(newWidth / 2, newHeight / 2);
+            this.entity.transform.position.addEqual(this._origin.sub(oldOrigin));
+        };
+        Camera.prototype.updateMatrixes = function () {
+            if (!this._areBoundsDirty)
+                return;
+            var tempMat = new es.Matrix2D();
+            es.Matrix2D.createTranslation(-this.entity.transform.position.x, -this.entity.transform.position.y, this._transformMatrix);
+            if (this._zoom != 1) {
+                es.Matrix2D.createScale(this._zoom, this._zoom, tempMat);
+                this._transformMatrix = this._transformMatrix.multiply(tempMat);
+            }
+            if (this.entity.transform.rotation != 0) {
+                es.Matrix2D.createRotation(this.entity.transform.rotation, tempMat);
+                this._transformMatrix = this._transformMatrix.multiply(tempMat);
+            }
+            es.Matrix2D.createTranslation(Math.trunc(this._origin.x), Math.trunc(this._origin.y), tempMat);
+            this._transformMatrix = this._transformMatrix.multiply(tempMat);
+            this._inverseTransformMatrix = es.Matrix2D.invert(this._transformMatrix);
+            this._areBoundsDirty = true;
+            this._areMatrixesDirty = false;
+        };
+        Camera.prototype.setZoom = function (zoom) {
+            var newZoom = es.MathHelper.clamp(zoom, -1, 1);
+            if (newZoom == 0)
+                this._zoom = 1;
+            else if (newZoom < 0)
+                this._zoom = es.MathHelper.map(newZoom, -1, 0, this._minimumZoom, 1);
+            else
+                this._zoom = es.MathHelper.map(newZoom, 0, 1, 1, this._maxmumZoom);
+            this._areMatrixesDirty = true;
+            return this;
+        };
+        Camera.prototype.setMinimumZoom = function (minZoom) {
+            es.Insist.isTrue(minZoom > 0, "minimumZoom必须大于零");
+            if (this._zoom < minZoom)
+                this._zoom = this.minimumZoom;
+            this._minimumZoom = minZoom;
+            return this;
+        };
+        Camera.prototype.setMaximumZoom = function (maxZoom) {
+            es.Insist.isTrue(maxZoom > 0, "MaximumZoom必须大于零");
+            if (this._zoom > maxZoom)
+                this._zoom = maxZoom;
+            this._maxmumZoom = maxZoom;
+            return this;
+        };
+        Camera.prototype.setRatio = function (value) {
+            if (!this._ratio.equals(value)) {
+                this._ratio = value;
+                this._areBoundsDirty = true;
+            }
+            return this;
+        };
+        Camera.prototype.setInset = function (left, right, top, bottom) {
+            this._inset = new CameraInset();
+            this._inset.left = left;
+            this._inset.right = right;
+            this._inset.top = top;
+            this._inset.bottom = bottom;
+            this._areBoundsDirty = true;
+            return this;
+        };
+        Camera.prototype.zoomIn = function (deltaZoom) {
+            this.zoom += deltaZoom;
+        };
+        Camera.prototype.zoomOut = function (deltaZoom) {
+            this.zoom -= deltaZoom;
+        };
+        Camera.prototype.screenToWorldPoint = function (screenPosition) {
+            this.updateMatrixes();
+            es.Vector2Ext.transformR(screenPosition.multiply(this.ratio), this._inverseTransformMatrix, screenPosition);
+            return screenPosition;
+        };
+        Camera.prototype.worldToScreenPoint = function (worldPosition) {
+            this.updateMatrixes();
+            es.Vector2Ext.transformR(worldPosition.multiply(this.ratio), this._transformMatrix, worldPosition);
+            return worldPosition;
+        };
+        Camera.prototype.forceMatrixUpdate = function () {
+            this._areMatrixesDirty = true;
+        };
+        Camera.prototype.onEntityTransformChanged = function (comp) {
+            this._areMatrixesDirty = true;
+        };
+        Camera.prototype.touchToWorldPoint = function () {
+            return this.screenToWorldPoint(es.Input.scaledPosition(es.Input.touchPosition));
+        };
+        Camera.prototype.mouseToWorldPoint = function () {
+            return this.screenToWorldPoint(es.Input.scaledPosition(es.Input.mousePosition));
+        };
+        Camera.prototype.update = function () {
+        };
+        return Camera;
+    }(es.Component));
+    es.Camera = Camera;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -1521,11 +1804,14 @@ var es;
 (function (es) {
     /** 场景 */
     var Scene = /** @class */ (function () {
-        function Scene() {
+        function Scene(name) {
             this._sceneComponents = [];
             this._renderers = [];
+            this.name = name;
             this.entities = new es.EntityList(this);
             this.renderableComponents = new es.RenderableComponentList();
+            var cameraEntity = this.createEntity("camera");
+            this.camera = cameraEntity.addComponent(new es.Camera());
             this.entityProcessors = new es.EntityProcessorList();
             this.identifierPool = new es.IdentifierPool();
             this.initialize();
@@ -3768,6 +4054,10 @@ var es;
         RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
             this._areBoundsDirty = true;
         };
+        RenderableComponent.prototype.setColor = function (color) {
+            this.color = color;
+            return this;
+        };
         Object.defineProperty(RenderableComponent.prototype, "localOffset", {
             get: function () {
                 return this._localOffset;
@@ -5996,12 +6286,198 @@ var es;
 var es;
 (function (es) {
     var Graphics = /** @class */ (function () {
-        function Graphics(batcher) {
-            this.batcher = batcher;
+        function Graphics() {
+            this.batcher = new es.Batcher();
+            this.pixelTexture = new egret.Sprite();
+            this.pixelTexture.graphics.drawRect(0, 0, 1, 1);
+            this.pixelTexture.graphics.endFill();
         }
         return Graphics;
     }());
     es.Graphics = Graphics;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 用于集中处理所有graphics绘制逻辑
+     */
+    var Batcher = /** @class */ (function () {
+        function Batcher() {
+            this.camera = null;
+            this.strokeNum = 0;
+            this.MAX_STROKE = 2048;
+            this._batcherSprite = new Map();
+        }
+        Batcher.prototype.begin = function (cam, batcherType) {
+            if (batcherType === void 0) { batcherType = Batcher.TYPE_NORMAL; }
+            if (!this._batcherSprite.has(batcherType)) {
+                this.sprite = new egret.Sprite();
+                this.sprite.name = "batcher_" + batcherType;
+                this._batcherSprite.set(batcherType, this.sprite);
+                es.Core.stage.addChild(this.sprite);
+                return;
+            }
+            this.sprite = this._batcherSprite.get(batcherType);
+            this.sprite.graphics.clear();
+            this.camera = cam;
+            this.strokeNum = 0;
+        };
+        Batcher.prototype.end = function () {
+            if (this.strokeNum > 0) {
+                this.strokeNum = 0;
+                this.sprite.graphics.endFill();
+            }
+        };
+        /**
+         * 绘制点
+         * @param points 点列表
+         * @param color 颜色
+         * @param thickness 粗细 默认1
+         */
+        Batcher.prototype.drawPoints = function (points, color, thickness) {
+            if (points.length < 2)
+                return;
+            for (var i = 1; i < points.length; i++)
+                this.drawLine(points[i - 1], points[i], color, thickness);
+        };
+        /**
+         * 绘制多边形
+         * @param position 多边形位置
+         * @param points 多边形点
+         * @param color 颜色
+         * @param closePoly 是否关闭图形
+         * @param thickness 粗细
+         */
+        Batcher.prototype.drawPolygon = function (position, points, color, closePoly, thickness) {
+            if (points.length < 2)
+                return;
+            for (var i = 1; i < points.length; i++)
+                this.drawLine(es.Vector2.add(position, points[i - 1]), es.Vector2.add(position, points[i]), color, thickness);
+            if (closePoly)
+                this.drawLine(es.Vector2.add(position, points[points.length - 1]), es.Vector2.add(position, points[0]), color, thickness);
+        };
+        /**
+         * 绘制空心矩形
+         * @param x 坐标x
+         * @param y 坐标y
+         * @param width 宽度
+         * @param height 高度
+         * @param color 颜色
+         * @param thickness 边框粗细
+         */
+        Batcher.prototype.drawHollowRect = function (x, y, width, height, color, thickness) {
+            this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
+            var tl = es.Vector2Ext.round(new es.Vector2(x, y));
+            var tr = es.Vector2Ext.round(new es.Vector2(x + width, y));
+            var br = es.Vector2Ext.round(new es.Vector2(x + width, y + height));
+            var bl = es.Vector2Ext.round(new es.Vector2(x, y + height));
+            this.drawLine(tl, tr, color, thickness);
+            this.drawLine(tr, br, color, thickness);
+            this.drawLine(br, bl, color, thickness);
+            this.drawLine(bl, tl, color, thickness);
+        };
+        /**
+         * 绘制圆形
+         * @param position 位置
+         * @param radius 半径
+         * @param color 颜色
+         * @param thickness 粗细
+         */
+        Batcher.prototype.drawCircle = function (position, radius, color, thickness) {
+            var bounds = new es.Rectangle(position.x - radius, position.y - radius, radius * 2, radius * 2);
+            if (this.camera && !this.camera.bounds.intersects(bounds))
+                return;
+            this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
+            this.sprite.graphics.drawCircle(position.x, position.y, radius);
+            this.strokeNum++;
+            this.flushBatch();
+        };
+        /**
+         * 绘制低精度袁
+         * @param position 位置
+         * @param radius 半径
+         * @param color 颜色
+         * @param thickness 边框粗细
+         * @param resolution 圆边数
+         */
+        Batcher.prototype.drawCircleLow = function (position, radius, color, thickness, resolution) {
+            var last = es.Vector2.unitX.multiplyScaler(radius);
+            var lastP = es.Vector2Ext.perpendicularFlip(last);
+            for (var i = 1; i <= resolution; i++) {
+                var at = es.MathHelper.angleToVector(i * es.MathHelper.PiOver2 / resolution, radius);
+                var atP = es.Vector2Ext.perpendicularFlip(at);
+                this.drawLine(es.Vector2.add(position, last), es.Vector2.add(position, at), color, thickness);
+                this.drawLine(position.sub(last), position.sub(at), color, thickness);
+                this.drawLine(es.Vector2.add(position, lastP), es.Vector2.add(position, atP), color, thickness);
+                this.drawLine(position.sub(lastP), position.sub(atP), color, thickness);
+                last = at;
+                lastP = atP;
+            }
+        };
+        /**
+         * 绘制矩形
+         * @param x 位置x
+         * @param y 位置y
+         * @param width 宽度
+         * @param height 高度
+         * @param color 颜色
+         */
+        Batcher.prototype.drawRect = function (x, y, width, height, color) {
+            var rect = new es.Rectangle(x, y, width, height);
+            if (this.camera && !this.camera.bounds.intersects(rect))
+                return;
+            this.sprite.graphics.lineStyle(1, color.toHexEgret(), color.a);
+            this.sprite.graphics.drawRect(Math.trunc(x), Math.trunc(y), Math.trunc(width), Math.trunc(height));
+            this.strokeNum++;
+            this.flushBatch();
+        };
+        /**
+         * 绘制线
+         * @param start 起始点坐标
+         * @param end 终点坐标
+         * @param color 颜色
+         * @param thickness 粗细
+         */
+        Batcher.prototype.drawLine = function (start, end, color, thickness) {
+            var bounds = es.RectangleExt.boundsFromPolygonVector([start, end]);
+            if (this.camera && !this.camera.bounds.intersects(bounds))
+                return;
+            this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
+            this.sprite.graphics.moveTo(start.x, start.y);
+            this.sprite.graphics.lineTo(end.x, end.y);
+            this.strokeNum++;
+            this.flushBatch();
+        };
+        /**
+         * 绘制点
+         * @param position 位置
+         * @param color 颜色
+         * @param size 大小
+         */
+        Batcher.prototype.drawPixel = function (position, color, size) {
+            var destRect = new es.Rectangle(Math.trunc(position.x), Math.trunc(position.y), size, size);
+            if (size != 1) {
+                destRect.x -= Math.trunc(size * 0.5);
+                destRect.y -= Math.trunc(size * 0.5);
+            }
+            if (this.camera && !this.camera.bounds.intersects(destRect))
+                return;
+            this.sprite.graphics.lineStyle(size, color.toHexEgret(), color.a);
+            this.sprite.graphics.drawRect(destRect.x, destRect.y, destRect.width, destRect.height);
+            this.strokeNum++;
+            this.flushBatch();
+        };
+        Batcher.prototype.flushBatch = function () {
+            if (this.strokeNum >= this.MAX_STROKE) {
+                this.strokeNum = 0;
+                this.sprite.graphics.endFill();
+            }
+        };
+        Batcher.TYPE_DEBUG = "debug";
+        Batcher.TYPE_NORMAL = "normal";
+        return Batcher;
+    }());
+    es.Batcher = Batcher;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -6171,6 +6647,16 @@ var es;
         Color.prototype.toHex = function () {
             return ('#' +
                 this._componentToHex(this.r) +
+                this._componentToHex(this.g) +
+                this._componentToHex(this.b) +
+                this._componentToHex(this.a));
+        };
+        /**
+         * 返回egret颜色的十六进制表示
+         * @returns
+         */
+        Color.prototype.toHexEgret = function () {
+            return Number("0x" + this._componentToHex(this.r) +
                 this._componentToHex(this.g) +
                 this._componentToHex(this.b) +
                 this._componentToHex(this.a));
@@ -6476,6 +6962,685 @@ var es;
         return DefaultRenderer;
     }(es.Renderer));
     es.DefaultRenderer = DefaultRenderer;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TouchState = /** @class */ (function () {
+        function TouchState() {
+            this.x = 0;
+            this.y = 0;
+            this.touchPoint = -1;
+            this.touchDown = false;
+        }
+        Object.defineProperty(TouchState.prototype, "position", {
+            get: function () {
+                return new es.Vector2(this.x, this.y);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        TouchState.prototype.reset = function () {
+            this.x = 0;
+            this.y = 0;
+            this.touchDown = false;
+            this.touchPoint = -1;
+        };
+        return TouchState;
+    }());
+    es.TouchState = TouchState;
+    var Input = /** @class */ (function () {
+        function Input() {
+        }
+        Object.defineProperty(Input, "gameTouchs", {
+            /**
+             * 触摸列表 存放最大个数量触摸点信息
+             * 可通过判断touchPoint是否为-1 来确定是否为有触摸
+             * 通过判断touchDown 判断触摸点是否有按下
+             */
+            get: function () {
+                return this._gameTouchs;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "resolutionScale", {
+            /** 获取缩放值 默认为1 */
+            get: function () {
+                return this._resolutionScale;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "totalTouchCount", {
+            /** 当前触摸点数量 */
+            get: function () {
+                return this._totalTouchCount;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "touchPosition", {
+            /** 返回第一个触摸点的坐标 */
+            get: function () {
+                if (!this._gameTouchs[0])
+                    return es.Vector2.zero;
+                return this._gameTouchs[0].position;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "mousePosition", {
+            get: function () {
+                return this._mousePosition;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "maxSupportedTouch", {
+            /** 获取最大触摸数 */
+            get: function () {
+                return es.Core.stage.maxTouches;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "touchPositionDelta", {
+            /** 获取第一个触摸点距离上次距离的增量 */
+            get: function () {
+                var delta = this.touchPosition.sub(this._previousTouchState.position);
+                if (delta.magnitude() > 0) {
+                    this.setpreviousTouchState(this._gameTouchs[0]);
+                }
+                return delta;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Input.initialize = function () {
+            if (this._init)
+                return;
+            this._init = true;
+            Input._previousMouseState = new es.MouseState();
+            Input._currentMouseState = new es.MouseState();
+            es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
+            es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
+            es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
+            es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_CANCEL, this.touchEnd, this);
+            es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_RELEASE_OUTSIDE, this.touchEnd, this);
+            document.addEventListener('mousedown', this.mouseDown);
+            document.addEventListener('mouseup', this.mouseUp);
+            document.addEventListener('mousemove', this.mouseMove);
+            document.addEventListener('mouseleave', this.mouseLeave);
+            this.initTouchCache();
+        };
+        Input.update = function () {
+            es.KeyboardUtils.update();
+            for (var i = 0; i < this._virtualInputs.length; i++)
+                this._virtualInputs[i].update();
+            this._previousMouseState = this._currentMouseState.clone();
+        };
+        Input.scaledPosition = function (position) {
+            var scaledPos = new es.Vector2(position.x - this._resolutionOffset.x, position.y - this._resolutionOffset.y);
+            return scaledPos.multiply(this.resolutionScale);
+        };
+        /**
+         * 只有在当前帧按下并且在上一帧没有按下时才算press
+         * @param key
+         */
+        Input.isKeyPressed = function (key) {
+            return new es.List(es.KeyboardUtils.currentKeys).contains(key) && !new es.List(es.KeyboardUtils.previousKeys).contains(key);
+        };
+        Input.isKeyPressedBoth = function (keyA, keyB) {
+            return this.isKeyPressed(keyA) || this.isKeyPressed(keyB);
+        };
+        Input.isKeyDown = function (key) {
+            return new es.List(es.KeyboardUtils.currentKeys).contains(key);
+        };
+        Input.isKeyDownBoth = function (keyA, keyB) {
+            return this.isKeyDown(keyA) || this.isKeyDown(keyB);
+        };
+        Input.isKeyReleased = function (key) {
+            return !new es.List(es.KeyboardUtils.currentKeys).contains(key) && new es.List(es.KeyboardUtils.previousKeys).contains(key);
+        };
+        Input.isKeyReleasedBoth = function (keyA, keyB) {
+            return this.isKeyReleased(keyA) || this.isKeyReleased(keyB);
+        };
+        Object.defineProperty(Input, "leftMouseButtonPressed", {
+            get: function () {
+                return this._currentMouseState.leftButton == es.ButtonState.pressed &&
+                    this._previousMouseState.leftButton == es.ButtonState.released;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "rightMouseButtonPressed", {
+            get: function () {
+                return this._currentMouseState.rightButton == es.ButtonState.pressed &&
+                    this._previousMouseState.rightButton == es.ButtonState.released;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "leftMouseButtonDown", {
+            get: function () {
+                return this._currentMouseState.leftButton == es.ButtonState.pressed;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "leftMouseButtonRelease", {
+            get: function () {
+                return this._currentMouseState.leftButton == es.ButtonState.released;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "rightMouseButtonDown", {
+            get: function () {
+                return this._currentMouseState.rightButton == es.ButtonState.pressed;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Input, "rightMouseButtonRelease", {
+            get: function () {
+                return this._currentMouseState.rightButton == es.ButtonState.released;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Input.initTouchCache = function () {
+            this._totalTouchCount = 0;
+            this._touchIndex = 0;
+            this._gameTouchs.length = 0;
+            for (var i = 0; i < this.maxSupportedTouch; i++) {
+                this._gameTouchs.push(new TouchState());
+            }
+        };
+        Input.touchBegin = function (touch, event) {
+            if (this._touchIndex < this.maxSupportedTouch) {
+                this._gameTouchs[this._touchIndex].touchPoint = touch.identifier;
+                this._gameTouchs[this._touchIndex].touchDown = true;
+                this._gameTouchs[this._touchIndex].x = touch.screenX;
+                this._gameTouchs[this._touchIndex].y = touch.screenY;
+                if (this._touchIndex == 0) {
+                    this.setpreviousTouchState(this._gameTouchs[0]);
+                }
+                this._touchIndex++;
+                this._totalTouchCount++;
+            }
+        };
+        Input.touchMove = function (touch, event) {
+            if (touch.identifier == this._gameTouchs[0].touchPoint) {
+                this.setpreviousTouchState(this._gameTouchs[0]);
+            }
+            var touchIndex = this._gameTouchs.findIndex(function (t) { return t.touchPoint == touch.identifier; });
+            if (touchIndex != -1) {
+                var touchData = this._gameTouchs[touchIndex];
+                touchData.x = touch.screenX;
+                touchData.y = touch.screenY;
+            }
+        };
+        Input.touchEnd = function (touch, event) {
+            var touchIndex = this._gameTouchs.findIndex(function (t) { return t.touchPoint == touch.identifier; });
+            if (touchIndex != -1) {
+                var touchData = this._gameTouchs[touchIndex];
+                touchData.reset();
+                if (touchIndex == 0)
+                    this._previousTouchState.reset();
+                this._totalTouchCount--;
+                if (this.totalTouchCount == 0) {
+                    this._touchIndex = 0;
+                }
+            }
+        };
+        Input.mouseDown = function (event) {
+            if (event.button == 0) {
+                this._currentMouseState.leftButton = es.ButtonState.pressed;
+            }
+            else if (event.button == 1) {
+                this._currentMouseState.middleButton = es.ButtonState.pressed;
+            }
+            else if (event.button == 2) {
+                this._currentMouseState.rightButton = es.ButtonState.pressed;
+            }
+        };
+        Input.mouseUp = function (event) {
+            if (event.button == 0) {
+                this._currentMouseState.leftButton = es.ButtonState.released;
+            }
+            else if (event.button == 1) {
+                this._currentMouseState.middleButton = es.ButtonState.released;
+            }
+            else if (event.button == 2) {
+                this._currentMouseState.rightButton = es.ButtonState.released;
+            }
+        };
+        Input.mouseMove = function (event) {
+            this._mousePosition = new es.Vector2(event.screenX, event.screenY);
+        };
+        Input.mouseLeave = function (event) {
+            this._mousePosition = new es.Vector2(-1, -1);
+            this._currentMouseState = new es.MouseState();
+        };
+        Input.setpreviousTouchState = function (touchState) {
+            this._previousTouchState = new TouchState();
+            this._previousTouchState.x = touchState.position.x;
+            this._previousTouchState.y = touchState.position.y;
+            this._previousTouchState.touchPoint = touchState.touchPoint;
+            this._previousTouchState.touchDown = touchState.touchDown;
+        };
+        Input._init = false;
+        Input._previousTouchState = new TouchState();
+        Input._resolutionOffset = es.Vector2.zero;
+        Input._touchIndex = 0;
+        Input._gameTouchs = [];
+        Input._mousePosition = new es.Vector2(-1, -1);
+        Input._resolutionScale = es.Vector2.one;
+        Input._totalTouchCount = 0;
+        Input._virtualInputs = [];
+        return Input;
+    }());
+    es.Input = Input;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var KeyboardUtils = /** @class */ (function () {
+        function KeyboardUtils() {
+        }
+        KeyboardUtils.init = function () {
+            document.addEventListener('keyup', KeyboardUtils.onKeyUpHandler);
+            document.addEventListener('keydown', KeyboardUtils.onKeyDownHandler);
+        };
+        KeyboardUtils.update = function () {
+            var e_9, _a, e_10, _b;
+            KeyboardUtils.previousKeys.length = 0;
+            try {
+                for (var _c = __values(KeyboardUtils.currentKeys), _d = _c.next(); !_d.done; _d = _c.next()) {
+                    var key = _d.value;
+                    KeyboardUtils.previousKeys.push(key);
+                    new es.List(KeyboardUtils.currentKeys).remove(key);
+                }
+            }
+            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            finally {
+                try {
+                    if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+                }
+                finally { if (e_9) throw e_9.error; }
+            }
+            KeyboardUtils.currentKeys.length = 0;
+            try {
+                for (var _e = __values(KeyboardUtils.keyStatusKeys), _f = _e.next(); !_f.done; _f = _e.next()) {
+                    var key = _f.value;
+                    KeyboardUtils.currentKeys.push(key);
+                }
+            }
+            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+            finally {
+                try {
+                    if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                }
+                finally { if (e_10) throw e_10.error; }
+            }
+        };
+        KeyboardUtils.destroy = function () {
+            KeyboardUtils.currentKeys.length = 0;
+            document.removeEventListener('keyup', KeyboardUtils.onKeyUpHandler);
+            document.removeEventListener('keydown', KeyboardUtils.onKeyDownHandler);
+        };
+        KeyboardUtils.onKeyDownHandler = function (event) {
+            if (!new es.List(KeyboardUtils.keyStatusKeys).contains(event.keyCode))
+                KeyboardUtils.keyStatusKeys.push(event.keyCode);
+        };
+        KeyboardUtils.onKeyUpHandler = function (event) {
+            var linqList = new es.List(KeyboardUtils.keyStatusKeys);
+            if (linqList.contains(event.keyCode))
+                linqList.remove(event.keyCode);
+        };
+        /**
+         * 当前帧按键状态
+         */
+        KeyboardUtils.currentKeys = [];
+        /**
+         * 上一帧按键状态
+         */
+        KeyboardUtils.previousKeys = [];
+        KeyboardUtils.keyStatusKeys = [];
+        return KeyboardUtils;
+    }());
+    es.KeyboardUtils = KeyboardUtils;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Keys;
+    (function (Keys) {
+        Keys[Keys["none"] = 0] = "none";
+        Keys[Keys["back"] = 8] = "back";
+        Keys[Keys["tab"] = 9] = "tab";
+        Keys[Keys["enter"] = 13] = "enter";
+        Keys[Keys["capsLock"] = 20] = "capsLock";
+        Keys[Keys["escape"] = 27] = "escape";
+        Keys[Keys["space"] = 32] = "space";
+        Keys[Keys["pageUp"] = 33] = "pageUp";
+        Keys[Keys["pageDown"] = 34] = "pageDown";
+        Keys[Keys["end"] = 35] = "end";
+        Keys[Keys["home"] = 36] = "home";
+        Keys[Keys["left"] = 37] = "left";
+        Keys[Keys["up"] = 38] = "up";
+        Keys[Keys["right"] = 39] = "right";
+        Keys[Keys["down"] = 40] = "down";
+        Keys[Keys["select"] = 41] = "select";
+        Keys[Keys["print"] = 42] = "print";
+        Keys[Keys["execute"] = 43] = "execute";
+        Keys[Keys["printScreen"] = 44] = "printScreen";
+        Keys[Keys["insert"] = 45] = "insert";
+        Keys[Keys["delete"] = 46] = "delete";
+        Keys[Keys["help"] = 47] = "help";
+        Keys[Keys["d0"] = 48] = "d0";
+        Keys[Keys["d1"] = 49] = "d1";
+        Keys[Keys["d2"] = 50] = "d2";
+        Keys[Keys["d3"] = 51] = "d3";
+        Keys[Keys["d4"] = 52] = "d4";
+        Keys[Keys["d5"] = 53] = "d5";
+        Keys[Keys["d6"] = 54] = "d6";
+        Keys[Keys["d7"] = 55] = "d7";
+        Keys[Keys["d8"] = 56] = "d8";
+        Keys[Keys["d9"] = 57] = "d9";
+        Keys[Keys["a"] = 65] = "a";
+        Keys[Keys["b"] = 66] = "b";
+        Keys[Keys["c"] = 67] = "c";
+        Keys[Keys["d"] = 68] = "d";
+        Keys[Keys["e"] = 69] = "e";
+        Keys[Keys["f"] = 70] = "f";
+        Keys[Keys["g"] = 71] = "g";
+        Keys[Keys["h"] = 72] = "h";
+        Keys[Keys["i"] = 73] = "i";
+        Keys[Keys["j"] = 74] = "j";
+        Keys[Keys["k"] = 75] = "k";
+        Keys[Keys["l"] = 76] = "l";
+        Keys[Keys["m"] = 77] = "m";
+        Keys[Keys["n"] = 78] = "n";
+        Keys[Keys["o"] = 79] = "o";
+        Keys[Keys["p"] = 80] = "p";
+        Keys[Keys["q"] = 81] = "q";
+        Keys[Keys["r"] = 82] = "r";
+        Keys[Keys["s"] = 83] = "s";
+        Keys[Keys["t"] = 84] = "t";
+        Keys[Keys["u"] = 85] = "u";
+        Keys[Keys["v"] = 86] = "v";
+        Keys[Keys["w"] = 87] = "w";
+        Keys[Keys["x"] = 88] = "x";
+        Keys[Keys["y"] = 89] = "y";
+        Keys[Keys["z"] = 90] = "z";
+        Keys[Keys["leftWindows"] = 91] = "leftWindows";
+        Keys[Keys["rightWindows"] = 92] = "rightWindows";
+        Keys[Keys["apps"] = 93] = "apps";
+        Keys[Keys["sleep"] = 95] = "sleep";
+        Keys[Keys["numPad0"] = 96] = "numPad0";
+        Keys[Keys["numPad1"] = 97] = "numPad1";
+        Keys[Keys["numPad2"] = 98] = "numPad2";
+        Keys[Keys["numPad3"] = 99] = "numPad3";
+        Keys[Keys["numPad4"] = 100] = "numPad4";
+        Keys[Keys["numPad5"] = 101] = "numPad5";
+        Keys[Keys["numPad6"] = 102] = "numPad6";
+        Keys[Keys["numPad7"] = 103] = "numPad7";
+        Keys[Keys["numPad8"] = 104] = "numPad8";
+        Keys[Keys["numPad9"] = 105] = "numPad9";
+        Keys[Keys["multiply"] = 106] = "multiply";
+        Keys[Keys["add"] = 107] = "add";
+        Keys[Keys["seperator"] = 108] = "seperator";
+        Keys[Keys["subtract"] = 109] = "subtract";
+        Keys[Keys["decimal"] = 110] = "decimal";
+        Keys[Keys["divide"] = 111] = "divide";
+        Keys[Keys["f1"] = 112] = "f1";
+        Keys[Keys["f2"] = 113] = "f2";
+        Keys[Keys["f3"] = 114] = "f3";
+        Keys[Keys["f4"] = 115] = "f4";
+        Keys[Keys["f5"] = 116] = "f5";
+        Keys[Keys["f6"] = 117] = "f6";
+        Keys[Keys["f7"] = 118] = "f7";
+        Keys[Keys["f8"] = 119] = "f8";
+        Keys[Keys["f9"] = 120] = "f9";
+        Keys[Keys["f10"] = 121] = "f10";
+        Keys[Keys["f11"] = 122] = "f11";
+        Keys[Keys["f12"] = 123] = "f12";
+        Keys[Keys["f13"] = 124] = "f13";
+        Keys[Keys["f14"] = 125] = "f14";
+        Keys[Keys["f15"] = 126] = "f15";
+        Keys[Keys["f16"] = 127] = "f16";
+        Keys[Keys["f17"] = 128] = "f17";
+        Keys[Keys["f18"] = 129] = "f18";
+        Keys[Keys["f19"] = 130] = "f19";
+        Keys[Keys["f20"] = 131] = "f20";
+        Keys[Keys["f21"] = 132] = "f21";
+        Keys[Keys["f22"] = 133] = "f22";
+        Keys[Keys["f23"] = 134] = "f23";
+        Keys[Keys["f24"] = 135] = "f24";
+        Keys[Keys["numLock"] = 144] = "numLock";
+        Keys[Keys["scroll"] = 145] = "scroll";
+        Keys[Keys["leftShift"] = 160] = "leftShift";
+        Keys[Keys["rightShift"] = 161] = "rightShift";
+        Keys[Keys["leftControl"] = 162] = "leftControl";
+        Keys[Keys["rightControl"] = 163] = "rightControl";
+        Keys[Keys["leftAlt"] = 164] = "leftAlt";
+        Keys[Keys["rightAlt"] = 165] = "rightAlt";
+        Keys[Keys["browserBack"] = 166] = "browserBack";
+        Keys[Keys["browserForward"] = 167] = "browserForward";
+    })(Keys = es.Keys || (es.Keys = {}));
+})(es || (es = {}));
+var es;
+(function (es) {
+    var ButtonState;
+    (function (ButtonState) {
+        ButtonState[ButtonState["pressed"] = 0] = "pressed";
+        ButtonState[ButtonState["released"] = 1] = "released";
+    })(ButtonState = es.ButtonState || (es.ButtonState = {}));
+    var MouseState = /** @class */ (function () {
+        function MouseState() {
+            this.leftButton = ButtonState.released;
+            this.middleButton = ButtonState.released;
+            this.rightButton = ButtonState.released;
+        }
+        MouseState.prototype.clone = function () {
+            var mouseState = new MouseState();
+            mouseState.leftButton = this.leftButton;
+            mouseState.middleButton = this.middleButton;
+            mouseState.rightButton = this.rightButton;
+            return mouseState;
+        };
+        return MouseState;
+    }());
+    es.MouseState = MouseState;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var OverlapBehavior;
+    (function (OverlapBehavior) {
+        /**
+         * 重复的输入将导致相互抵消，并且不会记录任何输入。
+         * 例如:按左箭头键，按住时按右箭头键。这将导致相互抵消。
+         */
+        OverlapBehavior[OverlapBehavior["cancelOut"] = 0] = "cancelOut";
+        /**
+         * 将使用找到的第一个输入
+         */
+        OverlapBehavior[OverlapBehavior["takeOlder"] = 1] = "takeOlder";
+        /**
+         * 将使用找到的最后一个输入
+         */
+        OverlapBehavior[OverlapBehavior["takeNewer"] = 2] = "takeNewer";
+    })(OverlapBehavior = es.OverlapBehavior || (es.OverlapBehavior = {}));
+    /**
+     * 虚拟按钮，其状态由其VirtualInputNodes的状态决定
+     */
+    var VirtualInput = /** @class */ (function () {
+        function VirtualInput() {
+            es.Input._virtualInputs.push(this);
+        }
+        /**
+         * 从输入系统取消虚拟输入的注册。在轮询VirtualInput之后调用这个函数
+         */
+        VirtualInput.prototype.deregister = function () {
+            new es.List(es.Input._virtualInputs).remove(this);
+        };
+        return VirtualInput;
+    }());
+    es.VirtualInput = VirtualInput;
+    /**
+     * 将它们添加到您的VirtualInput中，以定义它如何确定当前输入状态。
+     * 例如，如果你想检查一个键盘键是否被按下，创建一个VirtualButton并添加一个VirtualButton.keyboardkey
+     */
+    var VirtualInputNode = /** @class */ (function () {
+        function VirtualInputNode() {
+        }
+        VirtualInputNode.prototype.update = function () { };
+        return VirtualInputNode;
+    }());
+    es.VirtualInputNode = VirtualInputNode;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var VirtualIntegerAxis = /** @class */ (function (_super) {
+        __extends(VirtualIntegerAxis, _super);
+        function VirtualIntegerAxis() {
+            var nodes = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                nodes[_i] = arguments[_i];
+            }
+            var _this = _super.call(this) || this;
+            _this.nodes = [];
+            _this.nodes.concat(nodes);
+            return _this;
+        }
+        Object.defineProperty(VirtualIntegerAxis.prototype, "value", {
+            get: function () {
+                for (var i = 0; i < this.nodes.length; i++) {
+                    var val = this.nodes[i].value;
+                    if (val != 0)
+                        return Math.sign(val);
+                }
+                return 0;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        VirtualIntegerAxis.prototype.update = function () {
+            for (var i = 0; i < this.nodes.length; i++)
+                this.nodes[i].update();
+        };
+        /**
+         * 添加键盘键来模拟这个虚拟输入的左/右或上/下
+         * @param overlapBehavior
+         * @param negative
+         * @param positive
+         */
+        VirtualIntegerAxis.prototype.addKeyboardKeys = function (overlapBehavior, negative, positive) {
+            this.nodes.push(new es.KeyboardKeys(overlapBehavior, negative, positive));
+            return this;
+        };
+        return VirtualIntegerAxis;
+    }(es.VirtualInput));
+    es.VirtualIntegerAxis = VirtualIntegerAxis;
+    var VirtualAxisNode = /** @class */ (function (_super) {
+        __extends(VirtualAxisNode, _super);
+        function VirtualAxisNode() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return VirtualAxisNode;
+    }(es.VirtualInputNode));
+    es.VirtualAxisNode = VirtualAxisNode;
+})(es || (es = {}));
+///<reference path="VirtualInput.ts"/>
+///<reference path="VirtualIntegerAxis.ts"/>
+var es;
+///<reference path="VirtualInput.ts"/>
+///<reference path="VirtualIntegerAxis.ts"/>
+(function (es) {
+    var VirtualAxis = /** @class */ (function (_super) {
+        __extends(VirtualAxis, _super);
+        function VirtualAxis() {
+            var nodes = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                nodes[_i] = arguments[_i];
+            }
+            var _this = _super.call(this) || this;
+            _this.nodes = [];
+            _this.nodes.concat(nodes);
+            return _this;
+        }
+        Object.defineProperty(VirtualAxis.prototype, "value", {
+            get: function () {
+                for (var i = 0; i < this.nodes.length; i++) {
+                    var val = this.nodes[i].value;
+                    if (val != 0)
+                        return val;
+                }
+                return 0;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        VirtualAxis.prototype.update = function () {
+            for (var i = 0; i < this.nodes.length; i++)
+                this.nodes[i].update();
+        };
+        return VirtualAxis;
+    }(es.VirtualInput));
+    es.VirtualAxis = VirtualAxis;
+    var KeyboardKeys = /** @class */ (function (_super) {
+        __extends(KeyboardKeys, _super);
+        function KeyboardKeys(overlapBehavior, negative, positive) {
+            var _this = _super.call(this) || this;
+            _this._value = 0;
+            _this._turned = false;
+            _this.overlapBehavior = overlapBehavior;
+            _this.negative = negative;
+            _this.positive = positive;
+            return _this;
+        }
+        KeyboardKeys.prototype.update = function () {
+            if (es.Input.isKeyDown(this.positive)) {
+                if (es.Input.isKeyDown(this.negative)) {
+                    switch (this.overlapBehavior) {
+                        default:
+                        case es.OverlapBehavior.cancelOut:
+                            this._value = 0;
+                            break;
+                        case es.OverlapBehavior.takeNewer:
+                            if (!this._turned) {
+                                this._value *= -1;
+                                this._turned = true;
+                            }
+                            break;
+                        case es.OverlapBehavior.takeOlder:
+                            break;
+                    }
+                }
+                else {
+                    this._turned = false;
+                    this._value = 1;
+                }
+            }
+            else if (es.Input.isKeyDown(this.negative)) {
+                this._turned = false;
+                this._value = -1;
+            }
+            else {
+                this._turned = false;
+                this._value = 0;
+            }
+        };
+        Object.defineProperty(KeyboardKeys.prototype, "value", {
+            get: function () {
+                return this._value;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return KeyboardKeys;
+    }(es.VirtualAxisNode));
+    es.KeyboardKeys = KeyboardKeys;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -8512,7 +9677,7 @@ var es;
          * 它将处理任何与Collider重叠的ITriggerListeners。
          */
         ColliderTriggerHelper.prototype.update = function () {
-            var e_9, _a;
+            var e_11, _a;
             var lateColliders = [];
             // 对所有实体.colliders进行重叠检查，这些实体.colliders是触发器，与所有宽相碰撞器，无论是否触发器。   
             // 任何重叠都会导致触发事件
@@ -8548,12 +9713,12 @@ var es;
                     this.notifyTriggerListeners(pair, true);
                 }
             }
-            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            catch (e_11_1) { e_11 = { error: e_11_1 }; }
             finally {
                 try {
                     if (lateColliders_1_1 && !lateColliders_1_1.done && (_a = lateColliders_1.return)) _a.call(lateColliders_1);
                 }
-                finally { if (e_9) throw e_9.error; }
+                finally { if (e_11) throw e_11.error; }
             }
             this.checkForExitedColliders();
         };
@@ -9262,7 +10427,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
-            var e_10, _a;
+            var e_12, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location.clone();
             var resultCounter = 0;
@@ -9293,12 +10458,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_10) throw e_10.error; }
+                finally { if (e_12) throw e_12.error; }
             }
             return resultCounter;
         };
@@ -9310,7 +10475,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_11, _a;
+            var e_13, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -9345,12 +10510,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_11_1) { e_11 = { error: e_11_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
                     if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_11) throw e_11.error; }
+                finally { if (e_13) throw e_13.error; }
             }
             return resultCounter;
         };
@@ -14148,7 +15313,7 @@ var es;
             this._all = [];
         };
         PairSet.prototype.union = function (other) {
-            var e_12, _a;
+            var e_14, _a;
             var otherAll = other.all;
             try {
                 for (var otherAll_1 = __values(otherAll), otherAll_1_1 = otherAll_1.next(); !otherAll_1_1.done; otherAll_1_1 = otherAll_1.next()) {
@@ -14156,16 +15321,16 @@ var es;
                     this.add(elem);
                 }
             }
-            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (otherAll_1_1 && !otherAll_1_1.done && (_a = otherAll_1.return)) _a.call(otherAll_1);
                 }
-                finally { if (e_12) throw e_12.error; }
+                finally { if (e_14) throw e_14.error; }
             }
         };
         PairSet.prototype.except = function (other) {
-            var e_13, _a;
+            var e_15, _a;
             var otherAll = other.all;
             try {
                 for (var otherAll_2 = __values(otherAll), otherAll_2_1 = otherAll_2.next(); !otherAll_2_1.done; otherAll_2_1 = otherAll_2.next()) {
@@ -14173,12 +15338,12 @@ var es;
                     this.remove(elem);
                 }
             }
-            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
             finally {
                 try {
                     if (otherAll_2_1 && !otherAll_2_1.done && (_a = otherAll_2.return)) _a.call(otherAll_2);
                 }
-                finally { if (e_13) throw e_13.error; }
+                finally { if (e_15) throw e_15.error; }
             }
         };
         return PairSet;
@@ -16145,7 +17310,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_14, _a;
+            var e_16, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -16153,12 +17318,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_16) throw e_16.error; }
             }
             return result;
         };
@@ -16407,7 +17572,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_15, _a;
+            var e_17, _a;
             var output = es.ListPool.obtain(es.Vector2);
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -16446,12 +17611,12 @@ var es;
                         }
                     }
                 }
-                catch (e_15_1) { e_15 = { error: e_15_1 }; }
+                catch (e_17_1) { e_17 = { error: e_17_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_15) throw e_15.error; }
+                    finally { if (e_17) throw e_17.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -16567,7 +17732,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_16, _a;
+            var e_18, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -16585,12 +17750,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            catch (e_18_1) { e_18 = { error: e_18_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_16) throw e_16.error; }
+                finally { if (e_18) throw e_18.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

@@ -216,6 +216,17 @@ module es {
         }
 
         /**
+         * 返回egret颜色的十六进制表示
+         * @returns 
+         */
+        public toHexEgret(): number {
+            return Number("0x" + this._componentToHex(this.r) +
+            this._componentToHex(this.g) +
+            this._componentToHex(this.b) +
+            this._componentToHex(this.a));
+        }
+
+        /**
          * 从十六进制字符串设置颜色 
          *
          * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的 

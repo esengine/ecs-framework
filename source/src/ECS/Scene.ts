@@ -2,7 +2,9 @@
 module es {
     /** 场景 */
     export class Scene {
-        public camera: ICamera;
+        /** 场景名称 */
+        public name: string;
+        public camera: Camera;
         /** 这个场景中的实体列表 */
         public readonly entities: EntityList;
         public readonly renderableComponents: RenderableComponentList;
@@ -14,9 +16,13 @@ module es {
         public readonly identifierPool: IdentifierPool;
         private _didSceneBegin: boolean;
 
-        constructor() {
+        constructor(name?: string) {
+            this.name = name;
             this.entities = new EntityList(this);
             this.renderableComponents = new RenderableComponentList();
+
+            const cameraEntity = this.createEntity("camera");
+            this.camera = cameraEntity.addComponent(new Camera());
 
             this.entityProcessors = new EntityProcessorList();
             this.identifierPool = new IdentifierPool();
