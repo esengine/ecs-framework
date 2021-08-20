@@ -24,7 +24,7 @@ module es {
         /**
          * egret舞台
          */
-        public static stage: egret.DisplayObjectContainer;
+        public static stage: egret.Stage;
         /**
          * 是否正在debug模式
          * 仅允许在create时进行更改
@@ -42,7 +42,7 @@ module es {
         public _coroutineManager: CoroutineManager = new CoroutineManager();
         public _timerManager: TimerManager = new TimerManager();
 
-        private constructor(stage: egret.DisplayObjectContainer, debug: boolean = true, enableEntitySystems: boolean = true) {
+        private constructor(stage: egret.Stage, debug: boolean = true, enableEntitySystems: boolean = true) {
             Core._instance = this;
             Core.stage = stage;
             Core.emitter = new Emitter<CoreEvents>();
@@ -99,7 +99,7 @@ module es {
         /**
          * 默认实现创建核心
          */
-        public static create(stage: egret.DisplayObjectContainer, debug: boolean = true): Core {
+        public static create(stage: egret.Stage, debug: boolean = true): Core {
             if (this._instance == null) {
                 this._instance = new es.Core(stage, debug);
             }
@@ -179,6 +179,24 @@ module es {
             Time.sceneChanged();
         }
 
+        public registerCoreEvent() {
+            egret.lifecycle.addLifecycleListener((context) => {
+                context.onUpdate = () => {
+                    es.Core.emitter.emit(es.CoreEvents.frameUpdated);
+                }
+            });
+
+            egret.lifecycle.onPause = () => {
+                egret.ticker.pause();
+                Core.paused = true;
+            };
+
+            egret.lifecycle.onResume = () => {
+                egret.ticker.resume();
+                Core.paused = false;
+            };
+        }
+
         protected initialize() {
 
         }
@@ -200,6 +218,7 @@ module es {
                 if (this._nextScene != null) {
                     this._scene.end();
 
+                    Debug.log(LogType.info, "场景 {0} 切换至另一个场景 {1}", this._scene.name, this._nextScene.name);
                     this._scene = this._nextScene;
                     this._nextScene = null;
                     this.onSceneChanged();

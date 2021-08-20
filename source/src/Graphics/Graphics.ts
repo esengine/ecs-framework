@@ -4,11 +4,11 @@ module es {
         public batcher: IBatcher;
         public pixelTexture: egret.Sprite;
 
-        constructor(batcher: IBatcher) {
-            this.batcher = batcher;
+        constructor() {
+            this.batcher = new Batcher();
             this.pixelTexture = new egret.Sprite();
-            this.pixelTexture.width = 1;
-            this.pixelTexture.height = 1;
+            this.pixelTexture.graphics.drawRect(0, 0, 1, 1);
+            this.pixelTexture.graphics.endFill();
         }
     }
 }

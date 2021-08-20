@@ -23,7 +23,7 @@ declare module es {
         /**
          * egret舞台
          */
-        static stage: egret.DisplayObjectContainer;
+        static stage: egret.Stage;
         /**
          * 是否正在debug模式
          * 仅允许在create时进行更改
@@ -62,7 +62,7 @@ declare module es {
         /**
          * 默认实现创建核心
          */
-        static create(stage: egret.DisplayObjectContainer, debug?: boolean): Core;
+        static create(stage: egret.Stage, debug?: boolean): Core;
         /**
          * 添加一个全局管理器对象，它的更新方法将调用场景前的每一帧。
          * @param manager
@@ -97,6 +97,7 @@ declare module es {
          * 在一个场景结束后，下一个场景开始之前调用
          */
         onSceneChanged(): void;
+        registerCoreEvent(): void;
         protected initialize(): void;
         protected update(currentTime?: number): Promise<void>;
     }
@@ -209,6 +210,50 @@ declare module es {
         onDisabled(): void;
         setEnabled(isEnabled: boolean): this;
         setUpdateOrder(updateOrder: number): this;
+    }
+}
+declare module es {
+    class Camera extends Component implements IUpdatable, ICamera {
+        readonly position: Vector2;
+        readonly rotation: number;
+        readonly bounds: Rectangle;
+        readonly transformMatrix: Matrix2D;
+        readonly inverseTransformMatrix: Matrix2D;
+        origin: Vector2;
+        zoom: number;
+        rawZoom: number;
+        minimumZoom: number;
+        maximumZoom: number;
+        ratio: Vector2;
+        private _transformMatrix;
+        private _inverseTransformMatrix;
+        private _bounds;
+        private _inset;
+        private _zoom;
+        private _minimumZoom;
+        private _maxmumZoom;
+        private _origin;
+        private _ratio;
+        private _areMatrixesDirty;
+        private _areBoundsDirty;
+        private camera;
+        constructor();
+        onSceneRenderTargetSizeChanged(newWidth: number, newHeight: number): void;
+        protected updateMatrixes(): void;
+        setZoom(zoom: number): this;
+        setMinimumZoom(minZoom: number): this;
+        setMaximumZoom(maxZoom: number): this;
+        setRatio(value: Vector2): this;
+        setInset(left: number, right: number, top: number, bottom: number): this;
+        zoomIn(deltaZoom: number): void;
+        zoomOut(deltaZoom: number): void;
+        screenToWorldPoint(screenPosition: Vector2): Vector2;
+        worldToScreenPoint(worldPosition: Vector2): Vector2;
+        forceMatrixUpdate(): void;
+        onEntityTransformChanged(comp: ComponentTransform): void;
+        touchToWorldPoint(): Vector2;
+        mouseToWorldPoint(): Vector2;
+        update(): void;
     }
 }
 declare module es {
@@ -648,7 +693,9 @@ declare module es {
 declare module es {
     /** 场景 */
     class Scene {
-        camera: ICamera;
+        /** 场景名称 */
+        name: string;
+        camera: Camera;
         /** 这个场景中的实体列表 */
         readonly entities: EntityList;
         readonly renderableComponents: RenderableComponentList;
@@ -658,7 +705,7 @@ declare module es {
         _renderers: Renderer[];
         readonly identifierPool: IdentifierPool;
         private _didSceneBegin;
-        constructor();
+        constructor(name?: string);
         /**
          * 在场景子类中重写这个，然后在这里进行加载。
          * 在场景设置好之后，但在调用begin之前，从contructor中调用这个函数
@@ -1521,6 +1568,7 @@ declare module es {
         renderLayer: number;
         protected _renderLayer: number;
         onEntityTransformChanged(comp: ComponentTransform): void;
+        setColor(color: Color): this;
         localOffset: es.Vector2;
         setLocalOffset(offset: es.Vector2): this;
         isVisible: boolean;
@@ -1534,6 +1582,41 @@ declare module es {
         isVisibleFromCamera(cam: ICamera): boolean;
         debugRender(batcher: IBatcher): void;
         tweenColorTo(to: Color, duration: number): RenderableColorTween;
+    }
+}
+declare module es {
+    class SpriteRenderer extends Component {
+        constructor(sprite?: Sprite | egret.Texture);
+        protected _origin: Vector2;
+        /**
+         * 精灵的原点。这是在设置精灵时自动设置的
+         */
+        /**
+        * 精灵的原点。这是在设置精灵时自动设置的
+        * @param value
+        */
+        origin: Vector2;
+        protected _sprite: Sprite;
+        /**
+         * 应该由这个精灵显示的精灵
+         * 当设置时，精灵的原点也被设置为精灵的origin
+         */
+        /**
+        * 应该由这个精灵显示的精灵
+        * 当设置时，精灵的原点也被设置为精灵的origin
+        * @param value
+        */
+        sprite: Sprite;
+        /**
+         * 设置精灵并更新精灵的原点以匹配sprite.origin
+         * @param sprite
+         */
+        setSprite(sprite: Sprite): SpriteRenderer;
+        /**
+         * 设置可渲染的原点
+         * @param origin
+         */
+        setOrigin(origin: Vector2): SpriteRenderer;
     }
 }
 declare module es {
@@ -2297,7 +2380,94 @@ declare module es {
     class Graphics {
         static instance: Graphics;
         batcher: IBatcher;
-        constructor(batcher: IBatcher);
+        pixelTexture: egret.Sprite;
+        constructor();
+    }
+}
+declare module es {
+    /**
+     * 用于集中处理所有graphics绘制逻辑
+     */
+    class Batcher implements IBatcher {
+        static readonly TYPE_DEBUG: string;
+        static readonly TYPE_NORMAL: string;
+        /** 根据不同的batcherType来使用不同的graphics来进行绘制 */
+        private _batcherSprite;
+        camera: ICamera | null;
+        strokeNum: number;
+        sprite: egret.Sprite;
+        readonly MAX_STROKE: number;
+        constructor();
+        begin(cam: ICamera, batcherType?: string): void;
+        end(): void;
+        /**
+         * 绘制点
+         * @param points 点列表
+         * @param color 颜色
+         * @param thickness 粗细 默认1
+         */
+        drawPoints(points: Vector2[], color: Color, thickness?: number): void;
+        /**
+         * 绘制多边形
+         * @param position 多边形位置
+         * @param points 多边形点
+         * @param color 颜色
+         * @param closePoly 是否关闭图形
+         * @param thickness 粗细
+         */
+        drawPolygon(position: Vector2, points: Vector2[], color: Color, closePoly: boolean, thickness?: number): void;
+        /**
+         * 绘制空心矩形
+         * @param x 坐标x
+         * @param y 坐标y
+         * @param width 宽度
+         * @param height 高度
+         * @param color 颜色
+         * @param thickness 边框粗细
+         */
+        drawHollowRect(x: number, y: number, width: number, height: number, color: Color, thickness?: number): void;
+        /**
+         * 绘制圆形
+         * @param position 位置
+         * @param radius 半径
+         * @param color 颜色
+         * @param thickness 粗细
+         */
+        drawCircle(position: Vector2, radius: number, color: Color, thickness?: number): void;
+        /**
+         * 绘制低精度袁
+         * @param position 位置
+         * @param radius 半径
+         * @param color 颜色
+         * @param thickness 边框粗细
+         * @param resolution 圆边数
+         */
+        drawCircleLow(position: Vector2, radius: number, color: Color, thickness?: number, resolution?: number): void;
+        /**
+         * 绘制矩形
+         * @param x 位置x
+         * @param y 位置y
+         * @param width 宽度
+         * @param height 高度
+         * @param color 颜色
+         */
+        drawRect(x: number, y: number, width: number, height: number, color: Color): void;
+        /**
+         * 绘制线
+         * @param start 起始点坐标
+         * @param end 终点坐标
+         * @param color 颜色
+         * @param thickness 粗细
+         */
+        drawLine(start: Vector2, end: Vector2, color: Color, thickness: number): void;
+        /**
+         * 绘制点
+         * @param position 位置
+         * @param color 颜色
+         * @param size 大小
+         */
+        drawPixel(position: Vector2, color: Color, size?: number): void;
+        flushBatch(): void;
     }
 }
 declare module es {
@@ -2426,6 +2596,11 @@ declare module es {
          */
         toHex(): string;
         /**
+         * 返回egret颜色的十六进制表示
+         * @returns
+         */
+        toHexEgret(): number;
+        /**
          * 从十六进制字符串设置颜色
          *
          * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的
@@ -2530,9 +2705,9 @@ declare module es {
         begin(cam: ICamera): any;
         end(): any;
         drawPoints(points: Vector2[], color: Color, thickness?: number): any;
-        drawPolygon(poisition: Vector2, points: Vector2[], color: Color, closePoly: boolean, thickness?: number): any;
+        drawPolygon(position: Vector2, points: Vector2[], color: Color, closePoly: boolean, thickness?: number): any;
         drawHollowRect(x: number, y: number, width: number, height: number, color: Color, thickness?: number): any;
-        drawCircle(position: Vector2, raidus: number, color: Color, thickness?: number): any;
+        drawCircle(position: Vector2, radius: number, color: Color, thickness?: number): any;
         drawCircleLow(position: es.Vector2, radius: number, color: Color, thickness?: number, resolution?: number): any;
         drawRect(x: number, y: number, width: number, height: number, color: Color): any;
         drawLine(start: Vector2, end: Vector2, color: Color, thickness: number): any;
@@ -2565,6 +2740,310 @@ declare module es {
     class DefaultRenderer extends Renderer {
         constructor(renderOrder?: number, camera?: ICamera);
         render(scene: Scene): void;
+    }
+}
+declare module es {
+    class Sprite {
+        texture2D: egret.Texture;
+        readonly sourceRect: Rectangle;
+        readonly center: Vector2;
+        origin: Vector2;
+        readonly uvs: Rectangle;
+        constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
+        /**
+         * 提供一个精灵的列/行等间隔的图集的精灵列表
+         * @param texture
+         * @param cellWidth
+         * @param cellHeight
+         * @param cellOffset 处理时要包含的第一个单元格。基于0的索引
+         * @param maxCellsToInclude 包含的最大单元
+         */
+        static spritesFromAtlas(texture: egret.Texture, cellWidth: number, cellHeight: number, cellOffset?: number, maxCellsToInclude?: number): Sprite[];
+    }
+}
+declare module es {
+    class TouchState {
+        x: number;
+        y: number;
+        touchPoint: number;
+        touchDown: boolean;
+        readonly position: Vector2;
+        reset(): void;
+    }
+    class Input {
+        private static _init;
+        private static _previousTouchState;
+        private static _resolutionOffset;
+        private static _touchIndex;
+        private static _gameTouchs;
+        private static _mousePosition;
+        /**
+         * 触摸列表 存放最大个数量触摸点信息
+         * 可通过判断touchPoint是否为-1 来确定是否为有触摸
+         * 通过判断touchDown 判断触摸点是否有按下
+         */
+        static readonly gameTouchs: TouchState[];
+        private static _resolutionScale;
+        /** 获取缩放值 默认为1 */
+        static readonly resolutionScale: Vector2;
+        private static _totalTouchCount;
+        /** 当前触摸点数量 */
+        static readonly totalTouchCount: number;
+        /** 返回第一个触摸点的坐标 */
+        static readonly touchPosition: Vector2;
+        static readonly mousePosition: Vector2;
+        static _virtualInputs: VirtualInput[];
+        /** 获取最大触摸数 */
+        static readonly maxSupportedTouch: number;
+        /** 获取第一个触摸点距离上次距离的增量 */
+        static readonly touchPositionDelta: Vector2;
+        static initialize(): void;
+        static update(): void;
+        static scaledPosition(position: Vector2): Vector2;
+        /**
+         * 只有在当前帧按下并且在上一帧没有按下时才算press
+         * @param key
+         */
+        static isKeyPressed(key: Keys): boolean;
+        static isKeyPressedBoth(keyA: Keys, keyB: Keys): boolean;
+        static isKeyDown(key: Keys): boolean;
+        static isKeyDownBoth(keyA: Keys, keyB: Keys): boolean;
+        static isKeyReleased(key: Keys): boolean;
+        static isKeyReleasedBoth(keyA: Keys, keyB: Keys): boolean;
+        static readonly leftMouseButtonPressed: boolean;
+        static readonly rightMouseButtonPressed: boolean;
+        static readonly leftMouseButtonDown: boolean;
+        static readonly leftMouseButtonRelease: boolean;
+        static readonly rightMouseButtonDown: boolean;
+        static readonly rightMouseButtonRelease: boolean;
+        private static _previousMouseState;
+        private static _currentMouseState;
+        private static initTouchCache;
+        private static touchBegin;
+        private static touchMove;
+        private static touchEnd;
+        private static mouseDown;
+        private static mouseUp;
+        private static mouseMove;
+        private static mouseLeave;
+        private static setpreviousTouchState;
+    }
+}
+declare module es {
+    class KeyboardUtils {
+        /**
+         * 当前帧按键状态
+         */
+        static currentKeys: Keys[];
+        /**
+         * 上一帧按键状态
+         */
+        static previousKeys: Keys[];
+        private static keyStatusKeys;
+        static init(): void;
+        static update(): void;
+        static destroy(): void;
+        private static onKeyDownHandler;
+        private static onKeyUpHandler;
+    }
+}
+declare module es {
+    enum Keys {
+        none = 0,
+        back = 8,
+        tab = 9,
+        enter = 13,
+        capsLock = 20,
+        escape = 27,
+        space = 32,
+        pageUp = 33,
+        pageDown = 34,
+        end = 35,
+        home = 36,
+        left = 37,
+        up = 38,
+        right = 39,
+        down = 40,
+        select = 41,
+        print = 42,
+        execute = 43,
+        printScreen = 44,
+        insert = 45,
+        delete = 46,
+        help = 47,
+        d0 = 48,
+        d1 = 49,
+        d2 = 50,
+        d3 = 51,
+        d4 = 52,
+        d5 = 53,
+        d6 = 54,
+        d7 = 55,
+        d8 = 56,
+        d9 = 57,
+        a = 65,
+        b = 66,
+        c = 67,
+        d = 68,
+        e = 69,
+        f = 70,
+        g = 71,
+        h = 72,
+        i = 73,
+        j = 74,
+        k = 75,
+        l = 76,
+        m = 77,
+        n = 78,
+        o = 79,
+        p = 80,
+        q = 81,
+        r = 82,
+        s = 83,
+        t = 84,
+        u = 85,
+        v = 86,
+        w = 87,
+        x = 88,
+        y = 89,
+        z = 90,
+        leftWindows = 91,
+        rightWindows = 92,
+        apps = 93,
+        sleep = 95,
+        numPad0 = 96,
+        numPad1 = 97,
+        numPad2 = 98,
+        numPad3 = 99,
+        numPad4 = 100,
+        numPad5 = 101,
+        numPad6 = 102,
+        numPad7 = 103,
+        numPad8 = 104,
+        numPad9 = 105,
+        multiply = 106,
+        add = 107,
+        seperator = 108,
+        subtract = 109,
+        decimal = 110,
+        divide = 111,
+        f1 = 112,
+        f2 = 113,
+        f3 = 114,
+        f4 = 115,
+        f5 = 116,
+        f6 = 117,
+        f7 = 118,
+        f8 = 119,
+        f9 = 120,
+        f10 = 121,
+        f11 = 122,
+        f12 = 123,
+        f13 = 124,
+        f14 = 125,
+        f15 = 126,
+        f16 = 127,
+        f17 = 128,
+        f18 = 129,
+        f19 = 130,
+        f20 = 131,
+        f21 = 132,
+        f22 = 133,
+        f23 = 134,
+        f24 = 135,
+        numLock = 144,
+        scroll = 145,
+        leftShift = 160,
+        rightShift = 161,
+        leftControl = 162,
+        rightControl = 163,
+        leftAlt = 164,
+        rightAlt = 165,
+        browserBack = 166,
+        browserForward = 167
+    }
+}
+declare module es {
+    enum ButtonState {
+        pressed = 0,
+        released = 1
+    }
+    class MouseState {
+        leftButton: ButtonState;
+        middleButton: ButtonState;
+        rightButton: ButtonState;
+        clone(): MouseState;
+    }
+}
+declare module es {
+    enum OverlapBehavior {
+        /**
+         * 重复的输入将导致相互抵消，并且不会记录任何输入。
+         * 例如:按左箭头键，按住时按右箭头键。这将导致相互抵消。
+         */
+        cancelOut = 0,
+        /**
+         * 将使用找到的第一个输入
+         */
+        takeOlder = 1,
+        /**
+         * 将使用找到的最后一个输入
+         */
+        takeNewer = 2
+    }
+    /**
+     * 虚拟按钮，其状态由其VirtualInputNodes的状态决定
+     */
+    abstract class VirtualInput {
+        protected constructor();
+        /**
+         * 从输入系统取消虚拟输入的注册。在轮询VirtualInput之后调用这个函数
+         */
+        deregister(): void;
+        abstract update(): void;
+    }
+    /**
+     * 将它们添加到您的VirtualInput中，以定义它如何确定当前输入状态。
+     * 例如，如果你想检查一个键盘键是否被按下，创建一个VirtualButton并添加一个VirtualButton.keyboardkey
+     */
+    abstract class VirtualInputNode {
+        update(): void;
+    }
+}
+declare module es {
+    class VirtualIntegerAxis extends VirtualInput {
+        nodes: VirtualAxisNode[];
+        readonly value: number;
+        constructor(...nodes: VirtualAxisNode[]);
+        update(): void;
+        /**
+         * 添加键盘键来模拟这个虚拟输入的左/右或上/下
+         * @param overlapBehavior
+         * @param negative
+         * @param positive
+         */
+        addKeyboardKeys(overlapBehavior: OverlapBehavior, negative: Keys, positive: Keys): this;
+    }
+    abstract class VirtualAxisNode extends VirtualInputNode {
+        abstract value: number;
+    }
+}
+declare module es {
+    class VirtualAxis extends VirtualInput {
+        nodes: VirtualAxisNode[];
+        readonly value: number;
+        constructor(...nodes: VirtualAxisNode[]);
+        update(): void;
+    }
+    class KeyboardKeys extends VirtualAxisNode {
+        overlapBehavior: OverlapBehavior;
+        positive: Keys;
+        negative: Keys;
+        _value: number;
+        _turned: boolean;
+        constructor(overlapBehavior: OverlapBehavior, negative: Keys, positive: Keys);
+        update(): void;
+        readonly value: number;
     }
 }
 declare module es {

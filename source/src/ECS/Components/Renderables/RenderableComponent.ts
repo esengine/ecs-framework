@@ -38,6 +38,11 @@ module es {
             this._areBoundsDirty = true;
         }
 
+        public setColor(color: Color) {
+            this.color = color;
+            return this;
+        }
+
         public get localOffset() {
             return this._localOffset;
         }

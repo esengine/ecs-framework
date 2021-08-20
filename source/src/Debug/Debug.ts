@@ -22,6 +22,9 @@ module es {
         }
 
         public static log(type: LogType, format: string, ...args: any[]) {
+            if (!Core.Instance.debug)
+                return;
+            
             switch(type) {
                 case LogType.error:
                     console.error(`${type}: ${StringUtils.format(format, args)}`);
