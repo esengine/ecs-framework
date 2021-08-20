@@ -119,12 +119,12 @@ module es {
             return this;
         }
 
-        public addComponent<T extends Component>(component: T) {
-            return this.entity.addComponent(component);
+        public addComponent<T extends Component>(component: T): T {
+            return this.entity.addComponent<T>(component);
         }
 
-        public getComponent(type: new (...args: any[])=>Component) {
-            return this.entity.getComponent(type);
+        public getComponent<T extends Component>(type: new (...args: any[])=>T): T {
+            return this.entity.getComponent<T>(type);
         }
 
         public getComponents(typeName: any, componentList?: any[]) {

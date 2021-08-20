@@ -206,7 +206,7 @@ declare module es {
         setEnabled(isEnabled: boolean): this;
         setUpdateOrder(updateOrder: number): this;
         addComponent<T extends Component>(component: T): T;
-        getComponent(type: new (...args: any[]) => Component): Component;
+        getComponent<T extends Component>(type: new (...args: any[]) => T): T;
         getComponents(typeName: any, componentList?: any[]): any[];
         hasComponent(type: new (...args: any[]) => Component): boolean;
         removeComponent(component?: Component): void;
