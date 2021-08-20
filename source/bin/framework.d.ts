@@ -103,6 +103,13 @@ declare module es {
     }
 }
 declare module es {
+    class SpriteAnimation {
+        readonly sprites: Sprite[];
+        readonly frameRate: number;
+        constructor(sprites: Sprite[], frameRate?: number);
+    }
+}
+declare module es {
     enum LogType {
         error = 0,
         warn = 1,
@@ -1005,6 +1012,57 @@ declare module es {
     }
 }
 declare module es {
+    enum CameraStyle {
+        lockOn = 0,
+        cameraWindow = 1
+    }
+    class FollowCamera extends Component implements IUpdatable {
+        camera: Camera;
+        /**
+         * 如果相机模式为cameraWindow 则会进行缓动移动
+         * 该值为移动速度
+         */
+        followLerp: number;
+        /**
+         * 在cameraWindow模式下，宽度/高度被用做边界框，允许在不移动相机的情况下移动
+         * 在lockOn模式下，只使用deadZone的x/y值 你可以通过直接setCenteredDeadzone重写它来自定义deadZone
+         */
+        deadzone: Rectangle;
+        /**
+         * 相机聚焦于屏幕中心的偏移
+         */
+        focusOffset: Vector2;
+        /**
+         * 如果为true 相机位置则不会超出地图矩形（0, 0, mapwidth, mapheight）
+         */
+        mapLockEnabled: boolean;
+        mapSize: Rectangle;
+        _targetEntity: Entity;
+        _targetCollider: Collider;
+        _desiredPositionDelta: Vector2;
+        _cameraStyle: CameraStyle;
+        _worldSpaceDeadZone: Rectangle;
+        constructor(targetEntity?: Entity, camera?: Camera, cameraStyle?: CameraStyle);
+        onAddedToEntity(): void;
+        onRemovedFromEntity(): void;
+        onGraphicsDeviceReset(): void;
+        update(): void;
+        /**
+         * 固定相机 永远不会离开地图的可见区域
+         * @param position
+         */
+        clampToMapSize(position: Vector2): Vector2;
+        follow(targetEntity: Entity, cameraStyle?: CameraStyle): void;
+        updateFollow(): void;
+        /**
+         * 以给定的尺寸设置当前相机边界中心的死区
+         * @param width
+         * @param height
+         */
+        setCenteredDeadzone(width: number, height: number): void;
+    }
+}
+declare module es {
     /**
      * 接口，当添加到一个Component时，只要Component和实体被启用，它就会在每个框架中调用更新方法。
      */
@@ -1617,6 +1675,95 @@ declare module es {
          * @param origin
          */
         setOrigin(origin: Vector2): SpriteRenderer;
+    }
+}
+declare module es {
+    enum LoopMode {
+        /** 在一个循环序列[A][B][C][A][B][C][A][B][C]... */
+        loop = 0,
+        /** [A][B][C]然后暂停，设置时间为0 [A] */
+        once = 1,
+        /** [A][B][C]。当它到达终点时，它会继续播放最后一帧，并且不会停止播放 */
+        clampForever = 2,
+        /** 在乒乓循环中永远播放序列[A][B][C][B][A][B][C][B]...... */
+        pingPong = 3,
+        /** 向前播放一次序列，然后回到起点[A][B][C][B][A]，然后暂停并将时间设置为0 */
+        pingPongOnce = 4
+    }
+    enum State {
+        none = 0,
+        running = 1,
+        paused = 2,
+        completed = 3
+    }
+    /**
+     * SpriteAnimator处理精灵的显示和动画
+     */
+    class SpriteAnimator extends SpriteRenderer implements IUpdatable {
+        /**
+         * 在动画完成时触发，包括动画名称
+         */
+        onAnimationCompletedEvent: (string: any) => void;
+        /**
+         * 动画播放速度
+         */
+        speed: number;
+        /**
+         * 动画的当前状态
+         */
+        animationState: State;
+        /**
+         * 当前动画
+         */
+        currentAnimation: SpriteAnimation;
+        /**
+         * 当前动画的名称
+         */
+        currentAnimationName: string;
+        /**
+         * 当前动画的精灵数组中当前帧的索引
+         */
+        currentFrame: number;
+        _elapsedTime: number;
+        _loopMode: LoopMode;
+        constructor(sprite?: Sprite);
+        /**
+         * 检查当前动画是否正在运行
+         */
+        readonly isRunning: boolean;
+        private _animations;
+        /** 提供对可用动画列表的访问 */
+        readonly animations: Map<string, SpriteAnimation>;
+        update(): void;
+        /**
+         * 添加一个SpriteAnimation
+         * @param name
+         * @param animation
+         */
+        addAnimation(name: string, animation: SpriteAnimation): SpriteAnimator;
+        /**
+         * 以给定的名称放置动画。如果没有指定循环模式，则默认为循环
+         * @param name
+         * @param loopMode
+         */
+        play(name: string, loopMode?: LoopMode): void;
+        /**
+         * 检查动画是否在播放（即动画是否处于活动状态，可能仍处于暂停状态）
+         * @param name
+         */
+        isAnimationActive(name: string): boolean;
+        /**
+         * 暂停动画
+         */
+        pause(): void;
+        /**
+         * 继续动画
+         */
+        unPause(): void;
+        /**
+         * 停止当前动画并将其设为null
+         */
+        stop(): void;
     }
 }
 declare module es {

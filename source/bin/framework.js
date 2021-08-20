@@ -278,6 +278,18 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var SpriteAnimation = /** @class */ (function () {
+        function SpriteAnimation(sprites, frameRate) {
+            if (frameRate === void 0) { frameRate = 10; }
+            this.sprites = sprites;
+            this.frameRate = frameRate;
+        }
+        return SpriteAnimation;
+    }());
+    es.SpriteAnimation = SpriteAnimation;
+})(es || (es = {}));
+var es;
+(function (es) {
     var LogType;
     (function (LogType) {
         LogType[LogType["error"] = 0] = "error";
@@ -2519,6 +2531,150 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var CameraStyle;
+    (function (CameraStyle) {
+        CameraStyle[CameraStyle["lockOn"] = 0] = "lockOn";
+        CameraStyle[CameraStyle["cameraWindow"] = 1] = "cameraWindow";
+    })(CameraStyle = es.CameraStyle || (es.CameraStyle = {}));
+    var FollowCamera = /** @class */ (function (_super) {
+        __extends(FollowCamera, _super);
+        function FollowCamera(targetEntity, camera, cameraStyle) {
+            if (targetEntity === void 0) { targetEntity = null; }
+            if (camera === void 0) { camera = null; }
+            if (cameraStyle === void 0) { cameraStyle = CameraStyle.lockOn; }
+            var _this = _super.call(this) || this;
+            /**
+             * 如果相机模式为cameraWindow 则会进行缓动移动
+             * 该值为移动速度
+             */
+            _this.followLerp = 0.1;
+            /**
+             * 在cameraWindow模式下，宽度/高度被用做边界框，允许在不移动相机的情况下移动
+             * 在lockOn模式下，只使用deadZone的x/y值 你可以通过直接setCenteredDeadzone重写它来自定义deadZone
+             */
+            _this.deadzone = new es.Rectangle();
+            /**
+             * 相机聚焦于屏幕中心的偏移
+             */
+            _this.focusOffset = es.Vector2.zero;
+            /**
+             * 如果为true 相机位置则不会超出地图矩形（0, 0, mapwidth, mapheight）
+             */
+            _this.mapLockEnabled = false;
+            _this.mapSize = new es.Rectangle();
+            _this._desiredPositionDelta = new es.Vector2();
+            _this._worldSpaceDeadZone = new es.Rectangle();
+            _this._targetEntity = targetEntity;
+            _this._cameraStyle = cameraStyle;
+            _this.camera = camera;
+            return _this;
+        }
+        FollowCamera.prototype.onAddedToEntity = function () {
+            if (this.camera == null)
+                this.camera = this.entity.getOrCreateComponent(es.Camera);
+            this.follow(this._targetEntity, this._cameraStyle);
+        };
+        FollowCamera.prototype.onRemovedFromEntity = function () {
+        };
+        FollowCamera.prototype.onGraphicsDeviceReset = function () {
+            // 我们需要这个在下一帧触发 这样相机边界就会更新
+            es.Core.schedule(0, false, this, function (t) {
+                var self = t.context;
+                self.follow(self._targetEntity, self._cameraStyle);
+            });
+        };
+        FollowCamera.prototype.update = function () {
+            var halfScreen = this.camera.bounds.size.multiplyScaler(0.5);
+            this._worldSpaceDeadZone.x = this.camera.position.x - halfScreen.x + this.deadzone.x + this.focusOffset.x;
+            this._worldSpaceDeadZone.y = this.camera.position.y - halfScreen.y + this.deadzone.y + this.focusOffset.y;
+            this._worldSpaceDeadZone.width = this.deadzone.width;
+            this._worldSpaceDeadZone.height = this.deadzone.height;
+            if (this._targetEntity != null)
+                this.updateFollow();
+            this.camera.transform.position = es.Vector2.lerp(this.camera.position, es.Vector2.add(this.camera.position, this._desiredPositionDelta), this.followLerp);
+            this.entity.transform.roundPosition();
+            if (this.mapLockEnabled) {
+                this.camera.transform.position = this.clampToMapSize(this.camera.position);
+                this.entity.transform.roundPosition();
+            }
+        };
+        /**
+         * 固定相机 永远不会离开地图的可见区域
+         * @param position
+         */
+        FollowCamera.prototype.clampToMapSize = function (position) {
+            var halfScreen = this.camera.bounds.size.multiplyScaler(0.5).add(new es.Vector2(this.mapSize.x, this.mapSize.y));
+            var cameraMax = new es.Vector2(this.mapSize.width - halfScreen.x, this.mapSize.height - halfScreen.y);
+            return es.Vector2.clamp(position, halfScreen, cameraMax);
+        };
+        FollowCamera.prototype.follow = function (targetEntity, cameraStyle) {
+            if (cameraStyle === void 0) { cameraStyle = CameraStyle.cameraWindow; }
+            this._targetEntity = targetEntity;
+            this._cameraStyle = cameraStyle;
+            var cameraBounds = this.camera.bounds;
+            switch (this._cameraStyle) {
+                case CameraStyle.cameraWindow:
+                    var w = cameraBounds.width / 6;
+                    var h = cameraBounds.height / 3;
+                    this.deadzone = new es.Rectangle((cameraBounds.width - w) / 2, (cameraBounds.height - h) / 2, w, h);
+                    break;
+                case CameraStyle.lockOn:
+                    this.deadzone = new es.Rectangle(cameraBounds.width / 2, cameraBounds.height / 2, 10, 10);
+                    break;
+            }
+        };
+        FollowCamera.prototype.updateFollow = function () {
+            this._desiredPositionDelta.x = this._desiredPositionDelta.y = 0;
+            if (this._cameraStyle == CameraStyle.lockOn) {
+                var targetX = this._targetEntity.transform.position.x;
+                var targetY = this._targetEntity.transform.position.y;
+                if (this._worldSpaceDeadZone.x > targetX)
+                    this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;
+                else if (this._worldSpaceDeadZone.x < targetX)
+                    this._desiredPositionDelta.x = targetX - this._worldSpaceDeadZone.x;
+                if (this._worldSpaceDeadZone.y < targetY)
+                    this._desiredPositionDelta.y = targetY - this._worldSpaceDeadZone.y;
+                else if (this._worldSpaceDeadZone.y > targetY)
+                    this._desiredPositionDelta.y = targetY - this._worldSpaceDeadZone.y;
+            }
+            else {
+                if (!this._targetCollider) {
+                    this._targetCollider = this._targetEntity.getComponent(es.Collider);
+                    if (!this._targetCollider)
+                        return;
+                }
+                var targetBounds = this._targetEntity.getComponent(es.Collider).bounds;
+                if (!this._worldSpaceDeadZone.containsRect(targetBounds)) {
+                    if (this._worldSpaceDeadZone.left > targetBounds.left)
+                        this._desiredPositionDelta.x = targetBounds.left - this._worldSpaceDeadZone.left;
+                    else if (this._worldSpaceDeadZone.right < targetBounds.right)
+                        this._desiredPositionDelta.x = targetBounds.right - this._worldSpaceDeadZone.right;
+                    if (this._worldSpaceDeadZone.bottom < targetBounds.bottom)
+                        this._desiredPositionDelta.y = targetBounds.bottom - this._worldSpaceDeadZone.bottom;
+                    else if (this._worldSpaceDeadZone.top > targetBounds.top)
+                        this._desiredPositionDelta.y = targetBounds.top - this._worldSpaceDeadZone.top;
+                }
+            }
+        };
+        /**
+         * 以给定的尺寸设置当前相机边界中心的死区
+         * @param width
+         * @param height
+         */
+        FollowCamera.prototype.setCenteredDeadzone = function (width, height) {
+            if (!this.camera) {
+                console.error("相机是null。我们不能得到它的边界。请等到该组件添加到实体之后");
+                return;
+            }
+            var cameraBounds = this.camera.bounds;
+            this.deadzone = new es.Rectangle((cameraBounds.width - width) / 2, (cameraBounds.height - height) / 2, width, height);
+        };
+        return FollowCamera;
+    }(es.Component));
+    es.FollowCamera = FollowCamera;
+})(es || (es = {}));
+var es;
+(function (es) {
     /**
      * 用于比较组件更新排序
      */
@@ -4211,6 +4367,165 @@ var es;
         return SpriteRenderer;
     }(es.Component));
     es.SpriteRenderer = SpriteRenderer;
+})(es || (es = {}));
+///<reference path="./SpriteRenderer.ts" />
+var es;
+///<reference path="./SpriteRenderer.ts" />
+(function (es) {
+    var LoopMode;
+    (function (LoopMode) {
+        /** 在一个循环序列[A][B][C][A][B][C][A][B][C]... */
+        LoopMode[LoopMode["loop"] = 0] = "loop";
+        /** [A][B][C]然后暂停，设置时间为0 [A] */
+        LoopMode[LoopMode["once"] = 1] = "once";
+        /** [A][B][C]。当它到达终点时，它会继续播放最后一帧，并且不会停止播放 */
+        LoopMode[LoopMode["clampForever"] = 2] = "clampForever";
+        /** 在乒乓循环中永远播放序列[A][B][C][B][A][B][C][B]...... */
+        LoopMode[LoopMode["pingPong"] = 3] = "pingPong";
+        /** 向前播放一次序列，然后回到起点[A][B][C][B][A]，然后暂停并将时间设置为0 */
+        LoopMode[LoopMode["pingPongOnce"] = 4] = "pingPongOnce";
+    })(LoopMode = es.LoopMode || (es.LoopMode = {}));
+    var State;
+    (function (State) {
+        State[State["none"] = 0] = "none";
+        State[State["running"] = 1] = "running";
+        State[State["paused"] = 2] = "paused";
+        State[State["completed"] = 3] = "completed";
+    })(State = es.State || (es.State = {}));
+    /**
+     * SpriteAnimator处理精灵的显示和动画
+     */
+    var SpriteAnimator = /** @class */ (function (_super) {
+        __extends(SpriteAnimator, _super);
+        function SpriteAnimator(sprite) {
+            var _this = _super.call(this, sprite) || this;
+            /**
+             * 动画播放速度
+             */
+            _this.speed = 1;
+            /**
+             * 动画的当前状态
+             */
+            _this.animationState = State.none;
+            _this._elapsedTime = 0;
+            _this._animations = new Map();
+            return _this;
+        }
+        Object.defineProperty(SpriteAnimator.prototype, "isRunning", {
+            /**
+             * 检查当前动画是否正在运行
+             */
+            get: function () {
+                return this.animationState == State.running;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(SpriteAnimator.prototype, "animations", {
+            /** 提供对可用动画列表的访问 */
+            get: function () {
+                return this._animations;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        SpriteAnimator.prototype.update = function () {
+            if (this.animationState != State.running || this.currentAnimation == null)
+                return;
+            var animation = this.currentAnimation;
+            var secondsPerFrame = 1 / (animation.frameRate * this.speed);
+            var iterationDuration = secondsPerFrame * animation.sprites.length;
+            var pingPongInterationDuration = animation.sprites.length < 3 ? iterationDuration : secondsPerFrame * (animation.sprites.length * 2 - 2);
+            this._elapsedTime += es.Time.deltaTime;
+            var time = Math.abs(this._elapsedTime);
+            // Once和PingPongOnce一旦完成，就会重置回时间=0
+            if (this._loopMode == LoopMode.once && time > iterationDuration ||
+                this._loopMode == LoopMode.pingPongOnce && time > pingPongInterationDuration) {
+                this.animationState = State.completed;
+                this._elapsedTime = 0;
+                this.currentFrame = 0;
+                this.sprite = animation.sprites[0];
+                this.onAnimationCompletedEvent(this.currentAnimationName);
+                return;
+            }
+            if (this._loopMode == LoopMode.clampForever && time > iterationDuration) {
+                this.animationState = State.completed;
+                this.currentFrame = animation.sprites.length - 1;
+                this.sprite = animation.sprites[this.currentFrame];
+                this.onAnimationCompletedEvent(this.currentAnimationName);
+                return;
+            }
+            // 弄清楚我们在哪个坐标系上
+            var i = Math.floor(time / secondsPerFrame);
+            var n = animation.sprites.length;
+            if (n > 2 && (this._loopMode == LoopMode.pingPong || this._loopMode == LoopMode.pingPongOnce)) {
+                // pingpong
+                var maxIndex = n - 1;
+                this.currentFrame = maxIndex - Math.abs(maxIndex - i % (maxIndex * 2));
+            }
+            else {
+                this.currentFrame = i % n;
+            }
+            this.sprite = animation.sprites[this.currentFrame];
+        };
+        /**
+         * 添加一个SpriteAnimation
+         * @param name
+         * @param animation
+         */
+        SpriteAnimator.prototype.addAnimation = function (name, animation) {
+            // 如果我们没有精灵，使用我们找到的第一帧
+            if (!this.sprite && animation.sprites.length > 0)
+                this.setSprite(animation.sprites[0]);
+            this._animations[name] = animation;
+            return this;
+        };
+        /**
+         * 以给定的名称放置动画。如果没有指定循环模式，则默认为循环
+         * @param name
+         * @param loopMode
+         */
+        SpriteAnimator.prototype.play = function (name, loopMode) {
+            if (loopMode === void 0) { loopMode = null; }
+            this.currentAnimation = this._animations[name];
+            this.currentAnimationName = name;
+            this.currentFrame = 0;
+            this.animationState = State.running;
+            this.sprite = this.currentAnimation.sprites[0];
+            this._elapsedTime = 0;
+            this._loopMode = loopMode || LoopMode.loop;
+        };
+        /**
+         * 检查动画是否在播放（即动画是否处于活动状态，可能仍处于暂停状态）
+         * @param name
+         */
+        SpriteAnimator.prototype.isAnimationActive = function (name) {
+            return this.currentAnimation != null && this.currentAnimationName == name;
+        };
+        /**
+         * 暂停动画
+         */
+        SpriteAnimator.prototype.pause = function () {
+            this.animationState = State.paused;
+        };
+        /**
+         * 继续动画
+         */
+        SpriteAnimator.prototype.unPause = function () {
+            this.animationState = State.running;
+        };
+        /**
+         * 停止当前动画并将其设为null
+         */
+        SpriteAnimator.prototype.stop = function () {
+            this.currentAnimation = null;
+            this.currentAnimationName = null;
+            this.currentFrame = 0;
+            this.animationState = State.none;
+        };
+        return SpriteAnimator;
+    }(es.SpriteRenderer));
+    es.SpriteAnimator = SpriteAnimator;
 })(es || (es = {}));
 var es;
 (function (es) {
