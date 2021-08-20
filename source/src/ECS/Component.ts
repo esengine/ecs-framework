@@ -118,5 +118,29 @@ module es {
 
             return this;
         }
+
+        public addComponent<T extends Component>(component: T) {
+            return this.entity.addComponent(component);
+        }
+
+        public getComponent(type: new (...args: any[])=>Component) {
+            return this.entity.getComponent(type);
+        }
+
+        public getComponents(typeName: any, componentList?: any[]) {
+            return this.entity.getComponents(typeName, componentList);
+        }
+
+        public hasComponent(type: new (...args: any[])=>Component) {
+            return this.entity.hasComponent(type);
+        }
+
+        public removeComponent(component?: Component) {
+            if (component) {
+                this.entity.removeComponent(component);
+            } else {
+                this.entity.removeComponent(this);
+            }
+        }
     }
 }

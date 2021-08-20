@@ -205,6 +205,11 @@ declare module es {
         onDisabled(): void;
         setEnabled(isEnabled: boolean): this;
         setUpdateOrder(updateOrder: number): this;
+        addComponent<T extends Component>(component: T): T;
+        getComponent(type: new (...args: any[]) => Component): Component;
+        getComponents(typeName: any, componentList?: any[]): any[];
+        hasComponent(type: new (...args: any[]) => Component): boolean;
+        removeComponent(component?: Component): void;
     }
 }
 declare module es {
@@ -408,7 +413,7 @@ declare module es {
          * @param typeName
          * @param componentList
          */
-        getComponents(typeName: any, componentList?: any): any[];
+        getComponents(typeName: any, componentList?: any[]): any[];
         /**
          * 从组件列表中删除组件
          * @param component

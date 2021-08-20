@@ -542,6 +542,26 @@ var es;
             }
             return this;
         };
+        Component.prototype.addComponent = function (component) {
+            return this.entity.addComponent(component);
+        };
+        Component.prototype.getComponent = function (type) {
+            return this.entity.getComponent(type);
+        };
+        Component.prototype.getComponents = function (typeName, componentList) {
+            return this.entity.getComponents(typeName, componentList);
+        };
+        Component.prototype.hasComponent = function (type) {
+            return this.entity.hasComponent(type);
+        };
+        Component.prototype.removeComponent = function (component) {
+            if (component) {
+                this.entity.removeComponent(component);
+            }
+            else {
+                this.entity.removeComponent(this);
+            }
+        };
         Component._idGenerator = 0;
         return Component;
     }());
