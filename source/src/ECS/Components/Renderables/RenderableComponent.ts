@@ -1,6 +1,33 @@
 module es {
     export abstract class RenderableComponent extends es.Component implements IRenderable {
-        public sprite: egret.Sprite = new egret.Sprite();
+        protected _sprite: Sprite;
+
+        /**
+         * 应该由这个精灵显示的精灵
+         * 当设置时，精灵的原点也被设置为精灵的origin
+         */
+         public get sprite(): Sprite {
+            return this._sprite;
+        }
+
+        /**
+         * 应该由这个精灵显示的精灵
+         * 当设置时，精灵的原点也被设置为精灵的origin
+         * @param value
+         */
+        public set sprite(value: Sprite) {
+            this.setSprite(value);
+        }
+
+        /**
+         * 设置精灵并更新精灵的原点以匹配sprite.origin
+         * @param sprite
+         */
+        public setSprite(sprite: Sprite): RenderableComponent {
+            this._sprite = sprite;
+
+            return this;
+        }
 
         public getwidth() {
             return this.bounds.width;

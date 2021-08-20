@@ -1,6 +1,6 @@
 module es {
     export interface IRenderable {
-        sprite: egret.Sprite;
+        sprite: Sprite;
         enabled: boolean;
         renderLayer: number;
         isVisibleFromCamera(camera: ICamera): boolean;

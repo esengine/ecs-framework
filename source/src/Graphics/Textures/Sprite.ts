@@ -1,14 +1,15 @@
 module es {
-    export class Sprite {
+    export class Sprite extends egret.Sprite {
         public texture2D: egret.Texture;
         public readonly sourceRect: Rectangle;
         public readonly center: Vector2;
         public origin: Vector2;
         public readonly uvs: Rectangle = new Rectangle();
 
-        constructor(texture: egret.Texture,
+        constructor(texture?: egret.Texture,
             sourceRect: Rectangle = new Rectangle(0, 0, texture.textureWidth, texture.textureHeight),
             origin: Vector2 = sourceRect.getHalfSize()) {
+            super();
             this.texture2D = texture;
             this.sourceRect = sourceRect;
             this.center = new Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);

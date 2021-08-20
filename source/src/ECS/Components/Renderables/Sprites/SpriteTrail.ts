@@ -27,6 +27,13 @@ module es {
             this._targetColor = targetColor;
         }
 
+        public setSpriteRenderOptions(rotation: number, origin: Vector2, scale: Vector2, layerDepth: number) {
+            this._rotation = rotation;
+            this._origin = origin;
+            this._scale = scale;
+            this._layerDepth = layerDepth;
+        }
+
         public update(): boolean {
             this._elapsedTime += Time.deltaTime;
 
@@ -40,7 +47,7 @@ module es {
             return false;
         }
 
-        public render(batcher: Batcher, camera: Camera) {
+        public render(batcher: IBatcher, camera: ICamera) {
         }
     }
 
@@ -57,46 +64,46 @@ module es {
             this.setMaxSpriteInstance(value);
         }
 
-        public minDistanceBetweenInstance = 30;
+        public minDistanceBetweenInstances = 30;
         public fadeDuration = 0.8;
         public fadeDelay = 0.1;
         public initialColor = Color.White;
         public fadeToColor = Color.Transparent;
 
         _maxSpriteInstance = 15;
-        _availableSpriteTrailInstance: SpriteTrailInstance[] = [];
-        _liveSpriteTrailInstance: SpriteTrailInstance[] = [];
+        _availableSpriteTrailInstances: SpriteTrailInstance[] = [];
+        _liveSpriteTrailInstances: SpriteTrailInstance[] = [];
         _lastPosition: Vector2;
-        _sprite: SpriteRenderer;
+        _spriteRender: SpriteRenderer;
 
         _isFirstInstance: boolean;
         _awaitingDisable: boolean;
 
-        constructor(sprite?: SpriteRenderer) {
+        constructor(spriteRender?: SpriteRenderer) {
             super();
 
-            this._sprite = sprite;
+            this._spriteRender = spriteRender;
         }
 
         public setMaxSpriteInstance(maxSpriteInstance: number) {
-            if (this._availableSpriteTrailInstance.length < maxSpriteInstance) {
-                const newInstance = this._availableSpriteTrailInstance.length - maxSpriteInstance;
+            if (this._availableSpriteTrailInstances.length < maxSpriteInstance) {
+                const newInstance = this._availableSpriteTrailInstances.length - maxSpriteInstance;
                 for (let i = 0; i < newInstance; i ++)
-                    this._availableSpriteTrailInstance.push(new SpriteTrailInstance());
+                    this._availableSpriteTrailInstances.push(new SpriteTrailInstance());
             }
 
-            if (this._availableSpriteTrailInstance.length > maxSpriteInstance) {
-                const excessInstances = maxSpriteInstance - this._availableSpriteTrailInstance.length;
+            if (this._availableSpriteTrailInstances.length > maxSpriteInstance) {
+                const excessInstances = maxSpriteInstance - this._availableSpriteTrailInstances.length;
                 for (let i = 0; i < excessInstances; i ++)
-                    this._availableSpriteTrailInstance.pop();
+                    this._availableSpriteTrailInstances.pop();
             }
 
             this._maxSpriteInstance = maxSpriteInstance;
             return this;
         }
 
-        public setMinDistanceBetweenInstance(minDistanceBetweenInstances: number) {
-            this.minDistanceBetweenInstance = minDistanceBetweenInstances;
+        public setMinDistanceBetweenInstances(minDistanceBetweenInstances: number) {
+            this.minDistanceBetweenInstances = minDistanceBetweenInstances;
             return this;
         }
 
@@ -133,19 +140,75 @@ module es {
             } else {
                 this.enabled = false;
 
-                for (let i = 0; i < this._liveSpriteTrailInstance.length; i ++)
-                    this._availableSpriteTrailInstance.push(this._liveSpriteTrailInstance[i]);
-                this._liveSpriteTrailInstance.length = 0;
+                for (let i = 0; i < this._liveSpriteTrailInstances.length; i ++)
+                    this._availableSpriteTrailInstances.push(this._liveSpriteTrailInstances[i]);
+                this._liveSpriteTrailInstances.length = 0;
             }
         }
 
         public onAddedToEntity() {
+            if (this._spriteRender == null)
+                this._spriteRender = this.getComponent(SpriteRenderer);
+
+            if (this._spriteRender == null) {
+                this.enabled = false;
+                return;
+            }
+
+            if (this._availableSpriteTrailInstances.length == 0) {
+                for (let i = 0; i < this._maxSpriteInstance; i ++)
+                    this._availableSpriteTrailInstances.push(new SpriteTrailInstance());
+            }
         }
 
-        update() {
+        public update() {
+            if (this._isFirstInstance) {
+                this._isFirstInstance = false;
+                this.spawnInstance();
+            } else {
+                const distanceMoved = Math.abs(Vector2.distance(this.entity.transform.position.add(this._localOffset), this._lastPosition));
+                if (distanceMoved >= this.minDistanceBetweenInstances)
+                    this.spawnInstance();
+            }
+
+            let min = new Vector2(Number.MAX_VALUE, Number.MAX_VALUE);
+            let max = new Vector2(Number.MIN_VALUE, Number.MIN_VALUE);
+
+            for (let i = this._liveSpriteTrailInstances.length - 1; i >= 0; i --) {
+                if (this._liveSpriteTrailInstances[i].update()) {
+                    this._availableSpriteTrailInstances.push(this._liveSpriteTrailInstances[i]);
+                    this._liveSpriteTrailInstances.splice(i, 1);
+                } else {
+                    min = Vector2.min(min, this._liveSpriteTrailInstances[i].position);
+                    max = Vector2.max(max, this._liveSpriteTrailInstances[i].position);
+                }
+            }
+
+            this._bounds.location = min;
+            this._bounds.width = max.x - min.x;
+            this._bounds.height = max.y - min.y;
+            this._bounds.inflate(this._spriteRender.getwidth(), this._spriteRender.getheight());
+
+            if (this._awaitingDisable && this._liveSpriteTrailInstances.length == 0)
+                this.enabled = false;
+        }
+
+        spawnInstance() {
+            this._lastPosition = this._spriteRender.entity.transform.position.add(this._spriteRender.localOffset);
+
+            if (this._awaitingDisable || this._availableSpriteTrailInstances.length == 0)
+                return;
+
+            const instance = this._availableSpriteTrailInstances.pop();
+            instance.spawn(this._lastPosition, this._spriteRender.sprite, this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
+            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotation, this._spriteRender.origin,
+                this._spriteRender.entity.transform.scale, this.renderLayer);
+            this._liveSpriteTrailInstances.push(instance);
         }
 
         public render(batcher: IBatcher, camera: ICamera): void {
+            for (let i = 0; i < this._liveSpriteTrailInstances.length; i ++)
+                this._liveSpriteTrailInstances[i].render(batcher, camera);
         }
     }
 }

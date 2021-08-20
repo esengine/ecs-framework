@@ -4187,7 +4187,6 @@ var es;
         __extends(RenderableComponent, _super);
         function RenderableComponent() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
-            _this.sprite = new egret.Sprite();
             _this._bounds = new es.Rectangle();
             _this._areBoundsDirty = true;
             _this.color = es.Color.White;
@@ -4197,6 +4196,33 @@ var es;
             _this._localOffset = new es.Vector2();
             return _this;
         }
+        Object.defineProperty(RenderableComponent.prototype, "sprite", {
+            /**
+             * 应该由这个精灵显示的精灵
+             * 当设置时，精灵的原点也被设置为精灵的origin
+             */
+            get: function () {
+                return this._sprite;
+            },
+            /**
+             * 应该由这个精灵显示的精灵
+             * 当设置时，精灵的原点也被设置为精灵的origin
+             * @param value
+             */
+            set: function (value) {
+                this.setSprite(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /**
+         * 设置精灵并更新精灵的原点以匹配sprite.origin
+         * @param sprite
+         */
+        RenderableComponent.prototype.setSprite = function (sprite) {
+            this._sprite = sprite;
+            return this;
+        };
         RenderableComponent.prototype.getwidth = function () {
             return this.bounds.width;
         };
@@ -4344,25 +4370,6 @@ var es;
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(SpriteRenderer.prototype, "sprite", {
-            /**
-             * 应该由这个精灵显示的精灵
-             * 当设置时，精灵的原点也被设置为精灵的origin
-             */
-            get: function () {
-                return this._sprite;
-            },
-            /**
-             * 应该由这个精灵显示的精灵
-             * 当设置时，精灵的原点也被设置为精灵的origin
-             * @param value
-             */
-            set: function (value) {
-                this.setSprite(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
         /**
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
@@ -4384,8 +4391,10 @@ var es;
             }
             return this;
         };
+        SpriteRenderer.prototype.render = function (batcher, camera) {
+        };
         return SpriteRenderer;
-    }(es.Component));
+    }(es.RenderableComponent));
     es.SpriteRenderer = SpriteRenderer;
 })(es || (es = {}));
 ///<reference path="./SpriteRenderer.ts" />
@@ -4562,6 +4571,12 @@ var es;
             this._initialColor = initialColor;
             this._targetColor = targetColor;
         };
+        SpriteTrailInstance.prototype.setSpriteRenderOptions = function (rotation, origin, scale, layerDepth) {
+            this._rotation = rotation;
+            this._origin = origin;
+            this._scale = scale;
+            this._layerDepth = layerDepth;
+        };
         SpriteTrailInstance.prototype.update = function () {
             this._elapsedTime += es.Time.deltaTime;
             if (this._elapsedTime > this._fadeDelay && this._elapsedTime < this._fadeDuration + this._fadeDelay) {
@@ -4579,17 +4594,17 @@ var es;
     }());
     var SpriteTrail = /** @class */ (function (_super) {
         __extends(SpriteTrail, _super);
-        function SpriteTrail(sprite) {
+        function SpriteTrail(spriteRender) {
             var _this = _super.call(this) || this;
-            _this.minDistanceBetweenInstance = 30;
+            _this.minDistanceBetweenInstances = 30;
             _this.fadeDuration = 0.8;
             _this.fadeDelay = 0.1;
             _this.initialColor = es.Color.White;
             _this.fadeToColor = es.Color.Transparent;
             _this._maxSpriteInstance = 15;
-            _this._availableSpriteTrailInstance = [];
-            _this._liveSpriteTrailInstance = [];
-            _this._sprite = sprite;
+            _this._availableSpriteTrailInstances = [];
+            _this._liveSpriteTrailInstances = [];
+            _this._spriteRender = spriteRender;
             return _this;
         }
         SpriteTrail.prototype.getbounds = function () {
@@ -4606,21 +4621,21 @@ var es;
             configurable: true
         });
         SpriteTrail.prototype.setMaxSpriteInstance = function (maxSpriteInstance) {
-            if (this._availableSpriteTrailInstance.length < maxSpriteInstance) {
-                var newInstance = this._availableSpriteTrailInstance.length - maxSpriteInstance;
+            if (this._availableSpriteTrailInstances.length < maxSpriteInstance) {
+                var newInstance = this._availableSpriteTrailInstances.length - maxSpriteInstance;
                 for (var i = 0; i < newInstance; i++)
-                    this._availableSpriteTrailInstance.push(new SpriteTrailInstance());
+                    this._availableSpriteTrailInstances.push(new SpriteTrailInstance());
             }
-            if (this._availableSpriteTrailInstance.length > maxSpriteInstance) {
-                var excessInstances = maxSpriteInstance - this._availableSpriteTrailInstance.length;
+            if (this._availableSpriteTrailInstances.length > maxSpriteInstance) {
+                var excessInstances = maxSpriteInstance - this._availableSpriteTrailInstances.length;
                 for (var i = 0; i < excessInstances; i++)
-                    this._availableSpriteTrailInstance.pop();
+                    this._availableSpriteTrailInstances.pop();
             }
             this._maxSpriteInstance = maxSpriteInstance;
             return this;
         };
-        SpriteTrail.prototype.setMinDistanceBetweenInstance = function (minDistanceBetweenInstances) {
-            this.minDistanceBetweenInstance = minDistanceBetweenInstances;
+        SpriteTrail.prototype.setMinDistanceBetweenInstances = function (minDistanceBetweenInstances) {
+            this.minDistanceBetweenInstances = minDistanceBetweenInstances;
             return this;
         };
         SpriteTrail.prototype.setFadeDuration = function (fadeDuration) {
@@ -4652,16 +4667,64 @@ var es;
             }
             else {
                 this.enabled = false;
-                for (var i = 0; i < this._liveSpriteTrailInstance.length; i++)
-                    this._availableSpriteTrailInstance.push(this._liveSpriteTrailInstance[i]);
-                this._liveSpriteTrailInstance.length = 0;
+                for (var i = 0; i < this._liveSpriteTrailInstances.length; i++)
+                    this._availableSpriteTrailInstances.push(this._liveSpriteTrailInstances[i]);
+                this._liveSpriteTrailInstances.length = 0;
             }
         };
         SpriteTrail.prototype.onAddedToEntity = function () {
+            if (this._spriteRender == null)
+                this._spriteRender = this.getComponent(es.SpriteRenderer);
+            if (this._spriteRender == null) {
+                this.enabled = false;
+                return;
+            }
+            if (this._availableSpriteTrailInstances.length == 0) {
+                for (var i = 0; i < this._maxSpriteInstance; i++)
+                    this._availableSpriteTrailInstances.push(new SpriteTrailInstance());
+            }
         };
         SpriteTrail.prototype.update = function () {
+            if (this._isFirstInstance) {
+                this._isFirstInstance = false;
+                this.spawnInstance();
+            }
+            else {
+                var distanceMoved = Math.abs(es.Vector2.distance(this.entity.transform.position.add(this._localOffset), this._lastPosition));
+                if (distanceMoved >= this.minDistanceBetweenInstances)
+                    this.spawnInstance();
+            }
+            var min = new es.Vector2(Number.MAX_VALUE, Number.MAX_VALUE);
+            var max = new es.Vector2(Number.MIN_VALUE, Number.MIN_VALUE);
+            for (var i = this._liveSpriteTrailInstances.length - 1; i >= 0; i--) {
+                if (this._liveSpriteTrailInstances[i].update()) {
+                    this._availableSpriteTrailInstances.push(this._liveSpriteTrailInstances[i]);
+                    this._liveSpriteTrailInstances.splice(i, 1);
+                }
+                else {
+                    min = es.Vector2.min(min, this._liveSpriteTrailInstances[i].position);
+                    max = es.Vector2.max(max, this._liveSpriteTrailInstances[i].position);
+                }
+            }
+            this._bounds.location = min;
+            this._bounds.width = max.x - min.x;
+            this._bounds.height = max.y - min.y;
+            this._bounds.inflate(this._spriteRender.getwidth(), this._spriteRender.getheight());
+            if (this._awaitingDisable && this._liveSpriteTrailInstances.length == 0)
+                this.enabled = false;
+        };
+        SpriteTrail.prototype.spawnInstance = function () {
+            this._lastPosition = this._spriteRender.entity.transform.position.add(this._spriteRender.localOffset);
+            if (this._awaitingDisable || this._availableSpriteTrailInstances.length == 0)
+                return;
+            var instance = this._availableSpriteTrailInstances.pop();
+            instance.spawn(this._lastPosition, this._spriteRender.sprite, this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
+            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotation, this._spriteRender.origin, this._spriteRender.entity.transform.scale, this.renderLayer);
+            this._liveSpriteTrailInstances.push(instance);
         };
         SpriteTrail.prototype.render = function (batcher, camera) {
+            for (var i = 0; i < this._liveSpriteTrailInstances.length; i++)
+                this._liveSpriteTrailInstances[i].render(batcher, camera);
         };
         return SpriteTrail;
     }(es.RenderableComponent));
@@ -7494,21 +7557,24 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Sprite = /** @class */ (function () {
+    var Sprite = /** @class */ (function (_super) {
+        __extends(Sprite, _super);
         function Sprite(texture, sourceRect, origin) {
             if (sourceRect === void 0) { sourceRect = new es.Rectangle(0, 0, texture.textureWidth, texture.textureHeight); }
             if (origin === void 0) { origin = sourceRect.getHalfSize(); }
-            this.uvs = new es.Rectangle();
-            this.texture2D = texture;
-            this.sourceRect = sourceRect;
-            this.center = new es.Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
-            this.origin = origin;
+            var _this = _super.call(this) || this;
+            _this.uvs = new es.Rectangle();
+            _this.texture2D = texture;
+            _this.sourceRect = sourceRect;
+            _this.center = new es.Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
+            _this.origin = origin;
             var inverseTexW = 1 / texture.textureWidth;
             var inverseTexH = 1 / texture.textureHeight;
-            this.uvs.x = sourceRect.x * inverseTexW;
-            this.uvs.y = sourceRect.y * inverseTexH;
-            this.uvs.width = sourceRect.width * inverseTexW;
-            this.uvs.height = sourceRect.height * inverseTexH;
+            _this.uvs.x = sourceRect.x * inverseTexW;
+            _this.uvs.y = sourceRect.y * inverseTexH;
+            _this.uvs.width = sourceRect.width * inverseTexW;
+            _this.uvs.height = sourceRect.height * inverseTexH;
+            return _this;
         }
         /**
          * 提供一个精灵的列/行等间隔的图集的精灵列表
@@ -7541,7 +7607,7 @@ var es;
             return sprites;
         };
         return Sprite;
-    }());
+    }(egret.Sprite));
     es.Sprite = Sprite;
 })(es || (es = {}));
 var es;

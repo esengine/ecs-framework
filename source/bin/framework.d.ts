@@ -1610,7 +1610,7 @@ declare module es {
 }
 declare module es {
     interface IRenderable {
-        sprite: egret.Sprite;
+        sprite: Sprite;
         enabled: boolean;
         renderLayer: number;
         isVisibleFromCamera(camera: ICamera): boolean;
@@ -1620,7 +1620,22 @@ declare module es {
 }
 declare module es {
     abstract class RenderableComponent extends es.Component implements IRenderable {
-        sprite: egret.Sprite;
+        protected _sprite: Sprite;
+        /**
+         * 应该由这个精灵显示的精灵
+         * 当设置时，精灵的原点也被设置为精灵的origin
+         */
+        /**
+        * 应该由这个精灵显示的精灵
+        * 当设置时，精灵的原点也被设置为精灵的origin
+        * @param value
+        */
+        sprite: Sprite;
+        /**
+         * 设置精灵并更新精灵的原点以匹配sprite.origin
+         * @param sprite
+         */
+        setSprite(sprite: Sprite): RenderableComponent;
         getwidth(): number;
         getheight(): number;
         protected _bounds: es.Rectangle;
@@ -1648,7 +1663,7 @@ declare module es {
     }
 }
 declare module es {
-    class SpriteRenderer extends Component {
+    class SpriteRenderer extends RenderableComponent {
         constructor(sprite?: Sprite | egret.Texture);
         protected _origin: Vector2;
         /**
@@ -1659,17 +1674,6 @@ declare module es {
         * @param value
         */
         origin: Vector2;
-        protected _sprite: Sprite;
-        /**
-         * 应该由这个精灵显示的精灵
-         * 当设置时，精灵的原点也被设置为精灵的origin
-         */
-        /**
-        * 应该由这个精灵显示的精灵
-        * 当设置时，精灵的原点也被设置为精灵的origin
-        * @param value
-        */
-        sprite: Sprite;
         /**
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
@@ -1680,6 +1684,7 @@ declare module es {
          * @param origin
          */
         setOrigin(origin: Vector2): SpriteRenderer;
+        render(batcher: Batcher, camera: Camera): void;
     }
 }
 declare module es {
@@ -1786,27 +1791,28 @@ declare module es {
         _scale: Vector2;
         _layerDepth: number;
         spawn(position: Vector2, sprite: Sprite, fadeDuration: number, fadeDelay: number, initialColor: Color, targetColor: Color): void;
+        setSpriteRenderOptions(rotation: number, origin: Vector2, scale: Vector2, layerDepth: number): void;
         update(): boolean;
-        render(batcher: Batcher, camera: Camera): void;
+        render(batcher: IBatcher, camera: ICamera): void;
     }
     class SpriteTrail extends RenderableComponent implements IUpdatable {
         getbounds(): Rectangle;
         maxSpriteInstance: number;
-        minDistanceBetweenInstance: number;
+        minDistanceBetweenInstances: number;
         fadeDuration: number;
         fadeDelay: number;
         initialColor: Color;
         fadeToColor: Color;
         _maxSpriteInstance: number;
-        _availableSpriteTrailInstance: SpriteTrailInstance[];
-        _liveSpriteTrailInstance: SpriteTrailInstance[];
+        _availableSpriteTrailInstances: SpriteTrailInstance[];
+        _liveSpriteTrailInstances: SpriteTrailInstance[];
         _lastPosition: Vector2;
-        _sprite: SpriteRenderer;
+        _spriteRender: SpriteRenderer;
         _isFirstInstance: boolean;
         _awaitingDisable: boolean;
-        constructor(sprite?: SpriteRenderer);
+        constructor(spriteRender?: SpriteRenderer);
         setMaxSpriteInstance(maxSpriteInstance: number): this;
-        setMinDistanceBetweenInstance(minDistanceBetweenInstances: number): this;
+        setMinDistanceBetweenInstances(minDistanceBetweenInstances: number): this;
         setFadeDuration(fadeDuration: number): this;
         setFadeDelay(fadeDelay: number): this;
         setInitialColor(initialColor: Color): this;
@@ -1815,6 +1821,7 @@ declare module es {
         disableSpriteTrail(completeCurrentTrail?: boolean): void;
         onAddedToEntity(): void;
         update(): void;
+        spawnInstance(): void;
         render(batcher: IBatcher, camera: ICamera): void;
     }
 }
@@ -2942,13 +2949,13 @@ declare module es {
     }
 }
 declare module es {
-    class Sprite {
+    class Sprite extends egret.Sprite {
         texture2D: egret.Texture;
         readonly sourceRect: Rectangle;
         readonly center: Vector2;
         origin: Vector2;
         readonly uvs: Rectangle;
-        constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
+        constructor(texture?: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
         /**
          * 提供一个精灵的列/行等间隔的图集的精灵列表
          * @param texture

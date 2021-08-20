@@ -1,5 +1,5 @@
 module es {
-    export class SpriteRenderer extends Component {
+    export class SpriteRenderer extends RenderableComponent {
         constructor(sprite: Sprite | egret.Texture = null) {
             super();
             if (sprite instanceof Sprite)
@@ -25,25 +25,6 @@ module es {
             this.setOrigin(value);
         }
 
-        protected _sprite: Sprite;
-
-        /**
-         * 应该由这个精灵显示的精灵
-         * 当设置时，精灵的原点也被设置为精灵的origin
-         */
-        public get sprite(): Sprite {
-            return this._sprite;
-        }
-
-        /**
-         * 应该由这个精灵显示的精灵
-         * 当设置时，精灵的原点也被设置为精灵的origin
-         * @param value
-         */
-        public set sprite(value: Sprite) {
-            this.setSprite(value);
-        }
-
         /**
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
@@ -67,6 +48,10 @@ module es {
             }
 
             return this;
+        }
+
+        public render(batcher: Batcher, camera: Camera) {
+
         }
     }
 }
