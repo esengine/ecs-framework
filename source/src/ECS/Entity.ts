@@ -456,7 +456,7 @@ module es {
          * @param typeName
          * @param componentList
          */
-        public getComponents(typeName: any, componentList?) {
+        public getComponents(typeName: any, componentList?: any[]) {
             return this.components.getComponents(typeName, componentList);
         }
 

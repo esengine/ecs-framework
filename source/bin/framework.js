@@ -573,6 +573,26 @@ var es;
             }
             return this;
         };
+        Component.prototype.addComponent = function (component) {
+            return this.entity.addComponent(component);
+        };
+        Component.prototype.getComponent = function (type) {
+            return this.entity.getComponent(type);
+        };
+        Component.prototype.getComponents = function (typeName, componentList) {
+            return this.entity.getComponents(typeName, componentList);
+        };
+        Component.prototype.hasComponent = function (type) {
+            return this.entity.hasComponent(type);
+        };
+        Component.prototype.removeComponent = function (component) {
+            if (component) {
+                this.entity.removeComponent(component);
+            }
+            else {
+                this.entity.removeComponent(this);
+            }
+        };
         Component._idGenerator = 0;
         return Component;
     }());
@@ -4526,6 +4546,126 @@ var es;
         return SpriteAnimator;
     }(es.SpriteRenderer));
     es.SpriteAnimator = SpriteAnimator;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var SpriteTrailInstance = /** @class */ (function () {
+        function SpriteTrailInstance() {
+        }
+        SpriteTrailInstance.prototype.spawn = function (position, sprite, fadeDuration, fadeDelay, initialColor, targetColor) {
+            this.position = position;
+            this._sprite = sprite;
+            this._initialColor = initialColor;
+            this._elapsedTime = 0;
+            this._fadeDuration = fadeDuration;
+            this._fadeDelay = fadeDelay;
+            this._initialColor = initialColor;
+            this._targetColor = targetColor;
+        };
+        SpriteTrailInstance.prototype.update = function () {
+            this._elapsedTime += es.Time.deltaTime;
+            if (this._elapsedTime > this._fadeDelay && this._elapsedTime < this._fadeDuration + this._fadeDelay) {
+                var t = es.MathHelper.map01(this._elapsedTime, 0, this._fadeDelay + this._fadeDuration);
+                es.ColorExt.lerpOut(this._initialColor, this._targetColor, this._renderColor, t);
+            }
+            else if (this._elapsedTime >= this._fadeDuration + this._fadeDelay) {
+                return true;
+            }
+            return false;
+        };
+        SpriteTrailInstance.prototype.render = function (batcher, camera) {
+        };
+        return SpriteTrailInstance;
+    }());
+    var SpriteTrail = /** @class */ (function (_super) {
+        __extends(SpriteTrail, _super);
+        function SpriteTrail(sprite) {
+            var _this = _super.call(this) || this;
+            _this.minDistanceBetweenInstance = 30;
+            _this.fadeDuration = 0.8;
+            _this.fadeDelay = 0.1;
+            _this.initialColor = es.Color.White;
+            _this.fadeToColor = es.Color.Transparent;
+            _this._maxSpriteInstance = 15;
+            _this._availableSpriteTrailInstance = [];
+            _this._liveSpriteTrailInstance = [];
+            _this._sprite = sprite;
+            return _this;
+        }
+        SpriteTrail.prototype.getbounds = function () {
+            return this._bounds;
+        };
+        Object.defineProperty(SpriteTrail.prototype, "maxSpriteInstance", {
+            get: function () {
+                return this._maxSpriteInstance;
+            },
+            set: function (value) {
+                this.setMaxSpriteInstance(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        SpriteTrail.prototype.setMaxSpriteInstance = function (maxSpriteInstance) {
+            if (this._availableSpriteTrailInstance.length < maxSpriteInstance) {
+                var newInstance = this._availableSpriteTrailInstance.length - maxSpriteInstance;
+                for (var i = 0; i < newInstance; i++)
+                    this._availableSpriteTrailInstance.push(new SpriteTrailInstance());
+            }
+            if (this._availableSpriteTrailInstance.length > maxSpriteInstance) {
+                var excessInstances = maxSpriteInstance - this._availableSpriteTrailInstance.length;
+                for (var i = 0; i < excessInstances; i++)
+                    this._availableSpriteTrailInstance.pop();
+            }
+            this._maxSpriteInstance = maxSpriteInstance;
+            return this;
+        };
+        SpriteTrail.prototype.setMinDistanceBetweenInstance = function (minDistanceBetweenInstances) {
+            this.minDistanceBetweenInstance = minDistanceBetweenInstances;
+            return this;
+        };
+        SpriteTrail.prototype.setFadeDuration = function (fadeDuration) {
+            this.fadeDuration = fadeDuration;
+            return this;
+        };
+        SpriteTrail.prototype.setFadeDelay = function (fadeDelay) {
+            this.fadeDelay = fadeDelay;
+            return this;
+        };
+        SpriteTrail.prototype.setInitialColor = function (initialColor) {
+            this.initialColor = initialColor;
+            return this;
+        };
+        SpriteTrail.prototype.setFadeToColor = function (fadeToColor) {
+            this.fadeToColor = fadeToColor;
+            return this;
+        };
+        SpriteTrail.prototype.enableSpriteTrail = function () {
+            this._awaitingDisable = false;
+            this._isFirstInstance = true;
+            this.enabled = true;
+            return this;
+        };
+        SpriteTrail.prototype.disableSpriteTrail = function (completeCurrentTrail) {
+            if (completeCurrentTrail === void 0) { completeCurrentTrail = true; }
+            if (completeCurrentTrail) {
+                this._awaitingDisable = true;
+            }
+            else {
+                this.enabled = false;
+                for (var i = 0; i < this._liveSpriteTrailInstance.length; i++)
+                    this._availableSpriteTrailInstance.push(this._liveSpriteTrailInstance[i]);
+                this._liveSpriteTrailInstance.length = 0;
+            }
+        };
+        SpriteTrail.prototype.onAddedToEntity = function () {
+        };
+        SpriteTrail.prototype.update = function () {
+        };
+        SpriteTrail.prototype.render = function (batcher, camera) {
+        };
+        return SpriteTrail;
+    }(es.RenderableComponent));
+    es.SpriteTrail = SpriteTrail;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -16581,6 +16721,27 @@ var es;
         return Base64Utils;
     }());
     es.Base64Utils = Base64Utils;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var ColorExt = /** @class */ (function () {
+        function ColorExt() {
+        }
+        ColorExt.lerp = function (from, to, t) {
+            var t255 = t * 255;
+            return new es.Color(from.r + (to.r - from.r) * t255 / 255, from.g + (to.g - from.g) * t255 / 255, from.b + (to.b - from.b) * t255 / 255, from.a + (to.a - from.a) * t255 / 255);
+        };
+        ColorExt.lerpOut = function (from, to, result, t) {
+            var t255 = t * 255;
+            result.r = from.r + (to.r - from.r) * t255 / 255;
+            result.g = from.g + (to.g - from.g) * t255 / 255;
+            result.b = from.b + (to.b - from.b) * t255 / 255;
+            result.a = from.a + (to.a - from.a) * t255 / 255;
+        };
+        ColorExt.HEX = "0123456789ABCDEF";
+        return ColorExt;
+    }());
+    es.ColorExt = ColorExt;
 })(es || (es = {}));
 var es;
 (function (es) {

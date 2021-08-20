@@ -217,6 +217,11 @@ declare module es {
         onDisabled(): void;
         setEnabled(isEnabled: boolean): this;
         setUpdateOrder(updateOrder: number): this;
+        addComponent<T extends Component>(component: T): T;
+        getComponent(type: new (...args: any[]) => Component): Component;
+        getComponents(typeName: any, componentList?: any[]): any[];
+        hasComponent(type: new (...args: any[]) => Component): boolean;
+        removeComponent(component?: Component): void;
     }
 }
 declare module es {
@@ -464,7 +469,7 @@ declare module es {
          * @param typeName
          * @param componentList
          */
-        getComponents(typeName: any, componentList?: any): any[];
+        getComponents(typeName: any, componentList?: any[]): any[];
         /**
          * 从组件列表中删除组件
          * @param component
@@ -1764,6 +1769,53 @@ declare module es {
          * 停止当前动画并将其设为null
          */
         stop(): void;
+    }
+}
+declare module es {
+    class SpriteTrailInstance {
+        position: Vector2;
+        _sprite: Sprite;
+        _fadeDuration: number;
+        _fadeDelay: number;
+        _elapsedTime: number;
+        _initialColor: Color;
+        _targetColor: Color;
+        _renderColor: Color;
+        _rotation: number;
+        _origin: Vector2;
+        _scale: Vector2;
+        _layerDepth: number;
+        spawn(position: Vector2, sprite: Sprite, fadeDuration: number, fadeDelay: number, initialColor: Color, targetColor: Color): void;
+        update(): boolean;
+        render(batcher: Batcher, camera: Camera): void;
+    }
+    class SpriteTrail extends RenderableComponent implements IUpdatable {
+        getbounds(): Rectangle;
+        maxSpriteInstance: number;
+        minDistanceBetweenInstance: number;
+        fadeDuration: number;
+        fadeDelay: number;
+        initialColor: Color;
+        fadeToColor: Color;
+        _maxSpriteInstance: number;
+        _availableSpriteTrailInstance: SpriteTrailInstance[];
+        _liveSpriteTrailInstance: SpriteTrailInstance[];
+        _lastPosition: Vector2;
+        _sprite: SpriteRenderer;
+        _isFirstInstance: boolean;
+        _awaitingDisable: boolean;
+        constructor(sprite?: SpriteRenderer);
+        setMaxSpriteInstance(maxSpriteInstance: number): this;
+        setMinDistanceBetweenInstance(minDistanceBetweenInstances: number): this;
+        setFadeDuration(fadeDuration: number): this;
+        setFadeDelay(fadeDelay: number): this;
+        setInitialColor(initialColor: Color): this;
+        setFadeToColor(fadeToColor: Color): this;
+        enableSpriteTrail(): SpriteTrail;
+        disableSpriteTrail(completeCurrentTrail?: boolean): void;
+        onAddedToEntity(): void;
+        update(): void;
+        render(batcher: IBatcher, camera: ICamera): void;
     }
 }
 declare module es {
@@ -6285,6 +6337,13 @@ declare module es {
          * @param input
          */
         static decodeCSV(input: string): Array<number>;
+    }
+}
+declare module es {
+    class ColorExt {
+        private static readonly HEX;
+        static lerp(from: Color, to: Color, t: number): Color;
+        static lerpOut(from: Color, to: Color, result: Color, t: number): void;
     }
 }
 declare module es {
