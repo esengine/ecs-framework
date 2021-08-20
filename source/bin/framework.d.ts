@@ -2483,8 +2483,14 @@ declare module es {
         /** 自场景加载以来的总时间 */
         static timeSinceSceneLoad: number;
         private static _lastTime;
+        private static _useEngineTime;
         static update(currentTime: number, useEngineTime: boolean): void;
         static sceneChanged(): void;
+        /**
+         * 用于暂停切换至继续状态
+         * 需要将上一次时间重置并重置dt
+         */
+        static pauseToResume(): void;
         /**
          * 允许在间隔检查。只应该使用高于delta的间隔值，否则它将始终返回true。
          * @param interval

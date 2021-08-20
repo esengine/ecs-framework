@@ -193,6 +193,7 @@ module es {
 
             egret.lifecycle.onResume = () => {
                 egret.ticker.resume();
+                Time.pauseToResume();
                 Core.paused = false;
             };
         }

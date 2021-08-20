@@ -20,12 +20,12 @@ module es {
             this.name = name;
             this.entities = new EntityList(this);
             this.renderableComponents = new RenderableComponentList();
-
+            this.identifierPool = new IdentifierPool();
+            
             const cameraEntity = this.createEntity("camera");
             this.camera = cameraEntity.addComponent(new Camera());
 
             this.entityProcessors = new EntityProcessorList();
-            this.identifierPool = new IdentifierPool();
 
             this.initialize();
         }

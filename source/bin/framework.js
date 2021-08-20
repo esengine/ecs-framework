@@ -233,6 +233,7 @@ var es;
             };
             egret.lifecycle.onResume = function () {
                 egret.ticker.resume();
+                es.Time.pauseToResume();
                 Core.paused = false;
             };
         };
@@ -1842,10 +1843,10 @@ var es;
             this.name = name;
             this.entities = new es.EntityList(this);
             this.renderableComponents = new es.RenderableComponentList();
+            this.identifierPool = new es.IdentifierPool();
             var cameraEntity = this.createEntity("camera");
             this.camera = cameraEntity.addComponent(new es.Camera());
             this.entityProcessors = new es.EntityProcessorList();
-            this.identifierPool = new es.IdentifierPool();
             this.initialize();
         }
         /**
@@ -6569,6 +6570,7 @@ var es;
         }
         Time.update = function (currentTime, useEngineTime) {
             var dt = 0;
+            this._useEngineTime = useEngineTime;
             if (useEngineTime) {
                 dt = currentTime;
             }
@@ -6593,6 +6595,16 @@ var es;
             this.timeSinceSceneLoad = 0;
         };
         /**
+         * 用于暂停切换至继续状态
+         * 需要将上一次时间重置并重置dt
+         */
+        Time.pauseToResume = function () {
+            if (!this._useEngineTime)
+                return;
+            this._lastTime = Date.now();
+            this.deltaTime = 0;
+        };
+        /**
          * 允许在间隔检查。只应该使用高于delta的间隔值，否则它将始终返回true。
          * @param interval
          */
@@ -6615,6 +6627,7 @@ var es;
         /** 自场景加载以来的总时间 */
         Time.timeSinceSceneLoad = 0;
         Time._lastTime = -1;
+        Time._useEngineTime = false;
         return Time;
     }());
     es.Time = Time;

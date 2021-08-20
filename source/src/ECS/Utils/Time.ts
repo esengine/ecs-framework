@@ -16,9 +16,11 @@ module es {
         /** 自场景加载以来的总时间 */
         public static timeSinceSceneLoad: number = 0;
         private static _lastTime = -1;
+        private static _useEngineTime: boolean = false;
 
         public static update(currentTime: number, useEngineTime: boolean) {
             let dt = 0;
+            this._useEngineTime = useEngineTime;
             if (useEngineTime) {
                 dt = currentTime;
             } else {
@@ -45,6 +47,18 @@ module es {
 
         public static sceneChanged() {
             this.timeSinceSceneLoad = 0;
+        }
+
+        /**
+         * 用于暂停切换至继续状态
+         * 需要将上一次时间重置并重置dt
+         */
+        public static pauseToResume() {
+            if (!this._useEngineTime)
+                return;
+
+            this._lastTime = Date.now();
+            this.deltaTime = 0;
         }
 
         /**
