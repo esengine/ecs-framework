@@ -12,6 +12,7 @@ declare module es {
          * 是否启用调试渲染
          */
         static debugRenderEndabled: boolean;
+        static content: ContentManager;
         /**
          * 简化对内部类的全局内容实例的访问
          */
@@ -100,6 +101,12 @@ declare module es {
         registerCoreEvent(): void;
         protected initialize(): void;
         protected update(currentTime?: number): Promise<void>;
+    }
+}
+declare module es {
+    class ContentManager {
+        _loadedAssets: Map<string, object>;
+        loadTexture(name: string): Promise<egret.Texture>;
     }
 }
 declare module es {

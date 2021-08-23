@@ -96,10 +96,12 @@ var es;
             Core.stage = stage;
             Core.emitter = new es.Emitter();
             Core.emitter.addObserver(es.CoreEvents.frameUpdated, this.update, this);
+            Core.content = new es.ContentManager();
             Core.registerGlobalManager(this._coroutineManager);
             Core.registerGlobalManager(new es.TweenManager());
             Core.registerGlobalManager(this._timerManager);
             Core.entitySystemsEnabled = enableEntitySystems;
+            this.registerCoreEvent();
             this.debug = debug;
             this.initialize();
         }
@@ -276,6 +278,31 @@ var es;
         return Core;
     }());
     es.Core = Core;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var ContentManager = /** @class */ (function () {
+        function ContentManager() {
+            this._loadedAssets = new Map();
+        }
+        ContentManager.prototype.loadTexture = function (name) {
+            var _this = this;
+            return new Promise(function (resolve, reject) {
+                var asset = _this._loadedAssets.get(name);
+                if (asset) {
+                    return resolve(asset);
+                }
+                RES.addEventListener(RES.ResourceEvent.ITEM_LOAD_ERROR, function (event) {
+                    reject("\u8D44\u6E90:" + event.resItem.name + "\u52A0\u8F7D\u5931\u8D25");
+                }, _this);
+                RES.getResAsync(name, function (texture) {
+                    resolve(texture);
+                }, _this);
+            });
+        };
+        return ContentManager;
+    }());
+    es.ContentManager = ContentManager;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -4188,6 +4215,7 @@ var es;
         __extends(RenderableComponent, _super);
         function RenderableComponent() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this._sprite = new es.Sprite();
             _this._bounds = new es.Rectangle();
             _this._areBoundsDirty = true;
             _this.color = es.Color.White;
@@ -7573,11 +7601,17 @@ var es;
     var Sprite = /** @class */ (function (_super) {
         __extends(Sprite, _super);
         function Sprite(texture, sourceRect, origin) {
-            if (sourceRect === void 0) { sourceRect = new es.Rectangle(0, 0, texture.textureWidth, texture.textureHeight); }
-            if (origin === void 0) { origin = sourceRect.getHalfSize(); }
             var _this = _super.call(this) || this;
             _this.uvs = new es.Rectangle();
+            if (!texture)
+                return _this;
             _this.texture2D = texture;
+            if (!sourceRect) {
+                sourceRect = new es.Rectangle(0, 0, texture.textureWidth, texture.textureHeight);
+            }
+            if (!origin) {
+                origin = sourceRect.getHalfSize();
+            }
             _this.sourceRect = sourceRect;
             _this.center = new es.Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
             _this.origin = origin;

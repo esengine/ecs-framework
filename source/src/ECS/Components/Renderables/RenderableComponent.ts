@@ -1,6 +1,6 @@
 module es {
     export abstract class RenderableComponent extends es.Component implements IRenderable {
-        protected _sprite: Sprite;
+        protected _sprite: Sprite = new Sprite();
 
         /**
          * 应该由这个精灵显示的精灵

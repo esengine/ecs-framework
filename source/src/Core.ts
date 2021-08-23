@@ -12,6 +12,7 @@ module es {
          * 是否启用调试渲染
          */
         public static debugRenderEndabled = false;
+        public static content: ContentManager;
         /**
          * 简化对内部类的全局内容实例的访问
          */
@@ -48,11 +49,14 @@ module es {
             Core.emitter = new Emitter<CoreEvents>();
             Core.emitter.addObserver(CoreEvents.frameUpdated, this.update, this);
 
+            Core.content = new ContentManager();
+
             Core.registerGlobalManager(this._coroutineManager);
             Core.registerGlobalManager(new TweenManager());
             Core.registerGlobalManager(this._timerManager);
             Core.entitySystemsEnabled = enableEntitySystems;
 
+            this.registerCoreEvent();
             this.debug = debug;
             this.initialize();
         }

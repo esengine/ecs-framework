@@ -7,10 +7,18 @@ module es {
         public readonly uvs: Rectangle = new Rectangle();
 
         constructor(texture?: egret.Texture,
-            sourceRect: Rectangle = new Rectangle(0, 0, texture.textureWidth, texture.textureHeight),
-            origin: Vector2 = sourceRect.getHalfSize()) {
+            sourceRect?: Rectangle,
+            origin?: Vector2) {
             super();
+            if (!texture)
+                return;
             this.texture2D = texture;
+            if (!sourceRect) {
+                sourceRect = new Rectangle(0, 0, texture.textureWidth, texture.textureHeight);
+            }
+            if (!origin) {
+                origin = sourceRect.getHalfSize();
+            }
             this.sourceRect = sourceRect;
             this.center = new Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
             this.origin = origin;
