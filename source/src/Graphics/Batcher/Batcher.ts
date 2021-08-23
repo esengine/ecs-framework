@@ -199,6 +199,29 @@ module es {
             this.flushBatch();
         }
 
+        drawSprite(sprite: egret.Sprite, position: Vector2, color: Color, rotation: number,
+            origin: Vector2, scale: Vector2) {
+                sprite.x = position.x;
+                sprite.y = position.y;
+                sprite.rotation = rotation;
+                sprite.scaleX = scale.x;
+                sprite.scaleY = scale.y;
+                sprite.anchorOffsetX = origin.x;
+                sprite.anchorOffsetY = origin.y;
+
+                const colorMatrix = [
+                    1, 0, 0, 0, 0,
+                    0, 1, 0, 0, 0,
+                    0, 0, 1, 0, 0,
+                    0, 0, 0, 1, 0
+                ];
+                colorMatrix[0] = color.r / 255;
+                colorMatrix[6] = color.g / 255;
+                colorMatrix[12] = color.b / 255;
+                const colorFilter = new egret.ColorMatrixFilter(colorMatrix);
+                sprite.filters = [colorFilter];
+            }
+
         public flushBatch() {
             if (this.strokeNum >= this.MAX_STROKE) {
                 this.strokeNum = 0;

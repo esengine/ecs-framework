@@ -110,6 +110,17 @@ declare module es {
     }
 }
 declare module es {
+    class SpriteAtlas {
+        names: string[];
+        sprites: Sprite[];
+        animationNames: string[];
+        spriteAnimations: SpriteAnimation[];
+        getSprite(name: string): Sprite;
+        getAnimation(name: string): SpriteAnimation;
+        dispose(): void;
+    }
+}
+declare module es {
     enum LogType {
         error = 0,
         warn = 1,
@@ -1674,6 +1685,7 @@ declare module es {
         * @param value
         */
         origin: Vector2;
+        originNormalized: Vector2;
         /**
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
@@ -1684,6 +1696,7 @@ declare module es {
          * @param origin
          */
         setOrigin(origin: Vector2): SpriteRenderer;
+        setOriginNormalized(value: Vector2): SpriteRenderer;
         render(batcher: Batcher, camera: Camera): void;
     }
 }
@@ -2679,6 +2692,7 @@ declare module es {
          * @param size 大小
          */
         drawPixel(position: Vector2, color: Color, size?: number): void;
+        drawSprite(sprite: egret.Sprite, position: Vector2, color: Color, rotation: number, origin: Vector2, scale: Vector2): void;
         flushBatch(): void;
     }
 }
