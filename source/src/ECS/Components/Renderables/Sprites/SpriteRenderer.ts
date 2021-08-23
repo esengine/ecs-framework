@@ -25,6 +25,16 @@ module es {
             this.setOrigin(value);
         }
 
+        public get originNormalized() {
+            return new Vector2(this._origin.x / this.getwidth() * this.entity.transform.scale.x,
+                this._origin.y / this.getheight() * this.entity.transform.scale.y);
+        }
+
+        public set originNormalized(value: Vector2) {
+            this.setOrigin(new Vector2(value.x * this.getwidth() / this.entity.transform.scale.x,
+                value.y))
+        }
+        
         /**
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
@@ -45,13 +55,22 @@ module es {
         public setOrigin(origin: Vector2): SpriteRenderer {
             if (!this._origin.equals(origin)) {
                 this._origin = origin;
+                this._areBoundsDirty = true;
             }
 
             return this;
         }
 
-        public render(batcher: Batcher, camera: Camera) {
+        public setOriginNormalized(value: Vector2): SpriteRenderer {
+            this.setOrigin(new Vector2(value.x * this.getwidth() / this.entity.transform.scale.x,
+                value.y * this.getheight() / this.entity.transform.scale.y));
 
+            return this;
+        }
+
+        public render(batcher: Batcher, camera: Camera) {
+            batcher.drawSprite(this.sprite, this.entity.transform.position.add(this.localOffset),
+                this.color, this.entity.transform.rotation, this.originNormalized, this.entity.transform.scale);
         }
     }
 }

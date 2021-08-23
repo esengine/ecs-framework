@@ -318,6 +318,29 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var SpriteAtlas = /** @class */ (function () {
+        function SpriteAtlas() {
+        }
+        SpriteAtlas.prototype.getSprite = function (name) {
+            var index = this.names.indexOf(name);
+            return this.sprites[index];
+        };
+        SpriteAtlas.prototype.getAnimation = function (name) {
+            var index = this.animationNames.indexOf(name);
+            return this.spriteAnimations[index];
+        };
+        SpriteAtlas.prototype.dispose = function () {
+            if (this.sprites != null) {
+                this.sprites[0].texture2D.dispose();
+                this.sprites = null;
+            }
+        };
+        return SpriteAtlas;
+    }());
+    es.SpriteAtlas = SpriteAtlas;
+})(es || (es = {}));
+var es;
+(function (es) {
     var LogType;
     (function (LogType) {
         LogType[LogType["error"] = 0] = "error";
@@ -4399,6 +4422,16 @@ var es;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(SpriteRenderer.prototype, "originNormalized", {
+            get: function () {
+                return new es.Vector2(this._origin.x / this.getwidth() * this.entity.transform.scale.x, this._origin.y / this.getheight() * this.entity.transform.scale.y);
+            },
+            set: function (value) {
+                this.setOrigin(new es.Vector2(value.x * this.getwidth() / this.entity.transform.scale.x, value.y));
+            },
+            enumerable: true,
+            configurable: true
+        });
         /**
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
@@ -4417,10 +4450,16 @@ var es;
         SpriteRenderer.prototype.setOrigin = function (origin) {
             if (!this._origin.equals(origin)) {
                 this._origin = origin;
+                this._areBoundsDirty = true;
             }
             return this;
         };
+        SpriteRenderer.prototype.setOriginNormalized = function (value) {
+            this.setOrigin(new es.Vector2(value.x * this.getwidth() / this.entity.transform.scale.x, value.y * this.getheight() / this.entity.transform.scale.y));
+            return this;
+        };
         SpriteRenderer.prototype.render = function (batcher, camera) {
+            batcher.drawSprite(this.sprite, this.entity.transform.position.add(this.localOffset), this.color, this.entity.transform.rotation, this.originNormalized, this.entity.transform.scale);
         };
         return SpriteRenderer;
     }(es.RenderableComponent));
@@ -7099,6 +7138,26 @@ var es;
             this.sprite.graphics.drawRect(destRect.x, destRect.y, destRect.width, destRect.height);
             this.strokeNum++;
             this.flushBatch();
+        };
+        Batcher.prototype.drawSprite = function (sprite, position, color, rotation, origin, scale) {
+            sprite.x = position.x;
+            sprite.y = position.y;
+            sprite.rotation = rotation;
+            sprite.scaleX = scale.x;
+            sprite.scaleY = scale.y;
+            sprite.anchorOffsetX = origin.x;
+            sprite.anchorOffsetY = origin.y;
+            var colorMatrix = [
+                1, 0, 0, 0, 0,
+                0, 1, 0, 0, 0,
+                0, 0, 1, 0, 0,
+                0, 0, 0, 1, 0
+            ];
+            colorMatrix[0] = color.r / 255;
+            colorMatrix[6] = color.g / 255;
+            colorMatrix[12] = color.b / 255;
+            var colorFilter = new egret.ColorMatrixFilter(colorMatrix);
+            sprite.filters = [colorFilter];
         };
         Batcher.prototype.flushBatch = function () {
             if (this.strokeNum >= this.MAX_STROKE) {
