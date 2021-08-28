@@ -276,6 +276,9 @@ module es {
         public addEntityProcessor(processor: EntitySystem) {
             processor.scene = this;
             this.entityProcessors.add(processor);
+            
+            processor.setUpdateOrder(this.entityProcessors.count - 1);
+            this.entityProcessors.clearDirty();
             return processor;
         }
 

@@ -1760,6 +1760,8 @@ var es;
         Scene.prototype.addEntityProcessor = function (processor) {
             processor.scene = this;
             this.entityProcessors.add(processor);
+            processor.setUpdateOrder(this.entityProcessors.count - 1);
+            this.entityProcessors.clearDirty();
             return processor;
         };
         /**
@@ -3967,12 +3969,34 @@ var es;
     var EntitySystem = /** @class */ (function () {
         function EntitySystem(matcher) {
             this._entities = [];
+            this._updateOrder = 0;
             this._startTime = 0;
             this._endTime = 0;
             this._useTime = 0;
             this._matcher = matcher ? matcher : es.Matcher.empty();
             this.initialize();
         }
+        Object.defineProperty(EntitySystem.prototype, "useTime", {
+            /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
+            get: function () {
+                return this._useTime;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EntitySystem.prototype, "updateOrder", {
+            /**
+             * 获取系统的更新时序
+             */
+            get: function () {
+                return this._updateOrder;
+            },
+            set: function (value) {
+                this.setUpdateOrder(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
         Object.defineProperty(EntitySystem.prototype, "scene", {
             /**
              * 这个系统所属的场景
@@ -3994,14 +4018,14 @@ var es;
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(EntitySystem.prototype, "useTime", {
-            /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
-            get: function () {
-                return this._useTime;
-            },
-            enumerable: true,
-            configurable: true
-        });
+        /**
+         * 设置更新时序
+         * @param order
+         */
+        EntitySystem.prototype.setUpdateOrder = function (order) {
+            this._updateOrder = order;
+            this.scene.entityProcessors.setDirty();
+        };
         EntitySystem.prototype.initialize = function () {
         };
         EntitySystem.prototype.onChanged = function (entity) {
@@ -5135,7 +5159,24 @@ var es;
     var EntityProcessorList = /** @class */ (function () {
         function EntityProcessorList() {
             this._processors = [];
+            this._orderDirty = false;
         }
+        Object.defineProperty(EntityProcessorList.prototype, "processors", {
+            /** 获取系统列表 */
+            get: function () {
+                return this._processors;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(EntityProcessorList.prototype, "count", {
+            /** 系统数量 */
+            get: function () {
+                return this._processors.length;
+            },
+            enumerable: true,
+            configurable: true
+        });
         EntityProcessorList.prototype.add = function (processor) {
             this._processors.push(processor);
         };
@@ -5159,6 +5200,15 @@ var es;
         EntityProcessorList.prototype.update = function () {
             if (this._processors.length == 0)
                 return;
+            if (this._orderDirty) {
+                // 进行排序
+                this._processors = this._processors.sort(function (a, b) { return a.updateOrder - b.updateOrder; });
+                for (var i = 0, s = this._processors.length; i < s; ++i) {
+                    var processor = this._processors[i];
+                    processor.setUpdateOrder(i);
+                }
+                this.clearDirty();
+            }
             for (var i = 0, s = this._processors.length; i < s; ++i) {
                 this._processors[i].update();
             }
@@ -5171,6 +5221,12 @@ var es;
             }
         };
         EntityProcessorList.prototype.end = function () {
+        };
+        EntityProcessorList.prototype.setDirty = function () {
+            this._orderDirty = true;
+        };
+        EntityProcessorList.prototype.clearDirty = function () {
+            this._orderDirty = false;
         };
         EntityProcessorList.prototype.getProcessor = function (type) {
             if (this._processors.length == 0)

@@ -1573,6 +1573,16 @@ declare module es {
      */
     abstract class EntitySystem {
         private _entities;
+        private _updateOrder;
+        private _startTime;
+        private _endTime;
+        private _useTime;
+        /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
+        readonly useTime: number;
+        /**
+         * 获取系统的更新时序
+         */
+        updateOrder: number;
         constructor(matcher?: Matcher);
         private _scene;
         /**
@@ -1581,11 +1591,11 @@ declare module es {
         scene: Scene;
         private _matcher;
         readonly matcher: Matcher;
-        private _startTime;
-        private _endTime;
-        private _useTime;
-        /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
-        readonly useTime: number;
+        /**
+         * 设置更新时序
+         * @param order
+         */
+        setUpdateOrder(order: number): void;
         initialize(): void;
         onChanged(entity: Entity): void;
         add(entity: Entity): void;
@@ -2006,7 +2016,12 @@ declare module es {
 }
 declare module es {
     class EntityProcessorList {
-        _processors: EntitySystem[];
+        private _processors;
+        private _orderDirty;
+        /** 获取系统列表 */
+        readonly processors: EntitySystem[];
+        /** 系统数量 */
+        readonly count: number;
         add(processor: EntitySystem): void;
         remove(processor: EntitySystem): void;
         onComponentAdded(entity: Entity): void;
@@ -2017,6 +2032,8 @@ declare module es {
         update(): void;
         lateUpdate(): void;
         end(): void;
+        setDirty(): void;
+        clearDirty(): void;
         getProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T;
         protected notifyEntityChanged(entity: Entity): void;
         protected removeFromProcessors(entity: Entity): void;
