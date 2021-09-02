@@ -56,8 +56,8 @@ module es {
             Core.registerGlobalManager(this._timerManager);
             Core.entitySystemsEnabled = enableEntitySystems;
 
-            this.registerCoreEvent();
             this.debug = debug;
+            this.registerCoreEvent();
             this.initialize();
         }
 

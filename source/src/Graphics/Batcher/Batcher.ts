@@ -199,7 +199,7 @@ module es {
             this.flushBatch();
         }
 
-        drawSprite(sprite: egret.Sprite, position: Vector2, color: Color, rotation: number,
+        drawSprite(sprite: egret.Bitmap, position: Vector2, color: Color, rotation: number,
             origin: Vector2, scale: Vector2) {
                 sprite.x = position.x;
                 sprite.y = position.y;
@@ -220,6 +220,7 @@ module es {
                 colorMatrix[12] = color.b / 255;
                 const colorFilter = new egret.ColorMatrixFilter(colorMatrix);
                 sprite.filters = [colorFilter];
+                sprite.alpha = color.a;
             }
 
         public flushBatch() {

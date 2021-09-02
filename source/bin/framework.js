@@ -101,8 +101,8 @@ var es;
             Core.registerGlobalManager(new es.TweenManager());
             Core.registerGlobalManager(this._timerManager);
             Core.entitySystemsEnabled = enableEntitySystems;
-            this.registerCoreEvent();
             this.debug = debug;
+            this.registerCoreEvent();
             this.initialize();
         }
         Object.defineProperty(Core, "Instance", {
@@ -331,7 +331,7 @@ var es;
         };
         SpriteAtlas.prototype.dispose = function () {
             if (this.sprites != null) {
-                this.sprites[0].texture2D.dispose();
+                this.sprites[0].texture.dispose();
                 this.sprites = null;
             }
         };
@@ -4262,7 +4262,7 @@ var es;
              * @param value
              */
             set: function (value) {
-                this.setSprite(value);
+                this.setSprite(value.texture);
             },
             enumerable: true,
             configurable: true
@@ -4272,7 +4272,7 @@ var es;
          * @param sprite
          */
         RenderableComponent.prototype.setSprite = function (sprite) {
-            this._sprite = sprite;
+            this._sprite.texture = sprite;
             return this;
         };
         RenderableComponent.prototype.getwidth = function () {
@@ -4399,10 +4399,12 @@ var es;
         function SpriteRenderer(sprite) {
             if (sprite === void 0) { sprite = null; }
             var _this = _super.call(this) || this;
-            if (sprite instanceof es.Sprite)
+            if (sprite instanceof es.Sprite) {
+                _this.setSprite(sprite.texture);
+            }
+            else if (sprite instanceof egret.Texture) {
                 _this.setSprite(sprite);
-            else if (sprite instanceof egret.Texture)
-                _this.setSprite(new es.Sprite(sprite));
+            }
             return _this;
         }
         Object.defineProperty(SpriteRenderer.prototype, "origin", {
@@ -4437,7 +4439,7 @@ var es;
          * @param sprite
          */
         SpriteRenderer.prototype.setSprite = function (sprite) {
-            this._sprite = sprite;
+            this._sprite.texture = sprite;
             if (this._sprite) {
                 this._origin = this._sprite.origin;
             }
@@ -4573,7 +4575,7 @@ var es;
         SpriteAnimator.prototype.addAnimation = function (name, animation) {
             // 如果我们没有精灵，使用我们找到的第一帧
             if (!this.sprite && animation.sprites.length > 0)
-                this.setSprite(animation.sprites[0]);
+                this.setSprite(animation.sprites[0].texture);
             this._animations[name] = animation;
             return this;
         };
@@ -7158,6 +7160,7 @@ var es;
             colorMatrix[12] = color.b / 255;
             var colorFilter = new egret.ColorMatrixFilter(colorMatrix);
             sprite.filters = [colorFilter];
+            sprite.alpha = color.a;
         };
         Batcher.prototype.flushBatch = function () {
             if (this.strokeNum >= this.MAX_STROKE) {
@@ -7664,7 +7667,7 @@ var es;
             _this.uvs = new es.Rectangle();
             if (!texture)
                 return _this;
-            _this.texture2D = texture;
+            _this.texture = texture;
             if (!sourceRect) {
                 sourceRect = new es.Rectangle(0, 0, texture.textureWidth, texture.textureHeight);
             }
@@ -7713,7 +7716,7 @@ var es;
             return sprites;
         };
         return Sprite;
-    }(egret.Sprite));
+    }(egret.Bitmap));
     es.Sprite = Sprite;
 })(es || (es = {}));
 var es;

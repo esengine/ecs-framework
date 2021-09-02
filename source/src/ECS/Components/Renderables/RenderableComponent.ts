@@ -16,15 +16,15 @@ module es {
          * @param value
          */
         public set sprite(value: Sprite) {
-            this.setSprite(value);
+            this.setSprite(value.texture);
         }
 
         /**
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
          */
-        public setSprite(sprite: Sprite): RenderableComponent {
-            this._sprite = sprite;
+        public setSprite(sprite: egret.Texture): RenderableComponent {
+            this._sprite.texture = sprite;
 
             return this;
         }

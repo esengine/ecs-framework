@@ -1653,7 +1653,7 @@ declare module es {
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
          */
-        setSprite(sprite: Sprite): RenderableComponent;
+        setSprite(sprite: egret.Texture): RenderableComponent;
         getwidth(): number;
         getheight(): number;
         protected _bounds: es.Rectangle;
@@ -1697,7 +1697,7 @@ declare module es {
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
          */
-        setSprite(sprite: Sprite): SpriteRenderer;
+        setSprite(sprite: egret.Texture): SpriteRenderer;
         /**
          * 设置可渲染的原点
          * @param origin
@@ -2699,7 +2699,7 @@ declare module es {
          * @param size 大小
          */
         drawPixel(position: Vector2, color: Color, size?: number): void;
-        drawSprite(sprite: egret.Sprite, position: Vector2, color: Color, rotation: number, origin: Vector2, scale: Vector2): void;
+        drawSprite(sprite: egret.Bitmap, position: Vector2, color: Color, rotation: number, origin: Vector2, scale: Vector2): void;
         flushBatch(): void;
     }
 }
@@ -2976,8 +2976,7 @@ declare module es {
     }
 }
 declare module es {
-    class Sprite extends egret.Sprite {
-        texture2D: egret.Texture;
+    class Sprite extends egret.Bitmap {
         readonly sourceRect: Rectangle;
         readonly center: Vector2;
         origin: Vector2;

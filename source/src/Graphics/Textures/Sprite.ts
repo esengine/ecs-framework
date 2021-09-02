@@ -1,6 +1,5 @@
 module es {
-    export class Sprite extends egret.Sprite {
-        public texture2D: egret.Texture;
+    export class Sprite extends egret.Bitmap {
         public readonly sourceRect: Rectangle;
         public readonly center: Vector2;
         public origin: Vector2;
@@ -12,7 +11,7 @@ module es {
             super();
             if (!texture)
                 return;
-            this.texture2D = texture;
+            this.texture = texture;
             if (!sourceRect) {
                 sourceRect = new Rectangle(0, 0, texture.textureWidth, texture.textureHeight);
             }

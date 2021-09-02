@@ -1,11 +1,13 @@
 module es {
     export class SpriteRenderer extends RenderableComponent {
-        constructor(sprite: Sprite | egret.Texture = null) {
+        constructor(sprite: Sprite |egret.Texture = null) {
             super();
-            if (sprite instanceof Sprite)
+            if (sprite instanceof Sprite) {
+                this.setSprite(sprite.texture);
+            }
+            else if (sprite instanceof egret.Texture) {
                 this.setSprite(sprite);
-            else if (sprite instanceof egret.Texture)
-                this.setSprite(new Sprite(sprite));
+            }
         }
 
         protected _origin: Vector2;
@@ -39,8 +41,8 @@ module es {
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
          */
-        public setSprite(sprite: Sprite): SpriteRenderer {
-            this._sprite = sprite;
+        public setSprite(sprite: egret.Texture): SpriteRenderer {
+            this._sprite.texture = sprite;
             if (this._sprite) {
                 this._origin = this._sprite.origin;
             }
