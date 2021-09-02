@@ -1653,7 +1653,7 @@ declare module es {
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
          */
-        setSprite(sprite: egret.Texture): RenderableComponent;
+        setSprite(sprite: Sprite): RenderableComponent;
         getwidth(): number;
         getheight(): number;
         protected _bounds: es.Rectangle;
@@ -1682,6 +1682,7 @@ declare module es {
 }
 declare module es {
     class SpriteRenderer extends RenderableComponent {
+        getbounds(): Rectangle;
         constructor(sprite?: Sprite | egret.Texture);
         protected _origin: Vector2;
         /**
@@ -1697,7 +1698,7 @@ declare module es {
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
          */
-        setSprite(sprite: egret.Texture): SpriteRenderer;
+        setSprite(sprite: Sprite): SpriteRenderer;
         /**
          * 设置可渲染的原点
          * @param origin
@@ -2957,13 +2958,11 @@ declare module es {
         camera: ICamera;
         readonly renderOrder: number;
         shouldDebugRender: boolean;
-        protected renderDirty: boolean;
         constructor(renderOrder: number, camera: ICamera);
         onAddedToScene(scene: es.Scene): void;
         unload(): void;
         protected beginRender(cam: ICamera): void;
         protected endRender(): void;
-        protected onRenderChanged(): void;
         abstract render(scene: Scene): void;
         protected renderAfterStateCheck(renderable: IRenderable, cam: ICamera): void;
         protected debugRender(scene: Scene): void;
@@ -2981,7 +2980,7 @@ declare module es {
         readonly center: Vector2;
         origin: Vector2;
         readonly uvs: Rectangle;
-        constructor(texture?: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
+        constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
         /**
          * 提供一个精灵的列/行等间隔的图集的精灵列表
          * @param texture

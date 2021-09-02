@@ -1,6 +1,6 @@
 module es {
     export abstract class RenderableComponent extends es.Component implements IRenderable {
-        protected _sprite: Sprite = new Sprite();
+        protected _sprite: Sprite;
 
         /**
          * 应该由这个精灵显示的精灵
@@ -16,15 +16,15 @@ module es {
          * @param value
          */
         public set sprite(value: Sprite) {
-            this.setSprite(value.texture);
+            this.setSprite(value);
         }
 
         /**
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
          */
-        public setSprite(sprite: egret.Texture): RenderableComponent {
-            this._sprite.texture = sprite;
+        public setSprite(sprite: Sprite): RenderableComponent {
+            this._sprite = sprite;
 
             return this;
         }

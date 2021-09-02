@@ -1,11 +1,11 @@
 module es {
     export class Sprite extends egret.Bitmap {
-        public readonly sourceRect: Rectangle;
-        public readonly center: Vector2;
-        public origin: Vector2;
+        public readonly sourceRect: Rectangle = new Rectangle();
+        public readonly center: Vector2 = Vector2.zero;
+        public origin: Vector2 = Vector2.zero;
         public readonly uvs: Rectangle = new Rectangle();
 
-        constructor(texture?: egret.Texture,
+        constructor(texture: egret.Texture,
             sourceRect?: Rectangle,
             origin?: Vector2) {
             super();

@@ -240,6 +240,7 @@ var es;
             };
         };
         Core.prototype.initialize = function () {
+            es.Graphics.instance = new es.Graphics();
         };
         Core.prototype.update = function (currentTime) {
             if (currentTime === void 0) { currentTime = -1; }
@@ -4238,7 +4239,6 @@ var es;
         __extends(RenderableComponent, _super);
         function RenderableComponent() {
             var _this = _super !== null && _super.apply(this, arguments) || this;
-            _this._sprite = new es.Sprite();
             _this._bounds = new es.Rectangle();
             _this._areBoundsDirty = true;
             _this.color = es.Color.White;
@@ -4262,7 +4262,7 @@ var es;
              * @param value
              */
             set: function (value) {
-                this.setSprite(value.texture);
+                this.setSprite(value);
             },
             enumerable: true,
             configurable: true
@@ -4272,7 +4272,7 @@ var es;
          * @param sprite
          */
         RenderableComponent.prototype.setSprite = function (sprite) {
-            this._sprite.texture = sprite;
+            this._sprite = sprite;
             return this;
         };
         RenderableComponent.prototype.getwidth = function () {
@@ -4400,13 +4400,22 @@ var es;
             if (sprite === void 0) { sprite = null; }
             var _this = _super.call(this) || this;
             if (sprite instanceof es.Sprite) {
-                _this.setSprite(sprite.texture);
+                _this.setSprite(sprite);
             }
             else if (sprite instanceof egret.Texture) {
-                _this.setSprite(sprite);
+                _this.setSprite(new es.Sprite(sprite));
             }
             return _this;
         }
+        SpriteRenderer.prototype.getbounds = function () {
+            if (this._areBoundsDirty) {
+                if (this._sprite != null) {
+                    this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin, this.entity.transform.scale, this.entity.transform.rotation, this._sprite.sourceRect.width, this._sprite.sourceRect.height);
+                }
+                this._areBoundsDirty = false;
+            }
+            return this._bounds;
+        };
         Object.defineProperty(SpriteRenderer.prototype, "origin", {
             /**
              * 精灵的原点。这是在设置精灵时自动设置的
@@ -4439,10 +4448,11 @@ var es;
          * @param sprite
          */
         SpriteRenderer.prototype.setSprite = function (sprite) {
-            this._sprite.texture = sprite;
+            this._sprite = sprite;
             if (this._sprite) {
                 this._origin = this._sprite.origin;
             }
+            this._areBoundsDirty = true;
             return this;
         };
         /**
@@ -4575,7 +4585,7 @@ var es;
         SpriteAnimator.prototype.addAnimation = function (name, animation) {
             // 如果我们没有精灵，使用我们找到的第一帧
             if (!this.sprite && animation.sprites.length > 0)
-                this.setSprite(animation.sprites[0].texture);
+                this.setSprite(animation.sprites[0]);
             this._animations[name] = animation;
             return this;
         };
@@ -7587,10 +7597,8 @@ var es;
         function Renderer(renderOrder, camera) {
             this.renderOrder = 0;
             this.shouldDebugRender = true;
-            this.renderDirty = true;
             this.renderOrder = renderOrder;
             this.camera = camera;
-            es.Core.emitter.addObserver(es.CoreEvents.renderChanged, this.onRenderChanged, this);
         }
         Renderer.prototype.onAddedToScene = function (scene) { };
         Renderer.prototype.unload = function () { };
@@ -7603,9 +7611,6 @@ var es;
             if (!es.Graphics.instance)
                 return;
             es.Graphics.instance.batcher.end();
-        };
-        Renderer.prototype.onRenderChanged = function () {
-            this.renderDirty = true;
         };
         Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
             if (!es.Graphics.instance)
@@ -7639,9 +7644,6 @@ var es;
             return _super.call(this, renderOrder, camera) || this;
         }
         DefaultRenderer.prototype.render = function (scene) {
-            if (!this.renderDirty)
-                return;
-            this.renderDirty = false;
             var cam = this.camera ? this.camera : scene.camera;
             this.beginRender(cam);
             for (var i = 0; i < scene.renderableComponents.count; i++) {
@@ -7664,6 +7666,9 @@ var es;
         __extends(Sprite, _super);
         function Sprite(texture, sourceRect, origin) {
             var _this = _super.call(this) || this;
+            _this.sourceRect = new es.Rectangle();
+            _this.center = es.Vector2.zero;
+            _this.origin = es.Vector2.zero;
             _this.uvs = new es.Rectangle();
             if (!texture)
                 return _this;

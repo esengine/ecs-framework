@@ -1,12 +1,25 @@
 module es {
     export class SpriteRenderer extends RenderableComponent {
+        public getbounds() {
+            if (this._areBoundsDirty) {
+                if (this._sprite != null) {
+                    this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin,
+                        this.entity.transform.scale, this.entity.transform.rotation, this._sprite.sourceRect.width,
+                        this._sprite.sourceRect.height);
+                }
+                this._areBoundsDirty = false;
+            }
+
+            return this._bounds;
+        }
+
         constructor(sprite: Sprite |egret.Texture = null) {
             super();
             if (sprite instanceof Sprite) {
-                this.setSprite(sprite.texture);
+                this.setSprite(sprite);
             }
             else if (sprite instanceof egret.Texture) {
-                this.setSprite(sprite);
+                this.setSprite(new Sprite(sprite));
             }
         }
 
@@ -41,11 +54,12 @@ module es {
          * 设置精灵并更新精灵的原点以匹配sprite.origin
          * @param sprite
          */
-        public setSprite(sprite: egret.Texture): SpriteRenderer {
-            this._sprite.texture = sprite;
+        public setSprite(sprite: Sprite): SpriteRenderer {
+            this._sprite = sprite;
             if (this._sprite) {
                 this._origin = this._sprite.origin;
             }
+            this._areBoundsDirty = true;
 
             return this;
         }

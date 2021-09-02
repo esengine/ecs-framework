@@ -203,7 +203,7 @@ module es {
         }
 
         protected initialize() {
-
+            Graphics.instance = new Graphics();
         }
 
         protected async update(currentTime: number = -1) {

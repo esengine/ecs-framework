@@ -122,7 +122,7 @@ module es {
         public addAnimation(name: string, animation: SpriteAnimation): SpriteAnimator {
             // 如果我们没有精灵，使用我们找到的第一帧
             if (!this.sprite && animation.sprites.length > 0)
-                this.setSprite(animation.sprites[0].texture);
+                this.setSprite(animation.sprites[0]);
             this._animations[name] = animation;
             return this;
         }
