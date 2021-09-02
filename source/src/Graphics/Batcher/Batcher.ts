@@ -45,7 +45,7 @@ module es {
          * @param color 颜色
          * @param thickness 粗细 默认1
          */
-        drawPoints(points: Vector2[], color: Color, thickness?: number) {
+        drawPoints(points: Vector2[], color: Color, thickness: number = 2) {
             if (points.length < 2)
                 return;
 
@@ -61,7 +61,7 @@ module es {
          * @param closePoly 是否关闭图形
          * @param thickness 粗细
          */
-        drawPolygon(position: Vector2, points: Vector2[], color: Color, closePoly: boolean, thickness?: number) {
+        drawPolygon(position: Vector2, points: Vector2[], color: Color, closePoly: boolean, thickness: number = 2) {
             if (points.length < 2)
                 return;
 
@@ -81,7 +81,7 @@ module es {
          * @param color 颜色
          * @param thickness 边框粗细
          */
-        drawHollowRect(x: number, y: number, width: number, height: number, color: Color, thickness?: number) {
+        drawHollowRect(x: number, y: number, width: number, height: number, color: Color, thickness: number = 2) {
             this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
 
             const tl = Vector2Ext.round(new Vector2(x, y));
@@ -102,7 +102,7 @@ module es {
          * @param color 颜色
          * @param thickness 粗细
          */
-        drawCircle(position: Vector2, radius: number, color: Color, thickness?: number) {
+        drawCircle(position: Vector2, radius: number, color: Color, thickness: number = 2) {
             const bounds = new Rectangle(position.x - radius, position.y - radius, radius * 2, radius * 2);
             if (this.camera && !this.camera.bounds.intersects(bounds))
                 return;
@@ -121,7 +121,7 @@ module es {
          * @param thickness 边框粗细
          * @param resolution 圆边数
          */
-        drawCircleLow(position: Vector2, radius: number, color: Color, thickness?: number, resolution?: number) {
+        drawCircleLow(position: Vector2, radius: number, color: Color, thickness: number = 2, resolution?: number) {
             let last = Vector2.unitX.multiplyScaler(radius);
             let lastP = Vector2Ext.perpendicularFlip(last);
 

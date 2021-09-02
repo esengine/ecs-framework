@@ -21,7 +21,7 @@ module es {
                 this.updateMatrixes();
 
             if (this._areBoundsDirty) {
-                let viewport = new Rectangle(0, 0, Core.stage.width, Core.stage.height);
+                let viewport = new Rectangle(0, 0, Core.stage.stageWidth, Core.stage.stageHeight);
                 let topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
                 let bottomRight = this.screenToWorldPoint(new Vector2(viewport.width - this._inset.right,
                     viewport.height - this._inset.bottom));
@@ -146,7 +146,7 @@ module es {
             super();
             this.setZoom(0);
 
-            this.origin = new Vector2(Core.stage.stageWidth / 2, Core.stage.stageHeight / 2);
+            // this.origin = new Vector2(Core.stage.stageWidth / 2, Core.stage.stageHeight / 2);
             this.ratio = new Vector2(1, 1);
         }
 

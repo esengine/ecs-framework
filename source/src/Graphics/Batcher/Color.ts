@@ -222,8 +222,7 @@ module es {
         public toHexEgret(): number {
             return Number("0x" + this._componentToHex(this.r) +
             this._componentToHex(this.g) +
-            this._componentToHex(this.b) +
-            this._componentToHex(this.a));
+            this._componentToHex(this.b));
         }
 
         /**

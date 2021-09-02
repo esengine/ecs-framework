@@ -679,7 +679,7 @@ var es;
             _this._areMatrixesDirty = true;
             _this._areBoundsDirty = true;
             _this.setZoom(0);
-            _this.origin = new es.Vector2(es.Core.stage.stageWidth / 2, es.Core.stage.stageHeight / 2);
+            // this.origin = new Vector2(Core.stage.stageWidth / 2, Core.stage.stageHeight / 2);
             _this.ratio = new es.Vector2(1, 1);
             return _this;
         }
@@ -702,7 +702,7 @@ var es;
                 if (this._areMatrixesDirty)
                     this.updateMatrixes();
                 if (this._areBoundsDirty) {
-                    var viewport = new es.Rectangle(0, 0, es.Core.stage.width, es.Core.stage.height);
+                    var viewport = new es.Rectangle(0, 0, es.Core.stage.stageWidth, es.Core.stage.stageHeight);
                     var topLeft = this.screenToWorldPoint(new es.Vector2(this._inset.left, this._inset.top));
                     var bottomRight = this.screenToWorldPoint(new es.Vector2(viewport.width - this._inset.right, viewport.height - this._inset.bottom));
                     if (this.entity.transform.rotation != 0) {
@@ -4471,7 +4471,7 @@ var es;
             return this;
         };
         SpriteRenderer.prototype.render = function (batcher, camera) {
-            batcher.drawSprite(this.sprite, this.entity.transform.position.add(this.localOffset), this.color, this.entity.transform.rotation, this.originNormalized, this.entity.transform.scale);
+            batcher.drawSprite(this.sprite, this.entity.transform.position.add(this.localOffset), this.color, this.entity.transform.rotationDegrees, this.origin, this.entity.transform.scale);
         };
         return SpriteRenderer;
     }(es.RenderableComponent));
@@ -7019,6 +7019,7 @@ var es;
          * @param thickness 粗细 默认1
          */
         Batcher.prototype.drawPoints = function (points, color, thickness) {
+            if (thickness === void 0) { thickness = 2; }
             if (points.length < 2)
                 return;
             for (var i = 1; i < points.length; i++)
@@ -7033,6 +7034,7 @@ var es;
          * @param thickness 粗细
          */
         Batcher.prototype.drawPolygon = function (position, points, color, closePoly, thickness) {
+            if (thickness === void 0) { thickness = 2; }
             if (points.length < 2)
                 return;
             for (var i = 1; i < points.length; i++)
@@ -7050,6 +7052,7 @@ var es;
          * @param thickness 边框粗细
          */
         Batcher.prototype.drawHollowRect = function (x, y, width, height, color, thickness) {
+            if (thickness === void 0) { thickness = 2; }
             this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
             var tl = es.Vector2Ext.round(new es.Vector2(x, y));
             var tr = es.Vector2Ext.round(new es.Vector2(x + width, y));
@@ -7068,6 +7071,7 @@ var es;
          * @param thickness 粗细
          */
         Batcher.prototype.drawCircle = function (position, radius, color, thickness) {
+            if (thickness === void 0) { thickness = 2; }
             var bounds = new es.Rectangle(position.x - radius, position.y - radius, radius * 2, radius * 2);
             if (this.camera && !this.camera.bounds.intersects(bounds))
                 return;
@@ -7085,6 +7089,7 @@ var es;
          * @param resolution 圆边数
          */
         Batcher.prototype.drawCircleLow = function (position, radius, color, thickness, resolution) {
+            if (thickness === void 0) { thickness = 2; }
             var last = es.Vector2.unitX.multiplyScaler(radius);
             var lastP = es.Vector2Ext.perpendicularFlip(last);
             for (var i = 1; i <= resolution; i++) {
@@ -7363,8 +7368,7 @@ var es;
         Color.prototype.toHexEgret = function () {
             return Number("0x" + this._componentToHex(this.r) +
                 this._componentToHex(this.g) +
-                this._componentToHex(this.b) +
-                this._componentToHex(this.a));
+                this._componentToHex(this.b));
         };
         /**
          * 从十六进制字符串设置颜色
