@@ -5,6 +5,26 @@ module es {
      */
     export abstract class EntitySystem {
         private _entities: Entity[] = [];
+        private _updateOrder: number = 0;
+        private _startTime = 0;
+        private _endTime = 0;
+        private _useTime = 0;
+        
+        /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
+        public get useTime() {
+            return this._useTime;
+        }
+
+        /**
+         * 获取系统的更新时序
+         */
+        public get updateOrder() {
+            return this._updateOrder;
+        }
+
+        public set updateOrder(value: number) {
+            this.setUpdateOrder(value);
+        }
 
         constructor(matcher?: Matcher) {
             this._matcher = matcher ? matcher : Matcher.empty();
@@ -31,12 +51,13 @@ module es {
             return this._matcher;
         }
 
-        private _startTime = 0;
-        private _endTime = 0;
-        private _useTime = 0;
-        /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
-        public get useTime() {
-            return this._useTime;
+        /**
+         * 设置更新时序
+         * @param order 
+         */
+         public setUpdateOrder(order: number) {
+            this._updateOrder = order;
+            this.scene.entityProcessors.setDirty();
         }
 
         public initialize() {

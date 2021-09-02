@@ -1884,6 +1884,16 @@ declare module es {
      */
     abstract class EntitySystem {
         private _entities;
+        private _updateOrder;
+        private _startTime;
+        private _endTime;
+        private _useTime;
+        /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
+        readonly useTime: number;
+        /**
+         * 获取系统的更新时序
+         */
+        updateOrder: number;
         constructor(matcher?: Matcher);
         private _scene;
         /**
@@ -1892,11 +1902,11 @@ declare module es {
         scene: Scene;
         private _matcher;
         readonly matcher: Matcher;
-        private _startTime;
-        private _endTime;
-        private _useTime;
-        /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
-        readonly useTime: number;
+        /**
+         * 设置更新时序
+         * @param order
+         */
+        setUpdateOrder(order: number): void;
         initialize(): void;
         onChanged(entity: Entity): void;
         add(entity: Entity): void;
@@ -2317,7 +2327,12 @@ declare module es {
 }
 declare module es {
     class EntityProcessorList {
-        _processors: EntitySystem[];
+        private _processors;
+        private _orderDirty;
+        /** 获取系统列表 */
+        readonly processors: EntitySystem[];
+        /** 系统数量 */
+        readonly count: number;
         add(processor: EntitySystem): void;
         remove(processor: EntitySystem): void;
         onComponentAdded(entity: Entity): void;
@@ -2328,6 +2343,8 @@ declare module es {
         update(): void;
         lateUpdate(): void;
         end(): void;
+        setDirty(): void;
+        clearDirty(): void;
         getProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T;
         protected notifyEntityChanged(entity: Entity): void;
         protected removeFromProcessors(entity: Entity): void;
@@ -2404,87 +2421,95 @@ declare module es {
         updateLists(): void;
     }
 }
-declare class StringUtils {
-    /**
-     * 特殊符号字符串
-     */
-    private static specialSigns;
-    /**
-     * 匹配中文字符
-     * @param str 需要匹配的字符串
-     * @return
-     */
-    static matchChineseWord(str: string): string[];
-    /**
-     * 去除字符串左端的空白字符
-     * @param target 目标字符串
-     * @return
-     */
-    static lTrim(target: string): string;
-    /**
-     * 去除字符串右端的空白字符
-     * @param target 目标字符串
-     * @return
-     */
-    static rTrim(target: string): string;
-    /**
-     * 返回一个去除2段空白字符的字符串
-     * @param target
-     * @return 返回一个去除2段空白字符的字符串
-     */
-    static trim(target: string): string;
-    /**
-     * 返回该字符是否为空白字符
-     * @param    str
-     * @return  返回该字符是否为空白字符
-     */
-    static isWhiteSpace(str: string): boolean;
-    /**
-     * 返回执行替换后的字符串
-     * @param mainStr 待查找字符串
-     * @param targetStr 目标字符串
-     * @param replaceStr 替换字符串
-     * @param caseMark 是否忽略大小写
-     * @return 返回执行替换后的字符串
-     */
-    static replaceMatch(mainStr: string, targetStr: string, replaceStr: string, caseMark?: boolean): string;
-    /**
-     * 用html实体换掉字符窜中的特殊字符
-     * @param str 需要替换的字符串
-     * @param reversion 是否翻转替换：将转义符号替换为正常的符号
-     * @return 换掉特殊字符后的字符串
-     */
-    static htmlSpecialChars(str: string, reversion?: boolean): string;
-    /**
-     * 给数字字符前面添 "0"
-     *
-     * @param str 要进行处理的字符串
-     * @param width 处理后字符串的长度，
-     *              如果str.length >= width，将不做任何处理直接返回原始的str。
-     * @return
-     *
-     */
-    static zfill(str: string, width?: number): string;
-    /**
-     * 翻转字符串
-     * @param str 字符串
-     * @return 翻转后的字符串
-     */
-    static reverse(str: string): string;
-    /**
-     * 截断某段字符串
-     * @param str 目标字符串
-     * @param start 需要截断的起始索引
-     * @param en 截断长度
-     * @param order 顺序，true从字符串头部开始计算，false从字符串尾巴开始结算。
-     * @return 截断后的字符串
-     */
-    static cutOff(str: string, start: number, len: number, order?: boolean): string;
-    /**
-     * {0} 字符替换
-     */
-    static strReplace(str: string, rStr: string[]): string;
-    static format(str: string, ...args: any[]): string;
+declare module es {
+    class StringUtils {
+        /**
+         * 特殊符号字符串
+         */
+        private static specialSigns;
+        /**
+         * 匹配中文字符
+         * @param str 需要匹配的字符串
+         * @return
+         */
+        static matchChineseWord(str: string): string[];
+        /**
+         * 去除字符串左端的空白字符
+         * @param target 目标字符串
+         * @return
+         */
+        static lTrim(target: string): string;
+        /**
+         * 去除字符串右端的空白字符
+         * @param target 目标字符串
+         * @return
+         */
+        static rTrim(target: string): string;
+        /**
+         * 返回一个去除2段空白字符的字符串
+         * @param target
+         * @return 返回一个去除2段空白字符的字符串
+         */
+        static trim(target: string): string;
+        /**
+         * 返回该字符是否为空白字符
+         * @param    str
+         * @return  返回该字符是否为空白字符
+         */
+        static isWhiteSpace(str: string): boolean;
+        /**
+         * 返回该字符是否为空字符或者为null
+         * @param str
+         * @returns
+         */
+        static isNullOrEmpty(str: string): boolean;
+        /**
+         * 返回执行替换后的字符串
+         * @param mainStr 待查找字符串
+         * @param targetStr 目标字符串
+         * @param replaceStr 替换字符串
+         * @param caseMark 是否忽略大小写
+         * @return 返回执行替换后的字符串
+         */
+        static replaceMatch(mainStr: string, targetStr: string, replaceStr: string, caseMark?: boolean): string;
+        /**
+         * 用html实体换掉字符窜中的特殊字符
+         * @param str 需要替换的字符串
+         * @param reversion 是否翻转替换：将转义符号替换为正常的符号
+         * @return 换掉特殊字符后的字符串
+         */
+        static htmlSpecialChars(str: string, reversion?: boolean): string;
+        /**
+         * 给数字字符前面添 "0"
+         *
+         * @param str 要进行处理的字符串
+         * @param width 处理后字符串的长度，
+         *              如果str.length >= width，将不做任何处理直接返回原始的str。
+         * @return
+         *
+         */
+        static zfill(str: string, width?: number): string;
+        /**
+         * 翻转字符串
+         * @param str 字符串
+         * @return 翻转后的字符串
+         */
+        static reverse(str: string): string;
+        /**
+         * 截断某段字符串
+         * @param str 目标字符串
+         * @param start 需要截断的起始索引
+         * @param en 截断长度
+         * @param order 顺序，true从字符串头部开始计算，false从字符串尾巴开始结算。
+         * @return 截断后的字符串
+         */
+        static cutOff(str: string, start: number, len: number, order?: boolean): string;
+        /**
+         * {0} 字符替换
+         */
+        static strReplace(str: string, rStr: string[]): string;
+        static format(str: string, ...args: any[]): string;
+    }
 }
 declare module es {
     /** 提供帧定时信息 */

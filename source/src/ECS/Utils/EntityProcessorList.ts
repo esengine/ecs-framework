@@ -1,6 +1,16 @@
 module es {
     export class EntityProcessorList {
-        public _processors: EntitySystem[] = [];
+        private _processors: EntitySystem[] = [];
+        private _orderDirty: boolean = false;
+        /** 获取系统列表 */
+        public get processors() {
+            return this._processors;
+        }
+
+        /** 系统数量 */
+        public get count() {
+            return this._processors.length;
+        }
 
         public add(processor: EntitySystem) {
             this._processors.push(processor);
@@ -34,6 +44,16 @@ module es {
             if (this._processors.length == 0)
                 return;
 
+            if (this._orderDirty) {
+                // 进行排序
+                this._processors = this._processors.sort((a, b) => a.updateOrder - b.updateOrder);
+                for (let i = 0, s = this._processors.length; i < s; ++ i) {
+                    const processor = this._processors[i];
+                    processor.setUpdateOrder(i);
+                }
+                this.clearDirty();
+            }
+
             for (let i = 0, s = this._processors.length; i < s; ++ i) {
                 this._processors[i].update();
             }
@@ -50,6 +70,14 @@ module es {
 
         public end() {
 
+        }
+
+        public setDirty() {
+            this._orderDirty = true;
+        }
+
+        public clearDirty() {
+            this._orderDirty = false;
         }
 
         public getProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T {
