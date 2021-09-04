@@ -1,5 +1,5 @@
 module es {
-    export abstract class RenderableComponent extends es.Component implements IRenderable {
+    export abstract class RenderableComponent extends Component implements IRenderable {
         protected _sprite: Sprite;
 
         /**

@@ -1,8 +1,11 @@
+const {ccclass, property} = cc._decorator;
+
 module es {
     /**
      *  全局核心类
      */
-    export class Core {
+    @ccclass
+    export class Core extends cc.Component {
         /**
          * 核心发射器。只发出核心级别的事件
          */
@@ -22,10 +25,7 @@ module es {
          */
         public static entitySystemsEnabled: boolean;
 
-        /**
-         * egret舞台
-         */
-        public static stage: egret.Stage;
+        public static stage: cc.Canvas;
         /**
          * 是否正在debug模式
          * 仅允许在create时进行更改
@@ -43,7 +43,8 @@ module es {
         public _coroutineManager: CoroutineManager = new CoroutineManager();
         public _timerManager: TimerManager = new TimerManager();
 
-        private constructor(stage: egret.Stage, debug: boolean = true, enableEntitySystems: boolean = true) {
+        private constructor(stage: cc.Canvas, debug: boolean = true, enableEntitySystems: boolean = true) {
+            super();
             Core._instance = this;
             Core.stage = stage;
             Core.emitter = new Emitter<CoreEvents>();
@@ -57,7 +58,6 @@ module es {
             Core.entitySystemsEnabled = enableEntitySystems;
 
             this.debug = debug;
-            this.registerCoreEvent();
             this.initialize();
         }
 
@@ -103,7 +103,7 @@ module es {
         /**
          * 默认实现创建核心
          */
-        public static create(stage: egret.Stage, debug: boolean = true): Core {
+        public static create(stage: cc.Canvas, debug: boolean = true): Core {
             if (this._instance == null) {
                 this._instance = new es.Core(stage, debug);
             }
@@ -183,35 +183,16 @@ module es {
             Time.sceneChanged();
         }
 
-        public registerCoreEvent() {
-            egret.lifecycle.addLifecycleListener((context) => {
-                context.onUpdate = () => {
-                    es.Core.emitter.emit(es.CoreEvents.frameUpdated);
-                }
-            });
-
-            egret.lifecycle.onPause = () => {
-                egret.ticker.pause();
-                Core.paused = true;
-            };
-
-            egret.lifecycle.onResume = () => {
-                egret.ticker.resume();
-                Time.pauseToResume();
-                Core.paused = false;
-            };
-        }
-
         protected initialize() {
             Graphics.instance = new Graphics();
         }
 
-        protected async update(currentTime: number = -1) {
+        protected update(currentTime: number) {
             if (Core.paused) {
                 return;
             }
 
-            Time.update(currentTime, currentTime != -1);
+            Time.update(currentTime, true);
             if (this._scene != null) {
                 for (let i = this._globalManagers.length - 1; i >= 0; i--) {
                     if (this._globalManagers[i].enabled)

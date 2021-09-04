@@ -13,12 +13,12 @@ module es {
             return this._bounds;
         }
 
-        constructor(sprite: Sprite |egret.Texture = null) {
+        constructor(sprite: Sprite | cc.Texture2D = null) {
             super();
             if (sprite instanceof Sprite) {
                 this.setSprite(sprite);
             }
-            else if (sprite instanceof egret.Texture) {
+            else if (sprite instanceof cc.Texture2D) {
                 this.setSprite(new Sprite(sprite));
             }
         }

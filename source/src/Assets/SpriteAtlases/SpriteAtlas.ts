@@ -18,7 +18,7 @@ module es {
 
         public dispose() {
             if (this.sprites != null) {
-                this.sprites[0].texture.dispose();
+                this.sprites[0].destroy();
                 this.sprites = null;
             }
         }

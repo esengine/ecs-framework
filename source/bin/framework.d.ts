@@ -1,8 +1,9 @@
+declare const ccclass: typeof cc._decorator.ccclass, property: typeof cc._decorator.property;
 declare module es {
     /**
      *  全局核心类
      */
-    class Core {
+    class Core extends cc.Component {
         /**
          * 核心发射器。只发出核心级别的事件
          */
@@ -21,10 +22,7 @@ declare module es {
          * 用于确定是否应该使用EntitySystems
          */
         static entitySystemsEnabled: boolean;
-        /**
-         * egret舞台
-         */
-        static stage: egret.Stage;
+        static stage: cc.Canvas;
         /**
          * 是否正在debug模式
          * 仅允许在create时进行更改
@@ -63,7 +61,7 @@ declare module es {
         /**
          * 默认实现创建核心
          */
-        static create(stage: egret.Stage, debug?: boolean): Core;
+        static create(stage: cc.Canvas, debug?: boolean): Core;
         /**
          * 添加一个全局管理器对象，它的更新方法将调用场景前的每一帧。
          * @param manager
@@ -98,15 +96,14 @@ declare module es {
          * 在一个场景结束后，下一个场景开始之前调用
          */
         onSceneChanged(): void;
-        registerCoreEvent(): void;
         protected initialize(): void;
-        protected update(currentTime?: number): Promise<void>;
+        protected update(currentTime: number): void;
     }
 }
 declare module es {
     class ContentManager {
         _loadedAssets: Map<string, object>;
-        loadTexture(name: string): Promise<egret.Texture>;
+        loadTexture(name: string): Promise<cc.Texture2D>;
     }
 }
 declare module es {
@@ -281,8 +278,6 @@ declare module es {
         worldToScreenPoint(worldPosition: Vector2): Vector2;
         forceMatrixUpdate(): void;
         onEntityTransformChanged(comp: ComponentTransform): void;
-        touchToWorldPoint(): Vector2;
-        mouseToWorldPoint(): Vector2;
         update(): void;
     }
 }
@@ -1637,7 +1632,7 @@ declare module es {
     }
 }
 declare module es {
-    abstract class RenderableComponent extends es.Component implements IRenderable {
+    abstract class RenderableComponent extends Component implements IRenderable {
         protected _sprite: Sprite;
         /**
          * 应该由这个精灵显示的精灵
@@ -1683,7 +1678,7 @@ declare module es {
 declare module es {
     class SpriteRenderer extends RenderableComponent {
         getbounds(): Rectangle;
-        constructor(sprite?: Sprite | egret.Texture);
+        constructor(sprite?: Sprite | cc.Texture2D);
         protected _origin: Vector2;
         /**
          * 精灵的原点。这是在设置精灵时自动设置的
@@ -2638,7 +2633,6 @@ declare module es {
     class Graphics {
         static instance: Graphics;
         batcher: IBatcher;
-        pixelTexture: egret.Sprite;
         constructor();
     }
 }
@@ -2653,7 +2647,8 @@ declare module es {
         private _batcherSprite;
         camera: ICamera | null;
         strokeNum: number;
-        sprite: egret.Sprite;
+        sprite: cc.Node;
+        protected graphics: cc.Graphics;
         readonly MAX_STROKE: number;
         constructor();
         begin(cam: ICamera, batcherType?: string): void;
@@ -2725,12 +2720,12 @@ declare module es {
          * @param size 大小
          */
         drawPixel(position: Vector2, color: Color, size?: number): void;
-        drawSprite(sprite: egret.Bitmap, position: Vector2, color: Color, rotation: number, origin: Vector2, scale: Vector2): void;
+        drawSprite(sprite: Sprite, position: Vector2, color: Color, rotation: number, origin: Vector2, scale: Vector2): void;
         flushBatch(): void;
     }
 }
 declare module es {
-    class Color {
+    class Color extends cc.Color {
         /**
          * 红色通道
          */
@@ -3000,306 +2995,12 @@ declare module es {
     }
 }
 declare module es {
-    class Sprite extends egret.Bitmap {
+    class Sprite extends cc.Sprite {
         readonly sourceRect: Rectangle;
         readonly center: Vector2;
         origin: Vector2;
         readonly uvs: Rectangle;
-        constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
-        /**
-         * 提供一个精灵的列/行等间隔的图集的精灵列表
-         * @param texture
-         * @param cellWidth
-         * @param cellHeight
-         * @param cellOffset 处理时要包含的第一个单元格。基于0的索引
-         * @param maxCellsToInclude 包含的最大单元
-         */
-        static spritesFromAtlas(texture: egret.Texture, cellWidth: number, cellHeight: number, cellOffset?: number, maxCellsToInclude?: number): Sprite[];
-    }
-}
-declare module es {
-    class TouchState {
-        x: number;
-        y: number;
-        touchPoint: number;
-        touchDown: boolean;
-        readonly position: Vector2;
-        reset(): void;
-    }
-    class Input {
-        private static _init;
-        private static _previousTouchState;
-        private static _resolutionOffset;
-        private static _touchIndex;
-        private static _gameTouchs;
-        private static _mousePosition;
-        /**
-         * 触摸列表 存放最大个数量触摸点信息
-         * 可通过判断touchPoint是否为-1 来确定是否为有触摸
-         * 通过判断touchDown 判断触摸点是否有按下
-         */
-        static readonly gameTouchs: TouchState[];
-        private static _resolutionScale;
-        /** 获取缩放值 默认为1 */
-        static readonly resolutionScale: Vector2;
-        private static _totalTouchCount;
-        /** 当前触摸点数量 */
-        static readonly totalTouchCount: number;
-        /** 返回第一个触摸点的坐标 */
-        static readonly touchPosition: Vector2;
-        static readonly mousePosition: Vector2;
-        static _virtualInputs: VirtualInput[];
-        /** 获取最大触摸数 */
-        static readonly maxSupportedTouch: number;
-        /** 获取第一个触摸点距离上次距离的增量 */
-        static readonly touchPositionDelta: Vector2;
-        static initialize(): void;
-        static update(): void;
-        static scaledPosition(position: Vector2): Vector2;
-        /**
-         * 只有在当前帧按下并且在上一帧没有按下时才算press
-         * @param key
-         */
-        static isKeyPressed(key: Keys): boolean;
-        static isKeyPressedBoth(keyA: Keys, keyB: Keys): boolean;
-        static isKeyDown(key: Keys): boolean;
-        static isKeyDownBoth(keyA: Keys, keyB: Keys): boolean;
-        static isKeyReleased(key: Keys): boolean;
-        static isKeyReleasedBoth(keyA: Keys, keyB: Keys): boolean;
-        static readonly leftMouseButtonPressed: boolean;
-        static readonly rightMouseButtonPressed: boolean;
-        static readonly leftMouseButtonDown: boolean;
-        static readonly leftMouseButtonRelease: boolean;
-        static readonly rightMouseButtonDown: boolean;
-        static readonly rightMouseButtonRelease: boolean;
-        private static _previousMouseState;
-        private static _currentMouseState;
-        private static initTouchCache;
-        private static touchBegin;
-        private static touchMove;
-        private static touchEnd;
-        private static mouseDown;
-        private static mouseUp;
-        private static mouseMove;
-        private static mouseLeave;
-        private static setpreviousTouchState;
-    }
-}
-declare module es {
-    class KeyboardUtils {
-        /**
-         * 当前帧按键状态
-         */
-        static currentKeys: Keys[];
-        /**
-         * 上一帧按键状态
-         */
-        static previousKeys: Keys[];
-        private static keyStatusKeys;
-        static init(): void;
-        static update(): void;
-        static destroy(): void;
-        private static onKeyDownHandler;
-        private static onKeyUpHandler;
-    }
-}
-declare module es {
-    enum Keys {
-        none = 0,
-        back = 8,
-        tab = 9,
-        enter = 13,
-        capsLock = 20,
-        escape = 27,
-        space = 32,
-        pageUp = 33,
-        pageDown = 34,
-        end = 35,
-        home = 36,
-        left = 37,
-        up = 38,
-        right = 39,
-        down = 40,
-        select = 41,
-        print = 42,
-        execute = 43,
-        printScreen = 44,
-        insert = 45,
-        delete = 46,
-        help = 47,
-        d0 = 48,
-        d1 = 49,
-        d2 = 50,
-        d3 = 51,
-        d4 = 52,
-        d5 = 53,
-        d6 = 54,
-        d7 = 55,
-        d8 = 56,
-        d9 = 57,
-        a = 65,
-        b = 66,
-        c = 67,
-        d = 68,
-        e = 69,
-        f = 70,
-        g = 71,
-        h = 72,
-        i = 73,
-        j = 74,
-        k = 75,
-        l = 76,
-        m = 77,
-        n = 78,
-        o = 79,
-        p = 80,
-        q = 81,
-        r = 82,
-        s = 83,
-        t = 84,
-        u = 85,
-        v = 86,
-        w = 87,
-        x = 88,
-        y = 89,
-        z = 90,
-        leftWindows = 91,
-        rightWindows = 92,
-        apps = 93,
-        sleep = 95,
-        numPad0 = 96,
-        numPad1 = 97,
-        numPad2 = 98,
-        numPad3 = 99,
-        numPad4 = 100,
-        numPad5 = 101,
-        numPad6 = 102,
-        numPad7 = 103,
-        numPad8 = 104,
-        numPad9 = 105,
-        multiply = 106,
-        add = 107,
-        seperator = 108,
-        subtract = 109,
-        decimal = 110,
-        divide = 111,
-        f1 = 112,
-        f2 = 113,
-        f3 = 114,
-        f4 = 115,
-        f5 = 116,
-        f6 = 117,
-        f7 = 118,
-        f8 = 119,
-        f9 = 120,
-        f10 = 121,
-        f11 = 122,
-        f12 = 123,
-        f13 = 124,
-        f14 = 125,
-        f15 = 126,
-        f16 = 127,
-        f17 = 128,
-        f18 = 129,
-        f19 = 130,
-        f20 = 131,
-        f21 = 132,
-        f22 = 133,
-        f23 = 134,
-        f24 = 135,
-        numLock = 144,
-        scroll = 145,
-        leftShift = 160,
-        rightShift = 161,
-        leftControl = 162,
-        rightControl = 163,
-        leftAlt = 164,
-        rightAlt = 165,
-        browserBack = 166,
-        browserForward = 167
-    }
-}
-declare module es {
-    enum ButtonState {
-        pressed = 0,
-        released = 1
-    }
-    class MouseState {
-        leftButton: ButtonState;
-        middleButton: ButtonState;
-        rightButton: ButtonState;
-        clone(): MouseState;
-    }
-}
-declare module es {
-    enum OverlapBehavior {
-        /**
-         * 重复的输入将导致相互抵消，并且不会记录任何输入。
-         * 例如:按左箭头键，按住时按右箭头键。这将导致相互抵消。
-         */
-        cancelOut = 0,
-        /**
-         * 将使用找到的第一个输入
-         */
-        takeOlder = 1,
-        /**
-         * 将使用找到的最后一个输入
-         */
-        takeNewer = 2
-    }
-    /**
-     * 虚拟按钮，其状态由其VirtualInputNodes的状态决定
-     */
-    abstract class VirtualInput {
-        protected constructor();
-        /**
-         * 从输入系统取消虚拟输入的注册。在轮询VirtualInput之后调用这个函数
-         */
-        deregister(): void;
-        abstract update(): void;
-    }
-    /**
-     * 将它们添加到您的VirtualInput中，以定义它如何确定当前输入状态。
-     * 例如，如果你想检查一个键盘键是否被按下，创建一个VirtualButton并添加一个VirtualButton.keyboardkey
-     */
-    abstract class VirtualInputNode {
-        update(): void;
-    }
-}
-declare module es {
-    class VirtualIntegerAxis extends VirtualInput {
-        nodes: VirtualAxisNode[];
-        readonly value: number;
-        constructor(...nodes: VirtualAxisNode[]);
-        update(): void;
-        /**
-         * 添加键盘键来模拟这个虚拟输入的左/右或上/下
-         * @param overlapBehavior
-         * @param negative
-         * @param positive
-         */
-        addKeyboardKeys(overlapBehavior: OverlapBehavior, negative: Keys, positive: Keys): this;
-    }
-    abstract class VirtualAxisNode extends VirtualInputNode {
-        abstract value: number;
-    }
-}
-declare module es {
-    class VirtualAxis extends VirtualInput {
-        nodes: VirtualAxisNode[];
-        readonly value: number;
-        constructor(...nodes: VirtualAxisNode[]);
-        update(): void;
-    }
-    class KeyboardKeys extends VirtualAxisNode {
-        overlapBehavior: OverlapBehavior;
-        positive: Keys;
-        negative: Keys;
-        _value: number;
-        _turned: boolean;
-        constructor(overlapBehavior: OverlapBehavior, negative: Keys, positive: Keys);
-        update(): void;
-        readonly value: number;
+        constructor(texture: cc.Texture2D, sourceRect?: Rectangle, origin?: Vector2);
     }
 }
 declare module es {
@@ -3580,7 +3281,7 @@ declare module es {
          * @param threshold
          * @returns
          */
-        static signThreshold(value: number, threshold: number): number;
+        static signThreshold(value: number, threshold: number): any;
         static inverseLerp(from: number, to: number, t: number): number;
         /**
          * 在两个值之间线性插值

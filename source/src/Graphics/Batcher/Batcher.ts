@@ -6,28 +6,33 @@ module es {
         public static readonly TYPE_DEBUG = "debug";
         public static readonly TYPE_NORMAL = "normal";
         /** 根据不同的batcherType来使用不同的graphics来进行绘制 */
-        private _batcherSprite: Map<string, egret.Sprite>;
+        private _batcherSprite: Map<string, cc.Node>;
         public camera: ICamera | null = null;
         public strokeNum: number = 0;
-        public sprite: egret.Sprite;
+        public sprite: cc.Node;
+
+        protected graphics: cc.Graphics;
     
         public readonly MAX_STROKE = 2048;
 
         constructor() {
-            this._batcherSprite = new Map<string, egret.Sprite>();
+            this._batcherSprite = new Map<string, cc.Node>();
         }
 
         begin(cam: ICamera, batcherType: string = Batcher.TYPE_NORMAL) {
             if (!this._batcherSprite.has(batcherType)) {
-                this.sprite = new egret.Sprite();
+                this.sprite = new cc.Node();
                 this.sprite.name = "batcher_" + batcherType;
                 this._batcherSprite.set(batcherType, this.sprite);
-                Core.stage.addChild(this.sprite);
+                Core.stage.node.addChild(this.sprite);
                 return;
             }
 
             this.sprite = this._batcherSprite.get(batcherType);
-            this.sprite.graphics.clear();
+            this.graphics = this.sprite.getComponent<cc.Graphics>(cc.Graphics);
+            if (!this.graphics)
+                this.graphics = this.sprite.addComponent(cc.Graphics);
+            this.graphics.clear();
             this.camera = cam;
             this.strokeNum = 0;
         }
@@ -35,7 +40,7 @@ module es {
         end() {
             if (this.strokeNum > 0) {
                 this.strokeNum = 0;
-                this.sprite.graphics.endFill();
+                this.graphics.fill();
             }
         }
 
@@ -82,7 +87,8 @@ module es {
          * @param thickness 边框粗细
          */
         drawHollowRect(x: number, y: number, width: number, height: number, color: Color, thickness: number = 2) {
-            this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
+            this.graphics.lineWidth = thickness;
+            this.graphics.fillColor = color;
 
             const tl = Vector2Ext.round(new Vector2(x, y));
             const tr = Vector2Ext.round(new Vector2(x + width, y));
@@ -107,8 +113,9 @@ module es {
             if (this.camera && !this.camera.bounds.intersects(bounds))
                 return;
 
-            this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
-            this.sprite.graphics.drawCircle(position.x, position.y, radius);
+            this.graphics.lineWidth = thickness;
+            this.graphics.fillColor = color;
+            this.graphics.circle(position.x, position.y, radius);
             this.strokeNum ++;
             this.flushBatch();
         }
@@ -152,8 +159,9 @@ module es {
             if (this.camera && !this.camera.bounds.intersects(rect))
                 return;
                 
-            this.sprite.graphics.lineStyle(1, color.toHexEgret(), color.a);
-            this.sprite.graphics.drawRect(Math.trunc(x), Math.trunc(y), Math.trunc(width), Math.trunc(height));
+            this.graphics.lineWidth = 1;
+            this.graphics.fillColor = color;
+            this.graphics.rect(Math.trunc(x), Math.trunc(y), Math.trunc(width), Math.trunc(height));
             this.strokeNum ++;
             this.flushBatch();
         }
@@ -170,9 +178,10 @@ module es {
             if (this.camera && !this.camera.bounds.intersects(bounds))
                 return;
     
-            this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
-            this.sprite.graphics.moveTo(start.x, start.y);
-            this.sprite.graphics.lineTo(end.x, end.y);
+            this.graphics.lineWidth = thickness;
+            this.graphics.fillColor = color;
+            this.graphics.moveTo(start.x, start.y);
+            this.graphics.lineTo(end.x, end.y);
             this.strokeNum ++;
             this.flushBatch();
         }
@@ -193,40 +202,30 @@ module es {
             if (this.camera && !this.camera.bounds.intersects(destRect))
                 return;
 
-            this.sprite.graphics.lineStyle(size, color.toHexEgret(), color.a);
-            this.sprite.graphics.drawRect(destRect.x, destRect.y, destRect.width, destRect.height);
+            this.graphics.lineWidth = size;
+            this.graphics.fillColor = color;
+            this.graphics.rect(destRect.x, destRect.y, destRect.width, destRect.height);
             this.strokeNum ++;
             this.flushBatch();
         }
 
-        drawSprite(sprite: egret.Bitmap, position: Vector2, color: Color, rotation: number,
+        drawSprite(sprite: Sprite, position: Vector2, color: Color, rotation: number,
             origin: Vector2, scale: Vector2) {
-                sprite.x = position.x;
-                sprite.y = position.y;
-                sprite.rotation = rotation;
-                sprite.scaleX = scale.x;
-                sprite.scaleY = scale.y;
-                sprite.anchorOffsetX = origin.x;
-                sprite.anchorOffsetY = origin.y;
+                sprite.node.x = position.x;
+                sprite.node.y = position.y;
+                sprite.node.rotation = rotation;
+                sprite.node.scaleX = scale.x;
+                sprite.node.scaleY = scale.y;
+                sprite.node.anchorX = origin.x;
+                sprite.node.anchorY = origin.y;
 
-                const colorMatrix = [
-                    1, 0, 0, 0, 0,
-                    0, 1, 0, 0, 0,
-                    0, 0, 1, 0, 0,
-                    0, 0, 0, 1, 0
-                ];
-                colorMatrix[0] = color.r / 255;
-                colorMatrix[6] = color.g / 255;
-                colorMatrix[12] = color.b / 255;
-                const colorFilter = new egret.ColorMatrixFilter(colorMatrix);
-                sprite.filters = [colorFilter];
-                sprite.alpha = color.a;
+                sprite.node.color = color;
             }
 
         public flushBatch() {
             if (this.strokeNum >= this.MAX_STROKE) {
                 this.strokeNum = 0;
-                this.sprite.graphics.endFill();
+                this.graphics.fill();
             }
         }
     }

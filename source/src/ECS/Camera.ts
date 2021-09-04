@@ -21,7 +21,7 @@ module es {
                 this.updateMatrixes();
 
             if (this._areBoundsDirty) {
-                let viewport = new Rectangle(0, 0, Core.stage.stageWidth, Core.stage.stageHeight);
+                let viewport = new Rectangle(0, 0, Core.stage.node.width, Core.stage.node.height);
                 let topLeft = this.screenToWorldPoint(new Vector2(this._inset.left, this._inset.top));
                 let bottomRight = this.screenToWorldPoint(new Vector2(viewport.width - this._inset.right,
                     viewport.height - this._inset.bottom));
@@ -262,14 +262,6 @@ module es {
 
         public onEntityTransformChanged(comp: ComponentTransform) {
             this._areMatrixesDirty = true;
-        }
-
-        public touchToWorldPoint() {
-            return this.screenToWorldPoint(Input.scaledPosition(Input.touchPosition));
-        }
-
-        public mouseToWorldPoint() {
-            return this.screenToWorldPoint(Input.scaledPosition(Input.mousePosition));
         }
 
         public update() {

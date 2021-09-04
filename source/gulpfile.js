@@ -25,18 +25,18 @@ gulp.task("buildDts", ["buildJs"], () => {
 
 gulp.task("copy", ["buildDts"], () => {
     return gulp.src('bin/**/*')
-        .pipe(gulp.dest('../demo/egret_demo/libs/framework/'))
-        .pipe(gulp.dest('../extensions/behaviourTree-ai/egret-demo/libs/framework/'))
+        // .pipe(gulp.dest('../demo/egret_demo/libs/framework/'))
+        // .pipe(gulp.dest('../extensions/behaviourTree-ai/egret-demo/libs/framework/'))
 });
 
 gulp.task('build', ['copy'], () => {
     return merge([
-        gulp.src('bin/*.js')
-            .pipe(gulp.dest('../demo/laya_demo/bin/libs/')),
-        gulp.src('bin/*.ts')
-            .pipe(gulp.dest('../demo/laya_demo/libs/')),
+        gulp.src('bin/*.js'),
+            // .pipe(gulp.dest('../demo/laya_demo/bin/libs/')),
+        gulp.src('bin/*.ts'),
+            // .pipe(gulp.dest('../demo/laya_demo/libs/')),
         gulp.src('bin/framework.d.ts')
-            .pipe(gulp.dest('../extensions/behaviourTree-ai/source/lib/'))
-            .pipe(gulp.dest('../extensions/ecs-star/lib/'))
+            // .pipe(gulp.dest('../extensions/behaviourTree-ai/source/lib/'))
+            // .pipe(gulp.dest('../extensions/ecs-star/lib/'))
     ])
 });

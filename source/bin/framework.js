@@ -1,39 +1,3 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -44,6 +8,12 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 var __read = (this && this.__read) || function (o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
     if (!m) return o;
@@ -74,37 +44,68 @@ var __values = (this && this.__values) || function (o) {
         }
     };
 };
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var _a = cc._decorator, ccclass = _a.ccclass, property = _a.property;
 var es;
 (function (es) {
     /**
      *  全局核心类
      */
-    var Core = /** @class */ (function () {
+    var Core = /** @class */ (function (_super) {
+        __extends(Core, _super);
         function Core(stage, debug, enableEntitySystems) {
             if (debug === void 0) { debug = true; }
             if (enableEntitySystems === void 0) { enableEntitySystems = true; }
+            var _this = _super.call(this) || this;
             /**
              * 全局访问系统
              */
-            this._globalManagers = [];
-            this._coroutineManager = new es.CoroutineManager();
-            this._timerManager = new es.TimerManager();
-            this._frameCounterElapsedTime = 0;
-            this._frameCounter = 0;
-            this._totalMemory = 0;
-            Core._instance = this;
-            Core.stage = stage;
-            Core.emitter = new es.Emitter();
-            Core.emitter.addObserver(es.CoreEvents.frameUpdated, this.update, this);
-            Core.content = new es.ContentManager();
-            Core.registerGlobalManager(this._coroutineManager);
-            Core.registerGlobalManager(new es.TweenManager());
-            Core.registerGlobalManager(this._timerManager);
-            Core.entitySystemsEnabled = enableEntitySystems;
-            this.debug = debug;
-            this.registerCoreEvent();
-            this.initialize();
+            _this._globalManagers = [];
+            _this._coroutineManager = new es.CoroutineManager();
+            _this._timerManager = new es.TimerManager();
+            _this._frameCounterElapsedTime = 0;
+            _this._frameCounter = 0;
+            _this._totalMemory = 0;
+            Core_1._instance = _this;
+            Core_1.stage = stage;
+            Core_1.emitter = new es.Emitter();
+            Core_1.emitter.addObserver(es.CoreEvents.frameUpdated, _this.update, _this);
+            Core_1.content = new es.ContentManager();
+            Core_1.registerGlobalManager(_this._coroutineManager);
+            Core_1.registerGlobalManager(new es.TweenManager());
+            Core_1.registerGlobalManager(_this._timerManager);
+            Core_1.entitySystemsEnabled = enableEntitySystems;
+            _this.debug = debug;
+            _this.initialize();
+            return _this;
         }
+        Core_1 = Core;
         Object.defineProperty(Core, "Instance", {
             /**
              * 提供对单例/游戏实例的访问
@@ -174,8 +175,8 @@ var es;
          * @param type
          */
         Core.getGlobalManager = function (type) {
-            for (var i = 0, s = Core._instance._globalManagers.length; i < s; ++i) {
-                var manager = Core._instance._globalManagers[i];
+            for (var i = 0, s = Core_1._instance._globalManagers.length; i < s; ++i) {
+                var manager = Core_1._instance._globalManagers[i];
                 if (manager instanceof type)
                     return manager;
             }
@@ -223,61 +224,42 @@ var es;
         Core.prototype.onSceneChanged = function () {
             es.Time.sceneChanged();
         };
-        Core.prototype.registerCoreEvent = function () {
-            egret.lifecycle.addLifecycleListener(function (context) {
-                context.onUpdate = function () {
-                    es.Core.emitter.emit(es.CoreEvents.frameUpdated);
-                };
-            });
-            egret.lifecycle.onPause = function () {
-                egret.ticker.pause();
-                Core.paused = true;
-            };
-            egret.lifecycle.onResume = function () {
-                egret.ticker.resume();
-                es.Time.pauseToResume();
-                Core.paused = false;
-            };
-        };
         Core.prototype.initialize = function () {
             es.Graphics.instance = new es.Graphics();
         };
         Core.prototype.update = function (currentTime) {
-            if (currentTime === void 0) { currentTime = -1; }
-            return __awaiter(this, void 0, void 0, function () {
-                var i;
-                return __generator(this, function (_a) {
-                    if (Core.paused) {
-                        return [2 /*return*/];
-                    }
-                    es.Time.update(currentTime, currentTime != -1);
-                    if (this._scene != null) {
-                        for (i = this._globalManagers.length - 1; i >= 0; i--) {
-                            if (this._globalManagers[i].enabled)
-                                this._globalManagers[i].update();
-                        }
-                        this._scene.update();
-                        if (this._nextScene != null) {
-                            this._scene.end();
-                            es.Debug.log(es.LogType.info, "场景 {0} 切换至另一个场景 {1}", this._scene.name, this._nextScene.name);
-                            this._scene = this._nextScene;
-                            this._nextScene = null;
-                            this.onSceneChanged();
-                            this._scene.begin();
-                        }
-                    }
-                    this.startDebugDraw();
-                    return [2 /*return*/];
-                });
-            });
+            if (Core_1.paused) {
+                return;
+            }
+            es.Time.update(currentTime, true);
+            if (this._scene != null) {
+                for (var i = this._globalManagers.length - 1; i >= 0; i--) {
+                    if (this._globalManagers[i].enabled)
+                        this._globalManagers[i].update();
+                }
+                this._scene.update();
+                if (this._nextScene != null) {
+                    this._scene.end();
+                    es.Debug.log(es.LogType.info, "场景 {0} 切换至另一个场景 {1}", this._scene.name, this._nextScene.name);
+                    this._scene = this._nextScene;
+                    this._nextScene = null;
+                    this.onSceneChanged();
+                    this._scene.begin();
+                }
+            }
+            this.startDebugDraw();
         };
+        var Core_1;
         Core.paused = false;
         /**
          * 是否启用调试渲染
          */
         Core.debugRenderEndabled = false;
+        Core = Core_1 = __decorate([
+            ccclass
+        ], Core);
         return Core;
-    }());
+    }(cc.Component));
     es.Core = Core;
 })(es || (es = {}));
 var es;
@@ -293,12 +275,14 @@ var es;
                 if (asset) {
                     return resolve(asset);
                 }
-                RES.addEventListener(RES.ResourceEvent.ITEM_LOAD_ERROR, function (event) {
-                    reject("\u8D44\u6E90:" + event.resItem.name + "\u52A0\u8F7D\u5931\u8D25");
-                }, _this);
-                RES.getResAsync(name, function (texture) {
-                    resolve(texture);
-                }, _this);
+                cc.resources.load(name, cc.Texture2D, function (err, assets) {
+                    if (err == null) {
+                        resolve(assets);
+                    }
+                    else {
+                        reject("\u8D44\u6E90\u52A0\u8F7D\u5931\u8D25: " + err);
+                    }
+                });
             });
         };
         return ContentManager;
@@ -332,7 +316,7 @@ var es;
         };
         SpriteAtlas.prototype.dispose = function () {
             if (this.sprites != null) {
-                this.sprites[0].texture.dispose();
+                this.sprites[0].destroy();
                 this.sprites = null;
             }
         };
@@ -702,7 +686,7 @@ var es;
                 if (this._areMatrixesDirty)
                     this.updateMatrixes();
                 if (this._areBoundsDirty) {
-                    var viewport = new es.Rectangle(0, 0, es.Core.stage.stageWidth, es.Core.stage.stageHeight);
+                    var viewport = new es.Rectangle(0, 0, es.Core.stage.node.width, es.Core.stage.node.height);
                     var topLeft = this.screenToWorldPoint(new es.Vector2(this._inset.left, this._inset.top));
                     var bottomRight = this.screenToWorldPoint(new es.Vector2(viewport.width - this._inset.right, viewport.height - this._inset.bottom));
                     if (this.entity.transform.rotation != 0) {
@@ -902,12 +886,6 @@ var es;
         };
         Camera.prototype.onEntityTransformChanged = function (comp) {
             this._areMatrixesDirty = true;
-        };
-        Camera.prototype.touchToWorldPoint = function () {
-            return this.screenToWorldPoint(es.Input.scaledPosition(es.Input.touchPosition));
-        };
-        Camera.prototype.mouseToWorldPoint = function () {
-            return this.screenToWorldPoint(es.Input.scaledPosition(es.Input.mousePosition));
         };
         Camera.prototype.update = function () {
         };
@@ -4404,7 +4382,7 @@ var es;
             if (sprite instanceof es.Sprite) {
                 _this.setSprite(sprite);
             }
-            else if (sprite instanceof egret.Texture) {
+            else if (sprite instanceof cc.Texture2D) {
                 _this.setSprite(new es.Sprite(sprite));
             }
             return _this;
@@ -6412,15 +6390,15 @@ var es;
             return this._components[index];
         };
         RenderableComponentList.prototype.add = function (component) {
-            if (component.sprite.parent == null) {
-                es.Core.stage.addChild(component.sprite);
+            if (component.sprite.node.parent == null) {
+                component.sprite.node.setParent(es.Core.stage.node);
             }
             this._components.push(component);
             this.addToRenderLayerList(component, component.renderLayer);
         };
         RenderableComponentList.prototype.remove = function (component) {
-            if (component.sprite.parent != null) {
-                es.Core.stage.removeChild(component.sprite);
+            if (component.sprite.node.parent != null) {
+                component.sprite.node.removeFromParent();
             }
             new es.List(this._components).remove(component);
             new es.List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);
@@ -7042,9 +7020,6 @@ var es;
     var Graphics = /** @class */ (function () {
         function Graphics() {
             this.batcher = new es.Batcher();
-            this.pixelTexture = new egret.Sprite();
-            this.pixelTexture.graphics.drawRect(0, 0, 1, 1);
-            this.pixelTexture.graphics.endFill();
         }
         return Graphics;
     }());
@@ -7065,21 +7040,24 @@ var es;
         Batcher.prototype.begin = function (cam, batcherType) {
             if (batcherType === void 0) { batcherType = Batcher.TYPE_NORMAL; }
             if (!this._batcherSprite.has(batcherType)) {
-                this.sprite = new egret.Sprite();
+                this.sprite = new cc.Node();
                 this.sprite.name = "batcher_" + batcherType;
                 this._batcherSprite.set(batcherType, this.sprite);
-                es.Core.stage.addChild(this.sprite);
+                es.Core.stage.node.addChild(this.sprite);
                 return;
             }
             this.sprite = this._batcherSprite.get(batcherType);
-            this.sprite.graphics.clear();
+            this.graphics = this.sprite.getComponent(cc.Graphics);
+            if (!this.graphics)
+                this.graphics = this.sprite.addComponent(cc.Graphics);
+            this.graphics.clear();
             this.camera = cam;
             this.strokeNum = 0;
         };
         Batcher.prototype.end = function () {
             if (this.strokeNum > 0) {
                 this.strokeNum = 0;
-                this.sprite.graphics.endFill();
+                this.graphics.fill();
             }
         };
         /**
@@ -7123,7 +7101,8 @@ var es;
          */
         Batcher.prototype.drawHollowRect = function (x, y, width, height, color, thickness) {
             if (thickness === void 0) { thickness = 2; }
-            this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
+            this.graphics.lineWidth = thickness;
+            this.graphics.fillColor = color;
             var tl = es.Vector2Ext.round(new es.Vector2(x, y));
             var tr = es.Vector2Ext.round(new es.Vector2(x + width, y));
             var br = es.Vector2Ext.round(new es.Vector2(x + width, y + height));
@@ -7145,8 +7124,9 @@ var es;
             var bounds = new es.Rectangle(position.x - radius, position.y - radius, radius * 2, radius * 2);
             if (this.camera && !this.camera.bounds.intersects(bounds))
                 return;
-            this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
-            this.sprite.graphics.drawCircle(position.x, position.y, radius);
+            this.graphics.lineWidth = thickness;
+            this.graphics.fillColor = color;
+            this.graphics.circle(position.x, position.y, radius);
             this.strokeNum++;
             this.flushBatch();
         };
@@ -7185,8 +7165,9 @@ var es;
             var rect = new es.Rectangle(x, y, width, height);
             if (this.camera && !this.camera.bounds.intersects(rect))
                 return;
-            this.sprite.graphics.lineStyle(1, color.toHexEgret(), color.a);
-            this.sprite.graphics.drawRect(Math.trunc(x), Math.trunc(y), Math.trunc(width), Math.trunc(height));
+            this.graphics.lineWidth = 1;
+            this.graphics.fillColor = color;
+            this.graphics.rect(Math.trunc(x), Math.trunc(y), Math.trunc(width), Math.trunc(height));
             this.strokeNum++;
             this.flushBatch();
         };
@@ -7201,9 +7182,10 @@ var es;
             var bounds = es.RectangleExt.boundsFromPolygonVector([start, end]);
             if (this.camera && !this.camera.bounds.intersects(bounds))
                 return;
-            this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
-            this.sprite.graphics.moveTo(start.x, start.y);
-            this.sprite.graphics.lineTo(end.x, end.y);
+            this.graphics.lineWidth = thickness;
+            this.graphics.fillColor = color;
+            this.graphics.moveTo(start.x, start.y);
+            this.graphics.lineTo(end.x, end.y);
             this.strokeNum++;
             this.flushBatch();
         };
@@ -7221,36 +7203,26 @@ var es;
             }
             if (this.camera && !this.camera.bounds.intersects(destRect))
                 return;
-            this.sprite.graphics.lineStyle(size, color.toHexEgret(), color.a);
-            this.sprite.graphics.drawRect(destRect.x, destRect.y, destRect.width, destRect.height);
+            this.graphics.lineWidth = size;
+            this.graphics.fillColor = color;
+            this.graphics.rect(destRect.x, destRect.y, destRect.width, destRect.height);
             this.strokeNum++;
             this.flushBatch();
         };
         Batcher.prototype.drawSprite = function (sprite, position, color, rotation, origin, scale) {
-            sprite.x = position.x;
-            sprite.y = position.y;
-            sprite.rotation = rotation;
-            sprite.scaleX = scale.x;
-            sprite.scaleY = scale.y;
-            sprite.anchorOffsetX = origin.x;
-            sprite.anchorOffsetY = origin.y;
-            var colorMatrix = [
-                1, 0, 0, 0, 0,
-                0, 1, 0, 0, 0,
-                0, 0, 1, 0, 0,
-                0, 0, 0, 1, 0
-            ];
-            colorMatrix[0] = color.r / 255;
-            colorMatrix[6] = color.g / 255;
-            colorMatrix[12] = color.b / 255;
-            var colorFilter = new egret.ColorMatrixFilter(colorMatrix);
-            sprite.filters = [colorFilter];
-            sprite.alpha = color.a;
+            sprite.node.x = position.x;
+            sprite.node.y = position.y;
+            sprite.node.rotation = rotation;
+            sprite.node.scaleX = scale.x;
+            sprite.node.scaleY = scale.y;
+            sprite.node.anchorX = origin.x;
+            sprite.node.anchorY = origin.y;
+            sprite.node.color = color;
         };
         Batcher.prototype.flushBatch = function () {
             if (this.strokeNum >= this.MAX_STROKE) {
                 this.strokeNum = 0;
-                this.sprite.graphics.endFill();
+                this.graphics.fill();
             }
         };
         Batcher.TYPE_DEBUG = "debug";
@@ -7261,7 +7233,8 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Color = /** @class */ (function () {
+    var Color = /** @class */ (function (_super) {
+        __extends(Color, _super);
         /**
          * 从 r, g, b, a 创建一个新的 Color 实例
          *
@@ -7271,10 +7244,12 @@ var es;
          * @param a  颜色的 alpha 分量 (0-1.0)
          */
         function Color(r, g, b, a) {
-            this.r = r;
-            this.g = g;
-            this.b = b;
-            this.a = a != null ? a : 1;
+            var _this = _super.call(this, r, g, b, a) || this;
+            _this.r = r;
+            _this.g = g;
+            _this.b = b;
+            _this.a = a != null ? a : 1;
+            return _this;
         }
         /**
          * 从 r, g, b, a 创建一个新的 Color 实例
@@ -7574,7 +7549,7 @@ var es;
          */
         Color.Transparent = Color.createFromHex('#FFFFFF00');
         return Color;
-    }());
+    }(cc.Color));
     es.Color = Color;
     /**
      * 内部 HSL 颜色表示
@@ -7746,9 +7721,9 @@ var es;
             _this.uvs = new es.Rectangle();
             if (!texture)
                 return _this;
-            _this.texture = texture;
+            _this.spriteFrame = new cc.SpriteFrame(texture);
             if (!sourceRect) {
-                sourceRect = new es.Rectangle(0, 0, texture.textureWidth, texture.textureHeight);
+                sourceRect = new es.Rectangle(0, 0, texture.width, texture.height);
             }
             if (!origin) {
                 origin = sourceRect.getHalfSize();
@@ -7756,726 +7731,17 @@ var es;
             _this.sourceRect = sourceRect;
             _this.center = new es.Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
             _this.origin = origin;
-            var inverseTexW = 1 / texture.textureWidth;
-            var inverseTexH = 1 / texture.textureHeight;
+            var inverseTexW = 1 / texture.width;
+            var inverseTexH = 1 / texture.height;
             _this.uvs.x = sourceRect.x * inverseTexW;
             _this.uvs.y = sourceRect.y * inverseTexH;
             _this.uvs.width = sourceRect.width * inverseTexW;
             _this.uvs.height = sourceRect.height * inverseTexH;
             return _this;
         }
-        /**
-         * 提供一个精灵的列/行等间隔的图集的精灵列表
-         * @param texture
-         * @param cellWidth
-         * @param cellHeight
-         * @param cellOffset 处理时要包含的第一个单元格。基于0的索引
-         * @param maxCellsToInclude 包含的最大单元
-         */
-        Sprite.spritesFromAtlas = function (texture, cellWidth, cellHeight, cellOffset, maxCellsToInclude) {
-            if (cellOffset === void 0) { cellOffset = 0; }
-            if (maxCellsToInclude === void 0) { maxCellsToInclude = Number.MAX_VALUE; }
-            var sprites = [];
-            var cols = texture.textureWidth / cellWidth;
-            var rows = texture.textureHeight / cellHeight;
-            var i = 0;
-            var spriteSheet = new egret.SpriteSheet(texture);
-            for (var y = 0; y < rows; y++) {
-                for (var x = 0; x < cols; x++) {
-                    if (i++ < cellOffset)
-                        continue;
-                    var texture_1 = spriteSheet.getTexture(y + "_" + x);
-                    if (!texture_1)
-                        texture_1 = spriteSheet.createTexture(y + "_" + x, x * cellWidth, y * cellHeight, cellWidth, cellHeight);
-                    sprites.push(new Sprite(texture_1));
-                    if (sprites.length == maxCellsToInclude)
-                        return sprites;
-                }
-            }
-            return sprites;
-        };
         return Sprite;
-    }(egret.Bitmap));
+    }(cc.Sprite));
     es.Sprite = Sprite;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var TouchState = /** @class */ (function () {
-        function TouchState() {
-            this.x = 0;
-            this.y = 0;
-            this.touchPoint = -1;
-            this.touchDown = false;
-        }
-        Object.defineProperty(TouchState.prototype, "position", {
-            get: function () {
-                return new es.Vector2(this.x, this.y);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        TouchState.prototype.reset = function () {
-            this.x = 0;
-            this.y = 0;
-            this.touchDown = false;
-            this.touchPoint = -1;
-        };
-        return TouchState;
-    }());
-    es.TouchState = TouchState;
-    var Input = /** @class */ (function () {
-        function Input() {
-        }
-        Object.defineProperty(Input, "gameTouchs", {
-            /**
-             * 触摸列表 存放最大个数量触摸点信息
-             * 可通过判断touchPoint是否为-1 来确定是否为有触摸
-             * 通过判断touchDown 判断触摸点是否有按下
-             */
-            get: function () {
-                return this._gameTouchs;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "resolutionScale", {
-            /** 获取缩放值 默认为1 */
-            get: function () {
-                return this._resolutionScale;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "totalTouchCount", {
-            /** 当前触摸点数量 */
-            get: function () {
-                return this._totalTouchCount;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "touchPosition", {
-            /** 返回第一个触摸点的坐标 */
-            get: function () {
-                if (!this._gameTouchs[0])
-                    return es.Vector2.zero;
-                return this._gameTouchs[0].position;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "mousePosition", {
-            get: function () {
-                return this._mousePosition;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "maxSupportedTouch", {
-            /** 获取最大触摸数 */
-            get: function () {
-                return es.Core.stage.maxTouches;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "touchPositionDelta", {
-            /** 获取第一个触摸点距离上次距离的增量 */
-            get: function () {
-                var delta = this.touchPosition.sub(this._previousTouchState.position);
-                if (delta.magnitude() > 0) {
-                    this.setpreviousTouchState(this._gameTouchs[0]);
-                }
-                return delta;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Input.initialize = function () {
-            if (this._init)
-                return;
-            this._init = true;
-            Input._previousMouseState = new es.MouseState();
-            Input._currentMouseState = new es.MouseState();
-            es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_BEGIN, this.touchBegin, this);
-            es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_MOVE, this.touchMove, this);
-            es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
-            es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_CANCEL, this.touchEnd, this);
-            es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_RELEASE_OUTSIDE, this.touchEnd, this);
-            document.addEventListener('mousedown', this.mouseDown);
-            document.addEventListener('mouseup', this.mouseUp);
-            document.addEventListener('mousemove', this.mouseMove);
-            document.addEventListener('mouseleave', this.mouseLeave);
-            this.initTouchCache();
-        };
-        Input.update = function () {
-            es.KeyboardUtils.update();
-            for (var i = 0; i < this._virtualInputs.length; i++)
-                this._virtualInputs[i].update();
-            this._previousMouseState = this._currentMouseState.clone();
-        };
-        Input.scaledPosition = function (position) {
-            var scaledPos = new es.Vector2(position.x - this._resolutionOffset.x, position.y - this._resolutionOffset.y);
-            return scaledPos.multiply(this.resolutionScale);
-        };
-        /**
-         * 只有在当前帧按下并且在上一帧没有按下时才算press
-         * @param key
-         */
-        Input.isKeyPressed = function (key) {
-            return new es.List(es.KeyboardUtils.currentKeys).contains(key) && !new es.List(es.KeyboardUtils.previousKeys).contains(key);
-        };
-        Input.isKeyPressedBoth = function (keyA, keyB) {
-            return this.isKeyPressed(keyA) || this.isKeyPressed(keyB);
-        };
-        Input.isKeyDown = function (key) {
-            return new es.List(es.KeyboardUtils.currentKeys).contains(key);
-        };
-        Input.isKeyDownBoth = function (keyA, keyB) {
-            return this.isKeyDown(keyA) || this.isKeyDown(keyB);
-        };
-        Input.isKeyReleased = function (key) {
-            return !new es.List(es.KeyboardUtils.currentKeys).contains(key) && new es.List(es.KeyboardUtils.previousKeys).contains(key);
-        };
-        Input.isKeyReleasedBoth = function (keyA, keyB) {
-            return this.isKeyReleased(keyA) || this.isKeyReleased(keyB);
-        };
-        Object.defineProperty(Input, "leftMouseButtonPressed", {
-            get: function () {
-                return this._currentMouseState.leftButton == es.ButtonState.pressed &&
-                    this._previousMouseState.leftButton == es.ButtonState.released;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "rightMouseButtonPressed", {
-            get: function () {
-                return this._currentMouseState.rightButton == es.ButtonState.pressed &&
-                    this._previousMouseState.rightButton == es.ButtonState.released;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "leftMouseButtonDown", {
-            get: function () {
-                return this._currentMouseState.leftButton == es.ButtonState.pressed;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "leftMouseButtonRelease", {
-            get: function () {
-                return this._currentMouseState.leftButton == es.ButtonState.released;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "rightMouseButtonDown", {
-            get: function () {
-                return this._currentMouseState.rightButton == es.ButtonState.pressed;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Input, "rightMouseButtonRelease", {
-            get: function () {
-                return this._currentMouseState.rightButton == es.ButtonState.released;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Input.initTouchCache = function () {
-            this._totalTouchCount = 0;
-            this._touchIndex = 0;
-            this._gameTouchs.length = 0;
-            for (var i = 0; i < this.maxSupportedTouch; i++) {
-                this._gameTouchs.push(new TouchState());
-            }
-        };
-        Input.touchBegin = function (touch, event) {
-            if (this._touchIndex < this.maxSupportedTouch) {
-                this._gameTouchs[this._touchIndex].touchPoint = touch.identifier;
-                this._gameTouchs[this._touchIndex].touchDown = true;
-                this._gameTouchs[this._touchIndex].x = touch.screenX;
-                this._gameTouchs[this._touchIndex].y = touch.screenY;
-                if (this._touchIndex == 0) {
-                    this.setpreviousTouchState(this._gameTouchs[0]);
-                }
-                this._touchIndex++;
-                this._totalTouchCount++;
-            }
-        };
-        Input.touchMove = function (touch, event) {
-            if (touch.identifier == this._gameTouchs[0].touchPoint) {
-                this.setpreviousTouchState(this._gameTouchs[0]);
-            }
-            var touchIndex = this._gameTouchs.findIndex(function (t) { return t.touchPoint == touch.identifier; });
-            if (touchIndex != -1) {
-                var touchData = this._gameTouchs[touchIndex];
-                touchData.x = touch.screenX;
-                touchData.y = touch.screenY;
-            }
-        };
-        Input.touchEnd = function (touch, event) {
-            var touchIndex = this._gameTouchs.findIndex(function (t) { return t.touchPoint == touch.identifier; });
-            if (touchIndex != -1) {
-                var touchData = this._gameTouchs[touchIndex];
-                touchData.reset();
-                if (touchIndex == 0)
-                    this._previousTouchState.reset();
-                this._totalTouchCount--;
-                if (this.totalTouchCount == 0) {
-                    this._touchIndex = 0;
-                }
-            }
-        };
-        Input.mouseDown = function (event) {
-            if (event.button == 0) {
-                this._currentMouseState.leftButton = es.ButtonState.pressed;
-            }
-            else if (event.button == 1) {
-                this._currentMouseState.middleButton = es.ButtonState.pressed;
-            }
-            else if (event.button == 2) {
-                this._currentMouseState.rightButton = es.ButtonState.pressed;
-            }
-        };
-        Input.mouseUp = function (event) {
-            if (event.button == 0) {
-                this._currentMouseState.leftButton = es.ButtonState.released;
-            }
-            else if (event.button == 1) {
-                this._currentMouseState.middleButton = es.ButtonState.released;
-            }
-            else if (event.button == 2) {
-                this._currentMouseState.rightButton = es.ButtonState.released;
-            }
-        };
-        Input.mouseMove = function (event) {
-            this._mousePosition = new es.Vector2(event.screenX, event.screenY);
-        };
-        Input.mouseLeave = function (event) {
-            this._mousePosition = new es.Vector2(-1, -1);
-            this._currentMouseState = new es.MouseState();
-        };
-        Input.setpreviousTouchState = function (touchState) {
-            this._previousTouchState = new TouchState();
-            this._previousTouchState.x = touchState.position.x;
-            this._previousTouchState.y = touchState.position.y;
-            this._previousTouchState.touchPoint = touchState.touchPoint;
-            this._previousTouchState.touchDown = touchState.touchDown;
-        };
-        Input._init = false;
-        Input._previousTouchState = new TouchState();
-        Input._resolutionOffset = es.Vector2.zero;
-        Input._touchIndex = 0;
-        Input._gameTouchs = [];
-        Input._mousePosition = new es.Vector2(-1, -1);
-        Input._resolutionScale = es.Vector2.one;
-        Input._totalTouchCount = 0;
-        Input._virtualInputs = [];
-        return Input;
-    }());
-    es.Input = Input;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var KeyboardUtils = /** @class */ (function () {
-        function KeyboardUtils() {
-        }
-        KeyboardUtils.init = function () {
-            document.addEventListener('keyup', KeyboardUtils.onKeyUpHandler);
-            document.addEventListener('keydown', KeyboardUtils.onKeyDownHandler);
-        };
-        KeyboardUtils.update = function () {
-            var e_9, _a, e_10, _b;
-            KeyboardUtils.previousKeys.length = 0;
-            try {
-                for (var _c = __values(KeyboardUtils.currentKeys), _d = _c.next(); !_d.done; _d = _c.next()) {
-                    var key = _d.value;
-                    KeyboardUtils.previousKeys.push(key);
-                    new es.List(KeyboardUtils.currentKeys).remove(key);
-                }
-            }
-            catch (e_9_1) { e_9 = { error: e_9_1 }; }
-            finally {
-                try {
-                    if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
-                }
-                finally { if (e_9) throw e_9.error; }
-            }
-            KeyboardUtils.currentKeys.length = 0;
-            try {
-                for (var _e = __values(KeyboardUtils.keyStatusKeys), _f = _e.next(); !_f.done; _f = _e.next()) {
-                    var key = _f.value;
-                    KeyboardUtils.currentKeys.push(key);
-                }
-            }
-            catch (e_10_1) { e_10 = { error: e_10_1 }; }
-            finally {
-                try {
-                    if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
-                }
-                finally { if (e_10) throw e_10.error; }
-            }
-        };
-        KeyboardUtils.destroy = function () {
-            KeyboardUtils.currentKeys.length = 0;
-            document.removeEventListener('keyup', KeyboardUtils.onKeyUpHandler);
-            document.removeEventListener('keydown', KeyboardUtils.onKeyDownHandler);
-        };
-        KeyboardUtils.onKeyDownHandler = function (event) {
-            if (!new es.List(KeyboardUtils.keyStatusKeys).contains(event.keyCode))
-                KeyboardUtils.keyStatusKeys.push(event.keyCode);
-        };
-        KeyboardUtils.onKeyUpHandler = function (event) {
-            var linqList = new es.List(KeyboardUtils.keyStatusKeys);
-            if (linqList.contains(event.keyCode))
-                linqList.remove(event.keyCode);
-        };
-        /**
-         * 当前帧按键状态
-         */
-        KeyboardUtils.currentKeys = [];
-        /**
-         * 上一帧按键状态
-         */
-        KeyboardUtils.previousKeys = [];
-        KeyboardUtils.keyStatusKeys = [];
-        return KeyboardUtils;
-    }());
-    es.KeyboardUtils = KeyboardUtils;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Keys;
-    (function (Keys) {
-        Keys[Keys["none"] = 0] = "none";
-        Keys[Keys["back"] = 8] = "back";
-        Keys[Keys["tab"] = 9] = "tab";
-        Keys[Keys["enter"] = 13] = "enter";
-        Keys[Keys["capsLock"] = 20] = "capsLock";
-        Keys[Keys["escape"] = 27] = "escape";
-        Keys[Keys["space"] = 32] = "space";
-        Keys[Keys["pageUp"] = 33] = "pageUp";
-        Keys[Keys["pageDown"] = 34] = "pageDown";
-        Keys[Keys["end"] = 35] = "end";
-        Keys[Keys["home"] = 36] = "home";
-        Keys[Keys["left"] = 37] = "left";
-        Keys[Keys["up"] = 38] = "up";
-        Keys[Keys["right"] = 39] = "right";
-        Keys[Keys["down"] = 40] = "down";
-        Keys[Keys["select"] = 41] = "select";
-        Keys[Keys["print"] = 42] = "print";
-        Keys[Keys["execute"] = 43] = "execute";
-        Keys[Keys["printScreen"] = 44] = "printScreen";
-        Keys[Keys["insert"] = 45] = "insert";
-        Keys[Keys["delete"] = 46] = "delete";
-        Keys[Keys["help"] = 47] = "help";
-        Keys[Keys["d0"] = 48] = "d0";
-        Keys[Keys["d1"] = 49] = "d1";
-        Keys[Keys["d2"] = 50] = "d2";
-        Keys[Keys["d3"] = 51] = "d3";
-        Keys[Keys["d4"] = 52] = "d4";
-        Keys[Keys["d5"] = 53] = "d5";
-        Keys[Keys["d6"] = 54] = "d6";
-        Keys[Keys["d7"] = 55] = "d7";
-        Keys[Keys["d8"] = 56] = "d8";
-        Keys[Keys["d9"] = 57] = "d9";
-        Keys[Keys["a"] = 65] = "a";
-        Keys[Keys["b"] = 66] = "b";
-        Keys[Keys["c"] = 67] = "c";
-        Keys[Keys["d"] = 68] = "d";
-        Keys[Keys["e"] = 69] = "e";
-        Keys[Keys["f"] = 70] = "f";
-        Keys[Keys["g"] = 71] = "g";
-        Keys[Keys["h"] = 72] = "h";
-        Keys[Keys["i"] = 73] = "i";
-        Keys[Keys["j"] = 74] = "j";
-        Keys[Keys["k"] = 75] = "k";
-        Keys[Keys["l"] = 76] = "l";
-        Keys[Keys["m"] = 77] = "m";
-        Keys[Keys["n"] = 78] = "n";
-        Keys[Keys["o"] = 79] = "o";
-        Keys[Keys["p"] = 80] = "p";
-        Keys[Keys["q"] = 81] = "q";
-        Keys[Keys["r"] = 82] = "r";
-        Keys[Keys["s"] = 83] = "s";
-        Keys[Keys["t"] = 84] = "t";
-        Keys[Keys["u"] = 85] = "u";
-        Keys[Keys["v"] = 86] = "v";
-        Keys[Keys["w"] = 87] = "w";
-        Keys[Keys["x"] = 88] = "x";
-        Keys[Keys["y"] = 89] = "y";
-        Keys[Keys["z"] = 90] = "z";
-        Keys[Keys["leftWindows"] = 91] = "leftWindows";
-        Keys[Keys["rightWindows"] = 92] = "rightWindows";
-        Keys[Keys["apps"] = 93] = "apps";
-        Keys[Keys["sleep"] = 95] = "sleep";
-        Keys[Keys["numPad0"] = 96] = "numPad0";
-        Keys[Keys["numPad1"] = 97] = "numPad1";
-        Keys[Keys["numPad2"] = 98] = "numPad2";
-        Keys[Keys["numPad3"] = 99] = "numPad3";
-        Keys[Keys["numPad4"] = 100] = "numPad4";
-        Keys[Keys["numPad5"] = 101] = "numPad5";
-        Keys[Keys["numPad6"] = 102] = "numPad6";
-        Keys[Keys["numPad7"] = 103] = "numPad7";
-        Keys[Keys["numPad8"] = 104] = "numPad8";
-        Keys[Keys["numPad9"] = 105] = "numPad9";
-        Keys[Keys["multiply"] = 106] = "multiply";
-        Keys[Keys["add"] = 107] = "add";
-        Keys[Keys["seperator"] = 108] = "seperator";
-        Keys[Keys["subtract"] = 109] = "subtract";
-        Keys[Keys["decimal"] = 110] = "decimal";
-        Keys[Keys["divide"] = 111] = "divide";
-        Keys[Keys["f1"] = 112] = "f1";
-        Keys[Keys["f2"] = 113] = "f2";
-        Keys[Keys["f3"] = 114] = "f3";
-        Keys[Keys["f4"] = 115] = "f4";
-        Keys[Keys["f5"] = 116] = "f5";
-        Keys[Keys["f6"] = 117] = "f6";
-        Keys[Keys["f7"] = 118] = "f7";
-        Keys[Keys["f8"] = 119] = "f8";
-        Keys[Keys["f9"] = 120] = "f9";
-        Keys[Keys["f10"] = 121] = "f10";
-        Keys[Keys["f11"] = 122] = "f11";
-        Keys[Keys["f12"] = 123] = "f12";
-        Keys[Keys["f13"] = 124] = "f13";
-        Keys[Keys["f14"] = 125] = "f14";
-        Keys[Keys["f15"] = 126] = "f15";
-        Keys[Keys["f16"] = 127] = "f16";
-        Keys[Keys["f17"] = 128] = "f17";
-        Keys[Keys["f18"] = 129] = "f18";
-        Keys[Keys["f19"] = 130] = "f19";
-        Keys[Keys["f20"] = 131] = "f20";
-        Keys[Keys["f21"] = 132] = "f21";
-        Keys[Keys["f22"] = 133] = "f22";
-        Keys[Keys["f23"] = 134] = "f23";
-        Keys[Keys["f24"] = 135] = "f24";
-        Keys[Keys["numLock"] = 144] = "numLock";
-        Keys[Keys["scroll"] = 145] = "scroll";
-        Keys[Keys["leftShift"] = 160] = "leftShift";
-        Keys[Keys["rightShift"] = 161] = "rightShift";
-        Keys[Keys["leftControl"] = 162] = "leftControl";
-        Keys[Keys["rightControl"] = 163] = "rightControl";
-        Keys[Keys["leftAlt"] = 164] = "leftAlt";
-        Keys[Keys["rightAlt"] = 165] = "rightAlt";
-        Keys[Keys["browserBack"] = 166] = "browserBack";
-        Keys[Keys["browserForward"] = 167] = "browserForward";
-    })(Keys = es.Keys || (es.Keys = {}));
-})(es || (es = {}));
-var es;
-(function (es) {
-    var ButtonState;
-    (function (ButtonState) {
-        ButtonState[ButtonState["pressed"] = 0] = "pressed";
-        ButtonState[ButtonState["released"] = 1] = "released";
-    })(ButtonState = es.ButtonState || (es.ButtonState = {}));
-    var MouseState = /** @class */ (function () {
-        function MouseState() {
-            this.leftButton = ButtonState.released;
-            this.middleButton = ButtonState.released;
-            this.rightButton = ButtonState.released;
-        }
-        MouseState.prototype.clone = function () {
-            var mouseState = new MouseState();
-            mouseState.leftButton = this.leftButton;
-            mouseState.middleButton = this.middleButton;
-            mouseState.rightButton = this.rightButton;
-            return mouseState;
-        };
-        return MouseState;
-    }());
-    es.MouseState = MouseState;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var OverlapBehavior;
-    (function (OverlapBehavior) {
-        /**
-         * 重复的输入将导致相互抵消，并且不会记录任何输入。
-         * 例如:按左箭头键，按住时按右箭头键。这将导致相互抵消。
-         */
-        OverlapBehavior[OverlapBehavior["cancelOut"] = 0] = "cancelOut";
-        /**
-         * 将使用找到的第一个输入
-         */
-        OverlapBehavior[OverlapBehavior["takeOlder"] = 1] = "takeOlder";
-        /**
-         * 将使用找到的最后一个输入
-         */
-        OverlapBehavior[OverlapBehavior["takeNewer"] = 2] = "takeNewer";
-    })(OverlapBehavior = es.OverlapBehavior || (es.OverlapBehavior = {}));
-    /**
-     * 虚拟按钮，其状态由其VirtualInputNodes的状态决定
-     */
-    var VirtualInput = /** @class */ (function () {
-        function VirtualInput() {
-            es.Input._virtualInputs.push(this);
-        }
-        /**
-         * 从输入系统取消虚拟输入的注册。在轮询VirtualInput之后调用这个函数
-         */
-        VirtualInput.prototype.deregister = function () {
-            new es.List(es.Input._virtualInputs).remove(this);
-        };
-        return VirtualInput;
-    }());
-    es.VirtualInput = VirtualInput;
-    /**
-     * 将它们添加到您的VirtualInput中，以定义它如何确定当前输入状态。
-     * 例如，如果你想检查一个键盘键是否被按下，创建一个VirtualButton并添加一个VirtualButton.keyboardkey
-     */
-    var VirtualInputNode = /** @class */ (function () {
-        function VirtualInputNode() {
-        }
-        VirtualInputNode.prototype.update = function () { };
-        return VirtualInputNode;
-    }());
-    es.VirtualInputNode = VirtualInputNode;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var VirtualIntegerAxis = /** @class */ (function (_super) {
-        __extends(VirtualIntegerAxis, _super);
-        function VirtualIntegerAxis() {
-            var nodes = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                nodes[_i] = arguments[_i];
-            }
-            var _this = _super.call(this) || this;
-            _this.nodes = [];
-            _this.nodes.concat(nodes);
-            return _this;
-        }
-        Object.defineProperty(VirtualIntegerAxis.prototype, "value", {
-            get: function () {
-                for (var i = 0; i < this.nodes.length; i++) {
-                    var val = this.nodes[i].value;
-                    if (val != 0)
-                        return Math.sign(val);
-                }
-                return 0;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        VirtualIntegerAxis.prototype.update = function () {
-            for (var i = 0; i < this.nodes.length; i++)
-                this.nodes[i].update();
-        };
-        /**
-         * 添加键盘键来模拟这个虚拟输入的左/右或上/下
-         * @param overlapBehavior
-         * @param negative
-         * @param positive
-         */
-        VirtualIntegerAxis.prototype.addKeyboardKeys = function (overlapBehavior, negative, positive) {
-            this.nodes.push(new es.KeyboardKeys(overlapBehavior, negative, positive));
-            return this;
-        };
-        return VirtualIntegerAxis;
-    }(es.VirtualInput));
-    es.VirtualIntegerAxis = VirtualIntegerAxis;
-    var VirtualAxisNode = /** @class */ (function (_super) {
-        __extends(VirtualAxisNode, _super);
-        function VirtualAxisNode() {
-            return _super !== null && _super.apply(this, arguments) || this;
-        }
-        return VirtualAxisNode;
-    }(es.VirtualInputNode));
-    es.VirtualAxisNode = VirtualAxisNode;
-})(es || (es = {}));
-///<reference path="VirtualInput.ts"/>
-///<reference path="VirtualIntegerAxis.ts"/>
-var es;
-///<reference path="VirtualInput.ts"/>
-///<reference path="VirtualIntegerAxis.ts"/>
-(function (es) {
-    var VirtualAxis = /** @class */ (function (_super) {
-        __extends(VirtualAxis, _super);
-        function VirtualAxis() {
-            var nodes = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                nodes[_i] = arguments[_i];
-            }
-            var _this = _super.call(this) || this;
-            _this.nodes = [];
-            _this.nodes.concat(nodes);
-            return _this;
-        }
-        Object.defineProperty(VirtualAxis.prototype, "value", {
-            get: function () {
-                for (var i = 0; i < this.nodes.length; i++) {
-                    var val = this.nodes[i].value;
-                    if (val != 0)
-                        return val;
-                }
-                return 0;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        VirtualAxis.prototype.update = function () {
-            for (var i = 0; i < this.nodes.length; i++)
-                this.nodes[i].update();
-        };
-        return VirtualAxis;
-    }(es.VirtualInput));
-    es.VirtualAxis = VirtualAxis;
-    var KeyboardKeys = /** @class */ (function (_super) {
-        __extends(KeyboardKeys, _super);
-        function KeyboardKeys(overlapBehavior, negative, positive) {
-            var _this = _super.call(this) || this;
-            _this._value = 0;
-            _this._turned = false;
-            _this.overlapBehavior = overlapBehavior;
-            _this.negative = negative;
-            _this.positive = positive;
-            return _this;
-        }
-        KeyboardKeys.prototype.update = function () {
-            if (es.Input.isKeyDown(this.positive)) {
-                if (es.Input.isKeyDown(this.negative)) {
-                    switch (this.overlapBehavior) {
-                        default:
-                        case es.OverlapBehavior.cancelOut:
-                            this._value = 0;
-                            break;
-                        case es.OverlapBehavior.takeNewer:
-                            if (!this._turned) {
-                                this._value *= -1;
-                                this._turned = true;
-                            }
-                            break;
-                        case es.OverlapBehavior.takeOlder:
-                            break;
-                    }
-                }
-                else {
-                    this._turned = false;
-                    this._value = 1;
-                }
-            }
-            else if (es.Input.isKeyDown(this.negative)) {
-                this._turned = false;
-                this._value = -1;
-            }
-            else {
-                this._turned = false;
-                this._value = 0;
-            }
-        };
-        Object.defineProperty(KeyboardKeys.prototype, "value", {
-            get: function () {
-                return this._value;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        return KeyboardKeys;
-    }(es.VirtualAxisNode));
-    es.KeyboardKeys = KeyboardKeys;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -10512,7 +9778,7 @@ var es;
          * 它将处理任何与Collider重叠的ITriggerListeners。
          */
         ColliderTriggerHelper.prototype.update = function () {
-            var e_11, _a;
+            var e_9, _a;
             var lateColliders = [];
             // 对所有实体.colliders进行重叠检查，这些实体.colliders是触发器，与所有宽相碰撞器，无论是否触发器。   
             // 任何重叠都会导致触发事件
@@ -10548,12 +9814,12 @@ var es;
                     this.notifyTriggerListeners(pair, true);
                 }
             }
-            catch (e_11_1) { e_11 = { error: e_11_1 }; }
+            catch (e_9_1) { e_9 = { error: e_9_1 }; }
             finally {
                 try {
                     if (lateColliders_1_1 && !lateColliders_1_1.done && (_a = lateColliders_1.return)) _a.call(lateColliders_1);
                 }
-                finally { if (e_11) throw e_11.error; }
+                finally { if (e_9) throw e_9.error; }
             }
             this.checkForExitedColliders();
         };
@@ -11262,7 +10528,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
-            var e_12, _a;
+            var e_10, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location.clone();
             var resultCounter = 0;
@@ -11293,12 +10559,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            catch (e_10_1) { e_10 = { error: e_10_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_12) throw e_12.error; }
+                finally { if (e_10) throw e_10.error; }
             }
             return resultCounter;
         };
@@ -11310,7 +10576,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_13, _a;
+            var e_11, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -11345,12 +10611,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            catch (e_11_1) { e_11 = { error: e_11_1 }; }
             finally {
                 try {
                     if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_13) throw e_13.error; }
+                finally { if (e_11) throw e_11.error; }
             }
             return resultCounter;
         };
@@ -16148,7 +15414,7 @@ var es;
             this._all = [];
         };
         PairSet.prototype.union = function (other) {
-            var e_14, _a;
+            var e_12, _a;
             var otherAll = other.all;
             try {
                 for (var otherAll_1 = __values(otherAll), otherAll_1_1 = otherAll_1.next(); !otherAll_1_1.done; otherAll_1_1 = otherAll_1.next()) {
@@ -16156,16 +15422,16 @@ var es;
                     this.add(elem);
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
             finally {
                 try {
                     if (otherAll_1_1 && !otherAll_1_1.done && (_a = otherAll_1.return)) _a.call(otherAll_1);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_12) throw e_12.error; }
             }
         };
         PairSet.prototype.except = function (other) {
-            var e_15, _a;
+            var e_13, _a;
             var otherAll = other.all;
             try {
                 for (var otherAll_2 = __values(otherAll), otherAll_2_1 = otherAll_2.next(); !otherAll_2_1.done; otherAll_2_1 = otherAll_2.next()) {
@@ -16173,12 +15439,12 @@ var es;
                     this.remove(elem);
                 }
             }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
                     if (otherAll_2_1 && !otherAll_2_1.done && (_a = otherAll_2.return)) _a.call(otherAll_2);
                 }
-                finally { if (e_15) throw e_15.error; }
+                finally { if (e_13) throw e_13.error; }
             }
         };
         return PairSet;
@@ -18166,7 +17432,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_16, _a;
+            var e_14, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -18174,12 +17440,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_16) throw e_16.error; }
+                finally { if (e_14) throw e_14.error; }
             }
             return result;
         };
@@ -18428,7 +17694,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_17, _a;
+            var e_15, _a;
             var output = es.ListPool.obtain(es.Vector2);
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -18467,12 +17733,12 @@ var es;
                         }
                     }
                 }
-                catch (e_17_1) { e_17 = { error: e_17_1 }; }
+                catch (e_15_1) { e_15 = { error: e_15_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_17) throw e_17.error; }
+                    finally { if (e_15) throw e_15.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -18588,7 +17854,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_18, _a;
+            var e_16, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -18606,12 +17872,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_18_1) { e_18 = { error: e_18_1 }; }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_18) throw e_18.error; }
+                finally { if (e_16) throw e_16.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

@@ -14,16 +14,16 @@ module es {
         }
 
         public add(component: IRenderable) {
-            if (component.sprite.parent == null) {
-                Core.stage.addChild(component.sprite);
+            if (component.sprite.node.parent == null) {
+                component.sprite.node.setParent(Core.stage.node);
             }
             this._components.push(component);
             this.addToRenderLayerList(component, component.renderLayer);
         }
 
         public remove(component: IRenderable) {
-            if (component.sprite.parent != null) {
-                Core.stage.removeChild(component.sprite);
+            if (component.sprite.node.parent != null) {
+                component.sprite.node.removeFromParent();
             }
             new List(this._components).remove(component);
             new List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);

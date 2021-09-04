@@ -1,5 +1,5 @@
 module es {
-    export class Color {
+    export class Color extends cc.Color {
         /**
          * 红色通道
          */
@@ -39,6 +39,7 @@ module es {
          * @param a  颜色的 alpha 分量 (0-1.0) 
          */
         constructor(r: number, g: number, b: number, a?: number) {
+            super(r, g, b, a);
             this.r = r;
             this.g = g;
             this.b = b;
