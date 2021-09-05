@@ -4450,7 +4450,12 @@ var es;
          * @param sprite
          */
         SpriteRenderer.prototype.setSprite = function (sprite) {
-            this._sprite = sprite;
+            if (!this._sprite) {
+                this._sprite = sprite;
+            }
+            else {
+                this._sprite.setTexture(sprite.texture);
+            }
             if (this._sprite) {
                 this._origin = this._sprite.origin;
             }
@@ -7744,26 +7749,29 @@ var es;
             _this.center = es.Vector2.zero;
             _this.origin = es.Vector2.zero;
             _this.uvs = new es.Rectangle();
+            _this.setTexture(texture, sourceRect, origin);
+            return _this;
+        }
+        Sprite.prototype.setTexture = function (texture, sourceRect, origin) {
             if (!texture)
-                return _this;
-            _this.texture = texture;
+                return;
+            this.texture = texture;
             if (!sourceRect) {
                 sourceRect = new es.Rectangle(0, 0, texture.textureWidth, texture.textureHeight);
             }
             if (!origin) {
                 origin = sourceRect.getHalfSize();
             }
-            _this.sourceRect = sourceRect;
-            _this.center = new es.Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
-            _this.origin = origin;
+            this.sourceRect = sourceRect;
+            this.center = new es.Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
+            this.origin = origin;
             var inverseTexW = 1 / texture.textureWidth;
             var inverseTexH = 1 / texture.textureHeight;
-            _this.uvs.x = sourceRect.x * inverseTexW;
-            _this.uvs.y = sourceRect.y * inverseTexH;
-            _this.uvs.width = sourceRect.width * inverseTexW;
-            _this.uvs.height = sourceRect.height * inverseTexH;
-            return _this;
-        }
+            this.uvs.x = sourceRect.x * inverseTexW;
+            this.uvs.y = sourceRect.y * inverseTexH;
+            this.uvs.width = sourceRect.width * inverseTexW;
+            this.uvs.height = sourceRect.height * inverseTexH;
+        };
         /**
          * 提供一个精灵的列/行等间隔的图集的精灵列表
          * @param texture

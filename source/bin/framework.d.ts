@@ -3001,11 +3001,12 @@ declare module es {
 }
 declare module es {
     class Sprite extends egret.Bitmap {
-        readonly sourceRect: Rectangle;
-        readonly center: Vector2;
+        sourceRect: Rectangle;
+        center: Vector2;
         origin: Vector2;
         readonly uvs: Rectangle;
         constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
+        setTexture(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2): void;
         /**
          * 提供一个精灵的列/行等间隔的图集的精灵列表
          * @param texture

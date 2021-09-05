@@ -55,7 +55,11 @@ module es {
          * @param sprite
          */
         public setSprite(sprite: Sprite): SpriteRenderer {
-            this._sprite = sprite;
+            if (!this._sprite) {
+                this._sprite = sprite;
+            } else {
+                this._sprite.setTexture(sprite.texture);
+            }
             if (this._sprite) {
                 this._origin = this._sprite.origin;
             }
