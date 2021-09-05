@@ -3001,8 +3001,10 @@ declare module es {
 }
 declare module es {
     class Sprite extends egret.Bitmap {
-        sourceRect: Rectangle;
-        center: Vector2;
+        private _sourceRect;
+        readonly sourceRect: Rectangle;
+        private _center;
+        readonly center: Vector2;
         origin: Vector2;
         readonly uvs: Rectangle;
         constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);

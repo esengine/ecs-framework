@@ -7745,13 +7745,27 @@ var es;
         __extends(Sprite, _super);
         function Sprite(texture, sourceRect, origin) {
             var _this = _super.call(this) || this;
-            _this.sourceRect = new es.Rectangle();
-            _this.center = es.Vector2.zero;
+            _this._sourceRect = new es.Rectangle();
+            _this._center = es.Vector2.zero;
             _this.origin = es.Vector2.zero;
             _this.uvs = new es.Rectangle();
             _this.setTexture(texture, sourceRect, origin);
             return _this;
         }
+        Object.defineProperty(Sprite.prototype, "sourceRect", {
+            get: function () {
+                return this._sourceRect;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Sprite.prototype, "center", {
+            get: function () {
+                return this._center;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Sprite.prototype.setTexture = function (texture, sourceRect, origin) {
             if (!texture)
                 return;
@@ -7762,8 +7776,8 @@ var es;
             if (!origin) {
                 origin = sourceRect.getHalfSize();
             }
-            this.sourceRect = sourceRect;
-            this.center = new es.Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
+            this._sourceRect = sourceRect;
+            this._center = new es.Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
             this.origin = origin;
             var inverseTexW = 1 / texture.textureWidth;
             var inverseTexH = 1 / texture.textureHeight;

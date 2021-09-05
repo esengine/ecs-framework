@@ -1,7 +1,13 @@
 module es {
     export class Sprite extends egret.Bitmap {
-        public sourceRect: Rectangle = new Rectangle();
-        public center: Vector2 = Vector2.zero;
+        private _sourceRect: Rectangle = new Rectangle();
+        public get sourceRect() {
+            return this._sourceRect;
+        }
+        private _center: Vector2 = Vector2.zero;
+        public get center() {
+            return this._center;
+        }
         public origin: Vector2 = Vector2.zero;
         public readonly uvs: Rectangle = new Rectangle();
 
@@ -23,8 +29,8 @@ module es {
             if (!origin) {
                 origin = sourceRect.getHalfSize();
             }
-            this.sourceRect = sourceRect;
-            this.center = new Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
+            this._sourceRect = sourceRect;
+            this._center = new Vector2(sourceRect.width * 0.5, sourceRect.height * 0.5);
             this.origin = origin;
 
             let inverseTexW = 1 / texture.textureWidth;
