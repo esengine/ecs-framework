@@ -56,7 +56,7 @@ module es {
          */
         public setSprite(sprite: Sprite): SpriteRenderer {
             if (!this._sprite) {
-                this._sprite = sprite;
+                this._sprite = sprite.clone();
             } else {
                 this._sprite.setTexture(sprite.texture);
             }

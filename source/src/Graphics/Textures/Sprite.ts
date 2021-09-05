@@ -21,7 +21,7 @@ module es {
         public setTexture(texture: egret.Texture, sourceRect?: Rectangle,
             origin?: Vector2) {
             if (!texture)
-            return;
+                return;
             this.texture = texture;
             if (!sourceRect) {
                 sourceRect = new Rectangle(0, 0, texture.textureWidth, texture.textureHeight);
@@ -72,6 +72,10 @@ module es {
             }
 
             return sprites;
+        }
+
+        public clone() {
+            return new Sprite(this.texture, this.sourceRect, this.origin);
         }
     }
 }

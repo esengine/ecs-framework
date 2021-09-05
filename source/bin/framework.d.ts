@@ -1767,6 +1767,12 @@ declare module es {
         readonly animations: Map<string, SpriteAnimation>;
         update(): void;
         /**
+         * 添加精灵中的所有动画
+         * @param atlas
+         * @returns
+         */
+        addAnimationsFromAtlas(atlas: SpriteAtlas): this;
+        /**
          * 添加一个SpriteAnimation
          * @param name
          * @param animation
@@ -3018,6 +3024,7 @@ declare module es {
          * @param maxCellsToInclude 包含的最大单元
          */
         static spritesFromAtlas(texture: egret.Texture, cellWidth: number, cellHeight: number, cellOffset?: number, maxCellsToInclude?: number): Sprite[];
+        clone(): Sprite;
     }
 }
 declare module es {

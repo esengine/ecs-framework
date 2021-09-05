@@ -24,7 +24,11 @@ module es {
          * @param sprite
          */
         public setSprite(sprite: Sprite): RenderableComponent {
-            this._sprite = sprite;
+            if (!this._sprite) {
+                this._sprite = sprite.clone();
+            } else {
+                this._sprite.setTexture(sprite.texture)
+            }
 
             return this;
         }

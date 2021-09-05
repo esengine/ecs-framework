@@ -88,7 +88,9 @@ module es {
                 this._elapsedTime = 0;
                 this.currentFrame = 0;
                 this.sprite = animation.sprites[0];
-                this.onAnimationCompletedEvent(this.currentAnimationName);
+                if (this.onAnimationCompletedEvent) {
+                    this.onAnimationCompletedEvent(this.currentAnimationName);
+                }
                 return;
             }
 
@@ -96,7 +98,9 @@ module es {
                 this.animationState = State.completed;
                 this.currentFrame = animation.sprites.length - 1;
                 this.sprite = animation.sprites[this.currentFrame];
-                this.onAnimationCompletedEvent(this.currentAnimationName);
+                if (this.onAnimationCompletedEvent) {
+                    this.onAnimationCompletedEvent(this.currentAnimationName);
+                }
                 return;
             }
 
@@ -112,6 +116,17 @@ module es {
             }
 
             this.sprite = animation.sprites[this.currentFrame];
+        }
+
+        /**
+         * 添加精灵中的所有动画
+         * @param atlas 
+         * @returns 
+         */
+        public addAnimationsFromAtlas(atlas: SpriteAtlas) {
+            for (let i = 0; i < atlas.animationNames.length; i ++)
+                this._animations.set(atlas.animationNames[i], atlas.spriteAnimations[i]);
+            return this;
         }
 
         /**
