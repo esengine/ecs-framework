@@ -1674,6 +1674,7 @@ declare module es {
         abstract render(batcher: IBatcher, camera: ICamera): void;
         protected onBecameVisible(): void;
         protected onBecameInvisible(): void;
+        onRemovedFromEntity(): void;
         setRenderLayer(renderLayer: number): RenderableComponent;
         isVisibleFromCamera(cam: ICamera): boolean;
         debugRender(batcher: IBatcher): void;
@@ -1820,7 +1821,7 @@ declare module es {
         spawn(position: Vector2, sprite: Sprite, fadeDuration: number, fadeDelay: number, initialColor: Color, targetColor: Color): void;
         setSpriteRenderOptions(rotation: number, origin: Vector2, scale: Vector2, layerDepth: number): void;
         update(): boolean;
-        render(batcher: IBatcher, camera: ICamera): void;
+        render(batcher: Batcher, camera: ICamera): void;
     }
     class SpriteTrail extends RenderableComponent implements IUpdatable {
         getbounds(): Rectangle;
@@ -1849,7 +1850,7 @@ declare module es {
         onAddedToEntity(): void;
         update(): void;
         spawnInstance(): void;
-        render(batcher: IBatcher, camera: ICamera): void;
+        render(batcher: Batcher, camera: ICamera): void;
     }
 }
 declare module es {
@@ -2731,7 +2732,7 @@ declare module es {
          * @param size 大小
          */
         drawPixel(position: Vector2, color: Color, size?: number): void;
-        drawSprite(sprite: egret.Bitmap, position: Vector2, color: Color, rotation: number, origin: Vector2, scale: Vector2): void;
+        drawSprite(sprite: Sprite, position: Vector2, color: Color, rotation: number, origin: Vector2, scale: Vector2): void;
         flushBatch(): void;
     }
 }
@@ -3025,6 +3026,7 @@ declare module es {
          */
         static spritesFromAtlas(texture: egret.Texture, cellWidth: number, cellHeight: number, cellOffset?: number, maxCellsToInclude?: number): Sprite[];
         clone(): Sprite;
+        dispose(): void;
     }
 }
 declare module es {

@@ -1,18 +1,18 @@
 module es {
     class SpriteTrailInstance {
-        public position: Vector2;
+        public position: Vector2 = Vector2.zero;
         _sprite: Sprite;
-        _fadeDuration: number;
-        _fadeDelay: number;
-        _elapsedTime: number;
-        _initialColor: Color;
-        _targetColor: Color;
-        _renderColor: Color;
+        _fadeDuration: number = 0;
+        _fadeDelay: number = 0;
+        _elapsedTime: number = 0;
+        _initialColor: Color = Color.White;
+        _targetColor: Color = Color.White;
+        _renderColor: Color = Color.White;
 
-        _rotation: number;
-        _origin: Vector2;
-        _scale: Vector2;
-        _layerDepth: number;
+        _rotation: number = 0;
+        _origin: Vector2 = Vector2.zero;
+        _scale: Vector2 = Vector2.one;
+        _layerDepth: number = 0;
 
         public spawn(position: Vector2, sprite: Sprite, fadeDuration: number, fadeDelay: number, initialColor: Color, targetColor: Color) {
             this.position = position;
@@ -47,7 +47,8 @@ module es {
             return false;
         }
 
-        public render(batcher: IBatcher, camera: ICamera) {
+        public render(batcher: Batcher, camera: ICamera) {
+            batcher.drawSprite(this._sprite, this.position, this._renderColor, this._rotation, this._origin, this._scale);
         }
     }
 
@@ -73,11 +74,11 @@ module es {
         _maxSpriteInstance = 15;
         _availableSpriteTrailInstances: SpriteTrailInstance[] = [];
         _liveSpriteTrailInstances: SpriteTrailInstance[] = [];
-        _lastPosition: Vector2;
+        _lastPosition: Vector2 = Vector2.zero;
         _spriteRender: SpriteRenderer;
 
-        _isFirstInstance: boolean;
-        _awaitingDisable: boolean;
+        _isFirstInstance: boolean = false;
+        _awaitingDisable: boolean = false;
 
         constructor(spriteRender?: SpriteRenderer) {
             super();
@@ -200,13 +201,13 @@ module es {
                 return;
 
             const instance = this._availableSpriteTrailInstances.pop();
-            instance.spawn(this._lastPosition, this._spriteRender.sprite, this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
-            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotation, this._spriteRender.origin,
+            instance.spawn(this._lastPosition, this._spriteRender.sprite.clone(), this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
+            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotationDegrees, this._spriteRender.originNormalized,
                 this._spriteRender.entity.transform.scale, this.renderLayer);
             this._liveSpriteTrailInstances.push(instance);
         }
 
-        public render(batcher: IBatcher, camera: ICamera): void {
+        public render(batcher: Batcher, camera: ICamera): void {
             for (let i = 0; i < this._liveSpriteTrailInstances.length; i ++)
                 this._liveSpriteTrailInstances[i].render(batcher, camera);
         }

@@ -77,5 +77,9 @@ module es {
         public clone() {
             return new Sprite(this.texture, this.sourceRect, this.origin);
         }
+
+        public dispose() {
+            this.texture.dispose();
+        }
     }
 }

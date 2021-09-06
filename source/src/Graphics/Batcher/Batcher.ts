@@ -199,8 +199,11 @@ module es {
             this.flushBatch();
         }
 
-        drawSprite(sprite: egret.Bitmap, position: Vector2, color: Color, rotation: number,
+        drawSprite(sprite: Sprite, position: Vector2, color: Color, rotation: number,
             origin: Vector2, scale: Vector2) {
+                if (sprite.parent == null) {
+                    Core.stage.addChild(sprite);
+                }
                 sprite.x = position.x;
                 sprite.y = position.y;
                 sprite.rotation = rotation;

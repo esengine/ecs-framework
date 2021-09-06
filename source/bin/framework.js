@@ -4356,8 +4356,19 @@ var es;
             configurable: true
         });
         RenderableComponent.prototype.onBecameVisible = function () {
+            if (this._sprite) {
+                this._sprite.visible = true;
+            }
         };
         RenderableComponent.prototype.onBecameInvisible = function () {
+            if (this._sprite) {
+                this._sprite.visible = false;
+            }
+        };
+        RenderableComponent.prototype.onRemovedFromEntity = function () {
+            if (this._sprite) {
+                this._sprite.dispose();
+            }
         };
         RenderableComponent.prototype.setRenderLayer = function (renderLayer) {
             if (renderLayer != this._renderLayer) {
@@ -4667,6 +4678,17 @@ var es;
 (function (es) {
     var SpriteTrailInstance = /** @class */ (function () {
         function SpriteTrailInstance() {
+            this.position = es.Vector2.zero;
+            this._fadeDuration = 0;
+            this._fadeDelay = 0;
+            this._elapsedTime = 0;
+            this._initialColor = es.Color.White;
+            this._targetColor = es.Color.White;
+            this._renderColor = es.Color.White;
+            this._rotation = 0;
+            this._origin = es.Vector2.zero;
+            this._scale = es.Vector2.one;
+            this._layerDepth = 0;
         }
         SpriteTrailInstance.prototype.spawn = function (position, sprite, fadeDuration, fadeDelay, initialColor, targetColor) {
             this.position = position;
@@ -4696,6 +4718,7 @@ var es;
             return false;
         };
         SpriteTrailInstance.prototype.render = function (batcher, camera) {
+            batcher.drawSprite(this._sprite, this.position, this._renderColor, this._rotation, this._origin, this._scale);
         };
         return SpriteTrailInstance;
     }());
@@ -4711,6 +4734,9 @@ var es;
             _this._maxSpriteInstance = 15;
             _this._availableSpriteTrailInstances = [];
             _this._liveSpriteTrailInstances = [];
+            _this._lastPosition = es.Vector2.zero;
+            _this._isFirstInstance = false;
+            _this._awaitingDisable = false;
             _this._spriteRender = spriteRender;
             return _this;
         }
@@ -4825,8 +4851,8 @@ var es;
             if (this._awaitingDisable || this._availableSpriteTrailInstances.length == 0)
                 return;
             var instance = this._availableSpriteTrailInstances.pop();
-            instance.spawn(this._lastPosition, this._spriteRender.sprite, this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
-            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotation, this._spriteRender.origin, this._spriteRender.entity.transform.scale, this.renderLayer);
+            instance.spawn(this._lastPosition, this._spriteRender.sprite.clone(), this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
+            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotationDegrees, this._spriteRender.originNormalized, this._spriteRender.entity.transform.scale, this.renderLayer);
             this._liveSpriteTrailInstances.push(instance);
         };
         SpriteTrail.prototype.render = function (batcher, camera) {
@@ -6437,14 +6463,14 @@ var es;
             return this._components[index];
         };
         RenderableComponentList.prototype.add = function (component) {
-            if (component.sprite.parent == null) {
+            if (component.sprite && component.sprite.parent == null) {
                 es.Core.stage.addChild(component.sprite);
             }
             this._components.push(component);
             this.addToRenderLayerList(component, component.renderLayer);
         };
         RenderableComponentList.prototype.remove = function (component) {
-            if (component.sprite.parent != null) {
+            if (component.sprite && component.sprite.parent != null) {
                 es.Core.stage.removeChild(component.sprite);
             }
             new es.List(this._components).remove(component);
@@ -7252,6 +7278,9 @@ var es;
             this.flushBatch();
         };
         Batcher.prototype.drawSprite = function (sprite, position, color, rotation, origin, scale) {
+            if (sprite.parent == null) {
+                es.Core.stage.addChild(sprite);
+            }
             sprite.x = position.x;
             sprite.y = position.y;
             sprite.rotation = rotation;
@@ -7838,6 +7867,9 @@ var es;
         };
         Sprite.prototype.clone = function () {
             return new Sprite(this.texture, this.sourceRect, this.origin);
+        };
+        Sprite.prototype.dispose = function () {
+            this.texture.dispose();
         };
         return Sprite;
     }(egret.Bitmap));

@@ -114,11 +114,21 @@ module es {
         public abstract render(batcher: IBatcher, camera: ICamera): void;
 
         protected onBecameVisible() {
-
+            if (this._sprite) {
+                this._sprite.visible = true;
+            }
         }
 
         protected onBecameInvisible() {
+            if (this._sprite) {
+                this._sprite.visible = false;
+            }
+        }
 
+        public onRemovedFromEntity() {
+            if (this._sprite) {
+                this._sprite.dispose();
+            }
         }
 
         public setRenderLayer(renderLayer: number): RenderableComponent {
