@@ -204,6 +204,7 @@ module es {
 
         protected initialize() {
             Graphics.instance = new Graphics();
+            Input.initialize();
         }
 
         protected async update(currentTime: number = -1) {

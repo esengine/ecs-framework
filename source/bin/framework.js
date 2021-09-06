@@ -241,6 +241,7 @@ var es;
         };
         Core.prototype.initialize = function () {
             es.Graphics.instance = new es.Graphics();
+            es.Input.initialize();
         };
         Core.prototype.update = function (currentTime) {
             if (currentTime === void 0) { currentTime = -1; }
@@ -7946,10 +7947,10 @@ var es;
             es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_END, this.touchEnd, this);
             es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_CANCEL, this.touchEnd, this);
             es.Core.stage.addEventListener(egret.TouchEvent.TOUCH_RELEASE_OUTSIDE, this.touchEnd, this);
-            document.addEventListener('mousedown', this.mouseDown);
-            document.addEventListener('mouseup', this.mouseUp);
-            document.addEventListener('mousemove', this.mouseMove);
-            document.addEventListener('mouseleave', this.mouseLeave);
+            document.addEventListener('mousedown', this.mouseDown.bind(this));
+            document.addEventListener('mouseup', this.mouseUp.bind(this));
+            document.addEventListener('mousemove', this.mouseMove.bind(this));
+            document.addEventListener('mouseleave', this.mouseLeave.bind(this));
             this.initTouchCache();
         };
         Input.update = function () {
@@ -8036,12 +8037,12 @@ var es;
                 this._gameTouchs.push(new TouchState());
             }
         };
-        Input.touchBegin = function (touch, event) {
+        Input.touchBegin = function (evt) {
             if (this._touchIndex < this.maxSupportedTouch) {
-                this._gameTouchs[this._touchIndex].touchPoint = touch.identifier;
-                this._gameTouchs[this._touchIndex].touchDown = true;
-                this._gameTouchs[this._touchIndex].x = touch.screenX;
-                this._gameTouchs[this._touchIndex].y = touch.screenY;
+                this._gameTouchs[this._touchIndex].touchPoint = evt.touchPointID;
+                this._gameTouchs[this._touchIndex].touchDown = evt.touchDown;
+                this._gameTouchs[this._touchIndex].x = evt.stageX;
+                this._gameTouchs[this._touchIndex].y = evt.stageY;
                 if (this._touchIndex == 0) {
                     this.setpreviousTouchState(this._gameTouchs[0]);
                 }
@@ -8049,19 +8050,19 @@ var es;
                 this._totalTouchCount++;
             }
         };
-        Input.touchMove = function (touch, event) {
-            if (touch.identifier == this._gameTouchs[0].touchPoint) {
+        Input.touchMove = function (evt) {
+            if (evt.touchPointID == this._gameTouchs[0].touchPoint) {
                 this.setpreviousTouchState(this._gameTouchs[0]);
             }
-            var touchIndex = this._gameTouchs.findIndex(function (t) { return t.touchPoint == touch.identifier; });
+            var touchIndex = this._gameTouchs.findIndex(function (touch) { return touch.touchPoint == evt.touchPointID; });
             if (touchIndex != -1) {
                 var touchData = this._gameTouchs[touchIndex];
-                touchData.x = touch.screenX;
-                touchData.y = touch.screenY;
+                touchData.x = evt.stageX;
+                touchData.y = evt.stageY;
             }
         };
-        Input.touchEnd = function (touch, event) {
-            var touchIndex = this._gameTouchs.findIndex(function (t) { return t.touchPoint == touch.identifier; });
+        Input.touchEnd = function (evt) {
+            var touchIndex = this._gameTouchs.findIndex(function (touch) { return touch.touchPoint == evt.touchPointID; });
             if (touchIndex != -1) {
                 var touchData = this._gameTouchs[touchIndex];
                 touchData.reset();
