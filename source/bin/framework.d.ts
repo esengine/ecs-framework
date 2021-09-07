@@ -1663,6 +1663,8 @@ declare module es {
         color: Color;
         renderLayer: number;
         protected _renderLayer: number;
+        protected _layerDepth: number;
+        layerDepth: number;
         onEntityTransformChanged(comp: ComponentTransform): void;
         setColor(color: Color): this;
         localOffset: es.Vector2;
@@ -1675,6 +1677,17 @@ declare module es {
         protected onBecameVisible(): void;
         protected onBecameInvisible(): void;
         onRemovedFromEntity(): void;
+        /**
+         * 标准 Batcher 层深度。 0在前，1在后。 更改此值将触发某种可渲染组件
+         * @param layerDepth
+         * @returns
+         */
+        setLayerDepth(layerDepth: number): this;
+        /**
+         * 较低的 renderLayers 在前面，较高的在后面，就像 layerDepth
+         * @param renderLayer
+         * @returns
+         */
         setRenderLayer(renderLayer: number): RenderableComponent;
         isVisibleFromCamera(cam: ICamera): boolean;
         debugRender(batcher: IBatcher): void;
@@ -1805,6 +1818,27 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * 此组件将在每一帧中绘制相同的 spriteToMime
+     * 渲染的唯一区别是 SpriteMime 使用自己的localOffset 和颜色
+     * 这允许您将其用于阴影（通过 localPosition 偏移）
+     */
+    class SpriteMime extends RenderableComponent {
+        getwidth(): number;
+        getheight(): number;
+        getbounds(): Rectangle;
+        _spriteToMime: SpriteRenderer;
+        _mimeSprite: Sprite;
+        constructor(spriteToMime?: SpriteRenderer);
+        onAddedToEntity(): void;
+        onRemovedFromEntity(): void;
+        render(batcher: Batcher, camera: Camera): void;
+    }
+}
+declare module es {
+    /**
+     * 包含单个跟踪实例所需数据的辅助类
+     */
     class SpriteTrailInstance {
         position: Vector2;
         _sprite: Sprite;
@@ -1823,32 +1857,54 @@ declare module es {
         update(): boolean;
         render(batcher: Batcher, camera: ICamera): void;
     }
+    /**
+     * 在同一个实体上渲染和淡化一系列 Sprite 副本。 minDistanceBetweenInstances 确定添加轨迹精灵的频率
+     */
     class SpriteTrail extends RenderableComponent implements IUpdatable {
         getbounds(): Rectangle;
         maxSpriteInstance: number;
+        /** 在产生新实例之前，精灵必须移动多远 */
         minDistanceBetweenInstances: number;
+        /** 从初始颜色到淡入淡出的总持续时间 */
         fadeDuration: number;
+        /** 开始褪色之前的延迟 */
         fadeDelay: number;
+        /** 轨迹实例的初始颜色 */
         initialColor: Color;
+        /** 在fadeDuration 过程中将被修改的最终颜色 */
         fadeToColor: Color;
         _maxSpriteInstance: number;
         _availableSpriteTrailInstances: SpriteTrailInstance[];
         _liveSpriteTrailInstances: SpriteTrailInstance[];
         _lastPosition: Vector2;
         _spriteRender: SpriteRenderer;
+        /** flag 为 true 时，无论距离检查如何，它将始终添加新实例 */
         _isFirstInstance: boolean;
+        /** 如果 awaitingDisable 在组件被禁用之前允许所有实例淡出 */
         _awaitingDisable: boolean;
         constructor(spriteRender?: SpriteRenderer);
-        setMaxSpriteInstance(maxSpriteInstance: number): this;
+        setMaxSpriteInstances(maxSpriteInstance: number): this;
         setMinDistanceBetweenInstances(minDistanceBetweenInstances: number): this;
         setFadeDuration(fadeDuration: number): this;
         setFadeDelay(fadeDelay: number): this;
         setInitialColor(initialColor: Color): this;
         setFadeToColor(fadeToColor: Color): this;
+        /**
+         * 启用 SpriteTrail
+         * @returns
+         */
         enableSpriteTrail(): SpriteTrail;
+        /**
+         * 禁用 SpriteTrail
+         * @param completeCurrentTrail 等待当前轨迹先淡出
+         */
         disableSpriteTrail(completeCurrentTrail?: boolean): void;
         onAddedToEntity(): void;
         update(): void;
+        /**
+         * 存储距离计算的最后一个位置，如果堆栈中有可用的，则生成一个新的轨迹实例
+         * @returns
+         */
         spawnInstance(): void;
         render(batcher: Batcher, camera: ICamera): void;
     }

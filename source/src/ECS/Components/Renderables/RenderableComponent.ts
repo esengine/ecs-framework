@@ -65,6 +65,16 @@ module es {
 
         protected _renderLayer: number = 0;
 
+        protected _layerDepth: number = 0;
+
+        public get layerDepth() {
+            return this._layerDepth;
+        }
+
+        public set layerDepth(value: number) {
+            this.setLayerDepth(value);
+        }
+
         public onEntityTransformChanged(comp: ComponentTransform) {
             this._areBoundsDirty = true;
         }
@@ -131,6 +141,26 @@ module es {
             }
         }
 
+        /**
+         * 标准 Batcher 层深度。 0在前，1在后。 更改此值将触发某种可渲染组件
+         * @param layerDepth 
+         * @returns 
+         */
+        public setLayerDepth(layerDepth: number) {
+            this._layerDepth = MathHelper.clamp01(layerDepth);
+
+            if (this.entity != null && this.entity.scene != null) {
+                this.entity.scene.renderableComponents.setRenderLayerNeedsComponentSort(this.renderLayer);
+            }
+
+            return this;
+        }
+
+        /**
+         * 较低的 renderLayers 在前面，较高的在后面，就像 layerDepth
+         * @param renderLayer 
+         * @returns 
+         */
         public setRenderLayer(renderLayer: number): RenderableComponent {
             if (renderLayer != this._renderLayer) {
                 let oldRenderLayer = this._renderLayer;

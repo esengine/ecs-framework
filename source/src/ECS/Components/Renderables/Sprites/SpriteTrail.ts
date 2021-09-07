@@ -1,4 +1,7 @@
 module es {
+    /**
+     * 包含单个跟踪实例所需数据的辅助类
+     */
     class SpriteTrailInstance {
         public position: Vector2 = Vector2.zero;
         _sprite: Sprite;
@@ -53,6 +56,9 @@ module es {
         }
     }
 
+    /**
+     * 在同一个实体上渲染和淡化一系列 Sprite 副本。 minDistanceBetweenInstances 确定添加轨迹精灵的频率
+     */
     export class SpriteTrail extends RenderableComponent implements IUpdatable {
         public getbounds() {
             return this._bounds;
@@ -63,13 +69,18 @@ module es {
         }
 
         public set maxSpriteInstance(value: number) {
-            this.setMaxSpriteInstance(value);
+            this.setMaxSpriteInstances(value);
         }
 
+        /** 在产生新实例之前，精灵必须移动多远 */
         public minDistanceBetweenInstances = 30;
+        /** 从初始颜色到淡入淡出的总持续时间 */
         public fadeDuration = 0.8;
+        /** 开始褪色之前的延迟 */
         public fadeDelay = 0.1;
+        /** 轨迹实例的初始颜色 */
         public initialColor = Color.White;
+        /** 在fadeDuration 过程中将被修改的最终颜色 */
         public fadeToColor = Color.Transparent;
 
         _maxSpriteInstance = 15;
@@ -78,7 +89,9 @@ module es {
         _lastPosition: Vector2 = Vector2.zero;
         _spriteRender: SpriteRenderer;
 
+        /** flag 为 true 时，无论距离检查如何，它将始终添加新实例 */
         _isFirstInstance: boolean = false;
+        /** 如果 awaitingDisable 在组件被禁用之前允许所有实例淡出 */
         _awaitingDisable: boolean = false;
 
         constructor(spriteRender?: SpriteRenderer) {
@@ -87,13 +100,15 @@ module es {
             this._spriteRender = spriteRender;
         }
 
-        public setMaxSpriteInstance(maxSpriteInstance: number) {
+        public setMaxSpriteInstances(maxSpriteInstance: number) {
+            // 如果我们的新值大于我们之前的计数，则实例化所需的 SpriteTrailInstances
             if (this._availableSpriteTrailInstances.length < maxSpriteInstance) {
                 const newInstance = this._availableSpriteTrailInstances.length - maxSpriteInstance;
                 for (let i = 0; i < newInstance; i ++)
                     this._availableSpriteTrailInstances.push(new SpriteTrailInstance());
             }
 
+            // 如果我们的新值小于我们之前的计数，则修剪列表
             if (this._availableSpriteTrailInstances.length > maxSpriteInstance) {
                 const excessInstances = maxSpriteInstance - this._availableSpriteTrailInstances.length;
                 for (let i = 0; i < excessInstances; i ++)
@@ -129,6 +144,10 @@ module es {
             return this;
         }
 
+        /**
+         * 启用 SpriteTrail
+         * @returns 
+         */
         public enableSpriteTrail(): SpriteTrail {
             this._awaitingDisable = false;
             this._isFirstInstance = true;
@@ -136,6 +155,10 @@ module es {
             return this;
         }
 
+        /**
+         * 禁用 SpriteTrail 
+         * @param completeCurrentTrail 等待当前轨迹先淡出
+         */
         public disableSpriteTrail(completeCurrentTrail: boolean = true) {
             if (completeCurrentTrail) {
                 this._awaitingDisable = true;
@@ -157,6 +180,10 @@ module es {
                 return;
             }
 
+            // 移动trail到sprite之后
+            this.layerDepth = this._spriteRender.layerDepth + 0.001;
+
+            // 如果 setMaxSpriteInstances 被调用，它将处理初始化 SpriteTrailInstances 所以确保我们不要做两次
             if (this._availableSpriteTrailInstances.length == 0) {
                 for (let i = 0; i < this._maxSpriteInstance; i ++)
                     this._availableSpriteTrailInstances.push(new SpriteTrailInstance());
@@ -196,6 +223,10 @@ module es {
                 this.enabled = false;
         }
 
+        /**
+         * 存储距离计算的最后一个位置，如果堆栈中有可用的，则生成一个新的轨迹实例
+         * @returns 
+         */
         spawnInstance() {
             this._lastPosition = this._spriteRender.entity.transform.position.add(this._spriteRender.localOffset);
 

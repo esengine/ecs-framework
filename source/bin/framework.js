@@ -4246,6 +4246,7 @@ var es;
             _this._areBoundsDirty = true;
             _this.color = es.Color.White;
             _this._renderLayer = 0;
+            _this._layerDepth = 0;
             _this.debugRenderEnabled = true;
             _this._isVisible = false;
             _this._localOffset = new es.Vector2();
@@ -4313,6 +4314,16 @@ var es;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(RenderableComponent.prototype, "layerDepth", {
+            get: function () {
+                return this._layerDepth;
+            },
+            set: function (value) {
+                this.setLayerDepth(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
         RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
             this._areBoundsDirty = true;
         };
@@ -4370,6 +4381,23 @@ var es;
                 this._sprite.dispose();
             }
         };
+        /**
+         * 标准 Batcher 层深度。 0在前，1在后。 更改此值将触发某种可渲染组件
+         * @param layerDepth
+         * @returns
+         */
+        RenderableComponent.prototype.setLayerDepth = function (layerDepth) {
+            this._layerDepth = es.MathHelper.clamp01(layerDepth);
+            if (this.entity != null && this.entity.scene != null) {
+                this.entity.scene.renderableComponents.setRenderLayerNeedsComponentSort(this.renderLayer);
+            }
+            return this;
+        };
+        /**
+         * 较低的 renderLayers 在前面，较高的在后面，就像 layerDepth
+         * @param renderLayer
+         * @returns
+         */
         RenderableComponent.prototype.setRenderLayer = function (renderLayer) {
             if (renderLayer != this._renderLayer) {
                 var oldRenderLayer = this._renderLayer;
@@ -4676,6 +4704,58 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 此组件将在每一帧中绘制相同的 spriteToMime
+     * 渲染的唯一区别是 SpriteMime 使用自己的localOffset 和颜色
+     * 这允许您将其用于阴影（通过 localPosition 偏移）
+     */
+    var SpriteMime = /** @class */ (function (_super) {
+        __extends(SpriteMime, _super);
+        function SpriteMime(spriteToMime) {
+            var _this = _super.call(this) || this;
+            if (_this._spriteToMime) {
+                _this._spriteToMime = spriteToMime;
+                _this._mimeSprite = spriteToMime.sprite.clone();
+            }
+            return _this;
+        }
+        SpriteMime.prototype.getwidth = function () {
+            return this._spriteToMime.getwidth();
+        };
+        SpriteMime.prototype.getheight = function () {
+            return this._spriteToMime.getheight();
+        };
+        SpriteMime.prototype.getbounds = function () {
+            return this._spriteToMime.bounds;
+        };
+        SpriteMime.prototype.onAddedToEntity = function () {
+            if (this._spriteToMime == null) {
+                this._spriteToMime = this.getComponent(es.SpriteRenderer);
+                if (this._spriteToMime) {
+                    this._mimeSprite = this._spriteToMime.sprite.clone();
+                }
+                else {
+                    this.enabled = false;
+                }
+            }
+        };
+        SpriteMime.prototype.onRemovedFromEntity = function () {
+            if (this._mimeSprite) {
+                this._mimeSprite.dispose();
+            }
+        };
+        SpriteMime.prototype.render = function (batcher, camera) {
+            batcher.drawSprite(this._mimeSprite, this.entity.transform.position.add(this._localOffset), this.color, this.entity.transform.rotationDegrees, this._mimeSprite.origin, this.entity.transform.scale);
+        };
+        return SpriteMime;
+    }(es.RenderableComponent));
+    es.SpriteMime = SpriteMime;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 包含单个跟踪实例所需数据的辅助类
+     */
     var SpriteTrailInstance = /** @class */ (function () {
         function SpriteTrailInstance() {
             this.position = es.Vector2.zero;
@@ -4724,20 +4804,30 @@ var es;
         };
         return SpriteTrailInstance;
     }());
+    /**
+     * 在同一个实体上渲染和淡化一系列 Sprite 副本。 minDistanceBetweenInstances 确定添加轨迹精灵的频率
+     */
     var SpriteTrail = /** @class */ (function (_super) {
         __extends(SpriteTrail, _super);
         function SpriteTrail(spriteRender) {
             var _this = _super.call(this) || this;
+            /** 在产生新实例之前，精灵必须移动多远 */
             _this.minDistanceBetweenInstances = 30;
+            /** 从初始颜色到淡入淡出的总持续时间 */
             _this.fadeDuration = 0.8;
+            /** 开始褪色之前的延迟 */
             _this.fadeDelay = 0.1;
+            /** 轨迹实例的初始颜色 */
             _this.initialColor = es.Color.White;
+            /** 在fadeDuration 过程中将被修改的最终颜色 */
             _this.fadeToColor = es.Color.Transparent;
             _this._maxSpriteInstance = 15;
             _this._availableSpriteTrailInstances = [];
             _this._liveSpriteTrailInstances = [];
             _this._lastPosition = es.Vector2.zero;
+            /** flag 为 true 时，无论距离检查如何，它将始终添加新实例 */
             _this._isFirstInstance = false;
+            /** 如果 awaitingDisable 在组件被禁用之前允许所有实例淡出 */
             _this._awaitingDisable = false;
             _this._spriteRender = spriteRender;
             return _this;
@@ -4750,17 +4840,19 @@ var es;
                 return this._maxSpriteInstance;
             },
             set: function (value) {
-                this.setMaxSpriteInstance(value);
+                this.setMaxSpriteInstances(value);
             },
             enumerable: true,
             configurable: true
         });
-        SpriteTrail.prototype.setMaxSpriteInstance = function (maxSpriteInstance) {
+        SpriteTrail.prototype.setMaxSpriteInstances = function (maxSpriteInstance) {
+            // 如果我们的新值大于我们之前的计数，则实例化所需的 SpriteTrailInstances
             if (this._availableSpriteTrailInstances.length < maxSpriteInstance) {
                 var newInstance = this._availableSpriteTrailInstances.length - maxSpriteInstance;
                 for (var i = 0; i < newInstance; i++)
                     this._availableSpriteTrailInstances.push(new SpriteTrailInstance());
             }
+            // 如果我们的新值小于我们之前的计数，则修剪列表
             if (this._availableSpriteTrailInstances.length > maxSpriteInstance) {
                 var excessInstances = maxSpriteInstance - this._availableSpriteTrailInstances.length;
                 for (var i = 0; i < excessInstances; i++)
@@ -4789,12 +4881,20 @@ var es;
             this.fadeToColor = fadeToColor;
             return this;
         };
+        /**
+         * 启用 SpriteTrail
+         * @returns
+         */
         SpriteTrail.prototype.enableSpriteTrail = function () {
             this._awaitingDisable = false;
             this._isFirstInstance = true;
             this.enabled = true;
             return this;
         };
+        /**
+         * 禁用 SpriteTrail
+         * @param completeCurrentTrail 等待当前轨迹先淡出
+         */
         SpriteTrail.prototype.disableSpriteTrail = function (completeCurrentTrail) {
             if (completeCurrentTrail === void 0) { completeCurrentTrail = true; }
             if (completeCurrentTrail) {
@@ -4814,6 +4914,9 @@ var es;
                 this.enabled = false;
                 return;
             }
+            // 移动trail到sprite之后
+            this.layerDepth = this._spriteRender.layerDepth + 0.001;
+            // 如果 setMaxSpriteInstances 被调用，它将处理初始化 SpriteTrailInstances 所以确保我们不要做两次
             if (this._availableSpriteTrailInstances.length == 0) {
                 for (var i = 0; i < this._maxSpriteInstance; i++)
                     this._availableSpriteTrailInstances.push(new SpriteTrailInstance());
@@ -4849,6 +4952,10 @@ var es;
             if (this._awaitingDisable && this._liveSpriteTrailInstances.length == 0)
                 this.enabled = false;
         };
+        /**
+         * 存储距离计算的最后一个位置，如果堆栈中有可用的，则生成一个新的轨迹实例
+         * @returns
+         */
         SpriteTrail.prototype.spawnInstance = function () {
             this._lastPosition = this._spriteRender.entity.transform.position.add(this._spriteRender.localOffset);
             if (this._awaitingDisable || this._availableSpriteTrailInstances.length == 0)
