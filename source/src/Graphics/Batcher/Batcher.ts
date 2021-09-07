@@ -201,6 +201,8 @@ module es {
 
         drawSprite(sprite: Sprite, position: Vector2, color: Color, rotation: number,
             origin: Vector2, scale: Vector2) {
+                if (!sprite) return;
+                // 这里可以将未加入场景的Sprite进行绘制
                 if (sprite.parent == null) {
                     Core.stage.addChild(sprite);
                 }

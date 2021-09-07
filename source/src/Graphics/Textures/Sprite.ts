@@ -10,6 +10,10 @@ module es {
         }
         public origin: Vector2 = Vector2.zero;
         public readonly uvs: Rectangle = new Rectangle();
+        private _dispose = false;
+        public get isDispose() {
+            return this._dispose;
+        }
 
         constructor(texture: egret.Texture,
             sourceRect?: Rectangle,
@@ -78,8 +82,20 @@ module es {
             return new Sprite(this.texture, this.sourceRect, this.origin);
         }
 
-        public dispose() {
-            this.texture.dispose();
+        /**
+         * 销毁Sprite
+         * 注意: disposeTexture开启后所有用到该纹理的组件也将被销毁
+         * 请确保其他引用该纹理的组件未引用该纹理后开启
+         * @param disposeTexture 是否销毁纹理
+         */
+        public dispose(disposeTexture: boolean = false) {
+            if (this.parent) {
+                this.parent.removeChild(this);
+            }
+            if (disposeTexture) {
+                this.texture.dispose();
+            }
+            this._dispose = true;
         }
     }
 }

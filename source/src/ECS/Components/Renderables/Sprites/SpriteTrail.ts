@@ -15,16 +15,14 @@ module es {
         _layerDepth: number = 0;
 
         public spawn(position: Vector2, sprite: Sprite, fadeDuration: number, fadeDelay: number, initialColor: Color, targetColor: Color) {
-            this.position = position;
-            this._sprite = sprite;
+            this.position = position.clone();
+            this._sprite = sprite.clone();
 
-            this._initialColor = initialColor;
             this._elapsedTime = 0;
-            
             this._fadeDuration = fadeDuration;
             this._fadeDelay = fadeDelay;
-            this._initialColor = initialColor;
-            this._targetColor = targetColor;
+            this._initialColor = initialColor.clone();
+            this._targetColor = targetColor.clone();
         }
 
         public setSpriteRenderOptions(rotation: number, origin: Vector2, scale: Vector2, layerDepth: number) {
@@ -39,8 +37,11 @@ module es {
 
             if (this._elapsedTime > this._fadeDelay && this._elapsedTime < this._fadeDuration + this._fadeDelay) {
                 const t = MathHelper.map01(this._elapsedTime, 0, this._fadeDelay + this._fadeDuration);
-                ColorExt.lerpOut(this._initialColor, this._targetColor, this._renderColor, t);
+                this._renderColor = ColorExt.lerpOut(this._initialColor, this._targetColor, t);
             } else if(this._elapsedTime >= this._fadeDuration + this._fadeDelay) {
+                if (this._sprite) {
+                    this._sprite.dispose();
+                }
                 return true;
             }
 
@@ -176,12 +177,13 @@ module es {
             let max = new Vector2(Number.MIN_VALUE, Number.MIN_VALUE);
 
             for (let i = this._liveSpriteTrailInstances.length - 1; i >= 0; i --) {
-                if (this._liveSpriteTrailInstances[i].update()) {
-                    this._availableSpriteTrailInstances.push(this._liveSpriteTrailInstances[i]);
+                const spriteTrailInstance = this._liveSpriteTrailInstances[i];
+                if (spriteTrailInstance.update()) {
+                    this._availableSpriteTrailInstances.push(spriteTrailInstance);
                     this._liveSpriteTrailInstances.splice(i, 1);
                 } else {
-                    min = Vector2.min(min, this._liveSpriteTrailInstances[i].position);
-                    max = Vector2.max(max, this._liveSpriteTrailInstances[i].position);
+                    min = Vector2.min(min, spriteTrailInstance.position);
+                    max = Vector2.max(max, spriteTrailInstance.position);
                 }
             }
 
@@ -201,8 +203,8 @@ module es {
                 return;
 
             const instance = this._availableSpriteTrailInstances.pop();
-            instance.spawn(this._lastPosition, this._spriteRender.sprite.clone(), this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
-            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotationDegrees, this._spriteRender.originNormalized,
+            instance.spawn(this._lastPosition, this._spriteRender.sprite, this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
+            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotationDegrees, this._spriteRender.origin,
                 this._spriteRender.entity.transform.scale, this.renderLayer);
             this._liveSpriteTrailInstances.push(instance);
         }

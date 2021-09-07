@@ -38,7 +38,7 @@ module es {
          * @param b  颜色的蓝色分量 (0-255) 
          * @param a  颜色的 alpha 分量 (0-1.0) 
          */
-        constructor(r: number, g: number, b: number, a?: number) {
+        constructor(r: number = 255, g: number = 255, b: number = 255, a?: number) {
             this.r = r;
             this.g = g;
             this.b = b;

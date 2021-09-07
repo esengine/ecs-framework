@@ -2774,7 +2774,7 @@ declare module es {
          * @param b  颜色的蓝色分量 (0-255)
          * @param a  颜色的 alpha 分量 (0-1.0)
          */
-        constructor(r: number, g: number, b: number, a?: number);
+        constructor(r?: number, g?: number, b?: number, a?: number);
         /**
          * 从 r, g, b, a 创建一个新的 Color 实例
          *
@@ -3014,6 +3014,8 @@ declare module es {
         readonly center: Vector2;
         origin: Vector2;
         readonly uvs: Rectangle;
+        private _dispose;
+        readonly isDispose: boolean;
         constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
         setTexture(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2): void;
         /**
@@ -3026,7 +3028,13 @@ declare module es {
          */
         static spritesFromAtlas(texture: egret.Texture, cellWidth: number, cellHeight: number, cellOffset?: number, maxCellsToInclude?: number): Sprite[];
         clone(): Sprite;
-        dispose(): void;
+        /**
+         * 销毁Sprite
+         * 注意: disposeTexture开启后所有用到该纹理的组件也将被销毁
+         * 请确保其他引用该纹理的组件未引用该纹理后开启
+         * @param disposeTexture 是否销毁纹理
+         */
+        dispose(disposeTexture?: boolean): void;
     }
 }
 declare module es {
@@ -6412,7 +6420,7 @@ declare module es {
     class ColorExt {
         private static readonly HEX;
         static lerp(from: Color, to: Color, t: number): Color;
-        static lerpOut(from: Color, to: Color, result: Color, t: number): void;
+        static lerpOut(from: Color, to: Color, t: number): Color;
     }
 }
 declare module es {

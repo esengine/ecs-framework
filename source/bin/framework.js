@@ -4691,14 +4691,13 @@ var es;
             this._layerDepth = 0;
         }
         SpriteTrailInstance.prototype.spawn = function (position, sprite, fadeDuration, fadeDelay, initialColor, targetColor) {
-            this.position = position;
-            this._sprite = sprite;
-            this._initialColor = initialColor;
+            this.position = position.clone();
+            this._sprite = sprite.clone();
             this._elapsedTime = 0;
             this._fadeDuration = fadeDuration;
             this._fadeDelay = fadeDelay;
-            this._initialColor = initialColor;
-            this._targetColor = targetColor;
+            this._initialColor = initialColor.clone();
+            this._targetColor = targetColor.clone();
         };
         SpriteTrailInstance.prototype.setSpriteRenderOptions = function (rotation, origin, scale, layerDepth) {
             this._rotation = rotation;
@@ -4710,9 +4709,12 @@ var es;
             this._elapsedTime += es.Time.deltaTime;
             if (this._elapsedTime > this._fadeDelay && this._elapsedTime < this._fadeDuration + this._fadeDelay) {
                 var t = es.MathHelper.map01(this._elapsedTime, 0, this._fadeDelay + this._fadeDuration);
-                es.ColorExt.lerpOut(this._initialColor, this._targetColor, this._renderColor, t);
+                this._renderColor = es.ColorExt.lerpOut(this._initialColor, this._targetColor, t);
             }
             else if (this._elapsedTime >= this._fadeDuration + this._fadeDelay) {
+                if (this._sprite) {
+                    this._sprite.dispose();
+                }
                 return true;
             }
             return false;
@@ -4830,13 +4832,14 @@ var es;
             var min = new es.Vector2(Number.MAX_VALUE, Number.MAX_VALUE);
             var max = new es.Vector2(Number.MIN_VALUE, Number.MIN_VALUE);
             for (var i = this._liveSpriteTrailInstances.length - 1; i >= 0; i--) {
-                if (this._liveSpriteTrailInstances[i].update()) {
-                    this._availableSpriteTrailInstances.push(this._liveSpriteTrailInstances[i]);
+                var spriteTrailInstance = this._liveSpriteTrailInstances[i];
+                if (spriteTrailInstance.update()) {
+                    this._availableSpriteTrailInstances.push(spriteTrailInstance);
                     this._liveSpriteTrailInstances.splice(i, 1);
                 }
                 else {
-                    min = es.Vector2.min(min, this._liveSpriteTrailInstances[i].position);
-                    max = es.Vector2.max(max, this._liveSpriteTrailInstances[i].position);
+                    min = es.Vector2.min(min, spriteTrailInstance.position);
+                    max = es.Vector2.max(max, spriteTrailInstance.position);
                 }
             }
             this._bounds.location = min;
@@ -4851,8 +4854,8 @@ var es;
             if (this._awaitingDisable || this._availableSpriteTrailInstances.length == 0)
                 return;
             var instance = this._availableSpriteTrailInstances.pop();
-            instance.spawn(this._lastPosition, this._spriteRender.sprite.clone(), this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
-            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotationDegrees, this._spriteRender.originNormalized, this._spriteRender.entity.transform.scale, this.renderLayer);
+            instance.spawn(this._lastPosition, this._spriteRender.sprite, this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
+            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotationDegrees, this._spriteRender.origin, this._spriteRender.entity.transform.scale, this.renderLayer);
             this._liveSpriteTrailInstances.push(instance);
         };
         SpriteTrail.prototype.render = function (batcher, camera) {
@@ -7278,6 +7281,9 @@ var es;
             this.flushBatch();
         };
         Batcher.prototype.drawSprite = function (sprite, position, color, rotation, origin, scale) {
+            if (!sprite)
+                return;
+            // 这里可以将未加入场景的Sprite进行绘制
             if (sprite.parent == null) {
                 es.Core.stage.addChild(sprite);
             }
@@ -7325,6 +7331,9 @@ var es;
          * @param a  颜色的 alpha 分量 (0-1.0)
          */
         function Color(r, g, b, a) {
+            if (r === void 0) { r = 255; }
+            if (g === void 0) { g = 255; }
+            if (b === void 0) { b = 255; }
             this.r = r;
             this.g = g;
             this.b = b;
@@ -7798,6 +7807,7 @@ var es;
             _this._center = es.Vector2.zero;
             _this.origin = es.Vector2.zero;
             _this.uvs = new es.Rectangle();
+            _this._dispose = false;
             _this.setTexture(texture, sourceRect, origin);
             return _this;
         }
@@ -7811,6 +7821,13 @@ var es;
         Object.defineProperty(Sprite.prototype, "center", {
             get: function () {
                 return this._center;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Sprite.prototype, "isDispose", {
+            get: function () {
+                return this._dispose;
             },
             enumerable: true,
             configurable: true
@@ -7868,8 +7885,21 @@ var es;
         Sprite.prototype.clone = function () {
             return new Sprite(this.texture, this.sourceRect, this.origin);
         };
-        Sprite.prototype.dispose = function () {
-            this.texture.dispose();
+        /**
+         * 销毁Sprite
+         * 注意: disposeTexture开启后所有用到该纹理的组件也将被销毁
+         * 请确保其他引用该纹理的组件未引用该纹理后开启
+         * @param disposeTexture 是否销毁纹理
+         */
+        Sprite.prototype.dispose = function (disposeTexture) {
+            if (disposeTexture === void 0) { disposeTexture = false; }
+            if (this.parent) {
+                this.parent.removeChild(this);
+            }
+            if (disposeTexture) {
+                this.texture.dispose();
+            }
+            this._dispose = true;
         };
         return Sprite;
     }(egret.Bitmap));
@@ -17062,12 +17092,14 @@ var es;
             var t255 = t * 255;
             return new es.Color(from.r + (to.r - from.r) * t255 / 255, from.g + (to.g - from.g) * t255 / 255, from.b + (to.b - from.b) * t255 / 255, from.a + (to.a - from.a) * t255 / 255);
         };
-        ColorExt.lerpOut = function (from, to, result, t) {
+        ColorExt.lerpOut = function (from, to, t) {
             var t255 = t * 255;
+            var result = new es.Color();
             result.r = from.r + (to.r - from.r) * t255 / 255;
             result.g = from.g + (to.g - from.g) * t255 / 255;
             result.b = from.b + (to.b - from.b) * t255 / 255;
             result.a = from.a + (to.a - from.a) * t255 / 255;
+            return result;
         };
         ColorExt.HEX = "0123456789ABCDEF";
         return ColorExt;
