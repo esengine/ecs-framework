@@ -4523,7 +4523,7 @@ var es;
             return this;
         };
         SpriteRenderer.prototype.render = function (batcher, camera) {
-            batcher.drawSprite(this.sprite, this.entity.transform.position.add(this.localOffset), this.color, this.entity.transform.rotationDegrees, this.origin, this.entity.transform.scale);
+            batcher.drawSprite(this.sprite, this.entity.transform.position.add(this.localOffset), this.color, this.entity.transform.rotationDegrees, this.origin, this.entity.transform.scale, this._layerDepth);
         };
         return SpriteRenderer;
     }(es.RenderableComponent));
@@ -4745,7 +4745,7 @@ var es;
             }
         };
         SpriteMime.prototype.render = function (batcher, camera) {
-            batcher.drawSprite(this._mimeSprite, this.entity.transform.position.add(this._localOffset), this.color, this.entity.transform.rotationDegrees, this._mimeSprite.origin, this.entity.transform.scale);
+            batcher.drawSprite(this._mimeSprite, this.entity.transform.position.add(this._localOffset), this.color, this.entity.transform.rotationDegrees, this._mimeSprite.origin, this.entity.transform.scale, this._layerDepth);
         };
         return SpriteMime;
     }(es.RenderableComponent));
@@ -4800,7 +4800,7 @@ var es;
             return false;
         };
         SpriteTrailInstance.prototype.render = function (batcher, camera) {
-            batcher.drawSprite(this._sprite, this.position, this._renderColor, this._rotation, this._origin, this._scale);
+            batcher.drawSprite(this._sprite, this.position, this._renderColor, this._rotation, this._origin, this._scale, this._layerDepth);
         };
         return SpriteTrailInstance;
     }());
@@ -7387,7 +7387,7 @@ var es;
             this.strokeNum++;
             this.flushBatch();
         };
-        Batcher.prototype.drawSprite = function (sprite, position, color, rotation, origin, scale) {
+        Batcher.prototype.drawSprite = function (sprite, position, color, rotation, origin, scale, layerDepth) {
             if (!sprite)
                 return;
             // 这里可以将未加入场景的Sprite进行绘制
@@ -7401,6 +7401,7 @@ var es;
             sprite.scaleY = scale.y;
             sprite.anchorOffsetX = origin.x;
             sprite.anchorOffsetY = origin.y;
+            sprite.zIndex = layerDepth;
             var colorMatrix = [
                 1, 0, 0, 0, 0,
                 0, 1, 0, 0, 0,

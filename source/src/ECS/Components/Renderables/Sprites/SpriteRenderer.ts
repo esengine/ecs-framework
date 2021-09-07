@@ -90,7 +90,7 @@ module es {
 
         public render(batcher: Batcher, camera: Camera) {
             batcher.drawSprite(this.sprite, this.entity.transform.position.add(this.localOffset),
-                this.color, this.entity.transform.rotationDegrees, this.origin, this.entity.transform.scale);
+                this.color, this.entity.transform.rotationDegrees, this.origin, this.entity.transform.scale, this._layerDepth);
         }
     }
 }

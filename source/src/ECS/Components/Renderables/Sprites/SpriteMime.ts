@@ -48,7 +48,7 @@ module es {
         
         public render(batcher: Batcher, camera: Camera) {
             batcher.drawSprite(this._mimeSprite, this.entity.transform.position.add(this._localOffset), this.color,
-                this.entity.transform.rotationDegrees, this._mimeSprite.origin, this.entity.transform.scale);
+                this.entity.transform.rotationDegrees, this._mimeSprite.origin, this.entity.transform.scale, this._layerDepth);
         }
     }
 }

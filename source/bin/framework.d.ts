@@ -2788,7 +2788,7 @@ declare module es {
          * @param size 大小
          */
         drawPixel(position: Vector2, color: Color, size?: number): void;
-        drawSprite(sprite: Sprite, position: Vector2, color: Color, rotation: number, origin: Vector2, scale: Vector2): void;
+        drawSprite(sprite: Sprite, position: Vector2, color: Color, rotation: number, origin: Vector2, scale: Vector2, layerDepth: number): void;
         flushBatch(): void;
     }
 }

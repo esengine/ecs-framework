@@ -52,7 +52,7 @@ module es {
         }
 
         public render(batcher: Batcher, camera: ICamera) {
-            batcher.drawSprite(this._sprite, this.position, this._renderColor, this._rotation, this._origin, this._scale);
+            batcher.drawSprite(this._sprite, this.position, this._renderColor, this._rotation, this._origin, this._scale, this._layerDepth);
         }
     }
 

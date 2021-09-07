@@ -200,7 +200,7 @@ module es {
         }
 
         drawSprite(sprite: Sprite, position: Vector2, color: Color, rotation: number,
-            origin: Vector2, scale: Vector2) {
+            origin: Vector2, scale: Vector2, layerDepth: number) {
                 if (!sprite) return;
                 // 这里可以将未加入场景的Sprite进行绘制
                 if (sprite.parent == null) {
@@ -213,6 +213,7 @@ module es {
                 sprite.scaleY = scale.y;
                 sprite.anchorOffsetX = origin.x;
                 sprite.anchorOffsetY = origin.y;
+                sprite.zIndex = layerDepth;
 
                 const colorMatrix = [
                     1, 0, 0, 0, 0,
