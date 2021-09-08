@@ -1,4 +1,25 @@
 module es {
+    class BatcherItem {
+        sprite: Sprite;
+        position: Vector2;
+        color: Color;
+        rotation: number;
+        origin: Vector2;
+        scale: Vector2;
+        layerDepth: number;
+
+        constructor(sprite: Sprite, position: Vector2, color: Color, rotation: number,
+            origin: Vector2, scale: Vector2, layerDepth: number) {
+            this.sprite = sprite;
+            this.position = position;
+            this.color = color;
+            this.rotation = rotation;
+            this.origin = origin;
+            this.scale = scale;
+            this.layerDepth = layerDepth;
+        }
+    }
+
     /**
      * 用于集中处理所有graphics绘制逻辑
      */
@@ -10,7 +31,8 @@ module es {
         public camera: ICamera | null = null;
         public strokeNum: number = 0;
         public sprite: egret.Sprite;
-    
+        protected batcherQueue: BatcherItem[] = [];
+
         public readonly MAX_STROKE = 2048;
 
         constructor() {
@@ -37,6 +59,8 @@ module es {
                 this.strokeNum = 0;
                 this.sprite.graphics.endFill();
             }
+
+            this.flushSprite();
         }
 
         /**
@@ -65,7 +89,7 @@ module es {
             if (points.length < 2)
                 return;
 
-            for (let i = 1; i < points.length; i ++)
+            for (let i = 1; i < points.length; i++)
                 this.drawLine(Vector2.add(position, points[i - 1]), Vector2.add(position, points[i]), color, thickness);
 
             if (closePoly)
@@ -109,7 +133,7 @@ module es {
 
             this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
             this.sprite.graphics.drawCircle(position.x, position.y, radius);
-            this.strokeNum ++;
+            this.strokeNum++;
             this.flushBatch();
         }
 
@@ -125,7 +149,7 @@ module es {
             let last = Vector2.unitX.multiplyScaler(radius);
             let lastP = Vector2Ext.perpendicularFlip(last);
 
-            for (let i = 1; i <= resolution; i ++) {
+            for (let i = 1; i <= resolution; i++) {
                 const at = MathHelper.angleToVector(i * MathHelper.PiOver2 / resolution, radius);
                 const atP = Vector2Ext.perpendicularFlip(at);
 
@@ -151,10 +175,10 @@ module es {
             const rect = new Rectangle(x, y, width, height);
             if (this.camera && !this.camera.bounds.intersects(rect))
                 return;
-                
+
             this.sprite.graphics.lineStyle(1, color.toHexEgret(), color.a);
             this.sprite.graphics.drawRect(Math.trunc(x), Math.trunc(y), Math.trunc(width), Math.trunc(height));
-            this.strokeNum ++;
+            this.strokeNum++;
             this.flushBatch();
         }
 
@@ -169,11 +193,11 @@ module es {
             const bounds = RectangleExt.boundsFromPolygonVector([start, end]);
             if (this.camera && !this.camera.bounds.intersects(bounds))
                 return;
-    
+
             this.sprite.graphics.lineStyle(thickness, color.toHexEgret(), color.a);
             this.sprite.graphics.moveTo(start.x, start.y);
             this.sprite.graphics.lineTo(end.x, end.y);
-            this.strokeNum ++;
+            this.strokeNum++;
             this.flushBatch();
         }
 
@@ -195,27 +219,43 @@ module es {
 
             this.sprite.graphics.lineStyle(size, color.toHexEgret(), color.a);
             this.sprite.graphics.drawRect(destRect.x, destRect.y, destRect.width, destRect.height);
-            this.strokeNum ++;
+            this.strokeNum++;
             this.flushBatch();
         }
 
         drawSprite(sprite: Sprite, position: Vector2, color: Color, rotation: number,
             origin: Vector2, scale: Vector2, layerDepth: number) {
-                if (!sprite) return;
+            if (!sprite) return;
+            this.batcherQueue.push(new BatcherItem(sprite, position, color, rotation, origin, scale, layerDepth));
+        }
+
+        public flushBatch() {
+            if (this.strokeNum >= this.MAX_STROKE) {
+                this.strokeNum = 0;
+                this.sprite.graphics.endFill();
+            }
+        }
+
+        public flushSprite() {
+            this.batcherQueue = this.batcherQueue.sort((a, b) => b.layerDepth - a.layerDepth);
+            for (let i = 0; i < this.batcherQueue.length; i++) {
+                const batcherItem = this.batcherQueue[i];
+                const sprite = batcherItem.sprite;
                 // 这里可以将未加入场景的Sprite进行绘制
                 if (sprite.parent == null) {
                     Core.stage.addChild(sprite);
                 }
-                sprite.x = position.x;
-                sprite.y = position.y;
-                sprite.rotation = rotation;
-                sprite.scaleX = scale.x;
-                sprite.scaleY = scale.y;
-                sprite.anchorOffsetX = origin.x;
-                sprite.anchorOffsetY = origin.y;
-                const depth = 1 - layerDepth;
-                if (sprite.zIndex != depth) {
-                    sprite.zIndex = depth;
+
+                sprite.x = batcherItem.position.x;
+                sprite.y = batcherItem.position.y;
+                sprite.rotation = batcherItem.rotation;
+                sprite.scaleX = batcherItem.scale.x;
+                sprite.scaleY = batcherItem.scale.y;
+                sprite.anchorOffsetX = batcherItem.origin.x;
+                sprite.anchorOffsetY = batcherItem.origin.y;
+                if (sprite.zIndex != i) {
+                    sprite.zIndex = i;
+                    es.Core.emitter.emit(CoreEvents.zIndexChanged);
                 }
 
                 const colorMatrix = [
@@ -224,19 +264,15 @@ module es {
                     0, 0, 1, 0, 0,
                     0, 0, 0, 1, 0
                 ];
-                colorMatrix[0] = color.r / 255;
-                colorMatrix[6] = color.g / 255;
-                colorMatrix[12] = color.b / 255;
+                colorMatrix[0] = batcherItem.color.r / 255;
+                colorMatrix[6] = batcherItem.color.g / 255;
+                colorMatrix[12] = batcherItem.color.b / 255;
                 const colorFilter = new egret.ColorMatrixFilter(colorMatrix);
                 sprite.filters = [colorFilter];
-                sprite.alpha = color.a;
+                sprite.alpha = batcherItem.color.a;
             }
 
-        public flushBatch() {
-            if (this.strokeNum >= this.MAX_STROKE) {
-                this.strokeNum = 0;
-                this.sprite.graphics.endFill();
-            }
+            this.batcherQueue.length = 0;
         }
     }
 }

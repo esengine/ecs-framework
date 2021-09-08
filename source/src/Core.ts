@@ -42,13 +42,14 @@ module es {
         public _globalManagers: GlobalManager[] = [];
         public _coroutineManager: CoroutineManager = new CoroutineManager();
         public _timerManager: TimerManager = new TimerManager();
+        private _zIndexDirty: boolean = false;
 
         private constructor(stage: egret.Stage, debug: boolean = true, enableEntitySystems: boolean = true) {
             Core._instance = this;
             Core.stage = stage;
-            Core.stage.sortableChildren = true;
             Core.emitter = new Emitter<CoreEvents>();
             Core.emitter.addObserver(CoreEvents.frameUpdated, this.update, this);
+            Core.emitter.addObserver(CoreEvents.zIndexChanged, this.zIndexChanged, this);
 
             Core.content = new ContentManager();
 
@@ -208,7 +209,7 @@ module es {
             Input.initialize();
         }
 
-        protected async update(currentTime: number = -1) {
+        protected update(currentTime: number = -1) {
             if (Core.paused) {
                 return;
             }
@@ -232,9 +233,18 @@ module es {
 
                     this._scene.begin();
                 }
+
+                if (this._zIndexDirty) {
+                    this._zIndexDirty = false;
+                    es.Core.stage.sortChildren();
+                }
             }
 
             this.startDebugDraw();
+        }
+
+        protected zIndexChanged() {
+            this._zIndexDirty = true;
         }
     }
 }

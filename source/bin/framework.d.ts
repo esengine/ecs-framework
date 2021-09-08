@@ -41,6 +41,7 @@ declare module es {
         _globalManagers: GlobalManager[];
         _coroutineManager: CoroutineManager;
         _timerManager: TimerManager;
+        private _zIndexDirty;
         private constructor();
         /**
          * 提供对单例/游戏实例的访问
@@ -100,7 +101,8 @@ declare module es {
         onSceneChanged(): void;
         registerCoreEvent(): void;
         protected initialize(): void;
-        protected update(currentTime?: number): Promise<void>;
+        protected update(currentTime?: number): void;
+        protected zIndexChanged(): void;
     }
 }
 declare module es {
@@ -310,7 +312,11 @@ declare module es {
         /**
          * 当渲染发生时触发
          */
-        renderChanged = 2
+        renderChanged = 2,
+        /**
+         * 当zIndex发生改变时触发
+         */
+        zIndexChanged = 3
     }
 }
 declare module es {
@@ -2726,6 +2732,16 @@ declare module es {
     }
 }
 declare module es {
+    class BatcherItem {
+        sprite: Sprite;
+        position: Vector2;
+        color: Color;
+        rotation: number;
+        origin: Vector2;
+        scale: Vector2;
+        layerDepth: number;
+        constructor(sprite: Sprite, position: Vector2, color: Color, rotation: number, origin: Vector2, scale: Vector2, layerDepth: number);
+    }
     /**
      * 用于集中处理所有graphics绘制逻辑
      */
@@ -2737,6 +2753,7 @@ declare module es {
         camera: ICamera | null;
         strokeNum: number;
         sprite: egret.Sprite;
+        protected batcherQueue: BatcherItem[];
         readonly MAX_STROKE: number;
         constructor();
         begin(cam: ICamera, batcherType?: string): void;
@@ -2810,6 +2827,7 @@ declare module es {
         drawPixel(position: Vector2, color: Color, size?: number): void;
         drawSprite(sprite: Sprite, position: Vector2, color: Color, rotation: number, origin: Vector2, scale: Vector2, layerDepth: number): void;
         flushBatch(): void;
+        flushSprite(): void;
     }
 }
 declare module es {

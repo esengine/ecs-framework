@@ -12,5 +12,9 @@ module es {
          * 当渲染发生时触发
          */
         renderChanged,
+        /**
+         * 当zIndex发生改变时触发
+         */
+        zIndexChanged,
     }
 }

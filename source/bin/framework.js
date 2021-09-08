@@ -1,39 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -74,6 +39,33 @@ var __values = (this && this.__values) || function (o) {
         }
     };
 };
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 var es;
 (function (es) {
     /**
@@ -89,14 +81,15 @@ var es;
             this._globalManagers = [];
             this._coroutineManager = new es.CoroutineManager();
             this._timerManager = new es.TimerManager();
+            this._zIndexDirty = false;
             this._frameCounterElapsedTime = 0;
             this._frameCounter = 0;
             this._totalMemory = 0;
             Core._instance = this;
             Core.stage = stage;
-            Core.stage.sortableChildren = true;
             Core.emitter = new es.Emitter();
             Core.emitter.addObserver(es.CoreEvents.frameUpdated, this.update, this);
+            Core.emitter.addObserver(es.CoreEvents.zIndexChanged, this.zIndexChanged, this);
             Core.content = new es.ContentManager();
             Core.registerGlobalManager(this._coroutineManager);
             Core.registerGlobalManager(new es.TweenManager());
@@ -246,32 +239,33 @@ var es;
         };
         Core.prototype.update = function (currentTime) {
             if (currentTime === void 0) { currentTime = -1; }
-            return __awaiter(this, void 0, void 0, function () {
-                var i;
-                return __generator(this, function (_a) {
-                    if (Core.paused) {
-                        return [2 /*return*/];
-                    }
-                    es.Time.update(currentTime, currentTime != -1);
-                    if (this._scene != null) {
-                        for (i = this._globalManagers.length - 1; i >= 0; i--) {
-                            if (this._globalManagers[i].enabled)
-                                this._globalManagers[i].update();
-                        }
-                        this._scene.update();
-                        if (this._nextScene != null) {
-                            this._scene.end();
-                            es.Debug.log(es.LogType.info, "场景 {0} 切换至另一个场景 {1}", this._scene.name, this._nextScene.name);
-                            this._scene = this._nextScene;
-                            this._nextScene = null;
-                            this.onSceneChanged();
-                            this._scene.begin();
-                        }
-                    }
-                    this.startDebugDraw();
-                    return [2 /*return*/];
-                });
-            });
+            if (Core.paused) {
+                return;
+            }
+            es.Time.update(currentTime, currentTime != -1);
+            if (this._scene != null) {
+                for (var i = this._globalManagers.length - 1; i >= 0; i--) {
+                    if (this._globalManagers[i].enabled)
+                        this._globalManagers[i].update();
+                }
+                this._scene.update();
+                if (this._nextScene != null) {
+                    this._scene.end();
+                    es.Debug.log(es.LogType.info, "场景 {0} 切换至另一个场景 {1}", this._scene.name, this._nextScene.name);
+                    this._scene = this._nextScene;
+                    this._nextScene = null;
+                    this.onSceneChanged();
+                    this._scene.begin();
+                }
+                if (this._zIndexDirty) {
+                    this._zIndexDirty = false;
+                    es.Core.stage.sortChildren();
+                }
+            }
+            this.startDebugDraw();
+        };
+        Core.prototype.zIndexChanged = function () {
+            this._zIndexDirty = true;
         };
         Core.paused = false;
         /**
@@ -960,6 +954,10 @@ var es;
          * 当渲染发生时触发
          */
         CoreEvents[CoreEvents["renderChanged"] = 2] = "renderChanged";
+        /**
+         * 当zIndex发生改变时触发
+         */
+        CoreEvents[CoreEvents["zIndexChanged"] = 3] = "zIndexChanged";
     })(CoreEvents = es.CoreEvents || (es.CoreEvents = {}));
 })(es || (es = {}));
 var es;
@@ -7252,6 +7250,18 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var BatcherItem = /** @class */ (function () {
+        function BatcherItem(sprite, position, color, rotation, origin, scale, layerDepth) {
+            this.sprite = sprite;
+            this.position = position;
+            this.color = color;
+            this.rotation = rotation;
+            this.origin = origin;
+            this.scale = scale;
+            this.layerDepth = layerDepth;
+        }
+        return BatcherItem;
+    }());
     /**
      * 用于集中处理所有graphics绘制逻辑
      */
@@ -7259,6 +7269,7 @@ var es;
         function Batcher() {
             this.camera = null;
             this.strokeNum = 0;
+            this.batcherQueue = [];
             this.MAX_STROKE = 2048;
             this._batcherSprite = new Map();
         }
@@ -7281,6 +7292,7 @@ var es;
                 this.strokeNum = 0;
                 this.sprite.graphics.endFill();
             }
+            this.flushSprite();
         };
         /**
          * 绘制点
@@ -7429,39 +7441,48 @@ var es;
         Batcher.prototype.drawSprite = function (sprite, position, color, rotation, origin, scale, layerDepth) {
             if (!sprite)
                 return;
-            // 这里可以将未加入场景的Sprite进行绘制
-            if (sprite.parent == null) {
-                es.Core.stage.addChild(sprite);
-            }
-            sprite.x = position.x;
-            sprite.y = position.y;
-            sprite.rotation = rotation;
-            sprite.scaleX = scale.x;
-            sprite.scaleY = scale.y;
-            sprite.anchorOffsetX = origin.x;
-            sprite.anchorOffsetY = origin.y;
-            var depth = 1 - layerDepth;
-            if (sprite.zIndex != depth) {
-                sprite.zIndex = depth;
-            }
-            var colorMatrix = [
-                1, 0, 0, 0, 0,
-                0, 1, 0, 0, 0,
-                0, 0, 1, 0, 0,
-                0, 0, 0, 1, 0
-            ];
-            colorMatrix[0] = color.r / 255;
-            colorMatrix[6] = color.g / 255;
-            colorMatrix[12] = color.b / 255;
-            var colorFilter = new egret.ColorMatrixFilter(colorMatrix);
-            sprite.filters = [colorFilter];
-            sprite.alpha = color.a;
+            this.batcherQueue.push(new BatcherItem(sprite, position, color, rotation, origin, scale, layerDepth));
         };
         Batcher.prototype.flushBatch = function () {
             if (this.strokeNum >= this.MAX_STROKE) {
                 this.strokeNum = 0;
                 this.sprite.graphics.endFill();
             }
+        };
+        Batcher.prototype.flushSprite = function () {
+            this.batcherQueue = this.batcherQueue.sort(function (a, b) { return b.layerDepth - a.layerDepth; });
+            for (var i = 0; i < this.batcherQueue.length; i++) {
+                var batcherItem = this.batcherQueue[i];
+                var sprite = batcherItem.sprite;
+                // 这里可以将未加入场景的Sprite进行绘制
+                if (sprite.parent == null) {
+                    es.Core.stage.addChild(sprite);
+                }
+                sprite.x = batcherItem.position.x;
+                sprite.y = batcherItem.position.y;
+                sprite.rotation = batcherItem.rotation;
+                sprite.scaleX = batcherItem.scale.x;
+                sprite.scaleY = batcherItem.scale.y;
+                sprite.anchorOffsetX = batcherItem.origin.x;
+                sprite.anchorOffsetY = batcherItem.origin.y;
+                if (sprite.zIndex != i) {
+                    sprite.zIndex = i;
+                    es.Core.emitter.emit(es.CoreEvents.zIndexChanged);
+                }
+                var colorMatrix = [
+                    1, 0, 0, 0, 0,
+                    0, 1, 0, 0, 0,
+                    0, 0, 1, 0, 0,
+                    0, 0, 0, 1, 0
+                ];
+                colorMatrix[0] = batcherItem.color.r / 255;
+                colorMatrix[6] = batcherItem.color.g / 255;
+                colorMatrix[12] = batcherItem.color.b / 255;
+                var colorFilter = new egret.ColorMatrixFilter(colorMatrix);
+                sprite.filters = [colorFilter];
+                sprite.alpha = batcherItem.color.a;
+            }
+            this.batcherQueue.length = 0;
         };
         Batcher.TYPE_DEBUG = "debug";
         Batcher.TYPE_NORMAL = "normal";
