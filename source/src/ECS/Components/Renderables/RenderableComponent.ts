@@ -142,12 +142,12 @@ module es {
         }
 
         /**
-         * 标准 Batcher 层深度。 0在前，1在后。 更改此值将触发某种可渲染组件
+         * 标准 Batcher 层深度。 大的数字显示在后面， 更改此值将触发某种可渲染组件
          * @param layerDepth 
          * @returns 
          */
         public setLayerDepth(layerDepth: number) {
-            this._layerDepth = MathHelper.clamp01(layerDepth);
+            this._layerDepth = layerDepth;
 
             if (this.entity != null && this.entity.scene != null) {
                 this.entity.scene.renderableComponents.setRenderLayerNeedsComponentSort(this.renderLayer);
