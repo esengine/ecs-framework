@@ -46,6 +46,7 @@ module es {
         private constructor(stage: egret.Stage, debug: boolean = true, enableEntitySystems: boolean = true) {
             Core._instance = this;
             Core.stage = stage;
+            Core.stage.sortableChildren = true;
             Core.emitter = new Emitter<CoreEvents>();
             Core.emitter.addObserver(CoreEvents.frameUpdated, this.update, this);
 

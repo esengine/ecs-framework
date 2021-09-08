@@ -94,6 +94,7 @@ var es;
             this._totalMemory = 0;
             Core._instance = this;
             Core.stage = stage;
+            Core.stage.sortableChildren = true;
             Core.emitter = new es.Emitter();
             Core.emitter.addObserver(es.CoreEvents.frameUpdated, this.update, this);
             Core.content = new es.ContentManager();
@@ -1957,6 +1958,7 @@ var es;
             this.entities.update();
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
+            // 我们在 entity.update 之后更新我们的可渲染文件，以防添加任何新的可渲染文件
             this.renderableComponents.updateLists();
             this.render();
         };
@@ -4238,6 +4240,25 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 用于对 IRenderable 进行排序的比较器。 首先按 RenderLayer 排序，然后按 LayerDepth
+     */
+    var RenderableComparer = /** @class */ (function () {
+        function RenderableComparer() {
+        }
+        RenderableComparer.prototype.compare = function (self, other) {
+            var res = other.renderLayer - self.renderLayer;
+            if (res == 0) {
+                res = other.layerDepth - self.layerDepth;
+            }
+            return res;
+        };
+        return RenderableComparer;
+    }());
+    es.RenderableComparer = RenderableComparer;
+})(es || (es = {}));
+var es;
+(function (es) {
     var RenderableComponent = /** @class */ (function (_super) {
         __extends(RenderableComponent, _super);
         function RenderableComponent() {
@@ -4773,6 +4794,9 @@ var es;
         SpriteTrailInstance.prototype.spawn = function (position, sprite, fadeDuration, fadeDelay, initialColor, targetColor) {
             this.position = position.clone();
             this._sprite = sprite.clone();
+            if (sprite.parent) {
+                sprite.parent.addChild(this._sprite);
+            }
             this._elapsedTime = 0;
             this._fadeDuration = fadeDuration;
             this._fadeDelay = fadeDelay;
@@ -4962,7 +4986,7 @@ var es;
                 return;
             var instance = this._availableSpriteTrailInstances.pop();
             instance.spawn(this._lastPosition, this._spriteRender.sprite, this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
-            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotationDegrees, this._spriteRender.origin, this._spriteRender.entity.transform.scale, this.renderLayer);
+            instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotationDegrees, this._spriteRender.origin, this._spriteRender.entity.transform.scale, this._layerDepth);
             this._liveSpriteTrailInstances.push(instance);
         };
         SpriteTrail.prototype.render = function (batcher, camera) {
@@ -6557,7 +6581,9 @@ var es;
 (function (es) {
     var RenderableComponentList = /** @class */ (function () {
         function RenderableComponentList() {
+            /** 添加到实体的组件列表 */
             this._components = [];
+            /** 通过 renderLayer 跟踪组件以便于检索 */
             this._componentsByRenderLayer = new Map();
             this._unsortedRenderLayers = [];
             this._componentsNeedSort = true;
@@ -6587,15 +6613,21 @@ var es;
             new es.List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);
         };
         RenderableComponentList.prototype.updateRenderableRenderLayer = function (component, oldRenderLayer, newRenderLayer) {
-            if (this._componentsByRenderLayer.has(oldRenderLayer) && new es.List(this._componentsByRenderLayer.get(oldRenderLayer)).contains(component)) {
+            // 如果在组件“活动”之前更改了 renderLayer，则需要小心
+            // 当组件在创建后立即更改其 renderLayer 时，可能会发生这种情况
+            if (this._componentsByRenderLayer.has(oldRenderLayer) &&
+                this._componentsByRenderLayer.get(oldRenderLayer).indexOf(component) == -1) {
                 new es.List(this._componentsByRenderLayer.get(oldRenderLayer)).remove(component);
                 this.addToRenderLayerList(component, newRenderLayer);
             }
         };
+        /**
+         * 弄脏 RenderLayers 排序标志，这会导致所有组件重新排序
+         * @param renderLayer
+         */
         RenderableComponentList.prototype.setRenderLayerNeedsComponentSort = function (renderLayer) {
-            var unsortedRenderLayersList = new es.List(this._unsortedRenderLayers);
-            if (!unsortedRenderLayersList.contains(renderLayer))
-                unsortedRenderLayersList.add(renderLayer);
+            if (this._unsortedRenderLayers.indexOf(renderLayer) == -1)
+                this._unsortedRenderLayers.push(renderLayer);
             this._componentsNeedSort = true;
         };
         RenderableComponentList.prototype.setNeedsComponentSort = function () {
@@ -6605,11 +6637,15 @@ var es;
             var list = this.componentsWithRenderLayer(renderLayer);
             es.Insist.isFalse(!!list.find(function (c) { return c == component; }), "组件renderLayer列表已包含此组件");
             list.push(component);
-            var unsortedRenderLayersList = new es.List(this._unsortedRenderLayers);
-            if (!unsortedRenderLayersList.contains(renderLayer))
-                unsortedRenderLayersList.add(renderLayer);
+            if (this._unsortedRenderLayers.indexOf(renderLayer) == -1)
+                this._unsortedRenderLayers.push(renderLayer);
             this._componentsNeedSort = true;
         };
+        /**
+         * 使用给定的 renderLayer 获取所有组件。 组件列表是预先排序的
+         * @param renderLayer
+         * @returns
+         */
         RenderableComponentList.prototype.componentsWithRenderLayer = function (renderLayer) {
             if (!this._componentsByRenderLayer.get(renderLayer)) {
                 this._componentsByRenderLayer.set(renderLayer, []);
@@ -6618,19 +6654,21 @@ var es;
         };
         RenderableComponentList.prototype.updateLists = function () {
             if (this._componentsNeedSort) {
-                this._components.sort(function (self, other) { return other.renderLayer - self.renderLayer; });
+                this._components.sort(RenderableComponentList.compareUpdatableOrder.compare);
                 this._componentsNeedSort = false;
             }
             if (this._unsortedRenderLayers.length > 0) {
                 for (var i = 0, count = this._unsortedRenderLayers.length; i < count; i++) {
                     var renderLayerComponents = this._componentsByRenderLayer.get(this._unsortedRenderLayers[i]);
                     if (renderLayerComponents) {
-                        renderLayerComponents.sort(function (self, other) { return other.renderLayer - self.renderLayer; });
+                        renderLayerComponents.sort(RenderableComponentList.compareUpdatableOrder.compare);
                     }
                     this._unsortedRenderLayers.length = 0;
                 }
             }
         };
+        // IRenderable 列表的全局 updateOrder 排序
+        RenderableComponentList.compareUpdatableOrder = new es.RenderableComparer();
         return RenderableComponentList;
     }());
     es.RenderableComponentList = RenderableComponentList;
@@ -7401,7 +7439,10 @@ var es;
             sprite.scaleY = scale.y;
             sprite.anchorOffsetX = origin.x;
             sprite.anchorOffsetY = origin.y;
-            sprite.zIndex = layerDepth;
+            var depth = 1 - layerDepth;
+            if (sprite.zIndex != depth) {
+                sprite.zIndex = depth;
+            }
             var colorMatrix = [
                 1, 0, 0, 0, 0,
                 0, 1, 0, 0, 0,
@@ -7838,14 +7879,34 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 渲染器被添加到场景中并处理对 RenderableComponent.render 和 Entity.debugRender 的所有实际调用
+     * 一个简单的渲染器可以只启动 Batcher.instanceGraphics.batcher 或者它可以创建自己的本地 Batcher 实例
+     * 如果它需要它进行某种自定义渲染, 请注意，最佳做法是确保所有渲染器都具有较低的 renderOrders 以避免出现问题
+     * 给他们一个负的 renderOrder 是处理这个问题的好策略
+     */
     var Renderer = /** @class */ (function () {
         function Renderer(renderOrder, camera) {
+            /**
+             * 指定场景调用渲染器的顺序
+             */
             this.renderOrder = 0;
+            /**
+             * 此渲染器的标志，决定是否应调试渲染。 render 方法接收一个 bool (debugRenderEnabled)
+             * 让渲染器知道全局调试渲染是否打开/关闭。 然后渲染器使用本地 bool 来决定它是否应该调试渲染。
+             */
             this.shouldDebugRender = true;
             this.renderOrder = renderOrder;
             this.camera = camera;
         }
+        /**
+         * 当渲染器添加到场景时调用
+         * @param scene
+         */
         Renderer.prototype.onAddedToScene = function (scene) { };
+        /**
+         * 当场景结束或此渲染器从场景中移除时调用。 使用它进行清理
+         */
         Renderer.prototype.unload = function () { };
         Renderer.prototype.beginRender = function (cam) {
             if (!es.Graphics.instance)
@@ -7857,11 +7918,23 @@ var es;
                 return;
             es.Graphics.instance.batcher.end();
         };
+        /**
+         * 渲染 RenderableComponent 刷新 Batcher 并在必要时重置当前材质
+         * @param renderable
+         * @param cam
+         * @returns
+         */
         Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
             if (!es.Graphics.instance)
                 return;
             renderable.render(es.Graphics.instance.batcher, cam);
         };
+        /**
+         * 默认的 debugRender 方法只是遍历所有实体并调用 entity.debugRender
+         * 请注意，此时您正处于批处理中间，因此您可能需要调用 Batcher.End 和 Batcher.begin 以清除任何等待渲染的材质和项目。
+         * @param scene
+         * @returns
+         */
         Renderer.prototype.debugRender = function (scene) {
             if (!es.Graphics.instance)
                 return;

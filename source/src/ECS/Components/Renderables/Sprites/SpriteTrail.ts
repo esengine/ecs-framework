@@ -21,6 +21,10 @@ module es {
             this.position = position.clone();
             this._sprite = sprite.clone();
 
+            if (sprite.parent) {
+                sprite.parent.addChild(this._sprite);
+            }
+
             this._elapsedTime = 0;
             this._fadeDuration = fadeDuration;
             this._fadeDelay = fadeDelay;
@@ -236,7 +240,7 @@ module es {
             const instance = this._availableSpriteTrailInstances.pop();
             instance.spawn(this._lastPosition, this._spriteRender.sprite, this.fadeDuration, this.fadeDelay, this.initialColor, this.fadeToColor);
             instance.setSpriteRenderOptions(this._spriteRender.entity.transform.rotationDegrees, this._spriteRender.origin,
-                this._spriteRender.entity.transform.scale, this.renderLayer);
+                this._spriteRender.entity.transform.scale, this._layerDepth);
             this._liveSpriteTrailInstances.push(instance);
         }
 

@@ -1628,12 +1628,20 @@ declare module es {
 }
 declare module es {
     interface IRenderable {
+        id: number;
         sprite: Sprite;
         enabled: boolean;
+        layerDepth: number;
         renderLayer: number;
         isVisibleFromCamera(camera: ICamera): boolean;
         render(batcher: IBatcher, camera: ICamera): void;
         debugRender(batcher: IBatcher): void;
+    }
+    /**
+     * 用于对 IRenderable 进行排序的比较器。 首先按 RenderLayer 排序，然后按 LayerDepth
+     */
+    class RenderableComparer implements IComparer<IRenderable> {
+        compare(self: IRenderable, other: IRenderable): number;
     }
 }
 declare module es {
@@ -2468,7 +2476,10 @@ declare module es {
 }
 declare module es {
     class RenderableComponentList {
+        static compareUpdatableOrder: IComparer<IRenderable>;
+        /** 添加到实体的组件列表 */
         private _components;
+        /** 通过 renderLayer 跟踪组件以便于检索 */
         private _componentsByRenderLayer;
         private _unsortedRenderLayers;
         private _componentsNeedSort;
@@ -2477,9 +2488,18 @@ declare module es {
         add(component: IRenderable): void;
         remove(component: IRenderable): void;
         updateRenderableRenderLayer(component: IRenderable, oldRenderLayer: number, newRenderLayer: number): void;
+        /**
+         * 弄脏 RenderLayers 排序标志，这会导致所有组件重新排序
+         * @param renderLayer
+         */
         setRenderLayerNeedsComponentSort(renderLayer: number): void;
         setNeedsComponentSort(): void;
         private addToRenderLayerList;
+        /**
+         * 使用给定的 renderLayer 获取所有组件。 组件列表是预先排序的
+         * @param renderLayer
+         * @returns
+         */
         componentsWithRenderLayer(renderLayer: number): IRenderable[];
         updateLists(): void;
     }
@@ -3042,17 +3062,54 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * 渲染器被添加到场景中并处理对 RenderableComponent.render 和 Entity.debugRender 的所有实际调用
+     * 一个简单的渲染器可以只启动 Batcher.instanceGraphics.batcher 或者它可以创建自己的本地 Batcher 实例
+     * 如果它需要它进行某种自定义渲染, 请注意，最佳做法是确保所有渲染器都具有较低的 renderOrders 以避免出现问题
+     * 给他们一个负的 renderOrder 是处理这个问题的好策略
+     */
     abstract class Renderer {
+        /**
+         * 此渲染器用于渲染的相机（实际上是它的 transformMatrix 和用于剔除的边界）
+         * 这不是必需的字段
+         * Renderer 子类可以选择调用 beginRender 时使用的相机
+         */
         camera: ICamera;
+        /**
+         * 指定场景调用渲染器的顺序
+         */
         readonly renderOrder: number;
+        /**
+         * 此渲染器的标志，决定是否应调试渲染。 render 方法接收一个 bool (debugRenderEnabled)
+         * 让渲染器知道全局调试渲染是否打开/关闭。 然后渲染器使用本地 bool 来决定它是否应该调试渲染。
+         */
         shouldDebugRender: boolean;
         constructor(renderOrder: number, camera: ICamera);
+        /**
+         * 当渲染器添加到场景时调用
+         * @param scene
+         */
         onAddedToScene(scene: es.Scene): void;
+        /**
+         * 当场景结束或此渲染器从场景中移除时调用。 使用它进行清理
+         */
         unload(): void;
         protected beginRender(cam: ICamera): void;
         protected endRender(): void;
         abstract render(scene: Scene): void;
+        /**
+         * 渲染 RenderableComponent 刷新 Batcher 并在必要时重置当前材质
+         * @param renderable
+         * @param cam
+         * @returns
+         */
         protected renderAfterStateCheck(renderable: IRenderable, cam: ICamera): void;
+        /**
+         * 默认的 debugRender 方法只是遍历所有实体并调用 entity.debugRender
+         * 请注意，此时您正处于批处理中间，因此您可能需要调用 Batcher.End 和 Batcher.begin 以清除任何等待渲染的材质和项目。
+         * @param scene
+         * @returns
+         */
         protected debugRender(scene: Scene): void;
     }
 }

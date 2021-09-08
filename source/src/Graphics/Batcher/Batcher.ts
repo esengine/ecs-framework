@@ -213,7 +213,10 @@ module es {
                 sprite.scaleY = scale.y;
                 sprite.anchorOffsetX = origin.x;
                 sprite.anchorOffsetY = origin.y;
-                sprite.zIndex = layerDepth;
+                const depth = 1 - layerDepth;
+                if (sprite.zIndex != depth) {
+                    sprite.zIndex = depth;
+                }
 
                 const colorMatrix = [
                     1, 0, 0, 0, 0,

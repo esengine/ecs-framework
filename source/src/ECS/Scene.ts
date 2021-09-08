@@ -21,7 +21,7 @@ module es {
             this.entities = new EntityList(this);
             this.renderableComponents = new RenderableComponentList();
             this.identifierPool = new IdentifierPool();
-            
+
             const cameraEntity = this.createEntity("camera");
             this.camera = cameraEntity.addComponent(new Camera());
 
@@ -68,7 +68,7 @@ module es {
         public end() {
             this._didSceneBegin = false;
 
-            for (let i = 0; i < this._renderers.length; i ++)
+            for (let i = 0; i < this._renderers.length; i++)
                 this._renderers[i].unload();
 
             this.entities.removeAllEntities();
@@ -102,16 +102,17 @@ module es {
 
             // 更新我们的实体组
             this.entities.update();
-            
+
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
 
+            // 我们在 entity.update 之后更新我们的可渲染文件，以防添加任何新的可渲染文件
             this.renderableComponents.updateLists();
             this.render();
         }
 
         public render() {
-            for (let i = 0; i < this._renderers.length; i ++) {
+            for (let i = 0; i < this._renderers.length; i++) {
                 this._renderers[i].render(this);
             }
         }
@@ -126,7 +127,7 @@ module es {
         }
 
         public getRenderer<T extends Renderer>(type: new (...args: any[]) => T): T {
-            for (let i = 0; i < this._renderers.length; i ++) {
+            for (let i = 0; i < this._renderers.length; i++) {
                 if (this._renderers[i] instanceof type)
                     return this._renderers[i] as T;
             }
@@ -282,7 +283,7 @@ module es {
         public addEntityProcessor(processor: EntitySystem) {
             processor.scene = this;
             this.entityProcessors.add(processor);
-            
+
             processor.setUpdateOrder(this.entityProcessors.count - 1);
             this.entityProcessors.clearDirty();
             return processor;
