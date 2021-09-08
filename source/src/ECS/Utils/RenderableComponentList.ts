@@ -82,15 +82,16 @@ module es {
 
         public updateLists() {
             if (this._componentsNeedSort) {
-                this._components.sort(RenderableComponentList.compareUpdatableOrder.compare);
+                this._components = this._components.sort(RenderableComponentList.compareUpdatableOrder.compare);
                 this._componentsNeedSort = false;
             }
 
             if (this._unsortedRenderLayers.length > 0) {
                 for (let i = 0, count = this._unsortedRenderLayers.length; i < count; i ++) {
-                    const renderLayerComponents = this._componentsByRenderLayer.get(this._unsortedRenderLayers[i]);
+                    let renderLayerComponents = this._componentsByRenderLayer.get(this._unsortedRenderLayers[i]);
                     if (renderLayerComponents) {
-                        renderLayerComponents.sort(RenderableComponentList.compareUpdatableOrder.compare);
+                        renderLayerComponents = renderLayerComponents.sort(RenderableComponentList.compareUpdatableOrder.compare);
+                        this._componentsByRenderLayer.set(this._unsortedRenderLayers[i], renderLayerComponents);
                     }
 
                     this._unsortedRenderLayers.length = 0;

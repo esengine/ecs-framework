@@ -6654,14 +6654,15 @@ var es;
         };
         RenderableComponentList.prototype.updateLists = function () {
             if (this._componentsNeedSort) {
-                this._components.sort(RenderableComponentList.compareUpdatableOrder.compare);
+                this._components = this._components.sort(RenderableComponentList.compareUpdatableOrder.compare);
                 this._componentsNeedSort = false;
             }
             if (this._unsortedRenderLayers.length > 0) {
                 for (var i = 0, count = this._unsortedRenderLayers.length; i < count; i++) {
                     var renderLayerComponents = this._componentsByRenderLayer.get(this._unsortedRenderLayers[i]);
                     if (renderLayerComponents) {
-                        renderLayerComponents.sort(RenderableComponentList.compareUpdatableOrder.compare);
+                        renderLayerComponents = renderLayerComponents.sort(RenderableComponentList.compareUpdatableOrder.compare);
+                        this._componentsByRenderLayer.set(this._unsortedRenderLayers[i], renderLayerComponents);
                     }
                     this._unsortedRenderLayers.length = 0;
                 }
@@ -7935,7 +7936,7 @@ var es;
          * @param scene
          * @returns
          */
-        Renderer.prototype.debugRender = function (scene) {
+        Renderer.prototype.debugRender = function (scene, cam) {
             if (!es.Graphics.instance)
                 return;
             es.Physics.debugDraw(2);
@@ -7970,13 +7971,106 @@ var es;
                     this.renderAfterStateCheck(renderable, cam);
             }
             if (this.shouldDebugRender && es.Core.debugRenderEndabled) {
-                this.debugRender(scene);
+                this.debugRender(scene, cam);
             }
             this.endRender();
         };
         return DefaultRenderer;
     }(es.Renderer));
     es.DefaultRenderer = DefaultRenderer;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 仅渲染除一个渲染层之外的所有渲染层的渲染器。
+     * 当与 RenderLayerRenderer 结合使用时，有助于将 UI 渲染与游戏的其余部分分开
+     */
+    var RenderLayerExcludeRenderer = /** @class */ (function (_super) {
+        __extends(RenderLayerExcludeRenderer, _super);
+        function RenderLayerExcludeRenderer(renderOrder) {
+            var excludedRenderLayers = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                excludedRenderLayers[_i - 1] = arguments[_i];
+            }
+            var _this = _super.call(this, renderOrder, null) || this;
+            _this.excludedRenderLayers = excludedRenderLayers;
+            return _this;
+        }
+        RenderLayerExcludeRenderer.prototype.render = function (scene) {
+            var cam = this.camera ? this.camera : scene.camera;
+            this.beginRender(cam);
+            for (var i = 0; i < scene.renderableComponents.count; i++) {
+                var renderable = scene.renderableComponents.get(i);
+                if (this.excludedRenderLayers.indexOf(renderable.renderLayer) == -1 &&
+                    renderable.enabled && renderable.isVisibleFromCamera(cam)) {
+                    this.renderAfterStateCheck(renderable, cam);
+                }
+            }
+            if (this.shouldDebugRender && es.Core.debugRenderEndabled)
+                this.debugRender(scene, cam);
+            this.endRender();
+        };
+        RenderLayerExcludeRenderer.prototype.debugRender = function (scene, cam) {
+            for (var i = 0; i < scene.renderableComponents.count; i++) {
+                var renderable = scene.renderableComponents.get(i);
+                if (this.excludedRenderLayers.indexOf(renderable.renderLayer) == -1 &&
+                    renderable.enabled && renderable.isVisibleFromCamera(cam))
+                    renderable.debugRender(es.Graphics.instance.batcher);
+            }
+            _super.prototype.debugRender.call(this, scene, cam);
+        };
+        return RenderLayerExcludeRenderer;
+    }(es.Renderer));
+    es.RenderLayerExcludeRenderer = RenderLayerExcludeRenderer;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 仅渲染指定的 renderLayers 的渲染器
+     * 当与渲染不同渲染层的其他 RenderLayerRenderer 一起使用时，有助于将 UI 渲染与游戏的其余部分分开
+     */
+    var RenderLayerRenderer = /** @class */ (function (_super) {
+        __extends(RenderLayerRenderer, _super);
+        function RenderLayerRenderer(renderOrder) {
+            var renderLayers = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                renderLayers[_i - 1] = arguments[_i];
+            }
+            var _this = _super.call(this, renderOrder, null) || this;
+            renderLayers = renderLayers.sort(function (a, b) { return a - b; });
+            renderLayers = renderLayers.reverse();
+            _this.renderLayers = renderLayers;
+            return _this;
+        }
+        RenderLayerRenderer.prototype.render = function (scene) {
+            var cam = this.camera ? this.camera : scene.camera;
+            this.beginRender(cam);
+            for (var i = 0; i < this.renderLayers.length; i++) {
+                var renderables = scene.renderableComponents.componentsWithRenderLayer(this.renderLayers[i]);
+                for (var j = 0; j < renderables.length; j++) {
+                    var renderable = renderables[j];
+                    if (renderable.enabled && renderable.isVisibleFromCamera(cam))
+                        this.renderAfterStateCheck(renderable, cam);
+                }
+            }
+            if (this.shouldDebugRender && es.Core.debugRenderEndabled)
+                this.debugRender(scene, cam);
+            this.endRender();
+        };
+        RenderLayerRenderer.prototype.debugRender = function (scene, cam) {
+            for (var i = 0; i < this.renderLayers.length; i++) {
+                var renderables = scene.renderableComponents.componentsWithRenderLayer(this.renderLayers[i]);
+                for (var j = 0; j < renderables.length; j++) {
+                    var renderable = renderables[j];
+                    if (renderable.enabled && renderable.isVisibleFromCamera(cam))
+                        renderable.debugRender(es.Graphics.instance.batcher);
+                }
+            }
+            _super.prototype.debugRender.call(this, scene, cam);
+        };
+        return RenderLayerRenderer;
+    }(es.Renderer));
+    es.RenderLayerRenderer = RenderLayerRenderer;
 })(es || (es = {}));
 var es;
 (function (es) {

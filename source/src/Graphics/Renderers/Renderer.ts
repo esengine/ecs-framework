@@ -11,7 +11,7 @@ module es {
          * 这不是必需的字段
          * Renderer 子类可以选择调用 beginRender 时使用的相机
          */
-        public camera: ICamera;
+        public camera: Camera;
         /**
          * 指定场景调用渲染器的顺序
          */
@@ -22,7 +22,7 @@ module es {
          */
         public shouldDebugRender: boolean = true;
 
-        constructor(renderOrder: number, camera: ICamera) {
+        constructor(renderOrder: number, camera: Camera) {
             this.renderOrder = renderOrder;
             this.camera = camera;
         }
@@ -73,7 +73,7 @@ module es {
          * @param scene 
          * @returns 
          */
-        protected debugRender(scene: Scene) {
+        protected debugRender(scene: Scene, cam: Camera) {
             if (!Graphics.instance)
                 return;
 

@@ -3074,7 +3074,7 @@ declare module es {
          * 这不是必需的字段
          * Renderer 子类可以选择调用 beginRender 时使用的相机
          */
-        camera: ICamera;
+        camera: Camera;
         /**
          * 指定场景调用渲染器的顺序
          */
@@ -3084,7 +3084,7 @@ declare module es {
          * 让渲染器知道全局调试渲染是否打开/关闭。 然后渲染器使用本地 bool 来决定它是否应该调试渲染。
          */
         shouldDebugRender: boolean;
-        constructor(renderOrder: number, camera: ICamera);
+        constructor(renderOrder: number, camera: Camera);
         /**
          * 当渲染器添加到场景时调用
          * @param scene
@@ -3110,13 +3110,38 @@ declare module es {
          * @param scene
          * @returns
          */
-        protected debugRender(scene: Scene): void;
+        protected debugRender(scene: Scene, cam: Camera): void;
     }
 }
 declare module es {
     class DefaultRenderer extends Renderer {
-        constructor(renderOrder?: number, camera?: ICamera);
+        constructor(renderOrder?: number, camera?: Camera);
         render(scene: Scene): void;
+    }
+}
+declare module es {
+    /**
+     * 仅渲染除一个渲染层之外的所有渲染层的渲染器。
+     * 当与 RenderLayerRenderer 结合使用时，有助于将 UI 渲染与游戏的其余部分分开
+     */
+    class RenderLayerExcludeRenderer extends Renderer {
+        excludedRenderLayers: number[];
+        constructor(renderOrder: number, ...excludedRenderLayers: number[]);
+        render(scene: Scene): void;
+        protected debugRender(scene: Scene, cam: Camera): void;
+    }
+}
+declare module es {
+    /**
+     * 仅渲染指定的 renderLayers 的渲染器
+     * 当与渲染不同渲染层的其他 RenderLayerRenderer 一起使用时，有助于将 UI 渲染与游戏的其余部分分开
+     */
+    class RenderLayerRenderer extends Renderer {
+        /** 此渲染器将渲染的渲染层 */
+        renderLayers: number[];
+        constructor(renderOrder: number, ...renderLayers: number[]);
+        render(scene: Scene): void;
+        protected debugRender(scene: Scene, cam: Camera): void;
     }
 }
 declare module es {

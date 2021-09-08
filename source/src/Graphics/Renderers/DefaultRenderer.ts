@@ -1,7 +1,7 @@
 ///<reference path="Renderer.ts" />
 module es {
     export class DefaultRenderer extends Renderer {
-        constructor(renderOrder: number = 0, camera: ICamera = null) {
+        constructor(renderOrder: number = 0, camera: Camera = null) {
             super(renderOrder, camera);
         }
 
@@ -16,7 +16,7 @@ module es {
             }
 
             if (this.shouldDebugRender && es.Core.debugRenderEndabled) {
-                this.debugRender(scene);
+                this.debugRender(scene, cam);
             }
 
             this.endRender();
