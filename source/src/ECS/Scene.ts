@@ -5,6 +5,11 @@ module es {
         /** 场景名称 */
         public name: string;
         public camera: Camera;
+        /**
+         * 特定于场景的 ContentManager。 使用它来加载仅此场景需要的任何资源
+         * 如果您有全局/多场景资源，您可以使用 Core.contentManager 加载它们，因为框架永远不会卸载它们。
+         */
+        public readonly content: ContentManager;
         /** 这个场景中的实体列表 */
         public readonly entities: EntityList;
         public readonly renderableComponents: RenderableComponentList;
@@ -21,6 +26,7 @@ module es {
             this.entities = new EntityList(this);
             this.renderableComponents = new RenderableComponentList();
             this.identifierPool = new IdentifierPool();
+            this.content = new ContentManager();
 
             const cameraEntity = this.createEntity("camera");
             this.camera = cameraEntity.addComponent(new Camera());
@@ -79,6 +85,7 @@ module es {
             this._sceneComponents.length = 0;
 
             this.camera = null;
+            this.content.dispose();
             Physics.clear();
 
             if (this.entityProcessors)

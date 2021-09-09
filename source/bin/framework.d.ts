@@ -106,9 +106,22 @@ declare module es {
     }
 }
 declare module es {
+    interface IDisposable {
+        dispose(): any;
+    }
     class ContentManager {
-        _loadedAssets: Map<string, object>;
-        loadTexture(name: string): Promise<egret.Texture>;
+        private _loadedAssets;
+        private _disposableAssets;
+        private _disposed;
+        private static contentManagers;
+        constructor();
+        getResAsync<T>(name: string): Promise<T>;
+        getRes<T>(name: string): T;
+        unloadAsset(assetName: string): void;
+        private static addContentManager;
+        private static removeContentManager;
+        dispose(): void;
+        unload(): void;
     }
 }
 declare module es {
@@ -732,6 +745,11 @@ declare module es {
         /** 场景名称 */
         name: string;
         camera: Camera;
+        /**
+         * 特定于场景的 ContentManager。 使用它来加载仅此场景需要的任何资源
+         * 如果您有全局/多场景资源，您可以使用 Core.contentManager 加载它们，因为框架永远不会卸载它们。
+         */
+        readonly content: ContentManager;
         /** 这个场景中的实体列表 */
         readonly entities: EntityList;
         readonly renderableComponents: RenderableComponentList;

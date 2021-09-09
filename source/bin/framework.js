@@ -1,4 +1,14 @@
 "use strict";
+var __values = (this && this.__values) || function (o) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
+    if (m) return m.call(o);
+    return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+};
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -28,16 +38,6 @@ var __read = (this && this.__read) || function (o, n) {
 var __spread = (this && this.__spread) || function () {
     for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
     return ar;
-};
-var __values = (this && this.__values) || function (o) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
-    if (m) return m.call(o);
-    return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
     var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
@@ -281,8 +281,11 @@ var es;
     var ContentManager = /** @class */ (function () {
         function ContentManager() {
             this._loadedAssets = new Map();
+            this._disposableAssets = [];
+            this._disposed = false;
+            ContentManager.addContentManager(this);
         }
-        ContentManager.prototype.loadTexture = function (name) {
+        ContentManager.prototype.getResAsync = function (name) {
             var _this = this;
             return new Promise(function (resolve, reject) {
                 var asset = _this._loadedAssets.get(name);
@@ -293,10 +296,84 @@ var es;
                     reject("\u8D44\u6E90:" + event.resItem.name + "\u52A0\u8F7D\u5931\u8D25");
                 }, _this);
                 RES.getResAsync(name, function (texture) {
-                    resolve(texture);
+                    var result = texture;
+                    if (texture != null) {
+                        _this._loadedAssets.set(name, result);
+                    }
+                    resolve(result);
                 }, _this);
             });
         };
+        ContentManager.prototype.getRes = function (name) {
+            var asset = this._loadedAssets.get(name);
+            if (asset) {
+                return asset;
+            }
+            var result = RES.getRes(name);
+            if (result != null) {
+                this._loadedAssets.set(name, result);
+            }
+            return result;
+        };
+        ContentManager.prototype.unloadAsset = function (assetName) {
+            if (es.StringUtils.isNullOrEmpty(assetName)) {
+                throw new Error("assetName 错误的参数");
+            }
+            if (this._disposed) {
+                throw new Error("contentManager 已经被销毁");
+            }
+            var asset = this._loadedAssets.get(assetName);
+            if (asset && typeof (asset['dispose']) == 'function') {
+                var disposable = asset;
+                if (disposable != null) {
+                    disposable.dispose();
+                    new es.List(this._disposableAssets).remove(disposable);
+                }
+                this._loadedAssets.delete(assetName);
+            }
+        };
+        ContentManager.addContentManager = function (contentManager) {
+            var contains = false;
+            if (this.contentManagers.has(contentManager)) {
+                contains = true;
+                this.contentManagers.delete(contentManager);
+            }
+            if (!contains) {
+                this.contentManagers.add(contentManager);
+            }
+        };
+        ContentManager.removeContentManager = function (contentManager) {
+            if (this.contentManagers.has(contentManager)) {
+                this.contentManagers.delete(contentManager);
+            }
+        };
+        ContentManager.prototype.dispose = function () {
+            if (!this._disposed) {
+                this.unload();
+                this._disposed = true;
+            }
+            ContentManager.removeContentManager(this);
+        };
+        ContentManager.prototype.unload = function () {
+            var e_1, _a;
+            try {
+                for (var _b = __values(this._disposableAssets), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var dispoable = _c.value;
+                    if (dispoable != null)
+                        dispoable.dispose();
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+            this._disposableAssets.length = 0;
+            this._loadedAssets.clear();
+        };
+        ContentManager.contentManagers = new WeakSet();
         return ContentManager;
     }());
     es.ContentManager = ContentManager;
@@ -1895,6 +1972,7 @@ var es;
             this.entities = new es.EntityList(this);
             this.renderableComponents = new es.RenderableComponentList();
             this.identifierPool = new es.IdentifierPool();
+            this.content = new es.ContentManager();
             var cameraEntity = this.createEntity("camera");
             this.camera = cameraEntity.addComponent(new es.Camera());
             this.entityProcessors = new es.EntityProcessorList();
@@ -1937,6 +2015,7 @@ var es;
             }
             this._sceneComponents.length = 0;
             this.camera = null;
+            this.content.dispose();
             es.Physics.clear();
             if (this.entityProcessors)
                 this.entityProcessors.end();
@@ -2995,7 +3074,7 @@ var es;
             es.Debug.warnIf(this._collider == null, "ArcadeRigidbody 没有 Collider。ArcadeRigidbody需要一个Collider!");
         };
         ArcadeRigidbody.prototype.update = function () {
-            var e_1, _a;
+            var e_2, _a;
             if (this.isImmovable || this._collider == null) {
                 this.velocity = es.Vector2.zero;
                 return;
@@ -3031,12 +3110,12 @@ var es;
                     }
                 }
             }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
             finally {
                 try {
                     if (neighbors_1_1 && !neighbors_1_1.done && (_a = neighbors_1.return)) _a.call(neighbors_1);
                 }
-                finally { if (e_1) throw e_1.error; }
+                finally { if (e_2) throw e_2.error; }
             }
         };
         /**
@@ -3525,7 +3604,7 @@ var es;
         function TriggerListenerHelper() {
         }
         TriggerListenerHelper.getITriggerListener = function (entity, components) {
-            var e_2, _a;
+            var e_3, _a;
             try {
                 for (var _b = __values(entity.components._components), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var component = _c.value;
@@ -3534,12 +3613,12 @@ var es;
                     }
                 }
             }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            catch (e_3_1) { e_3 = { error: e_3_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_2) throw e_2.error; }
+                finally { if (e_3) throw e_3.error; }
             }
             for (var i in entity.components._componentsToAdd) {
                 var component = entity.components._componentsToAdd[i];
@@ -3577,7 +3656,7 @@ var es;
          * @param collisionResult
          */
         Mover.prototype.calculateMovement = function (motion, collisionResult) {
-            var e_3, _a;
+            var e_4, _a;
             var collider = null;
             for (var i = 0; i < this.entity.components.buffer.length; i++) {
                 var component = this.entity.components.buffer[i];
@@ -3627,12 +3706,12 @@ var es;
                         }
                     }
                 }
-                catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                catch (e_4_1) { e_4 = { error: e_4_1 }; }
                 finally {
                     try {
                         if (neighbors_2_1 && !neighbors_2_1.done && (_a = neighbors_2.return)) _a.call(neighbors_2);
                     }
-                    finally { if (e_3) throw e_3.error; }
+                    finally { if (e_4) throw e_4.error; }
                 }
             }
             es.ListPool.free(es.Collider, colliders);
@@ -3693,7 +3772,7 @@ var es;
          * @param motion
          */
         ProjectileMover.prototype.move = function (motion) {
-            var e_4, _a;
+            var e_5, _a;
             if (this._collider == null)
                 return false;
             var didCollide = false;
@@ -3710,12 +3789,12 @@ var es;
                     }
                 }
             }
-            catch (e_4_1) { e_4 = { error: e_4_1 }; }
+            catch (e_5_1) { e_5 = { error: e_5_1 }; }
             finally {
                 try {
                     if (neighbors_3_1 && !neighbors_3_1.done && (_a = neighbors_3.return)) _a.call(neighbors_3);
                 }
-                finally { if (e_4) throw e_4.error; }
+                finally { if (e_5) throw e_5.error; }
             }
             return didCollide;
         };
@@ -3966,7 +4045,7 @@ var es;
          * @param result
          */
         Collider.prototype.collidesWithAny = function (motion, result) {
-            var e_5, _a;
+            var e_6, _a;
             // 在我们的新位置上获取我们可能会碰到的任何东西 
             var colliderBounds = this.bounds.clone();
             colliderBounds.x += motion.x;
@@ -3988,12 +4067,12 @@ var es;
                     }
                 }
             }
-            catch (e_5_1) { e_5 = { error: e_5_1 }; }
+            catch (e_6_1) { e_6 = { error: e_6_1 }; }
             finally {
                 try {
                     if (neighbors_4_1 && !neighbors_4_1.done && (_a = neighbors_4.return)) _a.call(neighbors_4);
                 }
-                finally { if (e_5) throw e_5.error; }
+                finally { if (e_6) throw e_6.error; }
             }
             // 将形状位置返回到检查之前的位置 
             this.shape.position = oldPosition.clone();
@@ -4005,7 +4084,7 @@ var es;
          */
         Collider.prototype.collidesWithAnyNonMotion = function (result) {
             if (result === void 0) { result = new es.CollisionResult(); }
-            var e_6, _a;
+            var e_7, _a;
             // 在我们的新位置上获取我们可能会碰到的任何东西 
             var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this, this.collidesWithLayers.value);
             try {
@@ -4017,12 +4096,12 @@ var es;
                         return true;
                 }
             }
-            catch (e_6_1) { e_6 = { error: e_6_1 }; }
+            catch (e_7_1) { e_7 = { error: e_7_1 }; }
             finally {
                 try {
                     if (neighbors_5_1 && !neighbors_5_1.done && (_a = neighbors_5.return)) _a.call(neighbors_5);
                 }
-                finally { if (e_6) throw e_6.error; }
+                finally { if (e_7) throw e_7.error; }
             }
             return false;
         };
@@ -6130,7 +6209,7 @@ var es;
          * @param tag
          */
         EntityList.prototype.entitiesWithTag = function (tag) {
-            var e_7, _a;
+            var e_8, _a;
             var list = this.getTagList(tag);
             var returnList = es.ListPool.obtain(es.Entity);
             if (list.size > 0) {
@@ -6140,12 +6219,12 @@ var es;
                         returnList.push(entity);
                     }
                 }
-                catch (e_7_1) { e_7 = { error: e_7_1 }; }
+                catch (e_8_1) { e_8 = { error: e_8_1 }; }
                 finally {
                     try {
                         if (list_1_1 && !list_1_1.done && (_a = list_1.return)) _a.call(list_1);
                     }
-                    finally { if (e_7) throw e_7.error; }
+                    finally { if (e_8) throw e_8.error; }
                 }
             }
             return returnList;
@@ -6156,7 +6235,7 @@ var es;
          * @returns
          */
         EntityList.prototype.entityWithTag = function (tag) {
-            var e_8, _a;
+            var e_9, _a;
             var list = this.getTagList(tag);
             if (list.size > 0) {
                 try {
@@ -6165,12 +6244,12 @@ var es;
                         return entity;
                     }
                 }
-                catch (e_8_1) { e_8 = { error: e_8_1 }; }
+                catch (e_9_1) { e_9 = { error: e_9_1 }; }
                 finally {
                     try {
                         if (list_2_1 && !list_2_1.done && (_a = list_2.return)) _a.call(list_2);
                     }
-                    finally { if (e_8) throw e_8.error; }
+                    finally { if (e_9) throw e_9.error; }
                 }
             }
             return null;
@@ -8491,7 +8570,7 @@ var es;
             document.addEventListener('keydown', KeyboardUtils.onKeyDownHandler);
         };
         KeyboardUtils.update = function () {
-            var e_9, _a, e_10, _b;
+            var e_10, _a, e_11, _b;
             KeyboardUtils.previousKeys.length = 0;
             try {
                 for (var _c = __values(KeyboardUtils.currentKeys), _d = _c.next(); !_d.done; _d = _c.next()) {
@@ -8500,12 +8579,12 @@ var es;
                     new es.List(KeyboardUtils.currentKeys).remove(key);
                 }
             }
-            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            catch (e_10_1) { e_10 = { error: e_10_1 }; }
             finally {
                 try {
                     if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
-                finally { if (e_9) throw e_9.error; }
+                finally { if (e_10) throw e_10.error; }
             }
             KeyboardUtils.currentKeys.length = 0;
             try {
@@ -8514,12 +8593,12 @@ var es;
                     KeyboardUtils.currentKeys.push(key);
                 }
             }
-            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+            catch (e_11_1) { e_11 = { error: e_11_1 }; }
             finally {
                 try {
                     if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                 }
-                finally { if (e_10) throw e_10.error; }
+                finally { if (e_11) throw e_11.error; }
             }
         };
         KeyboardUtils.destroy = function () {
@@ -10915,7 +10994,7 @@ var es;
          * 它将处理任何与Collider重叠的ITriggerListeners。
          */
         ColliderTriggerHelper.prototype.update = function () {
-            var e_11, _a;
+            var e_12, _a;
             var lateColliders = [];
             // 对所有实体.colliders进行重叠检查，这些实体.colliders是触发器，与所有宽相碰撞器，无论是否触发器。   
             // 任何重叠都会导致触发事件
@@ -10951,12 +11030,12 @@ var es;
                     this.notifyTriggerListeners(pair, true);
                 }
             }
-            catch (e_11_1) { e_11 = { error: e_11_1 }; }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
             finally {
                 try {
                     if (lateColliders_1_1 && !lateColliders_1_1.done && (_a = lateColliders_1.return)) _a.call(lateColliders_1);
                 }
-                finally { if (e_11) throw e_11.error; }
+                finally { if (e_12) throw e_12.error; }
             }
             this.checkForExitedColliders();
         };
@@ -11665,7 +11744,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
-            var e_12, _a;
+            var e_13, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location.clone();
             var resultCounter = 0;
@@ -11696,12 +11775,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_12) throw e_12.error; }
+                finally { if (e_13) throw e_13.error; }
             }
             return resultCounter;
         };
@@ -11713,7 +11792,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_13, _a;
+            var e_14, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -11748,12 +11827,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_13) throw e_13.error; }
+                finally { if (e_14) throw e_14.error; }
             }
             return resultCounter;
         };
@@ -16551,7 +16630,7 @@ var es;
             this._all = [];
         };
         PairSet.prototype.union = function (other) {
-            var e_14, _a;
+            var e_15, _a;
             var otherAll = other.all;
             try {
                 for (var otherAll_1 = __values(otherAll), otherAll_1_1 = otherAll_1.next(); !otherAll_1_1.done; otherAll_1_1 = otherAll_1.next()) {
@@ -16559,16 +16638,16 @@ var es;
                     this.add(elem);
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
             finally {
                 try {
                     if (otherAll_1_1 && !otherAll_1_1.done && (_a = otherAll_1.return)) _a.call(otherAll_1);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_15) throw e_15.error; }
             }
         };
         PairSet.prototype.except = function (other) {
-            var e_15, _a;
+            var e_16, _a;
             var otherAll = other.all;
             try {
                 for (var otherAll_2 = __values(otherAll), otherAll_2_1 = otherAll_2.next(); !otherAll_2_1.done; otherAll_2_1 = otherAll_2.next()) {
@@ -16576,12 +16655,12 @@ var es;
                     this.remove(elem);
                 }
             }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
             finally {
                 try {
                     if (otherAll_2_1 && !otherAll_2_1.done && (_a = otherAll_2.return)) _a.call(otherAll_2);
                 }
-                finally { if (e_15) throw e_15.error; }
+                finally { if (e_16) throw e_16.error; }
             }
         };
         return PairSet;
@@ -18571,7 +18650,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_16, _a;
+            var e_17, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -18579,12 +18658,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_16) throw e_16.error; }
+                finally { if (e_17) throw e_17.error; }
             }
             return result;
         };
@@ -18833,7 +18912,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_17, _a;
+            var e_18, _a;
             var output = es.ListPool.obtain(es.Vector2);
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -18872,12 +18951,12 @@ var es;
                         }
                     }
                 }
-                catch (e_17_1) { e_17 = { error: e_17_1 }; }
+                catch (e_18_1) { e_18 = { error: e_18_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_17) throw e_17.error; }
+                    finally { if (e_18) throw e_18.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -18993,7 +19072,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_18, _a;
+            var e_19, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -19011,12 +19090,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_18_1) { e_18 = { error: e_18_1 }; }
+            catch (e_19_1) { e_19 = { error: e_19_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_18) throw e_18.error; }
+                finally { if (e_19) throw e_19.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。
