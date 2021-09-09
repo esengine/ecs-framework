@@ -46,7 +46,8 @@ module es {
             this._batcherSprite = new Map<string, egret.Sprite>();
         }
 
-        begin(cam: ICamera, batcherType: string = Batcher.TYPE_NORMAL) {
+        begin(cam: Camera, batcherType: string = Batcher.TYPE_NORMAL) {
+            this._transformMatrix = cam.transformMatrix;
             if (!this._batcherSprite.has(batcherType)) {
                 this.sprite = new egret.Sprite();
                 this.sprite.name = "batcher_" + batcherType;
@@ -244,6 +245,9 @@ module es {
         }
 
         public flushSprite() {
+            if (this.batcherQueue.length == 0)
+                return;
+
             this.batcherQueue = this.batcherQueue.sort((a, b) => b.layerDepth - a.layerDepth);
             for (let i = 0; i < this.batcherQueue.length; i++) {
                 const batcherItem = this.batcherQueue[i];

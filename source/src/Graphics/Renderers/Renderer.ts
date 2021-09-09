@@ -63,7 +63,7 @@ module es {
         protected renderAfterStateCheck(renderable: IRenderable, cam: ICamera) {
             if (!Graphics.instance)
                 return;
-
+''
             renderable.render(Graphics.instance.batcher, cam);
         }
 
@@ -76,6 +76,9 @@ module es {
         protected debugRender(scene: Scene, cam: Camera) {
             if (!Graphics.instance)
                 return;
+
+            Graphics.instance.batcher.end();
+            Graphics.instance.batcher.begin(cam);
 
             es.Physics.debugDraw(2);
 

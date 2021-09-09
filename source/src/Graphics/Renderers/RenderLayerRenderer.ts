@@ -34,6 +34,9 @@ module es {
         }
 
         protected debugRender(scene: Scene, cam: Camera) {
+            Graphics.instance.batcher.end();
+            Graphics.instance.batcher.begin(cam);
+
             for (let i = 0; i < this.renderLayers.length; i ++) {
                 const renderables = scene.renderableComponents.componentsWithRenderLayer(this.renderLayers[i]);
                 for (let j = 0; j < renderables.length; j ++) {
