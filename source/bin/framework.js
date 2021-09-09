@@ -598,6 +598,24 @@ var es;
 var es;
 (function (es) {
     /**
+     * 检查系统的核心。 Inspector 的子类负责设置和管理 UI。 目前，尚未实现自定义类型处理。
+     */
+    var Inspector = /** @class */ (function () {
+        function Inspector() {
+        }
+        Inspector.getInspectableProperties = function (target) {
+            var props = [];
+            for (var field in target) {
+                console.log(field, typeof (target[field]));
+            }
+        };
+        return Inspector;
+    }());
+    es.Inspector = Inspector;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
      * 执行顺序
      *  - onAddedToEntity
      *  - OnEnabled

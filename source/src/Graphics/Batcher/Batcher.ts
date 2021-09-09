@@ -26,12 +26,19 @@ module es {
     export class Batcher implements IBatcher {
         public static readonly TYPE_DEBUG = "debug";
         public static readonly TYPE_NORMAL = "normal";
+        /** 创建投影矩阵时要使用的矩阵 */
+        public get transformMatrix() {
+            return this._transformMatrix;
+        }
         /** 根据不同的batcherType来使用不同的graphics来进行绘制 */
         private _batcherSprite: Map<string, egret.Sprite>;
         public camera: ICamera | null = null;
         public strokeNum: number = 0;
         public sprite: egret.Sprite;
         protected batcherQueue: BatcherItem[] = [];
+
+        // 创建投影矩阵时要使用的矩阵
+        private _transformMatrix: Matrix2D;
 
         public readonly MAX_STROKE = 2048;
 

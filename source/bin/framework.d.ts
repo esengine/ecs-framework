@@ -188,6 +188,20 @@ declare module es {
 }
 declare module es {
     /**
+     * 检查系统的核心。 Inspector 的子类负责设置和管理 UI。 目前，尚未实现自定义类型处理。
+     */
+    abstract class Inspector {
+        protected _target: any;
+        protected _name: string;
+        protected _valueType: any;
+        protected _getter: Function;
+        protected _setter: Function;
+        protected _memberInfo: any;
+        static getInspectableProperties(target: any): void;
+    }
+}
+declare module es {
+    /**
      * 执行顺序
      *  - onAddedToEntity
      *  - OnEnabled
