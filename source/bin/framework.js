@@ -284,17 +284,15 @@ var es;
             this._disposableAssets = [];
             this._disposed = false;
             ContentManager.addContentManager(this);
+            RES.addEventListener(RES.ResourceEvent.ITEM_LOAD_ERROR, this.itemLoadError, this);
         }
         ContentManager.prototype.getResAsync = function (name) {
             var _this = this;
-            return new Promise(function (resolve, reject) {
+            return new Promise(function (resolve) {
                 var asset = _this._loadedAssets.get(name);
                 if (asset) {
                     return resolve(asset);
                 }
-                RES.addEventListener(RES.ResourceEvent.ITEM_LOAD_ERROR, function (event) {
-                    reject("\u8D44\u6E90:" + event.resItem.name + "\u52A0\u8F7D\u5931\u8D25");
-                }, _this);
                 RES.getResAsync(name, function (texture) {
                     var result = texture;
                     if (texture != null) {
@@ -356,6 +354,7 @@ var es;
         };
         ContentManager.prototype.unload = function () {
             var e_1, _a;
+            RES.removeEventListener(RES.ResourceEvent.ITEM_LOAD_ERROR, this.itemLoadError, this);
             try {
                 for (var _b = __values(this._disposableAssets), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var dispoable = _c.value;
@@ -372,6 +371,9 @@ var es;
             }
             this._disposableAssets.length = 0;
             this._loadedAssets.clear();
+        };
+        ContentManager.prototype.itemLoadError = function (event) {
+            es.Debug.error("\u8D44\u6E90:" + event.resItem.name + "\u52A0\u8F7D\u5931\u8D25");
         };
         ContentManager.contentManagers = new WeakSet();
         return ContentManager;

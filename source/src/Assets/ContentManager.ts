@@ -12,18 +12,17 @@ module es {
 
         constructor() {
             ContentManager.addContentManager(this);
+
+            RES.addEventListener(RES.ResourceEvent.ITEM_LOAD_ERROR, this.itemLoadError, this);
         }
 
         public getResAsync<T>(name: string): Promise<T> {
-            return new Promise((resolve, reject)=>{
+            return new Promise((resolve)=>{
                 const asset = this._loadedAssets.get(name);
                 if (asset) {
                     return resolve(asset as T);
                 }
     
-                RES.addEventListener(RES.ResourceEvent.ITEM_LOAD_ERROR, (event: RES.ResourceEvent)=>{
-                    reject(`资源:${event.resItem.name}加载失败`);
-                }, this);
                 RES.getResAsync(name, (texture)=>{
                     const result = texture as T;
                     if (texture != null) {
@@ -96,6 +95,8 @@ module es {
         }
 
         public unload() {
+            RES.removeEventListener(RES.ResourceEvent.ITEM_LOAD_ERROR, this.itemLoadError, this);
+
             for (let dispoable of this._disposableAssets) {
                 if (dispoable != null)
                     dispoable.dispose();
@@ -103,6 +104,10 @@ module es {
 
             this._disposableAssets.length = 0;
             this._loadedAssets.clear();
+        }
+
+        private itemLoadError(event: RES.ResourceEvent) {
+            Debug.error(`资源:${event.resItem.name}加载失败`);
         }
     }
 }

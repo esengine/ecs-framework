@@ -122,6 +122,7 @@ declare module es {
         private static removeContentManager;
         dispose(): void;
         unload(): void;
+        private itemLoadError;
     }
 }
 declare module es {
