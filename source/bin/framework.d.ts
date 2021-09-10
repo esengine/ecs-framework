@@ -196,8 +196,12 @@ declare module es {
         protected _valueType: any;
         protected _getter: Function;
         protected _setter: Function;
-        protected _memberInfo: any;
         static getInspectableProperties(target: any): void;
+        protected static getInspectorForType(valueType: any, target: any): NumberInspector;
+    }
+}
+declare module es {
+    class NumberInspector extends Inspector {
     }
 }
 declare module es {
@@ -1742,6 +1746,20 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * 包含 Stage 并委托 update/render/debugRender 调用的简单组件
+     */
+    class UICanvas extends RenderableComponent implements IUpdatable {
+        getwidth(): number;
+        getheight(): number;
+        stage: Stage;
+        constructor();
+        onAddedToEntity(): void;
+        update(): void;
+        render(batcher: IBatcher, camera: ICamera): void;
+    }
+}
+declare module es {
     class SpriteRenderer extends RenderableComponent {
         getbounds(): Rectangle;
         constructor(sprite?: Sprite | egret.Texture);
@@ -2781,15 +2799,18 @@ declare module es {
     class Batcher implements IBatcher {
         static readonly TYPE_DEBUG: string;
         static readonly TYPE_NORMAL: string;
+        /** 创建投影矩阵时要使用的矩阵 */
+        readonly transformMatrix: Matrix2D;
         /** 根据不同的batcherType来使用不同的graphics来进行绘制 */
         private _batcherSprite;
         camera: ICamera | null;
         strokeNum: number;
         sprite: egret.Sprite;
         protected batcherQueue: BatcherItem[];
+        private _transformMatrix;
         readonly MAX_STROKE: number;
         constructor();
-        begin(cam: ICamera, batcherType?: string): void;
+        begin(cam: Camera, batcherType?: string): void;
         end(): void;
         /**
          * 绘制点
@@ -5805,6 +5826,209 @@ declare module es {
          * @param bringToCompletion
          */
         stop(bringToCompletion: boolean): any;
+    }
+}
+declare module es {
+    class Stage {
+        static debug: boolean;
+        entity: Entity;
+        root: Group;
+        camera: Camera;
+        /**
+         * 返回包含 stageCoords 中所有元素的根组
+         * @returns
+         */
+        getRoot(): Group;
+        getWidth(): number;
+        getHeight(): number;
+        constructor();
+    }
+}
+declare module es {
+    class Cell implements IPoolable {
+        private static defaults;
+        private table;
+        constructor();
+        setLayout(table: Table): void;
+        /**
+         * 返回用于所有单元格的默认值。 这可用于避免需要为每个表格设置相同的默认值（例如，间距）
+         * @returns
+         */
+        static getDefaults(): Cell;
+        /**
+         * 重置状态以便可以重用单元格，将所有约束设置为其 {@link defaults()} 值。
+         */
+        reset(): void;
+    }
+}
+declare module es {
+    class Element implements ILayout {
+        protected _stage: Stage;
+        parent: Group;
+        protected _visible: boolean;
+        protected _needsLayout: boolean;
+        protected _layoutEnabled: boolean;
+        protected touchable: Touchable;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        color: Color;
+        protected originX: number;
+        protected originY: number;
+        protected scaleX: number;
+        protected scaleY: number;
+        protected rotation: number;
+        readonly preferredWidth: number;
+        readonly preferredHeight: number;
+        fillParent: boolean;
+        layoutEnabled: boolean;
+        getWidth(): number;
+        getHeight(): number;
+        /**
+         * 返回父元素，如果不在组中，则返回 null
+         * @returns
+         */
+        getParent(): Group;
+        /**
+         * 当元素添加到组中或从组中删除时由框架调用
+         * @param newParent 如果元素已从父元素中移除，则父元素可能为 null
+         */
+        setParent(newParent: Group): void;
+        /**
+         * 如果此元素处理输入事件，则返回 true
+         * @returns
+         */
+        isTouchable(): boolean;
+        getTouchable(): Touchable;
+        /**
+         * 确定如何将触摸事件分发到此元素。 默认值为 {@link Touchable.enabled}。
+         * @param touchable
+         */
+        setTouchable(touchable: Touchable): void;
+        /**
+         * 返回此元素当前所在的舞台，如果不在阶段，则返回 null。
+         * @returns
+         */
+        getStage(): Stage;
+        /**
+         * 当此元素或任何父元素添加到舞台中的组时，由框架调用
+         * 如果元素或任何父元素不再处于阶段，则 stage 可能为 null
+         * @param stage
+         */
+        setStage(stage: Stage): void;
+        setIsVisible(visible: boolean): void;
+        isVisible(): boolean;
+        /**
+         * 如果为 false，则不会绘制元素并且不会接收触摸事件。 默认为真。
+         * @param visible
+         */
+        setVisible(visible: boolean): void;
+        /**
+         * 如果此方法被覆盖，则应调用 super 方法或 {@link validate()} 以确保小部件布局。
+         * @param batcher
+         * @param parentAlpha
+         */
+        draw(batcher: Batcher, parentAlpha: number): void;
+        invalidate(): void;
+        invalidateHierarchy(): void;
+        validate(): void;
+        layout(): void;
+        setSize(width: number, height: number): void;
+        /**
+         * 如果此 Element 和所有父元素都可见，则返回 true
+         * @returns
+         */
+        areParentsVisible(): any;
+        hit(point: Vector2): Element;
+        protected sizeChanged(): void;
+        pack(): void;
+    }
+}
+declare module es {
+    class Group extends Element implements ICullable {
+        children: Element[];
+        protected transform: boolean;
+        _previousBatcherTransform: Matrix2D;
+        _cullingArea: Rectangle;
+        /**
+         * 如果组在配置后添加到舞台，则在所有子级上设置舞台
+         * @param stage
+         */
+        setStage(stage: Stage): void;
+        draw(batcher: Batcher, parentAlpha: number): void;
+        protected computeTransform(): Matrix2D;
+        /**
+         * 设置批处理的转换矩阵，通常使用 {@link computeTransform()} 的结果。
+         * 请注意，这会导致批次被刷新。 {@link resetTransform(Batch)} 会将转换恢复到此调用之前的状态。
+         * @param batcher
+         * @param transform
+         */
+        protected applyTransform(batcher: Batcher, transform: Matrix2D): void;
+        /**
+         * 将批量转换恢复到 {@link applyTransform(Batch, Matrix2D)} 之前的状态。 请注意，这会导致批处理被刷新
+         * @param batcher
+         */
+        protected resetTransform(batcher: Batcher): void;
+        pack(): void;
+        setCullingArea(cullingArea: Rectangle): void;
+    }
+}
+declare module es {
+    interface ICullable {
+        setCullingArea(cullingArea: Rectangle): void;
+    }
+}
+declare module es {
+    /**
+     * 为元素提供参与布局并提供最小、首选和最大尺寸的方法
+     */
+    interface ILayout {
+    }
+}
+declare module es {
+    enum Touchable {
+        /**
+         * 所有触摸输入事件都将由元素和任何子元素接收
+         */
+        enabled = 0,
+        /**
+         * 元素或任何子元素都不会收到触摸输入事件
+         */
+        disabled = 1,
+        /**
+         * 元素不会接收触摸输入事件，但子元素仍会接收事件。 请注意，子级上的事件仍会冒泡到父级
+         */
+        childrenOnly = 2
+    }
+}
+declare module es {
+    /**
+     * 使用表格约束来调整和定位子级的组。
+     * 默认情况下，{@link getTouchable()} 是 {@link Touchable.childrenOnly}。
+     * 首选和最小大小是 chdebugn 在列和行中布局时的大小。
+     */
+    class Table extends Group {
+        clip: boolean;
+        _cellDefaults: Cell;
+        constructor();
+        obtainCell(): Cell;
+    }
+}
+declare module es {
+    class Label extends Element {
+    }
+}
+declare module es {
+    /**
+     * 可以拖动和调整大小的表格。 顶部填充用作窗口的标题高度。
+     * 窗口的首选大小是标题文本和表格中布置的子项的首选大小。
+     * 将子窗口添加到窗口后，可以方便地调用 {@link pack()} 将窗口大小调整为子窗口的大小。
+     */
+    class Window extends Table {
+        constructor(title: string, style: WindowStyle);
+    }
+    class WindowStyle {
     }
 }
 declare module es {

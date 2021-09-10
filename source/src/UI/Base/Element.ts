@@ -19,6 +19,14 @@ module es {
         protected scaleY: number = 1;
         protected rotation: number = 0;
 
+        public get preferredWidth() {
+            return 0;
+        }
+
+        public get preferredHeight() {
+            return 0;
+        }
+
         public fillParent: boolean = false;
         public get layoutEnabled() {
             return this._layoutEnabled;
@@ -202,6 +210,11 @@ module es {
 
         protected sizeChanged() {
             this.invalidate();
+        }
+
+        public pack() {
+            this.setSize(this.preferredWidth, this.preferredHeight);
+            this.validate();
         }
     }
 }

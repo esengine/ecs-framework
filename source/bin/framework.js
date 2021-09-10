@@ -607,11 +607,29 @@ var es;
             var props = [];
             for (var field in target) {
                 console.log(field, typeof (target[field]));
+                if (field == "enabled")
+                    continue;
+            }
+        };
+        Inspector.getInspectorForType = function (valueType, target) {
+            if (valueType instanceof Number) {
+                return new es.NumberInspector();
             }
         };
         return Inspector;
     }());
     es.Inspector = Inspector;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var NumberInspector = /** @class */ (function (_super) {
+        __extends(NumberInspector, _super);
+        function NumberInspector() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return NumberInspector;
+    }(es.Inspector));
+    es.NumberInspector = NumberInspector;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -4559,6 +4577,35 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 包含 Stage 并委托 update/render/debugRender 调用的简单组件
+     */
+    var UICanvas = /** @class */ (function (_super) {
+        __extends(UICanvas, _super);
+        function UICanvas() {
+            var _this = _super.call(this) || this;
+            _this.stage = new es.Stage();
+            return _this;
+        }
+        UICanvas.prototype.getwidth = function () {
+            return this.stage.getWidth();
+        };
+        UICanvas.prototype.getheight = function () {
+            return this.stage.getHeight();
+        };
+        UICanvas.prototype.onAddedToEntity = function () {
+            this.stage.entity = this.entity;
+        };
+        UICanvas.prototype.update = function () {
+        };
+        UICanvas.prototype.render = function (batcher, camera) {
+        };
+        return UICanvas;
+    }(es.RenderableComponent));
+    es.UICanvas = UICanvas;
+})(es || (es = {}));
+var es;
+(function (es) {
     var SpriteRenderer = /** @class */ (function (_super) {
         __extends(SpriteRenderer, _super);
         function SpriteRenderer(sprite) {
@@ -7372,8 +7419,17 @@ var es;
             this.MAX_STROKE = 2048;
             this._batcherSprite = new Map();
         }
+        Object.defineProperty(Batcher.prototype, "transformMatrix", {
+            /** 创建投影矩阵时要使用的矩阵 */
+            get: function () {
+                return this._transformMatrix;
+            },
+            enumerable: true,
+            configurable: true
+        });
         Batcher.prototype.begin = function (cam, batcherType) {
             if (batcherType === void 0) { batcherType = Batcher.TYPE_NORMAL; }
+            this._transformMatrix = cam.transformMatrix;
             if (!this._batcherSprite.has(batcherType)) {
                 this.sprite = new egret.Sprite();
                 this.sprite.name = "batcher_" + batcherType;
@@ -7549,6 +7605,8 @@ var es;
             }
         };
         Batcher.prototype.flushSprite = function () {
+            if (this.batcherQueue.length == 0)
+                return;
             this.batcherQueue = this.batcherQueue.sort(function (a, b) { return b.layerDepth - a.layerDepth; });
             for (var i = 0; i < this.batcherQueue.length; i++) {
                 var batcherItem = this.batcherQueue[i];
@@ -8048,6 +8106,7 @@ var es;
         Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
             if (!es.Graphics.instance)
                 return;
+            '';
             renderable.render(es.Graphics.instance.batcher, cam);
         };
         /**
@@ -8059,6 +8118,8 @@ var es;
         Renderer.prototype.debugRender = function (scene, cam) {
             if (!es.Graphics.instance)
                 return;
+            es.Graphics.instance.batcher.end();
+            es.Graphics.instance.batcher.begin(cam);
             es.Physics.debugDraw(2);
             for (var i = 0; i < scene.entities.count; i++) {
                 var entity = scene.entities.buffer[i];
@@ -8178,6 +8239,8 @@ var es;
             this.endRender();
         };
         RenderLayerRenderer.prototype.debugRender = function (scene, cam) {
+            es.Graphics.instance.batcher.end();
+            es.Graphics.instance.batcher.begin(cam);
             for (var i = 0; i < this.renderLayers.length; i++) {
                 var renderables = scene.renderableComponents.componentsWithRenderLayer(this.renderLayers[i]);
                 for (var j = 0; j < renderables.length; j++) {
@@ -14919,6 +14982,421 @@ var es;
         return Lerps;
     }());
     es.Lerps = Lerps;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Stage = /** @class */ (function () {
+        function Stage() {
+            this.root = new es.Group();
+            this.root.setStage(this);
+        }
+        /**
+         * 返回包含 stageCoords 中所有元素的根组
+         * @returns
+         */
+        Stage.prototype.getRoot = function () {
+            return this.root;
+        };
+        Stage.prototype.getWidth = function () {
+            return es.Core.stage.stageWidth;
+        };
+        Stage.prototype.getHeight = function () {
+            return es.Core.stage.stageHeight;
+        };
+        Stage.debug = false;
+        return Stage;
+    }());
+    es.Stage = Stage;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Cell = /** @class */ (function () {
+        function Cell() {
+            this.reset();
+        }
+        Cell.prototype.setLayout = function (table) {
+            this.table = table;
+        };
+        /**
+         * 返回用于所有单元格的默认值。 这可用于避免需要为每个表格设置相同的默认值（例如，间距）
+         * @returns
+         */
+        Cell.getDefaults = function () {
+            return this.defaults;
+        };
+        /**
+         * 重置状态以便可以重用单元格，将所有约束设置为其 {@link defaults()} 值。
+         */
+        Cell.prototype.reset = function () {
+        };
+        return Cell;
+    }());
+    es.Cell = Cell;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Element = /** @class */ (function () {
+        function Element() {
+            this._visible = true;
+            this._needsLayout = true;
+            this._layoutEnabled = true;
+            this.touchable = es.Touchable.enabled;
+            this.x = 0;
+            this.y = 0;
+            this.width = 0;
+            this.height = 0;
+            this.color = es.Color.White;
+            this.originX = 0;
+            this.originY = 0;
+            this.scaleX = 1;
+            this.scaleY = 1;
+            this.rotation = 0;
+            this.fillParent = false;
+        }
+        Object.defineProperty(Element.prototype, "preferredWidth", {
+            get: function () {
+                return 0;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Element.prototype, "preferredHeight", {
+            get: function () {
+                return 0;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Element.prototype, "layoutEnabled", {
+            get: function () {
+                return this._layoutEnabled;
+            },
+            set: function (value) {
+                if (this._layoutEnabled != value) {
+                    this._layoutEnabled = value;
+                    if (this._layoutEnabled)
+                        this.invalidateHierarchy();
+                }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Element.prototype.getWidth = function () {
+            return this.width;
+        };
+        Element.prototype.getHeight = function () {
+            return this.height;
+        };
+        /**
+         * 返回父元素，如果不在组中，则返回 null
+         * @returns
+         */
+        Element.prototype.getParent = function () {
+            return this.parent;
+        };
+        /**
+         * 当元素添加到组中或从组中删除时由框架调用
+         * @param newParent 如果元素已从父元素中移除，则父元素可能为 null
+         */
+        Element.prototype.setParent = function (newParent) {
+            this.parent = newParent;
+        };
+        /**
+         * 如果此元素处理输入事件，则返回 true
+         * @returns
+         */
+        Element.prototype.isTouchable = function () {
+            return this.touchable == es.Touchable.enabled;
+        };
+        Element.prototype.getTouchable = function () {
+            return this.touchable;
+        };
+        /**
+         * 确定如何将触摸事件分发到此元素。 默认值为 {@link Touchable.enabled}。
+         * @param touchable
+         */
+        Element.prototype.setTouchable = function (touchable) {
+            this.touchable = touchable;
+        };
+        /**
+         * 返回此元素当前所在的舞台，如果不在阶段，则返回 null。
+         * @returns
+         */
+        Element.prototype.getStage = function () {
+            return this._stage;
+        };
+        /**
+         * 当此元素或任何父元素添加到舞台中的组时，由框架调用
+         * 如果元素或任何父元素不再处于阶段，则 stage 可能为 null
+         * @param stage
+         */
+        Element.prototype.setStage = function (stage) {
+            this._stage = stage;
+        };
+        Element.prototype.setIsVisible = function (visible) {
+            this._visible = visible;
+        };
+        Element.prototype.isVisible = function () {
+            return this._visible;
+        };
+        /**
+         * 如果为 false，则不会绘制元素并且不会接收触摸事件。 默认为真。
+         * @param visible
+         */
+        Element.prototype.setVisible = function (visible) {
+            this._visible = visible;
+        };
+        /**
+         * 如果此方法被覆盖，则应调用 super 方法或 {@link validate()} 以确保小部件布局。
+         * @param batcher
+         * @param parentAlpha
+         */
+        Element.prototype.draw = function (batcher, parentAlpha) {
+            this.validate();
+        };
+        Element.prototype.invalidate = function () {
+            this._needsLayout = true;
+        };
+        Element.prototype.invalidateHierarchy = function () {
+            if (!this._layoutEnabled)
+                return;
+            this.invalidate();
+            if (this.parent instanceof Element) {
+                this.parent.invalidateHierarchy();
+            }
+        };
+        Element.prototype.validate = function () {
+            if (!this._layoutEnabled)
+                return;
+            if (this.fillParent && this.parent != null) {
+                var stage = this.getStage();
+                var parentWidth = void 0, parentHeight = void 0;
+                if (stage != null && this.parent == stage.getRoot()) {
+                    parentWidth = stage.getWidth();
+                    parentHeight = stage.getHeight();
+                }
+                else {
+                    parentWidth = this.parent.getWidth();
+                    parentHeight = this.parent.getHeight();
+                }
+                if (this.width != parentWidth || this.height != parentHeight) {
+                    this.setSize(parentWidth, parentHeight);
+                    this.invalidate();
+                }
+            }
+            if (!this._needsLayout)
+                return;
+            this._needsLayout = false;
+            this.layout();
+        };
+        Element.prototype.layout = function () {
+        };
+        Element.prototype.setSize = function (width, height) {
+            if (this.width == width && this.height == height)
+                return;
+            this.width = width;
+            this.height = height;
+            this.sizeChanged();
+        };
+        /**
+         * 如果此 Element 和所有父元素都可见，则返回 true
+         * @returns
+         */
+        Element.prototype.areParentsVisible = function () {
+            if (!this._visible)
+                return false;
+            if (this.parent != null)
+                return this.parent.areParentsVisible();
+            return this._visible;
+        };
+        Element.prototype.hit = function (point) {
+            // 如果我们不是 Touchable 或者我们或任何parent不可见
+            if (this.touchable != es.Touchable.enabled || !this.areParentsVisible())
+                return null;
+            if (point.x >= 0 && point.x < this.width && point.y >= 0 && point.y < this.height)
+                return this;
+            return null;
+        };
+        Element.prototype.sizeChanged = function () {
+            this.invalidate();
+        };
+        Element.prototype.pack = function () {
+            this.setSize(this.preferredWidth, this.preferredHeight);
+            this.validate();
+        };
+        return Element;
+    }());
+    es.Element = Element;
+})(es || (es = {}));
+///<reference path="Element.ts" />
+var es;
+///<reference path="Element.ts" />
+(function (es) {
+    var Group = /** @class */ (function (_super) {
+        __extends(Group, _super);
+        function Group() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.children = [];
+            _this.transform = true;
+            return _this;
+        }
+        /**
+         * 如果组在配置后添加到舞台，则在所有子级上设置舞台
+         * @param stage
+         */
+        Group.prototype.setStage = function (stage) {
+            this._stage = stage;
+            for (var i = 0; i < this.children.length; i++)
+                this.children[i].setStage(stage);
+        };
+        Group.prototype.draw = function (batcher, parentAlpha) {
+            if (!this.isVisible())
+                return;
+            this.validate();
+            if (this.transform)
+                this.applyTransform(batcher, this.computeTransform());
+        };
+        Group.prototype.computeTransform = function () {
+            var mat = es.Matrix2D.identity;
+            var tempMatrix = es.Matrix2D.identity;
+            if (this.originX != 0 || this.originY != 0) {
+                es.Matrix2D.createTranslation(-this.originX, -this.originY, tempMatrix);
+                es.Matrix2D.multiply(mat, tempMatrix, mat);
+            }
+            if (this.rotation != 0) {
+                es.Matrix2D.createRotation(es.MathHelper.toRadians(this.rotation), tempMatrix);
+                es.Matrix2D.multiply(mat, tempMatrix, mat);
+            }
+            if (this.scaleX != 1 || this.scaleY != 1) {
+                es.Matrix2D.createScale(this.scaleX, this.scaleY, tempMatrix);
+                es.Matrix2D.multiply(mat, tempMatrix, mat);
+            }
+            var parentGroup = this.parent;
+            while (parentGroup != null) {
+                if (parentGroup.transform)
+                    break;
+                parentGroup = parentGroup.parent;
+            }
+            if (parentGroup != null)
+                es.Matrix2D.multiply(mat, parentGroup.computeTransform(), mat);
+            return mat;
+        };
+        /**
+         * 设置批处理的转换矩阵，通常使用 {@link computeTransform()} 的结果。
+         * 请注意，这会导致批次被刷新。 {@link resetTransform(Batch)} 会将转换恢复到此调用之前的状态。
+         * @param batcher
+         * @param transform
+         */
+        Group.prototype.applyTransform = function (batcher, transform) {
+            this._previousBatcherTransform = batcher.transformMatrix;
+        };
+        /**
+         * 将批量转换恢复到 {@link applyTransform(Batch, Matrix2D)} 之前的状态。 请注意，这会导致批处理被刷新
+         * @param batcher
+         */
+        Group.prototype.resetTransform = function (batcher) {
+        };
+        Group.prototype.pack = function () {
+            this.setSize(this.preferredWidth, this.preferredHeight);
+            this.validate();
+            // 有些情况需要另一种布局
+            // 例如，一个被包裹的标签在知道它的宽度之前不知道它的首选高度，所以如果它的首选高度改变了，它会在 layout() 中调用 invalidateHierarchy() 
+            if (this._needsLayout) {
+                this.setSize(this.preferredWidth, this.preferredHeight);
+                this.validate();
+            }
+        };
+        Group.prototype.setCullingArea = function (cullingArea) {
+            this._cullingArea = cullingArea;
+        };
+        return Group;
+    }(es.Element));
+    es.Group = Group;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Touchable;
+    (function (Touchable) {
+        /**
+         * 所有触摸输入事件都将由元素和任何子元素接收
+         */
+        Touchable[Touchable["enabled"] = 0] = "enabled";
+        /**
+         * 元素或任何子元素都不会收到触摸输入事件
+         */
+        Touchable[Touchable["disabled"] = 1] = "disabled";
+        /**
+         * 元素不会接收触摸输入事件，但子元素仍会接收事件。 请注意，子级上的事件仍会冒泡到父级
+         */
+        Touchable[Touchable["childrenOnly"] = 2] = "childrenOnly";
+    })(Touchable = es.Touchable || (es.Touchable = {}));
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 使用表格约束来调整和定位子级的组。
+     * 默认情况下，{@link getTouchable()} 是 {@link Touchable.childrenOnly}。
+     * 首选和最小大小是 chdebugn 在列和行中布局时的大小。
+     */
+    var Table = /** @class */ (function (_super) {
+        __extends(Table, _super);
+        function Table() {
+            var _this = _super.call(this) || this;
+            _this.clip = false;
+            _this._cellDefaults = _this.obtainCell();
+            _this.transform = false;
+            _this.touchable = es.Touchable.childrenOnly;
+            return _this;
+        }
+        Table.prototype.obtainCell = function () {
+            var cell = es.Pool.obtain(es.Cell);
+            cell.setLayout(this);
+            return cell;
+        };
+        return Table;
+    }(es.Group));
+    es.Table = Table;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Label = /** @class */ (function (_super) {
+        __extends(Label, _super);
+        function Label() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return Label;
+    }(es.Element));
+    es.Label = Label;
+})(es || (es = {}));
+///<reference path="../Containers/Table.ts" />
+var es;
+///<reference path="../Containers/Table.ts" />
+(function (es) {
+    /**
+     * 可以拖动和调整大小的表格。 顶部填充用作窗口的标题高度。
+     * 窗口的首选大小是标题文本和表格中布置的子项的首选大小。
+     * 将子窗口添加到窗口后，可以方便地调用 {@link pack()} 将窗口大小调整为子窗口的大小。
+     */
+    var Window = /** @class */ (function (_super) {
+        __extends(Window, _super);
+        function Window(title, style) {
+            var _this = _super.call(this) || this;
+            es.Insist.isNotNull(title, "title不能为Null");
+            _this.touchable = es.Touchable.enabled;
+            _this.clip = true;
+            _this.width = 150;
+            _this.height = 150;
+            return _this;
+        }
+        return Window;
+    }(es.Table));
+    es.Window = Window;
+    var WindowStyle = /** @class */ (function () {
+        function WindowStyle() {
+        }
+        return WindowStyle;
+    }());
+    es.WindowStyle = WindowStyle;
 })(es || (es = {}));
 var es;
 (function (es) {

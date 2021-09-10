@@ -1,9 +1,10 @@
 ///<reference path="Element.ts" />
 module es {
-    export class Group extends Element {
+    export class Group extends Element implements ICullable {
         public children: Element[] = [];
         protected transform = true;
         _previousBatcherTransform: Matrix2D;
+        _cullingArea: Rectangle;
         /**
          * 如果组在配置后添加到舞台，则在所有子级上设置舞台
          * @param stage 
@@ -68,11 +69,27 @@ module es {
         }
 
         /**
-         * 将批量转换恢复到 {@link #applyTransform(Batch, Matrix2D)} 之前的状态。 请注意，这会导致批处理被刷新
+         * 将批量转换恢复到 {@link applyTransform(Batch, Matrix2D)} 之前的状态。 请注意，这会导致批处理被刷新
          * @param batcher 
          */
         protected resetTransform(batcher: Batcher) {
 
+        }
+
+        public pack() {
+            this.setSize(this.preferredWidth, this.preferredHeight);
+            this.validate();
+
+            // 有些情况需要另一种布局
+            // 例如，一个被包裹的标签在知道它的宽度之前不知道它的首选高度，所以如果它的首选高度改变了，它会在 layout() 中调用 invalidateHierarchy() 
+            if (this._needsLayout) {
+                this.setSize(this.preferredWidth, this.preferredHeight);
+                this.validate();
+            }
+        }
+
+        public setCullingArea(cullingArea: Rectangle) {
+            this._cullingArea = cullingArea;
         }
     }
 }
