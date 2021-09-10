@@ -202,6 +202,7 @@ declare module es {
 }
 declare module es {
     class NumberInspector extends Inspector {
+        _textField: egret.TextField;
     }
 }
 declare module es {
@@ -3229,6 +3230,19 @@ declare module es {
         constructor(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2);
         setTexture(texture: egret.Texture, sourceRect?: Rectangle, origin?: Vector2): void;
         /**
+         * 生成九个补丁矩形。 destArray 应该有 9 个元素。
+         * renderRect 是将渲染九个补丁的最终区域。
+         * 在 Sprite.sourceRect 中获取渲染通道的源矩形。
+         * 传入更大的 Rectangle 以获得最终目标渲染 Rectangles。
+         * @param renderRect
+         * @param destArray
+         * @param marginLeft
+         * @param marginRight
+         * @param mariginTop
+         * @param marginBottom
+         */
+        generateNinePatchRects(renderRect: Rectangle, destArray: Rectangle[], marginLeft: number, marginRight: number, mariginTop: number, marginBottom: number): void;
+        /**
          * 提供一个精灵的列/行等间隔的图集的精灵列表
          * @param texture
          * @param cellWidth
@@ -3245,6 +3259,22 @@ declare module es {
          * @param disposeTexture 是否销毁纹理
          */
         dispose(disposeTexture?: boolean): void;
+    }
+}
+declare module es {
+    class NinePatchSprite extends Sprite {
+        left: number;
+        right: number;
+        top: number;
+        bottom: number;
+        ninePatchRects: Rectangle[];
+        /** 用于指示这九个补丁是否有额外的填充信息 */
+        hasPadding: boolean;
+        padLeft: number;
+        padRight: number;
+        padTop: number;
+        padBottom: number;
+        constructor(texture: egret.Texture, sourceRect: Rectangle, left: number, right: number, top: number, bottom: number);
     }
 }
 declare module es {
@@ -5842,6 +5872,21 @@ declare module es {
         getWidth(): number;
         getHeight(): number;
         constructor();
+        update(): void;
+        updateKeyboardState(): void;
+        updateInputTouch(): void;
+        /**
+         * 将屏幕坐标转换为舞台坐标
+         * @param screenCoords
+         */
+        screenToStageCoordinates(screenCoords: Vector2): Vector2;
+        /**
+         * 将舞台坐标转换为屏幕坐标
+         * @param stageCoords
+         * @returns
+         */
+        stageToScreenCoordinates(stageCoords: Vector2): Vector2;
+        hit(point: Vector2): Element;
     }
 }
 declare module es {
@@ -5941,6 +5986,17 @@ declare module es {
          */
         areParentsVisible(): any;
         hit(point: Vector2): Element;
+        /**
+         * 将父坐标系中给定的坐标转换为该元素的坐标系
+         * @param parentCoords
+         */
+        parentToLocalCoordianates(parentCoords: Vector2): Vector2;
+        /**
+         * 将元素坐标中的指定点转换为父坐标中的点
+         * @param localCoords
+         * @returns
+         */
+        localToParentCoordinates(localCoords: Vector2): Vector2;
         protected sizeChanged(): void;
         pack(): void;
     }
@@ -5980,6 +6036,10 @@ declare module es {
     }
 }
 declare module es {
+    interface IInputListener {
+    }
+}
+declare module es {
     /**
      * 为元素提供参与布局并提供最小、首选和最大尺寸的方法
      */
@@ -6016,7 +6076,44 @@ declare module es {
     }
 }
 declare module es {
+    interface IDrawable {
+        leftWidth: number;
+        rightWidth: number;
+        topHeight: number;
+        bottomHeight: number;
+        minWidth: number;
+        minHeight: number;
+        setPadding(top: number, bottom: number, left: number, right: number): void;
+        draw(batcher: Batcher, x: number, y: number, width: number, height: number, color: Color): void;
+    }
+}
+declare module es {
     class Label extends Element {
+    }
+}
+declare module es {
+    class ProgressBar extends Element {
+        constructor(min: number, max: number, stepSize: number, vertical: boolean, style: any);
+    }
+    /**
+     * 进度条的样式
+     */
+    class ProgressBarStyle {
+        /** 进度条背景，仅向一个方向拉伸。 可选的。 */
+        background: IDrawable;
+    }
+}
+declare module es {
+    /**
+     * 创建一个新滑块
+     * 它的宽度由给定的 prefWidth 参数决定，其高度由滑块 {@link NinePatchSprite} 的最大高度决定。
+     * 最小值和最大值确定此滑块的值可以采用的范围，stepSize 参数指定各个值之间的距离
+     * 例如。 min 可以是 4，max 可以是 10，stepSize 可以是 0.2，总共给你 30 个值，4.0 4.2、4.4 等等。
+     */
+    class Slider extends ProgressBar implements IInputListener {
+        constructor(min: number, max: number, stepSize: number, vertical: boolean, style: SliderStyle);
+    }
+    class SliderStyle extends ProgressBarStyle {
     }
 }
 declare module es {

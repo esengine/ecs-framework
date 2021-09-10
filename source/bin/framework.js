@@ -4597,6 +4597,7 @@ var es;
             this.stage.entity = this.entity;
         };
         UICanvas.prototype.update = function () {
+            this.stage.update();
         };
         UICanvas.prototype.render = function (batcher, camera) {
         };
@@ -8311,6 +8312,36 @@ var es;
             this.uvs.height = sourceRect.height * inverseTexH;
         };
         /**
+         * 生成九个补丁矩形。 destArray 应该有 9 个元素。
+         * renderRect 是将渲染九个补丁的最终区域。
+         * 在 Sprite.sourceRect 中获取渲染通道的源矩形。
+         * 传入更大的 Rectangle 以获得最终目标渲染 Rectangles。
+         * @param renderRect
+         * @param destArray
+         * @param marginLeft
+         * @param marginRight
+         * @param mariginTop
+         * @param marginBottom
+         */
+        Sprite.prototype.generateNinePatchRects = function (renderRect, destArray, marginLeft, marginRight, mariginTop, marginBottom) {
+            es.Insist.isTrue(destArray.length == 9, "destArray 的长度不是 9");
+            var stretchedCenterWidth = renderRect.width - marginLeft - marginRight;
+            var stretchedCenterHeight = renderRect.height - mariginTop - marginBottom;
+            var bottomY = renderRect.y + renderRect.height - marginBottom;
+            var rightX = renderRect.x + renderRect.width - marginRight;
+            var leftX = renderRect.x + marginLeft;
+            var topY = renderRect.y + mariginTop;
+            destArray[0] = new es.Rectangle(renderRect.x, renderRect.y, marginLeft, mariginTop);
+            destArray[1] = new es.Rectangle(leftX, renderRect.y, stretchedCenterWidth, mariginTop);
+            destArray[2] = new es.Rectangle(rightX, renderRect.y, marginRight, mariginTop);
+            destArray[3] = new es.Rectangle(renderRect.x, topY, marginLeft, stretchedCenterHeight);
+            destArray[4] = new es.Rectangle(leftX, topY, stretchedCenterWidth, stretchedCenterHeight);
+            destArray[5] = new es.Rectangle(rightX, topY, marginRight, stretchedCenterHeight);
+            destArray[6] = new es.Rectangle(renderRect.x, bottomY, marginLeft, marginBottom);
+            destArray[7] = new es.Rectangle(leftX, bottomY, stretchedCenterWidth, marginBottom);
+            destArray[8] = new es.Rectangle(rightX, bottomY, marginRight, marginBottom);
+        };
+        /**
          * 提供一个精灵的列/行等间隔的图集的精灵列表
          * @param texture
          * @param cellWidth
@@ -8362,6 +8393,36 @@ var es;
         return Sprite;
     }(egret.Bitmap));
     es.Sprite = Sprite;
+})(es || (es = {}));
+///<reference path="Sprite.ts" />
+var es;
+///<reference path="Sprite.ts" />
+(function (es) {
+    var NinePatchSprite = /** @class */ (function (_super) {
+        __extends(NinePatchSprite, _super);
+        function NinePatchSprite(texture, sourceRect, left, right, top, bottom) {
+            var _this = _super.call(this, texture, sourceRect) || this;
+            _this.left = 0;
+            _this.right = 0;
+            _this.top = 0;
+            _this.bottom = 0;
+            _this.ninePatchRects = [];
+            /** 用于指示这九个补丁是否有额外的填充信息 */
+            _this.hasPadding = false;
+            _this.padLeft = 0;
+            _this.padRight = 0;
+            _this.padTop = 0;
+            _this.padBottom = 0;
+            _this.left = left;
+            _this.right = right;
+            _this.top = top;
+            _this.bottom = bottom;
+            _this.generateNinePatchRects(sourceRect, _this.ninePatchRects, left, right, top, bottom);
+            return _this;
+        }
+        return NinePatchSprite;
+    }(es.Sprite));
+    es.NinePatchSprite = NinePatchSprite;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -15003,6 +15064,37 @@ var es;
         Stage.prototype.getHeight = function () {
             return es.Core.stage.stageHeight;
         };
+        Stage.prototype.update = function () {
+            this.updateKeyboardState();
+            this.updateInputTouch();
+        };
+        Stage.prototype.updateKeyboardState = function () {
+        };
+        Stage.prototype.updateInputTouch = function () {
+        };
+        /**
+         * 将屏幕坐标转换为舞台坐标
+         * @param screenCoords
+         */
+        Stage.prototype.screenToStageCoordinates = function (screenCoords) {
+            if (this.camera == null)
+                return screenCoords;
+            return this.camera.screenToWorldPoint(screenCoords);
+        };
+        /**
+         * 将舞台坐标转换为屏幕坐标
+         * @param stageCoords
+         * @returns
+         */
+        Stage.prototype.stageToScreenCoordinates = function (stageCoords) {
+            if (this.camera == null)
+                return stageCoords;
+            return this.camera.worldToScreenPoint(stageCoords);
+        };
+        Stage.prototype.hit = function (point) {
+            point = this.root.parentToLocalCoordianates(point);
+            return this.root.hit(point);
+        };
         Stage.debug = false;
         return Stage;
     }());
@@ -15217,6 +15309,58 @@ var es;
                 return this;
             return null;
         };
+        /**
+         * 将父坐标系中给定的坐标转换为该元素的坐标系
+         * @param parentCoords
+         */
+        Element.prototype.parentToLocalCoordianates = function (parentCoords) {
+            if (this.rotation == 0) {
+                if (this.scaleX == 1 && this.scaleY == 1) {
+                    parentCoords.x -= this.x;
+                    parentCoords.y -= this.y;
+                }
+                else {
+                    parentCoords.x = (parentCoords.x - this.x - this.originX) / this.scaleX + this.originX;
+                    parentCoords.y = (parentCoords.y - this.y, this.originY) / this.scaleY + this.originY;
+                }
+            }
+            else {
+                var cos = Math.cos(es.MathHelper.toRadians(this.rotation));
+                var sin = Math.sin(es.MathHelper.toRadians(this.rotation));
+                var tox = parentCoords.x - this.x - this.originX;
+                var toy = parentCoords.y - this.y - this.originY;
+                parentCoords.x = (tox * cos * toy * sin) / this.scaleX + this.originX;
+                parentCoords.y = (tox * -sin + toy * cos) / this.scaleY + this.originY;
+            }
+            return parentCoords;
+        };
+        /**
+         * 将元素坐标中的指定点转换为父坐标中的点
+         * @param localCoords
+         * @returns
+         */
+        Element.prototype.localToParentCoordinates = function (localCoords) {
+            var rotation = -this.rotation;
+            if (rotation == 0) {
+                if (this.scaleX == 1 && this.scaleY == 1) {
+                    localCoords.x += this.x;
+                    localCoords.y += this.y;
+                }
+                else {
+                    localCoords.x = (localCoords.x - this.originX) * this.scaleX + this.originX + this.x;
+                    localCoords.y = (localCoords.y - this.originY) * this.scaleY + this.originY + this.y;
+                }
+            }
+            else {
+                var cos = Math.cos(es.MathHelper.toRadians(rotation));
+                var sin = Math.sin(es.MathHelper.toRadians(rotation));
+                var tox = (localCoords.x - this.originX) * this.scaleX;
+                var toy = (localCoords.y - this.originY) * this.scaleY;
+                localCoords.x = (tox * cos + toy * sin) + this.originX + this.x;
+                localCoords.y = (tox * -sin + toy * cos) + this.originY + this.y;
+            }
+            return localCoords;
+        };
         Element.prototype.sizeChanged = function () {
             this.invalidate();
         };
@@ -15367,6 +15511,51 @@ var es;
         return Label;
     }(es.Element));
     es.Label = Label;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var ProgressBar = /** @class */ (function (_super) {
+        __extends(ProgressBar, _super);
+        function ProgressBar(min, max, stepSize, vertical, style) {
+            return _super.call(this) || this;
+        }
+        return ProgressBar;
+    }(es.Element));
+    es.ProgressBar = ProgressBar;
+    /**
+     * 进度条的样式
+     */
+    var ProgressBarStyle = /** @class */ (function () {
+        function ProgressBarStyle() {
+        }
+        return ProgressBarStyle;
+    }());
+    es.ProgressBarStyle = ProgressBarStyle;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 创建一个新滑块
+     * 它的宽度由给定的 prefWidth 参数决定，其高度由滑块 {@link NinePatchSprite} 的最大高度决定。
+     * 最小值和最大值确定此滑块的值可以采用的范围，stepSize 参数指定各个值之间的距离
+     * 例如。 min 可以是 4，max 可以是 10，stepSize 可以是 0.2，总共给你 30 个值，4.0 4.2、4.4 等等。
+     */
+    var Slider = /** @class */ (function (_super) {
+        __extends(Slider, _super);
+        function Slider(min, max, stepSize, vertical, style) {
+            return _super.call(this, min, max, stepSize, vertical, style) || this;
+        }
+        return Slider;
+    }(es.ProgressBar));
+    es.Slider = Slider;
+    var SliderStyle = /** @class */ (function (_super) {
+        __extends(SliderStyle, _super);
+        function SliderStyle() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return SliderStyle;
+    }(es.ProgressBarStyle));
+    es.SliderStyle = SliderStyle;
 })(es || (es = {}));
 ///<reference path="../Containers/Table.ts" />
 var es;

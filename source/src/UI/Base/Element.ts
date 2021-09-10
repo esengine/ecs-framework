@@ -208,6 +208,59 @@ module es {
             return null;
         }
 
+        /**
+         * 将父坐标系中给定的坐标转换为该元素的坐标系
+         * @param parentCoords 
+         */
+        public parentToLocalCoordianates(parentCoords: Vector2) {
+            if (this.rotation == 0) {
+                if (this.scaleX == 1 && this.scaleY == 1) {
+                    parentCoords.x -= this.x;
+                    parentCoords.y -= this.y;
+                } else {
+                    parentCoords.x = (parentCoords.x - this.x - this.originX) / this.scaleX + this.originX;
+                    parentCoords.y = (parentCoords.y - this.y, this.originY) / this.scaleY + this.originY;
+                }
+            } else {
+                const cos = Math.cos(MathHelper.toRadians(this.rotation));
+                const sin = Math.sin(MathHelper.toRadians(this.rotation));
+                const tox = parentCoords.x - this.x - this.originX;
+                const toy = parentCoords.y - this.y - this.originY;
+                parentCoords.x = (tox * cos * toy * sin) / this.scaleX + this.originX;
+                parentCoords.y = (tox * -sin + toy * cos) / this.scaleY + this.originY;
+            }
+
+            return parentCoords;
+        }
+
+        /**
+         * 将元素坐标中的指定点转换为父坐标中的点
+         * @param localCoords 
+         * @returns 
+         */
+        public localToParentCoordinates(localCoords: Vector2) {
+            const rotation = -this.rotation;
+            if (rotation == 0) {
+                if (this.scaleX == 1 && this.scaleY == 1) {
+                    localCoords.x += this.x;
+                    localCoords.y += this.y;
+                } else {
+                    localCoords.x = (localCoords.x - this.originX) * this.scaleX + this.originX + this.x;
+                    localCoords.y = (localCoords.y - this.originY) * this.scaleY + this.originY + this.y;
+                }
+            } else {
+                const cos = Math.cos(MathHelper.toRadians(rotation));
+                const sin = Math.sin(MathHelper.toRadians(rotation));
+
+                const tox = (localCoords.x - this.originX) * this.scaleX;
+                const toy = (localCoords.y - this.originY) * this.scaleY;
+                localCoords.x = (tox * cos + toy * sin) + this.originX + this.x;
+                localCoords.y = (tox * -sin + toy * cos) + this.originY + this.y;
+            }
+
+            return localCoords;
+        }
+
         protected sizeChanged() {
             this.invalidate();
         }

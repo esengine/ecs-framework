@@ -23,6 +23,7 @@ module es {
         }
 
         public update() {
+            this.stage.update();
         }
 
         public render(batcher: IBatcher, camera: ICamera): void {

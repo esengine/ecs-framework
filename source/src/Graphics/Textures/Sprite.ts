@@ -47,6 +47,39 @@ module es {
         }
 
         /**
+         * 生成九个补丁矩形。 destArray 应该有 9 个元素。 
+         * renderRect 是将渲染九个补丁的最终区域。 
+         * 在 Sprite.sourceRect 中获取渲染通道的源矩形。 
+         * 传入更大的 Rectangle 以获得最终目标渲染 Rectangles。
+         * @param renderRect 
+         * @param destArray 
+         * @param marginLeft 
+         * @param marginRight 
+         * @param mariginTop 
+         * @param marginBottom 
+         */
+        public generateNinePatchRects(renderRect: Rectangle, destArray: Rectangle[], marginLeft: number, marginRight: number, mariginTop: number, marginBottom: number) {
+            Insist.isTrue(destArray.length == 9, "destArray 的长度不是 9");
+
+            const stretchedCenterWidth = renderRect.width - marginLeft - marginRight;
+            const stretchedCenterHeight = renderRect.height - mariginTop - marginBottom;
+            const bottomY = renderRect.y + renderRect.height - marginBottom;
+            const rightX = renderRect.x + renderRect.width - marginRight;
+            const leftX = renderRect.x + marginLeft;
+            const topY = renderRect.y + mariginTop;
+
+            destArray[0] = new Rectangle(renderRect.x, renderRect.y, marginLeft, mariginTop);
+            destArray[1] = new Rectangle(leftX, renderRect.y, stretchedCenterWidth, mariginTop);
+            destArray[2] = new Rectangle(rightX, renderRect.y, marginRight, mariginTop);
+            destArray[3] = new Rectangle(renderRect.x, topY, marginLeft, stretchedCenterHeight);
+            destArray[4] = new Rectangle(leftX, topY, stretchedCenterWidth, stretchedCenterHeight);
+            destArray[5] = new Rectangle(rightX, topY, marginRight, stretchedCenterHeight);
+            destArray[6] = new Rectangle(renderRect.x, bottomY, marginLeft, marginBottom);
+            destArray[7] = new Rectangle(leftX, bottomY, stretchedCenterWidth, marginBottom);
+            destArray[8] = new Rectangle(rightX, bottomY, marginRight, marginBottom);
+        }
+
+        /**
          * 提供一个精灵的列/行等间隔的图集的精灵列表
          * @param texture
          * @param cellWidth
