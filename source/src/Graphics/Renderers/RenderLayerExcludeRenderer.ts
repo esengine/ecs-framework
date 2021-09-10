@@ -23,7 +23,7 @@ module es {
                 }
             }
 
-            if (this.shouldDebugRender && Core.debugRenderEndabled)
+            if (this.shouldDebugRender && Core.debugRenderEnabled)
                 this.debugRender(scene, cam);
 
             this.endRender();

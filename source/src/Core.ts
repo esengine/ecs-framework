@@ -11,7 +11,7 @@ module es {
         /**
          * 是否启用调试渲染
          */
-        public static debugRenderEndabled = false;
+        public static debugRenderEnabled = false;
         public static content: ContentManager;
         /**
          * 简化对内部类的全局内容实例的访问

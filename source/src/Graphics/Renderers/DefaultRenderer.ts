@@ -15,7 +15,7 @@ module es {
                     this.renderAfterStateCheck(renderable, cam);
             }
 
-            if (this.shouldDebugRender && es.Core.debugRenderEndabled) {
+            if (this.shouldDebugRender && es.Core.debugRenderEnabled) {
                 this.debugRender(scene, cam);
             }
 

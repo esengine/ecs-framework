@@ -271,7 +271,7 @@ var es;
         /**
          * 是否启用调试渲染
          */
-        Core.debugRenderEndabled = false;
+        Core.debugRenderEnabled = false;
         return Core;
     }());
     es.Core = Core;
@@ -8151,7 +8151,7 @@ var es;
                 if (renderable.enabled && renderable.isVisibleFromCamera(scene.camera))
                     this.renderAfterStateCheck(renderable, cam);
             }
-            if (this.shouldDebugRender && es.Core.debugRenderEndabled) {
+            if (this.shouldDebugRender && es.Core.debugRenderEnabled) {
                 this.debugRender(scene, cam);
             }
             this.endRender();
@@ -8187,7 +8187,7 @@ var es;
                     this.renderAfterStateCheck(renderable, cam);
                 }
             }
-            if (this.shouldDebugRender && es.Core.debugRenderEndabled)
+            if (this.shouldDebugRender && es.Core.debugRenderEnabled)
                 this.debugRender(scene, cam);
             this.endRender();
         };
@@ -8234,7 +8234,7 @@ var es;
                         this.renderAfterStateCheck(renderable, cam);
                 }
             }
-            if (this.shouldDebugRender && es.Core.debugRenderEndabled)
+            if (this.shouldDebugRender && es.Core.debugRenderEnabled)
                 this.debugRender(scene, cam);
             this.endRender();
         };
