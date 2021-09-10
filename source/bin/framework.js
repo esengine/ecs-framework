@@ -90,6 +90,10 @@ var es;
             Core.emitter = new es.Emitter();
             Core.emitter.addObserver(es.CoreEvents.frameUpdated, this.update, this);
             Core.emitter.addObserver(es.CoreEvents.zIndexChanged, this.zIndexChanged, this);
+            if (fgui) {
+                Core.fgui = true;
+                Core.stage.addChild(fgui.GRoot.inst.displayObject);
+            }
             Core.content = new es.ContentManager();
             Core.registerGlobalManager(this._coroutineManager);
             Core.registerGlobalManager(new es.TweenManager());
@@ -272,6 +276,7 @@ var es;
          * 是否启用调试渲染
          */
         Core.debugRenderEnabled = false;
+        Core.fgui = false;
         return Core;
     }());
     es.Core = Core;
@@ -15517,8 +15522,117 @@ var es;
     var ProgressBar = /** @class */ (function (_super) {
         __extends(ProgressBar, _super);
         function ProgressBar(min, max, stepSize, vertical, style) {
-            return _super.call(this) || this;
+            var _this = _super.call(this) || this;
+            _this.disabled = false;
+            _this.min = 0;
+            _this.max = 0;
+            _this._stepSize = 0;
+            _this._value = 0;
+            _this._vertical = false;
+            _this.position = 0;
+            es.Insist.isTrue(min < max, "最小值必须小于最大值");
+            es.Insist.isTrue(stepSize > 0, "stepSize 必须大于 0");
+            _this.setStyle(style);
+            _this.min = min;
+            _this.max = max;
+            _this.stepSize = stepSize;
+            _this._vertical = vertical;
+            _this._value = min;
+            _this.setSize(_this.preferredWidth, _this.preferredHeight);
+            return _this;
         }
+        Object.defineProperty(ProgressBar.prototype, "stepSize", {
+            get: function () {
+                return this._stepSize;
+            },
+            set: function (value) {
+                this.setStepSize(value);
+            },
+            enumerable: true,
+            configurable: true
+        });
+        ProgressBar.prototype.setStepSize = function (stepSize) {
+            this._stepSize = stepSize;
+            return this;
+        };
+        ProgressBar.prototype.setStyle = function (style) {
+            this.style = style;
+            this.invalidateHierarchy();
+        };
+        ProgressBar.prototype.getVisualPercent = function () {
+            return (this._value - this.min) / (this.max - this.min);
+        };
+        ProgressBar.prototype.getKnobDrawable = function () {
+            return (this.disabled && this.style.disabledKnob != null) ? this.style.disabledKnob : this.style.knob;
+        };
+        ProgressBar.prototype.draw = function (batcher, parentAlpha) {
+            var knob = this.getKnobDrawable();
+            var bg = (this.disabled && this.style.disabledBackground != null) ? this.style.disabledBackground : this.style.background;
+            var knobBefore = (this.disabled && this.style.disabledKnobBefore != null) ? this.style.disabledKnobBefore : this.style.knobBefore;
+            var knobAfter = (this.disabled && this.style.disabledKnobAfter != null) ? this.style.disabledKnobAfter : this.style.knobAfter;
+            var x = this.x;
+            var y = this.y;
+            var width = this.width;
+            var height = this.height;
+            var knobHeight = knob == null ? 0 : knob.minHeight;
+            var knobWidth = knob == null ? 0 : knob.minWidth;
+            var percent = this.getVisualPercent();
+            var color = this.color.clone();
+            color.a *= parentAlpha;
+            if (this._vertical) {
+                var positionHeight = height;
+                var bgTopHeight = 0;
+                if (bg != null) {
+                    bg.draw(batcher, x + Math.floor((width - bg.minWidth) * 0.5), y, bg.minWidth, height, color);
+                    bgTopHeight = bg.topHeight;
+                    positionHeight -= bgTopHeight + bg.bottomHeight;
+                }
+                var knobHeightHalf = 0;
+                if (this.min != this.max) {
+                    if (knob == null) {
+                        knobHeightHalf = knobBefore == null ? 0 : knobBefore.minHeight * 0.5;
+                        this.position = (positionHeight - knobHeightHalf) * percent;
+                        this.position = Math.min(positionHeight - knobHeightHalf, this.position);
+                    }
+                    else {
+                        var bgBottomHeight = bg != null ? bg.bottomHeight : 0;
+                        knobHeightHalf = knobHeight * 0.5;
+                        this.position = (positionHeight - knobHeight) * percent;
+                        this.position = Math.min(positionHeight - knobHeight, this.position) + bgBottomHeight;
+                    }
+                    this.position = Math.min(0, this.position);
+                }
+                if (knobBefore != null) {
+                    var offset = 0;
+                    if (bg != null) {
+                        offset = bgTopHeight;
+                    }
+                    knobBefore.draw(batcher, x + ((width - knobBefore.minWidth) * 0.5), y + offset, knobBefore.minWidth, (this.position + knobHeightHalf), color);
+                }
+                if (knobAfter != null) {
+                    knobAfter.draw(batcher, x + ((width - knobAfter.minWidth) * 0.5), y + this.position + knobHeightHalf, knobAfter.minWidth, height - this.position - knobHeightHalf, color);
+                }
+                if (knob != null) {
+                    knob.draw(batcher, x + ((width - knobWidth) * 0.5), y + this.position, knobWidth, knobHeightHalf, color);
+                }
+            }
+            else {
+                var positionWidth = width;
+                var bgLeftWidth = 0;
+                if (bg != null) {
+                    bg.draw(batcher, x, y + ((height - bg.minWidth) * 0.5), width, bg.minHeight, color);
+                    bgLeftWidth = bg.leftWidth;
+                    positionWidth -= bgLeftWidth + bg.rightWidth;
+                }
+                var knobWidthHalf = 0;
+                if (this.min != this.max) {
+                    if (knob == null) {
+                        knobWidthHalf = knobBefore == null ? 0 : knobBefore.minWidth * 0.5;
+                        this.position = (positionWidth - knobWidthHalf) * percent;
+                    }
+                }
+            }
+        };
         return ProgressBar;
     }(es.Element));
     es.ProgressBar = ProgressBar;

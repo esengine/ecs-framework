@@ -25,6 +25,7 @@ declare module es {
          * egret舞台
          */
         static stage: egret.Stage;
+        static fgui: boolean;
         /**
          * 是否正在debug模式
          * 仅允许在create时进行更改
@@ -202,7 +203,8 @@ declare module es {
 }
 declare module es {
     class NumberInspector extends Inspector {
-        _textField: egret.TextField;
+        _textField: fgui.GTextField;
+        _slider: fgui.GSlider;
     }
 }
 declare module es {
@@ -6093,7 +6095,21 @@ declare module es {
 }
 declare module es {
     class ProgressBar extends Element {
-        constructor(min: number, max: number, stepSize: number, vertical: boolean, style: any);
+        disabled: boolean;
+        min: number;
+        max: number;
+        protected _stepSize: number;
+        protected _value: number;
+        protected _vertical: boolean;
+        protected position: number;
+        style: ProgressBarStyle;
+        stepSize: number;
+        setStepSize(stepSize: number): ProgressBar;
+        constructor(min: number, max: number, stepSize: number, vertical: boolean, style: ProgressBarStyle);
+        setStyle(style: ProgressBarStyle): void;
+        getVisualPercent(): number;
+        protected getKnobDrawable(): IDrawable;
+        draw(batcher: Batcher, parentAlpha: number): void;
     }
     /**
      * 进度条的样式
@@ -6101,6 +6117,20 @@ declare module es {
     class ProgressBarStyle {
         /** 进度条背景，仅向一个方向拉伸。 可选的。 */
         background: IDrawable;
+        /** 可选 */
+        disabledBackground: IDrawable;
+        /** 可选，以背景为中心 */
+        knob: IDrawable;
+        /** 可选，以背景为中心 */
+        disabledKnob: IDrawable;
+        /** 可选 */
+        knobBefore: IDrawable;
+        /** 可选 */
+        knobAfter: IDrawable;
+        /** 可选 */
+        disabledKnobBefore: IDrawable;
+        /** 可选 */
+        disabledKnobAfter: IDrawable;
     }
 }
 declare module es {
