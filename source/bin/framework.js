@@ -3277,7 +3277,7 @@ var es;
         }
         Object.defineProperty(Collider.prototype, "absolutePosition", {
             /**
-             * 镖师碰撞器的绝对位置
+             * 表示碰撞器的绝对位置
              */
             get: function () {
                 return es.Vector2.add(this.entity.transform.position, this._localOffset);

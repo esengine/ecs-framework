@@ -1360,7 +1360,7 @@ declare module es {
          */
         protected _isColliderRegistered: any;
         /**
-         * 镖师碰撞器的绝对位置
+         * 表示碰撞器的绝对位置
          */
         readonly absolutePosition: Vector2;
         /**
