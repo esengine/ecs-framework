@@ -26,7 +26,6 @@ module es {
          * egret舞台
          */
         public static stage: egret.Stage;
-        public static fgui: boolean = false;
         /**
          * 是否正在debug模式
          * 仅允许在create时进行更改
@@ -51,11 +50,6 @@ module es {
             Core.emitter = new Emitter<CoreEvents>();
             Core.emitter.addObserver(CoreEvents.frameUpdated, this.update, this);
             Core.emitter.addObserver(CoreEvents.zIndexChanged, this.zIndexChanged, this);
-
-            if (fgui) {
-                Core.fgui = true;
-                Core.stage.addChild(fgui.GRoot.inst.displayObject);
-            }
 
             Core.content = new ContentManager();
 
