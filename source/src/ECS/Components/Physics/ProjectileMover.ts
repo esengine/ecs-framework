@@ -35,12 +35,14 @@ module es {
 
             // 获取任何可能在新位置发生碰撞的东西
             let neighbors = Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers.value);
-            for (let neighbor of neighbors){
-                if (this._collider.overlaps(neighbor) && neighbor.enabled){
-                    didCollide = true;
-                    this.notifyTriggerListeners(this._collider, neighbor);
+            if (neighbors.length > 0)
+                for (let i = 0; i < neighbors.length; i ++) {
+                    const neighbor = neighbors[i];
+                    if (this._collider.overlaps(neighbor) && neighbor.enabled){
+                        didCollide = true;
+                        this.notifyTriggerListeners(this._collider, neighbor);
+                    }
                 }
-            }
 
             return didCollide;
         }
