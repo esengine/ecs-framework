@@ -141,6 +141,11 @@ declare module es {
     }
 }
 declare module es {
+    class DebugConsole {
+        static Instance: DebugConsole;
+    }
+}
+declare module es {
     /**
      * 执行顺序
      *  - onAddedToEntity
@@ -2011,7 +2016,7 @@ declare module es {
          * @param types
          * @returns
          */
-        findEntitesOfComponent(...types: any[]): Entity[];
+        findEntitiesOfComponent(...types: any[]): Entity[];
     }
 }
 declare module es {

@@ -439,6 +439,15 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var DebugConsole = /** @class */ (function () {
+        function DebugConsole() {
+        }
+        return DebugConsole;
+    }());
+    es.DebugConsole = DebugConsole;
+})(es || (es = {}));
+var es;
+(function (es) {
     /**
      * 执行顺序
      *  - onAddedToEntity
@@ -1751,7 +1760,7 @@ var es;
                 types[_i] = arguments[_i];
             }
             var _a;
-            return (_a = this.entities).findEntitesOfComponent.apply(_a, __spread(types));
+            return (_a = this.entities).findEntitiesOfComponent.apply(_a, __spread(types));
         };
         /**
          * 在场景中添加一个EntitySystem处理器
@@ -3197,7 +3206,6 @@ var es;
          * @param motion
          */
         ProjectileMover.prototype.move = function (motion) {
-            var e_4, _a;
             if (this._collider == null)
                 return false;
             var didCollide = false;
@@ -3205,22 +3213,14 @@ var es;
             this.entity.position = es.Vector2.add(this.entity.position, motion);
             // 获取任何可能在新位置发生碰撞的东西
             var neighbors = es.Physics.boxcastBroadphase(this._collider.bounds, this._collider.collidesWithLayers.value);
-            try {
-                for (var neighbors_3 = __values(neighbors), neighbors_3_1 = neighbors_3.next(); !neighbors_3_1.done; neighbors_3_1 = neighbors_3.next()) {
-                    var neighbor = neighbors_3_1.value;
+            if (neighbors.length > 0)
+                for (var i = 0; i < neighbors.length; i++) {
+                    var neighbor = neighbors[i];
                     if (this._collider.overlaps(neighbor) && neighbor.enabled) {
                         didCollide = true;
                         this.notifyTriggerListeners(this._collider, neighbor);
                     }
                 }
-            }
-            catch (e_4_1) { e_4 = { error: e_4_1 }; }
-            finally {
-                try {
-                    if (neighbors_3_1 && !neighbors_3_1.done && (_a = neighbors_3.return)) _a.call(neighbors_3);
-                }
-                finally { if (e_4) throw e_4.error; }
-            }
             return didCollide;
         };
         ProjectileMover.prototype.notifyTriggerListeners = function (self, other) {
@@ -3470,7 +3470,7 @@ var es;
          * @param result
          */
         Collider.prototype.collidesWithAny = function (motion, result) {
-            var e_5, _a;
+            var e_4, _a;
             // 在我们的新位置上获取我们可能会碰到的任何东西 
             var colliderBounds = this.bounds.clone();
             colliderBounds.x += motion.x;
@@ -3481,8 +3481,8 @@ var es;
             this.shape.position = es.Vector2.add(this.shape.position, motion);
             var didCollide = false;
             try {
-                for (var neighbors_4 = __values(neighbors), neighbors_4_1 = neighbors_4.next(); !neighbors_4_1.done; neighbors_4_1 = neighbors_4.next()) {
-                    var neighbor = neighbors_4_1.value;
+                for (var neighbors_3 = __values(neighbors), neighbors_3_1 = neighbors_3.next(); !neighbors_3_1.done; neighbors_3_1 = neighbors_3.next()) {
+                    var neighbor = neighbors_3_1.value;
                     if (neighbor.isTrigger)
                         continue;
                     if (this.collidesWithNonMotion(neighbor, result)) {
@@ -3492,12 +3492,12 @@ var es;
                     }
                 }
             }
-            catch (e_5_1) { e_5 = { error: e_5_1 }; }
+            catch (e_4_1) { e_4 = { error: e_4_1 }; }
             finally {
                 try {
-                    if (neighbors_4_1 && !neighbors_4_1.done && (_a = neighbors_4.return)) _a.call(neighbors_4);
+                    if (neighbors_3_1 && !neighbors_3_1.done && (_a = neighbors_3.return)) _a.call(neighbors_3);
                 }
-                finally { if (e_5) throw e_5.error; }
+                finally { if (e_4) throw e_4.error; }
             }
             // 将形状位置返回到检查之前的位置 
             this.shape.position = oldPosition.clone();
@@ -3509,24 +3509,24 @@ var es;
          */
         Collider.prototype.collidesWithAnyNonMotion = function (result) {
             if (result === void 0) { result = new es.CollisionResult(); }
-            var e_6, _a;
+            var e_5, _a;
             // 在我们的新位置上获取我们可能会碰到的任何东西 
             var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this, this.collidesWithLayers.value);
             try {
-                for (var neighbors_5 = __values(neighbors), neighbors_5_1 = neighbors_5.next(); !neighbors_5_1.done; neighbors_5_1 = neighbors_5.next()) {
-                    var neighbor = neighbors_5_1.value;
+                for (var neighbors_4 = __values(neighbors), neighbors_4_1 = neighbors_4.next(); !neighbors_4_1.done; neighbors_4_1 = neighbors_4.next()) {
+                    var neighbor = neighbors_4_1.value;
                     if (neighbor.isTrigger)
                         continue;
                     if (this.collidesWithNonMotion(neighbor, result))
                         return true;
                 }
             }
-            catch (e_6_1) { e_6 = { error: e_6_1 }; }
+            catch (e_5_1) { e_5 = { error: e_5_1 }; }
             finally {
                 try {
-                    if (neighbors_5_1 && !neighbors_5_1.done && (_a = neighbors_5.return)) _a.call(neighbors_5);
+                    if (neighbors_4_1 && !neighbors_4_1.done && (_a = neighbors_4.return)) _a.call(neighbors_4);
                 }
-                finally { if (e_6) throw e_6.error; }
+                finally { if (e_5) throw e_5.error; }
             }
             return false;
         };
@@ -5003,7 +5003,7 @@ var es;
          * @param tag
          */
         EntityList.prototype.entitiesWithTag = function (tag) {
-            var e_7, _a;
+            var e_6, _a;
             var list = this.getTagList(tag);
             var returnList = es.ListPool.obtain(es.Entity);
             if (list.size > 0) {
@@ -5013,12 +5013,12 @@ var es;
                         returnList.push(entity);
                     }
                 }
-                catch (e_7_1) { e_7 = { error: e_7_1 }; }
+                catch (e_6_1) { e_6 = { error: e_6_1 }; }
                 finally {
                     try {
                         if (list_1_1 && !list_1_1.done && (_a = list_1.return)) _a.call(list_1);
                     }
-                    finally { if (e_7) throw e_7.error; }
+                    finally { if (e_6) throw e_6.error; }
                 }
             }
             return returnList;
@@ -5029,7 +5029,7 @@ var es;
          * @returns
          */
         EntityList.prototype.entityWithTag = function (tag) {
-            var e_8, _a;
+            var e_7, _a;
             var list = this.getTagList(tag);
             if (list.size > 0) {
                 try {
@@ -5038,12 +5038,12 @@ var es;
                         return entity;
                     }
                 }
-                catch (e_8_1) { e_8 = { error: e_8_1 }; }
+                catch (e_7_1) { e_7 = { error: e_7_1 }; }
                 finally {
                     try {
                         if (list_2_1 && !list_2_1.done && (_a = list_2.return)) _a.call(list_2);
                     }
-                    finally { if (e_8) throw e_8.error; }
+                    finally { if (e_7) throw e_7.error; }
                 }
             }
             return null;
@@ -5103,7 +5103,7 @@ var es;
          * @param types
          * @returns
          */
-        EntityList.prototype.findEntitesOfComponent = function () {
+        EntityList.prototype.findEntitiesOfComponent = function () {
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
@@ -8594,7 +8594,7 @@ var es;
          * 它将处理任何与Collider重叠的ITriggerListeners。
          */
         ColliderTriggerHelper.prototype.update = function () {
-            var e_9, _a;
+            var e_8, _a;
             var lateColliders = [];
             // 对所有实体.colliders进行重叠检查，这些实体.colliders是触发器，与所有宽相碰撞器，无论是否触发器。   
             // 任何重叠都会导致触发事件
@@ -8630,12 +8630,12 @@ var es;
                     this.notifyTriggerListeners(pair, true);
                 }
             }
-            catch (e_9_1) { e_9 = { error: e_9_1 }; }
+            catch (e_8_1) { e_8 = { error: e_8_1 }; }
             finally {
                 try {
                     if (lateColliders_1_1 && !lateColliders_1_1.done && (_a = lateColliders_1.return)) _a.call(lateColliders_1);
                 }
-                finally { if (e_9) throw e_9.error; }
+                finally { if (e_8) throw e_8.error; }
             }
             this.checkForExitedColliders();
         };
@@ -9344,7 +9344,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
-            var e_10, _a;
+            var e_9, _a;
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location.clone();
             var resultCounter = 0;
@@ -9375,12 +9375,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+            catch (e_9_1) { e_9 = { error: e_9_1 }; }
             finally {
                 try {
                     if (potentials_1_1 && !potentials_1_1.done && (_a = potentials_1.return)) _a.call(potentials_1);
                 }
-                finally { if (e_10) throw e_10.error; }
+                finally { if (e_9) throw e_9.error; }
             }
             return resultCounter;
         };
@@ -9392,7 +9392,7 @@ var es;
          * @param layerMask
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
-            var e_11, _a;
+            var e_10, _a;
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
@@ -9427,12 +9427,12 @@ var es;
                         return resultCounter;
                 }
             }
-            catch (e_11_1) { e_11 = { error: e_11_1 }; }
+            catch (e_10_1) { e_10 = { error: e_10_1 }; }
             finally {
                 try {
                     if (potentials_2_1 && !potentials_2_1.done && (_a = potentials_2.return)) _a.call(potentials_2);
                 }
-                finally { if (e_11) throw e_11.error; }
+                finally { if (e_10) throw e_10.error; }
             }
             return resultCounter;
         };
@@ -11982,12 +11982,6 @@ var es;
                     return es.Easing.Quadratic.easeOut(t, duration);
                 case EaseType.quadInOut:
                     return es.Easing.Quadratic.easeInOut(t, duration);
-                case EaseType.quadIn:
-                    return es.Easing.Quadratic.easeIn(t, duration);
-                case EaseType.quadOut:
-                    return es.Easing.Quadratic.easeOut(t, duration);
-                case EaseType.quadInOut:
-                    return es.Easing.Quadratic.easeInOut(t, duration);
                 case EaseType.quintIn:
                     return es.Easing.Quintic.easeIn(t, duration);
                 case EaseType.quintOut:
@@ -14230,7 +14224,7 @@ var es;
             this._all = [];
         };
         PairSet.prototype.union = function (other) {
-            var e_12, _a;
+            var e_11, _a;
             var otherAll = other.all;
             try {
                 for (var otherAll_1 = __values(otherAll), otherAll_1_1 = otherAll_1.next(); !otherAll_1_1.done; otherAll_1_1 = otherAll_1.next()) {
@@ -14238,16 +14232,16 @@ var es;
                     this.add(elem);
                 }
             }
-            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            catch (e_11_1) { e_11 = { error: e_11_1 }; }
             finally {
                 try {
                     if (otherAll_1_1 && !otherAll_1_1.done && (_a = otherAll_1.return)) _a.call(otherAll_1);
                 }
-                finally { if (e_12) throw e_12.error; }
+                finally { if (e_11) throw e_11.error; }
             }
         };
         PairSet.prototype.except = function (other) {
-            var e_13, _a;
+            var e_12, _a;
             var otherAll = other.all;
             try {
                 for (var otherAll_2 = __values(otherAll), otherAll_2_1 = otherAll_2.next(); !otherAll_2_1.done; otherAll_2_1 = otherAll_2.next()) {
@@ -14255,12 +14249,12 @@ var es;
                     this.remove(elem);
                 }
             }
-            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
             finally {
                 try {
                     if (otherAll_2_1 && !otherAll_2_1.done && (_a = otherAll_2.return)) _a.call(otherAll_2);
                 }
-                finally { if (e_13) throw e_13.error; }
+                finally { if (e_12) throw e_12.error; }
             }
         };
         return PairSet;
@@ -16227,7 +16221,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_14, _a;
+            var e_13, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -16235,12 +16229,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_13) throw e_13.error; }
             }
             return result;
         };
@@ -16489,7 +16483,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_15, _a;
+            var e_14, _a;
             var output = es.ListPool.obtain(es.Vector2);
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -16528,12 +16522,12 @@ var es;
                         }
                     }
                 }
-                catch (e_15_1) { e_15 = { error: e_15_1 }; }
+                catch (e_14_1) { e_14 = { error: e_14_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_15) throw e_15.error; }
+                    finally { if (e_14) throw e_14.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -16649,7 +16643,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_16, _a;
+            var e_15, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -16667,12 +16661,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_16) throw e_16.error; }
+                finally { if (e_15) throw e_15.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

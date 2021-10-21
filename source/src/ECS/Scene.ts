@@ -266,7 +266,7 @@ module es {
          * @returns 
          */
         public findEntitiesOfComponent(...types): Entity[] {
-            return this.entities.findEntitesOfComponent(...types);
+            return this.entities.findEntitiesOfComponent(...types);
         }
 
         /**

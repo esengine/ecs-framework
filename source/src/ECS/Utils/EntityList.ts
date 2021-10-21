@@ -311,7 +311,7 @@ module es {
          * @param types 
          * @returns 
          */
-        public findEntitesOfComponent(...types: any[]): Entity[] {
+        public findEntitiesOfComponent(...types: any[]): Entity[] {
             let entities = [];
             if (this._entities.length > 0) {
                 for (let i = 0, s = this._entities.length; i < s; i++) {
