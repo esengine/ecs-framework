@@ -356,6 +356,8 @@ var es;
             for (var _i = 1; _i < arguments.length; _i++) {
                 args[_i - 1] = arguments[_i];
             }
+            if (!console.assert)
+                return;
             if (message == null) {
                 console.assert(false);
             }
