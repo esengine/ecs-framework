@@ -42,7 +42,7 @@ module es {
         protected _isColliderRegistered;
 
         /**
-         * 镖师碰撞器的绝对位置
+         * 表示碰撞器的绝对位置
          */
         public get absolutePosition(): Vector2 {
             return Vector2.add(this.entity.transform.position, this._localOffset);

@@ -1,6 +1,9 @@
 module es {
     export class Insist {
         public static fail(message: string = null, ...args: any[]) {
+            if (!console.assert)
+                return;
+                
             if (message == null) {
                 console.assert(false);
             } else {
