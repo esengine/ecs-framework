@@ -2,21 +2,17 @@
 module es {
     /** 场景 */
     export class Scene {
-        public camera: ICamera;
         /** 这个场景中的实体列表 */
         public readonly entities: EntityList;
-        public readonly renderableComponents: RenderableComponentList;
         /** 管理所有实体处理器 */
         public readonly entityProcessors: EntityProcessorList;
 
         public readonly _sceneComponents: SceneComponent[] = [];
-        public _renderers: Renderer[] = [];
         public readonly identifierPool: IdentifierPool;
         private _didSceneBegin: boolean;
 
         constructor() {
             this.entities = new EntityList(this);
-            this.renderableComponents = new RenderableComponentList();
 
             this.entityProcessors = new EntityProcessorList();
             this.identifierPool = new IdentifierPool();
@@ -45,10 +41,6 @@ module es {
         }
 
         public begin() {
-            if (this._renderers.length == 0) {
-                this.addRenderer(new DefaultRenderer());
-            }
-
             Physics.reset();
 
             if (this.entityProcessors != null)
@@ -62,9 +54,6 @@ module es {
         public end() {
             this._didSceneBegin = false;
 
-            for (let i = 0; i < this._renderers.length; i ++)
-                this._renderers[i].unload();
-
             this.entities.removeAllEntities();
 
             for (let i = 0; i < this._sceneComponents.length; i++) {
@@ -72,7 +61,6 @@ module es {
             }
             this._sceneComponents.length = 0;
 
-            this.camera = null;
             Physics.clear();
 
             if (this.entityProcessors)
@@ -99,38 +87,6 @@ module es {
             
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
-
-            this.renderableComponents.updateLists();
-            this.render();
-        }
-
-        public render() {
-            for (let i = 0; i < this._renderers.length; i ++) {
-                this._renderers[i].render(this);
-            }
-        }
-
-        public addRenderer<T extends Renderer>(renderer: T): T {
-            this._renderers.push(renderer);
-            this._renderers.sort((self, other) => self.renderOrder - other.renderOrder);
-
-            renderer.onAddedToScene(this);
-
-            return renderer;
-        }
-
-        public getRenderer<T extends Renderer>(type: new (...args: any[]) => T): T {
-            for (let i = 0; i < this._renderers.length; i ++) {
-                if (this._renderers[i] instanceof type)
-                    return this._renderers[i] as T;
-            }
-
-            return null;
-        }
-
-        public removeRenderer(renderer: Renderer) {
-            new List(this._renderers).remove(renderer);
-            renderer.unload();
         }
 
         /**

@@ -29,8 +29,6 @@ module es {
          */
         public registeredPhysicsBounds: Rectangle = new Rectangle();
 
-        protected _colliderRequiresAutoSizing: boolean;
-
         public _localOffsetLength: number;
         public _isPositionDirty: boolean = true;
         public _isRotationDirty: boolean = true;
@@ -116,33 +114,6 @@ module es {
         }
 
         public onAddedToEntity() {
-            if (this._colliderRequiresAutoSizing) {
-                let renderable = null;
-                for (let i = 0; i < this.entity.components.buffer.length; i ++) {
-                    let component = this.entity.components.buffer[i];
-                    if (component instanceof RenderableComponent){
-                        renderable = component;
-                        break;
-                    }
-                }
-
-                if (renderable != null) {
-                    let renderableBounds = renderable.bounds.clone();
-
-                    let width = renderableBounds.width / this.entity.transform.scale.x;
-                    let height = renderableBounds.height / this.entity.transform.scale.y;
-
-                    if (this instanceof CircleCollider) {
-                        this.radius = Math.max(width, height) * 0.5;
-                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
-                    } else if (this instanceof BoxCollider) {
-                        this.width = width;
-                        this.height = height;
-
-                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
-                    }
-                }
-            }
             this._isParentEntityAddedToScene = true;
             this.registerColliderWithPhysicsSystem();
         }

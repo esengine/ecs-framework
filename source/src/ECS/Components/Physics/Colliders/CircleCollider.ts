@@ -11,9 +11,6 @@ module es {
             super();
 
             this.shape = new Circle(radius);
-            if (radius == 1) {
-                this._colliderRequiresAutoSizing = true;
-            }
         }
 
         public get radius(): number {
@@ -29,7 +26,6 @@ module es {
          * @param radius
          */
         public setRadius(radius: number): CircleCollider {
-            this._colliderRequiresAutoSizing = false;
             let circle = this.shape as Circle;
             if (radius != circle.radius) {
                 circle.radius = radius;
@@ -41,17 +37,6 @@ module es {
             }
 
             return this;
-        }
-
-        public debugRender(batcher: IBatcher) {
-            batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new Color(76, 76, 76, 76), 2);
-            batcher.end();
-            batcher.drawCircle(this.shape.position, this.radius, new Color(139, 0, 0), 2);
-            batcher.end();
-            batcher.drawPixel(this.entity.transform.position, new Color(255, 255, 0), 4);
-            batcher.end();
-            batcher.drawPixel(this.shape.position, new Color(255, 0, 0), 2);
-            batcher.end();
         }
 
         public toString() {

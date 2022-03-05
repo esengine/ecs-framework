@@ -88,30 +88,4 @@ module es {
                 Pool.free(RectangleTween, this);
         }
     }
-
-    export class ColorTween extends Tween<Color> {
-        public static create() : ColorTween {
-            return TweenManager.cacheColorTweens ? Pool.obtain(ColorTween) : new ColorTween();
-
-        }
-
-        constructor(target?: ITweenTarget<Color>, to?: Color, duration?: number) {
-            super();
-
-            this.initialize(target, to, duration);
-        }
-
-        public setIsRelative() {
-            this._isRelative = true;
-            this._toValue.r += this._fromValue.r;
-            this._toValue.g += this._fromValue.g;
-            this._toValue.b += this._fromValue.b;
-            this._toValue.a += this._fromValue.a;
-            return this;
-        }
-
-        protected updateValue() {
-            this._target.setTweenedValue(Lerps.ease(this._easeType, this._fromValue as any, this._toValue as any, this._elapsedTime, this._duration));
-        }
-    }
 }

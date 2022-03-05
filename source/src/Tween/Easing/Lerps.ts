@@ -3,19 +3,12 @@ module es {
      * 一系列静态方法来处理所有常见的tween类型结构，以及它们的unclamped lerps.unclamped lerps对于超过0-1范围的bounce、elastic或其他tweens是必需的
      */
     export class Lerps {
-        public static lerp(from: Color, to: Color, t: number);
         public static lerp(from: number, to: number, t: number);
         public static lerp(from: Rectangle, to: Rectangle, t: number);
         public static lerp(from: Vector2, to: Vector2, t: number);
         public static lerp(from: any, to: any, t: number) {
             if (typeof(from) == "number" && typeof(to) == "number") {
                 return from + (to - from) * t;
-            }
-
-            if (from instanceof Color && to instanceof Color) {
-                const t255 = t * 255;
-                return new Color(from.r + (to.r - from.r) * t255 / 255, from.g + (to.g - from.g) * t255 / 255,
-				    from.b + (to.b - from.b) * t255 / 255, from.a + (to.a - from.a) * t255 / 255)
             }
 
             if (from instanceof Rectangle && to instanceof Rectangle) {
@@ -41,7 +34,6 @@ module es {
         public static ease(easeType: EaseType, from: Rectangle, to: Rectangle, t: number, duration: number);
         public static ease(easeType: EaseType, from: Vector2, to: Vector2, t: number, duration: number);
         public static ease(easeType: EaseType, from: number, to: number, t: number, duration: number);
-        public static ease(easeType: EaseType, from: Color, to: Color, t: number, duration: number);
         public static ease(easeType: EaseType, from: any, to: any, t: number, duration: number) {
             if (typeof(from) == 'number' && typeof(to) == "number") {
                 return this.lerp(from, to, EaseHelper.ease(easeType, t, duration));
@@ -52,10 +44,6 @@ module es {
             }
 
             if (from instanceof Rectangle && to instanceof Rectangle) {
-                return this.lerp(from, to, EaseHelper.ease(easeType, t, duration));
-            }
-
-            if (from instanceof Color && to instanceof Color) {
                 return this.lerp(from, to, EaseHelper.ease(easeType, t, duration));
             }
         }

@@ -43,11 +43,6 @@ module es {
             this._spatialHash.clear();
         }
 
-        public static debugDraw(secondsToDisplay) {
-            if (this.debugRender)
-                this._spatialHash.debugDraw(secondsToDisplay);
-        }
-
         /**
          * 检查是否有对撞机落在一个圆形区域内。返回遇到的第一个对撞机
          * @param center 

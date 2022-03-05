@@ -522,7 +522,6 @@ var es;
          */
         Component.prototype.onEntityTransformChanged = function (comp) {
         };
-        Component.prototype.debugRender = function (batcher) { };
         /**
          *当父实体或此组件启用时调用
          */
@@ -980,11 +979,6 @@ var es;
          */
         Entity.prototype.update = function () {
             this.components.update();
-        };
-        Entity.prototype.debugRender = function (batcher) {
-            if (!batcher)
-                return;
-            this.components.debugRender(batcher);
         };
         /**
          * 创建组件的新实例。返回实例组件
@@ -1551,9 +1545,7 @@ var es;
     var Scene = /** @class */ (function () {
         function Scene() {
             this._sceneComponents = [];
-            this._renderers = [];
             this.entities = new es.EntityList(this);
-            this.renderableComponents = new es.RenderableComponentList();
             this.entityProcessors = new es.EntityProcessorList();
             this.identifierPool = new es.IdentifierPool();
             this.initialize();
@@ -1576,9 +1568,6 @@ var es;
         Scene.prototype.unload = function () {
         };
         Scene.prototype.begin = function () {
-            if (this._renderers.length == 0) {
-                this.addRenderer(new es.DefaultRenderer());
-            }
             es.Physics.reset();
             if (this.entityProcessors != null)
                 this.entityProcessors.begin();
@@ -1587,14 +1576,11 @@ var es;
         };
         Scene.prototype.end = function () {
             this._didSceneBegin = false;
-            for (var i = 0; i < this._renderers.length; i++)
-                this._renderers[i].unload();
             this.entities.removeAllEntities();
             for (var i = 0; i < this._sceneComponents.length; i++) {
                 this._sceneComponents[i].onRemovedFromScene();
             }
             this._sceneComponents.length = 0;
-            this.camera = null;
             es.Physics.clear();
             if (this.entityProcessors)
                 this.entityProcessors.end();
@@ -1614,30 +1600,6 @@ var es;
             this.entities.update();
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
-            this.renderableComponents.updateLists();
-            this.render();
-        };
-        Scene.prototype.render = function () {
-            for (var i = 0; i < this._renderers.length; i++) {
-                this._renderers[i].render(this);
-            }
-        };
-        Scene.prototype.addRenderer = function (renderer) {
-            this._renderers.push(renderer);
-            this._renderers.sort(function (self, other) { return self.renderOrder - other.renderOrder; });
-            renderer.onAddedToScene(this);
-            return renderer;
-        };
-        Scene.prototype.getRenderer = function (type) {
-            for (var i = 0; i < this._renderers.length; i++) {
-                if (this._renderers[i] instanceof type)
-                    return this._renderers[i];
-            }
-            return null;
-        };
-        Scene.prototype.removeRenderer = function (renderer) {
-            new es.List(this._renderers).remove(renderer);
-            renderer.unload();
         };
         /**
          * 向组件列表添加并返回SceneComponent
@@ -3352,30 +3314,6 @@ var es;
             return this;
         };
         Collider.prototype.onAddedToEntity = function () {
-            if (this._colliderRequiresAutoSizing) {
-                var renderable = null;
-                for (var i = 0; i < this.entity.components.buffer.length; i++) {
-                    var component = this.entity.components.buffer[i];
-                    if (component instanceof es.RenderableComponent) {
-                        renderable = component;
-                        break;
-                    }
-                }
-                if (renderable != null) {
-                    var renderableBounds = renderable.bounds.clone();
-                    var width = renderableBounds.width / this.entity.transform.scale.x;
-                    var height = renderableBounds.height / this.entity.transform.scale.y;
-                    if (this instanceof es.CircleCollider) {
-                        this.radius = Math.max(width, height) * 0.5;
-                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
-                    }
-                    else if (this instanceof es.BoxCollider) {
-                        this.width = width;
-                        this.height = height;
-                        this.localOffset = renderableBounds.center.sub(this.entity.transform.position);
-                    }
-                }
-            }
             this._isParentEntityAddedToScene = true;
             this.registerColliderWithPhysicsSystem();
         };
@@ -3554,12 +3492,7 @@ var es;
             if (width === void 0) { width = 1; }
             if (height === void 0) { height = 1; }
             var _this = _super.call(this) || this;
-            if (width == 1 && height == 1) {
-                _this._colliderRequiresAutoSizing = true;
-            }
-            else {
-                _this._localOffset = new es.Vector2(x + width / 2, y + height / 2);
-            }
+            _this._localOffset = new es.Vector2(x + width / 2, y + height / 2);
             _this.shape = new es.Box(width, height);
             return _this;
         }
@@ -3589,7 +3522,6 @@ var es;
          * @param height
          */
         BoxCollider.prototype.setSize = function (width, height) {
-            this._colliderRequiresAutoSizing = false;
             var box = this.shape;
             if (width != box.width || height != box.height) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
@@ -3605,7 +3537,6 @@ var es;
          * @param width
          */
         BoxCollider.prototype.setWidth = function (width) {
-            this._colliderRequiresAutoSizing = false;
             var box = this.shape;
             if (width != box.width) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
@@ -3621,7 +3552,6 @@ var es;
          * @param height
          */
         BoxCollider.prototype.setHeight = function (height) {
-            this._colliderRequiresAutoSizing = false;
             var box = this.shape;
             if (height != box.height) {
                 // 更新框，改变边界，如果我们需要更新物理系统中的边界
@@ -3630,17 +3560,6 @@ var es;
                 if (this.entity && this._isParentEntityAddedToScene)
                     es.Physics.updateCollider(this);
             }
-        };
-        BoxCollider.prototype.debugRender = function (batcher) {
-            var poly = this.shape;
-            batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new es.Color(76, 76, 76, 76), 2);
-            batcher.end();
-            batcher.drawPolygon(this.shape.position, poly.points, new es.Color(139, 0, 0, 255), true, 2);
-            batcher.end();
-            batcher.drawPixel(this.entity.position, new es.Color(255, 255, 0), 4);
-            batcher.end();
-            batcher.drawPixel(es.Vector2.add(this.transform.position, this.shape.center), new es.Color(255, 0, 0), 2);
-            batcher.end();
         };
         BoxCollider.prototype.toString = function () {
             return "[BoxCollider: bounds: " + this.bounds + "]";
@@ -3664,9 +3583,6 @@ var es;
             if (radius === void 0) { radius = 1; }
             var _this = _super.call(this) || this;
             _this.shape = new es.Circle(radius);
-            if (radius == 1) {
-                _this._colliderRequiresAutoSizing = true;
-            }
             return _this;
         }
         Object.defineProperty(CircleCollider.prototype, "radius", {
@@ -3684,7 +3600,6 @@ var es;
          * @param radius
          */
         CircleCollider.prototype.setRadius = function (radius) {
-            this._colliderRequiresAutoSizing = false;
             var circle = this.shape;
             if (radius != circle.radius) {
                 circle.radius = radius;
@@ -3694,16 +3609,6 @@ var es;
                     es.Physics.updateCollider(this);
             }
             return this;
-        };
-        CircleCollider.prototype.debugRender = function (batcher) {
-            batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new es.Color(76, 76, 76, 76), 2);
-            batcher.end();
-            batcher.drawCircle(this.shape.position, this.radius, new es.Color(139, 0, 0), 2);
-            batcher.end();
-            batcher.drawPixel(this.entity.transform.position, new es.Color(255, 255, 0), 4);
-            batcher.end();
-            batcher.drawPixel(this.shape.position, new es.Color(255, 0, 0), 2);
-            batcher.end();
         };
         CircleCollider.prototype.toString = function () {
             return "[CircleCollider: bounds: " + this.bounds + ", radius: " + this.shape.radius + "]";
@@ -3739,134 +3644,6 @@ var es;
         return PolygonCollider;
     }(es.Collider));
     es.PolygonCollider = PolygonCollider;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var RenderableComponent = /** @class */ (function (_super) {
-        __extends(RenderableComponent, _super);
-        function RenderableComponent() {
-            var _this = _super !== null && _super.apply(this, arguments) || this;
-            _this._bounds = new es.Rectangle();
-            _this._areBoundsDirty = true;
-            _this.color = es.Color.White;
-            _this._renderLayer = 0;
-            _this.debugRenderEnabled = true;
-            _this._isVisible = false;
-            _this._localOffset = new es.Vector2();
-            return _this;
-        }
-        RenderableComponent.prototype.getwidth = function () {
-            return this.bounds.width;
-        };
-        RenderableComponent.prototype.getheight = function () {
-            return this.bounds.height;
-        };
-        RenderableComponent.prototype.getbounds = function () {
-            if (this._areBoundsDirty) {
-                this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, new es.Vector2(this.getwidth() / 2, this.getheight() / 2), this.entity.transform.scale, this.entity.transform.rotation, this.getwidth(), this.getheight());
-                this._areBoundsDirty = false;
-            }
-            return this._bounds;
-        };
-        Object.defineProperty(RenderableComponent.prototype, "bounds", {
-            get: function () {
-                return this.getbounds();
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(RenderableComponent.prototype, "renderLayer", {
-            get: function () {
-                return this._renderLayer;
-            },
-            set: function (value) {
-                this.setRenderLayer(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        RenderableComponent.prototype.onEntityTransformChanged = function (comp) {
-            this._areBoundsDirty = true;
-        };
-        Object.defineProperty(RenderableComponent.prototype, "localOffset", {
-            get: function () {
-                return this._localOffset;
-            },
-            set: function (value) {
-                this.setLocalOffset(value);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        RenderableComponent.prototype.setLocalOffset = function (offset) {
-            if (!this._localOffset.equals(offset)) {
-                this._localOffset = offset;
-                this._areBoundsDirty = true;
-            }
-            return this;
-        };
-        Object.defineProperty(RenderableComponent.prototype, "isVisible", {
-            get: function () {
-                return this._isVisible;
-            },
-            set: function (value) {
-                if (this._isVisible != value) {
-                    this._isVisible = value;
-                    if (this._isVisible) {
-                        this.onBecameVisible();
-                    }
-                    else {
-                        this.onBecameInvisible();
-                    }
-                }
-            },
-            enumerable: true,
-            configurable: true
-        });
-        RenderableComponent.prototype.onBecameVisible = function () {
-        };
-        RenderableComponent.prototype.onBecameInvisible = function () {
-        };
-        RenderableComponent.prototype.setRenderLayer = function (renderLayer) {
-            if (renderLayer != this._renderLayer) {
-                var oldRenderLayer = this._renderLayer;
-                this._renderLayer = renderLayer;
-                if (this.entity != null && this.entity.scene != null)
-                    es.Core.scene.renderableComponents.updateRenderableRenderLayer(this, oldRenderLayer, this._renderLayer);
-            }
-            return this;
-        };
-        RenderableComponent.prototype.isVisibleFromCamera = function (cam) {
-            this.isVisible = cam.bounds.intersects(this.bounds);
-            return this.isVisible;
-        };
-        RenderableComponent.prototype.debugRender = function (batcher) {
-            if (!this.debugRenderEnabled)
-                return;
-            var collider = null;
-            for (var i = 0; i < this.entity.components.buffer.length; i++) {
-                var component = this.entity.components.buffer[i];
-                if (component instanceof es.Collider) {
-                    collider = component;
-                    break;
-                }
-            }
-            if (collider == null) {
-                batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new es.Color(255, 255, 0));
-                batcher.end();
-            }
-            batcher.drawPixel(es.Vector2.add(this.entity.transform.position, this._localOffset), new es.Color(153, 50, 204), 4);
-            batcher.end();
-        };
-        RenderableComponent.prototype.tweenColorTo = function (to, duration) {
-            var tween = es.Pool.obtain(es.RenderableColorTween);
-            tween.setTarget(this);
-            tween.initialize(tween, to, duration);
-            return tween;
-        };
-        return RenderableComponent;
-    }(es.Component));
-    es.RenderableComponent = RenderableComponent;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -4536,8 +4313,6 @@ var es;
                     var component = this._components[i];
                     if (!component)
                         continue;
-                    if (component instanceof es.RenderableComponent)
-                        this._entity.scene.renderableComponents.remove(component);
                     // 处理IUpdatable
                     if (es.isIUpdatable(component))
                         new es.List(this._updatableComponents).remove(component);
@@ -4550,8 +4325,6 @@ var es;
             if (this._components.length > 0) {
                 for (var i = 0, s = this._components.length; i < s; ++i) {
                     var component = this._components[i];
-                    if (component instanceof es.RenderableComponent)
-                        this._entity.scene.renderableComponents.add(component);
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
                     this.addBits(component);
@@ -4592,8 +4365,6 @@ var es;
             if (this._componentsToAddList.length > 0) {
                 for (var i = 0, l = this._componentsToAddList.length; i < l; ++i) {
                     var component = this._componentsToAddList[i];
-                    if (component instanceof es.RenderableComponent)
-                        this._entity.scene.renderableComponents.add(component);
                     if (es.isIUpdatable(component))
                         this._updatableComponents.push(component);
                     this.addBits(component);
@@ -4622,8 +4393,6 @@ var es;
             }
         };
         ComponentList.prototype.handleRemove = function (component) {
-            if (component instanceof es.RenderableComponent)
-                this._entity.scene.renderableComponents.remove(component);
             if (es.isIUpdatable(component) && this._updatableComponents.length > 0) {
                 var index = this._updatableComponents.findIndex(function (c) { return c.id == component.id; });
                 if (index != -1)
@@ -4733,15 +4502,6 @@ var es;
             if (this._components.length > 0) {
                 for (var i = 0, s = this._components.length; i < s; i++)
                     this._components[i].onDisabled();
-            }
-        };
-        ComponentList.prototype.debugRender = function (batcher) {
-            if (!batcher)
-                return;
-            for (var i = 0; i < this._components.length; i++) {
-                if (this._components[i].enabled) {
-                    this._components[i].debugRender(batcher);
-                }
             }
         };
         /**
@@ -5450,82 +5210,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var RenderableComponentList = /** @class */ (function () {
-        function RenderableComponentList() {
-            this._components = [];
-            this._componentsByRenderLayer = new Map();
-            this._unsortedRenderLayers = [];
-            this._componentsNeedSort = true;
-        }
-        Object.defineProperty(RenderableComponentList.prototype, "count", {
-            get: function () {
-                return this._components.length;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        RenderableComponentList.prototype.get = function (index) {
-            return this._components[index];
-        };
-        RenderableComponentList.prototype.add = function (component) {
-            this._components.push(component);
-            this.addToRenderLayerList(component, component.renderLayer);
-        };
-        RenderableComponentList.prototype.remove = function (component) {
-            new es.List(this._components).remove(component);
-            new es.List(this._componentsByRenderLayer.get(component.renderLayer)).remove(component);
-        };
-        RenderableComponentList.prototype.updateRenderableRenderLayer = function (component, oldRenderLayer, newRenderLayer) {
-            if (this._componentsByRenderLayer.has(oldRenderLayer) && new es.List(this._componentsByRenderLayer.get(oldRenderLayer)).contains(component)) {
-                new es.List(this._componentsByRenderLayer.get(oldRenderLayer)).remove(component);
-                this.addToRenderLayerList(component, newRenderLayer);
-            }
-        };
-        RenderableComponentList.prototype.setRenderLayerNeedsComponentSort = function (renderLayer) {
-            var unsortedRenderLayersList = new es.List(this._unsortedRenderLayers);
-            if (!unsortedRenderLayersList.contains(renderLayer))
-                unsortedRenderLayersList.add(renderLayer);
-            this._componentsNeedSort = true;
-        };
-        RenderableComponentList.prototype.setNeedsComponentSort = function () {
-            this._componentsNeedSort = true;
-        };
-        RenderableComponentList.prototype.addToRenderLayerList = function (component, renderLayer) {
-            var list = this.componentsWithRenderLayer(renderLayer);
-            es.Insist.isFalse(!!list.find(function (c) { return c == component; }), "组件renderLayer列表已包含此组件");
-            list.push(component);
-            var unsortedRenderLayersList = new es.List(this._unsortedRenderLayers);
-            if (!unsortedRenderLayersList.contains(renderLayer))
-                unsortedRenderLayersList.add(renderLayer);
-            this._componentsNeedSort = true;
-        };
-        RenderableComponentList.prototype.componentsWithRenderLayer = function (renderLayer) {
-            if (!this._componentsByRenderLayer.get(renderLayer)) {
-                this._componentsByRenderLayer.set(renderLayer, []);
-            }
-            return this._componentsByRenderLayer.get(renderLayer);
-        };
-        RenderableComponentList.prototype.updateLists = function () {
-            if (this._componentsNeedSort) {
-                this._components.sort(function (self, other) { return other.renderLayer - self.renderLayer; });
-                this._componentsNeedSort = false;
-            }
-            if (this._unsortedRenderLayers.length > 0) {
-                for (var i = 0, count = this._unsortedRenderLayers.length; i < count; i++) {
-                    var renderLayerComponents = this._componentsByRenderLayer.get(this._unsortedRenderLayers[i]);
-                    if (renderLayerComponents) {
-                        renderLayerComponents.sort(function (self, other) { return other.renderLayer - self.renderLayer; });
-                    }
-                    this._unsortedRenderLayers.length = 0;
-                }
-            }
-        };
-        return RenderableComponentList;
-    }());
-    es.RenderableComponentList = RenderableComponentList;
-})(es || (es = {}));
-var es;
-(function (es) {
     var StringUtils = /** @class */ (function () {
         function StringUtils() {
         }
@@ -6074,490 +5758,6 @@ var es;
         return WorkerUtils;
     }());
     es.WorkerUtils = WorkerUtils;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Graphics = /** @class */ (function () {
-        function Graphics(batcher) {
-            this.batcher = batcher;
-        }
-        return Graphics;
-    }());
-    es.Graphics = Graphics;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Color = /** @class */ (function () {
-        /**
-         * 从 r, g, b, a 创建一个新的 Color 实例
-         *
-         * @param r  颜色的红色分量 (0-255)
-         * @param g  颜色的绿色成分 (0-255)
-         * @param b  颜色的蓝色分量 (0-255)
-         * @param a  颜色的 alpha 分量 (0-1.0)
-         */
-        function Color(r, g, b, a) {
-            this.r = r;
-            this.g = g;
-            this.b = b;
-            this.a = a != null ? a : 1;
-        }
-        /**
-         * 从 r, g, b, a 创建一个新的 Color 实例
-         *
-         * @param r  颜色的红色分量 (0-255)
-         * @param g  颜色的绿色成分 (0-255)
-         * @param b  颜色的蓝色分量 (0-255)
-         * @param a  颜色的 alpha 分量 (0-1.0)
-         */
-        Color.fromRGB = function (r, g, b, a) {
-            return new Color(r, g, b, a);
-        };
-        /**
-         * 从十六进制字符串创建一个新的 Color 实例
-         *
-         * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的
-         */
-        Color.createFromHex = function (hex) {
-            var color = new Color(1, 1, 1);
-            color.fromHex(hex);
-            return color;
-        };
-        /**
-         * 从 hsl 值创建一个新的 Color 实例
-         *
-         * @param h  色调表示 [0-1]
-         * @param s  饱和度表示为 [0-1]
-         * @param l  亮度表示 [0-1]
-         * @param a  透明度表示 [0-1]
-         */
-        Color.fromHSL = function (h, s, l, a) {
-            if (a === void 0) { a = 1.0; }
-            var temp = new HSLColor(h, s, l, a);
-            return temp.toRGBA();
-        };
-        /**
-         * 将当前颜色调亮指定的量
-         *
-         * @param factor
-         */
-        Color.prototype.lighten = function (factor) {
-            if (factor === void 0) { factor = 0.1; }
-            var temp = HSLColor.fromRGBA(this.r, this.g, this.b, this.a);
-            temp.l += temp.l * factor;
-            return temp.toRGBA();
-        };
-        /**
-         * 将当前颜色变暗指定的量
-         *
-         * @param factor
-         */
-        Color.prototype.darken = function (factor) {
-            if (factor === void 0) { factor = 0.1; }
-            var temp = HSLColor.fromRGBA(this.r, this.g, this.b, this.a);
-            temp.l -= temp.l * factor;
-            return temp.toRGBA();
-        };
-        /**
-         * 使当前颜色饱和指定的量
-         *
-         * @param factor
-         */
-        Color.prototype.saturate = function (factor) {
-            if (factor === void 0) { factor = 0.1; }
-            var temp = HSLColor.fromRGBA(this.r, this.g, this.b, this.a);
-            temp.s += temp.s * factor;
-            return temp.toRGBA();
-        };
-        /**
-         * 按指定量降低当前颜色的饱和度
-         *
-         * @param factor
-         */
-        Color.prototype.desaturate = function (factor) {
-            if (factor === void 0) { factor = 0.1; }
-            var temp = HSLColor.fromRGBA(this.r, this.g, this.b, this.a);
-            temp.s -= temp.s * factor;
-            return temp.toRGBA();
-        };
-        /**
-         * 将一种颜色乘以另一种颜色，得到更深的颜色
-         *
-         * @param color
-         */
-        Color.prototype.mulitiply = function (color) {
-            var newR = (((color.r / 255) * this.r) / 255) * 255;
-            var newG = (((color.g / 255) * this.g) / 255) * 255;
-            var newB = (((color.b / 255) * this.b) / 255) * 255;
-            var newA = color.a * this.a;
-            return new Color(newR, newG, newB, newA);
-        };
-        /**
-         * 筛选另一种颜色，导致颜色较浅
-         *
-         * @param color
-         */
-        Color.prototype.screen = function (color) {
-            var color1 = color.invert();
-            var color2 = color.invert();
-            return color1.mulitiply(color2).invert();
-        };
-        /**
-         * 反转当前颜色
-         */
-        Color.prototype.invert = function () {
-            return new Color(255 - this.r, 255 - this.g, 255 - this.b, 1.0 - this.a);
-        };
-        /**
-         * 将当前颜色与另一个颜色平均
-         *
-         * @param color
-         */
-        Color.prototype.average = function (color) {
-            var newR = (color.r + this.r) / 2;
-            var newG = (color.g + this.g) / 2;
-            var newB = (color.b + this.b) / 2;
-            var newA = (color.a + this.a) / 2;
-            return new Color(newR, newG, newB, newA);
-        };
-        /**
-         * 返回颜色的 CSS 字符串表示形式。
-         *
-         * @param format
-         */
-        Color.prototype.toString = function (format) {
-            if (format === void 0) { format = 'rgb'; }
-            switch (format) {
-                case 'rgb':
-                    return this.toRGBA();
-                case 'hsl':
-                    return this.toHSLA();
-                case 'hex':
-                    return this.toHex();
-                default:
-                    throw new Error('Invalid Color format');
-            }
-        };
-        /**
-         * 返回颜色分量的十六进制值
-         * @param c
-         * @see https://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
-         */
-        Color.prototype._componentToHex = function (c) {
-            var hex = c.toString(16);
-            return hex.length === 1 ? '0' + hex : hex;
-        };
-        /**
-         *返回颜色的十六进制表示
-         */
-        Color.prototype.toHex = function () {
-            return ('#' +
-                this._componentToHex(this.r) +
-                this._componentToHex(this.g) +
-                this._componentToHex(this.b) +
-                this._componentToHex(this.a));
-        };
-        /**
-         * 从十六进制字符串设置颜色
-         *
-         * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的
-         */
-        Color.prototype.fromHex = function (hex) {
-            var hexRegEx = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})?$/i;
-            var match = hex.match(hexRegEx);
-            if (match) {
-                var r = parseInt(match[1], 16);
-                var g = parseInt(match[2], 16);
-                var b = parseInt(match[3], 16);
-                var a = 1;
-                if (match[4]) {
-                    a = parseInt(match[4], 16) / 255;
-                }
-                this.r = r;
-                this.g = g;
-                this.b = b;
-                this.a = a;
-            }
-            else {
-                throw new Error('Invalid hex string: ' + hex);
-            }
-        };
-        /**
-         * 返回颜色的 RGBA 表示
-         */
-        Color.prototype.toRGBA = function () {
-            var result = String(this.r.toFixed(0)) +
-                ', ' +
-                String(this.g.toFixed(0)) +
-                ', ' +
-                String(this.b.toFixed(0));
-            if (this.a !== undefined || this.a != null) {
-                return 'rgba(' + result + ', ' + String(this.a) + ')';
-            }
-            return 'rgb(' + result + ')';
-        };
-        /**
-         * 返回颜色的 HSLA 表示
-         */
-        Color.prototype.toHSLA = function () {
-            return HSLColor.fromRGBA(this.r, this.g, this.b, this.a).toString();
-        };
-        /**
-         * 返回颜色的 CSS 字符串表示形式
-         */
-        Color.prototype.fillStyle = function () {
-            return this.toString();
-        };
-        /**
-         * 返回当前颜色的克隆
-         */
-        Color.prototype.clone = function () {
-            return new Color(this.r, this.g, this.b, this.a);
-        };
-        /**
-         * Black (#000000)
-         */
-        Color.Black = Color.createFromHex('#000000');
-        /**
-         * White (#FFFFFF)
-         */
-        Color.White = Color.createFromHex('#FFFFFF');
-        /**
-         * Gray (#808080)
-         */
-        Color.Gray = Color.createFromHex('#808080');
-        /**
-         * Light gray (#D3D3D3)
-         */
-        Color.LightGray = Color.createFromHex('#D3D3D3');
-        /**
-         * Dark gray (#A9A9A9)
-         */
-        Color.DarkGray = Color.createFromHex('#A9A9A9');
-        /**
-         * Yellow (#FFFF00)
-         */
-        Color.Yellow = Color.createFromHex('#FFFF00');
-        /**
-         * Orange (#FFA500)
-         */
-        Color.Orange = Color.createFromHex('#FFA500');
-        /**
-         * Red (#FF0000)
-         */
-        Color.Red = Color.createFromHex('#FF0000');
-        /**
-         * Vermillion (#FF5B31)
-         */
-        Color.Vermillion = Color.createFromHex('#FF5B31');
-        /**
-         * Rose (#FF007F)
-         */
-        Color.Rose = Color.createFromHex('#FF007F');
-        /**
-         * Magenta (#FF00FF)
-         */
-        Color.Magenta = Color.createFromHex('#FF00FF');
-        /**
-         * Violet (#7F00FF)
-         */
-        Color.Violet = Color.createFromHex('#7F00FF');
-        /**
-         * Blue (#0000FF)
-         */
-        Color.Blue = Color.createFromHex('#0000FF');
-        /**
-         * Azure (#007FFF)
-         */
-        Color.Azure = Color.createFromHex('#007FFF');
-        /**
-         * Cyan (#00FFFF)
-         */
-        Color.Cyan = Color.createFromHex('#00FFFF');
-        /**
-         * Viridian (#59978F)
-         */
-        Color.Viridian = Color.createFromHex('#59978F');
-        /**
-         * Green (#00FF00)
-         */
-        Color.Green = Color.createFromHex('#00FF00');
-        /**
-         * Chartreuse (#7FFF00)
-         */
-        Color.Chartreuse = Color.createFromHex('#7FFF00');
-        /**
-         * Transparent (#FFFFFF00)
-         */
-        Color.Transparent = Color.createFromHex('#FFFFFF00');
-        return Color;
-    }());
-    es.Color = Color;
-    /**
-     * 内部 HSL 颜色表示
-     *
-     * http://en.wikipedia.org/wiki/HSL_and_HSV
-     * http://axonflux.com/handy-rgb-to-hsl-and-rgb-to-hsv-color-model-c
-     */
-    var HSLColor = /** @class */ (function () {
-        function HSLColor(h, s, l, a) {
-            this.h = h;
-            this.s = s;
-            this.l = l;
-            this.a = a;
-        }
-        HSLColor.hue2rgb = function (p, q, t) {
-            if (t < 0) {
-                t += 1;
-            }
-            if (t > 1) {
-                t -= 1;
-            }
-            if (t < 1 / 6) {
-                return p + (q - p) * 6 * t;
-            }
-            if (t < 1 / 2) {
-                return q;
-            }
-            if (t < 2 / 3) {
-                return p + (q - p) * (2 / 3 - t) * 6;
-            }
-            return p;
-        };
-        HSLColor.fromRGBA = function (r, g, b, a) {
-            r /= 255;
-            g /= 255;
-            b /= 255;
-            var max = Math.max(r, g, b);
-            var min = Math.min(r, g, b);
-            var h = (max + min) / 2;
-            var s = h;
-            var l = h;
-            if (max === min) {
-                h = s = 0; // achromatic
-            }
-            else {
-                var d = max - min;
-                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                switch (max) {
-                    case r:
-                        h = (g - b) / d + (g < b ? 6 : 0);
-                        break;
-                    case g:
-                        h = (b - r) / d + 2;
-                        break;
-                    case b:
-                        h = (r - g) / d + 4;
-                        break;
-                }
-                h /= 6;
-            }
-            return new HSLColor(h, s, l, a);
-        };
-        HSLColor.prototype.toRGBA = function () {
-            var r;
-            var g;
-            var b;
-            if (this.s === 0) {
-                r = g = b = this.l; // achromatic
-            }
-            else {
-                var q = this.l < 0.5
-                    ? this.l * (1 + this.s)
-                    : this.l + this.s - this.l * this.s;
-                var p = 2 * this.l - q;
-                r = HSLColor.hue2rgb(p, q, this.h + 1 / 3);
-                g = HSLColor.hue2rgb(p, q, this.h);
-                b = HSLColor.hue2rgb(p, q, this.h - 1 / 3);
-            }
-            return new Color(r * 255, g * 255, b * 255, this.a);
-        };
-        HSLColor.prototype.toString = function () {
-            var h = this.h.toFixed(0);
-            var s = this.s.toFixed(0);
-            var l = this.l.toFixed(0);
-            var a = this.a.toFixed(0);
-            return "hsla(" + h + ", " + s + ", " + l + ", " + a + ")";
-        };
-        return HSLColor;
-    }());
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Renderer = /** @class */ (function () {
-        function Renderer(renderOrder, camera) {
-            this.renderOrder = 0;
-            this.shouldDebugRender = true;
-            this.renderDirty = true;
-            this.renderOrder = renderOrder;
-            this.camera = camera;
-            es.Core.emitter.addObserver(es.CoreEvents.renderChanged, this.onRenderChanged, this);
-        }
-        Renderer.prototype.onAddedToScene = function (scene) { };
-        Renderer.prototype.unload = function () { };
-        Renderer.prototype.beginRender = function (cam) {
-            if (!es.Graphics.instance)
-                return;
-            es.Graphics.instance.batcher.begin(cam);
-        };
-        Renderer.prototype.endRender = function () {
-            if (!es.Graphics.instance)
-                return;
-            es.Graphics.instance.batcher.end();
-        };
-        Renderer.prototype.onRenderChanged = function () {
-            this.renderDirty = true;
-        };
-        Renderer.prototype.renderAfterStateCheck = function (renderable, cam) {
-            if (!es.Graphics.instance)
-                return;
-            renderable.render(es.Graphics.instance.batcher, cam);
-        };
-        Renderer.prototype.debugRender = function (scene) {
-            if (!es.Graphics.instance)
-                return;
-            es.Physics.debugDraw(2);
-            for (var i = 0; i < scene.entities.count; i++) {
-                var entity = scene.entities.buffer[i];
-                if (entity.enabled) {
-                    entity.debugRender(es.Graphics.instance.batcher);
-                }
-            }
-        };
-        return Renderer;
-    }());
-    es.Renderer = Renderer;
-})(es || (es = {}));
-///<reference path="Renderer.ts" />
-var es;
-///<reference path="Renderer.ts" />
-(function (es) {
-    var DefaultRenderer = /** @class */ (function (_super) {
-        __extends(DefaultRenderer, _super);
-        function DefaultRenderer(renderOrder, camera) {
-            if (renderOrder === void 0) { renderOrder = 0; }
-            if (camera === void 0) { camera = null; }
-            return _super.call(this, renderOrder, camera) || this;
-        }
-        DefaultRenderer.prototype.render = function (scene) {
-            if (!this.renderDirty)
-                return;
-            this.renderDirty = false;
-            var cam = this.camera ? this.camera : scene.camera;
-            this.beginRender(cam);
-            for (var i = 0; i < scene.renderableComponents.count; i++) {
-                var renderable = scene.renderableComponents.get(i);
-                if (renderable.enabled && renderable.isVisibleFromCamera(scene.camera))
-                    this.renderAfterStateCheck(renderable, cam);
-            }
-            if (this.shouldDebugRender && es.Core.debugRenderEndabled) {
-                this.debugRender(scene);
-            }
-            this.endRender();
-        };
-        return DefaultRenderer;
-    }(es.Renderer));
-    es.DefaultRenderer = DefaultRenderer;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -8944,10 +8144,6 @@ var es;
         Physics.clear = function () {
             this._spatialHash.clear();
         };
-        Physics.debugDraw = function (secondsToDisplay) {
-            if (this.debugRender)
-                this._spatialHash.debugDraw(secondsToDisplay);
-        };
         /**
          * 检查是否有对撞机落在一个圆形区域内。返回遇到的第一个对撞机
          * @param center
@@ -9232,20 +8428,6 @@ var es;
         };
         SpatialHash.prototype.clear = function () {
             this._cellDict.clear();
-        };
-        SpatialHash.prototype.debugDraw = function (secondsToDisplay) {
-            for (var x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
-                for (var y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
-                    var cell = this.cellAtPosition(x, y);
-                    if (cell != null && cell.length > 0)
-                        this.debugDrawCellDetails(x, y, secondsToDisplay);
-                }
-            }
-        };
-        SpatialHash.prototype.debugDrawCellDetails = function (x, y, secondsToDisplay) {
-            if (secondsToDisplay === void 0) { secondsToDisplay = 0.5; }
-            es.Graphics.instance.batcher.drawHollowRect(x * this._cellSize, y * this._cellSize, this._cellSize, this._cellSize, new es.Color(255, 0, 0), secondsToDisplay);
-            es.Graphics.instance.batcher.end();
         };
         /**
          * 返回边框与单元格相交的所有对象
@@ -10563,600 +9745,6 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    var Particle = /** @class */ (function () {
-        function Particle(position) {
-            this.position = es.Vector2.zero;
-            this.lastPosition = es.Vector2.zero;
-            this.mass = 1;
-            this.radius = 0;
-            this.collidesWithColliders = true;
-            this.isPinned = false;
-            this.acceleration = es.Vector2.zero;
-            this.pinnedPosition = es.Vector2.zero;
-            this.position = new es.Vector2(position.x, position.y);
-            this.lastPosition = new es.Vector2(position.x, position.y);
-        }
-        Particle.prototype.applyForce = function (force) {
-            this.acceleration = this.acceleration.add(force.divideScaler(this.mass));
-        };
-        Particle.prototype.pin = function () {
-            this.isPinned = true;
-            this.pinnedPosition = this.position;
-            return this;
-        };
-        Particle.prototype.pinTo = function (position) {
-            this.isPinned = true;
-            this.pinnedPosition = position;
-            this.position = this.pinnedPosition;
-            return this;
-        };
-        Particle.prototype.unpin = function () {
-            this.isPinned = false;
-            return this;
-        };
-        return Particle;
-    }());
-    es.Particle = Particle;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var VerletWorld = /** @class */ (function () {
-        function VerletWorld(simulationBounds) {
-            if (simulationBounds === void 0) { simulationBounds = null; }
-            this.gravity = new es.Vector2(0, -980);
-            this.constraintIterations = 3;
-            this.maximumStepIterations = 5;
-            this.allowDragging = true;
-            this.selectionRadiusSquared = 20 * 20;
-            this._composites = [];
-            this._tempCircle = new es.Circle(1);
-            this._leftOverTime = 0;
-            this._fixedDeltaTime = 1 / 60;
-            this._iterationSteps = 0;
-            this._fixedDeltaTimeSq = 0;
-            this.simulationBounds = simulationBounds;
-            this._fixedDeltaTimeSq = Math.pow(this._fixedDeltaTime, 2);
-        }
-        VerletWorld.prototype.update = function () {
-            this.updateTiming();
-            if (this.allowDragging)
-                this.handleDragging();
-            for (var iteration = 1; iteration <= this._iterationSteps; iteration++) {
-                for (var i = this._composites.length - 1; i >= 0; i--) {
-                    var composite = this._composites[i];
-                    for (var s = 0; s < this.constraintIterations; s++)
-                        composite.solveConstraints();
-                    composite.updateParticles(this._fixedDeltaTimeSq, this.gravity);
-                    composite.handleConstraintCollisions();
-                    for (var j = 0; j < composite.particles.length; j++) {
-                        var p = composite.particles[j];
-                        if (this.simulationBounds) {
-                            this.constrainParticleToBounds(p);
-                        }
-                        if (p.collidesWithColliders)
-                            this.handleCollisions(p, composite.collidesWithLayers);
-                    }
-                }
-            }
-        };
-        VerletWorld.prototype.constrainParticleToBounds = function (p) {
-            var tempPos = p.position;
-            var bounds = this.simulationBounds;
-            if (p.radius == 0) {
-                if (tempPos.y > bounds.height)
-                    tempPos.y = bounds.height;
-                else if (tempPos.y < bounds.y)
-                    tempPos.y = bounds.y;
-                if (tempPos.x < bounds.x)
-                    tempPos.x = bounds.x;
-                else if (tempPos.x > bounds.width)
-                    tempPos.x = bounds.width;
-            }
-            else {
-                if (tempPos.y < bounds.y + p.radius)
-                    tempPos.y = 2 * (bounds.y + p.radius) - tempPos.y;
-                if (tempPos.y > bounds.height - p.radius)
-                    tempPos.y = 2 * (bounds.height - p.radius) - tempPos.y;
-                if (tempPos.x > bounds.width - p.radius)
-                    tempPos.x = 2 * (bounds.width - p.radius) - tempPos.x;
-                if (tempPos.x < bounds.x + p.radius)
-                    tempPos.x = 2 * (bounds.x + p.radius) - tempPos.x;
-            }
-            p.position = tempPos;
-        };
-        VerletWorld.prototype.handleCollisions = function (p, collidesWithLayers) {
-            var collidedCount = es.Physics.overlapCircleAll(p.position, p.radius, VerletWorld._colliders, collidesWithLayers);
-            for (var i = 0; i < collidedCount; i++) {
-                var collider = VerletWorld._colliders[i];
-                if (collider.isTrigger)
-                    continue;
-                var collisionResult = new es.CollisionResult();
-                if (p.radius < 2) {
-                    if (collider.shape.pointCollidesWithShape(p.position, collisionResult)) {
-                        p.position = p.position.sub(collisionResult.minimumTranslationVector);
-                    }
-                }
-                else {
-                    this._tempCircle.radius = p.radius;
-                    this._tempCircle.position = p.position;
-                    if (this._tempCircle.collidesWithShape(collider.shape, collisionResult)) {
-                        p.position = p.position.sub(collisionResult.minimumTranslationVector);
-                    }
-                }
-            }
-        };
-        VerletWorld.prototype.updateTiming = function () {
-            this._leftOverTime += es.Time.deltaTime;
-            this._iterationSteps = Math.trunc(this._leftOverTime / this._fixedDeltaTime);
-            this._leftOverTime -= this._iterationSteps * this._fixedDeltaTime;
-            this._iterationSteps = Math.min(this._iterationSteps, this.maximumStepIterations);
-        };
-        VerletWorld.prototype.addComposite = function (composite) {
-            this._composites.push(composite);
-            return composite;
-        };
-        VerletWorld.prototype.removeComposite = function (composite) {
-            var index = this._composites.indexOf(composite);
-            this._composites.splice(index, 1);
-        };
-        VerletWorld.prototype.handleDragging = function () {
-            if (this.onHandleDrag)
-                this.onHandleDrag();
-        };
-        VerletWorld.prototype.getNearestParticle = function (position) {
-            var nearestSquaredDistance = this.selectionRadiusSquared;
-            var particle = null;
-            for (var j = 0; j < this._composites.length; j++) {
-                var particles = this._composites[j].particles;
-                for (var i = 0; i < particles.length; i++) {
-                    var p = particles[i];
-                    var squaredDistanceToParticle = es.Vector2.sqrDistance(p.position, position);
-                    if (squaredDistanceToParticle <= this.selectionRadiusSquared &&
-                        (particle == null || squaredDistanceToParticle < nearestSquaredDistance)) {
-                        particle = p;
-                        nearestSquaredDistance = squaredDistanceToParticle;
-                    }
-                }
-            }
-            return particle;
-        };
-        VerletWorld.prototype.debugRender = function (batcher) {
-            for (var i = 0; i < this._composites.length; i++) {
-                this._composites[i].debugRender(batcher);
-            }
-            if (this.allowDragging) {
-                if (this._draggedParticle != null) {
-                    batcher.drawCircle(this._draggedParticle.position, 8, es.Color.White);
-                }
-            }
-        };
-        VerletWorld._colliders = [];
-        return VerletWorld;
-    }());
-    es.VerletWorld = VerletWorld;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Composite = /** @class */ (function () {
-        function Composite() {
-            this.friction = new es.Vector2(0.98, 1);
-            this.drawParticles = true;
-            this.drawConstraints = true;
-            this.collidesWithLayers = es.Physics.allLayers;
-            this.particles = [];
-            this._constraints = [];
-        }
-        Composite.prototype.addParticle = function (particle) {
-            this.particles.push(particle);
-            return particle;
-        };
-        Composite.prototype.removeParticle = function (particle) {
-            var index = this.particles.indexOf(particle);
-            this.particles.splice(index, 1);
-        };
-        Composite.prototype.removeAll = function () {
-            this.particles.length = 0;
-            this._constraints.length = 0;
-        };
-        Composite.prototype.addConstraint = function (constraint) {
-            this._constraints.push(constraint);
-            constraint.composite = this;
-            return constraint;
-        };
-        Composite.prototype.removeConstraint = function (constraint) {
-            var index = this._constraints.indexOf(constraint);
-            this._constraints.splice(index, 1);
-        };
-        Composite.prototype.applyForce = function (force) {
-            for (var j = 0; j < this.particles.length; j++)
-                this.particles[j].applyForce(force);
-        };
-        Composite.prototype.solveConstraints = function () {
-            for (var i = this._constraints.length - 1; i >= 0; i--)
-                this._constraints[i].solve();
-        };
-        Composite.prototype.updateParticles = function (deltaTimeSquared, gravity) {
-            for (var j = 0; j < this.particles.length; j++) {
-                var p = this.particles[j];
-                if (p.isPinned) {
-                    p.position = p.pinnedPosition;
-                    continue;
-                }
-                p.applyForce(gravity.scale(p.mass));
-                var vel = p.position.sub(p.lastPosition).multiply(this.friction);
-                var nextPos = p.position.add(vel).add(p.acceleration.scale(0.5 * deltaTimeSquared));
-                p.lastPosition = p.position;
-                p.position = nextPos;
-                p.acceleration.x = p.acceleration.y = 0;
-            }
-        };
-        Composite.prototype.handleConstraintCollisions = function () {
-            for (var i = this._constraints.length - 1; i >= 0; i--) {
-                if (this._constraints[i].collidesWithColliders)
-                    this._constraints[i].handleCollisions(this.collidesWithLayers);
-            }
-        };
-        Composite.prototype.debugRender = function (batcher) {
-            if (this.drawConstraints) {
-                for (var i = 0; i < this._constraints.length; i++)
-                    this._constraints[i].debugRender(batcher);
-            }
-            if (this.drawParticles) {
-                for (var i = 0; i < this.particles.length; i++) {
-                    if (this.particles[i].radius == 0)
-                        batcher.drawPixel(this.particles[i].position, new es.Color(220, 52, 94), 4);
-                    else
-                        batcher.drawCircleLow(this.particles[i].position, this.particles[i].radius, new es.Color(220, 52, 94), 1, 4);
-                }
-            }
-        };
-        return Composite;
-    }());
-    es.Composite = Composite;
-})(es || (es = {}));
-///<reference path="./Composite.ts" />
-var es;
-///<reference path="./Composite.ts" />
-(function (es) {
-    var Ball = /** @class */ (function (_super) {
-        __extends(Ball, _super);
-        function Ball(position, radius) {
-            if (radius === void 0) { radius = 10; }
-            var _this = _super.call(this) || this;
-            _this.addParticle(new es.Particle(position)).radius = radius;
-            return _this;
-        }
-        return Ball;
-    }(es.Composite));
-    es.Ball = Ball;
-})(es || (es = {}));
-///<reference path="./Composite.ts" />
-var es;
-///<reference path="./Composite.ts" />
-(function (es) {
-    var VerletBox = /** @class */ (function (_super) {
-        __extends(VerletBox, _super);
-        function VerletBox(center, width, height, borderStiffness, diagonalStiffness) {
-            if (borderStiffness === void 0) { borderStiffness = 0.2; }
-            if (diagonalStiffness === void 0) { diagonalStiffness = 0.5; }
-            var _this = _super.call(this) || this;
-            var tl = _this.addParticle(new es.Particle(center.add(new es.Vector2(-width / 2, -height / 2))));
-            var tr = _this.addParticle(new es.Particle(center.add(new es.Vector2(width / 2, -height / 2))));
-            var br = _this.addParticle(new es.Particle(center.add(new es.Vector2(width / 2, height / 2))));
-            var bl = _this.addParticle(new es.Particle(center.add(new es.Vector2(-width / 2, height / 2))));
-            _this.addConstraint(new es.DistanceConstraint(tl, tr, borderStiffness));
-            _this.addConstraint(new es.DistanceConstraint(tr, br, borderStiffness));
-            _this.addConstraint(new es.DistanceConstraint(br, bl, borderStiffness));
-            _this.addConstraint(new es.DistanceConstraint(bl, tl, borderStiffness));
-            _this.addConstraint(new es.DistanceConstraint(tl, br, diagonalStiffness))
-                .setCollidesWithColliders(false);
-            _this.addConstraint(new es.DistanceConstraint(bl, tr, diagonalStiffness))
-                .setCollidesWithColliders(false);
-            return _this;
-        }
-        return VerletBox;
-    }(es.Composite));
-    es.VerletBox = VerletBox;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Cloth = /** @class */ (function (_super) {
-        __extends(Cloth, _super);
-        function Cloth(topLeftPosition, width, height, segments, stiffness, tearSensitivity, connectHorizontalParticles) {
-            if (segments === void 0) { segments = 20; }
-            if (stiffness === void 0) { stiffness = 0.25; }
-            if (tearSensitivity === void 0) { tearSensitivity = 5; }
-            if (connectHorizontalParticles === void 0) { connectHorizontalParticles = true; }
-            var _this = _super.call(this) || this;
-            var xStride = width / segments;
-            var yStride = height / segments;
-            for (var y = 0; y < segments; y++) {
-                for (var x = 0; x < segments; x++) {
-                    var px = topLeftPosition.x + x * xStride;
-                    var py = topLeftPosition.y + y + yStride;
-                    var particle = _this.addParticle(new es.Particle(new es.Vector2(px, py)));
-                    if (connectHorizontalParticles && x > 0)
-                        _this.addConstraint(new es.DistanceConstraint(_this.particles[y * segments + x], _this.particles[y * segments + x - 1], stiffness))
-                            .setTearSensitivity(tearSensitivity)
-                            .setCollidesWithColliders(false);
-                    if (y > 0)
-                        _this.addConstraint(new es.DistanceConstraint(_this.particles[y * segments + x], _this.particles[(y - 1) * segments + x], stiffness))
-                            .setTearSensitivity(tearSensitivity)
-                            .setCollidesWithColliders(false);
-                    if (y == 0)
-                        particle.pin();
-                }
-            }
-            return _this;
-        }
-        return Cloth;
-    }(es.Composite));
-    es.Cloth = Cloth;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var LineSegments = /** @class */ (function (_super) {
-        __extends(LineSegments, _super);
-        function LineSegments(vertices, stiffness) {
-            var _this = _super.call(this) || this;
-            for (var i = 0; i < vertices.length; i++) {
-                var p = new es.Particle(vertices[i]);
-                _this.addParticle(p);
-                if (i > 0)
-                    _this.addConstraint(new es.DistanceConstraint(_this.particles[i], _this.particles[i - 1], stiffness));
-            }
-            return _this;
-        }
-        LineSegments.prototype.pinParticleAtIndex = function (index) {
-            this.particles[index].pin();
-            return this;
-        };
-        return LineSegments;
-    }(es.Composite));
-    es.LineSegments = LineSegments;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Ragdoll = /** @class */ (function (_super) {
-        __extends(Ragdoll, _super);
-        function Ragdoll(x, y, bodyHeight) {
-            var _this = _super.call(this) || this;
-            var headLength = bodyHeight / 7.5;
-            var head = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
-            head.radius = headLength * 0.75;
-            head.mass = 4;
-            var shoulder = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
-            shoulder.mass = 26;
-            _this.addConstraint(new es.DistanceConstraint(head, shoulder, 1, 5 / 4 * headLength));
-            var elbowLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
-            var elbowRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
-            elbowLeft.mass = 2;
-            elbowRight.mass = 2;
-            _this.addConstraint(new es.DistanceConstraint(elbowLeft, shoulder, 1, headLength * 3 / 2));
-            _this.addConstraint(new es.DistanceConstraint(elbowRight, shoulder, 1, headLength * 3 / 2));
-            var handLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
-            var handRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
-            handLeft.mass = 2;
-            handRight.mass = 2;
-            _this.addConstraint(new es.DistanceConstraint(handLeft, elbowLeft, 1, headLength * 2));
-            _this.addConstraint(new es.DistanceConstraint(handRight, elbowRight, 1, headLength * 2));
-            var pelvis = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
-            pelvis.mass = 15;
-            _this.addConstraint(new es.DistanceConstraint(pelvis, shoulder, 0.8, headLength * 3.5));
-            _this.addConstraint(new es.DistanceConstraint(pelvis, head, 0.02, bodyHeight * 2))
-                .setCollidesWithColliders(false);
-            var kneeLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
-            var kneeRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
-            kneeLeft.mass = 10;
-            kneeRight.mass = 10;
-            _this.addConstraint(new es.DistanceConstraint(kneeLeft, pelvis, 1, headLength * 2));
-            _this.addConstraint(new es.DistanceConstraint(kneeRight, pelvis, 1, headLength * 2));
-            var footLeft = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
-            var footRight = _this.addParticle(new es.Particle({ x: x + es.RandomUtils.randint(-5, 5), y: y + es.RandomUtils.randint(-5, 5) }));
-            footLeft.mass = 5;
-            footRight.mass = 5;
-            _this.addConstraint(new es.DistanceConstraint(footLeft, kneeLeft, 1, headLength * 2));
-            _this.addConstraint(new es.DistanceConstraint(footRight, kneeRight, 1, headLength * 2));
-            _this.addConstraint(new es.DistanceConstraint(footLeft, shoulder, 0.001, bodyHeight * 2))
-                .setCollidesWithColliders(false);
-            _this.addConstraint(new es.DistanceConstraint(footLeft, shoulder, 0.001, bodyHeight * 2))
-                .setCollidesWithColliders(false);
-            return _this;
-        }
-        return Ragdoll;
-    }(es.Composite));
-    es.Ragdoll = Ragdoll;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Tire = /** @class */ (function (_super) {
-        __extends(Tire, _super);
-        function Tire(origin, radius, segments, spokeStiffness, treadStiffness) {
-            if (spokeStiffness === void 0) { spokeStiffness = 1; }
-            if (treadStiffness === void 0) { treadStiffness = 1; }
-            var _this = _super.call(this) || this;
-            var stride = 2 * Math.PI / segments;
-            for (var i = 0; i < segments; i++) {
-                var theta = i * stride;
-                _this.addParticle(new es.Particle(new es.Vector2(origin.x + Math.cos(theta) * radius, origin.y + Math.sin(theta) * radius)));
-            }
-            var centerParticle = _this.addParticle(new es.Particle(origin));
-            for (var i = 0; i < segments; i++) {
-                _this.addConstraint(new es.DistanceConstraint(_this.particles[i], _this.particles[(i + 1) % segments], treadStiffness));
-                _this.addConstraint(new es.DistanceConstraint(_this.particles[i], centerParticle, spokeStiffness))
-                    .setCollidesWithColliders(false);
-                _this.addConstraint(new es.DistanceConstraint(_this.particles[i], _this.particles[(i + 5) % segments], treadStiffness));
-            }
-            return _this;
-        }
-        return Tire;
-    }(es.Composite));
-    es.Tire = Tire;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var Constraint = /** @class */ (function () {
-        function Constraint() {
-            this.collidesWithColliders = true;
-        }
-        Constraint.prototype.handleCollisions = function (collidesWithLayers) {
-        };
-        Constraint.prototype.debugRender = function (batcher) {
-        };
-        return Constraint;
-    }());
-    es.Constraint = Constraint;
-})(es || (es = {}));
-///<reference path="./Constraint.ts" />
-var es;
-///<reference path="./Constraint.ts" />
-(function (es) {
-    var AngleConstraint = /** @class */ (function (_super) {
-        __extends(AngleConstraint, _super);
-        function AngleConstraint(a, center, c, stiffness) {
-            var _this = _super.call(this) || this;
-            _this.stiffness = 0;
-            _this.angleInRadius = 0;
-            _this._particleA = a;
-            _this._centerParticle = center;
-            _this._particleC = c;
-            _this.stiffness = stiffness;
-            _this.collidesWithColliders = false;
-            _this.angleInRadius = _this.angleBetweenParticles();
-            return _this;
-        }
-        AngleConstraint.prototype.angleBetweenParticles = function () {
-            var first = this._particleA.position.sub(this._centerParticle.position);
-            var second = this._particleC.position.sub(this._centerParticle.position);
-            return Math.atan2(first.x * second.y - first.y * second.x, first.x * second.x + first.y * second.y);
-        };
-        AngleConstraint.prototype.solve = function () {
-            var angleBetween = this.angleBetweenParticles();
-            var diff = angleBetween - this.angleInRadius;
-            if (diff <= -Math.PI)
-                diff += 2 * Math.PI;
-            else if (diff >= Math.PI)
-                diff -= 2 * Math.PI;
-            diff *= this.stiffness;
-            this._particleA.position = es.MathHelper.rotateAround2(this._particleA.position, this._centerParticle.position, diff);
-            this._particleC.position = es.MathHelper.rotateAround2(this._particleC.position, this._centerParticle.position, -diff);
-            this._centerParticle.position = es.MathHelper.rotateAround2(this._centerParticle.position, this._particleA.position, diff);
-            this._centerParticle.position = es.MathHelper.rotateAround2(this._centerParticle.position, this._particleC.position, -diff);
-        };
-        return AngleConstraint;
-    }(es.Constraint));
-    es.AngleConstraint = AngleConstraint;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var DistanceConstraint = /** @class */ (function (_super) {
-        __extends(DistanceConstraint, _super);
-        function DistanceConstraint(first, second, stiffness, distance) {
-            if (distance === void 0) { distance = -1; }
-            var _this = _super.call(this) || this;
-            _this.stiffness = 0;
-            _this.restingDistance = 0;
-            _this.tearSensitivity = Number.POSITIVE_INFINITY;
-            _this.shouldApproximateCollisionsWithPoints = false;
-            _this.totalPointsToApproximateCollisionsWith = 5;
-            DistanceConstraint._polygon.create(2, 1);
-            _this._particleOne = first;
-            _this._particleTwo = second;
-            _this.stiffness = stiffness;
-            if (distance > -1)
-                _this.restingDistance = distance;
-            else
-                _this.restingDistance = first.position.distance(second.position);
-            return _this;
-        }
-        DistanceConstraint.create = function (a, center, c, stiffness, angleInDegrees) {
-            var aToCenter = a.position.distance(center.position);
-            var cToCenter = c.position.distance(center.position);
-            var distance = Math.sqrt(aToCenter * aToCenter + cToCenter * cToCenter - (2 * aToCenter * cToCenter * Math.cos(angleInDegrees * es.MathHelper.Deg2Rad)));
-            return new DistanceConstraint(a, c, stiffness, distance);
-        };
-        DistanceConstraint.prototype.setTearSensitivity = function (tearSensitivity) {
-            this.tearSensitivity = tearSensitivity;
-            return this;
-        };
-        DistanceConstraint.prototype.setCollidesWithColliders = function (collidesWithColliders) {
-            this.collidesWithColliders = collidesWithColliders;
-            return this;
-        };
-        DistanceConstraint.prototype.setShouldApproximateCollisionsWithPoints = function (shouldApproximateCollisionsWithPoints) {
-            this.shouldApproximateCollisionsWithPoints = shouldApproximateCollisionsWithPoints;
-            return this;
-        };
-        DistanceConstraint.prototype.solve = function () {
-            var diff = this._particleOne.position.sub(this._particleTwo.position);
-            var d = diff.distance();
-            var difference = (this.restingDistance - d) / d;
-            if (d / this.restingDistance > this.tearSensitivity) {
-                this.composite.removeConstraint(this);
-                return;
-            }
-            var im1 = 1 / this._particleOne.mass;
-            var im2 = 1 / this._particleTwo.mass;
-            var scalarP1 = (im1 / (im1 + im2)) * this.stiffness;
-            var scalarP2 = this.stiffness - scalarP1;
-            this._particleOne.position = this._particleOne.position.add(diff.scale(scalarP1 * difference));
-            this._particleTwo.position = this._particleTwo.position.sub(diff.scale(scalarP2 * difference));
-        };
-        DistanceConstraint.prototype.handleCollisions = function (collidesWithLayers) {
-            if (this.shouldApproximateCollisionsWithPoints) {
-                this.approximateCollisionsWithPoints(collidesWithLayers);
-                return;
-            }
-            var minX = Math.min(this._particleOne.position.x, this._particleTwo.position.x);
-            var maxX = Math.max(this._particleOne.position.x, this._particleTwo.position.x);
-            var minY = Math.min(this._particleOne.position.y, this._particleTwo.position.y);
-            var maxY = Math.max(this._particleOne.position.y, this._particleTwo.position.y);
-            DistanceConstraint._polygon.bounds = es.Rectangle.fromMinMax(minX, minY, maxX, maxY);
-            var midPoint = es.Vector2.zero;
-            this.preparePolygonForCollisionChecks(midPoint);
-            var colliders = es.Physics.boxcastBroadphase(DistanceConstraint._polygon.bounds, collidesWithLayers);
-            for (var i = 0; i < colliders.length; i++) {
-                var collider = colliders[i];
-                var result = new es.CollisionResult();
-                if (DistanceConstraint._polygon.collidesWithShape(collider.shape, result)) {
-                    this._particleOne.position = this._particleOne.position.sub(result.minimumTranslationVector);
-                    this._particleTwo.position = this._particleTwo.position.sub(result.minimumTranslationVector);
-                }
-            }
-        };
-        DistanceConstraint.prototype.approximateCollisionsWithPoints = function (collidesWithLayers) {
-            var pt;
-            for (var j = 0; j < this.totalPointsToApproximateCollisionsWith - 1; j++) {
-                pt = es.Vector2.lerp(this._particleOne.position, this._particleTwo.position, (j + 1) / this.totalPointsToApproximateCollisionsWith);
-                var collidedCount = es.Physics.overlapCircleAll(pt, 3, es.VerletWorld._colliders, collidesWithLayers);
-                for (var i = 0; i < collidedCount; i++) {
-                    var collider = es.VerletWorld._colliders[i];
-                    var collisionResult = new es.CollisionResult();
-                    if (collider.shape.pointCollidesWithShape(pt, collisionResult)) {
-                        this._particleOne.position = this._particleOne.position.sub(collisionResult.minimumTranslationVector);
-                        this._particleTwo.position = this._particleTwo.position.sub(collisionResult.minimumTranslationVector);
-                    }
-                }
-            }
-        };
-        DistanceConstraint.prototype.preparePolygonForCollisionChecks = function (midPoint) {
-            var tempMidPoint = es.Vector2.lerp(this._particleOne.position, this._particleTwo.position, 0.5);
-            midPoint.setTo(tempMidPoint.x, tempMidPoint.y);
-            DistanceConstraint._polygon.position = midPoint;
-            DistanceConstraint._polygon.points[0] = this._particleOne.position.sub(DistanceConstraint._polygon.position);
-            DistanceConstraint._polygon.points[1] = this._particleTwo.position.sub(DistanceConstraint._polygon.position);
-            DistanceConstraint._polygon.recalculateCenterAndEdgeNormals();
-        };
-        DistanceConstraint.prototype.debugRender = function (batcher) {
-            batcher.drawLine(this._particleOne.position, this._particleTwo.position, new es.Color(67, 62, 54), 1);
-        };
-        DistanceConstraint._polygon = new es.Polygon([]);
-        return DistanceConstraint;
-    }(es.Constraint));
-    es.DistanceConstraint = DistanceConstraint;
-})(es || (es = {}));
-var es;
-(function (es) {
     /**
      * AbstractTweenable作为你可能想做的任何可以执行的自定义类的基础。
      * 这些类不同于ITweens，因为他们没有实现ITweenT接口。
@@ -11235,6 +9823,99 @@ var es;
         return PropertyTweens;
     }());
     es.PropertyTweens = PropertyTweens;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var TransformSpringTween = /** @class */ (function (_super) {
+        __extends(TransformSpringTween, _super);
+        function TransformSpringTween(transform, targetType, targetValue) {
+            var _this = _super.call(this) || this;
+            // 阻尼比（dampingRatio）和角频率（angularFrequency）的配置是公开的，以便于在设计时进行调整
+            /**
+             * 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
+             */
+            _this.dampingRatio = 0.23;
+            /**
+             * 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定角频率
+             */
+            _this.angularFrequency = 25;
+            _this._transform = transform;
+            _this._targetType = targetType;
+            _this.setTargetValue(targetValue);
+            return _this;
+        }
+        Object.defineProperty(TransformSpringTween.prototype, "targetType", {
+            get: function () {
+                return this._targetType;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /**
+         * 你可以在任何时候调用setTargetValue来重置目标值到一个新的Vector2。
+         * 如果你没有调用start来添加spring tween，它会为你调用
+         * @param targetValue
+         */
+        TransformSpringTween.prototype.setTargetValue = function (targetValue) {
+            this._velocity = es.Vector2.zero;
+            this._targetValue = targetValue;
+            if (!this._isCurrentlyManagedByTweenManager)
+                this.start();
+        };
+        /**
+         * lambda应该是振荡幅度减少50%时的理想持续时间
+         * @param lambda
+         */
+        TransformSpringTween.prototype.updateDampingRatioWithHalfLife = function (lambda) {
+            this.dampingRatio = (-lambda / this.angularFrequency) * Math.log(0.5);
+        };
+        TransformSpringTween.prototype.tick = function () {
+            if (!this._isPaused)
+                this.setTweenedValue(es.Lerps.fastSpring(this.getCurrentValueOfTweenedTargetType(), this._targetValue, this._velocity, this.dampingRatio, this.angularFrequency));
+            return false;
+        };
+        TransformSpringTween.prototype.setTweenedValue = function (value) {
+            switch (this._targetType) {
+                case es.TransformTargetType.position:
+                    this._transform.position = value;
+                    break;
+                case es.TransformTargetType.localPosition:
+                    this._transform.localPosition = value;
+                    break;
+                case es.TransformTargetType.scale:
+                    this._transform.scale = value;
+                    break;
+                case es.TransformTargetType.localScale:
+                    this._transform.localScale = value;
+                    break;
+                case es.TransformTargetType.rotationDegrees:
+                    this._transform.rotationDegrees = value.x;
+                case es.TransformTargetType.localRotationDegrees:
+                    this._transform.localRotationDegrees = value.x;
+                    break;
+            }
+        };
+        TransformSpringTween.prototype.getCurrentValueOfTweenedTargetType = function () {
+            switch (this._targetType) {
+                case es.TransformTargetType.position:
+                    return this._transform.position;
+                case es.TransformTargetType.localPosition:
+                    return this._transform.localPosition;
+                case es.TransformTargetType.scale:
+                    return this._transform.scale;
+                case es.TransformTargetType.localScale:
+                    return this._transform.localScale;
+                case es.TransformTargetType.rotationDegrees:
+                    return new es.Vector2(this._transform.rotationDegrees);
+                case es.TransformTargetType.localRotationDegrees:
+                    return new es.Vector2(this._transform.localRotationDegrees, 0);
+                default:
+                    return es.Vector2.zero;
+            }
+        };
+        return TransformSpringTween;
+    }(es.AbstractTweenable));
+    es.TransformSpringTween = TransformSpringTween;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -11581,161 +10262,6 @@ var es;
         return RectangleTween;
     }(es.Tween));
     es.RectangleTween = RectangleTween;
-    var ColorTween = /** @class */ (function (_super) {
-        __extends(ColorTween, _super);
-        function ColorTween(target, to, duration) {
-            var _this = _super.call(this) || this;
-            _this.initialize(target, to, duration);
-            return _this;
-        }
-        ColorTween.create = function () {
-            return es.TweenManager.cacheColorTweens ? es.Pool.obtain(ColorTween) : new ColorTween();
-        };
-        ColorTween.prototype.setIsRelative = function () {
-            this._isRelative = true;
-            this._toValue.r += this._fromValue.r;
-            this._toValue.g += this._fromValue.g;
-            this._toValue.b += this._fromValue.b;
-            this._toValue.a += this._fromValue.a;
-            return this;
-        };
-        ColorTween.prototype.updateValue = function () {
-            this._target.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
-        };
-        return ColorTween;
-    }(es.Tween));
-    es.ColorTween = ColorTween;
-})(es || (es = {}));
-///<reference path="./Tweens.ts"/>
-var es;
-///<reference path="./Tweens.ts"/>
-(function (es) {
-    var RenderableColorTween = /** @class */ (function (_super) {
-        __extends(RenderableColorTween, _super);
-        function RenderableColorTween() {
-            return _super !== null && _super.apply(this, arguments) || this;
-        }
-        RenderableColorTween.prototype.setTweenedValue = function (value) {
-            this._renderable.color = value;
-        };
-        RenderableColorTween.prototype.getTweenedValue = function () {
-            return this._renderable.color;
-        };
-        RenderableColorTween.prototype.getTargetObject = function () {
-            return this._renderable;
-        };
-        RenderableColorTween.prototype.updateValue = function () {
-            this.setTweenedValue(es.Lerps.ease(this._easeType, this._fromValue, this._toValue, this._elapsedTime, this._duration));
-        };
-        RenderableColorTween.prototype.setTarget = function (renderable) {
-            this._renderable = renderable;
-        };
-        RenderableColorTween.prototype.recycleSelf = function () {
-            if (this._shouldRecycleTween) {
-                this._renderable = null;
-                this._target = null;
-                this._nextTween = null;
-            }
-            if (this._shouldRecycleTween && es.TweenManager.cacheColorTweens) {
-                es.Pool.free(es.ColorTween, this);
-            }
-        };
-        return RenderableColorTween;
-    }(es.ColorTween));
-    es.RenderableColorTween = RenderableColorTween;
-})(es || (es = {}));
-var es;
-(function (es) {
-    var TransformSpringTween = /** @class */ (function (_super) {
-        __extends(TransformSpringTween, _super);
-        function TransformSpringTween(transform, targetType, targetValue) {
-            var _this = _super.call(this) || this;
-            // 阻尼比（dampingRatio）和角频率（angularFrequency）的配置是公开的，以便于在设计时进行调整
-            /**
-             * 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
-             */
-            _this.dampingRatio = 0.23;
-            /**
-             * 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定角频率
-             */
-            _this.angularFrequency = 25;
-            _this._transform = transform;
-            _this._targetType = targetType;
-            _this.setTargetValue(targetValue);
-            return _this;
-        }
-        Object.defineProperty(TransformSpringTween.prototype, "targetType", {
-            get: function () {
-                return this._targetType;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /**
-         * 你可以在任何时候调用setTargetValue来重置目标值到一个新的Vector2。
-         * 如果你没有调用start来添加spring tween，它会为你调用
-         * @param targetValue
-         */
-        TransformSpringTween.prototype.setTargetValue = function (targetValue) {
-            this._velocity = es.Vector2.zero;
-            this._targetValue = targetValue;
-            if (!this._isCurrentlyManagedByTweenManager)
-                this.start();
-        };
-        /**
-         * lambda应该是振荡幅度减少50%时的理想持续时间
-         * @param lambda
-         */
-        TransformSpringTween.prototype.updateDampingRatioWithHalfLife = function (lambda) {
-            this.dampingRatio = (-lambda / this.angularFrequency) * Math.log(0.5);
-        };
-        TransformSpringTween.prototype.tick = function () {
-            if (!this._isPaused)
-                this.setTweenedValue(es.Lerps.fastSpring(this.getCurrentValueOfTweenedTargetType(), this._targetValue, this._velocity, this.dampingRatio, this.angularFrequency));
-            return false;
-        };
-        TransformSpringTween.prototype.setTweenedValue = function (value) {
-            switch (this._targetType) {
-                case es.TransformTargetType.position:
-                    this._transform.position = value;
-                    break;
-                case es.TransformTargetType.localPosition:
-                    this._transform.localPosition = value;
-                    break;
-                case es.TransformTargetType.scale:
-                    this._transform.scale = value;
-                    break;
-                case es.TransformTargetType.localScale:
-                    this._transform.localScale = value;
-                    break;
-                case es.TransformTargetType.rotationDegrees:
-                    this._transform.rotationDegrees = value.x;
-                case es.TransformTargetType.localRotationDegrees:
-                    this._transform.localRotationDegrees = value.x;
-                    break;
-            }
-        };
-        TransformSpringTween.prototype.getCurrentValueOfTweenedTargetType = function () {
-            switch (this._targetType) {
-                case es.TransformTargetType.position:
-                    return this._transform.position;
-                case es.TransformTargetType.localPosition:
-                    return this._transform.localPosition;
-                case es.TransformTargetType.scale:
-                    return this._transform.scale;
-                case es.TransformTargetType.localScale:
-                    return this._transform.localScale;
-                case es.TransformTargetType.rotationDegrees:
-                    return new es.Vector2(this._transform.rotationDegrees);
-                case es.TransformTargetType.localRotationDegrees:
-                    return new es.Vector2(this._transform.localRotationDegrees, 0);
-                default:
-                    return es.Vector2.zero;
-            }
-        };
-        return TransformSpringTween;
-    }(es.AbstractTweenable));
-    es.TransformSpringTween = TransformSpringTween;
 })(es || (es = {}));
 ///<reference path="./Tweens.ts"/>
 var es;
@@ -12442,10 +10968,6 @@ var es;
             if (typeof (from) == "number" && typeof (to) == "number") {
                 return from + (to - from) * t;
             }
-            if (from instanceof es.Color && to instanceof es.Color) {
-                var t255 = t * 255;
-                return new es.Color(from.r + (to.r - from.r) * t255 / 255, from.g + (to.g - from.g) * t255 / 255, from.b + (to.b - from.b) * t255 / 255, from.a + (to.a - from.a) * t255 / 255);
-            }
             if (from instanceof es.Rectangle && to instanceof es.Rectangle) {
                 return new es.Rectangle((from.x + (to.x - from.x) * t), (from.y + (to.x - from.y) * t), (from.width + (to.width - from.width) * t), (from.height + (to.height - from.height) * t));
             }
@@ -12466,9 +10988,6 @@ var es;
                 return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
             }
             if (from instanceof es.Rectangle && to instanceof es.Rectangle) {
-                return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
-            }
-            if (from instanceof es.Color && to instanceof es.Color) {
                 return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
             }
         };

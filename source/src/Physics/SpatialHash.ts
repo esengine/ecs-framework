@@ -94,21 +94,6 @@ module es {
             this._cellDict.clear();
         }
 
-        public debugDraw(secondsToDisplay: number) {
-            for (let x = this.gridBounds.x; x <= this.gridBounds.right; x++) {
-                for (let y = this.gridBounds.y; y <= this.gridBounds.bottom; y++) {
-                    let cell = this.cellAtPosition(x, y);
-                    if (cell != null && cell.length > 0)
-                        this.debugDrawCellDetails(x, y, secondsToDisplay);
-                }
-            }
-        }
-
-        private debugDrawCellDetails(x: number, y: number, secondsToDisplay: number = 0.5) {
-            Graphics.instance.batcher.drawHollowRect(x * this._cellSize, y * this._cellSize, this._cellSize, this._cellSize, new Color(255, 0, 0), secondsToDisplay);
-            Graphics.instance.batcher.end();
-        }
-
         /**
          * 返回边框与单元格相交的所有对象
          * @param bounds

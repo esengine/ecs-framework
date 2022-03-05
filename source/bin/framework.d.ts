@@ -199,7 +199,6 @@ declare module es {
          * @param comp
          */
         onEntityTransformChanged(comp: ComponentTransform): void;
-        debugRender(batcher: IBatcher): void;
         /**
          *当父实体或此组件启用时调用
          */
@@ -374,7 +373,6 @@ declare module es {
          * 每帧进行调用进行更新组件
          */
         update(): void;
-        debugRender(batcher: IBatcher): void;
         /**
          * 创建组件的新实例。返回实例组件
          * @param componentType
@@ -654,14 +652,11 @@ declare module es {
 declare module es {
     /** 场景 */
     class Scene {
-        camera: ICamera;
         /** 这个场景中的实体列表 */
         readonly entities: EntityList;
-        readonly renderableComponents: RenderableComponentList;
         /** 管理所有实体处理器 */
         readonly entityProcessors: EntityProcessorList;
         readonly _sceneComponents: SceneComponent[];
-        _renderers: Renderer[];
         readonly identifierPool: IdentifierPool;
         private _didSceneBegin;
         constructor();
@@ -682,10 +677,6 @@ declare module es {
         begin(): void;
         end(): void;
         update(): void;
-        render(): void;
-        addRenderer<T extends Renderer>(renderer: T): T;
-        getRenderer<T extends Renderer>(type: new (...args: any[]) => T): T;
-        removeRenderer(renderer: Renderer): void;
         /**
          * 向组件列表添加并返回SceneComponent
          * @param component
@@ -1352,7 +1343,6 @@ declare module es {
          * 存储这个允许我们始终能够安全地从物理系统中移除对撞机，即使它在试图移除它之前已经被移动了。
          */
         registeredPhysicsBounds: Rectangle;
-        protected _colliderRequiresAutoSizing: boolean;
         _localOffsetLength: number;
         _isPositionDirty: boolean;
         _isRotationDirty: boolean;
@@ -1468,7 +1458,6 @@ declare module es {
          * @param height
          */
         setHeight(height: number): void;
-        debugRender(batcher: IBatcher): void;
         toString(): string;
     }
 }
@@ -1488,7 +1477,6 @@ declare module es {
          * @param radius
          */
         setRadius(radius: number): CircleCollider;
-        debugRender(batcher: IBatcher): void;
         toString(): string;
     }
 }
@@ -1502,42 +1490,6 @@ declare module es {
          * @param points
          */
         constructor(points: Vector2[]);
-    }
-}
-declare module es {
-    interface IRenderable {
-        enabled: boolean;
-        renderLayer: number;
-        isVisibleFromCamera(camera: ICamera): boolean;
-        render(batcher: IBatcher, camera: ICamera): void;
-        debugRender(batcher: IBatcher): void;
-    }
-}
-declare module es {
-    abstract class RenderableComponent extends es.Component implements IRenderable {
-        getwidth(): number;
-        getheight(): number;
-        protected _bounds: es.Rectangle;
-        getbounds(): es.Rectangle;
-        readonly bounds: Rectangle;
-        protected _areBoundsDirty: boolean;
-        color: Color;
-        renderLayer: number;
-        protected _renderLayer: number;
-        onEntityTransformChanged(comp: ComponentTransform): void;
-        localOffset: es.Vector2;
-        setLocalOffset(offset: es.Vector2): this;
-        isVisible: boolean;
-        debugRenderEnabled: boolean;
-        protected _isVisible: boolean;
-        protected _localOffset: es.Vector2;
-        abstract render(batcher: IBatcher, camera: ICamera): void;
-        protected onBecameVisible(): void;
-        protected onBecameInvisible(): void;
-        setRenderLayer(renderLayer: number): RenderableComponent;
-        isVisibleFromCamera(cam: ICamera): boolean;
-        debugRender(batcher: IBatcher): void;
-        tweenColorTo(to: Color, duration: number): RenderableColorTween;
     }
 }
 declare module es {
@@ -1898,7 +1850,6 @@ declare module es {
         onEntityTransformChanged(comp: ComponentTransform): void;
         onEntityEnabled(): void;
         onEntityDisabled(): void;
-        debugRender(batcher: IBatcher): void;
     }
 }
 declare module es {
@@ -2095,24 +2046,6 @@ declare module es {
         all(...types: any[]): Matcher;
         exclude(...types: any[]): this;
         one(...types: any[]): this;
-    }
-}
-declare module es {
-    class RenderableComponentList {
-        private _components;
-        private _componentsByRenderLayer;
-        private _unsortedRenderLayers;
-        private _componentsNeedSort;
-        readonly count: number;
-        get(index: number): IRenderable;
-        add(component: IRenderable): void;
-        remove(component: IRenderable): void;
-        updateRenderableRenderLayer(component: IRenderable, oldRenderLayer: number, newRenderLayer: number): void;
-        setRenderLayerNeedsComponentSort(renderLayer: number): void;
-        setNeedsComponentSort(): void;
-        private addToRenderLayerList;
-        componentsWithRenderLayer(renderLayer: number): IRenderable[];
-        updateLists(): void;
     }
 }
 declare module es {
@@ -2320,280 +2253,6 @@ declare module es {
          */
         static makeWorker(doFunc: Function): Worker;
         static workerMessage(worker: Worker): (...message: any[]) => Promise<{}>;
-    }
-}
-declare module es {
-    class Graphics {
-        static instance: Graphics;
-        batcher: IBatcher;
-        constructor(batcher: IBatcher);
-    }
-}
-declare module es {
-    class Color {
-        /**
-         * 红色通道
-         */
-        r: number;
-        /**
-         * 绿色通道
-         */
-        g: number;
-        /**
-         * 蓝色通道
-         */
-        b: number;
-        /**
-         * 透明度通道 (仅0-1之间)
-         */
-        a: number;
-        /**
-         * 色调
-         */
-        h: number;
-        /**
-         * 饱和
-         */
-        s: number;
-        /**
-         * 亮度
-         */
-        l: number;
-        /**
-         * 从 r, g, b, a 创建一个新的 Color 实例
-         *
-         * @param r  颜色的红色分量 (0-255)
-         * @param g  颜色的绿色成分 (0-255)
-         * @param b  颜色的蓝色分量 (0-255)
-         * @param a  颜色的 alpha 分量 (0-1.0)
-         */
-        constructor(r: number, g: number, b: number, a?: number);
-        /**
-         * 从 r, g, b, a 创建一个新的 Color 实例
-         *
-         * @param r  颜色的红色分量 (0-255)
-         * @param g  颜色的绿色成分 (0-255)
-         * @param b  颜色的蓝色分量 (0-255)
-         * @param a  颜色的 alpha 分量 (0-1.0)
-         */
-        static fromRGB(r: number, g: number, b: number, a?: number): Color;
-        /**
-         * 从十六进制字符串创建一个新的 Color 实例
-         *
-         * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的
-         */
-        static createFromHex(hex: string): Color;
-        /**
-         * 从 hsl 值创建一个新的 Color 实例
-         *
-         * @param h  色调表示 [0-1]
-         * @param s  饱和度表示为 [0-1]
-         * @param l  亮度表示 [0-1]
-         * @param a  透明度表示 [0-1]
-         */
-        static fromHSL(h: number, s: number, l: number, a?: number): Color;
-        /**
-         * 将当前颜色调亮指定的量
-         *
-         * @param factor
-         */
-        lighten(factor?: number): Color;
-        /**
-         * 将当前颜色变暗指定的量
-         *
-         * @param factor
-         */
-        darken(factor?: number): Color;
-        /**
-         * 使当前颜色饱和指定的量
-         *
-         * @param factor
-         */
-        saturate(factor?: number): Color;
-        /**
-         * 按指定量降低当前颜色的饱和度
-         *
-         * @param factor
-         */
-        desaturate(factor?: number): Color;
-        /**
-         * 将一种颜色乘以另一种颜色，得到更深的颜色
-         *
-         * @param color
-         */
-        mulitiply(color: Color): Color;
-        /**
-         * 筛选另一种颜色，导致颜色较浅
-         *
-         * @param color
-         */
-        screen(color: Color): Color;
-        /**
-         * 反转当前颜色
-         */
-        invert(): Color;
-        /**
-         * 将当前颜色与另一个颜色平均
-         *
-         * @param color
-         */
-        average(color: Color): Color;
-        /**
-         * 返回颜色的 CSS 字符串表示形式。
-         *
-         * @param format
-         */
-        toString(format?: 'rgb' | 'hsl' | 'hex'): string;
-        /**
-         * 返回颜色分量的十六进制值
-         * @param c
-         * @see https://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
-         */
-        private _componentToHex;
-        /**
-         *返回颜色的十六进制表示
-         */
-        toHex(): string;
-        /**
-         * 从十六进制字符串设置颜色
-         *
-         * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的
-         */
-        fromHex(hex: string): void;
-        /**
-         * 返回颜色的 RGBA 表示
-         */
-        toRGBA(): string;
-        /**
-         * 返回颜色的 HSLA 表示
-         */
-        toHSLA(): string;
-        /**
-         * 返回颜色的 CSS 字符串表示形式
-         */
-        fillStyle(): string;
-        /**
-         * 返回当前颜色的克隆
-         */
-        clone(): Color;
-        /**
-         * Black (#000000)
-         */
-        static Black: Color;
-        /**
-         * White (#FFFFFF)
-         */
-        static White: Color;
-        /**
-         * Gray (#808080)
-         */
-        static Gray: Color;
-        /**
-         * Light gray (#D3D3D3)
-         */
-        static LightGray: Color;
-        /**
-         * Dark gray (#A9A9A9)
-         */
-        static DarkGray: Color;
-        /**
-         * Yellow (#FFFF00)
-         */
-        static Yellow: Color;
-        /**
-         * Orange (#FFA500)
-         */
-        static Orange: Color;
-        /**
-         * Red (#FF0000)
-         */
-        static Red: Color;
-        /**
-         * Vermillion (#FF5B31)
-         */
-        static Vermillion: Color;
-        /**
-         * Rose (#FF007F)
-         */
-        static Rose: Color;
-        /**
-         * Magenta (#FF00FF)
-         */
-        static Magenta: Color;
-        /**
-         * Violet (#7F00FF)
-         */
-        static Violet: Color;
-        /**
-         * Blue (#0000FF)
-         */
-        static Blue: Color;
-        /**
-         * Azure (#007FFF)
-         */
-        static Azure: Color;
-        /**
-         * Cyan (#00FFFF)
-         */
-        static Cyan: Color;
-        /**
-         * Viridian (#59978F)
-         */
-        static Viridian: Color;
-        /**
-         * Green (#00FF00)
-         */
-        static Green: Color;
-        /**
-         * Chartreuse (#7FFF00)
-         */
-        static Chartreuse: Color;
-        /**
-         * Transparent (#FFFFFF00)
-         */
-        static Transparent: Color;
-    }
-}
-declare module es {
-    interface IBatcher {
-        begin(cam: ICamera): any;
-        end(): any;
-        drawPoints(points: Vector2[], color: Color, thickness?: number): any;
-        drawPolygon(poisition: Vector2, points: Vector2[], color: Color, closePoly: boolean, thickness?: number): any;
-        drawHollowRect(x: number, y: number, width: number, height: number, color: Color, thickness?: number): any;
-        drawCircle(position: Vector2, raidus: number, color: Color, thickness?: number): any;
-        drawCircleLow(position: es.Vector2, radius: number, color: Color, thickness?: number, resolution?: number): any;
-        drawRect(x: number, y: number, width: number, height: number, color: Color): any;
-        drawLine(start: Vector2, end: Vector2, color: Color, thickness: number): any;
-        drawPixel(position: Vector2, color: Color, size?: number): any;
-    }
-}
-declare module es {
-    interface ICamera extends Component {
-        bounds: Rectangle;
-    }
-}
-declare module es {
-    abstract class Renderer {
-        camera: ICamera;
-        readonly renderOrder: number;
-        shouldDebugRender: boolean;
-        protected renderDirty: boolean;
-        constructor(renderOrder: number, camera: ICamera);
-        onAddedToScene(scene: es.Scene): void;
-        unload(): void;
-        protected beginRender(cam: ICamera): void;
-        protected endRender(): void;
-        protected onRenderChanged(): void;
-        abstract render(scene: Scene): void;
-        protected renderAfterStateCheck(renderable: IRenderable, cam: ICamera): void;
-        protected debugRender(scene: Scene): void;
-    }
-}
-declare module es {
-    class DefaultRenderer extends Renderer {
-        constructor(renderOrder?: number, camera?: ICamera);
-        render(scene: Scene): void;
     }
 }
 declare module es {
@@ -3616,7 +3275,6 @@ declare module es {
          * 从SpatialHash中移除所有碰撞器
          */
         static clear(): void;
-        static debugDraw(secondsToDisplay: any): void;
         /**
          * 检查是否有对撞机落在一个圆形区域内。返回遇到的第一个对撞机
          * @param center
@@ -3764,8 +3422,6 @@ declare module es {
          */
         removeWithBruteForce(obj: Collider): void;
         clear(): void;
-        debugDraw(secondsToDisplay: number): void;
-        private debugDrawCellDetails;
         /**
          * 返回边框与单元格相交的所有对象
          * @param bounds
@@ -4144,149 +3800,6 @@ declare module es {
     }
 }
 declare module es {
-    class Particle {
-        position: Vector2;
-        lastPosition: Vector2;
-        mass: number;
-        radius: number;
-        collidesWithColliders: boolean;
-        isPinned: boolean;
-        acceleration: Vector2;
-        pinnedPosition: Vector2;
-        constructor(position: {
-            x: number;
-            y: number;
-        });
-        applyForce(force: Vector2): void;
-        pin(): Particle;
-        pinTo(position: Vector2): Particle;
-        unpin(): Particle;
-    }
-}
-declare module es {
-    class VerletWorld {
-        gravity: Vector2;
-        constraintIterations: number;
-        maximumStepIterations: number;
-        simulationBounds: Rectangle;
-        allowDragging: boolean;
-        selectionRadiusSquared: number;
-        _draggedParticle: Particle;
-        _composites: Composite[];
-        static _colliders: Collider[];
-        _tempCircle: Circle;
-        _leftOverTime: number;
-        _fixedDeltaTime: number;
-        _iterationSteps: number;
-        _fixedDeltaTimeSq: number;
-        onHandleDrag: Function;
-        constructor(simulationBounds?: Rectangle);
-        update(): void;
-        constrainParticleToBounds(p: Particle): void;
-        handleCollisions(p: Particle, collidesWithLayers: number): void;
-        updateTiming(): void;
-        addComposite<T extends Composite>(composite: T): T;
-        removeComposite(composite: Composite): void;
-        handleDragging(): void;
-        getNearestParticle(position: Vector2): Particle;
-        debugRender(batcher: IBatcher): void;
-    }
-}
-declare module es {
-    class Composite {
-        friction: Vector2;
-        drawParticles: boolean;
-        drawConstraints: boolean;
-        collidesWithLayers: number;
-        particles: Particle[];
-        _constraints: Constraint[];
-        addParticle(particle: Particle): Particle;
-        removeParticle(particle: Particle): void;
-        removeAll(): void;
-        addConstraint<T extends Constraint>(constraint: T): T;
-        removeConstraint(constraint: Constraint): void;
-        applyForce(force: Vector2): void;
-        solveConstraints(): void;
-        updateParticles(deltaTimeSquared: number, gravity: Vector2): void;
-        handleConstraintCollisions(): void;
-        debugRender(batcher: IBatcher): void;
-    }
-}
-declare module es {
-    class Ball extends Composite {
-        constructor(position: Vector2, radius?: number);
-    }
-}
-declare module es {
-    class VerletBox extends es.Composite {
-        constructor(center: es.Vector2, width: number, height: number, borderStiffness?: number, diagonalStiffness?: number);
-    }
-}
-declare module es {
-    class Cloth extends Composite {
-        constructor(topLeftPosition: Vector2, width: number, height: number, segments?: number, stiffness?: number, tearSensitivity?: number, connectHorizontalParticles?: boolean);
-    }
-}
-declare module es {
-    class LineSegments extends Composite {
-        constructor(vertices: Vector2[], stiffness: number);
-        pinParticleAtIndex(index: number): LineSegments;
-    }
-}
-declare module es {
-    class Ragdoll extends Composite {
-        constructor(x: number, y: number, bodyHeight: number);
-    }
-}
-declare module es {
-    class Tire extends Composite {
-        constructor(origin: Vector2, radius: number, segments: number, spokeStiffness?: number, treadStiffness?: number);
-    }
-}
-declare module es {
-    abstract class Constraint {
-        composite: Composite;
-        collidesWithColliders: boolean;
-        abstract solve(): void;
-        handleCollisions(collidesWithLayers: number): void;
-        debugRender(batcher: IBatcher): void;
-    }
-}
-declare module es {
-    class AngleConstraint extends Constraint {
-        stiffness: number;
-        angleInRadius: number;
-        _particleA: Particle;
-        _centerParticle: Particle;
-        _particleC: Particle;
-        constructor(a: Particle, center: Particle, c: Particle, stiffness: number);
-        angleBetweenParticles(): number;
-        solve(): void;
-    }
-}
-declare module es {
-    class DistanceConstraint extends Constraint {
-        stiffness: number;
-        restingDistance: number;
-        tearSensitivity: number;
-        shouldApproximateCollisionsWithPoints: boolean;
-        totalPointsToApproximateCollisionsWith: number;
-        _particleOne: Particle;
-        _particleTwo: Particle;
-        static _polygon: Polygon;
-        constructor(first: Particle, second: Particle, stiffness: number, distance?: number);
-        static create(a: Particle, center: Particle, c: Particle, stiffness: number, angleInDegrees: number): DistanceConstraint;
-        setTearSensitivity(tearSensitivity: number): this;
-        setCollidesWithColliders(collidesWithColliders: boolean): this;
-        setShouldApproximateCollisionsWithPoints(shouldApproximateCollisionsWithPoints: boolean): this;
-        solve(): void;
-        handleCollisions(collidesWithLayers: number): void;
-        approximateCollisionsWithPoints(collidesWithLayers: number): void;
-        preparePolygonForCollisionChecks(midPoint: Vector2): void;
-        debugRender(batcher: IBatcher): void;
-    }
-}
-declare module es {
     /**
      * AbstractTweenable作为你可能想做的任何可以执行的自定义类的基础。
      * 这些类不同于ITweens，因为他们没有实现ITweenT接口。
@@ -4313,6 +3826,38 @@ declare module es {
     class PropertyTweens {
         static NumberPropertyTo(self: any, memberName: string, to: number, duration: number): ITween<number>;
         static Vector2PropertyTo(self: any, memeberName: string, to: Vector2, duration: number): ITween<Vector2>;
+    }
+}
+declare module es {
+    class TransformSpringTween extends AbstractTweenable {
+        readonly targetType: TransformTargetType;
+        private _transform;
+        private _targetType;
+        private _targetValue;
+        private _velocity;
+        /**
+         * 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
+         */
+        dampingRatio: number;
+        /**
+         * 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定角频率
+         */
+        angularFrequency: number;
+        constructor(transform: Transform, targetType: TransformTargetType, targetValue: Vector2);
+        /**
+         * 你可以在任何时候调用setTargetValue来重置目标值到一个新的Vector2。
+         * 如果你没有调用start来添加spring tween，它会为你调用
+         * @param targetValue
+         */
+        setTargetValue(targetValue: Vector2): void;
+        /**
+         * lambda应该是振荡幅度减少50%时的理想持续时间
+         * @param lambda
+         */
+        updateDampingRatioWithHalfLife(lambda: number): void;
+        tick(): boolean;
+        private setTweenedValue;
+        private getCurrentValueOfTweenedTargetType;
     }
 }
 declare module es {
@@ -4418,55 +3963,6 @@ declare module es {
         setIsRelative(): ITween<Rectangle>;
         protected updateValue(): void;
         recycleSelf(): void;
-    }
-    class ColorTween extends Tween<Color> {
-        static create(): ColorTween;
-        constructor(target?: ITweenTarget<Color>, to?: Color, duration?: number);
-        setIsRelative(): this;
-        protected updateValue(): void;
-    }
-}
-declare module es {
-    class RenderableColorTween extends ColorTween implements ITweenTarget<Color> {
-        _renderable: RenderableComponent;
-        setTweenedValue(value: Color): void;
-        getTweenedValue(): Color;
-        getTargetObject(): RenderableComponent;
-        updateValue(): void;
-        setTarget(renderable: RenderableComponent): void;
-        recycleSelf(): void;
-    }
-}
-declare module es {
-    class TransformSpringTween extends AbstractTweenable {
-        readonly targetType: TransformTargetType;
-        private _transform;
-        private _targetType;
-        private _targetValue;
-        private _velocity;
-        /**
-         * 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
-         */
-        dampingRatio: number;
-        /**
-         * 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定角频率
-         */
-        angularFrequency: number;
-        constructor(transform: Transform, targetType: TransformTargetType, targetValue: Vector2);
-        /**
-         * 你可以在任何时候调用setTargetValue来重置目标值到一个新的Vector2。
-         * 如果你没有调用start来添加spring tween，它会为你调用
-         * @param targetValue
-         */
-        setTargetValue(targetValue: Vector2): void;
-        /**
-         * lambda应该是振荡幅度减少50%时的理想持续时间
-         * @param lambda
-         */
-        updateDampingRatioWithHalfLife(lambda: number): void;
-        tick(): boolean;
-        private setTweenedValue;
-        private getCurrentValueOfTweenedTargetType;
     }
 }
 declare module es {
@@ -4715,7 +4211,6 @@ declare module es {
      * 一系列静态方法来处理所有常见的tween类型结构，以及它们的unclamped lerps.unclamped lerps对于超过0-1范围的bounce、elastic或其他tweens是必需的
      */
     class Lerps {
-        static lerp(from: Color, to: Color, t: number): any;
         static lerp(from: number, to: number, t: number): any;
         static lerp(from: Rectangle, to: Rectangle, t: number): any;
         static lerp(from: Vector2, to: Vector2, t: number): any;
@@ -4723,7 +4218,6 @@ declare module es {
         static ease(easeType: EaseType, from: Rectangle, to: Rectangle, t: number, duration: number): any;
         static ease(easeType: EaseType, from: Vector2, to: Vector2, t: number, duration: number): any;
         static ease(easeType: EaseType, from: number, to: number, t: number, duration: number): any;
-        static ease(easeType: EaseType, from: Color, to: Color, t: number, duration: number): any;
         static easeAngle(easeType: EaseType, from: Vector2, to: Vector2, t: number, duration: number): Vector2;
         /**
          * 使用半隐式欧拉方法。速度较慢，但总是很稳定。见
