@@ -7,6 +7,8 @@ module es {
      * 当你需要处理与Matcher相匹配的实体，并且你更喜欢使用Entity的时候，可以使用这个功能。
      */
     export abstract class EntityProcessingSystem extends EntitySystem {
+        public enabled: boolean = true;
+
         constructor(matcher: Matcher) {
             super(matcher);
         }
@@ -44,6 +46,10 @@ module es {
                 let entity = entities[i];
                 this.lateProcessEntity(entity);
             }
+        }
+
+        protected checkProcessing(): boolean {
+            return this.enabled;
         }
     }
 }

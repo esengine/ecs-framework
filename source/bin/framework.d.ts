@@ -1661,6 +1661,7 @@ declare module es {
      * 当你需要处理与Matcher相匹配的实体，并且你更喜欢使用Entity的时候，可以使用这个功能。
      */
     abstract class EntityProcessingSystem extends EntitySystem {
+        enabled: boolean;
         constructor(matcher: Matcher);
         /**
          * 处理特定的实体
@@ -1674,6 +1675,7 @@ declare module es {
          */
         protected process(entities: Entity[]): void;
         protected lateProcess(entities: Entity[]): void;
+        protected checkProcessing(): boolean;
     }
 }
 declare module es {

@@ -296,7 +296,7 @@ module es {
             } else {
                 this.localPosition = position;
             }
-            this._positionDirty = false;
+            this.setDirty(DirtyType.positionDirty);
 
             return this;
         }
@@ -328,6 +328,7 @@ module es {
             } else {
                 this.localRotation = radians;
             }
+            this.setDirty(DirtyType.rotationDirty);
 
             return this;
         }
@@ -381,6 +382,7 @@ module es {
             } else {
                 this.localScale = scale;
             }
+            this.setDirty(DirtyType.scaleDirty);
             return this;
         }
 

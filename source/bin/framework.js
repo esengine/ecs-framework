@@ -2053,7 +2053,7 @@ var es;
             else {
                 this.localPosition = position;
             }
-            this._positionDirty = false;
+            this.setDirty(DirtyType.positionDirty);
             return this;
         };
         /**
@@ -2080,6 +2080,7 @@ var es;
             else {
                 this.localRotation = radians;
             }
+            this.setDirty(DirtyType.rotationDirty);
             return this;
         };
         /**
@@ -2127,6 +2128,7 @@ var es;
             else {
                 this.localScale = scale;
             }
+            this.setDirty(DirtyType.scaleDirty);
             return this;
         };
         /**
@@ -3093,7 +3095,7 @@ var es;
                         var _internalcollisionResult = new es.CollisionResult();
                         if (collider_1.collidesWith(neighbor, motion, _internalcollisionResult)) {
                             // 如果碰撞 则退回之前的移动量
-                            motion.sub(_internalcollisionResult.minimumTranslationVector);
+                            motion.subEqual(_internalcollisionResult.minimumTranslationVector);
                             // 如果我们碰到多个对象，为了简单起见，只取第一个。
                             if (_internalcollisionResult.collider != null) {
                                 collisionResult.collider = _internalcollisionResult.collider;
@@ -3997,7 +3999,9 @@ var es;
     var EntityProcessingSystem = /** @class */ (function (_super) {
         __extends(EntityProcessingSystem, _super);
         function EntityProcessingSystem(matcher) {
-            return _super.call(this, matcher) || this;
+            var _this = _super.call(this, matcher) || this;
+            _this.enabled = true;
+            return _this;
         }
         EntityProcessingSystem.prototype.lateProcessEntity = function (entity) {
         };
@@ -4020,6 +4024,9 @@ var es;
                 var entity = entities[i];
                 this.lateProcessEntity(entity);
             }
+        };
+        EntityProcessingSystem.prototype.checkProcessing = function () {
+            return this.enabled;
         };
         return EntityProcessingSystem;
     }(es.EntitySystem));
