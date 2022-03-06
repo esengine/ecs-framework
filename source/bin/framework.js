@@ -2053,7 +2053,7 @@ var es;
             else {
                 this.localPosition = position;
             }
-            this.setDirty(DirtyType.positionDirty);
+            this._positionDirty = false;
             return this;
         };
         /**
