@@ -94,7 +94,7 @@ declare module es {
          */
         onSceneChanged(): void;
         protected initialize(): void;
-        protected update(currentTime?: number): Promise<void>;
+        protected update(currentTime?: number): void;
     }
 }
 declare module es {
@@ -4877,7 +4877,7 @@ declare module es {
          * 将项推回堆栈
          * @param obj
          */
-        static free<T>(type: new (...args: any[]) => T, obj: Array<T>): void;
+        static free<T>(type: new (...args: any[]) => T, obj: T[]): void;
         private static checkCreate;
     }
 }

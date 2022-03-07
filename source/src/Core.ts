@@ -177,7 +177,7 @@ module es {
 
         }
 
-        protected async update(currentTime: number = -1) {
+        protected update(currentTime: number = -1) {
             if (Core.paused) {
                 return;
             }

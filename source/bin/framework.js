@@ -1,39 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
 var __read = (this && this.__read) || function (o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
     if (!m) return o;
@@ -73,6 +38,33 @@ var __values = (this && this.__values) || function (o) {
             return { value: o && o[i++], done: !o };
         }
     };
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
 };
 var es;
 (function (es) {
@@ -224,31 +216,25 @@ var es;
         };
         Core.prototype.update = function (currentTime) {
             if (currentTime === void 0) { currentTime = -1; }
-            return __awaiter(this, void 0, void 0, function () {
-                var i;
-                return __generator(this, function (_a) {
-                    if (Core.paused) {
-                        return [2 /*return*/];
-                    }
-                    es.Time.update(currentTime, currentTime != -1);
-                    if (this._scene != null) {
-                        for (i = this._globalManagers.length - 1; i >= 0; i--) {
-                            if (this._globalManagers[i].enabled)
-                                this._globalManagers[i].update();
-                        }
-                        this._scene.update();
-                        if (this._nextScene != null) {
-                            this._scene.end();
-                            this._scene = this._nextScene;
-                            this._nextScene = null;
-                            this.onSceneChanged();
-                            this._scene.begin();
-                        }
-                    }
-                    this.startDebugDraw();
-                    return [2 /*return*/];
-                });
-            });
+            if (Core.paused) {
+                return;
+            }
+            es.Time.update(currentTime, currentTime != -1);
+            if (this._scene != null) {
+                for (var i = this._globalManagers.length - 1; i >= 0; i--) {
+                    if (this._globalManagers[i].enabled)
+                        this._globalManagers[i].update();
+                }
+                this._scene.update();
+                if (this._nextScene != null) {
+                    this._scene.end();
+                    this._scene = this._nextScene;
+                    this._nextScene = null;
+                    this.onSceneChanged();
+                    this._scene.begin();
+                }
+            }
+            this.startDebugDraw();
         };
         Core.paused = false;
         /**
@@ -8551,33 +8537,34 @@ var es;
             this._overlapTestCircle.position = circleCenter;
             var resultCounter = 0;
             var potentials = this.aabbBroadphase(bounds, null, layerMask);
-            for (var i = 0; i < potentials.length; i++) {
-                var collider = potentials[i];
-                if (collider instanceof es.BoxCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
+            if (potentials.length > 0)
+                for (var i = 0; i < potentials.length; i++) {
+                    var collider = potentials[i];
+                    if (collider instanceof es.BoxCollider) {
+                        if (collider.shape.overlaps(this._overlapTestCircle)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
                     }
-                }
-                else if (collider instanceof es.CircleCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
+                    else if (collider instanceof es.CircleCollider) {
+                        if (collider.shape.overlaps(this._overlapTestCircle)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
                     }
-                }
-                else if (collider instanceof es.PolygonCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
+                    else if (collider instanceof es.PolygonCollider) {
+                        if (collider.shape.overlaps(this._overlapTestCircle)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
                     }
+                    else {
+                        throw new Error("对这个对撞机类型的overlapCircle没有实现!");
+                    }
+                    // 如果我们所有的结果数据有了则返回
+                    if (resultCounter === results.length)
+                        return resultCounter;
                 }
-                else {
-                    throw new Error("对这个对撞机类型的overlapCircle没有实现!");
-                }
-                // 如果我们所有的结果数据有了则返回
-                if (resultCounter === results.length)
-                    return resultCounter;
-            }
             return resultCounter;
         };
         /**
@@ -12601,7 +12588,7 @@ var es;
             cacheCount -= this._objectQueue.get(type).length;
             if (cacheCount > 0) {
                 for (var i = 0; i < cacheCount; i++) {
-                    this._objectQueue.get(type).unshift([]);
+                    this._objectQueue.get(type).push([]);
                 }
             }
         };
@@ -12612,7 +12599,7 @@ var es;
         ListPool.trimCache = function (type, cacheCount) {
             this.checkCreate(type);
             while (cacheCount > this._objectQueue.get(type).length)
-                this._objectQueue.get(type).shift();
+                this._objectQueue.get(type).splice(0, 1);
         };
         /**
          * 清除缓存
@@ -12636,11 +12623,11 @@ var es;
          */
         ListPool.free = function (type, obj) {
             this.checkCreate(type);
-            this._objectQueue.get(type).unshift(obj);
+            this._objectQueue.get(type).push(obj);
             obj.length = 0;
         };
         ListPool.checkCreate = function (type) {
-            if (!this._objectQueue.get(type))
+            if (!this._objectQueue.has(type))
                 this._objectQueue.set(type, []);
         };
         ListPool._objectQueue = new Map();
@@ -12741,7 +12728,7 @@ var es;
             cacheCount -= this._objectQueue.get(type).length;
             if (cacheCount > 0) {
                 for (var i = 0; i < cacheCount; i++) {
-                    this._objectQueue.get(type).unshift(new type());
+                    this._objectQueue.get(type).push(new type());
                 }
             }
         };
@@ -12752,7 +12739,7 @@ var es;
         Pool.trimCache = function (type, cacheCount) {
             this.checkCreate(type);
             while (cacheCount > this._objectQueue.get(type).length)
-                this._objectQueue.get(type).shift();
+                this._objectQueue.get(type).splice(0, 1);
         };
         /**
          * 清除缓存
@@ -12776,13 +12763,13 @@ var es;
          */
         Pool.free = function (type, obj) {
             this.checkCreate(type);
-            this._objectQueue.get(type).unshift(obj);
+            this._objectQueue.get(type).push(obj);
             if (es.isIPoolable(obj)) {
                 obj["reset"]();
             }
         };
         Pool.checkCreate = function (type) {
-            if (!this._objectQueue.get(type))
+            if (!this._objectQueue.has(type))
                 this._objectQueue.set(type, []);
         };
         Pool._objectQueue = new Map();
@@ -15179,7 +15166,7 @@ var es;
             this._timeInSeconds = timeInsSeconds;
             this._repeats = repeats;
             this.context = context;
-            this._onTime = onTime;
+            this._onTime = onTime.bind(context);
         };
         /**
          * 空出对象引用，以便在js需要时GC可以清理它们的引用
@@ -15208,7 +15195,7 @@ var es;
             for (var i = this._timers.length - 1; i >= 0; i--) {
                 if (this._timers[i].tick()) {
                     this._timers[i].unload();
-                    new es.List(this._timers).removeAt(i);
+                    this._timers.splice(i, 1);
                 }
             }
         };

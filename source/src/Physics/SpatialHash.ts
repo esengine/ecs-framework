@@ -259,31 +259,32 @@ module es {
 
             let resultCounter = 0;
             const potentials = this.aabbBroadphase(bounds, null, layerMask);
-            for (let i = 0; i < potentials.length; i ++) {
-                const collider = potentials[i];
-                if (collider instanceof BoxCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
+            if (potentials.length > 0)
+                for (let i = 0; i < potentials.length; i ++) {
+                    const collider = potentials[i];
+                    if (collider instanceof BoxCollider) {
+                        if (collider.shape.overlaps(this._overlapTestCircle)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
+                    } else if (collider instanceof CircleCollider) {
+                        if (collider.shape.overlaps(this._overlapTestCircle)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
+                    } else if (collider instanceof PolygonCollider) {
+                        if (collider.shape.overlaps(this._overlapTestCircle)) {
+                            results[resultCounter] = collider;
+                            resultCounter++;
+                        }
+                    } else {
+                        throw new Error("对这个对撞机类型的overlapCircle没有实现!");
                     }
-                } else if (collider instanceof CircleCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
-                    }
-                } else if (collider instanceof PolygonCollider) {
-                    if (collider.shape.overlaps(this._overlapTestCircle)) {
-                        results[resultCounter] = collider;
-                        resultCounter++;
-                    }
-                } else {
-                    throw new Error("对这个对撞机类型的overlapCircle没有实现!");
-                }
 
-                // 如果我们所有的结果数据有了则返回
-                if (resultCounter === results.length)
-                    return resultCounter;
-            }
+                    // 如果我们所有的结果数据有了则返回
+                    if (resultCounter === results.length)
+                        return resultCounter;
+                }
 
             return resultCounter;
         }

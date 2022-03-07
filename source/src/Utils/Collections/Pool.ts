@@ -15,7 +15,7 @@ module es {
             cacheCount -= this._objectQueue.get(type).length;
             if (cacheCount > 0) {
                 for (let i = 0; i < cacheCount; i++) {
-                    this._objectQueue.get(type).unshift(new type());
+                    this._objectQueue.get(type).push(new type());
                 }
             }
         }
@@ -27,7 +27,7 @@ module es {
         public static trimCache<T>(type: new (...args) => T, cacheCount: number) {
             this.checkCreate(type);
             while (cacheCount > this._objectQueue.get(type).length)
-                this._objectQueue.get(type).shift();
+                this._objectQueue.get(type).splice(0, 1);
         }
 
         /**
@@ -55,7 +55,7 @@ module es {
          */
         public static free<T>(type: new (...args) => T, obj: T) {
             this.checkCreate(type);
-            this._objectQueue.get(type).unshift(obj);
+            this._objectQueue.get(type).push(obj);
 
             if (isIPoolable(obj)) {
                 obj["reset"]();
@@ -63,7 +63,7 @@ module es {
         }
 
         private static checkCreate<T>(type: new (...args) => T) {
-            if (!this._objectQueue.get(type))
+            if (!this._objectQueue.has(type))
                 this._objectQueue.set(type, []);
         }
     }

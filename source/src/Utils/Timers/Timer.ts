@@ -41,7 +41,7 @@ module es {
             this._timeInSeconds = timeInsSeconds;
             this._repeats = repeats;
             this.context = context;
-            this._onTime = onTime;
+            this._onTime = onTime.bind(context);
         }
 
         /**

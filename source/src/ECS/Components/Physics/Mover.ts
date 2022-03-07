@@ -43,6 +43,7 @@ module es {
                     }
                 }
 
+
             if (colliders.length > 0) {
                 for (let i = 0; i < colliders.length; i++) {
                     let collider = colliders[i];
