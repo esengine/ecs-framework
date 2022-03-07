@@ -20,58 +20,66 @@ module es {
          */
         public calculateMovement(motion: Vector2, collisionResult: CollisionResult): boolean {
             let collider = null;
-            for (let i = 0; i < this.entity.components.buffer.length; i++) {
-                let component = this.entity.components.buffer[i];
-                if (component instanceof Collider) {
-                    collider = component;
-                    break;
+            if (this.entity.components.buffer.length > 0)
+                for (let i = 0; i < this.entity.components.buffer.length; i++) {
+                    let component = this.entity.components.buffer[i];
+                    if (component instanceof Collider) {
+                        collider = component;
+                        break;
+                    }
                 }
-            }
+
             if (collider == null || this._triggerHelper == null) {
                 return false;
             }
 
             // 移动所有的非触发碰撞器并获得最近的碰撞
             let colliders: Collider[] = [];
-            for (let i = 0; i < this.entity.components.buffer.length; i ++) {
-                let component = this.entity.components.buffer[i];
-                if (component instanceof Collider) {
-                    colliders.push(component);
+            if (this.entity.components.buffer.length > 0)
+                for (let i = 0; i < this.entity.components.buffer.length; i ++) {
+                    let component = this.entity.components.buffer[i];
+                    if (component instanceof Collider) {
+                        colliders.push(component);
+                    }
                 }
-            }
-            for (let i = 0; i < colliders.length; i++) {
-                let collider = colliders[i];
 
-                // 不检测触发器 在我们移动后会重新访问它
-                if (collider.isTrigger)
-                    continue;
-
-                // 获取我们在新位置可能发生碰撞的任何东西
-                let bounds = collider.bounds.clone();
-                bounds.x += motion.x;
-                bounds.y += motion.y;
-                let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
-
-                for (let neighbor of neighbors) {
-                    // 不检测触发器
-                    if (neighbor.isTrigger)
-                        return;
-
-                    let _internalcollisionResult: CollisionResult = new CollisionResult();
-                    if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
-                        // 如果碰撞 则退回之前的移动量
-                        motion.subEqual(_internalcollisionResult.minimumTranslationVector);
-                        // 如果我们碰到多个对象，为了简单起见，只取第一个。
-                        if (_internalcollisionResult.collider != null) {
-                            collisionResult.collider = _internalcollisionResult.collider;
-                            collisionResult.minimumTranslationVector = _internalcollisionResult.minimumTranslationVector;
-                            collisionResult.normal = _internalcollisionResult.normal;
-                            collisionResult.point = _internalcollisionResult.point;
+            if (colliders.length > 0) {
+                for (let i = 0; i < colliders.length; i++) {
+                    let collider = colliders[i];
+    
+                    // 不检测触发器 在我们移动后会重新访问它
+                    if (collider.isTrigger)
+                        continue;
+    
+                    // 获取我们在新位置可能发生碰撞的任何东西
+                    let bounds = collider.bounds;
+                    bounds.x += motion.x;
+                    bounds.y += motion.y;
+                    let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, bounds, collider.collidesWithLayers.value);
+    
+                    if (neighbors.length > 0) {
+                        for (let i = 0; i < neighbors.length; i ++) {
+                            const neighbor = neighbors[i];
+                            // 不检测触发器
+                            if (neighbor.isTrigger)
+                                return;
+        
+                            let _internalcollisionResult: CollisionResult = new CollisionResult();
+                            if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
+                                // 如果碰撞 则退回之前的移动量
+                                motion.subEqual(_internalcollisionResult.minimumTranslationVector);
+                                // 如果我们碰到多个对象，为了简单起见，只取第一个。
+                                if (_internalcollisionResult.collider != null) {
+                                    collisionResult.collider = _internalcollisionResult.collider;
+                                    collisionResult.minimumTranslationVector = _internalcollisionResult.minimumTranslationVector;
+                                    collisionResult.normal = _internalcollisionResult.normal;
+                                    collisionResult.point = _internalcollisionResult.point;
+                                }
+                            }
                         }
                     }
                 }
             }
-
             ListPool.free(Collider, colliders);
 
             return collisionResult.collider != null;

@@ -228,23 +228,26 @@ module es {
             let neighbors = Physics.boxcastBroadphaseExcludingSelf(this, colliderBounds, this.collidesWithLayers.value);
 
             // 更改形状位置，使其处于移动后的位置，以便我们检查是否有重叠 
-            let oldPosition = this.shape.position.clone();
+            let oldPosition = this.shape.position;
             this.shape.position = Vector2.add(this.shape.position, motion);
 
             let didCollide = false;
-            for (let neighbor of neighbors) {
-                if (neighbor.isTrigger)
-                    continue;
-
-                if (this.collidesWithNonMotion(neighbor, result)) {
-                    motion = motion.sub(result.minimumTranslationVector);
-                    this.shape.position = this.shape.position.sub(result.minimumTranslationVector);
-                    didCollide = true;
+            if (neighbors.length > 0) {
+                for (let i = 0; i < neighbors.length; i ++ ){
+                    const neighbor = neighbors[i];
+                     if (neighbor.isTrigger)
+                        continue;
+    
+                    if (this.collidesWithNonMotion(neighbor, result)) {
+                        motion = motion.sub(result.minimumTranslationVector);
+                        this.shape.position = this.shape.position.sub(result.minimumTranslationVector);
+                        didCollide = true;
+                    }
                 }
             }
 
             // 将形状位置返回到检查之前的位置 
-            this.shape.position = oldPosition.clone();
+            this.shape.position = oldPosition;
 
             return didCollide;
         }

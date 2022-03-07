@@ -23,38 +23,44 @@ module es {
             // 对所有实体.colliders进行重叠检查，这些实体.colliders是触发器，与所有宽相碰撞器，无论是否触发器。   
             // 任何重叠都会导致触发事件
             let colliders: Collider[] = this.getColliders();
-            for (let i = 0; i < colliders.length; i++) {
-                let collider = colliders[i];
-
-                let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, collider.bounds, collider.collidesWithLayers.value);
-                for (let j = 0; j < neighbors.length; j++) {
-                    let neighbor = neighbors[j];
-                    // 我们至少需要一个碰撞器作为触发器
-                    if (!collider.isTrigger && !neighbor.isTrigger)
-                        continue;
-
-                    if (collider.overlaps(neighbor)) {
-                        const pair = new Pair<Collider>(collider, neighbor);
-
-                        // 如果我们的某一个集合中已经有了这个对子（前一个或当前的触发交叉点），就不要调用输入事件了
-                        const shouldReportTriggerEvent = !this._activeTriggerIntersections.has(pair) &&
-                            !this._previousTriggerIntersections.has(pair);
-
-                            if (shouldReportTriggerEvent) {
-                                if (neighbor.castSortOrder >= Collider.lateSortOrder) {
-                                    lateColliders.push(pair);
-                                } else {
-                                    this.notifyTriggerListeners(pair, true);
+            if (colliders.length > 0) {
+                for (let i = 0; i < colliders.length; i++) {
+                    let collider = colliders[i];
+    
+                    let neighbors = Physics.boxcastBroadphaseExcludingSelf(collider, collider.bounds, collider.collidesWithLayers.value);
+                    for (let j = 0; j < neighbors.length; j++) {
+                        let neighbor = neighbors[j];
+                        // 我们至少需要一个碰撞器作为触发器
+                        if (!collider.isTrigger && !neighbor.isTrigger)
+                            continue;
+    
+                        if (collider.overlaps(neighbor)) {
+                            const pair = new Pair<Collider>(collider, neighbor);
+    
+                            // 如果我们的某一个集合中已经有了这个对子（前一个或当前的触发交叉点），就不要调用输入事件了
+                            const shouldReportTriggerEvent = !this._activeTriggerIntersections.has(pair) &&
+                                !this._previousTriggerIntersections.has(pair);
+    
+                                if (shouldReportTriggerEvent) {
+                                    if (neighbor.castSortOrder >= Collider.lateSortOrder) {
+                                        lateColliders.push(pair);
+                                    } else {
+                                        this.notifyTriggerListeners(pair, true);
+                                    }
                                 }
-                            }
-
-                        this._activeTriggerIntersections.add(pair);
+    
+                            this._activeTriggerIntersections.add(pair);
+                        }
                     }
                 }
             }
+            
 
-            for (const pair of lateColliders) {
-                this.notifyTriggerListeners(pair, true);
+            if (lateColliders.length > 0) {
+                for (let i = 0; i < lateColliders.length; i ++) {
+                    const pair = lateColliders[i];
+                    this.notifyTriggerListeners(pair, true);
+                }
             }
 
             this.checkForExitedColliders();
@@ -62,12 +68,13 @@ module es {
 
         private getColliders() {
             const colliders: Collider[] = [];
-            for (let i = 0; i < this._entity.components.buffer.length; i ++) {
-                const component = this._entity.components.buffer[i];
-                if (component instanceof Collider) {
-                    colliders.push(component);
+            if (this._entity.components.buffer.length > 0)
+                for (let i = 0; i < this._entity.components.buffer.length; i ++) {
+                    const component = this._entity.components.buffer[i];
+                    if (component instanceof Collider) {
+                        colliders.push(component);
+                    }
                 }
-            }
 
             return colliders;
         }
@@ -91,28 +98,32 @@ module es {
 
         private notifyTriggerListeners(collisionPair: Pair<Collider>, isEntering: boolean) {
             TriggerListenerHelper.getITriggerListener(collisionPair.first.entity, this._tempTriggerList);
-            for (let i = 0; i < this._tempTriggerList.length; i++) {
-                if (isEntering) {
-                    this._tempTriggerList[i].onTriggerEnter(collisionPair.second, collisionPair.first);
-                } else {
-                    this._tempTriggerList[i].onTriggerExit(collisionPair.second, collisionPair.first);
-                }
-
-                this._tempTriggerList.length = 0;
-
-                if (collisionPair.second.entity) {
-                    TriggerListenerHelper.getITriggerListener(collisionPair.second.entity, this._tempTriggerList);
-                    for (let i = 0; i < this._tempTriggerList.length; i++) {
-                        if (isEntering) {
-                            this._tempTriggerList[i].onTriggerEnter(collisionPair.first, collisionPair.second);
-                        } else {
-                            this._tempTriggerList[i].onTriggerExit(collisionPair.first, collisionPair.second);
-                        }
+            if (this._tempTriggerList.length > 0)
+                for (let i = 0; i < this._tempTriggerList.length; i++) {
+                    const trigger = this._tempTriggerList[i];
+                    if (isEntering) {
+                        trigger.onTriggerEnter(collisionPair.second, collisionPair.first);
+                    } else {
+                        trigger.onTriggerExit(collisionPair.second, collisionPair.first);
                     }
 
                     this._tempTriggerList.length = 0;
+
+                    if (collisionPair.second.entity) {
+                        TriggerListenerHelper.getITriggerListener(collisionPair.second.entity, this._tempTriggerList);
+                        if (this._tempTriggerList.length > 0)
+                            for (let i = 0; i < this._tempTriggerList.length; i++) {
+                                const trigger = this._tempTriggerList[i];
+                                if (isEntering) {
+                                    trigger.onTriggerEnter(collisionPair.first, collisionPair.second);
+                                } else {
+                                    trigger.onTriggerExit(collisionPair.first, collisionPair.second);
+                                }
+                            }
+
+                        this._tempTriggerList.length = 0;
+                    }
                 }
-            }
         }
     }
 }

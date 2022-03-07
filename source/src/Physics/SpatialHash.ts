@@ -113,15 +113,17 @@ module es {
                         continue;
 
                     // 当cell不为空。循环并取回所有碰撞器
-                    for (let i = 0; i < cell.length; i++) {
-                        const collider = cell[i];
-
-                        // 如果它是自身或者如果它不匹配我们的层掩码 跳过这个碰撞器
-                        if (collider == excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer.value))
-                            continue;
-
-                        if (bounds.intersects(collider.bounds)) {
-                            this._tempHashSet.add(collider);
+                    if (cell.length > 0) {
+                        for (let i = 0; i < cell.length; i++) {
+                            const collider = cell[i];
+    
+                            // 如果它是自身或者如果它不匹配我们的层掩码 跳过这个碰撞器
+                            if (collider == excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer.value))
+                                continue;
+    
+                            if (bounds.intersects(collider.bounds)) {
+                                this._tempHashSet.add(collider);
+                            }
                         }
                     }
                 }
@@ -215,7 +217,9 @@ module es {
 
             let resultCounter = 0;
             let potentials = this.aabbBroadphase(rect, null, layerMask);
-            for (let collider of potentials) {
+
+            for (let i = 0; i < potentials.length; i ++) {
+                const collider = potentials[i];
                 if (collider instanceof BoxCollider) {
                     results[resultCounter] = collider;
                     resultCounter++;
@@ -255,7 +259,8 @@ module es {
 
             let resultCounter = 0;
             const potentials = this.aabbBroadphase(bounds, null, layerMask);
-            for (let collider of potentials) {
+            for (let i = 0; i < potentials.length; i ++) {
+                const collider = potentials[i];
                 if (collider instanceof BoxCollider) {
                     if (collider.shape.overlaps(this._overlapTestCircle)) {
                         results[resultCounter] = collider;
@@ -324,9 +329,8 @@ module es {
          */
         public remove(obj: T) {
             this._store.forEach(list => {
-                let linqList = new es.List(list);
-                if (linqList.contains(obj))
-                    linqList.remove(obj);
+                let index = list.indexOf(obj);
+                list.splice(index, 1);
             })
         }
 
@@ -383,7 +387,7 @@ module es {
                 const potential = cell[i];
 
                 // 管理我们已经处理过的碰撞器
-                if (new es.List(this._checkedColliders).contains(potential))
+                if (this._checkedColliders.indexOf(potential) != -1)
                     continue;
 
                 this._checkedColliders.push(potential);

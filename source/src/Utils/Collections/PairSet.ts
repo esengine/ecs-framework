@@ -31,14 +31,20 @@ module es {
 
         public union(other: PairSet<T>) {
             const otherAll = other.all;
-            for (const elem of otherAll) {
-                this.add(elem);
-            }
+
+            if (otherAll.length > 0)
+                for (let i = 0; i < otherAll.length; i ++) {
+                    const elem = otherAll[i];
+                    this.add(elem);
+                }
         }
 
         public except(other: PairSet<T>) {
             const otherAll = other.all;
-            for (const elem of otherAll) {
+
+            if (otherAll.length > 0)
+            for (let i = 0; i < otherAll.length; i ++) {
+                const elem = otherAll[i];
                 this.remove(elem);
             }
         }

@@ -23,9 +23,12 @@ module es {
 
     export class TriggerListenerHelper {
         public static getITriggerListener(entity: Entity, components: ITriggerListener[]){
-            for (let component of entity.components._components) {
-                if (isITriggerListener(component)) {
-                    components.push(component);
+            if (entity.components._components.length > 0) {
+                for (let i = 0; i < entity.components._components.length; i ++) {
+                    const component = entity.components._components[i];
+                    if (isITriggerListener(component)) {
+                        components.push(component);
+                    }
                 }
             }
 

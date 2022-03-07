@@ -157,29 +157,33 @@ module es {
 
             // 捞取我们在新的位置上可能会碰撞到的任何东西
             let neighbors = Physics.boxcastBroadphaseExcludingSelf(this._collider, this._collider.bounds, this._collider.collidesWithLayers.value);
-            for (const neighbor of neighbors) {
-                if (!neighbor)
-                    continue;
-
-                // 如果邻近的对撞机是同一个实体，则忽略它
-                if (neighbor.entity.equals(this.entity)) {
-                    continue;
-                }
-
-                if (this._collider.collidesWithNonMotion(neighbor, collisionResult)) {
-                    // 如果附近有一个ArcadeRigidbody，我们就会处理完整的碰撞响应。如果没有，我们会根据附近是不可移动的来计算事情
-                    let neighborRigidbody = neighbor.entity.getComponent(ArcadeRigidbody);
-                    if (neighborRigidbody != null) {
-                        this.processOverlap(neighborRigidbody, collisionResult.minimumTranslationVector);
-                        this.processCollision(neighborRigidbody, collisionResult.minimumTranslationVector);
-                    } else {
-                        // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                        this.entity.position = this.entity.position.sub(collisionResult.minimumTranslationVector);
-                        const relativeVelocity = this.calculateResponseVelocity(this.velocity, collisionResult.minimumTranslationVector);
-                        this.velocity.addEqual(relativeVelocity);
+            if (neighbors.length > 0) {
+                for (let i = 0; i < neighbors.length; i ++) {
+                    const neighbor = neighbors[i];
+                    if (!neighbor)
+                        continue;
+    
+                    // 如果邻近的对撞机是同一个实体，则忽略它
+                    if (neighbor.entity.equals(this.entity)) {
+                        continue;
+                    }
+    
+                    if (this._collider.collidesWithNonMotion(neighbor, collisionResult)) {
+                        // 如果附近有一个ArcadeRigidbody，我们就会处理完整的碰撞响应。如果没有，我们会根据附近是不可移动的来计算事情
+                        let neighborRigidbody = neighbor.entity.getComponent(ArcadeRigidbody);
+                        if (neighborRigidbody != null) {
+                            this.processOverlap(neighborRigidbody, collisionResult.minimumTranslationVector);
+                            this.processCollision(neighborRigidbody, collisionResult.minimumTranslationVector);
+                        } else {
+                            // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
+                            this.entity.position = this.entity.position.sub(collisionResult.minimumTranslationVector);
+                            const relativeVelocity = this.calculateResponseVelocity(this.velocity, collisionResult.minimumTranslationVector);
+                            this.velocity.addEqual(relativeVelocity);
+                        }
                     }
                 }
             }
+            
         }
 
         /**
