@@ -1282,7 +1282,7 @@ declare module es {
          * @param motion
          * @param collisionResult
          */
-        calculateMovement(motion: Vector2, collisionResult: CollisionResult): boolean;
+        calculateMovement(motion: Vector2, collisionResult: Out<CollisionResult>): boolean;
         /**
          *  将calculatemomovement应用到实体并更新triggerHelper
          * @param motion
@@ -1293,7 +1293,7 @@ declare module es {
          * @param motion
          * @param collisionResult
          */
-        move(motion: Vector2, collisionResult: CollisionResult): boolean;
+        move(motion: Vector2, collisionResult: Out<CollisionResult>): boolean;
     }
 }
 declare module es {
@@ -1409,25 +1409,25 @@ declare module es {
          * @param motion
          * @param result
          */
-        collidesWith(collider: Collider, motion: Vector2, result?: CollisionResult): boolean;
+        collidesWith(collider: Collider, motion: Vector2, result: Out<CollisionResult>): boolean;
         /**
          * 检查这个对撞机是否与对撞机发生碰撞。如果碰撞，则返回true，结果将被填充
          * @param collider
          * @param result
          */
-        collidesWithNonMotion(collider: Collider, result?: CollisionResult): boolean;
+        collidesWithNonMotion(collider: Collider, result: Out<CollisionResult>): boolean;
         /**
          * 检查此碰撞器是否已应用运动（增量运动矢量）与任何碰撞器发生碰撞。
          * 如果是这样，则将返回true，并且将使用碰撞数据填充结果。 运动将设置为碰撞器在碰撞之前可以行进的最大距离。
          * @param motion
          * @param result
          */
-        collidesWithAny(motion: Vector2, result: CollisionResult): boolean;
+        collidesWithAny(motion: Vector2, result: Out<CollisionResult>): boolean;
         /**
          * 检查此碰撞器是否与场景中的其他碰撞器碰撞。它相交的第一个碰撞器将在碰撞结果中返回碰撞数据。
          * @param result
          */
-        collidesWithAnyNonMotion(result?: CollisionResult): boolean;
+        collidesWithAnyNonMotion(result: Out<CollisionResult>): boolean;
     }
 }
 declare module es {
@@ -3053,7 +3053,7 @@ declare module es {
          * @param edgeNormal
          * @returns 矩形边框上离点最近的点
          */
-        getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2;
+        getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Out<Vector2>): Vector2;
         /**
          * 创建一个新的RectangleF，该RectangleF包含两个其他矩形的重叠区域
          * @param value1
@@ -3526,10 +3526,10 @@ declare module es {
         bounds: Rectangle;
         abstract recalculateBounds(collider: Collider): any;
         abstract overlaps(other: Shape): boolean;
-        abstract collidesWithShape(other: Shape, collisionResult: CollisionResult): boolean;
-        abstract collidesWithLine(start: Vector2, end: Vector2, hit: RaycastHit): boolean;
+        abstract collidesWithShape(other: Shape, collisionResult: Out<CollisionResult>): boolean;
+        abstract collidesWithLine(start: Vector2, end: Vector2, hit: Out<RaycastHit>): boolean;
         abstract containsPoint(point: Vector2): any;
-        abstract pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
+        abstract pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
     }
 }
 declare module es {
@@ -3627,15 +3627,15 @@ declare module es {
         static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints: Vector2[]): void;
         recalculateBounds(collider: Collider): void;
         overlaps(other: Shape): any;
-        collidesWithShape(other: Shape, result: CollisionResult): boolean;
-        collidesWithLine(start: es.Vector2, end: es.Vector2, hit: es.RaycastHit): boolean;
+        collidesWithShape(other: Shape, result: Out<CollisionResult>): boolean;
+        collidesWithLine(start: Vector2, end: Vector2, hit: Out<RaycastHit>): boolean;
         /**
          * 本质上，这个算法所做的就是从一个点发射一条射线。
          * 如果它与奇数条多边形边相交，我们就知道它在多边形内部。
          * @param point
          */
         containsPoint(point: Vector2): boolean;
-        pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
+        pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
     }
 }
 declare module es {
@@ -3659,9 +3659,9 @@ declare module es {
          */
         updateBox(width: number, height: number): void;
         overlaps(other: Shape): any;
-        collidesWithShape(other: Shape, result: CollisionResult): boolean;
+        collidesWithShape(other: Shape, result: Out<CollisionResult>): boolean;
         containsPoint(point: Vector2): boolean;
-        pointCollidesWithShape(point: es.Vector2, result: es.CollisionResult): boolean;
+        pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
     }
 }
 declare module es {
@@ -3671,15 +3671,15 @@ declare module es {
         constructor(radius: number);
         recalculateBounds(collider: Collider): void;
         overlaps(other: Shape): any;
-        collidesWithShape(other: Shape, result: CollisionResult): boolean;
-        collidesWithLine(start: Vector2, end: Vector2, hit: RaycastHit): boolean;
+        collidesWithShape(other: Shape, result: Out<CollisionResult>): boolean;
+        collidesWithLine(start: Vector2, end: Vector2, hit: Out<RaycastHit>): boolean;
         getPointAlongEdge(angle: number): Vector2;
         /**
          * 获取所提供的点是否在此范围内
          * @param point
          */
         containsPoint(point: Vector2): boolean;
-        pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
+        pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
     }
 }
 declare module es {
@@ -3731,7 +3731,7 @@ declare module es {
 }
 declare module es {
     class ShapeCollisionsBox {
-        static boxToBox(first: Box, second: Box, result: CollisionResult): boolean;
+        static boxToBox(first: Box, second: Box, result: Out<CollisionResult>): boolean;
         /**
          * 用second检查被deltaMovement移动的框的结果
          * @param first
@@ -3745,31 +3745,31 @@ declare module es {
 }
 declare module es {
     class ShapeCollisionsCircle {
-        static circleToCircleCast(first: Circle, second: Circle, deltaMovement: Vector2, hit: RaycastHit): boolean;
-        static circleToCircle(first: Circle, second: Circle, result?: CollisionResult): boolean;
+        static circleToCircleCast(first: Circle, second: Circle, deltaMovement: Vector2, hit: Out<RaycastHit>): boolean;
+        static circleToCircle(first: Circle, second: Circle, result: Out<CollisionResult>): boolean;
         /**
          * 适用于中心在框内的圆，也适用于与框外中心重合的圆。
          * @param circle
          * @param box
          * @param result
          */
-        static circleToBox(circle: Circle, box: Box, result?: CollisionResult): boolean;
-        static circleToPolygon(circle: Circle, polygon: Polygon, result?: CollisionResult): boolean;
+        static circleToBox(circle: Circle, box: Box, result: Out<CollisionResult>): boolean;
+        static circleToPolygon(circle: Circle, polygon: Polygon, result: Out<CollisionResult>): boolean;
         static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
     }
 }
 declare module es {
     class ShapeCollisionsLine {
-        static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit?: RaycastHit): boolean;
+        static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit: Out<RaycastHit>): boolean;
         static lineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2, intersection: Vector2): boolean;
-        static lineToCircle(start: Vector2, end: Vector2, s: Circle, hit: RaycastHit): boolean;
+        static lineToCircle(start: Vector2, end: Vector2, s: Circle, hit: Out<RaycastHit>): boolean;
     }
 }
 declare module es {
     class ShapeCollisionsPoint {
-        static pointToCircle(point: Vector2, circle: Circle, result: CollisionResult): boolean;
-        static pointToBox(point: Vector2, box: Box, result?: CollisionResult): boolean;
-        static pointToPoly(point: Vector2, poly: Polygon, result?: CollisionResult): boolean;
+        static pointToCircle(point: Vector2, circle: Circle, result: Out<CollisionResult>): boolean;
+        static pointToBox(point: Vector2, box: Box, result: Out<CollisionResult>): boolean;
+        static pointToPoly(point: Vector2, poly: Polygon, result: Out<CollisionResult>): boolean;
     }
 }
 declare module es {
@@ -3780,7 +3780,7 @@ declare module es {
          * @param second
          * @param result
          */
-        static polygonToPolygon(first: Polygon, second: Polygon, result: CollisionResult): boolean;
+        static polygonToPolygon(first: Polygon, second: Polygon, result: Out<CollisionResult>): boolean;
         /**
          * 计算一个多边形在一个轴上的投影，并返回一个[min，max]区间
          * @param axis
@@ -4563,6 +4563,12 @@ declare module es {
         clearListenerWithCaller(caller: object): void;
         private _onValueChange;
         private _value;
+    }
+}
+declare module es {
+    class Out<T> {
+        value: T;
+        constructor(value?: T);
     }
 }
 declare module es {

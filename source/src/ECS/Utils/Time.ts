@@ -53,7 +53,7 @@ module es {
          */
         public static checkEvery(interval: number) {
             // 我们减去了delta，因为timeSinceSceneLoad已经包含了这个update ticks delta
-            return this.timeSinceSceneLoad / interval > (this.timeSinceSceneLoad - this.deltaTime) / interval;
+            return MathHelper.toInt(this.timeSinceSceneLoad / interval) > MathHelper.toInt((this.timeSinceSceneLoad - this.deltaTime) / interval);
         }
     }
 }

@@ -18,7 +18,9 @@ module es {
          * @param motion
          * @param collisionResult
          */
-        public calculateMovement(motion: Vector2, collisionResult: CollisionResult): boolean {
+        public calculateMovement(motion: Vector2, collisionResult: Out<CollisionResult>): boolean {
+            collisionResult.value = new CollisionResult();
+
             let collider = null;
             if (this.entity.components.buffer.length > 0)
                 for (let i = 0; i < this.entity.components.buffer.length; i++) {
@@ -65,16 +67,16 @@ module es {
                             if (neighbor.isTrigger)
                                 return;
         
-                            let _internalcollisionResult: CollisionResult = new CollisionResult();
+                            let _internalcollisionResult = new Out<CollisionResult>();
                             if (collider.collidesWith(neighbor, motion, _internalcollisionResult)) {
                                 // 如果碰撞 则退回之前的移动量
-                                motion.subEqual(_internalcollisionResult.minimumTranslationVector);
+                                motion.subEqual(_internalcollisionResult.value.minimumTranslationVector);
                                 // 如果我们碰到多个对象，为了简单起见，只取第一个。
-                                if (_internalcollisionResult.collider != null) {
-                                    collisionResult.collider = _internalcollisionResult.collider;
-                                    collisionResult.minimumTranslationVector = _internalcollisionResult.minimumTranslationVector;
-                                    collisionResult.normal = _internalcollisionResult.normal;
-                                    collisionResult.point = _internalcollisionResult.point;
+                                if (_internalcollisionResult.value.collider != null) {
+                                    collisionResult.value.collider = _internalcollisionResult.value.collider;
+                                    collisionResult.value.minimumTranslationVector = _internalcollisionResult.value.minimumTranslationVector;
+                                    collisionResult.value.normal = _internalcollisionResult.value.normal;
+                                    collisionResult.value.point = _internalcollisionResult.value.point;
                                 }
                             }
                         }
@@ -83,7 +85,7 @@ module es {
             }
             ListPool.free(Collider, colliders);
 
-            return collisionResult.collider != null;
+            return collisionResult.value.collider != null;
         }
 
         /**
@@ -104,10 +106,10 @@ module es {
          * @param motion
          * @param collisionResult
          */
-        public move(motion: Vector2, collisionResult: CollisionResult) {
+        public move(motion: Vector2, collisionResult: Out<CollisionResult>) {
             this.calculateMovement(motion, collisionResult);
             this.applyMovement(motion);
-            return collisionResult.collider != null;
+            return collisionResult.value.collider != null;
         }
     }
 }

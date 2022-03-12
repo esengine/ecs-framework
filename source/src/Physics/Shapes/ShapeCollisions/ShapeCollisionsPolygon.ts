@@ -6,7 +6,8 @@ module es {
          * @param second
          * @param result
          */
-         public static polygonToPolygon(first: Polygon, second: Polygon, result: CollisionResult): boolean {
+        public static polygonToPolygon(first: Polygon, second: Polygon, result: Out<CollisionResult>): boolean {
+            result.value = new CollisionResult();
             let isIntersecting = true;
 
             const firstEdges = first.edgeNormals;
@@ -24,8 +25,8 @@ module es {
 
                 // 求多边形在当前轴上的投影
                 let intervalDist = 0;
-                let {min: minA, max: maxA} = this.getInterval(axis, first);
-                const {min: minB, max: maxB} = this.getInterval(axis, second);
+                let { min: minA, max: maxA } = this.getInterval(axis, first);
+                const { min: minB, max: maxB } = this.getInterval(axis, second);
 
                 // 将区间设为第二个多边形的空间。由轴上投影的位置差偏移。
                 const relativeIntervalOffset = polygonOffset.dot(axis);
@@ -56,8 +57,8 @@ module es {
             }
 
             // 利用最小平移向量对多边形进行推入。
-            result.normal = translationAxis;
-            result.minimumTranslationVector = translationAxis.scale(-minIntervalDistance);
+            result.value.normal = translationAxis;
+            result.value.minimumTranslationVector = translationAxis.scale(-minIntervalDistance);
 
             return true;
         }
@@ -69,8 +70,8 @@ module es {
          * @param min
          * @param max
          */
-        public static getInterval(axis: Vector2, polygon: Polygon): {min: number, max: number} {
-            const res = {min: 0, max: 0};
+        public static getInterval(axis: Vector2, polygon: Polygon): { min: number, max: number } {
+            const res = { min: 0, max: 0 };
             let dot: number;
             dot = polygon.points[0].dot(axis);
             res.max = dot;
@@ -93,7 +94,7 @@ module es {
          * @param minB
          * @param maxB
          */
-         public static intervalDistance(minA: number, maxA: number, minB: number, maxB: number) {
+        public static intervalDistance(minA: number, maxA: number, minB: number, maxB: number) {
             if (minA < minB)
                 return minB - maxA;
 

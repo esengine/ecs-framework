@@ -265,8 +265,8 @@ module es {
         public static getClosestPointOnRectangleBorderToPoint(rect: Rectangle, point: Vector2) {
             // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
             let res = es.Vector2.zero;
-            res.x = MathHelper.clamp(Math.trunc(point.x), rect.left, rect.right)
-            res.y = MathHelper.clamp(Math.trunc(point.y), rect.top, rect.bottom);
+            res.x = MathHelper.clamp(MathHelper.toInt(point.x), rect.left, rect.right)
+            res.y = MathHelper.clamp(MathHelper.toInt(point.y), rect.top, rect.bottom);
 
             // 如果点在矩形内，我们需要将res推到边框，因为它将在矩形内 
             if (rect.contains(res.x, res.y)) {
@@ -327,16 +327,16 @@ module es {
                     maxY = pt.y;
             }
 
-            return this.fromMinMaxVector(new Vector2(Math.trunc(minX), Math.trunc(minY)), new Vector2(Math.trunc(maxX), Math.trunc(maxY)));
+            return this.fromMinMaxVector(new Vector2(MathHelper.toInt(minX), MathHelper.toInt(minY)), new Vector2(MathHelper.toInt(maxX), MathHelper.toInt(maxY)));
         }
 
         public static calculateBounds(rect: Rectangle, parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2,
             rotation: number, width: number, height: number) {
             if (rotation == 0) {
-                rect.x = Math.trunc(parentPosition.x + position.x - origin.x * scale.x);
-                rect.y = Math.trunc(parentPosition.y + position.y - origin.y * scale.y);
-                rect.width = Math.trunc(width * scale.x);
-                rect.height = Math.trunc(height * scale.y);
+                rect.x = MathHelper.toInt(parentPosition.x + position.x - origin.x * scale.x);
+                rect.y = MathHelper.toInt(parentPosition.y + position.y - origin.y * scale.y);
+                rect.width = MathHelper.toInt(width * scale.x);
+                rect.height = MathHelper.toInt(height * scale.y);
             } else {
                 // 我们需要找到我们的绝对最小/最大值，并据此创建边界
                 let worldPosX = parentPosition.x + position.x;
@@ -366,14 +366,14 @@ module es {
                 Vector2Ext.transformR(bottomRight, transformMatrix, bottomRight);
 
                 // 找出最小值和最大值，这样我们就可以计算出我们的边界框。
-                let minX = Math.trunc(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
-                let maxX = Math.trunc(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
-                let minY = Math.trunc(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
-                let maxY = Math.trunc(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                let minX = MathHelper.toInt(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                let maxX = MathHelper.toInt(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                let minY = MathHelper.toInt(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                let maxY = MathHelper.toInt(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
 
                 rect.location = new Vector2(minX, minY);
-                rect.width = Math.trunc(maxX - minX);
-                rect.height = Math.trunc(maxY - minY);
+                rect.width = MathHelper.toInt(maxX - minX);
+                rect.height = MathHelper.toInt(maxY - minY);
             }
         }
 
@@ -383,10 +383,10 @@ module es {
          * @param scale 
          */
         public static scale(rect: Rectangle, scale: Vector2) {
-            rect.x = Math.trunc(rect.x * scale.x);
-            rect.y = Math.trunc(rect.y * scale.y);
-            rect.width = Math.trunc(rect.width * scale.x);
-            rect.height = Math.trunc(rect.height * scale.y);
+            rect.x = MathHelper.toInt(rect.x * scale.x);
+            rect.y = MathHelper.toInt(rect.y * scale.y);
+            rect.width = MathHelper.toInt(rect.width * scale.x);
+            rect.height = MathHelper.toInt(rect.height * scale.y);
         }
 
         public static translate(rect: Rectangle, vec: Vector2) {

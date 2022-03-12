@@ -318,9 +318,10 @@ module es {
          * @param edgeNormal
          * @returns 矩形边框上离点最近的点
          */
-        public getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Vector2): Vector2 {
+        public getClosestPointOnRectangleBorderToPoint(point: Vector2, edgeNormal: Out<Vector2>): Vector2 {
+            edgeNormal.value = Vector2.zero;
             // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
-            let res = es.Vector2.zero;
+            const res = Vector2.zero;
             res.x = MathHelper.clamp(point.x, this.left, this.right);
             res.y = MathHelper.clamp(point.y, this.top, this.bottom);
 
@@ -334,22 +335,22 @@ module es {
                 let min = Math.min(dl, dr, dt, db);
                 if (min == dt) {
                     res.y = this.top;
-                    edgeNormal.y = -1;
+                    edgeNormal.value.y = -1;
                 } else if (min == db) {
                     res.y = this.bottom;
-                    edgeNormal.y = 1;
+                    edgeNormal.value.y = 1;
                 } else if (min == dl) {
                     res.x = this.left;
-                    edgeNormal.x = -1;
+                    edgeNormal.value.x = -1;
                 } else {
                     res.x = this.right;
-                    edgeNormal.x = 1;
+                    edgeNormal.value.x = 1;
                 }
             } else {
-                if (res.x == this.left) edgeNormal.x = -1;
-                if (res.x == this.right) edgeNormal.x = 1;
-                if (res.y == this.top) edgeNormal.y = -1;
-                if (res.y == this.bottom) edgeNormal.y = 1;
+                if (res.x == this.left) edgeNormal.value.x = -1;
+                if (res.x == this.right) edgeNormal.value.x = 1;
+                if (res.y == this.top) edgeNormal.value.y = -1;
+                if (res.y == this.bottom) edgeNormal.value.y = 1;
             }
 
             return res;

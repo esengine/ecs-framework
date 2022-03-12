@@ -2467,7 +2467,6 @@ var es;
             if (this.shouldUseGravity)
                 this.velocity.addEqual(es.Physics.gravity.scale(es.Time.deltaTime));
             this.entity.position = this.entity.position.add(this.velocity.scale(es.Time.deltaTime));
-            var collisionResult = new es.CollisionResult();
             // 捞取我们在新的位置上可能会碰撞到的任何东西
             var neighbors = es.Physics.boxcastBroadphaseExcludingSelf(this._collider, this._collider.bounds, this._collider.collidesWithLayers.value);
             if (neighbors.length > 0) {
@@ -2479,17 +2478,18 @@ var es;
                     if (neighbor.entity.equals(this.entity)) {
                         continue;
                     }
+                    var collisionResult = new es.Out();
                     if (this._collider.collidesWithNonMotion(neighbor, collisionResult)) {
                         // 如果附近有一个ArcadeRigidbody，我们就会处理完整的碰撞响应。如果没有，我们会根据附近是不可移动的来计算事情
                         var neighborRigidbody = neighbor.entity.getComponent(ArcadeRigidbody);
                         if (neighborRigidbody != null) {
-                            this.processOverlap(neighborRigidbody, collisionResult.minimumTranslationVector);
-                            this.processCollision(neighborRigidbody, collisionResult.minimumTranslationVector);
+                            this.processOverlap(neighborRigidbody, collisionResult.value.minimumTranslationVector);
+                            this.processCollision(neighborRigidbody, collisionResult.value.minimumTranslationVector);
                         }
                         else {
                             // 没有ArcadeRigidbody，所以我们假设它是不动的，只移动我们自己的
-                            this.entity.position = this.entity.position.sub(collisionResult.minimumTranslationVector);
-                            var relativeVelocity = this.calculateResponseVelocity(this.velocity, collisionResult.minimumTranslationVector);
+                            this.entity.position = this.entity.position.sub(collisionResult.value.minimumTranslationVector);
+                            var relativeVelocity = this.calculateResponseVelocity(this.velocity, collisionResult.value.minimumTranslationVector);
                             this.velocity.addEqual(relativeVelocity);
                         }
                     }
@@ -3026,6 +3026,7 @@ var es;
          * @param collisionResult
          */
         Mover.prototype.calculateMovement = function (motion, collisionResult) {
+            collisionResult.value = new es.CollisionResult();
             var collider = null;
             if (this.entity.components.buffer.length > 0)
                 for (var i = 0; i < this.entity.components.buffer.length; i++) {
@@ -3064,16 +3065,16 @@ var es;
                             // 不检测触发器
                             if (neighbor.isTrigger)
                                 return;
-                            var _internalcollisionResult = new es.CollisionResult();
+                            var _internalcollisionResult = new es.Out();
                             if (collider_1.collidesWith(neighbor, motion, _internalcollisionResult)) {
                                 // 如果碰撞 则退回之前的移动量
-                                motion.subEqual(_internalcollisionResult.minimumTranslationVector);
+                                motion.subEqual(_internalcollisionResult.value.minimumTranslationVector);
                                 // 如果我们碰到多个对象，为了简单起见，只取第一个。
-                                if (_internalcollisionResult.collider != null) {
-                                    collisionResult.collider = _internalcollisionResult.collider;
-                                    collisionResult.minimumTranslationVector = _internalcollisionResult.minimumTranslationVector;
-                                    collisionResult.normal = _internalcollisionResult.normal;
-                                    collisionResult.point = _internalcollisionResult.point;
+                                if (_internalcollisionResult.value.collider != null) {
+                                    collisionResult.value.collider = _internalcollisionResult.value.collider;
+                                    collisionResult.value.minimumTranslationVector = _internalcollisionResult.value.minimumTranslationVector;
+                                    collisionResult.value.normal = _internalcollisionResult.value.normal;
+                                    collisionResult.value.point = _internalcollisionResult.value.point;
                                 }
                             }
                         }
@@ -3081,7 +3082,7 @@ var es;
                 }
             }
             es.ListPool.free(es.Collider, colliders);
-            return collisionResult.collider != null;
+            return collisionResult.value.collider != null;
         };
         /**
          *  将calculatemomovement应用到实体并更新triggerHelper
@@ -3102,7 +3103,7 @@ var es;
         Mover.prototype.move = function (motion, collisionResult) {
             this.calculateMovement(motion, collisionResult);
             this.applyMovement(motion);
-            return collisionResult.collider != null;
+            return collisionResult.value.collider != null;
         };
         return Mover;
     }(es.Component));
@@ -3346,13 +3347,12 @@ var es;
          * @param result
          */
         Collider.prototype.collidesWith = function (collider, motion, result) {
-            if (result === void 0) { result = new es.CollisionResult(); }
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
             var oldPosition = this.entity.position;
             this.entity.position = this.entity.position.add(motion);
             var didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)
-                result.collider = collider;
+                result.value.collider = collider;
             // 将图形位置返回到检查前的位置
             this.entity.position = oldPosition;
             return didCollide;
@@ -3363,12 +3363,11 @@ var es;
          * @param result
          */
         Collider.prototype.collidesWithNonMotion = function (collider, result) {
-            if (result === void 0) { result = new es.CollisionResult(); }
             if (this.shape.collidesWithShape(collider.shape, result)) {
-                result.collider = collider;
+                result.value.collider = collider;
                 return true;
             }
-            result.collider = null;
+            result.value.collider = null;
             return false;
         };
         /**
@@ -3378,6 +3377,7 @@ var es;
          * @param result
          */
         Collider.prototype.collidesWithAny = function (motion, result) {
+            result.value = new es.CollisionResult();
             // 在我们的新位置上获取我们可能会碰到的任何东西 
             var colliderBounds = this.bounds.clone();
             colliderBounds.x += motion.x;
@@ -3387,16 +3387,14 @@ var es;
             var oldPosition = this.shape.position;
             this.shape.position = es.Vector2.add(this.shape.position, motion);
             var didCollide = false;
-            if (neighbors.length > 0) {
-                for (var i = 0; i < neighbors.length; i++) {
-                    var neighbor = neighbors[i];
-                    if (neighbor.isTrigger)
-                        continue;
-                    if (this.collidesWithNonMotion(neighbor, result)) {
-                        motion = motion.sub(result.minimumTranslationVector);
-                        this.shape.position = this.shape.position.sub(result.minimumTranslationVector);
-                        didCollide = true;
-                    }
+            for (var i = 0; i < neighbors.length; i++) {
+                var neighbor = neighbors[i];
+                if (neighbor.isTrigger)
+                    continue;
+                if (this.collidesWithNonMotion(neighbor, result)) {
+                    motion = motion.sub(result.value.minimumTranslationVector);
+                    this.shape.position = this.shape.position.sub(result.value.minimumTranslationVector);
+                    didCollide = true;
                 }
             }
             // 将形状位置返回到检查之前的位置 
@@ -3408,8 +3406,8 @@ var es;
          * @param result
          */
         Collider.prototype.collidesWithAnyNonMotion = function (result) {
-            if (result === void 0) { result = new es.CollisionResult(); }
             var e_1, _a;
+            result.value = new es.CollisionResult();
             // 在我们的新位置上获取我们可能会碰到的任何东西 
             var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this, this.collidesWithLayers.value);
             try {
@@ -5449,7 +5447,7 @@ var es;
          */
         Time.checkEvery = function (interval) {
             // 我们减去了delta，因为timeSinceSceneLoad已经包含了这个update ticks delta
-            return this.timeSinceSceneLoad / interval > (this.timeSinceSceneLoad - this.deltaTime) / interval;
+            return es.MathHelper.toInt(this.timeSinceSceneLoad / interval) > es.MathHelper.toInt((this.timeSinceSceneLoad - this.deltaTime) / interval);
         };
         /** 游戏运行的总时间 */
         Time.totalTime = 0;
@@ -7469,6 +7467,7 @@ var es;
          * @returns 矩形边框上离点最近的点
          */
         Rectangle.prototype.getClosestPointOnRectangleBorderToPoint = function (point, edgeNormal) {
+            edgeNormal.value = es.Vector2.zero;
             // 对于每条轴，如果点在框外，就把它限制在框内，否则就不要管它
             var res = es.Vector2.zero;
             res.x = es.MathHelper.clamp(point.x, this.left, this.right);
@@ -7482,30 +7481,30 @@ var es;
                 var min = Math.min(dl, dr, dt, db);
                 if (min == dt) {
                     res.y = this.top;
-                    edgeNormal.y = -1;
+                    edgeNormal.value.y = -1;
                 }
                 else if (min == db) {
                     res.y = this.bottom;
-                    edgeNormal.y = 1;
+                    edgeNormal.value.y = 1;
                 }
                 else if (min == dl) {
                     res.x = this.left;
-                    edgeNormal.x = -1;
+                    edgeNormal.value.x = -1;
                 }
                 else {
                     res.x = this.right;
-                    edgeNormal.x = 1;
+                    edgeNormal.value.x = 1;
                 }
             }
             else {
                 if (res.x == this.left)
-                    edgeNormal.x = -1;
+                    edgeNormal.value.x = -1;
                 if (res.x == this.right)
-                    edgeNormal.x = 1;
+                    edgeNormal.value.x = 1;
                 if (res.y == this.top)
-                    edgeNormal.y = -1;
+                    edgeNormal.value.y = -1;
                 if (res.y == this.bottom)
-                    edgeNormal.y = 1;
+                    edgeNormal.value.y = 1;
             }
             return res;
         };
@@ -8496,7 +8495,7 @@ var es;
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
             this._overlapTestBox.updateBox(rect.width, rect.height);
-            this._overlapTestBox.position = rect.location.clone();
+            this._overlapTestBox.position = rect.location;
             var resultCounter = 0;
             var potentials = this.aabbBroadphase(rect, null, layerMask);
             for (var i = 0; i < potentials.length; i++) {
@@ -8670,13 +8669,14 @@ var es;
                 var colliderBounds = potential.bounds;
                 var res = colliderBounds.rayIntersects(this._ray);
                 if (res.intersected && res.distance <= 1) {
-                    if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
+                    var tempHit = new es.Out(this._tempHit);
+                    if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, tempHit)) {
                         // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
                         if (!es.Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
                             continue;
                         // TODO: 确保碰撞点在当前单元格中，如果它没有保存它以供以后计算
-                        this._tempHit.collider = potential;
-                        this._cellHits.push(this._tempHit);
+                        tempHit.value.collider = potential;
+                        this._cellHits.push(tempHit.value);
                     }
                 }
             }
@@ -8701,7 +8701,7 @@ var es;
         };
         RaycastResultParser.compareRaycastHits = function (a, b) {
             if (a.distance !== b.distance) {
-                return b.distance - a.distance;
+                return a.distance - b.distance;
             }
             else {
                 return a.collider.castSortOrder - b.collider.castSortOrder;
@@ -8944,12 +8944,12 @@ var es;
             this.bounds.location = this.bounds.location.add(this.position);
         };
         Polygon.prototype.overlaps = function (other) {
-            var result = new es.CollisionResult();
+            var result = new es.Out();
             if (other instanceof Polygon)
                 return es.ShapeCollisionsPolygon.polygonToPolygon(this, other, result);
             if (other instanceof es.Circle) {
                 if (es.ShapeCollisionsCircle.circleToPolygon(other, this, result)) {
-                    result.invertResult();
+                    result.value.invertResult();
                     return true;
                 }
                 return false;
@@ -8962,7 +8962,7 @@ var es;
             }
             if (other instanceof es.Circle) {
                 if (es.ShapeCollisionsCircle.circleToPolygon(other, this, result)) {
-                    result.invertResult();
+                    result.value.invertResult();
                     return true;
                 }
                 return false;
@@ -9110,7 +9110,7 @@ var es;
             this.bounds = new es.Rectangle(this.position.x - this.radius, this.position.y - this.radius, this.radius * 2, this.radius * 2);
         };
         Circle.prototype.overlaps = function (other) {
-            var result = new es.CollisionResult();
+            var result = new es.Out();
             if (other instanceof es.Box && other.isUnrotated)
                 return es.Collisions.rectToCircle(other.bounds, this.position, this.radius);
             if (other instanceof Circle)
@@ -9289,14 +9289,15 @@ var es;
         function ShapeCollisionsBox() {
         }
         ShapeCollisionsBox.boxToBox = function (first, second, result) {
+            result.value = new es.CollisionResult();
             var minkowskiDiff = this.minkowskiDifference(first, second);
             if (minkowskiDiff.contains(0, 0)) {
                 // 计算MTV。如果它是零，我们就可以称它为非碰撞
-                result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
-                if (result.minimumTranslationVector.equals(es.Vector2.zero))
+                result.value.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
+                if (result.value.minimumTranslationVector.equals(es.Vector2.zero))
                     return false;
-                result.normal = result.minimumTranslationVector.scale(-1);
-                result.normal = result.normal.normalize();
+                result.value.normal = result.value.minimumTranslationVector.scale(-1);
+                result.value.normal = result.value.normal.normalize();
                 return true;
             }
             return false;
@@ -9355,37 +9356,43 @@ var es;
         function ShapeCollisionsCircle() {
         }
         ShapeCollisionsCircle.circleToCircleCast = function (first, second, deltaMovement, hit) {
+            hit.value = new es.RaycastHit();
+            // 在动圆的运动矢量上找到离圆中心最近的点（第一个）
             var endPointOfCast = first.position.add(deltaMovement);
             var d = this.closestPointOnLine(first.position, endPointOfCast, second.position);
+            // 然后求最近点到圆心的距离 
             var closestDistanceSquared = es.Vector2.sqrDistance(second.position, d);
             var sumOfRadiiSquared = (first.radius + second.radius) * (first.radius + second.radius);
+            // 如果它小于半径之和，则发生碰撞
             if (closestDistanceSquared <= sumOfRadiiSquared) {
                 var normalizedDeltaMovement = deltaMovement.normalize();
+                // 边缘情况：如果端点等于线上最近的点，那么从它到 second.position 的线将不垂直于射线
                 if (d === endPointOfCast) {
+                    // 延长投射半径距离的终点，因此我们得到一个垂直的点
                     endPointOfCast = first.position.add(deltaMovement.add(normalizedDeltaMovement.scale(second.radius)));
                     d = this.closestPointOnLine(first.position, endPointOfCast, second.position);
                     closestDistanceSquared = es.Vector2.sqrDistance(second.position, d);
                 }
                 var backDist = Math.sqrt(sumOfRadiiSquared - closestDistanceSquared);
-                hit.centroid = d.sub(normalizedDeltaMovement.scale(backDist));
-                hit.normal = hit.centroid.sub(second.position).normalize();
-                hit.fraction = (hit.centroid.x - first.position.x) / deltaMovement.x;
-                hit.distance = es.Vector2.distance(first.position, hit.centroid);
-                hit.point = second.position.add(hit.normal.scale(second.radius));
+                hit.value.centroid = d.sub(normalizedDeltaMovement.scale(backDist));
+                hit.value.normal = hit.value.centroid.sub(second.position).normalize();
+                hit.value.fraction = (hit.value.centroid.x - first.position.x) / deltaMovement.x;
+                hit.value.distance = es.Vector2.distance(first.position, hit.value.centroid);
+                hit.value.point = second.position.add(hit.value.normal.scale(second.radius));
                 return true;
             }
             return false;
         };
         ShapeCollisionsCircle.circleToCircle = function (first, second, result) {
-            if (result === void 0) { result = new es.CollisionResult(); }
+            result.value = new es.CollisionResult();
             var distanceSquared = es.Vector2.sqrDistance(first.position, second.position);
             var sumOfRadii = first.radius + second.radius;
             var collided = distanceSquared < sumOfRadii * sumOfRadii;
             if (collided) {
-                result.normal = first.position.sub(second.position).normalize();
+                result.value.normal = first.position.sub(second.position).normalize();
                 var depth = sumOfRadii - Math.sqrt(distanceSquared);
-                result.minimumTranslationVector = result.normal.scale(-depth);
-                result.point = second.position.add(result.normal.scale(second.radius));
+                result.value.minimumTranslationVector = result.value.normal.scale(-depth);
+                result.value.point = second.position.add(result.value.normal.scale(second.radius));
                 return true;
             }
             return false;
@@ -9397,38 +9404,40 @@ var es;
          * @param result
          */
         ShapeCollisionsCircle.circleToBox = function (circle, box, result) {
-            if (result === void 0) { result = new es.CollisionResult(); }
-            var closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, result.normal);
+            result.value = new es.CollisionResult();
+            var normal = new es.Out();
+            var closestPointOnBounds = box.bounds.getClosestPointOnRectangleBorderToPoint(circle.position, normal);
+            result.value.normal = normal.value;
             // 先处理中心在盒子里的圆，如果我们是包含的, 它的成本更低，
             if (box.containsPoint(circle.position)) {
-                result.point = closestPointOnBounds;
+                result.value.point = closestPointOnBounds;
                 // 计算MTV。找出安全的、非碰撞的位置，并从中得到MTV
-                var safePlace = closestPointOnBounds.add(result.normal.scale(circle.radius));
-                result.minimumTranslationVector = circle.position.sub(safePlace);
+                var safePlace = closestPointOnBounds.add(result.value.normal.scale(circle.radius));
+                result.value.minimumTranslationVector = circle.position.sub(safePlace);
                 return true;
             }
             var sqrDistance = es.Vector2.sqrDistance(closestPointOnBounds, circle.position);
             // 看框上的点距圆的半径是否小于圆的半径
             if (sqrDistance == 0) {
-                result.minimumTranslationVector = result.normal.scale(circle.radius);
+                result.value.minimumTranslationVector = result.value.normal.scale(circle.radius);
             }
             else if (sqrDistance <= circle.radius * circle.radius) {
-                result.normal = circle.position.sub(closestPointOnBounds);
-                var depth = result.normal.magnitude() - circle.radius;
-                result.point = closestPointOnBounds;
-                result.normal = result.normal.normalize();
-                result.minimumTranslationVector = result.normal.scale(depth);
+                result.value.normal = circle.position.sub(closestPointOnBounds);
+                var depth = result.value.normal.magnitude() - circle.radius;
+                result.value.point = closestPointOnBounds;
+                result.value.normal = result.value.normal.normalize();
+                result.value.minimumTranslationVector = result.value.normal.scale(depth);
                 return true;
             }
             return false;
         };
         ShapeCollisionsCircle.circleToPolygon = function (circle, polygon, result) {
-            if (result === void 0) { result = new es.CollisionResult(); }
+            result.value = new es.CollisionResult();
             // 圆圈在多边形中的位置坐标
             var poly2Circle = circle.position.sub(polygon.position);
             // 首先，我们需要找到从圆到多边形的最近距离
             var res = es.Polygon.getClosestPointOnPolygonToPoint(polygon.points, poly2Circle);
-            result.normal = res.edgeNormal;
+            result.value.normal = res.edgeNormal;
             // 确保距离的平方小于半径的平方，否则我们不会相撞。
             // 请注意，如果圆完全包含在多边形中，距离可能大于半径。
             // 正因为如此，我们还要确保圆的位置不在多边形内。
@@ -9438,12 +9447,12 @@ var es;
             // 算出MTV。我们要注意处理完全包含在多边形中的圆或包含其中心的圆
             var mtv;
             if (circleCenterInsidePoly) {
-                mtv = result.normal.scale(Math.sqrt(res.distanceSquared) - circle.radius);
+                mtv = result.value.normal.scale(Math.sqrt(res.distanceSquared) - circle.radius);
             }
             else {
                 // 如果我们没有距离，这意味着圆心在多边形的边缘上。只需根据它的半径移动它
                 if (res.distanceSquared === 0) {
-                    mtv = result.normal.scale(circle.radius);
+                    mtv = result.value.normal.scale(circle.radius);
                 }
                 else {
                     var distance = Math.sqrt(res.distanceSquared);
@@ -9452,8 +9461,8 @@ var es;
                         .scale(((circle.radius - distance) / distance) * -1);
                 }
             }
-            result.minimumTranslationVector = mtv;
-            result.point = res.closestPoint.add(polygon.position);
+            result.value.minimumTranslationVector = mtv;
+            result.value.point = res.closestPoint.add(polygon.position);
             return true;
         };
         ShapeCollisionsCircle.closestPointOnLine = function (lineA, lineB, closestTo) {
@@ -9473,7 +9482,7 @@ var es;
         function ShapeCollisionsLine() {
         }
         ShapeCollisionsLine.lineToPoly = function (start, end, polygon, hit) {
-            if (hit === void 0) { hit = new es.RaycastHit(); }
+            hit.value = new es.RaycastHit();
             var normal = es.Vector2.zero;
             var intersectionPoint = es.Vector2.zero;
             var fraction = Number.MAX_VALUE;
@@ -9500,7 +9509,7 @@ var es;
             if (hasIntersection) {
                 normal = normal.normalize();
                 var distance = es.Vector2.distance(start, intersectionPoint);
-                hit.setValues(fraction, distance, intersectionPoint, normal);
+                hit.value.setValues(fraction, distance, intersectionPoint, normal);
                 return true;
             }
             return false;
@@ -9525,6 +9534,7 @@ var es;
             return true;
         };
         ShapeCollisionsLine.lineToCircle = function (start, end, s, hit) {
+            hit.value = new es.RaycastHit();
             // 计算这里的长度并分别对d进行标准化，因为如果我们命中了我们需要它来得到分数
             var lineLength = es.Vector2.distance(start, end);
             var d = es.Vector2.divideScaler(end.sub(start), lineLength);
@@ -9539,14 +9549,14 @@ var es;
             if (discr < 0)
                 return false;
             // 射线相交圆
-            hit.fraction = -b - Math.sqrt(discr);
+            hit.value.fraction = -b - Math.sqrt(discr);
             // 如果分数为负数，射线从圈内开始，
-            if (hit.fraction < 0)
-                hit.fraction = 0;
-            hit.point = start.add(d.scale(hit.fraction));
-            hit.distance = es.Vector2.distance(start, hit.point);
-            hit.normal = hit.point.sub(s.position).normalize();
-            hit.fraction = hit.distance / lineLength;
+            if (hit.value.fraction < 0)
+                hit.value.fraction = 0;
+            hit.value.point = start.add(d.scale(hit.value.fraction));
+            hit.value.distance = es.Vector2.distance(start, hit.value.point);
+            hit.value.normal = hit.value.point.sub(s.position).normalize();
+            hit.value.fraction = hit.value.distance / lineLength;
             return true;
         };
         return ShapeCollisionsLine;
@@ -9559,36 +9569,39 @@ var es;
         function ShapeCollisionsPoint() {
         }
         ShapeCollisionsPoint.pointToCircle = function (point, circle, result) {
+            result.value = new es.CollisionResult();
             var distanceSquared = es.Vector2.sqrDistance(point, circle.position);
             var sumOfRadii = 1 + circle.radius;
             var collided = distanceSquared < sumOfRadii * sumOfRadii;
             if (collided) {
-                result.normal = point.sub(circle.position).normalize();
+                result.value.normal = point.sub(circle.position).normalize();
                 var depth = sumOfRadii - Math.sqrt(distanceSquared);
-                result.minimumTranslationVector = result.normal.scale(-depth);
+                result.value.minimumTranslationVector = result.value.normal.scale(-depth);
                 ;
-                result.point = circle.position.add(result.normal.scale(circle.radius));
+                result.value.point = circle.position.add(result.value.normal.scale(circle.radius));
                 return true;
             }
             return false;
         };
         ShapeCollisionsPoint.pointToBox = function (point, box, result) {
-            if (result === void 0) { result = new es.CollisionResult(); }
+            result.value = new es.CollisionResult();
             if (box.containsPoint(point)) {
                 // 在方框的空间里找到点
-                result.point = box.bounds.getClosestPointOnRectangleBorderToPoint(point, result.normal);
-                result.minimumTranslationVector = point.sub(result.point);
+                var normal = new es.Out();
+                result.value.point = box.bounds.getClosestPointOnRectangleBorderToPoint(point, normal);
+                result.value.normal = normal.value;
+                result.value.minimumTranslationVector = point.sub(result.value.point);
                 return true;
             }
             return false;
         };
         ShapeCollisionsPoint.pointToPoly = function (point, poly, result) {
-            if (result === void 0) { result = new es.CollisionResult(); }
+            result.value = new es.CollisionResult();
             if (poly.containsPoint(point)) {
                 var res = es.Polygon.getClosestPointOnPolygonToPoint(poly.points, point.sub(poly.position));
-                result.normal = res.edgeNormal;
-                result.minimumTranslationVector = result.normal.scale(Math.sqrt(res.distanceSquared));
-                result.point = res.closestPoint.sub(poly.position);
+                result.value.normal = res.edgeNormal;
+                result.value.minimumTranslationVector = result.value.normal.scale(Math.sqrt(res.distanceSquared));
+                result.value.point = res.closestPoint.sub(poly.position);
                 return true;
             }
             return false;
@@ -9609,6 +9622,7 @@ var es;
          * @param result
          */
         ShapeCollisionsPolygon.polygonToPolygon = function (first, second, result) {
+            result.value = new es.CollisionResult();
             var isIntersecting = true;
             var firstEdges = first.edgeNormals;
             var secondEdges = second.edgeNormals;
@@ -9648,8 +9662,8 @@ var es;
                 }
             }
             // 利用最小平移向量对多边形进行推入。
-            result.normal = translationAxis;
-            result.minimumTranslationVector = translationAxis.scale(-minIntervalDistance);
+            result.value.normal = translationAxis;
+            result.value.minimumTranslationVector = translationAxis.scale(-minIntervalDistance);
             return true;
         };
         /**
@@ -11334,6 +11348,17 @@ var es;
         return ValueChangeCommand;
     }());
     es.ValueChangeCommand = ValueChangeCommand;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var Out = /** @class */ (function () {
+        function Out(value) {
+            if (value === void 0) { value = null; }
+            this.value = value;
+        }
+        return Out;
+    }());
+    es.Out = Out;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -13916,8 +13941,8 @@ var es;
         RectangleExt.getClosestPointOnRectangleBorderToPoint = function (rect, point) {
             // 对于每个轴，如果该点在盒子外面，则将在盒子上，否则不理会它
             var res = es.Vector2.zero;
-            res.x = es.MathHelper.clamp(Math.trunc(point.x), rect.left, rect.right);
-            res.y = es.MathHelper.clamp(Math.trunc(point.y), rect.top, rect.bottom);
+            res.x = es.MathHelper.clamp(es.MathHelper.toInt(point.x), rect.left, rect.right);
+            res.y = es.MathHelper.clamp(es.MathHelper.toInt(point.y), rect.top, rect.bottom);
             // 如果点在矩形内，我们需要将res推到边框，因为它将在矩形内 
             if (rect.contains(res.x, res.y)) {
                 var dl = rect.x - rect.left;
@@ -13968,14 +13993,14 @@ var es;
                 if (pt.y > maxY)
                     maxY = pt.y;
             }
-            return this.fromMinMaxVector(new es.Vector2(Math.trunc(minX), Math.trunc(minY)), new es.Vector2(Math.trunc(maxX), Math.trunc(maxY)));
+            return this.fromMinMaxVector(new es.Vector2(es.MathHelper.toInt(minX), es.MathHelper.toInt(minY)), new es.Vector2(es.MathHelper.toInt(maxX), es.MathHelper.toInt(maxY)));
         };
         RectangleExt.calculateBounds = function (rect, parentPosition, position, origin, scale, rotation, width, height) {
             if (rotation == 0) {
-                rect.x = Math.trunc(parentPosition.x + position.x - origin.x * scale.x);
-                rect.y = Math.trunc(parentPosition.y + position.y - origin.y * scale.y);
-                rect.width = Math.trunc(width * scale.x);
-                rect.height = Math.trunc(height * scale.y);
+                rect.x = es.MathHelper.toInt(parentPosition.x + position.x - origin.x * scale.x);
+                rect.y = es.MathHelper.toInt(parentPosition.y + position.y - origin.y * scale.y);
+                rect.width = es.MathHelper.toInt(width * scale.x);
+                rect.height = es.MathHelper.toInt(height * scale.y);
             }
             else {
                 // 我们需要找到我们的绝对最小/最大值，并据此创建边界
@@ -14001,13 +14026,13 @@ var es;
                 es.Vector2Ext.transformR(bottomLeft, transformMatrix, bottomLeft);
                 es.Vector2Ext.transformR(bottomRight, transformMatrix, bottomRight);
                 // 找出最小值和最大值，这样我们就可以计算出我们的边界框。
-                var minX = Math.trunc(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
-                var maxX = Math.trunc(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
-                var minY = Math.trunc(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
-                var maxY = Math.trunc(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                var minX = es.MathHelper.toInt(Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                var maxX = es.MathHelper.toInt(Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x));
+                var minY = es.MathHelper.toInt(Math.min(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
+                var maxY = es.MathHelper.toInt(Math.max(topLeft.y, bottomRight.y, topRight.y, bottomLeft.y));
                 rect.location = new es.Vector2(minX, minY);
-                rect.width = Math.trunc(maxX - minX);
-                rect.height = Math.trunc(maxY - minY);
+                rect.width = es.MathHelper.toInt(maxX - minX);
+                rect.height = es.MathHelper.toInt(maxY - minY);
             }
         };
         /**
@@ -14016,10 +14041,10 @@ var es;
          * @param scale
          */
         RectangleExt.scale = function (rect, scale) {
-            rect.x = Math.trunc(rect.x * scale.x);
-            rect.y = Math.trunc(rect.y * scale.y);
-            rect.width = Math.trunc(rect.width * scale.x);
-            rect.height = Math.trunc(rect.height * scale.y);
+            rect.x = es.MathHelper.toInt(rect.x * scale.x);
+            rect.y = es.MathHelper.toInt(rect.y * scale.y);
+            rect.width = es.MathHelper.toInt(rect.width * scale.x);
+            rect.height = es.MathHelper.toInt(rect.height * scale.y);
         };
         RectangleExt.translate = function (rect, vec) {
             rect.location.addEqual(vec);

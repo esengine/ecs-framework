@@ -34,7 +34,7 @@ module es {
         }
 
         public overlaps(other: Shape) {
-            let result: CollisionResult = new CollisionResult();
+            const result = new Out<CollisionResult>();
             if (other instanceof Box && (other as Box).isUnrotated)
                 return Collisions.rectToCircle(other.bounds, this.position, this.radius);
 
@@ -47,7 +47,7 @@ module es {
             throw new Error(`overlaps of circle to ${other} are not supported`);
         }
 
-        public collidesWithShape(other: Shape, result: CollisionResult): boolean {
+        public collidesWithShape(other: Shape, result: Out<CollisionResult>): boolean {
             if (other instanceof Box && (other as Box).isUnrotated) {
                 return ShapeCollisionsCircle.circleToBox(this, other, result);
             }
@@ -63,7 +63,7 @@ module es {
             throw new Error(`Collisions of Circle to ${other} are not supported`);
         }
 
-        public collidesWithLine(start: Vector2, end: Vector2, hit: RaycastHit): boolean {
+        public collidesWithLine(start: Vector2, end: Vector2, hit: Out<RaycastHit>): boolean {
             return ShapeCollisionsLine.lineToCircle(start, end, this, hit);
         }
 
@@ -82,7 +82,7 @@ module es {
             return (point.sub(this.position)).lengthSquared() <= this.radius * this.radius;
         }
 
-        public pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean {
+        public pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean {
             return ShapeCollisionsPoint.pointToCircle(point, this, result);
         }
     }

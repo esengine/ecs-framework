@@ -213,7 +213,7 @@ module es {
          */
         public overlapRectangle(rect: Rectangle, results: Collider[], layerMask: number) {
             this._overlapTestBox.updateBox(rect.width, rect.height);
-            this._overlapTestBox.position = rect.location.clone();
+            this._overlapTestBox.position = rect.location;
 
             let resultCounter = 0;
             let potentials = this.aabbBroadphase(rect, null, layerMask);
@@ -410,15 +410,16 @@ module es {
                 const colliderBounds = potential.bounds;
                 const res = colliderBounds.rayIntersects(this._ray);
                 if (res.intersected && res.distance <= 1) {
-                    if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, this._tempHit)) {
+                    let tempHit = new Out<RaycastHit>(this._tempHit);
+                    if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, tempHit)) {
                         // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
                         if (!Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
                             continue;
 
                         // TODO: 确保碰撞点在当前单元格中，如果它没有保存它以供以后计算
 
-                        this._tempHit.collider = potential;
-                        this._cellHits.push(this._tempHit);
+                        tempHit.value.collider = potential;
+                        this._cellHits.push(tempHit.value);
                     }
                 }
             }

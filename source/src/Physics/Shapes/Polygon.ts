@@ -287,13 +287,13 @@ module es {
         }
 
         public overlaps(other: Shape) {
-            let result: CollisionResult = new CollisionResult();
+            let result = new Out<CollisionResult>();
             if (other instanceof Polygon)
                 return ShapeCollisionsPolygon.polygonToPolygon(this, other, result);
 
             if (other instanceof Circle) {
                 if (ShapeCollisionsCircle.circleToPolygon(other, this, result)) {
-                    result.invertResult();
+                    result.value.invertResult();
                     return true;
                 }
 
@@ -303,14 +303,14 @@ module es {
             throw new Error(`overlaps of Pologon to ${other} are not supported`);
         }
 
-        public collidesWithShape(other: Shape, result: CollisionResult): boolean {
+        public collidesWithShape(other: Shape, result: Out<CollisionResult>): boolean {
             if (other instanceof Polygon) {
                 return ShapeCollisionsPolygon.polygonToPolygon(this, other, result);
             }
 
             if (other instanceof Circle) {
                 if (ShapeCollisionsCircle.circleToPolygon(other, this, result)) {
-                    result.invertResult();
+                    result.value.invertResult();
                     return true;
                 }
 
@@ -320,7 +320,7 @@ module es {
             throw new Error(`overlaps of Polygon to ${other} are not supported`);
         }
 
-        public collidesWithLine(start: es.Vector2, end: es.Vector2, hit: es.RaycastHit): boolean {
+        public collidesWithLine(start: Vector2, end: Vector2, hit: Out<RaycastHit>): boolean {
             return ShapeCollisionsLine.lineToPoly(start, end, this, hit);
         }
 
@@ -345,7 +345,7 @@ module es {
             return isInside;
         }
 
-        public pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean {
+        public pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean {
             return ShapeCollisionsPoint.pointToPoly(point, this, result);
         }
     }

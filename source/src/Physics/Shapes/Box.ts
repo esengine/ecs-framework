@@ -66,7 +66,7 @@ module es {
             return super.overlaps(other);
         }
 
-        public collidesWithShape(other: Shape, result: CollisionResult): boolean {
+        public collidesWithShape(other: Shape, result: Out<CollisionResult>): boolean {
             // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
             if (other instanceof Box && (other as Box).isUnrotated) {
                 return ShapeCollisionsBox.boxToBox(this, other, result);
@@ -84,7 +84,7 @@ module es {
             return super.containsPoint(point);
         }
 
-        public pointCollidesWithShape(point: es.Vector2, result: es.CollisionResult): boolean {
+        public pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean {
             if (this.isUnrotated)
                 return ShapeCollisionsPoint.pointToBox(point, this, result);
 

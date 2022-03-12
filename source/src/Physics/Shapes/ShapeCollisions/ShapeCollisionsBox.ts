@@ -1,16 +1,18 @@
 module es {
     export class ShapeCollisionsBox {
-        public static boxToBox(first: Box, second: Box, result: CollisionResult): boolean {
+        public static boxToBox(first: Box, second: Box, result: Out<CollisionResult>): boolean {
+            result.value = new CollisionResult();
+
             const minkowskiDiff = this.minkowskiDifference(first, second);
             if (minkowskiDiff.contains(0, 0)) {
                 // 计算MTV。如果它是零，我们就可以称它为非碰撞
-                result.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
+                result.value.minimumTranslationVector = minkowskiDiff.getClosestPointOnBoundsToOrigin();
 
-                if (result.minimumTranslationVector.equals(Vector2.zero))
+                if (result.value.minimumTranslationVector.equals(Vector2.zero))
                     return false;
 
-                result.normal = result.minimumTranslationVector.scale(-1);
-                result.normal = result.normal.normalize();
+                result.value.normal = result.value.minimumTranslationVector.scale(-1);
+                result.value.normal = result.value.normal.normalize();
 
                 return true;
             }

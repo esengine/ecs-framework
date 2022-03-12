@@ -19,12 +19,12 @@ module es {
 
         public abstract overlaps(other: Shape): boolean;
 
-        public abstract collidesWithShape(other: Shape, collisionResult: CollisionResult): boolean;
+        public abstract collidesWithShape(other: Shape, collisionResult: Out<CollisionResult>): boolean;
 
-        public abstract collidesWithLine(start: Vector2, end: Vector2, hit: RaycastHit): boolean;
+        public abstract collidesWithLine(start: Vector2, end: Vector2, hit: Out<RaycastHit>): boolean;
 
         public abstract containsPoint(point: Vector2);
 
-        public abstract pointCollidesWithShape(point: Vector2, result: CollisionResult): boolean;
+        public abstract pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
     }
 }

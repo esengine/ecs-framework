@@ -184,14 +184,14 @@ module es {
          * @param motion
          * @param result
          */
-        public collidesWith(collider: Collider, motion: Vector2, result: CollisionResult = new CollisionResult()): boolean {
+        public collidesWith(collider: Collider, motion: Vector2, result: Out<CollisionResult>): boolean {
             // 改变形状的位置，使它在移动后的位置，这样我们可以检查重叠
             const oldPosition = this.entity.position;
             this.entity.position = this.entity.position.add(motion);
 
             const didCollide = this.shape.collidesWithShape(collider.shape, result);
             if (didCollide)
-                result.collider = collider;
+                result.value.collider = collider;
 
             // 将图形位置返回到检查前的位置
             this.entity.position = oldPosition;
@@ -204,13 +204,13 @@ module es {
          * @param collider 
          * @param result 
          */
-        public collidesWithNonMotion(collider: Collider, result: CollisionResult = new CollisionResult()): boolean {
+        public collidesWithNonMotion(collider: Collider, result: Out<CollisionResult>): boolean {
             if (this.shape.collidesWithShape(collider.shape, result)) {
-                result.collider = collider;
+                result.value.collider = collider;
                 return true;
             }
 
-            result.collider = null;
+            result.value.collider = null;
             return false;
         }
 
@@ -220,7 +220,9 @@ module es {
          * @param motion 
          * @param result 
          */
-        public collidesWithAny(motion: Vector2, result: CollisionResult) {
+        public collidesWithAny(motion: Vector2, result: Out<CollisionResult>) {
+            result.value = new CollisionResult();
+
             // 在我们的新位置上获取我们可能会碰到的任何东西 
             let colliderBounds = this.bounds.clone();
             colliderBounds.x += motion.x;
@@ -232,17 +234,15 @@ module es {
             this.shape.position = Vector2.add(this.shape.position, motion);
 
             let didCollide = false;
-            if (neighbors.length > 0) {
-                for (let i = 0; i < neighbors.length; i ++ ){
-                    const neighbor = neighbors[i];
-                     if (neighbor.isTrigger)
-                        continue;
-    
-                    if (this.collidesWithNonMotion(neighbor, result)) {
-                        motion = motion.sub(result.minimumTranslationVector);
-                        this.shape.position = this.shape.position.sub(result.minimumTranslationVector);
-                        didCollide = true;
-                    }
+            for (let i = 0; i < neighbors.length; i ++ ){
+                const neighbor = neighbors[i];
+                if (neighbor.isTrigger)
+                    continue;
+
+                if (this.collidesWithNonMotion(neighbor, result)) {
+                    motion = motion.sub(result.value.minimumTranslationVector);
+                    this.shape.position = this.shape.position.sub(result.value.minimumTranslationVector);
+                    didCollide = true;
                 }
             }
 
@@ -256,7 +256,8 @@ module es {
          * 检查此碰撞器是否与场景中的其他碰撞器碰撞。它相交的第一个碰撞器将在碰撞结果中返回碰撞数据。
          * @param result 
          */
-        public collidesWithAnyNonMotion(result: CollisionResult = new CollisionResult()) {
+        public collidesWithAnyNonMotion(result: Out<CollisionResult>) {
+            result.value = new CollisionResult();
             // 在我们的新位置上获取我们可能会碰到的任何东西 
             let neighbors = Physics.boxcastBroadphaseExcludingSelfNonRect(this, this.collidesWithLayers.value);
 

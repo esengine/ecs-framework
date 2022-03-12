@@ -1,6 +1,8 @@
 module es {
     export class ShapeCollisionsLine {
-        public static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit: RaycastHit = new RaycastHit()): boolean {
+        public static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit: Out<RaycastHit>): boolean {
+            hit.value = new RaycastHit();
+
             let normal = Vector2.zero;
             let intersectionPoint = Vector2.zero;
             let fraction = Number.MAX_VALUE;
@@ -31,7 +33,7 @@ module es {
             if (hasIntersection){
                 normal = normal.normalize();
                 const distance = Vector2.distance(start, intersectionPoint);
-                hit.setValues(fraction, distance, intersectionPoint, normal);
+                hit.value.setValues(fraction, distance, intersectionPoint, normal);
                 return true;
             }
 
@@ -63,7 +65,9 @@ module es {
             return true;
         }
 
-        public static lineToCircle(start: Vector2, end: Vector2, s: Circle, hit: RaycastHit): boolean{
+        public static lineToCircle(start: Vector2, end: Vector2, s: Circle, hit: Out<RaycastHit>): boolean{
+            hit.value = new RaycastHit();
+
             // 计算这里的长度并分别对d进行标准化，因为如果我们命中了我们需要它来得到分数
             const lineLength = Vector2.distance(start, end);
             const d = Vector2.divideScaler(end.sub(start), lineLength);
@@ -81,16 +85,16 @@ module es {
                 return false;
 
             // 射线相交圆
-            hit.fraction = -b - Math.sqrt(discr);
+            hit.value.fraction = -b - Math.sqrt(discr);
 
             // 如果分数为负数，射线从圈内开始，
-            if (hit.fraction < 0)
-                hit.fraction = 0;
+            if (hit.value.fraction < 0)
+                hit.value.fraction = 0;
 
-            hit.point = start.add(d.scale(hit.fraction));
-            hit.distance = Vector2.distance(start, hit.point);
-            hit.normal = hit.point.sub(s.position).normalize();
-            hit.fraction = hit.distance / lineLength;
+            hit.value.point = start.add(d.scale(hit.value.fraction));
+            hit.value.distance = Vector2.distance(start, hit.value.point);
+            hit.value.normal = hit.value.point.sub(s.position).normalize();
+            hit.value.fraction = hit.value.distance / lineLength;
 
             return true;
         }
