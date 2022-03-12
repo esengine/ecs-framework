@@ -17,7 +17,7 @@ module es {
                 res.range = this._points.length - 4;
             } else {
                 t = MathHelper.clamp01(t) * this._curveCount;
-                res.range = Math.floor(t);
+                res.range = MathHelper.toInt(t);
                 t -= res.range;
                 res.range *= 3;
             }

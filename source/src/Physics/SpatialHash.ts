@@ -183,11 +183,11 @@ module es {
 
             while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
                 if (tMaxX < tMaxY) {
-                    currentCell.x = MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX));
+                    currentCell.x = MathHelper.toInt(MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
 
                     tMaxX += tDeltaX;
                 } else {
-                    currentCell.y = MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY));
+                    currentCell.y = MathHelper.toInt(MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
 
                     tMaxY += tDeltaY;
                 }
@@ -427,7 +427,7 @@ module es {
                 return false;
 
             // 所有处理单元完成。对结果进行排序并将命中结果打包到结果数组中
-            this._cellHits.sort(RaycastResultParser.compareRaycastHits);
+            this._cellHits = this._cellHits.sort(RaycastResultParser.compareRaycastHits);
             for (let i = 0; i < this._cellHits.length; i++) {
                 this._hits[this.hitCounter] = this._cellHits[i];
 

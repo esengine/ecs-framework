@@ -471,7 +471,7 @@ module es {
         }
 
         public static floorToInt(f: number) {
-            return Math.trunc(Math.floor(f));
+            return this.toInt(Math.floor(f));
         }
 
         /**
@@ -674,6 +674,10 @@ module es {
 
         public static fromAngle(angle: number) {
             return new Vector2(Math.cos(angle), Math.sin(angle)).normalizeEqual();
+        }
+
+        public static toInt(val: number){
+            return val>0 ? Math.floor(val):Math.ceil(val);
         }
     }
 }

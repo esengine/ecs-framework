@@ -2763,6 +2763,7 @@ declare module es {
          */
         static mapMinMax(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: any): number;
         static fromAngle(angle: number): Vector2;
+        static toInt(val: number): number;
     }
 }
 declare module es {

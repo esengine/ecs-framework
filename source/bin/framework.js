@@ -5864,7 +5864,7 @@ var es;
             }
             else {
                 t = es.MathHelper.clamp01(t) * this._curveCount;
-                res.range = Math.floor(t);
+                res.range = es.MathHelper.toInt(t);
                 t -= res.range;
                 res.range *= 3;
             }
@@ -6436,7 +6436,7 @@ var es;
             return t - Math.floor(t / length) * length;
         };
         MathHelper.floorToInt = function (f) {
-            return Math.trunc(Math.floor(f));
+            return this.toInt(Math.floor(f));
         };
         /**
          * 将值绕一圈移动的助手
@@ -6610,6 +6610,9 @@ var es;
         };
         MathHelper.fromAngle = function (angle) {
             return new es.Vector2(Math.cos(angle), Math.sin(angle)).normalizeEqual();
+        };
+        MathHelper.toInt = function (val) {
+            return val > 0 ? Math.floor(val) : Math.ceil(val);
         };
         MathHelper.Epsilon = 0.00001;
         MathHelper.Rad2Deg = 57.29578;
@@ -8208,10 +8211,8 @@ var es;
             if (layerMask === void 0) { layerMask = this.allLayers; }
             if (ignoredColliders === void 0) { ignoredColliders = null; }
             this._hitArray[0].reset();
-            this.linecastAll(start, end, this._hitArray, layerMask);
-            this._hitArray[0].reset();
             Physics.linecastAll(start, end, this._hitArray, layerMask, ignoredColliders);
-            return this._hitArray[0].clone();
+            return this._hitArray[0];
         };
         /**
          * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组
@@ -8470,11 +8471,11 @@ var es;
             }
             while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
                 if (tMaxX < tMaxY) {
-                    currentCell.x = es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX));
+                    currentCell.x = es.MathHelper.toInt(es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
                     tMaxX += tDeltaX;
                 }
                 else {
-                    currentCell.y = es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY));
+                    currentCell.y = es.MathHelper.toInt(es.MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
                     tMaxY += tDeltaY;
                 }
                 cell = this.cellAtPosition(currentCell.x, currentCell.y);
@@ -8682,7 +8683,7 @@ var es;
             if (this._cellHits.length === 0)
                 return false;
             // 所有处理单元完成。对结果进行排序并将命中结果打包到结果数组中
-            this._cellHits.sort(RaycastResultParser.compareRaycastHits);
+            this._cellHits = this._cellHits.sort(RaycastResultParser.compareRaycastHits);
             for (var i = 0; i < this._cellHits.length; i++) {
                 this._hits[this.hitCounter] = this._cellHits[i];
                 // 增加命中计数器，如果它已经达到数组大小的限制，我们就完成了
@@ -8700,7 +8701,7 @@ var es;
         };
         RaycastResultParser.compareRaycastHits = function (a, b) {
             if (a.distance !== b.distance) {
-                return a.distance - b.distance;
+                return b.distance - a.distance;
             }
             else {
                 return a.collider.castSortOrder - b.collider.castSortOrder;

@@ -147,8 +147,6 @@ module es {
          */
         public static linecast(start: Vector2, end: Vector2, layerMask: number = this.allLayers, ignoredColliders: Set<Collider> = null): RaycastHit {
             this._hitArray[0].reset();
-            this.linecastAll(start, end, this._hitArray, layerMask);
-            this._hitArray[0].reset();
             Physics.linecastAll(
                 start,
                 end,
@@ -156,7 +154,7 @@ module es {
                 layerMask,
                 ignoredColliders
             );
-            return this._hitArray[0].clone();
+            return this._hitArray[0];
         }
 
         /**
