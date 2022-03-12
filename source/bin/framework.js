@@ -19,26 +19,6 @@ var __spread = (this && this.__spread) || function () {
     for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
     return ar;
 };
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __values = (this && this.__values) || function (o) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
-    if (m) return m.call(o);
-    return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-};
 var __generator = (this && this.__generator) || function (thisArg, body) {
     var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
     return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
@@ -65,6 +45,26 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
+};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __values = (this && this.__values) || function (o) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
+    if (m) return m.call(o);
+    return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
 };
 var es;
 (function (es) {
@@ -171,6 +171,15 @@ var es;
             return null;
         };
         /**
+         * 临时运行SceneTransition，允许一个场景平滑过渡到另一个场景，并具有自定义效果
+         * @param sceneTransition
+         */
+        Core.startSceneTransition = function (sceneTransition) {
+            es.Insist.isNull(this._instance._sceneTransition, "在前一个场景转换完成之前，无法启动新的场景转换");
+            this._instance._sceneTransition = sceneTransition;
+            return sceneTransition;
+        };
+        /**
          * 启动一个coroutine。Coroutine可以将number延时几秒或延时到其他startCoroutine.Yielding
          * null将使coroutine在下一帧被执行。
          * @param enumerator
@@ -210,6 +219,7 @@ var es;
          * 在一个场景结束后，下一个场景开始之前调用
          */
         Core.prototype.onSceneChanged = function () {
+            Core.emitter.emit(es.CoreEvents.sceneChanged);
             es.Time.sceneChanged();
         };
         Core.prototype.initialize = function () {
@@ -225,7 +235,11 @@ var es;
                     if (this._globalManagers[i].enabled)
                         this._globalManagers[i].update();
                 }
-                this._scene.update();
+                if (this._sceneTransition == null ||
+                    (this._sceneTransition != null &&
+                        (!this._sceneTransition._loadsNewScene || this._sceneTransition._isNewSceneLoaded))) {
+                    this._scene.update();
+                }
                 if (this._nextScene != null) {
                     this._scene.end();
                     this._scene = this._nextScene;
@@ -235,6 +249,17 @@ var es;
                 }
             }
             this.startDebugDraw();
+            this.draw();
+        };
+        Core.prototype.draw = function () {
+            if (this._sceneTransition != null)
+                this._sceneTransition.preRender();
+            if (this._sceneTransition != null && !this._sceneTransition.hasPreviousSceneRender) {
+                if (this._scene != null) {
+                    Core.startCoroutine(this._sceneTransition.onBeginTransition());
+                }
+                this._sceneTransition.render();
+            }
         };
         Core.paused = false;
         /**
@@ -1739,6 +1764,103 @@ var es;
         return Scene;
     }());
     es.Scene = Scene;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * SceneTransition用于从一个场景过渡到另一个场景，或在一个场景内进行效果转换。
+     * 如果sceneLoadAction为null，框架将执行场景内过渡，而不是加载新的场景中间过渡。
+     */
+    var SceneTransition = /** @class */ (function () {
+        function SceneTransition(sceneLoadAction) {
+            /**
+             * 指示此转换是否将加载新场景的标志
+             */
+            this._loadsNewScene = false;
+            this._hasPreviousSceneRender = false;
+            /**
+             * 将此用于两部分过渡。例如，褪色会先褪色为黑色，然后当_isNewSceneLoaded变为true时会褪色。
+             * 对于场景内转换，应在中点将isNewSceneLoaded设置为true，就像加载了新场景一样
+             */
+            this._isNewSceneLoaded = false;
+            this.sceneLoadAction = sceneLoadAction;
+            this._loadsNewScene = sceneLoadAction != null;
+        }
+        Object.defineProperty(SceneTransition.prototype, "hasPreviousSceneRender", {
+            get: function () {
+                if (!this._hasPreviousSceneRender) {
+                    this._hasPreviousSceneRender = true;
+                    return false;
+                }
+                return true;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        SceneTransition.prototype.LoadNextScene = function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        // 如果我们有渲染界面，可以在这让玩家知道屏幕是模糊的（正在加载）
+                        if (this.onScreenObscured != null)
+                            this.onScreenObscured();
+                        if (!!this._loadsNewScene) return [3 /*break*/, 2];
+                        this._isNewSceneLoaded = true;
+                        return [4 /*yield*/, "break"];
+                    case 1:
+                        _a.sent();
+                        _a.label = 2;
+                    case 2:
+                        es.Core.scene = this.sceneLoadAction();
+                        this._isNewSceneLoaded = true;
+                        _a.label = 3;
+                    case 3:
+                        if (!!this._isNewSceneLoaded) return [3 /*break*/, 5];
+                        return [4 /*yield*/, null];
+                    case 4:
+                        _a.sent();
+                        return [3 /*break*/, 3];
+                    case 5: return [2 /*return*/];
+                }
+            });
+        };
+        /**
+         * 在前一个场景出现第一次（也是唯一一次）后调用。
+         * 此时，可以在生成一帧后加载新场景（因此第一次渲染调用发生在场景加载之前）
+         */
+        SceneTransition.prototype.onBeginTransition = function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, null];
+                    case 1:
+                        _a.sent();
+                        return [4 /*yield*/, es.Core.startCoroutine(this.LoadNextScene())];
+                    case 2:
+                        _a.sent();
+                        this.transitionComplete();
+                        return [2 /*return*/];
+                }
+            });
+        };
+        /**
+         * 在渲染场景之前调用
+         */
+        SceneTransition.prototype.preRender = function () { };
+        /**
+         * 在这里进行所有渲染
+         */
+        SceneTransition.prototype.render = function () { };
+        /**
+         * 当过渡完成且新场景已设置时，将调用此函数
+         */
+        SceneTransition.prototype.transitionComplete = function () {
+            es.Core.Instance._sceneTransition = null;
+            if (this.onTransitionCompleted != null)
+                this.onTransitionCompleted();
+        };
+        return SceneTransition;
+    }());
+    es.SceneTransition = SceneTransition;
 })(es || (es = {}));
 var es;
 (function (es) {

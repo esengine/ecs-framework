@@ -26,6 +26,7 @@ declare module es {
          */
         readonly debug: boolean;
         _nextScene: Scene;
+        _sceneTransition: SceneTransition;
         /**
          * 用于凝聚GraphicsDeviceReset事件
          */
@@ -75,6 +76,11 @@ declare module es {
          */
         static getGlobalManager<T extends es.GlobalManager>(type: new (...args: any[]) => T): T;
         /**
+         * 临时运行SceneTransition，允许一个场景平滑过渡到另一个场景，并具有自定义效果
+         * @param sceneTransition
+         */
+        static startSceneTransition<T extends SceneTransition>(sceneTransition: T): T;
+        /**
          * 启动一个coroutine。Coroutine可以将number延时几秒或延时到其他startCoroutine.Yielding
          * null将使coroutine在下一帧被执行。
          * @param enumerator
@@ -95,6 +101,7 @@ declare module es {
         onSceneChanged(): void;
         protected initialize(): void;
         protected update(currentTime?: number): void;
+        protected draw(): void;
     }
 }
 declare module es {
@@ -758,6 +765,55 @@ declare module es {
          * 获取EntitySystem处理器
          */
         getEntityProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T;
+    }
+}
+declare module es {
+    /**
+     * SceneTransition用于从一个场景过渡到另一个场景，或在一个场景内进行效果转换。
+     * 如果sceneLoadAction为null，框架将执行场景内过渡，而不是加载新的场景中间过渡。
+     */
+    abstract class SceneTransition {
+        /** 该函数应返回新加载的场景 */
+        protected sceneLoadAction: () => Scene;
+        /**
+         * 在loadNextScene执行时调用
+         * 这在进行场景间转换时非常有用，这样您就可以知道何时可以重新设置相机或重置任何实体
+         */
+        onScreenObscured: Function;
+        /**
+         * 转换完成后调用，以便调用其他工作，例如启动另一个场景转换
+         */
+        onTransitionCompleted: Function;
+        /**
+         * 指示此转换是否将加载新场景的标志
+         */
+        _loadsNewScene: boolean;
+        private _hasPreviousSceneRender;
+        readonly hasPreviousSceneRender: boolean;
+        /**
+         * 将此用于两部分过渡。例如，褪色会先褪色为黑色，然后当_isNewSceneLoaded变为true时会褪色。
+         * 对于场景内转换，应在中点将isNewSceneLoaded设置为true，就像加载了新场景一样
+         */
+        _isNewSceneLoaded: boolean;
+        protected constructor(sceneLoadAction: () => Scene);
+        protected LoadNextScene(): IterableIterator<string>;
+        /**
+         * 在前一个场景出现第一次（也是唯一一次）后调用。
+         * 此时，可以在生成一帧后加载新场景（因此第一次渲染调用发生在场景加载之前）
+         */
+        onBeginTransition(): any;
+        /**
+         * 在渲染场景之前调用
+         */
+        preRender(): void;
+        /**
+         * 在这里进行所有渲染
+         */
+        render(): void;
+        /**
+         * 当过渡完成且新场景已设置时，将调用此函数
+         */
+        protected transitionComplete(): void;
     }
 }
 declare module es {

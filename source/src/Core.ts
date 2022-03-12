@@ -26,6 +26,8 @@ module es {
          */
         public readonly debug: boolean;
         public _nextScene: Scene;
+        public _sceneTransition: SceneTransition;
+
         /**
          * 用于凝聚GraphicsDeviceReset事件
          */
@@ -132,6 +134,16 @@ module es {
         }
 
         /**
+         * 临时运行SceneTransition，允许一个场景平滑过渡到另一个场景，并具有自定义效果
+         * @param sceneTransition
+         */
+        public static startSceneTransition<T extends SceneTransition>(sceneTransition: T) {
+            Insist.isNull(this._instance._sceneTransition, "在前一个场景转换完成之前，无法启动新的场景转换");
+            this._instance._sceneTransition = sceneTransition;
+            return sceneTransition;
+        }
+
+        /**
          * 启动一个coroutine。Coroutine可以将number延时几秒或延时到其他startCoroutine.Yielding 
          * null将使coroutine在下一帧被执行。
          * @param enumerator 
@@ -170,6 +182,7 @@ module es {
          * 在一个场景结束后，下一个场景开始之前调用
          */
         public onSceneChanged() {
+            Core.emitter.emit(CoreEvents.sceneChanged);
             Time.sceneChanged();
         }
 
@@ -189,7 +202,11 @@ module es {
                         this._globalManagers[i].update();
                 }
 
-                this._scene.update();
+                if (this._sceneTransition == null ||
+                    (this._sceneTransition != null &&
+                        (!this._sceneTransition._loadsNewScene || this._sceneTransition._isNewSceneLoaded))) {
+                    this._scene.update();
+                }
 
                 if (this._nextScene != null) {
                     this._scene.end();
@@ -203,6 +220,20 @@ module es {
             }
 
             this.startDebugDraw();
+            this.draw();
+        }
+
+        protected draw() {
+            if (this._sceneTransition != null)
+                this._sceneTransition.preRender();
+
+            if (this._sceneTransition != null && !this._sceneTransition.hasPreviousSceneRender) {
+                if (this._scene != null) {
+                    Core.startCoroutine(this._sceneTransition.onBeginTransition());
+                }
+
+                this._sceneTransition.render();
+            }
         }
     }
 }
