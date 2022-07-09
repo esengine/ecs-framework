@@ -6,6 +6,7 @@ module es {
      * 它可以做任何需要每帧执行的事情。
      */
     export abstract class AbstractTweenable implements ITweenable {
+        readonly discriminator = "ITweenable";
         protected _isPaused: boolean;
 
         /**

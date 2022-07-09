@@ -23,6 +23,10 @@ module es {
          * 当前所有活跃用户的内部列表
          */
         private _activeTweens: ITweenable[] = [];
+        public static get activeTweens(): ITweenable[] {
+            return this._instance._activeTweens;
+        }
+
         private _tempTweens: ITweenable[] = [];
         /**
          * 标志表示tween更新循环正在运行
@@ -128,6 +132,29 @@ module es {
                     let tweenControl = TweenManager._instance._activeTweens[i] as ITweenControl;
                     if (tweenControl.getTargetObject() == target)
                         foundTweens.push(TweenManager._instance._activeTweens[i]);
+                }
+            }
+
+            return foundTweens;
+        }
+
+        /**
+         * 返回以特定实体为目标的所有tween
+         * Tween返回为ITweenControl
+         * @param target 
+         */
+        public static allTweensWithTargetEntity(target: Entity) {
+            let foundTweens = [];
+
+            for (let i = 0; i < this._instance._activeTweens.length; i ++) {
+                if (this._instance._activeTweens[i].discriminator == "ITweenControl") {
+                    let tweenControl = this._instance._activeTweens[i] as ITweenControl;
+                    let obj = tweenControl.getTargetObject();
+                    if (obj instanceof Entity && obj == target ||
+                        obj instanceof Component && obj.entity == target ||
+                        obj instanceof Transform && obj.entity == target) {
+                            foundTweens.push(this._instance._activeTweens[i]);
+                        }
                 }
             }
 

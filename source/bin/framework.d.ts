@@ -3866,6 +3866,7 @@ declare module es {
      * 它可以做任何需要每帧执行的事情。
      */
     abstract class AbstractTweenable implements ITweenable {
+        readonly discriminator: string;
         protected _isPaused: boolean;
         /**
          * abstractTweenable在完成后往往会被保留下来。
@@ -3931,6 +3932,7 @@ declare module es {
         complete = 2
     }
     abstract class Tween<T> implements ITweenable, ITween<T> {
+        readonly discriminator: "ITweenControl";
         protected _target: ITweenTarget<T>;
         protected _isFromValueOverridden: boolean;
         protected _fromValue: T;
@@ -4151,6 +4153,7 @@ declare module es {
          * 当前所有活跃用户的内部列表
          */
         private _activeTweens;
+        static readonly activeTweens: ITweenable[];
         private _tempTweens;
         /**
          * 标志表示tween更新循环正在运行
@@ -4195,6 +4198,12 @@ declare module es {
          * @param target
          */
         static allTweenWithTarget(target: any): ITweenable[];
+        /**
+         * 返回以特定实体为目标的所有tween
+         * Tween返回为ITweenControl
+         * @param target
+         */
+        static allTweensWithTargetEntity(target: Entity): any[];
         /**
          * 停止所有具有TweenManager知道的特定目标的tweens
          * @param target
@@ -4374,6 +4383,7 @@ declare module es {
      * 更多具体的Tween播放控制在这里
      */
     interface ITweenControl extends ITweenable {
+        readonly discriminator: "ITweenControl";
         /**
          * 当使用匿名方法时，您可以在任何回调（如完成处理程序）中使用该属性来避免分配
          */
@@ -4413,6 +4423,7 @@ declare module es {
 }
 declare module es {
     interface ITweenable {
+        readonly discriminator: string;
         /**
          * 就像内部的Update一样，每一帧都被TweenManager调用
          */
@@ -5044,7 +5055,7 @@ declare module es {
      * CoroutineManager用于隐藏Coroutine所需数据的内部类
      */
     class CoroutineImpl implements ICoroutine, IPoolable {
-        enumerator: any;
+        enumerator: Generator;
         /**
          * 每当产生一个延迟，它就会被添加到跟踪延迟的waitTimer中
          */
@@ -5065,6 +5076,10 @@ declare module es {
         _isInUpdate: boolean;
         _unblockedCoroutines: CoroutineImpl[];
         _shouldRunNextFrame: CoroutineImpl[];
+        /**
+         * 立即停止并清除所有协程
+         */
+        clearAllCoroutines(): void;
         /**
          * 将IEnumerator添加到CoroutineManager中
          * Coroutine在每一帧调用Update之前被执行

@@ -12,6 +12,7 @@ module es {
     }
 
     export abstract class Tween<T> implements ITweenable, ITween<T> {
+        readonly discriminator: "ITweenControl";
         protected _target: ITweenTarget<T>;
         protected _isFromValueOverridden: boolean;
         protected _fromValue: T;

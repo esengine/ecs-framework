@@ -9838,6 +9838,7 @@ var es;
      */
     var AbstractTweenable = /** @class */ (function () {
         function AbstractTweenable() {
+            this.discriminator = "ITweenable";
         }
         AbstractTweenable.prototype.recycleSelf = function () {
         };
@@ -10689,6 +10690,13 @@ var es;
             TweenManager._instance = _this;
             return _this;
         }
+        Object.defineProperty(TweenManager, "activeTweens", {
+            get: function () {
+                return this._instance._activeTweens;
+            },
+            enumerable: true,
+            configurable: true
+        });
         TweenManager.prototype.update = function () {
             this._isUpdating = true;
             // 反向循环，这样我们就可以把完成的weens删除了
@@ -10770,6 +10778,26 @@ var es;
                     var tweenControl = TweenManager._instance._activeTweens[i];
                     if (tweenControl.getTargetObject() == target)
                         foundTweens.push(TweenManager._instance._activeTweens[i]);
+                }
+            }
+            return foundTweens;
+        };
+        /**
+         * 返回以特定实体为目标的所有tween
+         * Tween返回为ITweenControl
+         * @param target
+         */
+        TweenManager.allTweensWithTargetEntity = function (target) {
+            var foundTweens = [];
+            for (var i = 0; i < this._instance._activeTweens.length; i++) {
+                if (this._instance._activeTweens[i].discriminator == "ITweenControl") {
+                    var tweenControl = this._instance._activeTweens[i];
+                    var obj = tweenControl.getTargetObject();
+                    if (obj instanceof es.Entity && obj == target ||
+                        obj instanceof es.Component && obj.entity == target ||
+                        obj instanceof es.Transform && obj.entity == target) {
+                        foundTweens.push(this._instance._activeTweens[i]);
+                    }
                 }
             }
             return foundTweens;
@@ -12999,6 +13027,19 @@ var es;
             return _this;
         }
         /**
+         * 立即停止并清除所有协程
+         */
+        CoroutineManager.prototype.clearAllCoroutines = function () {
+            for (var i = 0; i < this._unblockedCoroutines.length; i++) {
+                es.Pool.free(CoroutineImpl, this._unblockedCoroutines[i]);
+            }
+            for (var i = 0; i < this._shouldRunNextFrame.length; i++) {
+                es.Pool.free(CoroutineImpl, this._shouldRunNextFrame[i]);
+            }
+            this._unblockedCoroutines.length = 0;
+            this._shouldRunNextFrame.length = 0;
+        };
+        /**
          * 将IEnumerator添加到CoroutineManager中
          * Coroutine在每一帧调用Update之前被执行
          * @param enumerator
@@ -13077,6 +13118,10 @@ var es;
                     es.Pool.free(CoroutineImpl, coroutine);
                     return false;
                 }
+                return true;
+            }
+            if (typeof chain.value == 'function') {
+                coroutine.waitForCoroutine = this.startCoroutine(chain.value);
                 return true;
             }
             if (chain.value instanceof CoroutineImpl) {

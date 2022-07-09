@@ -3,7 +3,7 @@ module es {
      * CoroutineManager用于隐藏Coroutine所需数据的内部类
      */
     export class CoroutineImpl implements ICoroutine, IPoolable {
-        public enumerator: any;
+        public enumerator: Generator;
 
         /**
          * 每当产生一个延迟，它就会被添加到跟踪延迟的waitTimer中
@@ -45,6 +45,22 @@ module es {
 
         public _unblockedCoroutines: CoroutineImpl[] = [];
         public _shouldRunNextFrame: CoroutineImpl[] = [];
+
+        /**
+         * 立即停止并清除所有协程
+         */
+        public clearAllCoroutines() {
+            for (let i = 0; i < this._unblockedCoroutines.length; i ++) {
+                Pool.free(CoroutineImpl, this._unblockedCoroutines[i]);
+            }
+
+            for (let i = 0; i < this._shouldRunNextFrame.length; i ++) {
+                Pool.free(CoroutineImpl, this._shouldRunNextFrame[i]);
+            }
+
+            this._unblockedCoroutines.length = 0;
+            this._shouldRunNextFrame.length = 0;
+        }
 
         /**
          * 将IEnumerator添加到CoroutineManager中
@@ -141,6 +157,11 @@ module es {
                     return false;
                 }
 
+                return true;
+            }
+
+            if (typeof chain.value == 'function') {
+                coroutine.waitForCoroutine = this.startCoroutine(chain.value);
                 return true;
             }
 

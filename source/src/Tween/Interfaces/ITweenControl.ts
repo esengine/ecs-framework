@@ -3,6 +3,7 @@ module es {
      * 更多具体的Tween播放控制在这里
      */
     export interface ITweenControl extends ITweenable {
+        readonly discriminator: "ITweenControl";
         /**
          * 当使用匿名方法时，您可以在任何回调（如完成处理程序）中使用该属性来避免分配
          */

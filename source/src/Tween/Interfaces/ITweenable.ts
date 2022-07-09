@@ -1,5 +1,6 @@
 module es {
     export interface ITweenable {
+        readonly discriminator: string;
         /**
          * 就像内部的Update一样，每一帧都被TweenManager调用
          */
