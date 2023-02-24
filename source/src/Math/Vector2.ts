@@ -337,6 +337,14 @@ module es {
             return (this.x * this.x) + (this.y * this.y);
         }
 
+        /**
+         * 从原点到向量末端的距离
+         * @returns 
+         */
+        public getLength(): number {
+            return Math.sqrt(this.x * this.x + this.y * this.y);
+        }
+
         /** 
          * 四舍五入X和Y值
          */
@@ -353,6 +361,37 @@ module es {
             let one = left.sub(this);
             let two = right.sub(this);
             return Vector2Ext.angle(one, two);
+        }
+
+        public getDistance(other: Vector2): number {
+            return Math.sqrt(this.getDistanceSquared(other));
+        }
+
+        public getDistanceSquared(other: Vector2): number {
+            const dx = other.x - this.x;
+            const dy = other.y - this.y;
+            return dx * dx + dy * dy;
+        }
+
+        public isBetween(v1: Vector2, v2: Vector2): boolean {
+            const cross = v2.sub(v1).cross(this.sub(v1));
+            return Math.abs(cross) < Number.EPSILON && this.dot(v2.sub(v1)) >= 0 && this.dot(v1.sub(v2)) >= 0;
+        }
+
+        /**
+         * 两个向量的叉积
+         * @param other 
+         * @returns 
+         */
+        public cross(other: Vector2): number {
+            return this.x * other.y - this.y * other.x;
+        }
+
+        /**
+         * 计算向量与x轴之间的夹角
+         */
+        public getAngle(): number {
+            return Math.atan2(this.y, this.x);
         }
 
         /**
@@ -412,9 +451,19 @@ module es {
             return round ? Math.round(angle) : angle;
         }
 
+        public static fromAngle(angle: number, magnitude: number = 1): Vector2 {
+            return new Vector2(magnitude * Math.cos(angle), magnitude * Math.sin(angle));
+        }
+
 
         public clone(): Vector2 {
             return new Vector2(this.x, this.y);
+        }
+
+        public copyFrom(source: Vector2): Vector2 {
+            this.x = source.x;
+            this.y = source.y;
+            return this;
         }
     }
 }

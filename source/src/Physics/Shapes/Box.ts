@@ -53,6 +53,17 @@ module es {
                 this._originalPoints[i] = this.points[i];
         }
 
+        public getEdges(): Array<Line> {
+            const edges = [];
+          
+            for (let i = 0; i < this.points.length; i++) {
+              const j = (i + 1) % this.points.length;
+              edges.push(new Line(this.points[i], this.points[j]));
+            }
+          
+            return edges;
+          }
+
         public overlaps(other: Shape) {
             // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
             if (this.isUnrotated) {
@@ -89,6 +100,34 @@ module es {
                 return ShapeCollisionsPoint.pointToBox(point, this, result);
 
             return super.pointCollidesWithShape(point, result);
+        }
+
+        public getFurthestPoint(normal: Vector2): Vector2 {
+            let furthestPoint = new Vector2(this.width / 2, this.height / 2);
+            let dotProduct = furthestPoint.dot(normal);
+        
+            let tempPoint = new Vector2(-this.width / 2, this.height / 2);
+            let tempDotProduct = tempPoint.dot(normal);
+            if (tempDotProduct > dotProduct) {
+                furthestPoint.copyFrom(tempPoint);
+                dotProduct = tempDotProduct;
+            }
+        
+            tempPoint.setTo(-this.width / 2, -this.height / 2);
+            tempDotProduct = tempPoint.dot(normal);
+            if (tempDotProduct > dotProduct) {
+                furthestPoint.copyFrom(tempPoint);
+                dotProduct = tempDotProduct;
+            }
+        
+            tempPoint.setTo(this.width / 2, -this.height / 2);
+            tempDotProduct = tempPoint.dot(normal);
+            if (tempDotProduct > dotProduct) {
+                furthestPoint.copyFrom(tempPoint);
+                dotProduct = tempDotProduct;
+            }
+        
+            return furthestPoint;
         }
     }
 }

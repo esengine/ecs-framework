@@ -1479,6 +1479,13 @@ var es;
             return (this.x * this.x) + (this.y * this.y);
         };
         /**
+         * 从原点到向量末端的距离
+         * @returns
+         */
+        Vector2.prototype.getLength = function () {
+            return Math.sqrt(this.x * this.x + this.y * this.y);
+        };
+        /**
          * 四舍五入X和Y值
          */
         Vector2.prototype.round = function () {
@@ -1493,6 +1500,32 @@ var es;
             var one = left.sub(this);
             var two = right.sub(this);
             return es.Vector2Ext.angle(one, two);
+        };
+        Vector2.prototype.getDistance = function (other) {
+            return Math.sqrt(this.getDistanceSquared(other));
+        };
+        Vector2.prototype.getDistanceSquared = function (other) {
+            var dx = other.x - this.x;
+            var dy = other.y - this.y;
+            return dx * dx + dy * dy;
+        };
+        Vector2.prototype.isBetween = function (v1, v2) {
+            var cross = v2.sub(v1).cross(this.sub(v1));
+            return Math.abs(cross) < Number.EPSILON && this.dot(v2.sub(v1)) >= 0 && this.dot(v1.sub(v2)) >= 0;
+        };
+        /**
+         * 两个向量的叉积
+         * @param other
+         * @returns
+         */
+        Vector2.prototype.cross = function (other) {
+            return this.x * other.y - this.y * other.x;
+        };
+        /**
+         * 计算向量与x轴之间的夹角
+         */
+        Vector2.prototype.getAngle = function () {
+            return Math.atan2(this.y, this.x);
         };
         /**
          * 比较当前实例是否等于指定的对象
@@ -1543,8 +1576,17 @@ var es;
             var angle = Math.acos(es.MathHelper.clamp(from.dot(to), -1, 1)) * es.MathHelper.Rad2Deg;
             return round ? Math.round(angle) : angle;
         };
+        Vector2.fromAngle = function (angle, magnitude) {
+            if (magnitude === void 0) { magnitude = 1; }
+            return new Vector2(magnitude * Math.cos(angle), magnitude * Math.sin(angle));
+        };
         Vector2.prototype.clone = function () {
             return new Vector2(this.x, this.y);
+        };
+        Vector2.prototype.copyFrom = function (source) {
+            this.x = source.x;
+            this.y = source.y;
+            return this;
         };
         return Vector2;
     }());
@@ -3726,6 +3768,22 @@ var es;
         return PolygonCollider;
     }(es.Collider));
     es.PolygonCollider = PolygonCollider;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 扇形碰撞器
+     */
+    var SectorCollider = /** @class */ (function (_super) {
+        __extends(SectorCollider, _super);
+        function SectorCollider(center, radius, startAngle, endAngle) {
+            var _this = _super.call(this) || this;
+            _this.shape = new es.Sector(center, radius, startAngle, endAngle);
+            return _this;
+        }
+        return SectorCollider;
+    }(es.Collider));
+    es.SectorCollider = SectorCollider;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -9168,6 +9226,14 @@ var es;
             for (var i = 0; i < this.points.length; i++)
                 this._originalPoints[i] = this.points[i];
         };
+        Box.prototype.getEdges = function () {
+            var edges = [];
+            for (var i = 0; i < this.points.length; i++) {
+                var j = (i + 1) % this.points.length;
+                edges.push(new es.Line(this.points[i], this.points[j]));
+            }
+            return edges;
+        };
         Box.prototype.overlaps = function (other) {
             // 特殊情况，这一个高性能方式实现，其他情况则使用polygon方法检测
             if (this.isUnrotated) {
@@ -9195,6 +9261,29 @@ var es;
             if (this.isUnrotated)
                 return es.ShapeCollisionsPoint.pointToBox(point, this, result);
             return _super.prototype.pointCollidesWithShape.call(this, point, result);
+        };
+        Box.prototype.getFurthestPoint = function (normal) {
+            var furthestPoint = new es.Vector2(this.width / 2, this.height / 2);
+            var dotProduct = furthestPoint.dot(normal);
+            var tempPoint = new es.Vector2(-this.width / 2, this.height / 2);
+            var tempDotProduct = tempPoint.dot(normal);
+            if (tempDotProduct > dotProduct) {
+                furthestPoint.copyFrom(tempPoint);
+                dotProduct = tempDotProduct;
+            }
+            tempPoint.setTo(-this.width / 2, -this.height / 2);
+            tempDotProduct = tempPoint.dot(normal);
+            if (tempDotProduct > dotProduct) {
+                furthestPoint.copyFrom(tempPoint);
+                dotProduct = tempDotProduct;
+            }
+            tempPoint.setTo(this.width / 2, -this.height / 2);
+            tempDotProduct = tempPoint.dot(normal);
+            if (tempDotProduct > dotProduct) {
+                furthestPoint.copyFrom(tempPoint);
+                dotProduct = tempDotProduct;
+            }
+            return furthestPoint;
         };
         return Box;
     }(es.Polygon));
@@ -9337,6 +9426,93 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    var Line = /** @class */ (function () {
+        function Line(start, end) {
+            this.start = start.clone();
+            this.end = end.clone();
+        }
+        Object.defineProperty(Line.prototype, "direction", {
+            get: function () {
+                return this.end.sub(this.start).normalize();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Line.prototype.getNormal = function () {
+            var angle = this.direction.getAngle() - Math.PI / 2;
+            return new es.Vector2(Math.cos(angle), Math.sin(angle));
+        };
+        Line.prototype.getDirection = function (out) {
+            return out.copyFrom(this.end).sub(this.start).normalize();
+        };
+        Line.prototype.getLength = function () {
+            return this.start.getDistance(this.end);
+        };
+        Line.prototype.getLengthSquared = function () {
+            return this.start.getDistanceSquared(this.end);
+        };
+        Line.prototype.distanceToPoint = function (normal, center) {
+            return Math.abs((this.end.y - this.start.y) * normal.x - (this.end.x - this.start.x) * normal.y + this.end.x * this.start.y - this.end.y * this.start.x) / (2 * normal.magnitude());
+        };
+        Line.prototype.getFurthestPoint = function (direction) {
+            var d1 = this.start.dot(direction);
+            var d2 = this.end.dot(direction);
+            return d1 > d2 ? this.start : this.end;
+        };
+        Line.prototype.getClosestPoint = function (point, out) {
+            var delta = out.copyFrom(this.end).sub(this.start);
+            var t = (point.sub(this.start)).dot(delta) / delta.lengthSquared();
+            if (t < 0) {
+                return out.copyFrom(this.start);
+            }
+            else if (t > 1) {
+                return out.copyFrom(this.end);
+            }
+            return out.copyFrom(delta).multiplyScaler(t).add(this.start);
+        };
+        return Line;
+    }());
+    es.Line = Line;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 计算投影和重叠区域
+     */
+    var Projection = /** @class */ (function () {
+        function Projection() {
+            this.min = Number.MAX_VALUE;
+            this.max = -Number.MAX_VALUE;
+        }
+        Projection.prototype.project = function (axis, polygon) {
+            var points = polygon.points;
+            var min = axis.dot(points[0]);
+            var max = min;
+            for (var i = 1; i < points.length; i++) {
+                var p = points[i];
+                var dot = axis.dot(p);
+                if (dot < min) {
+                    min = dot;
+                }
+                else if (dot > max) {
+                    max = dot;
+                }
+            }
+            this.min = min;
+            this.max = max;
+        };
+        Projection.prototype.overlap = function (other) {
+            return this.max >= other.min && other.max >= this.min;
+        };
+        Projection.prototype.getOverlap = function (other) {
+            return Math.min(this.max, other.max) - Math.max(this.min, other.min);
+        };
+        return Projection;
+    }());
+    es.Projection = Projection;
+})(es || (es = {}));
+var es;
+(function (es) {
     var RealtimeCollisions = /** @class */ (function () {
         function RealtimeCollisions() {
         }
@@ -9404,6 +9580,270 @@ var es;
         return RealtimeCollisions;
     }());
     es.RealtimeCollisions = RealtimeCollisions;
+})(es || (es = {}));
+var es;
+(function (es) {
+    /**
+     * 扇形形状
+     */
+    var Sector = /** @class */ (function (_super) {
+        __extends(Sector, _super);
+        function Sector(center, radius, startAngle, endAngle) {
+            var _this = _super.call(this) || this;
+            _this.center = center;
+            _this.radius = radius;
+            _this.startAngle = startAngle;
+            _this.endAngle = endAngle;
+            _this.angle = endAngle - startAngle;
+            _this.radiusSquared = radius * radius;
+            _this.points = _this.getPoints();
+            _this.calculateProperties();
+            return _this;
+        }
+        Object.defineProperty(Sector.prototype, "sectorAngle", {
+            get: function () {
+                var angle = this.endAngle - this.startAngle;
+                if (angle < 0)
+                    angle += 360;
+                return angle;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /**
+         * 扇形的圆心和半径计算出扇形的重心
+         * @returns
+         */
+        Sector.prototype.getCentroid = function () {
+            var x = (Math.cos(this.startAngle) + Math.cos(this.endAngle)) * this.radius / 3;
+            var y = (Math.sin(this.startAngle) + Math.sin(this.endAngle)) * this.radius / 3;
+            return new es.Vector2(x + this.center.x, y + this.center.y);
+        };
+        /**
+         * 计算向量角度
+         * @returns
+         */
+        Sector.prototype.getAngle = function () {
+            return this.startAngle;
+        };
+        Sector.prototype.recalculateBounds = function (collider) {
+            var localCenter = this.center.add(collider.localOffset);
+            var x = localCenter.x - this.radius;
+            var y = localCenter.y - this.radius;
+            var width = this.radius * 2;
+            var height = this.radius * 2;
+            var bounds = new es.Rectangle(x, y, width, height);
+            this.bounds = bounds;
+            this.center = localCenter;
+        };
+        Sector.prototype.overlaps = function (other) {
+            var result = new es.Out();
+            if (other instanceof es.Polygon)
+                return es.ShapeCollisionSector.sectorToPolygon(this, other, result);
+            if (other instanceof es.Circle) {
+                if (es.ShapeCollisionSector.sectorToCircle(this, other, result)) {
+                    result.value.invertResult();
+                    return true;
+                }
+                return false;
+            }
+            throw new Error("overlaps of Sector to " + other + " are not supported");
+        };
+        Sector.prototype.collidesWithShape = function (other, collisionResult) {
+            if (other instanceof es.Box) {
+                return es.ShapeCollisionSector.sectorToBox(this, other, collisionResult);
+            }
+            if (other instanceof es.Polygon) {
+                return es.ShapeCollisionSector.sectorToPolygon(this, other, collisionResult);
+            }
+            if (other instanceof es.Circle) {
+                return es.ShapeCollisionSector.sectorToCircle(this, other, collisionResult);
+            }
+            throw new Error("overlaps of Polygon to " + other + " are not supported");
+        };
+        Sector.prototype.collidesWithLine = function (start, end, hit) {
+            var toStart = start.sub(this.center);
+            var toEnd = end.sub(this.center);
+            var angleStart = toStart.getAngle();
+            var angleEnd = toEnd.getAngle();
+            var angleDiff = angleEnd - angleStart;
+            if (angleDiff > Math.PI) {
+                angleDiff -= 2 * Math.PI;
+            }
+            else if (angleDiff < -Math.PI) {
+                angleDiff += 2 * Math.PI;
+            }
+            if (angleDiff >= this.startAngle && angleDiff <= this.endAngle) {
+                var r = toStart.getLength();
+                var t = this.startAngle - angleStart;
+                var x = r * Math.cos(t);
+                var y = r * Math.sin(t);
+                var intersection = new es.Vector2(x, y);
+                if (intersection.isBetween(start, end)) {
+                    var distance = intersection.sub(start).getLength();
+                    var fraction = distance / start.getDistance(end);
+                    var normal = intersection.sub(this.center).normalize();
+                    var point = intersection.add(this.center);
+                    var raycastHit = new es.RaycastHit();
+                    raycastHit.setValues(fraction, distance, point, normal);
+                    hit.value = raycastHit;
+                    return true;
+                }
+            }
+            return false;
+        };
+        Sector.prototype.containsPoint = function (point) {
+            var toPoint = point.sub(this.center);
+            var distanceSquared = toPoint.lengthSquared();
+            if (distanceSquared > this.radiusSquared) {
+                return false;
+            }
+            var angle = toPoint.getAngle();
+            var startAngle = this.startAngle;
+            var endAngle = startAngle + this.angle;
+            var angleDiff = angle - startAngle;
+            if (angleDiff < 0) {
+                angleDiff += Math.PI * 2;
+            }
+            if (angleDiff > this.angle) {
+                return false;
+            }
+            return true;
+        };
+        Sector.prototype.pointCollidesWithShape = function (point, result) {
+            if (!this.containsPoint(point)) {
+                if (result) {
+                    result.value = null;
+                }
+                return false;
+            }
+            if (result) {
+                result.value = new es.CollisionResult();
+                result.value.normal = point.sub(this.center).normalize();
+                result.value.minimumTranslationVector = result.value.normal.scale(this.radius - point.sub(this.center).getLength());
+                result.value.point = point;
+            }
+            return true;
+        };
+        Sector.prototype.getPoints = function () {
+            var points = new Array(this.numberOfPoints);
+            for (var i = 0; i < this.numberOfPoints; i++) {
+                var angle = this.startAngle + i * this.angleStep;
+                points[i] = es.Vector2.fromAngle(angle, this.radius).add(this.center);
+            }
+            return points;
+        };
+        Sector.prototype.calculateProperties = function () {
+            this.numberOfPoints = Math.max(10, Math.floor(this.radius * 0.1));
+            this.angleStep = (this.endAngle - this.startAngle) / (this.numberOfPoints - 1);
+        };
+        Sector.prototype.getFurthestPoint = function (normal) {
+            var maxProjection = -Number.MAX_VALUE;
+            var furthestPoint = new es.Vector2();
+            for (var i = 0; i < this.numberOfPoints; i++) {
+                var projection = this.points[i].dot(normal);
+                if (projection > maxProjection) {
+                    maxProjection = projection;
+                    furthestPoint.copyFrom(this.points[i]);
+                }
+            }
+            return furthestPoint;
+        };
+        return Sector;
+    }(es.Shape));
+    es.Sector = Sector;
+})(es || (es = {}));
+var es;
+(function (es) {
+    var ShapeCollisionSector = /** @class */ (function () {
+        function ShapeCollisionSector() {
+        }
+        ShapeCollisionSector.sectorToPolygon = function (first, second, result) {
+            var numPoints = second.points.length;
+            var collision = false;
+            var edgeStart = new es.Vector2();
+            var edgeEnd = new es.Vector2();
+            var hit = new es.Out();
+            for (var i = 0; i < numPoints; i++) {
+                var point = second.points[i];
+                if (first.containsPoint(point)) {
+                    if (result) {
+                        result.value = new es.CollisionResult();
+                        result.value.point = point.clone();
+                        result.value.normal = point.sub(first.center).normalize();
+                    }
+                    collision = true;
+                    break;
+                }
+            }
+            if (!collision && second.containsPoint(first.center)) {
+                if (result) {
+                    result.value = new es.CollisionResult();
+                    result.value.point = first.center.clone();
+                    result.value.normal = new es.Vector2(0, 0);
+                }
+                collision = true;
+            }
+            if (!collision) {
+                for (var i = 0; i < numPoints; i++) {
+                    var p1 = second.points[i];
+                    var p2 = second.points[(i + 1) % numPoints];
+                    edgeStart.copyFrom(p1);
+                    edgeEnd.copyFrom(p2);
+                    if (first.collidesWithLine(edgeStart, edgeEnd, hit)) {
+                        if (result) {
+                            result.value = new es.CollisionResult();
+                            result.value.point.copyFrom(hit.value.point);
+                            result.value.normal.copyFrom(hit.value.normal);
+                        }
+                        collision = true;
+                        break;
+                    }
+                }
+            }
+            return collision;
+        };
+        ShapeCollisionSector.sectorToCircle = function (first, second, result) {
+            var radiusSquared = second.radius * second.radius;
+            var distanceSquared = first.center.getDistanceSquared(second.center);
+            var angleDiff = Math.abs(second.center.sub(first.center).getAngle() - first.getAngle());
+            var sectorAngle = first.endAngle - first.startAngle;
+            if (distanceSquared <= radiusSquared && angleDiff <= sectorAngle / 2) {
+                if (result) {
+                    result.value = new es.CollisionResult();
+                    result.value.normal = second.center.sub(first.center).normalize();
+                    result.value.point = second.center.clone().add(result.value.normal.clone().multiplyScaler(second.radius));
+                }
+                return true;
+            }
+            if (result) {
+                result.value = null;
+            }
+            return false;
+        };
+        ShapeCollisionSector.sectorToBox = function (first, second, result) {
+            result.value = new es.CollisionResult();
+            // 获取box的四条边
+            var boxEdges = second.getEdges();
+            // 遍历box的每一条边
+            for (var i = 0; i < boxEdges.length; i++) {
+                var normal = boxEdges[i].getNormal();
+                var furthestPointBox = second.getFurthestPoint(normal);
+                var furthestPointSector = first.getFurthestPoint(normal.negate());
+                var distance = normal.dot(furthestPointSector.sub(furthestPointBox));
+                // 没有相交
+                if (distance > 0)
+                    return false;
+                if (result.value && Math.abs(distance) < result.value.minimumTranslationVector.getLength()) {
+                    result.value.minimumTranslationVector = normal.clone().multiplyScaler(distance);
+                    result.value.normal = normal;
+                }
+            }
+            return true;
+        };
+        return ShapeCollisionSector;
+    }());
+    es.ShapeCollisionSector = ShapeCollisionSector;
 })(es || (es = {}));
 var es;
 (function (es) {

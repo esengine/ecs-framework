@@ -612,6 +612,11 @@ declare module es {
          */
         lengthSquared(): number;
         /**
+         * 从原点到向量末端的距离
+         * @returns
+         */
+        getLength(): number;
+        /**
          * 四舍五入X和Y值
          */
         round(): Vector2;
@@ -621,6 +626,19 @@ declare module es {
          * @param right
          */
         angleBetween(left: Vector2, right: Vector2): number;
+        getDistance(other: Vector2): number;
+        getDistanceSquared(other: Vector2): number;
+        isBetween(v1: Vector2, v2: Vector2): boolean;
+        /**
+         * 两个向量的叉积
+         * @param other
+         * @returns
+         */
+        cross(other: Vector2): number;
+        /**
+         * 计算向量与x轴之间的夹角
+         */
+        getAngle(): number;
         /**
          * 比较当前实例是否等于指定的对象
          * @param other 要比较的对象
@@ -653,7 +671,9 @@ declare module es {
          */
         static hermite(value1: Vector2, tangent1: Vector2, value2: Vector2, tangent2: Vector2, amount: number): Vector2;
         static unsignedAngle(from: Vector2, to: Vector2, round?: boolean): number;
+        static fromAngle(angle: number, magnitude?: number): Vector2;
         clone(): Vector2;
+        copyFrom(source: Vector2): Vector2;
     }
 }
 declare module es {
@@ -1546,6 +1566,14 @@ declare module es {
          * @param points
          */
         constructor(points: Vector2[]);
+    }
+}
+declare module es {
+    /**
+     * 扇形碰撞器
+     */
+    class SectorCollider extends Collider {
+        constructor(center: Vector2, radius: number, startAngle: number, endAngle: number);
     }
 }
 declare module es {
@@ -3714,10 +3742,12 @@ declare module es {
          * @param height
          */
         updateBox(width: number, height: number): void;
+        getEdges(): Array<Line>;
         overlaps(other: Shape): any;
         collidesWithShape(other: Shape, result: Out<CollisionResult>): boolean;
         containsPoint(point: Vector2): boolean;
         pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
+        getFurthestPoint(normal: Vector2): Vector2;
     }
 }
 declare module es {
@@ -3768,6 +3798,34 @@ declare module es {
     }
 }
 declare module es {
+    class Line {
+        start: Vector2;
+        end: Vector2;
+        constructor(start: Vector2, end: Vector2);
+        readonly direction: Vector2;
+        getNormal(): Vector2;
+        getDirection(out: Vector2): Vector2;
+        getLength(): number;
+        getLengthSquared(): number;
+        distanceToPoint(normal: Vector2, center: Vector2): number;
+        getFurthestPoint(direction: Vector2): Vector2;
+        getClosestPoint(point: Vector2, out: Vector2): Vector2;
+    }
+}
+declare module es {
+    /**
+     * 计算投影和重叠区域
+     */
+    class Projection {
+        min: number;
+        max: number;
+        constructor();
+        project(axis: Vector2, polygon: Polygon): void;
+        overlap(other: Projection): boolean;
+        getOverlap(other: Projection): number;
+    }
+}
+declare module es {
     class RealtimeCollisions {
         static intersectMovingCircleBox(s: Circle, b: Box, movement: Vector2, time: number): boolean;
         /**
@@ -3783,6 +3841,50 @@ declare module es {
          * @param point
          */
         static testCircleBox(cirlce: Circle, box: Box, point: Vector2): boolean;
+    }
+}
+declare module es {
+    /**
+     * 扇形形状
+     */
+    class Sector extends Shape {
+        center: Vector2;
+        radius: number;
+        startAngle: number;
+        endAngle: number;
+        angle: number;
+        radiusSquared: number;
+        numberOfPoints: number;
+        angleStep: number;
+        points: Vector2[];
+        readonly sectorAngle: number;
+        constructor(center: Vector2, radius: number, startAngle: number, endAngle: number);
+        /**
+         * 扇形的圆心和半径计算出扇形的重心
+         * @returns
+         */
+        getCentroid(): Vector2;
+        /**
+         * 计算向量角度
+         * @returns
+         */
+        getAngle(): number;
+        recalculateBounds(collider: Collider): void;
+        overlaps(other: Shape): boolean;
+        collidesWithShape(other: Shape, collisionResult: Out<CollisionResult>): boolean;
+        collidesWithLine(start: Vector2, end: Vector2, hit: Out<RaycastHit>): boolean;
+        containsPoint(point: Vector2): boolean;
+        pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
+        getPoints(): Vector2[];
+        private calculateProperties;
+        getFurthestPoint(normal: Vector2): Vector2;
+    }
+}
+declare module es {
+    class ShapeCollisionSector {
+        static sectorToPolygon(first: Sector, second: Polygon, result: Out<CollisionResult>): boolean;
+        static sectorToCircle(first: Sector, second: Circle, result: Out<CollisionResult>): boolean;
+        static sectorToBox(first: Sector, second: Box, result: Out<CollisionResult>): boolean;
     }
 }
 declare module es {
