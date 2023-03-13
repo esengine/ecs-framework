@@ -10474,11 +10474,14 @@ var es;
 var es;
 (function (es) {
     /**
-     * AbstractTweenable作为你可能想做的任何可以执行的自定义类的基础。
-     * 这些类不同于ITweens，因为他们没有实现ITweenT接口。
-     * 它只是说一个AbstractTweenable不仅仅是将一个值从开始移动到结束。
-     * 它可以做任何需要每帧执行的事情。
-     */
+    * `AbstractTweenable` 是一个抽象类，实现了 `ITweenable` 接口。
+    * 这个类提供了 `start`、`pause`、`resume` 和 `stop` 等方法，
+    * 并且具有判断动画是否运行的方法 `isRunning`。
+    * 它还有一个 `tick` 方法，子类需要根据自己的需要实现这个方法。
+    *
+    * `AbstractTweenable` 在完成后往往会被保留下来， `_isCurrentlyManagedByTweenManager` 标志可以让它们知道自己当前是否被 `TweenManager` 监控着，
+    * 以便在必要时可以重新添加自己。
+    */
     var AbstractTweenable = /** @class */ (function () {
         function AbstractTweenable() {
             this.discriminator = "ITweenable";
@@ -10515,10 +10518,11 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    /**
-     * 通用ITweenTarget用于所有属性tweens。
-     */
     var PropertyTarget = /** @class */ (function () {
+        /**
+         * @param target 属性动画的目标对象
+         * @param propertyName 属性名
+         */
         function PropertyTarget(target, propertyName) {
             this._target = target;
             this._propertyName = propertyName;
@@ -10527,24 +10531,43 @@ var es;
             return this._target;
         };
         PropertyTarget.prototype.setTweenedValue = function (value) {
+            // 将属性动画的目标对象的属性值设置为动画的当前值
             this._target[this._propertyName] = value;
         };
         PropertyTarget.prototype.getTweenedValue = function () {
+            // 获取属性动画的目标对象的属性值
             return this._target[this._propertyName];
         };
         return PropertyTarget;
     }());
+    /**
+     * 属性动画工具类
+     */
     var PropertyTweens = /** @class */ (function () {
         function PropertyTweens() {
         }
+        /**
+         * 创建一个属性为number类型的动画对象
+         * @param self 属性动画的目标对象
+         * @param memberName 属性名
+         * @param to 动画结束时的属性值
+         * @param duration 动画时长
+         */
         PropertyTweens.NumberPropertyTo = function (self, memberName, to, duration) {
             var tweenTarget = new PropertyTarget(self, memberName);
             var tween = es.TweenManager.cacheNumberTweens ? es.Pool.obtain(es.NumberTween) : new es.NumberTween();
             tween.initialize(tweenTarget, to, duration);
             return tween;
         };
-        PropertyTweens.Vector2PropertyTo = function (self, memeberName, to, duration) {
-            var tweenTarget = new PropertyTarget(self, memeberName);
+        /**
+         * 创建一个属性为Vector2类型的动画对象
+         * @param self 属性动画的目标对象
+         * @param memberName 属性名
+         * @param to 动画结束时的属性值
+         * @param duration 动画时长
+         */
+        PropertyTweens.Vector2PropertyTo = function (self, memberName, to, duration) {
+            var tweenTarget = new PropertyTarget(self, memberName);
             var tween = es.TweenManager.cacheVector2Tweens ? es.Pool.obtain(es.Vector2Tween) : new es.Vector2Tween();
             tween.initialize(tweenTarget, to, duration);
             return tween;
@@ -10662,9 +10685,9 @@ var es;
     })(TweenState = es.TweenState || (es.TweenState = {}));
     var Tween = /** @class */ (function () {
         function Tween() {
-            this._shouldRecycleTween = true;
-            this._tweenState = TweenState.complete;
-            this._timeScale = 1;
+            this._shouldRecycleTween = true; // 标志位，表示Tween执行完毕后是否要回收Tween实例
+            this._tweenState = TweenState.complete; // 当前Tween的状态
+            this._timeScale = 1; // 时间缩放系数
         }
         Tween.prototype.setEaseType = function (easeType) {
             this._easeType = easeType;
@@ -10729,9 +10752,31 @@ var es;
             return this;
         };
         Tween.prototype.tick = function () {
+            // 如果Tween处于暂停状态，则直接返回false
             if (this._tweenState == TweenState.paused)
                 return false;
-            // 当我们进行循环时，我们会在0和持续时间之间限制数值
+            // 计算多余的时间
+            var elapsedTimeExcess = this.calculateElapsedTimeExcess();
+            // 如果Tween处于有效时间范围内，则更新Tween值
+            if (this._elapsedTime >= 0 && this._elapsedTime <= this._duration) {
+                this.updateValue();
+            }
+            // 如果Tween已经完成，且需要进行循环，则处理循环
+            if (this._loopType != LoopType.none && this._tweenState == TweenState.complete && this._loops != 0) {
+                this.handleLooping(elapsedTimeExcess);
+            }
+            // 计算deltaTime并更新_elapsedTime
+            var deltaTime = this.calculateDeltaTime();
+            this.updateElapsedTime(deltaTime);
+            // 如果Tween已经完成，则处理完成事件并启动下一个Tween（如果有的话）
+            if (this._tweenState == TweenState.complete) {
+                this.handleCompletion();
+                return true;
+            }
+            return false;
+        };
+        // 计算多余的时间
+        Tween.prototype.calculateElapsedTimeExcess = function () {
             var elapsedTimeExcess = 0;
             if (!this._isRunningInReverse && this._elapsedTime >= this._duration) {
                 elapsedTimeExcess = this._elapsedTime - this._duration;
@@ -10743,32 +10788,38 @@ var es;
                 this._elapsedTime = 0;
                 this._tweenState = TweenState.complete;
             }
-            // 当我们延迟开始tween的时候，经过的时间会是负数，所以不要更新这个值。
-            if (this._elapsedTime >= 0 && this._elapsedTime <= this._duration) {
-                this.updateValue();
-            }
-            // 如果我们有一个loopType，并且我们是Complete（意味着我们达到了0或持续时间）处理循环。
-            // handleLooping将采取任何多余的elapsedTime，并将其因子化，并在必要时调用udpateValue来保持tween的完美准确性
-            if (this._loopType != LoopType.none && this._tweenState == TweenState.complete && this._loops != 0) {
-                this.handleLooping(elapsedTimeExcess);
-            }
+            return elapsedTimeExcess;
+        };
+        // 计算deltaTime
+        Tween.prototype.calculateDeltaTime = function () {
             var deltaTime = this._isTimeScaleIndependent ? es.Time.unscaledDeltaTime : es.Time.deltaTime;
             deltaTime *= this._timeScale;
-            // 我们需要减去deltaTime
+            // 如果Tween是运行在反向模式下，则需要将deltaTime取反
             if (this._isRunningInReverse)
-                this._elapsedTime -= deltaTime;
-            else
-                this._elapsedTime += deltaTime;
-            if (this._tweenState == TweenState.complete) {
-                this._completionHandler && this._completionHandler(this);
-                // 如果我们有一个nextTween，把它添加到TweenManager中，这样它就可以开始运行了
-                if (this._nextTween != null) {
-                    this._nextTween.start();
-                    this._nextTween = null;
-                }
-                return true;
+                deltaTime = -deltaTime;
+            return deltaTime;
+        };
+        // 更新_elapsedTime
+        Tween.prototype.updateElapsedTime = function (deltaTime) {
+            this._elapsedTime += deltaTime;
+            // 如果Tween处于反向模式下，则需要将_elapsedTime限制在0和_duration之间
+            if (this._isRunningInReverse) {
+                this._elapsedTime = Math.max(0, this._elapsedTime);
+                this._elapsedTime = Math.min(this._elapsedTime, this._duration);
             }
-            return false;
+            // 如果Tween处于正向模式下，则需要将_elapsedTime限制在0和_duration之间
+            else {
+                this._elapsedTime = Math.min(this._elapsedTime, this._duration);
+            }
+        };
+        // 处理Tween完成事件并启动下一个Tween（如果有的话）
+        Tween.prototype.handleCompletion = function () {
+            this._completionHandler && this._completionHandler(this);
+            // 如果有下一个Tween，则启动它
+            if (this._nextTween != null) {
+                this._nextTween.start();
+                this._nextTween = null;
+            }
         };
         Tween.prototype.recycleSelf = function () {
             if (this._shouldRecycleTween) {
@@ -11128,8 +11179,9 @@ var es;
         function EaseHelper() {
         }
         /**
-         * 返回 easeType 的相反 EaseType
-         * @param easeType
+         * 返回相反的缓动类型
+         * @param easeType 缓动类型
+         * @returns 返回相反的缓动类型
          */
         EaseHelper.oppositeEaseType = function (easeType) {
             switch (easeType) {
@@ -11329,6 +11381,7 @@ var es;
              * 当前所有活跃用户的内部列表
              */
             _this._activeTweens = [];
+            // 临时存储已完成的tweens
             _this._tempTweens = [];
             TweenManager._instance = _this;
             return _this;
@@ -11342,17 +11395,21 @@ var es;
         });
         TweenManager.prototype.update = function () {
             this._isUpdating = true;
-            // 反向循环，这样我们就可以把完成的weens删除了
+            // 反向循环，这样我们就可以把完成的tweens删除了
             for (var i = this._activeTweens.length - 1; i >= 0; --i) {
                 var tween = this._activeTweens[i];
-                if (tween.tick())
+                if (tween.tick()) {
+                    // 如果tween还没有完成，将其加入临时列表中
                     this._tempTweens.push(tween);
+                }
             }
             this._isUpdating = false;
+            // 从临时列表中删除所有已完成的tweens
             for (var i = 0; i < this._tempTweens.length; i++) {
                 this._tempTweens[i].recycleSelf();
                 new es.List(this._activeTweens).remove(this._tempTweens[i]);
             }
+            // 清空临时列表
             this._tempTweens.length = 0;
         };
         /**
@@ -11489,6 +11546,11 @@ var es;
         var Linear = /** @class */ (function () {
             function Linear() {
             }
+            /**
+             * 线性缓动，等同于t / d
+             * @param t 当前时间
+             * @param d 持续时间
+             */
             Linear.easeNone = function (t, d) {
                 return t / d;
             };
@@ -11498,12 +11560,27 @@ var es;
         var Quadratic = /** @class */ (function () {
             function Quadratic() {
             }
+            /**
+             * 平方缓动进入，加速运动
+             * @param t 当前时间
+             * @param d 持续时间
+             */
             Quadratic.easeIn = function (t, d) {
                 return (t /= d) * t;
             };
+            /**
+             * 平方缓动退出，减速运动
+             * @param t 当前时间
+             * @param d 持续时间
+             */
             Quadratic.easeOut = function (t, d) {
                 return -1 * (t /= d) * (t - 2);
             };
+            /**
+             * 平方缓动进出，加速减速运动
+             * @param t 当前时间
+             * @param d 持续时间
+             */
             Quadratic.easeInOut = function (t, d) {
                 if ((t /= d / 2) < 1)
                     return 0.5 * t * t;
@@ -11515,18 +11592,49 @@ var es;
         var Back = /** @class */ (function () {
             function Back() {
             }
-            Back.easeIn = function (t, d) {
-                return (t /= d) * t * ((1.70158 + 1) * t - 1.70158);
+            /**
+             * Back.easeIn(t, d) 函数将会返回 Back 缓动进入算法的结果
+             *
+             * @param t 当前时间，从0开始递增
+             * @param d 持续时间
+             * @param s 回弹的距离，默认值为 1.70158，可以省略该参数
+             * @return 缓动后的值
+             */
+            Back.easeIn = function (t, d, s) {
+                if (s === void 0) { s = 1.70158; }
+                // 根据公式计算缓动结果
+                return (t /= d) * t * ((s + 1) * t - s);
             };
-            Back.easeOut = function (t, d) {
-                return ((t = t / d - 1) * t * ((1.70158 + 1) * t + 1.70158) + 1);
+            /**
+             * Back.easeOut(t, d) 函数将会返回 Back 缓动退出算法的结果
+             *
+             * @param t 当前时间，从0开始递增
+             * @param d 持续时间
+             * @param s 回弹的距离，默认值为 1.70158，可以省略该参数
+             * @return 缓动后的值
+             */
+            Back.easeOut = function (t, d, s) {
+                if (s === void 0) { s = 1.70158; }
+                // 根据公式计算缓动结果
+                return ((t = t / d - 1) * t * ((s + 1) * t + s) + 1);
             };
-            Back.easeInOut = function (t, d) {
-                var s = 1.70158;
+            /**
+             * Back.easeInOut(t, d) 函数将会返回 Back 缓动进入/退出算法的结果
+             *
+             * @param t 当前时间，从0开始递增
+             * @param d 持续时间
+             * @param s 回弹的距离，默认值为 1.70158，可以省略该参数
+             * @return 缓动后的值
+             */
+            Back.easeInOut = function (t, d, s) {
+                if (s === void 0) { s = 1.70158; }
+                // 根据公式计算缓动结果
                 if ((t /= d / 2) < 1) {
-                    return 0.5 * (t * t * (((s *= (1.525)) + 1) * t - s));
+                    s *= (1.525);
+                    return 0.5 * (t * t * (((s + 1) * t) - s));
                 }
-                return 0.5 * ((t -= 2) * t * (((s *= (1.525)) + 1) * t + s) + 2);
+                s *= (1.525);
+                return 0.5 * ((t -= 2) * t * (((s + 1) * t) + s) + 2);
             };
             return Back;
         }());
@@ -11534,6 +11642,12 @@ var es;
         var Bounce = /** @class */ (function () {
             function Bounce() {
             }
+            /**
+             * 从0到目标值的反弹动画
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 反弹动画进度
+             */
             Bounce.easeOut = function (t, d) {
                 if ((t /= d) < (1 / 2.75)) {
                     return (7.5625 * t * t);
@@ -11548,9 +11662,21 @@ var es;
                     return (7.5625 * (t -= (2.625 / 2.75)) * t + 0.984375);
                 }
             };
+            /**
+             * 从目标值到0的反弹动画
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 反弹动画进度
+             */
             Bounce.easeIn = function (t, d) {
                 return 1 - this.easeOut(d - t, d);
             };
+            /**
+             * 从0到目标值再到0的反弹动画
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 反弹动画进度
+             */
             Bounce.easeInOut = function (t, d) {
                 if (t < d / 2)
                     return this.easeIn(t * 2, d) * 0.5;
@@ -11563,12 +11689,27 @@ var es;
         var Circular = /** @class */ (function () {
             function Circular() {
             }
+            /**
+             * 缓动函数入口，表示从 0 到最大值的缓动（开始慢加速，后面变快）
+             * @param t 当前时间
+             * @param d 缓动总时间
+             */
             Circular.easeIn = function (t, d) {
                 return -(Math.sqrt(1 - (t /= d) * t) - 1);
             };
+            /**
+             * 缓动函数出口，表示从最大值到 0 的缓动（开始快减速，后面变慢）
+             * @param t 当前时间
+             * @param d 缓动总时间
+             */
             Circular.easeOut = function (t, d) {
                 return Math.sqrt(1 - (t = t / d - 1) * t);
             };
+            /**
+             * 缓动函数入口和出口，表示从 0 到最大值再到 0 的缓动（先慢加速，后面快减速）
+             * @param t 当前时间
+             * @param d 缓动总时间
+             */
             Circular.easeInOut = function (t, d) {
                 if ((t /= d / 2) < 1)
                     return -0.5 * (Math.sqrt(1 - t * t) - 1);
@@ -11580,12 +11721,30 @@ var es;
         var Cubic = /** @class */ (function () {
             function Cubic() {
             }
+            /**
+             * easeIn方法提供了一个以慢速开始，然后逐渐加速的缓动函数。
+             * @param t 当前时间，动画已经持续的时间，范围在0到d之间，其中d是动画的总时间。
+             * @param d 动画的总时间，即动画将从开始到结束的持续时间。
+             * @returns 根据动画的当前时间计算出的位置值，该位置值在0到1之间。
+             */
             Cubic.easeIn = function (t, d) {
                 return (t /= d) * t * t;
             };
+            /**
+             * easeOut方法提供了一个以快速开始，然后逐渐减速的缓动函数。
+             * @param t 当前时间，动画已经持续的时间，范围在0到d之间，其中d是动画的总时间。
+             * @param d 动画的总时间，即动画将从开始到结束的持续时间。
+             * @returns 根据动画的当前时间计算出的位置值，该位置值在0到1之间。
+             */
             Cubic.easeOut = function (t, d) {
                 return ((t = t / d - 1) * t * t + 1);
             };
+            /**
+             * easeInOut方法提供了一个慢速开始，然后加速，然后减速的缓动函数。
+             * @param t 当前时间，动画已经持续的时间，范围在0到d之间，其中d是动画的总时间。
+             * @param d 动画的总时间，即动画将从开始到结束的持续时间。
+             * @returns 根据动画的当前时间计算出的位置值，该位置值在0到1之间。
+             */
             Cubic.easeInOut = function (t, d) {
                 if ((t /= d / 2) < 1)
                     return 0.5 * t * t * t;
@@ -11597,42 +11756,72 @@ var es;
         var Elastic = /** @class */ (function () {
             function Elastic() {
             }
+            /**
+             * 弹性函数的 easeIn 版本
+             * @param t - 已经经过的时间
+             * @param d - 动画的总时间
+             * @returns 经过缓动函数计算后的值
+             */
             Elastic.easeIn = function (t, d) {
-                if (t == 0)
+                if (t === 0)
                     return 0;
-                if ((t /= d) == 1)
+                if ((t /= d) === 1)
                     return 1;
                 var p = d * 0.3;
                 var s = p / 4;
-                return -(1 * Math.pow(2, 10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p));
+                return -1 * Math.pow(2, 10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p);
             };
+            /**
+             * 弹性函数的 easeOut 版本
+             * @param t - 已经经过的时间
+             * @param d - 动画的总时间
+             * @returns 经过缓动函数计算后的值
+             */
             Elastic.easeOut = function (t, d) {
-                if (t == 0)
+                if (t === 0)
                     return 0;
-                if ((t /= d) == 1)
+                if ((t /= d) === 1)
                     return 1;
                 var p = d * 0.3;
                 var s = p / 4;
-                return (1 * Math.pow(2, -10 * t) * Math.sin((t * d - s) * (2 * Math.PI) / p) + 1);
+                return 1 * Math.pow(2, -10 * t) * Math.sin((t * d - s) * (2 * Math.PI) / p) + 1;
             };
+            /**
+             * 弹性函数的 easeInOut 版本
+             * @param t - 已经经过的时间
+             * @param d - 动画的总时间
+             * @returns 经过缓动函数计算后的值
+             */
             Elastic.easeInOut = function (t, d) {
-                if (t == 0)
+                if (t === 0)
                     return 0;
-                if ((t /= d / 2) == 2)
+                if ((t /= d / 2) === 2)
                     return 1;
                 var p = d * (0.3 * 1.5);
                 var s = p / 4;
-                if (t < 1)
-                    return -0.5 * (Math.pow(2, 10 * (t -= 1)) * Math.sin(t * d - s) * (2 * Math.PI) / p);
-                return (Math.pow(2, -10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p) * 0.5 + 1);
+                if (t < 1) {
+                    return (-0.5 *
+                        Math.pow(2, 10 * (t -= 1)) *
+                        Math.sin((t * d - s) * (2 * Math.PI) / p));
+                }
+                return (Math.pow(2, -10 * (t -= 1)) *
+                    Math.sin((t * d - s) * (2 * Math.PI) / p) *
+                    0.5 +
+                    1);
             };
+            /**
+             * 弹性函数的 punch 版本
+             * @param t - 已经经过的时间
+             * @param d - 动画的总时间
+             * @returns 经过缓动函数计算后的值
+             */
             Elastic.punch = function (t, d) {
-                if (t == 0)
+                if (t === 0)
                     return 0;
-                if ((t /= d) == 1)
+                if ((t /= d) === 1)
                     return 0;
                 var p = 0.3;
-                return (Math.pow(2, -10 * t) * Math.sin(t * (2 * Math.PI) / p));
+                return Math.pow(2, -10 * t) * Math.sin(t * (2 * Math.PI) / p);
             };
             return Elastic;
         }());
@@ -11640,12 +11829,30 @@ var es;
         var Exponential = /** @class */ (function () {
             function Exponential() {
             }
+            /**
+             * Exponential 缓动函数 - easeIn
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 缓动值
+             */
             Exponential.easeIn = function (t, d) {
                 return (t == 0) ? 0 : Math.pow(2, 10 * (t / d - 1));
             };
+            /**
+             * Exponential 缓动函数 - easeOut
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 缓动值
+             */
             Exponential.easeOut = function (t, d) {
                 return t == d ? 1 : (-Math.pow(2, -10 * t / d) + 1);
             };
+            /**
+             * Exponential 缓动函数 - easeInOut
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 缓动值
+             */
             Exponential.easeInOut = function (t, d) {
                 if (t == 0)
                     return 0;
@@ -11662,12 +11869,32 @@ var es;
         var Quartic = /** @class */ (function () {
             function Quartic() {
             }
+            /**
+             * Quartic 缓动函数的 easeIn 版本
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 根据当前时间计算出的值
+             */
             Quartic.easeIn = function (t, d) {
-                return (t /= d) * t * t * t;
+                t /= d;
+                return t * t * t * t;
             };
+            /**
+             * Quartic 缓动函数的 easeOut 版本
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 根据当前时间计算出的值
+             */
             Quartic.easeOut = function (t, d) {
-                return -1 * ((t = t / d - 1) * t * t * t - 1);
+                t = t / d - 1;
+                return -1 * (t * t * t * t - 1);
             };
+            /**
+             * Quartic 缓动函数的 easeInOut 版本
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 根据当前时间计算出的值
+             */
             Quartic.easeInOut = function (t, d) {
                 t /= d / 2;
                 if (t < 1)
@@ -11678,19 +11905,43 @@ var es;
             return Quartic;
         }());
         Easing.Quartic = Quartic;
+        /**
+         * Quintic 类提供了三种 Quintic 缓动函数
+         */
         var Quintic = /** @class */ (function () {
             function Quintic() {
             }
+            /**
+             * 缓动函数，具有 Quintic easeIn 效果
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 缓动值
+             */
             Quintic.easeIn = function (t, d) {
                 return (t /= d) * t * t * t * t;
             };
+            /**
+             * 缓动函数，具有 Quintic easeOut 效果
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 缓动值
+             */
             Quintic.easeOut = function (t, d) {
                 return ((t = t / d - 1) * t * t * t * t + 1);
             };
+            /**
+             * 缓动函数，具有 Quintic easeInOut 效果
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 缓动值
+             */
             Quintic.easeInOut = function (t, d) {
-                if ((t /= d / 2) < 1)
+                if ((t /= d / 2) < 1) {
                     return 0.5 * t * t * t * t * t;
-                return 0.5 * ((t -= 2) * t * t * t * t + 2);
+                }
+                else {
+                    return 0.5 * ((t -= 2) * t * t * t * t + 2);
+                }
             };
             return Quintic;
         }());
@@ -11698,13 +11949,34 @@ var es;
         var Sinusoidal = /** @class */ (function () {
             function Sinusoidal() {
             }
+            /**
+             * Sinusoidal 类的缓动入方法。
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 介于 0 和 1 之间的数字，表示当前时间的值
+             */
             Sinusoidal.easeIn = function (t, d) {
+                // 通过 cos 函数计算出当前时间对应的值
                 return -1 * Math.cos(t / d * (Math.PI / 2)) + 1;
             };
+            /**
+             * Sinusoidal 类的缓动出方法。
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 介于 0 和 1 之间的数字，表示当前时间的值
+             */
             Sinusoidal.easeOut = function (t, d) {
+                // 通过 sin 函数计算出当前时间对应的值
                 return Math.sin(t / d * (Math.PI / 2));
             };
+            /**
+             * Sinusoidal 类的缓动入出方法。
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 介于 0 和 1 之间的数字，表示当前时间的值
+             */
             Sinusoidal.easeInOut = function (t, d) {
+                // 通过 cos 函数计算出当前时间对应的值
                 return -0.5 * (Math.cos(Math.PI * t / d) - 1);
             };
             return Sinusoidal;
@@ -11721,6 +11993,7 @@ var es;
         function Lerps() {
         }
         Lerps.lerp = function (from, to, t) {
+            // 判断传入的数据类型，并执行对应的插值逻辑
             if (typeof (from) == "number" && typeof (to) == "number") {
                 return from + (to - from) * t;
             }
@@ -11731,38 +12004,60 @@ var es;
                 return new es.Vector2(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t);
             }
         };
+        /**
+         * 计算两个向量之间的角度差并使用线性插值函数进行插值
+         * @param from 起始向量
+         * @param to 目标向量
+         * @param t 插值因子
+         * @returns 插值后的向量
+         */
         Lerps.angleLerp = function (from, to, t) {
-            // 我们计算这个lerp的最短角差
+            // 计算最短的角差，确保角度在[-180, 180]度之间
             var toMinusFrom = new es.Vector2(es.MathHelper.deltaAngle(from.x, to.x), es.MathHelper.deltaAngle(from.y, to.y));
+            // 使用线性插值函数计算插值后的向量
             return new es.Vector2(from.x + toMinusFrom.x * t, from.y + toMinusFrom.y * t);
         };
         Lerps.ease = function (easeType, from, to, t, duration) {
+            // 如果传入的值都是 number 类型，就直接返回两个值之间的线性插值
             if (typeof (from) == 'number' && typeof (to) == "number") {
                 return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
             }
+            // 如果传入的值都是 Vector2 类型，就返回两个 Vector2 之间的插值
             if (from instanceof es.Vector2 && to instanceof es.Vector2) {
                 return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
             }
+            // 如果传入的值都是 Rectangle 类型，就返回两个 Rectangle 之间的插值
             if (from instanceof es.Rectangle && to instanceof es.Rectangle) {
                 return this.lerp(from, to, es.EaseHelper.ease(easeType, t, duration));
             }
         };
+        /**
+         * 通过提供的t值和持续时间使用给定的缓动类型在两个Vector2之间进行角度插值。
+         * @param easeType 缓动类型
+         * @param from 开始的向量
+         * @param to 结束的向量
+         * @param t 当前时间在持续时间内的比例
+         * @param duration 持续时间
+         * @returns 插值后的Vector2值
+         */
         Lerps.easeAngle = function (easeType, from, to, t, duration) {
             return this.angleLerp(from, to, es.EaseHelper.ease(easeType, t, duration));
         };
         /**
-         * 使用半隐式欧拉方法。速度较慢，但总是很稳定。见
-         * http://allenchou.net/2015/04/game-math-more-on-numeric-springing/
-         * @param currentValue
-         * @param targetValue
-         * @param velocity Velocity的引用。如果在两次调用之间改变targetValue，请务必将其重置为0
-         * @param dampingRatio 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
-         * @param angularFrequency 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定
+         * 使用快速弹簧算法来实现平滑过渡。返回经过弹簧计算后的当前值。
+         * @param currentValue 当前值
+         * @param targetValue 目标值
+         * @param velocity 当前速度
+         * @param dampingRatio 阻尼比例
+         * @param angularFrequency 角频率
          */
         Lerps.fastSpring = function (currentValue, targetValue, velocity, dampingRatio, angularFrequency) {
+            // 计算下一帧的速度
             velocity.add(velocity.scale(-2 * es.Time.deltaTime * dampingRatio * angularFrequency)
                 .add(targetValue.sub(currentValue).scale(es.Time.deltaTime * angularFrequency * angularFrequency)));
+            // 计算下一帧的当前值
             currentValue.add(velocity.scale(es.Time.deltaTime));
+            // 返回计算后的当前值
             return currentValue;
         };
         return Lerps;
@@ -15205,24 +15500,52 @@ var es;
             (_a = this._elements).push.apply(_a, __spread(elements));
         };
         /**
-         * 对序列应用累加器函数。
+         * 使用指定的累加器函数将数组中的所有元素聚合成一个值。
+         * @param accumulator 用于计算聚合值的累加器函数。
+         * @param initialValue 可选参数，用于指定累加器函数的初始值。
+         * @returns 聚合后的值。
          */
         List.prototype.aggregate = function (accumulator, initialValue) {
             return this._elements.reduce(accumulator, initialValue);
         };
         /**
-         * 确定序列的所有元素是否满足一个条件。
+         * 判断当前列表中的所有元素是否都满足指定条件
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {boolean} 如果列表中的所有元素都满足条件，则返回 true；否则返回 false
          */
         List.prototype.all = function (predicate) {
+            // 调用 every 方法，传入谓词函数，检查列表中的所有元素是否都满足条件
             return this._elements.every(predicate);
         };
+        /**
+         * 该方法用于判断数组中是否存在元素
+         * @param predicate 可选参数，用于检查是否有至少一个元素满足该函数
+         * @returns 如果存在元素，返回 true；如果不存在元素，返回 false
+         */
         List.prototype.any = function (predicate) {
-            return predicate
-                ? this._elements.some(predicate)
-                : this._elements.length > 0;
+            // 如果 predicate 函数提供了，则使用 some() 方法判断是否有任意元素满足该函数
+            if (predicate) {
+                return this._elements.some(predicate);
+            }
+            // 如果没有提供 predicate 函数，则检查数组的长度是否大于 0
+            return this._elements.length > 0;
         };
+        /**
+         * 计算数组中所有元素的平均值
+         * @param transform 可选参数，用于将数组中的每个元素转换成另外的值进行计算
+         * @returns 数组的平均值
+         */
         List.prototype.average = function (transform) {
-            return this.sum(transform) / this.count(transform);
+            // 调用 sum() 方法计算数组中所有元素的和
+            var sum = this.sum(transform);
+            // 调用 count() 方法计算数组中元素的个数
+            var count = this.count(transform);
+            // 如果元素的个数为 0，则返回 NaN
+            if (count === 0) {
+                return NaN;
+            }
+            // 计算数组的平均值并返回
+            return sum / count;
         };
         /**
          * 将序列的元素转换为指定的类型。
@@ -15252,23 +15575,30 @@ var es;
             return predicate ? this.where(predicate).count() : this._elements.length;
         };
         /**
-         * 返回指定序列的元素，或者如果序列为空，则返回单例集合中类型参数的默认值。
+         * 返回当前数组，如果当前数组为空，则返回一个只包含默认值的新数组。
+         * @param defaultValue 默认值。
+         * @returns 当前数组，或者只包含默认值的新数组。
          */
         List.prototype.defaultIfEmpty = function (defaultValue) {
             return this.count() ? this : new List([defaultValue]);
         };
         /**
-         * 根据指定的键选择器从序列中返回不同的元素。
+         * 根据指定的键选择器从数组中去除重复的元素。
+         * @param keySelector 用于选择每个元素的键的函数。
+         * @returns 去重后的数组。
          */
         List.prototype.distinctBy = function (keySelector) {
-            var groups = this.groupBy(keySelector);
+            var groups = this.groupBy(keySelector); // 根据键选择器对数组进行分组。
             return Object.keys(groups).reduce(function (res, key) {
-                res.add(groups[key][0]);
+                res.add(groups[key][0]); // 将每组的第一个元素加入结果集合。
                 return res;
-            }, new List());
+            }, new List()); // 返回结果集合。
         };
         /**
-         * 返回序列中指定索引处的元素。
+         * 根据指定的索引获取数组中的元素
+         * @param index 要获取的元素的索引
+         * @returns 数组中的元素
+         * @throws {Error} 如果索引小于 0 或大于等于数组长度，则抛出 "ArgumentOutOfRangeException" 异常。
          */
         List.prototype.elementAt = function (index) {
             if (index < this.count() && index >= 0) {
@@ -15279,15 +15609,17 @@ var es;
             }
         };
         /**
-         * 返回序列中指定索引处的元素，如果索引超出范围，则返回默认值。
+         * 获取指定索引处的元素，如果索引超出数组范围，则返回 null。
+         * @param index 索引。
+         * @returns 指定索引处的元素，如果索引超出数组范围，则返回 null。
          */
         List.prototype.elementAtOrDefault = function (index) {
-            return index < this.count() && index >= 0
-                ? this._elements[index]
-                : undefined;
+            return index < this.count() && index >= 0 ? this._elements[index] : null;
         };
         /**
-         * 通过使用默认的相等比较器来比较值，生成两个序列的差值集。
+         * 返回当前数组中不在指定数组中的元素集合。
+         * @param source 指定数组。
+         * @returns 当前数组中不在指定数组中的元素集合。
          */
         List.prototype.except = function (source) {
             return this.where(function (x) { return !source.contains(x); });
@@ -15304,13 +15636,17 @@ var es;
             return this.count(predicate) ? this.first(predicate) : undefined;
         };
         /**
-         * 对列表中的每个元素执行指定的操作。
+         * 对数组中的每个元素执行指定的操作
+         * @param action 要执行的操作，可以是一个函数或函数表达式
          */
         List.prototype.forEach = function (action) {
             return this._elements.forEach(action);
         };
         /**
-         * 根据指定的键选择器函数对序列中的元素进行分组。
+         * 根据指定的键对数组元素进行分组，并返回一个包含分组结果的对象
+         * @param grouper 指定的键，用于分组
+         * @param mapper 可选参数，用于对分组后的每个元素进行转换的函数
+         * @returns 包含分组结果的对象，其中键为分组后的键，值为分组后的元素组成的数组
          */
         List.prototype.groupBy = function (grouper, mapper) {
             if (mapper === void 0) { mapper = function (val) { return val; }; }
@@ -15326,68 +15662,131 @@ var es;
             }, initialValue);
         };
         /**
-         * 根据键的相等将两个序列的元素关联起来，并将结果分组。默认的相等比较器用于比较键。
+         * 将两个数组进行联接和分组操作
+         * @param list 要联接的数组
+         * @param key1 用于从第一个数组中选择分组键的函数
+         * @param key2 用于从第二个数组中选择分组键的函数
+         * @param result 用于将分组结果映射到输出元素的函数
+         * @returns 经过联接和分组后的新数组
          */
         List.prototype.groupJoin = function (list, key1, key2, result) {
+            // 使用 select() 方法对第一个数组中的每个元素进行分组操作
             return this.select(function (x) {
-                return result(x, list.where(function (z) { return key1(x) === key2(z); }));
+                // 调用 result 函数将分组结果映射到输出元素
+                return result(x, 
+                // 使用 where() 方法从第二个数组中选择符合条件的元素，然后使用 List 对象进行包装
+                list.where(function (z) { return key1(x) === key2(z); }));
             });
         };
         /**
-         * 返回列表中某个元素第一次出现的索引。
+         * 返回当前列表中指定元素的索引
+         * @param element 要查找的元素
+         * @returns {number} 元素在列表中的索引值，如果不存在，则返回 -1
          */
         List.prototype.indexOf = function (element) {
+            // 调用 indexOf 方法，查找元素在列表中的索引值，如果不存在，则返回 -1
             return this._elements.indexOf(element);
         };
         /**
-         * 向列表中插入一个元素在指定索引处。
+         * 在数组的指定位置插入一个元素
+         * @param index 要插入元素的位置
+         * @param element 要插入的元素
+         * @throws 如果索引超出了数组的范围，则抛出异常
          */
         List.prototype.insert = function (index, element) {
+            // 如果索引小于 0 或大于数组长度，则抛出异常
             if (index < 0 || index > this._elements.length) {
                 throw new Error('Index is out of range.');
             }
+            // 使用 splice() 方法在指定位置插入元素
             this._elements.splice(index, 0, element);
         };
         /**
-         * 通过使用默认的相等比较器来比较值，生成两个序列的交集集。
+         * 获取当前列表和另一个列表的交集
+         * @param source 另一个列表
+         * @returns {List<T>} 一个包含两个列表中相同元素的新列表对象
          */
         List.prototype.intersect = function (source) {
+            // 调用 where 方法，传入一个谓词函数，返回一个包含两个列表中相同元素的新列表对象
             return this.where(function (x) { return source.contains(x); });
         };
         /**
-         * 基于匹配的键将两个序列的元素关联起来。默认的相等比较器用于比较键。
+         * 将当前列表和另一个列表中的元素进行联接
+         * @param list 另一个列表
+         * @param key1 当前列表的键选择器函数
+         * @param key2 另一个列表的键选择器函数
+         * @param result 结果选择器函数
+         * @returns {List<R>} 一个包含联接后元素的新列表对象
          */
         List.prototype.join = function (list, key1, key2, result) {
+            // 对当前列表中的每个元素调用 selectMany 方法，并传入一个返回值为列表的函数，最终返回一个新的列表对象
             return this.selectMany(function (x) {
+                // 调用 list.where 方法，传入一个谓词函数，返回一个包含与当前元素匹配的元素的新列表对象
                 return list.where(function (y) { return key2(y) === key1(x); }).select(function (z) { return result(x, z); });
             });
         };
+        /**
+         * 返回数组的最后一个元素或满足条件的最后一个元素
+         * @param predicate 可选参数，用于筛选元素的函数
+         * @returns 数组的最后一个元素或满足条件的最后一个元素
+         * @throws 如果数组为空，则抛出异常
+         */
         List.prototype.last = function (predicate) {
+            // 如果数组不为空
             if (this.count()) {
-                return predicate
-                    ? this.where(predicate).last()
-                    : this._elements[this.count() - 1];
+                // 如果提供了 predicate 函数，则使用 where() 方法进行筛选，并递归调用 last() 方法
+                if (predicate) {
+                    return this.where(predicate).last();
+                }
+                else {
+                    // 否则，直接返回数组的最后一个元素
+                    return this._elements[this.count() - 1];
+                }
             }
             else {
+                // 如果数组为空，则抛出异常
                 throw Error('InvalidOperationException: The source sequence is empty.');
             }
         };
+        /**
+         * 返回数组的最后一个元素或满足条件的最后一个元素，如果数组为空或没有满足条件的元素，则返回默认值 undefined
+         * @param predicate 可选参数，用于筛选元素的函数
+         * @returns 数组的最后一个元素或满足条件的最后一个元素，如果数组为空或没有满足条件的元素，则返回默认值 undefined
+         */
         List.prototype.lastOrDefault = function (predicate) {
+            // 如果数组中存在满足条件的元素，则返回最后一个满足条件的元素；否则，返回 undefined
             return this.count(predicate) ? this.last(predicate) : undefined;
         };
+        /**
+         * 返回数组中的最大值，也可以通过 selector 函数对数组元素进行转换后再求最大值
+         * @param selector 可选参数，用于对数组元素进行转换的函数
+         * @returns 数组中的最大值，或者通过 selector 函数对数组元素进行转换后求得的最大值
+         */
         List.prototype.max = function (selector) {
+            // 定义一个默认的转换函数 id，用于当 selector 参数未指定时使用
             var id = function (x) { return x; };
+            // 使用 map() 方法对数组元素进行转换，并使用 Math.max() 方法求得最大值
             return Math.max.apply(Math, __spread(this._elements.map(selector || id)));
         };
+        /**
+         * 返回数组中的最小值，也可以通过 selector 函数对数组元素进行转换后再求最小值
+         * @param selector 可选参数，用于对数组元素进行转换的函数
+         * @returns 数组中的最小值，或者通过 selector 函数对数组元素进行转换后求得的最小值
+         */
         List.prototype.min = function (selector) {
+            // 定义一个默认的转换函数 id，用于当 selector 参数未指定时使用
             var id = function (x) { return x; };
+            // 使用 map() 方法对数组元素进行转换，并使用 Math.min() 方法求得最小值
             return Math.min.apply(Math, __spread(this._elements.map(selector || id)));
         };
         /**
-         * 根据指定的类型筛选序列中的元素。
+         * 根据指定的类型，筛选数组中的元素并返回一个新的数组
+         * @param type 指定的类型
+         * @returns 新的数组，其中包含了数组中所有指定类型的元素
          */
         List.prototype.ofType = function (type) {
             var typeName;
+            // 使用 switch 语句根据指定类型设置 typeName 变量
             switch (type) {
                 case Number:
                     typeName = typeof 0;
@@ -15399,12 +15798,14 @@ var es;
                     typeName = typeof true;
                     break;
                 case Function:
-                    typeName = typeof function () { }; // tslint:disable-line no-empty
+                    typeName = typeof function () {
+                    }; // 空函数，不做任何操作
                     break;
                 default:
                     typeName = null;
                     break;
             }
+            // 如果 typeName 为 null，则使用 "instanceof" 运算符检查类型；否则，使用 typeof 运算符检查类型
             return typeName === null
                 ? this.where(function (x) { return x instanceof type; }).cast()
                 : this.where(function (x) { return typeof x === typeName; }).cast();
@@ -15418,131 +15819,210 @@ var es;
             return new OrderedList(this._elements, comparer);
         };
         /**
-         * 根据键值降序对序列中的元素进行排序。
+         * 按照指定的键选择器和比较器，对列表元素进行降序排序
+         * @param keySelector 用于选择排序键的函数
+         * @param comparer 可选参数，用于比较元素的函数，如果未指定则使用 keySelector 和降序排序
+         * @returns 排序后的新 List<T> 对象
          */
         List.prototype.orderByDescending = function (keySelector, comparer) {
             if (comparer === void 0) { comparer = es.keyComparer(keySelector, true); }
-            // tslint:disable-next-line: no-use-before-declare
-            return new OrderedList(this._elements, comparer);
+            // 使用 Array.slice() 方法复制数组元素，避免修改原数组
+            var elementsCopy = this._elements.slice();
+            // 根据 keySelector 和 comparer 排序元素
+            elementsCopy.sort(comparer);
+            // 创建新的 OrderedList<T> 对象并返回
+            return new OrderedList(elementsCopy, comparer);
         };
         /**
-         * 按键按升序对序列中的元素执行后续排序。
+         * 在已经按照一个或多个条件排序的列表上，再按照一个新的条件进行排序
+         * @param keySelector 用于选择新排序键的函数
+         * @returns 排序后的新 List<T> 对象
          */
         List.prototype.thenBy = function (keySelector) {
+            // 调用 orderBy 方法，使用 keySelector 函数对列表进行排序，并返回排序后的新列表
             return this.orderBy(keySelector);
         };
         /**
-         * 根据键值按降序对序列中的元素执行后续排序。
+         * 对当前列表中的元素进行降序排序
+         * @param keySelector 键选择器函数，用于对列表中的每个元素进行转换
+         * @returns {List<T>} 一个包含排序后元素的新列表对象
          */
         List.prototype.thenByDescending = function (keySelector) {
+            // 调用 orderByDescending 方法，传入键选择器函数，对当前列表中的元素进行降序排序，并返回一个新的列表对象
             return this.orderByDescending(keySelector);
         };
         /**
-         * 从列表中删除第一个出现的特定对象。
+         * 从当前列表中删除指定元素
+         * @param element 要删除的元素
+         * @returns {boolean} 如果删除成功，则返回 true，否则返回 false
          */
         List.prototype.remove = function (element) {
-            return this.indexOf(element) !== -1
-                ? (this.removeAt(this.indexOf(element)), true)
-                : false;
+            // 调用 indexOf 方法，查找元素在列表中的索引值
+            var index = this.indexOf(element);
+            // 如果元素存在，则调用 removeAt 方法将其从列表中删除，并返回 true，否则返回 false
+            return index !== -1 ? (this.removeAt(index), true) : false;
         };
         /**
-         * 删除与指定谓词定义的条件匹配的所有元素。
+         * 从当前列表中删除满足指定条件的所有元素，并返回一个新的列表对象
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {List<T>} 一个包含不满足条件的元素的新列表对象
          */
         List.prototype.removeAll = function (predicate) {
-            return this.where(es.negate(predicate));
+            // 调用 negate 函数对谓词函数进行取反，然后使用 where 方法筛选出不满足条件的元素
+            var elements = this.where(es.negate(predicate)).toArray();
+            // 创建一个新的列表对象，包含不满足条件的元素，并返回该对象
+            return new List(elements);
         };
         /**
-         * 删除列表指定索引处的元素。
+         * 从当前列表中删除指定索引位置的元素
+         * @param index 要删除的元素在列表中的索引值
          */
         List.prototype.removeAt = function (index) {
+            // 使用 splice 方法，传入要删除的元素在列表中的索引值和要删除的元素个数，以从列表中删除指定索引位置的元素
             this._elements.splice(index, 1);
         };
         /**
-         * 颠倒整个列表中元素的顺序。
+         * 反转当前列表中的元素顺序
+         * @returns {List<T>} 一个包含反转后元素的新列表对象
          */
         List.prototype.reverse = function () {
+            // 调用 reverse 方法，反转当前列表中的元素顺序，并使用这些反转后的元素创建一个新的列表对象
             return new List(this._elements.reverse());
         };
         /**
-         * 将序列中的每个元素投射到一个新形式中。
+         * 对数组中的每个元素进行转换，生成新的数组
+         * @param selector 将数组中的每个元素转换成另外的值
+         * @returns 新的 List 对象，包含转换后的元素
          */
         List.prototype.select = function (selector) {
-            return new List(this._elements.map(selector));
+            // 使用 map() 方法对数组中的每个元素进行转换，生成新的数组
+            var transformedArray = this._elements.map(selector);
+            // 将新数组封装成 List 对象并返回
+            return new List(transformedArray);
         };
         /**
-         * 将序列的每个元素投影到一个列表中。并将得到的序列扁平化为一个序列。
+         * 对数组中的每个元素进行转换，并将多个新数组合并成一个数组
+         * @param selector 将数组中的每个元素转换成新的数组
+         * @returns 合并后的新数组
          */
         List.prototype.selectMany = function (selector) {
             var _this = this;
-            return this.aggregate(function (ac, _, i) { return (ac.addRange(_this.select(selector)
-                .elementAt(i)
-                .toArray()),
-                ac); }, new List());
+            // 使用 aggregate() 方法对数组中的每个元素进行转换，并将多个新数组合并成一个数组
+            return this.aggregate(function (accumulator, _, index) {
+                // 获取当前元素对应的新数组
+                var selectedArray = _this.select(selector).elementAt(index);
+                // 将新数组中的所有元素添加到累加器中
+                return accumulator.addRange(selectedArray.toArray());
+            }, new List());
         };
         /**
-         * 通过使用默认的相等比较器对元素的类型进行比较，确定两个序列是否相等。
+         * 比较当前列表和指定列表是否相等
+         * @param list 要比较的列表对象
+         * @returns {boolean} 如果列表相等，则返回 true，否则返回 false
          */
         List.prototype.sequenceEqual = function (list) {
+            // 调用 all 方法，传入一个谓词函数，用于对当前列表中的每个元素进行评估
+            // 在谓词函数中调用 contains 方法，传入当前元素和指定列表对象，以检查当前元素是否存在于指定列表中
+            // 如果当前列表中的所有元素都存在于指定列表中，则返回 true，否则返回 false
             return this.all(function (e) { return list.contains(e); });
         };
         /**
-         * 返回序列中唯一的元素，如果序列中没有恰好一个元素，则抛出异常。
+         * 从当前列表中获取一个满足指定条件的唯一元素
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {T} 列表中唯一满足指定条件的元素
+         * @throws {Error} 如果列表中不恰好包含一个满足指定条件的元素，则抛出异常
          */
         List.prototype.single = function (predicate) {
-            if (this.count(predicate) !== 1) {
+            // 调用 count 方法，传入谓词函数，以获取满足指定条件的元素个数
+            var count = this.count(predicate);
+            // 如果元素个数不等于 1，则抛出异常
+            if (count !== 1) {
                 throw new Error('The collection does not contain exactly one element.');
             }
-            else {
-                return this.first(predicate);
-            }
+            // 调用 first 方法，传入谓词函数，以获取唯一元素并返回
+            return this.first(predicate);
         };
         /**
-         * 返回序列中唯一的元素，如果序列为空，则返回默认值;如果序列中有多个元素，此方法将抛出异常。
+         * 从当前列表中获取一个满足指定条件的唯一元素，如果没有元素满足条件，则返回默认值 undefined
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {T} 列表中唯一满足指定条件的元素，如果没有元素满足条件，则返回默认值 undefined
          */
         List.prototype.singleOrDefault = function (predicate) {
+            // 如果元素个数为真值，则调用 single 方法，传入谓词函数，以获取唯一元素并返回
+            // 否则，返回默认值 undefined
             return this.count(predicate) ? this.single(predicate) : undefined;
         };
         /**
-         * 绕过序列中指定数量的元素，然后返回剩余的元素。
+         * 从 List 的开头跳过指定数量的元素并返回剩余元素的新 List。
+         * 如果指定数量大于 List 中的元素数，则返回一个空的 List。
+         * @param amount 要跳过的元素数量
+         * @returns 新 List
          */
         List.prototype.skip = function (amount) {
             return new List(this._elements.slice(Math.max(0, amount)));
         };
         /**
-         * 省略序列中最后指定数量的元素，然后返回剩余的元素。
+         * 返回由源 List 中除了最后指定数量的元素之外的所有元素组成的 List。
+         * @param amount 要跳过的元素数。
+         * @returns 由源 List 中除了最后指定数量的元素之外的所有元素组成的 List。
          */
         List.prototype.skipLast = function (amount) {
             return new List(this._elements.slice(0, -Math.max(0, amount)));
         };
         /**
-         * 只要指定条件为真，就绕过序列中的元素，然后返回剩余的元素。
+         * 从 List 的开头开始，跳过符合指定谓词的元素，并返回剩余元素。
+         * @param predicate 用于测试每个元素是否应跳过的函数。
+         * @returns 一个新 List，包含源 List 中从跳过元素之后到末尾的元素。
          */
         List.prototype.skipWhile = function (predicate) {
             var _this = this;
+            // aggregate() 函数接收一个函数作为参数，将该函数应用于 List 的每个元素，并在每次应用后返回一个累加器的值。
+            // 此处使用 aggregate() 函数来计算从 List 的开头开始符合指定谓词的元素个数。
             return this.skip(this.aggregate(function (ac) { return (predicate(_this.elementAt(ac)) ? ++ac : ac); }, 0));
         };
+        /**
+         * 计算数组中所有元素的和
+         * @param transform 可选参数，用于将数组中的每个元素转换成另外的值进行计算
+         * @returns 数组的和
+         */
         List.prototype.sum = function (transform) {
-            return transform
-                ? this.select(transform).sum()
-                : this.aggregate(function (ac, v) { return (ac += +v); }, 0);
+            // 如果提供了 transform 函数，则使用 select() 方法将每个元素转换成新的值，并调用 sum() 方法计算新数组的和
+            if (transform) {
+                return this.select(transform).sum();
+            }
+            // 如果没有提供 transform 函数，则使用 aggregate() 方法计算数组的和
+            // 这里使用加号 + 将元素转换为数值型
+            return this.aggregate(function (ac, v) { return (ac += +v); }, 0);
         };
         /**
-         * 从序列的开始返回指定数量的连续元素。
+         * 从 List 的开头返回指定数量的连续元素。
+         * @param amount 要返回的元素数量
+         * @returns 一个新的 List，其中包含原始 List 中开头的指定数量的元素
          */
         List.prototype.take = function (amount) {
+            // 使用 slice() 函数截取原始 List 中的指定数量的元素
             return new List(this._elements.slice(0, Math.max(0, amount)));
         };
         /**
-         * 从序列的末尾返回指定数目的连续元素。
+         * 从列表末尾开始获取指定数量的元素，返回一个新的 List 对象。
+         * @param amount 需要获取的元素数量。
+         * @returns 一个新的 List 对象，包含从末尾开始的指定数量的元素。
          */
         List.prototype.takeLast = function (amount) {
+            // Math.max(0, amount) 确保 amount 大于 0，如果 amount 是负数，则返回 0。
+            // slice() 方法从数组的指定位置开始提取元素，返回一个新的数组。
+            // 此处使用 slice() 方法返回 List 中末尾指定数量的元素。
             return new List(this._elements.slice(-Math.max(0, amount)));
         };
         /**
-         * 返回序列中的元素，只要指定的条件为真。
+         * 从 List 的开头开始取出符合指定谓词的元素，直到不符合为止，返回这些元素组成的 List。
+         * @param predicate 用于测试每个元素是否符合条件的函数。
+         * @returns 符合条件的元素组成的 List。
          */
         List.prototype.takeWhile = function (predicate) {
             var _this = this;
+            // aggregate() 函数接收一个函数作为参数，将该函数应用于 List 的每个元素，并在每次应用后返回一个累加器的值。
+            // 此处使用 aggregate() 函数来计算从 List 的开头开始符合指定谓词的元素个数。
             return this.take(this.aggregate(function (ac) { return (predicate(_this.elementAt(ac)) ? ++ac : ac); }, 0));
         };
         /**
@@ -15551,12 +16031,20 @@ var es;
         List.prototype.toArray = function () {
             return this._elements;
         };
+        /**
+         * 将数组转换为字典，根据指定的键和值对元素进行分组并返回一个新的字典
+         * @param key 指定的键，用于分组
+         * @param value 可选参数，指定的值，用于分组后的元素的值；如果未指定，则默认使用原始元素
+         * @returns 分组后的元素组成的新的字典
+         */
         List.prototype.toDictionary = function (key, value) {
             var _this = this;
             return this.aggregate(function (dicc, v, i) {
+                // 使用 select() 方法获取元素的键和值，并将其添加到字典中
                 dicc[_this.select(key)
                     .elementAt(i)
                     .toString()] = value ? _this.select(value).elementAt(i) : v;
+                // 将键和值添加到结果列表中
                 dicc.add({
                     Key: _this.select(key).elementAt(i),
                     Value: value ? _this.select(value).elementAt(i) : v
@@ -15565,7 +16053,8 @@ var es;
             }, new List());
         };
         /**
-         * 创建一个Set从一个Enumerable.List< T>。
+         * 将数组转换为一个 Set 对象
+         * @returns Set 对象，其中包含了数组中的所有元素
          */
         List.prototype.toSet = function () {
             var e_5, _a;
@@ -15586,31 +16075,38 @@ var es;
             return result;
         };
         /**
-         * 创建一个List< T>从一个Enumerable.List< T>。
-         */
-        List.prototype.toList = function () {
-            return this;
-        };
-        /**
-         * 创建一个查找，TElement>从一个IEnumerable< T>根据指定的键选择器和元素选择器函数。
+         * 将数组转换为一个查找表，根据指定的键对元素进行分组并返回一个包含键值对的对象
+         * @param keySelector 指定的键，用于分组
+         * @param elementSelector 可选参数，指定的值，用于分组后的元素的值；如果未指定，则默认使用原始元素
+         * @returns 包含键值对的对象，其中键为分组后的键，值为分组后的元素组成的数组
          */
         List.prototype.toLookup = function (keySelector, elementSelector) {
             return this.groupBy(keySelector, elementSelector);
         };
         /**
-         * 基于谓词过滤一系列值。
+         * 根据指定的条件，筛选数组中的元素并返回一个新的数组
+         * @param predicate 指定的条件
+         * @returns 新的数组，其中包含了数组中所有满足条件的元素
          */
         List.prototype.where = function (predicate) {
             return new List(this._elements.filter(predicate));
         };
         /**
-         * 将指定的函数应用于两个序列的对应元素，生成结果序列。
+         * 根据指定的函数将两个数组合并成一个新的数组
+         * @param list 要合并的数组
+         * @param result 指定的函数，用于将两个元素合并为一个
+         * @returns 合并后的新数组
          */
         List.prototype.zip = function (list, result) {
             var _this = this;
-            return list.count() < this.count()
-                ? list.select(function (x, y) { return result(_this.elementAt(y), x); })
-                : this.select(function (x, y) { return result(x, list.elementAt(y)); });
+            if (list.count() < this.count()) {
+                // 如果要合并的数组的长度小于当前数组的长度，就使用要合并的数组的长度进行循环迭代
+                return list.select(function (x, y) { return result(_this.elementAt(y), x); });
+            }
+            else {
+                // 如果要合并的数组的长度大于或等于当前数组的长度，就使用当前数组的长度进行循环迭代
+                return this.select(function (x, y) { return result(x, list.elementAt(y)); });
+            }
         };
         return List;
     }());
@@ -15625,7 +16121,7 @@ var es;
         function OrderedList(elements, _comparer) {
             var _this = _super.call(this, elements) || this;
             _this._comparer = _comparer;
-            _this._elements.sort(_this._comparer);
+            _this._elements.sort(_this._comparer); // 对元素数组进行排序
             return _this;
         }
         /**

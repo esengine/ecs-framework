@@ -50,8 +50,9 @@ module es {
      */
     export class EaseHelper {
         /**
-         * 返回 easeType 的相反 EaseType
-         * @param easeType 
+         * 返回相反的缓动类型
+         * @param easeType 缓动类型
+         * @returns 返回相反的缓动类型
          */
         public static oppositeEaseType(easeType: EaseType) {
             switch (easeType) {

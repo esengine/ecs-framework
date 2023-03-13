@@ -40,44 +40,60 @@ module es {
         }
 
         /**
-         * 对序列应用累加器函数。
+         * 使用指定的累加器函数将数组中的所有元素聚合成一个值。
+         * @param accumulator 用于计算聚合值的累加器函数。
+         * @param initialValue 可选参数，用于指定累加器函数的初始值。
+         * @returns 聚合后的值。
          */
         public aggregate<U>(
             accumulator: (accum: U, value?: T, index?: number, list?: T[]) => any,
             initialValue?: U
         ): any {
-            return this._elements.reduce(accumulator, initialValue)
+            return this._elements.reduce(accumulator, initialValue);
         }
 
         /**
-         * 确定序列的所有元素是否满足一个条件。
+         * 判断当前列表中的所有元素是否都满足指定条件
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {boolean} 如果列表中的所有元素都满足条件，则返回 true；否则返回 false
          */
         public all(predicate: PredicateType<T>): boolean {
-            return this._elements.every(predicate)
+            // 调用 every 方法，传入谓词函数，检查列表中的所有元素是否都满足条件
+            return this._elements.every(predicate);
         }
 
         /**
-         * 确定序列是否包含任何元素。
+         * 该方法用于判断数组中是否存在元素
+         * @param predicate 可选参数，用于检查是否有至少一个元素满足该函数
+         * @returns 如果存在元素，返回 true；如果不存在元素，返回 false
          */
-        public any(): boolean
-        public any(predicate: PredicateType<T>): boolean
-        public any(predicate?: PredicateType<T>): boolean {
-            return predicate
-                ? this._elements.some(predicate)
-                : this._elements.length > 0
+        public any(predicate?: (element: T) => boolean): boolean {
+            // 如果 predicate 函数提供了，则使用 some() 方法判断是否有任意元素满足该函数
+            if (predicate) {
+                return this._elements.some(predicate);
+            }
+            // 如果没有提供 predicate 函数，则检查数组的长度是否大于 0
+            return this._elements.length > 0;
         }
 
         /**
-         * 计算通过对输入序列的每个元素调用转换函数获得的一系列数值的平均值。
+         * 计算数组中所有元素的平均值
+         * @param transform 可选参数，用于将数组中的每个元素转换成另外的值进行计算
+         * @returns 数组的平均值
          */
-        public average(): number
-        public average(
-            transform: (value?: T, index?: number, list?: T[]) => any
-        ): number
         public average(
             transform?: (value?: T, index?: number, list?: T[]) => any
         ): number {
-            return this.sum(transform) / this.count(transform)
+            // 调用 sum() 方法计算数组中所有元素的和
+            const sum = this.sum(transform);
+            // 调用 count() 方法计算数组中元素的个数
+            const count = this.count(transform);
+            // 如果元素的个数为 0，则返回 NaN
+            if (count === 0) {
+                return NaN;
+            }
+            // 计算数组的平均值并返回
+            return sum / count;
         }
 
         /**
@@ -109,94 +125,111 @@ module es {
         }
 
         /**
-         * 返回序列中元素的数量。
+         * 计算数组中所有元素的数量，或者根据指定的条件计算符合条件的元素的数量。
+         * @param predicate 可选参数，用于过滤元素的条件函数。
+         * @returns 数组元素的数量。
          */
         public count(): number
         public count(predicate: PredicateType<T>): number
         public count(predicate?: PredicateType<T>): number {
-            return predicate ? this.where(predicate).count() : this._elements.length
+            return predicate ? this.where(predicate).count() : this._elements.length;
         }
 
         /**
-         * 返回指定序列的元素，或者如果序列为空，则返回单例集合中类型参数的默认值。
+         * 返回当前数组，如果当前数组为空，则返回一个只包含默认值的新数组。
+         * @param defaultValue 默认值。
+         * @returns 当前数组，或者只包含默认值的新数组。
          */
         public defaultIfEmpty(defaultValue?: T): List<T> {
-            return this.count() ? this : new List<T>([defaultValue])
+            return this.count() ? this : new List<T>([defaultValue]);
         }
 
         /**
-         * 根据指定的键选择器从序列中返回不同的元素。
+         * 根据指定的键选择器从数组中去除重复的元素。
+         * @param keySelector 用于选择每个元素的键的函数。
+         * @returns 去重后的数组。
          */
         public distinctBy(keySelector: (key: T) => string | number): List<T> {
-            const groups = this.groupBy(keySelector);
-            return Object.keys(groups).reduce((res, key) => {
-                res.add(groups[key][0] as T);
-                return res
-            }, new List<T>())
+            const groups = this.groupBy(keySelector); // 根据键选择器对数组进行分组。
+            return Object.keys(groups).reduce((res, key) => { // 遍历分组后的对象。
+                res.add(groups[key][0] as T); // 将每组的第一个元素加入结果集合。
+                return res;
+            }, new List<T>()); // 返回结果集合。
         }
 
         /**
-         * 返回序列中指定索引处的元素。
+         * 根据指定的索引获取数组中的元素
+         * @param index 要获取的元素的索引
+         * @returns 数组中的元素
+         * @throws {Error} 如果索引小于 0 或大于等于数组长度，则抛出 "ArgumentOutOfRangeException" 异常。
          */
         public elementAt(index: number): T {
             if (index < this.count() && index >= 0) {
-                return this._elements[index]
+                return this._elements[index];
             } else {
                 throw new Error(
                     'ArgumentOutOfRangeException: index is less than 0 or greater than or equal to the number of elements in source.'
-                )
+                );
             }
         }
 
         /**
-         * 返回序列中指定索引处的元素，如果索引超出范围，则返回默认值。
+         * 获取指定索引处的元素，如果索引超出数组范围，则返回 null。
+         * @param index 索引。
+         * @returns 指定索引处的元素，如果索引超出数组范围，则返回 null。
          */
         public elementAtOrDefault(index: number): T | null {
-            return index < this.count() && index >= 0
-                ? this._elements[index]
-                : undefined
+            return index < this.count() && index >= 0 ? this._elements[index] : null;
         }
 
         /**
-         * 通过使用默认的相等比较器来比较值，生成两个序列的差值集。
+         * 返回当前数组中不在指定数组中的元素集合。
+         * @param source 指定数组。
+         * @returns 当前数组中不在指定数组中的元素集合。
          */
         public except(source: List<T>): List<T> {
-            return this.where(x => !source.contains(x))
+            return this.where(x => !source.contains(x));
         }
 
         /**
-         * 返回序列的第一个元素。
+         * 返回当前数组中第一个元素，或者符合条件的第一个元素。
+         * @param predicate 符合条件的判断函数。
+         * @returns 当前数组中第一个元素，或者符合条件的第一个元素。
          */
-        public first(): T
-        public first(predicate: PredicateType<T>): T
+        public first(): T;
+        public first(predicate: PredicateType<T>): T;
         public first(predicate?: PredicateType<T>): T {
             if (this.count()) {
-                return predicate ? this.where(predicate).first() : this._elements[0]
+                return predicate ? this.where(predicate).first() : this._elements[0];
             } else {
-                throw new Error(
-                    'InvalidOperationException: The source sequence is empty.'
-                )
+                throw new Error('InvalidOperationException: The source sequence is empty.');
             }
         }
 
         /**
-         * 返回序列的第一个元素，如果序列不包含元素，则返回默认值。
+         * 根据指定的条件查询数组中第一个符合条件的元素，如果不存在符合条件的元素，则返回默认值 null 或 undefined。
+         * @param predicate 可选参数，表示查询条件的谓词函数
+         * @returns 符合条件的元素或默认值 null 或 undefined
          */
         public firstOrDefault(): T
         public firstOrDefault(predicate: PredicateType<T>): T
         public firstOrDefault(predicate?: PredicateType<T>): T {
-            return this.count(predicate) ? this.first(predicate) : undefined
+            return this.count(predicate) ? this.first(predicate) : undefined;
         }
 
         /**
-         * 对列表中的每个元素执行指定的操作。
+         * 对数组中的每个元素执行指定的操作
+         * @param action 要执行的操作，可以是一个函数或函数表达式
          */
         public forEach(action: (value?: T, index?: number, list?: T[]) => any): void {
-            return this._elements.forEach(action)
+            return this._elements.forEach(action);
         }
 
         /**
-         * 根据指定的键选择器函数对序列中的元素进行分组。
+         * 根据指定的键对数组元素进行分组，并返回一个包含分组结果的对象
+         * @param grouper 指定的键，用于分组
+         * @param mapper 可选参数，用于对分组后的每个元素进行转换的函数
+         * @returns 包含分组结果的对象，其中键为分组后的键，值为分组后的元素组成的数组
          */
         public groupBy<TResult>(
             grouper: (key: T) => string | number,
@@ -210,12 +243,17 @@ module es {
                 existingGroup
                     ? existingGroup.push(mappedValue)
                     : (ac[key] = [mappedValue]);
-                return ac
-            }, initialValue)
+                return ac;
+            }, initialValue);
         }
 
         /**
-         * 根据键的相等将两个序列的元素关联起来，并将结果分组。默认的相等比较器用于比较键。
+         * 将两个数组进行联接和分组操作
+         * @param list 要联接的数组
+         * @param key1 用于从第一个数组中选择分组键的函数
+         * @param key2 用于从第二个数组中选择分组键的函数
+         * @param result 用于将分组结果映射到输出元素的函数
+         * @returns 经过联接和分组后的新数组
          */
         public groupJoin<U, R>(
             list: List<U>,
@@ -223,41 +261,60 @@ module es {
             key2: (k: U) => any,
             result: (first: T, second: List<U>) => R
         ): List<R> {
+            // 使用 select() 方法对第一个数组中的每个元素进行分组操作
             return this.select(x =>
+                // 调用 result 函数将分组结果映射到输出元素
                 result(
                     x,
+                    // 使用 where() 方法从第二个数组中选择符合条件的元素，然后使用 List 对象进行包装
                     list.where(z => key1(x) === key2(z))
                 )
-            )
+            );
         }
 
         /**
-         * 返回列表中某个元素第一次出现的索引。
+         * 返回当前列表中指定元素的索引
+         * @param element 要查找的元素
+         * @returns {number} 元素在列表中的索引值，如果不存在，则返回 -1
          */
         public indexOf(element: T): number {
-            return this._elements.indexOf(element)
+            // 调用 indexOf 方法，查找元素在列表中的索引值，如果不存在，则返回 -1
+            return this._elements.indexOf(element);
         }
 
         /**
-         * 向列表中插入一个元素在指定索引处。
+         * 在数组的指定位置插入一个元素
+         * @param index 要插入元素的位置
+         * @param element 要插入的元素
+         * @throws 如果索引超出了数组的范围，则抛出异常
          */
-        public insert(index: number, element: T): void | Error {
+        public insert(index: number, element: T): void {
+            // 如果索引小于 0 或大于数组长度，则抛出异常
             if (index < 0 || index > this._elements.length) {
-                throw new Error('Index is out of range.')
+                throw new Error('Index is out of range.');
             }
 
-            this._elements.splice(index, 0, element)
+            // 使用 splice() 方法在指定位置插入元素
+            this._elements.splice(index, 0, element);
         }
 
         /**
-         * 通过使用默认的相等比较器来比较值，生成两个序列的交集集。
+         * 获取当前列表和另一个列表的交集
+         * @param source 另一个列表
+         * @returns {List<T>} 一个包含两个列表中相同元素的新列表对象
          */
         public intersect(source: List<T>): List<T> {
-            return this.where(x => source.contains(x))
+            // 调用 where 方法，传入一个谓词函数，返回一个包含两个列表中相同元素的新列表对象
+            return this.where(x => source.contains(x));
         }
 
         /**
-         * 基于匹配的键将两个序列的元素关联起来。默认的相等比较器用于比较键。
+         * 将当前列表和另一个列表中的元素进行联接
+         * @param list 另一个列表
+         * @param key1 当前列表的键选择器函数
+         * @param key2 另一个列表的键选择器函数
+         * @param result 结果选择器函数
+         * @returns {List<R>} 一个包含联接后元素的新列表对象
          */
         public join<U, R>(
             list: List<U>,
@@ -265,64 +322,77 @@ module es {
             key2: (key: U) => any,
             result: (first: T, second: U) => R
         ): List<R> {
+            // 对当前列表中的每个元素调用 selectMany 方法，并传入一个返回值为列表的函数，最终返回一个新的列表对象
             return this.selectMany(x =>
+                // 调用 list.where 方法，传入一个谓词函数，返回一个包含与当前元素匹配的元素的新列表对象
                 list.where(y => key2(y) === key1(x)).select(z => result(x, z))
-            )
+            );
         }
 
         /**
-         * 返回序列的最后一个元素。
+         * 返回数组的最后一个元素或满足条件的最后一个元素
+         * @param predicate 可选参数，用于筛选元素的函数
+         * @returns 数组的最后一个元素或满足条件的最后一个元素
+         * @throws 如果数组为空，则抛出异常
          */
-        public last(): T
-        public last(predicate: PredicateType<T>): T
         public last(predicate?: PredicateType<T>): T {
+            // 如果数组不为空
             if (this.count()) {
-                return predicate
-                    ? this.where(predicate).last()
-                    : this._elements[this.count() - 1]
+                // 如果提供了 predicate 函数，则使用 where() 方法进行筛选，并递归调用 last() 方法
+                if (predicate) {
+                    return this.where(predicate).last();
+                } else {
+                    // 否则，直接返回数组的最后一个元素
+                    return this._elements[this.count() - 1];
+                }
             } else {
-                throw Error('InvalidOperationException: The source sequence is empty.')
+                // 如果数组为空，则抛出异常
+                throw Error('InvalidOperationException: The source sequence is empty.');
             }
         }
 
         /**
-         * 返回序列的最后一个元素，如果序列不包含元素，则返回默认值。
+         * 返回数组的最后一个元素或满足条件的最后一个元素，如果数组为空或没有满足条件的元素，则返回默认值 undefined
+         * @param predicate 可选参数，用于筛选元素的函数
+         * @returns 数组的最后一个元素或满足条件的最后一个元素，如果数组为空或没有满足条件的元素，则返回默认值 undefined
          */
-        public lastOrDefault(): T
-        public lastOrDefault(predicate: PredicateType<T>): T
         public lastOrDefault(predicate?: PredicateType<T>): T {
-            return this.count(predicate) ? this.last(predicate) : undefined
+            // 如果数组中存在满足条件的元素，则返回最后一个满足条件的元素；否则，返回 undefined
+            return this.count(predicate) ? this.last(predicate) : undefined;
         }
 
         /**
-         * 返回泛型序列中的最大值。
+         * 返回数组中的最大值，也可以通过 selector 函数对数组元素进行转换后再求最大值
+         * @param selector 可选参数，用于对数组元素进行转换的函数
+         * @returns 数组中的最大值，或者通过 selector 函数对数组元素进行转换后求得的最大值
          */
-        public max(): number
-        public max(selector: (value: T, index: number, array: T[]) => number): number
-        public max(
-            selector?: (value: T, index: number, array: T[]) => number
-        ): number {
+        public max(selector?: (value: T, index: number, array: T[]) => number): number {
+            // 定义一个默认的转换函数 id，用于当 selector 参数未指定时使用
             const id = x => x;
-            return Math.max(...this._elements.map(selector || id))
+            // 使用 map() 方法对数组元素进行转换，并使用 Math.max() 方法求得最大值
+            return Math.max(...this._elements.map(selector || id));
         }
 
         /**
-         * 返回泛型序列中的最小值。
+         * 返回数组中的最小值，也可以通过 selector 函数对数组元素进行转换后再求最小值
+         * @param selector 可选参数，用于对数组元素进行转换的函数
+         * @returns 数组中的最小值，或者通过 selector 函数对数组元素进行转换后求得的最小值
          */
-        public min(): number
-        public min(selector: (value: T, index: number, array: T[]) => number): number
-        public min(
-            selector?: (value: T, index: number, array: T[]) => number
-        ): number {
+        public min(selector?: (value: T, index: number, array: T[]) => number): number {
+            // 定义一个默认的转换函数 id，用于当 selector 参数未指定时使用
             const id = x => x;
-            return Math.min(...this._elements.map(selector || id))
+            // 使用 map() 方法对数组元素进行转换，并使用 Math.min() 方法求得最小值
+            return Math.min(...this._elements.map(selector || id));
         }
 
         /**
-         * 根据指定的类型筛选序列中的元素。
+         * 根据指定的类型，筛选数组中的元素并返回一个新的数组
+         * @param type 指定的类型
+         * @returns 新的数组，其中包含了数组中所有指定类型的元素
          */
         public ofType<U>(type: any): List<U> {
-            let typeName;
+            let typeName: string;
+            // 使用 switch 语句根据指定类型设置 typeName 变量
             switch (type) {
                 case Number:
                     typeName = typeof 0;
@@ -334,15 +404,17 @@ module es {
                     typeName = typeof true;
                     break;
                 case Function:
-                    typeName = typeof function () { }; // tslint:disable-line no-empty
+                    typeName = typeof function () {
+                    }; // 空函数，不做任何操作
                     break;
                 default:
                     typeName = null;
-                    break
+                    break;
             }
+            // 如果 typeName 为 null，则使用 "instanceof" 运算符检查类型；否则，使用 typeof 运算符检查类型
             return typeName === null
                 ? this.where(x => x instanceof type).cast<U>()
-                : this.where(x => typeof x === typeName).cast<U>()
+                : this.where(x => typeof x === typeName).cast<U>();
         }
 
         /**
@@ -357,211 +429,281 @@ module es {
         }
 
         /**
-         * 根据键值降序对序列中的元素进行排序。
+         * 按照指定的键选择器和比较器，对列表元素进行降序排序
+         * @param keySelector 用于选择排序键的函数
+         * @param comparer 可选参数，用于比较元素的函数，如果未指定则使用 keySelector 和降序排序
+         * @returns 排序后的新 List<T> 对象
          */
         public orderByDescending(
             keySelector: (key: T) => any,
             comparer = keyComparer(keySelector, true)
         ): List<T> {
-            // tslint:disable-next-line: no-use-before-declare
-            return new OrderedList<T>(this._elements, comparer)
+            // 使用 Array.slice() 方法复制数组元素，避免修改原数组
+            const elementsCopy = this._elements.slice();
+
+            // 根据 keySelector 和 comparer 排序元素
+            elementsCopy.sort(comparer);
+
+            // 创建新的 OrderedList<T> 对象并返回
+            return new OrderedList<T>(elementsCopy, comparer);
         }
 
         /**
-         * 按键按升序对序列中的元素执行后续排序。
+         * 在已经按照一个或多个条件排序的列表上，再按照一个新的条件进行排序
+         * @param keySelector 用于选择新排序键的函数
+         * @returns 排序后的新 List<T> 对象
          */
         public thenBy(keySelector: (key: T) => any): List<T> {
-            return this.orderBy(keySelector)
+            // 调用 orderBy 方法，使用 keySelector 函数对列表进行排序，并返回排序后的新列表
+            return this.orderBy(keySelector);
         }
 
         /**
-         * 根据键值按降序对序列中的元素执行后续排序。
+         * 对当前列表中的元素进行降序排序
+         * @param keySelector 键选择器函数，用于对列表中的每个元素进行转换
+         * @returns {List<T>} 一个包含排序后元素的新列表对象
          */
         public thenByDescending(keySelector: (key: T) => any): List<T> {
-            return this.orderByDescending(keySelector)
+            // 调用 orderByDescending 方法，传入键选择器函数，对当前列表中的元素进行降序排序，并返回一个新的列表对象
+            return this.orderByDescending(keySelector);
         }
 
         /**
-         * 从列表中删除第一个出现的特定对象。
+         * 从当前列表中删除指定元素
+         * @param element 要删除的元素
+         * @returns {boolean} 如果删除成功，则返回 true，否则返回 false
          */
         public remove(element: T): boolean {
-            return this.indexOf(element) !== -1
-                ? (this.removeAt(this.indexOf(element)), true)
-                : false
+            // 调用 indexOf 方法，查找元素在列表中的索引值
+            const index = this.indexOf(element);
+            // 如果元素存在，则调用 removeAt 方法将其从列表中删除，并返回 true，否则返回 false
+            return index !== -1 ? (this.removeAt(index), true) : false;
         }
 
         /**
-         * 删除与指定谓词定义的条件匹配的所有元素。
+         * 从当前列表中删除满足指定条件的所有元素，并返回一个新的列表对象
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {List<T>} 一个包含不满足条件的元素的新列表对象
          */
         public removeAll(predicate: PredicateType<T>): List<T> {
-            return this.where(negate(predicate as any))
+            // 调用 negate 函数对谓词函数进行取反，然后使用 where 方法筛选出不满足条件的元素
+            const elements = this.where(negate(predicate as any)).toArray();
+            // 创建一个新的列表对象，包含不满足条件的元素，并返回该对象
+            return new List<T>(elements);
         }
 
         /**
-         * 删除列表指定索引处的元素。
+         * 从当前列表中删除指定索引位置的元素
+         * @param index 要删除的元素在列表中的索引值
          */
         public removeAt(index: number): void {
-            this._elements.splice(index, 1)
+            // 使用 splice 方法，传入要删除的元素在列表中的索引值和要删除的元素个数，以从列表中删除指定索引位置的元素
+            this._elements.splice(index, 1);
         }
 
         /**
-         * 颠倒整个列表中元素的顺序。
+         * 反转当前列表中的元素顺序
+         * @returns {List<T>} 一个包含反转后元素的新列表对象
          */
         public reverse(): List<T> {
-            return new List<T>(this._elements.reverse())
+            // 调用 reverse 方法，反转当前列表中的元素顺序，并使用这些反转后的元素创建一个新的列表对象
+            return new List<T>(this._elements.reverse());
         }
 
         /**
-         * 将序列中的每个元素投射到一个新形式中。
+         * 对数组中的每个元素进行转换，生成新的数组
+         * @param selector 将数组中的每个元素转换成另外的值
+         * @returns 新的 List 对象，包含转换后的元素
          */
         public select<TOut>(
             selector: (element: T, index: number) => TOut
         ): List<TOut> {
-            return new List<TOut>(this._elements.map(selector))
+            // 使用 map() 方法对数组中的每个元素进行转换，生成新的数组
+            const transformedArray = this._elements.map(selector);
+            // 将新数组封装成 List 对象并返回
+            return new List<TOut>(transformedArray);
         }
 
         /**
-         * 将序列的每个元素投影到一个列表中。并将得到的序列扁平化为一个序列。
+         * 对数组中的每个元素进行转换，并将多个新数组合并成一个数组
+         * @param selector 将数组中的每个元素转换成新的数组
+         * @returns 合并后的新数组
          */
         public selectMany<TOut extends List<any>>(
             selector: (element: T, index: number) => TOut
         ): TOut {
+            // 使用 aggregate() 方法对数组中的每个元素进行转换，并将多个新数组合并成一个数组
             return this.aggregate(
-                (ac, _, i) => (
-                    ac.addRange(
-                        this.select(selector)
-                            .elementAt(i)
-                            .toArray()
-                    ),
-                    ac
-                ),
+                (accumulator, _, index) => {
+                    // 获取当前元素对应的新数组
+                    const selectedArray = this.select(selector).elementAt(index);
+                    // 将新数组中的所有元素添加到累加器中
+                    return accumulator.addRange(selectedArray.toArray());
+                },
                 new List<TOut>()
-            )
+            );
         }
 
         /**
-         * 通过使用默认的相等比较器对元素的类型进行比较，确定两个序列是否相等。
+         * 比较当前列表和指定列表是否相等
+         * @param list 要比较的列表对象
+         * @returns {boolean} 如果列表相等，则返回 true，否则返回 false
          */
         public sequenceEqual(list: List<T>): boolean {
-            return this.all(e => list.contains(e))
+            // 调用 all 方法，传入一个谓词函数，用于对当前列表中的每个元素进行评估
+            // 在谓词函数中调用 contains 方法，传入当前元素和指定列表对象，以检查当前元素是否存在于指定列表中
+            // 如果当前列表中的所有元素都存在于指定列表中，则返回 true，否则返回 false
+            return this.all(e => list.contains(e));
         }
 
         /**
-         * 返回序列中唯一的元素，如果序列中没有恰好一个元素，则抛出异常。
+         * 从当前列表中获取一个满足指定条件的唯一元素
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {T} 列表中唯一满足指定条件的元素
+         * @throws {Error} 如果列表中不恰好包含一个满足指定条件的元素，则抛出异常
          */
         public single(predicate?: PredicateType<T>): T {
-            if (this.count(predicate) !== 1) {
-                throw new Error('The collection does not contain exactly one element.')
-            } else {
-                return this.first(predicate)
+            // 调用 count 方法，传入谓词函数，以获取满足指定条件的元素个数
+            const count = this.count(predicate);
+            // 如果元素个数不等于 1，则抛出异常
+            if (count !== 1) {
+                throw new Error('The collection does not contain exactly one element.');
             }
+            // 调用 first 方法，传入谓词函数，以获取唯一元素并返回
+            return this.first(predicate);
         }
 
         /**
-         * 返回序列中唯一的元素，如果序列为空，则返回默认值;如果序列中有多个元素，此方法将抛出异常。
+         * 从当前列表中获取一个满足指定条件的唯一元素，如果没有元素满足条件，则返回默认值 undefined
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {T} 列表中唯一满足指定条件的元素，如果没有元素满足条件，则返回默认值 undefined
          */
         public singleOrDefault(predicate?: PredicateType<T>): T {
-            return this.count(predicate) ? this.single(predicate) : undefined
+            // 如果元素个数为真值，则调用 single 方法，传入谓词函数，以获取唯一元素并返回
+            // 否则，返回默认值 undefined
+            return this.count(predicate) ? this.single(predicate) : undefined;
         }
 
         /**
-         * 绕过序列中指定数量的元素，然后返回剩余的元素。
+         * 从 List 的开头跳过指定数量的元素并返回剩余元素的新 List。
+         * 如果指定数量大于 List 中的元素数，则返回一个空的 List。
+         * @param amount 要跳过的元素数量
+         * @returns 新 List
          */
         public skip(amount: number): List<T> {
             return new List<T>(this._elements.slice(Math.max(0, amount)))
         }
 
         /**
-         * 省略序列中最后指定数量的元素，然后返回剩余的元素。
+         * 返回由源 List 中除了最后指定数量的元素之外的所有元素组成的 List。
+         * @param amount 要跳过的元素数。
+         * @returns 由源 List 中除了最后指定数量的元素之外的所有元素组成的 List。
          */
         public skipLast(amount: number): List<T> {
-            return new List<T>(this._elements.slice(0, -Math.max(0, amount)))
+            return new List<T>(this._elements.slice(0, -Math.max(0, amount)));
         }
 
         /**
-         * 只要指定条件为真，就绕过序列中的元素，然后返回剩余的元素。
+         * 从 List 的开头开始，跳过符合指定谓词的元素，并返回剩余元素。
+         * @param predicate 用于测试每个元素是否应跳过的函数。
+         * @returns 一个新 List，包含源 List 中从跳过元素之后到末尾的元素。
          */
         public skipWhile(predicate: PredicateType<T>): List<T> {
+            // aggregate() 函数接收一个函数作为参数，将该函数应用于 List 的每个元素，并在每次应用后返回一个累加器的值。
+            // 此处使用 aggregate() 函数来计算从 List 的开头开始符合指定谓词的元素个数。
             return this.skip(
                 this.aggregate(ac => (predicate(this.elementAt(ac)) ? ++ac : ac), 0)
-            )
+            );
         }
 
         /**
-         * 计算通过对输入序列的每个元素调用转换函数获得的数值序列的和。
+         * 计算数组中所有元素的和
+         * @param transform 可选参数，用于将数组中的每个元素转换成另外的值进行计算
+         * @returns 数组的和
          */
-        public sum(): number
-        public sum(
-            transform: (value?: T, index?: number, list?: T[]) => number
-        ): number
         public sum(
             transform?: (value?: T, index?: number, list?: T[]) => number
         ): number {
-            return transform
-                ? this.select(transform).sum()
-                : this.aggregate((ac, v) => (ac += +v), 0)
+            // 如果提供了 transform 函数，则使用 select() 方法将每个元素转换成新的值，并调用 sum() 方法计算新数组的和
+            if (transform) {
+                return this.select(transform).sum();
+            }
+            // 如果没有提供 transform 函数，则使用 aggregate() 方法计算数组的和
+            // 这里使用加号 + 将元素转换为数值型
+            return this.aggregate((ac, v) => (ac += +v), 0);
         }
 
         /**
-         * 从序列的开始返回指定数量的连续元素。
+         * 从 List 的开头返回指定数量的连续元素。
+         * @param amount 要返回的元素数量
+         * @returns 一个新的 List，其中包含原始 List 中开头的指定数量的元素
          */
         public take(amount: number): List<T> {
-            return new List<T>(this._elements.slice(0, Math.max(0, amount)))
+            // 使用 slice() 函数截取原始 List 中的指定数量的元素
+            return new List<T>(this._elements.slice(0, Math.max(0, amount)));
         }
 
         /**
-         * 从序列的末尾返回指定数目的连续元素。
+         * 从列表末尾开始获取指定数量的元素，返回一个新的 List 对象。
+         * @param amount 需要获取的元素数量。
+         * @returns 一个新的 List 对象，包含从末尾开始的指定数量的元素。
          */
         public takeLast(amount: number): List<T> {
-            return new List<T>(this._elements.slice(-Math.max(0, amount)))
+            // Math.max(0, amount) 确保 amount 大于 0，如果 amount 是负数，则返回 0。
+            // slice() 方法从数组的指定位置开始提取元素，返回一个新的数组。
+            // 此处使用 slice() 方法返回 List 中末尾指定数量的元素。
+            return new List<T>(this._elements.slice(-Math.max(0, amount)));
         }
 
         /**
-         * 返回序列中的元素，只要指定的条件为真。
+         * 从 List 的开头开始取出符合指定谓词的元素，直到不符合为止，返回这些元素组成的 List。
+         * @param predicate 用于测试每个元素是否符合条件的函数。
+         * @returns 符合条件的元素组成的 List。
          */
         public takeWhile(predicate: PredicateType<T>): List<T> {
+            // aggregate() 函数接收一个函数作为参数，将该函数应用于 List 的每个元素，并在每次应用后返回一个累加器的值。
+            // 此处使用 aggregate() 函数来计算从 List 的开头开始符合指定谓词的元素个数。
             return this.take(
                 this.aggregate(ac => (predicate(this.elementAt(ac)) ? ++ac : ac), 0)
-            )
+            );
         }
 
         /**
          * 复制列表中的元素到一个新数组。
          */
         public toArray(): T[] {
-            return this._elements
+            return this._elements;
         }
 
         /**
-         * 创建一个<dictionary>从List< T>根据指定的键选择器函数。
+         * 将数组转换为字典，根据指定的键和值对元素进行分组并返回一个新的字典
+         * @param key 指定的键，用于分组
+         * @param value 可选参数，指定的值，用于分组后的元素的值；如果未指定，则默认使用原始元素
+         * @returns 分组后的元素组成的新的字典
          */
-        public toDictionary<TKey>(
-            key: (key: T) => TKey
-        ): List<{ Key: TKey; Value: T }>
-        public toDictionary<TKey, TValue>(
-            key: (key: T) => TKey,
-            value: (value: T) => TValue
-        ): List<{ Key: TKey; Value: T | TValue }>
-        public toDictionary<TKey, TValue>(
+        public toDictionary<TKey, TValue = T>(
             key: (key: T) => TKey,
             value?: (value: T) => TValue
         ): List<{ Key: TKey; Value: T | TValue }> {
             return this.aggregate((dicc, v, i) => {
+                // 使用 select() 方法获取元素的键和值，并将其添加到字典中
                 dicc[
                     this.select(key)
                         .elementAt(i)
                         .toString()
-                ] = value ? this.select(value).elementAt(i) : v;
+                    ] = value ? this.select(value).elementAt(i) : v;
+                // 将键和值添加到结果列表中
                 dicc.add({
                     Key: this.select(key).elementAt(i),
                     Value: value ? this.select(value).elementAt(i) : v
                 });
-                return dicc
-            }, new List<{ Key: TKey; Value: T | TValue }>())
+                return dicc;
+            }, new List<{ Key: TKey; Value: T | TValue }>());
         }
 
         /**
-         * 创建一个Set从一个Enumerable.List< T>。
+         * 将数组转换为一个 Set 对象
+         * @returns Set 对象，其中包含了数组中的所有元素
          */
         public toSet() {
             let result = new Set();
@@ -572,39 +714,44 @@ module es {
         }
 
         /**
-         * 创建一个List< T>从一个Enumerable.List< T>。
-         */
-        public toList(): List<T> {
-            return this
-        }
-
-        /**
-         * 创建一个查找，TElement>从一个IEnumerable< T>根据指定的键选择器和元素选择器函数。
+         * 将数组转换为一个查找表，根据指定的键对元素进行分组并返回一个包含键值对的对象
+         * @param keySelector 指定的键，用于分组
+         * @param elementSelector 可选参数，指定的值，用于分组后的元素的值；如果未指定，则默认使用原始元素
+         * @returns 包含键值对的对象，其中键为分组后的键，值为分组后的元素组成的数组
          */
         public toLookup<TResult>(
             keySelector: (key: T) => string | number,
             elementSelector: (element: T) => TResult
         ): { [key: string]: TResult[] } {
-            return this.groupBy(keySelector, elementSelector)
+            return this.groupBy(keySelector, elementSelector);
         }
 
         /**
-         * 基于谓词过滤一系列值。
+         * 根据指定的条件，筛选数组中的元素并返回一个新的数组
+         * @param predicate 指定的条件
+         * @returns 新的数组，其中包含了数组中所有满足条件的元素
          */
         public where(predicate: PredicateType<T>): List<T> {
-            return new List<T>(this._elements.filter(predicate))
+            return new List<T>(this._elements.filter(predicate));
         }
 
         /**
-         * 将指定的函数应用于两个序列的对应元素，生成结果序列。
+         * 根据指定的函数将两个数组合并成一个新的数组
+         * @param list 要合并的数组
+         * @param result 指定的函数，用于将两个元素合并为一个
+         * @returns 合并后的新数组
          */
         public zip<U, TOut>(
             list: List<U>,
             result: (first: T, second: U) => TOut
         ): List<TOut> {
-            return list.count() < this.count()
-                ? list.select((x, y) => result(this.elementAt(y), x))
-                : this.select((x, y) => result(x, list.elementAt(y)))
+            if (list.count() < this.count()) {
+                // 如果要合并的数组的长度小于当前数组的长度，就使用要合并的数组的长度进行循环迭代
+                return list.select((x, y) => result(this.elementAt(y), x));
+            } else {
+                // 如果要合并的数组的长度大于或等于当前数组的长度，就使用当前数组的长度进行循环迭代
+                return this.select((x, y) => result(x, list.elementAt(y)));
+            }
         }
     }
 
@@ -616,7 +763,7 @@ module es {
     export class OrderedList<T> extends List<T> {
         constructor(elements: T[], private _comparer: (a: T, b: T) => number) {
             super(elements);
-            this._elements.sort(this._comparer)
+            this._elements.sort(this._comparer); // 对元素数组进行排序
         }
 
         /**
@@ -627,7 +774,7 @@ module es {
             return new OrderedList(
                 this._elements,
                 composeComparers(this._comparer, keyComparer(keySelector, false))
-            )
+            );
         }
 
         /**
@@ -638,7 +785,7 @@ module es {
             return new OrderedList(
                 this._elements,
                 composeComparers(this._comparer, keyComparer(keySelector, true))
-            )
+            );
         }
     }
 }

@@ -77,6 +77,7 @@ v10.20.1
 1. 进入source目录
 2. 安装package包: `npm install`
 3. 打包成js: `gulp build`
+> 如遇到gulp未找到则先执行 `npm install gulp -g`
 
 ### 渲染集成框架
 #### [cocos-framework](https://github.com/esengine/cocos-framework)

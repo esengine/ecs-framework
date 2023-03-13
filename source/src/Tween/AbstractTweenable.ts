@@ -1,10 +1,13 @@
 module es {
     /**
-     * AbstractTweenable作为你可能想做的任何可以执行的自定义类的基础。
-     * 这些类不同于ITweens，因为他们没有实现ITweenT接口。
-     * 它只是说一个AbstractTweenable不仅仅是将一个值从开始移动到结束。
-     * 它可以做任何需要每帧执行的事情。
-     */
+    * `AbstractTweenable` 是一个抽象类，实现了 `ITweenable` 接口。
+    * 这个类提供了 `start`、`pause`、`resume` 和 `stop` 等方法，
+    * 并且具有判断动画是否运行的方法 `isRunning`。
+    * 它还有一个 `tick` 方法，子类需要根据自己的需要实现这个方法。
+    *
+    * `AbstractTweenable` 在完成后往往会被保留下来， `_isCurrentlyManagedByTweenManager` 标志可以让它们知道自己当前是否被 `TweenManager` 监控着，
+    * 以便在必要时可以重新添加自己。
+    */
     export abstract class AbstractTweenable implements ITweenable {
         readonly discriminator = "ITweenable";
         protected _isPaused: boolean;

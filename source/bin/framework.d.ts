@@ -4092,11 +4092,14 @@ declare module es {
 }
 declare module es {
     /**
-     * AbstractTweenable作为你可能想做的任何可以执行的自定义类的基础。
-     * 这些类不同于ITweens，因为他们没有实现ITweenT接口。
-     * 它只是说一个AbstractTweenable不仅仅是将一个值从开始移动到结束。
-     * 它可以做任何需要每帧执行的事情。
-     */
+    * `AbstractTweenable` 是一个抽象类，实现了 `ITweenable` 接口。
+    * 这个类提供了 `start`、`pause`、`resume` 和 `stop` 等方法，
+    * 并且具有判断动画是否运行的方法 `isRunning`。
+    * 它还有一个 `tick` 方法，子类需要根据自己的需要实现这个方法。
+    *
+    * `AbstractTweenable` 在完成后往往会被保留下来， `_isCurrentlyManagedByTweenManager` 标志可以让它们知道自己当前是否被 `TweenManager` 监控着，
+    * 以便在必要时可以重新添加自己。
+    */
     abstract class AbstractTweenable implements ITweenable {
         readonly discriminator: string;
         protected _isPaused: boolean;
@@ -4115,9 +4118,26 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * 属性动画工具类
+     */
     class PropertyTweens {
+        /**
+         * 创建一个属性为number类型的动画对象
+         * @param self 属性动画的目标对象
+         * @param memberName 属性名
+         * @param to 动画结束时的属性值
+         * @param duration 动画时长
+         */
         static NumberPropertyTo(self: any, memberName: string, to: number, duration: number): ITween<number>;
-        static Vector2PropertyTo(self: any, memeberName: string, to: Vector2, duration: number): ITween<Vector2>;
+        /**
+         * 创建一个属性为Vector2类型的动画对象
+         * @param self 属性动画的目标对象
+         * @param memberName 属性名
+         * @param to 动画结束时的属性值
+         * @param duration 动画时长
+         */
+        static Vector2PropertyTo(self: any, memberName: string, to: Vector2, duration: number): ITween<Vector2>;
     }
 }
 declare module es {
@@ -4201,6 +4221,10 @@ declare module es {
         setContext(context: any): ITween<T>;
         setNextTween(nextTween: ITweenable): ITween<T>;
         tick(): boolean;
+        private calculateElapsedTimeExcess;
+        private calculateDeltaTime;
+        private updateElapsedTime;
+        private handleCompletion;
         recycleSelf(): void;
         isRunning(): boolean;
         start(): void;
@@ -4326,8 +4350,9 @@ declare module es {
      */
     class EaseHelper {
         /**
-         * 返回 easeType 的相反 EaseType
-         * @param easeType
+         * 返回相反的缓动类型
+         * @param easeType 缓动类型
+         * @returns 返回相反的缓动类型
          */
         static oppositeEaseType(easeType: EaseType): EaseType.linear | EaseType.sineIn | EaseType.sineOut | EaseType.sineInOut | EaseType.quadIn | EaseType.quadOut | EaseType.quadInOut | EaseType.quintIn | EaseType.quintOut | EaseType.quintInOut | EaseType.cubicIn | EaseType.cubicOut | EaseType.cubicInOut | EaseType.quartIn | EaseType.quartInOut | EaseType.expoIn | EaseType.expoOut | EaseType.expoInOut | EaseType.circleIn | EaseType.circleOut | EaseType.circleInOut | EaseType.elasticIn | EaseType.elasticOut | EaseType.elasticInOut | EaseType.punch | EaseType.backIn | EaseType.backOut | EaseType.backInOut | EaseType.bounceIn | EaseType.bounceOut | EaseType.bounceInOut;
         static ease(easeType: EaseType, t: number, duration: number): number;
@@ -4387,13 +4412,7 @@ declare module es {
         private _activeTweens;
         static readonly activeTweens: ITweenable[];
         private _tempTweens;
-        /**
-         * 标志表示tween更新循环正在运行
-         */
         private _isUpdating;
-        /**
-         * 便于暴露一个静态的API以方便访问
-         */
         private static _instance;
         constructor();
         update(): void;
@@ -4451,57 +4470,251 @@ declare module es {
      */
     module Easing {
         class Linear {
+            /**
+             * 线性缓动，等同于t / d
+             * @param t 当前时间
+             * @param d 持续时间
+             */
             static easeNone(t: number, d: number): number;
         }
         class Quadratic {
+            /**
+             * 平方缓动进入，加速运动
+             * @param t 当前时间
+             * @param d 持续时间
+             */
             static easeIn(t: number, d: number): number;
+            /**
+             * 平方缓动退出，减速运动
+             * @param t 当前时间
+             * @param d 持续时间
+             */
             static easeOut(t: number, d: number): number;
+            /**
+             * 平方缓动进出，加速减速运动
+             * @param t 当前时间
+             * @param d 持续时间
+             */
             static easeInOut(t: number, d: number): number;
         }
         class Back {
-            static easeIn(t: number, d: number): number;
-            static easeOut(t: number, d: number): number;
-            static easeInOut(t: number, d: number): number;
+            /**
+             * Back.easeIn(t, d) 函数将会返回 Back 缓动进入算法的结果
+             *
+             * @param t 当前时间，从0开始递增
+             * @param d 持续时间
+             * @param s 回弹的距离，默认值为 1.70158，可以省略该参数
+             * @return 缓动后的值
+             */
+            static easeIn(t: number, d: number, s?: number): number;
+            /**
+             * Back.easeOut(t, d) 函数将会返回 Back 缓动退出算法的结果
+             *
+             * @param t 当前时间，从0开始递增
+             * @param d 持续时间
+             * @param s 回弹的距离，默认值为 1.70158，可以省略该参数
+             * @return 缓动后的值
+             */
+            static easeOut(t: number, d: number, s?: number): number;
+            /**
+             * Back.easeInOut(t, d) 函数将会返回 Back 缓动进入/退出算法的结果
+             *
+             * @param t 当前时间，从0开始递增
+             * @param d 持续时间
+             * @param s 回弹的距离，默认值为 1.70158，可以省略该参数
+             * @return 缓动后的值
+             */
+            static easeInOut(t: number, d: number, s?: number): number;
         }
         class Bounce {
+            /**
+             * 从0到目标值的反弹动画
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 反弹动画进度
+             */
             static easeOut(t: number, d: number): number;
+            /**
+             * 从目标值到0的反弹动画
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 反弹动画进度
+             */
             static easeIn(t: number, d: number): number;
+            /**
+             * 从0到目标值再到0的反弹动画
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 反弹动画进度
+             */
             static easeInOut(t: number, d: number): number;
         }
         class Circular {
+            /**
+             * 缓动函数入口，表示从 0 到最大值的缓动（开始慢加速，后面变快）
+             * @param t 当前时间
+             * @param d 缓动总时间
+             */
             static easeIn(t: number, d: number): number;
+            /**
+             * 缓动函数出口，表示从最大值到 0 的缓动（开始快减速，后面变慢）
+             * @param t 当前时间
+             * @param d 缓动总时间
+             */
             static easeOut(t: number, d: number): number;
+            /**
+             * 缓动函数入口和出口，表示从 0 到最大值再到 0 的缓动（先慢加速，后面快减速）
+             * @param t 当前时间
+             * @param d 缓动总时间
+             */
             static easeInOut(t: number, d: number): number;
         }
         class Cubic {
+            /**
+             * easeIn方法提供了一个以慢速开始，然后逐渐加速的缓动函数。
+             * @param t 当前时间，动画已经持续的时间，范围在0到d之间，其中d是动画的总时间。
+             * @param d 动画的总时间，即动画将从开始到结束的持续时间。
+             * @returns 根据动画的当前时间计算出的位置值，该位置值在0到1之间。
+             */
             static easeIn(t: number, d: number): number;
+            /**
+             * easeOut方法提供了一个以快速开始，然后逐渐减速的缓动函数。
+             * @param t 当前时间，动画已经持续的时间，范围在0到d之间，其中d是动画的总时间。
+             * @param d 动画的总时间，即动画将从开始到结束的持续时间。
+             * @returns 根据动画的当前时间计算出的位置值，该位置值在0到1之间。
+             */
             static easeOut(t: number, d: number): number;
+            /**
+             * easeInOut方法提供了一个慢速开始，然后加速，然后减速的缓动函数。
+             * @param t 当前时间，动画已经持续的时间，范围在0到d之间，其中d是动画的总时间。
+             * @param d 动画的总时间，即动画将从开始到结束的持续时间。
+             * @returns 根据动画的当前时间计算出的位置值，该位置值在0到1之间。
+             */
             static easeInOut(t: number, d: number): number;
         }
         class Elastic {
+            /**
+             * 弹性函数的 easeIn 版本
+             * @param t - 已经经过的时间
+             * @param d - 动画的总时间
+             * @returns 经过缓动函数计算后的值
+             */
             static easeIn(t: number, d: number): number;
+            /**
+             * 弹性函数的 easeOut 版本
+             * @param t - 已经经过的时间
+             * @param d - 动画的总时间
+             * @returns 经过缓动函数计算后的值
+             */
             static easeOut(t: number, d: number): number;
+            /**
+             * 弹性函数的 easeInOut 版本
+             * @param t - 已经经过的时间
+             * @param d - 动画的总时间
+             * @returns 经过缓动函数计算后的值
+             */
             static easeInOut(t: number, d: number): number;
+            /**
+             * 弹性函数的 punch 版本
+             * @param t - 已经经过的时间
+             * @param d - 动画的总时间
+             * @returns 经过缓动函数计算后的值
+             */
             static punch(t: number, d: number): number;
         }
         class Exponential {
+            /**
+             * Exponential 缓动函数 - easeIn
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 缓动值
+             */
             static easeIn(t: number, d: number): number;
+            /**
+             * Exponential 缓动函数 - easeOut
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 缓动值
+             */
             static easeOut(t: number, d: number): number;
+            /**
+             * Exponential 缓动函数 - easeInOut
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 缓动值
+             */
             static easeInOut(t: number, d: number): number;
         }
         class Quartic {
+            /**
+             * Quartic 缓动函数的 easeIn 版本
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 根据当前时间计算出的值
+             */
             static easeIn(t: number, d: number): number;
+            /**
+             * Quartic 缓动函数的 easeOut 版本
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 根据当前时间计算出的值
+             */
             static easeOut(t: number, d: number): number;
+            /**
+             * Quartic 缓动函数的 easeInOut 版本
+             * @param t 当前时间
+             * @param d 持续时间
+             * @returns 根据当前时间计算出的值
+             */
             static easeInOut(t: number, d: number): number;
         }
+        /**
+         * Quintic 类提供了三种 Quintic 缓动函数
+         */
         class Quintic {
+            /**
+             * 缓动函数，具有 Quintic easeIn 效果
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 缓动值
+             */
             static easeIn(t: number, d: number): number;
+            /**
+             * 缓动函数，具有 Quintic easeOut 效果
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 缓动值
+             */
             static easeOut(t: number, d: number): number;
+            /**
+             * 缓动函数，具有 Quintic easeInOut 效果
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 缓动值
+             */
             static easeInOut(t: number, d: number): number;
         }
         class Sinusoidal {
+            /**
+             * Sinusoidal 类的缓动入方法。
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 介于 0 和 1 之间的数字，表示当前时间的值
+             */
             static easeIn(t: number, d: number): number;
+            /**
+             * Sinusoidal 类的缓动出方法。
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 介于 0 和 1 之间的数字，表示当前时间的值
+             */
             static easeOut(t: number, d: number): number;
+            /**
+             * Sinusoidal 类的缓动入出方法。
+             * @param t 当前时间（单位：毫秒）
+             * @param d 持续时间（单位：毫秒）
+             * @returns 介于 0 和 1 之间的数字，表示当前时间的值
+             */
             static easeInOut(t: number, d: number): number;
         }
     }
@@ -4511,22 +4724,53 @@ declare module es {
      * 一系列静态方法来处理所有常见的tween类型结构，以及它们的unclamped lerps.unclamped lerps对于超过0-1范围的bounce、elastic或其他tweens是必需的
      */
     class Lerps {
-        static lerp(from: number, to: number, t: number): any;
-        static lerp(from: Rectangle, to: Rectangle, t: number): any;
-        static lerp(from: Vector2, to: Vector2, t: number): any;
+        /**
+         * 提供通用的线性插值方法，支持数字、矩形和二维向量类型。
+         * @param from 起点值
+         * @param to 终点值
+         * @param t 插值参数，取值范围[0, 1]
+         * @returns 返回两个值的插值结果
+         */
+        static lerp(from: number, to: number, t: number): number;
+        static lerp(from: Rectangle, to: Rectangle, t: number): Rectangle;
+        static lerp(from: Vector2, to: Vector2, t: number): Vector2;
+        /**
+         * 计算两个向量之间的角度差并使用线性插值函数进行插值
+         * @param from 起始向量
+         * @param to 目标向量
+         * @param t 插值因子
+         * @returns 插值后的向量
+         */
         static angleLerp(from: Vector2, to: Vector2, t: number): Vector2;
+        /**
+         * 根据不同类型的数据，使用指定的缓动类型对两个值进行插值
+         * @param easeType 缓动类型
+         * @param from 起始值
+         * @param to 目标值
+         * @param t 当前时间（相对于持续时间的百分比）
+         * @param duration 持续时间
+         * @returns 两个值之间的插值
+         */
         static ease(easeType: EaseType, from: Rectangle, to: Rectangle, t: number, duration: number): any;
         static ease(easeType: EaseType, from: Vector2, to: Vector2, t: number, duration: number): any;
         static ease(easeType: EaseType, from: number, to: number, t: number, duration: number): any;
+        /**
+         * 通过提供的t值和持续时间使用给定的缓动类型在两个Vector2之间进行角度插值。
+         * @param easeType 缓动类型
+         * @param from 开始的向量
+         * @param to 结束的向量
+         * @param t 当前时间在持续时间内的比例
+         * @param duration 持续时间
+         * @returns 插值后的Vector2值
+         */
         static easeAngle(easeType: EaseType, from: Vector2, to: Vector2, t: number, duration: number): Vector2;
         /**
-         * 使用半隐式欧拉方法。速度较慢，但总是很稳定。见
-         * http://allenchou.net/2015/04/game-math-more-on-numeric-springing/
-         * @param currentValue
-         * @param targetValue
-         * @param velocity Velocity的引用。如果在两次调用之间改变targetValue，请务必将其重置为0
-         * @param dampingRatio 值越低，阻尼越小，值越高，阻尼越大，导致弹簧度越小，应在0.01-1之间，以避免系统不稳定
-         * @param angularFrequency 角频率为2pi(弧度/秒)意味着振荡在一秒钟内完成一个完整的周期，即1Hz.应小于35左右才能保持稳定
+         * 使用快速弹簧算法来实现平滑过渡。返回经过弹簧计算后的当前值。
+         * @param currentValue 当前值
+         * @param targetValue 目标值
+         * @param velocity 当前速度
+         * @param dampingRatio 阻尼比例
+         * @param angularFrequency 角频率
          */
         static fastSpring(currentValue: Vector2, targetValue: Vector2, velocity: Vector2, dampingRatio: number, angularFrequency: number): Vector2;
     }
@@ -5837,23 +6081,30 @@ declare module es {
          */
         addRange(elements: T[]): void;
         /**
-         * 对序列应用累加器函数。
+         * 使用指定的累加器函数将数组中的所有元素聚合成一个值。
+         * @param accumulator 用于计算聚合值的累加器函数。
+         * @param initialValue 可选参数，用于指定累加器函数的初始值。
+         * @returns 聚合后的值。
          */
         aggregate<U>(accumulator: (accum: U, value?: T, index?: number, list?: T[]) => any, initialValue?: U): any;
         /**
-         * 确定序列的所有元素是否满足一个条件。
+         * 判断当前列表中的所有元素是否都满足指定条件
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {boolean} 如果列表中的所有元素都满足条件，则返回 true；否则返回 false
          */
         all(predicate: PredicateType<T>): boolean;
         /**
-         * 确定序列是否包含任何元素。
+         * 该方法用于判断数组中是否存在元素
+         * @param predicate 可选参数，用于检查是否有至少一个元素满足该函数
+         * @returns 如果存在元素，返回 true；如果不存在元素，返回 false
          */
-        any(): boolean;
-        any(predicate: PredicateType<T>): boolean;
+        any(predicate?: (element: T) => boolean): boolean;
         /**
-         * 计算通过对输入序列的每个元素调用转换函数获得的一系列数值的平均值。
+         * 计算数组中所有元素的平均值
+         * @param transform 可选参数，用于将数组中的每个元素转换成另外的值进行计算
+         * @returns 数组的平均值
          */
-        average(): number;
-        average(transform: (value?: T, index?: number, list?: T[]) => any): number;
+        average(transform?: (value?: T, index?: number, list?: T[]) => any): number;
         /**
          * 将序列的元素转换为指定的类型。
          */
@@ -5871,92 +6122,137 @@ declare module es {
          */
         contains(element: T): boolean;
         /**
-         * 返回序列中元素的数量。
+         * 计算数组中所有元素的数量，或者根据指定的条件计算符合条件的元素的数量。
+         * @param predicate 可选参数，用于过滤元素的条件函数。
+         * @returns 数组元素的数量。
          */
         count(): number;
         count(predicate: PredicateType<T>): number;
         /**
-         * 返回指定序列的元素，或者如果序列为空，则返回单例集合中类型参数的默认值。
+         * 返回当前数组，如果当前数组为空，则返回一个只包含默认值的新数组。
+         * @param defaultValue 默认值。
+         * @returns 当前数组，或者只包含默认值的新数组。
          */
         defaultIfEmpty(defaultValue?: T): List<T>;
         /**
-         * 根据指定的键选择器从序列中返回不同的元素。
+         * 根据指定的键选择器从数组中去除重复的元素。
+         * @param keySelector 用于选择每个元素的键的函数。
+         * @returns 去重后的数组。
          */
         distinctBy(keySelector: (key: T) => string | number): List<T>;
         /**
-         * 返回序列中指定索引处的元素。
+         * 根据指定的索引获取数组中的元素
+         * @param index 要获取的元素的索引
+         * @returns 数组中的元素
+         * @throws {Error} 如果索引小于 0 或大于等于数组长度，则抛出 "ArgumentOutOfRangeException" 异常。
          */
         elementAt(index: number): T;
         /**
-         * 返回序列中指定索引处的元素，如果索引超出范围，则返回默认值。
+         * 获取指定索引处的元素，如果索引超出数组范围，则返回 null。
+         * @param index 索引。
+         * @returns 指定索引处的元素，如果索引超出数组范围，则返回 null。
          */
         elementAtOrDefault(index: number): T | null;
         /**
-         * 通过使用默认的相等比较器来比较值，生成两个序列的差值集。
+         * 返回当前数组中不在指定数组中的元素集合。
+         * @param source 指定数组。
+         * @returns 当前数组中不在指定数组中的元素集合。
          */
         except(source: List<T>): List<T>;
         /**
-         * 返回序列的第一个元素。
+         * 返回当前数组中第一个元素，或者符合条件的第一个元素。
+         * @param predicate 符合条件的判断函数。
+         * @returns 当前数组中第一个元素，或者符合条件的第一个元素。
          */
         first(): T;
         first(predicate: PredicateType<T>): T;
         /**
-         * 返回序列的第一个元素，如果序列不包含元素，则返回默认值。
+         * 根据指定的条件查询数组中第一个符合条件的元素，如果不存在符合条件的元素，则返回默认值 null 或 undefined。
+         * @param predicate 可选参数，表示查询条件的谓词函数
+         * @returns 符合条件的元素或默认值 null 或 undefined
          */
         firstOrDefault(): T;
         firstOrDefault(predicate: PredicateType<T>): T;
         /**
-         * 对列表中的每个元素执行指定的操作。
+         * 对数组中的每个元素执行指定的操作
+         * @param action 要执行的操作，可以是一个函数或函数表达式
          */
         forEach(action: (value?: T, index?: number, list?: T[]) => any): void;
         /**
-         * 根据指定的键选择器函数对序列中的元素进行分组。
+         * 根据指定的键对数组元素进行分组，并返回一个包含分组结果的对象
+         * @param grouper 指定的键，用于分组
+         * @param mapper 可选参数，用于对分组后的每个元素进行转换的函数
+         * @returns 包含分组结果的对象，其中键为分组后的键，值为分组后的元素组成的数组
          */
         groupBy<TResult>(grouper: (key: T) => string | number, mapper?: (element: T) => TResult): {
             [key: string]: TResult[];
         };
         /**
-         * 根据键的相等将两个序列的元素关联起来，并将结果分组。默认的相等比较器用于比较键。
+         * 将两个数组进行联接和分组操作
+         * @param list 要联接的数组
+         * @param key1 用于从第一个数组中选择分组键的函数
+         * @param key2 用于从第二个数组中选择分组键的函数
+         * @param result 用于将分组结果映射到输出元素的函数
+         * @returns 经过联接和分组后的新数组
          */
         groupJoin<U, R>(list: List<U>, key1: (k: T) => any, key2: (k: U) => any, result: (first: T, second: List<U>) => R): List<R>;
         /**
-         * 返回列表中某个元素第一次出现的索引。
+         * 返回当前列表中指定元素的索引
+         * @param element 要查找的元素
+         * @returns {number} 元素在列表中的索引值，如果不存在，则返回 -1
          */
         indexOf(element: T): number;
         /**
-         * 向列表中插入一个元素在指定索引处。
+         * 在数组的指定位置插入一个元素
+         * @param index 要插入元素的位置
+         * @param element 要插入的元素
+         * @throws 如果索引超出了数组的范围，则抛出异常
          */
-        insert(index: number, element: T): void | Error;
+        insert(index: number, element: T): void;
         /**
-         * 通过使用默认的相等比较器来比较值，生成两个序列的交集集。
+         * 获取当前列表和另一个列表的交集
+         * @param source 另一个列表
+         * @returns {List<T>} 一个包含两个列表中相同元素的新列表对象
          */
         intersect(source: List<T>): List<T>;
         /**
-         * 基于匹配的键将两个序列的元素关联起来。默认的相等比较器用于比较键。
+         * 将当前列表和另一个列表中的元素进行联接
+         * @param list 另一个列表
+         * @param key1 当前列表的键选择器函数
+         * @param key2 另一个列表的键选择器函数
+         * @param result 结果选择器函数
+         * @returns {List<R>} 一个包含联接后元素的新列表对象
          */
         join<U, R>(list: List<U>, key1: (key: T) => any, key2: (key: U) => any, result: (first: T, second: U) => R): List<R>;
         /**
-         * 返回序列的最后一个元素。
+         * 返回数组的最后一个元素或满足条件的最后一个元素
+         * @param predicate 可选参数，用于筛选元素的函数
+         * @returns 数组的最后一个元素或满足条件的最后一个元素
+         * @throws 如果数组为空，则抛出异常
          */
-        last(): T;
-        last(predicate: PredicateType<T>): T;
+        last(predicate?: PredicateType<T>): T;
         /**
-         * 返回序列的最后一个元素，如果序列不包含元素，则返回默认值。
+         * 返回数组的最后一个元素或满足条件的最后一个元素，如果数组为空或没有满足条件的元素，则返回默认值 undefined
+         * @param predicate 可选参数，用于筛选元素的函数
+         * @returns 数组的最后一个元素或满足条件的最后一个元素，如果数组为空或没有满足条件的元素，则返回默认值 undefined
          */
-        lastOrDefault(): T;
-        lastOrDefault(predicate: PredicateType<T>): T;
+        lastOrDefault(predicate?: PredicateType<T>): T;
         /**
-         * 返回泛型序列中的最大值。
+         * 返回数组中的最大值，也可以通过 selector 函数对数组元素进行转换后再求最大值
+         * @param selector 可选参数，用于对数组元素进行转换的函数
+         * @returns 数组中的最大值，或者通过 selector 函数对数组元素进行转换后求得的最大值
          */
-        max(): number;
-        max(selector: (value: T, index: number, array: T[]) => number): number;
+        max(selector?: (value: T, index: number, array: T[]) => number): number;
         /**
-         * 返回泛型序列中的最小值。
+         * 返回数组中的最小值，也可以通过 selector 函数对数组元素进行转换后再求最小值
+         * @param selector 可选参数，用于对数组元素进行转换的函数
+         * @returns 数组中的最小值，或者通过 selector 函数对数组元素进行转换后求得的最小值
          */
-        min(): number;
-        min(selector: (value: T, index: number, array: T[]) => number): number;
+        min(selector?: (value: T, index: number, array: T[]) => number): number;
         /**
-         * 根据指定的类型筛选序列中的元素。
+         * 根据指定的类型，筛选数组中的元素并返回一个新的数组
+         * @param type 指定的类型
+         * @returns 新的数组，其中包含了数组中所有指定类型的元素
          */
         ofType<U>(type: any): List<U>;
         /**
@@ -5964,80 +6260,118 @@ declare module es {
          */
         orderBy(keySelector: (key: T) => any, comparer?: (a: T, b: T) => number): List<T>;
         /**
-         * 根据键值降序对序列中的元素进行排序。
+         * 按照指定的键选择器和比较器，对列表元素进行降序排序
+         * @param keySelector 用于选择排序键的函数
+         * @param comparer 可选参数，用于比较元素的函数，如果未指定则使用 keySelector 和降序排序
+         * @returns 排序后的新 List<T> 对象
          */
         orderByDescending(keySelector: (key: T) => any, comparer?: (a: T, b: T) => number): List<T>;
         /**
-         * 按键按升序对序列中的元素执行后续排序。
+         * 在已经按照一个或多个条件排序的列表上，再按照一个新的条件进行排序
+         * @param keySelector 用于选择新排序键的函数
+         * @returns 排序后的新 List<T> 对象
          */
         thenBy(keySelector: (key: T) => any): List<T>;
         /**
-         * 根据键值按降序对序列中的元素执行后续排序。
+         * 对当前列表中的元素进行降序排序
+         * @param keySelector 键选择器函数，用于对列表中的每个元素进行转换
+         * @returns {List<T>} 一个包含排序后元素的新列表对象
          */
         thenByDescending(keySelector: (key: T) => any): List<T>;
         /**
-         * 从列表中删除第一个出现的特定对象。
+         * 从当前列表中删除指定元素
+         * @param element 要删除的元素
+         * @returns {boolean} 如果删除成功，则返回 true，否则返回 false
          */
         remove(element: T): boolean;
         /**
-         * 删除与指定谓词定义的条件匹配的所有元素。
+         * 从当前列表中删除满足指定条件的所有元素，并返回一个新的列表对象
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {List<T>} 一个包含不满足条件的元素的新列表对象
          */
         removeAll(predicate: PredicateType<T>): List<T>;
         /**
-         * 删除列表指定索引处的元素。
+         * 从当前列表中删除指定索引位置的元素
+         * @param index 要删除的元素在列表中的索引值
          */
         removeAt(index: number): void;
         /**
-         * 颠倒整个列表中元素的顺序。
+         * 反转当前列表中的元素顺序
+         * @returns {List<T>} 一个包含反转后元素的新列表对象
          */
         reverse(): List<T>;
         /**
-         * 将序列中的每个元素投射到一个新形式中。
+         * 对数组中的每个元素进行转换，生成新的数组
+         * @param selector 将数组中的每个元素转换成另外的值
+         * @returns 新的 List 对象，包含转换后的元素
          */
         select<TOut>(selector: (element: T, index: number) => TOut): List<TOut>;
         /**
-         * 将序列的每个元素投影到一个列表中。并将得到的序列扁平化为一个序列。
+         * 对数组中的每个元素进行转换，并将多个新数组合并成一个数组
+         * @param selector 将数组中的每个元素转换成新的数组
+         * @returns 合并后的新数组
          */
         selectMany<TOut extends List<any>>(selector: (element: T, index: number) => TOut): TOut;
         /**
-         * 通过使用默认的相等比较器对元素的类型进行比较，确定两个序列是否相等。
+         * 比较当前列表和指定列表是否相等
+         * @param list 要比较的列表对象
+         * @returns {boolean} 如果列表相等，则返回 true，否则返回 false
          */
         sequenceEqual(list: List<T>): boolean;
         /**
-         * 返回序列中唯一的元素，如果序列中没有恰好一个元素，则抛出异常。
+         * 从当前列表中获取一个满足指定条件的唯一元素
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {T} 列表中唯一满足指定条件的元素
+         * @throws {Error} 如果列表中不恰好包含一个满足指定条件的元素，则抛出异常
          */
         single(predicate?: PredicateType<T>): T;
         /**
-         * 返回序列中唯一的元素，如果序列为空，则返回默认值;如果序列中有多个元素，此方法将抛出异常。
+         * 从当前列表中获取一个满足指定条件的唯一元素，如果没有元素满足条件，则返回默认值 undefined
+         * @param predicate 谓词函数，用于对列表中的每个元素进行评估
+         * @returns {T} 列表中唯一满足指定条件的元素，如果没有元素满足条件，则返回默认值 undefined
          */
         singleOrDefault(predicate?: PredicateType<T>): T;
         /**
-         * 绕过序列中指定数量的元素，然后返回剩余的元素。
+         * 从 List 的开头跳过指定数量的元素并返回剩余元素的新 List。
+         * 如果指定数量大于 List 中的元素数，则返回一个空的 List。
+         * @param amount 要跳过的元素数量
+         * @returns 新 List
          */
         skip(amount: number): List<T>;
         /**
-         * 省略序列中最后指定数量的元素，然后返回剩余的元素。
+         * 返回由源 List 中除了最后指定数量的元素之外的所有元素组成的 List。
+         * @param amount 要跳过的元素数。
+         * @returns 由源 List 中除了最后指定数量的元素之外的所有元素组成的 List。
          */
         skipLast(amount: number): List<T>;
         /**
-         * 只要指定条件为真，就绕过序列中的元素，然后返回剩余的元素。
+         * 从 List 的开头开始，跳过符合指定谓词的元素，并返回剩余元素。
+         * @param predicate 用于测试每个元素是否应跳过的函数。
+         * @returns 一个新 List，包含源 List 中从跳过元素之后到末尾的元素。
          */
         skipWhile(predicate: PredicateType<T>): List<T>;
         /**
-         * 计算通过对输入序列的每个元素调用转换函数获得的数值序列的和。
+         * 计算数组中所有元素的和
+         * @param transform 可选参数，用于将数组中的每个元素转换成另外的值进行计算
+         * @returns 数组的和
          */
-        sum(): number;
-        sum(transform: (value?: T, index?: number, list?: T[]) => number): number;
+        sum(transform?: (value?: T, index?: number, list?: T[]) => number): number;
         /**
-         * 从序列的开始返回指定数量的连续元素。
+         * 从 List 的开头返回指定数量的连续元素。
+         * @param amount 要返回的元素数量
+         * @returns 一个新的 List，其中包含原始 List 中开头的指定数量的元素
          */
         take(amount: number): List<T>;
         /**
-         * 从序列的末尾返回指定数目的连续元素。
+         * 从列表末尾开始获取指定数量的元素，返回一个新的 List 对象。
+         * @param amount 需要获取的元素数量。
+         * @returns 一个新的 List 对象，包含从末尾开始的指定数量的元素。
          */
         takeLast(amount: number): List<T>;
         /**
-         * 返回序列中的元素，只要指定的条件为真。
+         * 从 List 的开头开始取出符合指定谓词的元素，直到不符合为止，返回这些元素组成的 List。
+         * @param predicate 用于测试每个元素是否符合条件的函数。
+         * @returns 符合条件的元素组成的 List。
          */
         takeWhile(predicate: PredicateType<T>): List<T>;
         /**
@@ -6045,36 +6379,40 @@ declare module es {
          */
         toArray(): T[];
         /**
-         * 创建一个<dictionary>从List< T>根据指定的键选择器函数。
+         * 将数组转换为字典，根据指定的键和值对元素进行分组并返回一个新的字典
+         * @param key 指定的键，用于分组
+         * @param value 可选参数，指定的值，用于分组后的元素的值；如果未指定，则默认使用原始元素
+         * @returns 分组后的元素组成的新的字典
          */
-        toDictionary<TKey>(key: (key: T) => TKey): List<{
-            Key: TKey;
-            Value: T;
-        }>;
-        toDictionary<TKey, TValue>(key: (key: T) => TKey, value: (value: T) => TValue): List<{
+        toDictionary<TKey, TValue = T>(key: (key: T) => TKey, value?: (value: T) => TValue): List<{
             Key: TKey;
             Value: T | TValue;
         }>;
         /**
-         * 创建一个Set从一个Enumerable.List< T>。
+         * 将数组转换为一个 Set 对象
+         * @returns Set 对象，其中包含了数组中的所有元素
          */
         toSet(): Set<any>;
         /**
-         * 创建一个List< T>从一个Enumerable.List< T>。
-         */
-        toList(): List<T>;
-        /**
-         * 创建一个查找，TElement>从一个IEnumerable< T>根据指定的键选择器和元素选择器函数。
+         * 将数组转换为一个查找表，根据指定的键对元素进行分组并返回一个包含键值对的对象
+         * @param keySelector 指定的键，用于分组
+         * @param elementSelector 可选参数，指定的值，用于分组后的元素的值；如果未指定，则默认使用原始元素
+         * @returns 包含键值对的对象，其中键为分组后的键，值为分组后的元素组成的数组
          */
         toLookup<TResult>(keySelector: (key: T) => string | number, elementSelector: (element: T) => TResult): {
             [key: string]: TResult[];
         };
         /**
-         * 基于谓词过滤一系列值。
+         * 根据指定的条件，筛选数组中的元素并返回一个新的数组
+         * @param predicate 指定的条件
+         * @returns 新的数组，其中包含了数组中所有满足条件的元素
          */
         where(predicate: PredicateType<T>): List<T>;
         /**
-         * 将指定的函数应用于两个序列的对应元素，生成结果序列。
+         * 根据指定的函数将两个数组合并成一个新的数组
+         * @param list 要合并的数组
+         * @param result 指定的函数，用于将两个元素合并为一个
+         * @returns 合并后的新数组
          */
         zip<U, TOut>(list: List<U>, result: (first: T, second: U) => TOut): List<TOut>;
     }

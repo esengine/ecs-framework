@@ -13,30 +13,30 @@ module es {
 
     export abstract class Tween<T> implements ITweenable, ITween<T> {
         readonly discriminator: "ITweenControl";
-        protected _target: ITweenTarget<T>;
-        protected _isFromValueOverridden: boolean;
-        protected _fromValue: T;
-        protected _toValue: T;
-        protected _easeType: EaseType;
-        protected _shouldRecycleTween: boolean = true;
-        protected _isRelative: boolean;
-        protected _completionHandler: (tween: ITween<T>) => void;
-        protected _loopCompleteHandler: (tween: ITween<T>) => void;
-        protected _nextTween: ITweenable;
+        protected _target: ITweenTarget<T>; // 一个受Tween控制的对象
+        protected _isFromValueOverridden: boolean; // 一个标志位，指示是否覆盖了FromValue
+        protected _fromValue: T; // 起始值
+        protected _toValue: T; // 结束值
+        protected _easeType: EaseType; // 缓动类型
+        protected _shouldRecycleTween: boolean = true; // 标志位，表示Tween执行完毕后是否要回收Tween实例
+        protected _isRelative: boolean; // 标志位，表示Tween是否是相对值
+        protected _completionHandler: (tween: ITween<T>) => void; // Tween完成时的回调函数
+        protected _loopCompleteHandler: (tween: ITween<T>) => void; // Tween循环完成时的回调函数
+        protected _nextTween: ITweenable; // 用于在Tween完成后启动下一个Tween的属性
 
-        protected _tweenState: TweenState = TweenState.complete;
-        private _isTimeScaleIndependent: boolean;
-        protected _delay: number;
-        protected _duration: number;
-        protected _timeScale: number = 1;
-        protected _elapsedTime: number;
+        protected _tweenState: TweenState = TweenState.complete; // 当前Tween的状态
+        private _isTimeScaleIndependent: boolean; // 标志位，表示Tween是否与TimeScale无关
+        protected _delay: number; // 延迟时间
+        protected _duration: number; // Tween执行时间
+        protected _timeScale: number = 1; // 时间缩放系数
+        protected _elapsedTime: number; // 经过的时间
 
-        protected _loopType: LoopType;
-        protected _loops: number;
-        protected _delayBetweenLoops: number;
-        private _isRunningInReverse: boolean;
+        protected _loopType: LoopType; // 循环类型
+        protected _loops: number; // 循环次数
+        protected _delayBetweenLoops: number; // 循环之间的延迟时间
+        private _isRunningInReverse: boolean; // 标志位，表示Tween是否以相反方向运行
 
-        public context: any;
+        public context: any; // 任意类型的属性，用于存储Tween的上下文信息
 
         public setEaseType(easeType: EaseType): ITween<T> {
             this._easeType = easeType;
@@ -117,11 +117,41 @@ module es {
         }
 
         public tick(): boolean {
+            // 如果Tween处于暂停状态，则直接返回false
             if (this._tweenState == TweenState.paused)
                 return false;
 
-            // 当我们进行循环时，我们会在0和持续时间之间限制数值
+            // 计算多余的时间
+            let elapsedTimeExcess = this.calculateElapsedTimeExcess();
+
+            // 如果Tween处于有效时间范围内，则更新Tween值
+            if (this._elapsedTime >= 0 && this._elapsedTime <= this._duration) {
+                this.updateValue();
+            }
+
+            // 如果Tween已经完成，且需要进行循环，则处理循环
+            if (this._loopType != LoopType.none && this._tweenState == TweenState.complete && this._loops != 0) {
+                this.handleLooping(elapsedTimeExcess);
+            }
+
+            // 计算deltaTime并更新_elapsedTime
+            let deltaTime = this.calculateDeltaTime();
+            this.updateElapsedTime(deltaTime);
+
+            // 如果Tween已经完成，则处理完成事件并启动下一个Tween（如果有的话）
+            if (this._tweenState == TweenState.complete) {
+                this.handleCompletion();
+
+                return true;
+            }
+
+            return false;
+        }
+
+        // 计算多余的时间
+        private calculateElapsedTimeExcess(): number {
             let elapsedTimeExcess = 0;
+
             if (!this._isRunningInReverse && this._elapsedTime >= this._duration) {
                 elapsedTimeExcess = this._elapsedTime - this._duration;
                 this._elapsedTime = this._duration;
@@ -132,41 +162,47 @@ module es {
                 this._tweenState = TweenState.complete;
             }
 
-            // 当我们延迟开始tween的时候，经过的时间会是负数，所以不要更新这个值。
-            if (this._elapsedTime >= 0 && this._elapsedTime <= this._duration) {
-                this.updateValue();
-            }
+            return elapsedTimeExcess;
+        }
 
-
-            // 如果我们有一个loopType，并且我们是Complete（意味着我们达到了0或持续时间）处理循环。
-            // handleLooping将采取任何多余的elapsedTime，并将其因子化，并在必要时调用udpateValue来保持tween的完美准确性
-            if (this._loopType != LoopType.none && this._tweenState == TweenState.complete && this._loops != 0) {
-                this.handleLooping(elapsedTimeExcess);
-            }
-
+        // 计算deltaTime
+        private calculateDeltaTime(): number {
             let deltaTime = this._isTimeScaleIndependent ? Time.unscaledDeltaTime : Time.deltaTime;
             deltaTime *= this._timeScale;
 
-            // 我们需要减去deltaTime
+            // 如果Tween是运行在反向模式下，则需要将deltaTime取反
             if (this._isRunningInReverse)
-                this._elapsedTime -= deltaTime;
-            else
-                this._elapsedTime += deltaTime;
+                deltaTime = -deltaTime;
 
-            if (this._tweenState == TweenState.complete) {
-                this._completionHandler && this._completionHandler(this);
-
-                // 如果我们有一个nextTween，把它添加到TweenManager中，这样它就可以开始运行了
-                if (this._nextTween != null) {
-                    this._nextTween.start();
-                    this._nextTween = null;
-                }
-
-                return true;
-            }
-
-            return false;
+            return deltaTime;
         }
+
+        // 更新_elapsedTime
+        private updateElapsedTime(deltaTime: number) {
+            this._elapsedTime += deltaTime;
+
+            // 如果Tween处于反向模式下，则需要将_elapsedTime限制在0和_duration之间
+            if (this._isRunningInReverse) {
+                this._elapsedTime = Math.max(0, this._elapsedTime);
+                this._elapsedTime = Math.min(this._elapsedTime, this._duration);
+            }
+            // 如果Tween处于正向模式下，则需要将_elapsedTime限制在0和_duration之间
+            else {
+                this._elapsedTime = Math.min(this._elapsedTime, this._duration);
+            }
+        }
+
+        // 处理Tween完成事件并启动下一个Tween（如果有的话）
+        private handleCompletion() {
+            this._completionHandler && this._completionHandler(this);
+
+            // 如果有下一个Tween，则启动它
+            if (this._nextTween != null) {
+                this._nextTween.start();
+                this._nextTween = null;
+            }
+        }
+
 
         public recycleSelf() {
             if (this._shouldRecycleTween) {
@@ -227,7 +263,7 @@ module es {
         /**
          * 当通过StartCoroutine调用时，这将一直持续到tween完成
          */
-        public * waitForCompletion() {
+        public* waitForCompletion() {
             while (this._tweenState != TweenState.complete)
                 yield null;
         }
@@ -267,9 +303,9 @@ module es {
          * 将所有状态重置为默认值，并根据传入的参数设置初始状态。
          * 这个方法作为一个切入点，这样Tween子类就可以调用它，这样tweens就可以被回收。
          * 当回收时，构造函数不会再被调用，所以这个方法封装了构造函数要做的事情
-         * @param target 
+         * @param target
          * @param to
-         * @param duration 
+         * @param duration
          */
         public initialize(target: ITweenTarget<T>, to: T, duration: number) {
             // 重置状态，以防我们被回收
@@ -282,7 +318,7 @@ module es {
 
         /**
          * 处理循环逻辑
-         * @param elapsedTimeExcess 
+         * @param elapsedTimeExcess
          */
         private handleLooping(elapsedTimeExcess: number) {
             this._loops--;
