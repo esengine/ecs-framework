@@ -70,10 +70,18 @@ Debug类提供日志记录。 Insist类提供各种断言条件。 您可以在�
 #### [laya-demo](https://github.com/esengine/ecs-laya-demo)
 #### [egret-demo](https://github.com/esengine/ecs-egret-demo)
 
+### 如何参与项目
+#### Node.js版本
+v10.20.1 
+#### 操作步骤
+1. 进入source目录
+2. 安装package包: `npm install`
+3. 打包成js: `gulp build`
+
 ### 渲染集成框架
 #### [cocos-framework](https://github.com/esengine/cocos-framework)
 
 ## 扩展库
 
 #### [基于ecs-framework开发的astar/BreadthFirst/Dijkstra/GOAP目标导向计划 路径寻找库](https://github.com/esengine/ecs-astar)
-#### [基于ecs-framework开发的AI（BehaviourTree、UtilityAI）系统](https://github.com/esengine/BehaviourTree-ai))
+#### [基于ecs-framework开发的AI（BehaviourTree、UtilityAI）系统](https://github.com/esengine/BehaviourTree-ai)
