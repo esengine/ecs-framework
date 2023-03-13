@@ -214,47 +214,47 @@ module es {
         }
 
         public rayIntersects(ray: Ray2D): { intersected: boolean; distance: number } {
-            const res = {intersected: false, distance: 0};
-            let maxValue = Number.MAX_VALUE;
-
+            const res = { intersected: false, distance: 0 };
+            let maxValue = Infinity;
+        
             if (Math.abs(ray.direction.x) < 1E-06) {
-                if ((ray.start.x < this.x) || (ray.start.x > this.x + this.width))
+                if (ray.start.x < this.x || ray.start.x > this.x + this.width) {
                     return res;
+                }
             } else {
                 const num11 = 1 / ray.direction.x;
                 let num8 = (this.x - ray.start.x) * num11;
                 let num7 = (this.x + this.width - ray.start.x) * num11;
                 if (num8 > num7) {
-                    const num14 = num8;
-                    num8 = num7;
-                    num7 = num14;
+                    [num7, num8] = [num8, num7];
                 }
-
+        
                 res.distance = Math.max(num8, res.distance);
                 maxValue = Math.min(num7, maxValue);
-                if (res.distance > maxValue)
+                if (res.distance > maxValue) {
                     return res;
+                }
             }
-
+        
             if (Math.abs(ray.direction.y) < 1e-06) {
-                if ((ray.start.y < this.y) || (ray.start.y > this.y + this.height))
+                if (ray.start.y < this.y || ray.start.y > this.y + this.height) {
                     return res;
+                }
             } else {
                 const num10 = 1 / ray.direction.y;
                 let num6 = (this.y - ray.start.y) * num10;
                 let num5 = (this.y + this.height - ray.start.y) * num10;
                 if (num6 > num5) {
-                    const num13 = num6;
-                    num6 = num5;
-                    num5 = num13;
+                    [num5, num6] = [num6, num5];
                 }
-
+        
                 res.distance = Math.max(num6, res.distance);
-                maxValue = Math.max(num5, maxValue);
-                if (res.distance > maxValue)
+                maxValue = Math.min(num5, maxValue);
+                if (res.distance > maxValue) {
                     return res;
+                }
             }
-
+        
             res.intersected = true;
             return res;
         }

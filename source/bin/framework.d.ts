@@ -544,7 +544,7 @@ declare module es {
          */
         static negate(value: Vector2): Vector2;
         /**
-         * 创建一个新的Vector2，其中包含给定矢量和法线的反射矢量
+         * 向量的反射，输入为两个二维向量vector和normal。函数返回一个新的向量，即vector相对于normal的反射
          * @param vector
          * @param normal
          * @returns

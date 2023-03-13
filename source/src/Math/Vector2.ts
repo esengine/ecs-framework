@@ -174,14 +174,16 @@ module es {
         }
 
         /**
-         * 创建一个新的Vector2，其中包含给定矢量和法线的反射矢量
+         * 向量的反射，输入为两个二维向量vector和normal。函数返回一个新的向量，即vector相对于normal的反射
          * @param vector 
          * @param normal 
          * @returns 
          */
         public static reflect(vector: Vector2, normal: Vector2) {
             let result: Vector2 = es.Vector2.zero;
+            // 计算向量与法线的点积，并将结果乘2
             let val = 2 * ((vector.x * normal.x) + (vector.y * normal.y));
+            // 计算反射向量
             result.x = vector.x - (normal.x * val);
             result.y = vector.y - (normal.y * val);
             return result;

@@ -1339,14 +1339,16 @@ var es;
             return value;
         };
         /**
-         * 创建一个新的Vector2，其中包含给定矢量和法线的反射矢量
+         * 向量的反射，输入为两个二维向量vector和normal。函数返回一个新的向量，即vector相对于normal的反射
          * @param vector
          * @param normal
          * @returns
          */
         Vector2.reflect = function (vector, normal) {
             var result = es.Vector2.zero;
+            // 计算向量与法线的点积，并将结果乘2
             var val = 2 * ((vector.x * normal.x) + (vector.y * normal.y));
+            // 计算反射向量
             result.x = vector.x - (normal.x * val);
             result.y = vector.y - (normal.y * val);
             return result;
@@ -7784,43 +7786,44 @@ var es;
                 this.top < value.bottom;
         };
         Rectangle.prototype.rayIntersects = function (ray) {
+            var _a, _b;
             var res = { intersected: false, distance: 0 };
-            var maxValue = Number.MAX_VALUE;
+            var maxValue = Infinity;
             if (Math.abs(ray.direction.x) < 1E-06) {
-                if ((ray.start.x < this.x) || (ray.start.x > this.x + this.width))
+                if (ray.start.x < this.x || ray.start.x > this.x + this.width) {
                     return res;
+                }
             }
             else {
                 var num11 = 1 / ray.direction.x;
                 var num8 = (this.x - ray.start.x) * num11;
                 var num7 = (this.x + this.width - ray.start.x) * num11;
                 if (num8 > num7) {
-                    var num14 = num8;
-                    num8 = num7;
-                    num7 = num14;
+                    _a = __read([num8, num7], 2), num7 = _a[0], num8 = _a[1];
                 }
                 res.distance = Math.max(num8, res.distance);
                 maxValue = Math.min(num7, maxValue);
-                if (res.distance > maxValue)
+                if (res.distance > maxValue) {
                     return res;
+                }
             }
             if (Math.abs(ray.direction.y) < 1e-06) {
-                if ((ray.start.y < this.y) || (ray.start.y > this.y + this.height))
+                if (ray.start.y < this.y || ray.start.y > this.y + this.height) {
                     return res;
+                }
             }
             else {
                 var num10 = 1 / ray.direction.y;
                 var num6 = (this.y - ray.start.y) * num10;
                 var num5 = (this.y + this.height - ray.start.y) * num10;
                 if (num6 > num5) {
-                    var num13 = num6;
-                    num6 = num5;
-                    num5 = num13;
+                    _b = __read([num6, num5], 2), num5 = _b[0], num6 = _b[1];
                 }
                 res.distance = Math.max(num6, res.distance);
-                maxValue = Math.max(num5, maxValue);
-                if (res.distance > maxValue)
+                maxValue = Math.min(num5, maxValue);
+                if (res.distance > maxValue) {
                     return res;
+                }
             }
             res.intersected = true;
             return res;
