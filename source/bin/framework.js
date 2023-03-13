@@ -200,19 +200,23 @@ var es;
             return this._instance._timerManager.schedule(timeInSeconds, repeats, context, onTime);
         };
         Core.prototype.startDebugDraw = function () {
+            // 如果debug标志未开启，则直接返回
             if (!this.debug)
                 return;
-            this._frameCounter++;
-            this._frameCounterElapsedTime += es.Time.deltaTime;
-            if (this._frameCounterElapsedTime >= 1) {
-                var memoryInfo = window.performance["memory"];
-                if (memoryInfo != null) {
+            // 计算帧率和内存使用情况
+            this._frameCounter++; // 帧计数器递增
+            this._frameCounterElapsedTime += es.Time.deltaTime; // 帧计数器累加时间
+            if (this._frameCounterElapsedTime >= 1) { // 如果时间已经超过1秒，则计算帧率和内存使用情况
+                var memoryInfo = window.performance["memory"]; // 获取内存使用情况
+                if (memoryInfo != null) { // 如果内存使用情况存在
+                    // 计算内存使用情况并保留2位小数
                     this._totalMemory = Number((memoryInfo.totalJSHeapSize / 1048576).toFixed(2));
                 }
-                if (this._titleMemory)
+                if (this._titleMemory) { // 如果回调函数存在，则执行回调函数，更新标题栏显示
                     this._titleMemory(this._totalMemory, this._frameCounter);
-                this._frameCounter = 0;
-                this._frameCounterElapsedTime -= 1;
+                }
+                this._frameCounter = 0; // 重置帧计数器
+                this._frameCounterElapsedTime -= 1; // 减去1秒时间
             }
         };
         /**
@@ -4017,50 +4021,31 @@ var es;
 ///<reference path="./EntitySystem.ts"/>
 (function (es) {
     /**
-     * 追踪每个实体的冷却时间，当实体的计时器耗尽时进行处理
-     *
-     * 一个示例系统将是ExpirationSystem，该系统将在特定生存期后删除实体。
-     * 你不必运行会为每个实体递减timeLeft值的系统
-     * 而只需使用此系统在寿命最短的实体时在将来执行
-     * 然后重置系统在未来的某一个最短命实体的时间运行
-     *
-     * 另一个例子是一个动画系统
-     * 你知道什么时候你必须对某个实体进行动画制作，比如300毫秒内。
-     * 所以你可以设置系统以300毫秒为单位运行来执行动画
-     *
-     * 这将在某些情况下节省CPU周期
+     * 这个类是一个实体系统的基类，其可以被子类继承并在子类中实现具体的实体处理逻辑。
+     * 该类提供了实体的添加、删除、更新等基本操作，并支持设置系统的更新时序、检查系统是否需要处理实体、获取系统的场景等方法
      */
     var DelayedIteratingSystem = /** @class */ (function (_super) {
         __extends(DelayedIteratingSystem, _super);
         function DelayedIteratingSystem(matcher) {
             var _this = _super.call(this, matcher) || this;
-            /**
-             * 一个实体应被处理的时间
-             */
             _this.delay = 0;
-            /**
-             * 如果系统正在运行，并倒计时延迟
-             */
             _this.running = false;
-            /**
-             * 倒计时
-             */
             _this.acc = 0;
             return _this;
         }
         DelayedIteratingSystem.prototype.process = function (entities) {
             var processed = entities.length;
-            if (processed == 0) {
+            if (processed === 0) {
                 this.stop();
                 return;
             }
             this.delay = Number.MAX_VALUE;
-            for (var i = 0; processed > i; i++) {
-                var e = entities[i];
-                this.processDelta(e, this.acc);
-                var remaining = this.getRemainingDelay(e);
+            for (var i = 0; i < processed; i++) {
+                var entity = entities[i];
+                this.processDelta(entity, this.acc);
+                var remaining = this.getRemainingDelay(entity);
                 if (remaining <= 0) {
-                    this.processExpired(e);
+                    this.processExpired(entity);
                 }
                 else {
                     this.offerDelay(remaining);
@@ -4080,7 +4065,7 @@ var es;
          * 如果系统已经停止（不运行），那么提供的延迟将被用来重新启动系统，无论其值如何
          * 如果系统已经在倒计时，并且提供的延迟大于剩余时间，系统将忽略它。
          * 如果提供的延迟时间短于剩余时间，系统将重新启动，以提供的延迟时间运行。
-         * @param offeredDelay
+         * @param offeredDelay 提供的延迟时间，单位为秒
          */
         DelayedIteratingSystem.prototype.offerDelay = function (offeredDelay) {
             if (!this.running) {
@@ -4098,9 +4083,9 @@ var es;
             return this.delay;
         };
         /**
-         * 获取系统计划运行前的时间
-         * 如果系统没有运行，则返回零
-         */
+        * 获取系统计划运行前的时间
+        * 如果系统没有运行，则返回零
+        */
         DelayedIteratingSystem.prototype.getRemainingTimeUntilProcessing = function () {
             if (this.running) {
                 return this.delay - this.acc;
@@ -4129,40 +4114,65 @@ var es;
 ///<reference path="./EntitySystem.ts" />
 (function (es) {
     /**
-     * 基本实体处理系统。将其用作处理具有特定组件的许多实体的基础
-     *
-     * 按实体引用遍历实体订阅成员实体的系统
-     * 当你需要处理与Matcher相匹配的实体，并且你更喜欢使用Entity的时候，可以使用这个功能。
+     * 定义一个处理实体的抽象类，继承自 EntitySystem 类。
+     * 子类需要实现 processEntity 方法，用于实现具体的实体处理逻辑。
      */
     var EntityProcessingSystem = /** @class */ (function (_super) {
         __extends(EntityProcessingSystem, _super);
+        /**
+         * 构造函数，初始化实体匹配器。
+         * @param matcher 实体匹配器
+         */
         function EntityProcessingSystem(matcher) {
             var _this = _super.call(this, matcher) || this;
+            /**
+             * 是否启用系统，默认为启用。
+             */
             _this.enabled = true;
             return _this;
         }
+        /**
+         * 在晚于 update 的时间更新实体，由子类实现。
+         * @param entity 待处理的实体
+         */
         EntityProcessingSystem.prototype.lateProcessEntity = function (entity) {
+            // do nothing
         };
         /**
-         * 遍历这个系统的所有实体并逐个处理它们
-         * @param entities
+         * 遍历系统的所有实体，逐个进行实体处理。
+         * @param entities 实体数组
          */
         EntityProcessingSystem.prototype.process = function (entities) {
-            if (entities.length == 0)
+            // 如果实体数组为空，则直接返回
+            if (entities.length === 0) {
                 return;
-            for (var i = 0, s = entities.length; i < s; ++i) {
+            }
+            // 遍历实体数组，逐个进行实体处理
+            for (var i = 0, len = entities.length; i < len; i++) {
                 var entity = entities[i];
                 this.processEntity(entity);
             }
         };
+        /**
+         * 在晚于 update 的时间更新实体。
+         * @param entities 实体数组
+         */
         EntityProcessingSystem.prototype.lateProcess = function (entities) {
-            if (entities.length == 0)
+            // 如果实体数组为空，则直接返回
+            if (entities.length === 0) {
                 return;
-            for (var i = 0, s = entities.length; i < s; ++i) {
+            }
+            // 遍历实体数组，逐个进行实体处理
+            for (var i = 0, len = entities.length; i < len; i++) {
                 var entity = entities[i];
                 this.lateProcessEntity(entity);
             }
         };
+        /**
+         * 判断系统是否需要进行实体处理。
+         * 如果启用了系统，则需要进行实体处理，返回 true；
+         * 否则不需要进行实体处理，返回 false。
+         */
         EntityProcessingSystem.prototype.checkProcessing = function () {
             return this.enabled;
         };
@@ -4173,10 +4183,16 @@ var es;
 var es;
 (function (es) {
     /**
-     * 实体系统以一定的时间间隔进行处理
+     * 定义一个按时间间隔处理的抽象类，继承自 EntitySystem 类。
+     * 子类需要实现 process 方法，用于实现具体的处理逻辑。
      */
     var IntervalSystem = /** @class */ (function (_super) {
         __extends(IntervalSystem, _super);
+        /**
+         * 构造函数，初始化时间间隔。
+         * @param matcher 实体匹配器
+         * @param interval 时间间隔
+         */
         function IntervalSystem(matcher, interval) {
             var _this = _super.call(this, matcher) || this;
             /**
@@ -4184,27 +4200,38 @@ var es;
              */
             _this.acc = 0;
             /**
-             * 更新之间需要等待多长时间
+             * 时间间隔的余数，用于计算下一次需要等待的时间
              */
-            _this.interval = 0;
-            _this.intervalDelta = 0;
+            _this.intervalRemainder = 0;
             _this.interval = interval;
             return _this;
         }
+        /**
+         * 判断是否需要进行处理。
+         * 如果需要进行处理，则更新累积增量和时间间隔余数，返回 true；
+         * 否则返回 false。
+         */
         IntervalSystem.prototype.checkProcessing = function () {
+            // 更新累积增量
             this.acc += es.Time.deltaTime;
+            // 如果累积增量超过时间间隔，则进行处理
             if (this.acc >= this.interval) {
-                this.acc -= this.interval;
-                this.intervalDelta = (this.acc - this.intervalDelta);
+                // 更新时间间隔余数
+                this.intervalRemainder = this.acc - this.interval;
+                // 重置累积增量
+                this.acc = 0;
+                // 返回 true，表示需要进行处理
                 return true;
             }
+            // 返回 false，表示不需要进行处理
             return false;
         };
         /**
-         * 获取本系统上次处理后的实际delta值
+         * 获取本系统上次处理后的实际 delta 值。
+         * 实际 delta 值等于时间间隔加上时间间隔余数。
          */
         IntervalSystem.prototype.getIntervalDelta = function () {
-            return this.interval + this.intervalDelta;
+            return this.interval + this.intervalRemainder;
         };
         return IntervalSystem;
     }(es.EntitySystem));
@@ -4237,98 +4264,25 @@ var es;
 var es;
 (function (es) {
     /**
-     * JobSystem使用实体的子集调用Execute（entities），并在指定数量的线程上分配工作负载。
+     * 定义一个被动的实体系统，继承自 EntitySystem 类。
+     * 被动的实体系统不会对实体进行任何修改，只会被动地接收实体的变化事件。
      */
-    var JobSystem = /** @class */ (function (_super) {
-        __extends(JobSystem, _super);
-        function JobSystem(matcher, threads) {
-            var _this = _super.call(this, matcher) || this;
-            _this._threads = threads;
-            _this._jobs = new Array(threads);
-            for (var i = 0; i < _this._jobs.length; i++) {
-                _this._jobs[i] = new Job();
-            }
-            _this._executeStr = JSON.stringify(_this.execute, function (key, val) {
-                if (typeof val === 'function') {
-                    return val + '';
-                }
-                return val;
-            });
-            return _this;
-        }
-        JobSystem.prototype.process = function (entities) {
-            var _this = this;
-            var remainder = entities.length & this._threads;
-            var slice = entities.length / this._threads + (remainder == 0 ? 0 : 1);
-            var _loop_1 = function (t) {
-                var from = t * slice;
-                var to = from + slice;
-                if (to > entities.length) {
-                    to = entities.length;
-                }
-                var job = this_1._jobs[t];
-                job.set(entities, from, to, this_1._executeStr, this_1);
-                if (from != to) {
-                    var worker_1 = es.WorkerUtils.makeWorker(this_1.queueOnThread);
-                    var workerDo = es.WorkerUtils.workerMessage(worker_1);
-                    workerDo(job).then(function (message) {
-                        var job = message;
-                        _this.resetJob(job);
-                        worker_1.terminate();
-                    }).catch(function (err) {
-                        job.err = err;
-                        worker_1.terminate();
-                    });
-                }
-            };
-            var this_1 = this;
-            for (var t = 0; t < this._threads; t++) {
-                _loop_1(t);
-            }
-        };
-        JobSystem.prototype.queueOnThread = function () {
-            onmessage = function (_a) {
-                var _b = _a.data, jobId = _b.jobId, message = _b.message;
-                var job = message[0];
-                var executeFunc = JSON.parse(job.execute, function (k, v) {
-                    if (v.indexOf && v.indexOf('function') > -1) {
-                        return eval("(function(){return " + v + " })()");
-                    }
-                    return v;
-                });
-                for (var i = job.from; i < job.to; i++) {
-                    executeFunc.call(job.context, job.entities[i]);
-                }
-                postMessage({ jobId: jobId, result: message }, null);
-            };
-        };
-        return JobSystem;
-    }(es.EntitySystem));
-    es.JobSystem = JobSystem;
-    var Job = /** @class */ (function () {
-        function Job() {
-        }
-        Job.prototype.set = function (entities, from, to, execute, context) {
-            this.entities = entities;
-            this.from = from;
-            this.to = to;
-            this.execute = execute;
-            this.context = context;
-        };
-        return Job;
-    }());
-})(es || (es = {}));
-var es;
-(function (es) {
     var PassiveSystem = /** @class */ (function (_super) {
         __extends(PassiveSystem, _super);
         function PassiveSystem() {
             return _super !== null && _super.apply(this, arguments) || this;
         }
-        PassiveSystem.prototype.onChanged = function (entity) {
-        };
+        /**
+         * 当实体发生变化时，不进行任何操作。
+         * @param entity 发生变化的实体
+         */
+        PassiveSystem.prototype.onChanged = function (entity) { };
+        /**
+         * 不进行任何处理，只进行开始和结束计时。
+         * @param entities 实体数组，未被使用
+         */
         PassiveSystem.prototype.process = function (entities) {
-            // 我们用我们自己的不考虑实体的基本实体系统来代替
+            // 调用 begin 和 end 方法，开始和结束计时
             this.begin();
             this.end();
         };
@@ -4336,19 +4290,30 @@ var es;
     }(es.EntitySystem));
     es.PassiveSystem = PassiveSystem;
 })(es || (es = {}));
-/** 用于协调其他系统的通用系统基类 */
 var es;
-/** 用于协调其他系统的通用系统基类 */
 (function (es) {
+    /**
+     * 定义一个处理实体的抽象类，继承自 EntitySystem 类。
+     * 子类需要实现 processSystem 方法，用于实现具体的处理逻辑。
+     */
     var ProcessingSystem = /** @class */ (function (_super) {
         __extends(ProcessingSystem, _super);
         function ProcessingSystem() {
             return _super !== null && _super.apply(this, arguments) || this;
         }
-        ProcessingSystem.prototype.onChanged = function (entity) {
-        };
+        /**
+         * 当实体发生变化时，不进行任何操作。
+         * @param entity 发生变化的实体
+         */
+        ProcessingSystem.prototype.onChanged = function (entity) { };
+        /**
+         * 处理实体，每帧调用 processSystem 方法进行处理。
+         * @param entities 实体数组，未被使用
+         */
         ProcessingSystem.prototype.process = function (entities) {
+            // 调用 begin 和 end 方法，开始和结束计时
             this.begin();
+            // 调用子类实现的 processSystem 方法进行实体处理
             this.processSystem();
             this.end();
         };
@@ -4494,17 +4459,17 @@ var es;
          */
         ComponentList.prototype.updateLists = function () {
             if (this._componentsToRemoveList.length > 0) {
-                var _loop_2 = function (i, l) {
-                    var component = this_2._componentsToRemoveList[i];
-                    this_2.handleRemove(component);
-                    var index = this_2._components.findIndex(function (c) { return c.id == component.id; });
+                var _loop_1 = function (i, l) {
+                    var component = this_1._componentsToRemoveList[i];
+                    this_1.handleRemove(component);
+                    var index = this_1._components.findIndex(function (c) { return c.id == component.id; });
                     if (index != -1)
-                        this_2._components.splice(index, 1);
-                    this_2.removeComponentsByType(component);
+                        this_1._components.splice(index, 1);
+                    this_1.removeComponentsByType(component);
                 };
-                var this_2 = this;
+                var this_1 = this;
                 for (var i = 0, l = this._componentsToRemoveList.length; i < l; ++i) {
-                    _loop_2(i, l);
+                    _loop_1(i, l);
                 }
                 this._componentsToRemove = {};
                 this._componentsToRemoveList.length = 0;
@@ -4661,27 +4626,50 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 组件类型工厂，用于生成和管理组件类型。
+     * 维护了一个类型映射表，将组件类型与其唯一索引相对应，以便在运行时高效地检查实体是否包含特定的组件类型。
+     */
     var ComponentTypeFactory = /** @class */ (function () {
         function ComponentTypeFactory() {
-            this.componentTypeCount_ = 0;
-            this.componentTypes_ = {};
+            /** 组件类型与其唯一索引的映射表 */
+            this.componentTypes = {};
+            /** 组件类型列表，按索引访问组件类型 */
             this.types = new es.Bag();
+            /** 当前组件类型的计数器 */
+            this.componentTypeCount = 0;
         }
-        ComponentTypeFactory.prototype.getTypeFor = function (c) {
-            if ("number" === typeof c) {
-                return this.types.get(c);
-            }
-            var type = this.componentTypes_[es.getClassName(c)];
-            if (type == null) {
-                var index = this.componentTypeCount_++;
-                type = new es.ComponentType(c, index);
-                this.componentTypes_[es.getClassName(c)] = type;
-                this.types.set(index, type);
-            }
-            return type;
-        };
+        /**
+         * 获取给定组件类型的唯一索引。
+         * 如果该组件类型尚未存在于类型映射表中，则创建一个新的组件类型，并将其添加到映射表和类型列表中。
+         * @param c 要查找或创建的组件类型
+         * @returns 组件类型的唯一索引
+         */
         ComponentTypeFactory.prototype.getIndexFor = function (c) {
             return this.getTypeFor(c).getIndex();
+        };
+        /**
+         * 获取给定组件类型的ComponentType对象。
+         * 如果该组件类型尚未存在于类型映射表中，则创建一个新的ComponentType对象，并将其添加到映射表和类型列表中。
+         * @param c 要查找或创建的组件类型
+         * @returns 组件类型的ComponentType对象
+         */
+        ComponentTypeFactory.prototype.getTypeFor = function (c) {
+            // 如果给定的组件类型是一个已有的索引，则直接返回对应的ComponentType对象
+            if (typeof c === "number") {
+                return this.types.get(c);
+            }
+            // 获取给定组件类型对应的类名
+            var className = es.getClassName(c);
+            // 如果类型映射表中不存在该组件类型，则创建一个新的ComponentType对象
+            if (!this.componentTypes[className]) {
+                var index = this.componentTypeCount++;
+                var type = new es.ComponentType(c, index);
+                this.componentTypes[className] = type;
+                this.types.set(index, type);
+            }
+            // 返回对应的ComponentType对象
+            return this.componentTypes[className];
         };
         return ComponentTypeFactory;
     }());
@@ -4689,13 +4677,28 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 组件类型管理器，维护了一个组件类型和它们对应的位掩码之间的映射关系。
+     * 用于实现实体匹配器中组件类型的比较操作，以确定实体是否符合给定的匹配器条件。
+     */
     var ComponentTypeManager = /** @class */ (function () {
         function ComponentTypeManager() {
         }
+        /**
+         * 将给定的组件类型添加到组件类型列表中，并分配一个唯一的位掩码。
+         * @param type 要添加的组件类型
+         */
         ComponentTypeManager.add = function (type) {
-            if (!this._componentTypesMask.has(type))
+            if (!this._componentTypesMask.has(type)) {
                 this._componentTypesMask.set(type, this._componentTypesMask.size);
+            }
         };
+        /**
+         * 获取给定组件类型的位掩码。
+         * 如果该组件类型还没有分配位掩码，则将其添加到列表中，并分配一个唯一的位掩码。
+         * @param type 要获取位掩码的组件类型
+         * @returns 组件类型的位掩码
+         */
         ComponentTypeManager.getIndexFor = function (type) {
             var v = -1;
             if (!this._componentTypesMask.has(type)) {
@@ -4707,6 +4710,7 @@ var es;
             }
             return v;
         };
+        /** 存储组件类型和它们对应的位掩码的Map */
         ComponentTypeManager._componentTypesMask = new Map();
         return ComponentTypeManager;
     }());
@@ -4834,20 +4838,20 @@ var es;
         };
         EntityList.prototype.updateLists = function () {
             if (this._entitiesToRemoveList.length > 0) {
-                var _loop_3 = function (i, s) {
-                    var entity = this_3._entitiesToRemoveList[i];
-                    this_3.removeFromTagList(entity);
+                var _loop_2 = function (i, s) {
+                    var entity = this_2._entitiesToRemoveList[i];
+                    this_2.removeFromTagList(entity);
                     // 处理常规实体列表
-                    var index = this_3._entities.findIndex(function (e) { return e.id == entity.id; });
+                    var index = this_2._entities.findIndex(function (e) { return e.id == entity.id; });
                     if (index != -1)
-                        this_3._entities.splice(index, 1);
+                        this_2._entities.splice(index, 1);
                     entity.onRemovedFromScene();
                     entity.scene = null;
-                    this_3.scene.entityProcessors.onEntityRemoved(entity);
+                    this_2.scene.entityProcessors.onEntityRemoved(entity);
                 };
-                var this_3 = this;
+                var this_2 = this;
                 for (var i = 0, s = this._entitiesToRemoveList.length; i < s; ++i) {
-                    _loop_3(i, s);
+                    _loop_2(i, s);
                 }
                 this._entitiesToRemove = {};
                 this._entitiesToRemoveList.length = 0;
@@ -5271,6 +5275,9 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 定义一个实体匹配器类。
+     */
     var Matcher = /** @class */ (function () {
         function Matcher() {
             this.allSet = [];
@@ -5293,62 +5300,70 @@ var es;
             return this.isInterested(e.componentBits);
         };
         Matcher.prototype.isInterested = function (components) {
-            if (this.allSet.length != 0) {
-                for (var i = 0, s = this.allSet.length; i < s; ++i) {
+            if (this.allSet.length !== 0) {
+                for (var i = 0; i < this.allSet.length; i++) {
                     var type = this.allSet[i];
-                    if (!components.get(es.ComponentTypeManager.getIndexFor(type)))
+                    if (!components.get(es.ComponentTypeManager.getIndexFor(type))) {
                         return false;
+                    }
                 }
             }
-            if (this.exclusionSet.length != 0) {
-                for (var i = 0, s = this.exclusionSet.length; i < s; ++i) {
+            if (this.exclusionSet.length !== 0) {
+                for (var i = 0; i < this.exclusionSet.length; i++) {
                     var type = this.exclusionSet[i];
-                    if (components.get(es.ComponentTypeManager.getIndexFor(type)))
+                    if (components.get(es.ComponentTypeManager.getIndexFor(type))) {
                         return false;
+                    }
                 }
             }
-            if (this.oneSet.length != 0) {
-                for (var i = 0, s = this.oneSet.length; i < s; ++i) {
+            if (this.oneSet.length !== 0) {
+                for (var i = 0; i < this.oneSet.length; i++) {
                     var type = this.oneSet[i];
-                    if (components.get(es.ComponentTypeManager.getIndexFor(type)))
+                    if (components.get(es.ComponentTypeManager.getIndexFor(type))) {
                         return true;
+                    }
                 }
+                return false;
             }
             return true;
         };
+        /**
+        * 添加所有包含的组件类型。
+        * @param types 所有包含的组件类型列表
+        */
         Matcher.prototype.all = function () {
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var t;
-            for (var i = 0, s = types.length; i < s; ++i) {
-                t = types[i];
-                this.allSet.push(t);
-            }
+            var _a;
+            (_a = this.allSet).push.apply(_a, __spread(types));
             return this;
         };
+        /**
+         * 添加排除包含的组件类型。
+         * @param types 排除包含的组件类型列表
+         */
         Matcher.prototype.exclude = function () {
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var t;
-            for (var i = 0, s = types.length; i < s; ++i) {
-                t = types[i];
-                this.exclusionSet.push(t);
-            }
+            var _a;
+            (_a = this.exclusionSet).push.apply(_a, __spread(types));
             return this;
         };
+        /**
+         * 添加至少包含其中之一的组件类型。
+         * @param types 至少包含其中之一的组件类型列表
+         */
         Matcher.prototype.one = function () {
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            for (var i = 0, s = types.length; i < s; ++i) {
-                var t = types[i];
-                this.oneSet.push(t);
-            }
+            var _a;
+            (_a = this.oneSet).push.apply(_a, __spread(types));
             return this;
         };
         return Matcher;
@@ -5862,50 +5877,6 @@ var TimeUtils = /** @class */ (function () {
     };
     return TimeUtils;
 }());
-var es;
-(function (es) {
-    /**
-     * 开辟一个新线程
-     * 注意：它无法获得主线程中的上下文
-     */
-    var WorkerUtils = /** @class */ (function () {
-        function WorkerUtils() {
-        }
-        /**
-         * 创建一个worker
-         * @param doFunc worker所能做的事情
-         */
-        WorkerUtils.makeWorker = function (doFunc) {
-            var worker = new Worker(URL.createObjectURL(new Blob(["(" + doFunc.toString() + ")()"])));
-            return worker;
-        };
-        WorkerUtils.workerMessage = function (worker) {
-            var _this = this;
-            worker.onmessage = function (_a) {
-                var _b = _a.data, result = _b.result, jobId = _b.jobId;
-                if (typeof _this.pendingJobs[jobId] == 'function')
-                    _this.pendingJobs[jobId](result);
-                delete _this.pendingJobs[jobId];
-            };
-            return function () {
-                var message = [];
-                for (var _i = 0; _i < arguments.length; _i++) {
-                    message[_i] = arguments[_i];
-                }
-                return new Promise(function (resolve) {
-                    var jobId = _this.jobIdGen++;
-                    _this.pendingJobs[jobId] = resolve;
-                    worker.postMessage({ jobId: jobId, message: message });
-                });
-            };
-        };
-        /** 正在执行的队列 */
-        WorkerUtils.pendingJobs = {};
-        WorkerUtils.jobIdGen = 0;
-        return WorkerUtils;
-    }());
-    es.WorkerUtils = WorkerUtils;
-})(es || (es = {}));
 var es;
 (function (es) {
     /**
@@ -11868,8 +11839,9 @@ var es;
                 list = [];
                 this._messageTable.set(eventType, list);
             }
-            es.Insist.isFalse(list.findIndex(function (funcPack) { return funcPack.func == handler; }) != -1, "您试图添加相同的观察者两次");
-            list.push(new FuncPack(handler, context));
+            if (!this.hasObserver(eventType, handler)) {
+                list.push(new FuncPack(handler, context));
+            }
         };
         /**
          * 移除监听项
@@ -11878,9 +11850,11 @@ var es;
          */
         Emitter.prototype.removeObserver = function (eventType, handler) {
             var messageData = this._messageTable.get(eventType);
-            var index = messageData.findIndex(function (data) { return data.func == handler; });
-            if (index != -1)
-                messageData.splice(index, 1);
+            if (messageData) {
+                var index = messageData.findIndex(function (data) { return data.func == handler; });
+                if (index != -1)
+                    messageData.splice(index, 1);
+            }
         };
         /**
          * 触发该事件
@@ -11892,12 +11866,32 @@ var es;
             for (var _i = 1; _i < arguments.length; _i++) {
                 data[_i - 1] = arguments[_i];
             }
-            var _a;
+            var e_4, _a, _b;
             var list = this._messageTable.get(eventType);
             if (list) {
-                for (var i = list.length - 1; i >= 0; i--)
-                    (_a = list[i].func).call.apply(_a, __spread([list[i].context], data));
+                try {
+                    for (var list_3 = __values(list), list_3_1 = list_3.next(); !list_3_1.done; list_3_1 = list_3.next()) {
+                        var observer = list_3_1.value;
+                        (_b = observer.func).call.apply(_b, __spread([observer.context], data));
+                    }
+                }
+                catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                finally {
+                    try {
+                        if (list_3_1 && !list_3_1.done && (_a = list_3.return)) _a.call(list_3);
+                    }
+                    finally { if (e_4) throw e_4.error; }
+                }
             }
+        };
+        /**
+         * 判断是否存在该类型的观察者
+         * @param eventType 事件类型
+         * @param handler 事件函数
+         */
+        Emitter.prototype.hasObserver = function (eventType, handler) {
+            var list = this._messageTable.get(eventType);
+            return list ? list.some(function (observer) { return observer.func === handler; }) : false;
         };
         return Emitter;
     }());
@@ -13560,71 +13554,93 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    /**
-     * 用于池任何对象
-     */
     var Pool = /** @class */ (function () {
         function Pool() {
         }
         /**
          * 预热缓存，使用最大的cacheCount对象填充缓存
-         * @param type
-         * @param cacheCount
+         * @param type 要预热的类型
+         * @param cacheCount 预热缓存数量
          */
         Pool.warmCache = function (type, cacheCount) {
             this.checkCreate(type);
-            cacheCount -= this._objectQueue.get(type).length;
+            var queue = this._objectQueue.get(type);
+            cacheCount -= queue.length;
+            // 如果需要预热更多的对象，则创建并添加到缓存
             if (cacheCount > 0) {
                 for (var i = 0; i < cacheCount; i++) {
-                    this._objectQueue.get(type).push(new type());
+                    queue.push(new type());
                 }
             }
         };
         /**
-         * 将缓存修剪为cacheCount项目
-         * @param cacheCount
-         */
+        * 将缓存修剪为cacheCount项目
+        * @param type 要修剪的类型
+        * @param cacheCount 修剪后的缓存数量
+        */
         Pool.trimCache = function (type, cacheCount) {
             this.checkCreate(type);
-            while (cacheCount > this._objectQueue.get(type).length)
-                this._objectQueue.get(type).splice(0, 1);
+            var objectQueue = this._objectQueue.get(type);
+            // 如果需要修剪缓存，则弹出多余的对象
+            while (cacheCount < objectQueue.length) {
+                objectQueue.pop();
+            }
         };
         /**
          * 清除缓存
+         * @param type 要清除缓存的类型
          */
         Pool.clearCache = function (type) {
             this.checkCreate(type);
-            this._objectQueue.get(type).length = 0;
+            var objectQueue = this._objectQueue.get(type);
+            // 清空缓存数组
+            objectQueue.length = 0;
         };
         /**
-         * 如果可以的话，从堆栈中弹出一个项
+         * 如果可以的话，从缓存中获取一个对象
+         * @param type 要获取的类型
          */
         Pool.obtain = function (type) {
             this.checkCreate(type);
-            if (this._objectQueue.get(type).length > 0)
-                return this._objectQueue.get(type).shift();
+            var objectQueue = this._objectQueue.get(type);
+            // 如果缓存中有对象，弹出一个并返回
+            if (objectQueue.length > 0) {
+                return objectQueue.pop();
+            }
+            // 如果没有缓存对象，则创建一个新的对象并返回
             return new type();
         };
         /**
-         * 将项推回堆栈
-         * @param obj
+         * 将对象推回缓存
+         * @param type 对象的类型
+         * @param obj 要推回的对象
          */
         Pool.free = function (type, obj) {
             this.checkCreate(type);
-            this._objectQueue.get(type).push(obj);
+            var objectQueue = this._objectQueue.get(type);
+            // 将对象推回缓存
+            objectQueue.push(obj);
+            // 如果对象实现了IPoolable接口，则调用reset方法重置对象
             if (es.isIPoolable(obj)) {
-                obj["reset"]();
+                obj.reset();
             }
         };
+        /**
+         * 检查缓存中是否已存在给定类型的对象池，如果不存在则创建一个
+         * @param type 要检查的类型
+         */
         Pool.checkCreate = function (type) {
-            if (!this._objectQueue.has(type))
+            if (!this._objectQueue.has(type)) {
                 this._objectQueue.set(type, []);
+            }
         };
         Pool._objectQueue = new Map();
         return Pool;
     }());
     es.Pool = Pool;
-    es.isIPoolable = function (props) { return typeof props['reset'] !== 'undefined'; };
+    es.isIPoolable = function (props) {
+        return typeof props.reset === 'function';
+    };
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -13717,50 +13733,60 @@ var es;
          * @param enumerator
          */
         CoroutineManager.prototype.startCoroutine = function (enumerator) {
-            // 找到或创建一个CoroutineImpl
+            var coroutine = this.getOrCreateCoroutine();
+            coroutine.prepareForUse();
+            coroutine.enumerator = typeof enumerator === 'function' ? enumerator() : enumerator;
+            if (this.tickCoroutine(coroutine)) {
+                this.addCoroutine(coroutine);
+                return coroutine;
+            }
+            return null;
+        };
+        CoroutineManager.prototype.getOrCreateCoroutine = function () {
             var coroutine = es.Pool.obtain(CoroutineImpl);
             coroutine.prepareForUse();
-            // 设置coroutine并添加它
-            coroutine.enumerator = enumerator;
-            var shouldContinueCoroutine = this.tickCoroutine(coroutine);
-            if (!shouldContinueCoroutine)
-                return null;
+            return coroutine;
+        };
+        CoroutineManager.prototype.addCoroutine = function (coroutine) {
             if (this._isInUpdate)
                 this._shouldRunNextFrame.push(coroutine);
             else
                 this._unblockedCoroutines.push(coroutine);
-            return coroutine;
         };
         CoroutineManager.prototype.update = function () {
             this._isInUpdate = true;
-            for (var i = 0; i < this._unblockedCoroutines.length; i++) {
-                var coroutine = this._unblockedCoroutines[i];
+            var unblockedCoroutines = this._unblockedCoroutines;
+            var shouldRunNextFrame = this._shouldRunNextFrame;
+            for (var i = unblockedCoroutines.length - 1; i >= 0; i--) {
+                var coroutine = unblockedCoroutines[i];
                 if (coroutine.isDone) {
                     es.Pool.free(CoroutineImpl, coroutine);
+                    unblockedCoroutines.splice(i, 1);
                     continue;
                 }
-                if (coroutine.waitForCoroutine != null) {
-                    if (coroutine.waitForCoroutine.isDone) {
+                var waitForCoroutine = coroutine.waitForCoroutine;
+                if (waitForCoroutine != null) {
+                    if (waitForCoroutine.isDone) {
                         coroutine.waitForCoroutine = null;
                     }
                     else {
-                        this._shouldRunNextFrame.push(coroutine);
+                        shouldRunNextFrame.push(coroutine);
                         continue;
                     }
                 }
-                if (coroutine.waitTimer > 0) {
+                var waitTimer = coroutine.waitTimer;
+                if (waitTimer > 0) {
                     // 递减，然后再运行下一帧，确保用适当的deltaTime递减
-                    coroutine.waitTimer -= coroutine.useUnscaledDeltaTime ? es.Time.unscaledDeltaTime : es.Time.deltaTime;
-                    this._shouldRunNextFrame.push(coroutine);
+                    coroutine.waitTimer = waitTimer - (coroutine.useUnscaledDeltaTime ? es.Time.unscaledDeltaTime : es.Time.deltaTime);
+                    shouldRunNextFrame.push(coroutine);
                     continue;
                 }
-                if (this.tickCoroutine(coroutine))
-                    this._shouldRunNextFrame.push(coroutine);
+                if (this.tickCoroutine(coroutine)) {
+                    shouldRunNextFrame.push(coroutine);
+                }
             }
-            var linqCoroutines = new es.List(this._unblockedCoroutines);
-            linqCoroutines.clear();
-            linqCoroutines.addRange(this._shouldRunNextFrame);
-            this._shouldRunNextFrame.length = 0;
+            unblockedCoroutines.push.apply(unblockedCoroutines, __spread(shouldRunNextFrame));
+            shouldRunNextFrame.length = 0;
             this._isInUpdate = false;
         };
         /**
@@ -13768,41 +13794,48 @@ var es;
          * @param coroutine
          */
         CoroutineManager.prototype.tickCoroutine = function (coroutine) {
-            var chain = coroutine.enumerator.next();
-            if (chain.done || coroutine.isDone) {
+            var enumerator = coroutine.enumerator;
+            var _a = enumerator.next(), value = _a.value, done = _a.done;
+            if (done || coroutine.isDone) {
+                // 当协程执行完或标记为结束时，回收协程实例并返回 false。
                 es.Pool.free(CoroutineImpl, coroutine);
                 return false;
             }
-            if (chain.value == null) {
-                // 下一帧再运行
+            if (!value) {
+                // 如果下一帧没有指定任务，返回 true 让协程继续等待下一帧执行。
                 return true;
             }
-            if (chain.value instanceof es.WaitForSeconds) {
-                coroutine.waitTimer = chain.value.waitTime;
+            if (value instanceof es.WaitForSeconds) {
+                // 如果下一帧需要等待指定时间，则记录等待时间并返回 true。
+                coroutine.waitTimer = value.waitTime;
                 return true;
             }
-            if (typeof chain.value == 'number') {
-                coroutine.waitTimer = chain.value;
+            if (typeof value === 'number') {
+                // 如果下一帧需要等待指定时间，则记录等待时间并返回 true。
+                coroutine.waitTimer = value;
                 return true;
             }
-            if (typeof chain.value == 'string') {
-                if (chain.value == 'break') {
+            if (typeof value === 'string') {
+                // 如果下一帧返回 'break'，标记协程为结束并返回 false。
+                if (value === 'break') {
                     es.Pool.free(CoroutineImpl, coroutine);
                     return false;
                 }
+                // 否则返回 true 让协程继续等待下一帧执行。
                 return true;
             }
-            if (typeof chain.value == 'function') {
-                coroutine.waitForCoroutine = this.startCoroutine(chain.value);
+            if (typeof value === 'function') {
+                // 如果下一帧需要等待另一个协程完成，启动并记录另一个协程实例，并返回 true。
+                coroutine.waitForCoroutine = this.startCoroutine(value);
                 return true;
             }
-            if (chain.value instanceof CoroutineImpl) {
-                coroutine.waitForCoroutine = chain.value;
+            if (value instanceof CoroutineImpl) {
+                // 如果下一帧需要等待另一个协程完成，记录另一个协程实例，并返回 true。
+                coroutine.waitForCoroutine = value;
                 return true;
             }
-            else {
-                return true;
-            }
+            // 否则返回 true 让协程继续等待下一帧执行。
+            return true;
         };
         return CoroutineManager;
     }(es.GlobalManager));
@@ -15535,7 +15568,7 @@ var es;
          * 创建一个Set从一个Enumerable.List< T>。
          */
         List.prototype.toSet = function () {
-            var e_4, _a;
+            var e_5, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -15543,12 +15576,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_4_1) { e_4 = { error: e_4_1 }; }
+            catch (e_5_1) { e_5 = { error: e_5_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_4) throw e_4.error; }
+                finally { if (e_5) throw e_5.error; }
             }
             return result;
         };
@@ -15797,7 +15830,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_5, _a;
+            var e_6, _a;
             var output = es.ListPool.obtain(es.Vector2);
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -15836,12 +15869,12 @@ var es;
                         }
                     }
                 }
-                catch (e_5_1) { e_5 = { error: e_5_1 }; }
+                catch (e_6_1) { e_6 = { error: e_6_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_5) throw e_5.error; }
+                    finally { if (e_6) throw e_6.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -15957,7 +15990,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_6, _a;
+            var e_7, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -15975,12 +16008,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_6_1) { e_6 = { error: e_6_1 }; }
+            catch (e_7_1) { e_7 = { error: e_7_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_6) throw e_6.error; }
+                finally { if (e_7) throw e_7.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

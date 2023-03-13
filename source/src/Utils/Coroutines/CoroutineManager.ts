@@ -3,7 +3,7 @@ module es {
      * CoroutineManager用于隐藏Coroutine所需数据的内部类
      */
     export class CoroutineImpl implements ICoroutine, IPoolable {
-        public enumerator: Generator;
+        public enumerator;
 
         /**
          * 每当产生一个延迟，它就会被添加到跟踪延迟的waitTimer中
@@ -50,11 +50,11 @@ module es {
          * 立即停止并清除所有协程
          */
         public clearAllCoroutines() {
-            for (let i = 0; i < this._unblockedCoroutines.length; i ++) {
+            for (let i = 0; i < this._unblockedCoroutines.length; i++) {
                 Pool.free(CoroutineImpl, this._unblockedCoroutines[i]);
             }
 
-            for (let i = 0; i < this._shouldRunNextFrame.length; i ++) {
+            for (let i = 0; i < this._shouldRunNextFrame.length; i++) {
                 Pool.free(CoroutineImpl, this._shouldRunNextFrame[i]);
             }
 
@@ -67,60 +67,72 @@ module es {
          * Coroutine在每一帧调用Update之前被执行
          * @param enumerator 
          */
-        public startCoroutine(enumerator: any) {
-            // 找到或创建一个CoroutineImpl
-            let coroutine = Pool.obtain<CoroutineImpl>(CoroutineImpl);
+        public startCoroutine<T>(enumerator: Iterator<T> | (() => Iterator<T>)): CoroutineImpl | null {
+            const coroutine = this.getOrCreateCoroutine();
             coroutine.prepareForUse();
+            coroutine.enumerator = typeof enumerator === 'function' ? enumerator() : enumerator;
 
-            // 设置coroutine并添加它
-            coroutine.enumerator = enumerator;
-            let shouldContinueCoroutine = this.tickCoroutine(coroutine);
+            if (this.tickCoroutine(coroutine)) {
+                this.addCoroutine(coroutine);
+                return coroutine;
+            }
 
-            if (!shouldContinueCoroutine)
-                return null;
+            return null;
+        }
 
+        private getOrCreateCoroutine(): CoroutineImpl {
+            const coroutine = Pool.obtain<CoroutineImpl>(CoroutineImpl);
+            coroutine.prepareForUse();
+            return coroutine;
+        }
+
+        private addCoroutine(coroutine: CoroutineImpl) {
             if (this._isInUpdate)
                 this._shouldRunNextFrame.push(coroutine);
             else
                 this._unblockedCoroutines.push(coroutine);
-
-            return coroutine;
         }
 
         public update() {
             this._isInUpdate = true;
-            for (let i = 0; i < this._unblockedCoroutines.length; i++) {
-                let coroutine = this._unblockedCoroutines[i];
+
+            const unblockedCoroutines = this._unblockedCoroutines;
+            const shouldRunNextFrame = this._shouldRunNextFrame;
+
+            for (let i = unblockedCoroutines.length - 1; i >= 0; i--) {
+                const coroutine = unblockedCoroutines[i];
 
                 if (coroutine.isDone) {
                     Pool.free(CoroutineImpl, coroutine);
+                    unblockedCoroutines.splice(i, 1);
                     continue;
                 }
 
-                if (coroutine.waitForCoroutine != null) {
-                    if (coroutine.waitForCoroutine.isDone) {
+                const waitForCoroutine = coroutine.waitForCoroutine;
+                if (waitForCoroutine != null) {
+                    if (waitForCoroutine.isDone) {
                         coroutine.waitForCoroutine = null;
                     } else {
-                        this._shouldRunNextFrame.push(coroutine);
+                        shouldRunNextFrame.push(coroutine);
                         continue;
                     }
                 }
 
-                if (coroutine.waitTimer > 0) {
+                const waitTimer = coroutine.waitTimer;
+                if (waitTimer > 0) {
                     // 递减，然后再运行下一帧，确保用适当的deltaTime递减
-                    coroutine.waitTimer -= coroutine.useUnscaledDeltaTime ? Time.unscaledDeltaTime : Time.deltaTime;
-                    this._shouldRunNextFrame.push(coroutine);
+                    coroutine.waitTimer = waitTimer - (coroutine.useUnscaledDeltaTime ? Time.unscaledDeltaTime : Time.deltaTime);
+                    shouldRunNextFrame.push(coroutine);
                     continue;
                 }
 
-                if (this.tickCoroutine(coroutine))
-                    this._shouldRunNextFrame.push(coroutine);
+                if (this.tickCoroutine(coroutine)) {
+                    shouldRunNextFrame.push(coroutine);
+                }
             }
 
-            let linqCoroutines = new es.List(this._unblockedCoroutines);
-            linqCoroutines.clear();
-            linqCoroutines.addRange(this._shouldRunNextFrame);
-            this._shouldRunNextFrame.length = 0;
+            unblockedCoroutines.push(...shouldRunNextFrame);
+            shouldRunNextFrame.length = 0;
 
             this._isInUpdate = false;
         }
@@ -130,47 +142,57 @@ module es {
          * @param coroutine 
          */
         public tickCoroutine(coroutine: CoroutineImpl) {
-            let chain = coroutine.enumerator.next();
-            if (chain.done || coroutine.isDone) {
+            const { enumerator } = coroutine;
+            const { value, done } = enumerator.next();
+
+            if (done || coroutine.isDone) {
+                // 当协程执行完或标记为结束时，回收协程实例并返回 false。
                 Pool.free(CoroutineImpl, coroutine);
                 return false;
             }
 
-            if (chain.value == null) {
-                // 下一帧再运行
+            if (!value) {
+                // 如果下一帧没有指定任务，返回 true 让协程继续等待下一帧执行。
                 return true;
             }
 
-            if (chain.value instanceof WaitForSeconds) {
-                coroutine.waitTimer = chain.value.waitTime;
+            if (value instanceof WaitForSeconds) {
+                // 如果下一帧需要等待指定时间，则记录等待时间并返回 true。
+                coroutine.waitTimer = value.waitTime;
                 return true;
             }
 
-            if (typeof chain.value == 'number') {
-                coroutine.waitTimer = chain.value;
+            if (typeof value === 'number') {
+                // 如果下一帧需要等待指定时间，则记录等待时间并返回 true。
+                coroutine.waitTimer = value;
                 return true;
             }
 
-            if (typeof chain.value == 'string') {
-                if (chain.value == 'break') {
+            if (typeof value === 'string') {
+                // 如果下一帧返回 'break'，标记协程为结束并返回 false。
+                if (value === 'break') {
                     Pool.free(CoroutineImpl, coroutine);
                     return false;
                 }
 
+                // 否则返回 true 让协程继续等待下一帧执行。
                 return true;
             }
 
-            if (typeof chain.value == 'function') {
-                coroutine.waitForCoroutine = this.startCoroutine(chain.value);
+            if (typeof value === 'function') {
+                // 如果下一帧需要等待另一个协程完成，启动并记录另一个协程实例，并返回 true。
+                coroutine.waitForCoroutine = this.startCoroutine(value);
                 return true;
             }
 
-            if (chain.value instanceof CoroutineImpl) {
-                coroutine.waitForCoroutine = chain.value;
-                return true;
-            } else {
+            if (value instanceof CoroutineImpl) {
+                // 如果下一帧需要等待另一个协程完成，记录另一个协程实例，并返回 true。
+                coroutine.waitForCoroutine = value;
                 return true;
             }
+
+            // 否则返回 true 让协程继续等待下一帧执行。
+            return true;
         }
     }
 }

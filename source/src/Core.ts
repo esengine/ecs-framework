@@ -164,17 +164,23 @@ module es {
         }
 
         public startDebugDraw() {
+            // 如果debug标志未开启，则直接返回
             if (!this.debug) return;
-            this._frameCounter++;
-            this._frameCounterElapsedTime += Time.deltaTime;
-            if (this._frameCounterElapsedTime >= 1) {
-                let memoryInfo = window.performance["memory"];
-                if (memoryInfo != null) {
+        
+            // 计算帧率和内存使用情况
+            this._frameCounter++; // 帧计数器递增
+            this._frameCounterElapsedTime += Time.deltaTime; // 帧计数器累加时间
+            if (this._frameCounterElapsedTime >= 1) { // 如果时间已经超过1秒，则计算帧率和内存使用情况
+                let memoryInfo = window.performance["memory"]; // 获取内存使用情况
+                if (memoryInfo != null) { // 如果内存使用情况存在
+                    // 计算内存使用情况并保留2位小数
                     this._totalMemory = Number((memoryInfo.totalJSHeapSize / 1048576).toFixed(2));
                 }
-                if (this._titleMemory) this._titleMemory(this._totalMemory, this._frameCounter);
-                this._frameCounter = 0;
-                this._frameCounterElapsedTime -= 1;
+                if (this._titleMemory) { // 如果回调函数存在，则执行回调函数，更新标题栏显示
+                    this._titleMemory(this._totalMemory, this._frameCounter);
+                }
+                this._frameCounter = 0; // 重置帧计数器
+                this._frameCounterElapsedTime -= 1; // 减去1秒时间
             }
         }
 

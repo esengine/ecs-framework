@@ -1,53 +1,76 @@
 ///<reference path="./EntitySystem.ts" />
 module es {
     /**
-     * 基本实体处理系统。将其用作处理具有特定组件的许多实体的基础
-     * 
-     * 按实体引用遍历实体订阅成员实体的系统
-     * 当你需要处理与Matcher相匹配的实体，并且你更喜欢使用Entity的时候，可以使用这个功能。
+     * 定义一个处理实体的抽象类，继承自 EntitySystem 类。
+     * 子类需要实现 processEntity 方法，用于实现具体的实体处理逻辑。
      */
     export abstract class EntityProcessingSystem extends EntitySystem {
+        /**
+         * 是否启用系统，默认为启用。
+         */
         public enabled: boolean = true;
 
+        /**
+         * 构造函数，初始化实体匹配器。
+         * @param matcher 实体匹配器
+         */
         constructor(matcher: Matcher) {
             super(matcher);
         }
 
+        /**
+         * 处理单个实体，由子类实现。
+         * @param entity 待处理的实体
+         */
+        public abstract processEntity(entity: Entity): void;
 
         /**
-         * 处理特定的实体
-         * @param entity
+         * 在晚于 update 的时间更新实体，由子类实现。
+         * @param entity 待处理的实体
          */
-        public abstract processEntity(entity: Entity);
-
-        public lateProcessEntity(entity: Entity) {
-
+        public lateProcessEntity(entity: Entity): void {
+            // do nothing
         }
 
         /**
-         * 遍历这个系统的所有实体并逐个处理它们
-         * @param entities
+         * 遍历系统的所有实体，逐个进行实体处理。
+         * @param entities 实体数组
          */
         protected process(entities: Entity[]) {
-            if (entities.length == 0)
+            // 如果实体数组为空，则直接返回
+            if (entities.length === 0) {
                 return;
-            
-            for (let i = 0, s = entities.length; i < s; ++ i) {
-                let entity = entities[i];
+            }
+
+            // 遍历实体数组，逐个进行实体处理
+            for (let i = 0, len = entities.length; i < len; i++) {
+                const entity = entities[i];
                 this.processEntity(entity);
             }
         }
 
+        /**
+         * 在晚于 update 的时间更新实体。
+         * @param entities 实体数组
+         */
         protected lateProcess(entities: Entity[]) {
-            if (entities.length == 0)
+            // 如果实体数组为空，则直接返回
+            if (entities.length === 0) {
                 return;
+            }
 
-            for (let i = 0, s = entities.length; i < s; ++ i) {
-                let entity = entities[i];
+            // 遍历实体数组，逐个进行实体处理
+            for (let i = 0, len = entities.length; i < len; i++) {
+                const entity = entities[i];
                 this.lateProcessEntity(entity);
             }
         }
 
+        /**
+         * 判断系统是否需要进行实体处理。
+         * 如果启用了系统，则需要进行实体处理，返回 true；
+         * 否则不需要进行实体处理，返回 false。
+         */
         protected checkProcessing(): boolean {
             return this.enabled;
         }

@@ -1,4 +1,7 @@
 module es {
+    /**
+     * 定义一个实体匹配器类。
+     */
     export class Matcher {
         protected allSet: (new (...args: any[]) => Component)[] = [];
         protected exclusionSet: (new (...args: any[]) => Component)[] = [];
@@ -25,59 +28,61 @@ module es {
         }
 
         public isInterested(components: Bits) {
-            if (this.allSet.length != 0) {
-                for (let i = 0, s = this.allSet.length; i < s; ++ i) {
-                    let type = this.allSet[i];
-                    if (!components.get(ComponentTypeManager.getIndexFor(type)))
+            if (this.allSet.length !== 0) {
+                for (let i = 0; i < this.allSet.length; i++) {
+                    const type = this.allSet[i];
+                    if (!components.get(ComponentTypeManager.getIndexFor(type))) {
                         return false;
+                    }
                 }
             }
 
-            if (this.exclusionSet.length != 0) {
-                for (let i = 0, s = this.exclusionSet.length; i < s; ++ i) {
-                    let type = this.exclusionSet[i];
-                    if (components.get(ComponentTypeManager.getIndexFor(type)))
+            if (this.exclusionSet.length !== 0) {
+                for (let i = 0; i < this.exclusionSet.length; i++) {
+                    const type = this.exclusionSet[i];
+                    if (components.get(ComponentTypeManager.getIndexFor(type))) {
                         return false;
+                    }
                 }
             }
 
-            if (this.oneSet.length != 0) {
-                for (let i = 0, s = this.oneSet.length; i < s; ++ i) {
-                    let type = this.oneSet[i];
-                    if (components.get(ComponentTypeManager.getIndexFor(type)))
+            if (this.oneSet.length !== 0) {
+                for (let i = 0; i < this.oneSet.length; i++) {
+                    const type = this.oneSet[i];
+                    if (components.get(ComponentTypeManager.getIndexFor(type))) {
                         return true;
+                    }
                 }
+                return false;
             }
 
             return true;
         }
 
-        public all(...types: any[]): Matcher {
-            let t;
-            for (let i = 0, s = types.length; i < s; ++ i) {
-                t = types[i];
-                this.allSet.push(t);
-            }
-
+        /**
+        * 添加所有包含的组件类型。
+        * @param types 所有包含的组件类型列表
+        */
+        public all(...types: (new (...args: any[]) => Component)[]): Matcher {
+            this.allSet.push(...types);
             return this;
         }
 
-        public exclude(...types: any[]) {
-            let t;
-            for (let i = 0, s = types.length; i < s; ++ i) {
-                t = types[i];
-                this.exclusionSet.push(t);
-            }
-
+        /**
+         * 添加排除包含的组件类型。
+         * @param types 排除包含的组件类型列表
+         */
+        public exclude(...types: (new (...args: any[]) => Component)[]): Matcher {
+            this.exclusionSet.push(...types);
             return this;
         }
 
-        public one(...types: any[]) {
-            for (let i = 0, s = types.length; i < s; ++ i) {
-                const t = types[i];
-                this.oneSet.push(t);
-            }
-
+        /**
+         * 添加至少包含其中之一的组件类型。
+         * @param types 至少包含其中之一的组件类型列表
+         */
+        public one(...types: (new (...args: any[]) => Component)[]): Matcher {
+            this.oneSet.push(...types);
             return this;
         }
     }

@@ -1668,31 +1668,12 @@ declare module es {
 }
 declare module es {
     /**
-     * 追踪每个实体的冷却时间，当实体的计时器耗尽时进行处理
-     *
-     * 一个示例系统将是ExpirationSystem，该系统将在特定生存期后删除实体。
-     * 你不必运行会为每个实体递减timeLeft值的系统
-     * 而只需使用此系统在寿命最短的实体时在将来执行
-     * 然后重置系统在未来的某一个最短命实体的时间运行
-     *
-     * 另一个例子是一个动画系统
-     * 你知道什么时候你必须对某个实体进行动画制作，比如300毫秒内。
-     * 所以你可以设置系统以300毫秒为单位运行来执行动画
-     *
-     * 这将在某些情况下节省CPU周期
+     * 这个类是一个实体系统的基类，其可以被子类继承并在子类中实现具体的实体处理逻辑。
+     * 该类提供了实体的添加、删除、更新等基本操作，并支持设置系统的更新时序、检查系统是否需要处理实体、获取系统的场景等方法
      */
     abstract class DelayedIteratingSystem extends EntitySystem {
-        /**
-         * 一个实体应被处理的时间
-         */
         private delay;
-        /**
-         * 如果系统正在运行，并倒计时延迟
-         */
         private running;
-        /**
-         * 倒计时
-         */
         private acc;
         constructor(matcher: Matcher);
         protected process(entities: Entity[]): void;
@@ -1702,30 +1683,17 @@ declare module es {
          * 如果系统已经停止（不运行），那么提供的延迟将被用来重新启动系统，无论其值如何
          * 如果系统已经在倒计时，并且提供的延迟大于剩余时间，系统将忽略它。
          * 如果提供的延迟时间短于剩余时间，系统将重新启动，以提供的延迟时间运行。
-         * @param offeredDelay
+         * @param offeredDelay 提供的延迟时间，单位为秒
          */
         offerDelay(offeredDelay: number): void;
-        /**
-         * 处理本系统感兴趣的实体
-         * 从实体定义的延迟中抽象出accumulativeDelta
-         * @param entity
-         * @param accumulatedDelta 本系统最后一次执行后的delta时间
-         */
-        protected abstract processDelta(entity: Entity, accumulatedDelta: number): any;
-        protected abstract processExpired(entity: Entity): any;
-        /**
-         * 返回该实体处理前的延迟时间
-         * @param entity
-         */
-        protected abstract getRemainingDelay(entity: Entity): number;
         /**
          * 获取系统被命令处理实体后的初始延迟
          */
         getInitialTimeDelay(): number;
         /**
-         * 获取系统计划运行前的时间
-         * 如果系统没有运行，则返回零
-         */
+        * 获取系统计划运行前的时间
+        * 如果系统没有运行，则返回零
+        */
         getRemainingTimeUntilProcessing(): number;
         /**
          * 检查系统是否正在倒计时处理
@@ -1735,51 +1703,101 @@ declare module es {
          * 停止系统运行，中止当前倒计时
          */
         stop(): void;
+        /**
+        * 处理给定实体的延迟时间的一部分，抽象出累积的 Delta 值。
+        * @param entity 要处理的实体
+        * @param accumulatedDelta 本系统最后一次执行后的累积 delta 时间
+        */
+        protected abstract processDelta(entity: Entity, accumulatedDelta: number): any;
+        /**
+         * 处理已到期的实体。
+         * @param entity 要处理的实体
+         */
+        protected abstract processExpired(entity: Entity): any;
+        /**
+         * 获取给定实体剩余的延迟时间。
+         * @param entity 要检查的实体
+         * @returns 剩余的延迟时间（以秒为单位）
+         */
+        protected abstract getRemainingDelay(entity: Entity): number;
     }
 }
 declare module es {
     /**
-     * 基本实体处理系统。将其用作处理具有特定组件的许多实体的基础
-     *
-     * 按实体引用遍历实体订阅成员实体的系统
-     * 当你需要处理与Matcher相匹配的实体，并且你更喜欢使用Entity的时候，可以使用这个功能。
+     * 定义一个处理实体的抽象类，继承自 EntitySystem 类。
+     * 子类需要实现 processEntity 方法，用于实现具体的实体处理逻辑。
      */
     abstract class EntityProcessingSystem extends EntitySystem {
+        /**
+         * 是否启用系统，默认为启用。
+         */
         enabled: boolean;
+        /**
+         * 构造函数，初始化实体匹配器。
+         * @param matcher 实体匹配器
+         */
         constructor(matcher: Matcher);
         /**
-         * 处理特定的实体
-         * @param entity
+         * 处理单个实体，由子类实现。
+         * @param entity 待处理的实体
          */
-        abstract processEntity(entity: Entity): any;
+        abstract processEntity(entity: Entity): void;
+        /**
+         * 在晚于 update 的时间更新实体，由子类实现。
+         * @param entity 待处理的实体
+         */
         lateProcessEntity(entity: Entity): void;
         /**
-         * 遍历这个系统的所有实体并逐个处理它们
-         * @param entities
+         * 遍历系统的所有实体，逐个进行实体处理。
+         * @param entities 实体数组
          */
         protected process(entities: Entity[]): void;
+        /**
+         * 在晚于 update 的时间更新实体。
+         * @param entities 实体数组
+         */
         protected lateProcess(entities: Entity[]): void;
+        /**
+         * 判断系统是否需要进行实体处理。
+         * 如果启用了系统，则需要进行实体处理，返回 true；
+         * 否则不需要进行实体处理，返回 false。
+         */
         protected checkProcessing(): boolean;
     }
 }
 declare module es {
     /**
-     * 实体系统以一定的时间间隔进行处理
+     * 定义一个按时间间隔处理的抽象类，继承自 EntitySystem 类。
+     * 子类需要实现 process 方法，用于实现具体的处理逻辑。
      */
     abstract class IntervalSystem extends EntitySystem {
         /**
          * 累积增量以跟踪间隔
          */
-        protected acc: number;
+        private acc;
         /**
          * 更新之间需要等待多长时间
          */
         private readonly interval;
-        private intervalDelta;
+        /**
+         * 时间间隔的余数，用于计算下一次需要等待的时间
+         */
+        private intervalRemainder;
+        /**
+         * 构造函数，初始化时间间隔。
+         * @param matcher 实体匹配器
+         * @param interval 时间间隔
+         */
         constructor(matcher: Matcher, interval: number);
+        /**
+         * 判断是否需要进行处理。
+         * 如果需要进行处理，则更新累积增量和时间间隔余数，返回 true；
+         * 否则返回 false。
+         */
         protected checkProcessing(): boolean;
         /**
-         * 获取本系统上次处理后的实际delta值
+         * 获取本系统上次处理后的实际 delta 值。
+         * 实际 delta 值等于时间间隔加上时间间隔余数。
          */
         protected getIntervalDelta(): number;
     }
@@ -1804,52 +1822,42 @@ declare module es {
 }
 declare module es {
     /**
-     * JobSystem使用实体的子集调用Execute（entities），并在指定数量的线程上分配工作负载。
+     * 定义一个被动的实体系统，继承自 EntitySystem 类。
+     * 被动的实体系统不会对实体进行任何修改，只会被动地接收实体的变化事件。
      */
-    abstract class JobSystem extends EntitySystem {
-        readonly _threads: number;
-        readonly _jobs: Job[];
-        readonly _executeStr: string;
-        constructor(matcher: Matcher, threads: number);
-        protected process(entities: Entity[]): void;
-        private queueOnThread;
-        /**
-         * 当操作完成时，改变的值需要用户进行手动传递
-         * 由于worker数据无法共享，所以这块需要特殊处理
-         * @example this.test = job[0].context.test;
-         * @param job
-         */
-        protected abstract resetJob(job: Job): any;
-        /**
-         * 对指定实体进行多线程操作
-         * @param entity
-         */
-        protected abstract execute(entity: Entity): any;
-    }
-    class Job {
-        entities: Entity[];
-        from: number;
-        to: number;
-        worker: Worker;
-        execute: string;
-        err: string;
-        context: any;
-        set(entities: Entity[], from: number, to: number, execute: string, context: any): void;
-    }
-}
-declare module es {
     abstract class PassiveSystem extends EntitySystem {
+        /**
+         * 当实体发生变化时，不进行任何操作。
+         * @param entity 发生变化的实体
+         */
         onChanged(entity: Entity): void;
+        /**
+         * 不进行任何处理，只进行开始和结束计时。
+         * @param entities 实体数组，未被使用
+         */
         protected process(entities: Entity[]): void;
     }
 }
-/** 用于协调其他系统的通用系统基类 */
 declare module es {
+    /**
+     * 定义一个处理实体的抽象类，继承自 EntitySystem 类。
+     * 子类需要实现 processSystem 方法，用于实现具体的处理逻辑。
+     */
     abstract class ProcessingSystem extends EntitySystem {
+        /**
+         * 当实体发生变化时，不进行任何操作。
+         * @param entity 发生变化的实体
+         */
         onChanged(entity: Entity): void;
-        /** 处理我们的系统 每帧调用 */
-        abstract processSystem(): any;
+        /**
+         * 处理实体，每帧调用 processSystem 方法进行处理。
+         * @param entities 实体数组，未被使用
+         */
         protected process(entities: Entity[]): void;
+        /**
+         * 处理实体的具体方法，由子类实现。
+         */
+        abstract processSystem(): void;
     }
 }
 declare module es {
@@ -1939,19 +1947,52 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * 组件类型工厂，用于生成和管理组件类型。
+     * 维护了一个类型映射表，将组件类型与其唯一索引相对应，以便在运行时高效地检查实体是否包含特定的组件类型。
+     */
     class ComponentTypeFactory {
-        private componentTypes_;
-        private componentTypeCount_;
-        types: Bag<ComponentType>;
-        constructor();
-        getTypeFor(c: any): ComponentType;
-        getIndexFor(c: any): number;
+        /** 组件类型与其唯一索引的映射表 */
+        private componentTypes;
+        /** 组件类型列表，按索引访问组件类型 */
+        readonly types: Bag<ComponentType>;
+        /** 当前组件类型的计数器 */
+        private componentTypeCount;
+        /**
+         * 获取给定组件类型的唯一索引。
+         * 如果该组件类型尚未存在于类型映射表中，则创建一个新的组件类型，并将其添加到映射表和类型列表中。
+         * @param c 要查找或创建的组件类型
+         * @returns 组件类型的唯一索引
+         */
+        getIndexFor(c: new (...args: any[]) => any): number;
+        /**
+         * 获取给定组件类型的ComponentType对象。
+         * 如果该组件类型尚未存在于类型映射表中，则创建一个新的ComponentType对象，并将其添加到映射表和类型列表中。
+         * @param c 要查找或创建的组件类型
+         * @returns 组件类型的ComponentType对象
+         */
+        getTypeFor(c: new (...args: any[]) => any): ComponentType;
     }
 }
 declare module es {
+    /**
+     * 组件类型管理器，维护了一个组件类型和它们对应的位掩码之间的映射关系。
+     * 用于实现实体匹配器中组件类型的比较操作，以确定实体是否符合给定的匹配器条件。
+     */
     class ComponentTypeManager {
+        /** 存储组件类型和它们对应的位掩码的Map */
         private static _componentTypesMask;
+        /**
+         * 将给定的组件类型添加到组件类型列表中，并分配一个唯一的位掩码。
+         * @param type 要添加的组件类型
+         */
         static add(type: any): void;
+        /**
+         * 获取给定组件类型的位掩码。
+         * 如果该组件类型还没有分配位掩码，则将其添加到列表中，并分配一个唯一的位掩码。
+         * @param type 要获取位掩码的组件类型
+         * @returns 组件类型的位掩码
+         */
         static getIndexFor(type: any): number;
     }
 }
@@ -2119,6 +2160,9 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * 定义一个实体匹配器类。
+     */
     class Matcher {
         protected allSet: (new (...args: any[]) => Component)[];
         protected exclusionSet: (new (...args: any[]) => Component)[];
@@ -2129,9 +2173,21 @@ declare module es {
         getOneSet(): (new (...args: any[]) => Component)[];
         isInterestedEntity(e: Entity): boolean;
         isInterested(components: Bits): boolean;
-        all(...types: any[]): Matcher;
-        exclude(...types: any[]): this;
-        one(...types: any[]): this;
+        /**
+        * 添加所有包含的组件类型。
+        * @param types 所有包含的组件类型列表
+        */
+        all(...types: (new (...args: any[]) => Component)[]): Matcher;
+        /**
+         * 添加排除包含的组件类型。
+         * @param types 排除包含的组件类型列表
+         */
+        exclude(...types: (new (...args: any[]) => Component)[]): Matcher;
+        /**
+         * 添加至少包含其中之一的组件类型。
+         * @param types 至少包含其中之一的组件类型列表
+         */
+        one(...types: (new (...args: any[]) => Component)[]): Matcher;
     }
 }
 declare module es {
@@ -2323,23 +2379,6 @@ declare class TimeUtils {
      * 输出   3600000
      */
     static timeToMillisecond(time: string, partition?: string): string;
-}
-declare module es {
-    /**
-     * 开辟一个新线程
-     * 注意：它无法获得主线程中的上下文
-     */
-    class WorkerUtils {
-        /** 正在执行的队列 */
-        private static readonly pendingJobs;
-        private static jobIdGen;
-        /**
-         * 创建一个worker
-         * @param doFunc worker所能做的事情
-         */
-        static makeWorker(doFunc: Function): Worker;
-        static workerMessage(worker: Worker): (...message: any[]) => Promise<{}>;
-    }
 }
 declare module es {
     /**
@@ -4697,6 +4736,12 @@ declare module es {
          * @param data 事件数据
          */
         emit(eventType: T, ...data: any[]): void;
+        /**
+         * 判断是否存在该类型的观察者
+         * @param eventType 事件类型
+         * @param handler 事件函数
+         */
+        hasObserver(eventType: T, handler: Function): boolean;
     }
 }
 declare module es {
@@ -5173,44 +5218,46 @@ declare module es {
     }
 }
 declare module es {
-    /**
-     * 用于池任何对象
-     */
     class Pool {
         private static _objectQueue;
         /**
          * 预热缓存，使用最大的cacheCount对象填充缓存
-         * @param type
-         * @param cacheCount
+         * @param type 要预热的类型
+         * @param cacheCount 预热缓存数量
          */
         static warmCache<T>(type: new (...args: any[]) => T, cacheCount: number): void;
         /**
-         * 将缓存修剪为cacheCount项目
-         * @param cacheCount
-         */
+        * 将缓存修剪为cacheCount项目
+        * @param type 要修剪的类型
+        * @param cacheCount 修剪后的缓存数量
+        */
         static trimCache<T>(type: new (...args: any[]) => T, cacheCount: number): void;
         /**
          * 清除缓存
+         * @param type 要清除缓存的类型
          */
         static clearCache<T>(type: new (...args: any[]) => T): void;
         /**
-         * 如果可以的话，从堆栈中弹出一个项
+         * 如果可以的话，从缓存中获取一个对象
+         * @param type 要获取的类型
          */
         static obtain<T>(type: new (...args: any[]) => T): T;
         /**
-         * 将项推回堆栈
-         * @param obj
+         * 将对象推回缓存
+         * @param type 对象的类型
+         * @param obj 要推回的对象
          */
         static free<T>(type: new (...args: any[]) => T, obj: T): void;
+        /**
+         * 检查缓存中是否已存在给定类型的对象池，如果不存在则创建一个
+         * @param type 要检查的类型
+         */
         private static checkCreate;
     }
     interface IPoolable {
-        /**
-         * 重置对象以供重用。对象引用应该为空，字段可以设置为默认值
-         */
-        reset(): any;
+        reset(): void;
     }
-    var isIPoolable: (props: any) => props is IPoolable;
+    const isIPoolable: (props: any) => props is IPoolable;
 }
 declare module es {
     /**
@@ -5248,7 +5295,7 @@ declare module es {
      * CoroutineManager用于隐藏Coroutine所需数据的内部类
      */
     class CoroutineImpl implements ICoroutine, IPoolable {
-        enumerator: Generator;
+        enumerator: any;
         /**
          * 每当产生一个延迟，它就会被添加到跟踪延迟的waitTimer中
          */
@@ -5278,7 +5325,9 @@ declare module es {
          * Coroutine在每一帧调用Update之前被执行
          * @param enumerator
          */
-        startCoroutine(enumerator: any): CoroutineImpl;
+        startCoroutine<T>(enumerator: Iterator<T> | (() => Iterator<T>)): CoroutineImpl | null;
+        private getOrCreateCoroutine;
+        private addCoroutine;
         update(): void;
         /**
          * 勾选一个coroutine，如果该coroutine应该在下一帧继续运行，则返回true。本方法会将完成的coroutine放回Pool
