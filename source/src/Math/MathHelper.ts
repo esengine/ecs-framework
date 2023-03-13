@@ -67,14 +67,16 @@ module es {
         }
 
         /**
-         * 将值（在leftMin-leftMax范围内）映射到一个在rightMin-rightMax范围内的值 
-         * @param value
-         * @param leftMin
-         * @param leftMax
-         * @param rightMin
-         * @param rightMax
+         * 对给定值进行范围映射。
+         * @param value 要映射的值。
+         * @param leftMin 输入范围的最小值。
+         * @param leftMax 输入范围的最大值。
+         * @param rightMin 输出范围的最小值。
+         * @param rightMax 输出范围的最大值。
+         * @returns 映射后的值。
          */
         public static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number) {
+            // 使用线性插值公式进行映射
             return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
         }
 
@@ -90,28 +92,30 @@ module es {
         }
 
         /**
-         * 将值从某个任意范围映射到1到0范围
-         * 这相当于map01的取反
+         * 接收一个值value和两个边界min和max作为参数。它将value映射到0到1的范围内，然后返回1减去该结果的值，因此该函数的结果将在1到0之间
          * @param value 
          * @param min 
          * @param max 
          * @returns 
          */
         public static map10(value: number, min: number, max: number) {
-            return 1 - this.map01(value, min, max);
+            // 将 value 映射到 0 到 1 的范围内
+            const mappedValue = this.map01(value, min, max);
+            // 返回 1 减去 mappedValue 的值，结果将在 1 到 0 之间
+            return 1 - mappedValue;
         }
 
         /**
-         * 使用三次方程在两个值之间进行插值
-         * @param value1 
-         * @param value2 
-         * @param amount 
+         * 在两个值之间进行平滑的线性插值。与 lerp 相似，但具有平滑过渡的特点，当 t 在 0 和 1 之间时，返回 [value1, value2] 之间平滑插值后的结果。
+         * @param value1 起始值
+         * @param value2 结束值
+         * @param amount 插值的程度，范围在 0 到 1 之间。
+         * @returns 两个值之间进行平滑的线性插值后的结果。
          */
-        public static smoothStep(value1: number, value2: number, amount: number) {
-            let result = this.clamp(amount, 0, 1);
-            result = MathHelper.hermite(value1, 0, value2, 0, result);
-
-            return result;
+        public static smoothStep(value1: number, value2: number, amount: number): number {
+            amount = this.clamp01(amount); // 将 amount 的值限制在 0 到 1 之间
+            amount = this.hermite(value1, 0, value2, 0, amount); // 使用 hermite 函数进行平滑插值
+            return amount; // 返回插值后的结果
         }
 
         /**
@@ -132,75 +136,107 @@ module es {
         }
 
         /**
-         * 确定值是否以2为底
+         * 判断给定的数值是否是2的幂
          * @param value 
          * @returns 
          */
         public static isPowerOfTwo(value: number) {
-            return (value > 0) && ((value % (value - 1)) == 0);
+            // 确保值大于0
+            if (value <= 0) {
+                return false;
+            }
+        
+            // 检查是否为2的幂
+            return (value & (value - 1)) == 0;
         }
 
-        public static lerp(from: number, to: number, t: number) {
-            return from + (to - from) * this.clamp01(t);
+        /**
+         * 线性插值
+         * @param from 
+         * @param to 
+         * @param t 
+         * @returns 
+         */
+        public static lerp(from: number, to: number, t: number): number {
+            // 计算在 from 和 to 之间 t 所占的比例
+            const clampedT = MathHelper.clamp01(t);
+            // 计算 from 到 to 的差值，再乘以比例，得到从 from 到 to 之间 t 所在的位置
+            return from + (to - from) * clampedT;
         }
 
+        /**
+         * 线性插值前检查两个数的差是否小于一个给定的epsilon值，如果小于，则直接返回结束值b，否则执行线性插值并返回插值结果。
+         * @param a 起始值
+         * @param b 结束值
+         * @param t 插值因子
+         * @param epsilon 差值阈值，当两个数的差小于epsilon时直接返回结束值b。
+         * @returns 如果a和b的差小于给定的epsilon值，则返回b，否则返回a到b的插值结果。
+         */
         public static betterLerp(a: number, b: number, t: number, epsilon: number): number {
             return Math.abs(a - b) < epsilon ? b : MathHelper.lerp(a, b, t);
         }
 
         /**
-         * 使度数的角度在a和b之间
-         * 用于处理360度环绕 
-         * @param a 
-         * @param b 
-         * @param t 
-         * @returns 
+         * 在两个角度之间进行插值，使用角度值表示角度
+         * @param a 起始角度
+         * @param b 结束角度
+         * @param t 插值比例，范围[0, 1]
+         * @returns 两个角度之间插值后的角度，使用角度值表示
          */
-        public static lerpAngle(a: number, b: number, t: number) {
-            let num = this.repeat(b - a, 360);
-            if (num > 180)
-                num -= 360;
+        public static lerpAngle(a: number, b: number, t: number): number {
+            // 计算从a到b的差值，对于超过360的值，需要进行修正
+            let deltaAngle = this.repeat(b - a, 360);
+            if (deltaAngle > 180) {
+                deltaAngle -= 360;
+            }
 
-            return a + num * this.clamp01(t);
+            // 返回经过插值后的角度
+            return a + deltaAngle * this.clamp01(t);
         }
 
         /**
-         * 使弧度的角度在a和b之间
-         * @param a 
-         * @param b 
-         * @param t 
-         * @returns 
+         * 在两个角度之间进行插值，使用弧度值表示角度
+         * @param a 起始角度
+         * @param b 结束角度
+         * @param t 插值比例，范围[0, 1]
+         * @returns 两个角度之间插值后的角度，使用弧度值表示
          */
-        public static lerpAngleRadians(a: number, b: number, t: number) {
-            let num = this.repeat(b - a, Math.PI * 2);
-            if (num > Math.PI)
-                num -= Math.PI * 2;
+        public static lerpAngleRadians(a: number, b: number, t: number): number {
+            // 计算从a到b的差值，对于超过2π的值，需要进行修正
+            let deltaAngle = this.repeat(b - a, Math.PI * 2);
+            if (deltaAngle > Math.PI) {
+                deltaAngle -= Math.PI * 2;
+            }
 
-            return a + num * this.clamp01(t);
+            // 返回经过插值后的角度
+            return a + deltaAngle * this.clamp01(t);
         }
 
         /**
-         * 循环t使其不大于长度且不小于0 
-         * @param t 
-         * @param length 
-         * @returns 
+         * 指定长度上来回“弹跳”（ping-pong）一个变量
+         * 因为弹跳的过程是来回循环的。最后，根据t在弹跳过程中相对于length的位置
+         * @param t 变量的当前值
+         * @param length 指定的长度
+         * @returns 0到length之间变化的值
          */
         public static pingPong(t: number, length: number) {
+            // 将t的值限制在0到length*2的范围内
             t = this.repeat(t, length * 2);
+            // 返回length和t-length的差的绝对值
             return length - Math.abs(t - length);
         }
 
         /**
-         * 如果value> = threshold返回其符号，否则返回0 
-         * @param value 
-         * @param threshold 
-         * @returns 
+         * 当value的绝对值大于等于threshold时返回value的符号，否则返回0
+         * @param value - 输入的值
+         * @param threshold - 阈值
+         * @returns value的符号或0
          */
         public static signThreshold(value: number, threshold: number) {
-            if (Math.abs(value) >= threshold)
-                return Math.sign(value);
+            if (Math.abs(value) >= threshold) // 如果绝对值大于等于阈值
+                return Math.sign(value); // 返回value的符号
             else
-                return 0;
+                return 0; // 否则返回0
         }
 
         /**
@@ -223,38 +259,43 @@ module es {
             return (t - from) / length;
         }
 
-        /** 
-         * 在两个值之间线性插值
-         * 此方法是MathHelper.Lerp的效率较低，更精确的版本。
+        /**
+         * 精确的线性插值，避免出现累积误差
+         * @param value1 起始值
+         * @param value2 结束值
+         * @param amount 插值比例
+         * @returns 两个值的线性插值结果
          */
         public static lerpPrecise(value1: number, value2: number, amount: number) {
             return ((1 - amount) * value1) + (value2 * amount);
         }
 
-        public static clamp(value: number, min: number, max: number) {
-            if (value < min)
+        /**
+         * 将给定值限制在指定范围内
+         * @param value 需要被限制的值
+         * @param min 最小值
+         * @param max 最大值
+         * @returns 限制后的值
+         */
+        public static clamp(value: number, min: number, max: number): number {
+            if (value < min) { // 如果值小于最小值，则返回最小值
                 return min;
-
-            if (value > max)
+            } else if (value > max) { // 如果值大于最大值，则返回最大值
                 return max;
-
-            return value;
-        }
-
-        public static snap(value: number, increment: number) {
-            return Math.round(value / increment) * increment;
+            } else { // 否则返回原始值
+                return value;
+            }
         }
 
         /**
-         * 给定圆心、半径和角度，得到圆周上的一个点。0度是3点钟。
-         * @param circleCenter
-         * @param radius
-         * @param angleInDegrees
+         * 按照指定增量取整到最接近的整数倍数
+         * @param value 
+         * @param increment 
+         * @returns 
          */
-        public static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number) {
-            let radians = MathHelper.toRadians(angleInDegrees);
-            return new Vector2(Math.cos(radians) * radians + circleCenter.x,
-                Math.sin(radians) * radians + circleCenter.y);
+        public static snap(value: number, increment: number) {
+            // 将给定值除以增量取整后再乘以增量，得到最接近给定值的整数倍
+            return Math.round(value / increment) * increment;
         }
 
         /**
@@ -275,22 +316,23 @@ module es {
         }
 
         /**
-         * 将值四舍五入并返回它和四舍五入后的数值
-         * @param value 
-         * @param roundedAmount 
-         * @returns 
+         * 将数值四舍五入到最接近的整数，并计算四舍五入的数量
+         * @param value 要四舍五入的数值
+         * @param roundedAmount 用于存储四舍五入的数量的参数
+         * @returns 四舍五入后的整数
          */
-        public static roundWithRoundedAmount(value: number, roundedAmount: Ref<number>) {
+        public static roundWithRoundedAmount(value: number, roundedAmount: Ref<number>): number {
             let rounded = Math.round(value);
             roundedAmount.value = value - (rounded * Math.round(value / rounded));
             return rounded;
         }
 
         /**
-         * 数值限定在0-1之间
-         * @param value
+         * 将一个数值限制在 [0,1] 范围内
+         * @param value 要限制的数值
+         * @returns 限制后的数值
          */
-        public static clamp01(value: number) {
+        public static clamp01(value: number): number {
             if (value < 0)
                 return 0;
 
@@ -300,267 +342,406 @@ module es {
             return value;
         }
 
-        public static angleBetweenVectors(from: Vector2, to: Vector2) {
+        /**
+         * 计算从一个向量到另一个向量之间的角度
+         * @param from 起始向量
+         * @param to 目标向量
+         * @returns 两个向量之间的角度（弧度制）
+         */
+        public static angleBetweenVectors(from: Vector2, to: Vector2): number {
+            // 使用 Math.atan2() 方法计算出两个向量之间的夹角，返回的是弧度制角度
             return Math.atan2(to.y - from.y, to.x - from.x);
         }
 
-        public static angleToVector(angleRadians: number, length: number) {
-            return new Vector2(Math.cos(angleRadians) * length, Math.sin(angleRadians) * length);
+        /**
+         * 将极角和极径转换为向量坐标
+         * @param angleRadians 极角弧度值
+         * @param length 极径长度
+         * @returns 对应向量坐标
+         */
+        public static angleToVector(angleRadians: number, length: number): Vector2 {
+            // 根据给定的极角弧度值，使用三角函数计算出向量的x坐标和y坐标
+            const x = Math.cos(angleRadians) * length;
+            const y = Math.sin(angleRadians) * length;
+
+            // 使用上一步得到的坐标值创建一个新的Vector2对象并返回
+            return new Vector2(x, y);
         }
 
         /**
-         * 增加t并确保它总是大于或等于0并且小于长度
-         * @param t
-         * @param length
+         * 将一个数加上1，并在结果等于指定长度时将其设置为0
+         * @param t 要加上1的数
+         * @param length 指定长度
+         * @returns 加上1后的结果，如果等于指定长度，则为0
          */
-        public static incrementWithWrap(t: number, length: number) {
+        public static incrementWithWrap(t: number, length: number): number {
+            // 将给定数t加上1。
             t++;
-            if (t == length)
+
+            // 如果结果等于指定长度，则返回0。
+            if (t == length) {
                 return 0;
+            }
 
+            // 否则，返回结果。
             return t;
         }
 
         /**
-         * 递减t并确保其始终大于或等于0且小于长度 
-         * @param t 
-         * @param length 
-         * @returns 
+         * 将一个数减去1，并在结果小于0时将其设置为指定长度减去1
+         * @param t 要减去1的数
+         * @param length 指定长度
+         * @returns 减去1后的结果，如果小于0，则为指定长度减去1
          */
-        public static decrementWithWrap(t: number, length: number) {
+        public static decrementWithWrap(t: number, length: number): number {
+            // 将给定数t减去1。
             t--;
-            if (t < 0)
-                return length - 1;
 
+            // 如果结果小于0，则返回指定长度减去1。
+            if (t < 0) {
+                return length - 1;
+            }
+
+            // 否则，返回结果。
             return t;
         }
 
         /**
-         * 返回sqrt（x * x + y * y） 
-         * @param x 
-         * @param y 
-         * @returns 
+         * 计算直角三角形斜边长度，即求两个数的欧几里得距离
+         * @param x 直角三角形的一条直角边
+         * @param y 直角三角形的另一条直角边
+         * @returns 三角形斜边长度
          */
-        public static hypotenuse(x: number, y: number) {
-            return Math.sqrt(x * x + y * y);
+        public static hypotenuse(x: number, y: number): number {
+            // 将x的平方与y的平方相加。
+            let sumOfSquares = x * x + y * y;
+
+            // 对和进行平方根运算。
+            let result = Math.sqrt(sumOfSquares);
+
+            // 返回结果。
+            return result;
         }
 
-        public static closestPowerOfTwoGreaterThan(x: number) {
-            x--;
-            x |= (x >> 1);
+        /**
+         * 计算大于给定数字的最小二次幂
+         * @param x 给定数字
+         * @returns 大于给定数字的最小二次幂
+         */
+        public static closestPowerOfTwoGreaterThan(x: number): number {
+            x--; // 将给定数字减1，得到一个二进制数的掩码。
+            x |= (x >> 1); // 将掩码的右侧一半全部设置为1。
             x |= (x >> 2);
             x |= (x >> 4);
             x |= (x >> 8);
-            x |= (x >> 16);
-
-            return (x + 1);
+            x |= (x >> 16); // 连续将掩码右移，并将右侧一半全部设置为1，直到得到一个全为1的掩码。
+            return (x + 1); // 将全为1的掩码加1，得到的结果就是大于给定数字的最小二次幂。
         }
 
         /**
-         * 以roundToNearest为步长，将值舍入到最接近的数字。例如：在125中找到127到最近的5个结果
-         * @param value 
-         * @param roundToNearest 
+         * 将数字舍入到最接近的指定值
+         * @param value 需要被舍入的数字
+         * @param roundToNearest 指定的舍入值
+         * @returns 舍入后的结果
          */
-        public static roundToNearest(value: number, roundToNearest: number) {
-            return Math.round(value / roundToNearest) * roundToNearest;
+        public static roundToNearest(value: number, roundToNearest: number): number {
+            const quotient: number = value / roundToNearest; // 将数字除以指定值，得到商。
+            const roundedQuotient: number = Math.round(quotient); // 将商四舍五入到最接近的整数。
+            const result: number = roundedQuotient * roundToNearest; // 将舍入后的整数乘以指定值，得到最终结果。
+            return result;
         }
 
         /**
-         * 检查传递的值是否在某个阈值之下。对于小规模、精确的比较很有用
-         * @param value 
-         * @param ep 
+         * 判断给定值是否接近于零
+         * @param value 给定值
+         * @param ep 阈值（可选，默认为Epsilon）
+         * @returns 如果接近于零，返回true，否则返回false
          */
-        public static withinEpsilon(value: number, ep: number = this.Epsilon) {
+        public static withinEpsilon(value: number, ep: number = this.Epsilon): boolean {
+            // 判断给定值的绝对值是否小于给定的阈值ep。
             return Math.abs(value) < ep;
         }
 
         /**
-         * 由上移量向上移。start可以小于或大于end。例如:开始是2，结束是10，移位是4，结果是6
-         * @param start
-         * @param end
-         * @param shift
+         * 逐渐逼近目标值
+         * @param start 起始值
+         * @param end 目标值
+         * @param shift 逼近步长
+         * @returns 逼近后的值
          */
         public static approach(start: number, end: number, shift: number): number {
-            if (start < end)
+            // 判断起始值是否小于目标值。
+            if (start < end) {
+                // 如果是，返回起始值加上shift和目标值中的较小值。
                 return Math.min(start + shift, end);
+            }
 
+            // 如果不是，返回起始值减去shift和目标值中的较大值。
             return Math.max(start - shift, end);
         }
 
         /**
-         * 通过偏移量钳位结果并选择最短路径，将起始角度向终止角度移动，起始值可以小于或大于终止值。 
-         * 示例1：开始是30，结束是100，移位是25，结果为55
-         * 示例2：开始是340，结束是30，移位是25，结果是5（365换为5） 
-         * @param start 
-         * @param end 
-         * @param shift 
-         * @returns 
+         * 逐渐逼近目标角度
+         * @param start 起始角度
+         * @param end 目标角度
+         * @param shift 逼近步长
+         * @returns 最终角度
          */
-        public static approachAngle(start: number, end: number, shift: number) {
-            let deltaAngle = this.deltaAngle(start, end);
-            if (-shift < deltaAngle && deltaAngle < shift)
-                return end;
+        public static approachAngle(start: number, end: number, shift: number): number {
+            // 调用this.deltaAngle()方法，获取起始角度和目标角度之间的夹角。
+            let deltaAngle: number = this.deltaAngle(start, end);
 
-            return this.repeat(this.approach(start, start + deltaAngle, shift), 360);
+            // 判断夹角是否小于等于shift，如果是，直接返回目标角度。
+            if (-shift < deltaAngle && deltaAngle < shift) {
+                return end;
+            }
+
+            // 如果夹角大于shift，则调用this.approach()方法，逐渐逼近目标角度。
+            let newAngle: number = this.approach(start, start + deltaAngle, shift);
+
+            // 通过调用this.repeat()方法，将最终的角度限制在0到360度之间。
+            newAngle = this.repeat(newAngle, 360);
+
+            // 返回最终的角度。
+            return newAngle;
         }
 
         /**
-         * 将 Vector 投影到另一个 Vector 上
-         * @param other 
+         * 计算向量在另一个向量上的投影向量
+         * @param self 要投影的向量
+         * @param other 目标向量
+         * @returns 投影向量
          */
-        public static project(self: Vector2, other: Vector2) {
-            let amt = self.dot(other) / other.lengthSquared();
-            let vec = other.scale(amt);
+        public static project(self: Vector2, other: Vector2): Vector2 {
+            // 通过调用Vector2.dot()方法，计算出self向量和other向量的点积。
+            let amt: number = self.dot(other) / other.lengthSquared();
+
+            // 通过调用Vector2.lengthSquared()方法，计算出other向量的长度的平方。
+            // 将点积除以长度的平方，得到self向量在other向量上的投影长度。
+            // 通过调用Vector2.scale()方法，将投影长度与other向量的方向向量相乘，得到投影向量。
+            let vec: Vector2 = other.scale(amt);
+
+            // 返回投影向量。
             return vec;
         }
 
         /**
-         * 通过将偏移量（全部以弧度为单位）夹住结果并选择最短路径，起始角度朝向终止角度。
-         * 起始值可以小于或大于终止值。 
-         * 此方法的工作方式与“角度”方法非常相似，唯一的区别是使用弧度代替度，并以2 * Pi代替360。 
-         * @param start 
-         * @param end 
-         * @param shift 
-         * @returns 
+         * 逐渐接近目标角度
+         * @param start 当前角度值（弧度制）
+         * @param end 目标角度值（弧度制）
+         * @param shift 每次逐渐接近目标角度的增量（弧度制）
+         * @returns 逐渐接近目标角度后的角度值（弧度制）
          */
-        public static approachAngleRadians(start: number, end: number, shift: number) {
-            let deltaAngleRadians = this.deltaAngleRadians(start, end);
-            if (-shift < deltaAngleRadians && deltaAngleRadians < shift)
-                return end;
+        public static approachAngleRadians(start: number, end: number, shift: number): number {
+            // 通过调用deltaAngleRadians()方法，计算出当前角度值和目标角度值之间的弧度差值。
+            let deltaAngleRadians: number = this.deltaAngleRadians(start, end);
 
-            return this.repeat(this.approach(start, start + deltaAngleRadians, shift), Math.PI * 2);
+            // 如果弧度差值的绝对值小于shift，则返回目标角度值。
+            if (-shift < deltaAngleRadians && deltaAngleRadians < shift) {
+                return end;
+            }
+
+            // 否则，通过调用approach()方法，逐渐将当前角度值接近目标角度值。
+            let result: number = this.approach(start, start + deltaAngleRadians, shift);
+
+            // 将计算结果使用repeat()方法转换成[0, 2π)之间的角度值，并返回。
+            return this.repeat(result, Math.PI * 2);
         }
 
         /**
-         * 使用可接受的检查公差检查两个值是否大致相同 
-         * @param value1 
-         * @param value2 
-         * @param tolerance 
-         * @returns 
+         * 判断两个数值是否在指定公差内近似相等
+         * @param value1 第一个数值
+         * @param value2 第二个数值
+         * @param tolerance 指定公差，默认为 Epsilon 常量
+         * @returns 是否在指定公差内近似相等
          */
-        public static approximately(value1: number, value2: number, tolerance: number = this.Epsilon) {
+        public static approximately(value1: number, value2: number, tolerance: number = this.Epsilon): boolean {
+            // 计算两个数值之差的绝对值是否小于等于指定公差。
             return Math.abs(value1 - value2) <= tolerance;
         }
 
         /**
-         * 计算两个给定角之间的最短差值（度数）
-         * @param current 
-         * @param target 
+         * 计算两个角度值之间的角度差值
+         * @param current 当前角度值
+         * @param target 目标角度值
+         * @returns 角度差值
          */
-        public static deltaAngle(current: number, target: number) {
-            let num = this.repeat(target - current, 360);
-            if (num > 180)
-                num -= 360;
+        public static deltaAngle(current: number, target: number): number {
+            // 通过调用repeat()方法，计算出当前角度值和目标角度值之间的差值。
+            let num: number = this.repeat(target - current, 360);
 
+            // 如果差值大于180度，则将差值减去360度，得到[-180度, 180度]之间的差值。
+            if (num > 180) {
+                num -= 360;
+            }
+
+            // 返回差值。
             return num;
         }
 
         /**
-         * 检查值是否介于最小值/最大值（包括最小值/最大值）之间 
-         * @param value 
-         * @param min 
-         * @param max 
-         * @returns 
+         * 判断给定数值是否在指定区间内
+         * @param value 给定数值
+         * @param min 区间最小值
+         * @param max 区间最大值
+         * @returns 是否在指定区间内
          */
-        public static between(value: number, min: number, max: number) {
+        public static between(value: number, min: number, max: number): boolean {
+            // 比较给定数值是否大于等于最小值并且小于等于最大值。
             return value >= min && value <= max;
         }
 
         /**
-         * 计算以弧度为单位的两个给定角度之间的最短差 
-         * @param current 
-         * @param target 
-         * @returns 
+         * 计算两个弧度值之间的角度差值
+         * @param current 当前弧度值
+         * @param target 目标弧度值
+         * @returns 角度差值
          */
-        public static deltaAngleRadians(current: number, target: number) {
-            let num = this.repeat(target - current, 2 * Math.PI);
-            if (num > Math.PI)
-                num -= 2 * Math.PI;
+        public static deltaAngleRadians(current: number, target: number): number {
+            // 通过调用repeat()方法，计算出当前弧度值和目标弧度值之间的差值。
+            let num: number = this.repeat(target - current, 2 * Math.PI);
 
+            // 如果差值大于π，则将差值减去2π，得到[-π, π]之间的差值。
+            if (num > Math.PI) {
+                num -= 2 * Math.PI;
+            }
+
+            // 返回差值。
             return num;
         }
 
         /**
-         * 循环t，使其永远不大于长度，永远不小于0
-         * @param t 
-         * @param length 
+         * 将给定的数值限定在一个循环范围内
+         * @param t 给定的数值
+         * @param length 循环范围长度
+         * @returns 限定在循环范围内的数值
          */
-        public static repeat(t: number, length: number) {
-            return t - Math.floor(t / length) * length;
-        }
+        public static repeat(t: number, length: number): number {
+            // 计算给定数值除以循环范围长度的整数部分，即循环次数。
+            const num: number = Math.floor(t / length);
 
-        public static floorToInt(f: number) {
-            return this.toInt(Math.floor(f));
-        }
+            // 用给定数值减去循环次数乘以循环范围长度，得到限定在循环范围内的数值。
+            const result: number = t - num * length;
 
-        /**
-         * 将值绕一圈移动的助手
-         * @param position 
-         * @param speed 
-         * @returns 
-         */
-        public static rotateAround(position: Vector2, speed: number) {
-            let time = Time.totalTime * speed;
-
-            let x = Math.cos(time);
-            let y = Math.sin(time);
-
-            return new Vector2(position.x + x, position.y + y);
+            // 返回限定后的数值。
+            return result;
         }
 
         /**
-         * 旋转是相对于当前位置而不是总旋转。 
-         * 例如，如果您当前处于90度并且想要旋转到135度，则可以使用45度而不是135度的角度
-         * @param point 
-         * @param center 
-         * @param angleIndegrees 
+         * 将给定的浮点数向下取整为整数
+         * @param f 给定的浮点数
+         * @returns 向下取整后的整数
          */
-        public static rotateAround2(point: Vector2, center: Vector2, angleIndegrees: number) {
-            angleIndegrees = this.toRadians(angleIndegrees);
-            let cos = Math.cos(angleIndegrees);
-            let sin = Math.sin(angleIndegrees);
-            let rotatedX = cos * (point.x - center.x) - sin * (point.y - center.y) + center.x;
-            let rotatedY = sin * (point.x - center.x) + cos * (point.y - center.y) + center.y;
+        public static floorToInt(f: number): number {
+            // 使用Math.floor()方法，将给定的浮点数向下取整为最接近它的小于等于它的整数。
+            const flooredValue: number = Math.floor(f);
 
+            // 调用toInt()方法，将结果转换为整数类型。
+            return this.toInt(flooredValue);
+        }
+
+        /**
+         * 绕着一个点旋转
+         * @param position 原点坐标
+         * @param speed 旋转速度
+         * @returns 经过旋转后的点坐标
+         */
+        public static rotateAround(position: Vector2, speed: number): Vector2 {
+            // 计算旋转角度，使用当前时间与旋转速度的乘积作为参数进行计算。
+            const angleInRadians: number = Time.totalTime * speed;
+
+            // 通过三角函数，计算出在当前时间下，距离原点为1的点在x轴和y轴上的坐标值。
+            const cosValue: number = Math.cos(angleInRadians);
+            const sinValue: number = Math.sin(angleInRadians);
+
+            // 将计算出的x轴和y轴的坐标值加上原点的坐标值，得到旋转后的点的坐标值。
+            const rotatedX: number = position.x + cosValue;
+            const rotatedY: number = position.y + sinValue;
+
+            // 创建一个新的Vector2对象，将上面得到的旋转后的点的坐标值作为参数，返回该对象。
             return new Vector2(rotatedX, rotatedY);
         }
 
         /**
-         * 根据圆的中心，半径和角度在圆的圆周上得到一个点。 0度是3点钟方向
-         * @param circleCenter 
-         * @param radius 
-         * @param angleInDegrees 
+         * 绕给定中心点旋转指定角度后得到的新点坐标
+         * @param point 要旋转的点的坐标
+         * @param center 旋转中心点的坐标
+         * @param angleIndegrees 旋转的角度，单位为度
+         * @returns 旋转后的新点的坐标，返回值类型为Vector2
          */
-        public static pointOnCircle(circleCenter: Vector2, radius: number, angleInDegrees: number) {
-            let radians = this.toRadians(angleInDegrees);
-            return new Vector2(Math.cos(radians) * radius + circleCenter.x, Math.sin(radians) * radius + circleCenter.y);
+        public static rotateAround2(point: Vector2, center: Vector2, angleIndegrees: number) {
+            const { x: cx, y: cy } = center;
+            const { x: px, y: py } = point;
+
+            const angleInRadians = this.toRadians(angleIndegrees); // 将角度值转换为弧度值
+            const cos = Math.cos(angleInRadians); // 计算cos值
+            const sin = Math.sin(angleInRadians); // 计算sin值
+
+            const rotatedX = cos * (px - cx) - sin * (py - cy) + cx; // 计算旋转后的新点的x坐标
+            const rotatedY = sin * (px - cx) + cos * (py - cy) + cy; // 计算旋转后的新点的y坐标
+
+            return new Vector2(rotatedX, rotatedY); // 返回旋转后的新点的坐标
         }
 
         /**
-         * 根据圆的中心，半径和角度在圆的圆周上得到一个点。 0弧度是3点钟方向
-         * @param circleCenter 
-         * @param radius 
-         * @param angleInRadians 
-         * @returns 
+         * 计算以给定点为圆心、给定半径的圆上某一点的坐标
+         * @param circleCenter 圆心坐标
+         * @param radius 圆半径
+         * @param angleInDegrees 角度值（度数制）
+         * @returns 计算出的圆上某一点的坐标
          */
-        public static pointOnCircleRadians(circleCenter: Vector2, radius: number, angleInRadians: number) {
-            return new Vector2(Math.cos(angleInRadians) * radius + circleCenter.x, Math.sin(angleInRadians) * radius + circleCenter.y);
+        public static pointOnCircle(circleCenter: Vector2, radius: number, angleInDegrees: number): Vector2 {
+            // 将给定角度值转换为弧度值，以便使用三角函数计算坐标值。
+            const radians: number = this.toRadians(angleInDegrees);
+
+            // 根据弧度值，通过三角函数（cos和sin）计算出该角度对应的x和y坐标的值（其中x坐标对应cos值，y坐标对应sin值）。
+            const x: number = Math.cos(radians) * radius;
+            const y: number = Math.sin(radians) * radius;
+
+            // 将x坐标值乘以半径，再加上圆心的x坐标，得到该点在x轴上的绝对坐标。
+            const absoluteX: number = x + circleCenter.x;
+            // 将y坐标值乘以半径，再加上圆心的y坐标，得到该点在y轴上的绝对坐标。
+            const absoluteY: number = y + circleCenter.y;
+
+            // 创建一个新的Vector2对象，将上面得到的x和y坐标作为参数，返回该对象。
+            return new Vector2(absoluteX, absoluteY);
         }
 
         /**
-         * lissajou曲线 
-         * @param xFrequency 
-         * @param yFrequency 
-         * @param xMagnitude 
-         * @param yMagnitude 
-         * @param phase 
-         * @returns 
+         * 计算以给定点为圆心、给定半径的圆上某一点的坐标
+         * @param circleCenter 圆心坐标
+         * @param radius 圆半径
+         * @param angleInRadians 角度值（弧度制）
+         * @returns 计算出的圆上某一点的坐标
          */
-        public static lissajou(xFrequency: number = 2, yFrequency: number = 3, xMagnitude: number = 1, yMagnitude: number = 1, phase: number = 0) {
-            let x = Math.sin(Time.totalTime * xFrequency + phase) * xMagnitude;
-            let y = Math.cos(Time.totalTime * yFrequency) * yMagnitude;
+        public static pointOnCircleRadians(circleCenter: Vector2, radius: number, angleInRadians: number): Vector2 {
+            // 根据给定角度值，通过三角函数（cos和sin）计算出该角度对应的x和y坐标的值（其中x坐标对应cos值，y坐标对应sin值）。
+            const x: number = Math.cos(angleInRadians) * radius;
+            const y: number = Math.sin(angleInRadians) * radius;
+            
+            // 将x坐标值乘以半径，再加上圆心的x坐标，得到该点在x轴上的绝对坐标。
+            const absoluteX: number = x + circleCenter.x;
+            // 将y坐标值乘以半径，再加上圆心的y坐标，得到该点在y轴上的绝对坐标。
+            const absoluteY: number = y + circleCenter.y;
 
-            return new Vector2(x, y);
+            // 创建一个新的Vector2对象，将上面得到的x和y坐标作为参数，返回该对象。
+            return new Vector2(absoluteX, absoluteY);
+        }
+
+        /**
+         * 生成一个Lissajous曲线上的点的坐标
+         * @param xFrequency x方向上的频率，默认值为2
+         * @param yFrequency y方向上的频率，默认值为3
+         * @param xMagnitude x方向上的振幅，默认值为1
+         * @param yMagnitude y方向上的振幅，默认值为1
+         * @param phase 相位，默认值为0
+         * @returns 在Lissajous曲线上的点的坐标，返回值类型为Vector2
+         */
+        public static lissajou(xFrequency = 2, yFrequency = 3, xMagnitude = 1, yMagnitude = 1, phase = 0) {
+            const x = Math.sin(Time.totalTime * xFrequency + phase) * xMagnitude; // 计算x方向上的坐标
+            const y = Math.cos(Time.totalTime * yFrequency) * yMagnitude; // 计算y方向上的坐标
+
+            return new Vector2(x, y); // 返回在Lissajous曲线上的点的坐标
         }
 
         /**
@@ -630,43 +811,70 @@ module es {
         }
 
         /**
-         * 此函数用于确保数不是NaN或无穷大
+         * 判断给定的数字是否有效
+         * 如果输入的数字是 NaN 或正无穷大，该函数将返回 false；否则返回 true
          * @param x 
          * @returns 
          */
-        public static isValid(x: number) {
+        public static isValid(x: number): boolean {
+            // 如果输入的数字是 NaN，返回 false
             if (Number.isNaN(x)) {
                 return false;
             }
-
-            return x !== Infinity;
-        }
-
-        public static smoothDamp(current: number, target: number, currentVelocity: number, smoothTime: number, maxSpeed: number, deltaTime: number): { value: number; currentVelocity: number } {
-            smoothTime = Math.max(0.0001, smoothTime);
-            const num: number = 2 / smoothTime;
-            const num2: number = num * deltaTime;
-            const num3: number =
-                1 /
-                (1 + (num2 + (0.48 * (num2 * num2) + 0.235 * (num2 * (num2 * num2)))));
-            let num4: number = current - target;
-            const num5: number = target;
-            const num6: number = maxSpeed * smoothTime;
-            num4 = this.clamp(num4, num6 * -1, num6);
-            target = current - num4;
-            const num7: number = (currentVelocity + num * num4) * deltaTime;
-            currentVelocity = (currentVelocity - num * num7) * num3;
-            let num8: number = target + (num4 + num7) * num3;
-            if (num5 - current > 0 === num8 > num5) {
-                num8 = num5;
-                currentVelocity = (num8 - num5) / deltaTime;
+        
+            // 如果输入的数字是正无穷大，返回 false
+            // 注意，负无穷大在这里被认为是有效的数字
+            if (x === Infinity) {
+                return false;
             }
-            return { value: num8, currentVelocity };
+        
+            // 如果输入的数字既不是 NaN，也不是正无穷大，返回 true
+            return true;
         }
 
-        public static smoothDampVector(current: Vector2, target: Vector2, currentVelocity: Vector2, smoothTime: number, maxSpeed: number, deltaTime: number): Vector2 {
-            const v = Vector2.zero;
+        /**
+         * 平滑阻尼运动，将当前位置平滑过渡到目标位置，返回一个包含当前位置和当前速度的对象
+         * @param current 当前位置
+         * @param target 目标位置
+         * @param currentVelocity 当前速度
+         * @param smoothTime 平滑时间
+         * @param maxSpeed 最大速度
+         * @param deltaTime 时间增量
+         * @returns 一个包含当前位置和当前速度的对象，类型为{ value: number; currentVelocity: number }
+         */
+        public static smoothDamp(current: number, target: number, currentVelocity: number, smoothTime: number, maxSpeed: number, deltaTime: number): { value: number; currentVelocity: number } {
+            smoothTime = Math.max(0.0001, smoothTime); // 平滑时间至少为0.0001，避免出现除以0的情况
+            const omega: number = 2 / smoothTime; // 根据平滑时间计算阻尼系数
+            const x: number = omega * deltaTime; // 计算阻尼系数与时间增量的乘积
+            const exp: number = 1 / (1 + 0.48 * x + 0.235 * x * x); // 计算阻尼比
+            const maxDelta: number = maxSpeed * smoothTime; // 计算最大速度与平滑时间的乘积
+            let delta: number = current - target; // 计算当前位置与目标位置之间的距离
+            delta = MathHelper.clamp(delta, -maxDelta, maxDelta); // 将距离限制在最大速度和最大速度的相反数之间
+            target = current - delta; // 计算新的目标位置
+            const temp: number = (currentVelocity + omega * delta) * deltaTime; // 计算当前速度和阻尼力的和乘以时间增量
+            currentVelocity = (currentVelocity - omega * temp) * exp; // 计算新的当前速度
+            let newValue: number = target + (delta + temp) * exp; // 计算新的当前位置
+            if (current > target === newValue > target) { // 如果新的当前位置超过了目标位置，则将当前位置设置为目标位置，并计算新的当前速度
+                newValue = target;
+                currentVelocity = (newValue - target) / deltaTime;
+            }
+            return { value: newValue, currentVelocity }; // 返回包含当前位置和当前速度的对象
+        }
 
+        /**
+         * 平滑插值两个二维向量
+         * @param current 当前向量
+         * @param target 目标向量
+         * @param currentVelocity 当前速度向量
+         * @param smoothTime 平滑插值时间
+         * @param maxSpeed 最大速度
+         * @param deltaTime 帧间隔时间
+         * @returns 插值后的结果向量
+         */
+        public static smoothDampVector(current: Vector2, target: Vector2, currentVelocity: Vector2, smoothTime: number, maxSpeed: number, deltaTime: number): Vector2 {
+            const v = Vector2.zero; // 创建一个初始向量v，其x和y坐标都为0。
+
+            // 对当前向量的x和y坐标进行平滑插值，得到插值结果和当前速度。
             const resX = this.smoothDamp(
                 current.x,
                 target.x,
@@ -675,8 +883,8 @@ module es {
                 maxSpeed,
                 deltaTime
             );
-            v.x = resX.value;
-            currentVelocity.x = resX.currentVelocity;
+            v.x = resX.value; // 将插值结果赋值给向量v的x坐标。
+            currentVelocity.x = resX.currentVelocity; // 将当前速度赋值给向量currentVelocity的x坐标。
 
             const resY = this.smoothDamp(
                 current.y,
@@ -686,31 +894,49 @@ module es {
                 maxSpeed,
                 deltaTime
             );
-            v.y = resY.value;
-            currentVelocity.y = resY.currentVelocity;
+            v.y = resY.value; // 将插值结果赋值给向量v的y坐标。
+            currentVelocity.y = resY.currentVelocity; // 将当前速度赋值给向量currentVelocity的y坐标。
 
-            return v;
+            return v; // 返回向量v。
         }
 
         /**
-         * 将值（在 leftMin - leftMax 范围内）映射到 rightMin - rightMax 范围内的值 
-         * @param value 
-         * @param leftMin 
-         * @param leftMax 
-         * @param rightMin 
-         * @param rightMax 
+         * 将一个值从一个区间映射到另一个区间
+         * @param value 需要映射的值
+         * @param leftMin 所在区间的最小值
+         * @param leftMax 所在区间的最大值
+         * @param rightMin 需要映射到的目标区间的最小值
+         * @param rightMax 需要映射到的目标区间的最大值
          * @returns 
          */
-        public static mapMinMax(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax): number {
-            return rightMin + ((MathHelper.clamp(value, leftMin, leftMax) - leftMin) * (rightMax - rightMin)) / (leftMax - leftMin);
+        public static mapMinMax(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number {
+            // 先将 value 限制在 [leftMin, leftMax] 区间内
+            let clampedValue = MathHelper.clamp(value, leftMin, leftMax);
+            // 计算映射到 [rightMin, rightMax] 区间内的值
+            return rightMin + (clampedValue - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
         }
 
+        /**
+         * 返回一个给定角度的单位向量。角度被解释为弧度制。
+         * @param angle - 给定角度，以弧度制表示。
+         * @returns 一个新的已归一化的二维向量。
+         */
         public static fromAngle(angle: number) {
+            // 返回一个新的二维向量，其中x和y分别设置为给定角度的余弦和正弦值，然后进行归一化以产生单位向量。
             return new Vector2(Math.cos(angle), Math.sin(angle)).normalizeEqual();
         }
 
-        public static toInt(val: number){
-            return val>0 ? Math.floor(val):Math.ceil(val);
+        /**
+         * 将一个数字转换为最接近的整数
+         * @param val 需要被转换的数字
+         * @returns 最接近的整数
+         */
+        public static toInt(val: number): number {
+            if (val > 0) { // 如果数字大于0，则向下舍入为最接近的整数。
+                return Math.floor(val);
+            } else { // 如果数字小于等于0，则向上舍入为最接近的整数。
+                return Math.ceil(val);
+            }
         }
     }
 }

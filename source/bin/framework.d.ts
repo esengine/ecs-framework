@@ -2546,12 +2546,13 @@ declare module es {
          */
         static catmullRom(value1: number, value2: number, value3: number, value4: number, amount: number): number;
         /**
-         * 将值（在leftMin-leftMax范围内）映射到一个在rightMin-rightMax范围内的值
-         * @param value
-         * @param leftMin
-         * @param leftMax
-         * @param rightMin
-         * @param rightMax
+         * 对给定值进行范围映射。
+         * @param value 要映射的值。
+         * @param leftMin 输入范围的最小值。
+         * @param leftMax 输入范围的最大值。
+         * @param rightMin 输出范围的最小值。
+         * @param rightMax 输出范围的最大值。
+         * @returns 映射后的值。
          */
         static map(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number;
         /**
@@ -2563,8 +2564,7 @@ declare module es {
          */
         static map01(value: number, min: number, max: number): number;
         /**
-         * 将值从某个任意范围映射到1到0范围
-         * 这相当于map01的取反
+         * 接收一个值value和两个边界min和max作为参数。它将value映射到0到1的范围内，然后返回1减去该结果的值，因此该函数的结果将在1到0之间
          * @param value
          * @param min
          * @param max
@@ -2572,10 +2572,11 @@ declare module es {
          */
         static map10(value: number, min: number, max: number): number;
         /**
-         * 使用三次方程在两个值之间进行插值
-         * @param value1
-         * @param value2
-         * @param amount
+         * 在两个值之间进行平滑的线性插值。与 lerp 相似，但具有平滑过渡的特点，当 t 在 0 和 1 之间时，返回 [value1, value2] 之间平滑插值后的结果。
+         * @param value1 起始值
+         * @param value2 结束值
+         * @param amount 插值的程度，范围在 0 到 1 之间。
+         * @returns 两个值之间进行平滑的线性插值后的结果。
          */
         static smoothStep(value1: number, value2: number, amount: number): number;
         /**
@@ -2585,42 +2586,57 @@ declare module es {
          */
         static wrapAngle(angle: number): number;
         /**
-         * 确定值是否以2为底
+         * 判断给定的数值是否是2的幂
          * @param value
          * @returns
          */
         static isPowerOfTwo(value: number): boolean;
-        static lerp(from: number, to: number, t: number): number;
-        static betterLerp(a: number, b: number, t: number, epsilon: number): number;
         /**
-         * 使度数的角度在a和b之间
-         * 用于处理360度环绕
-         * @param a
-         * @param b
+         * 线性插值
+         * @param from
+         * @param to
          * @param t
          * @returns
+         */
+        static lerp(from: number, to: number, t: number): number;
+        /**
+         * 线性插值前检查两个数的差是否小于一个给定的epsilon值，如果小于，则直接返回结束值b，否则执行线性插值并返回插值结果。
+         * @param a 起始值
+         * @param b 结束值
+         * @param t 插值因子
+         * @param epsilon 差值阈值，当两个数的差小于epsilon时直接返回结束值b。
+         * @returns 如果a和b的差小于给定的epsilon值，则返回b，否则返回a到b的插值结果。
+         */
+        static betterLerp(a: number, b: number, t: number, epsilon: number): number;
+        /**
+         * 在两个角度之间进行插值，使用角度值表示角度
+         * @param a 起始角度
+         * @param b 结束角度
+         * @param t 插值比例，范围[0, 1]
+         * @returns 两个角度之间插值后的角度，使用角度值表示
          */
         static lerpAngle(a: number, b: number, t: number): number;
         /**
-         * 使弧度的角度在a和b之间
-         * @param a
-         * @param b
-         * @param t
-         * @returns
+         * 在两个角度之间进行插值，使用弧度值表示角度
+         * @param a 起始角度
+         * @param b 结束角度
+         * @param t 插值比例，范围[0, 1]
+         * @returns 两个角度之间插值后的角度，使用弧度值表示
          */
         static lerpAngleRadians(a: number, b: number, t: number): number;
         /**
-         * 循环t使其不大于长度且不小于0
-         * @param t
-         * @param length
-         * @returns
+         * 指定长度上来回“弹跳”（ping-pong）一个变量
+         * 因为弹跳的过程是来回循环的。最后，根据t在弹跳过程中相对于length的位置
+         * @param t 变量的当前值
+         * @param length 指定的长度
+         * @returns 0到length之间变化的值
          */
         static pingPong(t: number, length: number): number;
         /**
-         * 如果value> = threshold返回其符号，否则返回0
-         * @param value
-         * @param threshold
-         * @returns
+         * 当value的绝对值大于等于threshold时返回value的符号，否则返回0
+         * @param value - 输入的值
+         * @param threshold - 阈值
+         * @returns value的符号或0
          */
         static signThreshold(value: number, threshold: number): number;
         /**
@@ -2632,19 +2648,28 @@ declare module es {
          */
         static inverseLerp(from: number, to: number, t: number): number;
         /**
-         * 在两个值之间线性插值
-         * 此方法是MathHelper.Lerp的效率较低，更精确的版本。
+         * 精确的线性插值，避免出现累积误差
+         * @param value1 起始值
+         * @param value2 结束值
+         * @param amount 插值比例
+         * @returns 两个值的线性插值结果
          */
         static lerpPrecise(value1: number, value2: number, amount: number): number;
-        static clamp(value: number, min: number, max: number): number;
-        static snap(value: number, increment: number): number;
         /**
-         * 给定圆心、半径和角度，得到圆周上的一个点。0度是3点钟。
-         * @param circleCenter
-         * @param radius
-         * @param angleInDegrees
+         * 将给定值限制在指定范围内
+         * @param value 需要被限制的值
+         * @param min 最小值
+         * @param max 最大值
+         * @returns 限制后的值
          */
-        static pointOnCirlce(circleCenter: Vector2, radius: number, angleInDegrees: number): Vector2;
+        static clamp(value: number, min: number, max: number): number;
+        /**
+         * 按照指定增量取整到最接近的整数倍数
+         * @param value
+         * @param increment
+         * @returns
+         */
+        static snap(value: number, increment: number): number;
         /**
          * 如果值为偶数，返回true
          * @param value
@@ -2657,158 +2682,186 @@ declare module es {
          */
         static isOdd(value: number): boolean;
         /**
-         * 将值四舍五入并返回它和四舍五入后的数值
-         * @param value
-         * @param roundedAmount
-         * @returns
+         * 将数值四舍五入到最接近的整数，并计算四舍五入的数量
+         * @param value 要四舍五入的数值
+         * @param roundedAmount 用于存储四舍五入的数量的参数
+         * @returns 四舍五入后的整数
          */
         static roundWithRoundedAmount(value: number, roundedAmount: Ref<number>): number;
         /**
-         * 数值限定在0-1之间
-         * @param value
+         * 将一个数值限制在 [0,1] 范围内
+         * @param value 要限制的数值
+         * @returns 限制后的数值
          */
         static clamp01(value: number): number;
+        /**
+         * 计算从一个向量到另一个向量之间的角度
+         * @param from 起始向量
+         * @param to 目标向量
+         * @returns 两个向量之间的角度（弧度制）
+         */
         static angleBetweenVectors(from: Vector2, to: Vector2): number;
+        /**
+         * 将极角和极径转换为向量坐标
+         * @param angleRadians 极角弧度值
+         * @param length 极径长度
+         * @returns 对应向量坐标
+         */
         static angleToVector(angleRadians: number, length: number): Vector2;
         /**
-         * 增加t并确保它总是大于或等于0并且小于长度
-         * @param t
-         * @param length
+         * 将一个数加上1，并在结果等于指定长度时将其设置为0
+         * @param t 要加上1的数
+         * @param length 指定长度
+         * @returns 加上1后的结果，如果等于指定长度，则为0
          */
         static incrementWithWrap(t: number, length: number): number;
         /**
-         * 递减t并确保其始终大于或等于0且小于长度
-         * @param t
-         * @param length
-         * @returns
+         * 将一个数减去1，并在结果小于0时将其设置为指定长度减去1
+         * @param t 要减去1的数
+         * @param length 指定长度
+         * @returns 减去1后的结果，如果小于0，则为指定长度减去1
          */
         static decrementWithWrap(t: number, length: number): number;
         /**
-         * 返回sqrt（x * x + y * y）
-         * @param x
-         * @param y
-         * @returns
+         * 计算直角三角形斜边长度，即求两个数的欧几里得距离
+         * @param x 直角三角形的一条直角边
+         * @param y 直角三角形的另一条直角边
+         * @returns 三角形斜边长度
          */
         static hypotenuse(x: number, y: number): number;
+        /**
+         * 计算大于给定数字的最小二次幂
+         * @param x 给定数字
+         * @returns 大于给定数字的最小二次幂
+         */
         static closestPowerOfTwoGreaterThan(x: number): number;
         /**
-         * 以roundToNearest为步长，将值舍入到最接近的数字。例如：在125中找到127到最近的5个结果
-         * @param value
-         * @param roundToNearest
+         * 将数字舍入到最接近的指定值
+         * @param value 需要被舍入的数字
+         * @param roundToNearest 指定的舍入值
+         * @returns 舍入后的结果
          */
         static roundToNearest(value: number, roundToNearest: number): number;
         /**
-         * 检查传递的值是否在某个阈值之下。对于小规模、精确的比较很有用
-         * @param value
-         * @param ep
+         * 判断给定值是否接近于零
+         * @param value 给定值
+         * @param ep 阈值（可选，默认为Epsilon）
+         * @returns 如果接近于零，返回true，否则返回false
          */
         static withinEpsilon(value: number, ep?: number): boolean;
         /**
-         * 由上移量向上移。start可以小于或大于end。例如:开始是2，结束是10，移位是4，结果是6
-         * @param start
-         * @param end
-         * @param shift
+         * 逐渐逼近目标值
+         * @param start 起始值
+         * @param end 目标值
+         * @param shift 逼近步长
+         * @returns 逼近后的值
          */
         static approach(start: number, end: number, shift: number): number;
         /**
-         * 通过偏移量钳位结果并选择最短路径，将起始角度向终止角度移动，起始值可以小于或大于终止值。
-         * 示例1：开始是30，结束是100，移位是25，结果为55
-         * 示例2：开始是340，结束是30，移位是25，结果是5（365换为5）
-         * @param start
-         * @param end
-         * @param shift
-         * @returns
+         * 逐渐逼近目标角度
+         * @param start 起始角度
+         * @param end 目标角度
+         * @param shift 逼近步长
+         * @returns 最终角度
          */
         static approachAngle(start: number, end: number, shift: number): number;
         /**
-         * 将 Vector 投影到另一个 Vector 上
-         * @param other
+         * 计算向量在另一个向量上的投影向量
+         * @param self 要投影的向量
+         * @param other 目标向量
+         * @returns 投影向量
          */
         static project(self: Vector2, other: Vector2): Vector2;
         /**
-         * 通过将偏移量（全部以弧度为单位）夹住结果并选择最短路径，起始角度朝向终止角度。
-         * 起始值可以小于或大于终止值。
-         * 此方法的工作方式与“角度”方法非常相似，唯一的区别是使用弧度代替度，并以2 * Pi代替360。
-         * @param start
-         * @param end
-         * @param shift
-         * @returns
+         * 逐渐接近目标角度
+         * @param start 当前角度值（弧度制）
+         * @param end 目标角度值（弧度制）
+         * @param shift 每次逐渐接近目标角度的增量（弧度制）
+         * @returns 逐渐接近目标角度后的角度值（弧度制）
          */
         static approachAngleRadians(start: number, end: number, shift: number): number;
         /**
-         * 使用可接受的检查公差检查两个值是否大致相同
-         * @param value1
-         * @param value2
-         * @param tolerance
-         * @returns
+         * 判断两个数值是否在指定公差内近似相等
+         * @param value1 第一个数值
+         * @param value2 第二个数值
+         * @param tolerance 指定公差，默认为 Epsilon 常量
+         * @returns 是否在指定公差内近似相等
          */
         static approximately(value1: number, value2: number, tolerance?: number): boolean;
         /**
-         * 计算两个给定角之间的最短差值（度数）
-         * @param current
-         * @param target
+         * 计算两个角度值之间的角度差值
+         * @param current 当前角度值
+         * @param target 目标角度值
+         * @returns 角度差值
          */
         static deltaAngle(current: number, target: number): number;
         /**
-         * 检查值是否介于最小值/最大值（包括最小值/最大值）之间
-         * @param value
-         * @param min
-         * @param max
-         * @returns
+         * 判断给定数值是否在指定区间内
+         * @param value 给定数值
+         * @param min 区间最小值
+         * @param max 区间最大值
+         * @returns 是否在指定区间内
          */
         static between(value: number, min: number, max: number): boolean;
         /**
-         * 计算以弧度为单位的两个给定角度之间的最短差
-         * @param current
-         * @param target
-         * @returns
+         * 计算两个弧度值之间的角度差值
+         * @param current 当前弧度值
+         * @param target 目标弧度值
+         * @returns 角度差值
          */
         static deltaAngleRadians(current: number, target: number): number;
         /**
-         * 循环t，使其永远不大于长度，永远不小于0
-         * @param t
-         * @param length
+         * 将给定的数值限定在一个循环范围内
+         * @param t 给定的数值
+         * @param length 循环范围长度
+         * @returns 限定在循环范围内的数值
          */
         static repeat(t: number, length: number): number;
+        /**
+         * 将给定的浮点数向下取整为整数
+         * @param f 给定的浮点数
+         * @returns 向下取整后的整数
+         */
         static floorToInt(f: number): number;
         /**
-         * 将值绕一圈移动的助手
-         * @param position
-         * @param speed
-         * @returns
+         * 绕着一个点旋转
+         * @param position 原点坐标
+         * @param speed 旋转速度
+         * @returns 经过旋转后的点坐标
          */
         static rotateAround(position: Vector2, speed: number): Vector2;
         /**
-         * 旋转是相对于当前位置而不是总旋转。
-         * 例如，如果您当前处于90度并且想要旋转到135度，则可以使用45度而不是135度的角度
-         * @param point
-         * @param center
-         * @param angleIndegrees
+         * 绕给定中心点旋转指定角度后得到的新点坐标
+         * @param point 要旋转的点的坐标
+         * @param center 旋转中心点的坐标
+         * @param angleIndegrees 旋转的角度，单位为度
+         * @returns 旋转后的新点的坐标，返回值类型为Vector2
          */
         static rotateAround2(point: Vector2, center: Vector2, angleIndegrees: number): Vector2;
         /**
-         * 根据圆的中心，半径和角度在圆的圆周上得到一个点。 0度是3点钟方向
-         * @param circleCenter
-         * @param radius
-         * @param angleInDegrees
+         * 计算以给定点为圆心、给定半径的圆上某一点的坐标
+         * @param circleCenter 圆心坐标
+         * @param radius 圆半径
+         * @param angleInDegrees 角度值（度数制）
+         * @returns 计算出的圆上某一点的坐标
          */
         static pointOnCircle(circleCenter: Vector2, radius: number, angleInDegrees: number): Vector2;
         /**
-         * 根据圆的中心，半径和角度在圆的圆周上得到一个点。 0弧度是3点钟方向
-         * @param circleCenter
-         * @param radius
-         * @param angleInRadians
-         * @returns
+         * 计算以给定点为圆心、给定半径的圆上某一点的坐标
+         * @param circleCenter 圆心坐标
+         * @param radius 圆半径
+         * @param angleInRadians 角度值（弧度制）
+         * @returns 计算出的圆上某一点的坐标
          */
         static pointOnCircleRadians(circleCenter: Vector2, radius: number, angleInRadians: number): Vector2;
         /**
-         * lissajou曲线
-         * @param xFrequency
-         * @param yFrequency
-         * @param xMagnitude
-         * @param yMagnitude
-         * @param phase
-         * @returns
+         * 生成一个Lissajous曲线上的点的坐标
+         * @param xFrequency x方向上的频率，默认值为2
+         * @param yFrequency y方向上的频率，默认值为3
+         * @param xMagnitude x方向上的振幅，默认值为1
+         * @param yMagnitude y方向上的振幅，默认值为1
+         * @param phase 相位，默认值为0
+         * @returns 在Lissajous曲线上的点的坐标，返回值类型为Vector2
          */
         static lissajou(xFrequency?: number, yFrequency?: number, xMagnitude?: number, yMagnitude?: number, phase?: number): Vector2;
         /**
@@ -2833,27 +2886,58 @@ declare module es {
          */
         static hermite(value1: number, tangent1: number, value2: number, tangent2: number, amount: number): number;
         /**
-         * 此函数用于确保数不是NaN或无穷大
+         * 判断给定的数字是否有效
+         * 如果输入的数字是 NaN 或正无穷大，该函数将返回 false；否则返回 true
          * @param x
          * @returns
          */
         static isValid(x: number): boolean;
+        /**
+         * 平滑阻尼运动，将当前位置平滑过渡到目标位置，返回一个包含当前位置和当前速度的对象
+         * @param current 当前位置
+         * @param target 目标位置
+         * @param currentVelocity 当前速度
+         * @param smoothTime 平滑时间
+         * @param maxSpeed 最大速度
+         * @param deltaTime 时间增量
+         * @returns 一个包含当前位置和当前速度的对象，类型为{ value: number; currentVelocity: number }
+         */
         static smoothDamp(current: number, target: number, currentVelocity: number, smoothTime: number, maxSpeed: number, deltaTime: number): {
             value: number;
             currentVelocity: number;
         };
+        /**
+         * 平滑插值两个二维向量
+         * @param current 当前向量
+         * @param target 目标向量
+         * @param currentVelocity 当前速度向量
+         * @param smoothTime 平滑插值时间
+         * @param maxSpeed 最大速度
+         * @param deltaTime 帧间隔时间
+         * @returns 插值后的结果向量
+         */
         static smoothDampVector(current: Vector2, target: Vector2, currentVelocity: Vector2, smoothTime: number, maxSpeed: number, deltaTime: number): Vector2;
         /**
-         * 将值（在 leftMin - leftMax 范围内）映射到 rightMin - rightMax 范围内的值
-         * @param value
-         * @param leftMin
-         * @param leftMax
-         * @param rightMin
-         * @param rightMax
+         * 将一个值从一个区间映射到另一个区间
+         * @param value 需要映射的值
+         * @param leftMin 所在区间的最小值
+         * @param leftMax 所在区间的最大值
+         * @param rightMin 需要映射到的目标区间的最小值
+         * @param rightMax 需要映射到的目标区间的最大值
          * @returns
          */
-        static mapMinMax(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: any): number;
+        static mapMinMax(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: number): number;
+        /**
+         * 返回一个给定角度的单位向量。角度被解释为弧度制。
+         * @param angle - 给定角度，以弧度制表示。
+         * @returns 一个新的已归一化的二维向量。
+         */
         static fromAngle(angle: number): Vector2;
+        /**
+         * 将一个数字转换为最接近的整数
+         * @param val 需要被转换的数字
+         * @returns 最接近的整数
+         */
         static toInt(val: number): number;
     }
 }

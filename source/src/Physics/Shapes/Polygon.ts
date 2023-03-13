@@ -257,7 +257,7 @@ module es {
                     const offsetAngle = Math.atan2(collider.localOffset.y * collider.entity.transform.scale.y, collider.localOffset.x * collider.entity.transform.scale.x) * MathHelper.Rad2Deg;
                     const offsetLength = hasUnitScale ? collider._localOffsetLength :
                         collider.localOffset.multiply(collider.entity.transform.scale).magnitude();
-                    this.center = MathHelper.pointOnCirlce(Vector2.zero, offsetLength,
+                    this.center = MathHelper.pointOnCircle(Vector2.zero, offsetLength,
                         collider.entity.transform.rotationDegrees + offsetAngle);
                 }
 
