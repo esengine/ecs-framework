@@ -6222,31 +6222,41 @@ var es;
             return degrees * 0.017453292519943295769236907684886;
         };
         /**
-         * 返回由给定三角形和两个归一化重心（面积）坐标定义的点的一个轴的笛卡尔坐标
-         * @param value1
-         * @param value2
-         * @param value3
-         * @param amount1
-         * @param amount2
+         * 计算三角形上给定两个归一化重心坐标所确定点在某个轴上的笛卡尔坐标
+         * @param value1 三角形上某个顶点在该轴上的笛卡尔坐标
+         * @param value2 三角形上另一个顶点在该轴上的笛卡尔坐标
+         * @param value3 三角形上第三个顶点在该轴上的笛卡尔坐标
+         * @param amount1 第一个重心坐标，即点相对于三角形边2的面积比例
+         * @param amount2 第二个重心坐标，即点相对于三角形边1的面积比例
+         * @returns 计算出的点在该轴上的笛卡尔坐标
          */
         MathHelper.barycentric = function (value1, value2, value3, amount1, amount2) {
-            return value1 + (value2 - value1) * amount1 + (value3 - value1) * amount2;
+            // 计算边2上的点的笛卡尔坐标
+            var point2 = value2 + (value3 - value2) * amount2;
+            // 计算从边1起点到点的向量
+            var vector = (point2 - value1) * (amount1 / (1 - amount1));
+            // 返回点在该轴上的笛卡尔坐标
+            return value1 + vector;
         };
         /**
-         * 使用指定位置执行Catmull-Rom插值
-         * @param value1
-         * @param value2
-         * @param value3
-         * @param value4
-         * @param amount
+         * 使用Catmull-Rom插值算法在指定的四个数值之间进行插值，返回给定位置的插值结果
+         * @param value1 插值范围中的第一个数据点
+         * @param value2 插值范围中的第二个数据点
+         * @param value3 插值范围中的第三个数据点
+         * @param value4 插值范围中的第四个数据点
+         * @param amount 插值位置的值，取值范围为[0, 1]，表示该位置在value2和value3之间的相对位置
+         * @returns 经过Catmull-Rom插值计算后在给定位置的插值结果
          */
         MathHelper.catmullRom = function (value1, value2, value3, value4, amount) {
-            // 使用来自http://www.mvps.org/directx/articles/catmull/的公式 
+            // 计算输入参数amount的平方和立方值
             var amountSquared = amount * amount;
             var amountCubed = amountSquared * amount;
-            return (0.5 * (2 * value2 + (value3 - value1) * amount +
-                (2 * value1 - 5 * value2 + 4 * value3 - value4) * amountSquared +
-                (3 * value2 - value1 - 3 * value3 + value4) * amountCubed));
+            // 使用Catmull-Rom插值算法计算插值结果
+            var p0 = (-value1 + 3 * value2 - 3 * value3 + value4) / 2;
+            var p1 = 2 * value1 - 5 * value2 + 4 * value3 - value4 / 2;
+            var p2 = (-value1 + value3) / 2;
+            var p3 = (value2 - value1 + value3 - value4) / 2;
+            return p0 * amountCubed + p1 * amountSquared + p2 * amount + p3;
         };
         /**
          * 将值（在leftMin-leftMax范围内）映射到一个在rightMin-rightMax范围内的值
@@ -6293,17 +6303,19 @@ var es;
         };
         /**
          * 将给定角度减小到π到-π之间的值
-         * @param angle
+         * @param angle 给定角度值
+         * @returns 减小后的角度值，保证在[-π, π]的范围内
          */
         MathHelper.wrapAngle = function (angle) {
-            if ((angle > -Math.PI) && (angle <= Math.PI))
-                return angle;
-            angle %= Math.PI * 2;
-            if (angle <= -Math.PI)
-                return angle + 2 * Math.PI;
-            if (angle > Math.PI)
-                return angle - 2 * Math.PI;
-            return angle;
+            // 将角度值限制在[-2π, 2π]的范围内，这样可以保证取余运算得到的结果始终为正数
+            var angleMod = (angle + 2 * Math.PI) % (2 * Math.PI);
+            // 如果计算出的余数大于π，则将其减去2π，使得结果在[-π, π]的范围内
+            if (angleMod > Math.PI) {
+                return angleMod - 2 * Math.PI;
+            }
+            else {
+                return angleMod;
+            }
         };
         /**
          * 确定值是否以2为底
@@ -6368,20 +6380,22 @@ var es;
             else
                 return 0;
         };
+        /**
+         * 计算t值在[from, to]区间内的插值比例
+         * @param from 插值区间的起点
+         * @param to 插值区间的终点
+         * @param t 需要计算插值比例的数值
+         * @returns t值在[from, to]区间内的插值比例，取值范围在[0, 1]之间
+         */
         MathHelper.inverseLerp = function (from, to, t) {
-            if (from < to) {
-                if (t < from)
-                    return 0;
-                else if (t > to)
-                    return 1;
+            // 计算插值区间的长度
+            var length = to - from;
+            // 如果插值区间的长度为0，则返回0
+            if (length === 0) {
+                return 0;
             }
-            else {
-                if (t < to)
-                    return 1;
-                else if (t > from)
-                    return 0;
-            }
-            return (t - from) / (to - from);
+            // 计算t在插值区间中的相对位置，并返回插值比例
+            return (t - from) / length;
         };
         /**
          * 在两个值之间线性插值
@@ -6683,17 +6697,14 @@ var es;
             return new es.Vector2(x, y);
         };
         /**
-         * lissajou曲线的阻尼形式，其振荡随时间在0和最大幅度之间。
-         * 为获得最佳效果，阻尼应在0到1之间。
-         * 振荡间隔是动画循环的一半完成的时间（以秒为单位）。
-         * @param xFrequency
-         * @param yFrequency
-         * @param xMagnitude
-         * @param yMagnitude
-         * @param phase
-         * @param damping
-         * @param oscillationInterval
-         * @returns
+         * 生成阻尼的 Lissajous 曲线
+         * @param xFrequency x 轴上的频率
+         * @param yFrequency y 轴上的频率
+         * @param xMagnitude x 轴上的振幅
+         * @param yMagnitude y 轴上的振幅
+         * @param phase x 轴相位差
+         * @param damping 阻尼值
+         * @param oscillationInterval 振荡间隔
          */
         MathHelper.lissajouDamped = function (xFrequency, yFrequency, xMagnitude, yMagnitude, phase, damping, oscillationInterval) {
             if (xFrequency === void 0) { xFrequency = 2; }
@@ -6703,34 +6714,43 @@ var es;
             if (phase === void 0) { phase = 0.5; }
             if (damping === void 0) { damping = 0; }
             if (oscillationInterval === void 0) { oscillationInterval = 5; }
+            // 将时间戳限制在振荡间隔内
             var wrappedTime = this.pingPong(es.Time.totalTime, oscillationInterval);
+            // 计算阻尼值
             var damped = Math.pow(Math.E, -damping * wrappedTime);
+            // 计算 x 和 y 方向上的振荡值
             var x = damped * Math.sin(es.Time.totalTime * xFrequency + phase) * xMagnitude;
             var y = damped * Math.cos(es.Time.totalTime * yFrequency) * yMagnitude;
+            // 返回二维向量
             return new es.Vector2(x, y);
         };
         /**
-         * 执行Hermite样条插值
-         * @param value1
-         * @param tangent1
-         * @param value2
-         * @param tangent2
-         * @param amount
-         * @returns
+         * 计算在曲线上特定位置的值。
+         * @param value1 第一个插值点的值
+         * @param tangent1 第一个插值点的切线或方向向量
+         * @param value2 第二个插值点的值
+         * @param tangent2 第二个插值点的切线或方向向量
+         * @param amount 在这两个点之间进行插值的位置
+         * @returns 在曲线上特定位置的值
          */
         MathHelper.hermite = function (value1, tangent1, value2, tangent2, amount) {
-            var v1 = value1, v2 = value2, t1 = tangent1, t2 = tangent2, s = amount, result;
+            var s = amount;
             var sCubed = s * s * s;
             var sSquared = s * s;
-            if (amount == 0)
-                result = value1;
-            else if (amount == 1)
-                result = value2;
-            else
-                result = (2 * v1 - 2 * v2 + t2 + t1) * sCubed +
-                    (3 * v2 - 3 * v1 - 2 * t1 - t2) * sSquared +
-                    t1 * s +
-                    v1;
+            // 如果在第一个插值点，直接返回第一个插值点的值
+            if (amount === 0) {
+                return value1;
+            }
+            // 如果在第二个插值点，直接返回第二个插值点的值
+            else if (amount === 1) {
+                return value2;
+            }
+            // 否则，根据Hermite插值公式计算特定位置的值
+            var v1 = value1, v2 = value2, t1 = tangent1, t2 = tangent2;
+            var result = (2 * v1 - 2 * v2 + t2 + t1) * sCubed +
+                (3 * v2 - 3 * v1 - 2 * t1 - t2) * sSquared +
+                t1 * s +
+                v1;
             return result;
         };
         /**

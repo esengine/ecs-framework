@@ -2526,21 +2526,23 @@ declare module es {
          */
         static toRadians(degrees: number): number;
         /**
-         * 返回由给定三角形和两个归一化重心（面积）坐标定义的点的一个轴的笛卡尔坐标
-         * @param value1
-         * @param value2
-         * @param value3
-         * @param amount1
-         * @param amount2
+         * 计算三角形上给定两个归一化重心坐标所确定点在某个轴上的笛卡尔坐标
+         * @param value1 三角形上某个顶点在该轴上的笛卡尔坐标
+         * @param value2 三角形上另一个顶点在该轴上的笛卡尔坐标
+         * @param value3 三角形上第三个顶点在该轴上的笛卡尔坐标
+         * @param amount1 第一个重心坐标，即点相对于三角形边2的面积比例
+         * @param amount2 第二个重心坐标，即点相对于三角形边1的面积比例
+         * @returns 计算出的点在该轴上的笛卡尔坐标
          */
         static barycentric(value1: number, value2: number, value3: number, amount1: number, amount2: number): number;
         /**
-         * 使用指定位置执行Catmull-Rom插值
-         * @param value1
-         * @param value2
-         * @param value3
-         * @param value4
-         * @param amount
+         * 使用Catmull-Rom插值算法在指定的四个数值之间进行插值，返回给定位置的插值结果
+         * @param value1 插值范围中的第一个数据点
+         * @param value2 插值范围中的第二个数据点
+         * @param value3 插值范围中的第三个数据点
+         * @param value4 插值范围中的第四个数据点
+         * @param amount 插值位置的值，取值范围为[0, 1]，表示该位置在value2和value3之间的相对位置
+         * @returns 经过Catmull-Rom插值计算后在给定位置的插值结果
          */
         static catmullRom(value1: number, value2: number, value3: number, value4: number, amount: number): number;
         /**
@@ -2578,7 +2580,8 @@ declare module es {
         static smoothStep(value1: number, value2: number, amount: number): number;
         /**
          * 将给定角度减小到π到-π之间的值
-         * @param angle
+         * @param angle 给定角度值
+         * @returns 减小后的角度值，保证在[-π, π]的范围内
          */
         static wrapAngle(angle: number): number;
         /**
@@ -2620,6 +2623,13 @@ declare module es {
          * @returns
          */
         static signThreshold(value: number, threshold: number): number;
+        /**
+         * 计算t值在[from, to]区间内的插值比例
+         * @param from 插值区间的起点
+         * @param to 插值区间的终点
+         * @param t 需要计算插值比例的数值
+         * @returns t值在[from, to]区间内的插值比例，取值范围在[0, 1]之间
+         */
         static inverseLerp(from: number, to: number, t: number): number;
         /**
          * 在两个值之间线性插值
@@ -2802,29 +2812,26 @@ declare module es {
          */
         static lissajou(xFrequency?: number, yFrequency?: number, xMagnitude?: number, yMagnitude?: number, phase?: number): Vector2;
         /**
-         * lissajou曲线的阻尼形式，其振荡随时间在0和最大幅度之间。
-         * 为获得最佳效果，阻尼应在0到1之间。
-         * 振荡间隔是动画循环的一半完成的时间（以秒为单位）。
-         * @param xFrequency
-         * @param yFrequency
-         * @param xMagnitude
-         * @param yMagnitude
-         * @param phase
-         * @param damping
-         * @param oscillationInterval
-         * @returns
+         * 生成阻尼的 Lissajous 曲线
+         * @param xFrequency x 轴上的频率
+         * @param yFrequency y 轴上的频率
+         * @param xMagnitude x 轴上的振幅
+         * @param yMagnitude y 轴上的振幅
+         * @param phase x 轴相位差
+         * @param damping 阻尼值
+         * @param oscillationInterval 振荡间隔
          */
         static lissajouDamped(xFrequency?: number, yFrequency?: number, xMagnitude?: number, yMagnitude?: number, phase?: number, damping?: number, oscillationInterval?: number): Vector2;
         /**
-         * 执行Hermite样条插值
-         * @param value1
-         * @param tangent1
-         * @param value2
-         * @param tangent2
-         * @param amount
-         * @returns
+         * 计算在曲线上特定位置的值。
+         * @param value1 第一个插值点的值
+         * @param tangent1 第一个插值点的切线或方向向量
+         * @param value2 第二个插值点的值
+         * @param tangent2 第二个插值点的切线或方向向量
+         * @param amount 在这两个点之间进行插值的位置
+         * @returns 在曲线上特定位置的值
          */
-        static hermite(value1: number, tangent1: number, value2: number, tangent2: number, amount: number): any;
+        static hermite(value1: number, tangent1: number, value2: number, tangent2: number, amount: number): number;
         /**
          * 此函数用于确保数不是NaN或无穷大
          * @param x
