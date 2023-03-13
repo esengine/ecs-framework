@@ -1,13 +1,10 @@
 ///<reference path="./IntervalSystem.ts"/>
 module es {
     /**
-     * 每x个ticks处理一个实体的子集
-     * 
-     * 典型的用法是每隔一定的时间间隔重新生成弹药或生命值
-     * 而无需在每个游戏循环中都进行
-     * 而是每100毫秒一次或每秒
+     * 定时遍历处理实体的系统，用于按指定的时间间隔遍历并处理感兴趣的实体。
      */
     export abstract class IntervalIteratingSystem extends IntervalSystem {
+
         constructor(matcher: Matcher, interval: number) {
             super(matcher, interval);
         }
@@ -18,6 +15,10 @@ module es {
          */
         public abstract processEntity(entity: Entity);
 
+        /**
+         * 遍历处理实体。
+         * @param entities 本系统感兴趣的实体列表
+         */
         protected process(entities: Entity[]) {
             entities.forEach(entity => this.processEntity(entity));
         }

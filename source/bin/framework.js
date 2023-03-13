@@ -567,18 +567,43 @@ var es;
             }
             return this;
         };
+        /**
+         * 添加组件
+         * @param component 要添加的组件实例
+         * @returns 返回添加的组件实例
+         */
         Component.prototype.addComponent = function (component) {
             return this.entity.addComponent(component);
         };
+        /**
+         * 获取组件
+         * @param type 组件类型
+         * @returns 返回获取到的组件实例
+         */
         Component.prototype.getComponent = function (type) {
             return this.entity.getComponent(type);
         };
+        /**
+         * 获取一组指定类型的组件
+         * @param typeName 组件类型名
+         * @param componentList 可选参数，存储组件实例的数组
+         * @returns 返回指定类型的组件实例数组
+         */
         Component.prototype.getComponents = function (typeName, componentList) {
             return this.entity.getComponents(typeName, componentList);
         };
+        /**
+         * 判断实体是否包含指定类型的组件
+         * @param type 组件类型
+         * @returns 如果实体包含指定类型的组件，返回 true，否则返回 false。
+         */
         Component.prototype.hasComponent = function (type) {
             return this.entity.hasComponent(type);
         };
+        /**
+         * 删除组件
+         * @param component 可选参数，要删除的组件实例。如果未指定该参数，则删除当前实例上的组件。
+         */
         Component.prototype.removeComponent = function (component) {
             if (component) {
                 this.entity.removeComponent(component);
@@ -3887,7 +3912,7 @@ var es;
 ///<reference path="../../Utils/Collections/HashMap.ts"/>
 (function (es) {
     /**
-     * 追踪实体的子集，但不实现任何排序或迭代。
+     * 实体系统的基类，用于处理一组实体。
      */
     var EntitySystem = /** @class */ (function () {
         function EntitySystem(matcher) {
@@ -3943,7 +3968,7 @@ var es;
         });
         /**
          * 设置更新时序
-         * @param order
+         * @param order 更新时序
          */
         EntitySystem.prototype.setUpdateOrder = function (order) {
             this._updateOrder = order;
@@ -3964,12 +3989,14 @@ var es;
                 this._entities.push(entity);
             this.onAdded(entity);
         };
-        EntitySystem.prototype.onAdded = function (entity) { };
+        EntitySystem.prototype.onAdded = function (entity) {
+        };
         EntitySystem.prototype.remove = function (entity) {
             new es.List(this._entities).remove(entity);
             this.onRemoved(entity);
         };
-        EntitySystem.prototype.onRemoved = function (entity) { };
+        EntitySystem.prototype.onRemoved = function (entity) {
+        };
         EntitySystem.prototype.update = function () {
             if (this.checkProcessing()) {
                 this.begin();
@@ -3991,8 +4018,10 @@ var es;
                 return;
             this._startTime = Date.now();
         };
-        EntitySystem.prototype.process = function (entities) { };
-        EntitySystem.prototype.lateProcess = function (entities) { };
+        EntitySystem.prototype.process = function (entities) {
+        };
+        EntitySystem.prototype.lateProcess = function (entities) {
+        };
         /**
          * 系统处理完毕后调用
          */
@@ -4242,17 +4271,17 @@ var es;
 ///<reference path="./IntervalSystem.ts"/>
 (function (es) {
     /**
-     * 每x个ticks处理一个实体的子集
-     *
-     * 典型的用法是每隔一定的时间间隔重新生成弹药或生命值
-     * 而无需在每个游戏循环中都进行
-     * 而是每100毫秒一次或每秒
+     * 定时遍历处理实体的系统，用于按指定的时间间隔遍历并处理感兴趣的实体。
      */
     var IntervalIteratingSystem = /** @class */ (function (_super) {
         __extends(IntervalIteratingSystem, _super);
         function IntervalIteratingSystem(matcher, interval) {
             return _super.call(this, matcher, interval) || this;
         }
+        /**
+         * 遍历处理实体。
+         * @param entities 本系统感兴趣的实体列表
+         */
         IntervalIteratingSystem.prototype.process = function (entities) {
             var _this = this;
             entities.forEach(function (entity) { return _this.processEntity(entity); });
@@ -4323,13 +4352,26 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 位操作类，用于操作一个位数组。
+     */
     var Bits = /** @class */ (function () {
         function Bits() {
             this._bit = {};
         }
+        /**
+         * 设置指定位置的位值。
+         * @param index 位置索引
+         * @param value 位值（0 或 1）
+         */
         Bits.prototype.set = function (index, value) {
             this._bit[index] = value;
         };
+        /**
+         * 获取指定位置的位值。
+         * @param index 位置索引
+         * @returns 位值（0 或 1）
+         */
         Bits.prototype.get = function (index) {
             var v = this._bit[index];
             return v == null ? 0 : v;
@@ -4345,25 +4387,40 @@ var es;
     var ComponentList = /** @class */ (function () {
         function ComponentList(entity) {
             /**
-             * 添加到实体的组件列表
+             * 实体的组件列表。
              */
             this._components = [];
             /**
-             * 所有需要更新的组件列表
+             * 可更新的组件列表。
              */
             this._updatableComponents = [];
             /**
-             * 添加到此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
+             * 等待添加到实体的组件列表。
              */
             this._componentsToAdd = {};
             /**
-             * 标记要删除此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
+             * 等待从实体中移除的组件列表。
              */
             this._componentsToRemove = {};
+            /**
+             * 等待添加到实体的组件列表（作为数组）。
+             */
             this._componentsToAddList = [];
+            /**
+             * 等待从实体中移除的组件列表（作为数组）。
+             */
             this._componentsToRemoveList = [];
+            /**
+             * 临时的组件缓冲列表。
+             */
             this._tempBufferList = [];
+            /**
+             * 按组件类型组织的组件列表字典。
+             */
             this.componentsByType = new Map();
+            /**
+             * 按组件类型组织的等待添加到实体的组件列表字典。
+             */
             this.componentsToAddByType = new Map();
             this._entity = entity;
         }
@@ -4384,20 +4441,32 @@ var es;
         ComponentList.prototype.markEntityListUnsorted = function () {
             this._isComponentListUnsorted = true;
         };
+        /**
+         * 将组件添加到实体的组件列表中，并添加到组件类型字典中。
+         * @param component 要添加的组件。
+         */
         ComponentList.prototype.add = function (component) {
+            // 将组件添加到_componentsToAdd和_componentsToAddList中，并添加到相应的组件类型字典中
             this._componentsToAdd[component.id] = component;
             this._componentsToAddList.push(component);
             this.addComponentsToAddByType(component);
         };
+        /**
+         * 从实体的组件列表中移除组件，并从相应的组件类型字典中移除组件。
+         * @param component 要从实体中移除的组件。
+         */
         ComponentList.prototype.remove = function (component) {
+            // 如果组件在_componentsToAdd中，则将其从_componentsToAddList中移除，并从相应的组件类型字典中移除组件
             if (this._componentsToAdd[component.id]) {
-                var index = this._componentsToAddList.findIndex(function (c) { return c.id == component.id; });
-                if (index != -1)
+                var index = this._componentsToAddList.findIndex(function (c) { return c.id === component.id; });
+                if (index !== -1) {
                     this._componentsToAddList.splice(index, 1);
+                }
                 delete this._componentsToAdd[component.id];
                 this.removeComponentsToAddByType(component);
                 return;
             }
+            // 如果组件不在_componentsToAdd中，则将其添加到_componentsToRemove和_componentsToRemoveList中
             this._componentsToRemove[component.id] = component;
             this._componentsToRemoveList.push(component);
         };
@@ -4419,163 +4488,280 @@ var es;
             this._componentsToAddList.length = 0;
             this._componentsToRemoveList.length = 0;
         };
+        /**
+         * 从实体的所有组件上注销并从相关数据结构中删除它们。
+         */
         ComponentList.prototype.deregisterAllComponents = function () {
+            var e_2, _a;
             if (this._components.length > 0) {
-                for (var i = 0, s = this._components.length; i < s; ++i) {
-                    var component = this._components[i];
-                    if (!component)
-                        continue;
-                    // 处理IUpdatable
-                    if (es.isIUpdatable(component))
-                        new es.List(this._updatableComponents).remove(component);
-                    this.decreaseBits(component);
-                    this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+                try {
+                    for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
+                        var component = _c.value;
+                        // 处理IUpdatable
+                        if (es.isIUpdatable(component)) {
+                            // 创建一个新的List实例，从_updatableComponents中移除组件，以避免并发修改异常
+                            new es.List(this._updatableComponents).remove(component);
+                        }
+                        // 从位掩码中减去组件类型的索引，通知实体处理器一个组件已被移除
+                        this.decreaseBits(component);
+                        this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+                    }
+                }
+                catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                finally {
+                    try {
+                        if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                    }
+                    finally { if (e_2) throw e_2.error; }
                 }
             }
         };
+        /**
+         * 注册实体的所有组件，并将它们添加到相应的数据结构中。
+         */
         ComponentList.prototype.registerAllComponents = function () {
+            var e_3, _a;
             if (this._components.length > 0) {
-                for (var i = 0, s = this._components.length; i < s; ++i) {
-                    var component = this._components[i];
-                    if (es.isIUpdatable(component))
-                        this._updatableComponents.push(component);
-                    this.addBits(component);
-                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                try {
+                    for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
+                        var component = _c.value;
+                        if (es.isIUpdatable(component)) {
+                            // 如果组件是可更新的，则将其添加到_updatableComponents中
+                            this._updatableComponents.push(component);
+                        }
+                        // 将组件类型的索引添加到实体的位掩码中，通知实体处理器一个组件已被添加
+                        this.addBits(component);
+                        this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                    }
+                }
+                catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                finally {
+                    try {
+                        if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                    }
+                    finally { if (e_3) throw e_3.error; }
                 }
             }
         };
+        /**
+         * 从实体的位掩码中减去组件类型的索引。
+         * @param component 要从实体中删除的组件。
+         */
         ComponentList.prototype.decreaseBits = function (component) {
             var bits = this._entity.componentBits;
+            // 获取组件类型的索引，将其对应位掩码减1
             var typeIndex = es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component));
             bits.set(typeIndex, bits.get(typeIndex) - 1);
         };
+        /**
+         * 在实体的位掩码中添加组件类型的索引。
+         * @param component 要添加到实体的组件。
+         */
         ComponentList.prototype.addBits = function (component) {
             var bits = this._entity.componentBits;
+            // 获取组件类型的索引，将其对应位掩码加1
             var typeIndex = es.ComponentTypeManager.getIndexFor(es.TypeUtils.getType(component));
             bits.set(typeIndex, bits.get(typeIndex) + 1);
         };
         /**
-         * 处理任何需要删除或添加的组件
+         * 更新实体的组件列表和相关数据结构。
+         * 如果有组件要添加或删除，它将相应地更新组件列表和其他数据结构。
          */
         ComponentList.prototype.updateLists = function () {
+            var e_4, _a, e_5, _b, e_6, _c;
+            // 处理要删除的组件
             if (this._componentsToRemoveList.length > 0) {
-                var _loop_1 = function (i, l) {
-                    var component = this_1._componentsToRemoveList[i];
+                var _loop_1 = function (component) {
+                    // 从实体中删除组件，从组件列表和相关数据结构中删除组件
                     this_1.handleRemove(component);
-                    var index = this_1._components.findIndex(function (c) { return c.id == component.id; });
-                    if (index != -1)
+                    // 从_components数组中删除组件
+                    var index = this_1._components.findIndex(function (c) { return c.id === component.id; });
+                    if (index !== -1) {
                         this_1._components.splice(index, 1);
+                    }
+                    // 从组件类型字典中删除组件
                     this_1.removeComponentsByType(component);
                 };
                 var this_1 = this;
-                for (var i = 0, l = this._componentsToRemoveList.length; i < l; ++i) {
-                    _loop_1(i, l);
+                try {
+                    for (var _d = __values(this._componentsToRemoveList), _e = _d.next(); !_e.done; _e = _d.next()) {
+                        var component = _e.value;
+                        _loop_1(component);
+                    }
                 }
+                catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                finally {
+                    try {
+                        if (_e && !_e.done && (_a = _d.return)) _a.call(_d);
+                    }
+                    finally { if (e_4) throw e_4.error; }
+                }
+                // 清空_componentsToRemove和_componentsToRemoveList
                 this._componentsToRemove = {};
                 this._componentsToRemoveList.length = 0;
             }
+            // 处理要添加的组件
             if (this._componentsToAddList.length > 0) {
-                for (var i = 0, l = this._componentsToAddList.length; i < l; ++i) {
-                    var component = this._componentsToAddList[i];
-                    if (es.isIUpdatable(component))
-                        this._updatableComponents.push(component);
-                    this.addBits(component);
-                    this._entity.scene.entityProcessors.onComponentAdded(this._entity);
-                    this.addComponentsByType(component);
-                    this._components.push(component);
-                    this._tempBufferList.push(component);
+                try {
+                    for (var _f = __values(this._componentsToAddList), _g = _f.next(); !_g.done; _g = _f.next()) {
+                        var component = _g.value;
+                        // 如果组件可以更新，则添加到可更新组件列表中
+                        if (es.isIUpdatable(component)) {
+                            this._updatableComponents.push(component);
+                        }
+                        // 更新实体的组件位掩码，通知实体处理器一个组件已经添加
+                        this.addBits(component);
+                        this._entity.scene.entityProcessors.onComponentAdded(this._entity);
+                        // 将组件添加到相应类型的fastList中，将组件添加到_components数组中
+                        this.addComponentsByType(component);
+                        this._components.push(component);
+                        // 将组件添加到_tempBufferList中，稍后调用onAddedToEntity和onEnabled
+                        this._tempBufferList.push(component);
+                    }
                 }
-                // 在调用onAddedToEntity之前清除，以防添加更多组件
+                catch (e_5_1) { e_5 = { error: e_5_1 }; }
+                finally {
+                    try {
+                        if (_g && !_g.done && (_b = _f.return)) _b.call(_f);
+                    }
+                    finally { if (e_5) throw e_5.error; }
+                }
+                // 清空_componentsToAdd、_componentsToAddList和componentsToAddByType，设置_isComponentListUnsorted标志
                 this._componentsToAdd = {};
                 this._componentsToAddList.length = 0;
                 this.componentsToAddByType.clear();
                 this._isComponentListUnsorted = true;
             }
+            // 调用新添加组件的onAddedToEntity和onEnabled方法
             if (this._tempBufferList.length > 0) {
-                // 现在所有的组件都添加到了场景中，我们再次循环并调用onAddedToEntity/onEnabled
-                for (var i = 0, l = this._tempBufferList.length; i < l; ++i) {
-                    var component = this._tempBufferList[i];
-                    component.onAddedToEntity();
-                    // enabled检查实体和组件
-                    if (component.enabled) {
-                        component.onEnabled();
+                try {
+                    for (var _h = __values(this._tempBufferList), _j = _h.next(); !_j.done; _j = _h.next()) {
+                        var component = _j.value;
+                        component.onAddedToEntity();
+                        // 如果组件已启用，则调用onEnabled方法
+                        if (component.enabled) {
+                            component.onEnabled();
+                        }
                     }
                 }
+                catch (e_6_1) { e_6 = { error: e_6_1 }; }
+                finally {
+                    try {
+                        if (_j && !_j.done && (_c = _h.return)) _c.call(_h);
+                    }
+                    finally { if (e_6) throw e_6.error; }
+                }
+                // 清空_tempBufferList
                 this._tempBufferList.length = 0;
             }
         };
         ComponentList.prototype.handleRemove = function (component) {
+            // 如果组件可以更新，从可更新组件列表中删除该组件
             if (es.isIUpdatable(component) && this._updatableComponents.length > 0) {
-                var index = this._updatableComponents.findIndex(function (c) { return c.id == component.id; });
-                if (index != -1)
+                var index = this._updatableComponents.findIndex(function (c) { return c.id === component.id; });
+                if (index !== -1) {
                     this._updatableComponents.splice(index, 1);
+                }
             }
+            // 更新实体的组件位掩码
             this.decreaseBits(component);
+            // 通知实体处理器一个组件已被删除
             this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
+            // 调用组件的onRemovedFromEntity方法，将其entity属性设置为null
             component.onRemovedFromEntity();
             component.entity = null;
         };
         ComponentList.prototype.removeComponentsByType = function (component) {
+            // 获取存储指定类型组件的fastList数组
             var fastList = this.componentsByType.get(es.TypeUtils.getType(component));
-            var fastIndex = fastList.findIndex(function (c) { return c.id == component.id; });
-            if (fastIndex != -1) {
-                fastList.splice(fastIndex, 1);
+            // 在fastList中查找要删除的组件
+            var index = fastList.findIndex(function (c) { return c.id === component.id; });
+            if (index !== -1) {
+                // 找到组件后，使用splice方法将其从fastList中删除
+                fastList.splice(index, 1);
             }
         };
         ComponentList.prototype.addComponentsByType = function (component) {
+            // 获取存储指定类型组件的fastList数组
             var fastList = this.componentsByType.get(es.TypeUtils.getType(component));
-            if (!fastList)
+            // 如果fastList不存在，则创建一个空数组
+            if (!fastList) {
                 fastList = [];
+            }
+            // 在fastList中添加组件
             fastList.push(component);
+            // 更新componentsByType字典，以便它包含fastList数组
             this.componentsByType.set(es.TypeUtils.getType(component), fastList);
         };
+        /**
+         * 从待添加组件列表中移除指定类型的组件。
+         * @param component 要移除的组件
+         */
         ComponentList.prototype.removeComponentsToAddByType = function (component) {
+            // 获取待添加组件列表中指定类型的组件列表
             var fastList = this.componentsToAddByType.get(es.TypeUtils.getType(component));
+            // 在该列表中查找指定组件
             var fastIndex = fastList.findIndex(function (c) { return c.id == component.id; });
+            // 如果找到了指定组件，则从列表中移除它
             if (fastIndex != -1) {
                 fastList.splice(fastIndex, 1);
             }
         };
+        /**
+         * 向待添加组件列表中添加指定类型的组件。
+         * @param component 要添加的组件
+         */
         ComponentList.prototype.addComponentsToAddByType = function (component) {
+            // 获取待添加组件列表中指定类型的组件列表
             var fastList = this.componentsToAddByType.get(es.TypeUtils.getType(component));
+            // 如果指定类型的组件列表不存在，则创建一个新的列表
             if (!fastList)
                 fastList = [];
+            // 向指定类型的组件列表中添加组件
             fastList.push(component);
+            // 更新待添加组件列表中指定类型的组件列表
             this.componentsToAddByType.set(es.TypeUtils.getType(component), fastList);
         };
         /**
-         * 获取类型T的第一个组件并返回它
-         * 可以选择跳过检查未初始化的组件(尚未调用onAddedToEntity方法的组件)
-         * 如果没有找到组件，则返回null。
-         * @param type
-         * @param onlyReturnInitializedComponents
+         * 获取指定类型的第一个组件实例。
+         * @param type 组件类型
+         * @param onlyReturnInitializedComponents 是否仅返回已初始化的组件
+         * @returns 指定类型的第一个组件实例，如果不存在则返回 null
          */
         ComponentList.prototype.getComponent = function (type, onlyReturnInitializedComponents) {
+            // 获取指定类型的组件列表
             var fastList = this.componentsByType.get(type);
+            // 如果指定类型的组件列表存在并且不为空，则返回第一个组件实例
             if (fastList && fastList.length > 0)
                 return fastList[0];
-            // 我们可以选择检查挂起的组件，以防addComponent和getComponent在同一个框架中被调用
+            // 如果不仅返回已初始化的组件，则检查待添加组件列表中是否存在指定类型的组件
             if (!onlyReturnInitializedComponents) {
                 var fastToAddList = this.componentsToAddByType.get(type);
                 if (fastToAddList && fastToAddList.length > 0)
                     return fastToAddList[0];
             }
+            // 如果指定类型的组件列表为空且待添加组件列表中也不存在该类型的组件，则返回 null
             return null;
         };
         /**
-         * 获取T类型的所有组件，但不使用列表分配
-         * @param typeName
-         * @param components
+         * 获取指定类型的所有组件实例。
+         * @param typeName 组件类型名称
+         * @param components 存储组件实例的数组
+         * @returns 存储了指定类型的所有组件实例的数组
          */
         ComponentList.prototype.getComponents = function (typeName, components) {
+            // 如果没有传入组件实例数组，则创建一个新数组
             if (!components)
                 components = [];
+            // 获取指定类型的组件列表，并将其添加到组件实例数组中
             var fastList = this.componentsByType.get(typeName);
             if (fastList)
                 components = components.concat(fastList);
+            // 获取待添加组件列表中的指定类型的组件列表，并将其添加到组件实例数组中
             var fastToAddList = this.componentsToAddByType.get(typeName);
             if (fastToAddList)
                 components = components.concat(fastToAddList);
+            // 返回存储了指定类型的所有组件实例的数组
             return components;
         };
         ComponentList.prototype.update = function () {
@@ -4617,7 +4803,7 @@ var es;
             }
         };
         /**
-         * 组件列表的全局updateOrder排序
+         * 比较IUpdatable对象的更新顺序。
          */
         ComponentList.compareUpdatableOrder = new es.IUpdatableComparer();
         return ComponentList;
@@ -4721,23 +4907,32 @@ var es;
     var EntityList = /** @class */ (function () {
         function EntityList(scene) {
             /**
-             * 场景中添加的实体列表
+             * 实体列表
              */
             this._entities = [];
             /**
-             * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
+             * 待添加的实体字典
              */
             this._entitiesToAdded = {};
             /**
-             * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
+             * 待移除的实体字典
              */
             this._entitiesToRemove = {};
+            /**
+             * 待添加的实体列表
+             */
             this._entitiesToAddedList = [];
+            /**
+             * 待移除的实体列表
+             */
             this._entitiesToRemoveList = [];
             /**
-             * 通过标签跟踪实体，便于检索
+             * 实体字典，以实体标签为键
              */
             this._entityDict = new Map();
+            /**
+             * 未排序的标签集合
+             */
             this._unsortedTags = new Set();
             this.scene = scene;
         }
@@ -4770,104 +4965,204 @@ var es;
             this._entitiesToAddedList.push(entity);
         };
         /**
-         * 从列表中删除一个实体。所有的生命周期方法将在下一帧中被调用
-         * @param entity
+         * 从场景中移除实体。
+         * @param entity 要从场景中移除的实体。
          */
         EntityList.prototype.remove = function (entity) {
-            // 防止在同一帧中添加或删除实体
+            // 如果实体在添加列表中，则将其从添加列表中移除
             if (this._entitiesToAdded[entity.id]) {
-                var index = this._entitiesToAddedList.findIndex(function (e) { return e.id == entity.id; });
-                if (index != -1)
+                var index = this._entitiesToAddedList.findIndex(function (e) { return e.id === entity.id; });
+                if (index !== -1) {
                     this._entitiesToAddedList.splice(index, 1);
+                }
                 delete this._entitiesToAdded[entity.id];
                 return;
             }
+            // 如果实体不在添加列表中，则将其添加到移除列表中并将其添加到移除字典中
             this._entitiesToRemoveList.push(entity);
-            if (!this._entitiesToRemove[entity.id])
+            if (!this._entitiesToRemove[entity.id]) {
                 this._entitiesToRemove[entity.id] = entity;
+            }
         };
         /**
-         * 从实体列表中删除所有实体
+         * 从场景中移除所有实体。
          */
         EntityList.prototype.removeAllEntities = function () {
+            var e_7, _a;
+            // 清除字典和列表，以及是否已排序的标志
             this._unsortedTags.clear();
             this._entitiesToAdded = {};
             this._entitiesToAddedList.length = 0;
             this._isEntityListUnsorted = false;
-            // 为什么我们要在这里更新列表？主要是为了处理在场景切换前被分离的实体。
-            // 它们仍然会在_entitiesToRemove列表中，这将由updateLists处理。
+            // 调用updateLists方法，以处理要移除的实体
             this.updateLists();
-            for (var i = 0; i < this._entities.length; i++) {
-                this._entities[i]._isDestroyed = true;
-                this._entities[i].onRemovedFromScene();
-                this._entities[i].scene = null;
+            try {
+                // 标记并移除所有实体
+                for (var _b = __values(this._entities), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var entity = _c.value;
+                    entity._isDestroyed = true;
+                    entity.onRemovedFromScene();
+                    entity.scene = null;
+                }
             }
+            catch (e_7_1) { e_7 = { error: e_7_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_7) throw e_7.error; }
+            }
+            // 清空实体列表和实体字典
             this._entities.length = 0;
             this._entityDict.clear();
         };
         /**
-         * 检查实体目前是否由这个EntityList管理
-         * @param entity
+         * 检查实体是否已经被添加到场景中。
+         * @param entity 要检查的实体
+         * @returns 如果实体已经被添加到场景中，则返回true；否则返回false
          */
         EntityList.prototype.contains = function (entity) {
+            // 检查实体是否存在于_entitiesToAdded字典中
             return !!this._entitiesToAdded[entity.id];
         };
+        /**
+         * 获取具有指定标签的实体列表。
+         * 如果列表不存在，则创建一个新列表并返回。
+         * @param tag 实体标签
+         * @returns 具有指定标签的实体列表
+         */
         EntityList.prototype.getTagList = function (tag) {
+            // 尝试从_entityDict中获取具有指定标签的实体列表
             var list = this._entityDict.get(tag);
+            // 如果列表不存在，则创建一个新的Set实例，并添加到_entityDict中
             if (!list) {
                 list = new Set();
                 this._entityDict.set(tag, list);
             }
             return list;
         };
+        /**
+         * 添加实体到标签列表中。
+         * @param entity 实体
+         */
         EntityList.prototype.addToTagList = function (entity) {
-            this.getTagList(entity.tag).add(entity);
+            // 获取标签列表
+            var list = this.getTagList(entity.tag);
+            // 将实体添加到标签列表中
+            list.add(entity);
+            // 添加未排序标志
             this._unsortedTags.add(entity.tag);
         };
+        /**
+         * 从标签列表中移除实体。
+         * @param entity 实体
+         */
         EntityList.prototype.removeFromTagList = function (entity) {
+            // 获取实体的标签列表
             var list = this._entityDict.get(entity.tag);
-            if (list)
+            // 如果标签列表存在，则从中移除实体
+            if (list) {
                 list.delete(entity);
-        };
-        EntityList.prototype.update = function () {
-            for (var i = 0, s = this._entities.length; i < s; ++i) {
-                var entity = this._entities[i];
-                if (entity.enabled && (entity.updateInterval == 1 || es.Time.frameCount % entity.updateInterval == 0))
-                    entity.update();
             }
         };
+        /**
+         * 更新场景中所有启用的实体的Update方法
+         * 如果实体的UpdateInterval为1或Time.frameCount模除UpdateInterval为0，则每帧调用Update
+         */
+        EntityList.prototype.update = function () {
+            for (var i = 0; i < this._entities.length; i++) {
+                var entity = this._entities[i];
+                if (entity.enabled && (entity.updateInterval === 1 || es.Time.frameCount % entity.updateInterval === 0)) {
+                    entity.update();
+                }
+            }
+        };
+        /**
+         * 更新场景中实体的列表。
+         */
         EntityList.prototype.updateLists = function () {
+            var e_8, _a, e_9, _b, e_10, _c, e_11, _d;
+            // 处理要移除的实体
             if (this._entitiesToRemoveList.length > 0) {
-                var _loop_2 = function (i, s) {
-                    var entity = this_2._entitiesToRemoveList[i];
+                var _loop_2 = function (entity) {
+                    // 从标签列表中删除实体
                     this_2.removeFromTagList(entity);
-                    // 处理常规实体列表
-                    var index = this_2._entities.findIndex(function (e) { return e.id == entity.id; });
-                    if (index != -1)
+                    // 从场景实体列表中删除实体
+                    var index = this_2._entities.findIndex(function (e) { return e.id === entity.id; });
+                    if (index !== -1) {
                         this_2._entities.splice(index, 1);
+                    }
+                    // 调用实体的onRemovedFromScene方法，并将其scene属性设置为null
                     entity.onRemovedFromScene();
                     entity.scene = null;
+                    // 通知场景实体处理器，一个实体已被移除
                     this_2.scene.entityProcessors.onEntityRemoved(entity);
                 };
                 var this_2 = this;
-                for (var i = 0, s = this._entitiesToRemoveList.length; i < s; ++i) {
-                    _loop_2(i, s);
+                try {
+                    for (var _e = __values(this._entitiesToRemoveList), _f = _e.next(); !_f.done; _f = _e.next()) {
+                        var entity = _f.value;
+                        _loop_2(entity);
+                    }
                 }
+                catch (e_8_1) { e_8 = { error: e_8_1 }; }
+                finally {
+                    try {
+                        if (_f && !_f.done && (_a = _e.return)) _a.call(_e);
+                    }
+                    finally { if (e_8) throw e_8.error; }
+                }
+                // 清空要移除的实体列表和字典
                 this._entitiesToRemove = {};
                 this._entitiesToRemoveList.length = 0;
             }
+            // 处理要添加的实体
             if (this._entitiesToAddedList.length > 0) {
-                for (var i = 0, s = this._entitiesToAddedList.length; i < s; ++i) {
-                    var entity = this._entitiesToAddedList[i];
-                    this._entities.push(entity);
-                    entity.scene = this.scene;
-                    this.addToTagList(entity);
-                    this.scene.entityProcessors.onEntityAdded(entity);
+                try {
+                    // 添加实体到场景实体列表和标签列表中
+                    for (var _g = __values(this._entitiesToAddedList), _h = _g.next(); !_h.done; _h = _g.next()) {
+                        var entity = _h.value;
+                        this._entities.push(entity);
+                        entity.scene = this.scene;
+                        this.addToTagList(entity);
+                    }
                 }
-                for (var i = 0, s = this._entitiesToAddedList.length; i < s; ++i) {
-                    var entity = this._entitiesToAddedList[i];
-                    entity.onAddedToScene();
+                catch (e_9_1) { e_9 = { error: e_9_1 }; }
+                finally {
+                    try {
+                        if (_h && !_h.done && (_b = _g.return)) _b.call(_g);
+                    }
+                    finally { if (e_9) throw e_9.error; }
                 }
+                try {
+                    // 通知场景实体处理器，有新的实体已添加
+                    for (var _j = __values(this._entitiesToAddedList), _k = _j.next(); !_k.done; _k = _j.next()) {
+                        var entity = _k.value;
+                        this.scene.entityProcessors.onEntityAdded(entity);
+                    }
+                }
+                catch (e_10_1) { e_10 = { error: e_10_1 }; }
+                finally {
+                    try {
+                        if (_k && !_k.done && (_c = _j.return)) _c.call(_j);
+                    }
+                    finally { if (e_10) throw e_10.error; }
+                }
+                try {
+                    // 调用实体的onAddedToScene方法，以允许它们执行任何场景相关的操作
+                    for (var _l = __values(this._entitiesToAddedList), _m = _l.next(); !_m.done; _m = _l.next()) {
+                        var entity = _m.value;
+                        entity.onAddedToScene();
+                    }
+                }
+                catch (e_11_1) { e_11 = { error: e_11_1 }; }
+                finally {
+                    try {
+                        if (_m && !_m.done && (_d = _l.return)) _d.call(_l);
+                    }
+                    finally { if (e_11) throw e_11.error; }
+                }
+                // 清空要添加的实体列表和字典
                 this._entitiesToAdded = {};
                 this._entitiesToAddedList.length = 0;
             }
@@ -4894,44 +5189,51 @@ var es;
             return null;
         };
         /**
-         *
-         * @param id
-         * @returns
+         * 通过实体ID在场景中查找对应实体
+         * @param id 实体ID
+         * @returns 返回找到的实体，如果没有找到则返回 null
          */
         EntityList.prototype.findEntityById = function (id) {
+            // 遍历场景中所有实体
             if (this._entities.length > 0) {
                 for (var i = 0, s = this._entities.length; i < s; ++i) {
                     var entity = this._entities[i];
+                    // 如果实体的ID匹配，返回该实体
                     if (entity.id == id)
                         return entity;
                 }
             }
+            // 在未添加的实体列表中查找
             return this._entitiesToAdded[id];
         };
         /**
-         * 返回带有标签的所有实体的列表。如果没有实体有标签，则返回一个空列表。
-         * 返回的List可以通过ListPool.free放回池中
-         * @param tag
+         * 获取标签对应的实体列表
+         * @param tag 实体的标签
+         * @returns 返回所有拥有该标签的实体列表
          */
         EntityList.prototype.entitiesWithTag = function (tag) {
-            var e_2, _a;
+            var e_12, _a;
+            // 从字典中获取对应标签的实体列表
             var list = this.getTagList(tag);
+            // 从对象池中获取 Entity 类型的数组
             var returnList = es.ListPool.obtain(es.Entity);
             if (list.size > 0) {
                 try {
+                    // 将实体列表中的实体添加到返回列表中
                     for (var list_1 = __values(list), list_1_1 = list_1.next(); !list_1_1.done; list_1_1 = list_1.next()) {
                         var entity = list_1_1.value;
                         returnList.push(entity);
                     }
                 }
-                catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                catch (e_12_1) { e_12 = { error: e_12_1 }; }
                 finally {
                     try {
                         if (list_1_1 && !list_1_1.done && (_a = list_1.return)) _a.call(list_1);
                     }
-                    finally { if (e_2) throw e_2.error; }
+                    finally { if (e_12) throw e_12.error; }
                 }
             }
+            // 返回已填充好实体的返回列表
             return returnList;
         };
         /**
@@ -4940,7 +5242,7 @@ var es;
          * @returns
          */
         EntityList.prototype.entityWithTag = function (tag) {
-            var e_3, _a;
+            var e_13, _a;
             var list = this.getTagList(tag);
             if (list.size > 0) {
                 try {
@@ -4949,115 +5251,203 @@ var es;
                         return entity;
                     }
                 }
-                catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                catch (e_13_1) { e_13 = { error: e_13_1 }; }
                 finally {
                     try {
                         if (list_2_1 && !list_2_1.done && (_a = list_2.return)) _a.call(list_2);
                     }
-                    finally { if (e_3) throw e_3.error; }
+                    finally { if (e_13) throw e_13.error; }
                 }
             }
             return null;
         };
         /**
-         * 返回在场景中找到的第一个T类型的组件。
-         * @param type
+         * 在场景中查找具有给定类型的组件。
+         * @param type 要查找的组件类型。
+         * @returns 如果找到，则返回该组件；否则返回null。
          */
         EntityList.prototype.findComponentOfType = function (type) {
-            if (this._entities.length > 0) {
-                for (var i = 0, s = this._entities.length; i < s; i++) {
-                    var entity = this._entities[i];
+            var e_14, _a, e_15, _b;
+            try {
+                // 遍历场景中的所有实体，查找具有给定类型的组件
+                for (var _c = __values(this._entities), _d = _c.next(); !_d.done; _d = _c.next()) {
+                    var entity = _d.value;
                     if (entity.enabled) {
                         var comp = entity.getComponent(type);
-                        if (comp)
+                        if (comp) {
                             return comp;
+                        }
                     }
                 }
             }
-            if (this._entitiesToAddedList.length > 0) {
-                for (var i = 0; i < this._entitiesToAddedList.length; i++) {
-                    var entity = this._entitiesToAddedList[i];
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            finally {
+                try {
+                    if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+                }
+                finally { if (e_14) throw e_14.error; }
+            }
+            try {
+                // 遍历待添加的实体列表中的所有实体，查找具有给定类型的组件
+                for (var _e = __values(this._entitiesToAddedList), _f = _e.next(); !_f.done; _f = _e.next()) {
+                    var entity = _f.value;
                     if (entity.enabled) {
                         var comp = entity.getComponent(type);
-                        if (comp)
+                        if (comp) {
                             return comp;
+                        }
                     }
                 }
             }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            finally {
+                try {
+                    if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                }
+                finally { if (e_15) throw e_15.error; }
+            }
+            // 如果找不到具有给定类型的组件，则返回null
             return null;
         };
         /**
-         * 返回在场景中找到的所有T类型的组件。
-         * 返回的List可以通过ListPool.free放回池中。
-         * @param type
+         * 在场景中查找具有给定类型的所有组件。
+         * @param type 要查找的组件类型。
+         * @returns 具有给定类型的所有组件的列表。
          */
         EntityList.prototype.findComponentsOfType = function (type) {
+            var e_16, _a, e_17, _b;
+            // 从池中获取一个可重用的组件列表
             var comps = es.ListPool.obtain(type);
-            if (this._entities.length > 0) {
-                for (var i = 0, s = this._entities.length; i < s; i++) {
-                    var entity = this._entities[i];
-                    if (entity.enabled)
+            try {
+                // 遍历场景中的所有实体，查找具有给定类型的组件并添加到组件列表中
+                for (var _c = __values(this._entities), _d = _c.next(); !_d.done; _d = _c.next()) {
+                    var entity = _d.value;
+                    if (entity.enabled) {
                         entity.getComponents(type, comps);
+                    }
                 }
             }
-            if (this._entitiesToAddedList.length > 0) {
-                for (var i = 0, s = this._entitiesToAddedList.length; i < s; i++) {
-                    var entity = this._entitiesToAddedList[i];
-                    if (entity.enabled)
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            finally {
+                try {
+                    if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+                }
+                finally { if (e_16) throw e_16.error; }
+            }
+            try {
+                // 遍历待添加的实体列表中的所有实体，查找具有给定类型的组件并添加到组件列表中
+                for (var _e = __values(this._entitiesToAddedList), _f = _e.next(); !_f.done; _f = _e.next()) {
+                    var entity = _f.value;
+                    if (entity.enabled) {
                         entity.getComponents(type, comps);
+                    }
                 }
             }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
+            finally {
+                try {
+                    if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                }
+                finally { if (e_17) throw e_17.error; }
+            }
+            // 返回具有给定类型的所有组件的列表
             return comps;
         };
         /**
-         * 返回场景中包含特定组件的实体列表
-         * @param types
-         * @returns
+         * 返回拥有指定类型组件的所有实体
+         * @param types 要查询的组件类型列表
+         * @returns 返回拥有指定类型组件的所有实体
          */
         EntityList.prototype.findEntitiesOfComponent = function () {
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
+            var e_18, _a, e_19, _b, e_20, _c, e_21, _d;
             var entities = [];
-            if (this._entities.length > 0) {
-                for (var i = 0, s = this._entities.length; i < s; i++) {
-                    if (this._entities[i].enabled) {
-                        var meet = true;
-                        if (types.length > 0)
-                            for (var t = 0, ts = types.length; t < ts; t++) {
-                                var type = types[t];
-                                var hasComp = this._entities[i].hasComponent(type);
-                                if (!hasComp) {
-                                    meet = false;
-                                    break;
-                                }
-                            }
-                        if (meet) {
-                            entities.push(this._entities[i]);
-                        }
-                    }
-                }
-            }
-            if (this._entitiesToAddedList.length > 0) {
-                for (var i = 0, s = this._entitiesToAddedList.length; i < s; i++) {
-                    var entity = this._entitiesToAddedList[i];
+            try {
+                // 遍历所有已存在的实体
+                for (var _e = __values(this._entities), _f = _e.next(); !_f.done; _f = _e.next()) {
+                    var entity = _f.value;
+                    // 只有启用的实体才会被考虑
                     if (entity.enabled) {
+                        // 如果types数组为空，直接将实体添加到结果数组中
+                        if (types.length === 0) {
+                            entities.push(entity);
+                            continue;
+                        }
+                        // 对于每个指定的组件类型，检查实体是否具有该组件
                         var meet = true;
-                        if (types.length > 0)
-                            for (var t = 0, ts = types.length; t < ts; t++) {
-                                var type = types[t];
+                        try {
+                            for (var types_1 = __values(types), types_1_1 = types_1.next(); !types_1_1.done; types_1_1 = types_1.next()) {
+                                var type = types_1_1.value;
                                 var hasComp = entity.hasComponent(type);
                                 if (!hasComp) {
                                     meet = false;
                                     break;
                                 }
                             }
+                        }
+                        catch (e_19_1) { e_19 = { error: e_19_1 }; }
+                        finally {
+                            try {
+                                if (types_1_1 && !types_1_1.done && (_b = types_1.return)) _b.call(types_1);
+                            }
+                            finally { if (e_19) throw e_19.error; }
+                        }
+                        // 如果实体满足要求，将其添加到结果数组中
                         if (meet) {
                             entities.push(entity);
                         }
                     }
                 }
+            }
+            catch (e_18_1) { e_18 = { error: e_18_1 }; }
+            finally {
+                try {
+                    if (_f && !_f.done && (_a = _e.return)) _a.call(_e);
+                }
+                finally { if (e_18) throw e_18.error; }
+            }
+            try {
+                // 遍历所有等待添加的实体，和上面的操作类似
+                for (var _g = __values(this._entitiesToAddedList), _h = _g.next(); !_h.done; _h = _g.next()) {
+                    var entity = _h.value;
+                    if (entity.enabled) {
+                        if (types.length === 0) {
+                            entities.push(entity);
+                            continue;
+                        }
+                        var meet = true;
+                        try {
+                            for (var types_2 = __values(types), types_2_1 = types_2.next(); !types_2_1.done; types_2_1 = types_2.next()) {
+                                var type = types_2_1.value;
+                                var hasComp = entity.hasComponent(type);
+                                if (!hasComp) {
+                                    meet = false;
+                                    break;
+                                }
+                            }
+                        }
+                        catch (e_21_1) { e_21 = { error: e_21_1 }; }
+                        finally {
+                            try {
+                                if (types_2_1 && !types_2_1.done && (_d = types_2.return)) _d.call(types_2);
+                            }
+                            finally { if (e_21) throw e_21.error; }
+                        }
+                        if (meet) {
+                            entities.push(entity);
+                        }
+                    }
+                }
+            }
+            catch (e_20_1) { e_20 = { error: e_20_1 }; }
+            finally {
+                try {
+                    if (_h && !_h.done && (_c = _g.return)) _c.call(_g);
+                }
+                finally { if (e_20) throw e_20.error; }
             }
             return entities;
         };
@@ -5069,11 +5459,11 @@ var es;
 (function (es) {
     var EntityProcessorList = /** @class */ (function () {
         function EntityProcessorList() {
-            this._processors = [];
-            this._orderDirty = false;
+            this._processors = []; // 处理器列表
+            this._orderDirty = false; // 处理器排序标志
         }
         Object.defineProperty(EntityProcessorList.prototype, "processors", {
-            /** 获取系统列表 */
+            /** 获取处理器列表 */
             get: function () {
                 return this._processors;
             },
@@ -5081,86 +5471,152 @@ var es;
             configurable: true
         });
         Object.defineProperty(EntityProcessorList.prototype, "count", {
-            /** 系统数量 */
+            /** 获取处理器数量 */
             get: function () {
                 return this._processors.length;
             },
             enumerable: true,
             configurable: true
         });
+        /**
+         * 添加处理器
+         * @param processor 要添加的处理器
+         */
         EntityProcessorList.prototype.add = function (processor) {
             this._processors.push(processor);
         };
+        /**
+         * 移除处理器
+         * @param processor 要移除的处理器
+         */
         EntityProcessorList.prototype.remove = function (processor) {
+            // 使用 es.List 类的 remove() 方法从处理器列表中移除指定处理器
             new es.List(this._processors).remove(processor);
         };
+        /**
+         * 在实体上添加组件时被调用
+         * @param entity 添加组件的实体
+         */
         EntityProcessorList.prototype.onComponentAdded = function (entity) {
             this.notifyEntityChanged(entity);
         };
+        /**
+         * 在实体上移除组件时被调用
+         * @param entity 移除组件的实体
+         */
         EntityProcessorList.prototype.onComponentRemoved = function (entity) {
             this.notifyEntityChanged(entity);
         };
+        /**
+         * 在场景中添加实体时被调用
+         * @param entity 添加的实体
+         */
         EntityProcessorList.prototype.onEntityAdded = function (entity) {
             this.notifyEntityChanged(entity);
         };
+        /**
+         * 在场景中移除实体时被调用
+         * @param entity 移除的实体
+         */
         EntityProcessorList.prototype.onEntityRemoved = function (entity) {
             this.removeFromProcessors(entity);
         };
+        /** 在处理器列表上开始循环 */
         EntityProcessorList.prototype.begin = function () {
         };
+        /** 更新处理器列表 */
         EntityProcessorList.prototype.update = function () {
-            if (this._processors.length == 0)
+            // 如果处理器列表为空，则直接返回
+            if (this._processors.length === 0) {
                 return;
+            }
+            // 如果需要重新排序处理器列表
             if (this._orderDirty) {
-                // 进行排序
-                this._processors = this._processors.sort(function (a, b) { return a.updateOrder - b.updateOrder; });
+                // 对处理器列表进行排序
+                this._processors.sort(function (a, b) { return a.updateOrder - b.updateOrder; });
+                // 重新设置处理器的更新顺序
                 for (var i = 0, s = this._processors.length; i < s; ++i) {
                     var processor = this._processors[i];
                     processor.setUpdateOrder(i);
                 }
+                // 将标志设置为“未脏”
                 this.clearDirty();
             }
+            // 调用每个处理器的 update() 方法
             for (var i = 0, s = this._processors.length; i < s; ++i) {
-                this._processors[i].update();
+                var processor = this._processors[i];
+                processor.update();
             }
         };
-        EntityProcessorList.prototype.lateUpdate = function () {
-            if (this._processors.length == 0)
-                return;
-            for (var i = 0, s = this._processors.length; i < s; ++i) {
-                this._processors[i].lateUpdate();
-            }
-        };
+        /** 在处理器列表上完成循环 */
         EntityProcessorList.prototype.end = function () {
         };
+        /** 设置处理器排序标志 */
         EntityProcessorList.prototype.setDirty = function () {
             this._orderDirty = true;
         };
+        /** 清除处理器排序标志 */
         EntityProcessorList.prototype.clearDirty = function () {
             this._orderDirty = false;
         };
+        /**
+         * 获取指定类型的处理器
+         * @param type 指定类型的构造函数
+         * @returns 指定类型的处理器
+         */
         EntityProcessorList.prototype.getProcessor = function (type) {
-            if (this._processors.length == 0)
+            // 如果处理器列表为空，则返回null
+            if (this._processors.length === 0) {
                 return null;
+            }
+            // 遍历处理器列表，查找指定类型的处理器
             for (var i = 0, s = this._processors.length; i < s; ++i) {
                 var processor = this._processors[i];
-                if (processor instanceof type)
+                // 如果当前处理器是指定类型的实例，则返回当前处理器
+                if (processor instanceof type) {
                     return processor;
+                }
             }
+            // 如果没有找到指定类型的处理器，则返回null
             return null;
         };
+        /**
+         * 通知处理器实体已更改
+         * @param entity 发生更改的实体
+         */
         EntityProcessorList.prototype.notifyEntityChanged = function (entity) {
-            if (this._processors.length == 0)
+            if (this._processors.length === 0) {
                 return;
+            }
+            // 遍历处理器列表，调用每个处理器的 onChanged() 方法
             for (var i = 0, s = this._processors.length; i < s; ++i) {
-                this._processors[i].onChanged(entity);
+                var processor = this._processors[i];
+                processor.onChanged(entity);
             }
         };
+        /**
+         * 从处理器列表中移除实体
+         * @param entity 要移除的实体
+         */
         EntityProcessorList.prototype.removeFromProcessors = function (entity) {
-            if (this._processors.length == 0)
+            if (this._processors.length === 0) {
                 return;
+            }
+            // 遍历处理器列表，调用每个处理器的 remove() 方法
             for (var i = 0, s = this._processors.length; i < s; ++i) {
-                this._processors[i].remove(entity);
+                var processor = this._processors[i];
+                processor.remove(entity);
+            }
+        };
+        /** 在处理器列表上进行后期更新 */
+        EntityProcessorList.prototype.lateUpdate = function () {
+            if (this._processors.length === 0) {
+                return;
+            }
+            // 调用每个处理器的 lateUpdate() 方法
+            for (var i = 0, s = this._processors.length; i < s; ++i) {
+                var processor = this._processors[i];
+                processor.lateUpdate();
             }
         };
         return EntityProcessorList;
@@ -5172,36 +5628,50 @@ var es;
     var HashHelpers = /** @class */ (function () {
         function HashHelpers() {
         }
+        /**
+         * 判断一个数是否为质数
+         * @param candidate 要判断的数
+         * @returns 是否为质数
+         */
         HashHelpers.isPrime = function (candidate) {
-            if ((candidate & 1) != 0) {
+            if ((candidate & 1) !== 0) { // 位运算判断奇偶性
                 var limit = Math.sqrt(candidate);
-                for (var divisor = 3; divisor <= limit; divisor += 2) {
-                    if ((candidate & divisor) == 0)
+                for (var divisor = 3; divisor <= limit; divisor += 2) { // 奇数因子判断
+                    if ((candidate % divisor) === 0) {
                         return false;
+                    }
                 }
                 return true;
             }
-            return (candidate == 2);
+            return (candidate === 2); // 2是质数
         };
+        /**
+         * 获取大于等于指定值的最小质数
+         * @param min 指定值
+         * @returns 大于等于指定值的最小质数
+         */
         HashHelpers.getPrime = function (min) {
-            if (min < 0)
-                throw new Error("参数错误 min不能小于0");
+            if (min < 0) {
+                throw new Error("参数错误 min 不能小于0");
+            }
             for (var i = 0; i < this.primes.length; i++) {
                 var prime = this.primes[i];
-                if (prime >= min)
+                if (prime >= min) {
                     return prime;
+                }
             }
-            // 在我们预定义的表之外，计算的方式稍复杂。
-            for (var i = (min | 1); i < Number.MAX_VALUE; i += 2) {
-                if (this.isPrime(i) && ((i - 1) % this.hashPrime != 0))
+            // 在预定义的质数列表之外，需要计算最小的质数
+            for (var i = (min | 1); i < Number.MAX_VALUE; i += 2) { // 从 min 向上计算奇数
+                if (this.isPrime(i) && ((i - 1) % this.hashPrime !== 0)) { // i是质数且不是hashPrime的倍数
                     return i;
+                }
             }
             return min;
         };
         /**
-         *
-         * @param oldSize
-         * @returns 返回要增长的哈希特表的大小
+         * 扩展哈希表容量
+         * @param oldSize 原哈希表容量
+         * @returns 扩展后的哈希表容量
          */
         HashHelpers.expandPrime = function (oldSize) {
             var newSize = 2 * oldSize;
@@ -5212,42 +5682,36 @@ var es;
             }
             return this.getPrime(newSize);
         };
+        /**
+         * 计算字符串的哈希值
+         * @param str 要计算哈希值的字符串
+         * @returns 哈希值
+         */
         HashHelpers.getHashCode = function (str) {
-            var s;
-            if (typeof str == 'object') {
-                s = JSON.stringify(str);
-            }
-            else {
-                s = str.toString();
-            }
             var hash = 0;
-            if (s.length == 0)
+            if (str.length === 0) {
                 return hash;
-            for (var i = 0; i < s.length; i++) {
-                var char = s.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash;
+            }
+            for (var i = 0; i < str.length; i++) {
+                var char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char; // 采用 FNV-1a 哈希算法
+                hash = hash & hash; // 将hash值转换为32位整数
             }
             return hash;
         };
+        // 哈希冲突阈值，超过此值将使用另一种哈希算法
         HashHelpers.hashCollisionThreshold = 100;
+        // 哈希值用于计算哈希表索引的质数
         HashHelpers.hashPrime = 101;
-        /**
-         * 用来作为哈希表大小的质数表。
-         * 一个典型的调整大小的算法会在这个数组中选取比之前容量大两倍的最小质数。
-         * 假设我们的Hashtable当前的容量为x，并且添加了足够多的元素，因此需要进行大小调整。
-         * 调整大小首先计算2x，然后在表中找到第一个大于2x的质数，即如果质数的顺序是p_1，p_2，...，p_i，...，则找到p_n，使p_n-1 < 2x < p_n。
-         * 双倍对于保持哈希特操作的渐近复杂度是很重要的，比如添加。
-         * 拥有一个质数可以保证双倍哈希不会导致无限循环。 IE，你的哈希函数将是h1(key)+i*h2(key)，0 <= i < size.h2和size必须是相对质数。
-         */
-        HashHelpers.primes = [3, 7, 11, 17, 23, 29, 37, 47, 59, 71, 89, 107, 131, 163, 197, 239, 293, 353, 431, 521, 631, 761, 919,
+        // 一组预定义的质数，用于计算哈希表容量
+        HashHelpers.primes = [
+            3, 7, 11, 17, 23, 29, 37, 47, 59, 71, 89, 107, 131, 163, 197, 239, 293, 353, 431, 521, 631, 761, 919,
             1103, 1327, 1597, 1931, 2333, 2801, 3371, 4049, 4861, 5839, 7013, 8419, 10103, 12143, 14591,
             17519, 21023, 25229, 30293, 36353, 43627, 52361, 62851, 75431, 90523, 108631, 130363, 156437,
             187751, 225307, 270371, 324449, 389357, 467237, 560689, 672827, 807403, 968897, 1162687, 1395263,
-            1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369];
-        /**
-         * 这是比Array.MaxArrayLength小的最大质数
-         */
+            1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369
+        ];
+        // 可分配的最大数组长度，用于避免 OutOfMemoryException
         HashHelpers.maxPrimeArrayLength = 0x7FEFFFFD;
         return HashHelpers;
     }());
@@ -5609,274 +6073,317 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
-    /** 提供帧定时信息 */
+    /**
+     * 时间管理器，用于管理游戏中的时间相关属性
+     */
     var Time = /** @class */ (function () {
         function Time() {
         }
+        /**
+         * 更新时间管理器
+         * @param currentTime 当前时间
+         * @param useEngineTime 是否使用引擎时间
+         */
         Time.update = function (currentTime, useEngineTime) {
             var dt = 0;
             if (useEngineTime) {
                 dt = currentTime;
             }
             else {
-                if (currentTime == -1) {
+                // 如果当前时间为 -1，则表示使用系统时间
+                if (currentTime === -1) {
                     currentTime = Date.now();
                 }
-                if (this._lastTime == -1)
+                // 如果上一次记录的时间为 -1，则表示当前为第一次调用 update
+                if (this._lastTime === -1) {
                     this._lastTime = currentTime;
+                }
+                // 计算两次调用 update 之间的时间差，并将其转换为秒
                 dt = (currentTime - this._lastTime) / 1000;
             }
-            if (dt > this.maxDeltaTime)
+            // 如果计算得到的时间差超过了最大时间步长，则将其限制为最大时间步长
+            if (dt > this.maxDeltaTime) {
                 dt = this.maxDeltaTime;
+            }
+            // 更新时间管理器的各个属性
             this.totalTime += dt;
             this.deltaTime = dt * this.timeScale;
             this.unscaledDeltaTime = dt;
             this.timeSinceSceneLoad += dt;
             this.frameCount++;
+            // 记录当前时间，以备下一次调用 update 使用
             this._lastTime = currentTime;
         };
         Time.sceneChanged = function () {
             this.timeSinceSceneLoad = 0;
         };
         /**
-         * 允许在间隔检查。只应该使用高于delta的间隔值，否则它将始终返回true。
-         * @param interval
+         * 检查指定时间间隔是否已过去
+         * @param interval 指定时间间隔
+         * @returns 是否已过去指定时间间隔
          */
         Time.checkEvery = function (interval) {
-            // 我们减去了delta，因为timeSinceSceneLoad已经包含了这个update ticks delta
-            return es.MathHelper.toInt(this.timeSinceSceneLoad / interval) > es.MathHelper.toInt((this.timeSinceSceneLoad - this.deltaTime) / interval);
+            // 计算当前时刻所经过的完整时间间隔个数（向下取整）
+            var passedIntervals = Math.floor(this.timeSinceSceneLoad / interval);
+            // 计算上一帧到当前帧经过的时间所包含的时间间隔个数（向下取整）
+            var deltaIntervals = Math.floor(this.deltaTime / interval);
+            // 如果当前时刻所经过的时间间隔数比上一帧所经过的时间间隔数多，则说明时间间隔已过去
+            return passedIntervals > deltaIntervals;
         };
-        /** 游戏运行的总时间 */
+        /** 游戏运行的总时间，单位为秒 */
         Time.totalTime = 0;
-        /** deltaTime的未缩放版本。不受时间尺度的影响 */
+        /** deltaTime 的未缩放版本，不受时间尺度的影响 */
         Time.unscaledDeltaTime = 0;
         /** 前一帧到当前帧的时间增量，按时间刻度进行缩放 */
         Time.deltaTime = 0;
-        /** 时间刻度缩放 */
+        /** 时间刻度缩放，可以加快或减慢游戏时间 */
         Time.timeScale = 1;
-        /** DeltaTime可以为的最大值 */
+        /** DeltaTime 可以为的最大值，避免游戏出现卡顿情况 */
         Time.maxDeltaTime = Number.MAX_VALUE;
         /** 已传递的帧总数 */
         Time.frameCount = 0;
-        /** 自场景加载以来的总时间 */
+        /** 自场景加载以来的总时间，单位为秒 */
         Time.timeSinceSceneLoad = 0;
+        /** 上一次记录的时间，用于计算两次调用 update 之间的时间差 */
         Time._lastTime = -1;
         return Time;
     }());
     es.Time = Time;
 })(es || (es = {}));
-var TimeUtils = /** @class */ (function () {
-    function TimeUtils() {
-    }
-    /**
-     * 计算月份ID
-     * @param d 指定计算日期
-     * @returns 月ID
-     */
-    TimeUtils.monthId = function (d) {
-        if (d === void 0) { d = null; }
-        d = d ? d : new Date();
-        var y = d.getFullYear();
-        var m = d.getMonth() + 1;
-        var g = m < 10 ? "0" : "";
-        return parseInt(y + g + m);
-    };
-    /**
-     * 计算日期ID
-     * @param d 指定计算日期
-     * @returns 日期ID
-     */
-    TimeUtils.dateId = function (t) {
-        if (t === void 0) { t = null; }
-        t = t ? t : new Date();
-        var m = t.getMonth() + 1;
-        var a = m < 10 ? "0" : "";
-        var d = t.getDate();
-        var b = d < 10 ? "0" : "";
-        return parseInt(t.getFullYear() + a + m + b + d);
-    };
-    /**
-     * 计算周ID
-     * @param d 指定计算日期
-     * @returns 周ID
-     */
-    TimeUtils.weekId = function (d, first) {
-        if (d === void 0) { d = null; }
-        if (first === void 0) { first = true; }
-        d = d ? d : new Date();
-        var c = new Date();
-        c.setTime(d.getTime());
-        c.setDate(1);
-        c.setMonth(0); //当年第一天
-        var year = c.getFullYear();
-        var firstDay = c.getDay();
-        if (firstDay == 0) {
-            firstDay = 7;
+var es;
+(function (es) {
+    var TimeUtils = /** @class */ (function () {
+        function TimeUtils() {
         }
-        var max = false;
-        if (firstDay <= 4) {
-            max = firstDay > 1;
-            c.setDate(c.getDate() - (firstDay - 1));
-        }
-        else {
-            c.setDate(c.getDate() + 7 - firstDay + 1);
-        }
-        var num = this.diffDay(d, c, false);
-        if (num < 0) {
+        /**
+         * 获取日期对应的年份和月份的数字组合
+         * @param d 要获取月份的日期对象，不传则默认为当前时间
+         * @returns 返回数字组合的年份和月份
+         */
+        TimeUtils.monthId = function (d) {
+            if (d === void 0) { d = null; }
+            // 如果传入了时间，则使用传入的时间，否则使用当前时间
+            d = d ? d : new Date();
+            // 获取当前年份
+            var y = d.getFullYear();
+            // 获取当前月份，并将月份转化为两位数的字符串格式
+            var m = d.getMonth() + 1;
+            var g = m < 10 ? "0" : "";
+            // 返回年份和月份的数字组合
+            return parseInt(y + g + m);
+        };
+        /**
+         * 获取日期的数字组合
+         * @param t - 可选参数，传入时间，若不传入则使用当前时间
+         * @returns 数字组合
+         */
+        TimeUtils.dateId = function (t) {
+            if (t === void 0) { t = null; }
+            // 如果传入了时间，则使用传入的时间，否则使用当前时间
+            t = t ? t : new Date();
+            // 获取当前月份，并将月份转化为两位数的字符串格式
+            var m = t.getMonth() + 1;
+            var a = m < 10 ? "0" : "";
+            // 获取当前日期，并将日期转化为两位数的字符串格式
+            var d = t.getDate();
+            var b = d < 10 ? "0" : "";
+            // 返回年份、月份和日期的数字组合
+            return parseInt(t.getFullYear() + a + m + b + d);
+        };
+        /**
+         * 获取当前日期所在周的数字组合
+         * @param d - 可选参数，传入日期，若不传入则使用当前日期
+         * @param first - 是否将当前周视为本年度的第1周，默认为true
+         * @returns 数字组合
+         */
+        TimeUtils.weekId = function (d, first) {
+            if (d === void 0) { d = null; }
+            if (first === void 0) { first = true; }
+            d = d ? d : new Date();
+            var c = new Date(d.getTime()); // 复制一个新的日期对象，以免改变原始日期对象
             c.setDate(1);
-            c.setMonth(0); //当年第一天
-            c.setDate(c.getDate() - 1);
-            return this.weekId(c, false);
-        }
-        var week = num / 7;
-        var weekIdx = Math.floor(week) + 1;
-        if (weekIdx == 53) {
-            c.setTime(d.getTime());
-            c.setDate(c.getDate() - 1);
-            var endDay = c.getDay();
-            if (endDay == 0) {
-                endDay = 7;
+            c.setMonth(0); // 将日期设置为当年的第一天
+            var year = c.getFullYear();
+            var firstDay = c.getDay();
+            if (firstDay == 0) {
+                firstDay = 7;
             }
-            if (first && (!max || endDay < 4)) {
-                c.setFullYear(c.getFullYear() + 1);
+            var max = false;
+            if (firstDay <= 4) {
+                max = firstDay > 1;
+                c.setDate(c.getDate() - (firstDay - 1));
+            }
+            else {
+                c.setDate(c.getDate() + 7 - firstDay + 1);
+            }
+            var num = this.diffDay(d, c, false); // 计算当前日期与本年度的第一个星期一之间的天数
+            if (num < 0) {
+                // 当前日期在本年度第一个星期一之前，则返回上一年度的最后一个星期
                 c.setDate(1);
-                c.setMonth(0); //当年第一天
+                c.setMonth(0);
+                c.setDate(c.getDate() - 1);
                 return this.weekId(c, false);
             }
-        }
-        var g = weekIdx > 9 ? "" : "0";
-        var s = year + "00" + g + weekIdx; //加上00防止和月份ID冲突
-        return parseInt(s);
-    };
-    /**
-     * 计算俩日期时间差，如果a比b小，返回负数
-     */
-    TimeUtils.diffDay = function (a, b, fixOne) {
-        if (fixOne === void 0) { fixOne = false; }
-        var x = (a.getTime() - b.getTime()) / 86400000;
-        return fixOne ? Math.ceil(x) : Math.floor(x);
-    };
-    /**
-     * 获取本周一 凌晨时间
-     */
-    TimeUtils.getFirstDayOfWeek = function (d) {
-        d = d ? d : new Date();
-        var day = d.getDay() || 7;
-        return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1 - day, 0, 0, 0, 0);
-    };
-    /**
-     * 获取当日凌晨时间
-     */
-    TimeUtils.getFirstOfDay = function (d) {
-        d = d ? d : new Date();
-        d.setHours(0, 0, 0, 0);
-        return d;
-    };
-    /**
-     * 获取次日凌晨时间
-     */
-    TimeUtils.getNextFirstOfDay = function (d) {
-        return new Date(this.getFirstOfDay(d).getTime() + 86400000);
-    };
-    /**
-     * @returns 2018-12-12
-     */
-    TimeUtils.formatDate = function (date) {
-        var y = date.getFullYear();
-        var m = date.getMonth() + 1;
-        m = m < 10 ? '0' + m : m;
-        var d = date.getDate();
-        d = d < 10 ? ('0' + d) : d;
-        return y + '-' + m + '-' + d;
-    };
-    /**
-     * @returns 2018-12-12 12:12:12
-     */
-    TimeUtils.formatDateTime = function (date) {
-        var y = date.getFullYear();
-        var m = date.getMonth() + 1;
-        m = m < 10 ? ('0' + m) : m;
-        var d = date.getDate();
-        d = d < 10 ? ('0' + d) : d;
-        var h = date.getHours();
-        var i = date.getMinutes();
-        i = i < 10 ? ('0' + i) : i;
-        var s = date.getSeconds();
-        s = s < 10 ? ('0' + s) : s;
-        return y + '-' + m + '-' + d + ' ' + h + ':' + i + ":" + s;
-    };
-    /**
-     * @returns s 2018-12-12 或者 2018-12-12 12:12:12
-     */
-    TimeUtils.parseDate = function (s) {
-        var t = Date.parse(s);
-        if (!isNaN(t)) {
-            return new Date(Date.parse(s.replace(/-/g, "/")));
-        }
-        else {
-            return new Date();
-        }
-    };
-    /**
-     * 秒数转换为时间形式。
-     * @param    time 秒数
-     * @param    partition 分隔符
-     * @param    showHour  是否显示小时
-     * @return  返回一个以分隔符分割的时, 分, 秒
-     *
-     * 比如: time = 4351; secondToTime(time)返回字符串01:12:31;
-     */
-    TimeUtils.secondToTime = function (time, partition, showHour) {
-        if (time === void 0) { time = 0; }
-        if (partition === void 0) { partition = ":"; }
-        if (showHour === void 0) { showHour = true; }
-        var hours = Math.floor(time / 3600);
-        var minutes = Math.floor(time % 3600 / 60);
-        var seconds = Math.floor(time % 3600 % 60);
-        var h = hours.toString();
-        var m = minutes.toString();
-        var s = seconds.toString();
-        if (hours < 10)
-            h = "0" + h;
-        if (minutes < 10)
-            m = "0" + m;
-        if (seconds < 10)
-            s = "0" + s;
-        var timeStr;
-        if (showHour)
-            timeStr = h + partition + m + partition + s;
-        else
-            timeStr = m + partition + s;
-        return timeStr;
-    };
-    /**
-     * 时间形式转换为毫秒数。
-     * @param   time  以指定分隔符分割的时间字符串
-     * @param   partition  分隔符
-     * @return  毫秒数显示的字符串
-     * @throws  Error Exception
-     *
-     * 用法1 trace(MillisecondTransform.timeToMillisecond("00:60:00"))
-     * 输出   3600000
-     *
-     *
-     * 用法2 trace(MillisecondTransform.timeToMillisecond("00.60.00","."))
-     * 输出   3600000
-     */
-    TimeUtils.timeToMillisecond = function (time, partition) {
-        if (partition === void 0) { partition = ":"; }
-        var _ary = time.split(partition);
-        var timeNum = 0;
-        var len = _ary.length;
-        for (var i = 0; i < len; i++) {
-            var n = _ary[i];
-            timeNum += n * Math.pow(60, (len - 1 - i));
-        }
-        timeNum *= 1000;
-        return timeNum.toString();
-    };
-    return TimeUtils;
-}());
+            // 计算当前日期在本年度中是第几个星期
+            var week = Math.floor(num / 7);
+            var weekIdx = Math.floor(week) + 1;
+            if (weekIdx == 53) {
+                c.setTime(d.getTime());
+                c.setDate(c.getDate() - 1);
+                var endDay = c.getDay();
+                if (endDay == 0) {
+                    endDay = 7;
+                }
+                if (first && (!max || endDay < 4)) {
+                    // 如果当前日期在本年度的最后一个星期并且当前年度的星期数不足53或当前日期在本年度第53周的星期4或更早，则返回下一年度的第1周
+                    c.setFullYear(c.getFullYear() + 1);
+                    c.setDate(1);
+                    c.setMonth(0);
+                    return this.weekId(c, false);
+                }
+            }
+            var g = weekIdx > 9 ? "" : "0";
+            var s = year + "00" + g + weekIdx; // 加上00防止和月份ID冲突
+            return parseInt(s);
+        };
+        /**
+         * 计算两个日期之间相差的天数
+         * @param a 第一个日期
+         * @param b 第二个日期
+         * @param fixOne 是否将相差天数四舍五入到整数
+         * @returns 两个日期之间相差的天数
+         */
+        TimeUtils.diffDay = function (a, b, fixOne) {
+            if (fixOne === void 0) { fixOne = false; }
+            var x = (a.getTime() - b.getTime()) / 86400000; // 计算两个日期相差的毫秒数，然后除以一天的毫秒数，得到相差的天数
+            return fixOne ? Math.ceil(x) : Math.floor(x); // 如果 fixOne 参数为 true，则将相差天数四舍五入到整数，否则向下取整
+        };
+        /**
+         * 获取指定日期所在周的第一天
+         * @param d 指定日期，默认值为今天
+         * @returns 指定日期所在周的第一天
+         */
+        TimeUtils.getFirstDayOfWeek = function (d) {
+            if (d === void 0) { d = new Date(); }
+            // 获取当前日期是星期几，如果是0，则设置为7
+            var dayOfWeek = d.getDay() || 7;
+            // 计算出指定日期所在周的第一天，即将指定日期减去星期几再加1
+            // 这里用1减去dayOfWeek是为了保证星期一为一周的第一天
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1 - dayOfWeek, 0, 0, 0, 0);
+        };
+        /**
+         * 获取当日凌晨时间
+         */
+        TimeUtils.getFirstOfDay = function (d) {
+            d = d ? d : new Date();
+            d.setHours(0, 0, 0, 0);
+            return d;
+        };
+        /**
+         * 获取次日凌晨时间
+         */
+        TimeUtils.getNextFirstOfDay = function (d) {
+            return new Date(this.getFirstOfDay(d).getTime() + 86400000);
+        };
+        /**
+         * 格式化日期为 "YYYY-MM-DD" 的字符串形式
+         * @param date 要格式化的日期
+         * @returns 格式化后的日期字符串
+         */
+        TimeUtils.formatDate = function (date) {
+            var y = date.getFullYear();
+            var m = date.getMonth() + 1;
+            m = m < 10 ? '0' + m : m;
+            var d = date.getDate();
+            d = d < 10 ? ('0' + d) : d;
+            return y + '-' + m + '-' + d;
+        };
+        /**
+         * 将日期对象格式化为 "YYYY-MM-DD HH:mm:ss" 的字符串
+         * @param date 日期对象
+         * @returns 格式化后的字符串
+         */
+        TimeUtils.formatDateTime = function (date) {
+            var y = date.getFullYear();
+            var m = date.getMonth() + 1;
+            m = m < 10 ? ('0' + m) : m;
+            var d = date.getDate();
+            d = d < 10 ? ('0' + d) : d;
+            var h = date.getHours();
+            var i = date.getMinutes();
+            i = i < 10 ? ('0' + i) : i;
+            var s = date.getSeconds();
+            s = s < 10 ? ('0' + s) : s;
+            return y + '-' + m + '-' + d + ' ' + h + ':' + i + ":" + s;
+        };
+        /**
+         * 将字符串解析为Date对象
+         * @param s 要解析的日期字符串，例如：2022-01-01
+         * @returns 返回解析后的Date对象，如果解析失败，则返回当前时间的Date对象
+         */
+        TimeUtils.parseDate = function (s) {
+            var t = Date.parse(s);
+            if (!isNaN(t)) {
+                // 如果日期字符串中的分隔符为“-”，则需要先将其转换为“/”，否则解析会失败
+                return new Date(Date.parse(s.replace(/-/g, "/")));
+            }
+            else {
+                return new Date();
+            }
+        };
+        /**
+         * 将秒数转换为时分秒的格式
+         * @param time 秒数
+         * @param partition 分隔符
+         * @param showHour 是否显示小时位
+         * @returns 转换后的时间字符串
+         */
+        TimeUtils.secondToTime = function (time, partition, showHour) {
+            if (time === void 0) { time = 0; }
+            if (partition === void 0) { partition = ":"; }
+            if (showHour === void 0) { showHour = true; }
+            var hours = Math.floor(time / 3600);
+            var minutes = Math.floor(time % 3600 / 60);
+            var seconds = Math.floor(time % 3600 % 60);
+            var h = hours.toString();
+            var m = minutes.toString();
+            var s = seconds.toString();
+            if (hours < 10)
+                h = "0" + h;
+            if (minutes < 10)
+                m = "0" + m;
+            if (seconds < 10)
+                s = "0" + s;
+            var timeStr;
+            if (showHour)
+                timeStr = h + partition + m + partition + s;
+            else
+                timeStr = m + partition + s;
+            return timeStr;
+        };
+        /**
+         * 将时间字符串转换为毫秒数
+         * @param time 时间字符串，如 "01:30:15" 表示 1小时30分钟15秒
+         * @param partition 分隔符，默认为 ":"
+         * @returns 转换后的毫秒数字符串
+         */
+        TimeUtils.timeToMillisecond = function (time, partition) {
+            if (partition === void 0) { partition = ":"; }
+            var _ary = time.split(partition);
+            var timeNum = 0;
+            var len = _ary.length;
+            // 将时间转换成毫秒数
+            for (var i = 0; i < len; i++) {
+                var n = _ary[i];
+                timeNum += n * Math.pow(60, (len - 1 - i));
+            }
+            timeNum *= 1000;
+            return timeNum.toString();
+        };
+        return TimeUtils;
+    }());
+    es.TimeUtils = TimeUtils;
+})(es || (es = {}));
 var es;
 (function (es) {
     /**
@@ -12161,7 +12668,7 @@ var es;
             for (var _i = 1; _i < arguments.length; _i++) {
                 data[_i - 1] = arguments[_i];
             }
-            var e_4, _a, _b;
+            var e_22, _a, _b;
             var list = this._messageTable.get(eventType);
             if (list) {
                 try {
@@ -12170,12 +12677,12 @@ var es;
                         (_b = observer.func).call.apply(_b, __spread([observer.context], data));
                     }
                 }
-                catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                catch (e_22_1) { e_22 = { error: e_22_1 }; }
                 finally {
                     try {
                         if (list_3_1 && !list_3_1.done && (_a = list_3.return)) _a.call(list_3);
                     }
-                    finally { if (e_4) throw e_4.error; }
+                    finally { if (e_22) throw e_22.error; }
                 }
             }
         };
@@ -13253,276 +13760,6 @@ var es;
         return Bag;
     }());
     es.Bag = Bag;
-})(es || (es = {}));
-var es;
-(function (es) {
-    /**
-     * 创建这个字典的原因只有一个：
-     * 我需要一个能让我直接以数组的形式对值进行迭代的字典，而不需要生成一个数组或使用迭代器。
-     * 对于这个目标是比标准字典快N倍。
-     * Faster dictionary在大部分操作上也比标准字典快，但差别可以忽略不计。
-     * 唯一较慢的操作是在添加时调整内存大小，因为与标准数组相比，这个实现需要使用两个单独的数组。
-     */
-    var FasterDictionary = /** @class */ (function () {
-        function FasterDictionary(size) {
-            if (size === void 0) { size = 1; }
-            this._freeValueCellIndex = 0;
-            this._collisions = 0;
-            this._valuesInfo = new Array(size);
-            this._values = new Array(size);
-            this._buckets = new Array(es.HashHelpers.getPrime(size));
-        }
-        FasterDictionary.prototype.getValuesArray = function (count) {
-            count.value = this._freeValueCellIndex;
-            return this._values;
-        };
-        Object.defineProperty(FasterDictionary.prototype, "valuesArray", {
-            get: function () {
-                return this._values;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(FasterDictionary.prototype, "count", {
-            get: function () {
-                return this._freeValueCellIndex;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        FasterDictionary.prototype.add = function (key, value) {
-            if (!this.addValue(key, value, { value: 0 }))
-                throw new Error("key 已经存在");
-        };
-        FasterDictionary.prototype.addValue = function (key, value, indexSet) {
-            var hash = es.HashHelpers.getHashCode(key);
-            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
-            if (this._freeValueCellIndex == this._values.length) {
-                var expandPrime = es.HashHelpers.expandPrime(this._freeValueCellIndex);
-                this._values.length = expandPrime;
-                this._valuesInfo.length = expandPrime;
-            }
-            // buckets值-1表示它是空的
-            var valueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
-            if (valueIndex == -1) {
-                // 在最后一个位置创建信息节点，并填入相关信息
-                this._valuesInfo[this._freeValueCellIndex] = new FastNode(key, hash);
-            }
-            else {
-                {
-                    var currentValueIndex = valueIndex;
-                    do {
-                        // 必须检查键是否已经存在于字典中
-                        if (this._valuesInfo[currentValueIndex].hashcode == hash &&
-                            this._valuesInfo[currentValueIndex].key == key) {
-                            // 键已经存在，只需将其值替换掉即可
-                            this._values[currentValueIndex] = value;
-                            indexSet.value = currentValueIndex;
-                            return false;
-                        }
-                        currentValueIndex = this._valuesInfo[currentValueIndex].previous;
-                    } while (currentValueIndex != -1); // -1表示没有更多的值与相同的哈希值的键
-                }
-                this._collisions++;
-                // 创建一个新的节点，该节点之前的索引指向当前指向桶的节点
-                this._valuesInfo[this._freeValueCellIndex] = new FastNode(key, hash, valueIndex);
-                // 更新现有单元格的下一个单元格指向新的单元格，旧的单元格 -> 新的单元格 -> 旧的单元格 <- 下一个单元格
-                this._valuesInfo[valueIndex].next = this._freeValueCellIndex;
-            }
-            // 重要的是：新的节点总是被桶单元格指向的那个节点，所以我可以假设被桶指向的那个节点总是最后添加的值(next = -1)
-            // item与这个bucketIndex将指向最后创建的值 
-            // TODO: 如果相反，我假设原来的那个是bucket中的那个，我就不需要在这里更新bucket了
-            this._buckets[bucketIndex] = (this._freeValueCellIndex + 1);
-            this._values[this._freeValueCellIndex] = value;
-            indexSet.value = this._freeValueCellIndex;
-            this._freeValueCellIndex++;
-            if (this._collisions > this._buckets.length) {
-                // 我们需要更多的空间和更少的碰撞
-                this._buckets = new Array(es.HashHelpers.expandPrime(this._collisions));
-                this._collisions = 0;
-                // 我们需要得到目前存储的所有值的哈希码，并将它们分布在新的桶长上
-                for (var newValueIndex = 0; newValueIndex < this._freeValueCellIndex; newValueIndex++) {
-                    // 获取原始哈希码，并根据新的长度找到新的bucketIndex
-                    bucketIndex = FasterDictionary.reduce(this._valuesInfo[newValueIndex].hashcode, this._buckets.length);
-                    // bucketsIndex可以是-1或下一个值。
-                    // 如果是-1意味着没有碰撞。
-                    // 如果有碰撞，我们创建一个新节点，它的上一个指向旧节点。
-                    // 旧节点指向新节点，新节点指向旧节点，旧节点指向新节点，现在bucket指向新节点，这样我们就可以重建linkedlist.
-                    // 获取当前值Index，如果没有碰撞，则为-1。
-                    var existingValueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
-                    // 将bucket索引更新为共享bucketIndex的当前项目的索引（最后找到的总是bucket中的那个）
-                    this._buckets[bucketIndex] = newValueIndex + 1;
-                    if (existingValueIndex != -1) {
-                        // 这个单元格已经指向了新的bucket list中的一个值，这意味着有一个碰撞，出了问题
-                        this._collisions++;
-                        // bucket将指向这个值，所以新的值将使用以前的索引
-                        this._valuesInfo[newValueIndex].previous = existingValueIndex;
-                        this._valuesInfo[newValueIndex].next = -1;
-                        // 并将之前的下一个索引更新为新的索引
-                        this._valuesInfo[existingValueIndex].next = newValueIndex;
-                    }
-                    else {
-                        // 什么都没有被索引，桶是空的。我们需要更新之前的 next 和 previous 的值。
-                        this._valuesInfo[newValueIndex].next = -1;
-                        this._valuesInfo[newValueIndex].previous = -1;
-                    }
-                }
-            }
-            return true;
-        };
-        FasterDictionary.prototype.remove = function (key) {
-            var hash = FasterDictionary.hash(key);
-            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
-            // 找桶
-            var indexToValueToRemove = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
-            // 第一部分：在bucket list中寻找实际的键，如果找到了，我就更新bucket list，使它不再指向要删除的单元格。
-            while (indexToValueToRemove != -1) {
-                if (this._valuesInfo[indexToValueToRemove].hashcode == hash &&
-                    this._valuesInfo[indexToValueToRemove].key == key) {
-                    // 如果找到了密钥，并且桶直接指向了要删除的节点
-                    if (this._buckets[bucketIndex] - 1 == indexToValueToRemove) {
-                        if (this._valuesInfo[indexToValueToRemove].next != -1)
-                            throw new Error("如果 bucket 指向单元格，那么 next 必须不存在。");
-                        // 如果前一个单元格存在，它的下一个指针必须被更新!
-                        //<---迭代顺序  
-                        // B(ucket总是指向最后一个)
-                        // ------- ------- -------
-                        // 1 | | | | 2 | | | 3 | //bucket不能有下一个，只能有上一个。
-                        // ------- ------- -------
-                        //--> 插入
-                        var value = this._valuesInfo[indexToValueToRemove].previous;
-                        this._buckets[bucketIndex] = value + 1;
-                    }
-                    else {
-                        if (this._valuesInfo[indexToValueToRemove].next == -1)
-                            throw new Error("如果 bucket 指向另一个单元格，则 NEXT 必须存在");
-                    }
-                    FasterDictionary.updateLinkedList(indexToValueToRemove, this._valuesInfo);
-                    break;
-                }
-                indexToValueToRemove = this._valuesInfo[indexToValueToRemove].previous;
-            }
-            if (indexToValueToRemove == -1)
-                return false; // 未找到
-            this._freeValueCellIndex--; // 少了一个需要反复计算的值
-            // 第二部分
-            // 这时节点指针和水桶会被更新，但_values数组会被更新仍然有要删除的值
-            // 这个字典的目标是能够做到像数组一样对数值进行迭代，所以数值数组必须始终是最新的
-            // 如果要删除的单元格是列表中的最后一个，我们可以执行较少的操作（不需要交换），否则我们要将最后一个值的单元格移到要删除的值上。
-            if (indexToValueToRemove != this._freeValueCellIndex) {
-                // 我们可以将两个数组的最后一个值移到要删除的数组中。
-                // 为了做到这一点，我们需要确保 bucket 指针已经更新了
-                // 首先我们在桶列表中找到指向要移动的单元格的指针的索引
-                var movingBucketIndex = FasterDictionary.reduce(this._valuesInfo[this._freeValueCellIndex].hashcode, this._buckets.length);
-                // 如果找到了键，并且桶直接指向要删除的节点，现在必须指向要移动的单元格。
-                if (this._buckets[movingBucketIndex] - 1 == this._freeValueCellIndex)
-                    this._buckets[movingBucketIndex] = (indexToValueToRemove + 1);
-                // 否则意味着有多个键具有相同的哈希值（碰撞），所以我们需要更新链接列表和它的指针
-                var next = this._valuesInfo[this._freeValueCellIndex].next;
-                var previous = this._valuesInfo[this._freeValueCellIndex].previous;
-                // 现在它们指向最后一个值被移入的单元格
-                if (next != -1)
-                    this._valuesInfo[next].previous = indexToValueToRemove;
-                if (previous != -1)
-                    this._valuesInfo[previous].next = indexToValueToRemove;
-                // 最后，实际上是移动值
-                this._valuesInfo[indexToValueToRemove] = this._valuesInfo[this._freeValueCellIndex];
-                this._values[indexToValueToRemove] = this._values[this._freeValueCellIndex];
-            }
-            return true;
-        };
-        FasterDictionary.prototype.trim = function () {
-            var expandPrime = es.HashHelpers.expandPrime(this._freeValueCellIndex);
-            if (expandPrime < this._valuesInfo.length) {
-                this._values.length = expandPrime;
-                this._valuesInfo.length = expandPrime;
-            }
-        };
-        FasterDictionary.prototype.clear = function () {
-            if (this._freeValueCellIndex == 0)
-                return;
-            this._freeValueCellIndex = 0;
-            this._buckets.length = 0;
-            this._values.length = 0;
-            this._valuesInfo.length = 0;
-        };
-        FasterDictionary.prototype.fastClear = function () {
-            if (this._freeValueCellIndex == 0)
-                return;
-            this._freeValueCellIndex = 0;
-            this._buckets.length = 0;
-            this._valuesInfo.length = 0;
-        };
-        FasterDictionary.prototype.containsKey = function (key) {
-            if (this.tryFindIndex(key, { value: 0 })) {
-                return true;
-            }
-            return false;
-        };
-        FasterDictionary.prototype.tryGetValue = function (key) {
-            var findIndex = { value: 0 };
-            if (this.tryFindIndex(key, findIndex)) {
-                return this._values[findIndex.value];
-            }
-            return null;
-        };
-        FasterDictionary.prototype.tryFindIndex = function (key, findIndex) {
-            // 我把所有的索引都用偏移量+1来存储，这样在bucket list中0就意味着实际上不存在
-            // 当读取时，偏移量必须再偏移-1才是真实的
-            // 这样我就避免了将数组初始化为-1
-            var hash = FasterDictionary.hash(key);
-            var bucketIndex = FasterDictionary.reduce(hash, this._buckets.length);
-            var valueIndex = es.NumberExtension.toNumber(this._buckets[bucketIndex]) - 1;
-            // 即使我们找到了一个现有的值，我们也需要确定它是我们所要求的值
-            while (valueIndex != -1) {
-                if (this._valuesInfo[valueIndex].hashcode == hash && this._valuesInfo[valueIndex].key == key) {
-                    findIndex.value = valueIndex;
-                    return true;
-                }
-                valueIndex = this._valuesInfo[valueIndex].previous;
-            }
-            findIndex.value = 0;
-            return false;
-        };
-        FasterDictionary.prototype.getDirectValue = function (index) {
-            return this._values[index];
-        };
-        FasterDictionary.prototype.getIndex = function (key) {
-            var findIndex = { value: 0 };
-            if (this.tryFindIndex(key, findIndex))
-                return findIndex.value;
-            throw new Error("未找到key");
-        };
-        FasterDictionary.updateLinkedList = function (index, valuesInfo) {
-            var next = valuesInfo[index].next;
-            var previous = valuesInfo[index].previous;
-            if (next != -1)
-                valuesInfo[next].previous = previous;
-            if (previous != -1)
-                valuesInfo[previous].next = next;
-        };
-        FasterDictionary.hash = function (key) {
-            return es.HashHelpers.getHashCode(key);
-        };
-        FasterDictionary.reduce = function (x, n) {
-            if (x >= n)
-                return x % n;
-            return x;
-        };
-        return FasterDictionary;
-    }());
-    es.FasterDictionary = FasterDictionary;
-    var FastNode = /** @class */ (function () {
-        function FastNode(key, hash, previousNode) {
-            if (previousNode === void 0) { previousNode = -1; }
-            this.key = key;
-            this.hashcode = hash;
-            this.previous = previousNode;
-            this.next = -1;
-        }
-        return FastNode;
-    }());
-    es.FastNode = FastNode;
 })(es || (es = {}));
 var es;
 (function (es) {
@@ -16057,7 +16294,7 @@ var es;
          * @returns Set 对象，其中包含了数组中的所有元素
          */
         List.prototype.toSet = function () {
-            var e_5, _a;
+            var e_23, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -16065,12 +16302,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_5_1) { e_5 = { error: e_5_1 }; }
+            catch (e_23_1) { e_23 = { error: e_23_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_5) throw e_5.error; }
+                finally { if (e_23) throw e_23.error; }
             }
             return result;
         };
@@ -16326,7 +16563,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_6, _a;
+            var e_24, _a;
             var output = es.ListPool.obtain(es.Vector2);
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -16365,12 +16602,12 @@ var es;
                         }
                     }
                 }
-                catch (e_6_1) { e_6 = { error: e_6_1 }; }
+                catch (e_24_1) { e_24 = { error: e_24_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_6) throw e_6.error; }
+                    finally { if (e_24) throw e_24.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -16486,7 +16723,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_7, _a;
+            var e_25, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -16504,12 +16741,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_7_1) { e_7 = { error: e_7_1 }; }
+            catch (e_25_1) { e_25 = { error: e_25_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_7) throw e_7.error; }
+                finally { if (e_25) throw e_25.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

@@ -1,7 +1,7 @@
 ///<reference path="../../Utils/Collections/HashMap.ts"/>
 module es {
     /**
-     * 追踪实体的子集，但不实现任何排序或迭代。
+     * 实体系统的基类，用于处理一组实体。
      */
     export abstract class EntitySystem {
         private _entities: Entity[] = [];
@@ -9,7 +9,7 @@ module es {
         private _startTime = 0;
         private _endTime = 0;
         private _useTime = 0;
-        
+
         /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
         public get useTime() {
             return this._useTime;
@@ -53,9 +53,9 @@ module es {
 
         /**
          * 设置更新时序
-         * @param order 
+         * @param order 更新时序
          */
-         public setUpdateOrder(order: number) {
+        public setUpdateOrder(order: number) {
             this._updateOrder = order;
             this.scene.entityProcessors.setDirty();
         }
@@ -80,14 +80,16 @@ module es {
             this.onAdded(entity);
         }
 
-        public onAdded(entity: Entity) { }
+        public onAdded(entity: Entity) {
+        }
 
         public remove(entity: Entity) {
             new es.List(this._entities).remove(entity);
             this.onRemoved(entity);
         }
 
-        public onRemoved(entity: Entity) { }
+        public onRemoved(entity: Entity) {
+        }
 
         public update() {
             if (this.checkProcessing()) {
@@ -107,21 +109,23 @@ module es {
          * 在系统处理开始前调用
          * 在下一个系统开始处理或新的处理回合开始之前（以先到者为准），使用此方法创建的任何实体都不会激活
          */
-        protected begin() { 
+        protected begin() {
             if (!Core.Instance.debug)
                 return;
 
             this._startTime = Date.now();
         }
 
-        protected process(entities: Entity[]) { }
+        protected process(entities: Entity[]) {
+        }
 
-        protected lateProcess(entities: Entity[]) { }
+        protected lateProcess(entities: Entity[]) {
+        }
 
         /**
          * 系统处理完毕后调用
          */
-        protected end() { 
+        protected end() {
             if (!Core.Instance.debug)
                 return;
 
@@ -131,7 +135,7 @@ module es {
 
         /**
          * 系统是否需要处理
-         * 
+         *
          * 在启用系统时有用，但仅偶尔需要处理
          * 这只影响处理，不影响事件或订阅列表
          * @returns 如果系统应该处理，则为true，如果不处理则为false。

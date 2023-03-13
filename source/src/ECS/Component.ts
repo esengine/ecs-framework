@@ -117,23 +117,48 @@ module es {
             return this;
         }
 
+        /**
+         * 添加组件
+         * @param component 要添加的组件实例
+         * @returns 返回添加的组件实例
+         */
         public addComponent<T extends Component>(component: T): T {
             return this.entity.addComponent<T>(component);
         }
 
-        public getComponent<T extends Component>(type: new (...args: any[])=>T): T {
+        /**
+         * 获取组件
+         * @param type 组件类型
+         * @returns 返回获取到的组件实例
+         */
+        public getComponent<T extends Component>(type: new (...args: any[]) => T): T {
             return this.entity.getComponent<T>(type);
         }
 
-        public getComponents(typeName: any, componentList?: any[]) {
+        /**
+         * 获取一组指定类型的组件
+         * @param typeName 组件类型名
+         * @param componentList 可选参数，存储组件实例的数组
+         * @returns 返回指定类型的组件实例数组
+         */
+        public getComponents(typeName: any, componentList?: any[]): any[] {
             return this.entity.getComponents(typeName, componentList);
         }
 
-        public hasComponent(type: new (...args: any[])=>Component) {
+        /**
+         * 判断实体是否包含指定类型的组件
+         * @param type 组件类型
+         * @returns 如果实体包含指定类型的组件，返回 true，否则返回 false。
+         */
+        public hasComponent(type: new (...args: any[]) => Component): boolean {
             return this.entity.hasComponent(type);
         }
 
-        public removeComponent(component?: Component) {
+        /**
+         * 删除组件
+         * @param component 可选参数，要删除的组件实例。如果未指定该参数，则删除当前实例上的组件。
+         */
+        public removeComponent(component?: Component): void {
             if (component) {
                 this.entity.removeComponent(component);
             } else {

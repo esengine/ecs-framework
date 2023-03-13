@@ -216,10 +216,35 @@ declare module es {
         onDisabled(): void;
         setEnabled(isEnabled: boolean): this;
         setUpdateOrder(updateOrder: number): this;
+        /**
+         * 添加组件
+         * @param component 要添加的组件实例
+         * @returns 返回添加的组件实例
+         */
         addComponent<T extends Component>(component: T): T;
+        /**
+         * 获取组件
+         * @param type 组件类型
+         * @returns 返回获取到的组件实例
+         */
         getComponent<T extends Component>(type: new (...args: any[]) => T): T;
+        /**
+         * 获取一组指定类型的组件
+         * @param typeName 组件类型名
+         * @param componentList 可选参数，存储组件实例的数组
+         * @returns 返回指定类型的组件实例数组
+         */
         getComponents(typeName: any, componentList?: any[]): any[];
+        /**
+         * 判断实体是否包含指定类型的组件
+         * @param type 组件类型
+         * @returns 如果实体包含指定类型的组件，返回 true，否则返回 false。
+         */
         hasComponent(type: new (...args: any[]) => Component): boolean;
+        /**
+         * 删除组件
+         * @param component 可选参数，要删除的组件实例。如果未指定该参数，则删除当前实例上的组件。
+         */
         removeComponent(component?: Component): void;
     }
 }
@@ -1610,7 +1635,7 @@ declare module es {
 }
 declare module es {
     /**
-     * 追踪实体的子集，但不实现任何排序或迭代。
+     * 实体系统的基类，用于处理一组实体。
      */
     abstract class EntitySystem {
         private _entities;
@@ -1634,7 +1659,7 @@ declare module es {
         readonly matcher: Matcher;
         /**
          * 设置更新时序
-         * @param order
+         * @param order 更新时序
          */
         setUpdateOrder(order: number): void;
         initialize(): void;
@@ -1804,11 +1829,7 @@ declare module es {
 }
 declare module es {
     /**
-     * 每x个ticks处理一个实体的子集
-     *
-     * 典型的用法是每隔一定的时间间隔重新生成弹药或生命值
-     * 而无需在每个游戏循环中都进行
-     * 而是每100毫秒一次或每秒
+     * 定时遍历处理实体的系统，用于按指定的时间间隔遍历并处理感兴趣的实体。
      */
     abstract class IntervalIteratingSystem extends IntervalSystem {
         constructor(matcher: Matcher, interval: number);
@@ -1817,6 +1838,10 @@ declare module es {
          * @param entity
          */
         abstract processEntity(entity: Entity): any;
+        /**
+         * 遍历处理实体。
+         * @param entities 本系统感兴趣的实体列表
+         */
         protected process(entities: Entity[]): void;
     }
 }
@@ -1861,83 +1886,142 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * 位操作类，用于操作一个位数组。
+     */
     class Bits {
         private _bit;
+        /**
+         * 设置指定位置的位值。
+         * @param index 位置索引
+         * @param value 位值（0 或 1）
+         */
         set(index: number, value: number): void;
+        /**
+         * 获取指定位置的位值。
+         * @param index 位置索引
+         * @returns 位值（0 或 1）
+         */
         get(index: number): number;
     }
 }
 declare module es {
     class ComponentList {
         /**
-         * 组件列表的全局updateOrder排序
+         * 比较IUpdatable对象的更新顺序。
          */
         static compareUpdatableOrder: IUpdatableComparer;
         _entity: Entity;
         /**
-         * 添加到实体的组件列表
+         * 实体的组件列表。
          */
         _components: Component[];
         /**
-         * 所有需要更新的组件列表
+         * 可更新的组件列表。
          */
         _updatableComponents: IUpdatable[];
         /**
-         * 添加到此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
+         * 等待添加到实体的组件列表。
          */
         _componentsToAdd: {
             [index: number]: Component;
         };
         /**
-         * 标记要删除此框架的组件列表。用来对组件进行分组，这样我们就可以同时进行加工
+         * 等待从实体中移除的组件列表。
          */
         _componentsToRemove: {
             [index: number]: Component;
         };
+        /**
+         * 等待添加到实体的组件列表（作为数组）。
+         */
         _componentsToAddList: Component[];
+        /**
+         * 等待从实体中移除的组件列表（作为数组）。
+         */
         _componentsToRemoveList: Component[];
+        /**
+         * 临时的组件缓冲列表。
+         */
         _tempBufferList: Component[];
         /**
-         * 用于确定是否需要对该框架中的组件进行排序的标志
+         * 指示组件列表是否已排序的标志。
          */
         _isComponentListUnsorted: boolean;
+        /**
+         * 按组件类型组织的组件列表字典。
+         */
         private componentsByType;
+        /**
+         * 按组件类型组织的等待添加到实体的组件列表字典。
+         */
         private componentsToAddByType;
         constructor(entity: Entity);
         readonly count: number;
         readonly buffer: Component[];
         markEntityListUnsorted(): void;
+        /**
+         * 将组件添加到实体的组件列表中，并添加到组件类型字典中。
+         * @param component 要添加的组件。
+         */
         add(component: Component): void;
+        /**
+         * 从实体的组件列表中移除组件，并从相应的组件类型字典中移除组件。
+         * @param component 要从实体中移除的组件。
+         */
         remove(component: Component): void;
         /**
          * 立即从组件列表中删除所有组件
          */
         removeAllComponents(): void;
+        /**
+         * 从实体的所有组件上注销并从相关数据结构中删除它们。
+         */
         deregisterAllComponents(): void;
+        /**
+         * 注册实体的所有组件，并将它们添加到相应的数据结构中。
+         */
         registerAllComponents(): void;
+        /**
+         * 从实体的位掩码中减去组件类型的索引。
+         * @param component 要从实体中删除的组件。
+         */
         private decreaseBits;
+        /**
+         * 在实体的位掩码中添加组件类型的索引。
+         * @param component 要添加到实体的组件。
+         */
         private addBits;
         /**
-         * 处理任何需要删除或添加的组件
+         * 更新实体的组件列表和相关数据结构。
+         * 如果有组件要添加或删除，它将相应地更新组件列表和其他数据结构。
          */
         updateLists(): void;
         handleRemove(component: Component): void;
         private removeComponentsByType;
         private addComponentsByType;
+        /**
+         * 从待添加组件列表中移除指定类型的组件。
+         * @param component 要移除的组件
+         */
         private removeComponentsToAddByType;
+        /**
+         * 向待添加组件列表中添加指定类型的组件。
+         * @param component 要添加的组件
+         */
         private addComponentsToAddByType;
         /**
-         * 获取类型T的第一个组件并返回它
-         * 可以选择跳过检查未初始化的组件(尚未调用onAddedToEntity方法的组件)
-         * 如果没有找到组件，则返回null。
-         * @param type
-         * @param onlyReturnInitializedComponents
+         * 获取指定类型的第一个组件实例。
+         * @param type 组件类型
+         * @param onlyReturnInitializedComponents 是否仅返回已初始化的组件
+         * @returns 指定类型的第一个组件实例，如果不存在则返回 null
          */
-        getComponent<T extends Component>(type: any, onlyReturnInitializedComponents: boolean): T;
+        getComponent<T extends Component>(type: new (...args: any[]) => T, onlyReturnInitializedComponents: boolean): T;
         /**
-         * 获取T类型的所有组件，但不使用列表分配
-         * @param typeName
-         * @param components
+         * 获取指定类型的所有组件实例。
+         * @param typeName 组件类型名称
+         * @param components 存储组件实例的数组
+         * @returns 存储了指定类型的所有组件实例的数组
          */
         getComponents(typeName: any, components?: any[]): any[];
         update(): void;
@@ -1998,33 +2082,45 @@ declare module es {
 }
 declare module es {
     class EntityList {
+        /**
+         * 场景引用
+         */
         scene: Scene;
         /**
-         * 场景中添加的实体列表
+         * 实体列表
          */
         _entities: Entity[];
         /**
-         * 本帧添加的实体列表。用于对实体进行分组，以便我们可以同时处理它们
+         * 待添加的实体字典
          */
         _entitiesToAdded: {
             [index: number]: Entity;
         };
         /**
-         * 本帧被标记为删除的实体列表。用于对实体进行分组，以便我们可以同时处理它们
+         * 待移除的实体字典
          */
         _entitiesToRemove: {
             [index: number]: Entity;
         };
+        /**
+         * 待添加的实体列表
+         */
         _entitiesToAddedList: Entity[];
+        /**
+         * 待移除的实体列表
+         */
         _entitiesToRemoveList: Entity[];
         /**
-         * 标志，用于确定我们是否需要在这一帧中对实体进行排序
+         * 实体列表是否已排序
          */
         _isEntityListUnsorted: boolean;
         /**
-         * 通过标签跟踪实体，便于检索
+         * 实体字典，以实体标签为键
          */
         _entityDict: Map<number, Set<Entity>>;
+        /**
+         * 未排序的标签集合
+         */
         _unsortedTags: Set<number>;
         constructor(scene: Scene);
         readonly count: number;
@@ -2037,23 +2133,45 @@ declare module es {
          */
         add(entity: Entity): void;
         /**
-         * 从列表中删除一个实体。所有的生命周期方法将在下一帧中被调用
-         * @param entity
+         * 从场景中移除实体。
+         * @param entity 要从场景中移除的实体。
          */
         remove(entity: Entity): void;
         /**
-         * 从实体列表中删除所有实体
+         * 从场景中移除所有实体。
          */
         removeAllEntities(): void;
         /**
-         * 检查实体目前是否由这个EntityList管理
-         * @param entity
+         * 检查实体是否已经被添加到场景中。
+         * @param entity 要检查的实体
+         * @returns 如果实体已经被添加到场景中，则返回true；否则返回false
          */
         contains(entity: Entity): boolean;
+        /**
+         * 获取具有指定标签的实体列表。
+         * 如果列表不存在，则创建一个新列表并返回。
+         * @param tag 实体标签
+         * @returns 具有指定标签的实体列表
+         */
         getTagList(tag: number): Set<Entity>;
+        /**
+         * 添加实体到标签列表中。
+         * @param entity 实体
+         */
         addToTagList(entity: Entity): void;
+        /**
+         * 从标签列表中移除实体。
+         * @param entity 实体
+         */
         removeFromTagList(entity: Entity): void;
+        /**
+         * 更新场景中所有启用的实体的Update方法
+         * 如果实体的UpdateInterval为1或Time.frameCount模除UpdateInterval为0，则每帧调用Update
+         */
         update(): void;
+        /**
+         * 更新场景中实体的列表。
+         */
         updateLists(): void;
         /**
          * 返回第一个找到的名字为name的实体。如果没有找到则返回null
@@ -2061,15 +2179,15 @@ declare module es {
          */
         findEntity(name: string): Entity;
         /**
-         *
-         * @param id
-         * @returns
+         * 通过实体ID在场景中查找对应实体
+         * @param id 实体ID
+         * @returns 返回找到的实体，如果没有找到则返回 null
          */
         findEntityById(id: number): Entity;
         /**
-         * 返回带有标签的所有实体的列表。如果没有实体有标签，则返回一个空列表。
-         * 返回的List可以通过ListPool.free放回池中
-         * @param tag
+         * 获取标签对应的实体列表
+         * @param tag 实体的标签
+         * @returns 返回所有拥有该标签的实体列表
          */
         entitiesWithTag(tag: number): Entity[];
         /**
@@ -2079,20 +2197,21 @@ declare module es {
          */
         entityWithTag(tag: number): Entity;
         /**
-         * 返回在场景中找到的第一个T类型的组件。
-         * @param type
+         * 在场景中查找具有给定类型的组件。
+         * @param type 要查找的组件类型。
+         * @returns 如果找到，则返回该组件；否则返回null。
          */
-        findComponentOfType<T extends Component>(type: any): T;
+        findComponentOfType<T extends Component>(type: new (...args: any[]) => T): T | null;
         /**
-         * 返回在场景中找到的所有T类型的组件。
-         * 返回的List可以通过ListPool.free放回池中。
-         * @param type
+         * 在场景中查找具有给定类型的所有组件。
+         * @param type 要查找的组件类型。
+         * @returns 具有给定类型的所有组件的列表。
          */
-        findComponentsOfType<T extends Component>(type: any): T[];
+        findComponentsOfType<T extends Component>(type: new (...args: any[]) => T): T[];
         /**
-         * 返回场景中包含特定组件的实体列表
-         * @param types
-         * @returns
+         * 返回拥有指定类型组件的所有实体
+         * @param types 要查询的组件类型列表
+         * @returns 返回拥有指定类型组件的所有实体
          */
         findEntitiesOfComponent(...types: any[]): Entity[];
     }
@@ -2101,53 +2220,100 @@ declare module es {
     class EntityProcessorList {
         private _processors;
         private _orderDirty;
-        /** 获取系统列表 */
+        /** 获取处理器列表 */
         readonly processors: EntitySystem[];
-        /** 系统数量 */
+        /** 获取处理器数量 */
         readonly count: number;
+        /**
+         * 添加处理器
+         * @param processor 要添加的处理器
+         */
         add(processor: EntitySystem): void;
+        /**
+         * 移除处理器
+         * @param processor 要移除的处理器
+         */
         remove(processor: EntitySystem): void;
+        /**
+         * 在实体上添加组件时被调用
+         * @param entity 添加组件的实体
+         */
         onComponentAdded(entity: Entity): void;
+        /**
+         * 在实体上移除组件时被调用
+         * @param entity 移除组件的实体
+         */
         onComponentRemoved(entity: Entity): void;
+        /**
+         * 在场景中添加实体时被调用
+         * @param entity 添加的实体
+         */
         onEntityAdded(entity: Entity): void;
+        /**
+         * 在场景中移除实体时被调用
+         * @param entity 移除的实体
+         */
         onEntityRemoved(entity: Entity): void;
+        /** 在处理器列表上开始循环 */
         begin(): void;
+        /** 更新处理器列表 */
         update(): void;
-        lateUpdate(): void;
+        /** 在处理器列表上完成循环 */
         end(): void;
+        /** 设置处理器排序标志 */
         setDirty(): void;
+        /** 清除处理器排序标志 */
         clearDirty(): void;
+        /**
+         * 获取指定类型的处理器
+         * @param type 指定类型的构造函数
+         * @returns 指定类型的处理器
+         */
         getProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T;
+        /**
+         * 通知处理器实体已更改
+         * @param entity 发生更改的实体
+         */
         protected notifyEntityChanged(entity: Entity): void;
+        /**
+         * 从处理器列表中移除实体
+         * @param entity 要移除的实体
+         */
         protected removeFromProcessors(entity: Entity): void;
+        /** 在处理器列表上进行后期更新 */
+        lateUpdate(): void;
     }
 }
 declare module es {
     class HashHelpers {
         static readonly hashCollisionThreshold: number;
         static readonly hashPrime: number;
-        /**
-         * 用来作为哈希表大小的质数表。
-         * 一个典型的调整大小的算法会在这个数组中选取比之前容量大两倍的最小质数。
-         * 假设我们的Hashtable当前的容量为x，并且添加了足够多的元素，因此需要进行大小调整。
-         * 调整大小首先计算2x，然后在表中找到第一个大于2x的质数，即如果质数的顺序是p_1，p_2，...，p_i，...，则找到p_n，使p_n-1 < 2x < p_n。
-         * 双倍对于保持哈希特操作的渐近复杂度是很重要的，比如添加。
-         * 拥有一个质数可以保证双倍哈希不会导致无限循环。 IE，你的哈希函数将是h1(key)+i*h2(key)，0 <= i < size.h2和size必须是相对质数。
-         */
         static readonly primes: number[];
-        /**
-         * 这是比Array.MaxArrayLength小的最大质数
-         */
         static readonly maxPrimeArrayLength: number;
+        /**
+         * 判断一个数是否为质数
+         * @param candidate 要判断的数
+         * @returns 是否为质数
+         */
         static isPrime(candidate: number): boolean;
+        /**
+         * 获取大于等于指定值的最小质数
+         * @param min 指定值
+         * @returns 大于等于指定值的最小质数
+         */
         static getPrime(min: number): number;
         /**
-         *
-         * @param oldSize
-         * @returns 返回要增长的哈希特表的大小
+         * 扩展哈希表容量
+         * @param oldSize 原哈希表容量
+         * @returns 扩展后的哈希表容量
          */
         static expandPrime(oldSize: number): number;
-        static getHashCode(str: any): number;
+        /**
+         * 计算字符串的哈希值
+         * @param str 要计算哈希值的字符串
+         * @returns 哈希值
+         */
+        static getHashCode(str: string): number;
     }
 }
 declare module es {
@@ -2281,104 +2447,118 @@ declare module es {
     }
 }
 declare module es {
-    /** 提供帧定时信息 */
+    /**
+     * 时间管理器，用于管理游戏中的时间相关属性
+     */
     class Time {
-        /** 游戏运行的总时间 */
+        /** 游戏运行的总时间，单位为秒 */
         static totalTime: number;
-        /** deltaTime的未缩放版本。不受时间尺度的影响 */
+        /** deltaTime 的未缩放版本，不受时间尺度的影响 */
         static unscaledDeltaTime: number;
         /** 前一帧到当前帧的时间增量，按时间刻度进行缩放 */
         static deltaTime: number;
-        /** 时间刻度缩放 */
+        /** 时间刻度缩放，可以加快或减慢游戏时间 */
         static timeScale: number;
-        /** DeltaTime可以为的最大值 */
+        /** DeltaTime 可以为的最大值，避免游戏出现卡顿情况 */
         static maxDeltaTime: number;
         /** 已传递的帧总数 */
         static frameCount: number;
-        /** 自场景加载以来的总时间 */
+        /** 自场景加载以来的总时间，单位为秒 */
         static timeSinceSceneLoad: number;
+        /** 上一次记录的时间，用于计算两次调用 update 之间的时间差 */
         private static _lastTime;
+        /**
+         * 更新时间管理器
+         * @param currentTime 当前时间
+         * @param useEngineTime 是否使用引擎时间
+         */
         static update(currentTime: number, useEngineTime: boolean): void;
         static sceneChanged(): void;
         /**
-         * 允许在间隔检查。只应该使用高于delta的间隔值，否则它将始终返回true。
-         * @param interval
+         * 检查指定时间间隔是否已过去
+         * @param interval 指定时间间隔
+         * @returns 是否已过去指定时间间隔
          */
         static checkEvery(interval: number): boolean;
     }
 }
-declare class TimeUtils {
-    /**
-     * 计算月份ID
-     * @param d 指定计算日期
-     * @returns 月ID
-     */
-    static monthId(d?: Date): number;
-    /**
-     * 计算日期ID
-     * @param d 指定计算日期
-     * @returns 日期ID
-     */
-    static dateId(t?: Date): number;
-    /**
-     * 计算周ID
-     * @param d 指定计算日期
-     * @returns 周ID
-     */
-    static weekId(d?: Date, first?: boolean): number;
-    /**
-     * 计算俩日期时间差，如果a比b小，返回负数
-     */
-    static diffDay(a: Date, b: Date, fixOne?: boolean): number;
-    /**
-     * 获取本周一 凌晨时间
-     */
-    static getFirstDayOfWeek(d?: Date): Date;
-    /**
-     * 获取当日凌晨时间
-     */
-    static getFirstOfDay(d?: Date): Date;
-    /**
-     * 获取次日凌晨时间
-     */
-    static getNextFirstOfDay(d?: Date): Date;
-    /**
-     * @returns 2018-12-12
-     */
-    static formatDate(date: Date): string;
-    /**
-     * @returns 2018-12-12 12:12:12
-     */
-    static formatDateTime(date: Date): string;
-    /**
-     * @returns s 2018-12-12 或者 2018-12-12 12:12:12
-     */
-    static parseDate(s: string): Date;
-    /**
-     * 秒数转换为时间形式。
-     * @param    time 秒数
-     * @param    partition 分隔符
-     * @param    showHour  是否显示小时
-     * @return  返回一个以分隔符分割的时, 分, 秒
-     *
-     * 比如: time = 4351; secondToTime(time)返回字符串01:12:31;
-     */
-    static secondToTime(time?: number, partition?: string, showHour?: boolean): string;
-    /**
-     * 时间形式转换为毫秒数。
-     * @param   time  以指定分隔符分割的时间字符串
-     * @param   partition  分隔符
-     * @return  毫秒数显示的字符串
-     * @throws  Error Exception
-     *
-     * 用法1 trace(MillisecondTransform.timeToMillisecond("00:60:00"))
-     * 输出   3600000
-     *
-     *
-     * 用法2 trace(MillisecondTransform.timeToMillisecond("00.60.00","."))
-     * 输出   3600000
-     */
-    static timeToMillisecond(time: string, partition?: string): string;
+declare module es {
+    class TimeUtils {
+        /**
+         * 获取日期对应的年份和月份的数字组合
+         * @param d 要获取月份的日期对象，不传则默认为当前时间
+         * @returns 返回数字组合的年份和月份
+         */
+        static monthId(d?: Date): number;
+        /**
+         * 获取日期的数字组合
+         * @param t - 可选参数，传入时间，若不传入则使用当前时间
+         * @returns 数字组合
+         */
+        static dateId(t?: Date): number;
+        /**
+         * 获取当前日期所在周的数字组合
+         * @param d - 可选参数，传入日期，若不传入则使用当前日期
+         * @param first - 是否将当前周视为本年度的第1周，默认为true
+         * @returns 数字组合
+         */
+        static weekId(d?: Date, first?: boolean): number;
+        /**
+         * 计算两个日期之间相差的天数
+         * @param a 第一个日期
+         * @param b 第二个日期
+         * @param fixOne 是否将相差天数四舍五入到整数
+         * @returns 两个日期之间相差的天数
+         */
+        static diffDay(a: Date, b: Date, fixOne?: boolean): number;
+        /**
+         * 获取指定日期所在周的第一天
+         * @param d 指定日期，默认值为今天
+         * @returns 指定日期所在周的第一天
+         */
+        static getFirstDayOfWeek(d?: Date): Date;
+        /**
+         * 获取当日凌晨时间
+         */
+        static getFirstOfDay(d?: Date): Date;
+        /**
+         * 获取次日凌晨时间
+         */
+        static getNextFirstOfDay(d?: Date): Date;
+        /**
+         * 格式化日期为 "YYYY-MM-DD" 的字符串形式
+         * @param date 要格式化的日期
+         * @returns 格式化后的日期字符串
+         */
+        static formatDate(date: Date): string;
+        /**
+         * 将日期对象格式化为 "YYYY-MM-DD HH:mm:ss" 的字符串
+         * @param date 日期对象
+         * @returns 格式化后的字符串
+         */
+        static formatDateTime(date: Date): string;
+        /**
+         * 将字符串解析为Date对象
+         * @param s 要解析的日期字符串，例如：2022-01-01
+         * @returns 返回解析后的Date对象，如果解析失败，则返回当前时间的Date对象
+         */
+        static parseDate(s: string): Date;
+        /**
+         * 将秒数转换为时分秒的格式
+         * @param time 秒数
+         * @param partition 分隔符
+         * @param showHour 是否显示小时位
+         * @returns 转换后的时间字符串
+         */
+        static secondToTime(time?: number, partition?: string, showHour?: boolean): string;
+        /**
+         * 将时间字符串转换为毫秒数
+         * @param time 时间字符串，如 "01:30:15" 表示 1小时30分钟15秒
+         * @param partition 分隔符，默认为 ":"
+         * @returns 转换后的毫秒数字符串
+         */
+        static timeToMillisecond(time: string, partition?: string): string;
+    }
 }
 declare module es {
     /**
@@ -5319,53 +5499,6 @@ declare module es {
         ensureCapacity(index: number): void;
         clear(): void;
         addAll(items: ImmutableBag<E>): void;
-    }
-}
-declare module es {
-    /**
-     * 创建这个字典的原因只有一个：
-     * 我需要一个能让我直接以数组的形式对值进行迭代的字典，而不需要生成一个数组或使用迭代器。
-     * 对于这个目标是比标准字典快N倍。
-     * Faster dictionary在大部分操作上也比标准字典快，但差别可以忽略不计。
-     * 唯一较慢的操作是在添加时调整内存大小，因为与标准数组相比，这个实现需要使用两个单独的数组。
-     */
-    class FasterDictionary<TKey, TValue> {
-        _values: TValue[];
-        _valuesInfo: FastNode[];
-        _buckets: number[];
-        _freeValueCellIndex: number;
-        _collisions: number;
-        constructor(size?: number);
-        getValuesArray(count: {
-            value: number;
-        }): TValue[];
-        readonly valuesArray: TValue[];
-        readonly count: number;
-        add(key: TKey, value: TValue): void;
-        addValue(key: TKey, value: TValue, indexSet: {
-            value: number;
-        }): boolean;
-        remove(key: TKey): boolean;
-        trim(): void;
-        clear(): void;
-        fastClear(): void;
-        containsKey(key: TKey): boolean;
-        tryGetValue(key: TKey): TValue;
-        tryFindIndex(key: TKey, findIndex: {
-            value: number;
-        }): boolean;
-        getDirectValue(index: number): TValue;
-        getIndex(key: TKey): number;
-        static updateLinkedList(index: number, valuesInfo: FastNode[]): void;
-        static hash(key: any): number;
-        static reduce(x: number, n: number): number;
-    }
-    class FastNode {
-        readonly key: any;
-        readonly hashcode: number;
-        previous: number;
-        next: number;
-        constructor(key: any, hash: number, previousNode?: number);
     }
 }
 declare module es {
