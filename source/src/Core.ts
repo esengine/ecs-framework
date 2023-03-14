@@ -93,12 +93,16 @@ module es {
         }
 
         /**
-         * 默认实现创建核心
+         * `Core`类的静态方法，用于创建`Core`的实例。
+         * @param debug {boolean} 是否为调试模式，默认为`true`
+         * @returns {Core} `Core`的实例
          */
         public static create(debug: boolean = true): Core {
+            // 如果实例还未被创建，则创建一个新的实例并保存在`_instance`静态属性中
             if (this._instance == null) {
                 this._instance = new es.Core(debug);
             }
+            // 返回`_instance`静态属性中保存的实例
             return this._instance;
         }
 
@@ -197,35 +201,47 @@ module es {
 
         }
 
-        protected update(currentTime: number = -1) {
+        /**
+         * `Core` 类的受保护的 `update` 方法，用于更新游戏状态。
+         * @param currentTime 当前时间戳，单位为毫秒，默认值为-1。
+         */
+        protected update(currentTime: number = -1): void {
+            // 如果引擎处于暂停状态，则直接返回，不做任何操作
             if (Core.paused) {
                 return;
             }
 
-            Time.update(currentTime, currentTime != -1);
+            // 更新时间戳信息
+            Time.update(currentTime, currentTime !== -1);
+
+            // 更新全局管理器和当前场景
             if (this._scene != null) {
-                for (let i = this._globalManagers.length - 1; i >= 0; i--) {
-                    if (this._globalManagers[i].enabled)
-                        this._globalManagers[i].update();
+                // 依次更新所有启用的全局管理器
+                for (const globalManager of this._globalManagers) {
+                    if (globalManager.enabled) {
+                        globalManager.update();
+                    }
                 }
 
-                if (this._sceneTransition == null ||
-                    (this._sceneTransition != null &&
-                        (!this._sceneTransition._loadsNewScene || this._sceneTransition._isNewSceneLoaded))) {
+                // 如果当前没有场景切换正在进行，或者正在进行的场景切换不需要加载新场景
+                if (this._sceneTransition == null || !this._sceneTransition._loadsNewScene) {
                     this._scene.update();
-                }
-
-                if (this._nextScene != null) {
-                    this._scene.end();
-
-                    this._scene = this._nextScene;
-                    this._nextScene = null;
-                    this.onSceneChanged();
-
-                    this._scene.begin();
                 }
             }
 
+            // 处理场景切换
+            if (this._nextScene != null) {
+                // 结束当前场景
+                this._scene.end();
+
+                // 加载并初始化新场景
+                this._scene = this._nextScene;
+                this._nextScene = null;
+                this.onSceneChanged();
+                this._scene.begin();
+            }
+
+            // 绘制调试信息
             this.startDebugDraw();
             this.draw();
         }

@@ -3,15 +3,19 @@
 ## 初始化框架
 
 ```typescript
-// 参数为false则开启debug模式
-es.Core.create(false);
+// 创建调试模式下的`Core`实例
+const core = es.Core.create();
+
+// 创建非调试模式下的`Core`实例
+const core = es.Core.create(false);
 ```
 
 ## 分发帧事件
 
 ```typescript
-// 放置于引擎每帧更新处
-// dt为可选参数，传入引擎的deltaTime代替框架内的es.Time.deltaTime
+// dt 是一个可选参数，如果传入了 es.Time.deltaTime或者不传入参数，则代表使用框架的内置的时间差来更新游戏状态；
+// 如果传入了游戏引擎自带的 deltaTime，则代表使用该值来更新游戏状态。
+// 在 es.Core.update 方法中，会根据 dt 的值来计算时间戳信息，并更新全局管理器和当前场景的状态
 es.Core.emitter.emit(es.CoreEvents.frameUpdated, dt);
 ```
 
@@ -24,35 +28,47 @@ es.Core.emitter.emit(es.CoreEvents.frameUpdated, dt);
 场景类需要继承框架中的 `es.Scene`
 
 ```typescript
-export class MainScene extends es.Scene {
-    /**
-     * 可重写方法，从contructor中调用这个函数
-     */
-    initialize() {
-        console.log('initialize');
+/** 示例场景 */
+export class MainScene extends Scene {
+    constructor() {
+        super();
     }
 
     /**
-     *  可重写方法。当Core将这个场景设置为活动场景时调用
-     */
-    onStart() {
-        console.log('onStart');
+    * 初始化场景，添加实体和组件
+    *
+    * 这个方法会在场景被创建时被调用。我们在这个方法中创建了一个实体，
+    * 并向它添加了一个SpriteRender组件和一个TransformMove组件。
+    */
+    public initialize() {
+        // 创建一个实体
+        let entity = this.createEntity("Player");
+
+        // 添加一个SpriteRender组件，用于显示实体的图像
+        let spriteRender = entity.addComponent(new SpriteRender());
+        spriteRender.sprite = new es.Sprite(new es.Texture("player.png"));
+
+        // 添加一个TransformMove组件，用于移动实体
+        let transformMove = entity.addComponent(new TransformMove());
+        transformMove.speed = 50;
     }
 
     /**
-     *  可重写方法。当Core把这个场景从活动槽中移除时调用。
-     */
-    unload() {
-        console.log('unload');
+    * 场景开始运行时执行的操作
+    *
+    * 这个方法会在场景开始运行时被调用。我们在这个方法中输出一条消息表示场景已经开始运行。
+    */
+    public onStart() {
+        console.log("MainScene has started!");
     }
 
     /**
-     * 可重写方法。
-     */
-    update() {
-        // 如果重写update方法 一定要调用该方法
-        // 不调用将导致实体无法加入/组件无法更新
-        super.update();
+    * 场景被销毁时执行的操作
+    *
+    * 这个方法会在场景被销毁时被调用。我们在这个方法中输出一条消息表示场景已经被卸载。
+    */
+    public unload() {
+        console.log("MainScene has been unloaded!");
     }
 }
 ```

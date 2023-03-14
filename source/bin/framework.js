@@ -1,4 +1,14 @@
 "use strict";
+var __values = (this && this.__values) || function (o) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
+    if (m) return m.call(o);
+    return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+};
 var __read = (this && this.__read) || function (o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
     if (!m) return o;
@@ -56,16 +66,6 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __values = (this && this.__values) || function (o) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
-    if (m) return m.call(o);
-    return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-};
 var es;
 (function (es) {
     /**
@@ -133,13 +133,17 @@ var es;
             configurable: true
         });
         /**
-         * 默认实现创建核心
+         * `Core`类的静态方法，用于创建`Core`的实例。
+         * @param debug {boolean} 是否为调试模式，默认为`true`
+         * @returns {Core} `Core`的实例
          */
         Core.create = function (debug) {
             if (debug === void 0) { debug = true; }
+            // 如果实例还未被创建，则创建一个新的实例并保存在`_instance`静态属性中
             if (this._instance == null) {
                 this._instance = new es.Core(debug);
             }
+            // 返回`_instance`静态属性中保存的实例
             return this._instance;
         };
         /**
@@ -159,8 +163,9 @@ var es;
             manager.enabled = false;
         };
         /**
-         * 获取类型为T的全局管理器
-         * @param type
+         * 获取指定类型的全局管理器实例
+         * @param type 管理器类型的构造函数
+         * @returns 指定类型的全局管理器实例，如果找不到则返回 null
          */
         Core.getGlobalManager = function (type) {
             for (var i = 0, s = Core._instance._globalManagers.length; i < s; ++i) {
@@ -228,30 +233,53 @@ var es;
         };
         Core.prototype.initialize = function () {
         };
+        /**
+         * `Core` 类的受保护的 `update` 方法，用于更新游戏状态。
+         * @param currentTime 当前时间戳，单位为毫秒，默认值为-1。
+         */
         Core.prototype.update = function (currentTime) {
             if (currentTime === void 0) { currentTime = -1; }
+            var e_1, _a;
+            // 如果引擎处于暂停状态，则直接返回，不做任何操作
             if (Core.paused) {
                 return;
             }
-            es.Time.update(currentTime, currentTime != -1);
+            // 更新时间戳信息
+            es.Time.update(currentTime, currentTime !== -1);
+            // 更新全局管理器和当前场景
             if (this._scene != null) {
-                for (var i = this._globalManagers.length - 1; i >= 0; i--) {
-                    if (this._globalManagers[i].enabled)
-                        this._globalManagers[i].update();
+                try {
+                    // 依次更新所有启用的全局管理器
+                    for (var _b = __values(this._globalManagers), _c = _b.next(); !_c.done; _c = _b.next()) {
+                        var globalManager = _c.value;
+                        if (globalManager.enabled) {
+                            globalManager.update();
+                        }
+                    }
                 }
-                if (this._sceneTransition == null ||
-                    (this._sceneTransition != null &&
-                        (!this._sceneTransition._loadsNewScene || this._sceneTransition._isNewSceneLoaded))) {
+                catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                finally {
+                    try {
+                        if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                    }
+                    finally { if (e_1) throw e_1.error; }
+                }
+                // 如果当前没有场景切换正在进行，或者正在进行的场景切换不需要加载新场景
+                if (this._sceneTransition == null || !this._sceneTransition._loadsNewScene) {
                     this._scene.update();
                 }
-                if (this._nextScene != null) {
-                    this._scene.end();
-                    this._scene = this._nextScene;
-                    this._nextScene = null;
-                    this.onSceneChanged();
-                    this._scene.begin();
-                }
             }
+            // 处理场景切换
+            if (this._nextScene != null) {
+                // 结束当前场景
+                this._scene.end();
+                // 加载并初始化新场景
+                this._scene = this._nextScene;
+                this._nextScene = null;
+                this.onSceneChanged();
+                this._scene.begin();
+            }
+            // 绘制调试信息
             this.startDebugDraw();
             this.draw();
         };
@@ -287,6 +315,12 @@ var es;
     var Debug = /** @class */ (function () {
         function Debug() {
         }
+        /**
+         * 如果条件为true，则在控制台中以警告方式打印消息。
+         * @param condition 是否应该打印消息的条件
+         * @param format 要打印的消息格式
+         * @param args 与消息格式相对应的参数列表
+         */
         Debug.warnIf = function (condition, format) {
             var args = [];
             for (var _i = 2; _i < arguments.length; _i++) {
@@ -295,6 +329,11 @@ var es;
             if (condition)
                 this.log(LogType.warn, format, args);
         };
+        /**
+         * 在控制台中以警告方式打印消息。
+         * @param format 要打印的消息格式
+         * @param args 与消息格式相对应的参数列表
+         */
         Debug.warn = function (format) {
             var args = [];
             for (var _i = 1; _i < arguments.length; _i++) {
@@ -302,6 +341,11 @@ var es;
             }
             this.log(LogType.warn, format, args);
         };
+        /**
+         * 在控制台中以错误方式打印消息。
+         * @param format 要打印的消息格式
+         * @param args 与消息格式相对应的参数列表
+         */
         Debug.error = function (format) {
             var args = [];
             for (var _i = 1; _i < arguments.length; _i++) {
@@ -309,6 +353,12 @@ var es;
             }
             this.log(LogType.error, format, args);
         };
+        /**
+         * 在控制台中以标准日志方式打印消息。
+         * @param type 要打印的日志类型
+         * @param format 要打印的消息格式
+         * @param args 与消息格式相对应的参数列表
+         */
         Debug.log = function (type, format) {
             var args = [];
             for (var _i = 2; _i < arguments.length; _i++) {
@@ -1637,53 +1687,83 @@ var es;
             this.initialize();
         }
         /**
-         * 在场景子类中重写这个，然后在这里进行加载。
-         * 在场景设置好之后，但在调用begin之前，从contructor中调用这个函数
+         * 初始化场景，可以在派生类中覆盖
+         *
+         * 这个方法会在场景创建时被调用。您可以在这个方法中添加实体和组件，
+         * 或者执行一些必要的准备工作，以便场景能够开始运行。
          */
         Scene.prototype.initialize = function () {
         };
         /**
-         * 当Core将这个场景设置为活动场景时，这个将被调用
+         * 开始运行场景时调用此方法，可以在派生类中覆盖
+         *
+         * 这个方法会在场景开始运行时被调用。您可以在这个方法中执行场景开始时需要进行的操作。
+         * 比如，您可以开始播放一段背景音乐、启动UI等等。
          */
         Scene.prototype.onStart = function () {
         };
         /**
-         * 在场景子类中重写这个，并在这里做任何必要的卸载。
-         * 当Core把这个场景从活动槽中移除时，这个被调用。
+         * 卸载场景时调用此方法，可以在派生类中覆盖
+         *
+         * 这个方法会在场景被销毁时被调用。您可以在这个方法中销毁实体和组件、释放资源等等。
+         * 您也可以在这个方法中执行一些必要的清理工作，以确保场景被完全卸载。
          */
         Scene.prototype.unload = function () {
         };
+        /**
+         * 开始场景，初始化物理系统、启动实体处理器等
+         *
+         * 这个方法会启动场景。它将重置物理系统、启动实体处理器等，并调用onStart方法。
+         */
         Scene.prototype.begin = function () {
+            // 重置物理系统
             es.Physics.reset();
+            // 启动实体处理器
             if (this.entityProcessors != null)
                 this.entityProcessors.begin();
+            // 标记场景已开始运行并调用onStart方法
             this._didSceneBegin = true;
             this.onStart();
         };
+        /**
+         * 结束场景，清除实体、场景组件、物理系统等
+         *
+         * 这个方法会结束场景。它将移除所有实体并调用它们的onRemovedFromScene方法，清除物理系统，结束实体处理器等，并调用unload方法。
+         */
         Scene.prototype.end = function () {
+            // 标记场景已结束运行
             this._didSceneBegin = false;
+            // 移除所有实体并调用它们的onRemovedFromScene方法
             this.entities.removeAllEntities();
             for (var i = 0; i < this._sceneComponents.length; i++) {
                 this._sceneComponents[i].onRemovedFromScene();
             }
             this._sceneComponents.length = 0;
+            // 清除物理系统
             es.Physics.clear();
+            // 结束实体处理器
             if (this.entityProcessors)
                 this.entityProcessors.end();
+            // 调用卸载方法
             this.unload();
         };
+        /**
+         * 更新场景，更新实体组件、实体处理器等
+         */
         Scene.prototype.update = function () {
-            // 更新我们的列表，以防它们有任何变化
+            // 更新实体列表
             this.entities.updateLists();
+            // 更新场景组件
             for (var i = this._sceneComponents.length - 1; i >= 0; i--) {
                 if (this._sceneComponents[i].enabled)
                     this._sceneComponents[i].update();
             }
-            // 更新我们的实体解析器
+            // 更新实体处理器
             if (this.entityProcessors != null)
                 this.entityProcessors.update();
-            // 更新我们的实体组
+            // 更新实体组
             this.entities.update();
+            // 更新实体处理器的后处理方法
             if (this.entityProcessors != null)
                 this.entityProcessors.lateUpdate();
         };
@@ -3601,7 +3681,7 @@ var es;
          * @param result
          */
         Collider.prototype.collidesWithAnyNonMotion = function (result) {
-            var e_1, _a;
+            var e_2, _a;
             result.value = new es.CollisionResult();
             // 在我们的新位置上获取我们可能会碰到的任何东西 
             var neighbors = es.Physics.boxcastBroadphaseExcludingSelfNonRect(this, this.collidesWithLayers.value);
@@ -3614,12 +3694,12 @@ var es;
                         return true;
                 }
             }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
             finally {
                 try {
                     if (neighbors_1_1 && !neighbors_1_1.done && (_a = neighbors_1.return)) _a.call(neighbors_1);
                 }
-                finally { if (e_1) throw e_1.error; }
+                finally { if (e_2) throw e_2.error; }
             }
             return false;
         };
@@ -4492,7 +4572,7 @@ var es;
          * 从实体的所有组件上注销并从相关数据结构中删除它们。
          */
         ComponentList.prototype.deregisterAllComponents = function () {
-            var e_2, _a;
+            var e_3, _a;
             if (this._components.length > 0) {
                 try {
                     for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -4507,12 +4587,12 @@ var es;
                         this._entity.scene.entityProcessors.onComponentRemoved(this._entity);
                     }
                 }
-                catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                catch (e_3_1) { e_3 = { error: e_3_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_2) throw e_2.error; }
+                    finally { if (e_3) throw e_3.error; }
                 }
             }
         };
@@ -4520,7 +4600,7 @@ var es;
          * 注册实体的所有组件，并将它们添加到相应的数据结构中。
          */
         ComponentList.prototype.registerAllComponents = function () {
-            var e_3, _a;
+            var e_4, _a;
             if (this._components.length > 0) {
                 try {
                     for (var _b = __values(this._components), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -4534,12 +4614,12 @@ var es;
                         this._entity.scene.entityProcessors.onComponentAdded(this._entity);
                     }
                 }
-                catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                catch (e_4_1) { e_4 = { error: e_4_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_3) throw e_3.error; }
+                    finally { if (e_4) throw e_4.error; }
                 }
             }
         };
@@ -4568,7 +4648,7 @@ var es;
          * 如果有组件要添加或删除，它将相应地更新组件列表和其他数据结构。
          */
         ComponentList.prototype.updateLists = function () {
-            var e_4, _a, e_5, _b, e_6, _c;
+            var e_5, _a, e_6, _b, e_7, _c;
             // 处理要删除的组件
             if (this._componentsToRemoveList.length > 0) {
                 var _loop_1 = function (component) {
@@ -4589,12 +4669,12 @@ var es;
                         _loop_1(component);
                     }
                 }
-                catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                catch (e_5_1) { e_5 = { error: e_5_1 }; }
                 finally {
                     try {
                         if (_e && !_e.done && (_a = _d.return)) _a.call(_d);
                     }
-                    finally { if (e_4) throw e_4.error; }
+                    finally { if (e_5) throw e_5.error; }
                 }
                 // 清空_componentsToRemove和_componentsToRemoveList
                 this._componentsToRemove = {};
@@ -4619,12 +4699,12 @@ var es;
                         this._tempBufferList.push(component);
                     }
                 }
-                catch (e_5_1) { e_5 = { error: e_5_1 }; }
+                catch (e_6_1) { e_6 = { error: e_6_1 }; }
                 finally {
                     try {
                         if (_g && !_g.done && (_b = _f.return)) _b.call(_f);
                     }
-                    finally { if (e_5) throw e_5.error; }
+                    finally { if (e_6) throw e_6.error; }
                 }
                 // 清空_componentsToAdd、_componentsToAddList和componentsToAddByType，设置_isComponentListUnsorted标志
                 this._componentsToAdd = {};
@@ -4644,12 +4724,12 @@ var es;
                         }
                     }
                 }
-                catch (e_6_1) { e_6 = { error: e_6_1 }; }
+                catch (e_7_1) { e_7 = { error: e_7_1 }; }
                 finally {
                     try {
                         if (_j && !_j.done && (_c = _h.return)) _c.call(_h);
                     }
-                    finally { if (e_6) throw e_6.error; }
+                    finally { if (e_7) throw e_7.error; }
                 }
                 // 清空_tempBufferList
                 this._tempBufferList.length = 0;
@@ -4988,7 +5068,7 @@ var es;
          * 从场景中移除所有实体。
          */
         EntityList.prototype.removeAllEntities = function () {
-            var e_7, _a;
+            var e_8, _a;
             // 清除字典和列表，以及是否已排序的标志
             this._unsortedTags.clear();
             this._entitiesToAdded = {};
@@ -5005,12 +5085,12 @@ var es;
                     entity.scene = null;
                 }
             }
-            catch (e_7_1) { e_7 = { error: e_7_1 }; }
+            catch (e_8_1) { e_8 = { error: e_8_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_7) throw e_7.error; }
+                finally { if (e_8) throw e_8.error; }
             }
             // 清空实体列表和实体字典
             this._entities.length = 0;
@@ -5081,7 +5161,7 @@ var es;
          * 更新场景中实体的列表。
          */
         EntityList.prototype.updateLists = function () {
-            var e_8, _a, e_9, _b, e_10, _c, e_11, _d;
+            var e_9, _a, e_10, _b, e_11, _c, e_12, _d;
             // 处理要移除的实体
             if (this._entitiesToRemoveList.length > 0) {
                 var _loop_2 = function (entity) {
@@ -5105,12 +5185,12 @@ var es;
                         _loop_2(entity);
                     }
                 }
-                catch (e_8_1) { e_8 = { error: e_8_1 }; }
+                catch (e_9_1) { e_9 = { error: e_9_1 }; }
                 finally {
                     try {
                         if (_f && !_f.done && (_a = _e.return)) _a.call(_e);
                     }
-                    finally { if (e_8) throw e_8.error; }
+                    finally { if (e_9) throw e_9.error; }
                 }
                 // 清空要移除的实体列表和字典
                 this._entitiesToRemove = {};
@@ -5127,12 +5207,12 @@ var es;
                         this.addToTagList(entity);
                     }
                 }
-                catch (e_9_1) { e_9 = { error: e_9_1 }; }
+                catch (e_10_1) { e_10 = { error: e_10_1 }; }
                 finally {
                     try {
                         if (_h && !_h.done && (_b = _g.return)) _b.call(_g);
                     }
-                    finally { if (e_9) throw e_9.error; }
+                    finally { if (e_10) throw e_10.error; }
                 }
                 try {
                     // 通知场景实体处理器，有新的实体已添加
@@ -5141,12 +5221,12 @@ var es;
                         this.scene.entityProcessors.onEntityAdded(entity);
                     }
                 }
-                catch (e_10_1) { e_10 = { error: e_10_1 }; }
+                catch (e_11_1) { e_11 = { error: e_11_1 }; }
                 finally {
                     try {
                         if (_k && !_k.done && (_c = _j.return)) _c.call(_j);
                     }
-                    finally { if (e_10) throw e_10.error; }
+                    finally { if (e_11) throw e_11.error; }
                 }
                 try {
                     // 调用实体的onAddedToScene方法，以允许它们执行任何场景相关的操作
@@ -5155,12 +5235,12 @@ var es;
                         entity.onAddedToScene();
                     }
                 }
-                catch (e_11_1) { e_11 = { error: e_11_1 }; }
+                catch (e_12_1) { e_12 = { error: e_12_1 }; }
                 finally {
                     try {
                         if (_m && !_m.done && (_d = _l.return)) _d.call(_l);
                     }
-                    finally { if (e_11) throw e_11.error; }
+                    finally { if (e_12) throw e_12.error; }
                 }
                 // 清空要添加的实体列表和字典
                 this._entitiesToAdded = {};
@@ -5212,7 +5292,7 @@ var es;
          * @returns 返回所有拥有该标签的实体列表
          */
         EntityList.prototype.entitiesWithTag = function (tag) {
-            var e_12, _a;
+            var e_13, _a;
             // 从字典中获取对应标签的实体列表
             var list = this.getTagList(tag);
             // 从对象池中获取 Entity 类型的数组
@@ -5225,12 +5305,12 @@ var es;
                         returnList.push(entity);
                     }
                 }
-                catch (e_12_1) { e_12 = { error: e_12_1 }; }
+                catch (e_13_1) { e_13 = { error: e_13_1 }; }
                 finally {
                     try {
                         if (list_1_1 && !list_1_1.done && (_a = list_1.return)) _a.call(list_1);
                     }
-                    finally { if (e_12) throw e_12.error; }
+                    finally { if (e_13) throw e_13.error; }
                 }
             }
             // 返回已填充好实体的返回列表
@@ -5242,7 +5322,7 @@ var es;
          * @returns
          */
         EntityList.prototype.entityWithTag = function (tag) {
-            var e_13, _a;
+            var e_14, _a;
             var list = this.getTagList(tag);
             if (list.size > 0) {
                 try {
@@ -5251,12 +5331,12 @@ var es;
                         return entity;
                     }
                 }
-                catch (e_13_1) { e_13 = { error: e_13_1 }; }
+                catch (e_14_1) { e_14 = { error: e_14_1 }; }
                 finally {
                     try {
                         if (list_2_1 && !list_2_1.done && (_a = list_2.return)) _a.call(list_2);
                     }
-                    finally { if (e_13) throw e_13.error; }
+                    finally { if (e_14) throw e_14.error; }
                 }
             }
             return null;
@@ -5267,7 +5347,7 @@ var es;
          * @returns 如果找到，则返回该组件；否则返回null。
          */
         EntityList.prototype.findComponentOfType = function (type) {
-            var e_14, _a, e_15, _b;
+            var e_15, _a, e_16, _b;
             try {
                 // 遍历场景中的所有实体，查找具有给定类型的组件
                 for (var _c = __values(this._entities), _d = _c.next(); !_d.done; _d = _c.next()) {
@@ -5280,12 +5360,12 @@ var es;
                     }
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
             finally {
                 try {
                     if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_15) throw e_15.error; }
             }
             try {
                 // 遍历待添加的实体列表中的所有实体，查找具有给定类型的组件
@@ -5299,12 +5379,12 @@ var es;
                     }
                 }
             }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
             finally {
                 try {
                     if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                 }
-                finally { if (e_15) throw e_15.error; }
+                finally { if (e_16) throw e_16.error; }
             }
             // 如果找不到具有给定类型的组件，则返回null
             return null;
@@ -5315,7 +5395,7 @@ var es;
          * @returns 具有给定类型的所有组件的列表。
          */
         EntityList.prototype.findComponentsOfType = function (type) {
-            var e_16, _a, e_17, _b;
+            var e_17, _a, e_18, _b;
             // 从池中获取一个可重用的组件列表
             var comps = es.ListPool.obtain(type);
             try {
@@ -5327,12 +5407,12 @@ var es;
                     }
                 }
             }
-            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
             finally {
                 try {
                     if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
-                finally { if (e_16) throw e_16.error; }
+                finally { if (e_17) throw e_17.error; }
             }
             try {
                 // 遍历待添加的实体列表中的所有实体，查找具有给定类型的组件并添加到组件列表中
@@ -5343,12 +5423,12 @@ var es;
                     }
                 }
             }
-            catch (e_17_1) { e_17 = { error: e_17_1 }; }
+            catch (e_18_1) { e_18 = { error: e_18_1 }; }
             finally {
                 try {
                     if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                 }
-                finally { if (e_17) throw e_17.error; }
+                finally { if (e_18) throw e_18.error; }
             }
             // 返回具有给定类型的所有组件的列表
             return comps;
@@ -5363,7 +5443,7 @@ var es;
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var e_18, _a, e_19, _b, e_20, _c, e_21, _d;
+            var e_19, _a, e_20, _b, e_21, _c, e_22, _d;
             var entities = [];
             try {
                 // 遍历所有已存在的实体
@@ -5388,12 +5468,12 @@ var es;
                                 }
                             }
                         }
-                        catch (e_19_1) { e_19 = { error: e_19_1 }; }
+                        catch (e_20_1) { e_20 = { error: e_20_1 }; }
                         finally {
                             try {
                                 if (types_1_1 && !types_1_1.done && (_b = types_1.return)) _b.call(types_1);
                             }
-                            finally { if (e_19) throw e_19.error; }
+                            finally { if (e_20) throw e_20.error; }
                         }
                         // 如果实体满足要求，将其添加到结果数组中
                         if (meet) {
@@ -5402,12 +5482,12 @@ var es;
                     }
                 }
             }
-            catch (e_18_1) { e_18 = { error: e_18_1 }; }
+            catch (e_19_1) { e_19 = { error: e_19_1 }; }
             finally {
                 try {
                     if (_f && !_f.done && (_a = _e.return)) _a.call(_e);
                 }
-                finally { if (e_18) throw e_18.error; }
+                finally { if (e_19) throw e_19.error; }
             }
             try {
                 // 遍历所有等待添加的实体，和上面的操作类似
@@ -5429,12 +5509,12 @@ var es;
                                 }
                             }
                         }
-                        catch (e_21_1) { e_21 = { error: e_21_1 }; }
+                        catch (e_22_1) { e_22 = { error: e_22_1 }; }
                         finally {
                             try {
                                 if (types_2_1 && !types_2_1.done && (_d = types_2.return)) _d.call(types_2);
                             }
-                            finally { if (e_21) throw e_21.error; }
+                            finally { if (e_22) throw e_22.error; }
                         }
                         if (meet) {
                             entities.push(entity);
@@ -5442,12 +5522,12 @@ var es;
                     }
                 }
             }
-            catch (e_20_1) { e_20 = { error: e_20_1 }; }
+            catch (e_21_1) { e_21 = { error: e_21_1 }; }
             finally {
                 try {
                     if (_h && !_h.done && (_c = _g.return)) _c.call(_g);
                 }
-                finally { if (e_20) throw e_20.error; }
+                finally { if (e_21) throw e_21.error; }
             }
             return entities;
         };
@@ -6610,71 +6690,73 @@ var es;
 var es;
 (function (es) {
     /**
-     * 帮助处理位掩码的实用程序类
-     * 除了isFlagSet之外，所有方法都期望flag参数是一个非移位的标志
-     * 允许您使用普通的(0、1、2、3等)来设置/取消您的标记
+     * 一个用于操作二进制标志（也称为位字段）
      */
     var Flags = /** @class */ (function () {
         function Flags() {
         }
         /**
-         * 检查位标志是否已在数值中设置
-         * 检查期望标志是否已经移位
-         * @param self
-         * @param flag
+         * 检查指定二进制数字中是否已设置了指定标志位
+         * @param self 二进制数字
+         * @param flag 标志位，应该为2的幂
+         * @returns 如果设置了指定的标志位，则返回true，否则返回false
          */
         Flags.isFlagSet = function (self, flag) {
-            return (self & flag) != 0;
+            return (self & flag) !== 0;
         };
         /**
-         * 检查位标志是否在数值中设置
-         * @param self
-         * @param flag
+         * 检查指定二进制数字中是否已设置未移位的指定标志位
+         * @param self 二进制数字
+         * @param flag 标志位，不应移位（应为2的幂）
+         * @returns 如果设置了指定的标志位，则返回true，否则返回false
          */
         Flags.isUnshiftedFlagSet = function (self, flag) {
             flag = 1 << flag;
-            return (self & flag) != 0;
+            return (self & flag) !== 0;
         };
         /**
-         *  设置数值标志位，移除所有已经设置的标志
-         * @param self
-         * @param flag
+         * 将指定的标志位设置为二进制数字的唯一标志
+         * @param self 二进制数字
+         * @param flag 标志位，应该为2的幂
          */
         Flags.setFlagExclusive = function (self, flag) {
             self.value = 1 << flag;
         };
         /**
-         * 设置标志位
-         * @param self
-         * @param flag
+         * 将指定的标志位设置为二进制数字
+         * @param self 二进制数字的引用
+         * @param flag 标志位，应该为2的幂
          */
         Flags.setFlag = function (self, flag) {
-            self.value = (self.value | 1 << flag);
+            self.value |= 1 << flag;
         };
         /**
-         * 取消标志位
-         * @param self
-         * @param flag
+         * 将指定的标志位从二进制数字中取消设置
+         * @param self 二进制数字的引用
+         * @param flag 标志位，应该为2的幂
          */
         Flags.unsetFlag = function (self, flag) {
             flag = 1 << flag;
-            self.value = (self.value & (~flag));
+            self.value &= ~flag;
         };
         /**
-         * 反转数值集合位
-         * @param self
+         * 反转二进制数字中的所有位（将1变为0，将0变为1）
+         * @param self 二进制数字的引用
          */
         Flags.invertFlags = function (self) {
             self.value = ~self.value;
         };
         /**
-         * 打印 number 的二进制表示。 方便调试 number 标志
+         * 返回二进制数字的字符串表示形式（以二进制形式）
+         * @param self 二进制数字
+         * @param leftPadWidth 返回的字符串的最小宽度（在左侧填充0）
+         * @returns 二进制数字的字符串表示形式
          */
         Flags.binaryStringRepresentation = function (self, leftPadWidth) {
             if (leftPadWidth === void 0) { leftPadWidth = 10; }
             var str = self.toString(2);
             while (str.length < (leftPadWidth || 2)) {
-                str = '0' + str;
+                str = "0" + str;
             }
             return str;
         };
@@ -8265,26 +8347,32 @@ var es;
         };
         Rectangle.prototype.rayIntersects = function (ray) {
             var _a, _b;
+            // 存储相交点和相交距离
             var res = { intersected: false, distance: 0 };
             var maxValue = Infinity;
+            // 计算射线与矩形的相交距离
             if (Math.abs(ray.direction.x) < 1E-06) {
+                // 如果射线方向的x分量很小，说明它是垂直的，那么它就不会相交
                 if (ray.start.x < this.x || ray.start.x > this.x + this.width) {
                     return res;
                 }
             }
             else {
+                // 计算射线与x边界的交点，以及在矩形上面和下面的交点
                 var num11 = 1 / ray.direction.x;
                 var num8 = (this.x - ray.start.x) * num11;
                 var num7 = (this.x + this.width - ray.start.x) * num11;
                 if (num8 > num7) {
                     _a = __read([num8, num7], 2), num7 = _a[0], num8 = _a[1];
                 }
+                // 将最远的相交距离更新为上下两个交点中更远的那个
                 res.distance = Math.max(num8, res.distance);
                 maxValue = Math.min(num7, maxValue);
                 if (res.distance > maxValue) {
                     return res;
                 }
             }
+            // 计算射线与y边界的交点，以及在矩形左边和右边的交点
             if (Math.abs(ray.direction.y) < 1e-06) {
                 if (ray.start.y < this.y || ray.start.y > this.y + this.height) {
                     return res;
@@ -8297,12 +8385,14 @@ var es;
                 if (num6 > num5) {
                     _b = __read([num6, num5], 2), num5 = _b[0], num6 = _b[1];
                 }
+                // 将最远的相交距离更新为左右两个交点中更远的那个
                 res.distance = Math.max(num6, res.distance);
                 maxValue = Math.min(num5, maxValue);
                 if (res.distance > maxValue) {
                     return res;
                 }
             }
+            // 如果相交了，将标志设为真，并返回相交点
             res.intersected = true;
             return res;
         };
@@ -8856,43 +8946,47 @@ var es;
             }
             return false;
         };
+        /**
+         * 检查矩形和线段之间是否相交
+         * @param rect - 要检查的矩形
+         * @param lineFrom - 线段起点
+         * @param lineTo - 线段终点
+         * @returns 如果相交返回 true，否则返回 false
+         */
         Collisions.rectToLine = function (rect, lineFrom, lineTo) {
+            // 获取起点和终点所在矩形的位置
             var fromSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineFrom);
             var toSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineTo);
+            // 起点或终点位于矩形内部
             if (fromSector == PointSectors.center || toSector == PointSectors.center) {
                 return true;
             }
-            else if ((fromSector & toSector) != 0) {
+            // 起点和终点都在矩形外部的同一区域
+            if ((fromSector & toSector) != 0) {
                 return false;
             }
-            else {
-                var both = fromSector | toSector;
-                // 线对边进行检查
-                var edgeFrom = void 0;
-                var edgeTo = void 0;
-                if ((both & PointSectors.top) != 0) {
-                    edgeFrom = new es.Vector2(rect.x, rect.y);
-                    edgeTo = new es.Vector2(rect.x + rect.width, rect.y);
-                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
-                        return true;
+            // 到这里说明起点和终点分别在矩形的两个不同区域，需要检查线段是否与矩形的边相交
+            // 枚举起点和终点所在区域
+            var both = fromSector | toSector;
+            // 逐条检查矩形的四条边是否与线段相交
+            if ((both & PointSectors.top) != 0) {
+                if (this.lineToLine(new es.Vector2(rect.x, rect.y), new es.Vector2(rect.x + rect.width, rect.y), lineFrom, lineTo)) {
+                    return true;
                 }
-                if ((both & PointSectors.bottom) != 0) {
-                    edgeFrom = new es.Vector2(rect.x, rect.y + rect.height);
-                    edgeTo = new es.Vector2(rect.x + rect.width, rect.y + rect.height);
-                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
-                        return true;
+            }
+            if ((both & PointSectors.bottom) != 0) {
+                if (this.lineToLine(new es.Vector2(rect.x, rect.y + rect.height), new es.Vector2(rect.x + rect.width, rect.y + rect.height), lineFrom, lineTo)) {
+                    return true;
                 }
-                if ((both & PointSectors.left) != 0) {
-                    edgeFrom = new es.Vector2(rect.x, rect.y);
-                    edgeTo = new es.Vector2(rect.x, rect.y + rect.height);
-                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
-                        return true;
+            }
+            if ((both & PointSectors.left) != 0) {
+                if (this.lineToLine(new es.Vector2(rect.x, rect.y), new es.Vector2(rect.x, rect.y + rect.height), lineFrom, lineTo)) {
+                    return true;
                 }
-                if ((both & PointSectors.right) != 0) {
-                    edgeFrom = new es.Vector2(rect.x + rect.width, rect.y);
-                    edgeTo = new es.Vector2(rect.x + rect.width, rect.y + rect.height);
-                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
-                        return true;
+            }
+            if ((both & PointSectors.right) != 0) {
+                if (this.lineToLine(new es.Vector2(rect.x + rect.width, rect.y), new es.Vector2(rect.x + rect.width, rect.y + rect.height), lineFrom, lineTo)) {
+                    return true;
                 }
             }
             return false;
@@ -9234,44 +9328,52 @@ var es;
             this._raycastParser = new RaycastResultParser();
         }
         /**
-         * 将对象添加到SpatialHash
-         * @param collider
+         * 注册一个碰撞器
+         * @param collider 碰撞器
          */
         SpatialHash.prototype.register = function (collider) {
+            // 克隆碰撞器的 bounds 属性
             var bounds = collider.bounds.clone();
+            // 存储克隆后的 bounds 属性到 registeredPhysicsBounds 属性中
             collider.registeredPhysicsBounds = bounds;
+            // 获取碰撞器所在的网格坐标
             var p1 = this.cellCoords(bounds.x, bounds.y);
             var p2 = this.cellCoords(bounds.right, bounds.bottom);
-            // 更新边界以跟踪网格大小
+            // 更新网格边界，以确保其覆盖所有碰撞器
             if (!this.gridBounds.contains(p1.x, p1.y)) {
                 this.gridBounds = es.RectangleExt.union(this.gridBounds, p1);
             }
             if (!this.gridBounds.contains(p2.x, p2.y)) {
                 this.gridBounds = es.RectangleExt.union(this.gridBounds, p2);
             }
+            // 将碰撞器添加到所在的所有单元格中
             for (var x = p1.x; x <= p2.x; x++) {
                 for (var y = p1.y; y <= p2.y; y++) {
-                    // 如果没有单元格，我们需要创建它
-                    var c = this.cellAtPosition(x, y, true);
-                    c.push(collider);
+                    // 如果该单元格不存在，创建一个新的单元格
+                    var cell = this.cellAtPosition(x, y, /* createIfNotExists = */ true);
+                    cell.push(collider);
                 }
             }
         };
         /**
-         * 从SpatialHash中删除对象
-         * @param collider
+         * 从空间哈希中移除一个碰撞器
+         * @param collider 碰撞器
          */
         SpatialHash.prototype.remove = function (collider) {
+            // 克隆碰撞器的 registeredPhysicsBounds 属性
             var bounds = collider.registeredPhysicsBounds.clone();
+            // 获取碰撞器所在的网格坐标
             var p1 = this.cellCoords(bounds.x, bounds.y);
             var p2 = this.cellCoords(bounds.right, bounds.bottom);
+            // 从所有单元格中移除该碰撞器
             for (var x = p1.x; x <= p2.x; x++) {
                 for (var y = p1.y; y <= p2.y; y++) {
-                    // 单元格应该始终存在，因为这个碰撞器应该在所有查询的单元格中
+                    // 单元格应该始终存在，因为该碰撞器应该在所有查询的单元格中
                     var cell = this.cellAtPosition(x, y);
                     es.Insist.isNotNull(cell, "\u4ECE\u4E0D\u5B58\u5728\u78B0\u649E\u5668\u7684\u5355\u5143\u683C\u4E2D\u79FB\u9664\u78B0\u649E\u5668: [" + collider + "]");
-                    if (cell != null)
+                    if (cell != null) {
                         new es.List(cell).remove(collider);
+                    }
                 }
             }
         };
@@ -9286,27 +9388,33 @@ var es;
             this._cellDict.clear();
         };
         /**
-         * 返回边框与单元格相交的所有对象
-         * @param bounds
-         * @param excludeCollider
-         * @param layerMask
+         * 执行基于 AABB 的广域相交检测并返回碰撞器列表
+         * @param bounds 边界矩形
+         * @param excludeCollider 排除的碰撞器
+         * @param layerMask 碰撞层掩码
+         * @returns 碰撞器列表
          */
         SpatialHash.prototype.aabbBroadphase = function (bounds, excludeCollider, layerMask) {
             this._tempHashSet.clear();
+            // 获取边界矩形所在的网格单元格
             var p1 = this.cellCoords(bounds.x, bounds.y);
             var p2 = this.cellCoords(bounds.right, bounds.bottom);
+            // 对所有相交的单元格中的碰撞器执行检测
             for (var x = p1.x; x <= p2.x; x++) {
                 for (var y = p1.y; y <= p2.y; y++) {
                     var cell = this.cellAtPosition(x, y);
-                    if (!cell)
+                    if (!cell) {
                         continue;
-                    // 当cell不为空。循环并取回所有碰撞器
+                    }
+                    // 如果单元格不为空，循环并取回所有碰撞器
                     if (cell.length > 0) {
                         for (var i = 0; i < cell.length; i++) {
                             var collider = cell[i];
-                            // 如果它是自身或者如果它不匹配我们的层掩码 跳过这个碰撞器
-                            if (collider == excludeCollider || !es.Flags.isFlagSet(layerMask, collider.physicsLayer.value))
+                            // 如果它是自身或者如果它不匹配我们的层掩码跳过这个碰撞器
+                            if (collider === excludeCollider || !es.Flags.isFlagSet(layerMask, collider.physicsLayer.value)) {
                                 continue;
+                            }
+                            // 检查碰撞器的 bounds 是否与边界矩形相交
                             if (bounds.intersects(collider.bounds)) {
                                 this._tempHashSet.add(collider);
                             }
@@ -9314,51 +9422,53 @@ var es;
                     }
                 }
             }
+            // 返回所有相交的碰撞器列表
             return Array.from(this._tempHashSet);
         };
         /**
-         * 通过空间散列投掷一条线，并将该线碰到的任何碰撞器填入碰撞数组
-         * https://github.com/francisengelmann/fast_voxel_traversal/blob/master/main.cpp
-         * http://www.cse.yorku.ca/~amana/research/grid.pdf
-         * @param start
-         * @param end
-         * @param hits
-         * @param layerMask
+         * 执行基于线段的射线检测并返回所有命中的碰撞器
+         * @param start 射线起点
+         * @param end 射线终点
+         * @param hits 射线命中结果
+         * @param layerMask 碰撞层掩码
+         * @param ignoredColliders 忽略的碰撞器
+         * @returns 命中的碰撞器数量
          */
         SpatialHash.prototype.linecast = function (start, end, hits, layerMask, ignoredColliders) {
+            // 创建一个射线
             var ray = new es.Ray2D(start, end);
+            // 使用射线解析器初始化线段命中结果
             this._raycastParser.start(ray, hits, layerMask, ignoredColliders);
-            // 获取我们的起始/结束位置，与我们的网格在同一空间内
+            // 获取起点和终点所在的网格单元格
             var currentCell = this.cellCoords(start.x, start.y);
             var lastCell = this.cellCoords(end.x, end.y);
-            // 我们向什么方向递增单元格检查？
+            // 计算射线在 x 和 y 方向上的步长
             var stepX = Math.sign(ray.direction.x);
             var stepY = Math.sign(ray.direction.y);
-            // 我们要确保，如果我们在同一条线上或同一排上，就不会踩到不必要的方向上
-            if (currentCell.x == lastCell.x)
+            if (currentCell.x === lastCell.x) {
                 stepX = 0;
-            if (currentCell.y == lastCell.y)
+            }
+            if (currentCell.y === lastCell.y) {
                 stepY = 0;
-            // 计算单元格的边界。
-            // 当步长为正数时，下一个单元格在这个单元格之后，意味着我们要加1。
+            }
+            // 计算 x 和 y 方向上的网格单元格步长
             var xStep = stepX < 0 ? 0 : stepX;
             var yStep = stepY < 0 ? 0 : stepY;
             var nextBoundaryX = (currentCell.x + xStep) * this._cellSize;
             var nextBoundaryY = (currentCell.y + yStep) * this._cellSize;
-            // 确定射线穿过第一个垂直体素边界时的t值，y/水平也是如此。
-            // 这两个值的最小值将表明我们可以沿着射线移动多少，并且仍然保持在当前的体素中，对于接近垂直/水平的射线可能是无限的。
-            var tMaxX = ray.direction.x != 0 ? (nextBoundaryX - ray.start.x) / ray.direction.x : Number.MAX_VALUE;
-            var tMaxY = ray.direction.y != 0 ? (nextBoundaryY - ray.start.y) / ray.direction.y : Number.MAX_VALUE;
-            // 我们要走多远才能从一个单元格的边界穿过一个单元格
-            var tDeltaX = ray.direction.x != 0 ? this._cellSize / (ray.direction.x * stepX) : Number.MAX_VALUE;
-            var tDeltaY = ray.direction.y != 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
-            // 开始遍历并返回交叉单元格。
+            // 计算 t 值的最大值和步长
+            var tMaxX = ray.direction.x !== 0 ? (nextBoundaryX - ray.start.x) / ray.direction.x : Number.MAX_VALUE;
+            var tMaxY = ray.direction.y !== 0 ? (nextBoundaryY - ray.start.y) / ray.direction.y : Number.MAX_VALUE;
+            var tDeltaX = ray.direction.x !== 0 ? this._cellSize / (ray.direction.x * stepX) : Number.MAX_VALUE;
+            var tDeltaY = ray.direction.y !== 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
+            // 检查射线起点所在的单元格是否与射线相交
             var cell = this.cellAtPosition(currentCell.x, currentCell.y);
-            if (cell != null && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
+            if (cell !== null && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
                 this._raycastParser.reset();
                 return this._raycastParser.hitCounter;
             }
-            while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
+            // 在所有相交的单元格中沿着射线前进并检查碰撞器
+            while (currentCell.x !== lastCell.x || currentCell.y !== lastCell.y) {
                 if (tMaxX < tMaxY) {
                     currentCell.x = es.MathHelper.toInt(es.MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
                     tMaxX += tDeltaX;
@@ -9373,34 +9483,41 @@ var es;
                     return this._raycastParser.hitCounter;
                 }
             }
-            // 复位
+            // 重置射线解析器并返回命中的碰撞器数量
             this._raycastParser.reset();
             return this._raycastParser.hitCounter;
         };
         /**
-         * 获取所有在指定矩形范围内的碰撞器
-         * @param rect
-         * @param results
-         * @param layerMask
+         * 执行矩形重叠检测并返回所有命中的碰撞器
+         * @param rect 矩形
+         * @param results 碰撞器命中结果
+         * @param layerMask 碰撞层掩码
+         * @returns 命中的碰撞器数量
          */
         SpatialHash.prototype.overlapRectangle = function (rect, results, layerMask) {
+            // 更新重叠检测框的位置和大小
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location;
             var resultCounter = 0;
+            // 获取潜在的相交碰撞器
             var potentials = this.aabbBroadphase(rect, null, layerMask);
+            // 遍历所有潜在的碰撞器并检查它们是否与矩形相交
             for (var i = 0; i < potentials.length; i++) {
                 var collider = potentials[i];
                 if (collider instanceof es.BoxCollider) {
+                    // 如果是 BoxCollider，直接将其添加到命中结果中
                     results[resultCounter] = collider;
                     resultCounter++;
                 }
                 else if (collider instanceof es.CircleCollider) {
+                    // 如果是 CircleCollider，使用 rectToCircle 函数检查矩形与圆是否相交
                     if (es.Collisions.rectToCircle(rect, collider.bounds.center, collider.bounds.width * 0.5)) {
                         results[resultCounter] = collider;
                         resultCounter++;
                     }
                 }
                 else if (collider instanceof es.PolygonCollider) {
+                    // 如果是 PolygonCollider，使用 Polygon.shape.overlaps 函数检查矩形与多边形是否相交
                     if (collider.shape.overlaps(this._overlapTestBox)) {
                         results[resultCounter] = collider;
                         resultCounter++;
@@ -9409,40 +9526,49 @@ var es;
                 else {
                     throw new Error("overlapRectangle对这个类型没有实现!");
                 }
-                if (resultCounter == results.length)
+                if (resultCounter === results.length) {
                     return resultCounter;
+                }
             }
             return resultCounter;
         };
         /**
-         * 获取所有落在指定圆圈内的碰撞器
-         * @param circleCenter
-         * @param radius
-         * @param results
-         * @param layerMask
+         * 执行圆形重叠检测并返回所有命中的碰撞器
+         * @param circleCenter 圆心坐标
+         * @param radius 圆形半径
+         * @param results 碰撞器命中结果
+         * @param layerMask 碰撞层掩码
+         * @returns 命中的碰撞器数量
          */
         SpatialHash.prototype.overlapCircle = function (circleCenter, radius, results, layerMask) {
+            // 计算包含圆形的最小矩形框
             var bounds = new es.Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
+            // 更新重叠检测圆的位置和半径
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
             var resultCounter = 0;
+            // 获取潜在的相交碰撞器
             var potentials = this.aabbBroadphase(bounds, null, layerMask);
-            if (potentials.length > 0)
+            // 遍历所有潜在的碰撞器并检查它们是否与圆相交
+            if (potentials.length > 0) {
                 for (var i = 0; i < potentials.length; i++) {
                     var collider = potentials[i];
                     if (collider instanceof es.BoxCollider) {
+                        // 如果是 BoxCollider，使用 BoxCollider.shape.overlaps 函数检查矩形与圆是否相交
                         if (collider.shape.overlaps(this._overlapTestCircle)) {
                             results[resultCounter] = collider;
                             resultCounter++;
                         }
                     }
                     else if (collider instanceof es.CircleCollider) {
+                        // 如果是 CircleCollider，使用 CircleCollider.shape.overlaps 函数检查圆与圆是否相交
                         if (collider.shape.overlaps(this._overlapTestCircle)) {
                             results[resultCounter] = collider;
                             resultCounter++;
                         }
                     }
                     else if (collider instanceof es.PolygonCollider) {
+                        // 如果是 PolygonCollider，使用 PolygonCollider.shape.overlaps 函数检查多边形与圆是否相交
                         if (collider.shape.overlaps(this._overlapTestCircle)) {
                             results[resultCounter] = collider;
                             resultCounter++;
@@ -9451,30 +9577,36 @@ var es;
                     else {
                         throw new Error("对这个对撞机类型的overlapCircle没有实现!");
                     }
-                    // 如果我们所有的结果数据有了则返回
-                    if (resultCounter === results.length)
+                    if (resultCounter === results.length) {
                         return resultCounter;
+                    }
                 }
+            }
             return resultCounter;
         };
         /**
-         * 获取单元格的x,y值作为世界空间的x,y值
-         * @param x
-         * @param y
+         * 将给定的 x 和 y 坐标转换为单元格坐标
+         * @param x X 坐标
+         * @param y Y 坐标
+         * @returns 转换后的单元格坐标
          */
         SpatialHash.prototype.cellCoords = function (x, y) {
+            // 使用 inverseCellSize 计算出单元格的 x 和 y 坐标
             return new es.Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
         };
         /**
-         * 获取世界空间x,y值的单元格。
-         * 如果单元格为空且createCellIfEmpty为true，则会创建一个新的单元格
-         * @param x
-         * @param y
-         * @param createCellIfEmpty
+         * 返回一个包含特定位置处的所有碰撞器的数组
+         * 如果此位置上没有单元格并且createCellIfEmpty参数为true，则会创建一个新的单元格
+         * @param x 单元格 x 坐标
+         * @param y 单元格 y 坐标
+         * @param createCellIfEmpty 如果该位置上没有单元格是否创建一个新单元格，默认为false
+         * @returns 该位置上的所有碰撞器
          */
         SpatialHash.prototype.cellAtPosition = function (x, y, createCellIfEmpty) {
             if (createCellIfEmpty === void 0) { createCellIfEmpty = false; }
+            // 获取指定位置的单元格
             var cell = this._cellDict.tryGetValue(x, y);
+            // 如果不存在此位置的单元格，并且需要创建，则创建并返回空单元格
             if (!cell) {
                 if (createCellIfEmpty) {
                     cell = [];
@@ -9486,31 +9618,54 @@ var es;
         return SpatialHash;
     }());
     es.SpatialHash = SpatialHash;
+    /**
+     * 数字字典
+     */
     var NumberDictionary = /** @class */ (function () {
         function NumberDictionary() {
+            // 存储数据的 Map 对象
             this._store = new Map();
         }
+        /**
+         * 将指定的列表添加到以给定 x 和 y 为键的字典条目中
+         * @param x 字典的 x 坐标
+         * @param y 字典的 y 坐标
+         * @param list 要添加到字典的列表
+         */
         NumberDictionary.prototype.add = function (x, y, list) {
             this._store.set(this.getKey(x, y), list);
         };
         /**
-         * 使用蛮力方法从字典存储列表中移除碰撞器
-         * @param obj
+         * 从字典中删除给定的对象
+         * @param obj 要删除的对象
          */
         NumberDictionary.prototype.remove = function (obj) {
+            // 遍历 Map 中的所有值，从值中查找并删除给定的对象
             this._store.forEach(function (list) {
                 var index = list.indexOf(obj);
                 list.splice(index, 1);
             });
         };
+        /**
+         * 尝试从字典中检索指定键的值
+         * @param x 字典的 x 坐标
+         * @param y 字典的 y 坐标
+         * @returns 指定键的值，如果不存在则返回 null
+         */
         NumberDictionary.prototype.tryGetValue = function (x, y) {
             return this._store.get(this.getKey(x, y));
         };
+        /**
+         * 根据给定的 x 和 y 坐标返回一个唯一的字符串键
+         * @param x 字典的 x 坐标
+         * @param y 字典的 y 坐标
+         * @returns 唯一的字符串键
+         */
         NumberDictionary.prototype.getKey = function (x, y) {
             return x + "_" + y;
         };
         /**
-         * 清除字典数据
+         * 清空字典
          */
         NumberDictionary.prototype.clear = function () {
             this._store.clear();
@@ -9532,39 +9687,43 @@ var es;
             this.hitCounter = 0;
         };
         /**
-         * 如果hits数组被填充，返回true。单元格不能为空!
-         * @param cellX
-         * @param cellY
-         * @param cell
+         * 对射线检测到的碰撞器进行进一步的处理，将结果存储在传递的碰撞数组中。
+         * @param cellX 当前单元格的x坐标
+         * @param cellY 当前单元格的y坐标
+         * @param cell 该单元格中的碰撞器列表
+         * @returns 如果当前单元格有任何碰撞器与射线相交，则返回true
          */
         RaycastResultParser.prototype.checkRayIntersection = function (cellX, cellY, cell) {
             for (var i = 0; i < cell.length; i++) {
                 var potential = cell[i];
-                // 管理我们已经处理过的碰撞器
+                // 如果该碰撞器已经处理过，则跳过它
                 if (this._checkedColliders.indexOf(potential) != -1)
                     continue;
+                // 将该碰撞器标记为已处理
                 this._checkedColliders.push(potential);
-                // 只有当我们被设置为这样做时才会点击触发器
+                // 如果该碰撞器是触发器且当前不允许触发器响应射线检测，则跳过它
                 if (potential.isTrigger && !es.Physics.raycastsHitTriggers)
                     continue;
-                // 确保碰撞器在图层蒙版上
+                // 确保碰撞器的图层与所提供的图层掩码相匹配
                 if (!es.Flags.isFlagSet(this._layerMask, potential.physicsLayer.value))
                     continue;
+                // 如果设置了要忽略的碰撞器并且该碰撞器是被忽略的，则跳过它
                 if (this._ignoredColliders && this._ignoredColliders.has(potential)) {
                     continue;
                 }
-                // TODO: rayIntersects的性能够吗?需要测试它。Collisions.rectToLine可能更快
-                // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
-                // 在做形状测试之前先做一个边界检查
+                // TODO: Collisions.rectToLine方法可能会更快一些，因为它没有涉及到浮点数除法和平方根计算，而且更简单
+                // 但是，rayIntersects方法也很快，并且在实际情况下可能更适合用于特定的应用程序
+                // 先进行一个边界检查
                 var colliderBounds = potential.bounds;
                 var res = colliderBounds.rayIntersects(this._ray);
-                if (res.intersected && res.distance <= 1) {
+                if (res.intersected && res.distance <= 1) { // 只有当该碰撞器与射线相交且交点在射线长度范围内才进一步进行形状检测
                     var tempHit = new es.Out(this._tempHit);
+                    // 调用形状的方法，检查该碰撞器是否与射线相交，并将结果保存在tempHit中
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, tempHit)) {
-                        // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
+                        // 如果碰撞器包含射线起点，而且不允许射线起点在碰撞器中启动检测，那么跳过该碰撞器
                         if (!es.Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
                             continue;
-                        // TODO: 确保碰撞点在当前单元格中，如果它没有保存它以供以后计算
+                        // 将碰撞信息添加到列表中
                         tempHit.value.collider = potential;
                         this._cellHits.push(tempHit.value);
                     }
@@ -11818,22 +11977,19 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 全局管理器的基类。所有全局管理器都应该从此类继承。
+     */
     var GlobalManager = /** @class */ (function () {
         function GlobalManager() {
         }
         Object.defineProperty(GlobalManager.prototype, "enabled", {
             /**
-             * 如果true则启用了GlobalManager。
-             * 状态的改变会导致调用OnEnabled/OnDisable
+             * 获取或设置管理器是否启用
              */
             get: function () {
                 return this._enabled;
             },
-            /**
-             * 如果true则启用了GlobalManager。
-             * 状态的改变会导致调用OnEnabled/OnDisable
-             * @param value
-             */
             set: function (value) {
                 this.setEnabled(value);
             },
@@ -11841,32 +11997,34 @@ var es;
             configurable: true
         });
         /**
-         * 启用/禁用这个GlobalManager
-         * @param isEnabled
+         * 设置管理器是否启用
+         * @param isEnabled 如果为true，则启用管理器；否则禁用管理器
          */
         GlobalManager.prototype.setEnabled = function (isEnabled) {
             if (this._enabled != isEnabled) {
                 this._enabled = isEnabled;
                 if (this._enabled) {
+                    // 如果启用了管理器，则调用onEnabled方法
                     this.onEnabled();
                 }
                 else {
+                    // 如果禁用了管理器，则调用onDisabled方法
                     this.onDisabled();
                 }
             }
         };
         /**
-         * 此GlobalManager启用时调用
+         * 在启用管理器时调用的回调方法
          */
         GlobalManager.prototype.onEnabled = function () {
         };
         /**
-         * 此GlobalManager禁用时调用
+         * 在禁用管理器时调用的回调方法
          */
         GlobalManager.prototype.onDisabled = function () {
         };
         /**
-         * 在frame .update之前调用每一帧
+         * 更新管理器状态的方法
          */
         GlobalManager.prototype.update = function () {
         };
@@ -12668,7 +12826,7 @@ var es;
             for (var _i = 1; _i < arguments.length; _i++) {
                 data[_i - 1] = arguments[_i];
             }
-            var e_22, _a, _b;
+            var e_23, _a, _b;
             var list = this._messageTable.get(eventType);
             if (list) {
                 try {
@@ -12677,12 +12835,12 @@ var es;
                         (_b = observer.func).call.apply(_b, __spread([observer.context], data));
                     }
                 }
-                catch (e_22_1) { e_22 = { error: e_22_1 }; }
+                catch (e_23_1) { e_23 = { error: e_23_1 }; }
                 finally {
                     try {
                         if (list_3_1 && !list_3_1.done && (_a = list_3.return)) _a.call(list_3);
                     }
-                    finally { if (e_22) throw e_22.error; }
+                    finally { if (e_23) throw e_23.error; }
                 }
             }
         };
@@ -16294,7 +16452,7 @@ var es;
          * @returns Set 对象，其中包含了数组中的所有元素
          */
         List.prototype.toSet = function () {
-            var e_23, _a;
+            var e_24, _a;
             var result = new Set();
             try {
                 for (var _b = __values(this._elements), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -16302,12 +16460,12 @@ var es;
                     result.add(x);
                 }
             }
-            catch (e_23_1) { e_23 = { error: e_23_1 }; }
+            catch (e_24_1) { e_24 = { error: e_24_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_23) throw e_23.error; }
+                finally { if (e_24) throw e_24.error; }
             }
             return result;
         };
@@ -16563,7 +16721,7 @@ var es;
          * 计算可见性多边形，并返回三角形扇形的顶点（减去中心顶点）。返回的数组来自ListPool
          */
         VisibilityComputer.prototype.end = function () {
-            var e_24, _a;
+            var e_25, _a;
             var output = es.ListPool.obtain(es.Vector2);
             this.updateSegments();
             this._endPoints.sort(this._radialComparer.compare);
@@ -16602,12 +16760,12 @@ var es;
                         }
                     }
                 }
-                catch (e_24_1) { e_24 = { error: e_24_1 }; }
+                catch (e_25_1) { e_25 = { error: e_25_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_24) throw e_24.error; }
+                    finally { if (e_25) throw e_25.error; }
                 }
             }
             VisibilityComputer._openSegments.clear();
@@ -16723,7 +16881,7 @@ var es;
          * 处理片段，以便我们稍后对它们进行分类
          */
         VisibilityComputer.prototype.updateSegments = function () {
-            var e_25, _a;
+            var e_26, _a;
             try {
                 for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var segment = _c.value;
@@ -16741,12 +16899,12 @@ var es;
                     segment.p2.begin = !segment.p1.begin;
                 }
             }
-            catch (e_25_1) { e_25 = { error: e_25_1 }; }
+            catch (e_26_1) { e_26 = { error: e_26_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_25) throw e_25.error; }
+                finally { if (e_26) throw e_26.error; }
             }
             // 如果我们有一个聚光灯，我们需要存储前两个段的角度。
             // 这些是光斑的边界，我们将用它们来过滤它们之外的任何顶点。

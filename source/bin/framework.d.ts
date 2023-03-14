@@ -57,7 +57,9 @@ declare module es {
         */
         static scene: Scene;
         /**
-         * 默认实现创建核心
+         * `Core`类的静态方法，用于创建`Core`的实例。
+         * @param debug {boolean} 是否为调试模式，默认为`true`
+         * @returns {Core} `Core`的实例
          */
         static create(debug?: boolean): Core;
         /**
@@ -69,12 +71,13 @@ declare module es {
          * 删除全局管理器对象
          * @param manager
          */
-        static unregisterGlobalManager(manager: es.GlobalManager): void;
+        static unregisterGlobalManager(manager: GlobalManager): void;
         /**
-         * 获取类型为T的全局管理器
-         * @param type
+         * 获取指定类型的全局管理器实例
+         * @param type 管理器类型的构造函数
+         * @returns 指定类型的全局管理器实例，如果找不到则返回 null
          */
-        static getGlobalManager<T extends es.GlobalManager>(type: new (...args: any[]) => T): T;
+        static getGlobalManager<T extends GlobalManager>(type: new (...args: any[]) => T): T;
         /**
          * 临时运行SceneTransition，允许一个场景平滑过渡到另一个场景，并具有自定义效果
          * @param sceneTransition
@@ -100,6 +103,10 @@ declare module es {
          */
         onSceneChanged(): void;
         protected initialize(): void;
+        /**
+         * `Core` 类的受保护的 `update` 方法，用于更新游戏状态。
+         * @param currentTime 当前时间戳，单位为毫秒，默认值为-1。
+         */
         protected update(currentTime?: number): void;
         protected draw(): void;
     }
@@ -113,9 +120,31 @@ declare module es {
         trace = 4
     }
     class Debug {
+        /**
+         * 如果条件为true，则在控制台中以警告方式打印消息。
+         * @param condition 是否应该打印消息的条件
+         * @param format 要打印的消息格式
+         * @param args 与消息格式相对应的参数列表
+         */
         static warnIf(condition: boolean, format: string, ...args: any[]): void;
+        /**
+         * 在控制台中以警告方式打印消息。
+         * @param format 要打印的消息格式
+         * @param args 与消息格式相对应的参数列表
+         */
         static warn(format: string, ...args: any[]): void;
+        /**
+         * 在控制台中以错误方式打印消息。
+         * @param format 要打印的消息格式
+         * @param args 与消息格式相对应的参数列表
+         */
         static error(format: string, ...args: any[]): void;
+        /**
+         * 在控制台中以标准日志方式打印消息。
+         * @param type 要打印的日志类型
+         * @param format 要打印的消息格式
+         * @param args 与消息格式相对应的参数列表
+         */
         static log(type: LogType, format: string, ...args: any[]): void;
     }
 }
@@ -713,21 +742,41 @@ declare module es {
         private _didSceneBegin;
         constructor();
         /**
-         * 在场景子类中重写这个，然后在这里进行加载。
-         * 在场景设置好之后，但在调用begin之前，从contructor中调用这个函数
+         * 初始化场景，可以在派生类中覆盖
+         *
+         * 这个方法会在场景创建时被调用。您可以在这个方法中添加实体和组件，
+         * 或者执行一些必要的准备工作，以便场景能够开始运行。
          */
         initialize(): void;
         /**
-         * 当Core将这个场景设置为活动场景时，这个将被调用
+         * 开始运行场景时调用此方法，可以在派生类中覆盖
+         *
+         * 这个方法会在场景开始运行时被调用。您可以在这个方法中执行场景开始时需要进行的操作。
+         * 比如，您可以开始播放一段背景音乐、启动UI等等。
          */
         onStart(): void;
         /**
-         * 在场景子类中重写这个，并在这里做任何必要的卸载。
-         * 当Core把这个场景从活动槽中移除时，这个被调用。
+         * 卸载场景时调用此方法，可以在派生类中覆盖
+         *
+         * 这个方法会在场景被销毁时被调用。您可以在这个方法中销毁实体和组件、释放资源等等。
+         * 您也可以在这个方法中执行一些必要的清理工作，以确保场景被完全卸载。
          */
         unload(): void;
+        /**
+         * 开始场景，初始化物理系统、启动实体处理器等
+         *
+         * 这个方法会启动场景。它将重置物理系统、启动实体处理器等，并调用onStart方法。
+         */
         begin(): void;
+        /**
+         * 结束场景，清除实体、场景组件、物理系统等
+         *
+         * 这个方法会结束场景。它将移除所有实体并调用它们的onRemovedFromScene方法，清除物理系统，结束实体处理器等，并调用unload方法。
+         */
         end(): void;
+        /**
+         * 更新场景，更新实体组件、实体处理器等
+         */
         update(): void;
         /**
          * 向组件列表添加并返回SceneComponent
@@ -2678,49 +2727,51 @@ declare module es {
 }
 declare module es {
     /**
-     * 帮助处理位掩码的实用程序类
-     * 除了isFlagSet之外，所有方法都期望flag参数是一个非移位的标志
-     * 允许您使用普通的(0、1、2、3等)来设置/取消您的标记
+     * 一个用于操作二进制标志（也称为位字段）
      */
     class Flags {
         /**
-         * 检查位标志是否已在数值中设置
-         * 检查期望标志是否已经移位
-         * @param self
-         * @param flag
+         * 检查指定二进制数字中是否已设置了指定标志位
+         * @param self 二进制数字
+         * @param flag 标志位，应该为2的幂
+         * @returns 如果设置了指定的标志位，则返回true，否则返回false
          */
         static isFlagSet(self: number, flag: number): boolean;
         /**
-         * 检查位标志是否在数值中设置
-         * @param self
-         * @param flag
+         * 检查指定二进制数字中是否已设置未移位的指定标志位
+         * @param self 二进制数字
+         * @param flag 标志位，不应移位（应为2的幂）
+         * @returns 如果设置了指定的标志位，则返回true，否则返回false
          */
         static isUnshiftedFlagSet(self: number, flag: number): boolean;
         /**
-         *  设置数值标志位，移除所有已经设置的标志
-         * @param self
-         * @param flag
+         * 将指定的标志位设置为二进制数字的唯一标志
+         * @param self 二进制数字
+         * @param flag 标志位，应该为2的幂
          */
         static setFlagExclusive(self: Ref<number>, flag: number): void;
         /**
-         * 设置标志位
-         * @param self
-         * @param flag
+         * 将指定的标志位设置为二进制数字
+         * @param self 二进制数字的引用
+         * @param flag 标志位，应该为2的幂
          */
         static setFlag(self: Ref<number>, flag: number): void;
         /**
-         * 取消标志位
-         * @param self
-         * @param flag
+         * 将指定的标志位从二进制数字中取消设置
+         * @param self 二进制数字的引用
+         * @param flag 标志位，应该为2的幂
          */
         static unsetFlag(self: Ref<number>, flag: number): void;
         /**
-         * 反转数值集合位
-         * @param self
+         * 反转二进制数字中的所有位（将1变为0，将0变为1）
+         * @param self 二进制数字的引用
          */
         static invertFlags(self: Ref<number>): void;
         /**
-         * 打印 number 的二进制表示。 方便调试 number 标志
+         * 返回二进制数字的字符串表示形式（以二进制形式）
+         * @param self 二进制数字
+         * @param leftPadWidth 返回的字符串的最小宽度（在左侧填充0）
+         * @returns 二进制数字的字符串表示形式
          */
         static binaryStringRepresentation(self: number, leftPadWidth?: number): string;
     }
@@ -3589,6 +3640,13 @@ declare module es {
         static circleToLine(circleCenter: Vector2, radius: number, lineFrom: Vector2, lineTo: Vector2): boolean;
         static circleToPoint(circleCenter: Vector2, radius: number, point: Vector2): boolean;
         static rectToCircle(rect: Rectangle, cPosition: Vector2, cRadius: number): boolean;
+        /**
+         * 检查矩形和线段之间是否相交
+         * @param rect - 要检查的矩形
+         * @param lineFrom - 线段起点
+         * @param lineTo - 线段终点
+         * @returns 如果相交返回 true，否则返回 false
+         */
         static rectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2): boolean;
         static rectToPoint(rX: number, rY: number, rW: number, rH: number, point: Vector2): boolean;
         /**
@@ -3804,13 +3862,13 @@ declare module es {
         _tempHashSet: Set<Collider>;
         constructor(cellSize?: number);
         /**
-         * 将对象添加到SpatialHash
-         * @param collider
+         * 注册一个碰撞器
+         * @param collider 碰撞器
          */
         register(collider: Collider): void;
         /**
-         * 从SpatialHash中删除对象
-         * @param collider
+         * 从空间哈希中移除一个碰撞器
+         * @param collider 碰撞器
          */
         remove(collider: Collider): void;
         /**
@@ -3820,64 +3878,90 @@ declare module es {
         removeWithBruteForce(obj: Collider): void;
         clear(): void;
         /**
-         * 返回边框与单元格相交的所有对象
-         * @param bounds
-         * @param excludeCollider
-         * @param layerMask
+         * 执行基于 AABB 的广域相交检测并返回碰撞器列表
+         * @param bounds 边界矩形
+         * @param excludeCollider 排除的碰撞器
+         * @param layerMask 碰撞层掩码
+         * @returns 碰撞器列表
          */
         aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
         /**
-         * 通过空间散列投掷一条线，并将该线碰到的任何碰撞器填入碰撞数组
-         * https://github.com/francisengelmann/fast_voxel_traversal/blob/master/main.cpp
-         * http://www.cse.yorku.ca/~amana/research/grid.pdf
-         * @param start
-         * @param end
-         * @param hits
-         * @param layerMask
+         * 执行基于线段的射线检测并返回所有命中的碰撞器
+         * @param start 射线起点
+         * @param end 射线终点
+         * @param hits 射线命中结果
+         * @param layerMask 碰撞层掩码
+         * @param ignoredColliders 忽略的碰撞器
+         * @returns 命中的碰撞器数量
          */
         linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): number;
         /**
-         * 获取所有在指定矩形范围内的碰撞器
-         * @param rect
-         * @param results
-         * @param layerMask
+         * 执行矩形重叠检测并返回所有命中的碰撞器
+         * @param rect 矩形
+         * @param results 碰撞器命中结果
+         * @param layerMask 碰撞层掩码
+         * @returns 命中的碰撞器数量
          */
         overlapRectangle(rect: Rectangle, results: Collider[], layerMask: number): number;
         /**
-         * 获取所有落在指定圆圈内的碰撞器
-         * @param circleCenter
-         * @param radius
-         * @param results
-         * @param layerMask
+         * 执行圆形重叠检测并返回所有命中的碰撞器
+         * @param circleCenter 圆心坐标
+         * @param radius 圆形半径
+         * @param results 碰撞器命中结果
+         * @param layerMask 碰撞层掩码
+         * @returns 命中的碰撞器数量
          */
-        overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: any): number;
+        overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: number): number;
         /**
-         * 获取单元格的x,y值作为世界空间的x,y值
-         * @param x
-         * @param y
+         * 将给定的 x 和 y 坐标转换为单元格坐标
+         * @param x X 坐标
+         * @param y Y 坐标
+         * @returns 转换后的单元格坐标
          */
         cellCoords(x: number, y: number): Vector2;
         /**
-         * 获取世界空间x,y值的单元格。
-         * 如果单元格为空且createCellIfEmpty为true，则会创建一个新的单元格
-         * @param x
-         * @param y
-         * @param createCellIfEmpty
+         * 返回一个包含特定位置处的所有碰撞器的数组
+         * 如果此位置上没有单元格并且createCellIfEmpty参数为true，则会创建一个新的单元格
+         * @param x 单元格 x 坐标
+         * @param y 单元格 y 坐标
+         * @param createCellIfEmpty 如果该位置上没有单元格是否创建一个新单元格，默认为false
+         * @returns 该位置上的所有碰撞器
          */
         cellAtPosition(x: number, y: number, createCellIfEmpty?: boolean): Collider[];
     }
+    /**
+     * 数字字典
+     */
     class NumberDictionary<T> {
         _store: Map<string, T[]>;
+        /**
+         * 将指定的列表添加到以给定 x 和 y 为键的字典条目中
+         * @param x 字典的 x 坐标
+         * @param y 字典的 y 坐标
+         * @param list 要添加到字典的列表
+         */
         add(x: number, y: number, list: T[]): void;
         /**
-         * 使用蛮力方法从字典存储列表中移除碰撞器
-         * @param obj
+         * 从字典中删除给定的对象
+         * @param obj 要删除的对象
          */
         remove(obj: T): void;
+        /**
+         * 尝试从字典中检索指定键的值
+         * @param x 字典的 x 坐标
+         * @param y 字典的 y 坐标
+         * @returns 指定键的值，如果不存在则返回 null
+         */
         tryGetValue(x: number, y: number): T[];
+        /**
+         * 根据给定的 x 和 y 坐标返回一个唯一的字符串键
+         * @param x 字典的 x 坐标
+         * @param y 字典的 y 坐标
+         * @returns 唯一的字符串键
+         */
         getKey(x: number, y: number): string;
         /**
-         * 清除字典数据
+         * 清空字典
          */
         clear(): void;
     }
@@ -3893,10 +3977,11 @@ declare module es {
         private _ignoredColliders;
         start(ray: Ray2D, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): void;
         /**
-         * 如果hits数组被填充，返回true。单元格不能为空!
-         * @param cellX
-         * @param cellY
-         * @param cell
+         * 对射线检测到的碰撞器进行进一步的处理，将结果存储在传递的碰撞数组中。
+         * @param cellX 当前单元格的x坐标
+         * @param cellY 当前单元格的y坐标
+         * @param cell 该单元格中的碰撞器列表
+         * @returns 如果当前单元格有任何碰撞器与射线相交，则返回true
          */
         checkRayIntersection(cellX: number, cellY: number, cell: Collider[]): boolean;
         reset(): void;
@@ -4539,33 +4624,33 @@ declare module es {
     }
 }
 declare module es {
+    /**
+     * 全局管理器的基类。所有全局管理器都应该从此类继承。
+     */
     class GlobalManager {
+        /**
+         * 表示管理器是否启用
+         */
         _enabled: boolean;
         /**
-         * 如果true则启用了GlobalManager。
-         * 状态的改变会导致调用OnEnabled/OnDisable
+         * 获取或设置管理器是否启用
          */
-        /**
-        * 如果true则启用了GlobalManager。
-        * 状态的改变会导致调用OnEnabled/OnDisable
-        * @param value
-        */
         enabled: boolean;
         /**
-         * 启用/禁用这个GlobalManager
-         * @param isEnabled
+         * 设置管理器是否启用
+         * @param isEnabled 如果为true，则启用管理器；否则禁用管理器
          */
         setEnabled(isEnabled: boolean): void;
         /**
-         * 此GlobalManager启用时调用
+         * 在启用管理器时调用的回调方法
          */
         onEnabled(): void;
         /**
-         * 此GlobalManager禁用时调用
+         * 在禁用管理器时调用的回调方法
          */
         onDisabled(): void;
         /**
-         * 在frame .update之前调用每一帧
+         * 更新管理器状态的方法
          */
         update(): void;
     }
