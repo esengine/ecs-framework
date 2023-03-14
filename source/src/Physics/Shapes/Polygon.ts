@@ -36,7 +36,7 @@ module es {
 
         public create(vertCount: number, radius: number) {
             Polygon.buildSymmetricalPolygon(vertCount, radius);
-          }
+        }
 
         public _edgeNormals: Vector2[];
 
@@ -167,7 +167,11 @@ module es {
          * @param distanceSquared
          * @param edgeNormal
          */
-        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): { distanceSquared: number; edgeNormal: Vector2; closestPoint: Vector2 } {
+        public static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): {
+            distanceSquared: number;
+            edgeNormal: Vector2;
+            closestPoint: Vector2
+        } {
             const res = {
                 distanceSquared: Number.MAX_VALUE,
                 edgeNormal: Vector2.zero,
@@ -215,75 +219,44 @@ module es {
         }
 
         public recalculateBounds(collider: Collider) {
-            // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
             this.center = collider.localOffset;
 
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 let hasUnitScale = true;
-                const tempMat: Matrix2D = new Matrix2D();
-                const combinedMatrix: Matrix2D = new Matrix2D();
-                Matrix2D.createTranslation(
-                    this._polygonCenter.x * -1,
-                    this._polygonCenter.y * -1,
-                    combinedMatrix
-                );
+                const tempMat = new Matrix2D();
+                const combinedMatrix = new Matrix2D();
 
-                if (!collider.entity.transform.scale.equals(Vector2.one)) {
-                    Matrix2D.createScale(
-                        collider.entity.scale.x,
-                        collider.entity.scale.y,
-                        tempMat
-                    );
+                Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y, combinedMatrix);
+
+                const scale = collider.entity.transform.scale;
+                if (!scale.equals(Vector2.one)) {
+                    Matrix2D.createScale(scale.x, scale.y, tempMat);
                     Matrix2D.multiply(combinedMatrix, tempMat, combinedMatrix);
                     hasUnitScale = false;
 
-                    // 缩放偏移量并将其设置为中心。如果我们有旋转，它会在下面重置
-                    const scaledOffset = new Vector2(
-                        collider.localOffset.x * collider.entity.scale.x,
-                        collider.localOffset.y * collider.entity.scale.y
-                    );
+                    const scaledOffset = collider.localOffset.multiply(scale);
                     this.center = scaledOffset;
                 }
 
-                if (collider.entity.transform.rotation != 0) {
-                    Matrix2D.createRotation(
-                        MathHelper.Deg2Rad * collider.entity.rotation,
-                        tempMat
-                    );
+                const rotation = collider.entity.transform.rotationDegrees;
+                if (rotation !== 0) {
+                    const offsetLength = hasUnitScale ? collider._localOffsetLength : collider.localOffset.multiply(scale).magnitude();
+                    const offsetAngle = Math.atan2(collider.localOffset.y * scale.y, collider.localOffset.x * scale.x) * MathHelper.Rad2Deg;
+                    this.center = MathHelper.pointOnCircle(Vector2.zero, offsetLength, rotation + offsetAngle);
+                    Matrix2D.createRotation(MathHelper.Deg2Rad * rotation, tempMat);
                     Matrix2D.multiply(combinedMatrix, tempMat, combinedMatrix);
-
-                    // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动
-                    // 我们的偏移使角度为0我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
-                    const offsetAngle = Math.atan2(collider.localOffset.y * collider.entity.transform.scale.y, collider.localOffset.x * collider.entity.transform.scale.x) * MathHelper.Rad2Deg;
-                    const offsetLength = hasUnitScale ? collider._localOffsetLength :
-                        collider.localOffset.multiply(collider.entity.transform.scale).magnitude();
-                    this.center = MathHelper.pointOnCircle(Vector2.zero, offsetLength,
-                        collider.entity.transform.rotationDegrees + offsetAngle);
                 }
 
-                Matrix2D.createTranslation(
-                    this._polygonCenter.x,
-                    this._polygonCenter.y,
-                    tempMat
-                );
+                Matrix2D.createTranslation(this._polygonCenter.x + collider.transform.position.x + this.center.x, this._polygonCenter.y + collider.transform.position.y + this.center.y, tempMat);
                 Matrix2D.multiply(combinedMatrix, tempMat, combinedMatrix);
 
-                // 最后变换原始点
-                this.points = [];
-                this._originalPoints.forEach(p => {
-                    this.points.push(p.transform(combinedMatrix));
-                });
-
-                this.isUnrotated = collider.entity.transform.rotation == 0;
-
-                // 如果旋转的话，我们只需要重建边的法线
-                if (collider._isRotationDirty)
-                    this._areEdgeNormalsDirty = true;
+                this.points = this._originalPoints.map(p => p.transform(combinedMatrix));
+                this.isUnrotated = rotation === 0;
+                if (collider._isRotationDirty) this._areEdgeNormalsDirty = true;
             }
 
             this.position = collider.transform.position.add(this.center);
-            this.bounds = Rectangle.rectEncompassingPoints(this.points);
-            this.bounds.location = this.bounds.location.add(this.position);
+            this.bounds = Rectangle.rectEncompassingPoints(this.points).offset(this.position.x, this.position.y);
         }
 
         public overlaps(other: Shape) {

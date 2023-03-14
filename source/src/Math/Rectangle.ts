@@ -390,6 +390,7 @@ module es {
         public offset(offsetX: number, offsetY: number) {
             this.x += offsetX;
             this.y += offsetY;
+            return this;
         }
 
         /**

@@ -311,7 +311,7 @@ module es {
         public mutiplyTranslation(x: number, y: number) {
             let trans = new Matrix2D();
             Matrix2D.createTranslation(x, y, trans);
-            return MatrixHelper.mutiply(this, trans);
+            return MatrixHelper.multiply(this, trans);
         }
 
         /**

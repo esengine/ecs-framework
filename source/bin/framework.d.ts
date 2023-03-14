@@ -3344,27 +3344,31 @@ declare module es {
 declare module es {
     class MatrixHelper {
         /**
-         * 创建一个新的Matrix2D，其中包含两个矩阵的和
-         * @param matrix1
-         * @param matrix2
+         * 该静态方法用于计算两个 Matrix2D 对象的和。
+         * @param {Matrix2D} matrix1 - 加数矩阵。
+         * @param {Matrix2D} matrix2 - 加数矩阵。
+         * @returns {Matrix2D} - 计算结果的 Matrix2D 对象。
          */
         static add(matrix1: Matrix2D, matrix2: Matrix2D): Matrix2D;
         /**
-         * 将一个Matrix2D的元素除以另一个矩阵的元素
-         * @param matrix1
-         * @param matrix2
+         * 该静态方法用于计算两个 Matrix2D 对象的商。
+         * @param {Matrix2D} matrix1 - 被除数矩阵。
+         * @param {Matrix2D} matrix2 - 除数矩阵。
+         * @returns {Matrix2D} - 计算结果的 Matrix2D 对象。
          */
         static divide(matrix1: Matrix2D, matrix2: Matrix2D): Matrix2D;
         /**
-         * 创建一个新的Matrix2D，包含两个矩阵的乘法
-         * @param matrix1
-         * @param matrix2
+         * 该静态方法用于计算两个 Matrix2D 对象或一个 Matrix2D 对象和一个数字的乘积。
+         * @param {Matrix2D} matrix1 - 第一个矩阵。
+         * @param {Matrix2D | number} matrix2 - 第二个矩阵或一个数字。
+         * @returns {Matrix2D} - 计算结果的 Matrix2D 对象。
          */
-        static mutiply(matrix1: Matrix2D, matrix2: Matrix2D | number): Matrix2D;
+        static multiply(matrix1: Matrix2D, matrix2: Matrix2D | number): Matrix2D;
         /**
-         * 创建一个新的Matrix2D，包含一个矩阵与另一个矩阵的减法。
-         * @param matrix1
-         * @param matrix2
+         * 该静态方法用于计算两个 Matrix2D 对象的差。
+         * @param {Matrix2D} matrix1 - 第一个矩阵。
+         * @param {Matrix2D} matrix2 - 第二个矩阵。
+         * @returns {Matrix2D} - 计算结果的 Matrix2D 对象。
          */
         static subtract(matrix1: Matrix2D, matrix2: Matrix2D): Matrix2D;
     }
@@ -3511,7 +3515,7 @@ declare module es {
          * @param offsetX 要添加到这个矩形的X坐标
          * @param offsetY 要添加到这个矩形的y坐标
          */
-        offset(offsetX: number, offsetY: number): void;
+        offset(offsetX: number, offsetY: number): this;
         /**
          * 创建一个完全包含两个其他矩形的新矩形
          * @param value1
@@ -3563,37 +3567,46 @@ declare module es {
 }
 declare module es {
     /**
-     * 它存储值，直到累计的总数大于1。一旦超过1，该值将在调用update时添加到amount中
-     * 一般用法如下:
-     *
-     *  let deltaMove = this.velocity * es.Time.deltaTime;
-     *  deltaMove.x = this._x.update(deltaMove.x);
-     *  deltaMove.y = this._y.update(deltaMove.y);
+     * 该类用于存储具有亚像素分辨率的浮点数。
      */
     class SubpixelFloat {
+        /**
+         * 存储 SubpixelFloat 值的浮点余数。
+         */
         remainder: number;
         /**
-         * 以amount递增余数，将值截断，存储新的余数并将amount设置为当前值
-         * @param amount
+         * 通过将给定数量的像素添加到余数中来更新 SubpixelFloat 值。
+         * 返回更新后的整数部分，余数表示当前值中包含的亚像素部分。
+         * @param {number} amount - 要添加到余数中的像素数。
+         * @returns {number} 更新后的整数部分。
          */
         update(amount: number): number;
         /**
-         * 将余数重置为0
+         * 将 SubpixelFloat 值重置为零。
          */
         reset(): void;
     }
 }
 declare module es {
+    /**
+     * 该类用于存储具有亚像素分辨率的二维向量。
+     */
     class SubpixelVector2 {
+        /**
+         * 用于存储 x 坐标的 SubpixelFloat 对象。
+         */
         _x: SubpixelFloat;
+        /**
+         * 用于存储 y 坐标的 SubpixelFloat 对象。
+         */
         _y: SubpixelFloat;
         /**
-         * 以数量递增s/y余数，将值截断为整数，存储新的余数并将amount设置为当前值
-         * @param amount
+         * 通过将给定数量的像素添加到余数中来更新 SubpixelVector2 值。
+         * @param {Vector2} amount - 要添加到余数中的像素向量。
          */
         update(amount: Vector2): void;
         /**
-         * 将余数重置为0
+         * 将 SubpixelVector2 值的余数重置为零。
          */
         reset(): void;
     }
@@ -3989,25 +4002,46 @@ declare module es {
 }
 declare module es {
     abstract class Shape {
-        /**
-         * 有一个单独的位置字段可以让我们改变形状的位置来进行碰撞检查，而不是改变entity.position。
-         * 触发碰撞器/边界/散列更新的位置。
-         * 内部字段
-         */
         position: Vector2;
-        /**
-         * 这不是中心。这个值不一定是物体的中心。对撞机更准确。
-         * 应用任何转换旋转的localOffset
-         * 内部字段
-         */
         center: Vector2;
-        /** 缓存的形状边界 内部字段 */
         bounds: Rectangle;
+        /**
+         * 根据形状的碰撞器重新计算形状的边界。
+         * @param {Collider} collider - 用于重新计算形状边界的碰撞器。
+         */
         abstract recalculateBounds(collider: Collider): any;
+        /**
+         * 确定形状是否与另一个形状重叠。
+         * @param {Shape} other - 要检查重叠的形状。
+         * @returns {boolean} 如果形状重叠，则为 true；否则为 false。
+         */
         abstract overlaps(other: Shape): boolean;
+        /**
+         * 确定形状是否与另一个形状碰撞。
+         * @param {Shape} other - 要检查碰撞的形状。
+         * @param {Out<CollisionResult>} collisionResult - 如果形状碰撞，则要填充的碰撞结果对象。
+         * @returns {boolean} 如果形状碰撞，则为 true；否则为 false。
+         */
         abstract collidesWithShape(other: Shape, collisionResult: Out<CollisionResult>): boolean;
+        /**
+         * 确定形状是否与线段相交。
+         * @param {Vector2} start - 线段的起点。
+         * @param {Vector2} end - 线段的终点。
+         * @param {Out<RaycastHit>} hit - 如果形状与线段相交，则要填充的射线命中结果对象。
+         * @returns {boolean} 如果形状与线段相交，则为 true；否则为 false。
+         */
         abstract collidesWithLine(start: Vector2, end: Vector2, hit: Out<RaycastHit>): boolean;
+        /**
+         * 确定形状是否包含一个点。
+         * @param {Vector2} point - 要检查包含的点。
+         */
         abstract containsPoint(point: Vector2): any;
+        /**
+         * 确定一个点是否与形状相交。
+         * @param {Vector2} point - 要检查与形状相交的点。
+         * @param {Out<CollisionResult>} result - 如果点与形状相交，则要填充的碰撞结果对象。
+         * @returns {boolean} 如果点与形状相交，则为 true；否则为 false。
+         */
         abstract pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
     }
 }
@@ -4184,8 +4218,8 @@ declare module es {
         reset(): void;
         cloneTo(cr: CollisionResult): void;
         /**
-         * 改变最小平移向量，如果没有相同方向上的运动，它将移除平移的x分量。
-         * @param deltaMovement
+         * 从移动向量中移除水平方向的位移，以确保形状只沿垂直方向运动。如果移动向量包含水平移动，则通过计算垂直位移来修复响应距离。
+         * @param deltaMovement - 移动向量
          */
         removeHorizontalTranslation(deltaMovement: Vector2): void;
         invertResult(): void;
@@ -4222,20 +4256,30 @@ declare module es {
 }
 declare module es {
     class RealtimeCollisions {
+        /**
+         * 判断移动的圆是否与矩形相交，并返回相撞的时间。
+         * @param s 移动的圆
+         * @param b 矩形
+         * @param movement 移动的向量
+         * @param time 时间
+         * @returns 是否相撞
+         */
         static intersectMovingCircleBox(s: Circle, b: Box, movement: Vector2, time: number): boolean;
         /**
-         * 支持函数，返回索引为n的矩形vert
-         * @param b
-         * @param n
+         * 返回矩形的第n个角的坐标。
+         * @param b 矩形
+         * @param n 第n个角的编号
+         * @returns 第n个角的坐标
          */
-        static corner(b: Rectangle, n: number): Vector2;
+        static corner(b: Rectangle, n: number): es.Vector2;
         /**
-         * 检查圆是否与方框重叠，并返回point交点
-         * @param cirlce
-         * @param box
-         * @param point
+         * 测试一个圆和一个矩形是否相交，并返回是否相交。
+         * @param circle 圆
+         * @param box 矩形
+         * @param point 离圆心最近的点
+         * @returns 是否相交
          */
-        static testCircleBox(cirlce: Circle, box: Box, point: Vector2): boolean;
+        static testCircleBox(circle: Circle, box: Box, point: Vector2): boolean;
     }
 }
 declare module es {
@@ -4255,8 +4299,8 @@ declare module es {
         readonly sectorAngle: number;
         constructor(center: Vector2, radius: number, startAngle: number, endAngle: number);
         /**
-         * 扇形的圆心和半径计算出扇形的重心
-         * @returns
+         * 获取圆弧的质心。
+         * @returns 圆弧的质心
          */
         getCentroid(): Vector2;
         /**

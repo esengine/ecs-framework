@@ -35,24 +35,26 @@ module es {
             );
             if (this.point) {
                 if (!cr.point) {
-                cr.point = new Vector2(0, 0);
+                    cr.point = new Vector2(0, 0);
                 }
                 cr.point.setTo(this.point.x, this.point.y);
             }
         }
 
         /**
-         * 改变最小平移向量，如果没有相同方向上的运动，它将移除平移的x分量。
-         * @param deltaMovement
+         * 从移动向量中移除水平方向的位移，以确保形状只沿垂直方向运动。如果移动向量包含水平移动，则通过计算垂直位移来修复响应距离。
+         * @param deltaMovement - 移动向量
          */
-        public removeHorizontalTranslation(deltaMovement: Vector2){
-            // 检查是否需要横向移动，如果需要，移除并固定响应
-            if (Math.sign(this.normal.x) !== Math.sign(deltaMovement.x) || (deltaMovement.x === 0 && this.normal.x !== 0)){
+        public removeHorizontalTranslation(deltaMovement: Vector2) {
+            // 如果运动方向和法线方向不在同一方向或者移动量为0且法线方向不为0，则需要修复
+            if (Math.sign(this.normal.x) !== Math.sign(deltaMovement.x) || (deltaMovement.x === 0 && this.normal.x !== 0)) {
+                // 获取响应距离
                 const responseDistance = this.minimumTranslationVector.magnitude();
+                // 计算需要修复的位移
                 const fix = responseDistance / this.normal.y;
 
-                // 检查一些边界情况。因为我们除以法线 使得x == 1和一个非常小的y这将导致一个巨大的固定值
-                if (Math.abs(this.normal.x) != 1 && Math.abs(fix) < Math.abs(deltaMovement.y * 3)){
+                // 如果法线方向不是完全水平或垂直，并且修复距离小于移动向量的3倍，则修复距离
+                if (Math.abs(this.normal.x) != 1 && Math.abs(fix) < Math.abs(deltaMovement.y * 3)) {
                     this.minimumTranslationVector = new Vector2(0, -fix);
                 }
             }
@@ -63,7 +65,7 @@ module es {
             this.normal = this.normal.negate();
         }
 
-        public toString(){
+        public toString() {
             return `[CollisionResult] normal: ${this.normal}, minimumTranslationVector: ${this.minimumTranslationVector}`;
         }
     }

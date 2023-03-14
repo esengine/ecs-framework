@@ -7990,7 +7990,7 @@ var es;
         Matrix2D.prototype.mutiplyTranslation = function (x, y) {
             var trans = new Matrix2D();
             Matrix2D.createTranslation(x, y, trans);
-            return es.MatrixHelper.mutiply(this, trans);
+            return es.MatrixHelper.multiply(this, trans);
         };
         /**
          * 比较当前实例是否等于指定的Matrix2D
@@ -8032,57 +8032,64 @@ var es;
         function MatrixHelper() {
         }
         /**
-         * 创建一个新的Matrix2D，其中包含两个矩阵的和
-         * @param matrix1
-         * @param matrix2
+         * 该静态方法用于计算两个 Matrix2D 对象的和。
+         * @param {Matrix2D} matrix1 - 加数矩阵。
+         * @param {Matrix2D} matrix2 - 加数矩阵。
+         * @returns {Matrix2D} - 计算结果的 Matrix2D 对象。
          */
         MatrixHelper.add = function (matrix1, matrix2) {
-            var result = es.Matrix2D.identity;
+            // 创建一个新的 Matrix2D 对象以存储计算结果。
+            var result = new es.Matrix2D();
+            // 计算两个矩阵的和。
             result.m11 = matrix1.m11 + matrix2.m11;
             result.m12 = matrix1.m12 + matrix2.m12;
             result.m21 = matrix1.m21 + matrix2.m21;
             result.m22 = matrix1.m22 + matrix2.m22;
             result.m31 = matrix1.m31 + matrix2.m31;
             result.m32 = matrix1.m32 + matrix2.m32;
+            // 返回计算结果的 Matrix2D 对象。
             return result;
         };
         /**
-         * 将一个Matrix2D的元素除以另一个矩阵的元素
-         * @param matrix1
-         * @param matrix2
+         * 该静态方法用于计算两个 Matrix2D 对象的商。
+         * @param {Matrix2D} matrix1 - 被除数矩阵。
+         * @param {Matrix2D} matrix2 - 除数矩阵。
+         * @returns {Matrix2D} - 计算结果的 Matrix2D 对象。
          */
         MatrixHelper.divide = function (matrix1, matrix2) {
-            var result = es.Matrix2D.identity;
+            // 创建一个新的 Matrix2D 对象以存储计算结果。
+            var result = new es.Matrix2D();
+            // 计算两个矩阵的商。
             result.m11 = matrix1.m11 / matrix2.m11;
             result.m12 = matrix1.m12 / matrix2.m12;
             result.m21 = matrix1.m21 / matrix2.m21;
             result.m22 = matrix1.m22 / matrix2.m22;
             result.m31 = matrix1.m31 / matrix2.m31;
             result.m32 = matrix1.m32 / matrix2.m32;
+            // 返回计算结果的 Matrix2D 对象。
             return result;
         };
         /**
-         * 创建一个新的Matrix2D，包含两个矩阵的乘法
-         * @param matrix1
-         * @param matrix2
+         * 该静态方法用于计算两个 Matrix2D 对象或一个 Matrix2D 对象和一个数字的乘积。
+         * @param {Matrix2D} matrix1 - 第一个矩阵。
+         * @param {Matrix2D | number} matrix2 - 第二个矩阵或一个数字。
+         * @returns {Matrix2D} - 计算结果的 Matrix2D 对象。
          */
-        MatrixHelper.mutiply = function (matrix1, matrix2) {
-            var result = es.Matrix2D.identity;
+        MatrixHelper.multiply = function (matrix1, matrix2) {
+            // 创建一个新的 Matrix2D 对象以存储计算结果。
+            var result = new es.Matrix2D();
+            // 根据第二个参数的类型执行不同的计算。
             if (matrix2 instanceof es.Matrix2D) {
-                var m11 = (matrix1.m11 * matrix2.m11) + (matrix1.m12 * matrix2.m21);
-                var m12 = (matrix2.m11 * matrix2.m12) + (matrix1.m12 * matrix2.m22);
-                var m21 = (matrix1.m21 * matrix2.m11) + (matrix1.m22 * matrix2.m21);
-                var m22 = (matrix1.m21 * matrix2.m12) + (matrix1.m22 * matrix2.m22);
-                var m31 = (matrix1.m31 * matrix2.m11) + (matrix1.m32 * matrix2.m21) + matrix2.m31;
-                var m32 = (matrix1.m31 * matrix2.m12) + (matrix1.m32 * matrix2.m22) + matrix2.m32;
-                result.m11 = m11;
-                result.m12 = m12;
-                result.m21 = m21;
-                result.m22 = m22;
-                result.m31 = m31;
-                result.m32 = m32;
+                // 执行矩阵乘法。
+                result.m11 = matrix1.m11 * matrix2.m11 + matrix1.m12 * matrix2.m21;
+                result.m12 = matrix1.m11 * matrix2.m12 + matrix1.m12 * matrix2.m22;
+                result.m21 = matrix1.m21 * matrix2.m11 + matrix1.m22 * matrix2.m21;
+                result.m22 = matrix1.m21 * matrix2.m12 + matrix1.m22 * matrix2.m22;
+                result.m31 = matrix1.m31 * matrix2.m11 + matrix1.m32 * matrix2.m21 + matrix2.m31;
+                result.m32 = matrix1.m31 * matrix2.m12 + matrix1.m32 * matrix2.m22 + matrix2.m32;
             }
-            else if (typeof matrix2 == "number") {
+            else {
+                // 执行矩阵和标量的乘法。
                 result.m11 = matrix1.m11 * matrix2;
                 result.m12 = matrix1.m12 * matrix2;
                 result.m21 = matrix1.m21 * matrix2;
@@ -8090,21 +8097,26 @@ var es;
                 result.m31 = matrix1.m31 * matrix2;
                 result.m32 = matrix1.m32 * matrix2;
             }
+            // 返回计算结果的 Matrix2D 对象。
             return result;
         };
         /**
-         * 创建一个新的Matrix2D，包含一个矩阵与另一个矩阵的减法。
-         * @param matrix1
-         * @param matrix2
+         * 该静态方法用于计算两个 Matrix2D 对象的差。
+         * @param {Matrix2D} matrix1 - 第一个矩阵。
+         * @param {Matrix2D} matrix2 - 第二个矩阵。
+         * @returns {Matrix2D} - 计算结果的 Matrix2D 对象。
          */
         MatrixHelper.subtract = function (matrix1, matrix2) {
-            var result = es.Matrix2D.identity;
+            // 创建一个新的 Matrix2D 对象以存储计算结果。
+            var result = new es.Matrix2D();
+            // 计算两个矩阵的差。
             result.m11 = matrix1.m11 - matrix2.m11;
             result.m12 = matrix1.m12 - matrix2.m12;
             result.m21 = matrix1.m21 - matrix2.m21;
             result.m22 = matrix1.m22 - matrix2.m22;
             result.m31 = matrix1.m31 - matrix2.m31;
             result.m32 = matrix1.m32 - matrix2.m32;
+            // 返回计算结果的 Matrix2D 对象。
             return result;
         };
         return MatrixHelper;
@@ -8514,6 +8526,7 @@ var es;
         Rectangle.prototype.offset = function (offsetX, offsetY) {
             this.x += offsetX;
             this.y += offsetY;
+            return this;
         };
         /**
          * 创建一个完全包含两个其他矩形的新矩形
@@ -8666,30 +8679,32 @@ var es;
 var es;
 (function (es) {
     /**
-     * 它存储值，直到累计的总数大于1。一旦超过1，该值将在调用update时添加到amount中
-     * 一般用法如下:
-     *
-     *  let deltaMove = this.velocity * es.Time.deltaTime;
-     *  deltaMove.x = this._x.update(deltaMove.x);
-     *  deltaMove.y = this._y.update(deltaMove.y);
+     * 该类用于存储具有亚像素分辨率的浮点数。
      */
     var SubpixelFloat = /** @class */ (function () {
         function SubpixelFloat() {
+            /**
+             * 存储 SubpixelFloat 值的浮点余数。
+             */
             this.remainder = 0;
         }
         /**
-         * 以amount递增余数，将值截断，存储新的余数并将amount设置为当前值
-         * @param amount
+         * 通过将给定数量的像素添加到余数中来更新 SubpixelFloat 值。
+         * 返回更新后的整数部分，余数表示当前值中包含的亚像素部分。
+         * @param {number} amount - 要添加到余数中的像素数。
+         * @returns {number} 更新后的整数部分。
          */
         SubpixelFloat.prototype.update = function (amount) {
+            // 将给定的像素数量添加到余数中
             this.remainder += amount;
+            // 检查余数是否超过一个像素的大小
             var motion = Math.trunc(this.remainder);
             this.remainder -= motion;
-            amount = motion;
-            return amount;
+            // 返回整数部分作为更新后的值
+            return motion;
         };
         /**
-         * 将余数重置为0
+         * 将 SubpixelFloat 值重置为零。
          */
         SubpixelFloat.prototype.reset = function () {
             this.remainder = 0;
@@ -8700,21 +8715,31 @@ var es;
 })(es || (es = {}));
 var es;
 (function (es) {
+    /**
+     * 该类用于存储具有亚像素分辨率的二维向量。
+     */
     var SubpixelVector2 = /** @class */ (function () {
         function SubpixelVector2() {
+            /**
+             * 用于存储 x 坐标的 SubpixelFloat 对象。
+             */
             this._x = new es.SubpixelFloat();
+            /**
+             * 用于存储 y 坐标的 SubpixelFloat 对象。
+             */
             this._y = new es.SubpixelFloat();
         }
         /**
-         * 以数量递增s/y余数，将值截断为整数，存储新的余数并将amount设置为当前值
-         * @param amount
+         * 通过将给定数量的像素添加到余数中来更新 SubpixelVector2 值。
+         * @param {Vector2} amount - 要添加到余数中的像素向量。
          */
         SubpixelVector2.prototype.update = function (amount) {
+            // 更新 x 和 y 坐标
             amount.x = this._x.update(amount.x);
             amount.y = this._y.update(amount.y);
         };
         /**
-         * 将余数重置为0
+         * 将 SubpixelVector2 值的余数重置为零。
          */
         SubpixelVector2.prototype.reset = function () {
             this._x.reset();
@@ -9950,47 +9975,37 @@ var es;
             }
         };
         Polygon.prototype.recalculateBounds = function (collider) {
-            var _this = this;
-            // 如果我们没有旋转或不关心TRS我们使用localOffset作为中心，我们会从那开始
             this.center = collider.localOffset;
             if (collider.shouldColliderScaleAndRotateWithTransform) {
                 var hasUnitScale = true;
                 var tempMat = new es.Matrix2D();
                 var combinedMatrix_1 = new es.Matrix2D();
-                es.Matrix2D.createTranslation(this._polygonCenter.x * -1, this._polygonCenter.y * -1, combinedMatrix_1);
-                if (!collider.entity.transform.scale.equals(es.Vector2.one)) {
-                    es.Matrix2D.createScale(collider.entity.scale.x, collider.entity.scale.y, tempMat);
+                es.Matrix2D.createTranslation(-this._polygonCenter.x, -this._polygonCenter.y, combinedMatrix_1);
+                var scale = collider.entity.transform.scale;
+                if (!scale.equals(es.Vector2.one)) {
+                    es.Matrix2D.createScale(scale.x, scale.y, tempMat);
                     es.Matrix2D.multiply(combinedMatrix_1, tempMat, combinedMatrix_1);
                     hasUnitScale = false;
-                    // 缩放偏移量并将其设置为中心。如果我们有旋转，它会在下面重置
-                    var scaledOffset = new es.Vector2(collider.localOffset.x * collider.entity.scale.x, collider.localOffset.y * collider.entity.scale.y);
+                    var scaledOffset = collider.localOffset.multiply(scale);
                     this.center = scaledOffset;
                 }
-                if (collider.entity.transform.rotation != 0) {
-                    es.Matrix2D.createRotation(es.MathHelper.Deg2Rad * collider.entity.rotation, tempMat);
+                var rotation = collider.entity.transform.rotationDegrees;
+                if (rotation !== 0) {
+                    var offsetLength = hasUnitScale ? collider._localOffsetLength : collider.localOffset.multiply(scale).magnitude();
+                    var offsetAngle = Math.atan2(collider.localOffset.y * scale.y, collider.localOffset.x * scale.x) * es.MathHelper.Rad2Deg;
+                    this.center = es.MathHelper.pointOnCircle(es.Vector2.zero, offsetLength, rotation + offsetAngle);
+                    es.Matrix2D.createRotation(es.MathHelper.Deg2Rad * rotation, tempMat);
                     es.Matrix2D.multiply(combinedMatrix_1, tempMat, combinedMatrix_1);
-                    // 为了处理偏移原点的旋转我们只需要将圆心在(0,0)附近移动
-                    // 我们的偏移使角度为0我们还需要处理这里的比例所以我们先对偏移进行缩放以得到合适的长度。
-                    var offsetAngle = Math.atan2(collider.localOffset.y * collider.entity.transform.scale.y, collider.localOffset.x * collider.entity.transform.scale.x) * es.MathHelper.Rad2Deg;
-                    var offsetLength = hasUnitScale ? collider._localOffsetLength :
-                        collider.localOffset.multiply(collider.entity.transform.scale).magnitude();
-                    this.center = es.MathHelper.pointOnCircle(es.Vector2.zero, offsetLength, collider.entity.transform.rotationDegrees + offsetAngle);
                 }
-                es.Matrix2D.createTranslation(this._polygonCenter.x, this._polygonCenter.y, tempMat);
+                es.Matrix2D.createTranslation(this._polygonCenter.x + collider.transform.position.x + this.center.x, this._polygonCenter.y + collider.transform.position.y + this.center.y, tempMat);
                 es.Matrix2D.multiply(combinedMatrix_1, tempMat, combinedMatrix_1);
-                // 最后变换原始点
-                this.points = [];
-                this._originalPoints.forEach(function (p) {
-                    _this.points.push(p.transform(combinedMatrix_1));
-                });
-                this.isUnrotated = collider.entity.transform.rotation == 0;
-                // 如果旋转的话，我们只需要重建边的法线
+                this.points = this._originalPoints.map(function (p) { return p.transform(combinedMatrix_1); });
+                this.isUnrotated = rotation === 0;
                 if (collider._isRotationDirty)
                     this._areEdgeNormalsDirty = true;
             }
             this.position = collider.transform.position.add(this.center);
-            this.bounds = es.Rectangle.rectEncompassingPoints(this.points);
-            this.bounds.location = this.bounds.location.add(this.position);
+            this.bounds = es.Rectangle.rectEncompassingPoints(this.points).offset(this.position.x, this.position.y);
         };
         Polygon.prototype.overlaps = function (other) {
             var result = new es.Out();
@@ -10132,25 +10147,26 @@ var es;
             return _super.prototype.pointCollidesWithShape.call(this, point, result);
         };
         Box.prototype.getFurthestPoint = function (normal) {
-            var furthestPoint = new es.Vector2(this.width / 2, this.height / 2);
+            var halfWidth = this.width / 2;
+            var halfHeight = this.height / 2;
+            var furthestPoint = new es.Vector2(halfWidth, halfHeight);
             var dotProduct = furthestPoint.dot(normal);
-            var tempPoint = new es.Vector2(-this.width / 2, this.height / 2);
+            var tempPoint = new es.Vector2(-halfWidth, halfHeight);
             var tempDotProduct = tempPoint.dot(normal);
             if (tempDotProduct > dotProduct) {
                 furthestPoint.copyFrom(tempPoint);
                 dotProduct = tempDotProduct;
             }
-            tempPoint.setTo(-this.width / 2, -this.height / 2);
+            tempPoint.setTo(-halfWidth, -halfHeight);
             tempDotProduct = tempPoint.dot(normal);
             if (tempDotProduct > dotProduct) {
                 furthestPoint.copyFrom(tempPoint);
                 dotProduct = tempDotProduct;
             }
-            tempPoint.setTo(this.width / 2, -this.height / 2);
+            tempPoint.setTo(halfWidth, -halfHeight);
             tempDotProduct = tempPoint.dot(normal);
             if (tempDotProduct > dotProduct) {
                 furthestPoint.copyFrom(tempPoint);
-                dotProduct = tempDotProduct;
             }
             return furthestPoint;
         };
@@ -10268,15 +10284,17 @@ var es;
             }
         };
         /**
-         * 改变最小平移向量，如果没有相同方向上的运动，它将移除平移的x分量。
-         * @param deltaMovement
+         * 从移动向量中移除水平方向的位移，以确保形状只沿垂直方向运动。如果移动向量包含水平移动，则通过计算垂直位移来修复响应距离。
+         * @param deltaMovement - 移动向量
          */
         CollisionResult.prototype.removeHorizontalTranslation = function (deltaMovement) {
-            // 检查是否需要横向移动，如果需要，移除并固定响应
+            // 如果运动方向和法线方向不在同一方向或者移动量为0且法线方向不为0，则需要修复
             if (Math.sign(this.normal.x) !== Math.sign(deltaMovement.x) || (deltaMovement.x === 0 && this.normal.x !== 0)) {
+                // 获取响应距离
                 var responseDistance = this.minimumTranslationVector.magnitude();
+                // 计算需要修复的位移
                 var fix = responseDistance / this.normal.y;
-                // 检查一些边界情况。因为我们除以法线 使得x == 1和一个非常小的y这将导致一个巨大的固定值
+                // 如果法线方向不是完全水平或垂直，并且修复距离小于移动向量的3倍，则修复距离
                 if (Math.abs(this.normal.x) != 1 && Math.abs(fix) < Math.abs(deltaMovement.y * 3)) {
                     this.minimumTranslationVector = new es.Vector2(0, -fix);
                 }
@@ -10385,27 +10403,35 @@ var es;
     var RealtimeCollisions = /** @class */ (function () {
         function RealtimeCollisions() {
         }
+        /**
+         * 判断移动的圆是否与矩形相交，并返回相撞的时间。
+         * @param s 移动的圆
+         * @param b 矩形
+         * @param movement 移动的向量
+         * @param time 时间
+         * @returns 是否相撞
+         */
         RealtimeCollisions.intersectMovingCircleBox = function (s, b, movement, time) {
             // 计算将b按球面半径r扩大后的AABB
             var e = b.bounds;
             e.inflate(s.radius, s.radius);
             // 将射线与展开的矩形e相交，如果射线错过了e，则以无交点退出，否则得到交点p和时间t作为结果。
-            var ray = new es.Ray2D(s.position.sub(movement), s.position);
-            var res = e.rayIntersects(ray);
+            var ray = new es.Ray2D(s.position.sub(movement), s.position); // 创建射线，将移动后的圆心作为起点
+            var res = e.rayIntersects(ray); // 判断射线与展开的矩形是否相交
             if (!res.intersected && res.distance > 1)
-                return false;
+                return false; // 如果没有相交且距离大于1，则无法相撞
             // 求交点
             var point = ray.start.add(ray.direction.scale(time));
             // 计算交点p位于b的哪个最小面和最大面之外。注意，u和v不能有相同的位集，它们之间必须至少有一个位集。
             var u, v = 0;
             if (point.x < b.bounds.left)
-                u |= 1;
+                u |= 1; // 如果交点在最小的x面的左边，将第一位设为1
             if (point.x > b.bounds.right)
-                v |= 1;
+                v |= 1; // 如果交点在最大的x面的右边，将第一位设为1
             if (point.y < b.bounds.top)
-                u |= 2;
+                u |= 2; // 如果交点在最小的y面的上面，将第二位设为1
             if (point.y > b.bounds.bottom)
-                v |= 2;
+                v |= 2; // 如果交点在最大的y面的下面，将第二位设为1
             // 'or'将所有的比特集合在一起，形成一个比特掩码(注意u + v == u | v)
             var m = u + v;
             // 如果这3个比特都被设置，那么该点就在顶点区域内。
@@ -10422,29 +10448,31 @@ var es;
             return true;
         };
         /**
-         * 支持函数，返回索引为n的矩形vert
-         * @param b
-         * @param n
+         * 返回矩形的第n个角的坐标。
+         * @param b 矩形
+         * @param n 第n个角的编号
+         * @returns 第n个角的坐标
          */
         RealtimeCollisions.corner = function (b, n) {
             var p = es.Vector2.zero;
-            p.x = (n & 1) == 0 ? b.right : b.left;
-            p.y = (n & 1) == 0 ? b.bottom : b.top;
+            p.x = (n & 1) === 0 ? b.right : b.left;
+            p.y = (n & 1) === 0 ? b.bottom : b.top;
             return p;
         };
         /**
-         * 检查圆是否与方框重叠，并返回point交点
-         * @param cirlce
-         * @param box
-         * @param point
+         * 测试一个圆和一个矩形是否相交，并返回是否相交。
+         * @param circle 圆
+         * @param box 矩形
+         * @param point 离圆心最近的点
+         * @returns 是否相交
          */
-        RealtimeCollisions.testCircleBox = function (cirlce, box, point) {
-            // 找出离球心最近的点
-            point = box.bounds.getClosestPointOnRectangleToPoint(cirlce.position);
-            // 圆和方块相交，如果圆心到点的距离小于圆的半径，则圆和方块相交
-            var v = point.sub(cirlce.position);
+        RealtimeCollisions.testCircleBox = function (circle, box, point) {
+            // 找出离圆心最近的点
+            point = box.bounds.getClosestPointOnRectangleToPoint(circle.position);
+            // 如果圆心到点的距离小于等于圆的半径，则圆和方块相交
+            var v = point.sub(circle.position);
             var dist = v.dot(v);
-            return dist <= cirlce.radius * cirlce.radius;
+            return dist <= circle.radius * circle.radius;
         };
         return RealtimeCollisions;
     }());
@@ -10480,12 +10508,14 @@ var es;
             configurable: true
         });
         /**
-         * 扇形的圆心和半径计算出扇形的重心
-         * @returns
+         * 获取圆弧的质心。
+         * @returns 圆弧的质心
          */
         Sector.prototype.getCentroid = function () {
+            // 计算圆弧的质心坐标
             var x = (Math.cos(this.startAngle) + Math.cos(this.endAngle)) * this.radius / 3;
             var y = (Math.sin(this.startAngle) + Math.sin(this.endAngle)) * this.radius / 3;
+            // 返回质心坐标
             return new es.Vector2(x + this.center.x, y + this.center.y);
         };
         /**
@@ -10531,53 +10561,57 @@ var es;
             throw new Error("overlaps of Polygon to " + other + " are not supported");
         };
         Sector.prototype.collidesWithLine = function (start, end, hit) {
-            var toStart = start.sub(this.center);
-            var toEnd = end.sub(this.center);
-            var angleStart = toStart.getAngle();
-            var angleEnd = toEnd.getAngle();
-            var angleDiff = angleEnd - angleStart;
+            var toStart = start.sub(this.center); // 线段起点到圆心的向量
+            var toEnd = end.sub(this.center); // 线段终点到圆心的向量
+            var angleStart = toStart.getAngle(); // 起点向量与 x 轴正方向的夹角
+            var angleEnd = toEnd.getAngle(); // 终点向量与 x 轴正方向的夹角
+            var angleDiff = angleEnd - angleStart; // 终点角度减去起点角度得到角度差
+            // 将角度差限制在 -PI 到 PI 之间，方便判断是否跨越了 0 度
             if (angleDiff > Math.PI) {
                 angleDiff -= 2 * Math.PI;
             }
             else if (angleDiff < -Math.PI) {
                 angleDiff += 2 * Math.PI;
             }
+            // 如果角度差在圆弧的起始角度和结束角度之间，则有可能发生相交
             if (angleDiff >= this.startAngle && angleDiff <= this.endAngle) {
-                var r = toStart.getLength();
-                var t = this.startAngle - angleStart;
-                var x = r * Math.cos(t);
-                var y = r * Math.sin(t);
-                var intersection = new es.Vector2(x, y);
+                var r = toStart.getLength(); // 圆心到线段起点的距离
+                var t = this.startAngle - angleStart; // 起点角度到圆弧起始角度的角度差
+                var x = r * Math.cos(t); // 圆弧上与线段相交的点的 x 坐标
+                var y = r * Math.sin(t); // 圆弧上与线段相交的点的 y 坐标
+                var intersection = new es.Vector2(x, y); // 相交点的二维坐标
+                // 判断相交点是否在线段上
                 if (intersection.isBetween(start, end)) {
-                    var distance = intersection.sub(start).getLength();
-                    var fraction = distance / start.getDistance(end);
-                    var normal = intersection.sub(this.center).normalize();
-                    var point = intersection.add(this.center);
+                    var distance = intersection.sub(start).getLength(); // 相交点到线段起点的距离
+                    var fraction = distance / start.getDistance(end); // 相交点处于线段的分数
+                    var normal = intersection.sub(this.center).normalize(); // 相交点处圆弧的法向量
+                    var point = intersection.add(this.center); // 相交点的全局坐标
+                    // 将相交信息存储到 hit 参数中
                     var raycastHit = new es.RaycastHit();
                     raycastHit.setValues(fraction, distance, point, normal);
                     hit.value = raycastHit;
-                    return true;
+                    return true; // 返回 true 表示相交
                 }
             }
-            return false;
+            return false; // 返回 false 表示不相交
         };
         Sector.prototype.containsPoint = function (point) {
-            var toPoint = point.sub(this.center);
-            var distanceSquared = toPoint.lengthSquared();
-            if (distanceSquared > this.radiusSquared) {
+            var toPoint = point.sub(this.center); // 点到圆心的向量
+            var distanceSquared = toPoint.lengthSquared(); // 点到圆心距离的平方
+            if (distanceSquared > this.radiusSquared) { // 如果点到圆心的距离平方大于圆形区域半径平方，则该点不在圆形区域内
                 return false;
             }
-            var angle = toPoint.getAngle();
-            var startAngle = this.startAngle;
-            var endAngle = startAngle + this.angle;
-            var angleDiff = angle - startAngle;
-            if (angleDiff < 0) {
+            var angle = toPoint.getAngle(); // 点到圆心的向量与 x 轴正方向的夹角
+            var startAngle = this.startAngle; // 圆弧起始角度
+            var endAngle = startAngle + this.angle; // 圆弧终止角度
+            var angleDiff = angle - startAngle; // 计算点到圆弧起始角度的角度差
+            if (angleDiff < 0) { // 如果角度差小于 0，则说明点在圆弧角度的另一侧，需要加上 2 * PI
                 angleDiff += Math.PI * 2;
             }
-            if (angleDiff > this.angle) {
+            if (angleDiff > this.angle) { // 如果角度差大于圆弧角度，则该点不在圆弧范围内
                 return false;
             }
-            return true;
+            return true; // 点在圆形区域内
         };
         Sector.prototype.pointCollidesWithShape = function (point, result) {
             if (!this.containsPoint(point)) {
@@ -10607,16 +10641,16 @@ var es;
             this.angleStep = (this.endAngle - this.startAngle) / (this.numberOfPoints - 1);
         };
         Sector.prototype.getFurthestPoint = function (normal) {
-            var maxProjection = -Number.MAX_VALUE;
-            var furthestPoint = new es.Vector2();
-            for (var i = 0; i < this.numberOfPoints; i++) {
-                var projection = this.points[i].dot(normal);
-                if (projection > maxProjection) {
+            var maxProjection = -Number.MAX_VALUE; // 最大投影值
+            var furthestPoint = new es.Vector2(); // 最远点
+            for (var i = 0; i < this.numberOfPoints; i++) { // 遍历多边形的所有顶点
+                var projection = this.points[i].dot(normal); // 计算当前顶点到法线的投影
+                if (projection > maxProjection) { // 如果当前投影值大于最大投影值，则更新最大投影值和最远点
                     maxProjection = projection;
                     furthestPoint.copyFrom(this.points[i]);
                 }
             }
-            return furthestPoint;
+            return furthestPoint; // 返回最远点
         };
         return Sector;
     }(es.Shape));
