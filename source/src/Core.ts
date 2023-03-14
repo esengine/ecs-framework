@@ -115,17 +115,18 @@ module es {
          * 删除全局管理器对象
          * @param manager
          */
-        public static unregisterGlobalManager(manager: es.GlobalManager) {
+        public static unregisterGlobalManager(manager: GlobalManager) {
             new es.List(this._instance._globalManagers).remove(manager);
             manager.enabled = false;
         }
 
         /**
-         * 获取类型为T的全局管理器
-         * @param type
+         * 获取指定类型的全局管理器实例
+         * @param type 管理器类型的构造函数
+         * @returns 指定类型的全局管理器实例，如果找不到则返回 null
          */
-        public static getGlobalManager<T extends es.GlobalManager>(type: new (...args) => T): T {
-            for (let i = 0, s = Core._instance._globalManagers.length; i < s; ++ i) {
+        public static getGlobalManager<T extends GlobalManager>(type: new (...args) => T): T {
+            for (let i = 0, s = Core._instance._globalManagers.length; i < s; ++i) {
                 let manager = Core._instance._globalManagers[i];
                 if (manager instanceof type)
                     return manager;
@@ -144,9 +145,9 @@ module es {
         }
 
         /**
-         * 启动一个coroutine。Coroutine可以将number延时几秒或延时到其他startCoroutine.Yielding 
+         * 启动一个coroutine。Coroutine可以将number延时几秒或延时到其他startCoroutine.Yielding
          * null将使coroutine在下一帧被执行。
-         * @param enumerator 
+         * @param enumerator
          */
         public static startCoroutine(enumerator): ICoroutine {
             return this._instance._coroutineManager.startCoroutine(enumerator);
@@ -166,7 +167,7 @@ module es {
         public startDebugDraw() {
             // 如果debug标志未开启，则直接返回
             if (!this.debug) return;
-        
+
             // 计算帧率和内存使用情况
             this._frameCounter++; // 帧计数器递增
             this._frameCounterElapsedTime += Time.deltaTime; // 帧计数器累加时间

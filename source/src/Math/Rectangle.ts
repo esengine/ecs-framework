@@ -98,7 +98,7 @@ module es {
             this.height = value.y;
         }
 
-        /** 
+        /**
          * 位于这个矩形中心的一个点
          * 如果 "宽度 "或 "高度 "是奇数，则中心点将向下舍入
          */
@@ -163,7 +163,7 @@ module es {
 
         /**
          * 获取指定边缘的位置
-         * @param edge 
+         * @param edge
          */
         public getSide(edge: Edge) {
             switch (edge) {
@@ -214,28 +214,34 @@ module es {
         }
 
         public rayIntersects(ray: Ray2D): { intersected: boolean; distance: number } {
-            const res = { intersected: false, distance: 0 };
+            // 存储相交点和相交距离
+            const res = {intersected: false, distance: 0};
             let maxValue = Infinity;
-        
+
+            // 计算射线与矩形的相交距离
             if (Math.abs(ray.direction.x) < 1E-06) {
+                // 如果射线方向的x分量很小，说明它是垂直的，那么它就不会相交
                 if (ray.start.x < this.x || ray.start.x > this.x + this.width) {
                     return res;
                 }
             } else {
+                // 计算射线与x边界的交点，以及在矩形上面和下面的交点
                 const num11 = 1 / ray.direction.x;
                 let num8 = (this.x - ray.start.x) * num11;
                 let num7 = (this.x + this.width - ray.start.x) * num11;
                 if (num8 > num7) {
                     [num7, num8] = [num8, num7];
                 }
-        
+
+                // 将最远的相交距离更新为上下两个交点中更远的那个
                 res.distance = Math.max(num8, res.distance);
                 maxValue = Math.min(num7, maxValue);
                 if (res.distance > maxValue) {
                     return res;
                 }
             }
-        
+
+            // 计算射线与y边界的交点，以及在矩形左边和右边的交点
             if (Math.abs(ray.direction.y) < 1e-06) {
                 if (ray.start.y < this.y || ray.start.y > this.y + this.height) {
                     return res;
@@ -247,14 +253,16 @@ module es {
                 if (num6 > num5) {
                     [num5, num6] = [num6, num5];
                 }
-        
+
+                // 将最远的相交距离更新为左右两个交点中更远的那个
                 res.distance = Math.max(num6, res.distance);
                 maxValue = Math.min(num5, maxValue);
                 if (res.distance > maxValue) {
                     return res;
                 }
             }
-        
+
+            // 如果相交了，将标志设为真，并返回相交点
             res.intersected = true;
             return res;
         }
@@ -265,7 +273,7 @@ module es {
          */
         public containsRect(value: Rectangle) {
             return ((((this.x <= value.x) && (value.x < (this.x + this.width))) &&
-                (this.y <= value.y)) &&
+                    (this.y <= value.y)) &&
                 (value.y < (this.y + this.height)));
         }
 
@@ -358,8 +366,8 @@ module es {
 
         /**
          * 创建一个新的RectangleF，该RectangleF包含两个其他矩形的重叠区域
-         * @param value1 
-         * @param value2 
+         * @param value1
+         * @param value2
          * @returns 将两个矩形的重叠区域作为输出参数
          */
         public static intersect(value1: Rectangle, value2: Rectangle) {
@@ -386,8 +394,8 @@ module es {
 
         /**
          * 创建一个完全包含两个其他矩形的新矩形
-         * @param value1 
-         * @param value2 
+         * @param value1
+         * @param value2
          */
         public static union(value1: Rectangle, value2: Rectangle) {
             let x = Math.min(value1.x, value2.x);
@@ -399,8 +407,8 @@ module es {
 
         /**
          * 在矩形重叠的地方创建一个新的矩形
-         * @param value1 
-         * @param value2 
+         * @param value1
+         * @param value2
          */
         public static overlap(value1: Rectangle, value2: Rectangle): Rectangle {
             let x = Math.max(value1.x, value2.x, 0);
@@ -411,7 +419,7 @@ module es {
         }
 
         public calculateBounds(parentPosition: Vector2, position: Vector2, origin: Vector2, scale: Vector2,
-            rotation: number, width: number, height: number) {
+                               rotation: number, width: number, height: number) {
             if (rotation == 0) {
                 this.x = Math.trunc(parentPosition.x + position.x - origin.x * scale.x);
                 this.y = Math.trunc(parentPosition.y + position.y - origin.y * scale.y);
@@ -456,10 +464,10 @@ module es {
 
         /**
          * 返回一个横跨当前矩形和提供的三角形位置的矩形
-         * @param deltaX 
-         * @param deltaY 
+         * @param deltaX
+         * @param deltaY
          */
-        public getSweptBroadphaseBounds(deltaX: number, deltaY: number){
+        public getSweptBroadphaseBounds(deltaX: number, deltaY: number) {
             let broadphasebox = Rectangle.empty;
 
             broadphasebox.x = deltaX > 0 ? this.x : this.x + deltaX;
@@ -471,13 +479,13 @@ module es {
         }
 
         /**
-         * 如果发生碰撞，返回true 
+         * 如果发生碰撞，返回true
          * moveX和moveY将返回b1为避免碰撞而必须移动的移动量
-         * @param other 
-         * @param moveX 
-         * @param moveY 
+         * @param other
+         * @param moveX
+         * @param moveY
          */
-        public collisionCheck(other: Rectangle, moveX: Ref<number>, moveY: Ref<number>){
+        public collisionCheck(other: Rectangle, moveX: Ref<number>, moveY: Ref<number>) {
             moveX.value = moveY.value = 0;
 
             let l = other.x - (this.x + this.width);
@@ -504,8 +512,8 @@ module es {
 
         /**
          * 计算两个矩形之间有符号的交点深度
-         * @param rectA 
-         * @param rectB 
+         * @param rectA
+         * @param rectB
          * @returns 两个相交的矩形之间的重叠量。
          * 这些深度值可以是负值，取决于矩形/相交的哪些边。
          * 这允许调用者确定正确的推送对象的方向，以解决碰撞问题。
@@ -541,7 +549,7 @@ module es {
 
         /**
          * 比较当前实例是否等于指定的矩形
-         * @param other 
+         * @param other
          */
         public equals(other: Rectangle) {
             return this === other;
@@ -550,7 +558,7 @@ module es {
         /**
          * 获取这个矩形的哈希码
          */
-        public getHashCode(): number{
+        public getHashCode(): number {
             return (Math.trunc(this.x) ^ Math.trunc(this.y) ^ Math.trunc(this.width) ^ Math.trunc(this.height));
         }
 

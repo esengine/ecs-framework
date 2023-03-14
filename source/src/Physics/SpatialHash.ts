@@ -35,49 +35,56 @@ module es {
         }
 
         /**
-         * 将对象添加到SpatialHash
-         * @param collider
+         * 注册一个碰撞器
+         * @param collider 碰撞器
          */
-        public register(collider: Collider) {
-            let bounds = collider.bounds.clone();
+        public register(collider: Collider): void {
+            // 克隆碰撞器的 bounds 属性
+            const bounds = collider.bounds.clone();
+            // 存储克隆后的 bounds 属性到 registeredPhysicsBounds 属性中
             collider.registeredPhysicsBounds = bounds;
-            let p1 = this.cellCoords(bounds.x, bounds.y);
-            let p2 = this.cellCoords(bounds.right, bounds.bottom);
+            // 获取碰撞器所在的网格坐标
+            const p1 = this.cellCoords(bounds.x, bounds.y);
+            const p2 = this.cellCoords(bounds.right, bounds.bottom);
 
-            // 更新边界以跟踪网格大小
+            // 更新网格边界，以确保其覆盖所有碰撞器
             if (!this.gridBounds.contains(p1.x, p1.y)) {
                 this.gridBounds = RectangleExt.union(this.gridBounds, p1);
             }
-
             if (!this.gridBounds.contains(p2.x, p2.y)) {
                 this.gridBounds = RectangleExt.union(this.gridBounds, p2);
             }
 
+            // 将碰撞器添加到所在的所有单元格中
             for (let x = p1.x; x <= p2.x; x++) {
                 for (let y = p1.y; y <= p2.y; y++) {
-                    // 如果没有单元格，我们需要创建它
-                    let c: Collider[] = this.cellAtPosition(x, y, true);
-                    c.push(collider);
+                    // 如果该单元格不存在，创建一个新的单元格
+                    const cell: Collider[] = this.cellAtPosition(x, y, /* createIfNotExists = */ true);
+                    cell.push(collider);
                 }
             }
         }
 
         /**
-         * 从SpatialHash中删除对象
-         * @param collider
+         * 从空间哈希中移除一个碰撞器
+         * @param collider 碰撞器
          */
-        public remove(collider: Collider) {
-            let bounds = collider.registeredPhysicsBounds.clone();
-            let p1 = this.cellCoords(bounds.x, bounds.y);
-            let p2 = this.cellCoords(bounds.right, bounds.bottom);
+        public remove(collider: Collider): void {
+            // 克隆碰撞器的 registeredPhysicsBounds 属性
+            const bounds = collider.registeredPhysicsBounds.clone();
+            // 获取碰撞器所在的网格坐标
+            const p1 = this.cellCoords(bounds.x, bounds.y);
+            const p2 = this.cellCoords(bounds.right, bounds.bottom);
 
+            // 从所有单元格中移除该碰撞器
             for (let x = p1.x; x <= p2.x; x++) {
                 for (let y = p1.y; y <= p2.y; y++) {
-                    // 单元格应该始终存在，因为这个碰撞器应该在所有查询的单元格中
-                    let cell = this.cellAtPosition(x, y);
+                    // 单元格应该始终存在，因为该碰撞器应该在所有查询的单元格中
+                    const cell = this.cellAtPosition(x, y);
                     Insist.isNotNull(cell, `从不存在碰撞器的单元格中移除碰撞器: [${collider}]`);
-                    if (cell != null)
+                    if (cell != null) {
                         new es.List(cell).remove(collider);
+                    }
                 }
             }
         }
@@ -95,32 +102,38 @@ module es {
         }
 
         /**
-         * 返回边框与单元格相交的所有对象
-         * @param bounds
-         * @param excludeCollider
-         * @param layerMask
+         * 执行基于 AABB 的广域相交检测并返回碰撞器列表
+         * @param bounds 边界矩形
+         * @param excludeCollider 排除的碰撞器
+         * @param layerMask 碰撞层掩码
+         * @returns 碰撞器列表
          */
         public aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[] {
             this._tempHashSet.clear();
 
+            // 获取边界矩形所在的网格单元格
             const p1 = this.cellCoords(bounds.x, bounds.y);
             const p2 = this.cellCoords(bounds.right, bounds.bottom);
 
+            // 对所有相交的单元格中的碰撞器执行检测
             for (let x = p1.x; x <= p2.x; x++) {
                 for (let y = p1.y; y <= p2.y; y++) {
                     const cell = this.cellAtPosition(x, y);
-                    if (!cell)
+                    if (!cell) {
                         continue;
+                    }
 
-                    // 当cell不为空。循环并取回所有碰撞器
+                    // 如果单元格不为空，循环并取回所有碰撞器
                     if (cell.length > 0) {
                         for (let i = 0; i < cell.length; i++) {
                             const collider = cell[i];
-    
-                            // 如果它是自身或者如果它不匹配我们的层掩码 跳过这个碰撞器
-                            if (collider == excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer.value))
+
+                            // 如果它是自身或者如果它不匹配我们的层掩码跳过这个碰撞器
+                            if (collider === excludeCollider || !Flags.isFlagSet(layerMask, collider.physicsLayer.value)) {
                                 continue;
-    
+                            }
+
+                            // 检查碰撞器的 bounds 是否与边界矩形相交
                             if (bounds.intersects(collider.bounds)) {
                                 this._tempHashSet.add(collider);
                             }
@@ -129,66 +142,65 @@ module es {
                 }
             }
 
+            // 返回所有相交的碰撞器列表
             return Array.from(this._tempHashSet);
         }
 
         /**
-         * 通过空间散列投掷一条线，并将该线碰到的任何碰撞器填入碰撞数组
-         * https://github.com/francisengelmann/fast_voxel_traversal/blob/master/main.cpp
-         * http://www.cse.yorku.ca/~amana/research/grid.pdf
-         * @param start
-         * @param end
-         * @param hits
-         * @param layerMask
+         * 执行基于线段的射线检测并返回所有命中的碰撞器
+         * @param start 射线起点
+         * @param end 射线终点
+         * @param hits 射线命中结果
+         * @param layerMask 碰撞层掩码
+         * @param ignoredColliders 忽略的碰撞器
+         * @returns 命中的碰撞器数量
          */
-        public linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>) {
-            let ray = new Ray2D(start, end);
+        public linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): number {
+            // 创建一个射线
+            const ray = new Ray2D(start, end);
+            // 使用射线解析器初始化线段命中结果
             this._raycastParser.start(ray, hits, layerMask, ignoredColliders);
 
-            // 获取我们的起始/结束位置，与我们的网格在同一空间内
+            // 获取起点和终点所在的网格单元格
             let currentCell = this.cellCoords(start.x, start.y);
-            let lastCell = this.cellCoords(end.x, end.y);
+            const lastCell = this.cellCoords(end.x, end.y);
 
-            // 我们向什么方向递增单元格检查？
+            // 计算射线在 x 和 y 方向上的步长
             let stepX = Math.sign(ray.direction.x);
             let stepY = Math.sign(ray.direction.y);
+            if (currentCell.x === lastCell.x) {
+                stepX = 0;
+            }
+            if (currentCell.y === lastCell.y) {
+                stepY = 0;
+            }
 
-            // 我们要确保，如果我们在同一条线上或同一排上，就不会踩到不必要的方向上
-            if (currentCell.x == lastCell.x) stepX = 0;
-            if (currentCell.y == lastCell.y) stepY = 0;
-
-            // 计算单元格的边界。
-            // 当步长为正数时，下一个单元格在这个单元格之后，意味着我们要加1。
-            let xStep = stepX < 0 ? 0 : stepX;
-            let yStep = stepY < 0 ? 0 : stepY;
+            // 计算 x 和 y 方向上的网格单元格步长
+            const xStep = stepX < 0 ? 0 : stepX;
+            const yStep = stepY < 0 ? 0 : stepY;
             let nextBoundaryX = (currentCell.x + xStep) * this._cellSize;
             let nextBoundaryY = (currentCell.y + yStep) * this._cellSize;
 
-            // 确定射线穿过第一个垂直体素边界时的t值，y/水平也是如此。
-            // 这两个值的最小值将表明我们可以沿着射线移动多少，并且仍然保持在当前的体素中，对于接近垂直/水平的射线可能是无限的。
-            let tMaxX = ray.direction.x != 0 ? (nextBoundaryX - ray.start.x) / ray.direction.x : Number.MAX_VALUE;
-            let tMaxY = ray.direction.y != 0 ? (nextBoundaryY - ray.start.y) / ray.direction.y : Number.MAX_VALUE;
+            // 计算 t 值的最大值和步长
+            let tMaxX = ray.direction.x !== 0 ? (nextBoundaryX - ray.start.x) / ray.direction.x : Number.MAX_VALUE;
+            let tMaxY = ray.direction.y !== 0 ? (nextBoundaryY - ray.start.y) / ray.direction.y : Number.MAX_VALUE;
+            const tDeltaX = ray.direction.x !== 0 ? this._cellSize / (ray.direction.x * stepX) : Number.MAX_VALUE;
+            const tDeltaY = ray.direction.y !== 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
 
-            // 我们要走多远才能从一个单元格的边界穿过一个单元格
-            let tDeltaX = ray.direction.x != 0 ? this._cellSize / (ray.direction.x * stepX) : Number.MAX_VALUE;
-            let tDeltaY = ray.direction.y != 0 ? this._cellSize / (ray.direction.y * stepY) : Number.MAX_VALUE;
-
-            // 开始遍历并返回交叉单元格。
+            // 检查射线起点所在的单元格是否与射线相交
             let cell = this.cellAtPosition(currentCell.x, currentCell.y);
-
-            if (cell != null && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
+            if (cell !== null && this._raycastParser.checkRayIntersection(currentCell.x, currentCell.y, cell)) {
                 this._raycastParser.reset();
                 return this._raycastParser.hitCounter;
             }
 
-            while (currentCell.x != lastCell.x || currentCell.y != lastCell.y) {
+            // 在所有相交的单元格中沿着射线前进并检查碰撞器
+            while (currentCell.x !== lastCell.x || currentCell.y !== lastCell.y) {
                 if (tMaxX < tMaxY) {
                     currentCell.x = MathHelper.toInt(MathHelper.approach(currentCell.x, lastCell.x, Math.abs(stepX)));
-
                     tMaxX += tDeltaX;
                 } else {
                     currentCell.y = MathHelper.toInt(MathHelper.approach(currentCell.y, lastCell.y, Math.abs(stepY)));
-
                     tMaxY += tDeltaY;
                 }
 
@@ -199,36 +211,43 @@ module es {
                 }
             }
 
-            // 复位
+            // 重置射线解析器并返回命中的碰撞器数量
             this._raycastParser.reset();
             return this._raycastParser.hitCounter;
         }
 
 
         /**
-         * 获取所有在指定矩形范围内的碰撞器
-         * @param rect 
-         * @param results 
-         * @param layerMask 
+         * 执行矩形重叠检测并返回所有命中的碰撞器
+         * @param rect 矩形
+         * @param results 碰撞器命中结果
+         * @param layerMask 碰撞层掩码
+         * @returns 命中的碰撞器数量
          */
-        public overlapRectangle(rect: Rectangle, results: Collider[], layerMask: number) {
+        public overlapRectangle(rect: Rectangle, results: Collider[], layerMask: number): number {
+            // 更新重叠检测框的位置和大小
             this._overlapTestBox.updateBox(rect.width, rect.height);
             this._overlapTestBox.position = rect.location;
 
             let resultCounter = 0;
-            let potentials = this.aabbBroadphase(rect, null, layerMask);
+            // 获取潜在的相交碰撞器
+            const potentials = this.aabbBroadphase(rect, null, layerMask);
 
-            for (let i = 0; i < potentials.length; i ++) {
+            // 遍历所有潜在的碰撞器并检查它们是否与矩形相交
+            for (let i = 0; i < potentials.length; i++) {
                 const collider = potentials[i];
                 if (collider instanceof BoxCollider) {
+                    // 如果是 BoxCollider，直接将其添加到命中结果中
                     results[resultCounter] = collider;
                     resultCounter++;
                 } else if (collider instanceof CircleCollider) {
+                    // 如果是 CircleCollider，使用 rectToCircle 函数检查矩形与圆是否相交
                     if (Collisions.rectToCircle(rect, collider.bounds.center, collider.bounds.width * 0.5)) {
                         results[resultCounter] = collider;
                         resultCounter++;
                     }
                 } else if (collider instanceof PolygonCollider) {
+                    // 如果是 PolygonCollider，使用 Polygon.shape.overlaps 函数检查矩形与多边形是否相交
                     if (collider.shape.overlaps(this._overlapTestBox)) {
                         results[resultCounter] = collider;
                         resultCounter++;
@@ -237,42 +256,53 @@ module es {
                     throw new Error("overlapRectangle对这个类型没有实现!");
                 }
 
-                if (resultCounter == results.length)
+                if (resultCounter === results.length) {
                     return resultCounter;
+                }
             }
 
             return resultCounter;
         }
 
+
         /**
-         * 获取所有落在指定圆圈内的碰撞器
-         * @param circleCenter
-         * @param radius
-         * @param results
-         * @param layerMask
+         * 执行圆形重叠检测并返回所有命中的碰撞器
+         * @param circleCenter 圆心坐标
+         * @param radius 圆形半径
+         * @param results 碰撞器命中结果
+         * @param layerMask 碰撞层掩码
+         * @returns 命中的碰撞器数量
          */
-        public overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask): number {
+        public overlapCircle(circleCenter: Vector2, radius: number, results: Collider[], layerMask: number): number {
+            // 计算包含圆形的最小矩形框
             const bounds = new Rectangle(circleCenter.x - radius, circleCenter.y - radius, radius * 2, radius * 2);
 
+            // 更新重叠检测圆的位置和半径
             this._overlapTestCircle.radius = radius;
             this._overlapTestCircle.position = circleCenter;
 
             let resultCounter = 0;
+            // 获取潜在的相交碰撞器
             const potentials = this.aabbBroadphase(bounds, null, layerMask);
-            if (potentials.length > 0)
-                for (let i = 0; i < potentials.length; i ++) {
+
+            // 遍历所有潜在的碰撞器并检查它们是否与圆相交
+            if (potentials.length > 0) {
+                for (let i = 0; i < potentials.length; i++) {
                     const collider = potentials[i];
                     if (collider instanceof BoxCollider) {
+                        // 如果是 BoxCollider，使用 BoxCollider.shape.overlaps 函数检查矩形与圆是否相交
                         if (collider.shape.overlaps(this._overlapTestCircle)) {
                             results[resultCounter] = collider;
                             resultCounter++;
                         }
                     } else if (collider instanceof CircleCollider) {
+                        // 如果是 CircleCollider，使用 CircleCollider.shape.overlaps 函数检查圆与圆是否相交
                         if (collider.shape.overlaps(this._overlapTestCircle)) {
                             results[resultCounter] = collider;
                             resultCounter++;
                         }
                     } else if (collider instanceof PolygonCollider) {
+                        // 如果是 PolygonCollider，使用 PolygonCollider.shape.overlaps 函数检查多边形与圆是否相交
                         if (collider.shape.overlaps(this._overlapTestCircle)) {
                             results[resultCounter] = collider;
                             resultCounter++;
@@ -281,70 +311,101 @@ module es {
                         throw new Error("对这个对撞机类型的overlapCircle没有实现!");
                     }
 
-                    // 如果我们所有的结果数据有了则返回
-                    if (resultCounter === results.length)
+                    if (resultCounter === results.length) {
                         return resultCounter;
+                    }
                 }
+            }
 
             return resultCounter;
         }
 
         /**
-         * 获取单元格的x,y值作为世界空间的x,y值
-         * @param x
-         * @param y
+         * 将给定的 x 和 y 坐标转换为单元格坐标
+         * @param x X 坐标
+         * @param y Y 坐标
+         * @returns 转换后的单元格坐标
          */
         public cellCoords(x: number, y: number): Vector2 {
+            // 使用 inverseCellSize 计算出单元格的 x 和 y 坐标
             return new Vector2(Math.floor(x * this._inverseCellSize), Math.floor(y * this._inverseCellSize));
         }
 
         /**
-         * 获取世界空间x,y值的单元格。
-         * 如果单元格为空且createCellIfEmpty为true，则会创建一个新的单元格
-         * @param x
-         * @param y
-         * @param createCellIfEmpty
+         * 返回一个包含特定位置处的所有碰撞器的数组
+         * 如果此位置上没有单元格并且createCellIfEmpty参数为true，则会创建一个新的单元格
+         * @param x 单元格 x 坐标
+         * @param y 单元格 y 坐标
+         * @param createCellIfEmpty 如果该位置上没有单元格是否创建一个新单元格，默认为false
+         * @returns 该位置上的所有碰撞器
          */
         public cellAtPosition(x: number, y: number, createCellIfEmpty: boolean = false): Collider[] {
+            // 获取指定位置的单元格
             let cell: Collider[] = this._cellDict.tryGetValue(x, y);
+
+            // 如果不存在此位置的单元格，并且需要创建，则创建并返回空单元格
             if (!cell) {
                 if (createCellIfEmpty) {
                     cell = [];
                     this._cellDict.add(x, y, cell);
                 }
             }
+
             return cell;
         }
     }
 
+    /**
+     * 数字字典
+     */
     export class NumberDictionary<T> {
+        // 存储数据的 Map 对象
         public _store: Map<string, T[]> = new Map<string, T[]>();
 
+        /**
+         * 将指定的列表添加到以给定 x 和 y 为键的字典条目中
+         * @param x 字典的 x 坐标
+         * @param y 字典的 y 坐标
+         * @param list 要添加到字典的列表
+         */
         public add(x: number, y: number, list: T[]) {
             this._store.set(this.getKey(x, y), list);
         }
 
         /**
-         * 使用蛮力方法从字典存储列表中移除碰撞器
-         * @param obj
+         * 从字典中删除给定的对象
+         * @param obj 要删除的对象
          */
         public remove(obj: T) {
+            // 遍历 Map 中的所有值，从值中查找并删除给定的对象
             this._store.forEach(list => {
                 let index = list.indexOf(obj);
                 list.splice(index, 1);
             })
         }
 
+        /**
+         * 尝试从字典中检索指定键的值
+         * @param x 字典的 x 坐标
+         * @param y 字典的 y 坐标
+         * @returns 指定键的值，如果不存在则返回 null
+         */
         public tryGetValue(x: number, y: number): T[] {
             return this._store.get(this.getKey(x, y));
         }
 
+        /**
+         * 根据给定的 x 和 y 坐标返回一个唯一的字符串键
+         * @param x 字典的 x 坐标
+         * @param y 字典的 y 坐标
+         * @returns 唯一的字符串键
+         */
         public getKey(x: number, y: number) {
             return `${x}_${y}`;
         }
 
         /**
-         * 清除字典数据
+         * 清空字典
          */
         public clear() {
             this._store.clear();
@@ -378,46 +439,51 @@ module es {
         }
 
         /**
-         * 如果hits数组被填充，返回true。单元格不能为空!
-         * @param cellX
-         * @param cellY
-         * @param cell
+         * 对射线检测到的碰撞器进行进一步的处理，将结果存储在传递的碰撞数组中。
+         * @param cellX 当前单元格的x坐标
+         * @param cellY 当前单元格的y坐标
+         * @param cell 该单元格中的碰撞器列表
+         * @returns 如果当前单元格有任何碰撞器与射线相交，则返回true
          */
         public checkRayIntersection(cellX: number, cellY: number, cell: Collider[]): boolean {
             for (let i = 0; i < cell.length; i++) {
                 const potential = cell[i];
 
-                // 管理我们已经处理过的碰撞器
+                // 如果该碰撞器已经处理过，则跳过它
                 if (this._checkedColliders.indexOf(potential) != -1)
                     continue;
 
+                // 将该碰撞器标记为已处理
                 this._checkedColliders.push(potential);
-                // 只有当我们被设置为这样做时才会点击触发器
+
+                // 如果该碰撞器是触发器且当前不允许触发器响应射线检测，则跳过它
                 if (potential.isTrigger && !Physics.raycastsHitTriggers)
                     continue;
 
-                // 确保碰撞器在图层蒙版上
+                // 确保碰撞器的图层与所提供的图层掩码相匹配
                 if (!Flags.isFlagSet(this._layerMask, potential.physicsLayer.value))
                     continue;
 
+                // 如果设置了要忽略的碰撞器并且该碰撞器是被忽略的，则跳过它
                 if (this._ignoredColliders && this._ignoredColliders.has(potential)) {
                     continue;
                 }
 
-                // TODO: rayIntersects的性能够吗?需要测试它。Collisions.rectToLine可能更快
-                // TODO: 如果边界检查返回更多数据，我们就不需要为BoxCollider检查做任何事情
-                // 在做形状测试之前先做一个边界检查
+                // TODO: Collisions.rectToLine方法可能会更快一些，因为它没有涉及到浮点数除法和平方根计算，而且更简单
+                // 但是，rayIntersects方法也很快，并且在实际情况下可能更适合用于特定的应用程序
+                // 先进行一个边界检查
                 const colliderBounds = potential.bounds;
                 const res = colliderBounds.rayIntersects(this._ray);
-                if (res.intersected && res.distance <= 1) {
+                if (res.intersected && res.distance <= 1) { // 只有当该碰撞器与射线相交且交点在射线长度范围内才进一步进行形状检测
                     let tempHit = new Out<RaycastHit>(this._tempHit);
+
+                    // 调用形状的方法，检查该碰撞器是否与射线相交，并将结果保存在tempHit中
                     if (potential.shape.collidesWithLine(this._ray.start, this._ray.end, tempHit)) {
-                        // 检查一下，我们应该排除这些射线，射线cast是否在碰撞器中开始
+                        // 如果碰撞器包含射线起点，而且不允许射线起点在碰撞器中启动检测，那么跳过该碰撞器
                         if (!Physics.raycastsStartInColliders && potential.shape.containsPoint(this._ray.start))
                             continue;
 
-                        // TODO: 确保碰撞点在当前单元格中，如果它没有保存它以供以后计算
-
+                        // 将碰撞信息添加到列表中
                         tempHit.value.collider = potential;
                         this._cellHits.push(tempHit.value);
                     }

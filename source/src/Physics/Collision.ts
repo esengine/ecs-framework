@@ -125,46 +125,75 @@ module es {
             return false;
         }
 
-        public static rectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2) {
+        /**
+         * 检查矩形和线段之间是否相交
+         * @param rect - 要检查的矩形
+         * @param lineFrom - 线段起点
+         * @param lineTo - 线段终点
+         * @returns 如果相交返回 true，否则返回 false
+         */
+        public static rectToLine(rect: Rectangle, lineFrom: Vector2, lineTo: Vector2): boolean {
+            // 获取起点和终点所在矩形的位置
             const fromSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineFrom);
             const toSector = this.getSector(rect.x, rect.y, rect.width, rect.height, lineTo);
 
+            // 起点或终点位于矩形内部
             if (fromSector == PointSectors.center || toSector == PointSectors.center) {
                 return true;
-            } else if ((fromSector & toSector) != 0) {
+            }
+
+            // 起点和终点都在矩形外部的同一区域
+            if ((fromSector & toSector) != 0) {
                 return false;
-            } else {
-                const both = fromSector | toSector;
-                // 线对边进行检查
-                let edgeFrom: Vector2;
-                let edgeTo: Vector2;
+            }
 
-                if ((both & PointSectors.top) != 0) {
-                    edgeFrom = new Vector2(rect.x, rect.y);
-                    edgeTo = new Vector2(rect.x + rect.width, rect.y);
-                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
-                        return true;
+            // 到这里说明起点和终点分别在矩形的两个不同区域，需要检查线段是否与矩形的边相交
+
+            // 枚举起点和终点所在区域
+            const both = fromSector | toSector;
+
+            // 逐条检查矩形的四条边是否与线段相交
+            if ((both & PointSectors.top) != 0) {
+                if (this.lineToLine(
+                    new Vector2(rect.x, rect.y),
+                    new Vector2(rect.x + rect.width, rect.y),
+                    lineFrom,
+                    lineTo
+                )) {
+                    return true;
                 }
+            }
 
-                if ((both & PointSectors.bottom) != 0) {
-                    edgeFrom = new Vector2(rect.x, rect.y + rect.height);
-                    edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
-                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
-                        return true;
+            if ((both & PointSectors.bottom) != 0) {
+                if (this.lineToLine(
+                    new Vector2(rect.x, rect.y + rect.height),
+                    new Vector2(rect.x + rect.width, rect.y + rect.height),
+                    lineFrom,
+                    lineTo
+                )) {
+                    return true;
                 }
+            }
 
-                if ((both & PointSectors.left) != 0) {
-                    edgeFrom = new Vector2(rect.x, rect.y);
-                    edgeTo = new Vector2(rect.x, rect.y + rect.height);
-                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
-                        return true;
+            if ((both & PointSectors.left) != 0) {
+                if (this.lineToLine(
+                    new Vector2(rect.x, rect.y),
+                    new Vector2(rect.x, rect.y + rect.height),
+                    lineFrom,
+                    lineTo
+                )) {
+                    return true;
                 }
+            }
 
-                if ((both & PointSectors.right) != 0) {
-                    edgeFrom = new Vector2(rect.x + rect.width, rect.y);
-                    edgeTo = new Vector2(rect.x + rect.width, rect.y + rect.height);
-                    if (this.lineToLine(edgeFrom, edgeTo, lineFrom, lineTo))
-                        return true;
+            if ((both & PointSectors.right) != 0) {
+                if (this.lineToLine(
+                    new Vector2(rect.x + rect.width, rect.y),
+                    new Vector2(rect.x + rect.width, rect.y + rect.height),
+                    lineFrom,
+                    lineTo
+                )) {
+                    return true;
                 }
             }
 

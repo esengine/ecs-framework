@@ -1,7 +1,7 @@
 ecs-framework 的目标是成为功能强大的框架。它为您构建游戏提供了坚实的基础。它包括的许多功能包括：
 
 - 完整的场景/实体/组件系统
-- SpatialHash用于超快速的广相物理学查找。您永远不会看到它，因为它在幕后起作用，但是您仍然会喜欢它，因为它可以通过射线广播或重叠检查迅速找到您附近的所有事物。
+- SpatialHash是一种空间散列数据结构，用于加速2D物理引擎的碰撞检测，它能够将物体分割为多个小区域并快速查询每个区域内包含的物体，从而大幅度提高碰撞检测的效率。
 - AABB，圆和多边形碰撞/触发检测
 - 高效的协程，可在多个帧或动画定时中分解大型任务（Core.startCoroutine）
 - 通过Astar和广度优先搜索提供寻路支持，以查找图块地图或您自己的自定义格式 ( 参见 https://github.com/esengine/ecs-astar )
@@ -24,51 +24,83 @@ ecs-framework 的目标是成为功能强大的框架。它为您构建游戏提
 
 
 ## Scene/Entity/Component
-框架的大部分围绕着实体组件系统（ECS）。ECS与您可能使用过的任何其他ECS均不同，所以我为您再以下详细介绍。
+Scene表示游戏场景，是所有实体和组件的容器；Entity表示游戏场景中的实体，是组件的容器；Component表示游戏实体中的组件，包含实体的具体行为逻辑。
 
 ### Scene
-ECS的根源。可以将场景视为游戏的不同部分，在适当的时间调用它们的方法。您也可以使用场景通过findEntity和findEntitiesByTag方法定位实体。
+这是一个ECS（Entity-Component-System）框架的场景类，用于管理游戏中的实体和处理器。它具有以下特点：
 
-场景可以包含一种称为场景组件的特殊类型的组件。 SceneComponent通过add / get / removeSceneComponent方法进行管理。可以将场景组件视为简化组件。它包含少量可重写的生命周期方法（onEnabled / onDisabled / update / onRemovedFromScene）。当您需要一个位于场景级别但不需要实体容器的对象时，可以使用这些对象。 
+- 维护了一个实体列表和一个实体处理器列表，以便在游戏中轻松添加、更新和删除实体。
+- 具有实体、组件和处理器的基本结构，可帮助您组织代码并实现分离的关注点。
+- 可以添加和删除场景组件，这是一个特殊类型的组件，可用于实现场景范围的逻辑。
+- 通过使用实体处理器，可以轻松地处理实体的更新和渲染。
+- 可以搜索场景中的实体、组件和处理器，并根据需要添加或删除它们。
+- 可以为实体分配唯一的标识符，以便在处理实体时轻松地跟踪它们。
 
 ### Entity
-将实体添加到场景中/从场景中删除，并由场景进行管理。 您可以子类化Entity，也可以只创建一个Entity实例，然后向其中添加任何必需的组件（通过addComponent，然后通过getComponent检索）。 在实体的最基本层次上，可以将其视为组件的容器。 实体具有一系列在整个生命周期中的不同时间被场景调用的方法。
+Entity 是ECS中的一个基础概念，它代表了游戏中的实体。每个 Entity 都有唯一的 ID 和名称，可以在一个 Scene 中被创建、添加、删除和管理。
 
-实体生命周期方法： 
-- onAddedToScene：在将所有未决的实体更改提交后将实体添加到场景中时调用
-- onRemovedFromScene：当实体从场景中移除时调用
-- update：只要启用了实体，就会每帧调用
+在一个 Entity 中，可以添加多个 Component 来实现不同的功能。例如，Transform Component 用来表示实体的位置、旋转和缩放等变换属性，其他自定义的 Component 则可以实现各种具体的游戏逻辑。
 
-实体上的一些关键/重要属性如下： 
+在 Entity 中，可以通过以下方法来管理 Component：
 
-- updateOrder：控制实体的顺序。 这会影响在每个实体上调用更新的顺序以及标签列表的顺序。
-- tag：随便使用它。 以后可以使用它在场景中查询具有特定标签（Scene.findEntitiesByTag）的所有实体。
-- updateInterval：指定应多久调用一次此Entities更新方法。 1表示每帧，2表示每两帧，依此类推 
+- createComponent(componentType: new (...args) => T): T 用来创建并返回一个指定类型的 Component 实例。
+- addComponent<T extends Component>(component: T): T 用来添加一个已有的 Component 实例。
+- getComponent<T extends Component>(type: new (...args) => T): T 用来获取指定类型的 Component 实例。
+- getComponentInScene<T extends Component>(type: new (...args) => T): T 用来获取指定类型的 Component 实例，但会在整个场景中搜索。
+- tryGetComponent<T extends Component>(type: new (...args) => T, outComponent: Ref<T>): boolean 用来尝试获取指定类型的 Component 实例，并将结果存储在传入的 outComponent 参数中。
+- hasComponent<T extends Component>(type: new (...args) => T): boolean 用来检查 Entity 是否有指定类型的 Component 实例。
+- getOrCreateComponent<T extends Component>(type: new (...args) => T): T 如果 Entity 没有指定类型的 Component 实例，将会创建一个并返回。
+此外，还可以通过 removeComponent() 方法来移除一个指定的 Component 实例，或者 removeAllComponents() 方法来移除 Entity 中的所有 Component 实例。
+
+最后，在 Entity 中还可以通过 Tween 类来实现各种动画效果，例如 tweenPositionTo()、tweenScaleTo() 和 tweenRotationDegreesTo() 等方法。
+
+以下是Entity类中一些关键和重要的属性：
+
+- scene：实体所属的场景对象。
+- name：实体的名称。
+- id：实体的唯一标识符。
+- transform：实体的变换组件。
+- components：实体的组件列表。
+- updateInterval：实体更新间隔，用于控制实体的更新频率。
+- componentBits：用于标记实体拥有哪些组件。
+这些属性是Entity类中非常重要的，它们可以用来操作和控制实体的行为和状态。其中，transform和components属性是实体最为关键的组成部分，前者用于操作实体的位置、旋转和缩放等变换信息，后者用于添加、删除、查询和更新实体的组件信息。通过这些属性，我们可以非常方便地构建出自己的游戏对象，并实现一些基本的功能，如移动、碰撞、动画、音效等。
 
 ### Component
-组件添加到实体并由实体管理。 它们构成了您游戏的重点，并且基本上是可重用的代码块，这些代码决定了实体的行为方式。
+这是一个用于构建实体组件系统的基本组件类，所有其他组件都应该从这个抽象类派生。每个组件都可以与一个实体相关联，可以通过实体来访问其它组件。
 
-组件生命周期方法： 
+重要属性：
 
-- initialize：在创建组件并分配Entity字段但在onAddedToEntity之前调用
-- onAddedToEntity：在将所有未决组件更改提交后将组件添加到实体时调用
-- onRemovedFromEntity：当组件从其实体中移除时调用。 在这里进行所有清理。
-- onEntityPositionChanged：在实体位置更改时调用。 这使组件可以知道它们是由于父实体移动而移动的。
-- update：只要启用了实体和组件并且组件实现IUpdatable，就会每帧调用
-- onEnabled：在启用父实体或组件时调用
-- onDisabled：在禁用父实体或组件时调用 
+- id: 组件的唯一标识符。
+- entity: 附加此组件的实体。
+重要方法：
+
+- addComponent<T extends Component>(component: T): T：将指定的组件添加到此组件所在的实体中。
+- getComponent<T extends Component>(type: new (...args: any[]) => T): T：获取指定类型的组件。
+- getComponents(typeName: any, componentList?: any[]): any[]：获取指定类型的组件数组。
+- hasComponent(type: new (...args: any[]) => Component): boolean：判断实体是否包含指定类型的组件。
+- removeComponent(component?: Component): void：从此组件所在的实体中删除指定的组件，如果未指定组件，则删除此组件本身。
+此外，组件还具有一些生命周期方法，例如 initialize()、onAddedToEntity()、onRemovedFromEntity()、onEntityTransformChanged()、onEnabled()、onDisabled() 等，这些方法可以根据需要在派生类中进行重写，以便在实体上添加或移除组件时执行相应的操作。
 
 
 ## Debug
-Debug类提供日志记录。 Insist类提供各种断言条件。 您可以在整个代码中自由使用它们。 
+这是一个静态类 Debug，它包含了一些方法用于打印调试信息。其中包含的方法如下：
+
+- warnIf(condition: boolean, format: string, ...args: any[]): 如果 condition 为 true，则打印警告信息。
+- warn(format: string, ...args: any[]): 打印警告信息。
+- error(format: string, ...args: any[]): 打印错误信息。
+- log(type: LogType, format: string, ...args: any[]): 打印指定类型的信息，可选的类型有 error、warn、log、info 和 trace。
+该类的优点是它提供了一种统一的调试信息输出方式，可以帮助开发者更方便地输出调试信息，以便在调试时更快地定位问题。缺点是它的功能比较单一，只能输出调试信息，不能对调试信息进行更加复杂的处理。
 
 ## Flags
-您是否喜欢将大量数据打包为单个number的功能，但讨厌处理该数据的语法？ Flags类可以为您提供帮助。 它包括用于处理number的辅助方法，以检查是否设置了位以及设置/取消设置了它们。 处理Collider.physicsLayer非常方便。 
+这是一个静态工具类 Flags，提供了一些位标志操作的方法：
 
-### 示例地址
-
-#### [laya-demo](https://github.com/esengine/ecs-laya-demo)
-#### [egret-demo](https://github.com/esengine/ecs-egret-demo)
+- isFlagSet：检查位标志是否已在数值中设置（该标志未移位）
+- isUnshiftedFlagSet：检查位标志是否在数值中设置（该标志已移位）
+- setFlagExclusive：设置数值标志位，移除所有已经设置的标志
+- setFlag：设置标志位
+- unsetFlag：取消标志位
+- invertFlags：反转数值集合位
+- binaryStringRepresentation：打印 number 的二进制表示，方便调试 number 标志。
 
 ### 如何参与项目
 #### Node.js版本
@@ -78,9 +110,6 @@ v10.20.1
 2. 安装package包: `npm install`
 3. 打包成js: `gulp build`
 > 如遇到gulp未找到则先执行 `npm install gulp -g`
-
-### 渲染集成框架
-#### [cocos-framework](https://github.com/esengine/cocos-framework)
 
 ## 扩展库
 
