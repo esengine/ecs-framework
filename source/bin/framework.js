@@ -1,13 +1,14 @@
 "use strict";
-var __values = (this && this.__values) || function (o) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
     if (m) return m.call(o);
-    return {
+    if (o && typeof o.length === "number") return {
         next: function () {
             if (o && i >= o.length) o = void 0;
             return { value: o && o[i++], done: !o };
         }
     };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var __read = (this && this.__read) || function (o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
@@ -25,17 +26,22 @@ var __read = (this && this.__read) || function (o, n) {
     }
     return ar;
 };
-var __spread = (this && this.__spread) || function () {
-    for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
-    return ar;
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
             if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
             if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
@@ -57,10 +63,15 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -102,7 +113,7 @@ var es;
             get: function () {
                 return this._instance;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Core, "scene", {
@@ -129,7 +140,7 @@ var es;
                     this._instance._nextScene = value;
                 }
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -238,8 +249,8 @@ var es;
          * @param currentTime 当前时间戳，单位为毫秒，默认值为-1。
          */
         Core.prototype.update = function (currentTime) {
-            if (currentTime === void 0) { currentTime = -1; }
             var e_1, _a;
+            if (currentTime === void 0) { currentTime = -1; }
             // 如果引擎处于暂停状态，则直接返回，不做任何操作
             if (Core.paused) {
                 return;
@@ -366,19 +377,19 @@ var es;
             }
             switch (type) {
                 case LogType.error:
-                    console.error(type + ": " + es.StringUtils.format(format, args));
+                    console.error("".concat(type, ": ").concat(es.StringUtils.format(format, args)));
                     break;
                 case LogType.warn:
-                    console.warn(type + ": " + es.StringUtils.format(format, args));
+                    console.warn("".concat(type, ": ").concat(es.StringUtils.format(format, args)));
                     break;
                 case LogType.log:
-                    console.log(type + ": " + es.StringUtils.format(format, args));
+                    console.log("".concat(type, ": ").concat(es.StringUtils.format(format, args)));
                     break;
                 case LogType.info:
-                    console.info(type + ": " + es.StringUtils.format(format, args));
+                    console.info("".concat(type, ": ").concat(es.StringUtils.format(format, args)));
                     break;
                 case LogType.trace:
-                    console.trace(type + ": " + es.StringUtils.format(format, args));
+                    console.trace("".concat(type, ": ").concat(es.StringUtils.format(format, args)));
                     break;
                 default:
                     throw new Error('argument out of range');
@@ -536,7 +547,7 @@ var es;
             get: function () {
                 return this.entity.transform;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Component.prototype, "enabled", {
@@ -553,7 +564,7 @@ var es;
             set: function (value) {
                 this.setEnabled(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Component.prototype, "updateOrder", {
@@ -565,7 +576,7 @@ var es;
             set: function (value) {
                 this.setUpdateOrder(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -748,7 +759,7 @@ var es;
             get: function () {
                 return this._isDestroyed;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "tag", {
@@ -765,7 +776,7 @@ var es;
             set: function (value) {
                 this.setTag(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "enabled", {
@@ -782,7 +793,7 @@ var es;
             set: function (value) {
                 this.setEnabled(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "updateOrder", {
@@ -799,7 +810,7 @@ var es;
             set: function (value) {
                 this.setUpdateOrder(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "parent", {
@@ -809,14 +820,14 @@ var es;
             set: function (value) {
                 this.transform.setParent(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "childCount", {
             get: function () {
                 return this.transform.childCount;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "position", {
@@ -826,7 +837,7 @@ var es;
             set: function (value) {
                 this.transform.setPosition(value.x, value.y);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "localPosition", {
@@ -836,7 +847,7 @@ var es;
             set: function (value) {
                 this.transform.setLocalPosition(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "rotation", {
@@ -846,7 +857,7 @@ var es;
             set: function (value) {
                 this.transform.setRotation(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "rotationDegrees", {
@@ -856,7 +867,7 @@ var es;
             set: function (value) {
                 this.transform.setRotationDegrees(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "localRotation", {
@@ -866,7 +877,7 @@ var es;
             set: function (value) {
                 this.transform.setLocalRotation(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "localRotationDegrees", {
@@ -876,7 +887,7 @@ var es;
             set: function (value) {
                 this.transform.setLocalRotationDegrees(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "scale", {
@@ -886,7 +897,7 @@ var es;
             set: function (value) {
                 this.transform.setScale(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "localScale", {
@@ -896,28 +907,28 @@ var es;
             set: function (value) {
                 this.transform.setLocalScale(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "worldInverseTransform", {
             get: function () {
                 return this.transform.worldInverseTransform;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "localToWorldTransform", {
             get: function () {
                 return this.transform.localToWorldTransform;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Entity.prototype, "worldToLocalTransform", {
             get: function () {
                 return this.transform.worldToLocalTransform;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Entity.prototype.onTransformChanged = function (comp) {
@@ -1227,7 +1238,7 @@ var es;
             return this.compareTo(other) == 0;
         };
         Entity.prototype.toString = function () {
-            return "[Entity: name: " + this.name + ", tag: " + this.tag + ", enabled: " + this.enabled + ", depth: " + this.updateOrder + "]";
+            return "[Entity: name: ".concat(this.name, ", tag: ").concat(this.tag, ", enabled: ").concat(this.enabled, ", depth: ").concat(this.updateOrder, "]");
         };
         Entity.entityComparer = new EntityComparer();
         return Entity;
@@ -1255,56 +1266,56 @@ var es;
             get: function () {
                 return new Vector2(0, 0);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Vector2, "one", {
             get: function () {
                 return new Vector2(1, 1);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Vector2, "unitX", {
             get: function () {
                 return new Vector2(1, 0);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Vector2, "unitY", {
             get: function () {
                 return new Vector2(0, 1);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Vector2, "up", {
             get: function () {
                 return new Vector2(0, -1);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Vector2, "down", {
             get: function () {
                 return new Vector2(0, 1);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Vector2, "left", {
             get: function () {
                 return new Vector2(-1, 0);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Vector2, "right", {
             get: function () {
                 return new Vector2(1, 0);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -1806,7 +1817,7 @@ var es;
          */
         Scene.prototype.removeSceneComponent = function (component) {
             var sceneComponentList = new es.List(this._sceneComponents);
-            es.Insist.isTrue(sceneComponentList.contains(component), "SceneComponent" + component + "\u4E0D\u5728SceneComponents\u5217\u8868\u4E2D!");
+            es.Insist.isTrue(sceneComponentList.contains(component), "SceneComponent".concat(component, "\u4E0D\u5728SceneComponents\u5217\u8868\u4E2D!"));
             sceneComponentList.remove(component);
             component.onRemovedFromScene();
         };
@@ -1823,7 +1834,7 @@ var es;
          * @param entity
          */
         Scene.prototype.addEntity = function (entity) {
-            es.Insist.isFalse(new es.List(this.entities.buffer).contains(entity), "\u60A8\u8BD5\u56FE\u5C06\u540C\u4E00\u5B9E\u4F53\u6DFB\u52A0\u5230\u573A\u666F\u4E24\u6B21: " + entity);
+            es.Insist.isFalse(new es.List(this.entities.buffer).contains(entity), "\u60A8\u8BD5\u56FE\u5C06\u540C\u4E00\u5B9E\u4F53\u6DFB\u52A0\u5230\u573A\u666F\u4E24\u6B21: ".concat(entity));
             this.entities.add(entity);
             entity.scene = this;
             for (var i = 0; i < entity.transform.childCount; i++)
@@ -1883,12 +1894,12 @@ var es;
          * @returns
          */
         Scene.prototype.findEntitiesOfComponent = function () {
+            var _a;
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var _a;
-            return (_a = this.entities).findEntitiesOfComponent.apply(_a, __spread(types));
+            return (_a = this.entities).findEntitiesOfComponent.apply(_a, __spreadArray([], __read(types), false));
         };
         /**
          * 在场景中添加一个EntitySystem处理器
@@ -1947,7 +1958,7 @@ var es;
                 }
                 return true;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         SceneTransition.prototype.LoadNextScene = function () {
@@ -2062,7 +2073,7 @@ var es;
             get: function () {
                 return this._children.length;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "rotationDegrees", {
@@ -2079,7 +2090,7 @@ var es;
             set: function (value) {
                 this.setRotation(es.MathHelper.toRadians(value));
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "localRotationDegrees", {
@@ -2096,7 +2107,7 @@ var es;
             set: function (value) {
                 this.localRotation = es.MathHelper.toRadians(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "localToWorldTransform", {
@@ -2104,7 +2115,7 @@ var es;
                 this.updateTransform();
                 return this._worldTransform;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "parent", {
@@ -2121,7 +2132,7 @@ var es;
             set: function (value) {
                 this.setParent(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "worldToLocalTransform", {
@@ -2138,7 +2149,7 @@ var es;
                 }
                 return this._worldToLocalTransform;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "worldInverseTransform", {
@@ -2150,7 +2161,7 @@ var es;
                 }
                 return this._worldInverseTransform;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "position", {
@@ -2178,7 +2189,7 @@ var es;
             set: function (value) {
                 this.setPosition(value.x, value.y);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "scale", {
@@ -2196,7 +2207,7 @@ var es;
             set: function (value) {
                 this.setScale(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "rotation", {
@@ -2214,7 +2225,7 @@ var es;
             set: function (value) {
                 this.setRotation(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "localPosition", {
@@ -2232,7 +2243,7 @@ var es;
             set: function (value) {
                 this.setLocalPosition(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "localScale", {
@@ -2250,7 +2261,7 @@ var es;
             set: function (value) {
                 this.setLocalScale(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Transform.prototype, "localRotation", {
@@ -2268,7 +2279,7 @@ var es;
             set: function (value) {
                 this.setLocalRotation(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -2482,7 +2493,7 @@ var es;
             this.setDirty(DirtyType.scaleDirty);
         };
         Transform.prototype.toString = function () {
-            return "[Transform: parent: " + this.parent + ", position: " + this.position + ", rotation: " + this.rotation + ",\n                scale: " + this.scale + ", localPosition: " + this._localPosition + ", localRotation: " + this._localRotation + ",\n                localScale: " + this._localScale + "]";
+            return "[Transform: parent: ".concat(this.parent, ", position: ").concat(this.position, ", rotation: ").concat(this.rotation, ",\n                scale: ").concat(this.scale, ", localPosition: ").concat(this._localPosition, ", localRotation: ").concat(this._localRotation, ",\n                localScale: ").concat(this._localScale, "]");
         };
         return Transform;
     }());
@@ -2528,7 +2539,7 @@ var es;
             set: function (value) {
                 this.setEnabled(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -2618,7 +2629,7 @@ var es;
             set: function (value) {
                 this.setMass(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(ArcadeRigidbody.prototype, "elasticity", {
@@ -2628,14 +2639,14 @@ var es;
             get: function () {
                 return this._elasticity;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(ArcadeRigidbody.prototype, "elasticiy", {
             set: function (value) {
                 this.setElasticity(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(ArcadeRigidbody.prototype, "friction", {
@@ -2648,7 +2659,7 @@ var es;
             set: function (value) {
                 this.setFriction(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(ArcadeRigidbody.prototype, "glue", {
@@ -2661,7 +2672,7 @@ var es;
             set: function (value) {
                 this.setGlue(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(ArcadeRigidbody.prototype, "isImmovable", {
@@ -2671,7 +2682,7 @@ var es;
             get: function () {
                 return this._mass < 0.0001;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -2868,7 +2879,7 @@ var es;
             this.slopeAngle = 0;
         };
         CharacterCollisionState2D.prototype.toString = function () {
-            return "[CharacterCollisionState2D] r: " + this.right + ", l: " + this.left + ", a: " + this.above + ", b: " + this.below + ", movingDownSlope: " + this.movingDownSlope + ", angle: " + this.slopeAngle + ", wasGroundedLastFrame: " + this.wasGroundedLastFrame + ", becameGroundedThisFrame: " + this.becameGroundedThisFrame;
+            return "[CharacterCollisionState2D] r: ".concat(this.right, ", l: ").concat(this.left, ", a: ").concat(this.above, ", b: ").concat(this.below, ", movingDownSlope: ").concat(this.movingDownSlope, ", angle: ").concat(this.slopeAngle, ", wasGroundedLastFrame: ").concat(this.wasGroundedLastFrame, ", becameGroundedThisFrame: ").concat(this.becameGroundedThisFrame);
         };
         return CharacterCollisionState2D;
     }());
@@ -2958,21 +2969,21 @@ var es;
                 this._skinWidth = value;
                 this.recalculateDistanceBetweenRays();
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CharacterController.prototype, "isGrounded", {
             get: function () {
                 return this.collisionState.below;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(CharacterController.prototype, "raycastHitsThisFrame", {
             get: function () {
                 return this._raycastHitsThisFrame;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         CharacterController.prototype.onTriggerEnter = function (other, local) {
@@ -3393,7 +3404,7 @@ var es;
     var ProjectileMover = /** @class */ (function (_super) {
         __extends(ProjectileMover, _super);
         function ProjectileMover() {
-            var _this = _super !== null && _super.apply(this, arguments) || this;
+            var _this = _super.apply(this, __spreadArray([], __read(arguments), false)) || this;
             _this._tempTriggerList = [];
             return _this;
         }
@@ -3454,7 +3465,7 @@ var es;
     var Collider = /** @class */ (function (_super) {
         __extends(Collider, _super);
         function Collider() {
-            var _this = _super !== null && _super.apply(this, arguments) || this;
+            var _this = _super.apply(this, __spreadArray([], __read(arguments), false)) || this;
             _this.castSortOrder = 0;
             /**
              * 如果这个碰撞器是一个触发器，它将不会引起碰撞，但它仍然会触发事件
@@ -3490,7 +3501,7 @@ var es;
             get: function () {
                 return es.Vector2.add(this.entity.transform.position, this._localOffset);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Collider.prototype, "rotation", {
@@ -3502,7 +3513,7 @@ var es;
                     return this.entity.transform.rotation;
                 return 0;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Collider.prototype, "bounds", {
@@ -3513,7 +3524,7 @@ var es;
                 }
                 return this.shape.bounds;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Collider.prototype, "localOffset", {
@@ -3532,7 +3543,7 @@ var es;
             set: function (value) {
                 this.setLocalOffset(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -3738,7 +3749,7 @@ var es;
             set: function (value) {
                 this.setWidth(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(BoxCollider.prototype, "height", {
@@ -3748,7 +3759,7 @@ var es;
             set: function (value) {
                 this.setHeight(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -3797,7 +3808,7 @@ var es;
             }
         };
         BoxCollider.prototype.toString = function () {
-            return "[BoxCollider: bounds: " + this.bounds + "]";
+            return "[BoxCollider: bounds: ".concat(this.bounds, "]");
         };
         return BoxCollider;
     }(es.Collider));
@@ -3827,7 +3838,7 @@ var es;
             set: function (value) {
                 this.setRadius(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -3846,7 +3857,7 @@ var es;
             return this;
         };
         CircleCollider.prototype.toString = function () {
-            return "[CircleCollider: bounds: " + this.bounds + ", radius: " + this.shape.radius + "]";
+            return "[CircleCollider: bounds: ".concat(this.bounds, ", radius: ").concat(this.shape.radius, "]");
         };
         return CircleCollider;
     }(es.Collider));
@@ -4009,7 +4020,7 @@ var es;
             get: function () {
                 return this._useTime;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EntitySystem.prototype, "updateOrder", {
@@ -4022,7 +4033,7 @@ var es;
             set: function (value) {
                 this.setUpdateOrder(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EntitySystem.prototype, "scene", {
@@ -4036,14 +4047,14 @@ var es;
                 this._scene = value;
                 this._entities = [];
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EntitySystem.prototype, "matcher", {
             get: function () {
                 return this._matcher;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -4508,14 +4519,14 @@ var es;
             get: function () {
                 return this._components.length;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(ComponentList.prototype, "buffer", {
             get: function () {
                 return this._components;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         ComponentList.prototype.markEntityListUnsorted = function () {
@@ -5020,14 +5031,14 @@ var es;
             get: function () {
                 return this._entities.length;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EntityList.prototype, "buffer", {
             get: function () {
                 return this._entities;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         EntityList.prototype.markEntityListUnsorted = function () {
@@ -5439,11 +5450,11 @@ var es;
          * @returns 返回拥有指定类型组件的所有实体
          */
         EntityList.prototype.findEntitiesOfComponent = function () {
+            var e_19, _a, e_20, _b, e_21, _c, e_22, _d;
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var e_19, _a, e_20, _b, e_21, _c, e_22, _d;
             var entities = [];
             try {
                 // 遍历所有已存在的实体
@@ -5459,7 +5470,7 @@ var es;
                         // 对于每个指定的组件类型，检查实体是否具有该组件
                         var meet = true;
                         try {
-                            for (var types_1 = __values(types), types_1_1 = types_1.next(); !types_1_1.done; types_1_1 = types_1.next()) {
+                            for (var types_1 = (e_20 = void 0, __values(types)), types_1_1 = types_1.next(); !types_1_1.done; types_1_1 = types_1.next()) {
                                 var type = types_1_1.value;
                                 var hasComp = entity.hasComponent(type);
                                 if (!hasComp) {
@@ -5500,7 +5511,7 @@ var es;
                         }
                         var meet = true;
                         try {
-                            for (var types_2 = __values(types), types_2_1 = types_2.next(); !types_2_1.done; types_2_1 = types_2.next()) {
+                            for (var types_2 = (e_22 = void 0, __values(types)), types_2_1 = types_2.next(); !types_2_1.done; types_2_1 = types_2.next()) {
                                 var type = types_2_1.value;
                                 var hasComp = entity.hasComponent(type);
                                 if (!hasComp) {
@@ -5547,7 +5558,7 @@ var es;
             get: function () {
                 return this._processors;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(EntityProcessorList.prototype, "count", {
@@ -5555,7 +5566,7 @@ var es;
             get: function () {
                 return this._processors.length;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -5876,12 +5887,12 @@ var es;
         * @param types 所有包含的组件类型列表
         */
         Matcher.prototype.all = function () {
+            var _a;
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var _a;
-            (_a = this.allSet).push.apply(_a, __spread(types));
+            (_a = this.allSet).push.apply(_a, __spreadArray([], __read(types), false));
             return this;
         };
         /**
@@ -5889,12 +5900,12 @@ var es;
          * @param types 排除包含的组件类型列表
          */
         Matcher.prototype.exclude = function () {
+            var _a;
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var _a;
-            (_a = this.exclusionSet).push.apply(_a, __spread(types));
+            (_a = this.exclusionSet).push.apply(_a, __spreadArray([], __read(types), false));
             return this;
         };
         /**
@@ -5902,12 +5913,12 @@ var es;
          * @param types 至少包含其中之一的组件类型列表
          */
         Matcher.prototype.one = function () {
+            var _a;
             var types = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 types[_i] = arguments[_i];
             }
-            var _a;
-            (_a = this.oneSet).push.apply(_a, __spread(types));
+            (_a = this.oneSet).push.apply(_a, __spreadArray([], __read(types), false));
             return this;
         };
         return Matcher;
@@ -7622,7 +7633,7 @@ var es;
             get: function () {
                 return this.identity;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -7746,7 +7757,7 @@ var es;
             get: function () {
                 return new Matrix2D().setIdentity();
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Matrix2D.prototype.setIdentity = function () {
@@ -7772,7 +7783,7 @@ var es;
                 this.m31 = value.x;
                 this.m32 = value.y;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Matrix2D.prototype, "rotation", {
@@ -7790,7 +7801,7 @@ var es;
                 this.m21 = -val2;
                 this.m22 = val1;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Matrix2D.prototype, "rotationDegrees", {
@@ -7803,7 +7814,7 @@ var es;
             set: function (value) {
                 this.rotation = es.MathHelper.toRadians(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Matrix2D.prototype, "scale", {
@@ -7817,7 +7828,7 @@ var es;
                 this.m11 = value.x;
                 this.m22 = value.y;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -8020,7 +8031,7 @@ var es;
             return matrix;
         };
         Matrix2D.prototype.toString = function () {
-            return "{m11:" + this.m11 + " m12:" + this.m12 + " m21:" + this.m21 + " m22:" + this.m22 + " m31:" + this.m31 + " m32:" + this.m32 + "}";
+            return "{m11:".concat(this.m11, " m12:").concat(this.m12, " m21:").concat(this.m21, " m22:").concat(this.m22, " m31:").concat(this.m31, " m32:").concat(this.m32, "}");
         };
         return Matrix2D;
     }());
@@ -8169,7 +8180,7 @@ var es;
             get: function () {
                 return new Rectangle();
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Rectangle, "maxRect", {
@@ -8179,7 +8190,7 @@ var es;
             get: function () {
                 return new Rectangle(Number.MIN_VALUE / 2, Number.MIN_VALUE / 2, Number.MAX_VALUE, Number.MAX_VALUE);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "left", {
@@ -8189,7 +8200,7 @@ var es;
             get: function () {
                 return this.x;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "right", {
@@ -8199,7 +8210,7 @@ var es;
             get: function () {
                 return this.x + this.width;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "top", {
@@ -8209,7 +8220,7 @@ var es;
             get: function () {
                 return this.y;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "bottom", {
@@ -8219,7 +8230,7 @@ var es;
             get: function () {
                 return this.y + this.height;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "max", {
@@ -8229,7 +8240,7 @@ var es;
             get: function () {
                 return new es.Vector2(this.right, this.bottom);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -8247,7 +8258,7 @@ var es;
                 this.x = value.x;
                 this.y = value.y;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "size", {
@@ -8261,7 +8272,7 @@ var es;
                 this.width = value.x;
                 this.height = value.y;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Rectangle.prototype, "center", {
@@ -8272,7 +8283,7 @@ var es;
             get: function () {
                 return new es.Vector2(this.x + (this.width / 2), this.y + (this.height / 2));
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -9097,7 +9108,7 @@ var es;
             return hit;
         };
         RaycastHit.prototype.toString = function () {
-            return "[RaycastHit] fraction: " + this.fraction + ", distance: " + this.distance + ", normal: " + this.normal + ", centroid: " + this.centroid + ", point: " + this.point;
+            return "[RaycastHit] fraction: ".concat(this.fraction, ", distance: ").concat(this.distance, ", normal: ").concat(this.normal, ", centroid: ").concat(this.centroid, ", point: ").concat(this.point);
         };
         return RaycastHit;
     }());
@@ -9305,21 +9316,21 @@ var es;
             get: function () {
                 return this._start;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Ray2D.prototype, "direction", {
             get: function () {
                 return this._direction;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Ray2D.prototype, "end", {
             get: function () {
                 return this._end;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         return Ray2D;
@@ -9395,7 +9406,7 @@ var es;
                 for (var y = p1.y; y <= p2.y; y++) {
                     // 单元格应该始终存在，因为该碰撞器应该在所有查询的单元格中
                     var cell = this.cellAtPosition(x, y);
-                    es.Insist.isNotNull(cell, "\u4ECE\u4E0D\u5B58\u5728\u78B0\u649E\u5668\u7684\u5355\u5143\u683C\u4E2D\u79FB\u9664\u78B0\u649E\u5668: [" + collider + "]");
+                    es.Insist.isNotNull(cell, "\u4ECE\u4E0D\u5B58\u5728\u78B0\u649E\u5668\u7684\u5355\u5143\u683C\u4E2D\u79FB\u9664\u78B0\u649E\u5668: [".concat(collider, "]"));
                     if (cell != null) {
                         new es.List(cell).remove(collider);
                     }
@@ -9687,7 +9698,7 @@ var es;
          * @returns 唯一的字符串键
          */
         NumberDictionary.prototype.getKey = function (x, y) {
-            return x + "_" + y;
+            return "".concat(x, "_").concat(y);
         };
         /**
          * 清空字典
@@ -9830,7 +9841,7 @@ var es;
                     this.buildEdgeNormals();
                 return this._edgeNormals;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -10018,7 +10029,7 @@ var es;
                 }
                 return false;
             }
-            throw new Error("overlaps of Pologon to " + other + " are not supported");
+            throw new Error("overlaps of Pologon to ".concat(other, " are not supported"));
         };
         Polygon.prototype.collidesWithShape = function (other, result) {
             if (other instanceof Polygon) {
@@ -10031,7 +10042,7 @@ var es;
                 }
                 return false;
             }
-            throw new Error("overlaps of Polygon to " + other + " are not supported");
+            throw new Error("overlaps of Polygon to ".concat(other, " are not supported"));
         };
         Polygon.prototype.collidesWithLine = function (start, end, hit) {
             return es.ShapeCollisionsLine.lineToPoly(start, end, this, hit);
@@ -10213,7 +10224,7 @@ var es;
                 return es.Collisions.circleToCircle(this.position, this.radius, other.position, other.radius);
             if (other instanceof es.Polygon)
                 return es.ShapeCollisionsCircle.circleToPolygon(this, other, result);
-            throw new Error("overlaps of circle to " + other + " are not supported");
+            throw new Error("overlaps of circle to ".concat(other, " are not supported"));
         };
         Circle.prototype.collidesWithShape = function (other, result) {
             if (other instanceof es.Box && other.isUnrotated) {
@@ -10225,7 +10236,7 @@ var es;
             if (other instanceof es.Polygon) {
                 return es.ShapeCollisionsCircle.circleToPolygon(this, other, result);
             }
-            throw new Error("Collisions of Circle to " + other + " are not supported");
+            throw new Error("Collisions of Circle to ".concat(other, " are not supported"));
         };
         Circle.prototype.collidesWithLine = function (start, end, hit) {
             return es.ShapeCollisionsLine.lineToCircle(start, end, this, hit);
@@ -10305,7 +10316,7 @@ var es;
             this.normal = this.normal.negate();
         };
         CollisionResult.prototype.toString = function () {
-            return "[CollisionResult] normal: " + this.normal + ", minimumTranslationVector: " + this.minimumTranslationVector;
+            return "[CollisionResult] normal: ".concat(this.normal, ", minimumTranslationVector: ").concat(this.minimumTranslationVector);
         };
         return CollisionResult;
     }());
@@ -10322,7 +10333,7 @@ var es;
             get: function () {
                 return this.end.sub(this.start).normalize();
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Line.prototype.getNormal = function () {
@@ -10437,7 +10448,7 @@ var es;
             // 如果这3个比特都被设置，那么该点就在顶点区域内。
             if (m == 3) {
                 // 如果有一条或多条命中,则必须在两条边的顶点相交,并返回最佳时间。
-                console.log("m == 3. corner " + es.Time.frameCount);
+                console.log("m == 3. corner ".concat(es.Time.frameCount));
             }
             // 如果在m中只设置了一个位，那么该点就在一个面的区域。
             if ((m & (m - 1)) == 0) {
@@ -10504,7 +10515,7 @@ var es;
                     angle += 360;
                 return angle;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -10546,7 +10557,7 @@ var es;
                 }
                 return false;
             }
-            throw new Error("overlaps of Sector to " + other + " are not supported");
+            throw new Error("overlaps of Sector to ".concat(other, " are not supported"));
         };
         Sector.prototype.collidesWithShape = function (other, collisionResult) {
             if (other instanceof es.Box) {
@@ -10558,7 +10569,7 @@ var es;
             if (other instanceof es.Circle) {
                 return es.ShapeCollisionSector.sectorToCircle(this, other, collisionResult);
             }
-            throw new Error("overlaps of Polygon to " + other + " are not supported");
+            throw new Error("overlaps of Polygon to ".concat(other, " are not supported"));
         };
         Sector.prototype.collidesWithLine = function (start, end, hit) {
             var toStart = start.sub(this.center); // 线段起点到圆心的向量
@@ -11300,7 +11311,7 @@ var es;
             get: function () {
                 return this._targetType;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -12027,7 +12038,7 @@ var es;
             set: function (value) {
                 this.setEnabled(value);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -12089,7 +12100,7 @@ var es;
             get: function () {
                 return this._instance._activeTweens;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         TweenManager.prototype.update = function () {
@@ -12785,7 +12796,7 @@ var es;
             get: function () {
                 return this._points;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         AnimCurve.prototype.lerp = function (t) {
@@ -12856,17 +12867,17 @@ var es;
          * @param data 事件数据
          */
         Emitter.prototype.emit = function (eventType) {
+            var e_23, _a, _b;
             var data = [];
             for (var _i = 1; _i < arguments.length; _i++) {
                 data[_i - 1] = arguments[_i];
             }
-            var e_23, _a, _b;
             var list = this._messageTable.get(eventType);
             if (list) {
                 try {
                     for (var list_3 = __values(list), list_3_1 = list_3.next(); !list_3_1.done; list_3_1 = list_3.next()) {
                         var observer = list_3_1.value;
-                        (_b = observer.func).call.apply(_b, __spread([observer.context], data));
+                        (_b = observer.func).call.apply(_b, __spreadArray([observer.context], __read(data), false));
                     }
                 }
                 catch (e_23_1) { e_23 = { error: e_23_1 }; }
@@ -13019,18 +13030,18 @@ var es;
             }
         };
         Observable.prototype.notify = function () {
+            var _a;
             var args = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 args[_i] = arguments[_i];
             }
-            var _a;
             for (var i = this._listeners.length - 1; i >= 0; i--) {
                 var listener = this._listeners[i];
                 if (listener.caller) {
-                    (_a = listener.callback).call.apply(_a, __spread([listener.caller], args));
+                    (_a = listener.callback).call.apply(_a, __spreadArray([listener.caller], __read(args), false));
                 }
                 else {
-                    listener.callback.apply(listener, __spread(args));
+                    listener.callback.apply(listener, __spreadArray([], __read(args), false));
                 }
             }
         };
@@ -13081,17 +13092,17 @@ var es;
             this._action = action;
         };
         Command.prototype.dispatch = function () {
+            var _a;
             var args = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 args[_i] = arguments[_i];
             }
-            var _a;
             if (this._action) {
                 if (this._caller) {
-                    (_a = this._action).call.apply(_a, __spread([this._caller], args));
+                    (_a = this._action).call.apply(_a, __spreadArray([this._caller], __read(args), false));
                 }
                 else {
-                    this._action.apply(this, __spread(args));
+                    this._action.apply(this, __spreadArray([], __read(args), false));
                 }
                 this._onExec.notify();
             }
@@ -13123,7 +13134,7 @@ var es;
             get: function () {
                 return this._onValueChange;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(ValueChangeCommand.prototype, "value", {
@@ -13133,7 +13144,7 @@ var es;
             set: function (newValue) {
                 this._value = newValue;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         ValueChangeCommand.prototype.dispatch = function (value) {
@@ -13189,14 +13200,14 @@ var es;
             get: function () {
                 return new es.Vector2(this.width, this.height);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         Object.defineProperty(Screen, "center", {
             get: function () {
                 return new es.Vector2(this.width / 2, this.height / 2);
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         return Screen;
@@ -13688,7 +13699,7 @@ var es;
          * 获取自上次重置以来该秒表已完成/记录的所有片的列表，以及当前挂起的片。
          */
         Stopwatch.prototype.getCompletedAndPendingSlices = function () {
-            return __spread(this._completeSlices, [this.getPendingSlice()]);
+            return __spreadArray(__spreadArray([], __read(this._completeSlices), false), [this.getPendingSlice()], false);
         };
         /**
          * 获取关于这个秒表当前挂起的切片的详细信息。
@@ -14121,13 +14132,13 @@ var es;
             if (this.head == null) {
                 return "";
             }
-            var objString = "" + this.head.element;
+            var objString = "".concat(this.head.element);
             // 获取链表顶点的下一个结点
             var current = this.head.next;
             // 遍历链表中的所有结点
             for (var i = 1; i < this.size() && current != null; i++) {
                 // 将当前结点的元素拼接到最终要生成的字符串对象中
-                objString = objString + ", " + current.element;
+                objString = "".concat(objString, ", ").concat(current.element);
                 // 当前结点指向链表的下一个元素
                 current = current.next;
             }
@@ -14232,7 +14243,7 @@ var es;
             get: function () {
                 return this._all;
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         PairSet.prototype.has = function (pair) {
@@ -14433,7 +14444,7 @@ var es;
     var CoroutineManager = /** @class */ (function (_super) {
         __extends(CoroutineManager, _super);
         function CoroutineManager() {
-            var _this = _super !== null && _super.apply(this, arguments) || this;
+            var _this = _super.apply(this, __spreadArray([], __read(arguments), false)) || this;
             _this._unblockedCoroutines = [];
             _this._shouldRunNextFrame = [];
             return _this;
@@ -14509,7 +14520,7 @@ var es;
                     shouldRunNextFrame.push(coroutine);
                 }
             }
-            unblockedCoroutines.push.apply(unblockedCoroutines, __spread(shouldRunNextFrame));
+            unblockedCoroutines.push.apply(unblockedCoroutines, __spreadArray([], __read(shouldRunNextFrame), false));
             shouldRunNextFrame.length = 0;
             this._isInUpdate = false;
         };
@@ -15011,7 +15022,7 @@ var es;
             get: function () {
                 return (typeof (window.atob) === "function");
             },
-            enumerable: true,
+            enumerable: false,
             configurable: true
         });
         /**
@@ -15871,7 +15882,7 @@ var es;
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        return !pred.apply(void 0, __spread(args));
+        return !pred.apply(void 0, __spreadArray([], __read(args), false));
     }; };
     /**
      * 比较器助手
@@ -15926,7 +15937,7 @@ var es;
          */
         List.prototype.addRange = function (elements) {
             var _a;
-            (_a = this._elements).push.apply(_a, __spread(elements));
+            (_a = this._elements).push.apply(_a, __spreadArray([], __read(elements), false));
         };
         /**
          * 使用指定的累加器函数将数组中的所有元素聚合成一个值。
@@ -16195,7 +16206,7 @@ var es;
             // 定义一个默认的转换函数 id，用于当 selector 参数未指定时使用
             var id = function (x) { return x; };
             // 使用 map() 方法对数组元素进行转换，并使用 Math.max() 方法求得最大值
-            return Math.max.apply(Math, __spread(this._elements.map(selector || id)));
+            return Math.max.apply(Math, __spreadArray([], __read(this._elements.map(selector || id)), false));
         };
         /**
          * 返回数组中的最小值，也可以通过 selector 函数对数组元素进行转换后再求最小值
@@ -16206,7 +16217,7 @@ var es;
             // 定义一个默认的转换函数 id，用于当 selector 参数未指定时使用
             var id = function (x) { return x; };
             // 使用 map() 方法对数组元素进行转换，并使用 Math.min() 方法求得最小值
-            return Math.min.apply(Math, __spread(this._elements.map(selector || id)));
+            return Math.min.apply(Math, __spreadArray([], __read(this._elements.map(selector || id)), false));
         };
         /**
          * 根据指定的类型，筛选数组中的元素并返回一个新的数组
@@ -16765,7 +16776,7 @@ var es;
             // 然而，更有效的方法是通过所有的段，找出哪些段与最初的扫描线相交，然后对它们进行分类
             for (var pass = 0; pass < 2; pass++) {
                 try {
-                    for (var _b = __values(this._endPoints), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    for (var _b = (e_25 = void 0, __values(this._endPoints)), _c = _b.next(); !_c.done; _c = _b.next()) {
                         var p = _c.value;
                         var currentOld = VisibilityComputer._openSegments.size() == 0 ? null : VisibilityComputer._openSegments.getHead().element;
                         if (p.begin) {
@@ -17010,7 +17021,7 @@ var es;
     var TimerManager = /** @class */ (function (_super) {
         __extends(TimerManager, _super);
         function TimerManager() {
-            var _this = _super !== null && _super.apply(this, arguments) || this;
+            var _this = _super.apply(this, __spreadArray([], __read(arguments), false)) || this;
             _this._timers = [];
             return _this;
         }

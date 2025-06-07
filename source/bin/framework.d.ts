@@ -1,4 +1,4 @@
-declare module es {
+declare namespace es {
     /**
      *  全局核心类
      */
@@ -42,7 +42,7 @@ declare module es {
          * 提供对单例/游戏实例的访问
          * @constructor
          */
-        static readonly Instance: Core;
+        static get Instance(): Core;
         _frameCounterElapsedTime: number;
         _frameCounter: number;
         _totalMemory: number;
@@ -51,11 +51,12 @@ declare module es {
         /**
          * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
          */
+        static get scene(): Scene;
         /**
-        * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
-        * @param value
-        */
-        static scene: Scene;
+         * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
+         * @param value
+         */
+        static set scene(value: Scene);
         /**
          * `Core`类的静态方法，用于创建`Core`的实例。
          * @param debug {boolean} 是否为调试模式，默认为`true`
@@ -111,7 +112,7 @@ declare module es {
         protected draw(): void;
     }
 }
-declare module es {
+declare namespace es {
     enum LogType {
         error = 0,
         warn = 1,
@@ -148,7 +149,7 @@ declare module es {
         static log(type: LogType, format: string, ...args: any[]): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 我们在这里存储了各种系统的默认颜色，如对撞机调试渲染、Debug.drawText等。
      * 命名方式尽可能采用CLASS-THING，以明确它的使用位置
@@ -165,7 +166,7 @@ declare module es {
         static verletConstraintEdge: number;
     }
 }
-declare module es {
+declare namespace es {
     class Insist {
         static fail(message?: string, ...args: any[]): void;
         static isTrue(condition: boolean, message?: string, ...args: any[]): void;
@@ -176,12 +177,12 @@ declare module es {
         static areNotEqual(first: any, second: any, message: string, ...args: any[]): void;
     }
 }
-declare module es {
+declare namespace es {
     class DebugConsole {
         static Instance: DebugConsole;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 执行顺序
      *  - onAddedToEntity
@@ -204,20 +205,22 @@ declare module es {
         /**
          * 快速访问 this.entity.transform
          */
-        readonly transform: Transform;
+        get transform(): Transform;
         private _enabled;
         /**
          * 如果组件和实体都已启用，则为。当启用该组件时，将调用该组件的生命周期方法。状态的改变会导致调用onEnabled/onDisable。
          */
+        get enabled(): boolean;
         /**
-        * 如果组件和实体都已启用，则为。当启用该组件时，将调用该组件的生命周期方法。状态的改变会导致调用onEnabled/onDisable。
-        * @param value
-        */
-        enabled: boolean;
+         * 如果组件和实体都已启用，则为。当启用该组件时，将调用该组件的生命周期方法。状态的改变会导致调用onEnabled/onDisable。
+         * @param value
+         */
+        set enabled(value: boolean);
         private _updateOrder;
         /** 更新此实体上组件的顺序 */
+        get updateOrder(): number;
         /** 更新此实体上组件的顺序 */
-        updateOrder: number;
+        set updateOrder(value: number);
         /**
          * 当此组件已分配其实体，但尚未添加到实体的活动组件列表时调用。有用的东西，如物理组件，需要访问转换来修改碰撞体的属性。
          */
@@ -277,7 +280,7 @@ declare module es {
         removeComponent(component?: Component): void;
     }
 }
-declare module es {
+declare namespace es {
     class ComponentType {
         static INDEX: number;
         private index_;
@@ -288,7 +291,7 @@ declare module es {
         toString(): string;
     }
 }
-declare module es {
+declare namespace es {
     enum CoreEvents {
         /**
          * 当场景发生变化时触发
@@ -304,7 +307,7 @@ declare module es {
         renderChanged = 2
     }
 }
-declare module es {
+declare namespace es {
     class EntityComparer implements IComparer<Entity> {
         compare(self: Entity, other: Entity): number;
     }
@@ -340,47 +343,59 @@ declare module es {
         /**
          * 如果调用了destroy，那么在下一次处理实体之前这将一直为true
          */
-        readonly isDestroyed: boolean;
+        get isDestroyed(): boolean;
         private _tag;
         /**
          * 你可以随意使用。稍后可以使用它来查询场景中具有特定标记的所有实体
          */
+        get tag(): number;
         /**
-        * 你可以随意使用。稍后可以使用它来查询场景中具有特定标记的所有实体
-        * @param value
-        */
-        tag: number;
+         * 你可以随意使用。稍后可以使用它来查询场景中具有特定标记的所有实体
+         * @param value
+         */
+        set tag(value: number);
         private _enabled;
         /**
          * 启用/禁用实体。当禁用碰撞器从物理系统和组件中移除时，方法将不会被调用
          */
+        get enabled(): boolean;
         /**
-        * 启用/禁用实体。当禁用碰撞器从物理系统和组件中移除时，方法将不会被调用
-        * @param value
-        */
-        enabled: boolean;
+         * 启用/禁用实体。当禁用碰撞器从物理系统和组件中移除时，方法将不会被调用
+         * @param value
+         */
+        set enabled(value: boolean);
         private _updateOrder;
         /**
          * 更新此实体的顺序。updateOrder还用于对scene.entities上的标签列表进行排序
          */
+        get updateOrder(): number;
         /**
-        * 更新此实体的顺序。updateOrder还用于对scene.entities上的标签列表进行排序
-        * @param value
-        */
-        updateOrder: number;
-        parent: Transform;
-        readonly childCount: number;
-        position: Vector2;
-        localPosition: Vector2;
-        rotation: number;
-        rotationDegrees: number;
-        localRotation: number;
-        localRotationDegrees: number;
-        scale: Vector2;
-        localScale: Vector2;
-        readonly worldInverseTransform: Matrix2D;
-        readonly localToWorldTransform: Matrix2D;
-        readonly worldToLocalTransform: Matrix2D;
+         * 更新此实体的顺序。updateOrder还用于对scene.entities上的标签列表进行排序
+         * @param value
+         */
+        set updateOrder(value: number);
+        get parent(): Transform;
+        set parent(value: Transform);
+        get childCount(): number;
+        get position(): Vector2;
+        set position(value: Vector2);
+        get localPosition(): Vector2;
+        set localPosition(value: Vector2);
+        get rotation(): number;
+        set rotation(value: number);
+        get rotationDegrees(): number;
+        set rotationDegrees(value: number);
+        get localRotation(): number;
+        set localRotation(value: number);
+        get localRotationDegrees(): number;
+        set localRotationDegrees(value: number);
+        get scale(): Vector2;
+        set scale(value: Vector2);
+        get localScale(): Vector2;
+        set localScale(value: Vector2);
+        get worldInverseTransform(): Matrix2D;
+        get localToWorldTransform(): Matrix2D;
+        get worldToLocalTransform(): Matrix2D;
         onTransformChanged(comp: ComponentTransform): void;
         setParent(parent: Entity): any;
         setParent(parent: Transform): any;
@@ -505,7 +520,7 @@ declare module es {
         toString(): string;
     }
 }
-declare module es {
+declare namespace es {
     /** 2d 向量 */
     class Vector2 implements IEquatable<Vector2> {
         x: number;
@@ -516,14 +531,14 @@ declare module es {
          * @param y 二维空间的y坐标
          */
         constructor(x?: number, y?: number);
-        static readonly zero: Vector2;
-        static readonly one: Vector2;
-        static readonly unitX: Vector2;
-        static readonly unitY: Vector2;
-        static readonly up: Vector2;
-        static readonly down: Vector2;
-        static readonly left: Vector2;
-        static readonly right: Vector2;
+        static get zero(): Vector2;
+        static get one(): Vector2;
+        static get unitX(): Vector2;
+        static get unitY(): Vector2;
+        static get up(): Vector2;
+        static get down(): Vector2;
+        static get left(): Vector2;
+        static get right(): Vector2;
         /**
          *
          * @param value1
@@ -730,7 +745,7 @@ declare module es {
         copyFrom(source: Vector2): Vector2;
     }
 }
-declare module es {
+declare namespace es {
     /** 场景 */
     class Scene {
         /** 这个场景中的实体列表 */
@@ -861,7 +876,7 @@ declare module es {
         getEntityProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * SceneTransition用于从一个场景过渡到另一个场景，或在一个场景内进行效果转换。
      * 如果sceneLoadAction为null，框架将执行场景内过渡，而不是加载新的场景中间过渡。
@@ -883,14 +898,14 @@ declare module es {
          */
         _loadsNewScene: boolean;
         private _hasPreviousSceneRender;
-        readonly hasPreviousSceneRender: boolean;
+        get hasPreviousSceneRender(): boolean;
         /**
          * 将此用于两部分过渡。例如，褪色会先褪色为黑色，然后当_isNewSceneLoaded变为true时会褪色。
          * 对于场景内转换，应在中点将isNewSceneLoaded设置为true，就像加载了新场景一样
          */
         _isNewSceneLoaded: boolean;
         protected constructor(sceneLoadAction: () => Scene);
-        protected LoadNextScene(): IterableIterator<string>;
+        protected LoadNextScene(): Generator<string, void, unknown>;
         /**
          * 在前一个场景出现第一次（也是唯一一次）后调用。
          * 此时，可以在生成一帧后加载新场景（因此第一次渲染调用发生在场景加载之前）
@@ -910,7 +925,7 @@ declare module es {
         protected transitionComplete(): void;
     }
 }
-declare module es {
+declare namespace es {
     enum ComponentTransform {
         position = 0,
         scale = 1,
@@ -949,91 +964,100 @@ declare module es {
         /**
          * 这个转换的所有子元素
          */
-        readonly childCount: number;
+        get childCount(): number;
         /**
          * 变换在世界空间的旋转度
          */
+        get rotationDegrees(): number;
         /**
-        * 变换在世界空间的旋转度
-        * @param value
-        */
-        rotationDegrees: number;
+         * 变换在世界空间的旋转度
+         * @param value
+         */
+        set rotationDegrees(value: number);
         /**
          * 旋转相对于父变换旋转的角度
          */
+        get localRotationDegrees(): number;
         /**
-        * 旋转相对于父变换旋转的角度
-        * @param value
-        */
-        localRotationDegrees: number;
-        readonly localToWorldTransform: Matrix2D;
+         * 旋转相对于父变换旋转的角度
+         * @param value
+         */
+        set localRotationDegrees(value: number);
+        get localToWorldTransform(): Matrix2D;
         _parent: Transform;
         /**
          * 获取此转换的父转换
          */
+        get parent(): Transform;
         /**
-        * 设置此转换的父转换
-        * @param value
-        */
-        parent: Transform;
+         * 设置此转换的父转换
+         * @param value
+         */
+        set parent(value: Transform);
         _worldToLocalTransform: Matrix2D;
-        readonly worldToLocalTransform: Matrix2D;
+        get worldToLocalTransform(): Matrix2D;
         _worldInverseTransform: Matrix2D;
-        readonly worldInverseTransform: Matrix2D;
+        get worldInverseTransform(): Matrix2D;
         _position: Vector2;
         /**
          * 变换在世界空间中的位置
          */
+        get position(): Vector2;
         /**
-        * 变换在世界空间中的位置
-        * @param value
-        */
-        position: Vector2;
+         * 变换在世界空间中的位置
+         * @param value
+         */
+        set position(value: Vector2);
         _scale: Vector2;
         /**
          * 变换在世界空间的缩放
          */
+        get scale(): Vector2;
         /**
-        * 变换在世界空间的缩放
-        * @param value
-        */
-        scale: Vector2;
+         * 变换在世界空间的缩放
+         * @param value
+         */
+        set scale(value: Vector2);
         _rotation: number;
         /**
          * 在世界空间中以弧度旋转的变换
          */
+        get rotation(): number;
         /**
-        * 变换在世界空间的旋转度
-        * @param value
-        */
-        rotation: number;
+         * 变换在世界空间的旋转度
+         * @param value
+         */
+        set rotation(value: number);
         _localPosition: Vector2;
         /**
          * 转换相对于父转换的位置。如果转换没有父元素，则与transform.position相同
          */
+        get localPosition(): Vector2;
         /**
-        * 转换相对于父转换的位置。如果转换没有父元素，则与transform.position相同
-        * @param value
-        */
-        localPosition: Vector2;
+         * 转换相对于父转换的位置。如果转换没有父元素，则与transform.position相同
+         * @param value
+         */
+        set localPosition(value: Vector2);
         _localScale: Vector2;
         /**
          * 转换相对于父元素的比例。如果转换没有父元素，则与transform.scale相同
          */
+        get localScale(): Vector2;
         /**
-        * 转换相对于父元素的比例。如果转换没有父元素，则与transform.scale相同
-        * @param value
-        */
-        localScale: Vector2;
+         * 转换相对于父元素的比例。如果转换没有父元素，则与transform.scale相同
+         * @param value
+         */
+        set localScale(value: Vector2);
         _localRotation: number;
         /**
          * 相对于父变换的旋转，变换的旋转。如果转换没有父元素，则与transform.rotation相同
          */
+        get localRotation(): number;
         /**
-        * 相对于父变换的旋转，变换的旋转。如果转换没有父元素，则与transform.rotation相同
-        * @param value
-        */
-        localRotation: number;
+         * 相对于父变换的旋转，变换的旋转。如果转换没有父元素，则与transform.rotation相同
+         * @param value
+         */
+        set localRotation(value: number);
         /**
          * 返回在索引处的转换子元素
          * @param index
@@ -1104,7 +1128,7 @@ declare module es {
         toString(): string;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 接口，当添加到一个Component时，只要Component和实体被启用，它就会在每个框架中调用更新方法。
      */
@@ -1121,7 +1145,7 @@ declare module es {
     }
     var isIUpdatable: (props: any) => props is IUpdatable;
 }
-declare module es {
+declare namespace es {
     class SceneComponent implements IComparer<SceneComponent> {
         /**
          * 这个场景组件被附加到的场景
@@ -1130,11 +1154,12 @@ declare module es {
         /**
          * 如果启用了SceneComponent，则为true。状态的改变会导致调用onEnabled/onDisable。
          */
+        get enabled(): boolean;
         /**
-        * 如果启用了SceneComponent，则为true。状态的改变会导致调用onEnabled/onDisable。
-        * @param value
-        */
-        enabled: boolean;
+         * 如果启用了SceneComponent，则为true。状态的改变会导致调用onEnabled/onDisable。
+         * @param value
+         */
+        set enabled(value: boolean);
         /**
          * 更新此场景中SceneComponents的顺序
          */
@@ -1169,27 +1194,30 @@ declare module es {
         compare(other: SceneComponent): number;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 请注意，这不是一个完整的、多迭代的物理系统！它可以用于简单的、街机风格的物理。
      * 这可以用于简单的，街机风格的物理学
      */
     class ArcadeRigidbody extends Component implements IUpdatable {
         /** 这个刚体的质量。质量为0，则是一个不可移动的物体 */
-        mass: number;
+        get mass(): number;
+        set mass(value: number);
         /**
          * 0-1范围，其中0为无反弹，1为完全反射。
          */
-        readonly elasticity: number;
-        elasticiy: number;
+        get elasticity(): number;
+        set elasticiy(value: number);
         /**
          * 0 - 1范围。0表示没有摩擦力，1表示物体会停止在原地
          */
-        friction: number;
+        get friction(): number;
+        set friction(value: number);
         /**
          * 0-9的范围。当发生碰撞时，沿碰撞面做直线运动时，如果其平方幅度小于glue摩擦力，则将碰撞设置为上限
          */
-        glue: number;
+        get glue(): number;
+        set glue(value: number);
         /**
          *  如果为真，则每一帧都会考虑到Physics.gravity
          */
@@ -1201,7 +1229,7 @@ declare module es {
         /**
          * 质量为0的刚体被认为是不可移动的。改变速度和碰撞对它们没有影响
          */
-        readonly isImmovable: boolean;
+        get isImmovable(): boolean;
         _mass: number;
         _elasticity: number;
         _friction: number;
@@ -1258,7 +1286,7 @@ declare module es {
         calculateResponseVelocity(relativeVelocity: Vector2, minimumTranslationVector: Vector2): Vector2;
     }
 }
-declare module es {
+declare namespace es {
     class CharacterCollisionState2D {
         right: boolean;
         left: boolean;
@@ -1272,7 +1300,7 @@ declare module es {
         reset(): void;
         toString(): string;
     }
-    class CharacterController implements ITriggerListener {
+    export class CharacterController implements ITriggerListener {
         onControllerCollidedEvent: ObservableT<RaycastHit>;
         onTriggerEnterEvent: ObservableT<Collider>;
         onTriggerExitEvent: ObservableT<Collider>;
@@ -1286,7 +1314,8 @@ declare module es {
          * 定义距离碰撞射线的边缘有多远。
          * 如果使用 0 范围进行投射，则通常会导致不需要的光线击中（例如，直接从表面水平投射的足部碰撞器可能会导致击中）
          */
-        skinWidth: number;
+        get skinWidth(): number;
+        set skinWidth(value: number);
         /**
          * CC2D 可以爬升的最大坡度角
          */
@@ -1303,8 +1332,8 @@ declare module es {
         totalVerticalRays: number;
         collisionState: CharacterCollisionState2D;
         velocity: Vector2;
-        readonly isGrounded: boolean;
-        readonly raycastHitsThisFrame: RaycastHit[];
+        get isGrounded(): boolean;
+        get raycastHitsThisFrame(): RaycastHit[];
         constructor(player: Entity, skinWidth?: number, platformMask?: number, onewayPlatformMask?: number, triggerMask?: number);
         onTriggerEnter(other: Collider, local: Collider): void;
         onTriggerExit(other: Collider, local: Collider): void;
@@ -1389,8 +1418,9 @@ declare module es {
         private oneWayPlatformMask;
         private readonly rayOriginSkinMutiplier;
     }
+    export {};
 }
-declare module es {
+declare namespace es {
     /**
      * 当添加到组件时，每当实体上的冲突器与另一个组件重叠/退出时，将调用这些方法。
      * ITriggerListener方法将在实现接口的触发器实体上的任何组件上调用。
@@ -1416,7 +1446,7 @@ declare module es {
     }
     var isITriggerListener: (props: any) => props is ITriggerListener;
 }
-declare module es {
+declare namespace es {
     /**
      * 辅助类说明了一种处理移动的方法，它考虑了包括触发器在内的所有冲突。
      * ITriggerListener接口用于管理对移动过程中违反的任何触发器的回调。
@@ -1446,7 +1476,7 @@ declare module es {
         move(motion: Vector2, collisionResult: Out<CollisionResult>): boolean;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 移动时考虑到碰撞，只用于向任何ITriggerListeners报告。
      * 物体总是会全量移动，所以如果需要的话，由调用者在撞击时销毁它。
@@ -1463,9 +1493,9 @@ declare module es {
         private notifyTriggerListeners;
     }
 }
-declare module es {
+declare namespace es {
     class Collider extends Component {
-        static readonly lateSortOrder: number;
+        static readonly lateSortOrder = 999;
         castSortOrder: number;
         /**
          * 对撞机的基本形状
@@ -1507,23 +1537,24 @@ declare module es {
         /**
          * 表示碰撞器的绝对位置
          */
-        readonly absolutePosition: Vector2;
+        get absolutePosition(): Vector2;
         /**
          * 封装变换。如果碰撞器没和实体一起旋转 则返回transform.rotation
          */
-        readonly rotation: number;
-        readonly bounds: Rectangle;
+        get rotation(): number;
+        get bounds(): Rectangle;
         protected _localOffset: Vector2;
         /**
          * 将localOffset添加到实体。获取碰撞器几何图形的最终位置。
          * 允许向一个实体添加多个碰撞器并分别定位，还允许你设置缩放/旋转
          */
+        get localOffset(): Vector2;
         /**
-        * 将localOffset添加到实体。获取碰撞器几何图形的最终位置。
-        * 允许向一个实体添加多个碰撞器并分别定位，还允许你设置缩放/旋转
-        * @param value
-        */
-        localOffset: Vector2;
+         * 将localOffset添加到实体。获取碰撞器几何图形的最终位置。
+         * 允许向一个实体添加多个碰撞器并分别定位，还允许你设置缩放/旋转
+         * @param value
+         */
+        set localOffset(value: Vector2);
         /**
          * 将localOffset添加到实体。获取碰撞器的最终位置。
          * 这允许您向一个实体添加多个碰撞器并分别定位它们。
@@ -1580,7 +1611,7 @@ declare module es {
         collidesWithAnyNonMotion(result: Out<CollisionResult>): boolean;
     }
 }
-declare module es {
+declare namespace es {
     class BoxCollider extends Collider {
         /**
          * 创建一个BoxCollider，并使用x/y组件作为局部Offset
@@ -1590,8 +1621,10 @@ declare module es {
          * @param height
          */
         constructor(x?: number, y?: number, width?: number, height?: number);
-        width: number;
-        height: number;
+        get width(): number;
+        set width(value: number);
+        get height(): number;
+        set height(value: number);
         /**
          * 设置BoxCollider的大小
          * @param width
@@ -1611,7 +1644,7 @@ declare module es {
         toString(): string;
     }
 }
-declare module es {
+declare namespace es {
     class CircleCollider extends Collider {
         /**
          * 创建一个具有半径的CircleCollider。
@@ -1621,7 +1654,8 @@ declare module es {
          * @param radius
          */
         constructor(radius?: number);
-        radius: number;
+        get radius(): number;
+        set radius(value: number);
         /**
          * 设置圆的半径
          * @param radius
@@ -1630,7 +1664,7 @@ declare module es {
         toString(): string;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 多边形应该以顺时针方式定义
      */
@@ -1642,7 +1676,7 @@ declare module es {
         constructor(points: Vector2[]);
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 扇形碰撞器
      */
@@ -1650,7 +1684,7 @@ declare module es {
         constructor(center: Vector2, radius: number, startAngle: number, endAngle: number);
     }
 }
-declare module es {
+declare namespace es {
     interface Map<K, V> {
         clear(): void;
         containsKey(key: any): boolean;
@@ -1662,7 +1696,7 @@ declare module es {
         size(): number;
         values(): V[];
     }
-    class HashMap<K, V> implements Map<K, V> {
+    export class HashMap<K, V> implements Map<K, V> {
         private map_;
         private keys_;
         constructor();
@@ -1681,8 +1715,9 @@ declare module es {
         remove(key: any): V;
         size(): number;
     }
+    export {};
 }
-declare module es {
+declare namespace es {
     /**
      * 实体系统的基类，用于处理一组实体。
      */
@@ -1693,19 +1728,21 @@ declare module es {
         private _endTime;
         private _useTime;
         /** 获取系统在当前帧所消耗的时间 仅在debug模式下生效 */
-        readonly useTime: number;
+        get useTime(): number;
         /**
          * 获取系统的更新时序
          */
-        updateOrder: number;
+        get updateOrder(): number;
+        set updateOrder(value: number);
         constructor(matcher?: Matcher);
         private _scene;
         /**
          * 这个系统所属的场景
          */
-        scene: Scene;
+        get scene(): Scene;
+        set scene(value: Scene);
         private _matcher;
-        readonly matcher: Matcher;
+        get matcher(): Matcher;
         /**
          * 设置更新时序
          * @param order 更新时序
@@ -1740,7 +1777,7 @@ declare module es {
         protected checkProcessing(): boolean;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 这个类是一个实体系统的基类，其可以被子类继承并在子类中实现具体的实体处理逻辑。
      * 该类提供了实体的添加、删除、更新等基本操作，并支持设置系统的更新时序、检查系统是否需要处理实体、获取系统的场景等方法
@@ -1796,7 +1833,7 @@ declare module es {
         protected abstract getRemainingDelay(entity: Entity): number;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 定义一个处理实体的抽象类，继承自 EntitySystem 类。
      * 子类需要实现 processEntity 方法，用于实现具体的实体处理逻辑。
@@ -1839,7 +1876,7 @@ declare module es {
         protected checkProcessing(): boolean;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 定义一个按时间间隔处理的抽象类，继承自 EntitySystem 类。
      * 子类需要实现 process 方法，用于实现具体的处理逻辑。
@@ -1876,7 +1913,7 @@ declare module es {
         protected getIntervalDelta(): number;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 定时遍历处理实体的系统，用于按指定的时间间隔遍历并处理感兴趣的实体。
      */
@@ -1894,7 +1931,7 @@ declare module es {
         protected process(entities: Entity[]): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 定义一个被动的实体系统，继承自 EntitySystem 类。
      * 被动的实体系统不会对实体进行任何修改，只会被动地接收实体的变化事件。
@@ -1912,7 +1949,7 @@ declare module es {
         protected process(entities: Entity[]): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 定义一个处理实体的抽象类，继承自 EntitySystem 类。
      * 子类需要实现 processSystem 方法，用于实现具体的处理逻辑。
@@ -1934,7 +1971,7 @@ declare module es {
         abstract processSystem(): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 位操作类，用于操作一个位数组。
      */
@@ -1954,7 +1991,7 @@ declare module es {
         get(index: number): number;
     }
 }
-declare module es {
+declare namespace es {
     class ComponentList {
         /**
          * 比较IUpdatable对象的更新顺序。
@@ -2006,8 +2043,8 @@ declare module es {
          */
         private componentsToAddByType;
         constructor(entity: Entity);
-        readonly count: number;
-        readonly buffer: Component[];
+        get count(): number;
+        get buffer(): Component[];
         markEntityListUnsorted(): void;
         /**
          * 将组件添加到实体的组件列表中，并添加到组件类型字典中。
@@ -2079,7 +2116,7 @@ declare module es {
         onEntityDisabled(): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 组件类型工厂，用于生成和管理组件类型。
      * 维护了一个类型映射表，将组件类型与其唯一索引相对应，以便在运行时高效地检查实体是否包含特定的组件类型。
@@ -2107,7 +2144,7 @@ declare module es {
         getTypeFor(c: new (...args: any[]) => any): ComponentType;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 组件类型管理器，维护了一个组件类型和它们对应的位掩码之间的映射关系。
      * 用于实现实体匹配器中组件类型的比较操作，以确定实体是否符合给定的匹配器条件。
@@ -2129,7 +2166,7 @@ declare module es {
         static getIndexFor(type: any): number;
     }
 }
-declare module es {
+declare namespace es {
     class EntityList {
         /**
          * 场景引用
@@ -2172,8 +2209,8 @@ declare module es {
          */
         _unsortedTags: Set<number>;
         constructor(scene: Scene);
-        readonly count: number;
-        readonly buffer: Entity[];
+        get count(): number;
+        get buffer(): Entity[];
         markEntityListUnsorted(): void;
         markTagUnsorted(tag: number): void;
         /**
@@ -2265,14 +2302,14 @@ declare module es {
         findEntitiesOfComponent(...types: any[]): Entity[];
     }
 }
-declare module es {
+declare namespace es {
     class EntityProcessorList {
         private _processors;
         private _orderDirty;
         /** 获取处理器列表 */
-        readonly processors: EntitySystem[];
+        get processors(): EntitySystem[];
         /** 获取处理器数量 */
-        readonly count: number;
+        get count(): number;
         /**
          * 添加处理器
          * @param processor 要添加的处理器
@@ -2333,12 +2370,12 @@ declare module es {
         lateUpdate(): void;
     }
 }
-declare module es {
+declare namespace es {
     class HashHelpers {
         static readonly hashCollisionThreshold: number;
         static readonly hashPrime: number;
         static readonly primes: number[];
-        static readonly maxPrimeArrayLength: number;
+        static readonly maxPrimeArrayLength = 2146435069;
         /**
          * 判断一个数是否为质数
          * @param candidate 要判断的数
@@ -2365,7 +2402,7 @@ declare module es {
         static getHashCode(str: string): number;
     }
 }
-declare module es {
+declare namespace es {
     class IdentifierPool {
         private ids;
         private nextAvailableId_;
@@ -2374,7 +2411,7 @@ declare module es {
         checkIn(id: number): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 定义一个实体匹配器类。
      */
@@ -2405,7 +2442,7 @@ declare module es {
         one(...types: (new (...args: any[]) => Component)[]): Matcher;
     }
 }
-declare module es {
+declare namespace es {
     class StringUtils {
         /**
          * 特殊符号字符串
@@ -2495,7 +2532,7 @@ declare module es {
         static format(str: string, ...args: any[]): string;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 时间管理器，用于管理游戏中的时间相关属性
      */
@@ -2531,7 +2568,7 @@ declare module es {
         static checkEvery(interval: number): boolean;
     }
 }
-declare module es {
+declare namespace es {
     class TimeUtils {
         /**
          * 获取日期对应的年份和月份的数字组合
@@ -2609,7 +2646,7 @@ declare module es {
         static timeToMillisecond(time: string, partition?: string): string;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 三次方和二次方贝塞尔帮助器(cubic and quadratic bezier helper)
      */
@@ -2670,7 +2707,7 @@ declare module es {
         private static recursiveGetOptimizedDrawingPoints;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 提供了一系列立方贝塞尔点，并提供了帮助方法来访问贝塞尔
      */
@@ -2725,7 +2762,7 @@ declare module es {
         getDrawingPoints(totalSegments: number): Vector2[];
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 一个用于操作二进制标志（也称为位字段）
      */
@@ -2776,11 +2813,11 @@ declare module es {
         static binaryStringRepresentation(self: number, leftPadWidth?: number): string;
     }
 }
-declare module es {
+declare namespace es {
     class MathHelper {
         static readonly Epsilon: number;
-        static readonly Rad2Deg: number;
-        static readonly Deg2Rad: number;
+        static readonly Rad2Deg = 57.29578;
+        static readonly Deg2Rad = 0.0174532924;
         /**
          * 表示pi除以2的值(1.57079637)
          */
@@ -3211,13 +3248,13 @@ declare module es {
         static toInt(val: number): number;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 代表右手4x4浮点矩阵，可以存储平移、比例和旋转信息
      */
     class Matrix {
         private static identity;
-        static readonly Identity: Matrix;
+        static get Identity(): Matrix;
         m11: number;
         m12: number;
         m13: number;
@@ -3255,7 +3292,7 @@ declare module es {
         static multiply(matrix1: Matrix, matrix2: Matrix, result?: Matrix): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 表示右手3 * 3的浮点矩阵，可以存储平移、缩放和旋转信息。
      */
@@ -3269,25 +3306,29 @@ declare module es {
         /**
          * 返回标识矩阵
          */
-        static readonly identity: Matrix2D;
+        static get identity(): Matrix2D;
         setIdentity(): Matrix2D;
         setValues(m11: number, m12: number, m21: number, m22: number, m31: number, m32: number): Matrix2D;
         /**
          * 储存在该矩阵中的位置
          */
-        translation: Vector2;
+        get translation(): Vector2;
+        set translation(value: Vector2);
         /**
          * 以弧度为单位的旋转，存储在这个矩阵中
          */
-        rotation: number;
+        get rotation(): number;
+        set rotation(value: number);
         /**
          * 矩阵中存储的旋转度数
          */
-        rotationDegrees: number;
+        get rotationDegrees(): number;
+        set rotationDegrees(value: number);
         /**
          * 储存在这个矩阵中的缩放
          */
-        scale: Vector2;
+        get scale(): Vector2;
+        set scale(value: Vector2);
         /**
          * 创建一个新的围绕Z轴的旋转矩阵2D
          * @param radians
@@ -3341,7 +3382,7 @@ declare module es {
         toString(): string;
     }
 }
-declare module es {
+declare namespace es {
     class MatrixHelper {
         /**
          * 该静态方法用于计算两个 Matrix2D 对象的和。
@@ -3373,7 +3414,7 @@ declare module es {
         static subtract(matrix1: Matrix2D, matrix2: Matrix2D): Matrix2D;
     }
 }
-declare module es {
+declare namespace es {
     class Rectangle implements IEquatable<Rectangle> {
         /**
          * 该矩形的左上角的x坐标
@@ -3394,46 +3435,48 @@ declare module es {
         /**
          * 返回X=0, Y=0, Width=0, Height=0的矩形
          */
-        static readonly empty: Rectangle;
+        static get empty(): Rectangle;
         /**
          * 返回一个Number.Min/Max值的矩形
          */
-        static readonly maxRect: Rectangle;
+        static get maxRect(): Rectangle;
         /**
          * 返回此矩形左边缘的X坐标
          */
-        readonly left: number;
+        get left(): number;
         /**
          * 返回此矩形右边缘的X坐标
          */
-        readonly right: number;
+        get right(): number;
         /**
          * 返回此矩形顶边的y坐标
          */
-        readonly top: number;
+        get top(): number;
         /**
          * 返回此矩形底边的y坐标
          */
-        readonly bottom: number;
+        get bottom(): number;
         /**
          * 获取矩形的最大点，即右下角
          */
-        readonly max: Vector2;
+        get max(): Vector2;
         /**
          * 这个矩形的宽和高是否为0，位置是否为（0，0）
          */
         isEmpty(): boolean;
         /** 这个矩形的左上角坐标 */
-        location: Vector2;
+        get location(): Vector2;
+        set location(value: Vector2);
         /**
          * 这个矩形的宽-高坐标
          */
-        size: Vector2;
+        get size(): Vector2;
+        set size(value: Vector2);
         /**
          * 位于这个矩形中心的一个点
          * 如果 "宽度 "或 "高度 "是奇数，则中心点将向下舍入
          */
-        readonly center: Vector2;
+        get center(): Vector2;
         _tempMat: Matrix2D;
         _transformMat: Matrix2D;
         /**
@@ -3565,7 +3608,7 @@ declare module es {
         clone(): Rectangle;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 该类用于存储具有亚像素分辨率的浮点数。
      */
@@ -3587,7 +3630,7 @@ declare module es {
         reset(): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 该类用于存储具有亚像素分辨率的二维向量。
      */
@@ -3611,7 +3654,7 @@ declare module es {
         reset(): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 移动器使用的帮助器类，用于管理触发器碰撞器交互并调用itriggerlistener
      */
@@ -3633,7 +3676,7 @@ declare module es {
         private notifyTriggerListeners;
     }
 }
-declare module es {
+declare namespace es {
     enum PointSectors {
         center = 0,
         top = 1,
@@ -3678,7 +3721,7 @@ declare module es {
         static getSector(rX: number, rY: number, rW: number, rH: number, point: Vector2): PointSectors;
     }
 }
-declare module es {
+declare namespace es {
     class RaycastHit {
         /**
          * 对撞机被射线击中
@@ -3712,7 +3755,7 @@ declare module es {
         toString(): string;
     }
 }
-declare module es {
+declare namespace es {
     class Physics {
         static _spatialHash: SpatialHash;
         /** 用于在全局范围内存储重力值的方便字段 */
@@ -3831,21 +3874,21 @@ declare module es {
         static overlapRectangleAll(rect: Rectangle, results: Collider[], layerMask?: number): number;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 不是真正的射线(射线只有开始和方向)，作为一条线和射线。
      */
     class Ray2D {
-        readonly start: Vector2;
-        readonly direction: Vector2;
-        readonly end: Vector2;
+        get start(): Vector2;
+        get direction(): Vector2;
+        get end(): Vector2;
         constructor(pos: Vector2, end: Vector2);
         private _start;
         private _direction;
         private _end;
     }
 }
-declare module es {
+declare namespace es {
     class SpatialHash {
         gridBounds: Rectangle;
         _raycastParser: RaycastResultParser;
@@ -4000,7 +4043,7 @@ declare module es {
         reset(): void;
     }
 }
-declare module es {
+declare namespace es {
     abstract class Shape {
         position: Vector2;
         center: Vector2;
@@ -4045,7 +4088,7 @@ declare module es {
         abstract pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 多边形
      */
@@ -4079,7 +4122,7 @@ declare module es {
          * 边缘法线用于SAT碰撞检测。缓存它们用于避免squareRoots
          * box只有两个边缘 因为其他两边是平行的
          */
-        readonly edgeNormals: Vector2[];
+        get edgeNormals(): Vector2[];
         /**
          * 重置点并重新计算中心和边缘法线
          * @param points
@@ -4139,7 +4182,7 @@ declare module es {
          */
         static rotatePolygonVerts(radians: number, originalPoints: Vector2[], rotatedPoints: Vector2[]): void;
         recalculateBounds(collider: Collider): void;
-        overlaps(other: Shape): any;
+        overlaps(other: Shape): boolean;
         collidesWithShape(other: Shape, result: Out<CollisionResult>): boolean;
         collidesWithLine(start: Vector2, end: Vector2, hit: Out<RaycastHit>): boolean;
         /**
@@ -4151,7 +4194,7 @@ declare module es {
         pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 多边形的特殊情况。在进行SAT碰撞检查时，我们只需要检查2个轴而不是8个轴
      */
@@ -4172,20 +4215,20 @@ declare module es {
          */
         updateBox(width: number, height: number): void;
         getEdges(): Array<Line>;
-        overlaps(other: Shape): any;
+        overlaps(other: Shape): boolean;
         collidesWithShape(other: Shape, result: Out<CollisionResult>): boolean;
         containsPoint(point: Vector2): boolean;
         pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
         getFurthestPoint(normal: Vector2): Vector2;
     }
 }
-declare module es {
+declare namespace es {
     class Circle extends Shape {
         radius: number;
         _originalRadius: number;
         constructor(radius: number);
         recalculateBounds(collider: Collider): void;
-        overlaps(other: Shape): any;
+        overlaps(other: Shape): boolean;
         collidesWithShape(other: Shape, result: Out<CollisionResult>): boolean;
         collidesWithLine(start: Vector2, end: Vector2, hit: Out<RaycastHit>): boolean;
         getPointAlongEdge(angle: number): Vector2;
@@ -4197,7 +4240,7 @@ declare module es {
         pointCollidesWithShape(point: Vector2, result: Out<CollisionResult>): boolean;
     }
 }
-declare module es {
+declare namespace es {
     class CollisionResult {
         /**
          * 与之相撞的对撞机
@@ -4226,12 +4269,12 @@ declare module es {
         toString(): string;
     }
 }
-declare module es {
+declare namespace es {
     class Line {
         start: Vector2;
         end: Vector2;
         constructor(start: Vector2, end: Vector2);
-        readonly direction: Vector2;
+        get direction(): Vector2;
         getNormal(): Vector2;
         getDirection(out: Vector2): Vector2;
         getLength(): number;
@@ -4241,7 +4284,7 @@ declare module es {
         getClosestPoint(point: Vector2, out: Vector2): Vector2;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 计算投影和重叠区域
      */
@@ -4254,7 +4297,7 @@ declare module es {
         getOverlap(other: Projection): number;
     }
 }
-declare module es {
+declare namespace es {
     class RealtimeCollisions {
         /**
          * 判断移动的圆是否与矩形相交，并返回相撞的时间。
@@ -4282,7 +4325,7 @@ declare module es {
         static testCircleBox(circle: Circle, box: Box, point: Vector2): boolean;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 扇形形状
      */
@@ -4296,7 +4339,7 @@ declare module es {
         numberOfPoints: number;
         angleStep: number;
         points: Vector2[];
-        readonly sectorAngle: number;
+        get sectorAngle(): number;
         constructor(center: Vector2, radius: number, startAngle: number, endAngle: number);
         /**
          * 获取圆弧的质心。
@@ -4319,14 +4362,14 @@ declare module es {
         getFurthestPoint(normal: Vector2): Vector2;
     }
 }
-declare module es {
+declare namespace es {
     class ShapeCollisionSector {
         static sectorToPolygon(first: Sector, second: Polygon, result: Out<CollisionResult>): boolean;
         static sectorToCircle(first: Sector, second: Circle, result: Out<CollisionResult>): boolean;
         static sectorToBox(first: Sector, second: Box, result: Out<CollisionResult>): boolean;
     }
 }
-declare module es {
+declare namespace es {
     class ShapeCollisionsBox {
         static boxToBox(first: Box, second: Box, result: Out<CollisionResult>): boolean;
         /**
@@ -4340,7 +4383,7 @@ declare module es {
         private static minkowskiDifference;
     }
 }
-declare module es {
+declare namespace es {
     class ShapeCollisionsCircle {
         static circleToCircleCast(first: Circle, second: Circle, deltaMovement: Vector2, hit: Out<RaycastHit>): boolean;
         static circleToCircle(first: Circle, second: Circle, result: Out<CollisionResult>): boolean;
@@ -4355,21 +4398,21 @@ declare module es {
         static closestPointOnLine(lineA: Vector2, lineB: Vector2, closestTo: Vector2): Vector2;
     }
 }
-declare module es {
+declare namespace es {
     class ShapeCollisionsLine {
         static lineToPoly(start: Vector2, end: Vector2, polygon: Polygon, hit: Out<RaycastHit>): boolean;
         static lineToLine(a1: Vector2, a2: Vector2, b1: Vector2, b2: Vector2, intersection: Vector2): boolean;
         static lineToCircle(start: Vector2, end: Vector2, s: Circle, hit: Out<RaycastHit>): boolean;
     }
 }
-declare module es {
+declare namespace es {
     class ShapeCollisionsPoint {
         static pointToCircle(point: Vector2, circle: Circle, result: Out<CollisionResult>): boolean;
         static pointToBox(point: Vector2, box: Box, result: Out<CollisionResult>): boolean;
         static pointToPoly(point: Vector2, poly: Polygon, result: Out<CollisionResult>): boolean;
     }
 }
-declare module es {
+declare namespace es {
     class ShapeCollisionsPolygon {
         /**
          * 检查两个多边形之间的碰撞
@@ -4399,7 +4442,7 @@ declare module es {
         static intervalDistance(minA: number, maxA: number, minB: number, maxB: number): number;
     }
 }
-declare module es {
+declare namespace es {
     /**
     * `AbstractTweenable` 是一个抽象类，实现了 `ITweenable` 接口。
     * 这个类提供了 `start`、`pause`、`resume` 和 `stop` 等方法，
@@ -4410,7 +4453,7 @@ declare module es {
     * 以便在必要时可以重新添加自己。
     */
     abstract class AbstractTweenable implements ITweenable {
-        readonly discriminator: string;
+        readonly discriminator = "ITweenable";
         protected _isPaused: boolean;
         /**
          * abstractTweenable在完成后往往会被保留下来。
@@ -4426,7 +4469,7 @@ declare module es {
         stop(bringToCompletion?: boolean): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 属性动画工具类
      */
@@ -4449,9 +4492,9 @@ declare module es {
         static Vector2PropertyTo(self: any, memberName: string, to: Vector2, duration: number): ITween<Vector2>;
     }
 }
-declare module es {
+declare namespace es {
     class TransformSpringTween extends AbstractTweenable {
-        readonly targetType: TransformTargetType;
+        get targetType(): TransformTargetType;
         private _transform;
         private _targetType;
         private _targetValue;
@@ -4481,7 +4524,7 @@ declare module es {
         private getCurrentValueOfTweenedTargetType;
     }
 }
-declare module es {
+declare namespace es {
     enum LoopType {
         none = 0,
         restartFromBeginning = 1,
@@ -4548,7 +4591,7 @@ declare module es {
         /**
          * 当通过StartCoroutine调用时，这将一直持续到tween完成
          */
-        waitForCompletion(): IterableIterator<any>;
+        waitForCompletion(): Generator<any, void, unknown>;
         getTargetObject(): any;
         private resetState;
         /**
@@ -4568,7 +4611,7 @@ declare module es {
         protected abstract updateValue(): any;
     }
 }
-declare module es {
+declare namespace es {
     class NumberTween extends Tween<number> {
         static create(): NumberTween;
         constructor(target?: ITweenTarget<number>, to?: number, duration?: number);
@@ -4591,7 +4634,7 @@ declare module es {
         recycleSelf(): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 对任何与Transform相关的属性tweens都是有用的枚举
      */
@@ -4618,7 +4661,7 @@ declare module es {
         recycleSelf(): void;
     }
 }
-declare module es {
+declare namespace es {
     enum EaseType {
         linear = 0,
         sineIn = 1,
@@ -4667,7 +4710,7 @@ declare module es {
         static ease(easeType: EaseType, t: number, duration: number): number;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 全局管理器的基类。所有全局管理器都应该从此类继承。
      */
@@ -4679,7 +4722,8 @@ declare module es {
         /**
          * 获取或设置管理器是否启用
          */
-        enabled: boolean;
+        get enabled(): boolean;
+        set enabled(value: boolean);
         /**
          * 设置管理器是否启用
          * @param isEnabled 如果为true，则启用管理器；否则禁用管理器
@@ -4699,7 +4743,7 @@ declare module es {
         update(): void;
     }
 }
-declare module es {
+declare namespace es {
     class TweenManager extends GlobalManager {
         static defaultEaseType: EaseType;
         /**
@@ -4719,7 +4763,7 @@ declare module es {
          * 当前所有活跃用户的内部列表
          */
         private _activeTweens;
-        static readonly activeTweens: ITweenable[];
+        static get activeTweens(): ITweenable[];
         private _tempTweens;
         private _isUpdating;
         private static _instance;
@@ -4772,12 +4816,12 @@ declare module es {
         static stopAllTweensWithTarget(target: any, bringToCompletion?: boolean): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 标准缓和方程通过将b和c参数（起始值和变化值）用0和1替换，然后进行简化。
      * 这样做的目的是为了让我们可以得到一个0 - 1之间的原始值（除了弹性/反弹故意超过界限），然后用这个值来lerp任何东西
      */
-    module Easing {
+    namespace Easing {
         class Linear {
             /**
              * 线性缓动，等同于t / d
@@ -5028,7 +5072,7 @@ declare module es {
         }
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 一系列静态方法来处理所有常见的tween类型结构，以及它们的unclamped lerps.unclamped lerps对于超过0-1范围的bounce、elastic或其他tweens是必需的
      */
@@ -5084,7 +5128,7 @@ declare module es {
         static fastSpring(currentValue: Vector2, targetValue: Vector2, velocity: Vector2, dampingRatio: number, angularFrequency: number): Vector2;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 一系列强类型、可链式的方法来设置各种tween属性
      */
@@ -5163,7 +5207,7 @@ declare module es {
         setNextTween(nextTween: ITweenable): ITween<T>;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 更多具体的Tween播放控制在这里
      */
@@ -5188,7 +5232,7 @@ declare module es {
         getTargetObject(): any;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 任何想要被weened的对象都需要实现这个功能。
      * TweenManager内部喜欢做一个简单的对象来实现这个接口，并存储一个对被tweened对象的引用
@@ -5206,7 +5250,7 @@ declare module es {
         getTargetObject(): any;
     }
 }
-declare module es {
+declare namespace es {
     interface ITweenable {
         readonly discriminator: string;
         /**
@@ -5241,19 +5285,19 @@ declare module es {
         stop(bringToCompletion: boolean): any;
     }
 }
-declare module es {
+declare namespace es {
     interface IAnimFrame {
         t: number;
         value: number;
     }
     class AnimCurve {
-        readonly points: IAnimFrame[];
+        get points(): IAnimFrame[];
         constructor(points: IAnimFrame[]);
         lerp(t: number): number;
         _points: IAnimFrame[];
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 用于包装事件的一个小类
      */
@@ -5297,7 +5341,7 @@ declare module es {
         hasObserver(eventType: T, handler: Function): boolean;
     }
 }
-declare module es {
+declare namespace es {
     enum Edge {
         top = 0,
         bottom = 1,
@@ -5305,7 +5349,7 @@ declare module es {
         right = 3
     }
 }
-declare module es {
+declare namespace es {
     class EqualityComparer<T> implements IEqualityComparer<T> {
         static default<T>(): EqualityComparer<T>;
         protected constructor();
@@ -5316,7 +5360,7 @@ declare module es {
         private forOwn;
     }
 }
-declare module es {
+declare namespace es {
     class Hash {
         /**
          * 从一个字节数组中计算一个哈希值
@@ -5325,12 +5369,12 @@ declare module es {
         static computeHash(...data: number[]): number;
     }
 }
-declare module es {
+declare namespace es {
     interface IComparer<T> {
         compare(x: T, y: T): number;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 对象声明自己的平等方法和Hashcode的生成
      */
@@ -5342,7 +5386,7 @@ declare module es {
         equals(other: any): boolean;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 为确定对象的哈希码和两个项目是否相等提供接口
      */
@@ -5360,7 +5404,7 @@ declare module es {
         getHashCode(value: T): number;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 实现该接口用于判定两个对象是否相等的快速接口
      */
@@ -5368,7 +5412,7 @@ declare module es {
         equals(other: T): boolean;
     }
 }
-declare module es {
+declare namespace es {
     interface IListener {
         caller: object;
         callback: Function;
@@ -5412,8 +5456,9 @@ declare module es {
     }
     class ValueChangeCommand<T> implements IObservable {
         constructor(value: T);
-        readonly onValueChange: Observable;
-        value: T;
+        get onValueChange(): Observable;
+        get value(): T;
+        set value(newValue: T);
         dispatch(value: T): void;
         addListener(caller: object, callback: Function): void;
         removeListener(caller: object, callback: Function): void;
@@ -5423,27 +5468,27 @@ declare module es {
         private _value;
     }
 }
-declare module es {
+declare namespace es {
     class Out<T> {
         value: T;
         constructor(value?: T);
     }
 }
-declare module es {
+declare namespace es {
     class Ref<T> {
         value: T;
         constructor(value: T);
     }
 }
-declare module es {
+declare namespace es {
     class Screen {
         static width: number;
         static height: number;
-        static readonly size: Vector2;
-        static readonly center: Vector2;
+        static get size(): Vector2;
+        static get center(): Vector2;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 管理数值的简单助手类。它存储值，直到累计的总数大于1。一旦超过1，该值将在调用update时添加到amount中。
      */
@@ -5461,7 +5506,7 @@ declare module es {
         reset(): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 简单的剪耳三角测量器，最终的三角形将出现在triangleIndices列表中。
      */
@@ -5482,12 +5527,12 @@ declare module es {
         private initialize;
     }
 }
-declare module es {
+declare namespace es {
     class UUID {
         static randomUUID(): string;
     }
 }
-declare module es {
+declare namespace es {
     interface Class extends Function {
     }
     function getClassName(klass: any): string;
@@ -5496,7 +5541,7 @@ declare namespace es {
     /**
      * 记录时间的持续时间，一些设计灵感来自物理秒表。
      */
-    class Stopwatch {
+    export class Stopwatch {
         private readonly getSystemTime;
         /**
          * 秒表启动的系统时间。
@@ -5583,7 +5628,7 @@ declare namespace es {
      * 返回某个系统的“当前时间”的函数。
      * 惟一的要求是，对该函数的每次调用都必须返回一个大于或等于前一次对该函数的调用的数字。
      */
-    type GetTimeFunc = () => number;
+    export type GetTimeFunc = () => number;
     enum State {
         /** 秒表尚未启动，或已复位。 */
         IDLE = "IDLE",
@@ -5592,7 +5637,7 @@ declare namespace es {
         /** 秒表以前还在跑，但现在已经停了。 */
         STOPPED = "STOPPED"
     }
-    function setDefaultSystemTimeGetter(systemTimeGetter?: GetTimeFunc): void;
+    export function setDefaultSystemTimeGetter(systemTimeGetter?: GetTimeFunc): void;
     /**
      * 由秒表记录的单个“薄片”的测量值
      */
@@ -5604,8 +5649,9 @@ declare namespace es {
         /** 该切片的运行时间 */
         readonly duration: number;
     }
+    export {};
 }
-declare module es {
+declare namespace es {
     class Bag<E> implements ImmutableBag<E> {
         size_: number;
         length: number;
@@ -5630,7 +5676,7 @@ declare module es {
         addAll(items: ImmutableBag<E>): void;
     }
 }
-declare module es {
+declare namespace es {
     interface ImmutableBag<E> {
         get(index: number): E;
         size(): number;
@@ -5638,8 +5684,8 @@ declare module es {
         contains(e: E): boolean;
     }
 }
-declare module es {
-    class Node<T> {
+declare namespace es {
+    export class Node<T> {
         element: T;
         next: Node<T>;
         constructor(element: T, next?: Node<T>);
@@ -5647,8 +5693,8 @@ declare module es {
     interface equalsFnType<T> {
         (a: T, b: T): boolean;
     }
-    function defaultEquals<T>(a: T, b: T): boolean;
-    class LinkedList<T> {
+    export function defaultEquals<T>(a: T, b: T): boolean;
+    export class LinkedList<T> {
         protected count: number;
         protected next: any;
         protected equalsFn: equalsFnType<T>;
@@ -5666,8 +5712,9 @@ declare module es {
         getHead(): Node<T>;
         toString(): string;
     }
+    export {};
 }
-declare module es {
+declare namespace es {
     /**
      * 可以用于列表池的简单类
      */
@@ -5699,7 +5746,7 @@ declare module es {
         private static checkCreate;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 用于管理一对对象的简单DTO
      */
@@ -5711,9 +5758,9 @@ declare module es {
         equals(other: Pair<T>): boolean;
     }
 }
-declare module es {
+declare namespace es {
     class PairSet<T> {
-        readonly all: Array<Pair<T>>;
+        get all(): Array<Pair<T>>;
         has(pair: Pair<T>): boolean;
         add(pair: Pair<T>): void;
         remove(pair: Pair<T>): void;
@@ -5723,7 +5770,7 @@ declare module es {
         private _all;
     }
 }
-declare module es {
+declare namespace es {
     class Pool {
         private static _objectQueue;
         /**
@@ -5765,7 +5812,7 @@ declare module es {
     }
     const isIPoolable: (props: any) => props is IPoolable;
 }
-declare module es {
+declare namespace es {
     /**
      * startCoroutine返回的接口，它提供了中途停止coroutine的能力。
      */
@@ -5796,7 +5843,7 @@ declare module es {
         wait(seconds: number): WaitForSeconds;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * CoroutineManager用于隐藏Coroutine所需数据的内部类
      */
@@ -5842,7 +5889,7 @@ declare module es {
         tickCoroutine(coroutine: CoroutineImpl): boolean;
     }
 }
-declare module es {
+declare namespace es {
     class MaxRectsBinPack {
         binWidth: number;
         binHeight: number;
@@ -5858,7 +5905,7 @@ declare module es {
         isContainedIn(a: Rectangle, b: Rectangle): boolean;
     }
 }
-declare module es {
+declare namespace es {
     class ArrayUtils {
         /**
          * 执行冒泡排序
@@ -5974,13 +6021,13 @@ declare module es {
         static randomItems<T>(type: any, list: T[], itemCount: number): T[];
     }
 }
-declare module es {
+declare namespace es {
     class Base64Utils {
         private static _keyStr;
         /**
          * 判断是否原生支持Base64位解析
          */
-        static readonly nativeBase64: boolean;
+        static get nativeBase64(): boolean;
         /**
          * 解码
          * @param input
@@ -6012,7 +6059,7 @@ declare module es {
         static decodeCSV(input: string): Array<number>;
     }
 }
-declare module es {
+declare namespace es {
     class EdgeExt {
         static oppositeEdge(self: Edge): Edge;
         /**
@@ -6027,12 +6074,12 @@ declare module es {
         static isVertical(self: Edge): boolean;
     }
 }
-declare module es {
+declare namespace es {
     class NumberExtension {
         static toNumber(value: any): number;
     }
 }
-declare module es {
+declare namespace es {
     class RandomUtils {
         /**
          * 在 start 与 stop之间取一个随机整数，可以用step指定间隔， 但不包括较大的端点（start与stop较大的一个）
@@ -6103,7 +6150,7 @@ declare module es {
         private static _randomCompare;
     }
 }
-declare module es {
+declare namespace es {
     class RectangleExt {
         /**
          * 获取指定边的位置
@@ -6199,17 +6246,17 @@ declare module es {
         static translate(rect: Rectangle, vec: Vector2): void;
     }
 }
-declare module es {
+declare namespace es {
     class TextureUtils {
         static premultiplyAlpha(pixels: number[]): void;
     }
 }
-declare module es {
+declare namespace es {
     class TypeUtils {
         static getType(obj: any): any;
     }
 }
-declare module es {
+declare namespace es {
     class Vector2Ext {
         /**
          * 检查三角形是CCW还是CW
@@ -6291,7 +6338,7 @@ declare module es {
         static round(vec: Vector2): Vector2;
     }
 }
-declare module es {
+declare namespace es {
     class Enumerable {
         /**
          * 在指定范围内生成一个整数序列。
@@ -6303,7 +6350,7 @@ declare module es {
         static repeat<T>(element: T, count: number): List<T>;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 检查传递的参数是否为对象
      */
@@ -6311,16 +6358,16 @@ declare module es {
     /**
      * 创建一个否定谓词结果的函数
      */
-    const negate: <T>(pred: (...args: T[]) => boolean) => (...args: T[]) => boolean;
+    const negate: <T>(pred: (...args: T[]) => boolean) => ((...args: T[]) => boolean);
     /**
      * 比较器助手
      */
-    const composeComparers: <T>(previousComparer: (a: T, b: T) => number, currentComparer: (a: T, b: T) => number) => (a: T, b: T) => number;
-    const keyComparer: <T>(_keySelector: (key: T) => string, descending?: boolean) => (a: T, b: T) => number;
+    const composeComparers: <T>(previousComparer: (a: T, b: T) => number, currentComparer: (a: T, b: T) => number) => ((a: T, b: T) => number);
+    const keyComparer: <T>(_keySelector: (key: T) => string, descending?: boolean) => ((a: T, b: T) => number);
 }
-declare module es {
+declare namespace es {
     type PredicateType<T> = (value?: T, index?: number, list?: T[]) => boolean;
-    class List<T> {
+    export class List<T> {
         protected _elements: T[];
         /**
          * 默认为列表的元素
@@ -6654,7 +6701,7 @@ declare module es {
          * 将数组转换为一个 Set 对象
          * @returns Set 对象，其中包含了数组中的所有元素
          */
-        toSet(): Set<any>;
+        toSet(): Set<unknown>;
         /**
          * 将数组转换为一个查找表，根据指定的键对元素进行分组并返回一个包含键值对的对象
          * @param keySelector 指定的键，用于分组
@@ -6683,7 +6730,7 @@ declare module es {
      * 即时返回值是一个存储执行操作所需的所有信息的对象。
      * 在通过调用对象的ToDictionary、ToLookup、ToList或ToArray方法枚举对象之前，不会执行由该方法表示的查询
      */
-    class OrderedList<T> extends List<T> {
+    export class OrderedList<T> extends List<T> {
         private _comparer;
         constructor(elements: T[], _comparer: (a: T, b: T) => number);
         /**
@@ -6697,8 +6744,9 @@ declare module es {
          */
         thenByDescending(keySelector: (key: T) => any): List<T>;
     }
+    export {};
 }
-declare module es {
+declare namespace es {
     /**
      * 一段的终点
      */
@@ -6722,7 +6770,7 @@ declare module es {
         compare(a: EndPoint, b: EndPoint): 0 | 1 | -1;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 表示可见性网格中的遮挡线段
      */
@@ -6738,7 +6786,7 @@ declare module es {
         constructor();
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 类，它可以计算出一个网格，表示从给定的一组遮挡物的原点可以看到哪些区域。使用方法如下。
      *
@@ -6848,7 +6896,7 @@ declare module es {
         updateSegments(): void;
     }
 }
-declare module es {
+declare namespace es {
     interface ITimer {
         context: any;
         /**
@@ -6865,7 +6913,7 @@ declare module es {
         getContext<T>(): T;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 私有类隐藏ITimer的实现
      */
@@ -6887,7 +6935,7 @@ declare module es {
         unload(): void;
     }
 }
-declare module es {
+declare namespace es {
     /**
      * 允许动作的延迟和重复执行
      */

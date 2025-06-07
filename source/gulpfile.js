@@ -1,7 +1,7 @@
 'use strict';
 const gulp = require('gulp');
 const { series, parallel } = require('gulp');
-const minify = require('gulp-minify');
+const terser = require('gulp-terser');
 const inject = require('gulp-inject-string');
 const ts = require('gulp-typescript');
 const merge = require('merge2');
@@ -13,7 +13,7 @@ function buildJs() {
     .js.pipe(inject.replace('var es;', ''))
     .pipe(inject.prepend('window.es = {};\n'))
     .pipe(inject.replace('var __extends =', 'window.__extends ='))
-    .pipe(minify({ ext: { min: ".min.js" } }))
+    .pipe(terser())
     .pipe(gulp.dest('./bin'));
 }
 
