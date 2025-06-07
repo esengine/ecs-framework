@@ -1,88 +1,64 @@
-module es {
-    export class SceneComponent implements IComparer<SceneComponent> {
-        /**
-         * 这个场景组件被附加到的场景
-         */
-        public scene: Scene;
+import type { Scene } from '../Scene';
 
-        /**
-         * 如果启用了SceneComponent，则为true。状态的改变会导致调用onEnabled/onDisable。
-         */
-        public get enabled() {
-            return this._enabled;
-        }
+/**
+ * 场景组件基类
+ * 附加到场景的组件，用于实现场景级别的功能
+ */
+export class SceneComponent {
+    /** 组件所属的场景 */
+    public scene!: Scene;
+    /** 更新顺序 */
+    public updateOrder: number = 0;
+    /** 是否启用 */
+    private _enabled: boolean = true;
 
-        /**
-         * 如果启用了SceneComponent，则为true。状态的改变会导致调用onEnabled/onDisable。
-         * @param value
-         */
-        public set enabled(value: boolean) {
-            this.setEnabled(value);
-        }
+    /** 获取是否启用 */
+    public get enabled(): boolean {
+        return this._enabled;
+    }
 
-        /**
-         * 更新此场景中SceneComponents的顺序
-         */
-        public updateOrder: number = 0;
-
-        public _enabled: boolean = true;
-
-        /**
-         * 在启用此SceneComponent时调用
-         */
-        public onEnabled() {
-        }
-
-        /**
-         * 当禁用此SceneComponent时调用
-         */
-        public onDisabled() {
-        }
-
-        /**
-         * 当该SceneComponent从场景中移除时调用
-         */
-        public onRemovedFromScene() {
-        }
-
-        /**
-         * 在实体更新之前每一帧调用
-         */
-        public update() {
-        }
-
-        /**
-         * 启用/禁用这个SceneComponent
-         * @param isEnabled
-         */
-        public setEnabled(isEnabled: boolean): SceneComponent {
-            if (this._enabled != isEnabled) {
-                this._enabled = isEnabled;
-
-                if (this._enabled) {
-                    this.onEnabled();
-                } else {
-                    this.onDisabled();
-                }
+    /** 设置是否启用 */
+    public set enabled(value: boolean) {
+        if (this._enabled !== value) {
+            this._enabled = value;
+            if (this._enabled) {
+                this.onEnabled();
+            } else {
+                this.onDisabled();
             }
-
-            return this;
         }
+    }
 
-        /**
-         * 设置SceneComponent的updateOrder并触发某种SceneComponent
-         * @param updateOrder
-         */
-        public setUpdateOrder(updateOrder: number) {
-            if (this.updateOrder != updateOrder) {
-                this.updateOrder = updateOrder;
-            }
+    /**
+     * 当组件启用时调用
+     */
+    public onEnabled(): void {
+    }
 
-            return this;
-        }
+    /**
+     * 当组件禁用时调用
+     */
+    public onDisabled(): void {
+    }
 
-        public compare(other: SceneComponent): number {
-            return this.updateOrder - other.updateOrder;
-        }
+    /**
+     * 当组件从场景中移除时调用
+     */
+    public onRemovedFromScene(): void {
+    }
+
+    /**
+     * 每帧更新
+     */
+    public update(): void {
+    }
+
+    /**
+     * 比较组件的更新顺序
+     * @param other 其他组件
+     * @returns 比较结果
+     */
+    public compare(other: SceneComponent): number {
+        return this.updateOrder - other.updateOrder;
     }
 }

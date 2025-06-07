@@ -1,564 +1,1356 @@
-module es {
-    export class EntityComparer implements IComparer<Entity> {
-        public compare(self: Entity, other: Entity): number {
-            let compare = self.updateOrder - other.updateOrder;
-            if (compare == 0)
-                compare = self.id - other.id;
-            return compare;
+import { Vector2 } from '../Math/Vector2';
+import { Transform } from './Transform';
+import { Component } from './Component';
+import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
+
+/**
+ * 实体比较器
+ * 
+ * 用于比较两个实体的优先级，首先按更新顺序比较，然后按ID比较。
+ */
+export class EntityComparer {
+    /**
+     * 比较两个实体
+     * 
+     * @param self - 第一个实体
+     * @param other - 第二个实体
+     * @returns 比较结果，负数表示self优先级更高，正数表示other优先级更高，0表示相等
+     */
+    public compare(self: Entity, other: Entity): number {
+        let compare = self.updateOrder - other.updateOrder;
+        if (compare == 0)
+            compare = self.id - other.id;
+        return compare;
+    }
+}
+
+/**
+ * 组件缓存项
+ */
+interface ComponentCacheEntry<T extends Component = Component> {
+    component: T;
+    lastAccessed: number;
+    accessCount: number;
+}
+
+/**
+ * 组件缓存配置
+ */
+interface ComponentCacheConfig {
+    maxSize: number;
+    ttl: number; // 生存时间（毫秒）
+    enableLRU: boolean; // 是否启用LRU淘汰策略
+}
+
+/**
+ * 高性能组件缓存
+ */
+class ComponentCache {
+    private cache = new Map<ComponentType, ComponentCacheEntry>();
+    private accessOrder: ComponentType[] = [];
+    private config: ComponentCacheConfig;
+
+    constructor(config: ComponentCacheConfig = {
+        maxSize: 16,
+        ttl: 5000,
+        enableLRU: true
+    }) {
+        this.config = config;
+    }
+
+    public get<T extends Component>(type: ComponentType<T>): T | null {
+        const entry = this.cache.get(type);
+        if (!entry) {
+            return null;
+        }
+
+        // 检查TTL
+        if (Date.now() - entry.lastAccessed > this.config.ttl) {
+            this.cache.delete(type);
+            this.removeFromAccessOrder(type);
+            return null;
+        }
+
+        // 更新访问信息
+        entry.lastAccessed = Date.now();
+        entry.accessCount++;
+
+        // 更新LRU顺序
+        if (this.config.enableLRU) {
+            this.updateAccessOrder(type);
+        }
+
+        return entry.component as T;
+    }
+
+    public set<T extends Component>(type: ComponentType<T>, component: T): void {
+        // 检查缓存大小限制
+        if (this.cache.size >= this.config.maxSize && !this.cache.has(type)) {
+            this.evictLeastRecentlyUsed();
+        }
+
+        const entry: ComponentCacheEntry<T> = {
+            component,
+            lastAccessed: Date.now(),
+            accessCount: 1
+        };
+
+        this.cache.set(type, entry);
+
+        if (this.config.enableLRU) {
+            this.updateAccessOrder(type);
         }
     }
 
-    export class Entity implements IEqualityComparable {
-        public static entityComparer: IComparer<Entity> = new EntityComparer();
-        /**
-         * 当前实体所属的场景
-         */
-        public scene: Scene;
-        /**
-         * 实体名称。用于在场景范围内搜索实体
-         */
-        public name: string;
-        /**
-         * 此实体的唯一标识
-         */
-        public readonly id: number;
-        /**
-         * 封装实体的位置/旋转/缩放，并允许设置一个高层结构
-         */
-        public readonly transform: Transform;
-        /**
-         * 当前附加到此实体的所有组件的列表
-         */
-        public readonly components: ComponentList;
-        /**
-         * 指定应该调用这个entity update方法的频率。1表示每一帧，2表示每一帧，以此类推
-         */
-        public updateInterval: number = 1;
-        public componentBits: Bits;
+    public delete(type: ComponentType): boolean {
+        const deleted = this.cache.delete(type);
+        if (deleted) {
+            this.removeFromAccessOrder(type);
+        }
+        return deleted;
+    }
 
-        constructor(name: string, id: number) {
-            this.components = new ComponentList(this);
-            this.transform = new Transform(this);
-            this.componentBits = new Bits();
-            this.name = name;
-            this.id = id;
+    public clear(): void {
+        this.cache.clear();
+        this.accessOrder.length = 0;
+    }
+
+    public has(type: ComponentType): boolean {
+        return this.cache.has(type);
+    }
+
+    private evictLeastRecentlyUsed(): void {
+        if (this.accessOrder.length > 0) {
+            const lruType = this.accessOrder[0];
+            this.cache.delete(lruType);
+            this.accessOrder.shift();
+        }
+    }
+
+    private updateAccessOrder(type: ComponentType): void {
+        this.removeFromAccessOrder(type);
+        this.accessOrder.push(type);
+    }
+
+    private removeFromAccessOrder(type: ComponentType): void {
+        const index = this.accessOrder.indexOf(type);
+        if (index !== -1) {
+            this.accessOrder.splice(index, 1);
+        }
+    }
+
+    public getStats(): {
+        size: number;
+        maxSize: number;
+        hitRate: number;
+        averageAccessCount: number;
+    } {
+        let totalAccess = 0;
+        let totalHits = 0;
+
+        for (const entry of this.cache.values()) {
+            totalAccess += entry.accessCount;
+            totalHits++;
         }
 
-        public _isDestroyed: boolean;
+        return {
+            size: this.cache.size,
+            maxSize: this.config.maxSize,
+            hitRate: totalAccess > 0 ? totalHits / totalAccess : 0,
+            averageAccessCount: this.cache.size > 0 ? totalAccess / this.cache.size : 0
+        };
+    }
+}
 
-        /**
-         * 如果调用了destroy，那么在下一次处理实体之前这将一直为true
-         */
-        public get isDestroyed() {
-            return this._isDestroyed;
+/**
+ * 游戏实体类
+ * 
+ * ECS架构中的实体（Entity），作为组件的容器。
+ * 实体本身不包含游戏逻辑，所有功能都通过组件来实现。
+ * 支持父子关系，可以构建实体层次结构。
+ * 
+ * @example
+ * ```typescript
+ * // 创建实体
+ * const entity = new Entity("Player", 1);
+ * 
+ * // 添加组件
+ * const healthComponent = entity.addComponent(new HealthComponent(100));
+ * 
+ * // 获取组件
+ * const health = entity.getComponent(HealthComponent);
+ * 
+ * // 设置位置
+ * entity.position = new Vector2(100, 200);
+ * 
+ * // 添加子实体
+ * const weapon = new Entity("Weapon", 2);
+ * entity.addChild(weapon);
+ * ```
+ */
+export class Entity {
+    /**
+     * 实体比较器实例
+     */
+    public static entityComparer: EntityComparer = new EntityComparer();
+    
+    /**
+     * 实体名称
+     * 
+     * 用于标识和调试的友好名称。
+     */
+    public name: string;
+    
+    /**
+     * 实体唯一标识符
+     * 
+     * 在整个游戏生命周期中唯一的数字ID。
+     */
+    public readonly id: number;
+    
+    /**
+     * 变换组件
+     * 
+     * 管理实体的位置、旋转和缩放信息。
+     */
+    public readonly transform: Transform;
+    
+    /**
+     * 组件集合
+     * 
+     * 存储附加到此实体的所有组件。
+     */
+    public readonly components: Component[] = [];
+    
+    /**
+     * 所属场景
+     * 
+     * 实体所在的场景引用。
+     */
+    public scene: any; // 使用any避免循环依赖
+    
+    /**
+     * 更新间隔
+     * 
+     * 控制实体更新的频率。
+     */
+    public updateInterval: number = 1;
+    
+    /**
+     * 销毁状态标志
+     * 
+     * 标记实体是否已被销毁。
+     */
+    public _isDestroyed: boolean = false;
+
+    /**
+     * 父实体
+     * 
+     * 此实体的父实体引用，如果为null则表示是根实体。
+     */
+    private _parent: Entity | null = null;
+
+    /**
+     * 子实体集合
+     * 
+     * 存储此实体的所有子实体。
+     */
+    private _children: Entity[] = [];
+
+    /**
+     * 活跃状态
+     * 
+     * 控制实体及其子实体是否参与更新和渲染。
+     */
+    private _active: boolean = true;
+    
+    /**
+     * 实体标签
+     * 
+     * 用于分类和快速查找的数字标签。
+     */
+    private _tag: number = 0;
+    
+    /**
+     * 启用状态
+     * 
+     * 控制实体是否参与更新循环。
+     */
+    private _enabled: boolean = true;
+    
+    /**
+     * 更新顺序
+     * 
+     * 决定实体在更新循环中的执行顺序。
+     */
+    private _updateOrder: number = 0;
+
+    /**
+     * 组件位掩码
+     * 
+     * 用于快速检查实体拥有哪些组件类型。
+     */
+    private _componentMask: bigint = BigInt(0);
+
+    /**
+     * 组件类型到索引的映射表
+     */
+    private _componentTypeToIndex = new Map<ComponentType, number>();
+
+    /**
+     * 组件缓存系统
+     */
+    private _componentCache: ComponentCache;
+
+    /**
+     * 组件访问统计
+     */
+    private _componentAccessStats = new Map<ComponentType, {
+        accessCount: number;
+        lastAccessed: number;
+        cacheHits: number;
+        cacheMisses: number;
+    }>();
+
+    /**
+     * 创建实体实例
+     * 
+     * @param name - 实体名称
+     * @param id - 实体唯一标识符
+     */
+    constructor(name: string, id: number) {
+        this.name = name;
+        this.id = id;
+        this.transform = new Transform();
+        this._componentCache = new ComponentCache();
+    }
+
+    /**
+     * 获取销毁状态
+     * 
+     * @returns 如果实体已被销毁则返回true
+     */
+    public get isDestroyed(): boolean {
+        return this._isDestroyed;
+    }
+
+    /**
+     * 获取父实体
+     * 
+     * @returns 父实体，如果没有父实体则返回null
+     */
+    public get parent(): Entity | null {
+        return this._parent;
+    }
+
+    /**
+     * 获取子实体数组的只读副本
+     * 
+     * @returns 子实体数组的副本
+     */
+    public get children(): readonly Entity[] {
+        return [...this._children];
+    }
+
+    /**
+     * 获取子实体数量
+     * 
+     * @returns 子实体的数量
+     */
+    public get childCount(): number {
+        return this._children.length;
+    }
+
+    /**
+     * 获取活跃状态
+     * 
+     * @returns 如果实体处于活跃状态则返回true
+     */
+    public get active(): boolean {
+        return this._active;
+    }
+
+    /**
+     * 设置活跃状态
+     * 
+     * 设置实体的活跃状态，会影响子实体的有效活跃状态。
+     * 
+     * @param value - 新的活跃状态
+     */
+    public set active(value: boolean) {
+        if (this._active !== value) {
+            this._active = value;
+            this.onActiveChanged();
+        }
+    }
+
+    /**
+     * 获取实体的有效活跃状态
+     * 
+     * 考虑父实体的活跃状态，只有当实体本身和所有父实体都处于活跃状态时才返回true。
+     * 
+     * @returns 有效的活跃状态
+     */
+    public get activeInHierarchy(): boolean {
+        if (!this._active) return false;
+        if (this._parent) return this._parent.activeInHierarchy;
+        return true;
+    }
+
+    /**
+     * 获取实体标签
+     * 
+     * @returns 实体的数字标签
+     */
+    public get tag(): number {
+        return this._tag;
+    }
+
+    /**
+     * 设置实体标签
+     * 
+     * @param value - 新的标签值
+     */
+    public set tag(value: number) {
+        this._tag = value;
+    }
+
+    /**
+     * 获取启用状态
+     * 
+     * @returns 如果实体已启用则返回true
+     */
+    public get enabled(): boolean {
+        return this._enabled;
+    }
+
+    /**
+     * 设置启用状态
+     * 
+     * @param value - 新的启用状态
+     */
+    public set enabled(value: boolean) {
+        this._enabled = value;
+    }
+
+    /**
+     * 获取更新顺序
+     * 
+     * @returns 实体的更新顺序值
+     */
+    public get updateOrder(): number {
+        return this._updateOrder;
+    }
+
+    /**
+     * 设置更新顺序
+     * 
+     * @param value - 新的更新顺序值
+     */
+    public set updateOrder(value: number) {
+        this._updateOrder = value;
+    }
+
+    /**
+     * 获取组件位掩码
+     * 
+     * @returns 实体的组件位掩码
+     */
+    public get componentMask(): bigint {
+        return this._componentMask;
+    }
+
+    /**
+     * 获取实体位置
+     * 
+     * @returns 实体的位置向量
+     */
+    public get position(): Vector2 {
+        return this.transform.position;
+    }
+
+    /**
+     * 设置实体位置
+     * 
+     * @param value - 新的位置向量
+     */
+    public set position(value: Vector2) {
+        this.transform.position = value;
+    }
+
+    /**
+     * 获取实体旋转角度
+     * 
+     * @returns 实体的旋转角度（弧度）
+     */
+    public get rotation(): number {
+        return this.transform.rotation;
+    }
+
+    /**
+     * 设置实体旋转角度
+     * 
+     * @param value - 新的旋转角度（弧度）
+     */
+    public set rotation(value: number) {
+        this.transform.rotation = value;
+    }
+
+    /**
+     * 获取实体缩放
+     * 
+     * @returns 实体的缩放向量
+     */
+    public get scale(): Vector2 {
+        return this.transform.scale;
+    }
+
+    /**
+     * 设置实体缩放
+     * 
+     * @param value - 新的缩放向量
+     */
+    public set scale(value: Vector2) {
+        this.transform.scale = value;
+    }
+
+    /**
+     * 创建并添加组件
+     * 
+     * @param componentType - 组件类型
+     * @param args - 组件构造函数参数
+     * @returns 创建的组件实例
+     */
+    public createComponent<T extends Component>(
+        componentType: ComponentType<T>, 
+        ...args: any[]
+    ): T {
+        const component = new componentType(...args);
+        return this.addComponent(component);
+    }
+
+    /**
+     * 内部添加组件方法（不进行重复检查，用于初始化）
+     * 
+     * @param component - 要添加的组件实例
+     * @returns 添加的组件实例
+     */
+    private addComponentInternal<T extends Component>(component: T): T {
+        const componentType = component.constructor as ComponentType<T>;
+        
+        // 注册组件类型（如果尚未注册）
+        if (!ComponentRegistry.isRegistered(componentType)) {
+            ComponentRegistry.register(componentType);
         }
 
-        private _tag: number = 0;
+        // 设置组件的实体引用
+        component.entity = this;
+        
+        // 添加到组件列表并建立索引映射
+        const index = this.components.length;
+        this.components.push(component);
+        this._componentTypeToIndex.set(componentType, index);
+        
+        // 更新位掩码
+        this._componentMask |= ComponentRegistry.getBitMask(componentType);
+        
+        // 添加到缓存
+        this._componentCache.set(componentType, component);
+        
+        // 初始化访问统计
+        this._componentAccessStats.set(componentType, {
+            accessCount: 0,
+            lastAccessed: Date.now(),
+            cacheHits: 0,
+            cacheMisses: 0
+        });
 
-        /**
-         * 你可以随意使用。稍后可以使用它来查询场景中具有特定标记的所有实体
-         */
-        public get tag(): number {
-            return this._tag;
+        return component;
+    }
+
+    /**
+     * 添加组件到实体
+     * 
+     * @param component - 要添加的组件实例
+     * @returns 添加的组件实例
+     * @throws {Error} 如果组件类型已存在
+     */
+    public addComponent<T extends Component>(component: T): T {
+        const componentType = component.constructor as ComponentType<T>;
+        
+        // 检查是否已有此类型的组件
+        if (this.hasComponent(componentType)) {
+            throw new Error(`Entity ${this.name} already has component ${componentType.name}`);
         }
 
-        /**
-         * 你可以随意使用。稍后可以使用它来查询场景中具有特定标记的所有实体
-         * @param value
-         */
-        public set tag(value: number) {
-            this.setTag(value);
+        // 使用内部方法添加组件
+        this.addComponentInternal(component);
+        
+        // 如果场景存在且有组件存储管理器，添加到存储器
+        if (this.scene && this.scene.componentStorageManager) {
+            this.scene.componentStorageManager.addComponent(this.id, component);
         }
 
-        private _enabled: boolean = true;
-
-        /**
-         * 启用/禁用实体。当禁用碰撞器从物理系统和组件中移除时，方法将不会被调用
-         */
-        public get enabled() {
-            return this._enabled;
-        }
-
-        /**
-         * 启用/禁用实体。当禁用碰撞器从物理系统和组件中移除时，方法将不会被调用
-         * @param value
-         */
-        public set enabled(value: boolean) {
-            this.setEnabled(value);
-        }
-
-        private _updateOrder: number = 0;
-
-        /**
-         * 更新此实体的顺序。updateOrder还用于对scene.entities上的标签列表进行排序
-         */
-        public get updateOrder() {
-            return this._updateOrder;
-        }
-
-        /**
-         * 更新此实体的顺序。updateOrder还用于对scene.entities上的标签列表进行排序
-         * @param value
-         */
-        public set updateOrder(value: number) {
-            this.setUpdateOrder(value);
-        }
-
-        public get parent(): Transform {
-            return this.transform.parent;
-        }
-
-        public set parent(value: Transform) {
-            this.transform.setParent(value);
-        }
-
-        public get childCount() {
-            return this.transform.childCount;
-        }
-
-        public get position(): Vector2 {
-            return this.transform.position;
-        }
-
-        public set position(value: Vector2) {
-            this.transform.setPosition(value.x, value.y);
-        }
-
-        public get localPosition(): Vector2 {
-            return this.transform.localPosition;
-        }
-
-        public set localPosition(value: Vector2) {
-            this.transform.setLocalPosition(value);
-        }
-
-        public get rotation(): number {
-            return this.transform.rotation;
-        }
-
-        public set rotation(value: number) {
-            this.transform.setRotation(value);
-        }
-
-        public get rotationDegrees(): number {
-            return this.transform.rotationDegrees;
-        }
-
-        public set rotationDegrees(value: number) {
-            this.transform.setRotationDegrees(value);
-        }
-
-        public get localRotation(): number {
-            return this.transform.localRotation;
-        }
-
-        public set localRotation(value: number) {
-            this.transform.setLocalRotation(value);
-        }
-
-        public get localRotationDegrees(): number {
-            return this.transform.localRotationDegrees;
-        }
-
-        public set localRotationDegrees(value: number) {
-            this.transform.setLocalRotationDegrees(value);
-        }
-
-        public get scale(): Vector2 {
-            return this.transform.scale;
-        }
-
-        public set scale(value: Vector2) {
-            this.transform.setScale(value);
-        }
-
-        public get localScale(): Vector2 {
-            return this.transform.localScale;
-        }
-
-        public set localScale(value: Vector2) {
-            this.transform.setLocalScale(value);
-        }
-
-        public get worldInverseTransform(): Matrix2D {
-            return this.transform.worldInverseTransform;
-        }
-
-        public get localToWorldTransform(): Matrix2D {
-            return this.transform.localToWorldTransform;
-        }
-
-        public get worldToLocalTransform(): Matrix2D {
-            return this.transform.worldToLocalTransform;
-        }
-
-        public onTransformChanged(comp: ComponentTransform) {
-            // 通知我们的子项改变了位置
-            this.components.onEntityTransformChanged(comp);
-        }
-
-        public setParent(parent: Entity);
-        public setParent(parent: Transform);
-        public setParent(parent: Transform | Entity) {
-            if (parent instanceof Transform) {
-                this.transform.setParent(parent);
-            } else if (parent instanceof Entity) {
-                this.transform.setParent(parent.transform);
+        // 调用组件的生命周期方法
+        component.onAddedToEntity();
+        
+        // 通知场景实体已改变
+        if (this.scene && this.scene.entityProcessors) {
+            for (const processor of this.scene.entityProcessors.processors) {
+                processor.onChanged(this);
             }
-
-            return this;
         }
 
-        public setPosition(x: number, y: number) {
-            this.transform.setPosition(x, y);
-            return this;
+        return component;
+    }
+
+    /**
+     * 获取指定类型的组件
+     * 
+     * @param type - 组件类型
+     * @returns 组件实例或null
+     */
+    public getComponent<T extends Component>(type: ComponentType<T>): T | null {
+        // 更新访问统计
+        this.updateComponentAccessStats(type);
+
+        // 首先检查位掩码，快速排除
+        if (!ComponentRegistry.isRegistered(type)) {
+            this.recordCacheMiss(type);
+            return null;
+        }
+        
+        const mask = ComponentRegistry.getBitMask(type);
+        if ((this._componentMask & mask) === BigInt(0)) {
+            this.recordCacheMiss(type);
+            return null;
         }
 
-        public setLocalPosition(localPosition: Vector2) {
-            this.transform.setLocalPosition(localPosition);
-            return this;
+        // 尝试从缓存获取（O(1)）
+        const cachedComponent = this._componentCache.get(type);
+        if (cachedComponent) {
+            this.recordCacheHit(type);
+            return cachedComponent;
         }
 
-        public setRotation(radians: number) {
-            this.transform.setRotation(radians);
-            return this;
-        }
-
-        public setRotationDegrees(degrees: number) {
-            this.transform.setRotationDegrees(degrees);
-            return this;
-        }
-
-        public setLocalRotation(radians: number) {
-            this.transform.setLocalRotation(radians);
-            return this;
-        }
-
-        public setLocalRotationDegrees(degrees: number) {
-            this.transform.setLocalRotationDegrees(degrees);
-            return this;
-        }
-
-        public setScale(scale: number);
-        public setScale(scale: Vector2);
-        public setScale(scale: Vector2 | number) {
-            if (scale instanceof Vector2) {
-                this.transform.setScale(scale);
-            } else {
-                this.transform.setScale(new Vector2(scale, scale));
-            }
-
-            return this;
-        }
-
-        public setLocalScale(scale: number);
-        public setLocalScale(scale: Vector2);
-        public setLocalScale(scale: Vector2 | number) {
-            if (scale instanceof Vector2) {
-                this.transform.setLocalScale(scale);
-            } else {
-                this.transform.setLocalScale(new Vector2(scale, scale));
-            }
-
-            return this;
-        }
-
-        /**
-         * 设置实体的标记
-         * @param tag
-         */
-        public setTag(tag: number): Entity {
-            if (this._tag != tag) {
-                // 我们只有在已经有场景的情况下才会调用entityTagList。如果我们还没有场景，我们会被添加到entityTagList
-                if (this.scene)
-                    this.scene.entities.removeFromTagList(this);
-                this._tag = tag;
-                if (this.scene)
-                    this.scene.entities.addToTagList(this);
-            }
-
-            return this;
-        }
-
-        /**
-         * 设置实体的启用状态。当禁用碰撞器从物理系统和组件中移除时，方法将不会被调用
-         * @param isEnabled
-         */
-        public setEnabled(isEnabled: boolean) {
-            if (this._enabled != isEnabled) {
-                this._enabled = isEnabled;
-
-                if (this._enabled)
-                    this.components.onEntityEnabled();
-                else
-                    this.components.onEntityDisabled();
-            }
-
-            return this;
-        }
-
-        /**
-         * 设置此实体的更新顺序。updateOrder还用于对scene.entities上的标签列表进行排序
-         * @param updateOrder
-         */
-        public setUpdateOrder(updateOrder: number) {
-            if (this._updateOrder != updateOrder) {
-                this._updateOrder = updateOrder;
-                if (this.scene) {
-                    this.scene.entities.markEntityListUnsorted();
-                    this.scene.entities.markTagUnsorted(this.tag);
-                }
-
-                return this;
+        // 尝试从索引映射获取（O(1)）
+        const index = this._componentTypeToIndex.get(type);
+        if (index !== undefined && index < this.components.length) {
+            const component = this.components[index];
+            if (component && component.constructor === type) {
+                // 添加到缓存
+                this._componentCache.set(type, component);
+                this.recordCacheHit(type);
+                return component as T;
             }
         }
 
-        /**
-         * 从场景中删除实体并销毁所有子元素
-         */
-        public destroy() {
-            this._isDestroyed = true;
-            this.scene.identifierPool.checkIn(this.id);
-            this.scene.entities.remove(this);
-            this.transform.parent = null;
-
-            // 销毁所有子项
-            for (let i = this.transform.childCount - 1; i >= 0; i--) {
-                let child = this.transform.getChild(i);
-                child.entity.destroy();
+        // 如果场景有组件存储管理器，从存储器获取
+        if (this.scene && this.scene.componentStorageManager) {
+            const component = this.scene.componentStorageManager.getComponent(this.id, type);
+            if (component) {
+                // 更新本地缓存和索引
+                this._componentCache.set(type, component);
+                this.rebuildComponentIndex();
+                this.recordCacheHit(type);
+                return component;
             }
         }
 
-        /**
-         * 将实体从场景中分离。下面的生命周期方法将被调用在组件上:OnRemovedFromEntity
-         */
-        public detachFromScene() {
-            this.scene.entities.remove(this);
-            this.components.deregisterAllComponents();
-
-            for (let i = 0; i < this.transform.childCount; i++)
-                this.transform.getChild(i).entity.detachFromScene();
-        }
-
-        /**
-         * 将一个先前分离的实体附加到一个新的场景
-         * @param newScene
-         */
-        public attachToScene(newScene: Scene) {
-            this.scene = newScene;
-            newScene.entities.add(this);
-            this.components.registerAllComponents();
-
-            for (let i = 0; i < this.transform.childCount; i++) {
-                this.transform.getChild(i).entity.attachToScene(newScene);
+        // 最后回退到线性搜索并重建索引
+        for (let i = 0; i < this.components.length; i++) {
+            const component = this.components[i];
+            if (component instanceof type) {
+                // 重建索引映射
+                this._componentTypeToIndex.set(type, i);
+                this._componentCache.set(type, component);
+                this.recordCacheHit(type);
+                return component as T;
             }
         }
+        
+        this.recordCacheMiss(type);
+        return null;
+    }
 
-        /**
-         * 在提交了所有挂起的实体更改后，将此实体添加到场景时调用
-         */
-        public onAddedToScene() {
+    /**
+     * 更新组件访问统计
+     * 
+     * @param type - 组件类型
+     */
+    private updateComponentAccessStats(type: ComponentType): void {
+        let stats = this._componentAccessStats.get(type);
+        if (!stats) {
+            stats = {
+                accessCount: 0,
+                lastAccessed: Date.now(),
+                cacheHits: 0,
+                cacheMisses: 0
+            };
+            this._componentAccessStats.set(type, stats);
+        }
+        
+        stats.accessCount++;
+        stats.lastAccessed = Date.now();
+    }
+
+    /**
+     * 记录缓存命中
+     * 
+     * @param type - 组件类型
+     */
+    private recordCacheHit(type: ComponentType): void {
+        const stats = this._componentAccessStats.get(type);
+        if (stats) {
+            stats.cacheHits++;
+        }
+    }
+
+    /**
+     * 记录缓存未命中
+     * 
+     * @param type - 组件类型
+     */
+    private recordCacheMiss(type: ComponentType): void {
+        const stats = this._componentAccessStats.get(type);
+        if (stats) {
+            stats.cacheMisses++;
+        }
+    }
+
+    /**
+     * 重建组件索引映射
+     */
+    private rebuildComponentIndex(): void {
+        this._componentTypeToIndex.clear();
+        
+        for (let i = 0; i < this.components.length; i++) {
+            const component = this.components[i];
+            const componentType = component.constructor as ComponentType;
+            this._componentTypeToIndex.set(componentType, i);
+        }
+    }
+
+    /**
+     * 检查实体是否有指定类型的组件
+     * 
+     * @param type - 组件类型
+     * @returns 如果有该组件则返回true
+     */
+    public hasComponent<T extends Component>(type: ComponentType<T>): boolean {
+        if (!ComponentRegistry.isRegistered(type)) {
+            return false;
+        }
+        
+        const mask = ComponentRegistry.getBitMask(type);
+        return (this._componentMask & mask) !== BigInt(0);
+    }
+
+    /**
+     * 获取或创建指定类型的组件
+     * 
+     * @param type - 组件类型
+     * @param args - 组件构造函数参数（仅在创建时使用）
+     * @returns 组件实例
+     */
+    public getOrCreateComponent<T extends Component>(
+        type: ComponentType<T>, 
+        ...args: any[]
+    ): T {
+        let component = this.getComponent(type);
+        if (!component) {
+            component = this.createComponent(type, ...args);
+        }
+        return component;
+    }
+
+    /**
+     * 移除指定的组件
+     * 
+     * @param component - 要移除的组件实例
+     */
+    public removeComponent(component: Component): void {
+        const componentType = component.constructor as ComponentType;
+        
+        // 从组件列表中移除
+        const index = this.components.indexOf(component);
+        if (index !== -1) {
+            this.components.splice(index, 1);
+            
+            // 重建索引映射（因为数组索引发生了变化）
+            this.rebuildComponentIndex();
         }
 
-        /**
-         * 当此实体从场景中删除时调用
-         */
-        public onRemovedFromScene() {
-            // 如果已经被销毁了，移走我们的组件。如果我们只是分离，我们需要保持我们的组件在实体上。
-            if (this._isDestroyed)
-                this.components.removeAllComponents();
+        // 从缓存中移除
+        this._componentCache.delete(componentType);
+        
+        // 清除访问统计
+        this._componentAccessStats.delete(componentType);
+
+        // 更新位掩码
+        if (ComponentRegistry.isRegistered(componentType)) {
+            this._componentMask &= ~ComponentRegistry.getBitMask(componentType);
         }
 
-        /**
-         * 每帧进行调用进行更新组件
-         */
-        public update() {
-            this.components.update();
+        // 从组件存储管理器中移除
+        if (this.scene && this.scene.componentStorageManager) {
+            this.scene.componentStorageManager.removeComponent(this.id, componentType);
         }
 
-        /**
-         * 创建组件的新实例。返回实例组件
-         * @param componentType 
-         */
-        public createComponent<T extends Component>(componentType: new (...args) => T): T {
-            let component = new componentType();
-            this.addComponent(component);
+        // 调用组件的生命周期方法
+        component.onRemovedFromEntity();
+        
+        // 清除组件的实体引用
+        component.entity = null as any;
+
+        // 通知场景实体已改变
+        if (this.scene && this.scene.entityProcessors) {
+            for (const processor of this.scene.entityProcessors.processors) {
+                processor.onChanged(this);
+            }
+        }
+    }
+
+    /**
+     * 移除指定类型的组件
+     * 
+     * @param type - 组件类型
+     * @returns 被移除的组件实例或null
+     */
+    public removeComponentByType<T extends Component>(type: ComponentType<T>): T | null {
+        const component = this.getComponent(type);
+        if (component) {
+            this.removeComponent(component);
             return component;
         }
+        return null;
+    }
 
-        /**
-         * 将组件添加到组件列表中。返回组件。
-         * @param component
-         */
-        public addComponent<T extends Component>(component: T): T {
-            component.entity = this;
-            this.components.add(component);
-            component.initialize();
-            return component;
-        }
-
-        /**
-         * 获取类型T的第一个组件并返回它。如果没有找到组件，则返回null。
-         * @param type
-         */
-        public getComponent<T extends Component>(type: new (...args) => T): T {
-            return this.components.getComponent(type, false);
-        }
-
-        /**
-         *  获取类型T的第一个并已加入场景的组件并返回它。如果没有找到组件，则返回null。
-         * @param type 
-         * @returns 
-         */
-        public getComponentInScene<T extends Component>(type: new (...args) => T): T {
-            return this.components.getComponent(type, true);
-        }
-
-        /**
-         * 尝试获取T类型的组件。如果未找到任何组件，则返回false
-         * @param type 
-         * @param outComponent 
-         * @returns 
-         */
-        public tryGetComponent<T extends Component>(type: new (...args) => T, outComponent: Ref<T>): boolean {
-            outComponent.value = this.components.getComponent<T>(type, false);
-            return outComponent.value != null;
-        }
-
-        /**
-         * 检查实体是否具有该组件
-         * @param type
-         */
-        public hasComponent<T extends Component>(type: new (...args) => T) {
-            return this.components.getComponent<T>(type, false) != null;
-        }
-
-        /**
-         * 获取类型T的第一个组件并返回它。如果没有找到组件，将创建组件。
-         * @param type
-         */
-        public getOrCreateComponent<T extends Component>(type: new (...args) => T) {
-            let comp = this.components.getComponent<T>(type, true);
-            if (!comp) {
-                comp = this.addComponent<T>(new type());
+    /**
+     * 移除所有组件
+     */
+    public removeAllComponents(): void {
+        // 复制组件列表，避免在迭代时修改
+        const componentsToRemove = [...this.components];
+        
+        // 清空所有缓存和索引
+        this._componentCache.clear();
+        this._componentTypeToIndex.clear();
+        this._componentAccessStats.clear();
+        this._componentMask = BigInt(0);
+        
+        // 移除组件
+        for (const component of componentsToRemove) {
+            const componentType = component.constructor as ComponentType;
+            
+            // 从组件存储管理器中移除
+            if (this.scene && this.scene.componentStorageManager) {
+                this.scene.componentStorageManager.removeComponent(this.id, componentType);
             }
 
-            return comp;
+            // 调用组件的生命周期方法
+            component.onRemovedFromEntity();
+            
+            // 清除组件的实体引用
+            component.entity = null as any;
         }
+        
+        // 清空组件列表
+        this.components.length = 0;
 
-        /**
-         * 获取typeName类型的所有组件，但不使用列表分配
-         * @param typeName
-         * @param componentList
-         */
-        public getComponents(typeName: any, componentList?: any[]) {
-            return this.components.getComponents(typeName, componentList);
-        }
-
-        /**
-         * 从组件列表中删除组件
-         * @param component
-         */
-        public removeComponent(component: Component) {
-            this.components.remove(component);
-        }
-
-        /**
-         * 从组件列表中删除类型为T的第一个组件
-         * @param type
-         */
-        public removeComponentForType<T extends Component>(type) {
-            let comp = this.getComponent<T>(type);
-            if (comp) {
-                this.removeComponent(comp);
-                return true;
+        // 通知场景实体已改变
+        if (this.scene && this.scene.entityProcessors) {
+            for (const processor of this.scene.entityProcessors.processors) {
+                processor.onChanged(this);
             }
+        }
+    }
 
+    /**
+     * 批量添加组件
+     * 
+     * @param components - 要添加的组件数组
+     * @returns 添加的组件数组
+     */
+    public addComponents<T extends Component>(components: T[]): T[] {
+        const addedComponents: T[] = [];
+        
+        for (const component of components) {
+            try {
+                addedComponents.push(this.addComponent(component));
+            } catch (error) {
+                // 如果某个组件添加失败，继续添加其他组件
+                console.warn(`Failed to add component ${component.constructor.name}:`, error);
+            }
+        }
+        
+        return addedComponents;
+    }
+
+    /**
+     * 批量移除组件类型
+     * 
+     * @param componentTypes - 要移除的组件类型数组
+     * @returns 被移除的组件数组
+     */
+    public removeComponentsByTypes<T extends Component>(componentTypes: ComponentType<T>[]): (T | null)[] {
+        const removedComponents: (T | null)[] = [];
+        
+        for (const componentType of componentTypes) {
+            removedComponents.push(this.removeComponentByType(componentType));
+        }
+        
+        return removedComponents;
+    }
+
+    /**
+     * 获取组件缓存统计信息
+     * 
+     * @returns 缓存统计信息
+     */
+    public getComponentCacheStats(): {
+        cacheStats: ReturnType<ComponentCache['getStats']>;
+        accessStats: Map<string, {
+            accessCount: number;
+            lastAccessed: number;
+            cacheHits: number;
+            cacheMisses: number;
+            hitRate: number;
+        }>;
+        indexMappingSize: number;
+        totalComponents: number;
+    } {
+        const accessStats = new Map<string, {
+            accessCount: number;
+            lastAccessed: number;
+            cacheHits: number;
+            cacheMisses: number;
+            hitRate: number;
+        }>();
+
+        for (const [componentType, stats] of this._componentAccessStats) {
+            const total = stats.cacheHits + stats.cacheMisses;
+            accessStats.set(componentType.name, {
+                ...stats,
+                hitRate: total > 0 ? stats.cacheHits / total : 0
+            });
+        }
+
+        return {
+            cacheStats: this._componentCache.getStats(),
+            accessStats,
+            indexMappingSize: this._componentTypeToIndex.size,
+            totalComponents: this.components.length
+        };
+    }
+
+    /**
+     * 预热组件缓存
+     * 
+     * 将所有组件添加到缓存中，提升后续访问性能
+     */
+    public warmUpComponentCache(): void {
+        for (let i = 0; i < this.components.length; i++) {
+            const component = this.components[i];
+            const componentType = component.constructor as ComponentType;
+            
+            // 更新索引映射
+            this._componentTypeToIndex.set(componentType, i);
+            
+            // 添加到缓存
+            this._componentCache.set(componentType, component);
+        }
+    }
+
+    /**
+     * 清理组件缓存
+     * 
+     * 清除过期的缓存项，释放内存
+     */
+    public cleanupComponentCache(): void {
+        // ComponentCache内部会自动处理TTL过期
+        // 这里我们可以强制清理一些不常用的缓存项
+        
+        const now = Date.now();
+        const cleanupThreshold = 30000; // 30秒未访问的组件从缓存中移除
+        
+        for (const [componentType, stats] of this._componentAccessStats) {
+            if (now - stats.lastAccessed > cleanupThreshold && stats.accessCount < 5) {
+                this._componentCache.delete(componentType);
+            }
+        }
+    }
+
+    /**
+     * 获取所有指定类型的组件
+     * 
+     * @param type - 组件类型
+     * @returns 组件实例数组
+     */
+    public getComponents<T extends Component>(type: ComponentType<T>): T[] {
+        const result: T[] = [];
+        
+        for (const component of this.components) {
+            if (component instanceof type) {
+                result.push(component as T);
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * 添加子实体
+     * 
+     * @param child - 要添加的子实体
+     * @returns 添加的子实体
+     */
+    public addChild(child: Entity): Entity {
+        if (child === this) {
+            throw new Error("Entity cannot be its own child");
+        }
+
+        if (child._parent === this) {
+            return child; // 已经是子实体
+        }
+
+        // 如果子实体已有父实体，先从原父实体移除
+        if (child._parent) {
+            child._parent.removeChild(child);
+        }
+
+        // 设置父子关系
+        child._parent = this;
+        this._children.push(child);
+
+        // 如果子实体还没有场景，设置为父实体的场景
+        if (!child.scene && this.scene) {
+            child.scene = this.scene;
+            this.scene.addEntity(child);
+        }
+
+        return child;
+    }
+
+    /**
+     * 移除子实体
+     * 
+     * @param child - 要移除的子实体
+     * @returns 是否成功移除
+     */
+    public removeChild(child: Entity): boolean {
+        const index = this._children.indexOf(child);
+        if (index === -1) {
             return false;
         }
 
-        /**
-         * 从实体中删除所有组件
-         */
-        public removeAllComponents() {
-            for (let i = 0; i < this.components.count; i++) {
-                this.removeComponent(this.components.buffer[i]);
+        // 移除父子关系
+        this._children.splice(index, 1);
+        child._parent = null;
+
+        return true;
+    }
+
+    /**
+     * 移除所有子实体
+     */
+    public removeAllChildren(): void {
+        // 复制子实体列表，避免在迭代时修改
+        const childrenToRemove = [...this._children];
+        
+        for (const child of childrenToRemove) {
+            this.removeChild(child);
+        }
+    }
+
+    /**
+     * 根据名称查找子实体
+     * 
+     * @param name - 子实体名称
+     * @param recursive - 是否递归查找
+     * @returns 找到的子实体或null
+     */
+    public findChild(name: string, recursive: boolean = false): Entity | null {
+        // 在直接子实体中查找
+        for (const child of this._children) {
+            if (child.name === name) {
+                return child;
             }
         }
 
-        public tweenPositionTo(to: Vector2, duration: number = 0.3): ITween<Vector2> {
-            const tween = Pool.obtain(TransformVector2Tween);
-            tween.setTargetAndType(this.transform, TransformTargetType.position);
-            tween.initialize(tween, to, duration);
-
-            return tween;
-        }
-
-        public tweenLocalPositionTo(to: Vector2, duration = 0.3): ITween<Vector2> {
-            const tween = Pool.obtain(TransformVector2Tween);
-            tween.setTargetAndType(this.transform, TransformTargetType.localPosition);
-            tween.initialize(tween, to, duration);
-
-            return tween;
-        }
-
-        public tweenScaleTo(to: Vector2, duration?: number);
-        public tweenScaleTo(to: number, duration?: number);
-        public tweenScaleTo(to: Vector2 | number, duration: number = 0.3) {
-            if (typeof (to) == 'number') {
-                return this.tweenScaleTo(new Vector2(to, to), duration);
+        // 递归查找
+        if (recursive) {
+            for (const child of this._children) {
+                const found = child.findChild(name, true);
+                if (found) {
+                    return found;
+                }
             }
-
-            const tween = Pool.obtain(TransformVector2Tween);
-            tween.setTargetAndType(this.transform, TransformTargetType.scale);
-            tween.initialize(tween, to, duration);
-
-            return tween;
         }
 
-        public tweenLocalScaleTo(to: Vector2, duration?);
-        public tweenLocalScaleTo(to: number, duration?);
-        public tweenLocalScaleTo(to: Vector2 | number, duration = 0.3) {
-            if (typeof (to) == 'number') {
-                return this.tweenLocalScaleTo(new Vector2(to, to), duration);
+        return null;
+    }
+
+    /**
+     * 根据标签查找子实体
+     * 
+     * @param tag - 标签
+     * @param recursive - 是否递归查找
+     * @returns 找到的子实体数组
+     */
+    public findChildrenByTag(tag: number, recursive: boolean = false): Entity[] {
+        const result: Entity[] = [];
+
+        // 在直接子实体中查找
+        for (const child of this._children) {
+            if (child.tag === tag) {
+                result.push(child);
             }
-
-            const tween = Pool.obtain(TransformVector2Tween);
-            tween.setTargetAndType(this.transform, TransformTargetType.localScale);
-            tween.initialize(tween, to, duration);
-
-            return tween;
         }
 
-        public tweenRotationDegreesTo(to: number, duration = 0.3) {
-            const tween = Pool.obtain(TransformVector2Tween);
-            tween.setTargetAndType(this.transform, TransformTargetType.rotationDegrees);
-            tween.initialize(tween, new Vector2(to, to), duration);
-
-            return tween;
+        // 递归查找
+        if (recursive) {
+            for (const child of this._children) {
+                result.push(...child.findChildrenByTag(tag, true));
+            }
         }
 
-        public tweenLocalRotationDegreesTo(to: number, duration = 0.3) {
-            const tween = Pool.obtain(TransformVector2Tween);
-            tween.setTargetAndType(this.transform, TransformTargetType.localRotationDegrees);
-            tween.initialize(tween, new Vector2(to, to), duration);
+        return result;
+    }
 
-            return tween;
+    /**
+     * 获取根实体
+     * 
+     * @returns 层次结构的根实体
+     */
+    public getRoot(): Entity {
+        let root: Entity = this;
+        while (root._parent) {
+            root = root._parent;
+        }
+        return root;
+    }
+
+    /**
+     * 检查是否是指定实体的祖先
+     * 
+     * @param entity - 要检查的实体
+     * @returns 如果是祖先则返回true
+     */
+    public isAncestorOf(entity: Entity): boolean {
+        let current = entity._parent;
+        while (current) {
+            if (current === this) {
+                return true;
+            }
+            current = current._parent;
+        }
+        return false;
+    }
+
+    /**
+     * 检查是否是指定实体的后代
+     * 
+     * @param entity - 要检查的实体
+     * @returns 如果是后代则返回true
+     */
+    public isDescendantOf(entity: Entity): boolean {
+        return entity.isAncestorOf(this);
+    }
+
+    /**
+     * 获取层次深度
+     * 
+     * @returns 在层次结构中的深度（根实体为0）
+     */
+    public getDepth(): number {
+        let depth = 0;
+        let current = this._parent;
+        while (current) {
+            depth++;
+            current = current._parent;
+        }
+        return depth;
+    }
+
+    /**
+     * 遍历所有子实体（深度优先）
+     * 
+     * @param callback - 对每个子实体执行的回调函数
+     * @param recursive - 是否递归遍历
+     */
+    public forEachChild(callback: (child: Entity, index: number) => void, recursive: boolean = false): void {
+        this._children.forEach((child, index) => {
+            callback(child, index);
+            if (recursive) {
+                child.forEachChild(callback, true);
+            }
+        });
+    }
+
+    /**
+     * 活跃状态改变时的回调
+     */
+    private onActiveChanged(): void {
+        // 通知所有组件活跃状态改变
+        for (const component of this.components) {
+            if ('onActiveChanged' in component && typeof component.onActiveChanged === 'function') {
+                (component as any).onActiveChanged();
+            }
         }
 
-        public compareTo(other: Entity): number {
-            let compare = this._updateOrder - other._updateOrder;
-            if (compare == 0)
-                compare = this.id - other.id;
-            return compare;
+        // 通知场景实体状态改变
+        if (this.scene && this.scene.eventSystem) {
+            this.scene.eventSystem.emitSync('entity:activeChanged', { 
+                entity: this, 
+                active: this._active,
+                activeInHierarchy: this.activeInHierarchy
+            });
+        }
+    }
+
+    /**
+     * 更新实体
+     * 
+     * 调用所有组件的更新方法，并更新子实体。
+     */
+    public update(): void {
+        if (!this.activeInHierarchy || this._isDestroyed) {
+            return;
         }
 
-        public equals(other: Entity): boolean {
-            return this.compareTo(other) == 0;
+        // 更新所有组件
+        for (const component of this.components) {
+            if (component.enabled) {
+                component.update();
+            }
         }
 
-        public toString(): string {
-            return `[Entity: name: ${this.name}, tag: ${this.tag}, enabled: ${this.enabled}, depth: ${this.updateOrder}]`;
+        // 更新所有子实体
+        for (const child of this._children) {
+            child.update();
         }
+    }
+
+    /**
+     * 销毁实体
+     * 
+     * 移除所有组件、子实体并标记为已销毁。
+     */
+    public destroy(): void {
+        if (this._isDestroyed) {
+            return;
+        }
+
+        this._isDestroyed = true;
+        
+        // 销毁所有子实体
+        const childrenToDestroy = [...this._children];
+        for (const child of childrenToDestroy) {
+            child.destroy();
+        }
+        
+        // 从父实体中移除
+        if (this._parent) {
+            this._parent.removeChild(this);
+        }
+        
+        // 移除所有组件
+        this.removeAllComponents();
+        
+        // 从场景中移除
+        if (this.scene && this.scene.entities) {
+            this.scene.entities.remove(this);
+        }
+    }
+
+    /**
+     * 比较实体
+     * 
+     * @param other - 另一个实体
+     * @returns 比较结果
+     */
+    public compareTo(other: Entity): number {
+        return EntityComparer.prototype.compare(this, other);
+    }
+
+    /**
+     * 获取实体的字符串表示
+     * 
+     * @returns 实体的字符串描述
+     */
+    public toString(): string {
+        return `Entity[${this.name}:${this.id}]`;
+    }
+
+    /**
+     * 获取实体的调试信息（包含组件缓存信息）
+     * 
+     * @returns 包含实体详细信息的对象
+     */
+    public getDebugInfo(): {
+        name: string;
+        id: number;
+        enabled: boolean;
+        active: boolean;
+        activeInHierarchy: boolean;
+        destroyed: boolean;
+        componentCount: number;
+        componentTypes: string[];
+        componentMask: string;
+        position: { x: number; y: number };
+        rotation: number;
+        scale: { x: number; y: number };
+        parentId: number | null;
+        childCount: number;
+        childIds: number[];
+        depth: number;
+        componentCache: {
+            size: number;
+            maxSize: number;
+            hitRate: number;
+            averageAccessCount: number;
+        };
+        componentAccessStats: Array<{
+            componentType: string;
+            accessCount: number;
+            cacheHits: number;
+            cacheMisses: number;
+            hitRate: number;
+            lastAccessed: string;
+        }>;
+        indexMappingSize: number;
+    } {
+        const cacheStats = this.getComponentCacheStats();
+        const accessStatsArray = Array.from(cacheStats.accessStats.entries()).map(([type, stats]) => ({
+            componentType: type,
+            accessCount: stats.accessCount,
+            cacheHits: stats.cacheHits,
+            cacheMisses: stats.cacheMisses,
+            hitRate: stats.hitRate,
+            lastAccessed: new Date(stats.lastAccessed).toISOString()
+        }));
+
+        return {
+            name: this.name,
+            id: this.id,
+            enabled: this._enabled,
+            active: this._active,
+            activeInHierarchy: this.activeInHierarchy,
+            destroyed: this._isDestroyed,
+            componentCount: this.components.length,
+            componentTypes: this.components.map(c => c.constructor.name),
+            componentMask: this._componentMask.toString(2), // 二进制表示
+            position: { x: this.position.x, y: this.position.y },
+            rotation: this.rotation,
+            scale: { x: this.scale.x, y: this.scale.y },
+            parentId: this._parent?.id || null,
+            childCount: this._children.length,
+            childIds: this._children.map(c => c.id),
+            depth: this.getDepth(),
+            componentCache: cacheStats.cacheStats,
+            componentAccessStats: accessStatsArray,
+            indexMappingSize: cacheStats.indexMappingSize
+        };
     }
 }

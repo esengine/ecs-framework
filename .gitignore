@@ -1,4 +1,5 @@
 /source/node_modules
+/source/bin
 /demo/bin-debug
 /demo/bin-release
 /.idea

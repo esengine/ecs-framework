@@ -1,471 +1,397 @@
-module es {
-    /** 2d 向量 */
-    export class Vector2 implements IEquatable<Vector2> {
-        public x: number = 0;
-        public y: number = 0;
+/**
+ * 二维向量类
+ * 提供二维向量的基本数学运算
+ */
+export class Vector2 {
+    /**
+     * X坐标
+     */
+    public x: number;
+    
+    /**
+     * Y坐标
+     */
+    public y: number;
 
-        /**
-         * 从两个值构造一个带有X和Y的二维向量。
-         * @param x 二维空间中的x坐标
-         * @param y 二维空间的y坐标
-         */
-        constructor(x: number = 0, y: number = 0) {
-            this.x = x;
-            this.y = y;
+    /**
+     * 构造函数
+     * @param x X坐标，默认为0
+     * @param y Y坐标，默认为0
+     */
+    constructor(x: number = 0, y: number = 0) {
+        this.x = x;
+        this.y = y;
+    }
+
+    /**
+     * 零向量
+     */
+    public static get zero(): Vector2 {
+        return new Vector2(0, 0);
+    }
+
+    /**
+     * 单位向量(1, 1)
+     */
+    public static get one(): Vector2 {
+        return new Vector2(1, 1);
+    }
+
+    /**
+     * 单位X向量(1, 0)
+     */
+    public static get unitX(): Vector2 {
+        return new Vector2(1, 0);
+    }
+
+    /**
+     * 单位Y向量(0, 1)
+     */
+    public static get unitY(): Vector2 {
+        return new Vector2(0, 1);
+    }
+
+    /**
+     * 向上向量(0, -1)
+     */
+    public static get up(): Vector2 {
+        return new Vector2(0, -1);
+    }
+
+    /**
+     * 向下向量(0, 1)
+     */
+    public static get down(): Vector2 {
+        return new Vector2(0, 1);
+    }
+
+    /**
+     * 向左向量(-1, 0)
+     */
+    public static get left(): Vector2 {
+        return new Vector2(-1, 0);
+    }
+
+    /**
+     * 向右向量(1, 0)
+     */
+    public static get right(): Vector2 {
+        return new Vector2(1, 0);
+    }
+
+    /**
+     * 获取向量长度
+     */
+    public get length(): number {
+        return Math.sqrt(this.x * this.x + this.y * this.y);
+    }
+
+    /**
+     * 获取向量长度的平方
+     */
+    public get lengthSquared(): number {
+        return this.x * this.x + this.y * this.y;
+    }
+
+    /**
+     * 设置向量的值
+     * @param x X坐标
+     * @param y Y坐标
+     */
+    public set(x: number, y: number): Vector2 {
+        this.x = x;
+        this.y = y;
+        return this;
+    }
+
+    /**
+     * 复制另一个向量的值
+     * @param other 另一个向量
+     */
+    public copyFrom(other: Vector2): Vector2 {
+        this.x = other.x;
+        this.y = other.y;
+        return this;
+    }
+
+    /**
+     * 克隆向量
+     */
+    public clone(): Vector2 {
+        return new Vector2(this.x, this.y);
+    }
+
+    /**
+     * 向量加法
+     * @param other 另一个向量
+     */
+    public add(other: Vector2): Vector2 {
+        return new Vector2(this.x + other.x, this.y + other.y);
+    }
+
+    /**
+     * 向量减法
+     * @param other 另一个向量
+     */
+    public subtract(other: Vector2): Vector2 {
+        return new Vector2(this.x - other.x, this.y - other.y);
+    }
+
+    /**
+     * 向量乘法（标量）
+     * @param scalar 标量
+     */
+    public multiply(scalar: number): Vector2 {
+        return new Vector2(this.x * scalar, this.y * scalar);
+    }
+
+    /**
+     * 向量除法（标量）
+     * @param scalar 标量
+     */
+    public divide(scalar: number): Vector2 {
+        return new Vector2(this.x / scalar, this.y / scalar);
+    }
+
+    /**
+     * 向量点积
+     * @param other 另一个向量
+     */
+    public dot(other: Vector2): number {
+        return this.x * other.x + this.y * other.y;
+    }
+
+    /**
+     * 向量叉积（2D中返回标量）
+     * @param other 另一个向量
+     */
+    public cross(other: Vector2): number {
+        return this.x * other.y - this.y * other.x;
+    }
+
+    /**
+     * 归一化向量
+     */
+    public normalize(): Vector2 {
+        const length = this.length;
+        if (length === 0) {
+            return Vector2.zero;
         }
+        return new Vector2(this.x / length, this.y / length);
+    }
 
-        public static get zero() {
-            return new Vector2(0, 0);
+    /**
+     * 获取到另一个向量的距离
+     * @param other 另一个向量
+     */
+    public distanceTo(other: Vector2): number {
+        const dx = this.x - other.x;
+        const dy = this.y - other.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /**
+     * 获取到另一个向量的距离的平方
+     * @param other 另一个向量
+     */
+    public distanceSquaredTo(other: Vector2): number {
+        const dx = this.x - other.x;
+        const dy = this.y - other.y;
+        return dx * dx + dy * dy;
+    }
+
+    /**
+     * 检查向量是否相等
+     * @param other 另一个向量
+     * @param tolerance 容差
+     */
+    public equals(other: Vector2, tolerance: number = 0.0001): boolean {
+        return Math.abs(this.x - other.x) < tolerance && Math.abs(this.y - other.y) < tolerance;
+    }
+
+    /**
+     * 获取向量的角度（弧度）
+     */
+    public angle(): number {
+        return Math.atan2(this.y, this.x);
+    }
+
+    /**
+     * 旋转向量
+     * @param radians 旋转角度（弧度）
+     */
+    public rotate(radians: number): Vector2 {
+        const cos = Math.cos(radians);
+        const sin = Math.sin(radians);
+        return new Vector2(
+            this.x * cos - this.y * sin,
+            this.x * sin + this.y * cos
+        );
+    }
+
+    /**
+     * 线性插值
+     * @param other 目标向量
+     * @param t 插值参数(0-1)
+     */
+    public lerp(other: Vector2, t: number): Vector2 {
+        return new Vector2(
+            this.x + (other.x - this.x) * t,
+            this.y + (other.y - this.y) * t
+        );
+    }
+
+    /**
+     * 四舍五入
+     */
+    public round(): Vector2 {
+        return new Vector2(Math.round(this.x), Math.round(this.y));
+    }
+
+    /**
+     * 向下取整
+     */
+    public floor(): Vector2 {
+        return new Vector2(Math.floor(this.x), Math.floor(this.y));
+    }
+
+    /**
+     * 向上取整
+     */
+    public ceil(): Vector2 {
+        return new Vector2(Math.ceil(this.x), Math.ceil(this.y));
+    }
+
+    /**
+     * 转换为字符串
+     */
+    public toString(): string {
+        return `(${this.x.toFixed(2)}, ${this.y.toFixed(2)})`;
+    }
+
+    // 静态方法
+
+    /**
+     * 向量加法
+     * @param a 向量A
+     * @param b 向量B
+     */
+    public static add(a: Vector2, b: Vector2): Vector2 {
+        return new Vector2(a.x + b.x, a.y + b.y);
+    }
+
+    /**
+     * 向量减法
+     * @param a 向量A
+     * @param b 向量B
+     */
+    public static subtract(a: Vector2, b: Vector2): Vector2 {
+        return new Vector2(a.x - b.x, a.y - b.y);
+    }
+
+    /**
+     * 向量乘法
+     * @param a 向量A
+     * @param b 向量B或标量
+     */
+    public static multiply(a: Vector2, b: Vector2 | number): Vector2 {
+        if (typeof b === 'number') {
+            return new Vector2(a.x * b, a.y * b);
+        } else {
+            return new Vector2(a.x * b.x, a.y * b.y);
         }
+    }
 
-        public static get one() {
-            return new Vector2(1, 1);
+    /**
+     * 向量除法
+     * @param a 向量A
+     * @param b 向量B或标量
+     */
+    public static divide(a: Vector2, b: Vector2 | number): Vector2 {
+        if (typeof b === 'number') {
+            return new Vector2(a.x / b, a.y / b);
+        } else {
+            return new Vector2(a.x / b.x, a.y / b.y);
         }
+    }
 
-        public static get unitX() {
-            return new Vector2(1, 0);
-        }
+    /**
+     * 向量点积
+     * @param a 向量A
+     * @param b 向量B
+     */
+    public static dot(a: Vector2, b: Vector2): number {
+        return a.x * b.x + a.y * b.y;
+    }
 
-        public static get unitY() {
-            return new Vector2(0, 1);
-        }
+    /**
+     * 向量叉积
+     * @param a 向量A
+     * @param b 向量B
+     */
+    public static cross(a: Vector2, b: Vector2): number {
+        return a.x * b.y - a.y * b.x;
+    }
 
-        public static get up() {
-            return new Vector2(0, -1);
-        }
+    /**
+     * 向量距离
+     * @param a 向量A
+     * @param b 向量B
+     */
+    public static distance(a: Vector2, b: Vector2): number {
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
 
-        public static get down() {
-            return new Vector2(0, 1);
-        }
+    /**
+     * 向量距离的平方
+     * @param a 向量A
+     * @param b 向量B
+     */
+    public static distanceSquared(a: Vector2, b: Vector2): number {
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        return dx * dx + dy * dy;
+    }
 
-        public static get left() {
-            return new Vector2(-1, 0);
-        }
+    /**
+     * 线性插值
+     * @param a 起始向量
+     * @param b 目标向量
+     * @param t 插值参数(0-1)
+     */
+    public static lerp(a: Vector2, b: Vector2, t: number): Vector2 {
+        return new Vector2(
+            a.x + (b.x - a.x) * t,
+            a.y + (b.y - a.y) * t
+        );
+    }
 
-        public static get right() {
-            return new Vector2(1, 0);
-        }
+    /**
+     * 四舍五入
+     * @param vector 向量
+     */
+    public static round(vector: Vector2): Vector2 {
+        return new Vector2(Math.round(vector.x), Math.round(vector.y));
+    }
 
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        public static add(value1: Vector2, value2: Vector2) {
-            let result: Vector2 = Vector2.zero;
-            result.x = value1.x + value2.x;
-            result.y = value1.y + value2.y;
-            return result;
-        }
+    /**
+     * 从角度创建向量
+     * @param radians 角度（弧度）
+     * @param length 长度，默认为1
+     */
+    public static fromAngle(radians: number, length: number = 1): Vector2 {
+        return new Vector2(Math.cos(radians) * length, Math.sin(radians) * length);
+    }
 
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        public static divide(value1: Vector2, value2: Vector2) {
-            let result: Vector2 = Vector2.zero;
-            result.x = value1.x / value2.x;
-            result.y = value1.y / value2.y;
-            return result;
-        }
-
-        public static divideScaler(value1: Vector2, value2: number) {
-            let result: Vector2 = Vector2.zero;
-            result.x = value1.x / value2;
-            result.y = value1.y / value2;
-            return result;
-        }
-
-        /**
-         * 返回两个向量之间距离的平方
-         * @param value1
-         * @param value2
-         */
-        public static sqrDistance(value1: Vector2, value2: Vector2) {
-            return Math.pow(value1.x - value2.x, 2) + Math.pow(value1.y - value2.y, 2);
-        }
-
-        /**
-         * 将指定的值限制在一个范围内
-         * @param value1
-         * @param min
-         * @param max
-         */
-        public static clamp(value1: Vector2, min: Vector2, max: Vector2) {
-            return new Vector2(MathHelper.clamp(value1.x, min.x, max.x),
-                MathHelper.clamp(value1.y, min.y, max.y));
-        }
-
-        /**
-         * 创建一个新的Vector2，其中包含指定向量的线性插值
-         * @param value1 第一个向量
-         * @param value2 第二个向量
-         * @param amount 加权值(0.0-1.0之间)
-         * @returns 指定向量的线性插值结果
-         */
-        public static lerp(value1: Vector2, value2: Vector2, amount: number) {
-            return new Vector2(MathHelper.lerp(value1.x, value2.x, amount), MathHelper.lerp(value1.y, value2.y, amount));
-        }
-
-        /**
-         * 创建一个新的Vector2，其中包含指定矢量的线性插值
-         * @param value1 
-         * @param value2 
-         * @param amount 
-         * @returns 
-         */
-        public static lerpPrecise(value1: Vector2, value2: Vector2, amount: number) {
-            return new Vector2(MathHelper.lerpPrecise(value1.x, value2.x, amount),
-                MathHelper.lerpPrecise(value1.y, value2.y, amount));
-        }
-
-        /**
-         * 创建一个新的Vector2，该Vector2包含了通过指定的Matrix进行的二维向量变换。
-         * @param position
-         * @param matrix
-         */
-        public static transform(position: Vector2, matrix: Matrix2D) {
-            return new Vector2((position.x * matrix.m11) + (position.y * matrix.m21) + matrix.m31,
-                (position.x * matrix.m12) + (position.y * matrix.m22) + matrix.m32);
-        }
-
-        /**
-         * 创建一个新的Vector2，其中包含由指定的Matrix转换的指定法线
-         * @param normal 
-         * @param matrix 
-         */
-        public static transformNormal(normal: Vector2, matrix: Matrix) {
-            return new Vector2((normal.x * matrix.m11) + (normal.y * matrix.m21),
-                (normal.x * matrix.m12) + (normal.y * matrix.m22));
-        }
-
-        /**
-         * 返回两个向量之间的距离
-         * @param value1
-         * @param value2
-         * @returns 两个向量之间的距离
-         */
-        public static distance(vec1: Vector2, vec2: Vector2): number {
-            return Math.sqrt(Math.pow(vec1.x - vec2.x, 2) + Math.pow(vec1.y - vec2.y, 2));
-        }
-
-        /**
-         * 返回两个向量之间的角度，单位是度数
-         * @param from
-         * @param to
-         */
-        public static angle(from: Vector2, to: Vector2): number {
-            from = from.normalize();
-            to = to.normalize();
-            return Math.acos(MathHelper.clamp(from.dot(to), -1, 1)) * MathHelper.Rad2Deg;
-        }
-
-        /**
-         * 创建一个包含指定向量反转的新Vector2
-         * @param value
-         * @returns 矢量反演的结果
-         */
-        public static negate(value: Vector2) {
-            value.x = -value.x;
-            value.y = -value.y;
-
-            return value;
-        }
-
-        /**
-         * 向量的反射，输入为两个二维向量vector和normal。函数返回一个新的向量，即vector相对于normal的反射
-         * @param vector 
-         * @param normal 
-         * @returns 
-         */
-        public static reflect(vector: Vector2, normal: Vector2) {
-            let result: Vector2 = es.Vector2.zero;
-            // 计算向量与法线的点积，并将结果乘2
-            let val = 2 * ((vector.x * normal.x) + (vector.y * normal.y));
-            // 计算反射向量
-            result.x = vector.x - (normal.x * val);
-            result.y = vector.y - (normal.y * val);
-            return result;
-        }
-
-        /**
-         * 创建一个新的Vector2，其中包含指定矢量的三次插值
-         * @param value1 
-         * @param value2 
-         * @param amount 
-         * @returns 
-         */
-        public static smoothStep(value1: Vector2, value2: Vector2, amount: number) {
-            return new Vector2(MathHelper.smoothStep(value1.x, value2.x, amount),
-                MathHelper.smoothStep(value1.y, value2.y, amount));
-        }
-
-        public setTo(x: number, y: number) {
-            this.x = x;
-            this.y = y;
-        }
-
-        public negate(): Vector2 {
-            return this.scale(-1);
-        }
-
-        /**
-         *
-         * @param value
-         */
-        public add(v: Vector2): Vector2 {
-            return new Vector2(this.x + v.x, this.y + v.y);
-        }
-
-        public addEqual(v: Vector2): Vector2 {
-            this.x += v.x;
-            this.y += v.y;
-            return this;
-        }
-
-        /**
-         *
-         * @param value
-         */
-        public divide(value: Vector2): Vector2 {
-            return new Vector2(this.x / value.x, this.y / value.y);
-        }
-
-        public divideScaler(value: number): Vector2 {
-            return new Vector2(this.x / value, this.y / value);
-        }
-
-        /**
-         *
-         * @param value
-         */
-        public multiply(value: Vector2): Vector2 {
-            return new Vector2(value.x * this.x, value.y * this.y);
-        }
-
-        /**
-         * 
-         * @param value 
-         * @returns 
-         */
-        public multiplyScaler(value: number): Vector2 {
-            this.x *= value;
-            this.y *= value;
-            return this;
-        }
-
-        /**
-         * 从当前Vector2减去一个Vector2
-         * @param value 要减去的Vector2
-         * @returns 当前Vector2
-         */
-        public sub(value: Vector2) {
-            return new Vector2(this.x - value.x, this.y - value.y);
-        }
-
-        public subEqual(v: Vector2): Vector2 {
-            this.x -= v.x;
-            this.y -= v.y;
-            return this;
-        }
-
-        public dot(v: Vector2): number {
-            return this.x * v.x + this.y * v.y;
-        }
-
-        /**
-         * 
-         * @param size 
-         * @returns 
-         */
-        public scale(size: number): Vector2 {
-            return new Vector2(this.x * size, this.y * size);
-        }
-
-        public scaleEqual(size: number): Vector2 {
-            this.x *= size;
-            this.y *= size;
-            return this;
-        }
-
-        public transform(matrix: Matrix2D): Vector2 {
-            return new Vector2(
-              this.x * matrix.m11 + this.y * matrix.m21 + matrix.m31,
-              this.x * matrix.m12 + this.y * matrix.m22 + matrix.m32
-            );
-          }
-
-        public normalize(): Vector2 {
-            const d = this.distance();
-            if (d > 0) {
-                return new Vector2(this.x / d, this.y / d);
-            } else {
-                return new Vector2(0, 1);
-            }
-        }
-
-        /** 
-         * 将这个Vector2变成一个方向相同的单位向量
-         */
-        public normalizeEqual(): Vector2 {
-            const d = this.distance();
-            if (d > 0) {
-                this.setTo(this.x / d, this.y / d);
-                return this;
-            } else {
-                this.setTo(0, 1);
-                return this;
-            }
-        }
-
-        public magnitude(): number {
-            return this.distance();
-        }
-
-        public distance(v?: Vector2): number {
-            if (!v) {
-                v = Vector2.zero;
-            }
-
-            return Math.sqrt(Math.pow(this.x - v.x, 2) + Math.pow(this.y - v.y, 2));
-        }
-
-        /**
-         * 返回该Vector2的平方长度
-         * @returns 这个Vector2的平方长度
-         */
-        public lengthSquared(): number {
-            return (this.x * this.x) + (this.y * this.y);
-        }
-
-        /**
-         * 从原点到向量末端的距离
-         * @returns 
-         */
-        public getLength(): number {
-            return Math.sqrt(this.x * this.x + this.y * this.y);
-        }
-
-        /** 
-         * 四舍五入X和Y值
-         */
-        public round(): Vector2 {
-            return new Vector2(Math.round(this.x), Math.round(this.y));
-        }
-
-        /**
-         * 返回以自己为中心点的左右角，单位为度
-         * @param left 
-         * @param right 
-         */
-        public angleBetween(left: Vector2, right: Vector2) {
-            let one = left.sub(this);
-            let two = right.sub(this);
-            return Vector2Ext.angle(one, two);
-        }
-
-        public getDistance(other: Vector2): number {
-            return Math.sqrt(this.getDistanceSquared(other));
-        }
-
-        public getDistanceSquared(other: Vector2): number {
-            const dx = other.x - this.x;
-            const dy = other.y - this.y;
-            return dx * dx + dy * dy;
-        }
-
-        public isBetween(v1: Vector2, v2: Vector2): boolean {
-            const cross = v2.sub(v1).cross(this.sub(v1));
-            return Math.abs(cross) < Number.EPSILON && this.dot(v2.sub(v1)) >= 0 && this.dot(v1.sub(v2)) >= 0;
-        }
-
-        /**
-         * 两个向量的叉积
-         * @param other 
-         * @returns 
-         */
-        public cross(other: Vector2): number {
-            return this.x * other.y - this.y * other.x;
-        }
-
-        /**
-         * 计算向量与x轴之间的夹角
-         */
-        public getAngle(): number {
-            return Math.atan2(this.y, this.x);
-        }
-
-        /**
-         * 比较当前实例是否等于指定的对象
-         * @param other 要比较的对象
-         * @returns 如果实例相同true 否则false 
-         */
-        public equals(other: Vector2, tolerance: number = 0.001): boolean {
-            return Math.abs(this.x - other.x) <= tolerance && Math.abs(this.y - other.y) <= tolerance;
-        }
-
-        public isValid(): boolean {
-            return MathHelper.isValid(this.x) && MathHelper.isValid(this.y);
-        }
-
-        /**
-         * 创建一个新的Vector2，其中包含来自两个向量的最小值
-         * @param value1 
-         * @param value2 
-         * @returns 
-         */
-        public static min(value1: Vector2, value2: Vector2) {
-            return new Vector2(value1.x < value2.x ? value1.x : value2.x,
-                value1.y < value2.y ? value1.y : value2.y);
-        }
-
-        /**
-         * 创建一个新的Vector2，其中包含两个向量的最大值
-         * @param value1 
-         * @param value2 
-         * @returns 
-         */
-        public static max(value1: Vector2, value2: Vector2) {
-            return new Vector2(value1.x > value2.x ? value1.x : value2.x,
-                value1.y > value2.y ? value1.y : value2.y);
-        }
-
-        /**
-         * 创建一个新的Vector2，其中包含Hermite样条插值
-         * @param value1 
-         * @param tangent1 
-         * @param value2 
-         * @param tangent2 
-         * @param amount 
-         * @returns 
-         */
-        public static hermite(value1: Vector2, tangent1: Vector2, value2: Vector2, tangent2: Vector2, amount: number) {
-            return new Vector2(MathHelper.hermite(value1.x, tangent1.x, value2.x, tangent2.x, amount),
-                MathHelper.hermite(value1.y, tangent1.y, value2.y, tangent2.y, amount));
-        }
-
-        public static unsignedAngle(from: Vector2, to: Vector2, round: boolean = true) {
-            from.normalizeEqual();
-            to.normalizeEqual();
-            const angle =
-                Math.acos(MathHelper.clamp(from.dot(to), -1, 1)) * MathHelper.Rad2Deg;
-            return round ? Math.round(angle) : angle;
-        }
-
-        public static fromAngle(angle: number, magnitude: number = 1): Vector2 {
-            return new Vector2(magnitude * Math.cos(angle), magnitude * Math.sin(angle));
-        }
-
-
-        public clone(): Vector2 {
-            return new Vector2(this.x, this.y);
-        }
-
-        public copyFrom(source: Vector2): Vector2 {
-            this.x = source.x;
-            this.y = source.y;
-            return this;
-        }
+    /**
+     * 反射向量
+     * @param vector 入射向量
+     * @param normal 法向量
+     */
+    public static reflect(vector: Vector2, normal: Vector2): Vector2 {
+        const dot = Vector2.dot(vector, normal);
+        return Vector2.subtract(vector, Vector2.multiply(normal, 2 * dot));
     }
 }

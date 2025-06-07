@@ -1,262 +1,337 @@
-module es {
+import { Emitter } from './Utils/Emitter';
+import { CoreEvents } from './ECS/CoreEvents';
+import { GlobalManager } from './Utils/GlobalManager';
+import { TimerManager } from './Utils/Timers/TimerManager';
+import { ITimer } from './Utils/Timers/ITimer';
+import { Time } from './Utils/Time';
+import { PerformanceMonitor } from './Utils/PerformanceMonitor';
+import { PoolManager } from './Utils/Pool';
+import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
+import { Scene } from './ECS/Scene';
+
+/**
+ * 游戏引擎核心类
+ * 
+ * 负责管理游戏的生命周期、场景切换、全局管理器和定时器系统。
+ * 提供统一的游戏循环和事件分发机制。
+ * 
+ * @example
+ * ```typescript
+ * // 创建核心实例
+ * const core = Core.create(true);
+ * 
+ * // 设置场景
+ * Core.scene = new MyScene();
+ * 
+ * // 调度定时器
+ * Core.schedule(1.0, false, null, (timer) => {
+ *     console.log("1秒后执行");
+ * });
+ * ```
+ */
+export class Core {
     /**
-     *  全局核心类
+     * 核心事件发射器
+     * 
+     * 用于发布和订阅核心级别的事件，如帧更新、场景切换等。
      */
-    export class Core {
-        /**
-         * 核心发射器。只发出核心级别的事件
-         */
-        public static emitter: Emitter<CoreEvents>;
-        public static paused = false;
-        /**
-         * 是否启用调试渲染
-         */
-        public static debugRenderEndabled = false;
-        /**
-         * 简化对内部类的全局内容实例的访问
-         */
-        private static _instance: Core;
-        /**
-         * 用于确定是否应该使用EntitySystems
-         */
-        public static entitySystemsEnabled: boolean;
-        /**
-         * 是否正在debug模式
-         * 仅允许在create时进行更改
-         */
-        public readonly debug: boolean;
-        public _nextScene: Scene;
-        public _sceneTransition: SceneTransition;
+    public static emitter: Emitter<CoreEvents>;
+    
+    /**
+     * 游戏暂停状态
+     * 
+     * 当设置为true时，游戏循环将暂停执行。
+     */
+    public static paused = false;
+    
+    /**
+     * 全局核心实例
+     */
+    private static _instance: Core;
+    
+    /**
+     * 实体系统启用状态
+     * 
+     * 控制是否启用ECS实体系统功能。
+     */
+    public static entitySystemsEnabled: boolean;
+    
+    /**
+     * 调试模式标志
+     * 
+     * 在调试模式下会启用额外的性能监控和错误检查。
+     */
+    public readonly debug: boolean;
+    
+    /**
+     * 待切换的场景
+     * 
+     * 存储下一帧要切换到的场景实例。
+     */
+    public _nextScene: Scene | null = null;
+    
+    /**
+     * 全局管理器集合
+     * 
+     * 存储所有注册的全局管理器实例。
+     */
+    public _globalManagers: GlobalManager[] = [];
+    
+    /**
+     * 定时器管理器
+     * 
+     * 负责管理所有的游戏定时器。
+     */
+    public _timerManager: TimerManager;
 
-        /**
-         * 用于凝聚GraphicsDeviceReset事件
-         */
-        public _graphicsDeviceChangeTimer: ITimer;
-        /**
-         * 全局访问系统
-         */
-        public _globalManagers: GlobalManager[] = [];
-        public _coroutineManager: CoroutineManager = new CoroutineManager();
-        public _timerManager: TimerManager = new TimerManager();
+    /**
+     * 性能监控器
+     * 
+     * 监控游戏性能并提供优化建议。
+     */
+    public _performanceMonitor: PerformanceMonitor;
 
-        private constructor(debug: boolean = true, enableEntitySystems: boolean = true) {
-            Core._instance = this;
-            Core.emitter = new Emitter<CoreEvents>();
-            Core.emitter.addObserver(CoreEvents.frameUpdated, this.update, this);
+    /**
+     * 对象池管理器
+     * 
+     * 管理所有对象池的生命周期。
+     */
+    public _poolManager: PoolManager;
 
-            Core.registerGlobalManager(this._coroutineManager);
-            Core.registerGlobalManager(new TweenManager());
-            Core.registerGlobalManager(this._timerManager);
-            Core.entitySystemsEnabled = enableEntitySystems;
+    /**
+     * ECS流式API
+     * 
+     * 提供便捷的ECS操作接口。
+     */
+    public _ecsAPI?: ECSFluentAPI;
+    
+    /**
+     * 当前活动场景
+     */
+    public _scene?: Scene;
 
-            this.debug = debug;
-            this.initialize();
-        }
+    /**
+     * 创建核心实例
+     * 
+     * @param debug - 是否启用调试模式，默认为true
+     * @param enableEntitySystems - 是否启用实体系统，默认为true
+     */
+    private constructor(debug: boolean = true, enableEntitySystems: boolean = true) {
+        Core._instance = this;
+        Core.emitter = new Emitter<CoreEvents>();
+        Core.emitter.addObserver(CoreEvents.frameUpdated, this.update, this);
 
-        /**
-         * 提供对单例/游戏实例的访问
-         * @constructor
-         */
-        public static get Instance() {
-            return this._instance;
-        }
+        // 初始化管理器
+        this._timerManager = new TimerManager();
+        Core.registerGlobalManager(this._timerManager);
 
-        public _frameCounterElapsedTime: number = 0;
-        public _frameCounter: number = 0;
-        public _totalMemory: number = 0;
-        public _titleMemory: (totalMemory: number, frameCounter: number) => void;
-        public _scene: Scene;
+        // 初始化性能监控器
+        this._performanceMonitor = PerformanceMonitor.instance;
 
-        /**
-         * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
-         */
-        public static get scene() {
-            if (!this._instance)
-                return null;
-            return this._instance._scene;
-        }
+        // 初始化对象池管理器
+        this._poolManager = PoolManager.getInstance();
+        
+        Core.entitySystemsEnabled = enableEntitySystems;
+        this.debug = debug;
+        this.initialize();
+    }
 
-        /**
-         * 当前活动的场景。注意，如果设置了该设置，在更新结束之前场景实际上不会改变
-         * @param value
-         */
-        public static set scene(value: Scene) {
-            Insist.isNotNull(value, "场景不能为空");
+    /**
+     * 获取核心实例
+     * 
+     * @returns 全局核心实例
+     */
+    public static get Instance() {
+        return this._instance;
+    }
 
-            if (this._instance._scene == null) {
-                this._instance._scene = value;
-                this._instance.onSceneChanged();
-                this._instance._scene.begin();
-            } else {
-                this._instance._nextScene = value;
-            }
-        }
-
-        /**
-         * `Core`类的静态方法，用于创建`Core`的实例。
-         * @param debug {boolean} 是否为调试模式，默认为`true`
-         * @returns {Core} `Core`的实例
-         */
-        public static create(debug: boolean = true): Core {
-            // 如果实例还未被创建，则创建一个新的实例并保存在`_instance`静态属性中
-            if (this._instance == null) {
-                this._instance = new es.Core(debug);
-            }
-            // 返回`_instance`静态属性中保存的实例
-            return this._instance;
-        }
-
-        /**
-         * 添加一个全局管理器对象，它的更新方法将调用场景前的每一帧。
-         * @param manager
-         */
-        public static registerGlobalManager(manager: es.GlobalManager) {
-            this._instance._globalManagers.push(manager);
-            manager.enabled = true;
-        }
-
-        /**
-         * 删除全局管理器对象
-         * @param manager
-         */
-        public static unregisterGlobalManager(manager: GlobalManager) {
-            new es.List(this._instance._globalManagers).remove(manager);
-            manager.enabled = false;
-        }
-
-        /**
-         * 获取指定类型的全局管理器实例
-         * @param type 管理器类型的构造函数
-         * @returns 指定类型的全局管理器实例，如果找不到则返回 null
-         */
-        public static getGlobalManager<T extends GlobalManager>(type: new (...args) => T): T {
-            for (let i = 0, s = Core._instance._globalManagers.length; i < s; ++i) {
-                let manager = Core._instance._globalManagers[i];
-                if (manager instanceof type)
-                    return manager;
-            }
+    /**
+     * 获取当前活动的场景
+     * 
+     * @returns 当前场景实例，如果没有则返回null
+     */
+    public static get scene(): Scene | null {
+        if (!this._instance)
             return null;
+        return this._instance._scene || null;
+    }
+
+    /**
+     * 设置当前活动的场景
+     * 
+     * 如果当前没有场景，会立即切换；否则会在下一帧切换。
+     * 
+     * @param value - 要设置的场景实例
+     * @throws {Error} 当场景为空时抛出错误
+     */
+    public static set scene(value: Scene | null) {
+        if (!value) return;
+        
+        if (!value) {
+            throw new Error("场景不能为空");
         }
 
-        /**
-         * 临时运行SceneTransition，允许一个场景平滑过渡到另一个场景，并具有自定义效果
-         * @param sceneTransition
-         */
-        public static startSceneTransition<T extends SceneTransition>(sceneTransition: T) {
-            Insist.isNull(this._instance._sceneTransition, "在前一个场景转换完成之前，无法启动新的场景转换");
-            this._instance._sceneTransition = sceneTransition;
-            return sceneTransition;
+        if (this._instance._scene == null) {
+            this._instance._scene = value;
+            this._instance.onSceneChanged();
+            this._instance._scene.begin();
+        } else {
+            this._instance._nextScene = value;
+        }
+    }
+
+    /**
+     * 创建Core实例
+     * 
+     * 如果实例已存在，则返回现有实例。
+     * 
+     * @param debug - 是否为调试模式，默认为true
+     * @returns Core实例
+     */
+    public static create(debug: boolean = true): Core {
+        if (this._instance == null) {
+            this._instance = new Core(debug);
+        }
+        return this._instance;
+    }
+
+    /**
+     * 注册全局管理器
+     * 
+     * 将管理器添加到全局管理器列表中，并启用它。
+     * 
+     * @param manager - 要注册的全局管理器
+     */
+    public static registerGlobalManager(manager: GlobalManager) {
+        this._instance._globalManagers.push(manager);
+        manager.enabled = true;
+    }
+
+    /**
+     * 注销全局管理器
+     * 
+     * 从全局管理器列表中移除管理器，并禁用它。
+     * 
+     * @param manager - 要注销的全局管理器
+     */
+    public static unregisterGlobalManager(manager: GlobalManager) {
+        this._instance._globalManagers.splice(this._instance._globalManagers.indexOf(manager), 1);
+        manager.enabled = false;
+    }
+
+    /**
+     * 获取指定类型的全局管理器
+     * 
+     * @param type - 管理器类型构造函数
+     * @returns 管理器实例，如果未找到则返回null
+     */
+    public static getGlobalManager<T extends GlobalManager>(type: new (...args: any[]) => T): T | null {
+        for (const manager of this._instance._globalManagers) {
+            if (manager instanceof type)
+                return manager as T;
+        }
+        return null;
+    }
+
+    /**
+     * 调度定时器
+     * 
+     * 创建一个定时器，在指定时间后执行回调函数。
+     * 
+     * @param timeInSeconds - 延迟时间（秒）
+     * @param repeats - 是否重复执行，默认为false
+     * @param context - 回调函数的上下文，默认为null
+     * @param onTime - 定时器触发时的回调函数
+     * @returns 创建的定时器实例
+     */
+    public static schedule(timeInSeconds: number, repeats: boolean = false, context: any = null, onTime: (timer: ITimer) => void) {
+        return this._instance._timerManager.schedule(timeInSeconds, repeats, context, onTime);
+    }
+
+    /**
+     * 获取ECS流式API
+     * 
+     * @returns ECS API实例，如果未初始化则返回null
+     */
+    public static get ecsAPI(): ECSFluentAPI | null {
+        return this._instance?._ecsAPI || null;
+    }
+
+    /**
+     * 场景切换回调
+     * 
+     * 在场景切换时调用，用于重置时间系统等。
+     */
+    public onSceneChanged() {
+        Time.sceneChanged();
+        
+        // 初始化ECS API（如果场景支持）
+        if (this._scene && typeof (this._scene as any).querySystem !== 'undefined') {
+            const scene = this._scene as any;
+            this._ecsAPI = createECSAPI(scene, scene.querySystem, scene.eventSystem);
+        }
+    }
+
+    /**
+     * 初始化核心系统
+     * 
+     * 执行核心系统的初始化逻辑。
+     */
+    protected initialize() {
+        // 核心系统初始化
+    }
+
+    /**
+     * 游戏主循环更新
+     * 
+     * 每帧调用，负责更新时间系统、全局管理器和当前场景。
+     * 
+     * @param currentTime - 当前时间戳，默认为-1（使用系统时间）
+     */
+    protected update(currentTime: number = -1): void {
+        if (Core.paused) return;
+
+        // 开始性能监控
+        const frameStartTime = this._performanceMonitor.startMonitoring('Core.update');
+
+        Time.update(currentTime);
+
+        // 更新FPS监控（如果性能监控器支持）
+        if (typeof (this._performanceMonitor as any).updateFPS === 'function') {
+            (this._performanceMonitor as any).updateFPS(Time.deltaTime);
         }
 
-        /**
-         * 启动一个coroutine。Coroutine可以将number延时几秒或延时到其他startCoroutine.Yielding
-         * null将使coroutine在下一帧被执行。
-         * @param enumerator
-         */
-        public static startCoroutine(enumerator): ICoroutine {
-            return this._instance._coroutineManager.startCoroutine(enumerator);
+        // 更新全局管理器
+        const managersStartTime = this._performanceMonitor.startMonitoring('GlobalManagers.update');
+        for (const globalManager of this._globalManagers) {
+            if (globalManager.enabled)
+                globalManager.update();
         }
+        this._performanceMonitor.endMonitoring('GlobalManagers.update', managersStartTime, this._globalManagers.length);
 
-        /**
-         * 调度一个一次性或重复的计时器，该计时器将调用已传递的动作
-         * @param timeInSeconds
-         * @param repeats
-         * @param context
-         * @param onTime
-         */
-        public static schedule(timeInSeconds: number, repeats: boolean = false, context: any = null, onTime: (timer: ITimer) => void) {
-            return this._instance._timerManager.schedule(timeInSeconds, repeats, context, onTime);
-        }
+        // 更新对象池管理器
+        this._poolManager.update();
 
-        public startDebugDraw() {
-            // 如果debug标志未开启，则直接返回
-            if (!this.debug) return;
-
-            // 计算帧率和内存使用情况
-            this._frameCounter++; // 帧计数器递增
-            this._frameCounterElapsedTime += Time.deltaTime; // 帧计数器累加时间
-            if (this._frameCounterElapsedTime >= 1) { // 如果时间已经超过1秒，则计算帧率和内存使用情况
-                let memoryInfo = window.performance["memory"]; // 获取内存使用情况
-                if (memoryInfo != null) { // 如果内存使用情况存在
-                    // 计算内存使用情况并保留2位小数
-                    this._totalMemory = Number((memoryInfo.totalJSHeapSize / 1048576).toFixed(2));
-                }
-                if (this._titleMemory) { // 如果回调函数存在，则执行回调函数，更新标题栏显示
-                    this._titleMemory(this._totalMemory, this._frameCounter);
-                }
-                this._frameCounter = 0; // 重置帧计数器
-                this._frameCounterElapsedTime -= 1; // 减去1秒时间
-            }
-        }
-
-        /**
-         * 在一个场景结束后，下一个场景开始之前调用
-         */
-        public onSceneChanged() {
-            Core.emitter.emit(CoreEvents.sceneChanged);
-            Time.sceneChanged();
-        }
-
-        protected initialize() {
-
-        }
-
-        /**
-         * `Core` 类的受保护的 `update` 方法，用于更新游戏状态。
-         * @param currentTime 当前时间戳，单位为毫秒，默认值为-1。
-         */
-        protected update(currentTime: number = -1): void {
-            // 如果引擎处于暂停状态，则直接返回，不做任何操作
-            if (Core.paused) {
-                return;
-            }
-
-            // 更新时间戳信息
-            Time.update(currentTime, currentTime !== -1);
-
-            // 更新全局管理器和当前场景
-            if (this._scene != null) {
-                // 依次更新所有启用的全局管理器
-                for (const globalManager of this._globalManagers) {
-                    if (globalManager.enabled) {
-                        globalManager.update();
-                    }
-                }
-
-                // 如果当前没有场景切换正在进行，或者正在进行的场景切换不需要加载新场景
-                if (this._sceneTransition == null || !this._sceneTransition._loadsNewScene) {
-                    this._scene.update();
-                }
-            }
-
-            // 处理场景切换
-            if (this._nextScene != null) {
-                // 结束当前场景
+        // 处理场景切换
+        if (this._nextScene != null) {
+            if (this._scene != null)
                 this._scene.end();
 
-                // 加载并初始化新场景
-                this._scene = this._nextScene;
-                this._nextScene = null;
-                this.onSceneChanged();
-                this._scene.begin();
-            }
-
-            // 绘制调试信息
-            this.startDebugDraw();
-            this.draw();
+            this._scene = this._nextScene;
+            this._nextScene = null;
+            this.onSceneChanged();
+            this._scene.begin();
         }
 
-        protected draw() {
-            if (this._sceneTransition != null)
-                this._sceneTransition.preRender();
-
-            if (this._sceneTransition != null && !this._sceneTransition.hasPreviousSceneRender) {
-                if (this._scene != null) {
-                    Core.startCoroutine(this._sceneTransition.onBeginTransition());
-                }
-
-                this._sceneTransition.render();
-            }
+        // 更新当前场景
+        if (this._scene != null && this._scene.update) {
+            const sceneStartTime = this._performanceMonitor.startMonitoring('Scene.update');
+            this._scene.update();
+            const entityCount = (this._scene as any).entities?.count || 0;
+            this._performanceMonitor.endMonitoring('Scene.update', sceneStartTime, entityCount);
         }
+
+        // 结束性能监控
+        this._performanceMonitor.endMonitoring('Core.update', frameStartTime);
     }
 }

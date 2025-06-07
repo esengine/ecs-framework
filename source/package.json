@@ -1,14 +1,39 @@
 {
-  "name": "@esengine/egret-framework",
-  "version": "1.0.1",
-  "description": "用于egret 包含众多高性能方法以供使用",
-  "main": "index.js",
-  "directories": {
-    "lib": "lib"
-  },
+  "name": "@esengine/ecs-framework",
+  "version": "2.0.4",
+  "description": "用于Laya、Cocos等游戏引擎的高性能ECS框架",
+  "main": "bin/index.js",
+  "types": "bin/index.d.ts",
+  "files": [
+    "bin/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "ecs",
+    "entity-component-system",
+    "game-engine",
+    "typescript",
+    "laya",
+    "cocos",
+    "egret"
+  ],
   "scripts": {
-    "test": "mocha --recursive --reporter tap --growl",
-    "eslint": "eslint src --ext .ts"
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rimraf bin",
+    "rebuild": "npm run clean && npm run build",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "prepublishOnly": "npm run rebuild",
+    "publish:patch": "npm run rebuild && npm version patch && npm publish",
+    "publish:minor": "npm run rebuild && npm version minor && npm publish",
+    "publish:major": "npm run rebuild && npm version major && npm publish",
+    "pack:check": "npm run rebuild && npm pack --dry-run",
+    "check": "node scripts/check-publish.js"
   },
   "author": "yhh",
   "license": "MIT",
@@ -25,6 +50,7 @@
     "gulp-typescript": "^6.0.0-alpha.1",
     "gulp-uglify": "^3.0.2",
     "merge2": "^1.4.1",
+    "rimraf": "^5.0.0",
     "tsify": "^5.0.4",
     "typedoc": "^0.28.5",
     "typescript": "^5.8.3",
@@ -32,7 +58,7 @@
     "watchify": "^4.0.0"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com/359807859@qq.com"
+    "access": "public"
   },
   "repository": {
     "type": "git",

@@ -1,28 +1,41 @@
 {
   "compilerOptions": {
-    "downlevelIteration": true,
-    "importHelpers": true,
-    "pretty": true,
-    "preserveConstEnums": true,
-    "alwaysStrict": true,
-    "module": "system",
-    "target": "es5",
+    "target": "ES2018",
+    "module": "ES2020",
+    "moduleResolution": "node",
+    "lib": ["ES2020", "DOM"],
+    "outDir": "./bin",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "declaration": true,
-    "sourceMap": false,
+    "declarationMap": true,
+    "sourceMap": true,
     "removeComments": false,
-    "outFile": "./framework.js",
-    "lib": [
-      "es5",
-      "dom",
-      "es2015.promise",
-      "es6"
-    ]
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "importHelpers": false,
+    "downlevelIteration": true
   },
   "include": [
-    "src",
-    "lib"
+    "src/**/*"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "bin",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }
