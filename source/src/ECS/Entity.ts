@@ -1,5 +1,3 @@
-import { Vector2 } from '../Math/Vector2';
-import { Transform } from './Transform';
 import { Component } from './Component';
 import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
 
@@ -204,35 +202,28 @@ export class Entity {
     /**
      * 实体唯一标识符
      * 
-     * 在整个游戏生命周期中唯一的数字ID。
+     * 在场景中唯一的数字标识符。
      */
     public readonly id: number;
     
     /**
-     * 变换组件
-     * 
-     * 管理实体的位置、旋转和缩放信息。
-     */
-    public readonly transform: Transform;
-    
-    /**
      * 组件集合
      * 
-     * 存储附加到此实体的所有组件。
+     * 存储实体拥有的所有组件。
      */
     public readonly components: Component[] = [];
     
     /**
-     * 所属场景
+     * 所属场景引用
      * 
-     * 实体所在的场景引用。
+     * 指向实体所在的场景实例。
      */
     public scene: any; // 使用any避免循环依赖
     
     /**
      * 更新间隔
      * 
-     * 控制实体更新的频率。
+     * 控制实体更新的频率，值越大更新越不频繁。
      */
     public updateInterval: number = 1;
     
@@ -244,66 +235,72 @@ export class Entity {
     public _isDestroyed: boolean = false;
 
     /**
-     * 父实体
+     * 父实体引用
      * 
-     * 此实体的父实体引用，如果为null则表示是根实体。
+     * 指向父级实体，用于构建实体层次结构。
      */
     private _parent: Entity | null = null;
 
     /**
      * 子实体集合
      * 
-     * 存储此实体的所有子实体。
+     * 存储所有子级实体的数组。
      */
     private _children: Entity[] = [];
 
     /**
-     * 活跃状态
+     * 激活状态
      * 
-     * 控制实体及其子实体是否参与更新和渲染。
+     * 控制实体是否处于激活状态。
      */
     private _active: boolean = true;
     
     /**
      * 实体标签
      * 
-     * 用于分类和快速查找的数字标签。
+     * 用于分类和查询的数字标签。
      */
     private _tag: number = 0;
     
     /**
      * 启用状态
      * 
-     * 控制实体是否参与更新循环。
+     * 控制实体是否启用更新和处理。
      */
     private _enabled: boolean = true;
     
     /**
      * 更新顺序
      * 
-     * 决定实体在更新循环中的执行顺序。
+     * 控制实体在系统中的更新优先级。
      */
     private _updateOrder: number = 0;
 
     /**
      * 组件位掩码
      * 
-     * 用于快速检查实体拥有哪些组件类型。
+     * 用于快速查询实体拥有的组件类型。
      */
     private _componentMask: bigint = BigInt(0);
 
     /**
-     * 组件类型到索引的映射表
+     * 组件类型到索引的映射
+     * 
+     * 用于快速定位组件在数组中的位置。
      */
     private _componentTypeToIndex = new Map<ComponentType, number>();
 
     /**
-     * 组件缓存系统
+     * 组件缓存
+     * 
+     * 高性能组件访问缓存。
      */
     private _componentCache: ComponentCache;
 
     /**
      * 组件访问统计
+     * 
+     * 记录组件访问的性能统计信息。
      */
     private _componentAccessStats = new Map<ComponentType, {
         accessCount: number;
@@ -313,7 +310,7 @@ export class Entity {
     }>();
 
     /**
-     * 创建实体实例
+     * 构造函数
      * 
      * @param name - 实体名称
      * @param id - 实体唯一标识符
@@ -321,7 +318,8 @@ export class Entity {
     constructor(name: string, id: number) {
         this.name = name;
         this.id = id;
-        this.transform = new Transform();
+        
+        // 初始化组件缓存
         this._componentCache = new ComponentCache();
     }
 
@@ -458,60 +456,6 @@ export class Entity {
      */
     public get componentMask(): bigint {
         return this._componentMask;
-    }
-
-    /**
-     * 获取实体位置
-     * 
-     * @returns 实体的位置向量
-     */
-    public get position(): Vector2 {
-        return this.transform.position;
-    }
-
-    /**
-     * 设置实体位置
-     * 
-     * @param value - 新的位置向量
-     */
-    public set position(value: Vector2) {
-        this.transform.position = value;
-    }
-
-    /**
-     * 获取实体旋转角度
-     * 
-     * @returns 实体的旋转角度（弧度）
-     */
-    public get rotation(): number {
-        return this.transform.rotation;
-    }
-
-    /**
-     * 设置实体旋转角度
-     * 
-     * @param value - 新的旋转角度（弧度）
-     */
-    public set rotation(value: number) {
-        this.transform.rotation = value;
-    }
-
-    /**
-     * 获取实体缩放
-     * 
-     * @returns 实体的缩放向量
-     */
-    public get scale(): Vector2 {
-        return this.transform.scale;
-    }
-
-    /**
-     * 设置实体缩放
-     * 
-     * @param value - 新的缩放向量
-     */
-    public set scale(value: Vector2) {
-        this.transform.scale = value;
     }
 
     /**
@@ -1298,9 +1242,6 @@ export class Entity {
         componentCount: number;
         componentTypes: string[];
         componentMask: string;
-        position: { x: number; y: number };
-        rotation: number;
-        scale: { x: number; y: number };
         parentId: number | null;
         childCount: number;
         childIds: number[];
@@ -1341,9 +1282,6 @@ export class Entity {
             componentCount: this.components.length,
             componentTypes: this.components.map(c => c.constructor.name),
             componentMask: this._componentMask.toString(2), // 二进制表示
-            position: { x: this.position.x, y: this.position.y },
-            rotation: this.rotation,
-            scale: { x: this.scale.x, y: this.scale.y },
             parentId: this._parent?.id || null,
             childCount: this._children.length,
             childIds: this._children.map(c => c.id),

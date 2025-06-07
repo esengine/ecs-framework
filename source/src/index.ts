@@ -19,11 +19,7 @@ export { Timer } from './Utils/Timers/Timer';
 // ECS核心
 export * from './ECS';
 
-// 数学库
-export * from './Math';
-
 // 工具类
-export { Screen } from './Utils/Screen';
 export * from './Utils/Pool';
 export * from './Utils/PerformanceMonitor';
 export * from './Utils/Extensions';

@@ -103,42 +103,6 @@ export class EntityBuilder {
     }
 
     /**
-     * 设置实体位置（如果有Transform组件）
-     * @param x X坐标
-     * @param y Y坐标
-     * @param z Z坐标（可选）
-     * @returns 实体构建器
-     */
-    public at(x: number, y: number, z: number = 0): EntityBuilder {
-        // 直接使用Entity的position属性
-        this.entity.position.x = x;
-        this.entity.position.y = y;
-        return this;
-    }
-
-    /**
-     * 设置实体旋转（如果有Transform组件）
-     * @param rotation 旋转角度
-     * @returns 实体构建器
-     */
-    public rotated(rotation: number): EntityBuilder {
-        this.entity.rotation = rotation;
-        return this;
-    }
-
-    /**
-     * 设置实体缩放（如果有Transform组件）
-     * @param scaleX X轴缩放
-     * @param scaleY Y轴缩放（可选，默认与X轴相同）
-     * @returns 实体构建器
-     */
-    public scaled(scaleX: number, scaleY?: number): EntityBuilder {
-        this.entity.scale.x = scaleX;
-        this.entity.scale.y = scaleY !== undefined ? scaleY : scaleX;
-        return this;
-    }
-
-    /**
      * 设置实体为启用状态
      * @param enabled 是否启用
      * @returns 实体构建器

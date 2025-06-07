@@ -2,5 +2,4 @@
 export * from './Extensions';
 export * from './Pool';
 export * from './PerformanceMonitor';
-export { Screen } from './Screen';
 export { Time } from './Time'; 
