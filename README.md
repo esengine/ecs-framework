@@ -14,7 +14,6 @@
 - 🔍 **查询系统** - 基于位掩码的高性能实体查询
 - 🛠️ **性能监控** - 内置性能监控工具，帮助优化游戏性能
 - 🎯 **对象池** - 内存管理优化，减少垃圾回收压力
-- 🎯 **纯ECS架构** - 专注于实体组件系统核心逻辑
 
 ## 📦 安装
 
@@ -78,17 +77,15 @@ function gameLoop() {
 ### 2. 创建场景
 
 ```typescript
-import { Scene, Vector2, EntitySystem } from '@esengine/ecs-framework';
+import { Scene, EntitySystem } from '@esengine/ecs-framework';
 
 class GameScene extends Scene {
     public initialize() {
         // 创建玩家实体
         const player = this.createEntity("Player");
         
-        // 设置位置
-        player.position = new Vector2(100, 100);
-        
         // 添加自定义组件
+        const position = player.addComponent(new PositionComponent(100, 100));
         const movement = player.addComponent(new MovementComponent());
         
         // 添加系统
@@ -107,17 +104,24 @@ Core.scene = new GameScene();
 ### 3. 创建组件
 
 ```typescript
-import { Component, Vector2, Time } from '@esengine/ecs-framework';
+import { Component, Time } from '@esengine/ecs-framework';
 
 class MovementComponent extends Component {
     public speed: number = 100;
-    public direction: Vector2 = Vector2.zero;
+    public direction = { x: 0, y: 0 };
     
     public update() {
-        if (this.direction.length > 0) {
-            const movement = this.direction.multiply(this.speed * Time.deltaTime);
-            this.entity.position = this.entity.position.add(movement);
+        const position = this.entity.getComponent(PositionComponent);
+        if (position && (this.direction.x !== 0 || this.direction.y !== 0)) {
+            position.x += this.direction.x * this.speed * Time.deltaTime;
+            position.y += this.direction.y * this.speed * Time.deltaTime;
         }
+    }
+}
+
+class PositionComponent extends Component {
+    constructor(public x: number = 0, public y: number = 0) {
+        super();
     }
 }
 ```
@@ -142,15 +146,20 @@ class MovementSystem extends EntitySystem {
 ## 📚 核心概念
 
 ### Entity（实体）
-实体是游戏世界中的基本对象，包含位置、旋转、缩放等基本属性，可以添加组件来扩展功能。
+实体是游戏世界中的基本对象，作为组件的容器。实体本身不包含游戏逻辑，所有功能都通过组件来实现。
 
 ```typescript
-import { Vector2 } from '@esengine/ecs-framework';
-
+// 通过场景创建实体
 const entity = scene.createEntity("MyEntity");
-entity.position = new Vector2(100, 200);
-entity.rotation = Math.PI / 4;
-entity.scale = new Vector2(2, 2);
+
+// 设置实体属性
+entity.tag = 1;                    // 设置标签用于分类
+entity.updateOrder = 0;            // 设置更新顺序
+entity.enabled = true;             // 设置启用状态
+
+// 添加组件来扩展功能
+const positionComponent = entity.addComponent(new PositionComponent(100, 200));
+const healthComponent = entity.addComponent(new HealthComponent(100));
 ```
 
 ### Component（组件）
@@ -283,6 +292,7 @@ console.log("场景统计:", stats);
 ## 📖 文档
 
 - [快速入门](docs/getting-started.md) - 从零开始学习框架使用
+- [实体使用指南](docs/entity-guide.md) - 详细了解实体的所有功能和用法
 - [核心概念](docs/core-concepts.md) - 深入了解 ECS 架构和设计原理
 - [查询系统使用指南](docs/query-system-usage.md) - 学习高性能查询系统的详细用法
 

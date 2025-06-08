@@ -588,6 +588,7 @@ game.start();
 
 现在您已经掌握了 ECS Framework 的基础用法，可以继续学习：
 
+- [实体使用指南](entity-guide.md) - 详细了解实体的所有功能和用法
 - [核心概念](core-concepts.md) - 深入了解 ECS 架构和设计原理
 - [查询系统使用指南](query-system-usage.md) - 学习高性能查询系统的详细用法
 
