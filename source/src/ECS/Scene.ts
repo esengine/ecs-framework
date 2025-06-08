@@ -90,8 +90,9 @@ export class Scene {
 
     /**
      * 创建场景实例
+     * @param enableWasmAcceleration 是否启用WebAssembly加速，默认为true
      */
-    constructor() {
+    constructor(enableWasmAcceleration: boolean = true) {
         this.entities = new EntityList(this);
         this.entityProcessors = new EntityProcessorList();
         this.identifierPool = new IdentifierPool();
@@ -195,18 +196,71 @@ export class Scene {
     /**
      * 在场景的实体列表中添加一个实体
      * @param entity 要添加的实体
+     * @param deferCacheClear 是否延迟缓存清理（用于批量操作）
      */
-    public addEntity(entity: Entity) {
+    public addEntity(entity: Entity, deferCacheClear: boolean = false) {
         this.entities.add(entity);
         entity.scene = this;
         
-        // 将实体添加到查询系统
-        this.querySystem.addEntity(entity);
+        // 将实体添加到查询系统（可延迟缓存清理）
+        this.querySystem.addEntity(entity, deferCacheClear);
         
         // 触发实体添加事件
         this.eventSystem.emitSync('entity:added', { entity, scene: this });
         
         return entity;
+    }
+
+    /**
+     * 批量创建实体（高性能版本）
+     * @param count 要创建的实体数量
+     * @param namePrefix 实体名称前缀
+     * @returns 创建的实体列表
+     */
+    public createEntities(count: number, namePrefix: string = "Entity"): Entity[] {
+        const entities: Entity[] = [];
+        
+        // 批量创建实体对象，不立即添加到系统
+        for (let i = 0; i < count; i++) {
+            const entity = new Entity(`${namePrefix}_${i}`, this.identifierPool.checkOut());
+            entity.scene = this;
+            entities.push(entity);
+        }
+        
+        // 批量添加到实体列表
+        for (const entity of entities) {
+            this.entities.add(entity);
+        }
+        
+        // 批量添加到查询系统（无重复检查，性能最优）
+        this.querySystem.addEntitiesUnchecked(entities);
+        
+        // 批量触发事件（可选，减少事件开销）
+        this.eventSystem.emitSync('entities:batch_added', { entities, scene: this, count });
+        
+        return entities;
+    }
+
+    /**
+     * 批量创建实体
+     * @param count 要创建的实体数量
+     * @param namePrefix 实体名称前缀
+     * @returns 创建的实体列表
+     */
+    public createEntitiesOld(count: number, namePrefix: string = "Entity"): Entity[] {
+        const entities: Entity[] = [];
+        
+        // 批量创建实体，延迟缓存清理
+        for (let i = 0; i < count; i++) {
+            const entity = new Entity(`${namePrefix}_${i}`, this.identifierPool.checkOut());
+            entities.push(entity);
+            this.addEntity(entity, true); // 延迟缓存清理
+        }
+        
+        // 最后统一清理缓存
+        this.querySystem.clearCache();
+        
+        return entities;
     }
 
     /**

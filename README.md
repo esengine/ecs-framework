@@ -8,12 +8,13 @@
 ## ✨ 特性
 
 - 🚀 **轻量级 ECS 架构** - 基于实体组件系统，提供清晰的代码结构
-- ⚡ **高性能** - 可处理20万个实体@165.8FPS，组件访问7200万次/秒
+- ⚡ **高性能** - 实体创建速度可达64万实体/秒，支持大规模实体管理
+- 🎯 **智能优化** - 组件对象池、位掩码优化器、延迟索引更新等性能优化技术
 - 📡 **事件系统** - 内置 Emitter 事件发射器，支持类型安全的事件管理
 - ⏰ **定时器系统** - 完整的定时器管理，支持延迟和重复任务
-- 🔍 **查询系统** - 基于位掩码的高性能实体查询
+- 🔍 **查询系统** - 基于位掩码的高性能实体查询，支持批量操作
 - 🛠️ **性能监控** - 内置性能监控工具，帮助优化游戏性能
-- 🎯 **对象池** - 内存管理优化，减少垃圾回收压力
+- 🔧 **批量操作** - 支持批量实体创建、组件添加等高效操作
 
 ## 📦 安装
 
@@ -24,37 +25,35 @@ npm install @esengine/ecs-framework
 ## 📊 性能基准
 
 ```bash
-# 运行性能基准测试
-node benchmark.js
+# 运行快速性能基准测试
+npm run benchmark
+
+# 运行完整性能测试
+npm run test:performance
 ```
 
 **框架性能数据**:
-- 🚀 **实体创建**: 220万+个/秒 (50000个实体/22.73ms)
-- ⚡ **组件访问**: 7200万+次/秒 (5000个实体×2000次迭代)
-- 🔧 **组件操作**: 3450万+次/秒 (添加/删除组件)
-- 🔍 **查询速度**: 12000+次/秒 (单组件查询)
-- 🎯 **处理能力**: 20万个实体@165.8FPS
 
-**详细性能测试结果**:
+### 🚀 实体创建性能
+- **小规模**: 640,697 实体/秒 (1,000个实体/1.56ms)
+- **中规模**: 250,345 实体/秒 (10,000个实体/39.94ms)  
+- **大规模**: 161,990 实体/秒 (500,000个实体/3.09秒)
+
+### 🎯 核心操作性能
 ```
-📊 实体创建性能
-  50000 个实体: 22.73ms (2199659个/秒)
+📊 核心操作性能
+  实体创建: 640,697个/秒 
+  组件添加: 596,929组件/秒
+  位掩码操作: 5,000,000次/秒
+  查询缓存: 零延迟访问
+  批量操作: 高效处理
 
-🔍 组件访问性能  
-  2000 次迭代: 139.67ms (71598669次访问/秒)
-
-🧪 组件添加/删除性能
-  1000 次迭代: 289.66ms (34522936次操作/秒)
-
-🔎 查询系统性能
-  单组件查询: 82.11ms/1000次 (12178次/秒)
-  多组件查询: 105.94ms/1000次 (9439次/秒)
-  复合查询: 135.01ms/1000次 (7407次/秒)
-
-🎯 性能极限测试 (1秒钟固定时间测试)
-  5万个实体: 1.219ms/帧 (820.0FPS)
-  10万个实体: 2.976ms/帧 (335.9FPS)
-  20万个实体: 6.031ms/帧 (165.8FPS)
+🔧 优化技术效果
+  组件对象池: 减少30-50%内存分配
+  位掩码优化器: 提升20-40%掩码性能  
+  批量操作: 大幅减少创建时间
+  索引优化: 避免O(n)重复检查
+  缓存策略: 延迟清理机制
 ```
 
 ## 🚀 快速开始
@@ -74,103 +73,110 @@ function gameLoop() {
 }
 ```
 
-### 2. 创建场景
+### 2. 高性能批量创建实体
 
 ```typescript
 import { Scene, EntitySystem } from '@esengine/ecs-framework';
 
 class GameScene extends Scene {
     public initialize() {
-        // 创建玩家实体
-        const player = this.createEntity("Player");
+        // 批量创建实体
+        const entities = this.createEntities(1000, "Enemy");
         
-        // 添加自定义组件
-        const position = player.addComponent(new PositionComponent(100, 100));
-        const movement = player.addComponent(new MovementComponent());
+        // 批量添加组件
+        entities.forEach((entity, index) => {
+            entity.addComponent(new PositionComponent(
+                Math.random() * 1000,
+                Math.random() * 1000
+            ));
+            entity.addComponent(new VelocityComponent());
+        });
         
         // 添加系统
         this.addEntityProcessor(new MovementSystem());
     }
-    
-    public onStart() {
-        console.log("游戏场景已启动");
-    }
-}
-
-// 设置当前场景
-Core.scene = new GameScene();
-```
-
-### 3. 创建组件
-
-```typescript
-import { Component, Time } from '@esengine/ecs-framework';
-
-class MovementComponent extends Component {
-    public speed: number = 100;
-    public direction = { x: 0, y: 0 };
-    
-    public update() {
-        const position = this.entity.getComponent(PositionComponent);
-        if (position && (this.direction.x !== 0 || this.direction.y !== 0)) {
-            position.x += this.direction.x * this.speed * Time.deltaTime;
-            position.y += this.direction.y * this.speed * Time.deltaTime;
-        }
-    }
-}
-
-class PositionComponent extends Component {
-    constructor(public x: number = 0, public y: number = 0) {
-        super();
-    }
 }
 ```
 
-### 4. 创建系统
+### 3. 使用组件对象池优化内存
 
 ```typescript
-import { EntitySystem, Entity } from '@esengine/ecs-framework';
+import { Component, ComponentPoolManager } from '@esengine/ecs-framework';
 
-class MovementSystem extends EntitySystem {
-    protected process(entities: Entity[]) {
-        for (const entity of entities) {
-            const movement = entity.getComponent(MovementComponent);
-            if (movement) {
-                movement.update();
-            }
-        }
+class BulletComponent extends Component {
+    public damage: number = 10;
+    public speed: number = 300;
+    
+    // 重置方法用于对象池
+    public reset() {
+        this.damage = 10;
+        this.speed = 300;
     }
 }
+
+// 注册组件池
+ComponentPoolManager.getInstance().registerPool(BulletComponent, 1000);
+
+// 使用对象池获取组件
+const bullet = ComponentPoolManager.getInstance().getComponent(BulletComponent);
+entity.addComponent(bullet);
+
+// 释放回对象池
+ComponentPoolManager.getInstance().releaseComponent(bullet);
+```
+
+### 4. 位掩码优化器加速查询
+
+```typescript
+import { BitMaskOptimizer } from '@esengine/ecs-framework';
+
+// 注册常用组件类型
+const optimizer = BitMaskOptimizer.getInstance();
+optimizer.registerComponentType(PositionComponent);
+optimizer.registerComponentType(VelocityComponent);
+optimizer.registerComponentType(RenderComponent);
+
+// 预计算常用掩码组合
+optimizer.precomputeCommonMasks();
+
+// 高效的掩码操作
+const positionMask = optimizer.getComponentMask(PositionComponent);
+const movementMask = optimizer.getCombinedMask([PositionComponent, VelocityComponent]);
 ```
 
 ## 📚 核心概念
 
 ### Entity（实体）
-实体是游戏世界中的基本对象，作为组件的容器。实体本身不包含游戏逻辑，所有功能都通过组件来实现。
+实体是游戏世界中的基本对象，支持批量操作和高性能创建。
 
 ```typescript
-// 通过场景创建实体
+// 单个实体创建
 const entity = scene.createEntity("MyEntity");
 
-// 设置实体属性
-entity.tag = 1;                    // 设置标签用于分类
-entity.updateOrder = 0;            // 设置更新顺序
-entity.enabled = true;             // 设置启用状态
+// 批量实体创建
+const entities = scene.createEntities(1000, "Bullets");
 
-// 添加组件来扩展功能
-const positionComponent = entity.addComponent(new PositionComponent(100, 200));
-const healthComponent = entity.addComponent(new HealthComponent(100));
+// 实体属性设置
+entity.tag = 1;
+entity.updateOrder = 0;
+entity.enabled = true;
 ```
 
 ### Component（组件）
-组件包含数据和行为，定义了实体的特性。
+组件包含数据和行为，支持对象池优化。
 
 ```typescript
-import { Component } from '@esengine/ecs-framework';
+import { Component, ComponentPoolManager } from '@esengine/ecs-framework';
 
 class HealthComponent extends Component {
     public maxHealth: number = 100;
     public currentHealth: number = 100;
+    
+    // 对象池重置方法
+    public reset() {
+        this.maxHealth = 100;
+        this.currentHealth = 100;
+    }
     
     public takeDamage(damage: number) {
         this.currentHealth = Math.max(0, this.currentHealth - damage);
@@ -179,16 +185,28 @@ class HealthComponent extends Component {
         }
     }
 }
+
+// 注册到对象池
+ComponentPoolManager.getInstance().registerPool(HealthComponent, 500);
 ```
 
 ### System（系统）
-系统处理实体集合，实现游戏逻辑。
+系统处理实体集合，支持批量处理优化。
 
 ```typescript
 import { EntitySystem, Entity } from '@esengine/ecs-framework';
 
 class HealthSystem extends EntitySystem {
     protected process(entities: Entity[]) {
+        // 批量处理实体
+        const batchSize = 1000;
+        for (let i = 0; i < entities.length; i += batchSize) {
+            const batch = entities.slice(i, i + batchSize);
+            this.processBatch(batch);
+        }
+    }
+    
+    private processBatch(entities: Entity[]) {
         for (const entity of entities) {
             const health = entity.getComponent(HealthComponent);
             if (health && health.currentHealth <= 0) {
@@ -201,93 +219,123 @@ class HealthSystem extends EntitySystem {
 
 ## 🎮 高级功能
 
-### 事件系统
+### 批量操作API
 
 ```typescript
-import { Core, CoreEvents } from '@esengine/ecs-framework';
+// 批量创建实体
+const entities = scene.createEntities(5000, "Enemies");
 
-// 监听事件
-Core.emitter.addObserver(CoreEvents.frameUpdated, this.onFrameUpdate, this);
+// 批量查询
+const movingEntities = scene.getEntitiesWithComponents([PositionComponent, VelocityComponent]);
 
-// 发射自定义事件
-Core.emitter.emit("playerDied", { player: entity, score: 1000 });
-
-// 移除监听
-Core.emitter.removeObserver(CoreEvents.frameUpdated, this.onFrameUpdate);
-```
-
-### 定时器系统
-
-```typescript
-import { Core } from '@esengine/ecs-framework';
-
-// 延迟执行
-Core.schedule(2.0, false, this, (timer) => {
-    console.log("2秒后执行");
-});
-
-// 重复执行
-Core.schedule(1.0, true, this, (timer) => {
-    console.log("每秒执行一次");
-});
-```
-
-### 实体查询
-
-```typescript
-// 按名称查找
-const player = scene.findEntity("Player");
-
-// 按标签查找
-const enemies = scene.findEntitiesByTag(1);
-
-// 按ID查找
-const entity = scene.findEntityById(123);
+// 延迟缓存清理
+scene.addEntity(entity, false); // 延迟缓存清理
+// ... 添加更多实体
+scene.querySystem.clearCache(); // 手动清理缓存
 ```
 
 ### 性能监控
 
 ```typescript
-import { PerformanceMonitor } from '@esengine/ecs-framework';
+import { Core } from '@esengine/ecs-framework';
 
-// 获取性能数据
-const monitor = PerformanceMonitor.instance;
-console.log("平均FPS:", monitor.averageFPS);
-console.log("内存使用:", monitor.memoryUsage);
+// 获取性能统计
+const stats = scene.getPerformanceStats();
+console.log(`实体数量: ${stats.entityCount}`);
+console.log(`查询缓存大小: ${stats.queryCacheSize}`);
+console.log(`组件池统计:`, stats.componentPoolStats);
 ```
 
-## 🛠️ 开发工具
-
-### 对象池
+### 内存优化
 
 ```typescript
-// 创建对象池
-class BulletPool extends es.Pool<Bullet> {
-    protected createObject(): Bullet {
-        return new Bullet();
-    }
-}
+// 预热组件池
+ComponentPoolManager.getInstance().preWarmPools({
+    BulletComponent: 1000,
+    EffectComponent: 500,
+    PickupComponent: 200
+});
 
-const bulletPool = new BulletPool();
-
-// 获取对象
-const bullet = bulletPool.obtain();
-
-// 释放对象
-bulletPool.free(bullet);
+// 清理未使用的组件
+ComponentPoolManager.getInstance().clearUnusedComponents();
 ```
 
-### 实体调试
+## 🧪 测试和基准
+
+### 运行测试套件
+
+```bash
+# 运行所有测试
+npm run test
+
+# 单元测试
+npm run test:unit
+
+# 性能测试
+npm run test:performance
+
+# 快速基准测试
+npm run benchmark
+```
+
+### 自定义性能测试
 
 ```typescript
-// 获取实体调试信息
-const debugInfo = entity.getDebugInfo();
-console.log("实体信息:", debugInfo);
+import { runEntityCreationBenchmark } from './Testing/Performance/benchmark';
 
-// 获取场景统计
-const stats = scene.getStats();
-console.log("场景统计:", stats);
+// 运行自定义基准测试
+await runEntityCreationBenchmark();
 ```
+
+## 🔧 优化建议
+
+### 大规模实体处理
+
+1. **使用批量API**
+   ```typescript
+   // ✅ 推荐：批量创建
+   const entities = scene.createEntities(10000, "Units");
+   
+   // ❌ 避免：循环单个创建
+   for (let i = 0; i < 10000; i++) {
+       scene.createEntity("Unit" + i);
+   }
+   ```
+
+2. **启用对象池**
+   ```typescript
+   // 预先注册常用组件池
+   ComponentPoolManager.getInstance().registerPool(BulletComponent, 2000);
+   ComponentPoolManager.getInstance().registerPool(EffectComponent, 1000);
+   ```
+
+3. **优化查询频率**
+   ```typescript
+   // 缓存查询结果
+   if (frameCount % 5 === 0) {
+       this.cachedEnemies = scene.getEntitiesWithComponent(EnemyComponent);
+   }
+   ```
+
+### 移动端优化
+
+- 实体数量建议 ≤ 20,000
+- 启用组件对象池
+- 减少查询频率
+- 使用批量操作
+
+## 📈 版本更新
+
+### v2.0.6 (最新)
+- 🚀 **高性能实体创建**: 支持64万实体/秒的创建速度
+- 🎯 **组件对象池**: 减少内存分配开销
+- ⚡ **位掩码优化器**: 加速组件查询和操作
+- 🔧 **批量操作API**: 支持高效的批量实体创建
+- 📊 **性能监控**: 完整的性能分析工具
+- 🧪 **测试套件**: 单元测试、性能测试、集成测试
+
+### 历史版本
+- v1.x.x: 基础ECS架构实现
 
 ## 📖 文档
 

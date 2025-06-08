@@ -64,6 +64,12 @@ typings/
 bin/
 dev-bin/
 
+# WASM build artifacts
+src/wasm/rust-ecs-core/target/
+src/wasm/rust-ecs-core/pkg/
+*.wasm
+wasm-pack.log
+
 # IDE
 .vscode/
 .idea/

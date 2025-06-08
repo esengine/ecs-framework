@@ -1,8 +1,6 @@
 /**
  * ECS Framework - 轻量级实体组件系统框架
  * 适用于Laya、Cocos等游戏引擎的小游戏开发
- * @version 2.0.0
- * @author ECS Framework Team
  */
 
 // 核心模块
@@ -16,13 +14,24 @@ export { TimerManager } from './Utils/Timers/TimerManager';
 export { ITimer } from './Utils/Timers/ITimer';
 export { Timer } from './Utils/Timers/Timer';
 
-// ECS核心
+// ECS核心组件
 export * from './ECS';
 
 // 工具类
 export * from './Utils/Pool';
 export * from './Utils/PerformanceMonitor';
 export * from './Utils/Extensions';
+
+// WebAssembly核心模块
+export { 
+    WasmEcsCore, 
+    ecsCore, 
+    initializeEcs, 
+    Query, 
+    EntityId, 
+    ComponentMask, 
+    QueryResult
+} from './Utils/WasmCore';
 
 // 类型定义
 export * from './Types'; 

@@ -1,21 +1,53 @@
-# Security Policy
+# 安全政策
 
-## Supported Versions
+## 支持的版本
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+我们为以下版本提供安全更新：
 
-| Version | Supported          |
+| 版本    | 支持状态           |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| 2.0.x   | :white_check_mark: |
+| 1.0.x   | :x:                |
 
-## Reporting a Vulnerability
+## 报告漏洞
 
-Use this section to tell people how to report a vulnerability.
+如果您发现了安全漏洞，请通过以下方式报告：
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+### 报告渠道
+
+- **邮箱**: [安全邮箱将在实际部署时提供]
+- **GitHub**: 创建私有安全报告（推荐）
+
+### 报告流程
+
+1. **不要**在公开的 issue 中报告安全漏洞
+2. 提供详细的漏洞描述，包括：
+   - 受影响的版本
+   - 复现步骤
+   - 潜在的影响范围
+   - 如果可能，提供修复建议
+
+### 响应时间
+
+- **确认收到**: 72小时内
+- **初步评估**: 1周内
+- **修复发布**: 根据严重程度，通常在2-4周内
+
+### 处理流程
+
+1. 我们会确认漏洞的存在和严重程度
+2. 开发修复方案并进行测试
+3. 发布安全更新
+4. 在修复发布后，会在相关渠道公布漏洞详情
+
+### 安全最佳实践
+
+使用 ECS Framework 时，请遵循以下安全建议：
+
+- 始终使用最新的稳定版本
+- 定期更新依赖项
+- 在生产环境中禁用调试模式
+- 验证所有外部输入数据
+- 不要在客户端存储敏感信息
+
+感谢您帮助保持 ECS Framework 的安全性！

@@ -9,15 +9,21 @@ ecs-framework/
 ├── source/
 │   ├── src/           # 源代码
 │   │   ├── ECS/       # ECS核心系统
-│   │   ├── Math/      # 数学运算
 │   │   ├── Types/     # 类型定义
-│   │   └── Utils/     # 工具类
+│   │   ├── Utils/     # 工具类
+│   │   └── Testing/   # 测试文件
 │   ├── scripts/       # 构建脚本
 │   └── tsconfig.json  # TypeScript配置
 └── docs/              # 文档
 ```
 
-## 安装和构建
+## 安装和使用
+
+### NPM 安装
+
+```bash
+npm install @esengine/ecs-framework
+```
 
 ### 从源码构建
 
@@ -28,13 +34,12 @@ git clone https://github.com/esengine/ecs-framework.git
 # 进入源码目录
 cd ecs-framework/source
 
+# 安装依赖
+npm install
+
 # 编译TypeScript
-npx tsc
+npm run build
 ```
-
-### 直接使用
-
-您可以直接将源码复制到项目中使用，或者引用编译后的JavaScript文件。
 
 ## 基础设置
 
@@ -42,13 +47,15 @@ npx tsc
 
 ```typescript
 // 导入核心类
-import { Core } from './Core';
-import { Entity } from './ECS/Entity';
-import { Component } from './ECS/Component';
-import { Scene } from './ECS/Scene';
-import { QuerySystem } from './ECS/Core/QuerySystem';
-import { Emitter } from './Utils/Emitter';
-import { TimerManager } from './Utils/Timers/TimerManager';
+import { 
+    Core, 
+    Entity, 
+    Component, 
+    Scene, 
+    EntitySystem,
+    ComponentPoolManager,
+    BitMaskOptimizer 
+} from '@esengine/ecs-framework';
 ```
 
 ### 2. 创建基础管理器
@@ -57,9 +64,6 @@ import { TimerManager } from './Utils/Timers/TimerManager';
 class GameManager {
     private core: Core;
     private scene: Scene;
-    private querySystem: QuerySystem;
-    private emitter: Emitter;
-    private timerManager: TimerManager;
     
     constructor() {
         // 创建核心实例
@@ -69,21 +73,30 @@ class GameManager {
         this.scene = new Scene();
         this.scene.name = "GameScene";
         
-        // 获取场景的查询系统
-        this.querySystem = this.scene.querySystem;
-        
-        // 获取核心的事件系统和定时器
-        this.emitter = Core.emitter;
-        this.timerManager = this.core._timerManager;
-        
         // 设置当前场景
         Core.scene = this.scene;
+        
+        // 初始化优化功能
+        this.setupOptimizations();
+    }
+    
+    private setupOptimizations() {
+        // 注册组件对象池
+        ComponentPoolManager.getInstance().preWarmPools({
+            PositionComponent: 1000,
+            VelocityComponent: 1000,
+            HealthComponent: 500
+        });
+        
+        // 注册位掩码优化
+        const optimizer = BitMaskOptimizer.getInstance();
+        optimizer.registerComponentType(PositionComponent);
+        optimizer.registerComponentType(VelocityComponent);
+        optimizer.registerComponentType(HealthComponent);
+        optimizer.precomputeCommonMasks();
     }
     
     public update(deltaTime: number): void {
-        // 更新定时器
-        this.timerManager.update(deltaTime);
-        
         // 更新场景
         this.scene.update();
         
@@ -122,6 +135,8 @@ gameLoop();
 ### 1. 定义组件
 
 ```typescript
+import { Component, ComponentPoolManager } from '@esengine/ecs-framework';
+
 // 位置组件
 class PositionComponent extends Component {
     public x: number = 0;
@@ -131,6 +146,12 @@ class PositionComponent extends Component {
         super();
         this.x = x;
         this.y = y;
+    }
+    
+    // 对象池重置方法
+    public reset() {
+        this.x = 0;
+        this.y = 0;
     }
 }
 
@@ -143,6 +164,11 @@ class VelocityComponent extends Component {
         super();
         this.x = x;
         this.y = y;
+    }
+    
+    public reset() {
+        this.x = 0;
+        this.y = 0;
     }
 }
 
@@ -157,6 +183,11 @@ class HealthComponent extends Component {
         this.currentHealth = maxHealth;
     }
     
+    public reset() {
+        this.maxHealth = 100;
+        this.currentHealth = 100;
+    }
+    
     public takeDamage(damage: number): void {
         this.currentHealth = Math.max(0, this.currentHealth - damage);
     }
@@ -169,6 +200,11 @@ class HealthComponent extends Component {
         return this.currentHealth <= 0;
     }
 }
+
+// 注册组件到对象池
+ComponentPoolManager.getInstance().registerPool(PositionComponent, 1000);
+ComponentPoolManager.getInstance().registerPool(VelocityComponent, 1000);
+ComponentPoolManager.getInstance().registerPool(HealthComponent, 500);
 ```
 
 ### 2. 创建实体
@@ -180,10 +216,19 @@ class GameManager {
     public createPlayer(): Entity {
         const player = this.scene.createEntity("Player");
         
-        // 添加组件
-        player.addComponent(new PositionComponent(400, 300));
-        player.addComponent(new VelocityComponent(0, 0));
-        player.addComponent(new HealthComponent(100));
+        // 使用对象池获取组件
+        const position = ComponentPoolManager.getInstance().getComponent(PositionComponent);
+        position.x = 400;
+        position.y = 300;
+        player.addComponent(position);
+        
+        const velocity = ComponentPoolManager.getInstance().getComponent(VelocityComponent);
+        player.addComponent(velocity);
+        
+        const health = ComponentPoolManager.getInstance().getComponent(HealthComponent);
+        health.maxHealth = 100;
+        health.currentHealth = 100;
+        player.addComponent(health);
         
         // 设置标签和更新顺序
         player.tag = 1; // 玩家标签
@@ -192,45 +237,64 @@ class GameManager {
         return player;
     }
     
-    public createEnemy(x: number, y: number): Entity {
-        const enemy = this.scene.createEntity("Enemy");
+    public createEnemies(count: number): Entity[] {
+        // 使用批量创建API - 高性能
+        const enemies = this.scene.createEntities(count, "Enemy");
         
-        enemy.addComponent(new PositionComponent(x, y));
-        enemy.addComponent(new VelocityComponent(50, 0));
-        enemy.addComponent(new HealthComponent(50));
+        // 批量配置敌人
+        enemies.forEach((enemy, index) => {
+            // 使用对象池获取组件
+            const position = ComponentPoolManager.getInstance().getComponent(PositionComponent);
+            position.x = Math.random() * 800;
+            position.y = Math.random() * 600;
+            enemy.addComponent(position);
+            
+            const velocity = ComponentPoolManager.getInstance().getComponent(VelocityComponent);
+            velocity.x = (Math.random() - 0.5) * 100;
+            velocity.y = (Math.random() - 0.5) * 100;
+            enemy.addComponent(velocity);
+            
+            const health = ComponentPoolManager.getInstance().getComponent(HealthComponent);
+            health.maxHealth = 50;
+            health.currentHealth = 50;
+            enemy.addComponent(health);
+            
+            enemy.tag = 2; // 敌人标签
+            enemy.updateOrder = 1;
+        });
         
-        enemy.tag = 2; // 敌人标签
-        enemy.updateOrder = 1;
+        return enemies;
+    }
+    
+    public destroyEntity(entity: Entity): void {
+        // 释放组件回对象池
+        entity.components.forEach(component => {
+            ComponentPoolManager.getInstance().releaseComponent(component);
+        });
         
-        return enemy;
+        // 销毁实体
+        entity.destroy();
     }
 }
+```
 
-## 使用查询系统
-
-查询系统是框架的核心功能，用于高效查找具有特定组件的实体：
+### 3. 创建系统
 
 ```typescript
-class GameManager {
-    // ... 之前的代码 ...
-    
-    private updateSystems(deltaTime: number): void {
-        this.updateMovementSystem(deltaTime);
-        this.updateHealthSystem(deltaTime);
-        this.updateCollisionSystem();
-    }
-    
-    private updateMovementSystem(deltaTime: number): void {
-        // 查询所有具有位置和速度组件的实体
-        const movableEntities = this.querySystem.queryTwoComponents(
+import { EntitySystem, Entity } from '@esengine/ecs-framework';
+
+class MovementSystem extends EntitySystem {
+    protected process(entities: Entity[]): void {
+        // 使用高性能查询获取移动实体
+        const movableEntities = this.scene.querySystem.queryTwoComponents(
             PositionComponent, 
             VelocityComponent
         );
         
         movableEntities.forEach(({ entity, component1: position, component2: velocity }) => {
             // 更新位置
-            position.x += velocity.x * deltaTime;
-            position.y += velocity.y * deltaTime;
+            position.x += velocity.x * Time.deltaTime;
+            position.y += velocity.y * Time.deltaTime;
             
             // 边界检查
             if (position.x < 0 || position.x > 800) {
@@ -241,177 +305,95 @@ class GameManager {
             }
         });
     }
-    
-    private updateHealthSystem(deltaTime: number): void {
-        // 查询所有具有生命值组件的实体
-        const healthEntities = this.querySystem.queryComponentTyped(HealthComponent);
-        
+}
+
+class HealthSystem extends EntitySystem {
+    protected process(entities: Entity[]): void {
+        const healthEntities = this.scene.querySystem.queryComponentTyped(HealthComponent);
         const deadEntities: Entity[] = [];
         
         healthEntities.forEach(({ entity, component: health }) => {
-            // 检查死亡
             if (health.isDead()) {
                 deadEntities.push(entity);
             }
         });
         
-        // 移除死亡实体
+        // 销毁死亡实体
         deadEntities.forEach(entity => {
-            entity.destroy();
-        });
-    }
-    
-    private updateCollisionSystem(): void {
-        // 获取玩家
-        const players = this.scene.findEntitiesByTag(1); // 玩家标签
-        const enemies = this.scene.findEntitiesByTag(2); // 敌人标签
-        
-        players.forEach(player => {
-            const playerPos = player.getComponent(PositionComponent);
-            const playerHealth = player.getComponent(HealthComponent);
-            
-            if (!playerPos || !playerHealth) return;
-            
-            enemies.forEach(enemy => {
-                const enemyPos = enemy.getComponent(PositionComponent);
-                
-                if (!enemyPos) return;
-                
-                // 简单的距离检测
-                const distance = Math.sqrt(
-                    Math.pow(playerPos.x - enemyPos.x, 2) + 
-                    Math.pow(playerPos.y - enemyPos.y, 2)
-                );
-                
-                if (distance < 50) { // 碰撞距离
-                    playerHealth.takeDamage(10);
-                    console.log(`玩家受到伤害！当前生命值: ${playerHealth.currentHealth}`);
-                }
-            });
+            this.scene.removeEntity(entity);
         });
     }
 }
 ```
 
-## 使用事件系统
+## 高级功能
 
-框架内置了事件系统，用于组件间通信：
+### 1. 性能监控
 
 ```typescript
-// 定义事件类型
-enum GameEvents {
-    PLAYER_DIED = 'playerDied',
-    ENEMY_SPAWNED = 'enemySpawned',
-    SCORE_CHANGED = 'scoreChanged'
-}
-
 class GameManager {
     // ... 之前的代码 ...
     
-    constructor() {
-        // ... 之前的代码 ...
+    public getPerformanceStats(): void {
+        const stats = this.scene.getPerformanceStats();
+        console.log(`实体数量: ${stats.entityCount}`);
+        console.log(`查询缓存大小: ${stats.queryCacheSize}`);
         
-        // 监听事件
-        this.emitter.on(GameEvents.PLAYER_DIED, this.onPlayerDied.bind(this));
-        this.emitter.on(GameEvents.ENEMY_SPAWNED, this.onEnemySpawned.bind(this));
-    }
-    
-    private onPlayerDied(player: Entity): void {
-        console.log('游戏结束！');
-        // 重置游戏或显示游戏结束界面
-    }
-    
-    private onEnemySpawned(enemy: Entity): void {
-        console.log('新敌人出现！');
-    }
-    
-    private updateHealthSystem(deltaTime: number): void {
-        const healthEntities = this.querySystem.queryComponentTyped(HealthComponent);
-        
-        healthEntities.forEach(({ entity, component: health }) => {
-            if (health.isDead()) {
-                // 发送死亡事件
-                if (entity.tag === 1) { // 玩家
-                    this.emitter.emit(GameEvents.PLAYER_DIED, entity);
-                }
-                
-                entity.destroy();
-            }
-        });
+        const poolStats = ComponentPoolManager.getInstance().getPoolStats();
+        console.log('组件池统计:', poolStats);
     }
 }
 ```
 
-## 使用定时器
-
-框架提供了强大的定时器系统：
+### 2. 批量操作
 
 ```typescript
-class GameManager {
-    // ... 之前的代码 ...
-    
-    public startGame(): void {
-        // 创建玩家
-        this.createPlayer();
-        
-        // 每2秒生成一个敌人
-        Core.schedule(2.0, true, this, (timer) => {
-            const x = Math.random() * 800;
-            const y = Math.random() * 600;
-            const enemy = this.createEnemy(x, y);
-            this.emitter.emit(GameEvents.ENEMY_SPAWNED, enemy);
-        });
-        
-        // 5秒后增加敌人生成速度
-        Core.schedule(5.0, false, this, (timer) => {
-            console.log('游戏难度提升！');
-            // 可以在这里修改敌人生成间隔
-        });
-    }
-}
+// 批量创建大量实体
+const bullets = this.scene.createEntities(1000, "Bullet");
+
+// 批量查询
+const enemies = this.scene.getEntitiesWithComponents([PositionComponent, HealthComponent]);
+
+// 延迟缓存清理（高性能）
+bullets.forEach(bullet => {
+    this.scene.addEntity(bullet, false); // 延迟清理
+});
+this.scene.querySystem.clearCache(); // 手动清理
+```
+
+### 3. 事件系统
+
+```typescript
+import { Core, CoreEvents } from '@esengine/ecs-framework';
+
+// 监听事件
+Core.emitter.addObserver(CoreEvents.frameUpdated, this.onFrameUpdate, this);
+
+// 发射自定义事件
+Core.emitter.emit("playerDied", { player: entity, score: 1000 });
+
+// 移除监听
+Core.emitter.removeObserver(CoreEvents.frameUpdated, this.onFrameUpdate);
+```
 
 ## 完整示例
 
 以下是一个完整的小游戏示例，展示了框架的主要功能：
 
 ```typescript
-// 导入框架
-import { Core } from './Core';
-import { Entity } from './ECS/Entity';
-import { Component } from './ECS/Component';
-import { Scene } from './ECS/Scene';
-import { QuerySystem } from './ECS/Core/QuerySystem';
-import { Emitter } from './Utils/Emitter';
+import { 
+    Core, 
+    Entity, 
+    Component, 
+    Scene, 
+    EntitySystem,
+    ComponentPoolManager,
+    BitMaskOptimizer,
+    Time 
+} from '@esengine/ecs-framework';
 
-// 定义组件
-class PositionComponent extends Component {
-    constructor(public x: number = 0, public y: number = 0) {
-        super();
-    }
-}
-
-class VelocityComponent extends Component {
-    constructor(public x: number = 0, public y: number = 0) {
-        super();
-    }
-}
-
-class HealthComponent extends Component {
-    constructor(public maxHealth: number = 100) {
-        super();
-        this.currentHealth = maxHealth;
-    }
-    
-    public currentHealth: number;
-    
-    public takeDamage(damage: number): void {
-        this.currentHealth = Math.max(0, this.currentHealth - damage);
-    }
-    
-    public isDead(): boolean {
-        return this.currentHealth <= 0;
-    }
-}
+// 定义组件（前面已定义）
+// ... PositionComponent, VelocityComponent, HealthComponent ...
 
 // 游戏事件
 enum GameEvents {
@@ -423,141 +405,124 @@ enum GameEvents {
 class SimpleGame {
     private core: Core;
     private scene: Scene;
-    private querySystem: QuerySystem;
-    private emitter: Emitter;
     private isRunning: boolean = false;
     
     constructor() {
         this.core = Core.create(true);
         this.scene = new Scene();
-        this.scene.name = "SimpleGame";
-        this.querySystem = this.scene.querySystem;
-        this.emitter = Core.emitter;
-        
-        // 设置场景
+        this.scene.name = "GameScene";
         Core.scene = this.scene;
         
-        // 监听事件
-        this.emitter.on(GameEvents.PLAYER_DIED, () => {
-            console.log('游戏结束！');
-            this.isRunning = false;
+        this.setupOptimizations();
+        this.setupSystems();
+        this.setupEvents();
+    }
+    
+    private setupOptimizations(): void {
+        // 预热组件池
+        ComponentPoolManager.getInstance().preWarmPools({
+            PositionComponent: 2000,
+            VelocityComponent: 2000,
+            HealthComponent: 1000
         });
+        
+        // 注册位掩码优化
+        const optimizer = BitMaskOptimizer.getInstance();
+        optimizer.registerComponentType(PositionComponent);
+        optimizer.registerComponentType(VelocityComponent);
+        optimizer.registerComponentType(HealthComponent);
+        optimizer.precomputeCommonMasks();
+    }
+    
+    private setupSystems(): void {
+        this.scene.addEntityProcessor(new MovementSystem());
+        this.scene.addEntityProcessor(new HealthSystem());
+    }
+    
+    private setupEvents(): void {
+        Core.emitter.addObserver(GameEvents.PLAYER_DIED, this.onPlayerDied, this);
+        Core.emitter.addObserver(GameEvents.ENEMY_SPAWNED, this.onEnemySpawned, this);
     }
     
     public start(): void {
-        console.log('游戏开始！');
         this.isRunning = true;
         
-        // 创建玩家
+        // 创建游戏实体
         this.createPlayer();
-        
-        // 定期生成敌人
-        Core.schedule(2.0, true, this, (timer) => {
-            if (this.isRunning) {
-                this.createEnemy();
-            }
-        });
+        this.createEnemies(100);
         
         // 启动游戏循环
         this.gameLoop();
     }
     
+    public stop(): void {
+        this.isRunning = false;
+        
+        // 清理组件池
+        ComponentPoolManager.getInstance().clearAllPools();
+    }
+    
     private createPlayer(): Entity {
         const player = this.scene.createEntity("Player");
-        player.addComponent(new PositionComponent(400, 300));
-        player.addComponent(new VelocityComponent(100, 0));
-        player.addComponent(new HealthComponent(100));
-        player.tag = 1; // 玩家标签
         
+        const position = ComponentPoolManager.getInstance().getComponent(PositionComponent);
+        position.x = 400;
+        position.y = 300;
+        player.addComponent(position);
+        
+        const velocity = ComponentPoolManager.getInstance().getComponent(VelocityComponent);
+        player.addComponent(velocity);
+        
+        const health = ComponentPoolManager.getInstance().getComponent(HealthComponent);
+        health.maxHealth = 100;
+        health.currentHealth = 100;
+        player.addComponent(health);
+        
+        player.tag = 1;
         return player;
     }
     
-    private createEnemy(): Entity {
-        const enemy = this.scene.createEntity("Enemy");
-        const x = Math.random() * 800;
-        const y = Math.random() * 600;
+    private createEnemies(count: number): Entity[] {
+        // 使用高性能批量创建
+        const enemies = this.scene.createEntities(count, "Enemy");
         
-        enemy.addComponent(new PositionComponent(x, y));
-        enemy.addComponent(new VelocityComponent(-50, 0));
-        enemy.addComponent(new HealthComponent(50));
-        enemy.tag = 2; // 敌人标签
+        enemies.forEach((enemy, index) => {
+            const position = ComponentPoolManager.getInstance().getComponent(PositionComponent);
+            position.x = Math.random() * 800;
+            position.y = Math.random() * 600;
+            enemy.addComponent(position);
+            
+            const velocity = ComponentPoolManager.getInstance().getComponent(VelocityComponent);
+            velocity.x = (Math.random() - 0.5) * 100;
+            velocity.y = (Math.random() - 0.5) * 100;
+            enemy.addComponent(velocity);
+            
+            const health = ComponentPoolManager.getInstance().getComponent(HealthComponent);
+            health.maxHealth = 50;
+            health.currentHealth = 50;
+            enemy.addComponent(health);
+            
+            enemy.tag = 2;
+        });
         
-        this.emitter.emit(GameEvents.ENEMY_SPAWNED, enemy);
-        
-        return enemy;
+        return enemies;
+    }
+    
+    private onPlayerDied(event: any): void {
+        console.log("游戏结束！玩家死亡");
+        this.stop();
+    }
+    
+    private onEnemySpawned(event: any): void {
+        console.log("敌人出现！");
     }
     
     private update(deltaTime: number): void {
+        // 更新定时器
+        this.core._timerManager.update(deltaTime);
+        
         // 更新场景
         this.scene.update();
-        
-        // 更新游戏系统
-        this.updateMovement(deltaTime);
-        this.updateCollision();
-        this.updateHealth();
-    }
-    
-    private updateMovement(deltaTime: number): void {
-        const movableEntities = this.querySystem.queryTwoComponents(
-            PositionComponent, 
-            VelocityComponent
-        );
-        
-        movableEntities.forEach(({ entity, component1: pos, component2: vel }) => {
-            pos.x += vel.x * deltaTime;
-            pos.y += vel.y * deltaTime;
-            
-            // 边界检查
-            if (pos.x < 0 || pos.x > 800) vel.x = -vel.x;
-            if (pos.y < 0 || pos.y > 600) vel.y = -vel.y;
-        });
-    }
-    
-    private updateCollision(): void {
-        const players = this.scene.findEntitiesByTag(1);
-        const enemies = this.scene.findEntitiesByTag(2);
-        
-        players.forEach(player => {
-            const playerPos = player.getComponent(PositionComponent);
-            const playerHealth = player.getComponent(HealthComponent);
-            
-            if (!playerPos || !playerHealth) return;
-            
-            enemies.forEach(enemy => {
-                const enemyPos = enemy.getComponent(PositionComponent);
-                if (!enemyPos) return;
-                
-                const distance = Math.sqrt(
-                    Math.pow(playerPos.x - enemyPos.x, 2) + 
-                    Math.pow(playerPos.y - enemyPos.y, 2)
-                );
-                
-                if (distance < 50) {
-                    playerHealth.takeDamage(10);
-                    console.log(`碰撞！玩家生命值: ${playerHealth.currentHealth}`);
-                }
-            });
-        });
-    }
-    
-    private updateHealth(): void {
-        const healthEntities = this.querySystem.queryComponentTyped(HealthComponent);
-        const deadEntities: Entity[] = [];
-        
-        healthEntities.forEach(({ entity, component: health }) => {
-            if (health.isDead()) {
-                deadEntities.push(entity);
-                
-                if (entity.tag === 1) { // 玩家死亡
-                    this.emitter.emit(GameEvents.PLAYER_DIED, entity);
-                }
-            }
-        });
-        
-        // 移除死亡实体
-        deadEntities.forEach(entity => {
-            entity.destroy();
-        });
     }
     
     private gameLoop(): void {
@@ -584,6 +549,23 @@ const game = new SimpleGame();
 game.start();
 ```
 
+## 性能优化建议
+
+### 1. 大规模实体处理
+- 使用 `createEntities()` 批量创建实体
+- 启用组件对象池减少内存分配
+- 使用延迟缓存清理机制
+
+### 2. 查询优化
+- 缓存频繁查询的结果
+- 使用 `BitMaskOptimizer` 优化掩码操作
+- 减少不必要的查询频率
+
+### 3. 内存管理
+- 预热常用组件池
+- 及时释放不用的组件回对象池
+- 定期清理未使用的缓存
+
 ## 下一步
 
 现在您已经掌握了 ECS Framework 的基础用法，可以继续学习：
@@ -591,13 +573,14 @@ game.start();
 - [实体使用指南](entity-guide.md) - 详细了解实体的所有功能和用法
 - [核心概念](core-concepts.md) - 深入了解 ECS 架构和设计原理
 - [查询系统使用指南](query-system-usage.md) - 学习高性能查询系统的详细用法
+- [性能基准](performance.md) - 了解框架的性能表现和优化建议
 
 ## 常见问题
 
 ### Q: 如何在不同游戏引擎中集成？
 
 A: ECS Framework 是引擎无关的，您只需要：
-1. 将框架源码复制到项目中
+1. 通过npm安装框架 `npm install @esengine/ecs-framework`
 2. 在游戏引擎的主循环中调用 `scene.update()`
 3. 根据需要集成渲染、输入等引擎特定功能
 
@@ -605,22 +588,20 @@ A: ECS Framework 是引擎无关的，您只需要：
 
 A: 框架本身不提供输入处理，建议：
 1. 创建一个输入组件来存储输入状态
-2. 在游戏循环中更新输入状态
-3. 在相关组件中读取输入状态并处理
+2. 在游戏引擎的输入回调中更新输入组件
+3. 创建输入处理系统来响应输入状态
 
-### Q: 如何调试？
+### Q: 如何优化大规模实体性能？
 
-A: 框架提供了多种调试功能：
-- 使用 `entity.getDebugInfo()` 查看实体信息
-- 使用 `querySystem.getPerformanceReport()` 查看查询性能
-- 使用 `querySystem.getStats()` 查看详细统计信息
+A: 关键优化策略：
+1. 启用组件对象池：`ComponentPoolManager.getInstance().registerPool()`
+2. 使用批量操作：`scene.createEntities()`
+3. 缓存查询结果，减少查询频率
+4. 使用位掩码优化器：`BitMaskOptimizer.getInstance()`
 
-### Q: 性能如何优化？
+### Q: 组件对象池何时有效？
 
-A: 框架已经内置了多种性能优化：
-- 使用位掩码进行快速组件匹配
-- 多级索引系统加速查询
-- 智能缓存减少重复计算
-- 批量操作减少开销
-
-建议定期调用 `querySystem.optimizeIndexes()` 来自动优化配置。 
+A: 对象池在以下情况下最有效：
+- 频繁创建和销毁相同类型的组件
+- 组件数量大于1000个
+- 游戏运行时间较长，需要避免垃圾回收压力 

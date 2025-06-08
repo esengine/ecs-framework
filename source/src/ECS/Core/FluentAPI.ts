@@ -390,7 +390,7 @@ export class ECSFluentAPI {
      * @returns 查询构建器
      */
     public query(): QueryBuilder {
-        return this.querySystem.createQuery();
+        return new QueryBuilder(this.querySystem);
     }
 
     /**

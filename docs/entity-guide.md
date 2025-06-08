@@ -29,6 +29,23 @@ console.log(entity.name); // "Player"
 console.log(entity.id);   // 唯一的数字ID
 ```
 
+### 批量创建实体（推荐）
+
+```typescript
+import { Scene } from '@esengine/ecs-framework';
+
+const scene = new Scene();
+
+// 批量创建1000个实体 - 高性能
+const entities = scene.createEntities(1000, "Enemy");
+
+// 批量配置
+entities.forEach((entity, index) => {
+    entity.tag = 2; // 敌人标签
+    // 添加组件...
+});
+```
+
 ### 使用流式API创建
 
 ```typescript

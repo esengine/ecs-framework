@@ -1,57 +1,46 @@
-# 源码文件（只发布编译后的文件）
+# 源代码文件
 src/
-tsconfig.json
-gulpfile.js
-build.config.js
-.babelrc
+tsconfig*.json
+*.ts
+!bin/**/*.d.ts
 
-# 开发工具配置
+# 开发文件
+dev-bin/
+scripts/
 .vscode/
-.idea/
-.wing/
-
-# 依赖和缓存
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+.git/
+.gitignore
 
 # 测试文件
-*.test.js
-*.test.ts
-*.spec.js
-*.spec.ts
-test/
-tests/
-__tests__/
-coverage/
+**/*.test.*
+**/*.spec.*
+**/test/
+**/tests/
 
-# 构建工具
-.nyc_output
-.cache
-
-# 环境文件
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# 临时文件
+# 构建缓存
+node_modules/
+*.log
 *.tmp
 *.temp
-.DS_Store
-Thumbs.db
 
-# 日志文件
-logs/
-*.log
+# Rust 构建文件（保留编译后的WASM）
+src/wasm/rust-ecs-core/target/
+src/wasm/rust-ecs-core/Cargo.lock
+src/wasm/rust-ecs-core/pkg/
+!bin/wasm/
+
+# 文档草稿
+docs/draft/
+*.draft.md
 
 # 编辑器文件
+.DS_Store
+Thumbs.db
 *.swp
 *.swo
 *~
 
-# 其他
-.git/
-.gitignore 
+# 环境文件
+.env
+.env.local
+.env.*.local 

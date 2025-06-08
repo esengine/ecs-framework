@@ -17,7 +17,7 @@ Core 是框架的核心管理类，负责游戏的生命周期管理。
 ### 创建和配置
 
 ```typescript
-import { Core } from './Core';
+import { Core } from '@esengine/ecs-framework';
 
 // 创建核心实例（调试模式）
 const core = Core.create(true);
@@ -29,7 +29,7 @@ const core = Core.create(false);
 ### 事件系统
 
 ```typescript
-import { CoreEvents } from './ECS/CoreEvents';
+import { CoreEvents } from '@esengine/ecs-framework';
 
 // 监听核心事件
 Core.emitter.addObserver(CoreEvents.frameUpdated, this.onUpdate, this);
@@ -62,7 +62,7 @@ Core.schedule(1.0, true, this, (timer) => {
 ### 创建和使用场景
 
 ```typescript
-import { Scene } from './ECS/Scene';
+import { Scene } from '@esengine/ecs-framework';
 
 // 创建场景
 const scene = new Scene();
@@ -77,6 +77,23 @@ scene.update(); // 更新场景
 scene.end();    // 结束场景
 ```
 
+### 批量实体管理
+
+```typescript
+// 批量创建实体 - 高性能
+const entities = scene.createEntities(1000, "Enemy");
+
+// 批量添加实体（延迟缓存清理）
+entities.forEach(entity => {
+    scene.addEntity(entity, false); // 延迟清理
+});
+scene.querySystem.clearCache(); // 手动清理缓存
+
+// 获取性能统计
+const stats = scene.getPerformanceStats();
+console.log(`实体数量: ${stats.entityCount}`);
+```
+
 ## Entity（实体）
 
 实体是游戏世界中的基本对象，包含位置、旋转、缩放等基本属性。
@@ -84,7 +101,7 @@ scene.end();    // 结束场景
 ### 实体的基本属性
 
 ```typescript
-import { Vector2 } from './Math/Vector2';
+import { Vector2 } from '@esengine/ecs-framework';
 
 const entity = scene.createEntity("MyEntity");
 
@@ -161,7 +178,7 @@ console.log(debugInfo);
 ### 创建组件
 
 ```typescript
-import { Component } from './ECS/Component';
+import { Component } from '@esengine/ecs-framework';
 
 class HealthComponent extends Component {
     public maxHealth: number = 100;
@@ -242,6 +259,43 @@ entity.removeComponentByType(HealthComponent);
 
 // 移除所有组件
 entity.removeAllComponents();
+```
+
+### 组件对象池优化
+
+```typescript
+import { Component, ComponentPoolManager } from '@esengine/ecs-framework';
+
+class BulletComponent extends Component {
+    public damage: number = 10;
+    public speed: number = 300;
+    
+    // 对象池重置方法
+    public reset() {
+        this.damage = 10;
+        this.speed = 300;
+    }
+}
+
+// 注册组件池
+ComponentPoolManager.getInstance().registerPool(BulletComponent, 1000);
+
+// 使用对象池获取组件
+const bullet = ComponentPoolManager.getInstance().getComponent(BulletComponent);
+entity.addComponent(bullet);
+
+// 释放组件回对象池
+ComponentPoolManager.getInstance().releaseComponent(bullet);
+
+// 预热组件池
+ComponentPoolManager.getInstance().preWarmPools({
+    BulletComponent: 1000,
+    EffectComponent: 500
+});
+
+// 获取池统计
+const stats = ComponentPoolManager.getInstance().getPoolStats();
+console.log('组件池统计:', stats);
 ```
 
 ## Scene（场景）
@@ -483,14 +537,86 @@ bulletPool.clear();
 - 监控性能数据
 - 合理使用时间缩放
 
+## 高级性能优化功能
+
+### 位掩码优化器
+
+位掩码优化器可以预计算和缓存常用的组件掩码，提升查询性能。
+
+```typescript
+import { BitMaskOptimizer } from '@esengine/ecs-framework';
+
+const optimizer = BitMaskOptimizer.getInstance();
+
+// 注册组件类型
+optimizer.registerComponentType(PositionComponent);
+optimizer.registerComponentType(VelocityComponent);
+optimizer.registerComponentType(RenderComponent);
+
+// 预计算常用掩码组合
+optimizer.precomputeCommonMasks();
+
+// 获取优化的掩码
+const positionMask = optimizer.getComponentMask(PositionComponent);
+const movementMask = optimizer.getCombinedMask([PositionComponent, VelocityComponent]);
+
+// 掩码操作
+const hasBothComponents = optimizer.hasAllComponents(entityMask, movementMask);
+const hasAnyComponent = optimizer.hasAnyComponent(entityMask, movementMask);
+
+// 获取掩码分析
+const analysis = optimizer.analyzeMask(entityMask);
+console.log('掩码包含的组件类型:', analysis.componentTypes);
+```
+
+### 延迟索引更新器
+
+批量更新索引可以显著提升大规模实体操作的性能。
+
+```typescript
+import { IndexUpdateBatcher } from '@esengine/ecs-framework';
+
+const batcher = new IndexUpdateBatcher((updates) => {
+    // 处理批量更新
+    console.log(`批量处理 ${updates.length} 个索引更新`);
+});
+
+// 配置批量大小和延迟
+batcher.configure(100, 16); // 批量大小100，延迟16ms
+
+// 添加更新任务
+batcher.addUpdate("add", entity, componentMask);
+batcher.addUpdate("remove", entity, componentMask);
+
+// 强制刷新
+batcher.flush();
+```
+
+### 批量操作API
+
+```typescript
+// 批量创建实体 - 最高性能
+const entities = scene.createEntities(10000, "Bullets");
+
+// 延迟缓存清理
+entities.forEach(entity => {
+    scene.addEntity(entity, false); // 延迟清理
+});
+scene.querySystem.clearCache(); // 手动清理
+
+// 批量查询优化
+const movingEntities = scene.getEntitiesWithComponents([PositionComponent, VelocityComponent]);
+```
+
 ## 总结
 
 ECS Framework 提供了完整的实体组件系统架构：
 
 - **Core** 管理游戏生命周期和全局功能
 - **Entity** 作为游戏对象的基础容器
-- **Component** 实现具体的功能模块
+- **Component** 实现具体的功能模块，支持对象池优化
 - **System** 处理游戏逻辑
-- **Scene** 管理游戏世界状态
+- **Scene** 管理游戏世界状态，支持批量操作
+- **高级优化** 位掩码优化器、组件对象池、批量操作等
 
-通过合理使用这些核心概念，可以构建出结构清晰、易于维护的游戏代码。 
+通过合理使用这些核心概念和优化功能，可以构建出高性能、结构清晰、易于维护的游戏代码。 

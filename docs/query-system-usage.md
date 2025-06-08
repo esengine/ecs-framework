@@ -7,15 +7,14 @@ QuerySystem 是 ECS Framework 中的高性能实体查询系统，支持多级�
 ### 1. 获取查询系统
 
 ```typescript
-import { Scene } from './ECS/Scene';
-import { Entity } from './ECS/Entity';
+import { Scene, Entity } from '@esengine/ecs-framework';
 
 // 创建场景，查询系统会自动创建
 const scene = new Scene();
 const querySystem = scene.querySystem;
 
 // 或者从Core获取当前场景的查询系统
-import { Core } from './Core';
+import { Core } from '@esengine/ecs-framework';
 const currentQuerySystem = Core.scene?.querySystem;
 ```
 
@@ -206,7 +205,7 @@ console.log(`新增: ${diff.added.length}, 移除: ${diff.removed.length}`);
 ### 移动系统示例
 
 ```typescript
-import { EntitySystem } from './ECS/Systems/EntitySystem';
+import { EntitySystem } from '@esengine/ecs-framework';
 
 class MovementSystem extends EntitySystem {
     public update(): void {
