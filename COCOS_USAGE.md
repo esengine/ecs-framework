@@ -8,11 +8,14 @@
 npm install @esengine/ecs-framework
 ```
 
-## 重要说明
+## WASM 支持（可选）
 
-⚠️ **Cocos Creator 环境下无法直接使用 WASM 加速**
+🚀 **WASM 模块已独立发布，需要手动下载和配置**
 
-由于 Cocos Creator 的特殊 WASM 加载机制，框架会自动检测 Cocos 环境并回退到 JavaScript 实现。这不会影响功能，只是性能稍有差异。
+WASM 模块不再包含在 npm 包中，如需使用请从 [GitHub Release](https://github.com/esengine/ecs-framework/releases) 下载。
+
+- 不使用 WASM：框架自动使用 JavaScript 实现，功能完全正常
+- 使用 WASM：提供查询性能优化，需要手动配置
 
 ## 基本使用
 
@@ -26,9 +29,34 @@ export class GameManager extends Component {
     private core: Core;
     
     onLoad() {
-        // 创建核心实例（Cocos环境会自动禁用WASM）
+        // 创建核心实例
         this.core = Core.create(true);
         console.log('ECS核心已初始化');
+        
+        // 可选：加载WASM支持（需要先下载WASM包）
+        this.loadWasmSupport();
+    }
+    
+    private async loadWasmSupport() {
+        try {
+            // 1. 导入WASM胶水代码（需要将文件放到项目中）
+            const { default: wasmFactory } = await import('./ecs_wasm_core.js');
+            
+            // 2. 使用Cocos API加载WASM文件（需要先导入到资源管理器）
+            const wasmFile = await this.loadWasmOrAsm("wasmFiles", "ecs_wasm_core", "your-wasm-uuid");
+            
+            // 3. 初始化WASM支持
+            const { ecsCore } = await import('@esengine/ecs-framework');
+            const success = await ecsCore.initializeWasm(wasmFactory, wasmFile);
+            
+            if (success) {
+                console.log('✅ ECS WASM加速已启用');
+            } else {
+                console.log('⚠️ WASM初始化失败，使用JavaScript实现');
+            }
+        } catch (error) {
+            console.log('⚠️ WASM不可用，使用JavaScript实现:', error);
+        }
     }
 }
 ```

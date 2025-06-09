@@ -1,0 +1,15 @@
+{
+  "name": "ecs-wasm-core",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "ecs_wasm_core_bg.wasm",
+    "ecs_wasm_core.js",
+    "ecs_wasm_core.d.ts"
+  ],
+  "main": "ecs_wasm_core.js",
+  "types": "ecs_wasm_core.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

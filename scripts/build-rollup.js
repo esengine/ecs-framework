@@ -60,7 +60,6 @@ function generatePackageJson() {
             'index.umd.js',
             'index.umd.js.map',
             'index.d.ts',
-            'wasm',
             'README.md',
             'LICENSE',
             'SECURITY.md',
@@ -108,29 +107,8 @@ function copyFiles() {
         }
     });
 
-    // 复制WASM文件（过滤.gitignore）
-    const wasmDir = './bin/wasm';
-    if (fs.existsSync(wasmDir)) {
-        const distWasmDir = './dist/wasm';
-        if (!fs.existsSync(distWasmDir)) {
-            fs.mkdirSync(distWasmDir);
-        }
-        
-        let copiedCount = 0;
-        fs.readdirSync(wasmDir).forEach(file => {
-            // 过滤掉.gitignore文件
-            if (file !== '.gitignore') {
-                fs.copyFileSync(
-                    path.join(wasmDir, file),
-                    path.join(distWasmDir, file)
-                );
-                copiedCount++;
-            }
-        });
-        if (copiedCount > 0) {
-            console.log(`  ✓ 复制: ${copiedCount}个WASM文件`);
-        }
-    }
+    // WASM文件不再包含在npm包中，单独发布
+    console.log('  ⚠️  WASM文件已移除，请从GitHub Release下载单独的WASM包');
 }
 
 function showBuildResults() {
