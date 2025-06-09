@@ -64,6 +64,7 @@ function generatePackageJson() {
             'README.md',
             'LICENSE',
             'SECURITY.md',
+            'COCOS_USAGE.md',
             '.npmignore'
         ],
         keywords: [
@@ -94,6 +95,7 @@ function copyFiles() {
         { src: './README.md', dest: './dist/README.md' },
         { src: './LICENSE', dest: './dist/LICENSE' },
         { src: './SECURITY.md', dest: './dist/SECURITY.md' },
+        { src: './COCOS_USAGE.md', dest: './dist/COCOS_USAGE.md' },
         { src: './.npmignore', dest: './dist/.npmignore' }
     ];
 
