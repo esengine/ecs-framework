@@ -62,7 +62,9 @@ function generatePackageJson() {
             'index.d.ts',
             'wasm',
             'README.md',
-            'LICENSE'
+            'LICENSE',
+            'SECURITY.md',
+            '.npmignore'
         ],
         keywords: [
             'ecs',
@@ -89,14 +91,18 @@ function generatePackageJson() {
 
 function copyFiles() {
     const filesToCopy = [
-        { src: '../README.md', dest: './dist/README.md' },
-        { src: '../LICENSE', dest: './dist/LICENSE' }
+        { src: './README.md', dest: './dist/README.md' },
+        { src: './LICENSE', dest: './dist/LICENSE' },
+        { src: './SECURITY.md', dest: './dist/SECURITY.md' },
+        { src: './.npmignore', dest: './dist/.npmignore' }
     ];
 
     filesToCopy.forEach(({ src, dest }) => {
         if (fs.existsSync(src)) {
             fs.copyFileSync(src, dest);
             console.log(`  ✓ 复制: ${path.basename(dest)}`);
+        } else {
+            console.log(`  ⚠️  文件不存在: ${src}`);
         }
     });
 
