@@ -17,21 +17,6 @@ export { Timer } from './Utils/Timers/Timer';
 // ECS核心组件
 export * from './ECS';
 
-// 工具类
-export * from './Utils/Pool';
-export * from './Utils/PerformanceMonitor';
-export * from './Utils/Extensions';
-
-// WebAssembly核心模块
-export { 
-    WasmEcsCore, 
-    ecsCore, 
-    initializeEcs, 
-    Query, 
-    EntityId, 
-    ComponentMask, 
-    QueryResult
-} from './Utils/WasmCore';
-
-// 类型定义
+// 工具类和类型定义
+export * from './Utils';
 export * from './Types'; 

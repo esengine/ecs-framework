@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "CommonJS",
+    "module": "ES2020",
     "moduleResolution": "node",
     "lib": ["ES2020", "DOM"],
     "outDir": "./bin",
@@ -27,7 +27,10 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "importHelpers": false,
-    "downlevelIteration": true
+    "downlevelIteration": true,
+    "isolatedModules": false,
+    "allowJs": true,
+    "resolveJsonModule": true
   },
   "include": [
     "src/**/*"
