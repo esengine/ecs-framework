@@ -1,11 +1,75 @@
-/source/node_modules
-/source/bin
-/demo/bin-debug
-/demo/bin-release
-/.idea
-/.vscode
-/demo_wxgame
-/demo/.wing
-/demo/.idea
-/demo/.vscode
-/source/docs
+# 依赖目录
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 构建输出
+bin/
+dist/
+wasm/
+*.tgz
+
+# TypeScript
+*.tsbuildinfo
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# IDE 配置
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 日志文件
+logs/
+*.log
+
+# 环境配置
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 测试覆盖率
+coverage/
+*.lcov
+
+# Rust 构建文件
+src/wasm/*/target/
+src/wasm/*/pkg/
+Cargo.lock
+
+# 包管理器锁文件（保留npm的，忽略其他的）
+yarn.lock
+pnpm-lock.yaml
+
+# 文档生成
+docs/api/
+docs/build/
+
+# 备份文件
+*.bak
+*.backup
+
+# 演示项目构建产物
+/demo/bin-debug/
+/demo/bin-release/
+/demo/.wing/
+/demo/.idea/
+/demo/.vscode/
+/demo_wxgame/
