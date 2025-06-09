@@ -1,0 +1,23 @@
+{
+  "name": "@esengine/ecs-framework-wasm",
+  "version": "1.0.0",
+  "description": "ECS Framework WASM 加速模块",
+  "main": "ecs_wasm_core.js",
+  "files": [
+    "ecs_wasm_core.js",
+    "ecs_wasm_core_bg.wasm",
+    "*.d.ts",
+    "README.md"
+  ],
+  "keywords": [
+    "ecs",
+    "wasm",
+    "game-engine",
+    "performance"
+  ],
+  "author": "ESEngine Team",
+  "license": "MIT",
+  "peerDependencies": {
+    "@esengine/ecs-framework": "^1.0.0"
+  }
+}
