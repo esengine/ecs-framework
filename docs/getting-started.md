@@ -1,6 +1,6 @@
 # 快速入门
 
-本指南将帮助您快速上手 ECS Framework，这是一个轻量级的实体组件系统框架，专为小游戏设计。
+本指南将帮助您快速上手 ECS Framework，这是一个专业级的实体组件系统框架，采用现代化架构设计，专为高性能游戏开发打造。
 
 ## 项目结构
 
@@ -53,8 +53,10 @@ import {
     Component, 
     Scene, 
     EntitySystem,
-    ComponentPoolManager,
-    BitMaskOptimizer 
+    EntityManager,
+    ComponentIndexManager,
+    ArchetypeSystem,
+    DirtyTrackingSystem
 } from '@esengine/ecs-framework';
 ```
 
@@ -64,6 +66,7 @@ import {
 class GameManager {
     private core: Core;
     private scene: Scene;
+    private entityManager: EntityManager;
     
     constructor() {
         // 创建核心实例
@@ -76,24 +79,23 @@ class GameManager {
         // 设置当前场景
         Core.scene = this.scene;
         
-        // 初始化优化功能
-        this.setupOptimizations();
+        // 初始化实体管理器
+        this.entityManager = new EntityManager(this.scene);
+        
+        // 初始化性能优化
+        this.setupPerformanceOptimizations();
     }
     
-    private setupOptimizations() {
-        // 注册组件对象池
-        ComponentPoolManager.getInstance().preWarmPools({
-            PositionComponent: 1000,
-            VelocityComponent: 1000,
-            HealthComponent: 500
-        });
+    private setupPerformanceOptimizations() {
+        // 启用组件索引（自动优化查询性能）
+        // EntityManager内部已自动启用
         
-        // 注册位掩码优化
-        const optimizer = BitMaskOptimizer.getInstance();
-        optimizer.registerComponentType(PositionComponent);
-        optimizer.registerComponentType(VelocityComponent);
-        optimizer.registerComponentType(HealthComponent);
-        optimizer.precomputeCommonMasks();
+        // 可选：手动配置优化系统
+        const componentIndex = this.entityManager.getComponentIndex();
+        const archetypeSystem = this.entityManager.getArchetypeSystem();
+        const dirtyTracking = this.entityManager.getDirtyTrackingSystem();
+        
+        // 优化系统会自动工作，通常无需手动配置
     }
     
     public update(deltaTime: number): void {
@@ -106,6 +108,11 @@ class GameManager {
     
     private updateSystems(deltaTime: number): void {
         // 在这里添加您的系统更新逻辑
+    }
+    
+    // 提供实体管理器访问
+    public getEntityManager(): EntityManager {
+        return this.entityManager;
     }
 }
 ```
@@ -201,107 +208,147 @@ class HealthComponent extends Component {
     }
 }
 
-// 注册组件到对象池
-ComponentPoolManager.getInstance().registerPool(PositionComponent, 1000);
-ComponentPoolManager.getInstance().registerPool(VelocityComponent, 1000);
-ComponentPoolManager.getInstance().registerPool(HealthComponent, 500);
+// 简单的组件定义
+// 注：框架会自动优化组件的存储和查询
 ```
 
-### 2. 创建实体
+## 使用 EntityManager
+
+EntityManager 是框架的核心功能，提供统一的实体管理和高性能查询接口。
+
+### 1. 基础用法
 
 ```typescript
-class GameManager {
-    // ... 之前的代码 ...
-    
-    public createPlayer(): Entity {
-        const player = this.scene.createEntity("Player");
-        
-        // 使用对象池获取组件
-        const position = ComponentPoolManager.getInstance().getComponent(PositionComponent);
-        position.x = 400;
-        position.y = 300;
-        player.addComponent(position);
-        
-        const velocity = ComponentPoolManager.getInstance().getComponent(VelocityComponent);
-        player.addComponent(velocity);
-        
-        const health = ComponentPoolManager.getInstance().getComponent(HealthComponent);
-        health.maxHealth = 100;
-        health.currentHealth = 100;
-        player.addComponent(health);
-        
-        // 设置标签和更新顺序
-        player.tag = 1; // 玩家标签
-        player.updateOrder = 0;
-        
-        return player;
-    }
-    
-    public createEnemies(count: number): Entity[] {
-        // 使用批量创建API - 高性能
-        const enemies = this.scene.createEntities(count, "Enemy");
-        
-        // 批量配置敌人
-        enemies.forEach((enemy, index) => {
-            // 使用对象池获取组件
-            const position = ComponentPoolManager.getInstance().getComponent(PositionComponent);
-            position.x = Math.random() * 800;
-            position.y = Math.random() * 600;
-            enemy.addComponent(position);
-            
-            const velocity = ComponentPoolManager.getInstance().getComponent(VelocityComponent);
-            velocity.x = (Math.random() - 0.5) * 100;
-            velocity.y = (Math.random() - 0.5) * 100;
-            enemy.addComponent(velocity);
-            
-            const health = ComponentPoolManager.getInstance().getComponent(HealthComponent);
-            health.maxHealth = 50;
-            health.currentHealth = 50;
-            enemy.addComponent(health);
-            
-            enemy.tag = 2; // 敌人标签
-            enemy.updateOrder = 1;
-        });
-        
-        return enemies;
-    }
-    
-    public destroyEntity(entity: Entity): void {
-        // 释放组件回对象池
-        entity.components.forEach(component => {
-            ComponentPoolManager.getInstance().releaseComponent(component);
-        });
-        
-        // 销毁实体
-        entity.destroy();
-    }
-}
+// 获取EntityManager实例（在GameManager中已创建）
+const entityManager = gameManager.getEntityManager();
+
+// 创建单个实体
+const player = entityManager.createEntity("Player");
+player.addComponent(new PositionComponent(100, 100));
+player.addComponent(new VelocityComponent(50, 0));
+
+// 批量创建实体
+const enemies = entityManager.createEntities(50, "Enemy");
+enemies.forEach((enemy, index) => {
+    enemy.addComponent(new PositionComponent(
+        Math.random() * 800, 
+        Math.random() * 600
+    ));
+    enemy.addComponent(new HealthComponent(30));
+    enemy.tag = "enemy";
+});
 ```
 
-### 3. 创建系统
+### 2. 高性能查询
+
+```typescript
+// 流式查询API - 支持复杂查询条件
+const movingEntities = entityManager
+    .query()
+    .withAll([PositionComponent, VelocityComponent])
+    .withoutTag("dead")
+    .active(true)
+    .execute();
+
+// 快速组件查询（使用O(1)索引）
+const healthEntities = entityManager.getEntitiesWithComponent(HealthComponent);
+
+// 标签查询
+const allEnemies = entityManager.getEntitiesByTag("enemy");
+
+// 名称查询
+const specificEnemy = entityManager.getEntityByName("BossEnemy");
+
+// 复合查询
+const livingEnemies = entityManager
+    .query()
+    .withAll([PositionComponent, HealthComponent])
+    .withTag("enemy")
+    .withoutTag("dead")
+    .where(entity => {
+        const health = entity.getComponent(HealthComponent);
+        return health && health.currentHealth > 0;
+    })
+    .execute();
+```
+
+### 3. 批量操作
+
+```typescript
+// 批量处理实体
+entityManager.forEachEntity(entity => {
+    // 处理所有实体
+    if (entity.tag === "bullet" && entity.position.y < 0) {
+        entity.destroy();
+    }
+});
+
+// 批量处理特定组件的实体
+entityManager.forEachEntityWithComponent(HealthComponent, (entity, health) => {
+    if (health.currentHealth <= 0) {
+        entity.addTag("dead");
+        entity.enabled = false;
+    }
+});
+
+// 获取统计信息
+const stats = entityManager.getStatistics();
+console.log(`总实体数: ${stats.entityCount}`);
+console.log(`索引命中率: ${stats.indexHits}/${stats.totalQueries}`);
+```
+
+### 4. 性能优化功能
+
+```typescript
+// 获取性能优化系统
+const componentIndex = entityManager.getComponentIndex();
+const archetypeSystem = entityManager.getArchetypeSystem();
+const dirtyTracking = entityManager.getDirtyTrackingSystem();
+
+// 查看性能统计
+console.log('组件索引统计:', componentIndex.getPerformanceStats());
+console.log('Archetype统计:', archetypeSystem.getStatistics());
+console.log('脏标记统计:', dirtyTracking.getPerformanceStats());
+
+// 手动优化（通常自动进行）
+entityManager.optimize();
+
+// 内存清理
+entityManager.cleanup();
+```
+
+## 创建系统
+
+系统处理具有特定组件的实体集合，实现游戏逻辑。
 
 ```typescript
 import { EntitySystem, Entity } from '@esengine/ecs-framework';
 
 class MovementSystem extends EntitySystem {
     protected process(entities: Entity[]): void {
-        // 使用高性能查询获取移动实体
-        const movableEntities = this.scene.querySystem.queryTwoComponents(
-            PositionComponent, 
-            VelocityComponent
-        );
+        // 使用EntityManager进行高效查询
+        const entityManager = new EntityManager(this.scene);
+        const movingEntities = entityManager
+            .query()
+            .withAll([PositionComponent, VelocityComponent])
+            .execute();
         
-        movableEntities.forEach(({ entity, component1: position, component2: velocity }) => {
-            // 更新位置
-            position.x += velocity.x * Time.deltaTime;
-            position.y += velocity.y * Time.deltaTime;
+        movingEntities.forEach(entity => {
+            const position = entity.getComponent(PositionComponent);
+            const velocity = entity.getComponent(VelocityComponent);
             
-            // 边界检查
-            if (position.x < 0 || position.x > 800) {
-                velocity.x = -velocity.x;
-            }
-            if (position.y < 0 || position.y > 600) {
-                velocity.y = -velocity.y;
+            if (position && velocity) {
+                // 更新位置
+                position.x += velocity.x * 0.016; // 假设60FPS
+                position.y += velocity.y * 0.016;
+                
+                // 边界检查
+                if (position.x < 0 || position.x > 800) {
+                    velocity.x = -velocity.x;
+                }
+                if (position.y < 0 || position.y > 600) {
+                    velocity.y = -velocity.y;
+                }
             }
         });
     }
@@ -309,64 +356,30 @@ class MovementSystem extends EntitySystem {
 
 class HealthSystem extends EntitySystem {
     protected process(entities: Entity[]): void {
-        const healthEntities = this.scene.querySystem.queryComponentTyped(HealthComponent);
-        const deadEntities: Entity[] = [];
+        const entityManager = new EntityManager(this.scene);
         
-        healthEntities.forEach(({ entity, component: health }) => {
+        // 查找所有有生命值的实体
+        entityManager.forEachEntityWithComponent(HealthComponent, (entity, health) => {
             if (health.isDead()) {
-                deadEntities.push(entity);
+                entity.destroy();
             }
-        });
-        
-        // 销毁死亡实体
-        deadEntities.forEach(entity => {
-            this.scene.removeEntity(entity);
         });
     }
 }
+
+// 添加系统到场景
+gameManager.scene.addEntityProcessor(new MovementSystem());
+gameManager.scene.addEntityProcessor(new HealthSystem());
 ```
 
 ## 高级功能
 
-### 1. 性能监控
-
-```typescript
-class GameManager {
-    // ... 之前的代码 ...
-    
-    public getPerformanceStats(): void {
-        const stats = this.scene.getPerformanceStats();
-        console.log(`实体数量: ${stats.entityCount}`);
-        console.log(`查询缓存大小: ${stats.queryCacheSize}`);
-        
-        const poolStats = ComponentPoolManager.getInstance().getPoolStats();
-        console.log('组件池统计:', poolStats);
-    }
-}
-```
-
-### 2. 批量操作
-
-```typescript
-// 批量创建大量实体
-const bullets = this.scene.createEntities(1000, "Bullet");
-
-// 批量查询
-const enemies = this.scene.getEntitiesWithComponents([PositionComponent, HealthComponent]);
-
-// 延迟缓存清理（高性能）
-bullets.forEach(bullet => {
-    this.scene.addEntity(bullet, false); // 延迟清理
-});
-this.scene.querySystem.clearCache(); // 手动清理
-```
-
-### 3. 事件系统
+### 事件系统
 
 ```typescript
 import { Core, CoreEvents } from '@esengine/ecs-framework';
 
-// 监听事件
+// 监听框架事件
 Core.emitter.addObserver(CoreEvents.frameUpdated, this.onFrameUpdate, this);
 
 // 发射自定义事件
@@ -376,9 +389,23 @@ Core.emitter.emit("playerDied", { player: entity, score: 1000 });
 Core.emitter.removeObserver(CoreEvents.frameUpdated, this.onFrameUpdate);
 ```
 
-## 完整示例
+### 性能监控
 
-以下是一个完整的小游戏示例，展示了框架的主要功能：
+```typescript
+// 获取EntityManager性能统计
+const stats = entityManager.getStatistics();
+console.log(`总实体数: ${stats.entityCount}`);
+console.log(`索引命中率: ${stats.indexHits}/${stats.totalQueries}`);
+
+// 获取各优化系统的统计
+console.log('组件索引:', entityManager.getComponentIndex().getPerformanceStats());
+console.log('Archetype:', entityManager.getArchetypeSystem().getStatistics());
+console.log('脏标记:', entityManager.getDirtyTrackingSystem().getPerformanceStats());
+```
+
+## 简单示例
+
+以下是一个完整的示例，展示了框架的主要功能：
 
 ```typescript
 import { 
@@ -387,25 +414,14 @@ import {
     Component, 
     Scene, 
     EntitySystem,
-    ComponentPoolManager,
-    BitMaskOptimizer,
-    Time 
+    EntityManager
 } from '@esengine/ecs-framework';
 
-// 定义组件（前面已定义）
-// ... PositionComponent, VelocityComponent, HealthComponent ...
-
-// 游戏事件
-enum GameEvents {
-    PLAYER_DIED = 'playerDied',
-    ENEMY_SPAWNED = 'enemySpawned'
-}
-
-// 完整的游戏管理器
+// 游戏管理器
 class SimpleGame {
     private core: Core;
     private scene: Scene;
-    private isRunning: boolean = false;
+    private entityManager: EntityManager;
     
     constructor() {
         this.core = Core.create(true);
@@ -413,25 +429,8 @@ class SimpleGame {
         this.scene.name = "GameScene";
         Core.scene = this.scene;
         
-        this.setupOptimizations();
+        this.entityManager = new EntityManager(this.scene);
         this.setupSystems();
-        this.setupEvents();
-    }
-    
-    private setupOptimizations(): void {
-        // 预热组件池
-        ComponentPoolManager.getInstance().preWarmPools({
-            PositionComponent: 2000,
-            VelocityComponent: 2000,
-            HealthComponent: 1000
-        });
-        
-        // 注册位掩码优化
-        const optimizer = BitMaskOptimizer.getInstance();
-        optimizer.registerComponentType(PositionComponent);
-        optimizer.registerComponentType(VelocityComponent);
-        optimizer.registerComponentType(HealthComponent);
-        optimizer.precomputeCommonMasks();
     }
     
     private setupSystems(): void {
@@ -439,108 +438,50 @@ class SimpleGame {
         this.scene.addEntityProcessor(new HealthSystem());
     }
     
-    private setupEvents(): void {
-        Core.emitter.addObserver(GameEvents.PLAYER_DIED, this.onPlayerDied, this);
-        Core.emitter.addObserver(GameEvents.ENEMY_SPAWNED, this.onEnemySpawned, this);
-    }
-    
     public start(): void {
-        this.isRunning = true;
-        
         // 创建游戏实体
         this.createPlayer();
-        this.createEnemies(100);
+        this.createEnemies(50);
         
         // 启动游戏循环
         this.gameLoop();
     }
     
-    public stop(): void {
-        this.isRunning = false;
-        
-        // 清理组件池
-        ComponentPoolManager.getInstance().clearAllPools();
-    }
-    
     private createPlayer(): Entity {
-        const player = this.scene.createEntity("Player");
-        
-        const position = ComponentPoolManager.getInstance().getComponent(PositionComponent);
-        position.x = 400;
-        position.y = 300;
-        player.addComponent(position);
-        
-        const velocity = ComponentPoolManager.getInstance().getComponent(VelocityComponent);
-        player.addComponent(velocity);
-        
-        const health = ComponentPoolManager.getInstance().getComponent(HealthComponent);
-        health.maxHealth = 100;
-        health.currentHealth = 100;
-        player.addComponent(health);
-        
-        player.tag = 1;
+        const player = this.entityManager.createEntity("Player");
+        player.addComponent(new PositionComponent(400, 300));
+        player.addComponent(new VelocityComponent(0, 0));
+        player.addComponent(new HealthComponent(100));
+        player.tag = "player";
         return player;
     }
     
     private createEnemies(count: number): Entity[] {
-        // 使用高性能批量创建
-        const enemies = this.scene.createEntities(count, "Enemy");
+        const enemies = this.entityManager.createEntities(count, "Enemy");
         
         enemies.forEach((enemy, index) => {
-            const position = ComponentPoolManager.getInstance().getComponent(PositionComponent);
-            position.x = Math.random() * 800;
-            position.y = Math.random() * 600;
-            enemy.addComponent(position);
-            
-            const velocity = ComponentPoolManager.getInstance().getComponent(VelocityComponent);
-            velocity.x = (Math.random() - 0.5) * 100;
-            velocity.y = (Math.random() - 0.5) * 100;
-            enemy.addComponent(velocity);
-            
-            const health = ComponentPoolManager.getInstance().getComponent(HealthComponent);
-            health.maxHealth = 50;
-            health.currentHealth = 50;
-            enemy.addComponent(health);
-            
-            enemy.tag = 2;
+            enemy.addComponent(new PositionComponent(
+                Math.random() * 800, 
+                Math.random() * 600
+            ));
+            enemy.addComponent(new VelocityComponent(
+                (Math.random() - 0.5) * 100,
+                (Math.random() - 0.5) * 100
+            ));
+            enemy.addComponent(new HealthComponent(50));
+            enemy.tag = "enemy";
         });
         
         return enemies;
     }
     
-    private onPlayerDied(event: any): void {
-        console.log("游戏结束！玩家死亡");
-        this.stop();
-    }
-    
-    private onEnemySpawned(event: any): void {
-        console.log("敌人出现！");
-    }
-    
-    private update(deltaTime: number): void {
-        // 更新定时器
-        this.core._timerManager.update(deltaTime);
-        
-        // 更新场景
-        this.scene.update();
-    }
-    
     private gameLoop(): void {
-        let lastTime = performance.now();
-        
-        const loop = () => {
-            if (!this.isRunning) return;
-            
-            const currentTime = performance.now();
-            const deltaTime = (currentTime - lastTime) / 1000;
-            lastTime = currentTime;
-            
-            this.update(deltaTime);
-            
-            requestAnimationFrame(loop);
+        const update = () => {
+            // 更新场景
+            this.scene.update();
+            requestAnimationFrame(update);
         };
-        
-        loop();
+        update();
     }
 }
 
@@ -552,28 +493,28 @@ game.start();
 ## 性能优化建议
 
 ### 1. 大规模实体处理
-- 使用 `createEntities()` 批量创建实体
-- 启用组件对象池减少内存分配
-- 使用延迟缓存清理机制
+- 使用 `EntityManager.createEntities()` 批量创建实体
+- 利用组件索引系统进行高效查询
+- 启用Archetype系统减少查询遍历
 
 ### 2. 查询优化
+- 使用 `EntityManager.query()` 流式API构建复杂查询
 - 缓存频繁查询的结果
-- 使用 `BitMaskOptimizer` 优化掩码操作
-- 减少不必要的查询频率
+- 利用脏标记系统避免不必要的更新
 
-### 3. 内存管理
-- 预热常用组件池
-- 及时释放不用的组件回对象池
-- 定期清理未使用的缓存
+### 3. 性能监控
+- 定期检查 `EntityManager.getStatistics()` 获取性能数据
+- 监控组件索引命中率
+- 使用框架提供的性能统计功能
 
 ## 下一步
 
 现在您已经掌握了 ECS Framework 的基础用法，可以继续学习：
 
-- [实体使用指南](entity-guide.md) - 详细了解实体的所有功能和用法
+- [EntityManager 使用指南](entity-manager-example.md) - 详细了解实体管理器的高级功能
+- [性能优化指南](performance-optimization.md) - 深入了解三大性能优化系统
 - [核心概念](core-concepts.md) - 深入了解 ECS 架构和设计原理
 - [查询系统使用指南](query-system-usage.md) - 学习高性能查询系统的详细用法
-- [性能基准](performance.md) - 了解框架的性能表现和优化建议
 
 ## 常见问题
 
@@ -594,14 +535,15 @@ A: 框架本身不提供输入处理，建议：
 ### Q: 如何优化大规模实体性能？
 
 A: 关键优化策略：
-1. 启用组件对象池：`ComponentPoolManager.getInstance().registerPool()`
-2. 使用批量操作：`scene.createEntities()`
-3. 缓存查询结果，减少查询频率
-4. 使用位掩码优化器：`BitMaskOptimizer.getInstance()`
+1. 使用 `EntityManager` 的高级查询功能
+2. 启用组件索引系统进行快速查询
+3. 利用Archetype系统减少查询遍历
+4. 使用脏标记系统避免不必要的更新
 
-### Q: 组件对象池何时有效？
+### Q: EntityManager 有什么优势？
 
-A: 对象池在以下情况下最有效：
-- 频繁创建和销毁相同类型的组件
-- 组件数量大于1000个
-- 游戏运行时间较长，需要避免垃圾回收压力 
+A: EntityManager 提供了：
+- O(1) 复杂度的组件查询（使用索引）
+- 流式API的复杂查询构建
+- 自动的性能优化系统集成
+- 统一的实体管理接口 
