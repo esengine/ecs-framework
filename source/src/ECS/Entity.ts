@@ -1,5 +1,8 @@
 import { Component } from './Component';
 import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
+import { EventBus } from './Core/EventBus';
+import { ECSEventType } from './CoreEvents';
+import { IComponentEventData } from '../Types';
 
 /**
  * 实体比较器
@@ -191,6 +194,12 @@ export class Entity {
      * 实体比较器实例
      */
     public static entityComparer: EntityComparer = new EntityComparer();
+    
+    /**
+     * 全局事件总线实例
+     * 用于发射组件相关事件
+     */
+    public static eventBus: EventBus | null = null;
     
     /**
      * 实体名称
@@ -538,6 +547,19 @@ export class Entity {
         // 调用组件的生命周期方法
         component.onAddedToEntity();
         
+        // 发射组件添加事件
+        if (Entity.eventBus) {
+            Entity.eventBus.emitComponentAdded({
+                timestamp: Date.now(),
+                source: 'Entity',
+                entityId: this.id,
+                entityName: this.name,
+                entityTag: this.tag?.toString(),
+                componentType: componentType.name,
+                component: component
+            });
+        }
+        
         // 通知场景实体已改变
         if (this.scene && this.scene.entityProcessors) {
             for (const processor of this.scene.entityProcessors.processors) {
@@ -743,6 +765,19 @@ export class Entity {
 
         // 调用组件的生命周期方法
         component.onRemovedFromEntity();
+        
+        // 发射组件移除事件
+        if (Entity.eventBus) {
+            Entity.eventBus.emitComponentRemoved({
+                timestamp: Date.now(),
+                source: 'Entity',
+                entityId: this.id,
+                entityName: this.name,
+                entityTag: this.tag?.toString(),
+                componentType: componentType.name,
+                component: component
+            });
+        }
         
         // 清除组件的实体引用
         component.entity = null as any;

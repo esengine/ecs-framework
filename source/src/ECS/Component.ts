@@ -1,3 +1,5 @@
+import type { IComponent } from '../Types';
+
 /**
  * 游戏组件基类
  * 
@@ -18,7 +20,7 @@
  * }
  * ```
  */
-export abstract class Component {
+export abstract class Component implements IComponent {
     /**
      * 组件ID生成器
      * 

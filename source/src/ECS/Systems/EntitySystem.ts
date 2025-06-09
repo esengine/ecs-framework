@@ -3,6 +3,7 @@ import { Core } from '../../Core';
 import { Matcher } from '../Utils/Matcher';
 import { PerformanceMonitor } from '../../Utils/PerformanceMonitor';
 import type { Scene } from '../Scene';
+import type { ISystemBase } from '../../Types';
 
 /**
  * 实体系统的基类
@@ -27,7 +28,7 @@ import type { Scene } from '../Scene';
  * }
  * ```
  */
-export abstract class EntitySystem {
+export abstract class EntitySystem implements ISystemBase {
     private _entities: Entity[] = [];
     private _updateOrder: number = 0;
     private _enabled: boolean = true;
