@@ -1,7 +1,11 @@
-// 导出核心ECS类
 export { Entity } from './Entity';
 export { Component } from './Component';
-export { CoreEvents } from './CoreEvents';
+export { CoreEvents, ECSEventType, EventPriority, EVENT_TYPES, EventTypeValidator } from './CoreEvents';
 export * from './Systems';
 export * from './Utils';
-export { Scene } from './Scene'; 
+export { Scene } from './Scene';
+export { EntityManager, EntityQueryBuilder } from './Core/EntityManager';
+export * from './Core/Events';
+export * from './Core/Query';
+export * from './Core/Performance';
+export * from './Core/Storage'; 
