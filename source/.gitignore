@@ -63,6 +63,7 @@ typings/
 # Build output
 bin/
 dev-bin/
+dist/
 
 # WASM build artifacts
 src/wasm/rust-ecs-core/target/
