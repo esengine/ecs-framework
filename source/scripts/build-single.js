@@ -21,8 +21,8 @@ const config = {
     minify: true,
     sourcemap: true,
     
-    // 目标环境 - 适配更多平台
-    target: ['es2017'],
+    // 目标环境 - 支持BigInt等ES2020特性
+    target: ['es2020'],
     format: 'esm',
     
     // npm包配置
@@ -50,14 +50,20 @@ async function buildSingleFile() {
             target: config.target,
             format: config.format,
             outfile: path.join(config.outputDir, config.outputFile),
-            platform: 'neutral', // 支持多平台
+            platform: 'browser', // 浏览器环境
             
             // 外部依赖
             external: [],
             
+            // 定义Node.js模块的浏览器替代
+            inject: [],
+            
             // 定义全局变量
             define: {
-                'process.env.NODE_ENV': '"production"'
+                'process.env.NODE_ENV': '"production"',
+                'require': 'undefined',
+                '__filename': '""',
+                '__dirname': '""'
             },
             
             // 元信息
