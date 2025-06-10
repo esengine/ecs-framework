@@ -91,9 +91,8 @@ export class Scene {
 
     /**
      * 创建场景实例
-     * @param enableWasmAcceleration 是否启用WebAssembly加速，默认为true
      */
-    constructor(enableWasmAcceleration: boolean = true) {
+    constructor() {
         this.entities = new EntityList(this);
         this.entityProcessors = new EntityProcessorList();
         this.identifierPool = new IdentifierPool();

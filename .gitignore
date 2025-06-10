@@ -7,7 +7,6 @@ yarn-error.log*
 # 构建输出
 bin/
 dist/
-wasm/
 *.tgz
 
 # TypeScript
@@ -48,11 +47,6 @@ logs/
 # 测试覆盖率
 coverage/
 *.lcov
-
-# Rust 构建文件
-src/wasm/*/target/
-src/wasm/*/pkg/
-Cargo.lock
 
 # 包管理器锁文件（保留npm的，忽略其他的）
 yarn.lock

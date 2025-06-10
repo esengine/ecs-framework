@@ -106,9 +106,6 @@ function copyFiles() {
             console.log(`  ⚠️  文件不存在: ${src}`);
         }
     });
-
-    // WASM文件不再包含在npm包中，单独发布
-    console.log('  ⚠️  WASM文件已移除，请从GitHub Release下载单独的WASM包');
 }
 
 function showBuildResults() {

@@ -23,12 +23,6 @@ node_modules/
 *.tmp
 *.temp
 
-# Rust 构建文件（保留编译后的WASM）
-src/wasm/rust-ecs-core/target/
-src/wasm/rust-ecs-core/Cargo.lock
-src/wasm/rust-ecs-core/pkg/
-!bin/wasm/
-
 # 文档草稿
 docs/draft/
 *.draft.md

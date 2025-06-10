@@ -1,7 +1,7 @@
 import { Entity } from '../Entity';
 import { Component } from '../Component';
 import { ComponentRegistry, ComponentType } from './ComponentStorage';
-import { ecsCore } from '../../Utils/WasmCore';
+
 import { ComponentPoolManager } from './ComponentPool';
 import { BitMaskOptimizer } from './BitMaskOptimizer';
 import { IndexUpdateBatcher } from './IndexUpdateBatcher';
@@ -84,7 +84,6 @@ interface QueryCacheEntry {
  */
 export class QuerySystem {
     private entities: Entity[] = [];
-    private wasmAvailable = false;
     private entityIndex: EntityIndex;
     private indexDirty = true;
 
@@ -150,31 +149,9 @@ export class QuerySystem {
                 this.addEntityToIndexes(update.entity);
             }
         };
-
-        this.initializeWasm();
     }
 
-    /**
-     * 初始化WebAssembly支持
-     * 
-     * 自动检测运行环境并启用WebAssembly计算加速。
-     * 如果WebAssembly不可用，系统将自动回退到JavaScript实现。
-     */
-    private async initializeWasm(): Promise<void> {
-        try {
-            const wasmLoaded = await ecsCore.initialize();
-            this.wasmAvailable = wasmLoaded && ecsCore.isUsingWasm();
 
-            if (this.wasmAvailable) {
-                console.log('QuerySystem: WebAssembly计算加速已启用');
-            } else {
-                console.log('QuerySystem: 使用JavaScript实现');
-            }
-        } catch (error) {
-            console.warn('QuerySystem: WebAssembly初始化失败，使用JavaScript实现:', error);
-            this.wasmAvailable = false;
-        }
-    }
 
     /**
      * 设置实体列表并重建索引
@@ -859,7 +836,6 @@ export class QuerySystem {
      * 批量更新实体组件
      * 
      * 对大量实体进行批量组件更新操作。
-     * 当更新数量超过阈值时，系统会自动使用WebAssembly加速。
      * 
      * @param updates 更新操作列表，包含实体ID和新的组件掩码
      * 
@@ -874,80 +850,33 @@ export class QuerySystem {
      * ```
      */
     public batchUpdateComponents(updates: Array<{ entityId: number, componentMask: bigint }>): void {
-        if (this.wasmAvailable && updates.length > 100) {
-            try {
-                const entityIds = updates.map(u => u.entityId);
-                const masks = updates.map(u => u.componentMask);
-                ecsCore.batchUpdateMasks(entityIds, masks);
-                console.log(`WebAssembly加速批量更新 ${updates.length} 个实体`);
-            } catch (error) {
-                console.warn('WebAssembly批量更新失败，回退到JavaScript实现:', error);
-                this.batchUpdateComponentsJS(updates);
+        // 批量处理更新，先从索引中移除，再重新添加
+        const entitiesToUpdate: Entity[] = [];
+        
+        for (const update of updates) {
+            const entity = this.entities.find(e => e.id === update.entityId);
+            if (entity) {
+                // 先从所有索引中移除
+                this.removeEntityFromIndexes(entity);
+                entitiesToUpdate.push(entity);
             }
-        } else {
-            this.batchUpdateComponentsJS(updates);
         }
-
+        
+        // 重新添加到索引中（此时实体的组件掩码已经更新）
+        for (const entity of entitiesToUpdate) {
+            this.addEntityToIndexes(entity);
+        }
+        
+        // 标记脏实体进行处理
+        for (const entity of entitiesToUpdate) {
+            this.dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_MODIFIED, []);
+        }
+        
         // 批量更新后清除缓存
         this.clearQueryCache();
     }
 
-    /**
-     * JavaScript实现的批量更新
-     */
-    private batchUpdateComponentsJS(updates: Array<{ entityId: number, componentMask: bigint }>): void {
-        for (const update of updates) {
-            const entity = this.entities.find(e => e.id === update.entityId);
-            if (entity) {
-                // 注意：componentMask是只读属性，实际应用中需要通过添加/移除组件来更新
-                console.log(`更新实体 ${update.entityId} 的组件掩码: ${update.componentMask}`);
-            }
-        }
-        this.rebuildIndexes();
-    }
 
-    /**
-     * 获取加速状态信息
-     * 
-     * 返回当前查询系统的加速状态和性能信息。
-     * 包括WebAssembly可用性、缓存统计等详细信息。
-     * 
-     * @returns 加速状态信息对象
-     */
-    public getAccelerationStatus(): {
-        wasmEnabled: boolean;
-        currentProvider: string;
-        availableProviders: string[];
-        performanceInfo?: any;
-    } {
-        return {
-            wasmEnabled: this.wasmAvailable,
-            currentProvider: this.wasmAvailable ? 'hybrid' : 'javascript',
-            availableProviders: ['javascript', 'hybrid'],
-            performanceInfo: {
-                entityCount: this.entities.length,
-                wasmEnabled: this.wasmAvailable,
-                cacheStats: {
-                    size: this.queryCache.size,
-                    hitRate: this.queryStats.totalQueries > 0 ?
-                        (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + '%' : '0%'
-                }
-            }
-        };
-    }
-
-    /**
-     * 切换加速提供者
-     * 
-     * 兼容性接口，保持向后兼容。
-     * 系统会自动选择最佳的实现方式。
-     * 
-     * @param providerName 提供者名称
-     * @returns 是否切换成功
-     */
-    public async switchAccelerationProvider(providerName: string): Promise<boolean> {
-        return true;
-    }
 
     /**
      * 创建组件掩码
@@ -986,7 +915,6 @@ export class QuerySystem {
             tagIndexSize: number;
             nameIndexSize: number;
         };
-        accelerationStatus: ReturnType<QuerySystem['getAccelerationStatus']>;
         queryStats: {
             totalQueries: number;
             cacheHits: number;
@@ -1001,6 +929,10 @@ export class QuerySystem {
             archetypeSystem: any;
             dirtyTracking: any;
         };
+        cacheStats: {
+            size: number;
+            hitRate: string;
+        };
     } {
         return {
             entityCount: this.entities.length,
@@ -1010,7 +942,6 @@ export class QuerySystem {
                 tagIndexSize: this.entityIndex.byTag.size,
                 nameIndexSize: this.entityIndex.byName.size
             },
-            accelerationStatus: this.getAccelerationStatus(),
             queryStats: {
                 ...this.queryStats,
                 cacheHitRate: this.queryStats.totalQueries > 0 ?
@@ -1024,6 +955,11 @@ export class QuerySystem {
                     entityCount: a.entities.length
                 })),
                 dirtyTracking: this.dirtyTrackingSystem.getStats()
+            },
+            cacheStats: {
+                size: this.queryCache.size,
+                hitRate: this.queryStats.totalQueries > 0 ?
+                    (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + '%' : '0%'
             }
         };
     }

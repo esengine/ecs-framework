@@ -189,32 +189,14 @@ export class Core {
      * @param options - 额外的配置选项
      * @returns Core实例
      */
-    public static create(debug: boolean = true, options?: { disableWasm?: boolean }): Core {
+    public static create(debug: boolean = true): Core {
         if (this._instance == null) {
             this._instance = new Core(debug);
-            
-            // 如果指定禁用WASM，设置静默模式
-            if (options?.disableWasm) {
-                this.disableWasm();
-            }
         }
         return this._instance;
     }
 
-    /**
-     * 禁用WASM支持
-     * 
-     * 当WASM加载失败或在不支持的环境中使用时调用。
-     * 这将使ECS系统使用JavaScript回退实现。
-     */
-    public static disableWasm(): void {
-        // 动态导入WASM实例并设置为静默模式
-        import('./Utils/Wasm/instance').then(({ ecsCore }) => {
-            ecsCore.setSilent(true);
-        }).catch(() => {
-            // 如果导入失败，忽略错误
-        });
-    }
+
 
     /**
      * 注册全局管理器
