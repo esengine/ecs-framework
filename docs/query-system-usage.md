@@ -36,7 +36,7 @@ const noneResult = querySystem.queryNone(DeadComponent);
 
 ```typescript
 // 类型安全的查询，返回实体和对应的组件
-const typedResult = querySystem.queryAllTyped(PositionComponent, VelocityComponent);
+const typedResult = querySystem.queryAll(PositionComponent, VelocityComponent);
 for (let i = 0; i < typedResult.entities.length; i++) {
     const entity = typedResult.entities[i];
     const [position, velocity] = typedResult.components[i];
@@ -158,9 +158,6 @@ querySystem.warmUpCache(commonQueries);
 ### 2. 索引优化
 
 ```typescript
-// 自动优化索引配置
-querySystem.optimizeIndexes();
-
 // 获取性能统计
 const stats = querySystem.getStats();
 console.log(`缓存命中率: ${(stats.hitRate * 100).toFixed(1)}%`);
@@ -205,10 +202,14 @@ console.log(`新增: ${diff.added.length}, 移除: ${diff.removed.length}`);
 ### 移动系统示例
 
 ```typescript
-import { EntitySystem } from '@esengine/ecs-framework';
+import { EntitySystem, Entity, Matcher } from '@esengine/ecs-framework';
 
 class MovementSystem extends EntitySystem {
-    public update(): void {
+    constructor() {
+        super(Matcher.empty().all(PositionComponent, VelocityComponent));
+    }
+    
+    protected process(entities: Entity[]): void {
         // 查询所有可移动的实体
         const movableEntities = this.scene.querySystem.queryTwoComponents(
             PositionComponent,
@@ -236,7 +237,11 @@ class MovementSystem extends EntitySystem {
 
 ```typescript
 class CollisionSystem extends EntitySystem {
-    public update(): void {
+    constructor() {
+        super(Matcher.empty().all(PositionComponent, ColliderComponent));
+    }
+    
+    protected process(entities: Entity[]): void {
         // 获取所有具有碰撞器的实体
         const collidableEntities = this.scene.querySystem.queryTwoComponents(
             PositionComponent,
@@ -276,7 +281,11 @@ class CollisionSystem extends EntitySystem {
 
 ```typescript
 class HealthSystem extends EntitySystem {
-    public update(): void {
+    constructor() {
+        super(Matcher.empty().all(HealthComponent));
+    }
+    
+    protected process(entities: Entity[]): void {
         // 查询所有具有生命值的实体
         const healthEntities = this.scene.querySystem.queryComponentTyped(HealthComponent);
         const deadEntities: Entity[] = [];

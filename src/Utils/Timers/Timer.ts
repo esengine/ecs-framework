@@ -16,6 +16,20 @@ export class Timer implements ITimer{
         return this.context as T;
     }
 
+    /**
+     * 定时器是否已完成
+     */
+    public get isDone(): boolean {
+        return this._isDone;
+    }
+
+    /**
+     * 定时器已运行的时间
+     */
+    public get elapsedTime(): number {
+        return this._elapsedTime;
+    }
+
     public reset(): void {
         this._elapsedTime = 0;
     }

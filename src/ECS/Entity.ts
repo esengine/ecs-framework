@@ -181,8 +181,8 @@ class ComponentCache {
  * // 获取组件
  * const health = entity.getComponent(HealthComponent);
  * 
- * // 设置位置
- * entity.position = new Vector2(100, 200);
+ * // 添加位置组件
+ * entity.addComponent(new PositionComponent(100, 200));
  * 
  * // 添加子实体
  * const weapon = new Entity("Weapon", 2);

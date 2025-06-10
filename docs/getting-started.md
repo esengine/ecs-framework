@@ -6,15 +6,18 @@
 
 ```
 ecs-framework/
-├── source/
-│   ├── src/           # 源代码
-│   │   ├── ECS/       # ECS核心系统
-│   │   ├── Types/     # 类型定义
-│   │   ├── Utils/     # 工具类
-│   │   └── Testing/   # 测试文件
-│   ├── scripts/       # 构建脚本
-│   └── tsconfig.json  # TypeScript配置
-└── docs/              # 文档
+├── src/               # 源代码
+│   ├── ECS/           # ECS核心系统
+│   │   ├── Core/      # 核心管理器
+│   │   ├── Systems/   # 系统类型
+│   │   ├── Utils/     # ECS工具类
+│   │   └── Components/# 组件类型
+│   ├── Types/         # TypeScript接口定义（精简版）
+│   └── Utils/         # 通用工具类
+├── docs/              # 文档
+├── scripts/           # 构建脚本  
+├── bin/               # 编译输出
+└── dist/              # 发布版本
 ```
 
 ## 安装和使用
@@ -31,14 +34,17 @@ npm install @esengine/ecs-framework
 # 克隆项目
 git clone https://github.com/esengine/ecs-framework.git
 
-# 进入源码目录
-cd ecs-framework/source
+# 进入项目目录
+cd ecs-framework
 
 # 安装依赖
 npm install
 
 # 编译TypeScript
 npm run build
+
+# 或者使用监听模式开发
+npm run build:watch
 ```
 
 ## 基础设置
@@ -80,22 +86,7 @@ class GameManager {
         Core.scene = this.scene;
         
         // 初始化实体管理器
-        this.entityManager = new EntityManager(this.scene);
-        
-        // 初始化性能优化
-        this.setupPerformanceOptimizations();
-    }
-    
-    private setupPerformanceOptimizations() {
-        // 启用组件索引（自动优化查询性能）
-        // EntityManager内部已自动启用
-        
-        // 可选：手动配置优化系统
-        const componentIndex = this.entityManager.getComponentIndex();
-        const archetypeSystem = this.entityManager.getArchetypeSystem();
-        const dirtyTracking = this.entityManager.getDirtyTrackingSystem();
-        
-        // 优化系统会自动工作，通常无需手动配置
+        this.entityManager = new EntityManager();
     }
     
     public update(deltaTime: number): void {
@@ -216,7 +207,7 @@ class HealthComponent extends Component {
 
 EntityManager 是框架的核心功能，提供统一的实体管理和高性能查询接口。
 
-### 1. 基础用法
+### 基础实体操作
 
 ```typescript
 // 获取EntityManager实例（在GameManager中已创建）
@@ -224,37 +215,22 @@ const entityManager = gameManager.getEntityManager();
 
 // 创建单个实体
 const player = entityManager.createEntity("Player");
-player.addComponent(new PositionComponent(100, 100));
-player.addComponent(new VelocityComponent(50, 0));
 
-// 批量创建实体
-const enemies = entityManager.createEntities(50, "Enemy");
-enemies.forEach((enemy, index) => {
-    enemy.addComponent(new PositionComponent(
-        Math.random() * 800, 
-        Math.random() * 600
-    ));
-    enemy.addComponent(new HealthComponent(30));
-    enemy.tag = "enemy";
-});
-```
+// 批量创建实体（使用Scene方法）
+const enemies = scene.createEntities(50, "Enemy");
 
-### 2. 高性能查询
-
-```typescript
-// 流式查询API - 支持复杂查询条件
+// 查询操作
 const movingEntities = entityManager
     .query()
-    .withAll([PositionComponent, VelocityComponent])
-    .withoutTag("dead")
-    .active(true)
+    .withAll(PositionComponent, VelocityComponent)
+    .withNone(HealthComponent)
     .execute();
 
-// 快速组件查询（使用O(1)索引）
+// 组件查询
 const healthEntities = entityManager.getEntitiesWithComponent(HealthComponent);
 
 // 标签查询
-const allEnemies = entityManager.getEntitiesByTag("enemy");
+const allEnemies = entityManager.getEntitiesByTag(2);
 
 // 名称查询
 const specificEnemy = entityManager.getEntityByName("BossEnemy");
@@ -262,59 +238,41 @@ const specificEnemy = entityManager.getEntityByName("BossEnemy");
 // 复合查询
 const livingEnemies = entityManager
     .query()
-    .withAll([PositionComponent, HealthComponent])
-    .withTag("enemy")
-    .withoutTag("dead")
-    .where(entity => {
-        const health = entity.getComponent(HealthComponent);
-        return health && health.currentHealth > 0;
-    })
+    .withAll(HealthComponent)
+    .withTag(2)
     .execute();
 ```
 
-### 3. 批量操作
+### 实体遍历
 
 ```typescript
-// 批量处理实体
-entityManager.forEachEntity(entity => {
-    // 处理所有实体
-    if (entity.tag === "bullet" && entity.position.y < 0) {
-        entity.destroy();
-    }
+// 遍历所有实体
+const allEntities = entityManager.getAllEntities();
+allEntities.forEach(entity => {
+    console.log(`实体: ${entity.name}, ID: ${entity.id}`);
 });
 
-// 批量处理特定组件的实体
-entityManager.forEachEntityWithComponent(HealthComponent, (entity, health) => {
-    if (health.currentHealth <= 0) {
-        entity.addTag("dead");
-        entity.enabled = false;
-    }
+// 遍历特定组件的实体
+const healthEntities = entityManager.getEntitiesWithComponent(HealthComponent);
+healthEntities.forEach(entity => {
+    const health = entity.getComponent(HealthComponent);
+    console.log(`${entity.name} 生命值: ${health.currentHealth}/${health.maxHealth}`);
 });
-
-// 获取统计信息
-const stats = entityManager.getStatistics();
-console.log(`总实体数: ${stats.entityCount}`);
-console.log(`索引命中率: ${stats.indexHits}/${stats.totalQueries}`);
 ```
 
-### 4. 性能优化功能
+### 性能监控
 
 ```typescript
-// 获取性能优化系统
-const componentIndex = entityManager.getComponentIndex();
-const archetypeSystem = entityManager.getArchetypeSystem();
-const dirtyTracking = entityManager.getDirtyTrackingSystem();
+// 获取场景统计
+const sceneStats = scene.getStats();
+console.log('实体数量:', sceneStats.entityCount);
+console.log('系统数量:', sceneStats.processorCount);
 
-// 查看性能统计
-console.log('组件索引统计:', componentIndex.getPerformanceStats());
-console.log('Archetype统计:', archetypeSystem.getStatistics());
-console.log('脏标记统计:', dirtyTracking.getPerformanceStats());
+// 获取查询系统统计
+const queryStats = scene.querySystem.getStats();
+console.log('查询统计:', queryStats);
 
-// 手动优化（通常自动进行）
-entityManager.optimize();
 
-// 内存清理
-entityManager.cleanup();
 ```
 
 ## 创建系统
@@ -322,45 +280,40 @@ entityManager.cleanup();
 系统处理具有特定组件的实体集合，实现游戏逻辑。
 
 ```typescript
-import { EntitySystem, Entity } from '@esengine/ecs-framework';
+import { EntitySystem, Entity, Matcher, EntityManager } from '@esengine/ecs-framework';
 
 class MovementSystem extends EntitySystem {
+    constructor() {
+        super(Matcher.empty().all(PositionComponent, VelocityComponent));
+    }
+    
     protected process(entities: Entity[]): void {
-        // 使用EntityManager进行高效查询
-        const entityManager = new EntityManager(this.scene);
-        const movingEntities = entityManager
-            .query()
-            .withAll([PositionComponent, VelocityComponent])
-            .execute();
+        // 使用Scene的查询系统进行高效查询
+        const movingEntities = this.scene.querySystem.queryAll(PositionComponent, VelocityComponent);
         
-        movingEntities.forEach(entity => {
+        movingEntities.entities.forEach(entity => {
             const position = entity.getComponent(PositionComponent);
             const velocity = entity.getComponent(VelocityComponent);
             
             if (position && velocity) {
-                // 更新位置
-                position.x += velocity.x * 0.016; // 假设60FPS
-                position.y += velocity.y * 0.016;
-                
-                // 边界检查
-                if (position.x < 0 || position.x > 800) {
-                    velocity.x = -velocity.x;
-                }
-                if (position.y < 0 || position.y > 600) {
-                    velocity.y = -velocity.y;
-                }
+                position.x += velocity.dx * Time.deltaTime;
+                position.y += velocity.dy * Time.deltaTime;
             }
         });
     }
 }
 
 class HealthSystem extends EntitySystem {
+    constructor() {
+        super(Matcher.empty().all(HealthComponent));
+    }
+    
     protected process(entities: Entity[]): void {
-        const entityManager = new EntityManager(this.scene);
+        const healthEntities = this.scene.querySystem.queryAll(HealthComponent);
         
-        // 查找所有有生命值的实体
-        entityManager.forEachEntityWithComponent(HealthComponent, (entity, health) => {
-            if (health.isDead()) {
+        healthEntities.entities.forEach(entity => {
+            const health = entity.getComponent(HealthComponent);
+            if (health && health.currentHealth <= 0) {
                 entity.destroy();
             }
         });
@@ -392,15 +345,14 @@ Core.emitter.removeObserver(CoreEvents.frameUpdated, this.onFrameUpdate);
 ### 性能监控
 
 ```typescript
-// 获取EntityManager性能统计
-const stats = entityManager.getStatistics();
-console.log(`总实体数: ${stats.entityCount}`);
-console.log(`索引命中率: ${stats.indexHits}/${stats.totalQueries}`);
+// 获取场景性能统计
+const sceneStats = scene.getStats();
+console.log(`总实体数: ${sceneStats.entityCount}`);
+console.log(`系统数量: ${sceneStats.processorCount}`);
 
-// 获取各优化系统的统计
-console.log('组件索引:', entityManager.getComponentIndex().getPerformanceStats());
-console.log('Archetype:', entityManager.getArchetypeSystem().getStatistics());
-console.log('脏标记:', entityManager.getDirtyTrackingSystem().getPerformanceStats());
+// 获取查询系统统计
+const queryStats = scene.querySystem.getStats();
+console.log('查询统计:', queryStats);
 ```
 
 ## 简单示例
@@ -429,7 +381,7 @@ class SimpleGame {
         this.scene.name = "GameScene";
         Core.scene = this.scene;
         
-        this.entityManager = new EntityManager(this.scene);
+        this.entityManager = new EntityManager();
         this.setupSystems();
     }
     
@@ -457,7 +409,7 @@ class SimpleGame {
     }
     
     private createEnemies(count: number): Entity[] {
-        const enemies = this.entityManager.createEntities(count, "Enemy");
+        const enemies = this.scene.createEntities(count, "Enemy");
         
         enemies.forEach((enemy, index) => {
             enemy.addComponent(new PositionComponent(
@@ -493,7 +445,7 @@ game.start();
 ## 性能优化建议
 
 ### 1. 大规模实体处理
-- 使用 `EntityManager.createEntities()` 批量创建实体
+- 使用 `scene.createEntities()` 批量创建实体
 - 利用组件索引系统进行高效查询
 - 启用Archetype系统减少查询遍历
 
@@ -503,7 +455,7 @@ game.start();
 - 利用脏标记系统避免不必要的更新
 
 ### 3. 性能监控
-- 定期检查 `EntityManager.getStatistics()` 获取性能数据
+- 定期检查 `scene.getStats()` 获取性能数据
 - 监控组件索引命中率
 - 使用框架提供的性能统计功能
 

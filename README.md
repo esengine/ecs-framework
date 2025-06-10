@@ -3,53 +3,45 @@
 [![npm version](https://badge.fury.io/js/%40esengine%2Fecs-framework.svg)](https://badge.fury.io/js/%40esengine%2Fecs-framework)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-一个专业级的 TypeScript ECS（Entity-Component-System）框架，采用现代化架构设计，专为高性能游戏开发打造。
+TypeScript ECS (Entity-Component-System) 框架，专为游戏开发设计。
 
-## ✨ 核心特性
+> 🤔 **什么是 ECS？** 不熟悉 ECS 架构？建议先阅读 [ECS 架构基础](docs/concepts-explained.md#ecs-架构基础) 了解核心概念
 
-- 🏗️ **现代化 ECS 架构** - 完整的实体组件系统，提供清晰的代码结构
-- 📡 **类型安全事件系统** - 增强的事件总线，支持异步事件、优先级、批处理和装饰器
-- ⏰ **定时器管理系统** - 完整的定时器管理，支持延迟和重复任务
-- 🔍 **智能查询系统** - 支持复杂的实体查询，流式API设计
-- ⚡ **高性能优化** - 组件索引、Archetype系统、脏标记机制三重优化
-- 🛠️ **开发者友好** - 完整的TypeScript支持，丰富的调试工具
-- 📦 **轻量级设计** - 最小化依赖，适用于各种游戏引擎
+## 特性
 
-## 📦 安装
+- 🔧 **完整的 TypeScript 支持** - 强类型检查和代码提示
+- 📡 **[类型安全事件系统](docs/concepts-explained.md#事件系统)** - 事件装饰器和异步事件处理
+- 🔍 **[查询系统](docs/concepts-explained.md#实体管理)** - 流式 API 和智能缓存
+- ⚡ **[性能优化](docs/concepts-explained.md#性能优化技术)** - 组件索引、Archetype 系统、脏标记
+- 🎯 **[实体管理器](docs/concepts-explained.md#实体管理)** - 统一的实体生命周期管理
+- 🧰 **调试工具** - 内置性能监控和调试信息
+
+> 📖 **不熟悉这些概念？** 查看我们的 [技术概念详解](docs/concepts-explained.md) 了解它们的作用和应用场景
+
+## 安装
 
 ```bash
 npm install @esengine/ecs-framework
 ```
 
-## 🚀 快速开始
+## 快速开始
 
-### 1. 基础设置
+### 基础设置
 
 ```typescript
-import { Core, CoreEvents, Scene } from '@esengine/ecs-framework';
+import { Core, Scene, Entity, Component, EntitySystem } from '@esengine/ecs-framework';
 
-// 创建 Core 实例
-const core = Core.create(true); // 开启调试模式
+// 创建核心实例
+const core = Core.create(true); // 调试模式
 
 // 创建场景
-class GameScene extends Scene {
-    public initialize() {
-        // 场景初始化逻辑
-    }
-}
-
-// 在游戏循环中更新框架
-function gameLoop() {
-    Core.emitter.emit(CoreEvents.frameUpdated);
-}
+const scene = new Scene();
+Core.scene = scene;
 ```
 
-### 2. 创建实体和组件
+### 定义组件
 
 ```typescript
-import { Component, Entity } from '@esengine/ecs-framework';
-
-// 定义组件
 class PositionComponent extends Component {
     constructor(public x: number = 0, public y: number = 0) {
         super();
@@ -62,18 +54,37 @@ class VelocityComponent extends Component {
     }
 }
 
-// 创建实体
-const entity = scene.createEntity("Player");
-entity.addComponent(new PositionComponent(100, 100));
-entity.addComponent(new VelocityComponent(10, 0));
+class HealthComponent extends Component {
+    constructor(
+        public maxHealth: number = 100,
+        public currentHealth: number = 100
+    ) {
+        super();
+    }
+}
 ```
 
-### 3. 创建处理系统
+### 创建实体
 
 ```typescript
-import { EntitySystem } from '@esengine/ecs-framework';
+// 基础实体创建
+const player = scene.createEntity("Player");
+player.addComponent(new PositionComponent(100, 100));
+player.addComponent(new VelocityComponent(5, 0));
+player.addComponent(new HealthComponent(100, 100));
 
+// 批量创建实体
+const enemies = scene.createEntities(50, "Enemy");
+```
+
+### 创建系统
+
+```typescript
 class MovementSystem extends EntitySystem {
+    constructor() {
+        super();
+    }
+
     public process(entities: Entity[]) {
         for (const entity of entities) {
             const position = entity.getComponent(PositionComponent);
@@ -91,236 +102,297 @@ class MovementSystem extends EntitySystem {
 scene.addEntityProcessor(new MovementSystem());
 ```
 
-### 4. 实体查询和管理
+### 游戏循环
+
+```typescript
+function gameLoop() {
+    // 更新场景
+    scene.update();
+    
+    // 发送帧更新事件
+    Core.emitter.emit(CoreEvents.frameUpdated);
+    
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+```
+
+## 实体管理器
+
+EntityManager 提供了统一的实体管理接口：
 
 ```typescript
 import { EntityManager } from '@esengine/ecs-framework';
 
-// 使用EntityManager进行高级查询
 const entityManager = new EntityManager();
 
-// 查询具有特定组件的实体
-const movingEntities = entityManager
+// 流式查询 API
+const results = entityManager
     .query()
     .withAll(PositionComponent, VelocityComponent)
+    .withNone(HealthComponent)
+    .withTag(1)
     .execute();
 
-// 查询带标签的实体
-const enemies = entityManager.getEntitiesByTag(1);
+// 批量操作（使用Scene的方法）
+const bullets = scene.createEntities(100, "bullet");
 
-// 批量创建实体
-const bullets = entityManager.createEntities(100, "bullet");
+// 按标签查询
+const enemies = entityManager.getEntitiesByTag(2);
 ```
 
-### 5. 事件系统
+## 事件系统
+
+### [基础事件](docs/concepts-explained.md#类型安全事件)
+
+类型安全的事件系统，编译时检查事件名和数据类型。
 
 ```typescript
-import { EventBus, ECSEventType, EventHandler } from '@esengine/ecs-framework';
+import { EventBus, ECSEventType } from '@esengine/ecs-framework';
 
-// 获取事件总线
 const eventBus = entityManager.eventBus;
 
-// 监听实体创建事件
+// 监听预定义事件
 eventBus.onEntityCreated((data) => {
-    console.log(`Entity created: ${data.entityName}`);
+    console.log(`实体创建: ${data.entityName}`);
 });
 
-// 监听组件添加事件
 eventBus.onComponentAdded((data) => {
-    console.log(`Component ${data.componentType} added to entity ${data.entityId}`);
+    console.log(`组件添加: ${data.componentType}`);
 });
-
-// 使用装饰器自动注册事件监听器
-class GameManager {
-    @EventHandler(ECSEventType.ENTITY_DESTROYED)
-    onEntityDestroyed(data) {
-        console.log('Entity destroyed:', data.entityName);
-    }
-}
 
 // 自定义事件
-eventBus.emit('player:levelup', { playerId: 123, newLevel: 5 });
+eventBus.emit('player:death', { playerId: 123, reason: 'fall' });
 ```
 
-## 🆚 框架对比
+### [事件装饰器](docs/concepts-explained.md#事件装饰器)
 
-与其他 TypeScript ECS 框架相比，我们的优势：
-
-| 特性 | @esengine/ecs-framework | bitecs | ecsy | Miniplex |
-|------|-------------------------|-------|------|----------|
-| **TypeScript 支持** | ✅ 原生支持 | ✅ 完整支持 | ⚠️ 部分支持 | ✅ 原生支持 |
-| **事件系统** | ✅ 类型安全+装饰器 | ❌ 无内置事件系统 | ⚠️ 基础事件 | ✅ 响应式事件 |
-| **查询系统** | ✅ 智能查询+流式API | ✅ 高性能 | ✅ 基础查询 | ✅ 响应式查询 |
-| **性能优化** | ✅ 多层优化系统 | ✅ 高性能优化 | ⚠️ 基础优化 | ✅ React集成优化 |
-| **实体管理器** | ✅ 统一管理接口 | ❌ 无统一接口 | ✅ 基础管理 | ✅ 响应式管理 |
-| **组件索引** | ✅ 哈希+位图索引 | ✅ 原生支持 | ❌ 无索引系统 | ✅ 自动索引 |
-| **Archetype系统** | ✅ 内置支持 | ✅ 内置支持 | ❌ 无Archetype | ❌ 无Archetype |
-| **脏标记系统** | ✅ 细粒度追踪 | ⚠️ 基础支持 | ❌ 无脏标记 | ✅ React级追踪 |
-| **批量操作** | ✅ 全面的批量API | ✅ 批量支持 | ⚠️ 有限支持 | ⚠️ 有限支持 |
-| **游戏引擎集成** | ✅ 通用设计 | ✅ 通用设计 | ✅ 通用设计 | ⚠️ 主要针对React |
-| **学习曲线** | 🟢 中等 | 🟡 较陡峭 | 🟢 简单 | 🟡 需要React知识 |
-| **社区生态** | 🟡 成长中 | 🟢 活跃 | 🟡 稳定 | 🟡 小众但精品 |
-
-### 为什么选择我们？
-
-**相比 bitecs**：
-- 更友好的 TypeScript API，无需手动管理内存
-- 完整的实体管理器，开发体验更佳
-- 内置类型安全事件系统，bitecs需要自己实现
-- 多种索引系统可选，适应不同场景
-
-**相比 ecsy**：
-- 现代化的性能优化系统（组件索引、Archetype、脏标记）
-- 更完整的 TypeScript 类型定义
-- 增强的事件系统，支持装饰器和异步事件
-- 活跃的维护和功能更新
-
-**相比 Miniplex**：
-- 不依赖 React 生态，可用于任何游戏引擎
-- 专门针对游戏开发优化
-- 更轻量级的核心设计
-- 传统事件模式，更适合游戏开发习惯
-
-## 📚 核心概念
-
-### Entity（实体）
-实体是游戏世界中的基本对象，可以挂载组件和运行系统。
+使用装饰器语法自动注册事件监听器，减少样板代码。
 
 ```typescript
-// 创建实体
-const entity = scene.createEntity("Player");
+import { EventHandler, ECSEventType } from '@esengine/ecs-framework';
 
-// 设置实体属性
-entity.tag = 1;
-entity.updateOrder = 0;
-entity.enabled = true;
-
-// 批量创建实体
-const entities = scene.createEntities(100, "Enemy");
-```
-
-### Component（组件）
-组件存储数据，定义实体的属性和状态。
-
-```typescript
-import { Component } from '@esengine/ecs-framework';
-
-class HealthComponent extends Component {
-    public maxHealth: number = 100;
-    public currentHealth: number = 100;
-    
-    public takeDamage(damage: number) {
-        this.currentHealth = Math.max(0, this.currentHealth - damage);
-        if (this.currentHealth <= 0) {
-            this.entity.destroy();
-        }
+class GameSystem {
+    @EventHandler(ECSEventType.ENTITY_DESTROYED)
+    onEntityDestroyed(data: EntityDestroyedEventData) {
+        console.log('实体销毁:', data.entityName);
     }
-}
 
-// 添加组件到实体
-entity.addComponent(new HealthComponent());
-```
-
-### System（系统）
-系统处理具有特定组件的实体集合，实现游戏逻辑。
-
-```typescript
-import { EntitySystem, Entity } from '@esengine/ecs-framework';
-
-class HealthSystem extends EntitySystem {
-    protected process(entities: Entity[]) {
-        for (const entity of entities) {
-            const health = entity.getComponent(HealthComponent);
-            if (health && health.currentHealth <= 0) {
-                // 处理实体死亡逻辑
-                entity.destroy();
-            }
-        }
+    @EventHandler('player:levelup')
+    onPlayerLevelUp(data: { playerId: number; newLevel: number }) {
+        console.log(`玩家 ${data.playerId} 升级到 ${data.newLevel} 级`);
     }
 }
 ```
 
-## 🧪 测试
+## 性能优化
 
-```bash
-# 运行所有测试
-npm run test
+### [组件索引](docs/concepts-explained.md#组件索引系统)
 
-# 性能基准测试
-npm run benchmark
+通过建立索引避免线性搜索，将查询复杂度从 O(n) 降低到 O(1)。
+
+```typescript
+// 使用Scene的查询系统进行组件索引
+const querySystem = scene.querySystem;
+
+// 查询具有特定组件的实体
+const entitiesWithPosition = querySystem.queryAll(PositionComponent).entities;
+const entitiesWithVelocity = querySystem.queryAll(VelocityComponent).entities;
+
+// 性能统计
+const stats = querySystem.getStats();
+console.log('查询效率:', stats.hitRate);
 ```
 
-## 📖 文档
+**索引类型选择：**
+- **哈希索引** - 适合稳定的、大量的组件（如位置、生命值）
+- **位图索引** - 适合频繁变化的组件（如Buff、状态）
 
-- [快速入门](docs/getting-started.md) - 从零开始学习框架使用
-- [EntityManager 使用指南](docs/entity-manager-example.md) - 详细了解实体管理器的高级功能
-- [事件系统使用指南](docs/event-system-example.md) - 学习类型安全事件系统的完整用法
-- [性能优化指南](docs/performance-optimization.md) - 深入了解三大性能优化系统
-- [核心概念](docs/core-concepts.md) - 深入了解 ECS 架构和设计原理
-- [查询系统使用指南](docs/query-system-usage.md) - 学习高性能查询系统的详细用法
+> 📋 详细选择指南参见 [索引类型选择指南](docs/concepts-explained.md#索引类型选择指南)
 
-## 🔗 扩展库
+### [Archetype 系统](docs/concepts-explained.md#archetype-系统)
 
-- [路径寻找库](https://github.com/esengine/ecs-astar) - A*、广度优先、Dijkstra、GOAP 算法
-- [AI 系统](https://github.com/esengine/BehaviourTree-ai) - 行为树、效用 AI 系统
+将具有相同组件组合的实体分组，减少查询时的组件检查开销。
 
-## 🤝 贡献
+```typescript
+// 使用查询系统的Archetype功能
+const querySystem = scene.querySystem;
 
-欢迎提交 Issue 和 Pull Request！
-
-### 开发环境设置
-
-```bash
-# 克隆项目
-git clone https://github.com/esengine/ecs-framework.git
-cd ecs-framework
-
-# 运行基准测试
-node benchmark.js
-
-# 开发构建 (在source目录)
-cd source && npm install && npm run build
+// 查询统计
+const stats = querySystem.getStats();
+console.log('缓存命中率:', stats.hitRate);
 ```
 
-### 构建要求
+### [脏标记系统](docs/concepts-explained.md#脏标记系统)
+
+追踪数据变化，只处理发生改变的实体，避免不必要的计算。
+
+```typescript
+// 脏标记通过组件系统自动管理
+// 组件变化时会自动标记为脏数据
+
+// 查询系统会自动处理脏标记优化
+const movingEntities = scene.querySystem.queryAll(PositionComponent, VelocityComponent);
+```
+
+> 💡 **不确定何时使用这些优化？** 查看 [性能优化建议](docs/concepts-explained.md#性能建议) 了解适用场景
+
+## API 参考
+
+### 核心类
+
+| 类 | 描述 |
+|---|---|
+| `Core` | 框架核心管理类 |
+| `Scene` | 场景容器，管理实体和系统 |
+| `Entity` | 实体对象，包含组件集合 |
+| `Component` | 组件基类 |
+| `EntitySystem` | 系统基类 |
+| `EntityManager` | 实体管理器 |
+
+### 查询 API
+
+```typescript
+entityManager
+    .query()
+    .withAll(...components)      // 包含所有指定组件
+    .withAny(...components)      // 包含任意指定组件
+    .withNone(...components)     // 不包含指定组件
+    .withTag(tag)                // 包含指定标签
+    .withoutTag(tag)             // 不包含指定标签
+    .execute()                   // 执行查询
+```
+
+### 事件类型
+
+```typescript
+enum ECSEventType {
+    ENTITY_CREATED = 'entity:created',
+    ENTITY_DESTROYED = 'entity:destroyed',
+    COMPONENT_ADDED = 'component:added',
+    COMPONENT_REMOVED = 'component:removed',
+    SYSTEM_ADDED = 'system:added',
+    SYSTEM_REMOVED = 'system:removed'
+}
+```
+
+## 与其他框架对比
+
+| 特性 | @esengine/ecs-framework | bitECS | Miniplex |
+|------|-------------------------|--------|----------|
+| TypeScript 支持 | ✅ 原生支持 | ✅ 完整支持 | ✅ 原生支持 |
+| 事件系统 | ✅ 内置+装饰器 | ❌ 需自己实现 | ✅ 响应式 |
+| 查询系统 | ✅ 流式 API | ✅ 函数式 | ✅ 响应式 |
+| 实体管理器 | ✅ 统一接口 | ❌ 低级 API | ✅ 高级接口 |
+| 性能优化 | ✅ 多重优化 | ✅ 极致性能 | ✅ React 优化 |
+| 游戏引擎集成 | ✅ 通用设计 | ✅ 通用设计 | ⚠️ 主要 React |
+
+**选择指南：**
+- 选择本框架：需要完整的游戏开发工具链和中文社区支持
+- 选择 bitECS：需要极致性能和最小化设计
+- 选择 Miniplex：主要用于 React 应用开发
+
+## 项目结构
+
+```
+ecs-framework/
+├── src/
+│   ├── ECS/           # ECS 核心系统
+│   │   ├── Core/      # 核心管理器
+│   │   ├── Systems/   # 系统类型
+│   │   └── Utils/     # ECS 工具
+│   ├── Types/         # TypeScript接口定义
+│   └── Utils/         # 通用工具
+├── docs/              # 文档
+└── scripts/           # 构建脚本
+```
+
+## 文档
+
+### 🎯 新手入门
+- **[📖 新手教程完整指南](docs/beginner-tutorials.md)** - 完整学习路径，从零开始 ⭐ **强烈推荐**
+- [🚀 快速入门](docs/getting-started.md) - 详细的入门教程
+- [🧠 技术概念详解](docs/concepts-explained.md) - 通俗易懂的技术概念解释 ⭐ **推荐新手阅读**
+- [🎯 位掩码使用指南](docs/bitmask-guide.md) - 位掩码概念、原理和高级使用技巧
+- [💡 使用场景示例](docs/use-cases.md) - 不同类型游戏的具体应用案例
+- [🔧 框架类型系统](docs/concepts-explained.md#框架类型系统) - TypeScript接口设计和使用指南
+
+### 📚 核心功能
+- [🎭 实体管理指南](docs/entity-guide.md) - 实体的创建和使用方法
+- [🧩 组件设计指南](docs/component-design-guide.md) - 如何设计高质量组件 ⭐ **设计必读**
+- [⚙️ 系统详解指南](docs/system-guide.md) - 四种系统类型的详细使用
+- [🎬 场景管理指南](docs/scene-management-guide.md) - 场景切换和数据管理
+- [⏰ 定时器系统指南](docs/timer-guide.md) - 定时器的完整使用方法
+
+### API 参考
+- [核心 API 参考](docs/core-concepts.md) - 完整的 API 使用说明  
+- [实体基础指南](docs/entity-guide.md) - 实体的基本概念和操作
+- [EntityManager 指南](docs/entity-manager-example.md) - 高性能查询和批量操作
+- [事件系统指南](docs/event-system-example.md) - 事件系统完整用法
+- [查询系统指南](docs/query-system-usage.md) - 查询系统使用方法
+
+### 性能相关
+- [性能优化指南](docs/performance-optimization.md) - 性能优化技术和策略
+
+## 构建
+
+```bash
+# 安装依赖
+npm install
+
+# 构建项目
+npm run build
+
+# 监听模式
+npm run build:watch
+
+# 清理构建文件
+npm run clean
+
+# 重新构建
+npm run rebuild
+```
+
+## 性能监控
+
+框架提供内置性能统计：
+
+```typescript
+// 场景统计
+const sceneStats = scene.getStats();
+console.log('性能统计:', {
+    实体数量: sceneStats.entityCount,
+    系统数量: sceneStats.processorCount
+});
+
+// 查询系统统计
+const queryStats = scene.querySystem.getStats();
+console.log('查询统计:', {
+    缓存命中率: queryStats.hitRate + '%',
+    查询次数: queryStats.queryCount
+});
+```
+
+## 扩展库
+
+- [路径寻找库](https://github.com/esengine/ecs-astar) - A*、BFS、Dijkstra 算法
+- [AI 系统](https://github.com/esengine/BehaviourTree-ai) - 行为树、效用 AI
+
+## 社区
+
+- QQ 群：[ecs游戏框架交流](https://jq.qq.com/?_wv=1027&k=29w1Nud6)
+- GitHub：[提交 Issue](https://github.com/esengine/ecs-framework/issues)
+
+## 贡献
+
+欢迎提交 Pull Request 和 Issue！
+
+### 开发要求
 
 - Node.js >= 14.0.0
 - TypeScript >= 4.0.0
 
-## 📄 许可证
+## 许可证
 
-本项目采用 [MIT](LICENSE) 许可证。
-
-## 💬 交流群
-
-加入 QQ 群讨论：[ecs游戏框架交流](https://jq.qq.com/?_wv=1027&k=29w1Nud6)
-
-### 🚀 核心性能指标
-
-```bash
-实体创建: 640,000+ 个/秒
-组件查询: O(1) 复杂度（使用索引）
-内存优化: 30-50% 减少分配
-批量操作: 显著提升处理效率
-```
-
-### 🎯 性能优化技术
-
-- **组件索引系统**: 哈希和位图双重索引，支持 O(1) 查询
-- **Archetype 系统**: 按组件组合分组，减少查询开销
-- **脏标记机制**: 细粒度变更追踪，避免不必要的计算
-- **批量操作 API**: 减少函数调用开销，提升大规模操作效率
-- **智能缓存**: 查询结果缓存和延迟清理机制
-
-### 🔧 性能建议
-
-1. **大规模场景**: 使用批量API和组件索引
-2. **频繁查询**: 启用Archetype系统进行快速筛选
-3. **实时游戏**: 利用脏标记减少无效更新
-4. **移动端**: 建议实体数量控制在20,000以内
-
-运行 `npm run benchmark` 查看在您的环境中的具体性能表现。
-
----
-
-**ECS Framework** - 让游戏开发更简单、更高效！ 
+[MIT](LICENSE) 

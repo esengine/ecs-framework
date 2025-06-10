@@ -6,7 +6,6 @@ import { EntitySystem } from './Systems/EntitySystem';
 import { ComponentStorageManager } from './Core/ComponentStorage';
 import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem, GlobalEventSystem } from './Core/EventSystem';
-import type { IScene } from '../Types';
 
 /**
  * 游戏场景类
