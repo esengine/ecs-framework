@@ -32,35 +32,15 @@ export class Time {
      * 当前帧数
      */
     public static frameCount: number = 0;
-    
-    /**
-     * 上一帧的时间戳
-     */
-    private static _lastTime: number = 0;
-    
-    /**
-     * 是否为第一次更新
-     */
-    private static _isFirstUpdate: boolean = true;
 
     /**
-     * 更新时间信息
-     * @param currentTime 当前时间戳（毫秒）
+     * 使用外部引擎提供的deltaTime更新时间信息
+     * @param deltaTime 外部引擎提供的帧时间间隔（秒）
      */
-    public static update(currentTime: number = -1): void {
-        if (currentTime === -1) {
-            currentTime = Date.now();
-        }
-
-        if (this._isFirstUpdate) {
-            this._lastTime = currentTime;
-            this._isFirstUpdate = false;
-            return;
-        }
-
-        // 计算帧时间间隔（转换为秒）
-        this.unscaledDeltaTime = (currentTime - this._lastTime) / 1000;
-        this.deltaTime = this.unscaledDeltaTime * this.timeScale;
+    public static update(deltaTime: number): void {
+        // 设置未缩放的帧时间
+        this.unscaledDeltaTime = deltaTime;
+        this.deltaTime = deltaTime * this.timeScale;
 
         // 更新总时间
         this.unscaledTotalTime += this.unscaledDeltaTime;
@@ -68,16 +48,17 @@ export class Time {
 
         // 更新帧数
         this.frameCount++;
-
-        // 记录当前时间
-        this._lastTime = currentTime;
     }
 
     /**
      * 场景改变时重置时间
      */
     public static sceneChanged(): void {
-        this._isFirstUpdate = true;
+        this.frameCount = 0;
+        this.totalTime = 0;
+        this.unscaledTotalTime = 0;
+        this.deltaTime = 0;
+        this.unscaledDeltaTime = 0;
     }
 
     /**

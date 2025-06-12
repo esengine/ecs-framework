@@ -1,6 +1,6 @@
 export { Entity } from './Entity';
 export { Component } from './Component';
-export { CoreEvents, ECSEventType, EventPriority, EVENT_TYPES, EventTypeValidator } from './CoreEvents';
+export { ECSEventType, EventPriority, EVENT_TYPES, EventTypeValidator } from './CoreEvents';
 export * from './Systems';
 export * from './Utils';
 export { Scene } from './Scene';

@@ -1,5 +1,3 @@
-import { Emitter } from './Utils/Emitter';
-import { CoreEvents } from './ECS/CoreEvents';
 import { GlobalManager } from './Utils/GlobalManager';
 import { TimerManager } from './Utils/Timers/TimerManager';
 import { ITimer } from './Utils/Timers/ITimer';
@@ -13,7 +11,7 @@ import { Scene } from './ECS/Scene';
  * 游戏引擎核心类
  * 
  * 负责管理游戏的生命周期、场景切换、全局管理器和定时器系统。
- * 提供统一的游戏循环和事件分发机制。
+ * 提供统一的游戏循环管理。
  * 
  * @example
  * ```typescript
@@ -23,6 +21,12 @@ import { Scene } from './ECS/Scene';
  * // 设置场景
  * Core.scene = new MyScene();
  * 
+ * // 在游戏循环中更新（Laya引擎示例）
+ * Laya.timer.frameLoop(1, this, () => {
+ *     const deltaTime = Laya.timer.delta / 1000;
+ *     Core.update(deltaTime);
+ * });
+ * 
  * // 调度定时器
  * Core.schedule(1.0, false, null, (timer) => {
  *     console.log("1秒后执行");
@@ -30,13 +34,6 @@ import { Scene } from './ECS/Scene';
  * ```
  */
 export class Core {
-    /**
-     * 核心事件发射器
-     * 
-     * 用于发布和订阅核心级别的事件，如帧更新、场景切换等。
-     */
-    public static emitter: Emitter<CoreEvents>;
-    
     /**
      * 游戏暂停状态
      * 
@@ -118,8 +115,6 @@ export class Core {
      */
     private constructor(debug: boolean = true, enableEntitySystems: boolean = true) {
         Core._instance = this;
-        Core.emitter = new Emitter<CoreEvents>();
-        Core.emitter.addObserver(CoreEvents.frameUpdated, this.update, this);
 
         // 初始化管理器
         this._timerManager = new TimerManager();
@@ -186,7 +181,6 @@ export class Core {
      * 如果实例已存在，则返回现有实例。
      * 
      * @param debug - 是否为调试模式，默认为true
-     * @param options - 额外的配置选项
      * @returns Core实例
      */
     public static create(debug: boolean = true): Core {
@@ -196,7 +190,40 @@ export class Core {
         return this._instance;
     }
 
-
+    /**
+     * 更新游戏逻辑
+     * 
+     * 此方法应该在游戏引擎的更新循环中调用。
+     * 
+     * @param deltaTime - 外部引擎提供的帧时间间隔（秒）
+     * 
+     * @example
+     * ```typescript
+     * // Laya引擎
+     * Laya.timer.frameLoop(1, this, () => {
+     *     const deltaTime = Laya.timer.delta / 1000;
+     *     Core.update(deltaTime);
+     * });
+     * 
+     * // Cocos Creator
+     * update(deltaTime: number) {
+     *     Core.update(deltaTime);
+     * }
+     * 
+     * // Unity (C#)
+     * void Update() {
+     *     Core.Update(Time.deltaTime);
+     * }
+     * ```
+     */
+    public static update(deltaTime: number): void {
+        if (!this._instance) {
+            console.warn("Core实例未创建，请先调用Core.create()");
+            return;
+        }
+        
+        this._instance.updateInternal(deltaTime);
+    }
 
     /**
      * 注册全局管理器
@@ -285,19 +312,18 @@ export class Core {
     }
 
     /**
-     * 游戏主循环更新
+     * 内部更新方法
      * 
-     * 每帧调用，负责更新时间系统、全局管理器和当前场景。
-     * 
-     * @param currentTime - 当前时间戳，默认为-1（使用系统时间）
+     * @param deltaTime - 帧时间间隔（秒）
      */
-    protected update(currentTime: number = -1): void {
+    private updateInternal(deltaTime: number): void {
         if (Core.paused) return;
 
         // 开始性能监控
         const frameStartTime = this._performanceMonitor.startMonitoring('Core.update');
 
-        Time.update(currentTime);
+        // 更新时间系统
+        Time.update(deltaTime);
 
         // 更新FPS监控（如果性能监控器支持）
         if (typeof (this._performanceMonitor as any).updateFPS === 'function') {

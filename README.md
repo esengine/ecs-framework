@@ -104,18 +104,41 @@ scene.addEntityProcessor(new MovementSystem());
 
 ### 游戏循环
 
+ECS框架需要在游戏引擎的更新循环中调用：
+
 ```typescript
-function gameLoop() {
-    // 更新场景
-    scene.update();
-    
-    // 发送帧更新事件
-    Core.emitter.emit(CoreEvents.frameUpdated);
-    
-    requestAnimationFrame(gameLoop);
+// 统一的API：传入deltaTime
+Core.update(deltaTime);
+```
+
+**不同引擎的集成示例：**
+
+```typescript
+// Laya引擎
+Laya.timer.frameLoop(1, this, () => {
+    const deltaTime = Laya.timer.delta / 1000; // 转换为秒
+    Core.update(deltaTime);
+});
+
+// Cocos Creator
+update(deltaTime: number) {
+    Core.update(deltaTime);
 }
 
-gameLoop();
+// Unity (C#)
+void Update() {
+    Core.Update(Time.deltaTime);
+}
+
+// 原生浏览器环境
+let lastTime = 0;
+function gameLoop(currentTime: number) {
+    const deltaTime = lastTime > 0 ? (currentTime - lastTime) / 1000 : 0.016;
+    lastTime = currentTime;
+    Core.update(deltaTime);
+    requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
 ```
 
 ## 实体管理器

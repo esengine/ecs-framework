@@ -8,6 +8,28 @@
 npm install @esengine/ecs-framework
 ```
 
+## 更新机制说明
+
+ECS框架需要在游戏引擎的更新循环中调用，并传入deltaTime：
+
+```typescript
+// 统一的更新方式：让外部引擎传入deltaTime
+Core.update(deltaTime);
+```
+
+**不同引擎的集成方式：**
+- **Laya引擎**：使用 `Laya.timer.delta / 1000`
+- **Cocos Creator**：使用组件的 `update(deltaTime)` 参数
+- **Unity**：使用 `Time.deltaTime`
+- **原生浏览器**：自己计算deltaTime
+- **Node.js服务器**：自己计算deltaTime
+
+**优势：**
+- 与引擎时间系统完全同步
+- 支持引擎的时间缩放和暂停功能
+- 更精确的时间控制
+- 统一的API，简化集成
+
 ## 平台集成
 
 ### Laya引擎
@@ -45,7 +67,9 @@ class LayaECSGame extends LayaScene {
     }
     
     private updateECS(): void {
-        this.ecsScene.update();
+        // 使用Laya的deltaTime更新ECS
+        const deltaTime = Laya.timer.delta / 1000; // 转换为秒
+        Core.update(deltaTime);
     }
     
     private setupSystems(): void {
@@ -105,8 +129,8 @@ export class ECSGameManager extends CocosComponent {
     }
     
     update(deltaTime: number) {
-        // 在Cocos的update中更新ECS
-        this.ecsScene.update();
+        // 使用Cocos Creator的deltaTime更新ECS
+        Core.update(deltaTime);
     }
     
     onDestroy() {
@@ -188,8 +212,8 @@ class ServerGameManager {
         const deltaTime = (now - this.lastUpdate) / 1000;
         this.lastUpdate = now;
         
-        Time.update(deltaTime);
-        this.scene.update();
+        // 使用计算出的deltaTime更新ECS
+        Core.update(deltaTime);
         
         const frameTime = 1000 / this.tickRate;
         const processingTime = Date.now() - now;
@@ -268,11 +292,15 @@ class BrowserGame {
     }
     
     private gameLoop(): void {
-        const update = () => {
-            this.scene.update();
+        let lastTime = 0;
+        const update = (currentTime: number) => {
+            // 计算deltaTime并更新ECS（原生浏览器环境）
+            const deltaTime = lastTime > 0 ? (currentTime - lastTime) / 1000 : 0.016;
+            lastTime = currentTime;
+            Core.update(deltaTime);
             requestAnimationFrame(update);
         };
-        update();
+        requestAnimationFrame(update);
     }
     
     private setupSystems(): void {
@@ -431,17 +459,33 @@ const enemiesByTag = entityManager.getEntitiesByTag(2);
 
 ## 事件系统
 
-```typescript
-import { Core, CoreEvents } from '@esengine/ecs-framework';
+推荐使用Scene的事件系统或EntityManager的事件系统：
 
-// 监听框架事件
-Core.emitter.addObserver(CoreEvents.frameUpdated, this.onFrameUpdate, this);
+```typescript
+// 使用EntityManager的事件系统（推荐）
+const eventBus = entityManager.eventBus;
+
+// 监听ECS事件
+eventBus.onEntityCreated((data) => {
+    console.log(`实体创建: ${data.entityName}`);
+});
+
+eventBus.onComponentAdded((data) => {
+    console.log(`组件添加: ${data.componentType}`);
+});
 
 // 发射自定义事件
-Core.emitter.emit("playerDied", { player: entity, score: 1000 });
+eventBus.emit('player:died', { player: entity, score: 1000 });
 
-// 移除监听
-Core.emitter.removeObserver(CoreEvents.frameUpdated, this.onFrameUpdate);
+// 使用装饰器自动注册事件监听器
+import { EventHandler } from '@esengine/ecs-framework';
+
+class GameSystem {
+    @EventHandler('player:died')
+    onPlayerDied(data: { player: Entity; score: number }) {
+        console.log(`玩家死亡，得分: ${data.score}`);
+    }
+}
 ```
 
 ## 性能监控

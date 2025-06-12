@@ -1,21 +1,4 @@
-/**
- * 核心事件枚举
- * 定义框架中的核心事件类型
- */
-export enum CoreEvents {
-    /**
-     * 当场景发生变化时触发
-     */
-    sceneChanged,
-    /**
-     * 每帧更新事件
-     */
-    frameUpdated,
-    /**
-     * 当渲染发生时触发
-     */
-    renderChanged,
-}
+
 
 /**
  * ECS事件类型枚举
@@ -112,13 +95,6 @@ export enum EventPriority {
  * 提供类型安全的事件类型字符串
  */
 export const EVENT_TYPES = {
-    // 核心事件
-    CORE: {
-        SCENE_CHANGED: 'core:scene:changed',
-        FRAME_UPDATED: 'core:frame:updated',
-        RENDER_CHANGED: 'core:render:changed'
-    },
-    
     // 实体事件
     ENTITY: {
         CREATED: ECSEventType.ENTITY_CREATED,
@@ -164,10 +140,8 @@ export const EVENT_TYPES = {
  * 验证事件类型是否有效
  */
 export class EventTypeValidator {
-    private static validTypes = new Set([
-        ...Object.values(CoreEvents).map(e => e.toString()),
+    private static validTypes = new Set<string>([
         ...Object.values(ECSEventType),
-        ...Object.values(EVENT_TYPES.CORE),
         ...Object.values(EVENT_TYPES.ENTITY),
         ...Object.values(EVENT_TYPES.COMPONENT),
         ...Object.values(EVENT_TYPES.SYSTEM),

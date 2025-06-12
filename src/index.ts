@@ -6,8 +6,7 @@
 // 核心模块
 export { Core } from './Core';
 
-// 核心事件和管理器
-export { CoreEvents } from './ECS/CoreEvents';
+// 核心管理器
 export { Emitter, FuncPack } from './Utils/Emitter';
 export { GlobalManager } from './Utils/GlobalManager';
 export { TimerManager } from './Utils/Timers/TimerManager';
