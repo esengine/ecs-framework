@@ -210,10 +210,7 @@ export class Core {
      *     Core.update(deltaTime);
      * }
      * 
-     * // Unity (C#)
-     * void Update() {
-     *     Core.Update(Time.deltaTime);
-     * }
+
      * ```
      */
     public static update(deltaTime: number): void {

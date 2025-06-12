@@ -1,6 +1,6 @@
 /**
  * ECS Framework - 轻量级实体组件系统框架
- * 适用于Laya、Cocos等游戏引擎的小游戏开发
+ * 适用于Laya、Cocos Creator等JavaScript游戏引擎和H5小游戏开发
  */
 
 // 核心模块

@@ -17,10 +17,9 @@ ECS框架需要在游戏引擎的更新循环中调用，并传入deltaTime：
 Core.update(deltaTime);
 ```
 
-**不同引擎的集成方式：**
+**不同平台的集成方式：**
 - **Laya引擎**：使用 `Laya.timer.delta / 1000`
 - **Cocos Creator**：使用组件的 `update(deltaTime)` 参数
-- **Unity**：使用 `Time.deltaTime`
 - **原生浏览器**：自己计算deltaTime
 - **Node.js服务器**：自己计算deltaTime
 

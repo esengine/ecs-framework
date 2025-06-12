@@ -8,7 +8,7 @@ const pkg = JSON.parse(readFileSync('./package.json', 'utf8'));
 
 const banner = `/**
  * @esengine/ecs-framework v${pkg.version}
- * 高性能ECS框架 - 适用于Cocos Creator和Laya引擎
+ * 高性能ECS框架 - 适用于Cocos Creator和Laya等JavaScript游戏引擎
  * 
  * @author ${pkg.author}
  * @license ${pkg.license}

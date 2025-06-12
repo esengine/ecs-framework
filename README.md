@@ -111,7 +111,7 @@ ECS框架需要在游戏引擎的更新循环中调用：
 Core.update(deltaTime);
 ```
 
-**不同引擎的集成示例：**
+**不同平台的集成示例：**
 
 ```typescript
 // Laya引擎
@@ -123,11 +123,6 @@ Laya.timer.frameLoop(1, this, () => {
 // Cocos Creator
 update(deltaTime: number) {
     Core.update(deltaTime);
-}
-
-// Unity (C#)
-void Update() {
-    Core.Update(Time.deltaTime);
 }
 
 // 原生浏览器环境
@@ -309,7 +304,7 @@ enum ECSEventType {
 | 查询系统 | ✅ 流式 API | ✅ 函数式 | ✅ 响应式 |
 | 实体管理器 | ✅ 统一接口 | ❌ 低级 API | ✅ 高级接口 |
 | 性能优化 | ✅ 多重优化 | ✅ 极致性能 | ✅ React 优化 |
-| 游戏引擎集成 | ✅ 通用设计 | ✅ 通用设计 | ⚠️ 主要 React |
+| JavaScript引擎集成 | ✅ 专为JS引擎设计 | ✅ 通用设计 | ⚠️ 主要 React |
 
 **选择指南：**
 - 选择本框架：需要完整的游戏开发工具链和中文社区支持
