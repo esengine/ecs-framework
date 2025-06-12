@@ -309,7 +309,7 @@ export class EventBus implements IEventBus {
      * @param sceneData 场景事件数据
      */
     public emitSceneChanged(sceneData: ISceneEventData): void {
-        this.emit(EVENT_TYPES.CORE.SCENE_CHANGED, sceneData);
+        this.emit(ECSEventType.SCENE_ACTIVATED, sceneData);
     }
     
     /**
