@@ -188,7 +188,68 @@
     <div class="debug-section" v-if="debugInfo.instanceId">
         <div class="section-header">
             <h2>🧩 组件分析</h2>
+            <div class="section-help">
+                <button class="help-btn" @click="showComponentPoolHelp = !showComponentPoolHelp" title="组件对象池使用说明">
+                    <ui-icon value="help"></ui-icon>
+                    对象池使用说明
+                </button>
+            </div>
         </div>
+        
+        <!-- 对象池使用说明 -->
+        <div v-if="showComponentPoolHelp" class="help-panel">
+            <div class="help-content">
+                <h4>📖 组件对象池使用指南</h4>
+                <p>组件对象池用于复用组件实例，减少频繁创建/销毁组件带来的内存分配开销。当前利用率为0表示还未配置对象池。</p>
+                
+                <div class="help-steps">
+                    <div class="help-step">
+                        <h5>1. 注册组件对象池</h5>
+                        <pre class="code-example">import { ComponentPoolManager } from '@esengine/ecs-framework';
+
+// 为Transform组件注册对象池
+ComponentPoolManager.getInstance().registerPool(
+    'Transform',
+    () => new Transform(),
+    (comp) => comp.reset(), // 可选的重置函数
+    100 // 池大小
+);</pre>
+                    </div>
+                    
+                    <div class="help-step">
+                        <h5>2. 使用对象池获取组件</h5>
+                        <pre class="code-example">// 从对象池获取组件实例
+const poolManager = ComponentPoolManager.getInstance();
+const transform = poolManager.acquireComponent('Transform');
+
+// 使用完毕后释放回池中
+poolManager.releaseComponent('Transform', transform);</pre>
+                    </div>
+                    
+                    <div class="help-step">
+                        <h5>3. 查看性能改进</h5>
+                        <p>正确配置后，利用率栏将显示池的使用情况。利用率越高说明对象池被有效使用，可以减少GC压力。</p>
+                    </div>
+                </div>
+                
+                <div class="help-links">
+                    <a href="#" @click="openDocumentation('component-pool')" class="doc-link">
+                        <ui-icon value="book"></ui-icon>
+                        查看详细文档
+                    </a>
+                    <a href="#" @click="openDocumentation('performance-optimization')" class="doc-link">
+                        <ui-icon value="speed"></ui-icon>
+                        性能优化指南
+                    </a>
+                </div>
+                
+                <div class="doc-access-note">
+                    <ui-icon value="info"></ui-icon>
+                    <span>如果无法直接打开文档链接，链接将自动复制到剪贴板，请在浏览器中粘贴访问</span>
+                </div>
+            </div>
+        </div>
+        
         <div class="component-overview">
             <div class="overview-item">
                 <span class="label">组件类型:</span>
@@ -206,18 +267,45 @@
                 <div class="col-count">实例数</div>
                 <div class="col-memory">内存占用</div>
                 <div class="col-pool">对象池</div>
-                <div class="col-efficiency">利用率</div>
+                <div class="col-efficiency">
+                    利用率
+                    <span class="help-tooltip" title="对象池利用率：使用中的实例 / 池总大小。利用率为0表示未配置对象池">
+                        <ui-icon value="help"></ui-icon>
+                    </span>
+                </div>
             </div>
             <div v-for="comp in debugInfo.components.componentStats" :key="comp.typeName" class="table-row">
                 <div class="col-name">{{ comp.typeName }}</div>
                 <div class="col-count">{{ comp.instanceCount }}</div>
                 <div class="col-memory">{{ formatMemory(comp.totalMemory) }}</div>
-                <div class="col-pool">{{ comp.poolSize }}</div>
+                <div class="col-pool">
+                    {{ comp.poolSize || '未配置' }}
+                    <span v-if="comp.poolSize === 0" class="not-configured" title="点击上方说明了解如何配置对象池">
+                        <ui-icon value="warning"></ui-icon>
+                    </span>
+                </div>
                 <div class="col-efficiency">
                     <div class="efficiency-bar">
                         <div class="efficiency-fill" :style="{ width: comp.poolUtilization + '%' }"></div>
                     </div>
                     {{ comp.poolUtilization.toFixed(1) }}%
+                    <span v-if="comp.poolUtilization === 0 && comp.poolSize === 0" class="no-pool-hint">
+                        (无对象池)
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 无对象池组件提示 -->
+        <div v-if="debugInfo.components.componentStats.length > 0 && debugInfo.components.componentStats.every(c => c.poolSize === 0)" class="pool-suggestion">
+            <div class="suggestion-content">
+                <ui-icon value="lightbulb" class="suggestion-icon"></ui-icon>
+                <div class="suggestion-text">
+                    <h4>💡 性能优化建议</h4>
+                    <p>检测到所有组件都未配置对象池。为频繁创建/销毁的组件配置对象池可以显著提升性能，减少垃圾回收压力。</p>
+                    <button @click="showComponentPoolHelp = true" class="suggestion-action">
+                        了解如何配置对象池
+                    </button>
                 </div>
             </div>
         </div>

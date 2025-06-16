@@ -149,4 +149,38 @@ export class ComponentPoolManager {
         }
         return stats;
     }
+
+    /**
+     * 获取池利用率信息（用于调试）
+     */
+    getPoolUtilization(): Map<string, { used: number; total: number; utilization: number }> {
+        const utilization = new Map();
+        for (const [name, pool] of this.pools) {
+            const available = pool.getAvailableCount();
+            const maxSize = pool.getMaxSize();
+            const used = maxSize - available;
+            const utilRate = maxSize > 0 ? (used / maxSize * 100) : 0;
+            
+            utilization.set(name, {
+                used: used,
+                total: maxSize,
+                utilization: utilRate
+            });
+        }
+        return utilization;
+    }
+
+    /**
+     * 获取指定组件的池利用率
+     */
+    getComponentUtilization(componentName: string): number {
+        const pool = this.pools.get(componentName);
+        if (!pool) return 0;
+        
+        const available = pool.getAvailableCount();
+        const maxSize = pool.getMaxSize();
+        const used = maxSize - available;
+        
+        return maxSize > 0 ? (used / maxSize * 100) : 0;
+    }
 } 

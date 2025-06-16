@@ -41,6 +41,14 @@ export class DebugReporter {
         this.config = config;
         this.sceneStartTime = Date.now();
         
+        // 确保性能监控器在调试模式下被启用
+        if (this.config.enabled && this.config.channels.performance) {
+            if (!this.core._performanceMonitor.isEnabled) {
+                this.core._performanceMonitor.enable();
+                console.log('[ECS Debug] Performance monitor enabled for debugging');
+            }
+        }
+        
         if (this.config.enabled) {
             this.start();
         }
@@ -79,6 +87,14 @@ export class DebugReporter {
         const urlChanged = this.config.websocketUrl !== newConfig.websocketUrl;
         
         this.config = newConfig;
+
+        // 根据配置启用或禁用性能监控器
+        if (newConfig.enabled && newConfig.channels.performance) {
+            if (!this.core._performanceMonitor.isEnabled) {
+                this.core._performanceMonitor.enable();
+                console.log('[ECS Debug] Performance monitor enabled for debugging');
+            }
+        }
 
         if (!newConfig.enabled && wasEnabled) {
             this.stop();
@@ -429,6 +445,7 @@ export class DebugReporter {
             maxFrameTime: maxECSTime, // ECS最长执行时间
             frameTimeHistory: [...this.frameTimeHistory],
             systemPerformance: this.getSystemPerformance(),
+            systemBreakdown: ecsPerformanceData.systemBreakdown,
             memoryDetails: this.getMemoryDetails()
         };
     }
@@ -439,6 +456,14 @@ export class DebugReporter {
     private getECSPerformanceData(): { totalExecutionTime: number; systemBreakdown: Array<any> } {
         const monitor = this.core._performanceMonitor;
         if (!monitor) {
+            console.warn('[ECS Debug] Performance monitor not found');
+            return { totalExecutionTime: 0, systemBreakdown: [] };
+        }
+
+        if (!monitor.isEnabled) {
+            console.warn('[ECS Debug] Performance monitor is disabled. Enable it to see ECS performance data.');
+            // 尝试启用性能监控器
+            monitor.enable();
             return { totalExecutionTime: 0, systemBreakdown: [] };
         }
 
@@ -447,6 +472,11 @@ export class DebugReporter {
             const systemBreakdown = [];
             
             const stats = monitor.getAllSystemStats();
+            
+            if (stats.size === 0) {
+                console.log('[ECS Debug] No system performance data available yet. This is normal on first frames.');
+                return { totalExecutionTime: 0, systemBreakdown: [] };
+            }
             
             // 计算各系统的执行时间
             for (const [systemName, stat] of stats.entries()) {
@@ -468,11 +498,14 @@ export class DebugReporter {
             // 按执行时间排序
             systemBreakdown.sort((a, b) => b.executionTime - a.executionTime);
             
+            console.log(`[ECS Debug] Performance data: ${stats.size} systems, total time: ${totalTime.toFixed(2)}ms`);
+            
             return {
                 totalExecutionTime: totalTime,
                 systemBreakdown: systemBreakdown
             };
         } catch (error) {
+            console.error('[ECS Debug] Error getting ECS performance data:', error);
             return { totalExecutionTime: 0, systemBreakdown: [] };
         }
     }
@@ -544,29 +577,56 @@ export class DebugReporter {
                         });
                     }
                 });
+            } else {
+                // 如果entityManager不存在，尝试从场景直接获取
+                const entityList = (scene as any).entities;
+                if (entityList?.buffer) {
+                    entityList.buffer.forEach((entity: any) => {
+                        entityMemory += this.estimateObjectSize(entity);
+                        
+                        if (entity.components) {
+                            entity.components.forEach((component: any) => {
+                                componentMemory += this.estimateObjectSize(component);
+                            });
+                        }
+                    });
+                }
             }
 
-            // 计算系统内存（估算）
+            // 计算系统内存
             const entitySystems = (scene as any).entitySystems;
             if (entitySystems?.systems) {
                 entitySystems.systems.forEach((system: any) => {
                     systemMemory += this.estimateObjectSize(system);
                 });
+            } else {
+                // 尝试从entityProcessors获取
+                const entityProcessors = (scene as any).entityProcessors;
+                if (entityProcessors?.processors) {
+                    entityProcessors.processors.forEach((system: any) => {
+                        systemMemory += this.estimateObjectSize(system);
+                    });
+                }
             }
 
-            // 计算对象池内存（估算）
+            // 计算对象池内存
             try {
-                const poolManager = this.core._poolManager;
-                if (poolManager) {
-                    // 简单估算对象池内存
-                    pooledMemory = 1024 * 1024; // 1MB估算值
+                const { ComponentPoolManager } = require('../ECS/Core/ComponentPool');
+                const poolManager = ComponentPoolManager.getInstance();
+                const poolStats = poolManager.getPoolStats();
+                
+                for (const [typeName, stats] of poolStats.entries()) {
+                    // 估算每个组件实例的大小
+                    const estimatedComponentSize = this.calculateComponentMemorySize(typeName);
+                    pooledMemory += stats.available * estimatedComponentSize;
                 }
             } catch (error) {
-                // 忽略对象池内存计算错误
+                // 如果无法访问ComponentPoolManager，使用估算值
+                pooledMemory = 512 * 1024; // 512KB估算值
             }
 
             // 获取浏览器内存信息
-            let totalMemory = 512 * 1024 * 1024; // 默认512MB
+            let totalMemory = 512 * 1024 * 1024;
             let usedMemory = entityMemory + componentMemory + systemMemory + pooledMemory;
             let gcCollections = 0;
 
@@ -637,35 +697,46 @@ export class DebugReporter {
             }
         });
 
+        // 获取池利用率信息
+        let poolUtilizations = new Map<string, number>();
+        let poolSizes = new Map<string, number>();
+        
+        try {
+            const { ComponentPoolManager } = require('../ECS/Core/ComponentPool');
+            const poolManager = ComponentPoolManager.getInstance();
+            const poolStats = poolManager.getPoolStats();
+            const utilizations = poolManager.getPoolUtilization();
+            
+            for (const [typeName, stats] of poolStats.entries()) {
+                poolSizes.set(typeName, stats.maxSize);
+            }
+            
+            for (const [typeName, util] of utilizations.entries()) {
+                poolUtilizations.set(typeName, util.utilization);
+            }
+        } catch (error) {
+            // 如果无法获取池信息，使用默认值
+        }
+
         return {
             componentTypes: componentStats.size,
             componentInstances: totalInstances,
             componentStats: Array.from(componentStats.entries()).map(([typeName, stats]) => {
-                const poolSize = this.getComponentPoolSize(typeName);
+                const poolSize = poolSizes.get(typeName) || 0;
+                const poolUtilization = poolUtilizations.get(typeName) || 0;
                 const memoryPerInstance = this.calculateComponentMemorySize(typeName);
+                
                 return {
                     typeName,
                     instanceCount: stats.count,
                     memoryPerInstance: memoryPerInstance,
                     totalMemory: stats.count * memoryPerInstance,
                     poolSize: poolSize,
-                    poolUtilization: poolSize > 0 ? (stats.count / poolSize * 100) : 0,
+                    poolUtilization: poolUtilization,
                     averagePerEntity: stats.count / entityList.buffer.length
                 };
             })
         };
-    }
-
-    /**
-     * 获取组件池大小
-     */
-    private getComponentPoolSize(typeName: string): number {
-        try {
-            const poolManager = this.core._poolManager;
-            return (poolManager as any).getPoolSize?.(typeName) || 0;
-        } catch (error) {
-            return 0;
-        }
     }
 
     /**

@@ -38,6 +38,8 @@ interface DetailedDebugInfo {
         minFrameTime: number;
         maxFrameTime: number;
         frameTimeHistory: number[];
+        engineFrameTime: number;
+        ecsPercentage: number;
     };
     
     // 内存信息
@@ -100,6 +102,7 @@ interface DetailedDebugInfo {
             memoryUsage: number;
             updateOrder: number;
             enabled: boolean;
+            percentage: number;
         }>;
     };
     
@@ -254,6 +257,16 @@ class ECSDebugServer {
     private transformToDetailedDebugInfo(instance: GameInstance, rawData: any): DetailedDebugInfo {
         const uptime = (Date.now() - instance.connectTime) / 1000;
         
+        // 计算系统性能数据，包括ECS占比
+        const systemBreakdown = rawData.performance?.systemBreakdown || [];
+        const systemPerformance = rawData.performance?.systemPerformance || [];
+        
+        // 创建系统名称到占比的映射
+        const systemPercentageMap = new Map<string, number>();
+        systemBreakdown.forEach((sys: any) => {
+            systemPercentageMap.set(sys.systemName, sys.percentage || 0);
+        });
+        
         return {
             instanceId: instance.id,
             instanceName: instance.name,
@@ -268,7 +281,9 @@ class ECSDebugServer {
                 averageFrameTime: rawData.performance?.averageFrameTime || rawData.performance?.frameTime || 0,
                 minFrameTime: rawData.performance?.minFrameTime || rawData.performance?.frameTime || 0,
                 maxFrameTime: rawData.performance?.maxFrameTime || rawData.performance?.frameTime || 0,
-                frameTimeHistory: rawData.performance?.frameTimeHistory || []
+                frameTimeHistory: rawData.performance?.frameTimeHistory || [],
+                engineFrameTime: rawData.performance?.engineFrameTime || 0,
+                ecsPercentage: rawData.performance?.ecsPercentage || 0
             },
             
             memory: {
@@ -307,18 +322,24 @@ class ECSDebugServer {
             
             systems: {
                 total: rawData.systems?.totalSystems || 0,
-                systemStats: (rawData.systems?.systemsInfo || []).map((sys: any) => ({
-                    name: sys.name,
-                    type: sys.type || 'Unknown',
-                    entityCount: sys.entityCount || 0,
-                    averageExecutionTime: sys.executionTime || 0,
-                    minExecutionTime: sys.minExecutionTime || sys.executionTime || 0,
-                    maxExecutionTime: sys.maxExecutionTime || sys.executionTime || 0,
-                    executionTimeHistory: sys.executionTimeHistory || [],
-                    memoryUsage: sys.memoryUsage || 0,
-                    updateOrder: sys.updateOrder || 0,
-                    enabled: sys.enabled !== false
-                }))
+                systemStats: (rawData.systems?.systemsInfo || []).map((sys: any) => {
+                    const systemName = sys.name;
+                    const percentage = systemPercentageMap.get(systemName) || 0;
+                    
+                    return {
+                        name: systemName,
+                        type: sys.type || 'Unknown',
+                        entityCount: sys.entityCount || 0,
+                        averageExecutionTime: sys.executionTime || 0,
+                        minExecutionTime: sys.minExecutionTime || sys.executionTime || 0,
+                        maxExecutionTime: sys.maxExecutionTime || sys.executionTime || 0,
+                        executionTimeHistory: sys.executionTimeHistory || [],
+                        memoryUsage: sys.memoryUsage || 0,
+                        updateOrder: sys.updateOrder || 0,
+                        enabled: sys.enabled !== false,
+                        percentage: percentage
+                    };
+                })
             },
             
             scenes: {
@@ -348,7 +369,9 @@ const defaultDebugInfo: DetailedDebugInfo = {
         averageFrameTime: 0,
         minFrameTime: 0,
         maxFrameTime: 0,
-        frameTimeHistory: []
+        frameTimeHistory: [],
+        engineFrameTime: 0,
+        ecsPercentage: 0
     },
     memory: {
         totalMemory: 0,
@@ -425,6 +448,7 @@ module.exports = Editor.Panel.define({
                     const isAutoRefresh = ref(true);
                     const refreshInterval = ref(100);
                     const lastUpdateTime = ref('');
+                    const showComponentPoolHelp = ref(false);
                     
                     let intervalId: NodeJS.Timeout | null = null;
                     let debugServer: ECSDebugServer | null = null;
@@ -556,6 +580,84 @@ module.exports = Editor.Panel.define({
                         return 'critical';
                     };
 
+                    // 打开文档链接  
+                    const openDocumentation = (section: string): void => {
+                        const urls: Record<string, string> = {
+                            'component-pool': 'https://github.com/esengine/ecs-framework/tree/master/docs/component-design-guide.md#1-对象池优化',
+                            'performance-optimization': 'https://github.com/esengine/ecs-framework/tree/master/docs/performance-optimization.md'
+                        };
+                        
+                        const url = urls[section];
+                        if (!url) return;
+
+                        try {
+                            // 在Cocos Creator扩展环境中，直接使用Electron的shell模块
+                            const { shell } = require('electron');
+                            shell.openExternal(url);
+                        } catch (error) {
+                            console.error('无法打开链接:', error);
+                            // 如果失败，复制到剪贴板
+                            copyUrlToClipboard(url);
+                        }
+                    };
+
+                    // 复制链接到剪贴板的辅助函数
+                    const copyUrlToClipboard = (url: string): void => {
+                        try {
+                            // 尝试使用现代的剪贴板API
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                navigator.clipboard.writeText(url).then(() => {
+                                    console.log(`文档链接已复制到剪贴板: ${url}`);
+                                    // 如果可能的话，显示用户友好的提示
+                                    if (typeof alert !== 'undefined') {
+                                        alert(`文档链接已复制到剪贴板，请在浏览器中粘贴访问:\n${url}`);
+                                    }
+                                }).catch(() => {
+                                    fallbackCopyText(url);
+                                });
+                            } else {
+                                fallbackCopyText(url);
+                            }
+                        } catch (error) {
+                            fallbackCopyText(url);
+                        }
+                    };
+
+                    // 备用的复制文本方法
+                    const fallbackCopyText = (text: string): void => {
+                        try {
+                            // 创建临时的文本区域
+                            const textArea = document.createElement('textarea');
+                            textArea.value = text;
+                            textArea.style.position = 'fixed';
+                            textArea.style.left = '-999999px';
+                            textArea.style.top = '-999999px';
+                            document.body.appendChild(textArea);
+                            textArea.focus();
+                            textArea.select();
+                            
+                            const successful = document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                            
+                            if (successful) {
+                                console.log(`文档链接已复制到剪贴板: ${text}`);
+                                if (typeof alert !== 'undefined') {
+                                    alert(`文档链接已复制到剪贴板，请在浏览器中粘贴访问:\n${text}`);
+                                }
+                            } else {
+                                console.log(`请手动复制文档链接: ${text}`);
+                                if (typeof alert !== 'undefined') {
+                                    alert(`请手动复制文档链接:\n${text}`);
+                                }
+                            }
+                        } catch (error) {
+                            console.log(`请手动访问文档: ${text}`);
+                            if (typeof alert !== 'undefined') {
+                                alert(`请手动访问文档:\n${text}`);
+                            }
+                        }
+                    };
+
                     // 组件挂载时初始化
                     onMounted(async () => {
                         await initializeServer();
@@ -575,6 +677,7 @@ module.exports = Editor.Panel.define({
                         isAutoRefresh,
                         refreshInterval,
                         lastUpdateTime,
+                        showComponentPoolHelp,
                         manualRefresh,
                         toggleAutoRefresh,
                         changeRefreshInterval,
@@ -584,7 +687,8 @@ module.exports = Editor.Panel.define({
                         getFpsColor,
                         getMemoryColor,
                         getECSTimeColor,
-                        getExecutionTimeColor
+                        getExecutionTimeColor,
+                        openDocumentation
                     };
                 },
                 template: readFileSync(join(__dirname, '../../../static/template/debug/index.html'), 'utf-8'),

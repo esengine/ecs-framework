@@ -10,7 +10,7 @@
     background: var(--color-normal-fill);
     margin: 0;
     padding: 0;
-    height: 100vh;
+    height: 100%;
     overflow: hidden;
 }
 
@@ -22,7 +22,7 @@
 .debug-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100%;
     background: var(--color-normal-fill);
 }
 
@@ -660,10 +660,12 @@ ui-button ui-icon {
 /* ECS调试面板样式 */
 .debug-panel {
     padding: 16px;
+    padding-bottom: 32px;
     background: var(--color-normal-fill);
     color: var(--color-normal-contrast);
     height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -1242,7 +1244,7 @@ ui-button ui-icon {
 }
 
 .debug-panel::-webkit-scrollbar-thumb:hover {
-    background: var(--color-normal-contrast-weaken);
+    background-color: var(--color-focus-border-emphasis);
 }
 
 /* 百分比条样式 */
@@ -1261,7 +1263,340 @@ ui-button ui-icon {
 }
 
 .percentage-fill {
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-emphasis));
     height: 100%;
-    background: linear-gradient(90deg, #4CAF50 0%, #FF9800 50%, #F44336 100%);
+    border-radius: inherit;
     transition: width 0.3s ease;
+}
+
+/* 调试面板滚动条样式 */
+.debug-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.debug-panel::-webkit-scrollbar-track {
+    background: var(--color-normal-fill-weaker);
+    border-radius: 4px;
+}
+
+.debug-panel::-webkit-scrollbar-thumb {
+    background: var(--color-normal-border);
+    border-radius: 4px;
+}
+
+.debug-panel::-webkit-scrollbar-thumb:hover {
+    background: var(--color-focus-border);
+}
+
+/* ============================================
+   帮助面板和文档链接样式
+   ============================================ */
+
+.section-help {
+    margin-left: auto;
+}
+
+.help-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--color-normal-fill);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 4px;
+    color: var(--color-default-contrast);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.help-btn:hover {
+    background: var(--color-normal-fill-emphasis);
+    border-color: var(--color-focus-border);
+    color: var(--color-focus-contrast);
+}
+
+.help-btn ui-icon {
+    font-size: 12px;
+}
+
+.help-panel {
+    margin: 16px 0;
+    padding: 20px;
+    background: var(--color-normal-fill);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 8px;
+    animation: fadeInDown 0.3s ease;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.help-content h4 {
+    margin: 0 0 12px 0;
+    color: var(--color-focus-contrast);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.help-content p {
+    margin: 0 0 16px 0;
+    color: var(--color-default-contrast);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.help-steps {
+    margin: 20px 0;
+}
+
+.help-step {
+    margin-bottom: 20px;
+    padding: 16px;
+    background: var(--color-normal-fill-emphasis);
+    border-radius: 6px;
+    border-left: 3px solid var(--color-focus-border);
+}
+
+.help-step:last-child {
+    margin-bottom: 0;
+}
+
+.help-step h5 {
+    margin: 0 0 12px 0;
+    color: var(--color-focus-contrast);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.help-step p {
+    margin: 0;
+    color: var(--color-default-contrast);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.code-example {
+    background: var(--color-normal-fill);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 4px;
+    padding: 12px;
+    margin: 8px 0 0 0;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    line-height: 1.4;
+    color: var(--color-focus-border);
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.help-links {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-normal-border);
+}
+
+.doc-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--color-focus-fill);
+    border: 1px solid var(--color-focus-border);
+    border-radius: 4px;
+    color: var(--color-focus-contrast);
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.doc-link:hover {
+    background: var(--color-focus-fill-emphasis);
+    border-color: var(--color-focus-border-emphasis);
+    transform: translateY(-1px);
+}
+
+.doc-link ui-icon {
+    font-size: 12px;
+}
+
+.doc-access-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--color-info-fill);
+    border: 1px solid var(--color-info-border);
+    border-radius: 4px;
+    font-size: 10px;
+    color: var(--color-info-contrast);
+    line-height: 1.4;
+}
+
+.doc-access-note ui-icon {
+    font-size: 14px;
+    color: var(--color-info-border);
+    margin-top: 1px;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   组件池相关样式
+   ============================================ */
+
+.help-tooltip {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 4px;
+    cursor: help;
+    color: var(--color-normal-contrast-weaker);
+}
+
+.help-tooltip:hover {
+    color: var(--color-focus-border);
+}
+
+.help-tooltip ui-icon {
+    font-size: 10px;
+}
+
+.not-configured {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 4px;
+    color: var(--color-warn-border);
+    cursor: help;
+}
+
+.not-configured ui-icon {
+    font-size: 10px;
+}
+
+.no-pool-hint {
+    font-size: 10px;
+    color: var(--color-normal-contrast-weaker);
+    margin-left: 4px;
+}
+
+.pool-suggestion {
+    margin-top: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--color-warn-fill) 0%, var(--color-focus-fill) 100%);
+    border: 1px solid var(--color-warn-border);
+    border-radius: 8px;
+    animation: fadeInUp 0.4s ease;
+}
+
+.suggestion-content {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.suggestion-icon {
+    color: var(--color-warn-border);
+    font-size: 20px;
+    margin-top: 2px;
+}
+
+.suggestion-text {
+    flex: 1;
+}
+
+.suggestion-text h4 {
+    margin: 0 0 8px 0;
+    color: var(--color-focus-contrast);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.suggestion-text p {
+    margin: 0 0 12px 0;
+    color: var(--color-default-contrast);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.suggestion-action {
+    padding: 6px 12px;
+    background: var(--color-focus-border);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.suggestion-action:hover {
+    background: var(--color-focus-border-emphasis);
+    transform: translateY(-1px);
+}
+
+/* ============================================
+   响应式设计增强
+   ============================================ */
+
+@media (max-width: 768px) {
+    .help-links {
+        flex-direction: column;
+    }
+    
+    .doc-link {
+        justify-content: center;
+    }
+    
+    .suggestion-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .suggestion-icon {
+        align-self: center;
+        margin-top: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .help-panel {
+        padding: 16px;
+    }
+    
+    .help-step {
+        padding: 12px;
+    }
+    
+    .code-example {
+        font-size: 9px;
+        padding: 8px;
+    }
+    
+    .help-btn {
+        padding: 4px 8px;
+        font-size: 10px;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .section-help {
+        margin-left: 0;
+    }
 } 

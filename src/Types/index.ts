@@ -386,6 +386,12 @@ export interface IPerformanceDebugData {
         samples: number;
         percentage?: number; // 系统占ECS总时间的百分比
     }>;
+    /** 系统占比分析数据 */
+    systemBreakdown?: Array<{
+        systemName: string;
+        executionTime: number;
+        percentage: number;
+    }>;
     /** 内存分配详情 */
     memoryDetails?: {
         entities: number;
