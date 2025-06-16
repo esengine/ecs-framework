@@ -1,101 +1,60 @@
 /**
  * 高性能位操作类
- * 用于快速操作位数组，支持组件匹配等场景
+ * 基于BigInt实现，支持任意数量的位操作
  */
 export class Bits {
-    private _words: number[] = [];
-    private static readonly WORD_SIZE = 32;
+    private _value: bigint = 0n;
 
-    constructor() {
-        this._words = [];
+    constructor(initialValue: bigint = 0n) {
+        this._value = initialValue;
     }
 
     /**
      * 设置指定位置的位为1
-     * @param index 位置索引
      */
     public set(index: number): void {
-        const wordIndex = Math.floor(index / Bits.WORD_SIZE);
-        const bitIndex = index % Bits.WORD_SIZE;
-        
-        // 确保数组足够大
-        while (this._words.length <= wordIndex) {
-            this._words.push(0);
+        if (index < 0) {
+            throw new Error('Bit index cannot be negative');
         }
-        
-        this._words[wordIndex] |= (1 << bitIndex);
+        this._value |= (1n << BigInt(index));
     }
 
     /**
      * 清除指定位置的位（设为0）
-     * @param index 位置索引
      */
     public clear(index: number): void {
-        const wordIndex = Math.floor(index / Bits.WORD_SIZE);
-        const bitIndex = index % Bits.WORD_SIZE;
-        
-        if (wordIndex < this._words.length) {
-            this._words[wordIndex] &= ~(1 << bitIndex);
+        if (index < 0) {
+            throw new Error('Bit index cannot be negative');
         }
+        this._value &= ~(1n << BigInt(index));
     }
 
     /**
      * 获取指定位置的位值
-     * @param index 位置索引
-     * @returns 位值（true或false）
      */
     public get(index: number): boolean {
-        const wordIndex = Math.floor(index / Bits.WORD_SIZE);
-        const bitIndex = index % Bits.WORD_SIZE;
-        
-        if (wordIndex >= this._words.length) {
+        if (index < 0) {
             return false;
         }
-        
-        return (this._words[wordIndex] & (1 << bitIndex)) !== 0;
+        return (this._value & (1n << BigInt(index))) !== 0n;
     }
 
     /**
      * 检查是否包含所有指定的位
-     * @param other 另一个Bits对象
-     * @returns 如果包含所有位则返回true
      */
     public containsAll(other: Bits): boolean {
-        const maxLength = Math.max(this._words.length, other._words.length);
-        
-        for (let i = 0; i < maxLength; i++) {
-            const thisWord = i < this._words.length ? this._words[i] : 0;
-            const otherWord = i < other._words.length ? other._words[i] : 0;
-            
-            if ((thisWord & otherWord) !== otherWord) {
-                return false;
-            }
-        }
-        
-        return true;
+        return (this._value & other._value) === other._value;
     }
 
     /**
      * 检查是否包含任意一个指定的位
-     * @param other 另一个Bits对象
-     * @returns 如果包含任意位则返回true
      */
     public intersects(other: Bits): boolean {
-        const minLength = Math.min(this._words.length, other._words.length);
-        
-        for (let i = 0; i < minLength; i++) {
-            if ((this._words[i] & other._words[i]) !== 0) {
-                return true;
-            }
-        }
-        
-        return false;
+        return (this._value & other._value) !== 0n;
     }
 
     /**
      * 检查是否不包含任何指定的位
-     * @param other 另一个Bits对象
-     * @returns 如果不包含任何位则返回true
      */
     public excludes(other: Bits): boolean {
         return !this.intersects(other);
@@ -105,60 +64,190 @@ export class Bits {
      * 清空所有位
      */
     public clearAll(): void {
-        this._words.length = 0;
+        this._value = 0n;
     }
 
     /**
      * 检查是否为空（没有设置任何位）
-     * @returns 如果为空则返回true
      */
     public isEmpty(): boolean {
-        for (const word of this._words) {
-            if (word !== 0) {
-                return false;
-            }
-        }
-        return true;
+        return this._value === 0n;
     }
 
     /**
      * 获取设置的位数量
-     * @returns 设置的位数量
      */
     public cardinality(): number {
         let count = 0;
-        for (const word of this._words) {
-            count += this.popCount(word);
+        let value = this._value;
+        
+        while (value > 0n) {
+            if (value & 1n) {
+                count++;
+            }
+            value >>= 1n;
         }
+        
         return count;
     }
 
     /**
-     * 计算一个32位整数中设置的位数量
-     * @param n 32位整数
-     * @returns 设置的位数量
+     * 位运算：与
      */
-    private popCount(n: number): number {
-        n = n - ((n >>> 1) & 0x55555555);
-        n = (n & 0x33333333) + ((n >>> 2) & 0x33333333);
-        return (((n + (n >>> 4)) & 0xF0F0F0F) * 0x1010101) >>> 24;
+    public and(other: Bits): Bits {
+        return new Bits(this._value & other._value);
+    }
+
+    /**
+     * 位运算：或
+     */
+    public or(other: Bits): Bits {
+        return new Bits(this._value | other._value);
+    }
+
+    /**
+     * 位运算：异或
+     */
+    public xor(other: Bits): Bits {
+        return new Bits(this._value ^ other._value);
+    }
+
+    /**
+     * 位运算：非
+     */
+    public not(maxBits: number = 64): Bits {
+        const mask = (1n << BigInt(maxBits)) - 1n;
+        return new Bits((~this._value) & mask);
     }
 
     /**
      * 复制另一个Bits对象
-     * @param other 要复制的Bits对象
      */
     public copyFrom(other: Bits): void {
-        this._words = [...other._words];
+        this._value = other._value;
     }
 
     /**
      * 创建当前Bits的副本
-     * @returns 新的Bits对象
      */
     public clone(): Bits {
-        const newBits = new Bits();
-        newBits.copyFrom(this);
-        return newBits;
+        return new Bits(this._value);
+    }
+
+    /**
+     * 获取原始BigInt值
+     */
+    public getValue(): bigint {
+        return this._value;
+    }
+
+    /**
+     * 设置原始BigInt值
+     */
+    public setValue(value: bigint): void {
+        this._value = value;
+    }
+
+    /**
+     * 获取调试信息
+     */
+    public toString(): string {
+        const bits: string[] = [];
+        let index = 0;
+        let value = this._value;
+        
+        while (value > 0n) {
+            if (value & 1n) {
+                bits.push(index.toString());
+            }
+            value >>= 1n;
+            index++;
+        }
+        
+        return `Bits[${bits.join(', ')}]`;
+    }
+
+    /**
+     * 获取二进制表示
+     */
+    public toBinaryString(maxBits: number = 64): string {
+        let result = '';
+        for (let i = maxBits - 1; i >= 0; i--) {
+            result += this.get(i) ? '1' : '0';
+            if (i % 8 === 0 && i > 0) {
+                result += ' ';
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 获取十六进制表示
+     */
+    public toHexString(): string {
+        return '0x' + this._value.toString(16).toUpperCase();
+    }
+
+    /**
+     * 从二进制字符串创建Bits
+     */
+    public static fromBinaryString(binaryString: string): Bits {
+        const cleanString = binaryString.replace(/\s/g, '');
+        const value = BigInt('0b' + cleanString);
+        return new Bits(value);
+    }
+
+    /**
+     * 从十六进制字符串创建Bits
+     */
+    public static fromHexString(hexString: string): Bits {
+        const cleanString = hexString.replace(/^0x/i, '');
+        const value = BigInt('0x' + cleanString);
+        return new Bits(value);
+    }
+
+    /**
+     * 比较两个Bits对象是否相等
+     */
+    public equals(other: Bits): boolean {
+        return this._value === other._value;
+    }
+
+    /**
+     * 获取最高位的索引
+     */
+    public getHighestBitIndex(): number {
+        if (this._value === 0n) {
+            return -1;
+        }
+        
+        let index = 0;
+        let value = this._value;
+        
+        while (value > 1n) {
+            value >>= 1n;
+            index++;
+        }
+        
+        return index;
+    }
+
+    /**
+     * 获取最低位的索引
+     */
+    public getLowestBitIndex(): number {
+        if (this._value === 0n) {
+            return -1;
+        }
+        
+        let index = 0;
+        let value = this._value;
+        
+        while ((value & 1n) === 0n) {
+            value >>= 1n;
+            index++;
+        }
+        
+        return index;
     }
 }
