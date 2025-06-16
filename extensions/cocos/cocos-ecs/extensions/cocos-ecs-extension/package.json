@@ -1,0 +1,103 @@
+{
+    "$schema": "./@types/schema/package/index.json",
+    "package_version": 2,
+    "name": "cocos-ecs-extension",
+    "version": "1.0.0",
+    "author": "esengine",
+    "editor": ">=3.8.6",
+    "scripts": {
+        "preinstall": "node ./scripts/preinstall.js",
+        "build": "npx tsc"
+    },
+    "description": "i18n:cocos-ecs-extension.description",
+    "main": "./dist/main.js",
+    "dependencies": {
+        "vue": "^3.1.4",
+        "fs-extra": "^10.0.0"
+    },
+    "devDependencies": {
+        "@cocos/creator-types": "^3.8.6",
+        "@types/fs-extra": "^9.0.5",
+        "@types/node": "^18.17.1",
+        "typescript": "^5.8.2"
+    },
+    "panels": {
+        "default": {
+            "title": "ECS Framework - 欢迎面板",
+            "type": "dockable",
+            "main": "dist/panels/default",
+            "size": {
+                "min-width": 450,
+                "min-height": 600,
+                "width": 850,
+                "height": 800
+            }
+        }
+    },
+    "contributions": {
+        "menu": [
+            {
+                "path": "i18n:menu.panel/ECS Framework",
+                "label": "欢迎面板",
+                "message": "open-panel"
+            },
+            {
+                "path": "i18n:menu.develop/ECS Framework",
+                "label": "ECS 开发工具",
+                "message": "open-panel"
+            }
+        ],
+        "messages": {
+            "open-panel": {
+                "methods": [
+                    "openPanel"
+                ]
+            },
+            "install-ecs-framework": {
+                "methods": [
+                    "install-ecs-framework"
+                ]
+            },
+            "update-ecs-framework": {
+                "methods": [
+                    "update-ecs-framework"
+                ]
+            },
+            "uninstall-ecs-framework": {
+                "methods": [
+                    "uninstall-ecs-framework"
+                ]
+            },
+            "open-documentation": {
+                "methods": [
+                    "open-documentation"
+                ]
+            },
+            "create-ecs-template": {
+                "methods": [
+                    "create-ecs-template"
+                ]
+            },
+            "open-settings": {
+                "methods": [
+                    "open-settings"
+                ]
+            },
+            "open-project-analysis": {
+                "methods": [
+                    "open-project-analysis"
+                ]
+            },
+            "open-component-library": {
+                "methods": [
+                    "open-component-library"
+                ]
+            },
+            "open-github": {
+                "methods": [
+                    "open-github"
+                ]
+            }
+        }
+    }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "cocos-ecs",
+  "uuid": "e17e4eb7-dfe2-4f87-b77d-13c36da216e3",
+  "creator": {
+    "version": "3.8.6"
+  },
+  "dependencies": {
+    "@esengine/ecs-framework": "^2.1.19"
+  }
+}

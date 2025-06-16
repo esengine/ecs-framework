@@ -1,0 +1,169 @@
+<div class="welcome-container">
+    <!-- 头部欢迎区域 -->
+    <div class="header">
+        <h1>🎮 ECS Framework for Cocos Creator</h1>
+        <p>高性能实体组件系统框架</p>
+    </div>
+
+    <!-- 操作状态显示区域 -->
+    <div class="status-section" v-if="showOperationStatus">
+        <div class="status-title">📋 操作状态</div>
+        <div class="operation-status" :class="operationStatusType">
+            <div class="status-content">
+                <span v-if="operationStatusType === 'loading'" class="loading-spinner"></span>
+                <span class="status-icon">{{ getStatusIcon(operationStatusType) }}</span>
+                <span class="status-text">{{ operationStatusMessage }}</span>
+            </div>
+            <div v-if="operationStatusDetails" class="status-details">
+                {{ operationStatusDetails }}
+            </div>
+        </div>
+    </div>
+
+    <!-- 安装状态检测区域 -->
+    <div class="status-section">
+        <div class="status-title">📦 安装状态检测</div>
+        
+        <div class="status-item">
+            <span class="status-label">ECS Framework (@esengine/ecs-framework)</span>
+            <div v-if="checkingStatus" class="status-badge checking">
+                <span class="loading-spinner"></span>检测中...
+            </div>
+            <div v-else-if="ecsInstalled" class="status-badge installed">
+                ✅ 已安装 <span class="version-info">v{{ecsVersion}}</span>
+                <span v-if="hasUpdate" class="update-hint">有新版本：v{{latestVersion}}</span>
+            </div>
+            <div v-else class="status-badge not-installed">
+                ❌ 未安装
+            </div>
+        </div>
+
+        <div class="status-item">
+            <span class="status-label">项目package.json</span>
+            <div v-if="packageJsonExists" class="status-badge installed">
+                ✅ 存在
+            </div>
+            <div v-else class="status-badge not-installed">
+                ❌ 不存在
+            </div>
+        </div>
+
+        <div class="status-item">
+            <span class="status-label">Node.js环境</span>
+            <div class="status-badge installed">
+                ✅ v{{nodeVersion}}
+            </div>
+        </div>
+    </div>
+
+    <!-- ECS框架管理区域 -->
+    <div class="status-section" v-if="ecsInstalled">
+        <div class="status-title">🔧 ECS Framework 管理</div>
+        
+        <div class="management-buttons">
+            <ui-button 
+                class="green" 
+                :disabled="!hasUpdate || updating" 
+                @click="updateEcsFramework">
+                <span v-if="updating" class="loading-spinner"></span>
+                {{ updating ? '更新中...' : (hasUpdate ? `更新到 v${latestVersion}` : '已是最新版本') }}
+            </ui-button>
+            
+            <ui-button 
+                class="red" 
+                :disabled="uninstalling" 
+                @click="uninstallEcsFramework">
+                <span v-if="uninstalling" class="loading-spinner"></span>
+                {{ uninstalling ? '卸载中...' : '卸载 ECS Framework' }}
+            </ui-button>
+            
+            <ui-button 
+                class="blue" 
+                @click="checkForUpdates">
+                🔄 检查更新
+            </ui-button>
+        </div>
+    </div>
+
+    <!-- 快速操作区域 -->
+    <div class="actions-section">
+        <div class="status-title">🚀 快速开始</div>
+        
+        <div class="action-card" :class="{ disabled: !packageJsonExists || installing }" @click="installEcsFramework">
+            <h3>
+                <span class="icon">📥</span>
+                {{ ecsInstalled ? '重新安装 ECS Framework' : '安装 ECS Framework' }}
+            </h3>
+            <p v-if="installing">正在安装中，请稍候...</p>
+            <p v-else-if="!packageJsonExists">请先确保项目有package.json文件</p>
+            <p v-else-if="ecsInstalled">重新安装当前版本的ECS框架</p>
+            <p v-else>安装@esengine/ecs-framework到当前项目</p>
+        </div>
+
+        <div class="action-card" :class="{ disabled: !ecsInstalled }" @click="openDocumentation">
+            <h3>
+                <span class="icon">📚</span>
+                查看文档
+            </h3>
+            <p>打开ECS框架完整使用文档和教程</p>
+        </div>
+
+        <div class="action-card" :class="{ disabled: !ecsInstalled || templateExists }" @click="createEcsTemplate">
+            <h3>
+                <span class="icon">🛠️</span>
+                创建ECS模板
+            </h3>
+            <p v-if="!ecsInstalled">请先安装 ECS Framework</p>
+            <p v-else-if="templateExists">⚠️ ECS模板已存在，避免覆盖现有代码</p>
+            <p v-else>生成基础的ECS项目结构和启动代码</p>
+            
+            <div v-if="templateExists && existingFiles.length > 0" class="existing-files-info">
+                <div class="files-summary">
+                    检测到 {{existingFiles.length}} 个已存在的文件
+                </div>
+                <div class="files-list" v-if="existingFiles.length <= 10">
+                    <div v-for="file in existingFiles" :key="file" class="file-item">
+                        📄 {{file}}
+                    </div>
+                </div>
+                <div v-else class="files-overflow">
+                    <div v-for="file in existingFiles.slice(0, 8)" :key="file" class="file-item">
+                        📄 {{file}}
+                    </div>
+                    <div class="more-files">... 还有 {{existingFiles.length - 8}} 个文件</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-card" @click="openSettings">
+            <h3>
+                <span class="icon">⚙️</span>
+                插件设置
+            </h3>
+            <p>配置ECS插件的各项设置和偏好</p>
+        </div>
+
+        <div class="action-card" @click="openProjectAnalysis">
+            <h3>
+                <span class="icon">📊</span>
+                项目分析
+            </h3>
+            <p>分析当前项目的ECS使用情况和性能建议</p>
+        </div>
+
+        <div class="action-card" @click="openComponentLibrary">
+            <h3>
+                <span class="icon">🧩</span>
+                组件库
+            </h3>
+            <p>浏览和管理项目中的ECS组件</p>
+        </div>
+    </div>
+
+    <!-- 底部信息 -->
+    <div class="footer">
+        <p>ECS Framework Plugin v{{pluginVersion}} | 基于Vue 3.x构建</p>
+        <p>更多信息请访问: <a href="#" @click="openGithub">GitHub Repository</a></p>
+        <p v-if="lastCheckTime" class="last-check">最后检查时间: {{lastCheckTime}}</p>
+    </div>
+</div> 
