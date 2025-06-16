@@ -1,0 +1,353 @@
+/* ECS Framework 设置面板样式 */
+.settings-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-normal-fill);
+    font-family: var(--font-family);
+}
+
+/* 头部样式 */
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px 20px;
+    background: var(--color-info-fill);
+    border-bottom: 1px solid var(--color-normal-border);
+    flex-shrink: 0;
+}
+
+.header-title h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-default-text);
+}
+
+.header-title p {
+    margin: 4px 0 0 0;
+    font-size: 12px;
+    color: var(--color-focus-text);
+    opacity: 0.8;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.header-actions ui-button {
+    min-width: 80px;
+    height: 28px;
+    font-size: 12px;
+}
+
+/* 保存按钮状态 */
+.save-button.dirty {
+    background: var(--color-warn-fill) !important;
+    border-color: var(--color-warn-border) !important;
+    color: var(--color-warn-text) !important;
+}
+
+.save-button.saving {
+    background: var(--color-info-fill) !important;
+    opacity: 0.7;
+}
+
+/* 图标动画 */
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 状态栏 */
+.status-bar {
+    padding: 8px 20px;
+    background: var(--color-success-fill);
+    border-bottom: 1px solid var(--color-normal-border);
+    flex-shrink: 0;
+}
+
+.status-text {
+    font-size: 12px;
+    color: var(--color-success-text);
+}
+
+/* 设置内容区域 */
+.settings-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 20px 20px 20px;
+    max-height: calc(100vh - 140px); /* 确保有固定的滚动区域 */
+    scroll-behavior: smooth; /* 平滑滚动 */
+}
+
+/* 设置分组 */
+.settings-section {
+    margin-bottom: 32px;
+    background: var(--color-default-fill);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.section-header {
+    padding: 16px 20px;
+    background: var(--color-focus-fill);
+    border-bottom: 1px solid var(--color-normal-border);
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-default-text);
+}
+
+.section-header p {
+    margin: 4px 0 0 0;
+    font-size: 12px;
+    color: var(--color-focus-text);
+    opacity: 0.8;
+}
+
+/* 设置网格 */
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    padding: 20px;
+}
+
+/* 设置项 */
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.setting-item label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-default-text);
+}
+
+.setting-item ui-input,
+.setting-item ui-select,
+.setting-item ui-num-input {
+    width: 100%;
+    height: 26px;
+    font-size: 12px;
+}
+
+/* 复选框项样式 */
+.checkbox-item {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.checkbox-item ui-checkbox {
+    margin: 0;
+}
+
+/* 全宽设置项 */
+.setting-item.full-width {
+    grid-column: 1 / -1;
+}
+
+/* 底部区域 */
+.settings-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--color-focus-fill);
+    border-top: 1px solid var(--color-normal-border);
+    flex-shrink: 0;
+}
+
+.footer-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--color-focus-text);
+    opacity: 0.8;
+}
+
+.footer-info ui-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.footer-actions {
+    display: flex;
+    align-items: center;
+}
+
+.dirty-indicator {
+    font-size: 11px;
+    color: var(--color-warn-text);
+    font-weight: 500;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .settings-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: flex-end;
+    }
+    
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .settings-footer {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+        text-align: center;
+    }
+}
+
+/* 深色主题支持 */
+@media (prefers-color-scheme: dark) {
+    .settings-container {
+        background: #2c2c2c;
+    }
+    
+    .settings-section {
+        background: #3c3c3c;
+        border-color: #555;
+    }
+    
+    .section-header {
+        background: #404040;
+        border-color: #555;
+    }
+    
+    .settings-header {
+        background: #333;
+        border-color: #555;
+    }
+    
+    .status-bar {
+        background: #2d5a2d;
+    }
+    
+    .settings-footer {
+        background: #333;
+        border-color: #555;
+    }
+}
+
+/* 优化滚动条样式 */
+.settings-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.settings-content::-webkit-scrollbar-track {
+    background: var(--color-normal-fill);
+    border-radius: 5px;
+    margin: 2px;
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+    background: var(--color-focus-border);
+    border-radius: 5px;
+    transition: background-color 0.2s ease;
+    min-height: 30px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+    background: var(--color-warn-border);
+}
+
+.settings-content::-webkit-scrollbar-thumb:active {
+    background: var(--color-danger-border);
+}
+
+/* 表单元素统一样式 */
+.setting-item ui-input,
+.setting-item ui-select,
+.setting-item ui-num-input {
+    border: 1px solid var(--color-normal-border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    background: var(--color-default-fill);
+    color: var(--color-default-text);
+    transition: border-color 0.2s ease;
+}
+
+.setting-item ui-input:focus,
+.setting-item ui-select:focus,
+.setting-item ui-num-input:focus {
+    border-color: var(--color-focus-border);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* 复选框样式 */
+.setting-item ui-checkbox {
+    font-size: 12px;
+    color: var(--color-default-text);
+}
+
+/* 按钮样式覆盖 */
+.header-actions .export-button {
+    background: var(--color-info-fill);
+    border-color: var(--color-info-border);
+    color: var(--color-info-text);
+}
+
+.header-actions .import-button {
+    background: var(--color-warn-fill);
+    border-color: var(--color-warn-border);
+    color: var(--color-warn-text);
+}
+
+.header-actions .reset-button {
+    background: var(--color-danger-fill);
+    border-color: var(--color-danger-border);
+    color: var(--color-danger-text);
+}
+
+/* 工具提示样式 */
+.setting-item[title] {
+    cursor: help;
+}
+
+/* 加载状态 */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--color-normal-border);
+    border-top: 3px solid var(--color-focus-border);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+} 

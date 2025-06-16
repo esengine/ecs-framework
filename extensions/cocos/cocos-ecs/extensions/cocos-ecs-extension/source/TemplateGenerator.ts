@@ -26,7 +26,7 @@ export class TemplateGenerator {
      */
     public getExistingFiles(): string[] {
         if (!this.checkTemplateExists()) return [];
-        
+
         const files: string[] = [];
         this.scanDirectory(this.ecsDir, '', files);
         return files;
@@ -34,12 +34,12 @@ export class TemplateGenerator {
 
     private scanDirectory(dirPath: string, relativePath: string, files: string[]): void {
         if (!fs.existsSync(dirPath)) return;
-        
+
         const items = fs.readdirSync(dirPath);
         for (const item of items) {
             const fullPath = path.join(dirPath, item);
             const relativeFilePath = relativePath ? `${relativePath}/${item}` : item;
-            
+
             if (fs.statSync(fullPath).isDirectory()) {
                 this.scanDirectory(fullPath, relativeFilePath, files);
             } else {
@@ -64,16 +64,16 @@ export class TemplateGenerator {
     public createTemplate(): void {
         // 创建目录结构
         this.createDirectories();
-        
+
         // 创建ECS启动管理器
         this.createECSManager();
-        
+
         // 创建基础游戏场景
         this.createBaseGameScene();
-        
+
         // 创建README文档
         this.createReadme();
-        
+
         console.log('ECS启动模板创建成功');
     }
 
@@ -141,8 +141,27 @@ export class ECSManager extends Component {
         console.log('🎮 正在初始化ECS框架...');
         
         try {
-            // 1. 创建Core实例
-            Core.create(this.debugMode);
+            // 1. 创建Core实例，启用调试功能
+            if (this.debugMode) {
+                Core.create({
+                    debugConfig: {
+                        enabled: true,
+                        websocketUrl: 'ws://localhost:8080/ecs-debug',
+                        autoReconnect: true,
+                        updateInterval: 100,
+                        channels: {
+                            entities: true,
+                            systems: true,
+                            performance: true,
+                            components: true,
+                            scenes: true
+                        }
+                    }
+                });
+                console.log('🔧 ECS调试模式已启用，可在Cocos Creator扩展面板中查看调试信息');
+            } else {
+                Core.create(false);
+            }
             
             // 2. 创建游戏场景
             const gameScene = new GameScene();
@@ -284,10 +303,24 @@ ECS框架已经配置完成！您只需要：
 
 \`\`\`
 🎮 正在初始化ECS框架...
+🔧 ECS调试模式已启用，可在Cocos Creator扩展面板中查看调试信息
 🎯 游戏场景已创建
 ✅ ECS框架初始化成功！
 🚀 游戏场景已启动
 \`\`\`
+
+### 3. 使用调试面板
+
+ECS框架已启用调试功能，您可以：
+
+1. 在Cocos Creator编辑器菜单中选择 "扩展" → "ECS Framework" → "调试面板"
+2. 调试面板将显示实时的ECS运行状态：
+   - 实体数量和状态
+   - 系统执行信息
+   - 性能监控数据
+   - 组件统计信息
+
+**注意**：调试功能会消耗一定性能，正式发布时建议关闭调试模式。
 
 ## 📚 下一步开发
 

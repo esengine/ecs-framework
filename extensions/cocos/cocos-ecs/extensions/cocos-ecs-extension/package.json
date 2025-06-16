@@ -25,21 +25,56 @@
         "default": {
             "title": "ECS Framework - 欢迎面板",
             "type": "dockable",
-            "main": "dist/panels/default",
+            "main": "dist/panels/default/index.js",
             "size": {
                 "min-width": 450,
                 "min-height": 600,
                 "width": 850,
                 "height": 800
             }
+        },
+        "settings": {
+            "title": "ECS Framework - 设置",
+            "type": "dockable",
+            "main": "dist/panels/settings/index.js",
+            "size": {
+                "min-width": 600,
+                "min-height": 700,
+                "width": 800,
+                "height": 900
+            }
+        },
+        "debug": {
+            "title": "ECS Framework - 调试面板",
+            "type": "dockable",
+            "main": "dist/panels/debug/index.js",
+            "size": {
+                "min-width": 400,
+                "min-height": 500,
+                "width": 500,
+                "height": 600
+            }
         }
     },
     "contributions": {
+        "scene": {
+            "script": "./dist/scene.js"
+        },
         "menu": [
             {
                 "path": "i18n:menu.panel/ECS Framework",
                 "label": "欢迎面板",
                 "message": "open-panel"
+            },
+            {
+                "path": "i18n:menu.panel/ECS Framework",
+                "label": "插件设置",
+                "message": "open-settings"
+            },
+            {
+                "path": "i18n:menu.panel/ECS Framework",
+                "label": "调试面板",
+                "message": "open-debug"
             },
             {
                 "path": "i18n:menu.develop/ECS Framework",
@@ -96,6 +131,16 @@
             "open-github": {
                 "methods": [
                     "open-github"
+                ]
+            },
+            "settings-updated": {
+                "methods": [
+                    "settings-updated"
+                ]
+            },
+            "open-debug": {
+                "methods": [
+                    "open-debug"
                 ]
             }
         }

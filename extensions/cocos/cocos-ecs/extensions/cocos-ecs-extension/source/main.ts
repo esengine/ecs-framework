@@ -122,7 +122,7 @@ export const methods: { [key: string]: (...any: any) => any } = {
     'open-documentation'() {
         // 使用系统默认命令打开链接
         const url = 'https://github.com/esengine/ecs-framework/blob/master/README.md';
-        exec(`start ${url}`, (error) => {
+        exec(`start "" "${url}"`, (error) => {
             if (error) {
                 console.error('Failed to open documentation:', error);
                 Editor.Dialog.info('打开文档', {
@@ -201,10 +201,17 @@ export const methods: { [key: string]: (...any: any) => any } = {
      * 打开设置
      */
     'open-settings'() {
-        Editor.Dialog.info('插件设置', {
-            detail: '设置面板开发中...\n\n将在下个版本提供完整的插件配置功能。\n\n预计功能：\n• 代码生成模板配置\n• 性能监控设置\n• 自动更新设置\n• 开发工具偏好',
-            buttons: ['好的'],
-        });
+        console.log('Opening ECS Framework settings panel...');
+        try {
+            // 正确的打开特定面板的方法
+            Editor.Panel.open(packageJSON.name + '.settings');
+            console.log('Settings panel opened successfully');
+        } catch (error) {
+            console.error('Failed to open settings panel:', error);
+            Editor.Dialog.error('打开设置失败', {
+                detail: `无法打开设置面板：\n\n${error}\n\n请尝试重启Cocos Creator编辑器。`,
+            });
+        }
     },
 
     /**
@@ -225,6 +232,74 @@ export const methods: { [key: string]: (...any: any) => any } = {
             detail: '组件库功能开发中...\n\n将在下个版本提供：\n• 常用组件模板库\n• 系统模板库\n• 一键生成组件代码\n• 社区组件分享\n• 组件文档和示例',
             buttons: ['好的'],
         });
+    },
+
+    /**
+     * 打开GitHub仓库
+     */
+    'open-github'() {
+        const url = 'https://github.com/esengine/ecs-framework';
+        // 在Windows上使用正确的start命令语法
+        exec(`start "" "${url}"`, (error) => {
+            if (error) {
+                console.error('Failed to open GitHub:', error);
+                Editor.Dialog.info('打开GitHub', {
+                    detail: `请手动访问以下链接：\n\n${url}`,
+                });
+            }
+        });
+    },
+
+    /**
+     * 打开调试面板
+     */
+    'open-debug'() {
+        console.log('Opening ECS Framework debug panel...');
+        try {
+            // 正确的打开特定面板的方法
+            Editor.Panel.open(packageJSON.name + '.debug');
+            console.log('Debug panel opened successfully');
+        } catch (error) {
+            console.error('Failed to open debug panel:', error);
+            Editor.Dialog.error('打开调试面板失败', {
+                detail: `无法打开调试面板：\n\n${error}\n\n请尝试重启Cocos Creator编辑器。`,
+            });
+        }
+    },
+
+    /**
+     * 处理设置更新
+     */
+    'settings-updated'(settings: any) {
+        console.log('ECS Framework settings updated:', settings);
+        
+        // 这里可以根据设置更新做一些处理
+        // 比如重新配置框架、更新性能监控等
+        
+        // 示例：根据设置更新性能监控
+        if (settings?.performance?.enableMonitoring) {
+            console.log('Performance monitoring enabled with thresholds:', {
+                warning: settings.performance.warningThreshold,
+                critical: settings.performance.criticalThreshold,
+                memoryWarning: settings.performance.memoryWarningMB,
+                memoryCritical: settings.performance.memoryCriticalMB
+            });
+        }
+        
+        // 示例：根据设置更新调试模式
+        if (settings?.debugging?.enableDebugMode) {
+            console.log('Debug mode enabled with log level:', settings.debugging.logLevel);
+        }
+        
+        // 示例：根据设置更新事件系统
+        if (settings?.events?.enableEventSystem) {
+            console.log('Event system configured:', {
+                asyncEvents: settings.events.enableAsyncEvents,
+                batching: settings.events.enableEventBatching,
+                batchSize: settings.events.batchSize,
+                maxListeners: settings.events.maxEventListeners
+            });
+        }
     },
 };
 

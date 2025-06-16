@@ -50,5 +50,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/esengine/ecs-framework.git"
+  },
+  "dependencies": {
+    "@types/ws": "^8.18.1",
+    "ws": "^8.18.2"
   }
 }

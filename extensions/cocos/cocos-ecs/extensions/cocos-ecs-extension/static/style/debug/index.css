@@ -1,0 +1,1267 @@
+/* ============================================
+   ECS Framework 调试面板样式
+   ============================================ */
+
+/* 全局重置 */
+#app {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 12px;
+    color: var(--color-default-contrast);
+    background: var(--color-normal-fill);
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/* 主容器 */
+.debug-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--color-normal-fill);
+}
+
+/* ============================================
+   头部区域
+   ============================================ */
+
+.debug-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--color-normal-fill-emphasis);
+    border-bottom: 1px solid var(--color-normal-border);
+    min-height: 80px;
+}
+
+.header-title h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-focus-contrast);
+}
+
+.header-title p {
+    margin: 4px 0 0 0;
+    font-size: 11px;
+    color: var(--color-normal-contrast-weakest);
+}
+
+.header-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* 按钮基础样式 */
+ui-button.refresh-btn, 
+ui-button.auto-refresh-btn, 
+ui-button.export-btn, 
+ui-button.reset-btn {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+    background: var(--color-normal-fill-emphasis) !important;
+    color: var(--color-normal-contrast) !important;
+    border: 1px solid var(--color-normal-border) !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    min-height: 28px !important;
+    box-sizing: border-box !important;
+}
+
+ui-button.refresh-btn:hover, 
+ui-button.auto-refresh-btn:hover,
+ui-button.export-btn:hover, 
+ui-button.reset-btn:hover {
+    background: var(--color-normal-fill-weaker) !important;
+    border-color: var(--color-focus-border) !important;
+}
+
+/* 激活状态的自动刷新按钮 */
+ui-button.auto-refresh-btn.active {
+    background: var(--color-focus-fill) !important;
+    color: var(--color-focus-contrast) !important;
+    border-color: var(--color-focus-border) !important;
+}
+
+ui-button.auto-refresh-btn.active:hover {
+    background: var(--color-focus-fill-emphasis) !important;
+}
+
+/* 修复按钮内文字和图标的对齐 */
+ui-button ui-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    width: 12px !important;
+    height: 12px !important;
+    margin-right: 2px !important;
+}
+
+/* 兼容原始样式类 */
+.refresh-btn, .auto-refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 11px;
+    background: var(--color-normal-fill-emphasis);
+    color: var(--color-normal-contrast);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.refresh-btn:hover, .auto-refresh-btn:hover {
+    background: var(--color-normal-fill-weaker);
+    border-color: var(--color-focus-border);
+}
+
+.auto-refresh-btn.active {
+    background: var(--color-focus-fill) !important;
+    color: var(--color-focus-contrast) !important;
+    border-color: var(--color-focus-border) !important;
+}
+
+.auto-refresh-btn.active:hover {
+    background: var(--color-focus-fill-emphasis) !important;
+}
+
+/* ============================================
+   状态栏
+   ============================================ */
+
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px;
+    background: var(--color-normal-fill-weaker);
+    border-bottom: 1px solid var(--color-normal-border);
+    font-size: 11px;
+}
+
+.status-info {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.status-indicator {
+    font-weight: 600;
+}
+
+.status-indicator.online {
+    color: var(--color-success-border);
+}
+
+.status-indicator.offline {
+    color: var(--color-danger-border);
+}
+
+.last-update {
+    color: var(--color-normal-contrast-weaker);
+}
+
+.status-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.export-btn, .reset-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 10px;
+    background: var(--color-normal-fill-emphasis);
+    color: var(--color-normal-contrast);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.export-btn:hover, .reset-btn:hover {
+    background: var(--color-normal-fill-weaker);
+    border-color: var(--color-focus-border);
+}
+
+/* ============================================
+   调试内容区域
+   ============================================ */
+
+.debug-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 20px 20px 20px;
+    max-height: calc(100vh - 140px);
+    scroll-behavior: smooth;
+}
+
+.debug-section {
+    margin-bottom: 20px;
+    background: var(--color-normal-fill-weaker);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.section-header {
+    padding: 12px 16px;
+    background: var(--color-normal-fill-emphasis);
+    border-bottom: 1px solid var(--color-normal-border);
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-focus-contrast);
+}
+
+/* ============================================
+   状态网格
+   ============================================ */
+
+.status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--color-normal-border);
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--color-normal-fill);
+}
+
+.status-item .label {
+    font-weight: 500;
+    color: var(--color-normal-contrast-weaker);
+}
+
+.status-item .value {
+    font-weight: 600;
+    color: var(--color-default-contrast);
+}
+
+.status-item .value.online {
+    color: var(--color-success-border);
+}
+
+.status-item .value.offline {
+    color: var(--color-danger-border);
+}
+
+/* ============================================
+   实体统计卡片
+   ============================================ */
+
+.entity-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 1px;
+    background: var(--color-normal-border);
+    padding: 0;
+}
+
+.stat-card {
+    background: var(--color-normal-fill);
+    padding: 16px;
+    text-align: center;
+    transition: background-color 0.2s ease;
+}
+
+.stat-card:hover {
+    background: var(--color-normal-fill-emphasis);
+}
+
+.stat-number {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-focus-border);
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 10px;
+    color: var(--color-normal-contrast-weaker);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================
+   系统列表
+   ============================================ */
+
+.systems-list {
+    padding: 8px;
+}
+
+.system-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    background: var(--color-normal-fill);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.system-item:hover {
+    background: var(--color-normal-fill-emphasis);
+    border-color: var(--color-focus-border);
+}
+
+.system-item:last-child {
+    margin-bottom: 0;
+}
+
+.system-name {
+    font-weight: 500;
+    color: var(--color-default-contrast);
+}
+
+.system-stats {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 10px;
+}
+
+.entity-count {
+    color: var(--color-normal-contrast-weaker);
+}
+
+.execution-time {
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--color-normal-fill-emphasis);
+}
+
+.update-order {
+    color: var(--color-normal-contrast-weakest);
+    font-family: monospace;
+}
+
+/* ============================================
+   组件统计
+   ============================================ */
+
+.component-stats {
+    padding: 16px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-normal-border);
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-item .label {
+    font-weight: 500;
+    color: var(--color-normal-contrast-weaker);
+}
+
+.stat-item .value {
+    font-weight: 600;
+    color: var(--color-focus-border);
+    font-size: 14px;
+}
+
+/* ============================================
+   性能监控
+   ============================================ */
+
+.performance-warnings {
+    padding: 16px;
+}
+
+.warning-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: var(--color-warn-fill);
+    border: 1px solid var(--color-warn-border);
+    border-radius: 4px;
+    color: var(--color-warn-contrast);
+    font-size: 11px;
+}
+
+.warning-item:last-child {
+    margin-bottom: 0;
+}
+
+.warning-icon {
+    color: var(--color-warn-border);
+}
+
+.no-warnings {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--color-success-fill);
+    border: 1px solid var(--color-success-border);
+    border-radius: 4px;
+    color: var(--color-success-contrast);
+    font-size: 11px;
+}
+
+.success-icon {
+    color: var(--color-success-border);
+}
+
+/* ============================================
+   性能指示器颜色
+   ============================================ */
+
+.good {
+    color: var(--color-success-border) !important;
+}
+
+.warning {
+    color: var(--color-warn-border) !important;
+}
+
+.critical {
+    color: var(--color-danger-border) !important;
+}
+
+.normal {
+    color: var(--color-default-contrast) !important;
+}
+
+/* ============================================
+   调试信息
+   ============================================ */
+
+.debug-info {
+    padding: 16px;
+    line-height: 1.5;
+}
+
+.debug-info p {
+    margin: 0 0 8px 0;
+    color: var(--color-default-contrast);
+}
+
+.debug-info ul {
+    margin: 8px 0 16px 0;
+    padding-left: 20px;
+}
+
+.debug-info li {
+    margin-bottom: 4px;
+    color: var(--color-normal-contrast-weaker);
+}
+
+.debug-info strong {
+    color: var(--color-focus-contrast);
+}
+
+.debug-info code {
+    background: var(--color-normal-fill-emphasis);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 10px;
+    color: var(--color-focus-border);
+}
+
+/* 运行状态通知 */
+.offline-notice, .online-notice {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px;
+    margin-bottom: 16px;
+    border-radius: 6px;
+    background: var(--color-normal-fill-emphasis);
+    border: 1px solid var(--color-normal-border);
+}
+
+.offline-notice {
+    background: var(--color-warn-fill);
+    border-color: var(--color-warn-border);
+}
+
+.online-notice {
+    background: var(--color-success-fill);
+    border-color: var(--color-success-border);
+}
+
+.notice-content {
+    flex: 1;
+}
+
+.notice-content p {
+    margin-bottom: 4px;
+}
+
+.notice-content p:last-child {
+    margin-bottom: 0;
+}
+
+.info-icon {
+    color: var(--color-warn-border);
+    margin-top: 2px;
+}
+
+/* ============================================
+   底部信息
+   ============================================ */
+
+.debug-footer {
+    padding: 8px 20px;
+    background: var(--color-normal-fill-emphasis);
+    border-top: 1px solid var(--color-normal-border);
+}
+
+.footer-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--color-normal-contrast-weaker);
+}
+
+/* ============================================
+   滚动条样式
+   ============================================ */
+
+.debug-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.debug-content::-webkit-scrollbar-track {
+    background: var(--color-normal-fill);
+    border-radius: 5px;
+    margin: 2px;
+}
+
+.debug-content::-webkit-scrollbar-thumb {
+    background: var(--color-focus-border);
+    border-radius: 5px;
+    transition: background-color 0.2s ease;
+    min-height: 30px;
+}
+
+.debug-content::-webkit-scrollbar-thumb:hover {
+    background: var(--color-default-border);
+}
+
+.debug-content::-webkit-scrollbar-thumb:active {
+    background: var(--color-focus-border-emphasis);
+}
+
+/* ============================================
+   响应式设计
+   ============================================ */
+
+@media (max-width: 600px) {
+    .header-controls {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .status-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .status-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .entity-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ============================================
+   动画效果
+   ============================================ */
+
+.debug-section {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-number {
+    transition: color 0.3s ease;
+}
+
+.system-item {
+    transition: all 0.2s ease;
+}
+
+/* ============================================
+   工具提示
+   ============================================ */
+
+[title] {
+    position: relative;
+}
+
+[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-normal-fill-emphasis);
+    border: 1px solid var(--color-normal-border);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ECS调试面板样式 */
+.debug-panel {
+    padding: 16px;
+    background: var(--color-normal-fill);
+    color: var(--color-normal-contrast);
+    height: 100%;
+    overflow-y: auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 顶部工具栏 */
+.debug-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--color-primary-fill);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toolbar-section label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-primary-contrast);
+}
+
+.instance-selector {
+    padding: 6px 12px;
+    border: 1px solid var(--color-normal-border);
+    border-radius: 4px;
+    background: var(--color-normal-fill);
+    color: var(--color-normal-contrast);
+    font-size: 13px;
+    min-width: 200px;
+}
+
+.instance-count {
+    font-size: 12px;
+    color: var(--color-normal-contrast-weaken);
+    padding: 4px 8px;
+    background: var(--color-normal-fill-emphasis);
+    border-radius: 12px;
+}
+
+.btn-refresh {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: var(--color-primary-fill);
+    border: 1px solid var(--color-primary-border);
+    border-radius: 4px;
+    color: var(--color-primary-contrast);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.btn-refresh:hover:not(:disabled) {
+    background: var(--color-primary-fill-emphasis);
+}
+
+.btn-refresh:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+}
+
+.last-update {
+    font-size: 12px;
+    color: var(--color-normal-contrast-weaken);
+}
+
+/* 调试区域 */
+.debug-section {
+    background: var(--color-normal-fill-emphasis);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.section-header {
+    padding: 12px 16px;
+    background: var(--color-primary-fill);
+    border-bottom: 1px solid var(--color-normal-border);
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-primary-contrast);
+}
+
+/* 状态网格 */
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 16px;
+}
+
+.status-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.status-item .label {
+    font-size: 12px;
+    color: var(--color-normal-contrast-weaken);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-item .value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-normal-contrast);
+}
+
+.status-item .value.online {
+    color: #4CAF50;
+}
+
+.status-item .value.offline {
+    color: #F44336;
+}
+
+/* 无实例提示 */
+.no-instance {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--color-normal-contrast-weaken);
+}
+
+.no-instance .info-icon {
+    font-size: 20px;
+    color: #2196F3;
+}
+
+/* 性能监控网格 */
+.performance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    padding: 16px;
+}
+
+.perf-card {
+    background: var(--color-normal-fill);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 6px;
+    padding: 16px;
+    text-align: center;
+}
+
+.perf-title {
+    font-size: 12px;
+    color: var(--color-normal-contrast-weaken);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.perf-value {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.perf-value.good {
+    color: #4CAF50;
+}
+
+.perf-value.warning {
+    color: #FF9800;
+}
+
+.perf-value.critical {
+    color: #F44336;
+}
+
+.perf-detail {
+    font-size: 11px;
+    color: var(--color-normal-contrast-weaken);
+}
+
+/* 内存分析 */
+.memory-breakdown {
+    padding: 16px;
+}
+
+.memory-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 8px 0;
+}
+
+.memory-label {
+    font-size: 13px;
+    color: var(--color-normal-contrast);
+    flex: 1;
+}
+
+.memory-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-normal-contrast);
+    margin-right: 12px;
+    min-width: 80px;
+    text-align: right;
+}
+
+.memory-bar {
+    flex: 2;
+    height: 6px;
+    background: var(--color-normal-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.memory-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #FF9800);
+    transition: width 0.3s ease;
+}
+
+/* 实体统计 */
+.entity-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+    padding: 16px;
+}
+
+.stat-card {
+    background: var(--color-normal-fill);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 6px;
+    padding: 16px;
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--color-normal-contrast-weaken);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Archetype 分布 */
+.archetype-section {
+    margin-top: 16px;
+    padding: 0 16px 16px;
+}
+
+.archetype-section h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-normal-contrast);
+}
+
+.archetype-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.archetype-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--color-normal-fill);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 4px;
+}
+
+.archetype-signature {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--color-normal-contrast);
+}
+
+.archetype-stats {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+}
+
+.entity-count {
+    color: #2196F3;
+    font-weight: 500;
+}
+
+.memory-usage {
+    color: var(--color-normal-contrast-weaken);
+}
+
+/* 组件分析 */
+.component-overview {
+    display: flex;
+    gap: 32px;
+    padding: 16px;
+    background: var(--color-normal-fill);
+    border-bottom: 1px solid var(--color-normal-border);
+}
+
+.overview-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.overview-item .label {
+    font-size: 12px;
+    color: var(--color-normal-contrast-weaken);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.overview-item .value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+/* 表格样式 */
+.component-table,
+.systems-table {
+    background: var(--color-normal-fill);
+}
+
+.table-header,
+.table-row {
+    display: grid;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-normal-border);
+    gap: 16px;
+}
+
+.component-table .table-header,
+.component-table .table-row {
+    grid-template-columns: 2fr 1fr 1.5fr 1fr 1.5fr;
+}
+
+.systems-table .table-header,
+.systems-table .table-row {
+    grid-template-columns: 2fr 1fr 1.5fr 1fr 0.8fr 0.8fr;
+}
+
+.table-header {
+    background: var(--color-primary-fill);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-primary-contrast);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table-row {
+    font-size: 13px;
+    color: var(--color-normal-contrast);
+    transition: background-color 0.2s;
+}
+
+.table-row:hover {
+    background: var(--color-normal-fill-emphasis);
+}
+
+.col-name {
+    font-weight: 500;
+}
+
+.col-count,
+.col-entities {
+    text-align: right;
+}
+
+.col-memory {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+}
+
+.col-pool {
+    text-align: right;
+}
+
+.col-efficiency {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.efficiency-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--color-normal-border);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.efficiency-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #F44336, #FF9800, #4CAF50);
+    transition: width 0.3s ease;
+}
+
+.col-time {
+    text-align: right;
+}
+
+.time-range {
+    font-size: 11px;
+    color: var(--color-normal-contrast-weaken);
+    margin-top: 2px;
+}
+
+.col-order {
+    text-align: center;
+}
+
+.col-status {
+    text-align: center;
+}
+
+.enabled {
+    color: #4CAF50;
+    font-weight: 500;
+}
+
+.disabled {
+    color: #F44336;
+    font-weight: 500;
+}
+
+/* 服务器状态 */
+.server-status {
+    padding: 32px 16px;
+    text-align: center;
+}
+
+.status-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.server-icon {
+    font-size: 48px;
+    color: #2196F3;
+}
+
+.message-content h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    color: var(--color-normal-contrast);
+}
+
+.message-content p {
+    margin: 4px 0;
+    font-size: 14px;
+    color: var(--color-normal-contrast-weaken);
+}
+
+.connection-help {
+    background: var(--color-normal-fill);
+    border: 1px solid var(--color-normal-border);
+    border-radius: 6px;
+    padding: 16px;
+    text-align: left;
+}
+
+.connection-help h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: var(--color-normal-contrast);
+}
+
+.connection-help ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.connection-help li {
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--color-normal-contrast-weaken);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .debug-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .toolbar-section {
+        justify-content: space-between;
+    }
+    
+    .performance-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .entity-stats {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    }
+    
+    .component-table .table-header,
+    .component-table .table-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .systems-table .table-header,
+    .systems-table .table-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .table-header {
+        display: none;
+    }
+    
+    .table-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+}
+
+/* 滚动条样式 */
+.debug-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.debug-panel::-webkit-scrollbar-track {
+    background: var(--color-normal-fill);
+}
+
+.debug-panel::-webkit-scrollbar-thumb {
+    background: var(--color-normal-border);
+    border-radius: 3px;
+}
+
+.debug-panel::-webkit-scrollbar-thumb:hover {
+    background: var(--color-normal-contrast-weaken);
+}
+
+/* 百分比条样式 */
+.col-percentage {
+    width: 120px;
+    text-align: center;
+}
+
+.percentage-bar {
+    width: 60px;
+    height: 8px;
+    background-color: var(--color-normal-fill);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0 auto 4px;
+}
+
+.percentage-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50 0%, #FF9800 50%, #F44336 100%);
+    transition: width 0.3s ease;
+} 

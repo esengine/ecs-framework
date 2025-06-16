@@ -1,0 +1,294 @@
+<div class="debug-panel">
+    <!-- 顶部控制栏 -->
+    <div class="debug-toolbar">
+        <div class="toolbar-section">
+            <label>游戏实例:</label>
+            <select v-model="selectedInstanceId" @change="onInstanceChanged" class="instance-selector">
+                <option value="">-- 选择实例 --</option>
+                <option v-for="instance in gameInstances" :key="instance.id" :value="instance.id">
+                    {{ instance.name }} ({{ instance.isActive ? '活跃' : '离线' }})
+                </option>
+            </select>
+            <span class="instance-count">{{ gameInstances.length }} 个实例</span>
+        </div>
+        
+        <div class="toolbar-section">
+            <button @click="manualRefresh" class="btn-refresh" :disabled="!selectedInstanceId">
+                <ui-icon value="refresh"></ui-icon>
+                刷新
+            </button>
+            <label class="checkbox-label">
+                <input type="checkbox" v-model="isAutoRefresh" @change="toggleAutoRefresh">
+                自动刷新
+            </label>
+            <select v-model="refreshInterval" @change="changeRefreshInterval" :disabled="!isAutoRefresh">
+                <option :value="100">0.1秒</option>
+                <option :value="250">0.25秒</option>
+                <option :value="500">0.5秒</option>
+                <option :value="1000">1秒</option>
+                <option :value="2000">2秒</option>
+            </select>
+        </div>
+        
+        <div class="toolbar-section">
+            <span class="last-update">{{ lastUpdateTime }}</span>
+        </div>
+    </div>
+
+    <!-- 连接状态和基础信息 -->
+    <div class="debug-section">
+        <div class="section-header">
+            <h2>📊 实例状态</h2>
+        </div>
+        <div class="status-grid" v-if="selectedInstanceId && debugInfo.instanceId">
+            <div class="status-item">
+                <span class="label">实例名称:</span>
+                <span class="value">{{ debugInfo.instanceName }}</span>
+            </div>
+            <div class="status-item">
+                <span class="label">运行状态:</span>
+                <span class="value" :class="{ online: debugInfo.isRunning, offline: !debugInfo.isRunning }">
+                    {{ debugInfo.isRunning ? '运行中' : '已停止' }}
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="label">当前场景:</span>
+                <span class="value">{{ debugInfo.currentScene }}</span>
+            </div>
+            <div class="status-item">
+                <span class="label">运行时间:</span>
+                <span class="value">{{ formatUptime(debugInfo.uptime) }}</span>
+            </div>
+        </div>
+        
+        <div class="no-instance" v-else>
+            <ui-icon value="info" class="info-icon"></ui-icon>
+            <span>请选择一个游戏实例查看详细信息</span>
+        </div>
+    </div>
+
+    <!-- 性能监控 -->
+    <div class="debug-section" v-if="debugInfo.instanceId">
+        <div class="section-header">
+            <h2>⚡ 性能监控</h2>
+        </div>
+        <div class="performance-grid">
+            <div class="perf-card">
+                <div class="perf-title">帧率</div>
+                <div class="perf-value" :class="getFpsColor(debugInfo.performance.fps)">
+                    {{ debugInfo.performance.fps }} FPS
+                </div>
+                <div class="perf-detail">
+                    引擎帧时间: {{ debugInfo.performance.engineFrameTime?.toFixed(2) || '0.00' }}ms
+                </div>
+            </div>
+            <div class="perf-card">
+                <div class="perf-title">ECS执行时间</div>
+                <div class="perf-value" :class="getECSTimeColor(debugInfo.performance.ecsPercentage)">
+                    {{ debugInfo.performance.frameTime.toFixed(3) }}ms
+                </div>
+                <div class="perf-detail">
+                    占总帧时间: {{ debugInfo.performance.ecsPercentage?.toFixed(1) || '0.0' }}%
+                </div>
+            </div>
+            <div class="perf-card">
+                <div class="perf-title">总内存</div>
+                <div class="perf-value" :class="getMemoryColor(debugInfo.memory.usedMemory / debugInfo.memory.totalMemory * 100)">
+                    {{ formatMemory(debugInfo.memory.usedMemory) }}
+                </div>
+                <div class="perf-detail">
+                    / {{ formatMemory(debugInfo.memory.totalMemory) }}
+                </div>
+            </div>
+            <div class="perf-card">
+                <div class="perf-title">GC回收</div>
+                <div class="perf-value">{{ debugInfo.memory.gcCollections }}</div>
+                <div class="perf-detail">次数</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 内存分析 -->
+    <div class="debug-section" v-if="debugInfo.instanceId">
+        <div class="section-header">
+            <h2>💾 内存分析</h2>
+        </div>
+        <div class="memory-breakdown">
+            <div class="memory-item">
+                <span class="memory-label">实体内存:</span>
+                <span class="memory-value">{{ formatMemory(debugInfo.memory.entityMemory) }}</span>
+                <div class="memory-bar">
+                    <div class="memory-fill" :style="{ width: (debugInfo.memory.entityMemory / debugInfo.memory.usedMemory * 100) + '%' }"></div>
+                </div>
+            </div>
+            <div class="memory-item">
+                <span class="memory-label">组件内存:</span>
+                <span class="memory-value">{{ formatMemory(debugInfo.memory.componentMemory) }}</span>
+                <div class="memory-bar">
+                    <div class="memory-fill" :style="{ width: (debugInfo.memory.componentMemory / debugInfo.memory.usedMemory * 100) + '%' }"></div>
+                </div>
+            </div>
+            <div class="memory-item">
+                <span class="memory-label">系统内存:</span>
+                <span class="memory-value">{{ formatMemory(debugInfo.memory.systemMemory) }}</span>
+                <div class="memory-bar">
+                    <div class="memory-fill" :style="{ width: (debugInfo.memory.systemMemory / debugInfo.memory.usedMemory * 100) + '%' }"></div>
+                </div>
+            </div>
+            <div class="memory-item">
+                <span class="memory-label">对象池内存:</span>
+                <span class="memory-value">{{ formatMemory(debugInfo.memory.pooledMemory) }}</span>
+                <div class="memory-bar">
+                    <div class="memory-fill" :style="{ width: (debugInfo.memory.pooledMemory / debugInfo.memory.usedMemory * 100) + '%' }"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 实体统计 -->
+    <div class="debug-section" v-if="debugInfo.instanceId">
+        <div class="section-header">
+            <h2>👥 实体统计</h2>
+        </div>
+        <div class="entity-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ debugInfo.entities.total }}</div>
+                <div class="stat-label">总实体数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ debugInfo.entities.active }}</div>
+                <div class="stat-label">活跃实体</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ debugInfo.entities.inactive }}</div>
+                <div class="stat-label">非活跃实体</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ debugInfo.entities.pendingAdd }}</div>
+                <div class="stat-label">待添加</div>
+            </div>
+        </div>
+        
+        <!-- Archetype分布 -->
+        <div class="archetype-section" v-if="debugInfo.entities.entitiesPerArchetype.length > 0">
+            <h3>Archetype 分布</h3>
+            <div class="archetype-list">
+                <div v-for="archetype in debugInfo.entities.entitiesPerArchetype" :key="archetype.signature" class="archetype-item">
+                    <div class="archetype-signature">{{ archetype.signature }}</div>
+                    <div class="archetype-stats">
+                        <span class="entity-count">{{ archetype.count }} 实体</span>
+                        <span class="memory-usage">{{ formatMemory(archetype.memory) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 组件分析 -->
+    <div class="debug-section" v-if="debugInfo.instanceId">
+        <div class="section-header">
+            <h2>🧩 组件分析</h2>
+        </div>
+        <div class="component-overview">
+            <div class="overview-item">
+                <span class="label">组件类型:</span>
+                <span class="value">{{ debugInfo.components.totalTypes }}</span>
+            </div>
+            <div class="overview-item">
+                <span class="label">组件实例:</span>
+                <span class="value">{{ debugInfo.components.totalInstances }}</span>
+            </div>
+        </div>
+        
+        <div class="component-table" v-if="debugInfo.components.componentStats.length > 0">
+            <div class="table-header">
+                <div class="col-name">组件类型</div>
+                <div class="col-count">实例数</div>
+                <div class="col-memory">内存占用</div>
+                <div class="col-pool">对象池</div>
+                <div class="col-efficiency">利用率</div>
+            </div>
+            <div v-for="comp in debugInfo.components.componentStats" :key="comp.typeName" class="table-row">
+                <div class="col-name">{{ comp.typeName }}</div>
+                <div class="col-count">{{ comp.instanceCount }}</div>
+                <div class="col-memory">{{ formatMemory(comp.totalMemory) }}</div>
+                <div class="col-pool">{{ comp.poolSize }}</div>
+                <div class="col-efficiency">
+                    <div class="efficiency-bar">
+                        <div class="efficiency-fill" :style="{ width: comp.poolUtilization + '%' }"></div>
+                    </div>
+                    {{ comp.poolUtilization.toFixed(1) }}%
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系统性能 -->
+    <div class="debug-section" v-if="debugInfo.instanceId">
+        <div class="section-header">
+            <h2>⚙️ 系统性能</h2>
+        </div>
+        <div class="systems-table" v-if="debugInfo.systems.systemStats.length > 0">
+            <div class="table-header">
+                <div class="col-name">系统名称</div>
+                <div class="col-entities">实体数</div>
+                <div class="col-time">执行时间</div>
+                <div class="col-percentage">ECS占比</div>
+                <div class="col-order">优先级</div>
+                <div class="col-status">状态</div>
+            </div>
+            <div v-for="system in debugInfo.systems.systemStats" :key="system.name" class="table-row">
+                <div class="col-name">{{ system.name }}</div>
+                <div class="col-entities">{{ system.entityCount }}</div>
+                <div class="col-time">
+                    <span :class="getExecutionTimeColor(system.averageExecutionTime)">
+                        {{ system.averageExecutionTime.toFixed(3) }}ms
+                    </span>
+                    <div class="time-range">
+                        ({{ system.minExecutionTime.toFixed(3) }}-{{ system.maxExecutionTime.toFixed(3) }}ms)
+                    </div>
+                </div>
+                <div class="col-percentage">
+                    <div class="percentage-bar">
+                        <div class="percentage-fill" :style="{ width: (system.percentage || 0) + '%' }"></div>
+                    </div>
+                    {{ (system.percentage || 0).toFixed(1) }}%
+                </div>
+                <div class="col-order">{{ system.updateOrder }}</div>
+                <div class="col-status">
+                    <span :class="{ enabled: system.enabled, disabled: !system.enabled }">
+                        {{ system.enabled ? '启用' : '禁用' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 服务器状态 -->
+    <div class="debug-section" v-if="gameInstances.length === 0">
+        <div class="section-header">
+            <h2>🔌 调试服务器</h2>
+        </div>
+        <div class="server-status">
+            <div class="status-message">
+                <ui-icon value="wifi" class="server-icon"></ui-icon>
+                <div class="message-content">
+                    <h3>等待游戏实例连接...</h3>
+                    <p>调试服务器正在 <strong>ws://localhost:8080</strong> 监听连接</p>
+                    <p>请确保游戏中的ECS框架已启用调试模式</p>
+                </div>
+            </div>
+            
+            <div class="connection-help">
+                <h4>连接说明:</h4>
+                <ul>
+                    <li>在ECSManager组件中启用调试模式</li>
+                    <li>运行游戏，框架会自动连接到调试服务器</li>
+                    <li>支持多个游戏实例同时连接</li>
+                    <li>可以在上方选择不同的实例进行调试</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div> 
+</div> 

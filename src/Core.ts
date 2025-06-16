@@ -6,6 +6,8 @@ import { PerformanceMonitor } from './Utils/PerformanceMonitor';
 import { PoolManager } from './Utils/Pool';
 import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
 import { Scene } from './ECS/Scene';
+import { DebugReporter } from './Utils/DebugReporter';
+import { ICoreConfig, IECSDebugConfig } from './Types';
 
 /**
  * 游戏引擎核心类
@@ -108,13 +110,31 @@ export class Core {
     public _scene?: Scene;
 
     /**
+     * 调试报告器
+     * 
+     * 负责收集和发送调试数据。
+     */
+    public _debugReporter?: DebugReporter;
+
+    /**
+     * Core配置
+     */
+    private _config: ICoreConfig;
+
+    /**
      * 创建核心实例
      * 
-     * @param debug - 是否启用调试模式，默认为true
-     * @param enableEntitySystems - 是否启用实体系统，默认为true
+     * @param config - Core配置对象
      */
-    private constructor(debug: boolean = true, enableEntitySystems: boolean = true) {
+    private constructor(config: ICoreConfig = {}) {
         Core._instance = this;
+
+        // 保存配置
+        this._config = {
+            debug: true,
+            enableEntitySystems: true,
+            ...config
+        };
 
         // 初始化管理器
         this._timerManager = new TimerManager();
@@ -122,12 +142,23 @@ export class Core {
 
         // 初始化性能监控器
         this._performanceMonitor = PerformanceMonitor.instance;
+        
+        // 在调试模式下启用性能监控
+        if (this._config.debug) {
+            this._performanceMonitor.enable();
+        }
 
         // 初始化对象池管理器
         this._poolManager = PoolManager.getInstance();
         
-        Core.entitySystemsEnabled = enableEntitySystems;
-        this.debug = debug;
+        Core.entitySystemsEnabled = this._config.enableEntitySystems || true;
+        this.debug = this._config.debug || true;
+
+        // 初始化调试报告器
+        if (this._config.debugConfig?.enabled) {
+            this._debugReporter = new DebugReporter(this, this._config.debugConfig);
+        }
+
         this.initialize();
     }
 
@@ -180,12 +211,16 @@ export class Core {
      * 
      * 如果实例已存在，则返回现有实例。
      * 
-     * @param debug - 是否为调试模式，默认为true
+     * @param config - Core配置，也可以直接传入boolean表示debug模式（向后兼容）
      * @returns Core实例
      */
-    public static create(debug: boolean = true): Core {
+    public static create(config: ICoreConfig | boolean = true): Core {
         if (this._instance == null) {
-            this._instance = new Core(debug);
+            // 向后兼容：如果传入boolean，转换为配置对象
+            const coreConfig: ICoreConfig = typeof config === 'boolean' 
+                ? { debug: config, enableEntitySystems: true }
+                : config;
+            this._instance = new Core(coreConfig);
         }
         return this._instance;
     }
@@ -285,6 +320,66 @@ export class Core {
     }
 
     /**
+     * 启用调试功能
+     * 
+     * @param config 调试配置
+     */
+    public static enableDebug(config: IECSDebugConfig): void {
+        if (!this._instance) {
+            console.warn("Core实例未创建，请先调用Core.create()");
+            return;
+        }
+
+        if (this._instance._debugReporter) {
+            this._instance._debugReporter.updateConfig(config);
+        } else {
+            this._instance._debugReporter = new DebugReporter(this._instance, config);
+        }
+
+        // 更新Core配置
+        this._instance._config.debugConfig = config;
+    }
+
+    /**
+     * 禁用调试功能
+     */
+    public static disableDebug(): void {
+        if (!this._instance) return;
+
+        if (this._instance._debugReporter) {
+            this._instance._debugReporter.stop();
+            this._instance._debugReporter = undefined;
+        }
+
+        // 更新Core配置
+        if (this._instance._config.debugConfig) {
+            this._instance._config.debugConfig.enabled = false;
+        }
+    }
+
+    /**
+     * 获取调试数据
+     * 
+     * @returns 当前调试数据，如果调试未启用则返回null
+     */
+    public static getDebugData(): any {
+        if (!this._instance?._debugReporter) {
+            return null;
+        }
+
+        return this._instance._debugReporter.getDebugData();
+    }
+
+    /**
+     * 检查调试是否启用
+     * 
+     * @returns 调试状态
+     */
+    public static get isDebugEnabled(): boolean {
+        return this._instance?._config.debugConfig?.enabled || false;
+    }
+
+    /**
      * 场景切换回调
      * 
      * 在场景切换时调用，用于重置时间系统等。
@@ -296,6 +391,11 @@ export class Core {
         if (this._scene && typeof (this._scene as any).querySystem !== 'undefined') {
             const scene = this._scene as any;
             this._ecsAPI = createECSAPI(scene, scene.querySystem, scene.eventSystem);
+        }
+
+        // 通知调试报告器场景已变更
+        if (this._debugReporter) {
+            this._debugReporter.onSceneChanged();
         }
     }
 

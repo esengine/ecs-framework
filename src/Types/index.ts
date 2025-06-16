@@ -234,4 +234,207 @@ export interface IPerformanceEventData extends IEventData {
     memoryUsage?: number;
     /** 额外数据 */
     metadata?: Record<string, any>;
+}
+
+/**
+ * ECS调试配置接口
+ */
+export interface IECSDebugConfig {
+    /** 是否启用调试 */
+    enabled: boolean;
+    /** WebSocket服务器URL */
+    websocketUrl: string;
+    /** 是否自动重连 */
+    autoReconnect?: boolean;
+    /** 数据更新间隔（毫秒） */
+    updateInterval?: number;
+    /** 数据通道配置 */
+    channels: {
+        entities: boolean;
+        systems: boolean;
+        performance: boolean;
+        components: boolean;
+        scenes: boolean;
+    };
+}
+
+/**
+ * Core配置接口
+ */
+export interface ICoreConfig {
+    /** 是否启用调试模式 */
+    debug?: boolean;
+    /** 是否启用实体系统 */
+    enableEntitySystems?: boolean;
+    /** 调试配置 */
+    debugConfig?: IECSDebugConfig;
+}
+
+/**
+ * ECS调试数据接口
+ */
+export interface IECSDebugData {
+    /** 时间戳 */
+    timestamp: number;
+    /** 框架版本 */
+    frameworkVersion?: string;
+    /** 是否正在运行 */
+    isRunning: boolean;
+    /** 框架是否已加载 */
+    frameworkLoaded: boolean;
+    /** 当前场景名称 */
+    currentScene: string;
+    /** 实体数据 */
+    entities?: IEntityDebugData;
+    /** 系统数据 */
+    systems?: ISystemDebugData;
+    /** 性能数据 */
+    performance?: IPerformanceDebugData;
+    /** 组件数据 */
+    components?: IComponentDebugData;
+    /** 场景数据 */
+    scenes?: ISceneDebugData;
+}
+
+/**
+ * 实体调试数据接口
+ */
+export interface IEntityDebugData {
+    /** 总实体数 */
+    totalEntities: number;
+    /** 激活实体数 */
+    activeEntities: number;
+    /** 待添加实体数 */
+    pendingAdd: number;
+    /** 待移除实体数 */
+    pendingRemove: number;
+    /** 按Archetype分组的实体分布 */
+    entitiesPerArchetype: Array<{
+        signature: string;
+        count: number;
+        memory: number;
+    }>;
+    /** 组件数量最多的前几个实体 */
+    topEntitiesByComponents: Array<{
+        id: string;
+        name: string;
+        componentCount: number;
+        memory: number;
+    }>;
+    /** 实体详情列表 */
+    entityDetails?: Array<{
+        id: string | number;
+        name?: string;
+        tag?: string;
+        enabled: boolean;
+        componentCount: number;
+        components: string[];
+    }>;
+}
+
+/**
+ * 系统调试数据接口
+ */
+export interface ISystemDebugData {
+    /** 总系统数 */
+    totalSystems: number;
+    /** 系统信息列表 */
+    systemsInfo: Array<{
+        name: string;
+        type: string;
+        entityCount: number;
+        executionTime?: number;
+        averageExecutionTime?: number;
+        minExecutionTime?: number;
+        maxExecutionTime?: number;
+        executionTimeHistory?: number[];
+        memoryUsage?: number;
+        updateOrder: number;
+        enabled: boolean;
+        lastUpdateTime?: number;
+    }>;
+}
+
+/**
+ * 性能调试数据接口
+ */
+export interface IPerformanceDebugData {
+    /** ECS框架执行时间（毫秒） */
+    frameTime: number;
+    /** 引擎总帧时间（毫秒） */
+    engineFrameTime?: number;
+    /** ECS占总帧时间百分比 */
+    ecsPercentage?: number;
+    /** 内存使用量（MB） */
+    memoryUsage: number;
+    /** FPS */
+    fps: number;
+    /** 平均ECS执行时间（毫秒） */
+    averageFrameTime: number;
+    /** 最小ECS执行时间（毫秒） */
+    minFrameTime: number;
+    /** 最大ECS执行时间（毫秒） */
+    maxFrameTime: number;
+    /** ECS执行时间历史记录 */
+    frameTimeHistory: number[];
+    /** 系统性能详情 */
+    systemPerformance: Array<{
+        systemName: string;
+        averageTime: number;
+        maxTime: number;
+        minTime: number;
+        samples: number;
+        percentage?: number; // 系统占ECS总时间的百分比
+    }>;
+    /** 内存分配详情 */
+    memoryDetails?: {
+        entities: number;
+        components: number;
+        systems: number;
+        pooled: number;
+        totalMemory: number;
+        usedMemory: number;
+        freeMemory: number;
+        gcCollections: number;
+    };
+}
+
+/**
+ * 组件调试数据接口
+ */
+export interface IComponentDebugData {
+    /** 组件类型数 */
+    componentTypes: number;
+    /** 组件实例总数 */
+    componentInstances: number;
+    /** 组件分布统计 */
+    componentStats: Array<{
+        typeName: string;
+        instanceCount: number;
+        memoryPerInstance: number;
+        totalMemory: number;
+        poolSize: number;
+        poolUtilization: number;
+        averagePerEntity?: number;
+    }>;
+}
+
+/**
+ * 场景调试数据接口
+ */
+export interface ISceneDebugData {
+    /** 当前场景名称 */
+    currentSceneName: string;
+    /** 场景是否已初始化 */
+    isInitialized: boolean;
+    /** 场景运行时间（秒） */
+    sceneRunTime: number;
+    /** 场景实体数 */
+    sceneEntityCount: number;
+    /** 场景系统数 */
+    sceneSystemCount: number;
+    /** 场景内存使用量 */
+    sceneMemory: number;
+    /** 场景启动时间 */
+    sceneUptime: number;
 } 
