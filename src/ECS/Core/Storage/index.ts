@@ -1,2 +1,2 @@
-export { ComponentPool } from '../ComponentPool';
+export { ComponentPool, ComponentPoolManager } from '../ComponentPool';
 export { ComponentStorage } from '../ComponentStorage'; 

@@ -100,7 +100,7 @@
             <p v-else>安装@esengine/ecs-framework到当前项目</p>
         </div>
 
-        <div class="action-card" :class="{ disabled: !ecsInstalled }" @click="openDocumentation">
+        <div class="action-card" @click="openDocumentation">
             <h3>
                 <span class="icon">📚</span>
                 查看文档
@@ -134,36 +134,29 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="action-card" @click="openSettings">
+    <!-- 代码生成工具区域 -->
+    <div class="actions-section" v-if="ecsInstalled">
+        <div class="status-title">🛠️ 代码生成工具</div>
+        
+        <div class="action-card special" @click="openGenerator">
             <h3>
-                <span class="icon">⚙️</span>
-                插件设置
+                <span class="icon">🚀</span>
+                代码生成器
             </h3>
-            <p>配置ECS插件的各项设置和偏好</p>
+            <p>一站式代码生成工具，输入功能名称快速生成组件和系统代码</p>
         </div>
 
-        <div class="action-card" @click="openProjectAnalysis">
-            <h3>
-                <span class="icon">📊</span>
-                项目分析
-            </h3>
-            <p>分析当前项目的ECS使用情况和性能建议</p>
-        </div>
-
-        <div class="action-card" @click="openComponentLibrary">
-            <h3>
-                <span class="icon">🧩</span>
-                组件库
-            </h3>
-            <p>浏览和管理项目中的ECS组件</p>
-        </div>
     </div>
 
     <!-- 底部信息 -->
     <div class="footer">
         <p>ECS Framework Plugin v{{pluginVersion}} | 基于Vue 3.x构建</p>
-        <p>更多信息请访问: <a href="#" @click="openGithub">GitHub Repository</a></p>
+        <p>
+            更多信息请访问: <a href="#" @click="openGithub">GitHub Repository</a> | 
+            <a href="#" @click="joinQQGroup">💬 加入QQ群交流</a>
+        </p>
         <p v-if="lastCheckTime" class="last-check">最后检查时间: {{lastCheckTime}}</p>
     </div>
 </div> 

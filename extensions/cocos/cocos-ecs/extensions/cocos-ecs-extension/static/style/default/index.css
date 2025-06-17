@@ -356,7 +356,41 @@
     transform: none;
 }
 
-/* 响应式布局优化 */
+/* action-card样式 */
+.action-card.special {
+    background: linear-gradient(135deg, var(--color-primary-fill) 0%, var(--color-focus-fill) 100%);
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.action-card.special h3 {
+    color: var(--color-primary-contrast);
+    font-weight: 700;
+}
+
+.action-card.special p {
+    color: var(--color-primary-contrast);
+    opacity: 0.9;
+}
+
+.action-card.special:hover {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-focus-border) 100%);
+    border-color: var(--color-focus-border);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.action-card.special .icon {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* 响应式布局 */
 @media (max-width: 600px) {
     .welcome-container {
         padding: 16px;
@@ -377,7 +411,6 @@
     }
 }
 
-/* 确保按钮文本不被截断 */
 .management-buttons ui-button {
     white-space: nowrap;
     overflow: hidden;

@@ -2,9 +2,11 @@
 import packageJSON from '../package.json';
 import { exec } from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
 import { readFileSync, outputFile } from 'fs-extra';
 import { join } from 'path';
 import { TemplateGenerator } from './TemplateGenerator';
+import { CodeGenerator } from './CodeGenerator';
 
 /**
  * @en Registration method for the main process of Extension
@@ -120,16 +122,28 @@ export const methods: { [key: string]: (...any: any) => any } = {
      * 打开文档
      */
     'open-documentation'() {
-        // 使用系统默认命令打开链接
         const url = 'https://github.com/esengine/ecs-framework/blob/master/README.md';
-        exec(`start "" "${url}"`, (error) => {
-            if (error) {
-                console.error('Failed to open documentation:', error);
-                Editor.Dialog.info('打开文档', {
-                    detail: `请手动访问以下链接查看文档:\n\n${url}`,
-                });
-            }
-        });
+        
+        try {
+            // 使用Electron的shell模块打开外部链接（推荐方法）
+            const { shell } = require('electron');
+            shell.openExternal(url);
+            console.log('Documentation link opened successfully');
+        } catch (error) {
+            console.error('Failed to open documentation with shell.openExternal, trying exec:', error);
+            
+            // 备用方法：使用系统命令
+            exec(`start "" "${url}"`, (execError) => {
+                if (execError) {
+                    console.error('Failed to open documentation with exec:', execError);
+                    Editor.Dialog.info('打开文档', {
+                        detail: `请手动访问以下链接查看文档:\n\n${url}`,
+                    });
+                } else {
+                    console.log('Documentation link opened successfully with exec');
+                }
+            });
+        }
     },
 
     /**
@@ -198,56 +212,59 @@ export const methods: { [key: string]: (...any: any) => any } = {
     },
 
     /**
-     * 打开设置
+     * 打开GitHub仓库
      */
-    'open-settings'() {
-        console.log('Opening ECS Framework settings panel...');
+    'open-github'() {
+        const url = 'https://github.com/esengine/ecs-framework';
+        
         try {
-            // 正确的打开特定面板的方法
-            Editor.Panel.open(packageJSON.name + '.settings');
-            console.log('Settings panel opened successfully');
+            // 使用Electron的shell模块打开外部链接（推荐方法）
+            const { shell } = require('electron');
+            shell.openExternal(url);
+            console.log('GitHub link opened successfully');
         } catch (error) {
-            console.error('Failed to open settings panel:', error);
-            Editor.Dialog.error('打开设置失败', {
-                detail: `无法打开设置面板：\n\n${error}\n\n请尝试重启Cocos Creator编辑器。`,
+            console.error('Failed to open GitHub with shell.openExternal, trying exec:', error);
+            
+            // 备用方法：使用系统命令
+            exec(`start "" "${url}"`, (execError) => {
+                if (execError) {
+                    console.error('Failed to open GitHub with exec:', execError);
+                    Editor.Dialog.info('打开GitHub', {
+                        detail: `请手动访问以下链接：\n\n${url}`,
+                    });
+                } else {
+                    console.log('GitHub link opened successfully with exec');
+                }
             });
         }
     },
 
     /**
-     * 项目分析（预留）
+     * 打开QQ群
      */
-    'analyze-project'() {
-        Editor.Dialog.info('项目分析', {
-            detail: '项目分析功能开发中...\n\n将在下个版本提供以下分析功能：\n• ECS架构合理性分析\n• 性能瓶颈检测\n• 组件使用统计\n• 系统执行效率分析\n• 内存使用优化建议',
-            buttons: ['好的'],
-        });
-    },
-
-    /**
-     * 组件库（预留）
-     */
-    'open-component-library'() {
-        Editor.Dialog.info('组件库', {
-            detail: '组件库功能开发中...\n\n将在下个版本提供：\n• 常用组件模板库\n• 系统模板库\n• 一键生成组件代码\n• 社区组件分享\n• 组件文档和示例',
-            buttons: ['好的'],
-        });
-    },
-
-    /**
-     * 打开GitHub仓库
-     */
-    'open-github'() {
-        const url = 'https://github.com/esengine/ecs-framework';
-        // 在Windows上使用正确的start命令语法
-        exec(`start "" "${url}"`, (error) => {
-            if (error) {
-                console.error('Failed to open GitHub:', error);
-                Editor.Dialog.info('打开GitHub', {
-                    detail: `请手动访问以下链接：\n\n${url}`,
-                });
-            }
-        });
+    'open-qq-group'() {
+        const url = 'https://qm.qq.com/cgi-bin/qm/qr?k=1DMoPJEsY5xUpTAcmjIHK8whgHJHYQTL&authKey=%2FklVb3S0Momc1q1J%2FWHncuwMVHGrDbwV1Y6gAfa5e%2FgHCvyYUL2gpA6hSOU%2BVSa5&noverify=0&group_code=481923584';
+        
+        try {
+            // 使用Electron的shell模块打开外部链接（推荐方法）
+            const { shell } = require('electron');
+            shell.openExternal(url);
+            console.log('QQ group link opened successfully');
+        } catch (error) {
+            console.error('Failed to open QQ group with shell.openExternal, trying exec:', error);
+            
+            // 备用方法：使用系统命令
+            exec(`start "" "${url}"`, (execError) => {
+                if (execError) {
+                    console.error('Failed to open QQ group with exec:', execError);
+                    Editor.Dialog.info('加入QQ群', {
+                        detail: `请手动访问以下链接加入QQ群：\n\n${url}\n\n或手动搜索QQ群号：481923584`,
+                    });
+                } else {
+                    console.log('QQ group link opened successfully with exec');
+                }
+            });
+        }
     },
 
     /**
@@ -268,36 +285,18 @@ export const methods: { [key: string]: (...any: any) => any } = {
     },
 
     /**
-     * 处理设置更新
+     * 打开代码生成器面板
      */
-    'settings-updated'(settings: any) {
-        console.log('ECS Framework settings updated:', settings);
-        
-        // 这里可以根据设置更新做一些处理
-        // 比如重新配置框架、更新性能监控等
-        
-        // 示例：根据设置更新性能监控
-        if (settings?.performance?.enableMonitoring) {
-            console.log('Performance monitoring enabled with thresholds:', {
-                warning: settings.performance.warningThreshold,
-                critical: settings.performance.criticalThreshold,
-                memoryWarning: settings.performance.memoryWarningMB,
-                memoryCritical: settings.performance.memoryCriticalMB
-            });
-        }
-        
-        // 示例：根据设置更新调试模式
-        if (settings?.debugging?.enableDebugMode) {
-            console.log('Debug mode enabled with log level:', settings.debugging.logLevel);
-        }
-        
-        // 示例：根据设置更新事件系统
-        if (settings?.events?.enableEventSystem) {
-            console.log('Event system configured:', {
-                asyncEvents: settings.events.enableAsyncEvents,
-                batching: settings.events.enableEventBatching,
-                batchSize: settings.events.batchSize,
-                maxListeners: settings.events.maxEventListeners
+    'open-generator'() {
+        console.log('Opening ECS Framework code generator panel...');
+        try {
+            // 正确的打开特定面板的方法
+            Editor.Panel.open(packageJSON.name + '.generator');
+            console.log('Generator panel opened successfully');
+        } catch (error) {
+            console.error('Failed to open generator panel:', error);
+            Editor.Dialog.error('打开代码生成器失败', {
+                detail: `无法打开代码生成器面板：\n\n${error}\n\n请尝试重启Cocos Creator编辑器。`,
             });
         }
     },

@@ -1,7 +1,8 @@
 import { readFileSync } from 'fs-extra';
 import { join } from 'path';
 import { createApp, App, defineComponent, ref, reactive, onMounted, onUnmounted } from 'vue';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
+import { IncomingMessage } from 'http';
 
 const panelDataMap = new WeakMap<any, App>();
 
@@ -15,7 +16,7 @@ interface GameInstance {
     lastUpdateTime: number;
     isActive: boolean;
     debugData?: any;
-    ws?: any; // WebSocket连接
+    ws?: WebSocket; // WebSocket连接
 }
 
 /**
@@ -136,7 +137,7 @@ class ECSDebugServer {
         try {
             this.wss = new WebSocketServer({ port: this.port });
             
-            this.wss.on('connection', (ws, req) => {
+            this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
                 const instanceId = this.generateInstanceId();
                 const instance: GameInstance = {
                     id: instanceId,
@@ -151,7 +152,7 @@ class ECSDebugServer {
                 this.gameInstances.set(instanceId, instance);
                 console.log(`[ECS Debug Server] New instance connected: ${instance.name}`);
 
-                ws.on('message', (data) => {
+                ws.on('message', (data: Buffer) => {
                     try {
                         const message = JSON.parse(data.toString());
                         this.handleMessage(instanceId, message);
@@ -168,7 +169,7 @@ class ECSDebugServer {
                     }
                 });
 
-                ws.on('error', (error) => {
+                ws.on('error', (error: Error) => {
                     console.error(`[ECS Debug Server] WebSocket error for ${instanceId}:`, error);
                 });
 

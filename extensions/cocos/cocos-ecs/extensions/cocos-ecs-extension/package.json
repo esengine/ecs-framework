@@ -13,12 +13,14 @@
     "main": "./dist/main.js",
     "dependencies": {
         "vue": "^3.1.4",
-        "fs-extra": "^10.0.0"
+        "fs-extra": "^10.0.0",
+        "ws": "^8.14.2"
     },
     "devDependencies": {
         "@cocos/creator-types": "^3.8.6",
         "@types/fs-extra": "^9.0.5",
         "@types/node": "^18.17.1",
+        "@types/ws": "^8.5.10",
         "typescript": "^5.8.2"
     },
     "panels": {
@@ -33,17 +35,6 @@
                 "height": 800
             }
         },
-        "settings": {
-            "title": "ECS Framework - 设置",
-            "type": "dockable",
-            "main": "dist/panels/settings/index.js",
-            "size": {
-                "min-width": 600,
-                "min-height": 700,
-                "width": 800,
-                "height": 900
-            }
-        },
         "debug": {
             "title": "ECS Framework - 调试面板",
             "type": "dockable",
@@ -53,6 +44,17 @@
                 "min-height": 500,
                 "width": 500,
                 "height": 600
+            }
+        },
+        "generator": {
+            "title": "ECS Framework - 代码生成器",
+            "type": "dockable",
+            "main": "dist/panels/generator/index.js",
+            "size": {
+                "min-width": 600,
+                "min-height": 500,
+                "width": 900,
+                "height": 700
             }
         }
     },
@@ -68,13 +70,13 @@
             },
             {
                 "path": "i18n:menu.panel/ECS Framework",
-                "label": "插件设置",
-                "message": "open-settings"
+                "label": "调试面板",
+                "message": "open-debug"
             },
             {
                 "path": "i18n:menu.panel/ECS Framework",
-                "label": "调试面板",
-                "message": "open-debug"
+                "label": "代码生成器",
+                "message": "open-generator"
             },
             {
                 "path": "i18n:menu.develop/ECS Framework",
@@ -113,34 +115,24 @@
                     "create-ecs-template"
                 ]
             },
-            "open-settings": {
-                "methods": [
-                    "open-settings"
-                ]
-            },
-            "open-project-analysis": {
-                "methods": [
-                    "open-project-analysis"
-                ]
-            },
-            "open-component-library": {
-                "methods": [
-                    "open-component-library"
-                ]
-            },
             "open-github": {
                 "methods": [
                     "open-github"
                 ]
             },
-            "settings-updated": {
+            "open-qq-group": {
                 "methods": [
-                    "settings-updated"
+                    "open-qq-group"
                 ]
             },
             "open-debug": {
                 "methods": [
                     "open-debug"
+                ]
+            },
+            "open-generator": {
+                "methods": [
+                    "open-generator"
                 ]
             }
         }

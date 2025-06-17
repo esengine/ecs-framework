@@ -462,20 +462,16 @@ module.exports = Editor.Panel.define({
                         });
                     };
 
-                    const openSettings = () => {
-                        Editor.Message.send('cocos-ecs-extension', 'open-settings');
-                    };
-
-                    const openProjectAnalysis = () => {
-                        Editor.Message.send('cocos-ecs-extension', 'open-project-analysis');
-                    };
-
-                    const openComponentLibrary = () => {
-                        Editor.Message.send('cocos-ecs-extension', 'open-component-library');
-                    };
-
                     const openGithub = () => {
                         Editor.Message.send('cocos-ecs-extension', 'open-github');
+                    };
+
+                    const joinQQGroup = () => {
+                        Editor.Message.send('cocos-ecs-extension', 'open-qq-group');
+                    };
+
+                    const openGenerator = () => {
+                        Editor.Message.send('cocos-ecs-extension', 'open-generator');
                     };
 
                     // 组件挂载后检测状态
@@ -510,10 +506,9 @@ module.exports = Editor.Panel.define({
                         checkForUpdates,
                         openDocumentation,
                         createEcsTemplate,
-                        openSettings,
-                        openProjectAnalysis,
-                        openComponentLibrary,
-                        openGithub
+                        openGithub,
+                        joinQQGroup,
+                        openGenerator
                     };
                 },
                 template: readFileSync(join(__dirname, '../../../static/template/vue/welcome.html'), 'utf-8'),
