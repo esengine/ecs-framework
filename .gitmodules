@@ -1,0 +1,3 @@
+[submodule "thirdparty/BehaviourTree-ai"]
+	path = thirdparty/BehaviourTree-ai
+	url = https://github.com/esengine/BehaviourTree-ai.git

@@ -56,6 +56,17 @@
                 "width": 900,
                 "height": 700
             }
+        },
+        "behavior-tree": {
+            "title": "ECS Framework - 行为树AI组件库",
+            "type": "dockable",
+            "main": "dist/panels/behavior-tree/index.js",
+            "size": {
+                "min-width": 700,
+                "min-height": 600,
+                "width": 1000,
+                "height": 800
+            }
         }
     },
     "contributions": {
@@ -77,6 +88,11 @@
                 "path": "i18n:menu.panel/ECS Framework",
                 "label": "代码生成器",
                 "message": "open-generator"
+            },
+            {
+                "path": "i18n:menu.panel/ECS Framework",
+                "label": "行为树AI组件库",
+                "message": "open-behavior-tree"
             },
             {
                 "path": "i18n:menu.develop/ECS Framework",
@@ -133,6 +149,31 @@
             "open-generator": {
                 "methods": [
                     "open-generator"
+                ]
+            },
+            "open-behavior-tree": {
+                "methods": [
+                    "open-behavior-tree"
+                ]
+            },
+            "install-behavior-tree": {
+                "methods": [
+                    "install-behavior-tree"
+                ]
+            },
+            "update-behavior-tree": {
+                "methods": [
+                    "update-behavior-tree"
+                ]
+            },
+            "check-behavior-tree-installed": {
+                "methods": [
+                    "check-behavior-tree-installed"
+                ]
+            },
+            "open-behavior-tree-docs": {
+                "methods": [
+                    "open-behavior-tree-docs"
                 ]
             }
         }

@@ -1,0 +1,407 @@
+<!-- 头部工具栏 -->
+<div class="header-toolbar">
+    <div class="toolbar-left">
+        <h2>🌳 行为树可视化编辑器</h2>
+        <div class="toolbar-buttons">
+            <button class="tool-btn" @click="newBehaviorTree" title="新建行为树">
+                <span>📄</span> 新建
+            </button>
+            <button class="tool-btn" @click="saveBehaviorTree" title="保存行为树">
+                <span>💾</span> 保存
+            </button>
+            <button class="tool-btn" @click="loadBehaviorTree" title="加载行为树">
+                <span>📂</span> 加载
+            </button>
+            <button class="tool-btn" @click="exportCode" title="导出代码">
+                <span>⚡</span> 导出代码
+            </button>
+        </div>
+    </div>
+    <div class="toolbar-right">
+        <div class="install-status" :class="installStatusClass()">
+            <span>{{ installStatusText() }}</span>
+            <button v-if="!isInstalled" @click="handleInstall" :disabled="isInstalling">
+                {{ isInstalling ? '安装中...' : '安装AI系统' }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="editor-container">
+    <!-- 左侧节点面板 -->
+    <div class="nodes-panel">
+        <div class="panel-header">
+            <h3>📦 节点库</h3>
+            <input 
+                type="text" 
+                v-model="nodeSearchText" 
+                placeholder="搜索节点..." 
+                class="search-input"
+            >
+        </div>
+        
+        <div class="node-categories">
+            <!-- 复合节点 -->
+            <div class="category">
+                <h4 class="category-title">🔗 复合节点</h4>
+                <div class="node-list">
+                    <div 
+                        v-for="node in filteredCompositeNodes()" 
+                        :key="node.type"
+                        class="node-item composite"
+                        :draggable="true"
+                        @dragstart="onNodeDragStart($event, node)"
+                        :title="node.description"
+                    >
+                        <span class="node-icon">{{ node.icon }}</span>
+                        <span class="node-name">{{ node.name }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 装饰器节点 -->
+            <div class="category">
+                <h4 class="category-title">🎭 装饰器</h4>
+                <div class="node-list">
+                    <div 
+                        v-for="node in filteredDecoratorNodes()" 
+                        :key="node.type"
+                        class="node-item decorator"
+                        :draggable="true"
+                        @dragstart="onNodeDragStart($event, node)"
+                        :title="node.description"
+                    >
+                        <span class="node-icon">{{ node.icon }}</span>
+                        <span class="node-name">{{ node.name }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 动作节点 -->
+            <div class="category">
+                <h4 class="category-title">⚡ 动作节点</h4>
+                <div class="node-list">
+                    <div 
+                        v-for="node in filteredActionNodes()" 
+                        :key="node.type"
+                        class="node-item action"
+                        :draggable="true"
+                        @dragstart="onNodeDragStart($event, node)"
+                        :title="node.description"
+                    >
+                        <span class="node-icon">{{ node.icon }}</span>
+                        <span class="node-name">{{ node.name }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 条件节点 -->
+            <div class="category">
+                <h4 class="category-title">❓ 条件节点</h4>
+                <div class="node-list">
+                    <div 
+                        v-for="node in filteredConditionNodes()" 
+                        :key="node.type"
+                        class="node-item condition"
+                        :draggable="true"
+                        @dragstart="onNodeDragStart($event, node)"
+                        :title="node.description"
+                    >
+                        <span class="node-icon">{{ node.icon }}</span>
+                        <span class="node-name">{{ node.name }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ECS节点 -->
+            <div class="category">
+                <h4 class="category-title">🎮 ECS节点</h4>
+                <div class="node-list">
+                    <div 
+                        v-for="node in filteredECSNodes()" 
+                        :key="node.type"
+                        class="node-item ecs"
+                        :draggable="true"
+                        @dragstart="onNodeDragStart($event, node)"
+                        :title="node.description"
+                    >
+                        <span class="node-icon">{{ node.icon }}</span>
+                        <span class="node-name">{{ node.name }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 中间画布区域 -->
+    <div class="canvas-container">
+        <div class="canvas-toolbar">
+            <div class="zoom-controls">
+                <button @click="zoomIn">🔍+</button>
+                <span>{{ Math.round(zoomLevel * 100) }}%</span>
+                <button @click="zoomOut">🔍-</button>
+                <button @click="resetZoom">重置</button>
+            </div>
+            <div class="canvas-actions">
+                <button @click="centerView">居中</button>
+                <button @click="autoLayout">自动布局</button>
+                <button @click="validateTree">验证</button>
+            </div>
+        </div>
+        
+        <div 
+            ref="canvasAreaRef"
+            class="canvas-area"
+            :class="{ 'connecting': dragState.isConnecting }"
+            @drop="onCanvasDrop"
+            @dragover="onCanvasDragOver"
+            @wheel="onCanvasWheel"
+            @mousedown="onCanvasMouseDown"
+            @mousemove="onCanvasMouseMove"
+            @mouseup="onCanvasMouseUp"
+        >
+            <canvas 
+                :width="canvasWidth" 
+                :height="canvasHeight"
+                class="behavior-tree-canvas"
+            ></canvas>
+            
+            <!-- 连接线绘制层 -->
+            <svg 
+                ref="svgRef"
+                class="connection-layer" 
+                :width="canvasWidth" 
+                :height="canvasHeight"
+            >
+                <g :transform="'translate(' + panX + ', ' + panY + ') scale(' + zoomLevel + ')'">
+                    <path 
+                        v-for="connection in connections" 
+                        :key="connection.id"
+                        :d="connection.path"
+                        class="connection-line"
+                        :class="{ 'connection-active': connection.active }"
+                    />
+                    <!-- 临时连接线 -->
+                    <path 
+                        v-if="connectionState.tempPath"
+                        :d="connectionState.tempPath"
+                        class="connection-temp"
+                    />
+                </g>
+            </svg>
+            
+            <!-- 节点渲染层 -->
+            <div 
+                class="nodes-layer" 
+                :style="{ transform: 'translate(' + panX + 'px, ' + panY + 'px) scale(' + zoomLevel + ')' }"
+            >
+                <div 
+                    v-for="node in treeNodes" 
+                    :key="node.id"
+                    :data-node-id="node.id"
+                    class="tree-node"
+                    :class="[
+                        'node-' + node.type, 
+                        { 
+                            'node-selected': selectedNodeId === node.id,
+                            'node-error': node.hasError,
+                            'dragging': dragState.dragNodeId === node.id
+                        }
+                    ]"
+                    :style="{ 
+                        left: node.x + 'px', 
+                        top: node.y + 'px' 
+                    }"
+                    @click="selectNode(node.id)"
+                    @mousedown="startNodeDrag($event, node)"
+                >
+                    <div class="node-header">
+                        <span class="node-icon">{{ node.icon }}</span>
+                        <span class="node-title">{{ node.name }}</span>
+                        <button class="node-delete" @click.stop="deleteNode(node.id)">×</button>
+                    </div>
+                    <div class="node-body" v-if="node.description">
+                        <div class="node-description">{{ node.description }}</div>
+                    </div>
+                    <!-- 输入端口 - 执行流入口 -->
+                    <div 
+                        v-if="node.canHaveParent"
+                        class="port port-input"
+                        :class="{ 
+                            'connecting': connectionState.isConnecting && 
+                                         connectionState.startPortType === 'output' && 
+                                         connectionState.startNodeId !== node.id,
+                            'drag-target': isValidConnectionTarget(node.id, 'input')
+                        }"
+                        @mousedown.stop="startConnection($event, node.id, 'input')"
+                        @mouseenter="onPortHover(node.id, 'input')"
+                        @mouseleave="onPortLeave()"
+                        title="执行流入口（可从此开始连接）"
+                    >
+                        <div class="port-inner"></div>
+                    </div>
+                    
+                    <!-- 输出端口 - 执行流出口 -->
+                    <div 
+                        v-if="node.canHaveChildren"
+                        class="port port-output"
+                        :class="{ 
+                            'connecting': connectionState.isConnecting && 
+                                         connectionState.startPortType === 'input' && 
+                                         connectionState.startNodeId !== node.id,
+                            'drag-target': isValidConnectionTarget(node.id, 'output')
+                        }"
+                        @mousedown.stop="startConnection($event, node.id, 'output')"
+                        @mouseenter="onPortHover(node.id, 'output')"
+                        @mouseleave="onPortLeave()"
+                        title="执行流出口（可从此开始连接）"
+                    >
+                        <div class="port-inner"></div>
+                    </div>
+                    <!-- 子节点指示器 -->
+                    <div v-if="node.children && node.children.length > 0" class="children-indicator">
+                        {{ node.children.length }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 网格背景 -->
+            <div class="grid-background" :style="gridStyle()"></div>
+        </div>
+    </div>
+
+    <!-- 右侧属性面板 -->
+    <div class="properties-panel">
+        <div class="panel-header">
+            <h3>⚙️ 属性面板</h3>
+        </div>
+        
+        <div v-if="selectedNode()" class="node-properties">
+            <div class="property-section">
+                <h4>基本信息</h4>
+                <div class="property-item">
+                    <label>节点名称:</label>
+                    <input 
+                        type="text" 
+                        :value="selectedNode().name" 
+                        @input="updateNodeProperty('name', $event.target.value)"
+                    >
+                </div>
+                <div class="property-item">
+                    <label>描述:</label>
+                    <textarea 
+                        :value="selectedNode().description"
+                        @input="updateNodeProperty('description', $event.target.value)"
+                    ></textarea>
+                </div>
+            </div>
+
+            <div class="property-section" v-if="selectedNode().properties">
+                <h4>节点属性</h4>
+                <div 
+                    v-for="(prop, key) in selectedNode().properties" 
+                    :key="key"
+                    class="property-item"
+                >
+                    <label>{{ prop.name }}:</label>
+                    <input 
+                        v-if="prop.type === 'string'"
+                        type="text" 
+                        :value="prop.value"
+                        @input="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
+                    >
+                    <input 
+                        v-else-if="prop.type === 'number'"
+                        type="number" 
+                        :value="prop.value"
+                        @input="updateNodeProperty('properties.' + key + '.value', parseFloat($event.target.value))"
+                    >
+                    <input 
+                        v-else-if="prop.type === 'boolean'"
+                        type="checkbox" 
+                        :checked="prop.value"
+                        @change="updateNodeProperty('properties.' + key + '.value', $event.target.checked)"
+                    >
+                    <textarea 
+                        v-else-if="prop.type === 'code'"
+                        :value="prop.value"
+                        @input="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
+                        rows="6"
+                        class="code-input"
+                        placeholder="请输入代码..."
+                    ></textarea>
+                    <select 
+                        v-else-if="prop.type === 'select'"
+                        :value="prop.value"
+                        @change="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
+                    >
+                        <option v-for="option in prop.options" :key="option" :value="option">
+                            {{ option }}
+                        </option>
+                    </select>
+                    <p v-if="prop.description" class="property-help">{{ prop.description }}</p>
+                </div>
+            </div>
+
+            <div class="property-section">
+                <h4>代码预览</h4>
+                <pre class="code-preview">{{ generateNodeCode(selectedNode()) }}</pre>
+            </div>
+        </div>
+        
+        <div v-else class="no-selection">
+            <p>请选择一个节点查看属性</p>
+        </div>
+    </div>
+</div>
+
+<!-- 行为树结构面板 -->
+<div class="tree-structure-panel" v-if="rootNode()">
+    <div class="panel-header">
+        <h3>🌲 树结构</h3>
+    </div>
+    <div class="tree-view">
+        <tree-node-item 
+            :node="rootNode()"
+            :level="0"
+            :get-node-by-id-local="getNodeByIdLocal"
+            @node-select="selectNode"
+        ></tree-node-item>
+    </div>
+</div>
+
+<!-- 验证结果 -->
+<div v-if="!validationResult().isValid" class="validation-error">
+    <span class="error-icon">⚠️</span>
+    <span>{{ validationResult().message }}</span>
+</div>
+
+<!-- 导出模态框 -->
+<div v-if="showExportModal" class="modal-overlay" @click="showExportModal = false">
+    <div class="modal-content" @click.stop>
+        <div class="modal-header">
+            <h3>导出代码</h3>
+            <button @click="showExportModal = false">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="export-options">
+                <label>
+                    <input type="radio" v-model="exportFormat" value="typescript"> TypeScript
+                </label>
+                <label>
+                    <input type="radio" v-model="exportFormat" value="json"> JSON
+                </label>
+            </div>
+            <textarea 
+                class="export-code" 
+                :value="exportedCode()" 
+                readonly
+            ></textarea>
+        </div>
+        <div class="modal-footer">
+            <button @click="copyToClipboard">复制到剪贴板</button>
+            <button @click="saveToFile">保存到文件</button>
+            <button @click="showExportModal = false">关闭</button>
+        </div>
+    </div>
+</div> 

@@ -1,8 +1,9 @@
 // @ts-ignore
 import packageJSON from '../package.json';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as fsExtra from 'fs-extra';
 import { readFileSync, outputFile } from 'fs-extra';
 import { join } from 'path';
 import { TemplateGenerator } from './TemplateGenerator';
@@ -297,6 +298,236 @@ export const methods: { [key: string]: (...any: any) => any } = {
             console.error('Failed to open generator panel:', error);
             Editor.Dialog.error('打开代码生成器失败', {
                 detail: `无法打开代码生成器面板：\n\n${error}\n\n请尝试重启Cocos Creator编辑器。`,
+            });
+        }
+    },
+
+    /**
+     * 打开行为树AI组件库面板
+     */
+    'open-behavior-tree'() {
+        console.log('Opening Behavior Tree AI panel...');
+        try {
+            Editor.Panel.open(packageJSON.name + '.behavior-tree');
+            console.log('Behavior Tree panel opened successfully');
+        } catch (error) {
+            console.error('Failed to open behavior tree panel:', error);
+            Editor.Dialog.error('打开行为树面板失败', {
+                detail: `无法打开行为树AI组件库面板：\n\n${error}\n\n请尝试重启Cocos Creator编辑器。`,
+            });
+        }
+    },
+
+    /**
+     * 安装行为树AI系统
+     */
+    async 'install-behavior-tree'() {
+        console.log('Installing Behavior Tree AI system...');
+        const projectPath = Editor.Project.path;
+        
+        try {
+            // 检查项目路径是否有效
+            if (!projectPath || !fs.existsSync(projectPath)) {
+                throw new Error('无效的项目路径');
+            }
+
+            const packageJsonPath = path.join(projectPath, 'package.json');
+            
+            // 检查package.json是否存在
+            if (!fs.existsSync(packageJsonPath)) {
+                throw new Error('项目根目录未找到package.json文件');
+            }
+
+            console.log('Installing @esengine/ai package...');
+            
+            // 执行npm安装
+            await new Promise<void>((resolve, reject) => {
+                const cmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+                const npmProcess = spawn(cmd, ['install', '@esengine/ai'], {
+                    cwd: projectPath,
+                    stdio: 'pipe',
+                    shell: true
+                });
+
+                let stdout = '';
+                let stderr = '';
+
+                npmProcess.stdout?.on('data', (data) => {
+                    stdout += data.toString();
+                });
+
+                npmProcess.stderr?.on('data', (data) => {
+                    stderr += data.toString();
+                });
+
+                npmProcess.on('close', (code) => {
+                    if (code === 0) {
+                        console.log('NPM install completed successfully');
+                        console.log('STDOUT:', stdout);
+                        resolve();
+                    } else {
+                        console.error('NPM install failed with code:', code);
+                        console.error('STDERR:', stderr);
+                        reject(new Error(`NPM安装失败 (退出码: ${code})\n\n${stderr || stdout}`));
+                    }
+                });
+
+                npmProcess.on('error', (error) => {
+                    console.error('NPM process error:', error);
+                    reject(new Error(`NPM进程错误: ${error.message}`));
+                });
+            });
+
+                         // 复制行为树相关文件到项目中
+             const sourceDir = path.join(__dirname, '../../../thirdparty/BehaviourTree-ai');
+             const targetDir = path.join(projectPath, 'assets/scripts/AI');
+             
+             if (fs.existsSync(sourceDir)) {
+                 console.log('Copying behavior tree files...');
+                 await fsExtra.ensureDir(targetDir);
+                
+                // 创建示例文件
+                const exampleCode = `import { Scene, Entity, Component } from '@esengine/ecs-framework';
+import { BehaviorTreeSystem, BehaviorTreeFactory, TaskStatus } from '@esengine/ai/ecs-integration';
+
+/**
+ * 示例AI组件
+ */
+export class AIExampleComponent extends Component {
+    // 在场景中添加行为树系统
+    static setupBehaviorTreeSystem(scene: Scene) {
+        const behaviorTreeSystem = new BehaviorTreeSystem();
+        scene.addEntityProcessor(behaviorTreeSystem);
+        return behaviorTreeSystem;
+    }
+    
+    // 为实体添加简单AI行为
+    static addSimpleAI(entity: Entity) {
+        BehaviorTreeFactory.addBehaviorTreeToEntity(
+            entity,
+            (builder) => builder
+                .selector()
+                    .action((entity) => {
+                        console.log("AI正在巡逻...");
+                        return TaskStatus.Success;
+                    })
+                    .action((entity) => {
+                        console.log("AI正在警戒...");
+                        return TaskStatus.Success;
+                    })
+                .endComposite(),
+            { debugMode: true }
+        );
+    }
+}`;
+
+                                 const examplePath = path.join(targetDir, 'AIExample.ts');
+                 await fsExtra.writeFile(examplePath, exampleCode);
+                console.log('Example file created successfully');
+            }
+
+            console.log('Behavior Tree AI system installed successfully');
+            return true;
+
+        } catch (error) {
+            console.error('Failed to install Behavior Tree AI system:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`行为树AI系统安装失败：\n\n${errorMessage}`);
+        }
+    },
+
+    /**
+     * 更新行为树AI系统
+     */
+    async 'update-behavior-tree'() {
+        console.log('Updating Behavior Tree AI system...');
+        const projectPath = Editor.Project.path;
+        
+        try {
+            // 检查是否已安装
+                         const packageJsonPath = path.join(projectPath, 'package.json');
+             if (!fs.existsSync(packageJsonPath)) {
+                 throw new Error('项目根目录未找到package.json文件');
+             }
+
+             const packageJson = await fsExtra.readJson(packageJsonPath);
+            const dependencies = packageJson.dependencies || {};
+            
+            if (!dependencies['@esengine/ai']) {
+                throw new Error('尚未安装行为树AI系统，请先进行安装');
+            }
+
+            console.log('Checking for updates...');
+            
+            // 执行npm更新
+            await new Promise<void>((resolve, reject) => {
+                const cmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+                const npmProcess = spawn(cmd, ['update', '@esengine/ai'], {
+                    cwd: projectPath,
+                    stdio: 'pipe',
+                    shell: true
+                });
+
+                npmProcess.on('close', (code) => {
+                    if (code === 0) {
+                        console.log('Update completed successfully');
+                        resolve();
+                    } else {
+                        reject(new Error(`更新失败 (退出码: ${code})`));
+                    }
+                });
+
+                npmProcess.on('error', (error) => {
+                    reject(new Error(`更新进程错误: ${error.message}`));
+                });
+            });
+
+            console.log('Behavior Tree AI system updated successfully');
+            return true;
+
+        } catch (error) {
+            console.error('Failed to update Behavior Tree AI system:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`行为树AI系统更新失败：\n\n${errorMessage}`);
+        }
+    },
+
+    /**
+     * 检查行为树AI系统是否已安装
+     */
+    async 'check-behavior-tree-installed'() {
+        const projectPath = Editor.Project.path;
+        
+        try {
+                         const packageJsonPath = path.join(projectPath, 'package.json');
+             if (!fs.existsSync(packageJsonPath)) {
+                 return false;
+             }
+
+             const packageJson = await fsExtra.readJson(packageJsonPath);
+            const dependencies = packageJson.dependencies || {};
+            
+            return !!dependencies['@esengine/ai'];
+        } catch (error) {
+            console.error('Failed to check installation status:', error);
+            return false;
+        }
+    },
+
+    /**
+     * 打开行为树文档
+     */
+    'open-behavior-tree-docs'() {
+        const url = 'https://github.com/esengine/BehaviourTree-ai/blob/master/ecs-integration/README.md';
+        
+        try {
+            const { shell } = require('electron');
+            shell.openExternal(url);
+            console.log('Behavior Tree documentation opened successfully');
+        } catch (error) {
+            console.error('Failed to open documentation:', error);
+            Editor.Dialog.info('打开文档', {
+                detail: `请手动访问以下链接查看行为树文档:\n\n${url}`,
             });
         }
     },

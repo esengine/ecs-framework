@@ -5,6 +5,7 @@
     "version": "3.8.6"
   },
   "dependencies": {
+    "@esengine/ai": "^2.0.1",
     "@esengine/ecs-framework": "^2.1.19"
   }
 }

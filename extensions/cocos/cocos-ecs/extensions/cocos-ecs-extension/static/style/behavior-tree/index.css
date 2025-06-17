@@ -1,0 +1,902 @@
+/* 基础样式 */
+#behavior-tree-app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1e1e1e;
+    color: #ffffff;
+    overflow: hidden;
+}
+
+/* 头部工具栏 */
+.header-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-bottom: 2px solid #4a5568;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.toolbar-left h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.toolbar-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 12px;
+}
+
+.tool-btn:hover {
+    background: rgba(255,255,255,0.2);
+    transform: translateY(-1px);
+}
+
+.toolbar-right .install-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
+/* 编辑器容器 */
+.editor-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* 左侧节点面板 */
+.nodes-panel {
+    width: 280px;
+    background: #2d3748;
+    border-right: 1px solid #4a5568;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-header {
+    padding: 16px;
+    background: #4a5568;
+    border-bottom: 1px solid #718096;
+}
+
+.panel-header h3 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    color: #e2e8f0;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 12px;
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    color: white;
+    font-size: 12px;
+}
+
+.search-input::placeholder {
+    color: #a0aec0;
+}
+
+.node-categories {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.category {
+    margin-bottom: 16px;
+}
+
+.category-title {
+    margin: 0 0 8px 0;
+    padding: 8px 12px;
+    background: #4a5568;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #e2e8f0;
+}
+
+.node-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.node-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    cursor: grab;
+    transition: all 0.3s ease;
+    font-size: 12px;
+}
+
+.node-item:hover {
+    background: #2d3748;
+    border-color: #667eea;
+    transform: translateX(4px);
+}
+
+.node-item:active {
+    cursor: grabbing;
+}
+
+.node-item.composite { border-left: 3px solid #667eea; }
+.node-item.decorator { border-left: 3px solid #9f7aea; }
+.node-item.action { border-left: 3px solid #48bb78; }
+.node-item.condition { border-left: 3px solid #ed8936; }
+.node-item.ecs { border-left: 3px solid #38b2ac; }
+
+.node-icon {
+    font-size: 16px;
+    min-width: 20px;
+}
+
+.node-name {
+    flex: 1;
+    color: #e2e8f0;
+}
+
+/* 中间画布区域 */
+.canvas-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #1a202c;
+    position: relative;
+}
+
+.canvas-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #2d3748;
+    border-bottom: 1px solid #4a5568;
+}
+
+.zoom-controls, .canvas-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.zoom-controls button, .canvas-actions button {
+    padding: 4px 8px;
+    background: #4a5568;
+    border: 1px solid #718096;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.3s ease;
+}
+
+.zoom-controls button:hover, .canvas-actions button:hover {
+    background: #667eea;
+}
+
+.canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: 
+        radial-gradient(circle at 20px 20px, #4a5568 1px, transparent 1px),
+        linear-gradient(90deg, transparent 19px, #2d3748 20px, transparent 21px),
+        linear-gradient(transparent 19px, #2d3748 20px, transparent 21px);
+    background-size: 20px 20px;
+}
+
+.behavior-tree-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+.connection-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 1;
+    will-change: transform;
+}
+
+.connection-line {
+    stroke: #67b7dc;
+    stroke-width: 3;
+    fill: none;
+    transition: none;
+    opacity: 0.9;
+    will-change: d;
+}
+
+.connection-line:hover {
+    stroke: #9f7aea;
+    stroke-width: 4;
+    opacity: 1;
+}
+
+.connection-active {
+    stroke: #48bb78;
+    stroke-width: 4;
+    animation: flow 1.5s linear infinite;
+}
+
+@keyframes flow {
+    0% { stroke-dasharray: 8,8; stroke-dashoffset: 0; }
+    100% { stroke-dasharray: 8,8; stroke-dashoffset: 16; }
+}
+
+.connection-temp {
+    stroke: #f6ad55;
+    stroke-width: 3;
+    stroke-dasharray: 6,6;
+    opacity: 0.8;
+    animation: dash 1s linear infinite;
+    will-change: d;
+    transition: none;
+}
+
+@keyframes dash {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: 12; }
+}
+
+.nodes-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+.tree-node {
+    position: absolute;
+    min-width: 150px;
+    background: linear-gradient(145deg, #2d3748 0%, #1a202c 100%);
+    border: 2px solid #4a5568;
+    border-radius: 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    will-change: transform;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+}
+
+.tree-node:hover {
+    border-color: #67b7dc;
+    box-shadow: 0 6px 20px rgba(103, 183, 220, 0.3);
+    transform: translateY(-1px);
+}
+
+.tree-node.node-selected {
+    border-color: #48bb78;
+    box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.3);
+    background: linear-gradient(145deg, #2f4f4f 0%, #1e3a3a 100%);
+}
+
+.tree-node.node-error {
+    border-color: #f56565;
+    box-shadow: 0 0 0 3px rgba(245, 101, 101, 0.3);
+    background: linear-gradient(145deg, #4a2626 0%, #2d1a1a 100%);
+}
+
+.node-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid #4a5568;
+    border-radius: 10px 10px 0 0;
+    backdrop-filter: blur(2px);
+}
+
+.node-header .node-icon {
+    font-size: 16px;
+    margin-right: 10px;
+    opacity: 0.9;
+}
+
+.node-title {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2e8f0;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.node-delete {
+    width: 20px;
+    height: 20px;
+    background: #f56565;
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.node-delete:hover {
+    opacity: 1;
+}
+
+.node-body {
+    padding: 10px 14px;
+}
+
+.node-description {
+    font-size: 11px;
+    color: #a0aec0;
+    line-height: 1.4;
+    opacity: 0.9;
+}
+
+/* 端口基础样式 */
+.port {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    border: 2px solid;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 100;
+    left: 50%;
+    pointer-events: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(1px);
+}
+
+/* 增加端口的可点击区域 */
+.port::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    z-index: 101;
+    pointer-events: auto;
+}
+
+.port:hover {
+    transform: scale(1.3);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+/* 输入端口 - 执行流入口，蓝色方形 */
+.port-input {
+    top: -8px;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+    border-color: #2c5aa0;
+}
+
+.port-input:hover {
+    background: linear-gradient(135deg, #5ba3f5 0%, #4a90e2 100%);
+    border-color: #357abd;
+    box-shadow: 0 0 12px rgba(74, 144, 226, 0.6);
+    transform: translateX(-50%) scale(1.3);
+}
+
+/* 输出端口 - 执行流出口，橙色方形 */
+.port-output {
+    bottom: -8px;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    border-color: #d68910;
+}
+
+.port-output:hover {
+    background: linear-gradient(135deg, #f5b041 0%, #f39c12 100%);
+    border-color: #e67e22;
+    box-shadow: 0 0 12px rgba(243, 156, 18, 0.6);
+    transform: translateX(-50%) scale(1.3);
+}
+
+/* 连接中的端口高亮 - 更清晰的反馈 */
+.port.connecting {
+    background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%) !important;
+    border-color: #ff8c00 !important;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.8) !important;
+    animation: pulse-port 1s infinite;
+}
+
+@keyframes pulse-port {
+    0% { 
+        transform: translateX(-50%) scale(1.2); 
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    }
+    50% { 
+        transform: translateX(-50%) scale(1.4); 
+        box-shadow: 0 0 20px rgba(255, 215, 0, 1);
+    }
+    100% { 
+        transform: translateX(-50%) scale(1.2); 
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    }
+}
+
+/* 拖拽目标样式 - 绿色高亮表示可连接 */
+.port.drag-target {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%) !important;
+    border-color: #2f855a !important;
+    transform: scale(1.4) !important;
+    box-shadow: 0 0 15px rgba(72, 187, 120, 0.8) !important;
+    animation: pulse-target 0.8s infinite;
+}
+
+@keyframes pulse-target {
+    0% { 
+        transform: scale(1.4);
+        box-shadow: 0 0 15px rgba(72, 187, 120, 0.8);
+    }
+    50% { 
+        transform: scale(1.6);
+        box-shadow: 0 0 20px rgba(72, 187, 120, 1);
+    }
+    100% { 
+        transform: scale(1.4);
+        box-shadow: 0 0 15px rgba(72, 187, 120, 0.8);
+    }
+}
+
+/* 端口内部亮点效果 */
+.port-inner {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    right: 3px;
+    bottom: 3px;
+    border-radius: 1px;
+    background: rgba(255, 255, 255, 0.2);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.port:hover .port-inner {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.port.connecting .port-inner {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.port.drag-target .port-inner {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.children-indicator {
+    position: absolute;
+    bottom: -12px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    background: #667eea;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    color: white;
+}
+
+/* 右侧属性面板 */
+.properties-panel {
+    width: 320px;
+    background: #2d3748;
+    border-left: 1px solid #4a5568;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.node-properties {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.property-section {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #4a5568;
+}
+
+.property-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: #e2e8f0;
+}
+
+.property-item {
+    margin-bottom: 12px;
+}
+
+.property-item label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    color: #a0aec0;
+}
+
+.property-item input,
+.property-item textarea,
+.property-item select {
+    flex: 1;
+    padding: 6px 8px;
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    color: white;
+    font-size: 12px;
+}
+
+.property-item input:focus,
+.property-item textarea:focus,
+.property-item select:focus {
+    border-color: #667eea;
+    outline: none;
+}
+
+.property-item .code-input {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    resize: vertical;
+    min-height: 120px;
+}
+
+.property-help {
+    margin: 4px 0 0 0;
+    font-size: 10px;
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.code-preview {
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    padding: 12px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    color: #e2e8f0;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+.no-selection {
+    padding: 40px 20px;
+    text-align: center;
+    color: #a0aec0;
+}
+
+.tree-structure {
+    padding: 16px;
+    border-top: 1px solid #4a5568;
+    background: #1a202c;
+}
+
+.structure-tree {
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.empty-tree {
+    color: #a0aec0;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+
+.tree-node-item {
+    margin-bottom: 2px;
+}
+
+.tree-node-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-size: 11px;
+}
+
+.tree-node-line:hover {
+    background: #4a5568;
+}
+
+.tree-node-icon {
+    font-size: 12px;
+    min-width: 16px;
+}
+
+.tree-node-name {
+    flex: 1;
+    color: #e2e8f0;
+    font-weight: 500;
+}
+
+.tree-node-type {
+    color: #a0aec0;
+    font-size: 10px;
+}
+
+/* 底部状态栏 */
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px;
+    background: #2d3748;
+    border-top: 1px solid #4a5568;
+    font-size: 12px;
+    color: #a0aec0;
+}
+
+.status-left, .status-right {
+    display: flex;
+    gap: 16px;
+}
+
+.status-valid {
+    color: #48bb78;
+}
+
+.status-invalid {
+    color: #f56565;
+}
+
+/* 模态框 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #2d3748;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #4a5568;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #e2e8f0;
+}
+
+.modal-header button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #a0aec0;
+    cursor: pointer;
+}
+
+.modal-body {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.export-options {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.export-options label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #e2e8f0;
+    cursor: pointer;
+}
+
+.code-output {
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    padding: 16px;
+    height: 400px;
+    overflow: auto;
+}
+
+.code-output pre {
+    margin: 0;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    color: #e2e8f0;
+    white-space: pre-wrap;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid #4a5568;
+    justify-content: flex-end;
+}
+
+.modal-footer button {
+    padding: 8px 16px;
+    background: #667eea;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.3s ease;
+}
+
+.modal-footer button:hover {
+    background: #5a67d8;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+    .nodes-panel {
+        width: 240px;
+    }
+    
+    .properties-panel {
+        width: 280px;
+    }
+}
+
+@media (max-width: 900px) {
+    .editor-container {
+        flex-direction: column;
+    }
+    
+    .nodes-panel, .properties-panel {
+        width: 100%;
+        height: 200px;
+    }
+    
+    .canvas-container {
+        flex: 1;
+        min-height: 400px;
+    }
+}
+
+/* 动画效果 */
+@keyframes nodeAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.tree-node {
+    animation: nodeAppear 0.3s ease-out;
+}
+
+/* 拖拽相关样式 */
+.drag-over {
+    background: rgba(102, 126, 234, 0.1);
+    border: 2px dashed #667eea;
+}
+
+/* 拖动状态样式 */
+.tree-node.dragging {
+    opacity: 0.9;
+    transform: scale(1.02) rotate(1deg);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+    z-index: 1000;
+    cursor: grabbing;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    transition: none;
+    border-color: #67b7dc;
+}
+
+/* 节点悬停时的端口显示优化 */
+.tree-node:hover .port {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.1);
+}
+
+.tree-node .port {
+    opacity: 0.8;
+    transition: all 0.2s ease;
+}
+
+/* 连接状态下的cursor样式 */
+.canvas-area.connecting {
+    cursor: crosshair;
+}
+
+.canvas-area.connecting .tree-node {
+    pointer-events: none;
+}
+
+.canvas-area.connecting .port {
+    pointer-events: all;
+    cursor: pointer;
+}
+
+.dragging {
+    opacity: 0.7;
+    transform: rotate(5deg);
+} 
