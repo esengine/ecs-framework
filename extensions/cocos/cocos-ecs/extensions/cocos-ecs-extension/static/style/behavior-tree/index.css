@@ -33,6 +33,17 @@
     text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
+.unsaved-indicator {
+    color: #ff6b6b;
+    animation: pulse-unsaved 2s infinite;
+    margin-left: 8px;
+}
+
+@keyframes pulse-unsaved {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
 .toolbar-buttons {
     display: flex;
     gap: 8px;
@@ -55,6 +66,21 @@
 .tool-btn:hover {
     background: rgba(255,255,255,0.2);
     transform: translateY(-1px);
+}
+
+.tool-btn.has-changes {
+    background: rgba(255, 107, 107, 0.2);
+    border-color: #ff6b6b;
+    animation: glow-save 2s infinite;
+}
+
+@keyframes glow-save {
+    0%, 100% { 
+        box-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
+    }
+    50% { 
+        box-shadow: 0 0 15px rgba(255, 107, 107, 0.8);
+    }
 }
 
 .toolbar-right .install-status {
@@ -215,7 +241,7 @@
 .canvas-area {
     flex: 1;
     position: relative;
-    overflow: hidden;
+    overflow: auto;
     background: 
         radial-gradient(circle at 20px 20px, #4a5568 1px, transparent 1px),
         linear-gradient(90deg, transparent 19px, #2d3748 20px, transparent 21px),
@@ -228,6 +254,7 @@
     top: 0;
     left: 0;
     pointer-events: none;
+    z-index: 0;
 }
 
 .connection-layer {
@@ -237,6 +264,7 @@
     pointer-events: none;
     z-index: 1;
     will-change: transform;
+    overflow: visible;
 }
 
 .connection-line {
@@ -287,11 +315,17 @@
     z-index: 2;
     transform-origin: 0 0;
     will-change: transform;
+    overflow: visible;
+    /* 硬件加速优化 */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
 }
 
 .tree-node {
     position: absolute;
     min-width: 150px;
+    min-height: 80px;
     background: linear-gradient(145deg, #2d3748 0%, #1a202c 100%);
     border: 2px solid #4a5568;
     border-radius: 12px;
@@ -857,18 +891,21 @@
     border: 2px dashed #667eea;
 }
 
-/* 拖动状态样式 */
+/* 拖动状态样式 - 优化硬件加速 */
 .tree-node.dragging {
     opacity: 0.9;
-    transform: scale(1.02) rotate(1deg);
+    transform: translateZ(0) scale(1.02) rotate(1deg);
     box-shadow: 0 12px 30px rgba(0,0,0,0.4);
     z-index: 1000;
     cursor: grabbing;
     will-change: transform, opacity;
     backface-visibility: hidden;
     transform-style: preserve-3d;
-    transition: none;
+    transition: none !important;
     border-color: #67b7dc;
+    /* 强制硬件加速 */
+    transform-origin: center center;
+    perspective: 1000px;
 }
 
 /* 节点悬停时的端口显示优化 */
@@ -899,4 +936,72 @@
 .dragging {
     opacity: 0.7;
     transform: rotate(5deg);
+}
+
+/* 节点属性预览样式 */
+.node-properties-preview {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 10px;
+}
+
+.property-preview-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px;
+    padding: 1px 0;
+}
+
+.property-label {
+    color: #a0aec0;
+    font-weight: 500;
+    flex-shrink: 0;
+    margin-right: 4px;
+    font-size: 9px;
+}
+
+.property-value {
+    color: #e2e8f0;
+    font-weight: 600;
+    text-align: right;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9px;
+}
+
+/* 不同类型属性的颜色 */
+.property-value.property-boolean {
+    color: #68d391;
+}
+
+.property-value.property-number {
+    color: #63b3ed;
+}
+
+.property-value.property-select {
+    color: #f6ad55;
+}
+
+.property-value.property-string {
+    color: #cbd5e0;
+}
+
+.property-value.property-code {
+    color: #d69e2e;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* 适应节点宽度 */
+.tree-node .node-body {
+    max-width: 146px; /* 节点宽度 - padding */
+    overflow: hidden;
+}
+
+/* 当节点有属性时稍微增加高度空间 */
+.tree-node:has(.node-properties-preview) {
+    min-height: 100px;
 } 

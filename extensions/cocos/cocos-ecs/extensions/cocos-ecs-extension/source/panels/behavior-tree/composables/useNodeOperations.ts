@@ -1,4 +1,4 @@
-import { Ref } from 'vue';
+import { Ref, nextTick } from 'vue';
 import { TreeNode, Connection } from '../types';
 import { NodeTemplate } from '../data/nodeTemplates';
 import { createNodeFromTemplate } from '../utils/nodeUtils';
@@ -14,7 +14,8 @@ export function useNodeOperations(
     panX: Ref<number>,
     panY: Ref<number>,
     zoomLevel: Ref<number>,
-    getNodeByIdLocal: (id: string) => TreeNode | undefined
+    getNodeByIdLocal: (id: string) => TreeNode | undefined,
+    updateConnections?: () => void
 ) {
     
     // 获取相对于画布的坐标（用于节点拖放等操作）
@@ -94,31 +95,73 @@ export function useNodeOperations(
         if (selectedNodeId.value === nodeId) {
             selectedNodeId.value = null;
         }
+        
+        // 更新连接线
+        if (updateConnections) {
+            updateConnections();
+        }
+    };
+
+    // 通用的属性更新方法
+    const setNestedProperty = (obj: any, path: string, value: any) => {
+        const keys = path.split('.');
+        let current = obj;
+        
+        // 导航到目标属性的父对象
+        for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i];
+            if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
+                current[key] = {};
+            }
+            current = current[key];
+        }
+        
+        // 设置最终值
+        const finalKey = keys[keys.length - 1];
+        current[finalKey] = value;
     };
 
     // 节点属性更新
     const updateNodeProperty = (path: string, value: any) => {
+        console.log('updateNodeProperty called:', path, value);
         const node = selectedNodeId.value ? getNodeByIdLocal(selectedNodeId.value) : null;
-        if (!node) return;
-        
-        // 确保 properties 对象存在
-        if (!node.properties) {
-            node.properties = {};
+        if (!node) {
+            console.log('No selected node found');
+            return;
         }
         
-        const keys = path.split('.');
-        let target: any = node.properties;
+        console.log('Current node before update:', JSON.stringify(node, null, 2));
         
-        // 导航到目标对象，如果中间对象不存在则创建
-        for (let i = 0; i < keys.length - 1; i++) {
-            if (!target[keys[i]] || typeof target[keys[i]] !== 'object') {
-                target[keys[i]] = {};
-            }
-            target = target[keys[i]];
+        // 使用通用方法更新属性
+        setNestedProperty(node, path, value);
+        
+        console.log(`Updated property ${path} to:`, value);
+        console.log('Updated node after change:', JSON.stringify(node, null, 2));
+        
+        // 强制触发响应式更新 - 创建新数组来强制Vue检测变化
+        const nodeIndex = treeNodes.value.findIndex(n => n.id === node.id);
+        if (nodeIndex > -1) {
+            // 创建新的节点数组，确保Vue能检测到变化
+            const newNodes = [...treeNodes.value];
+            newNodes[nodeIndex] = { ...node }; // 创建节点副本确保响应式更新
+            treeNodes.value = newNodes;
+            
+            console.log('Triggered reactive update - replaced array');
+            
+            // 验证更新是否成功
+            nextTick(() => {
+                const verifyNode = treeNodes.value.find(n => n.id === node.id);
+                console.log('Verification - node after update:', JSON.stringify(verifyNode, null, 2));
+                
+                // 验证属性值
+                const pathParts = path.split('.');
+                let checkValue: any = verifyNode;
+                for (const part of pathParts) {
+                    checkValue = checkValue?.[part];
+                }
+                console.log(`Verification - final value at ${path}:`, checkValue);
+            });
         }
-        
-        // 设置最终值
-        target[keys[keys.length - 1]] = value;
     };
 
     return {

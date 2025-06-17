@@ -21,6 +21,18 @@ module.exports = Editor.Panel.define({
     methods: {
         sendToMain(message: string, ...args: any[]) {
             Editor.Message.send('cocos-ecs-extension', message, ...args);
+        },
+        
+        loadBehaviorTreeFile(fileData: any) {
+            console.log('Loading behavior tree file:', fileData);
+            
+            // 通知编辑器组件加载文件
+            if (this.$.app) {
+                const event = new CustomEvent('load-behavior-tree-file', {
+                    detail: fileData
+                });
+                this.$.app.dispatchEvent(event);
+            }
         }
     },
 
@@ -28,6 +40,9 @@ module.exports = Editor.Panel.define({
         if (this.$.app) {
             const app = createApp({});
             app.config.compilerOptions.isCustomElement = (tag) => tag.startsWith('ui-');
+
+            // 暴露发送消息到主进程的方法
+            (window as any).sendToMain = this.sendToMain.bind(this);
 
             // 树节点组件
             app.component('tree-node-item', defineComponent({

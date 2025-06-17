@@ -1,19 +1,19 @@
 <!-- 头部工具栏 -->
 <div class="header-toolbar">
     <div class="toolbar-left">
-        <h2>🌳 行为树可视化编辑器</h2>
+        <h2>🌳 行为树可视化编辑器 <span v-if="hasUnsavedChanges" class="unsaved-indicator">●</span></h2>
         <div class="toolbar-buttons">
             <button class="tool-btn" @click="newBehaviorTree" title="新建行为树">
                 <span>📄</span> 新建
             </button>
-            <button class="tool-btn" @click="saveBehaviorTree" title="保存行为树">
-                <span>💾</span> 保存
+            <button class="tool-btn" :class="{ 'has-changes': hasUnsavedChanges }" @click="saveBehaviorTree" title="保存行为树">
+                <span>💾</span> 保存{{ hasUnsavedChanges ? ' *' : '' }}
             </button>
             <button class="tool-btn" @click="loadBehaviorTree" title="加载行为树">
                 <span>📂</span> 加载
             </button>
-            <button class="tool-btn" @click="exportCode" title="导出代码">
-                <span>⚡</span> 导出代码
+            <button class="tool-btn" @click="exportConfig" title="导出配置">
+                <span>⚡</span> 导出配置
             </button>
         </div>
     </div>
@@ -205,7 +205,7 @@
                         { 
                             'node-selected': selectedNodeId === node.id,
                             'node-error': node.hasError,
-                            'dragging': dragState.dragNodeId === node.id
+                            'dragging': dragState.dragNode && dragState.dragNode.id === node.id
                         }
                     ]"
                     :style="{ 
@@ -220,8 +220,22 @@
                         <span class="node-title">{{ node.name }}</span>
                         <button class="node-delete" @click.stop="deleteNode(node.id)">×</button>
                     </div>
-                    <div class="node-body" v-if="node.description">
-                        <div class="node-description">{{ node.description }}</div>
+                    <div class="node-body">
+                        <div v-if="node.description" class="node-description">{{ node.description }}</div>
+                        <!-- 节点属性预览 -->
+                        <div v-if="hasVisibleProperties(node)" class="node-properties-preview">
+                            <div 
+                                v-for="(prop, key) in getVisibleProperties(node)" 
+                                :key="key"
+                                class="property-preview-item"
+                                :title="prop.name + ': ' + prop.description"
+                            >
+                                <span class="property-label">{{ prop.name }}:</span>
+                                <span class="property-value" :class="'property-' + prop.type">
+                                    {{ formatPropertyValue(prop) }}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                     <!-- 输入端口 - 执行流入口 -->
                     <div 
@@ -276,30 +290,32 @@
             <h3>⚙️ 属性面板</h3>
         </div>
         
-        <div v-if="selectedNode()" class="node-properties">
+        <div v-if="selectedNode" class="node-properties">
             <div class="property-section">
                 <h4>基本信息</h4>
                 <div class="property-item">
                     <label>节点名称:</label>
                     <input 
                         type="text" 
-                        :value="selectedNode().name" 
+                        :value="selectedNode.name" 
                         @input="updateNodeProperty('name', $event.target.value)"
+                        :key="selectedNode.id + '_name'"
                     >
                 </div>
                 <div class="property-item">
                     <label>描述:</label>
                     <textarea 
-                        :value="selectedNode().description"
+                        :value="selectedNode.description"
                         @input="updateNodeProperty('description', $event.target.value)"
+                        :key="selectedNode.id + '_description'"
                     ></textarea>
                 </div>
             </div>
 
-            <div class="property-section" v-if="selectedNode().properties">
+            <div class="property-section" v-if="selectedNode.properties">
                 <h4>节点属性</h4>
                 <div 
-                    v-for="(prop, key) in selectedNode().properties" 
+                    v-for="(prop, key) in selectedNode.properties" 
                     :key="key"
                     class="property-item"
                 >
@@ -309,18 +325,21 @@
                         type="text" 
                         :value="prop.value"
                         @input="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
+                        :key="selectedNode.id + '_' + key + '_string'"
                     >
                     <input 
                         v-else-if="prop.type === 'number'"
                         type="number" 
                         :value="prop.value"
-                        @input="updateNodeProperty('properties.' + key + '.value', parseFloat($event.target.value))"
+                        @input="updateNodeProperty('properties.' + key + '.value', parseFloat($event.target.value) || 0)"
+                        :key="selectedNode.id + '_' + key + '_number'"
                     >
                     <input 
                         v-else-if="prop.type === 'boolean'"
                         type="checkbox" 
                         :checked="prop.value"
                         @change="updateNodeProperty('properties.' + key + '.value', $event.target.checked)"
+                        :key="selectedNode.id + '_' + key + '_boolean'"
                     >
                     <textarea 
                         v-else-if="prop.type === 'code'"
@@ -329,13 +348,20 @@
                         rows="6"
                         class="code-input"
                         placeholder="请输入代码..."
+                        :key="selectedNode.id + '_' + key + '_code'"
                     ></textarea>
                     <select 
                         v-else-if="prop.type === 'select'"
                         :value="prop.value"
                         @change="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
+                        :key="selectedNode.id + '_' + key + '_select_' + prop.value"
                     >
-                        <option v-for="option in prop.options" :key="option" :value="option">
+                        <option 
+                            v-for="option in prop.options" 
+                            :key="option" 
+                            :value="option"
+                            :selected="option === prop.value"
+                        >
                             {{ option }}
                         </option>
                     </select>
@@ -344,8 +370,8 @@
             </div>
 
             <div class="property-section">
-                <h4>代码预览</h4>
-                <pre class="code-preview">{{ generateNodeCode(selectedNode()) }}</pre>
+                <h4>节点配置</h4>
+                <pre class="config-preview">{{ selectedNode ? JSON.stringify(selectedNode, null, 2) : '{}' }}</pre>
             </div>
         </div>
         
@@ -380,16 +406,16 @@
 <div v-if="showExportModal" class="modal-overlay" @click="showExportModal = false">
     <div class="modal-content" @click.stop>
         <div class="modal-header">
-            <h3>导出代码</h3>
+            <h3>导出配置</h3>
             <button @click="showExportModal = false">×</button>
         </div>
         <div class="modal-body">
             <div class="export-options">
                 <label>
-                    <input type="radio" v-model="exportFormat" value="typescript"> TypeScript
+                    <input type="radio" v-model="exportFormat" value="json"> JSON配置
                 </label>
                 <label>
-                    <input type="radio" v-model="exportFormat" value="json"> JSON
+                    <input type="radio" v-model="exportFormat" value="typescript"> TypeScript代码
                 </label>
             </div>
             <textarea 

@@ -386,6 +386,13 @@ export const nodeTemplates: NodeTemplate[] = [
                 value: 'Component',
                 description: '要添加的组件类型名称',
                 required: true
+            },
+            componentFactory: {
+                name: '组件工厂函数',
+                type: 'code',
+                value: '() => new Component()',
+                description: '创建组件实例的函数（可选）',
+                required: false
             }
         }
     },

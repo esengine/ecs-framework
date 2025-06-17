@@ -56,4 +56,13 @@ export interface ConnectionPort {
 export interface CanvasCoordinates {
     x: number;
     y: number;
+}
+
+export interface ConnectionState {
+    isConnecting: boolean;
+    startNodeId: string | null;
+    startPortType: 'input' | 'output' | null;
+    currentMousePos: { x: number; y: number } | null;
+    startPortPos: { x: number; y: number } | null;
+    hoveredPort: { nodeId: string; portType: 'input' | 'output' } | null;
 } 

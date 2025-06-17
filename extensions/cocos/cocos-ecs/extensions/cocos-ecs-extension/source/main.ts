@@ -531,6 +531,169 @@ export class AIExampleComponent extends Component {
             });
         }
     },
+
+    /**
+     * 创建行为树文件
+     */
+    async 'create-behavior-tree-file'(assetInfo: any) {
+        console.log('Creating behavior tree file in folder:', assetInfo?.path);
+        
+        try {
+            // 获取项目assets目录
+            const projectPath = Editor.Project.path;
+            const assetsPath = path.join(projectPath, 'assets');
+            
+            // 生成唯一文件名
+            let fileName = 'NewBehaviorTree';
+            let counter = 1;
+            let filePath = path.join(assetsPath, `${fileName}.bt.json`);
+            
+            while (fs.existsSync(filePath)) {
+                fileName = `NewBehaviorTree_${counter}`;
+                filePath = path.join(assetsPath, `${fileName}.bt.json`);
+                counter++;
+            }
+            
+            // 创建默认的行为树配置
+            const defaultConfig = {
+                version: "1.0.0",
+                type: "behavior-tree",
+                metadata: {
+                    createdAt: new Date().toISOString(),
+                    nodeCount: 1
+                },
+                tree: {
+                    id: "root",
+                    type: "sequence",
+                    namespace: "behaviourTree/composites",
+                    properties: {},
+                    children: []
+                }
+            };
+            
+            // 写入文件
+            await fsExtra.writeFile(filePath, JSON.stringify(defaultConfig, null, 2));
+            
+            // 刷新资源管理器
+            await Editor.Message.request('asset-db', 'refresh-asset', 'db://assets');
+            
+            console.log(`Behavior tree file created: ${filePath}`);
+            
+            Editor.Dialog.info('创建成功', {
+                detail: `行为树文件 "${fileName}.bt.json" 已创建完成！\n\n文件位置：assets/${fileName}.bt.json\n\n您可以右键点击文件选择"用行为树编辑器打开"来编辑它。`,
+            });
+            
+        } catch (error) {
+            console.error('Failed to create behavior tree file:', error);
+            Editor.Dialog.error('创建失败', {
+                detail: `创建行为树文件失败：\n\n${error instanceof Error ? error.message : String(error)}`,
+            });
+        }
+    },
+
+    /**
+     * 用行为树编辑器打开文件
+     */
+    async 'open-behavior-tree-file'(assetInfo: any) {
+        console.log('Opening behavior tree file:', assetInfo);
+        
+        try {
+            // 直接从assetInfo获取文件系统路径
+            const assetPath = assetInfo?.path;
+            if (!assetPath) {
+                throw new Error('无效的文件路径');
+            }
+            
+            // 转换为文件系统路径
+            const projectPath = Editor.Project.path;
+            const relativePath = assetPath.replace('db://assets/', '');
+            const fsPath = path.join(projectPath, 'assets', relativePath);
+            
+            console.log('File system path:', fsPath);
+            
+            // 检查文件是否存在
+            if (!fs.existsSync(fsPath)) {
+                throw new Error('文件不存在');
+            }
+            
+            // 检查文件是否为JSON格式
+            let fileContent: any;
+            try {
+                const content = await fsExtra.readFile(fsPath, 'utf8');
+                fileContent = JSON.parse(content);
+            } catch (parseError) {
+                throw new Error('文件不是有效的JSON格式');
+            }
+            
+            // 验证是否为行为树文件
+            if (fileContent.type !== 'behavior-tree' && !fileContent.tree) {
+                const confirm = await new Promise<boolean>((resolve) => {
+                    Editor.Dialog.warn('文件格式提醒', {
+                        detail: '此文件可能不是标准的行为树配置文件，仍要打开吗？',
+                        buttons: ['打开', '取消'],
+                    }).then((result: any) => {
+                        resolve(result.response === 0);
+                    });
+                });
+                
+                if (!confirm) {
+                    return;
+                }
+            }
+            
+            // 打开行为树编辑器面板
+            Editor.Panel.open('cocos-ecs-extension.behavior-tree');
+            
+            console.log(`Behavior tree file opened in editor: ${fsPath}`);
+            
+        } catch (error) {
+            console.error('Failed to open behavior tree file:', error);
+            Editor.Dialog.error('打开失败', {
+                detail: `打开行为树文件失败：\n\n${error instanceof Error ? error.message : String(error)}`,
+            });
+        }
+    },
+
+    /**
+     * 从编辑器创建行为树文件
+     */
+    async 'create-behavior-tree-from-editor'(data: { fileName: string, content: string }) {
+        console.log('Creating behavior tree file from editor:', data.fileName);
+        
+        try {
+            const projectPath = Editor.Project.path;
+            const assetsPath = path.join(projectPath, 'assets');
+            
+            // 确保文件名唯一
+            let fileName = data.fileName;
+            let counter = 1;
+            let filePath = path.join(assetsPath, `${fileName}.bt.json`);
+            
+            while (fs.existsSync(filePath)) {
+                fileName = `${data.fileName}_${counter}`;
+                filePath = path.join(assetsPath, `${fileName}.bt.json`);
+                counter++;
+            }
+            
+            // 写入文件
+            await fsExtra.writeFile(filePath, data.content);
+            
+            // 刷新资源管理器
+            await Editor.Message.request('asset-db', 'refresh-asset', 'db://assets');
+            
+            console.log(`Behavior tree file created from editor: ${filePath}`);
+            
+            Editor.Dialog.info('保存成功', {
+                detail: `行为树文件 "${fileName}.bt.json" 已保存到 assets 目录中！`,
+            });
+            
+        } catch (error) {
+            console.error('Failed to create behavior tree file from editor:', error);
+            Editor.Dialog.error('保存失败', {
+                detail: `保存行为树文件失败：\n\n${error instanceof Error ? error.message : String(error)}`,
+            });
+        }
+    },
 };
 
 /**

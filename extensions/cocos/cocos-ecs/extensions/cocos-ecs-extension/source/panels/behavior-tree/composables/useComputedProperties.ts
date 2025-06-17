@@ -1,9 +1,8 @@
-import { Ref } from 'vue';
+import { Ref, computed } from 'vue';
 import { TreeNode } from '../types';
 import { NodeTemplate } from '../data/nodeTemplates';
 import { getRootNode } from '../utils/nodeUtils';
 import { getInstallStatusText, getInstallStatusClass } from '../utils/installUtils';
-import { generateCode } from '../utils/codeGenerator';
 import { getGridStyle } from '../utils/canvasUtils';
 
 /**
@@ -22,7 +21,11 @@ export function useComputedProperties(
     panX: Ref<number>,
     panY: Ref<number>,
     zoomLevel: Ref<number>,
-    getNodeByIdLocal: (id: string) => TreeNode | undefined
+    getNodeByIdLocal: (id: string) => TreeNode | undefined,
+    codeGeneration?: {
+        generateConfigJSON: () => string;
+        generateTypeScriptCode: () => string;
+    }
 ) {
     // 过滤节点
     const filteredCompositeNodes = () => {
@@ -60,10 +63,14 @@ export function useComputedProperties(
         );
     };
 
-    // 选中的节点
-    const selectedNode = () => {
-        return selectedNodeId.value ? getNodeByIdLocal(selectedNodeId.value) : null;
-    };
+    // 选中的节点 - 使用computed确保响应式更新
+    const selectedNode = computed(() => {
+        if (!selectedNodeId.value) return null;
+        
+        // 直接从treeNodes数组中查找，确保获取最新的节点状态
+        const node = treeNodes.value.find(n => n.id === selectedNodeId.value);
+        return node || null;
+    });
 
     // 根节点
     const rootNode = () => {
@@ -98,8 +105,16 @@ export function useComputedProperties(
 
     // 导出代码
     const exportedCode = () => {
+        if (!codeGeneration) {
+            return '// 代码生成器未初始化';
+        }
+        
         try {
-            return generateCode(treeNodes.value, exportFormat.value);
+            if (exportFormat.value === 'json') {
+                return codeGeneration.generateConfigJSON();
+            } else {
+                return codeGeneration.generateTypeScriptCode();
+            }
         } catch (error) {
             return `// 代码生成失败: ${error}`;
         }

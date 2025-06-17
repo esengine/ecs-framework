@@ -44,7 +44,7 @@ export function useAppState() {
     
     // UI状态
     const showExportModal = ref(false);
-    const exportFormat = ref('typescript');
+    const exportFormat = ref('json');
     
     // 工具函数
     const getNodeByIdLocal = (id: string): TreeNode | undefined => {
@@ -60,6 +60,17 @@ export function useAppState() {
         selectedNodeId.value = null;
         connections.value = [];
         tempConnection.value.path = '';
+    };
+
+    const updateCanvasSize = () => {
+        const canvasArea = document.querySelector('.canvas-area') as HTMLElement;
+        if (canvasArea) {
+            const rect = canvasArea.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+                canvasWidth.value = Math.max(rect.width, 800);
+                canvasHeight.value = Math.max(rect.height, 600);
+            }
+        }
     };
 
     return {
@@ -94,6 +105,7 @@ export function useAppState() {
         // 工具函数
         getNodeByIdLocal,
         selectNode,
-        newBehaviorTree
+        newBehaviorTree,
+        updateCanvasSize
     };
 } 
