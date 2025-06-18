@@ -263,15 +263,21 @@
                         <!-- 条件装饰器的条件显示 -->
                         <div v-if="node.type === 'conditional-decorator'" class="condition-attachment-area">
                             <div v-if="node.attachedCondition" class="attached-condition">
-                                <div class="condition-info">
+                                <div 
+                                    class="condition-info"
+                                    :class="{ 'condition-selected': selectedConditionNodeId === node.id }"
+                                    @click.stop="selectConditionNode(node)"
+                                    title="点击编辑条件属性"
+                                >
                                     <span class="condition-icon">{{ node.attachedCondition.icon }}</span>
                                     <span class="condition-text">{{ getConditionDisplayText(node) }}</span>
-                                    <button 
-                                        class="remove-condition-btn" 
-                                        @click.stop="removeConditionFromDecorator(node)"
-                                        title="移除条件"
-                                    >×</button>
+                                    <span class="edit-hint">📝</span>
                                 </div>
+                                <button 
+                                    class="remove-condition-btn" 
+                                    @click.stop="removeConditionFromDecorator(node)"
+                                    title="移除条件"
+                                >×</button>
                             </div>
                             <div v-else class="condition-placeholder">
                                 <span class="placeholder-text">🎯 拖拽条件到此处</span>
@@ -346,32 +352,34 @@
             <h3>⚙️ 属性面板</h3>
         </div>
         
-        <div v-if="selectedNode" class="node-properties">
+        <div v-if="activeNode" class="node-properties">
             <div class="property-section">
                 <h4>基本信息</h4>
                 <div class="property-item">
                     <label>节点名称:</label>
                     <input 
                         type="text" 
-                        :value="selectedNode.name" 
+                        :value="activeNode.name" 
                         @input="updateNodeProperty('name', $event.target.value)"
-                        :key="selectedNode.id + '_name'"
+                        :key="activeNode.id + '_name'"
+                        :disabled="activeNode.isConditionNode"
                     >
                 </div>
                 <div class="property-item">
                     <label>描述:</label>
                     <textarea 
-                        :value="selectedNode.description"
+                        :value="activeNode.description"
                         @input="updateNodeProperty('description', $event.target.value)"
-                        :key="selectedNode.id + '_description'"
+                        :key="activeNode.id + '_description'"
+                        :disabled="activeNode.isConditionNode"
                     ></textarea>
                 </div>
             </div>
 
-            <div class="property-section" v-if="selectedNode.properties">
+            <div class="property-section" v-if="activeNode.properties">
                 <h4>节点属性</h4>
                 <div 
-                    v-for="(prop, key) in selectedNode.properties" 
+                    v-for="(prop, key) in activeNode.properties" 
                     :key="key"
                     class="property-item"
                 >
@@ -381,21 +389,21 @@
                         type="text" 
                         :value="prop.value"
                         @input="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
-                        :key="selectedNode.id + '_' + key + '_string'"
+                        :key="activeNode.id + '_' + key + '_string'"
                     >
                     <input 
                         v-else-if="prop.type === 'number'"
                         type="number" 
                         :value="prop.value"
                         @input="updateNodeProperty('properties.' + key + '.value', parseFloat($event.target.value) || 0)"
-                        :key="selectedNode.id + '_' + key + '_number'"
+                        :key="activeNode.id + '_' + key + '_number'"
                     >
                     <input 
                         v-else-if="prop.type === 'boolean'"
                         type="checkbox" 
                         :checked="prop.value"
                         @change="updateNodeProperty('properties.' + key + '.value', $event.target.checked)"
-                        :key="selectedNode.id + '_' + key + '_boolean'"
+                        :key="activeNode.id + '_' + key + '_boolean'"
                     >
                     <textarea 
                         v-else-if="prop.type === 'code'"
@@ -404,13 +412,13 @@
                         rows="6"
                         class="code-input"
                         placeholder="请输入代码..."
-                        :key="selectedNode.id + '_' + key + '_code'"
+                        :key="activeNode.id + '_' + key + '_code'"
                     ></textarea>
                     <select 
                         v-else-if="prop.type === 'select'"
                         :value="prop.value"
                         @change="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
-                        :key="selectedNode.id + '_' + key + '_select_' + prop.value"
+                        :key="activeNode.id + '_' + key + '_select_' + prop.value"
                     >
                         <option 
                             v-for="option in prop.options" 
@@ -427,7 +435,7 @@
 
             <div class="property-section">
                 <h4>节点配置</h4>
-                <pre class="config-preview">{{ selectedNode ? JSON.stringify(selectedNode, null, 2) : '{}' }}</pre>
+                <pre class="config-preview">{{ activeNode ? JSON.stringify(activeNode, null, 2) : '{}' }}</pre>
             </div>
         </div>
         

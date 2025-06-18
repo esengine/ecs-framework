@@ -13,6 +13,7 @@ export function useComputedProperties(
     nodeSearchText: Ref<string>,
     treeNodes: Ref<TreeNode[]>,
     selectedNodeId: Ref<string | null>,
+    selectedConditionNodeId: Ref<string | null>,
     checkingStatus: Ref<boolean>,
     isInstalling: Ref<boolean>,
     isInstalled: Ref<boolean>,
@@ -79,6 +80,27 @@ export function useComputedProperties(
         return node || null;
     });
 
+    // 当前选中的条件节点（用于编辑条件属性）
+    const selectedConditionNode = computed(() => {
+        if (!selectedConditionNodeId.value) return null;
+        const decoratorNode = treeNodes.value.find(n => n.id === selectedConditionNodeId.value);
+        if (!decoratorNode || !decoratorNode.attachedCondition) return null;
+        
+        // 创建一个虚拟的条件节点对象，用于属性编辑
+        return {
+            id: decoratorNode.id + '_condition',
+            name: decoratorNode.attachedCondition.name + '（条件）',
+            type: decoratorNode.attachedCondition.type,
+            icon: decoratorNode.attachedCondition.icon,
+            properties: decoratorNode.properties || {},
+            isConditionNode: true,
+            parentDecorator: decoratorNode
+        };
+    });
+
+    // 当前显示在属性面板的节点（普通节点或条件节点）
+    const activeNode = computed(() => selectedConditionNode.value || selectedNode.value);
+
     // 根节点
     const rootNode = () => {
         return getRootNode(treeNodes.value);
@@ -140,6 +162,8 @@ export function useComputedProperties(
         filteredConditionNodes,
         filteredECSNodes,
         selectedNode,
+        selectedConditionNode,
+        activeNode,
         rootNode,
         installStatusClass,
         installStatusText,

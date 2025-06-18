@@ -43,6 +43,7 @@ export function useBehaviorTreeEditor() {
         appState.nodeSearchText,
         appState.treeNodes,
         appState.selectedNodeId,
+        appState.selectedConditionNodeId,
         appState.checkingStatus,
         appState.isInstalling,
         appState.isInstalled,
@@ -456,6 +457,49 @@ export function useBehaviorTreeEditor() {
         autoLayout,
         validateTree,
         clearAllConnections,
+        // 节点选择相关
+        selectNode: (nodeId: string) => {
+            // 选中普通节点时，取消条件节点的选中
+            appState.selectedNodeId.value = nodeId;
+            appState.selectedConditionNodeId.value = null;
+            console.log('🎯 选中节点:', nodeId);
+        },
+        selectConditionNode: (decoratorNode: any) => {
+            // 选中条件节点时，取消装饰器节点的选中
+            appState.selectedNodeId.value = null;
+            appState.selectedConditionNodeId.value = decoratorNode.id;
+            console.log('📝 选中条件节点进行编辑:', decoratorNode.attachedCondition?.name);
+        },
+        // 统一的属性更新方法（支持普通节点和条件节点）
+        updateNodeProperty: (path: string, value: any) => {
+            // 如果选中的是条件节点，更新装饰器节点的属性
+            if (appState.selectedConditionNodeId.value) {
+                const decoratorNode = appState.getNodeByIdLocal(appState.selectedConditionNodeId.value);
+                if (decoratorNode) {
+                    // 使用通用方法更新属性
+                    const keys = path.split('.');
+                    let current: any = decoratorNode;
+                    
+                    // 导航到目标属性的父对象
+                    for (let i = 0; i < keys.length - 1; i++) {
+                        const key = keys[i];
+                        if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
+                            current[key] = {};
+                        }
+                        current = current[key];
+                    }
+                    
+                    // 设置最终值
+                    const finalKey = keys[keys.length - 1];
+                    current[finalKey] = value;
+                    
+                    console.log('📝 更新条件属性:', path, '=', value);
+                }
+            } else {
+                // 普通节点属性更新
+                nodeOps.updateNodeProperty(path, value);
+            }
+        },
         // 条件吸附功能
         conditionDragState: conditionAttachment.dragState,
         startConditionDrag: conditionAttachment.startConditionDrag,

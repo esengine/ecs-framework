@@ -87,6 +87,21 @@
     align-items: center;
     gap: 6px;
     font-size: 11px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.condition-info:hover {
+    background: rgba(255, 215, 0, 0.2);
+    transform: scale(1.02);
+}
+
+.condition-info.condition-selected {
+    background: rgba(255, 215, 0, 0.3);
+    border: 1px solid #ffd700;
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.25);
 }
 
 .condition-icon {
@@ -97,6 +112,17 @@
     flex: 1;
     color: #ffd700;
     font-weight: 500;
+}
+
+.edit-hint {
+    font-size: 10px;
+    color: #a0aec0;
+    margin-left: auto;
+    transition: color 0.2s ease;
+}
+
+.condition-info:hover .edit-hint {
+    color: #ffd700;
 }
 
 .remove-condition-btn {

@@ -16,6 +16,7 @@ export function useAppState() {
     const nodeTemplates_ = ref(nodeTemplates);
     const treeNodes = ref<TreeNode[]>([]);
     const selectedNodeId = ref<string | null>(null);
+    const selectedConditionNodeId = ref<string | null>(null); // 选中的条件节点ID
     const nodeSearchText = ref('');
     
     // 调试：检查条件节点模板
@@ -95,6 +96,7 @@ export function useAppState() {
         nodeTemplates: nodeTemplates_,
         treeNodes,
         selectedNodeId,
+        selectedConditionNodeId,
         nodeSearchText,
         
         // 画布状态
