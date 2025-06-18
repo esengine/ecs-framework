@@ -93,15 +93,25 @@ export const methods: { [key: string]: (...any: any) => any } = {
     /**
      * 安装行为树AI系统
      */
-    'install-behavior-tree'() {
-        BehaviorTreeHandler.install();
+    async 'install-behavior-tree'() {
+        try {
+            return await BehaviorTreeHandler.install();
+        } catch (error) {
+            console.error('安装行为树AI系统失败:', error);
+            return false;
+        }
     },
 
     /**
      * 更新行为树AI系统
      */
-    'update-behavior-tree'() {
-        BehaviorTreeHandler.update();
+    async 'update-behavior-tree'() {
+        try {
+            return await BehaviorTreeHandler.update();
+        } catch (error) {
+            console.error('更新行为树AI系统失败:', error);
+            return false;
+        }
     },
 
     /**

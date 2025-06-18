@@ -347,9 +347,113 @@ export function useBehaviorTreeEditor() {
         }
     };
 
+    // 复制到剪贴板
+    const copyToClipboard = async () => {
+        try {
+            const code = computedProps.exportedCode();
+            await navigator.clipboard.writeText(code);
+            
+            // 显示成功消息
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                background: #4caf50;
+                color: white;
+                border-radius: 4px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+                z-index: 10001;
+                opacity: 0;
+                transform: translateX(100%);
+                transition: all 0.3s ease;
+            `;
+            toast.textContent = '已复制到剪贴板！';
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateX(0)';
+            }, 10);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
+                }, 300);
+            }, 2000);
+        } catch (error) {
+            alert('复制到剪贴板失败: ' + error);
+        }
+    };
+
+    // 保存到文件
+    const saveToFile = () => {
+        const code = computedProps.exportedCode();
+        const format = appState.exportFormat.value;
+        const extension = format === 'json' ? '.json' : '.ts';
+        const mimeType = format === 'json' ? 'application/json' : 'text/typescript';
+        
+        // 创建文件并下载
+        const blob = new Blob([code], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `behavior_tree_config${extension}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        URL.revokeObjectURL(url);
+        
+        // 显示成功消息
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #4caf50;
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 10001;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        `;
+        toast.textContent = `文件已保存: behavior_tree_config${extension}`;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(0)';
+        }, 10);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    };
+
 
 
     onMounted(() => {
+        // 自动检查安装状态
+        installation.checkInstallStatus();
+        
         const appContainer = document.querySelector('#behavior-tree-app');
         if (appContainer) {
             (appContainer as any).loadFileContent = fileOps.loadFileContent;
@@ -457,6 +561,8 @@ export function useBehaviorTreeEditor() {
         autoLayout,
         validateTree,
         clearAllConnections,
+        copyToClipboard,
+        saveToFile,
         // 节点选择相关
         selectNode: (nodeId: string) => {
             // 选中普通节点时，取消条件节点的选中

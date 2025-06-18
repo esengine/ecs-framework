@@ -50,9 +50,9 @@ export function getInstallStatusText(
     isInstalled: boolean,
     version: string | null
 ): string {
-    if (isChecking) return '检查中...';
-    if (isInstalling) return '安装中...';
-    return isInstalled ? `✅ AI系统已安装 (v${version})` : '❌ AI系统未安装';
+    if (isChecking) return '检查状态中...';
+    if (isInstalling) return '正在安装AI系统...';
+    return isInstalled ? 'AI系统已安装' : 'AI系统未安装';
 }
 
 /**
@@ -70,19 +70,13 @@ export function getInstallStatusClass(
  * 安装行为树AI系统
  * 通过发送消息到主进程来执行真实的npm安装命令
  */
-export async function installBehaviorTreeAI(projectPath: string): Promise<void> {
+export async function installBehaviorTreeAI(projectPath: string): Promise<boolean> {
     try {
-        // 通过Editor.Message发送安装消息到主进程
-        // 主进程会执行实际的npm install @esengine/ai命令
         const result = await Editor.Message.request('cocos-ecs-extension', 'install-behavior-tree');
-        
-        if (!result) {
-            throw new Error('安装请求失败，未收到主进程响应');
-        }
-        
-        // 安装完成
+        return Boolean(result);
     } catch (error) {
-        throw error;
+        console.error('请求安装AI系统失败:', error);
+        return false;
     }
 }
 
@@ -90,18 +84,12 @@ export async function installBehaviorTreeAI(projectPath: string): Promise<void> 
  * 更新行为树AI系统
  * 通过发送消息到主进程来执行真实的npm更新命令
  */
-export async function updateBehaviorTreeAI(projectPath: string): Promise<void> {
+export async function updateBehaviorTreeAI(projectPath: string): Promise<boolean> {
     try {
-        // 通过Editor.Message发送更新消息到主进程
-        // 主进程会执行实际的npm update @esengine/ai命令
         const result = await Editor.Message.request('cocos-ecs-extension', 'update-behavior-tree');
-        
-        if (!result) {
-            throw new Error('更新请求失败，未收到主进程响应');
-        }
-        
-        // 更新完成
+        return Boolean(result);
     } catch (error) {
-        throw error;
+        console.error('请求更新AI系统失败:', error);
+        return false;
     }
 } 

@@ -14,30 +14,21 @@ export class BehaviorTreeHandler {
         const projectPath = Editor.Project.path;
         const command = 'npm install @esengine/ai';
         
-        console.log(`Installing Behavior Tree AI to project: ${projectPath}`);
-        
         return new Promise((resolve) => {
             exec(command, { cwd: projectPath }, (error, stdout, stderr) => {
-                console.log('Install stdout:', stdout);
-                if (stderr) console.log('Install stderr:', stderr);
-                
                 if (error) {
-                    console.error('Behavior Tree AI installation failed:', error);
+                    console.error('AI系统安装失败:', error.message);
                     resolve(false);
                 } else {
-                    console.log('Behavior Tree AI installation completed successfully');
-                    
                     // 验证安装是否成功
                     const nodeModulesPath = path.join(projectPath, 'node_modules', '@esengine', 'ai');
                     const installSuccess = fs.existsSync(nodeModulesPath);
                     
-                    if (installSuccess) {
-                        console.log('Behavior Tree AI installed successfully');
-                        resolve(true);
-                    } else {
-                        console.warn('Behavior Tree AI directory not found after install');
-                        resolve(false);
+                    if (!installSuccess) {
+                        console.warn('安装完成但未找到AI系统目录，请检查网络连接');
                     }
+                    
+                    resolve(installSuccess);
                 }
             });
         });
@@ -50,30 +41,21 @@ export class BehaviorTreeHandler {
         const projectPath = Editor.Project.path;
         const command = 'npm update @esengine/ai';
         
-        console.log(`Updating Behavior Tree AI in project: ${projectPath}`);
-        
         return new Promise((resolve) => {
             exec(command, { cwd: projectPath }, (error, stdout, stderr) => {
-                console.log('Update stdout:', stdout);
-                if (stderr) console.log('Update stderr:', stderr);
-                
                 if (error) {
-                    console.error('Behavior Tree AI update failed:', error);
+                    console.error('AI系统更新失败:', error.message);
                     resolve(false);
                 } else {
-                    console.log('Behavior Tree AI update completed successfully');
-                    
                     // 验证更新是否成功
                     const nodeModulesPath = path.join(projectPath, 'node_modules', '@esengine', 'ai');
                     const updateSuccess = fs.existsSync(nodeModulesPath);
                     
-                    if (updateSuccess) {
-                        console.log('Behavior Tree AI updated successfully');
-                        resolve(true);
-                    } else {
-                        console.warn('Behavior Tree AI directory not found after update');
-                        resolve(false);
+                    if (!updateSuccess) {
+                        console.warn('更新完成但未找到AI系统目录');
                     }
+                    
+                    resolve(updateSuccess);
                 }
             });
         });
@@ -96,7 +78,7 @@ export class BehaviorTreeHandler {
             
             return '@esengine/ai' in dependencies;
         } catch (error) {
-            console.error('Error checking Behavior Tree AI installation:', error);
+            console.error('检查AI系统安装状态失败:', error);
             return false;
         }
     }

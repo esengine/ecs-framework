@@ -94,7 +94,7 @@ ${comments}
 export class ${className} extends ${options.systemType} {
 
     constructor() {
-        super(${matcherSetup}${options.systemType === 'IntervalSystem' ? ', 1000 / 60 // 60fps' : ''});
+        super(${matcherSetup}${options.systemType === 'IntervalSystem' ? ', 1000 / 60' : ''})${options.systemType === 'IntervalSystem' ? '; // 60fps' : ';'}
     }
 
 ${processMethod}

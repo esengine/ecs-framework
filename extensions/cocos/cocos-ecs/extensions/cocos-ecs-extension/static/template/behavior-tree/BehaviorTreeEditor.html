@@ -24,16 +24,64 @@
         </div>
     </div>
     <div class="toolbar-right">
-        <div class="install-status" :class="installStatusClass()">
-            <span>{{ installStatusText() }}</span>
-            <button v-if="!isInstalled" @click="handleInstall" :disabled="isInstalling">
-                {{ isInstalling ? '安装中...' : '安装AI系统' }}
-            </button>
+        <div class="install-status-container">
+            <div class="install-status" :class="installStatusClass()">
+                <div class="status-info">
+                    <span class="status-icon">{{ isInstalled ? '✅' : (isInstalling ? '⏳' : '❌') }}</span>
+                    <div class="status-text">
+                        <span class="main-text">{{ installStatusText() }}</span>
+                        <span v-if="version && isInstalled" class="version-text">版本 {{ version }}</span>
+                    </div>
+                </div>
+                <button 
+                    v-if="!isInstalled" 
+                    @click="handleInstall" 
+                    :disabled="isInstalling"
+                    class="install-btn"
+                    :class="{ 'installing': isInstalling }"
+                >
+                    <span class="btn-icon">{{ isInstalling ? '⏳' : '📦' }}</span>
+                    <span class="btn-text">{{ isInstalling ? '安装中...' : '立即安装' }}</span>
+                    <div v-if="isInstalling" class="loading-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                </button>
+                <button 
+                    v-if="isInstalled && !checkingStatus" 
+                    @click="checkInstallStatus" 
+                    class="refresh-btn"
+                    title="检查更新"
+                >
+                    🔄
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="editor-container">
+<div class="editor-container" :class="{ 'disabled': !isInstalled }">
+    <!-- 未安装遮罩 -->
+    <div v-if="!isInstalled" class="install-overlay">
+        <div class="overlay-content">
+            <div class="overlay-icon">🤖</div>
+            <h3>需要安装AI系统</h3>
+            <p>行为树编辑器需要安装AI系统才能正常使用</p>
+            <div class="overlay-actions">
+                <button 
+                    @click="handleInstall" 
+                    :disabled="isInstalling"
+                    class="overlay-install-btn"
+                    :class="{ 'installing': isInstalling }"
+                >
+                    <span>{{ isInstalling ? '⏳ 安装中...' : '📦 立即安装AI系统' }}</span>
+                    <div v-if="isInstalling" class="loading-spinner"></div>
+                </button>
+            </div>
+            <div class="overlay-note">
+                <small>📝 安装完成后编辑器将自动可用</small>
+            </div>
+        </div>
+    </div>
     <!-- 左侧节点面板 -->
     <div class="nodes-panel">
         <div class="panel-header">
