@@ -21,6 +21,7 @@
             <button class="tool-btn" @click="exportConfig" title="导出配置">
                 <span>⚡</span> 导出配置
             </button>
+
         </div>
     </div>
     <div class="toolbar-right">
@@ -395,103 +396,122 @@
     </div>
 
     <!-- 右侧属性面板 -->
-    <div class="properties-panel">
-        <div class="panel-header">
-            <h3>⚙️ 属性面板</h3>
-        </div>
-        
-        <div v-if="activeNode" class="node-properties">
-            <div class="property-section">
-                <h4>基本信息</h4>
-                <div class="property-item">
-                    <label>节点名称:</label>
-                    <input 
-                        type="text" 
-                        :value="activeNode.name" 
-                        @input="updateNodeProperty('name', $event.target.value)"
-                        :key="activeNode.id + '_name'"
-                        :disabled="activeNode.isConditionNode"
-                    >
-                </div>
-                <div class="property-item">
-                    <label>描述:</label>
-                    <textarea 
-                        :value="activeNode.description"
-                        @input="updateNodeProperty('description', $event.target.value)"
-                        :key="activeNode.id + '_description'"
-                        :disabled="activeNode.isConditionNode"
-                    ></textarea>
-                </div>
+    <div class="properties-panel-container">
+        <!-- 属性面板 -->
+        <div class="properties-panel">
+            <div class="panel-header">
+                <h3>⚙️ 属性面板</h3>
             </div>
-
-            <div class="property-section" v-if="activeNode.properties">
-                <h4>节点属性</h4>
-                <div 
-                    v-for="(prop, key) in activeNode.properties" 
-                    :key="key"
-                    class="property-item"
-                >
-                    <label>{{ prop.name }}:</label>
-                    <input 
-                        v-if="prop.type === 'string'"
-                        type="text" 
-                        :value="prop.value"
-                        @input="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
-                        :key="activeNode.id + '_' + key + '_string'"
-                    >
-                    <input 
-                        v-else-if="prop.type === 'number'"
-                        type="number" 
-                        :value="prop.value"
-                        @input="updateNodeProperty('properties.' + key + '.value', parseFloat($event.target.value) || 0)"
-                        :key="activeNode.id + '_' + key + '_number'"
-                    >
-                    <input 
-                        v-else-if="prop.type === 'boolean'"
-                        type="checkbox" 
-                        :checked="prop.value"
-                        @change="updateNodeProperty('properties.' + key + '.value', $event.target.checked)"
-                        :key="activeNode.id + '_' + key + '_boolean'"
-                    >
-                    <textarea 
-                        v-else-if="prop.type === 'code'"
-                        :value="prop.value"
-                        @input="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
-                        rows="6"
-                        class="code-input"
-                        placeholder="请输入代码..."
-                        :key="activeNode.id + '_' + key + '_code'"
-                    ></textarea>
-                    <select 
-                        v-else-if="prop.type === 'select'"
-                        :value="prop.value"
-                        @change="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
-                        :key="activeNode.id + '_' + key + '_select_' + prop.value"
-                    >
-                        <option 
-                            v-for="option in prop.options" 
-                            :key="option" 
-                            :value="option"
-                            :selected="option === prop.value"
+            
+            <div v-if="activeNode" class="node-properties">
+                <div class="property-section">
+                    <h4>基本信息</h4>
+                    <div class="property-item">
+                        <label>节点名称:</label>
+                        <input 
+                            type="text" 
+                            :value="activeNode.name" 
+                            @input="updateNodeProperty('name', $event.target.value)"
+                            :key="activeNode.id + '_name'"
+                            :disabled="activeNode.isConditionNode"
                         >
-                            {{ option }}
-                        </option>
-                    </select>
-                    <p v-if="prop.description" class="property-help">{{ prop.description }}</p>
+                    </div>
+                    <div class="property-item">
+                        <label>描述:</label>
+                        <textarea 
+                            :value="activeNode.description"
+                            @input="updateNodeProperty('description', $event.target.value)"
+                            :key="activeNode.id + '_description'"
+                            :disabled="activeNode.isConditionNode"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="property-section" v-if="activeNode.properties">
+                    <h4>节点属性</h4>
+                    <div 
+                        v-for="(prop, key) in activeNode.properties" 
+                        :key="key"
+                        class="property-item"
+                        :class="{ 'blackboard-droppable': isBlackboardDroppable(prop) }"
+                        @drop="handleBlackboardDrop($event, key)"
+                        @dragover="handleBlackboardDragOver"
+                        @dragleave="handleBlackboardDragLeave"
+                    >
+                        <label>{{ prop.name }}:</label>
+                        <div class="property-input-container">
+                            <input 
+                                v-if="prop.type === 'string'"
+                                type="text" 
+                                :value="prop.value"
+                                @input="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
+                                :key="activeNode.id + '_' + key + '_string'"
+                                :placeholder="'拖拽Blackboard变量或直接输入'"
+                            >
+                            <input 
+                                v-else-if="prop.type === 'number'"
+                                type="number" 
+                                :value="prop.value"
+                                @input="updateNodeProperty('properties.' + key + '.value', parseFloat($event.target.value) || 0)"
+                                :key="activeNode.id + '_' + key + '_number'"
+                                :placeholder="'拖拽Blackboard变量或直接输入'"
+                            >
+                            <input 
+                                v-else-if="prop.type === 'boolean'"
+                                type="checkbox" 
+                                :checked="prop.value"
+                                @change="updateNodeProperty('properties.' + key + '.value', $event.target.checked)"
+                                :key="activeNode.id + '_' + key + '_boolean'"
+                            >
+                            <textarea 
+                                v-else-if="prop.type === 'code'"
+                                :value="prop.value"
+                                @input="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
+                                rows="6"
+                                class="code-input"
+                                placeholder="请输入代码..."
+                                :key="activeNode.id + '_' + key + '_code'"
+                            ></textarea>
+                            <select 
+                                v-else-if="prop.type === 'select'"
+                                :value="prop.value"
+                                @change="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
+                                :key="activeNode.id + '_' + key + '_select_' + prop.value"
+                            >
+                                <option 
+                                    v-for="option in prop.options" 
+                                    :key="option" 
+                                    :value="option"
+                                    :selected="option === prop.value"
+                                >
+                                    {{ option }}
+                                </option>
+                            </select>
+                            
+                            <!-- Blackboard引用指示器 -->
+                            <div v-if="isBlackboardReference(prop.value)" class="blackboard-reference">
+                                <span class="ref-icon">🔗</span>
+                                <span class="ref-text">{{ prop.value }}</span>
+                                <button class="clear-ref" @click="clearBlackboardReference(key)" title="清除引用">×</button>
+                            </div>
+                        </div>
+                        <p v-if="prop.description" class="property-help">{{ prop.description }}</p>
+                    </div>
+                </div>
+
+                <div class="property-section">
+                    <h4>节点配置</h4>
+                    <pre class="config-preview">{{ activeNode ? JSON.stringify(activeNode, null, 2) : '{}' }}</pre>
                 </div>
             </div>
-
-            <div class="property-section">
-                <h4>节点配置</h4>
-                <pre class="config-preview">{{ activeNode ? JSON.stringify(activeNode, null, 2) : '{}' }}</pre>
+            
+            <div v-else class="no-selection">
+                <p>请选择一个节点查看属性</p>
             </div>
-        </div>
-        
-        <div v-else class="no-selection">
-            <p>请选择一个节点查看属性</p>
         </div>
     </div>
 </div>
+
 
 <!-- 行为树结构面板 -->
 <div class="tree-structure-panel" v-if="rootNode()">
@@ -513,6 +533,233 @@
     <span class="error-icon">⚠️</span>
     <span>{{ validationResult().message }}</span>
 </div>
+
+<!-- Blackboard变量编辑模态框 -->
+<div v-if="showBlackboardModal" class="modal-overlay" @click="showBlackboardModal = false">
+    <div class="modal-content blackboard-modal" @click.stop>
+        <div class="modal-header">
+            <h3>{{ editingBlackboardVariable ? '编辑变量' : '添加变量' }}</h3>
+            <button @click="showBlackboardModal = false">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>变量名称:</label>
+                <input 
+                    type="text" 
+                    v-model="blackboardModalData.name" 
+                    placeholder="例如：playerHealth、enemyCount..."
+                    :disabled="editingBlackboardVariable"
+                    class="form-input"
+                >
+            </div>
+            
+            <div class="form-group">
+                <label>变量类型:</label>
+                <select v-model="blackboardModalData.type" class="form-select">
+                    <option value="string">📝 字符串 (string)</option>
+                    <option value="number">🔢 数字 (number)</option>
+                    <option value="boolean">☑️ 布尔值 (boolean)</option>
+                    <option value="vector2">📐 二维向量 (vector2)</option>
+                    <option value="vector3">📏 三维向量 (vector3)</option>
+                    <option value="object">📦 对象 (object)</option>
+                    <option value="array">📋 数组 (array)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>默认值:</label>
+                <input 
+                    v-if="blackboardModalData.type === 'string'"
+                    type="text" 
+                    v-model="blackboardModalData.defaultValue" 
+                    placeholder="输入默认字符串值..."
+                    class="form-input"
+                >
+                <input 
+                    v-else-if="blackboardModalData.type === 'number'"
+                    type="number" 
+                    v-model="blackboardModalData.defaultValue" 
+                    placeholder="输入默认数值..."
+                    class="form-input"
+                >
+                <div v-else-if="blackboardModalData.type === 'boolean'" class="checkbox-group">
+                    <input 
+                        type="checkbox" 
+                        v-model="blackboardModalData.defaultValue"
+                        id="defaultBoolValue"
+                    >
+                    <label for="defaultBoolValue">默认为 True</label>
+                </div>
+                <textarea 
+                    v-else
+                    v-model="blackboardModalData.defaultValue" 
+                    placeholder="请输入JSON格式的默认值，例如：{&quot;x&quot;: 0, &quot;y&quot;: 0}"
+                    rows="3"
+                    class="form-textarea"
+                ></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>描述:</label>
+                <textarea 
+                    v-model="blackboardModalData.description" 
+                    placeholder="描述这个变量的用途和作用..."
+                    rows="2"
+                    class="form-textarea"
+                ></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>分组:</label>
+                <input 
+                    type="text" 
+                    v-model="blackboardModalData.group" 
+                    placeholder="例如：Player、AI、Environment、Game..."
+                    class="form-input"
+                >
+            </div>
+            
+            <!-- 约束设置 -->
+            <div v-if="blackboardModalData.type === 'number'" class="form-group">
+                <label>数值约束:</label>
+                <div class="constraint-inputs">
+                    <div class="constraint-row">
+                        <label>最小值:</label>
+                        <input type="number" v-model="blackboardModalData.constraints.min" placeholder="不限制" class="form-input">
+                    </div>
+                    <div class="constraint-row">
+                        <label>最大值:</label>
+                        <input type="number" v-model="blackboardModalData.constraints.max" placeholder="不限制" class="form-input">
+                    </div>
+                    <div class="constraint-row">
+                        <label>步长:</label>
+                        <input type="number" v-model="blackboardModalData.constraints.step" placeholder="1" class="form-input">
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="blackboardModalData.type === 'string'" class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" v-model="blackboardModalData.useAllowedValues" id="useAllowedValues">
+                    <label for="useAllowedValues">限制可选值</label>
+                </div>
+                <div v-if="blackboardModalData.useAllowedValues" class="allowed-values">
+                    <textarea 
+                        v-model="blackboardModalData.allowedValuesText" 
+                        placeholder="每行输入一个可选值&#10;例如：&#10;idle&#10;running&#10;jumping&#10;attacking"
+                        rows="4"
+                        class="form-textarea"
+                    ></textarea>
+                </div>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" v-model="blackboardModalData.readOnly" id="readOnlyVar">
+                <label for="readOnlyVar">只读变量</label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button @click="saveBlackboardVariable" class="save-btn">保存</button>
+            <button @click="showBlackboardModal = false" class="cancel-btn">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- Blackboard常驻侧边面板 -->
+<div class="blackboard-sidebar" 
+     :class="{ 
+         'collapsed': blackboardCollapsed, 
+         'transparent': blackboardTransparent 
+     }"
+     @mouseenter="blackboardTransparent = false"
+     @mouseleave="blackboardTransparent = true">
+    
+    <!-- 收缩/展开按钮 -->
+    <button class="blackboard-toggle" 
+            @click="blackboardCollapsed = !blackboardCollapsed"
+            :title="blackboardCollapsed ? '展开 Blackboard' : '收缩 Blackboard'">
+        <span v-if="blackboardCollapsed">📋</span>
+        <span v-else>◀</span>
+    </button>
+    
+    <!-- 面板内容 -->
+    <div class="blackboard-content" v-show="!blackboardCollapsed">
+        <div class="blackboard-header">
+            <h3>📋 Blackboard</h3>
+        </div>
+        
+        <!-- Blackboard操作按钮 -->
+        <div class="blackboard-actions">
+            <button @click="showBlackboardModal = true" class="add-var-btn">+ 添加变量</button>
+            <button @click="clearBlackboard" v-if="blackboardVariables.length > 0" class="clear-btn">清空</button>
+        </div>
+        
+        <!-- Blackboard变量列表 -->
+        <div class="blackboard-scroll-area">
+            <div v-if="blackboardVariables.length > 0" class="blackboard-groups">
+                <div 
+                    v-for="[groupName, variables] in groupedBlackboardVariables()" 
+                    :key="groupName" 
+                    class="variable-group"
+                >
+                    <h4 class="group-title">{{ groupName }}</h4>
+                    <div class="variable-list">
+                        <div 
+                            v-for="variable in variables" 
+                            :key="variable.name"
+                            class="variable-item"
+                            :class="variable.type"
+                            :draggable="true"
+                            @dragstart="onBlackboardDragStart($event, variable)"
+                            :title="variable.description"
+                        >
+                            <div class="variable-header">
+                                <span class="variable-name">{{ variable.name }}</span>
+                                <span class="variable-type">{{ getTypeDisplayName(variable.type) }}</span>
+                                <div class="variable-actions">
+                                    <button @click="editBlackboardVariable(variable)" class="edit-btn">✏️</button>
+                                    <button @click="removeBlackboardVariable(variable.name)" class="remove-btn">🗑️</button>
+                                </div>
+                            </div>
+                            
+                            <div class="variable-value">
+                                <select 
+                                    v-if="variable.constraints && variable.constraints.allowedValues" 
+                                    v-model="variable.value"
+                                    @change="onBlackboardValueChange(variable)"
+                                    :disabled="variable.readOnly"
+                                >
+                                    <option 
+                                        v-for="option in variable.constraints.allowedValues" 
+                                        :key="option" 
+                                        :value="option"
+                                    >
+                                        {{ option }}
+                                    </option>
+                                </select>
+                                <span v-else class="value-display">{{ getDisplayValue(variable) }}</span>
+                            </div>
+                            
+                            <!-- 约束显示 -->
+                            <div v-if="variable.constraints && hasVisibleConstraints(variable)" class="variable-constraints">
+                                <small>{{ formatConstraints(variable.constraints) }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 空状态 -->
+            <div v-else class="empty-blackboard">
+                <div class="empty-icon">📋</div>
+                <p>还没有定义任何变量</p>
+                <button class="add-first-var" @click="showBlackboardModal = true">添加第一个变量</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
 <!-- 导出模态框 -->
 <div v-if="showExportModal" class="modal-overlay" @click="showExportModal = false">

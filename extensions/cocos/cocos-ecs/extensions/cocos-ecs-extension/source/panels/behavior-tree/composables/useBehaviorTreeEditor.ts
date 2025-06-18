@@ -9,6 +9,7 @@ import { useConnectionManager } from './useConnectionManager';
 import { useCanvasManager } from './useCanvasManager';
 import { useNodeDisplay } from './useNodeDisplay';
 import { useConditionAttachment } from './useConditionAttachment';
+import { useBlackboard } from './useBlackboard';
 import { validateTree as validateTreeStructure } from '../utils/nodeUtils';
 
 /**
@@ -77,6 +78,15 @@ export function useBehaviorTreeEditor() {
         appState.isInstalling
     );
     
+    // Blackboard功能
+    const blackboard = useBlackboard();
+    
+    // Blackboard常驻侧边面板状态
+    const blackboardSidebarState = reactive({
+        collapsed: false,
+        transparent: true
+    });
+    
     const connectionState = reactive({
         isConnecting: false,
         startNodeId: null as string | null,
@@ -133,6 +143,65 @@ export function useBehaviorTreeEditor() {
         startPosition: { x: 0, y: 0 },
         updateCounter: 0
     });
+
+    // Blackboard拖拽相关功能
+    const isBlackboardDroppable = (prop: any): boolean => {
+        return prop && (prop.type === 'string' || prop.type === 'number' || prop.type === 'boolean');
+    };
+
+    const isBlackboardReference = (value: string): boolean => {
+        return typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}');
+    };
+
+    const handleBlackboardDrop = (event: DragEvent, propertyKey: string) => {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        try {
+            const blackboardData = event.dataTransfer?.getData('application/blackboard-variable');
+            if (!blackboardData) return;
+            
+            const variable = JSON.parse(blackboardData);
+            const activeNode = computedProps.activeNode.value;
+            
+            if (!activeNode || !activeNode.properties) return;
+            
+            const property = activeNode.properties[propertyKey];
+            if (!property) return;
+            
+            // 设置Blackboard引用
+            const referenceValue = `{{${variable.name}}}`;
+            nodeOps.updateNodeProperty(`properties.${propertyKey}.value`, referenceValue);
+            
+            // 移除拖拽样式
+            const element = event.currentTarget as HTMLElement;
+            element.classList.remove('drag-over');
+            
+        } catch (error) {
+            console.error('处理Blackboard拖拽失败:', error);
+        }
+    };
+
+    const handleBlackboardDragOver = (event: DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        const hasBlackboardData = event.dataTransfer?.types.includes('application/blackboard-variable');
+        if (hasBlackboardData) {
+            event.dataTransfer!.dropEffect = 'copy';
+            const element = event.currentTarget as HTMLElement;
+            element.classList.add('drag-over');
+        }
+    };
+
+    const handleBlackboardDragLeave = (event: DragEvent) => {
+        const element = event.currentTarget as HTMLElement;
+        element.classList.remove('drag-over');
+    };
+
+    const clearBlackboardReference = (propertyKey: string) => {
+        nodeOps.updateNodeProperty(`properties.${propertyKey}.value`, '');
+    };
 
     const startNodeDrag = (event: MouseEvent, node: any) => {
         event.stopPropagation();
@@ -448,8 +517,6 @@ export function useBehaviorTreeEditor() {
         }, 3000);
     };
 
-
-
     onMounted(() => {
         // 自动检查安装状态
         installation.checkInstallStatus();
@@ -551,6 +618,7 @@ export function useBehaviorTreeEditor() {
         ...fileOps,
         ...codeGen,
         ...installation,
+        ...blackboard,
         handleInstall,
         connectionState,
         ...connectionManager,
@@ -656,6 +724,23 @@ export function useBehaviorTreeEditor() {
             if (node.type === 'conditional-decorator') {
                 conditionAttachment.handleDecoratorDragLeave(node);
             }
-        }
+        },
+        // Blackboard拖拽相关功能
+        isBlackboardDroppable,
+        isBlackboardReference,
+        handleBlackboardDrop,
+        handleBlackboardDragOver,
+        handleBlackboardDragLeave,
+        clearBlackboardReference,
+        
+        // Blackboard常驻侧边面板功能
+        blackboardCollapsed: computed({
+            get: () => blackboardSidebarState.collapsed,
+            set: (value: boolean) => blackboardSidebarState.collapsed = value
+        }),
+        blackboardTransparent: computed({
+            get: () => blackboardSidebarState.transparent,
+            set: (value: boolean) => blackboardSidebarState.transparent = value
+        })
     };
 } 

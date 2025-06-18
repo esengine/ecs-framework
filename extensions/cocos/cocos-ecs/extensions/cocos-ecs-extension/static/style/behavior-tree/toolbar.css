@@ -17,15 +17,16 @@
 
 .toolbar-left h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 600;
     text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    letter-spacing: 0.5px;
 }
 
 .current-file {
     color: #a0aec0;
     font-weight: 400;
-    font-size: 16px;
+    font-size: 13px;
     margin-left: 8px;
 }
 
@@ -62,6 +63,12 @@
 .tool-btn:hover:not(:disabled) {
     background: rgba(255,255,255,0.2);
     transform: translateY(-1px);
+}
+
+.tool-btn.active {
+    background: rgba(102, 126, 234, 0.3);
+    border-color: #667eea;
+    color: #e2e8f0;
 }
 
 

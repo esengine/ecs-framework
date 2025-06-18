@@ -702,5 +702,370 @@ export const nodeTemplates: NodeTemplate[] = [
         maxChildren: 0,
         className: 'DestroyEntityAction',
         namespace: 'ecs-integration/behaviors'
+    },
+
+    // 黑板相关节点 - 动作节点
+    {
+        type: 'set-blackboard-value',
+        name: '设置黑板变量',
+        icon: '📝',
+        category: 'action',
+        description: '设置黑板变量的值',
+        canHaveChildren: false,
+        canHaveParent: true,
+        maxChildren: 0,
+        className: 'SetBlackboardValue',
+        namespace: 'behaviourTree/actions',
+        properties: {
+            variableName: {
+                name: '变量名',
+                type: 'string',
+                value: '',
+                description: '黑板变量名',
+                required: true
+            },
+            value: {
+                name: '设置值',
+                type: 'string',
+                value: '',
+                description: '要设置的值（留空则使用源变量）',
+                required: false
+            },
+            sourceVariable: {
+                name: '源变量名',
+                type: 'string',
+                value: '',
+                description: '从另一个黑板变量复制值',
+                required: false
+            },
+            force: {
+                name: '强制设置',
+                type: 'boolean',
+                value: false,
+                description: '是否忽略只读限制',
+                required: false
+            }
+        }
+    },
+    {
+        type: 'add-blackboard-value',
+        name: '增加数值变量',
+        icon: '➕',
+        category: 'action',
+        description: '增加数值型黑板变量的值',
+        canHaveChildren: false,
+        canHaveParent: true,
+        maxChildren: 0,
+        className: 'AddToBlackboardValue',
+        namespace: 'behaviourTree/actions',
+        properties: {
+            variableName: {
+                name: '变量名',
+                type: 'string',
+                value: '',
+                description: '数值型黑板变量名',
+                required: true
+            },
+            increment: {
+                name: '增量',
+                type: 'number',
+                value: 1,
+                description: '增加的数值',
+                required: true
+            },
+            incrementVariable: {
+                name: '增量变量名',
+                type: 'string',
+                value: '',
+                description: '从另一个变量获取增量值',
+                required: false
+            }
+        }
+    },
+    {
+        type: 'toggle-blackboard-bool',
+        name: '切换布尔变量',
+        icon: '🔄',
+        category: 'action',
+        description: '切换布尔型黑板变量的值',
+        canHaveChildren: false,
+        canHaveParent: true,
+        maxChildren: 0,
+        className: 'ToggleBlackboardBool',
+        namespace: 'behaviourTree/actions',
+        properties: {
+            variableName: {
+                name: '变量名',
+                type: 'string',
+                value: '',
+                description: '布尔型黑板变量名',
+                required: true
+            }
+        }
+    },
+    {
+        type: 'reset-blackboard-variable',
+        name: '重置变量',
+        icon: '🔄',
+        category: 'action',
+        description: '重置黑板变量到默认值',
+        canHaveChildren: false,
+        canHaveParent: true,
+        maxChildren: 0,
+        className: 'ResetBlackboardVariable',
+        namespace: 'behaviourTree/actions',
+        properties: {
+            variableName: {
+                name: '变量名',
+                type: 'string',
+                value: '',
+                description: '要重置的黑板变量名',
+                required: true
+            }
+        }
+    },
+    {
+        type: 'wait-blackboard-condition',
+        name: '等待黑板条件',
+        icon: '⏳',
+        category: 'action',
+        description: '等待黑板变量满足指定条件',
+        canHaveChildren: false,
+        canHaveParent: true,
+        maxChildren: 0,
+        className: 'WaitForBlackboardCondition',
+        namespace: 'behaviourTree/actions',
+        properties: {
+            variableName: {
+                name: '变量名',
+                type: 'string',
+                value: '',
+                description: '要监听的黑板变量名',
+                required: true
+            },
+            expectedValue: {
+                name: '期望值',
+                type: 'string',
+                value: '',
+                description: '期望的变量值',
+                required: true
+            }
+        }
+    },
+    {
+        type: 'log-blackboard-value',
+        name: '记录黑板变量',
+        icon: '📊',
+        category: 'action',
+        description: '将黑板变量值记录到控制台',
+        canHaveChildren: false,
+        canHaveParent: true,
+        maxChildren: 0,
+        className: 'LogBlackboardValue',
+        namespace: 'behaviourTree/actions',
+        properties: {
+            variableName: {
+                name: '变量名',
+                type: 'string',
+                value: '',
+                description: '要记录的黑板变量名',
+                required: true
+            },
+            prefix: {
+                name: '日志前缀',
+                type: 'string',
+                value: '[Blackboard]',
+                description: '日志消息的前缀',
+                required: false
+            }
+        }
+    },
+    {
+        type: 'math-blackboard-operation',
+        name: '数学运算',
+        icon: '🧮',
+        category: 'action',
+        description: '对黑板变量执行数学运算',
+        canHaveChildren: false,
+        canHaveParent: true,
+        maxChildren: 0,
+        className: 'MathBlackboardOperation',
+        namespace: 'behaviourTree/actions',
+        properties: {
+            targetVariable: {
+                name: '目标变量',
+                type: 'string',
+                value: '',
+                description: '存储结果的变量名',
+                required: true
+            },
+            operand1Variable: {
+                name: '操作数1变量',
+                type: 'string',
+                value: '',
+                description: '第一个操作数的变量名',
+                required: true
+            },
+            operand2: {
+                name: '操作数2',
+                type: 'string',
+                value: '',
+                description: '第二个操作数（数值或变量名）',
+                required: true
+            },
+            operation: {
+                name: '运算类型',
+                type: 'select',
+                value: 'add',
+                options: ['add', 'subtract', 'multiply', 'divide', 'modulo', 'power', 'min', 'max'],
+                description: '要执行的数学运算',
+                required: true
+            }
+        }
+    },
+
+    // 黑板相关节点 - 条件节点
+    {
+        type: 'blackboard-value-comparison',
+        name: '黑板值比较',
+        icon: '⚖️',
+        category: 'condition',
+        description: '比较黑板变量与指定值或另一个变量 (拖拽到条件装饰器上使用)',
+        canHaveChildren: false,
+        canHaveParent: false,
+        maxChildren: 0,
+        isDraggableCondition: true,
+        attachableToDecorator: true,
+        className: 'BlackboardValueComparison',
+        namespace: 'behaviourTree/conditionals',
+        properties: {
+            variableName: {
+                name: '变量名',
+                type: 'string',
+                value: '',
+                description: '要比较的黑板变量名',
+                required: true
+            },
+            operator: {
+                name: '比较操作符',
+                type: 'select',
+                value: 'equal',
+                options: ['equal', 'notEqual', 'greater', 'greaterOrEqual', 'less', 'lessOrEqual', 'contains', 'notContains'],
+                description: '比较操作类型',
+                required: true
+            },
+            compareValue: {
+                name: '比较值',
+                type: 'string',
+                value: '',
+                description: '用于比较的值（留空则使用比较变量）',
+                required: false
+            },
+            compareVariable: {
+                name: '比较变量名',
+                type: 'string',
+                value: '',
+                description: '用于比较的另一个黑板变量名',
+                required: false
+            }
+        }
+    },
+    {
+        type: 'blackboard-variable-exists',
+        name: '黑板变量存在',
+        icon: '✅',
+        category: 'condition',
+        description: '检查黑板变量是否存在且有效 (拖拽到条件装饰器上使用)',
+        canHaveChildren: false,
+        canHaveParent: false,
+        maxChildren: 0,
+        isDraggableCondition: true,
+        attachableToDecorator: true,
+        className: 'BlackboardVariableExists',
+        namespace: 'behaviourTree/conditionals',
+        properties: {
+            variableName: {
+                name: '变量名',
+                type: 'string',
+                value: '',
+                description: '要检查的黑板变量名',
+                required: true
+            },
+            invert: {
+                name: '反转结果',
+                type: 'boolean',
+                value: false,
+                description: '是否反转检查结果',
+                required: false
+            }
+        }
+    },
+    {
+        type: 'blackboard-variable-type-check',
+        name: '黑板变量类型检查',
+        icon: '🔍',
+        category: 'condition',
+        description: '检查黑板变量是否为指定类型 (拖拽到条件装饰器上使用)',
+        canHaveChildren: false,
+        canHaveParent: false,
+        maxChildren: 0,
+        isDraggableCondition: true,
+        attachableToDecorator: true,
+        className: 'BlackboardVariableTypeCheck',
+        namespace: 'behaviourTree/conditionals',
+        properties: {
+            variableName: {
+                name: '变量名',
+                type: 'string',
+                value: '',
+                description: '要检查的黑板变量名',
+                required: true
+            },
+            expectedType: {
+                name: '期望类型',
+                type: 'select',
+                value: 'string',
+                options: ['string', 'number', 'boolean', 'vector2', 'vector3', 'object', 'array'],
+                description: '期望的变量类型',
+                required: true
+            }
+        }
+    },
+    {
+        type: 'blackboard-variable-range-check',
+        name: '黑板变量范围检查',
+        icon: '📏',
+        category: 'condition',
+        description: '检查数值型黑板变量是否在指定范围内 (拖拽到条件装饰器上使用)',
+        canHaveChildren: false,
+        canHaveParent: false,
+        maxChildren: 0,
+        isDraggableCondition: true,
+        attachableToDecorator: true,
+        className: 'BlackboardVariableRangeCheck',
+        namespace: 'behaviourTree/conditionals',
+        properties: {
+            variableName: {
+                name: '变量名',
+                type: 'string',
+                value: '',
+                description: '要检查的数值型黑板变量名',
+                required: true
+            },
+            minValue: {
+                name: '最小值',
+                type: 'number',
+                value: 0,
+                description: '范围的最小值（包含）',
+                required: true
+            },
+            maxValue: {
+                name: '最大值',
+                type: 'number',
+                value: 100,
+                description: '范围的最大值（包含）',
+                required: true
+            }
+        }
     }
 ]; 

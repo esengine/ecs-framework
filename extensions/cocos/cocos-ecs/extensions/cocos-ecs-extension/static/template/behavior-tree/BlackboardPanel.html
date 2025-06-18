@@ -1,0 +1,194 @@
+<div class="blackboard-panel">
+    <div class="panel-header">
+        <h3>🎯 黑板变量</h3>
+        <div class="header-actions">
+            <button class="btn-add-variable" @click="showAddVariableDialog = true" title="添加新变量">
+                ➕ 添加变量
+            </button>
+            <button class="btn-import-export" @click="showImportExportDialog = true" title="导入/导出变量">
+                📤 导入/导出
+            </button>
+        </div>
+    </div>
+
+    <div class="variables-container">
+        <!-- 按分组显示变量 -->
+        <div v-for="group in groups" :key="group" class="variable-group">
+            <div class="group-header" @click="toggleGroup(group)">
+                <span class="group-icon">{{ expandedGroups.has(group) ? '📂' : '📁' }}</span>
+                <span class="group-name">{{ group }}</span>
+                <span class="group-count">({{ groupedBlackboardVariables()[group]?.length || 0 }})</span>
+            </div>
+
+            <div v-if="expandedGroups.has(group)" class="group-variables">
+                <div v-for="variable in groupedBlackboardVariables()[group]" :key="variable.name" class="variable-item"
+                    :class="[variable.type, { 'readonly': variable.readonly }]" :draggable="true"
+                    @dragstart="onBlackboardDragStart($event, variable)">
+
+                    <div class="variable-header">
+                        <div class="variable-info">
+                            <span class="variable-name">{{ variable.name }}</span>
+                            <span class="value-separator">:</span>
+                            <span class="value-display">{{ getDisplayValue(variable) }}</span>
+                        </div>
+                        <span class="variable-type">{{ getTypeDisplayName(variable.type) }}</span>
+                    </div>
+
+                    <div class="variable-actions">
+                        <button @click="editVariable(variable)" title="编辑" class="edit-btn">✏</button>
+                        <button @click="removeBlackboardVariable(variable.name)" title="删除"
+                            class="remove-btn">×</button>
+                    </div>
+                </div>
+            </div>
+</div>
+
+<!-- 空状态 -->
+<div v-if="groups.length === 0" class="empty-state">
+    <div class="empty-icon">📋</div>
+    <div class="empty-text">还没有黑板变量</div>
+    <div class="empty-hint">点击"添加变量"来创建第一个变量</div>
+</div>
+</div>
+
+<!-- 添加变量对话框 -->
+<div v-if="showAddVariableDialog" class="dialog-overlay" @click="closeAddVariableDialog">
+    <div class="dialog" @click.stop>
+        <div class="dialog-header">
+            <h4>{{ editingVariable ? '编辑变量' : '添加变量' }}</h4>
+            <button @click="closeAddVariableDialog" class="dialog-close">✕</button>
+        </div>
+
+        <div class="dialog-content">
+            <div class="form-group">
+                <label>变量名</label>
+                <input v-model="newVariable.name" :disabled="editingVariable" type="text" placeholder="请输入变量名"
+                    class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label>变量类型</label>
+                <select v-model="newVariable.type" class="form-select" @change="onTypeChange">
+                    <option value="string">字符串</option>
+                    <option value="number">数字</option>
+                    <option value="boolean">布尔</option>
+                    <option value="vector2">Vector2</option>
+                    <option value="vector3">Vector3</option>
+                    <option value="object">对象</option>
+                    <option value="array">数组</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>默认值</label>
+                <!-- 根据类型显示不同的输入控件 -->
+                <input v-if="newVariable.type === 'string'" v-model="newVariable.defaultValue" type="text"
+                    class="form-input">
+                <input v-else-if="newVariable.type === 'number'" v-model.number="newVariable.defaultValue" type="number"
+                    class="form-input">
+                <label v-else-if="newVariable.type === 'boolean'" class="checkbox-label">
+                    <input type="checkbox" v-model="newVariable.defaultValue">
+                    <span>{{ newVariable.defaultValue ? '真' : '假' }}</span>
+                </label>
+                <div v-else-if="newVariable.type === 'vector2'" class="vector-input">
+                    <input v-model.number="newVariable.defaultValue.x" type="number" placeholder="X">
+                    <input v-model.number="newVariable.defaultValue.y" type="number" placeholder="Y">
+                </div>
+                <div v-else-if="newVariable.type === 'vector3'" class="vector-input">
+                    <input v-model.number="newVariable.defaultValue.x" type="number" placeholder="X">
+                    <input v-model.number="newVariable.defaultValue.y" type="number" placeholder="Y">
+                    <input v-model.number="newVariable.defaultValue.z" type="number" placeholder="Z">
+                </div>
+                <textarea v-else-if="newVariable.type === 'object' || newVariable.type === 'array'"
+                    v-model="newVariable.defaultValueText" class="form-textarea" rows="3"
+                    placeholder="JSON格式"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>描述</label>
+                <input v-model="newVariable.description" type="text" placeholder="变量的用途描述" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label>分组</label>
+                <input v-model="newVariable.group" type="text" placeholder="变量分组（如：Player、Enemy等）" class="form-input">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" v-model="newVariable.readonly">
+                        <span>只读</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 数字类型的约束 -->
+            <div v-if="newVariable.type === 'number'" class="form-row">
+                <div class="form-group">
+                    <label>最小值</label>
+                    <input v-model.number="newVariable.min" type="number" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>最大值</label>
+                    <input v-model.number="newVariable.max" type="number" class="form-input">
+                </div>
+            </div>
+
+            <!-- 可选值列表 -->
+            <div class="form-group">
+                <label>可选值列表（用逗号分隔）</label>
+                <input v-model="newVariable.optionsText" type="text" placeholder="例如: small,medium,large"
+                    class="form-input">
+            </div>
+        </div>
+
+        <div class="dialog-actions">
+            <button @click="closeAddVariableDialog" class="btn-cancel">取消</button>
+            <button @click="saveVariable" class="btn-save" :disabled="!isValidVariable">
+                {{ editingVariable ? '保存' : '添加' }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 导入/导出对话框 -->
+<div v-if="showImportExportDialog" class="dialog-overlay" @click="closeImportExportDialog">
+    <div class="dialog large" @click.stop>
+        <div class="dialog-header">
+            <h4>导入/导出黑板变量</h4>
+            <button @click="closeImportExportDialog" class="dialog-close">✕</button>
+        </div>
+
+        <div class="dialog-content">
+            <div class="tab-container">
+                <div class="tabs">
+                    <button :class="{ active: activeTab === 'export' }" @click="activeTab = 'export'">导出</button>
+                    <button :class="{ active: activeTab === 'import' }" @click="activeTab = 'import'">导入</button>
+                </div>
+
+                <div v-if="activeTab === 'export'" class="tab-content">
+                    <p>以下是当前黑板变量的JSON数据，可以复制保存：</p>
+                    <textarea v-model="exportData" readonly class="export-textarea" rows="15"></textarea>
+                    <button @click="copyExportData" class="btn-copy">📋 复制到剪贴板</button>
+                </div>
+
+                <div v-if="activeTab === 'import'" class="tab-content">
+                    <p>粘贴黑板变量的JSON数据进行导入：</p>
+                    <textarea v-model="importData" class="import-textarea" rows="15"
+                        placeholder="粘贴JSON数据..."></textarea>
+                    <div class="import-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" v-model="clearBeforeImport">
+                            <span>导入前清空现有变量</span>
+                        </label>
+                    </div>
+                    <button @click="importVariables" class="btn-import" :disabled="!importData.trim()">
+                        📥 导入变量
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>

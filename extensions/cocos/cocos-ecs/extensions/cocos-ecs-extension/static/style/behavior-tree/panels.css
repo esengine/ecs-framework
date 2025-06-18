@@ -11,15 +11,53 @@
 }
 
 .panel-header {
-    padding: 16px;
+    padding: 12px 16px;
     background: #4a5568;
     border-bottom: 1px solid #718096;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 48px;
 }
 
 .panel-header h3 {
-    margin: 0 0 12px 0;
-    font-size: 16px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
     color: #e2e8f0;
+    flex: 1;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tool-btn.small {
+    padding: 6px 10px;
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    color: #e2e8f0;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.tool-btn.small:hover {
+    background: #2d3748;
+    border-color: #667eea;
+    transform: translateY(-1px);
 }
 
 .search-input {
@@ -49,10 +87,36 @@
 .category-title {
     margin: 0 0 8px 0;
     padding: 8px 12px;
-    background: #4a5568;
-    border-radius: 4px;
-    font-size: 14px;
-    color: #e2e8f0;
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #cbd5e0;
+    letter-spacing: 0.3px;
+    border-left: 3px solid #667eea;
+    position: relative;
+    overflow: hidden;
+}
+
+.category-title::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.category-title:hover::before {
+    left: 100%;
+}
+
+.category-title:hover {
+    background: linear-gradient(135deg, #667eea 0%, #4a5568 100%);
+    color: #ffffff;
+    transform: translateX(2px);
 }
 
 .node-list {
@@ -105,14 +169,27 @@
     text-overflow: ellipsis;
 }
 
-/* 右侧属性面板 */
-.properties-panel {
+/* 右侧属性面板容器 */
+.properties-panel-container {
     width: 320px;
     background: #2d3748;
     border-left: 1px solid #4a5568;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+}
+
+
+
+
+/* 属性面板 */
+.properties-panel {
+    flex: 1;
+    background: #2d3748;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: 100%;
 }
 
 .node-properties {
@@ -126,13 +203,19 @@
 }
 
 .property-section h4 {
-    margin: 0 0 12px 0;
+    margin: 0 0 10px 0;
     color: #e2e8f0;
-    font-size: 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-bottom: 1px solid #4a5568;
+    padding-bottom: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
 .property-item {
     margin-bottom: 12px;
+    position: relative;
 }
 
 .property-item label {
@@ -141,6 +224,10 @@
     color: #a0aec0;
     font-size: 12px;
     font-weight: 500;
+}
+
+.property-input-container {
+    position: relative;
 }
 
 .property-item input,
@@ -154,6 +241,7 @@
     color: white;
     font-size: 12px;
     font-family: inherit;
+    box-sizing: border-box;
 }
 
 .property-item input:focus,
@@ -178,7 +266,52 @@
     line-height: 1.4;
 }
 
-.code-preview {
+.blackboard-droppable {
+    border: 2px dashed transparent;
+    transition: border-color 0.2s ease;
+}
+
+.blackboard-droppable.drag-over {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.blackboard-reference {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    padding: 4px 8px;
+    background: #4a5568;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.ref-icon {
+    color: #667eea;
+}
+
+.ref-text {
+    color: #e2e8f0;
+    flex: 1;
+}
+
+.clear-ref {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    padding: 0 4px;
+    border-radius: 2px;
+    font-size: 12px;
+}
+
+.clear-ref:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.config-preview {
     background: #1a202c;
     border: 1px solid #4a5568;
     border-radius: 4px;
@@ -248,4 +381,543 @@
 .tree-node-type {
     font-size: 9px;
     color: #718096;
-} 
+}
+
+/* Blackboard悬浮窗口样式 */
+.blackboard-sidebar {
+    position: fixed;
+    top: 160px;
+    right: 320px;
+    width: 280px;
+    max-height: calc(100vh - 180px);
+    background: #2d3748;
+    border: 1px solid #4a5568;
+    border-radius: 8px 0 0 8px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+}
+
+.blackboard-sidebar.collapsed {
+    width: 48px;
+    right: 272px;
+}
+
+.blackboard-sidebar.transparent {
+    opacity: 0.7;
+    background: rgba(45, 55, 72, 0.85);
+}
+
+.blackboard-sidebar.transparent:not(.collapsed) {
+    transform: translateX(-20px);
+}
+
+.blackboard-toggle {
+    position: absolute;
+    left: -24px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 48px;
+    background: #667eea;
+    border: none;
+    border-radius: 8px 0 0 8px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    z-index: 1001;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+}
+
+.blackboard-toggle:hover {
+    background: #5a6acf;
+    transform: translateY(-50%) translateX(-2px);
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.3);
+}
+
+.blackboard-toggle span {
+    transition: transform 0.3s ease;
+}
+
+.blackboard-sidebar.collapsed .blackboard-toggle span {
+    transform: rotate(180deg);
+}
+
+.blackboard-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.blackboard-header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 12px;
+    position: relative;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+}
+
+.blackboard-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+}
+
+.blackboard-header h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.blackboard-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 12px 12px 12px;
+}
+
+.blackboard-sidebar .blackboard-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    padding: 12px;
+    border-bottom: 1px solid #4a5568;
+}
+
+.blackboard-sidebar .blackboard-actions button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.blackboard-sidebar .add-var-btn {
+    background: #48bb78;
+    color: white;
+}
+
+.blackboard-sidebar .add-var-btn:hover {
+    background: #38a169;
+    transform: translateY(-1px);
+}
+
+.blackboard-sidebar .clear-btn {
+    background: #f56565;
+    color: white;
+}
+
+.blackboard-sidebar .clear-btn:hover {
+    background: #e53e3e;
+    transform: translateY(-1px);
+}
+
+.blackboard-sidebar .blackboard-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.blackboard-sidebar .variable-group {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid #4a5568;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.blackboard-sidebar .group-title {
+    margin: 0;
+    padding: 8px 12px;
+    background: #1a202c;
+    color: #e2e8f0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #4a5568;
+}
+
+.blackboard-sidebar .variable-list {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.blackboard-sidebar .variable-item {
+    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+    border: 1px solid #4a5568;
+    border-radius: 8px;
+    padding: 12px 16px;
+    cursor: grab;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-left-width: 0;
+    min-height: 44px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+}
+
+.blackboard-sidebar .variable-item::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.blackboard-sidebar .variable-item:hover {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    border-color: #667eea;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.3);
+}
+
+.blackboard-sidebar .variable-item:hover::before {
+    transform: translateY(-50%) scale(1.2);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2), 0 0 12px currentColor, 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.blackboard-sidebar .variable-item:active {
+    cursor: grabbing;
+    transform: scale(0.98);
+}
+
+.blackboard-sidebar .variable-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    margin-left: 20px;
+}
+
+.blackboard-sidebar .variable-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.blackboard-sidebar .variable-name {
+    font-weight: 600;
+    color: #f7fafc;
+    font-size: 13px;
+    flex-shrink: 0;
+    letter-spacing: 0.3px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.blackboard-sidebar .value-separator {
+    color: #64748b;
+    font-weight: 500;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.blackboard-sidebar .variable-type {
+    font-size: 8px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    line-height: 1;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.blackboard-sidebar .variable-item.string::before {
+    background: #48bb78;
+}
+
+.blackboard-sidebar .variable-item.string .variable-type {
+    background: #48bb78;
+    color: white;
+}
+
+.blackboard-sidebar .variable-item.number::before {
+    background: #3182ce;
+}
+
+.blackboard-sidebar .variable-item.number .variable-type {
+    background: #3182ce;
+    color: white;
+}
+
+.blackboard-sidebar .variable-item.boolean::before {
+    background: #d69e2e;
+}
+
+.blackboard-sidebar .variable-item.boolean .variable-type {
+    background: #d69e2e;
+    color: white;
+}
+
+.blackboard-sidebar .variable-item.vector2::before,
+.blackboard-sidebar .variable-item.vector3::before {
+    background: #9f7aea;
+}
+
+.blackboard-sidebar .variable-item.vector2 .variable-type,
+.blackboard-sidebar .variable-item.vector3 .variable-type {
+    background: #9f7aea;
+    color: white;
+}
+
+.blackboard-sidebar .variable-item.object::before,
+.blackboard-sidebar .variable-item.array::before {
+    background: #ed8936;
+}
+
+.blackboard-sidebar .variable-item.object .variable-type,
+.blackboard-sidebar .variable-item.array .variable-type {
+    background: #ed8936;
+    color: white;
+}
+
+.blackboard-sidebar .variable-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    transform: translateX(8px);
+}
+
+.blackboard-sidebar .variable-item:hover .variable-actions {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.blackboard-sidebar .variable-actions button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 10px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    color: #cbd5e0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.blackboard-sidebar .edit-btn:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    transform: translateY(-1px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+
+.blackboard-sidebar .remove-btn:hover {
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+    border-color: #f56565;
+    transform: translateY(-1px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(245, 101, 101, 0.4);
+    color: white;
+}
+
+.blackboard-sidebar .value-display {
+    font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    color: #10b981;
+    background: none;
+    border: none;
+    padding: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* 不同类型的值颜色 */
+.blackboard-sidebar .variable-item.string .value-display {
+    color: #f59e0b; /* 琥珀色 - 字符串 */
+}
+
+.blackboard-sidebar .variable-item.number .value-display {
+    color: #3b82f6; /* 蓝色 - 数字 */
+}
+
+.blackboard-sidebar .variable-item.boolean .value-display {
+    color: #8b5cf6; /* 紫色 - 布尔值 */
+}
+
+.blackboard-sidebar .variable-item.vector2 .value-display,
+.blackboard-sidebar .variable-item.vector3 .value-display {
+    color: #ec4899; /* 粉色 - 向量 */
+}
+
+.blackboard-sidebar .variable-item.object .value-display,
+.blackboard-sidebar .variable-item.array .value-display {
+    color: #10b981; /* 绿色 - 对象/数组 */
+}
+
+.blackboard-sidebar .variable-constraints {
+    margin-top: 4px;
+    font-size: 10px;
+    color: #718096;
+    font-style: italic;
+}
+
+.blackboard-sidebar .empty-blackboard {
+    text-align: center;
+    padding: 24px 16px;
+    color: #718096;
+}
+
+.blackboard-sidebar .empty-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.blackboard-sidebar .empty-blackboard p {
+    margin: 0 0 16px 0;
+    font-size: 13px;
+}
+
+.blackboard-sidebar .add-first-var {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.blackboard-sidebar .add-first-var:hover {
+    background: #5a67d8;
+    transform: translateY(-1px);
+}
+
+/* 只读变量样式 */
+.blackboard-sidebar .variable-item.readonly {
+    opacity: 0.8;
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%) !important;
+    border-color: #6b7280;
+}
+
+.blackboard-sidebar .variable-item.readonly::before {
+    background: #6b7280 !important;
+}
+
+.blackboard-sidebar .variable-item.readonly .variable-name {
+    color: #9ca3af;
+}
+
+.blackboard-sidebar .variable-item.readonly .variable-type {
+    background: #6b7280 !important;
+    color: #e5e7eb !important;
+}
+
+/* 拖拽状态样式 */
+.blackboard-sidebar .variable-item:active {
+    cursor: grabbing !important;
+    transform: scale(0.95) rotate(2deg);
+    opacity: 0.8;
+    z-index: 1000;
+}
+
+/* 响应式断点调整 */
+@media (max-width: 1400px) {
+    .blackboard-sidebar .variable-item {
+        padding: 10px 14px;
+        gap: 10px;
+    }
+    
+    .blackboard-sidebar .variable-name {
+        font-size: 12px;
+    }
+    
+    .blackboard-sidebar .value-display {
+        font-size: 10px;
+    }
+    
+    .blackboard-sidebar .variable-type {
+        font-size: 7px;
+        padding: 3px 6px;
+    }
+    
+    .blackboard-sidebar .variable-actions button {
+        width: 20px;
+        height: 20px;
+        font-size: 9px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .blackboard-sidebar .variable-item {
+        padding: 8px 12px;
+        gap: 8px;
+        min-height: 38px;
+    }
+    
+    .blackboard-sidebar .variable-header {
+        margin-left: 16px;
+        gap: 8px;
+    }
+    
+    .blackboard-sidebar .variable-name {
+        font-size: 11px;
+    }
+    
+    .blackboard-sidebar .value-display {
+        font-size: 9px;
+    }
+    
+    .blackboard-sidebar .variable-item::before {
+        left: 10px;
+        width: 6px;
+        height: 6px;
+    }
+    
+    .blackboard-sidebar .variable-actions button {
+        width: 18px;
+        height: 18px;
+        font-size: 8px;
+        padding: 4px;
+    }
+}
