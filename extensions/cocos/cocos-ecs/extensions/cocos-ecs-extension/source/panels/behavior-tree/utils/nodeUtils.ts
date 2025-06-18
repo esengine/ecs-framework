@@ -31,7 +31,7 @@ export function createNodeFromTemplate(template: NodeTemplate, x: number = 100, 
     
     const node: TreeNode = {
         id: nodeId,
-        type: template.className || template.type,
+        type: template.type,
         name: template.name,
         icon: template.icon,
         description: template.description,

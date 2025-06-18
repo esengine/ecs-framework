@@ -1,0 +1,149 @@
+/* 画布区域样式 */
+
+.canvas-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #1a202c;
+    overflow: hidden;
+}
+
+.canvas-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #2d3748;
+    border-bottom: 1px solid #4a5568;
+}
+
+.zoom-controls, .canvas-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.zoom-controls button, .canvas-actions button {
+    padding: 4px 8px;
+    background: #4a5568;
+    border: 1px solid #718096;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background 0.3s ease;
+}
+
+.zoom-controls button:hover, .canvas-actions button:hover {
+    background: #667eea;
+}
+
+.canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #1a202c;
+    background-image: 
+        radial-gradient(circle, #2d3748 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-position: 0 0;
+    cursor: grab;
+}
+
+.behavior-tree-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+/* 连接线样式 */
+.connection-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.connection-line {
+    fill: none;
+    stroke: #667eea;
+    stroke-width: 2;
+    pointer-events: all;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.connection-line:hover {
+    stroke: #f6ad55;
+    stroke-width: 3;
+    filter: drop-shadow(0 0 6px rgba(246, 173, 85, 0.6));
+}
+
+.connection-active {
+    stroke: #48bb78;
+    stroke-dasharray: 8, 4;
+    animation: flow 2s linear infinite;
+}
+
+@keyframes flow {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: 12; }
+}
+
+.connection-temp {
+    fill: none;
+    stroke: #f6ad55;
+    stroke-width: 2;
+    stroke-dasharray: 5, 5;
+    animation: dash 1s linear infinite;
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+@keyframes dash {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: 10; }
+}
+
+/* 节点层 */
+.nodes-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    transform-origin: 0 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* 网格背景 */
+.grid-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.3;
+}
+
+/* 画布状态 */
+.canvas-area.connecting {
+    cursor: crosshair;
+}
+
+.canvas-area.connecting .tree-node {
+    pointer-events: none;
+}
+
+.canvas-area.connecting .port {
+    pointer-events: all;
+    cursor: pointer;
+}
+
+.drag-over {
+    background: rgba(102, 126, 234, 0.1);
+    border: 2px dashed #667eea;
+} 

@@ -1,0 +1,251 @@
+/* 侧边面板样式 */
+
+/* 左侧节点面板 */
+.nodes-panel {
+    width: 280px;
+    background: #2d3748;
+    border-right: 1px solid #4a5568;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-header {
+    padding: 16px;
+    background: #4a5568;
+    border-bottom: 1px solid #718096;
+}
+
+.panel-header h3 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    color: #e2e8f0;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 12px;
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    color: white;
+    font-size: 12px;
+}
+
+.search-input::placeholder {
+    color: #a0aec0;
+}
+
+.node-categories {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.category {
+    margin-bottom: 16px;
+}
+
+.category-title {
+    margin: 0 0 8px 0;
+    padding: 8px 12px;
+    background: #4a5568;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #e2e8f0;
+}
+
+.node-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.node-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    cursor: grab;
+    transition: all 0.3s ease;
+    font-size: 12px;
+    position: relative;
+}
+
+.node-item:hover {
+    background: #2d3748;
+    border-color: #667eea;
+    transform: translateX(4px);
+}
+
+.node-item:active {
+    cursor: grabbing;
+}
+
+.node-item.root { border-left: 3px solid #f6ad55; }
+.node-item.composite { border-left: 3px solid #667eea; }
+.node-item.decorator { border-left: 3px solid #9f7aea; }
+.node-item.action { border-left: 3px solid #48bb78; }
+.node-item.condition { border-left: 3px solid #ed8936; }
+.node-item.ecs { border-left: 3px solid #38b2ac; }
+
+.node-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.node-name {
+    font-weight: 500;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 右侧属性面板 */
+.properties-panel {
+    width: 320px;
+    background: #2d3748;
+    border-left: 1px solid #4a5568;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.node-properties {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.property-section {
+    margin-bottom: 20px;
+}
+
+.property-section h4 {
+    margin: 0 0 12px 0;
+    color: #e2e8f0;
+    font-size: 14px;
+}
+
+.property-item {
+    margin-bottom: 12px;
+}
+
+.property-item label {
+    display: block;
+    margin-bottom: 4px;
+    color: #a0aec0;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.property-item input,
+.property-item textarea,
+.property-item select {
+    width: 100%;
+    padding: 8px 12px;
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    color: white;
+    font-size: 12px;
+    font-family: inherit;
+}
+
+.property-item input:focus,
+.property-item textarea:focus,
+.property-item select:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.property-item .code-input {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    resize: vertical;
+    min-height: 80px;
+}
+
+.property-help {
+    margin-top: 4px;
+    font-size: 10px;
+    color: #718096;
+    line-height: 1.4;
+}
+
+.code-preview {
+    background: #1a202c;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 8px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    color: #e2e8f0;
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.no-selection {
+    padding: 40px 20px;
+    text-align: center;
+    color: #718096;
+    font-style: italic;
+}
+
+.tree-structure {
+    margin-top: 20px;
+}
+
+.structure-tree {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+}
+
+.empty-tree {
+    padding: 20px;
+    text-align: center;
+    color: #718096;
+    font-style: italic;
+    border: 2px dashed #4a5568;
+    border-radius: 4px;
+}
+
+.tree-node-item {
+    cursor: pointer;
+}
+
+.tree-node-line {
+    padding: 2px 4px;
+    border-radius: 2px;
+    margin: 1px 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.2s ease;
+}
+
+.tree-node-line:hover {
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.tree-node-icon {
+    font-size: 10px;
+    width: 12px;
+}
+
+.tree-node-name {
+    flex: 1;
+    color: #e2e8f0;
+}
+
+.tree-node-type {
+    font-size: 9px;
+    color: #718096;
+} 

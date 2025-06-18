@@ -26,6 +26,9 @@ export interface NodeTemplate {
     properties?: Record<string, PropertyDefinition>;
     className?: string; // 对应的实际类名
     namespace?: string; // 命名空间
+    // 条件节点相关
+    isDraggableCondition?: boolean; // 是否为可拖拽的条件节点
+    attachableToDecorator?: boolean; // 是否可以吸附到条件装饰器
 }
 
 /**
@@ -126,7 +129,24 @@ export const nodeTemplates: NodeTemplate[] = [
         canHaveParent: true,
         minChildren: 2,
         className: 'RandomSelector',
-        namespace: 'behaviourTree/composites'
+        namespace: 'behaviourTree/composites',
+        properties: {
+            reshuffleOnRestart: {
+                name: '重启时重新洗牌',
+                type: 'boolean',
+                value: true,
+                description: '是否在每次重新开始时都重新洗牌子节点顺序',
+                required: false
+            },
+            abortType: {
+                name: '中止类型',
+                type: 'select',
+                value: 'None',
+                options: ['None', 'LowerPriority', 'Self', 'Both'],
+                description: '决定节点在何种情况下会被中止',
+                required: false
+            }
+        }
     },
     {
         type: 'random-sequence',
@@ -138,7 +158,24 @@ export const nodeTemplates: NodeTemplate[] = [
         canHaveParent: true,
         minChildren: 2,
         className: 'RandomSequence',
-        namespace: 'behaviourTree/composites'
+        namespace: 'behaviourTree/composites',
+        properties: {
+            reshuffleOnRestart: {
+                name: '重启时重新洗牌',
+                type: 'boolean',
+                value: true,
+                description: '是否在每次重新开始时都重新洗牌子节点顺序',
+                required: false
+            },
+            abortType: {
+                name: '中止类型',
+                type: 'select',
+                value: 'None',
+                options: ['None', 'LowerPriority', 'Self', 'Both'],
+                description: '决定节点在何种情况下会被中止',
+                required: false
+            }
+        }
     },
 
     // 装饰器节点 (Decorators) - 只能有一个子节点
@@ -155,18 +192,25 @@ export const nodeTemplates: NodeTemplate[] = [
         className: 'Repeater',
         namespace: 'behaviourTree/decorators',
         properties: {
-            repeatCount: {
+            count: {
                 name: '重复次数',
                 type: 'number',
                 value: -1,
-                description: '重复执行次数，-1表示无限重复',
+                description: '重复执行次数，-1表示无限重复，必须是正整数',
                 required: true
             },
-            repeatForever: {
-                name: '无限重复',
+            endOnFailure: {
+                name: '失败时停止',
                 type: 'boolean',
-                value: true,
-                description: '是否无限重复执行',
+                value: false,
+                description: '子节点失败时是否停止重复',
+                required: false
+            },
+            endOnSuccess: {
+                name: '成功时停止',
+                type: 'boolean',
+                value: false,
+                description: '子节点成功时是否停止重复',
                 required: false
             }
         }
@@ -241,22 +285,14 @@ export const nodeTemplates: NodeTemplate[] = [
         name: '条件装饰器',
         icon: '🔀',
         category: 'decorator',
-        description: '基于条件执行子节点',
+        description: '基于条件执行子节点（拖拽条件节点到此装饰器来配置条件）',
         canHaveChildren: true,
         canHaveParent: true,
         maxChildren: 1,
         minChildren: 1,
         className: 'ConditionalDecorator',
         namespace: 'behaviourTree/decorators',
-        properties: {
-            conditionCode: {
-                name: '条件代码',
-                type: 'code',
-                value: '(context) => true',
-                description: '条件判断函数代码',
-                required: true
-            }
-        }
+        properties: {}
     },
 
     // 动作节点 (Actions) - 叶子节点，不能有子节点
@@ -304,14 +340,14 @@ export const nodeTemplates: NodeTemplate[] = [
                 name: '等待时间',
                 type: 'number',
                 value: 1.0,
-                description: '等待时间（秒）',
+                description: '等待时间（秒），必须大于0',
                 required: true
             },
-            randomVariance: {
-                name: '随机变化',
-                type: 'number',
-                value: 0.0,
-                description: '时间的随机变化量',
+            useExternalTime: {
+                name: '使用外部时间',
+                type: 'boolean',
+                value: false,
+                description: '是否使用上下文提供的deltaTime，否则使用内部时间计算',
                 required: false
             }
         }
@@ -348,7 +384,7 @@ export const nodeTemplates: NodeTemplate[] = [
     {
         type: 'behavior-tree-reference',
         name: '行为树引用',
-        icon: '🌳',
+        icon: '🔗',
         category: 'action',
         description: '运行另一个行为树',
         canHaveChildren: false,
@@ -367,39 +403,44 @@ export const nodeTemplates: NodeTemplate[] = [
         }
     },
 
-    // 条件节点 (基础条件) - 叶子节点，不能有子节点
+
+
+
+    // 条件节点 (可拖拽到条件装饰器上吸附)
     {
-        type: 'execute-conditional',
-        name: '执行条件',
-        icon: '❓',
+        type: 'condition-random',
+        name: '随机概率',
+        icon: '🎲',
         category: 'condition',
-        description: '执行自定义条件判断',
+        description: '基于概率的随机条件 (拖拽到条件装饰器上使用)',
         canHaveChildren: false,
-        canHaveParent: true,
+        canHaveParent: false, // 不能作为常规子节点
         maxChildren: 0,
-        className: 'ExecuteActionConditional',
+        isDraggableCondition: true, // 标记为可拖拽的条件
+        attachableToDecorator: true, // 可以吸附到装饰器
+        className: 'RandomProbability',
         namespace: 'behaviourTree/conditionals',
         properties: {
-            conditionCode: {
-                name: '条件代码',
-                type: 'code',
-                value: '(context) => {\n  // 在这里编写条件判断逻辑\n  return TaskStatus.Success; // 或 TaskStatus.Failure\n}',
-                description: '条件判断函数代码',
+            successProbability: {
+                name: '成功概率',
+                type: 'number',
+                value: 0.5,
+                description: '返回成功的概率 (0.0 - 1.0)',
                 required: true
             }
         }
     },
-
-    // ECS专用节点 - 都是叶子节点
     {
-        type: 'has-component',
-        name: '检查组件',
-        icon: '🔍',
-        category: 'ecs',
-        description: '检查实体是否包含指定组件',
+        type: 'condition-component',
+        name: '组件检查',
+        icon: '🔍📦',
+        category: 'condition',
+        description: '检查实体是否有指定组件 (拖拽到条件装饰器上使用)',
         canHaveChildren: false,
-        canHaveParent: true,
+        canHaveParent: false,
         maxChildren: 0,
+        isDraggableCondition: true,
+        attachableToDecorator: true,
         className: 'HasComponentCondition',
         namespace: 'ecs-integration/behaviors',
         properties: {
@@ -412,6 +453,145 @@ export const nodeTemplates: NodeTemplate[] = [
             }
         }
     },
+    {
+        type: 'condition-tag',
+        name: '标签检查',
+        icon: '🏷️',
+        category: 'condition',
+        description: '检查实体标签 (拖拽到条件装饰器上使用)',
+        canHaveChildren: false,
+        canHaveParent: false,
+        maxChildren: 0,
+        isDraggableCondition: true,
+        attachableToDecorator: true,
+        className: 'HasTagCondition',
+        namespace: 'ecs-integration/behaviors',
+        properties: {
+            tagValue: {
+                name: '标签值',
+                type: 'number',
+                value: 0,
+                description: '要检查的标签值',
+                required: true
+            }
+        }
+    },
+    {
+        type: 'condition-active',
+        name: '激活状态',
+        icon: '👁️',
+        category: 'condition',
+        description: '检查实体激活状态 (拖拽到条件装饰器上使用)',
+        canHaveChildren: false,
+        canHaveParent: false,
+        maxChildren: 0,
+        isDraggableCondition: true,
+        attachableToDecorator: true,
+        className: 'IsActiveCondition',
+        namespace: 'ecs-integration/behaviors',
+        properties: {
+            checkHierarchy: {
+                name: '检查层级',
+                type: 'boolean',
+                value: true,
+                description: '是否检查层级激活状态',
+                required: false
+            }
+        }
+    },
+    {
+        type: 'condition-numeric',
+        name: '数值比较',
+        icon: '🔢',
+        category: 'condition',
+        description: '数值比较条件 (拖拽到条件装饰器上使用)',
+        canHaveChildren: false,
+        canHaveParent: false,
+        maxChildren: 0,
+        isDraggableCondition: true,
+        attachableToDecorator: true,
+        className: 'NumericComparison',
+        namespace: 'behaviourTree/conditionals',
+        properties: {
+            propertyPath: {
+                name: '属性路径',
+                type: 'string',
+                value: 'context.someValue',
+                description: '要比较的属性路径',
+                required: true
+            },
+            compareOperator: {
+                name: '比较操作符',
+                type: 'select',
+                value: 'greater',
+                options: ['greater', 'less', 'equal', 'greaterEqual', 'lessEqual', 'notEqual'],
+                description: '数值比较操作符',
+                required: true
+            },
+            compareValue: {
+                name: '比较值',
+                type: 'number',
+                value: 0,
+                description: '用于比较的数值',
+                required: true
+            }
+        }
+    },
+    {
+        type: 'condition-property',
+        name: '属性存在',
+        icon: '📋',
+        category: 'condition',
+        description: '检查属性是否存在 (拖拽到条件装饰器上使用)',
+        canHaveChildren: false,
+        canHaveParent: false,
+        maxChildren: 0,
+        isDraggableCondition: true,
+        attachableToDecorator: true,
+        className: 'PropertyExists',
+        namespace: 'behaviourTree/conditionals',
+        properties: {
+            propertyPath: {
+                name: '属性路径',
+                type: 'string',
+                value: 'context.someProperty',
+                description: '要检查的属性路径',
+                required: true
+            }
+        }
+    },
+    {
+        type: 'condition-custom',
+        name: '自定义条件',
+        icon: '⚙️',
+        category: 'condition',
+        description: '自定义代码条件 (拖拽到条件装饰器上使用)',
+        canHaveChildren: false,
+        canHaveParent: false,
+        maxChildren: 0,
+        isDraggableCondition: true,
+        attachableToDecorator: true,
+        className: 'ExecuteActionConditional',
+        namespace: 'behaviourTree/conditionals',
+        properties: {
+            conditionCode: {
+                name: '条件代码',
+                type: 'code',
+                value: '(context) => {\n  // 条件判断逻辑\n  return true; // 返回 true/false\n}',
+                description: '条件判断函数代码',
+                required: true
+            },
+            conditionName: {
+                name: '条件名称',
+                type: 'string',
+                value: '',
+                description: '用于调试的条件名称',
+                required: false
+            }
+        }
+    },
+
+    // ECS专用节点 - 动作节点
     {
         type: 'add-component',
         name: '添加组件',
@@ -489,48 +669,7 @@ export const nodeTemplates: NodeTemplate[] = [
             }
         }
     },
-    {
-        type: 'has-tag',
-        name: '检查标签',
-        icon: '🏷️',
-        category: 'ecs',
-        description: '检查实体是否具有指定标签',
-        canHaveChildren: false,
-        canHaveParent: true,
-        maxChildren: 0,
-        className: 'HasTagCondition',
-        namespace: 'ecs-integration/behaviors',
-        properties: {
-            tag: {
-                name: '标签值',
-                type: 'number',
-                value: 0,
-                description: '要检查的标签值',
-                required: true
-            }
-        }
-    },
-    {
-        type: 'is-active',
-        name: '检查激活状态',
-        icon: '🔋',
-        category: 'ecs',
-        description: '检查实体是否处于激活状态',
-        canHaveChildren: false,
-        canHaveParent: true,
-        maxChildren: 0,
-        className: 'IsActiveCondition',
-        namespace: 'ecs-integration/behaviors',
-        properties: {
-            checkHierarchy: {
-                name: '检查层级',
-                type: 'boolean',
-                value: true,
-                description: '是否检查层级激活状态',
-                required: false
-            }
-        }
-    },
+
     {
         type: 'wait-time',
         name: 'ECS等待',

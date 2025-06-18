@@ -8,6 +8,7 @@ import { useFileOperations } from './useFileOperations';
 import { useConnectionManager } from './useConnectionManager';
 import { useCanvasManager } from './useCanvasManager';
 import { useNodeDisplay } from './useNodeDisplay';
+import { useConditionAttachment } from './useConditionAttachment';
 import { validateTree as validateTreeStructure } from '../utils/nodeUtils';
 
 /**
@@ -117,6 +118,11 @@ export function useBehaviorTreeEditor() {
     );
 
     const nodeDisplay = useNodeDisplay();
+
+    const conditionAttachment = useConditionAttachment(
+        appState.treeNodes,
+        appState.getNodeByIdLocal
+    );
 
     const dragState = reactive({
         isDragging: false,
@@ -340,6 +346,8 @@ export function useBehaviorTreeEditor() {
         }
     };
 
+
+
     onMounted(() => {
         const appContainer = document.querySelector('#behavior-tree-app');
         if (appContainer) {
@@ -370,16 +378,51 @@ export function useBehaviorTreeEditor() {
                 event.preventDefault();
                 connectionManager.cancelConnection();
             }
+            // Escape键取消条件拖拽
+            if (event.key === 'Escape' && conditionAttachment.dragState.isDraggingCondition) {
+                event.preventDefault();
+                conditionAttachment.resetDragState();
+            }
+        };
+
+        // 全局拖拽结束处理
+        const handleGlobalDragEnd = (event: DragEvent) => {
+            console.log('🔚 全局拖拽结束，是否正在拖拽条件:', conditionAttachment.dragState.isDraggingCondition);
+            if (conditionAttachment.dragState.isDraggingCondition) {
+                setTimeout(() => {
+                    console.log('⏰ 延迟重置拖拽状态');
+                    conditionAttachment.resetDragState();
+                }, 100); // 延迟重置，确保drop事件先执行
+            }
+        };
+
+        // 全局拖拽监听器用于调试
+        const handleGlobalDragOver = (event: DragEvent) => {
+            if (conditionAttachment.dragState.isDraggingCondition) {
+                console.log('🌐 全局dragover，鼠标位置:', event.clientX, event.clientY, '目标:', event.target);
+            }
+        };
+
+        const handleGlobalDrop = (event: DragEvent) => {
+            if (conditionAttachment.dragState.isDraggingCondition) {
+                console.log('🌐 全局drop事件，目标:', event.target, '位置:', event.clientX, event.clientY);
+            }
         };
         
         document.addEventListener('load-behavior-tree-file', handleLoadBehaviorTreeFile as EventListener);
         document.addEventListener('file-load-error', handleFileLoadError as EventListener);
         document.addEventListener('keydown', handleKeydown);
+        document.addEventListener('dragend', handleGlobalDragEnd);
+        document.addEventListener('dragover', handleGlobalDragOver);
+        document.addEventListener('drop', handleGlobalDrop);
         
         onUnmounted(() => {
             document.removeEventListener('load-behavior-tree-file', handleLoadBehaviorTreeFile as EventListener);
             document.removeEventListener('file-load-error', handleFileLoadError as EventListener);
             document.removeEventListener('keydown', handleKeydown);
+            document.removeEventListener('dragend', handleGlobalDragEnd);
+            document.removeEventListener('dragover', handleGlobalDragOver);
+            document.removeEventListener('drop', handleGlobalDrop);
             
             // 清理暴露的方法
             if (appContainer) {
@@ -412,6 +455,57 @@ export function useBehaviorTreeEditor() {
         dragState,
         autoLayout,
         validateTree,
-        clearAllConnections
+        clearAllConnections,
+        // 条件吸附功能
+        conditionDragState: conditionAttachment.dragState,
+        startConditionDrag: conditionAttachment.startConditionDrag,
+        handleDecoratorDragOver: conditionAttachment.handleDecoratorDragOver,
+        handleDecoratorDragLeave: conditionAttachment.handleDecoratorDragLeave,
+        attachConditionToDecorator: conditionAttachment.attachConditionToDecorator,
+        getConditionDisplayText: conditionAttachment.getConditionDisplayText,
+        removeConditionFromDecorator: conditionAttachment.removeConditionFromDecorator,
+        canAcceptCondition: conditionAttachment.canAcceptCondition,
+        resetDragState: conditionAttachment.resetDragState,
+        // 合并的画布拖拽处理
+        handleCanvasDrop: (event: DragEvent) => {
+            // 先尝试条件拖拽处理
+            if (conditionAttachment.handleCanvasDrop(event)) {
+                return; // 如果是条件拖拽，直接返回
+            }
+            // 否则使用正常的节点拖拽处理
+            nodeOps.onCanvasDrop(event);
+        },
+        // 条件节点拖拽处理
+        handleConditionNodeDragStart: (event: DragEvent, template: any) => {
+            console.log('🎯 条件节点拖拽事件:', template.name, template.isDraggableCondition);
+            if (template.isDraggableCondition) {
+                conditionAttachment.startConditionDrag(event, template);
+            } else {
+                nodeOps.onNodeDragStart(event, template);
+            }
+        },
+        // 节点拖拽事件处理
+        handleNodeDrop: (event: DragEvent, node: any) => {
+            console.log('📦 节点拖拽放置:', node.name, node.type, 'isDraggingCondition:', conditionAttachment.dragState.isDraggingCondition);
+            if (node.type === 'conditional-decorator') {
+                event.preventDefault();
+                event.stopPropagation();
+                return conditionAttachment.attachConditionToDecorator(event, node);
+            }
+        },
+        handleNodeDragOver: (event: DragEvent, node: any) => {
+            console.log('🔄 节点拖拽悬停:', node.name, node.type, 'isDraggingCondition:', conditionAttachment.dragState.isDraggingCondition);
+            if (node.type === 'conditional-decorator') {
+                event.preventDefault();
+                event.stopPropagation();
+                return conditionAttachment.handleDecoratorDragOver(event, node);
+            }
+        },
+        handleNodeDragLeave: (event: DragEvent, node: any) => {
+            console.log('🔙 节点拖拽离开:', node.name, node.type);
+            if (node.type === 'conditional-decorator') {
+                conditionAttachment.handleDecoratorDragLeave(node);
+            }
+        }
     };
 } 

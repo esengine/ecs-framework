@@ -127,12 +127,14 @@
                         v-for="node in filteredConditionNodes()" 
                         :key="node.type"
                         class="node-item condition"
+                        :class="{ 'draggable-condition': node.isDraggableCondition }"
                         :draggable="true"
-                        @dragstart="onNodeDragStart($event, node)"
-                        :title="node.description"
+                        @dragstart="handleConditionNodeDragStart($event, node)"
+                        :title="node.description + (node.isDraggableCondition ? ' (可拖拽到条件装饰器)' : '')"
                     >
                         <span class="node-icon">{{ node.icon }}</span>
                         <span class="node-name">{{ node.name }}</span>
+                        <span v-if="node.isDraggableCondition" class="drag-hint">🎯</span>
                     </div>
                 </div>
             </div>
@@ -177,8 +179,11 @@
         <div 
             ref="canvasAreaRef"
             class="canvas-area"
-            :class="{ 'connecting': dragState.isConnecting }"
-            @drop="onCanvasDrop"
+            :class="{ 
+                'connecting': dragState.isConnecting,
+                'condition-dragging': conditionDragState.isDraggingCondition 
+            }"
+            @drop="handleCanvasDrop"
             @dragover="onCanvasDragOver"
             @wheel="onCanvasWheel"
             @mousedown="onCanvasMouseDown"
@@ -232,7 +237,9 @@
                         { 
                             'node-selected': selectedNodeId === node.id,
                             'node-error': node.hasError,
-                            'dragging': dragState.dragNode && dragState.dragNode.id === node.id
+                            'dragging': dragState.dragNode && dragState.dragNode.id === node.id,
+                            'condition-hover': conditionDragState.hoveredDecoratorId === node.id,
+                            'can-accept-condition': canAcceptCondition(node) && conditionDragState.isDraggingCondition
                         }
                     ]"
                     :style="{ 
@@ -241,6 +248,9 @@
                     }"
                     @click="selectNode(node.id)"
                     @mousedown="startNodeDrag($event, node)"
+                    @drop="handleNodeDrop($event, node)"
+                    @dragover="handleNodeDragOver($event, node)"
+                    @dragleave="handleNodeDragLeave($event, node)"
                 >
                     <div class="node-header">
                         <span class="node-icon">{{ node.icon }}</span>
@@ -249,6 +259,25 @@
                     </div>
                     <div class="node-body">
                         <div v-if="node.description" class="node-description">{{ node.description }}</div>
+                        
+                        <!-- 条件装饰器的条件显示 -->
+                        <div v-if="node.type === 'conditional-decorator'" class="condition-attachment-area">
+                            <div v-if="node.attachedCondition" class="attached-condition">
+                                <div class="condition-info">
+                                    <span class="condition-icon">{{ node.attachedCondition.icon }}</span>
+                                    <span class="condition-text">{{ getConditionDisplayText(node) }}</span>
+                                    <button 
+                                        class="remove-condition-btn" 
+                                        @click.stop="removeConditionFromDecorator(node)"
+                                        title="移除条件"
+                                    >×</button>
+                                </div>
+                            </div>
+                            <div v-else class="condition-placeholder">
+                                <span class="placeholder-text">🎯 拖拽条件到此处</span>
+                            </div>
+                        </div>
+                        
                         <!-- 节点属性预览 -->
                         <div v-if="hasVisibleProperties(node)" class="node-properties-preview">
                             <div 

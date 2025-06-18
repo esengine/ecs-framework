@@ -1,0 +1,75 @@
+/* 基础样式和布局 */
+
+/* 全局重置和通用样式 */
+* {
+    box-sizing: border-box;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a202c;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #4a5568;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #667eea;
+}
+
+/* 选择文本样式 */
+::selection {
+    background: rgba(102, 126, 234, 0.3);
+    color: #ffffff;
+}
+
+#behavior-tree-app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1e1e1e;
+    color: #ffffff;
+    overflow: hidden;
+}
+
+/* 编辑器容器 */
+.editor-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+    .nodes-panel {
+        width: 240px;
+    }
+    
+    .properties-panel {
+        width: 280px;
+    }
+}
+
+@media (max-width: 900px) {
+    .editor-container {
+        flex-direction: column;
+    }
+    
+    .nodes-panel, .properties-panel {
+        width: 100%;
+        height: 200px;
+    }
+    
+    .canvas-container {
+        flex: 1;
+        min-height: 400px;
+    }
+} 

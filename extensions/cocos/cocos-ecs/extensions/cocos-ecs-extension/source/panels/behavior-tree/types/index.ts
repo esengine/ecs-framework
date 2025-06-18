@@ -10,12 +10,18 @@ export interface TreeNode {
     y: number;
     children: string[];
     parent?: string;
-    properties?: Record<string, PropertyDefinition>;
+    properties?: Record<string, any>; // 改为any以支持动态属性值
     canHaveChildren: boolean;
     canHaveParent: boolean;
     maxChildren?: number; // 最大子节点数量限制
     minChildren?: number; // 最小子节点数量要求
     hasError?: boolean;
+    // 条件装饰器相关
+    attachedCondition?: {
+        type: string;
+        name: string;
+        icon: string;
+    };
 }
 
 export interface Connection {

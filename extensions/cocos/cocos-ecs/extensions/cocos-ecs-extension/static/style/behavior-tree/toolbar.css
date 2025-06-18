@@ -1,0 +1,89 @@
+/* 头部工具栏样式 */
+.header-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-bottom: 2px solid #4a5568;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.toolbar-left h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.current-file {
+    color: #a0aec0;
+    font-weight: 400;
+    font-size: 16px;
+    margin-left: 8px;
+}
+
+.unsaved-indicator {
+    color: #ff6b6b;
+    animation: pulse-unsaved 2s infinite;
+    margin-left: 8px;
+}
+
+@keyframes pulse-unsaved {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.toolbar-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 12px;
+}
+
+.tool-btn:hover {
+    background: rgba(255,255,255,0.2);
+    transform: translateY(-1px);
+}
+
+.tool-btn.has-changes {
+    background: rgba(255, 107, 107, 0.2);
+    border-color: #ff6b6b;
+    animation: glow-save 2s infinite;
+}
+
+@keyframes glow-save {
+    0%, 100% { 
+        box-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
+    }
+    50% { 
+        box-shadow: 0 0 15px rgba(255, 107, 107, 0.8);
+    }
+}
+
+.toolbar-right .install-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+} 

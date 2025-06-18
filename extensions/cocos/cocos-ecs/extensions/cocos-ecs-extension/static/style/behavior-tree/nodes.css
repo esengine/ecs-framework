@@ -1,0 +1,322 @@
+/* 节点样式 */
+
+.tree-node {
+    position: absolute;
+    width: 160px;
+    min-height: 80px;
+    background: #2d3748;
+    border: 2px solid #4a5568;
+    border-radius: 8px;
+    pointer-events: all;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 1;
+    animation: nodeAppear 0.3s ease-out;
+}
+
+.tree-node:hover {
+    border-color: #667eea;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
+}
+
+.tree-node.node-selected {
+    border-color: #f6ad55;
+    box-shadow: 0 0 20px rgba(246, 173, 85, 0.4);
+}
+
+.tree-node.node-error {
+    border-color: #e53e3e;
+    background: rgba(229, 62, 62, 0.1);
+}
+
+.node-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #4a5568;
+    border-radius: 6px 6px 0 0;
+    border-bottom: 1px solid #718096;
+}
+
+.node-header .node-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.node-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 12px;
+    color: #e2e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.node-delete {
+    background: none;
+    border: none;
+    color: #e53e3e;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.node-delete:hover {
+    background: rgba(229, 62, 62, 0.2);
+    transform: scale(1.1);
+}
+
+.node-body {
+    padding: 8px 12px;
+    color: #a0aec0;
+    font-size: 11px;
+    line-height: 1.4;
+    max-width: 136px;
+    overflow: hidden;
+}
+
+.node-description {
+    margin-bottom: 6px;
+    color: #cbd5e0;
+    font-style: italic;
+}
+
+/* 端口样式 */
+.port {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    transform: translateX(-50%);
+    transition: all 0.3s ease;
+    z-index: 10;
+    opacity: 0.8;
+}
+
+.port::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    background: transparent;
+    transition: all 0.3s ease;
+}
+
+.port:hover {
+    transform: translateX(-50%) scale(1.3);
+    opacity: 1;
+}
+
+.port-input {
+    top: -6px;
+    left: 50%;
+    background: #4299e1;
+    border: 2px solid #2b6cb0;
+}
+
+.port-input:hover {
+    background: #63b3ed;
+    box-shadow: 0 0 12px rgba(66, 153, 225, 0.6);
+}
+
+.port-output {
+    bottom: -6px;
+    left: 50%;
+    background: #48bb78;
+    border: 2px solid #2f855a;
+}
+
+.port-output:hover {
+    background: #68d391;
+    box-shadow: 0 0 12px rgba(72, 187, 120, 0.6);
+}
+
+.port.connecting {
+    animation: pulse-port 1s ease-in-out infinite;
+    transform: translateX(-50%) scale(1.4);
+}
+
+@keyframes pulse-port {
+    0%, 100% {
+        box-shadow: 0 0 8px rgba(246, 173, 85, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(246, 173, 85, 0.8);
+        transform: translateX(-50%) scale(1.6);
+    }
+}
+
+.port.drag-target {
+    animation: pulse-target 0.8s ease-in-out infinite;
+    background: #f6ad55 !important;
+    border-color: #dd6b20 !important;
+    transform: translateX(-50%) scale(1.5);
+}
+
+@keyframes pulse-target {
+    0%, 100% {
+        box-shadow: 0 0 12px rgba(246, 173, 85, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 24px rgba(246, 173, 85, 1);
+        transform: translateX(-50%) scale(1.7);
+    }
+}
+
+.port-inner {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.port:hover .port-inner {
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.port.connecting .port-inner {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.port.drag-target .port-inner {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.children-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 6px;
+    background: #667eea;
+    color: white;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: bold;
+    z-index: 5;
+}
+
+/* 节点属性预览 */
+.node-properties-preview {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 10px;
+}
+
+.property-preview-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px;
+    padding: 1px 0;
+}
+
+.property-label {
+    color: #a0aec0;
+    font-weight: 500;
+    flex-shrink: 0;
+    margin-right: 4px;
+    font-size: 9px;
+}
+
+.property-value {
+    color: #e2e8f0;
+    font-weight: 600;
+    text-align: right;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9px;
+}
+
+/* 不同类型属性的颜色 */
+.property-value.property-boolean {
+    color: #68d391;
+}
+
+.property-value.property-number {
+    color: #63b3ed;
+}
+
+.property-value.property-select {
+    color: #f6ad55;
+}
+
+.property-value.property-string {
+    color: #cbd5e0;
+}
+
+.property-value.property-code {
+    color: #d69e2e;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* 当节点有属性时稍微增加高度空间 */
+.tree-node:has(.node-properties-preview) {
+    min-height: 100px;
+}
+
+/* 节点悬停时的端口显示优化 */
+.tree-node:hover .port {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.1);
+}
+
+.tree-node .port {
+    opacity: 0.8;
+    transition: all 0.2s ease;
+}
+
+/* 拖动状态样式 - 优化硬件加速 */
+.tree-node.dragging {
+    opacity: 0.9;
+    transform: translateZ(0) scale(1.02) rotate(1deg);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+    z-index: 1000;
+    cursor: grabbing;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    transition: none !important;
+    border-color: #67b7dc;
+    transform-origin: center center;
+    perspective: 1000px;
+}
+
+.dragging {
+    opacity: 0.7;
+    transform: rotate(5deg);
+}
+
+/* 动画效果 */
+@keyframes nodeAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+} 

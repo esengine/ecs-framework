@@ -18,6 +18,17 @@ export function useAppState() {
     const selectedNodeId = ref<string | null>(null);
     const nodeSearchText = ref('');
     
+    // 调试：检查条件节点模板
+    console.log('🔍 条件节点模板检查:');
+    nodeTemplates.filter(t => t.category === 'condition').forEach(template => {
+        console.log(`  ${template.name}: isDraggableCondition=${template.isDraggableCondition}`);
+    });
+    
+    console.log('🎭 装饰器节点模板检查:');
+    nodeTemplates.filter(t => t.category === 'decorator').forEach(template => {
+        console.log(`  ${template.name}: type=${template.type}`);
+    });
+    
     // 画布状态
     const canvasWidth = ref(800);
     const canvasHeight = ref(600);

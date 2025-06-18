@@ -18,30 +18,23 @@ let currentPanelInstance: any = null;
  * 面板定义
  */
 const panelDefinition = {
-    /**
-     * 面板模板
-     */
     template: readFileSync(join(__dirname, '../../../static/template/behavior-tree/index.html'), 'utf-8'),
 
-    /**
-     * 面板样式
-     */
-    style: readFileSync(join(__dirname, '../../../static/style/behavior-tree/index.css'), 'utf-8'),
+    style: [
+        readFileSync(join(__dirname, '../../../static/style/behavior-tree/base.css'), 'utf-8'),
+        readFileSync(join(__dirname, '../../../static/style/behavior-tree/toolbar.css'), 'utf-8'),
+        readFileSync(join(__dirname, '../../../static/style/behavior-tree/panels.css'), 'utf-8'),
+        readFileSync(join(__dirname, '../../../static/style/behavior-tree/canvas.css'), 'utf-8'),
+        readFileSync(join(__dirname, '../../../static/style/behavior-tree/nodes.css'), 'utf-8'),
+        readFileSync(join(__dirname, '../../../static/style/behavior-tree/conditions.css'), 'utf-8'),
+        readFileSync(join(__dirname, '../../../static/style/behavior-tree/modals.css'), 'utf-8')
+    ].join('\n'),
 
-    /**
-     * 选择器
-     */
     $: {
         app: '#behavior-tree-app',
     },
 
-    /**
-     * 面板方法 - 用于处理来自扩展主进程的消息
-     */
     methods: {
-        /**
-         * 加载行为树文件
-         */
         async loadBehaviorTreeFile(assetInfo: any) {
             try {
                 const filePath = assetInfo?.file || assetInfo?.path;
@@ -113,9 +106,6 @@ const panelDefinition = {
         },
     },
 
-    /**
-     * 面板准备完成时调用
-     */
     ready() {
         currentPanelInstance = this;
         

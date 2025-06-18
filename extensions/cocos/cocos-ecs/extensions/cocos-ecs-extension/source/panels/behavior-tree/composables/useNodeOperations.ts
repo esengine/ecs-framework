@@ -26,7 +26,12 @@ export function useNodeOperations(
     // 拖拽事件处理
     const onNodeDragStart = (event: DragEvent, template: NodeTemplate) => {
         if (event.dataTransfer) {
-            event.dataTransfer.setData('application/json', JSON.stringify(template));
+            // 检查是否为条件节点，如果是则标记为条件拖拽
+            const dragData = {
+                ...template,
+                isConditionDrag: template.isDraggableCondition || false
+            };
+            event.dataTransfer.setData('application/json', JSON.stringify(dragData));
             event.dataTransfer.effectAllowed = 'copy';
         }
     };
@@ -45,7 +50,14 @@ export function useNodeOperations(
         if (!templateData) return;
         
         try {
-            const template: NodeTemplate = JSON.parse(templateData);
+            const dragData = JSON.parse(templateData);
+            
+            // 如果是条件节点拖拽，阻止创建独立节点
+            if (dragData.isConditionDrag || dragData.isDraggableCondition) {
+                return; // 条件节点不能作为独立节点创建
+            }
+            
+            const template: NodeTemplate = dragData;
             const canvasElement = event.currentTarget as HTMLElement;
             const { x, y } = getCanvasCoords(event, canvasElement);
             
