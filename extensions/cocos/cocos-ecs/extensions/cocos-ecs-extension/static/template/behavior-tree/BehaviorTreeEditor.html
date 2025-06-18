@@ -152,6 +152,7 @@
                 <button @click="centerView">居中</button>
                 <button @click="autoLayout">自动布局</button>
                 <button @click="validateTree">验证</button>
+                <button @click="clearAllConnections" title="清除所有连接线" v-if="connections.length > 0">清除连线</button>
             </div>
         </div>
         
@@ -186,6 +187,8 @@
                         :d="connection.path"
                         class="connection-line"
                         :class="{ 'connection-active': connection.active }"
+                        @click="onConnectionClick($event, connection.id)"
+                        :title="'点击删除连接线 (' + connection.sourceId + ' → ' + connection.targetId + ')'"
                     />
                     <!-- 临时连接线 -->
                     <path 

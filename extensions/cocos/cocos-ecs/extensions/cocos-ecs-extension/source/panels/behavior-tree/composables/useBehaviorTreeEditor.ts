@@ -303,6 +303,27 @@ export function useBehaviorTreeEditor() {
         alert(message);
     };
 
+    // 清除所有连接线
+    const clearAllConnections = () => {
+        if (appState.connections.value.length === 0) {
+            alert('当前没有连接线需要清除！');
+            return;
+        }
+        
+        if (confirm(`确定要清除所有 ${appState.connections.value.length} 条连接线吗？此操作不可撤销。`)) {
+            // 清除所有节点的父子关系
+            appState.treeNodes.value.forEach(node => {
+                node.parent = undefined;
+                node.children = [];
+            });
+            
+            // 清空连接数组
+            appState.connections.value = [];
+            
+            alert('已清除所有连接线！');
+        }
+    };
+
     onMounted(() => {
         const appContainer = document.querySelector('#behavior-tree-app');
         if (appContainer) {
@@ -321,15 +342,28 @@ export function useBehaviorTreeEditor() {
             alert('文件加载失败: ' + event.detail.error);
         };
         
+        // 键盘快捷键处理
+        const handleKeydown = (event: KeyboardEvent) => {
+            // Delete键删除选中的节点
+            if (event.key === 'Delete' && appState.selectedNodeId.value) {
+                event.preventDefault();
+                nodeOps.deleteNode(appState.selectedNodeId.value);
+            }
+            // Escape键取消连接
+            if (event.key === 'Escape' && connectionState.isConnecting) {
+                event.preventDefault();
+                connectionManager.cancelConnection();
+            }
+        };
+        
         document.addEventListener('load-behavior-tree-file', handleLoadBehaviorTreeFile as EventListener);
         document.addEventListener('file-load-error', handleFileLoadError as EventListener);
-        
-        console.log('[BehaviorTreeEditor] 事件系统准备完成（直接方法调用 + DOM事件备用）');
+        document.addEventListener('keydown', handleKeydown);
         
         onUnmounted(() => {
-            console.log('[BehaviorTreeEditor] 清理事件监听器');
             document.removeEventListener('load-behavior-tree-file', handleLoadBehaviorTreeFile as EventListener);
             document.removeEventListener('file-load-error', handleFileLoadError as EventListener);
+            document.removeEventListener('keydown', handleKeydown);
             
             // 清理暴露的方法
             if (appContainer) {
@@ -361,6 +395,7 @@ export function useBehaviorTreeEditor() {
         startNodeDrag,
         dragState,
         autoLayout,
-        validateTree
+        validateTree,
+        clearAllConnections
     };
 } 

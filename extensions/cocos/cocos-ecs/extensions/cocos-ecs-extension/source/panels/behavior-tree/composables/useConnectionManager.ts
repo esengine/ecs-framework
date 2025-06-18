@@ -473,11 +473,47 @@ export function useConnectionManager(
         }, 50); // 50ms延迟，确保DOM渲染完成
     };
 
+    // 删除连接线
+    const removeConnection = (connectionId: string) => {
+        const connection = connections.value.find(conn => conn.id === connectionId);
+        if (!connection) return;
+        
+        const parentNode = treeNodes.value.find(n => n.id === connection.sourceId);
+        const childNode = treeNodes.value.find(n => n.id === connection.targetId);
+        
+        if (parentNode && childNode) {
+            // 从父节点的children中移除
+            const index = parentNode.children.indexOf(connection.targetId);
+            if (index > -1) {
+                parentNode.children.splice(index, 1);
+            }
+            
+            // 清除子节点的parent
+            childNode.parent = undefined;
+            
+            // 更新连接线
+            updateConnections();
+        }
+    };
+
+    // 连接线点击事件处理
+    const onConnectionClick = (event: MouseEvent, connectionId: string) => {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // 询问用户是否要删除连接
+        if (confirm('确定要删除这条连接线吗？')) {
+            removeConnection(connectionId);
+        }
+    };
+
     return {
         getPortPosition,
         startConnection,
         cancelConnection,
         updateConnections,
+        removeConnection,
+        onConnectionClick,
         onPortHover,
         onPortLeave,
         isValidConnectionTarget

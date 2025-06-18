@@ -281,12 +281,15 @@
     transition: none;
     opacity: 0.9;
     will-change: d;
+    pointer-events: stroke;
+    cursor: pointer;
 }
 
 .connection-line:hover {
-    stroke: #9f7aea;
-    stroke-width: 4;
+    stroke: #f56565;
+    stroke-width: 5;
     opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(245, 101, 101, 0.6));
 }
 
 .connection-active {
