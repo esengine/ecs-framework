@@ -21,7 +21,6 @@
             <button class="tool-btn" @click="exportConfig" title="导出配置">
                 <span>⚡</span> 导出配置
             </button>
-
         </div>
     </div>
     <div class="toolbar-right">
@@ -348,7 +347,8 @@
                             </div>
                         </div>
                     </div>
-                    <!-- 输入端口 - 执行流入口 -->
+                    
+                    <!-- 输入端口 -->
                     <div 
                         v-if="node.canHaveParent"
                         class="port port-input"
@@ -361,12 +361,12 @@
                         @mousedown.stop="startConnection($event, node.id, 'input')"
                         @mouseenter="onPortHover(node.id, 'input')"
                         @mouseleave="onPortLeave()"
-                        title="执行流入口（可从此开始连接）"
+                        title="执行流入口"
                     >
                         <div class="port-inner"></div>
                     </div>
                     
-                    <!-- 输出端口 - 执行流出口 -->
+                    <!-- 输出端口 -->
                     <div 
                         v-if="node.canHaveChildren"
                         class="port port-output"
@@ -379,25 +379,25 @@
                         @mousedown.stop="startConnection($event, node.id, 'output')"
                         @mouseenter="onPortHover(node.id, 'output')"
                         @mouseleave="onPortLeave()"
-                        title="执行流出口（可从此开始连接）"
+                        title="执行流出口"
                     >
                         <div class="port-inner"></div>
                     </div>
-                    <!-- 子节点指示器 -->
+
                     <div v-if="node.children && node.children.length > 0" class="children-indicator">
                         {{ node.children.length }}
                     </div>
                 </div>
             </div>
             
-            <!-- 网格背景 -->
+
             <div class="grid-background" :style="gridStyle()"></div>
         </div>
     </div>
 
-    <!-- 右侧属性面板 -->
+
     <div class="properties-panel-container">
-        <!-- 属性面板 -->
+
         <div class="properties-panel">
             <div class="panel-header">
                 <h3>⚙️ 属性面板</h3>
@@ -488,7 +488,6 @@
                                 </option>
                             </select>
                             
-                            <!-- Blackboard引用指示器 -->
                             <div v-if="isBlackboardReference(prop.value)" class="blackboard-reference">
                                 <span class="ref-icon">🔗</span>
                                 <span class="ref-text">{{ prop.value }}</span>
@@ -513,7 +512,6 @@
 </div>
 
 
-<!-- 行为树结构面板 -->
 <div class="tree-structure-panel" v-if="rootNode()">
     <div class="panel-header">
         <h3>🌲 树结构</h3>
@@ -528,13 +526,13 @@
     </div>
 </div>
 
-<!-- 验证结果 -->
+
 <div v-if="!validationResult().isValid" class="validation-error">
     <span class="error-icon">⚠️</span>
     <span>{{ validationResult().message }}</span>
 </div>
 
-<!-- Blackboard变量编辑模态框 -->
+
 <div v-if="showBlackboardModal" class="modal-overlay" @click="showBlackboardModal = false">
     <div class="modal-content blackboard-modal" @click.stop>
         <div class="modal-header">
@@ -619,7 +617,6 @@
                 >
             </div>
             
-            <!-- 约束设置 -->
             <div v-if="blackboardModalData.type === 'number'" class="form-group">
                 <label>数值约束:</label>
                 <div class="constraint-inputs">
@@ -665,7 +662,7 @@
     </div>
 </div>
 
-<!-- Blackboard常驻侧边面板 -->
+
 <div class="blackboard-sidebar" 
      :class="{ 
          'collapsed': blackboardCollapsed, 
@@ -674,7 +671,6 @@
      @mouseenter="blackboardTransparent = false"
      @mouseleave="blackboardTransparent = true">
     
-    <!-- 收缩/展开按钮 -->
     <button class="blackboard-toggle" 
             @click="blackboardCollapsed = !blackboardCollapsed"
             :title="blackboardCollapsed ? '展开 Blackboard' : '收缩 Blackboard'">
@@ -682,19 +678,16 @@
         <span v-else>◀</span>
     </button>
     
-    <!-- 面板内容 -->
     <div class="blackboard-content" v-show="!blackboardCollapsed">
         <div class="blackboard-header">
             <h3>📋 Blackboard</h3>
         </div>
         
-        <!-- Blackboard操作按钮 -->
         <div class="blackboard-actions">
             <button @click="showBlackboardModal = true" class="add-var-btn">+ 添加变量</button>
             <button @click="clearBlackboard" v-if="blackboardVariables.length > 0" class="clear-btn">清空</button>
         </div>
         
-        <!-- Blackboard变量列表 -->
         <div class="blackboard-scroll-area">
             <div v-if="blackboardVariables.length > 0" class="blackboard-groups">
                 <div 
@@ -740,7 +733,6 @@
                                 <span v-else class="value-display">{{ getDisplayValue(variable) }}</span>
                             </div>
                             
-                            <!-- 约束显示 -->
                             <div v-if="variable.constraints && hasVisibleConstraints(variable)" class="variable-constraints">
                                 <small>{{ formatConstraints(variable.constraints) }}</small>
                             </div>
@@ -748,8 +740,7 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- 空状态 -->
+                          
             <div v-else class="empty-blackboard">
                 <div class="empty-icon">📋</div>
                 <p>还没有定义任何变量</p>
@@ -761,7 +752,6 @@
 
 
 
-<!-- 导出模态框 -->
 <div v-if="showExportModal" class="modal-overlay" @click="showExportModal = false">
     <div class="modal-content" @click.stop>
         <div class="modal-header">

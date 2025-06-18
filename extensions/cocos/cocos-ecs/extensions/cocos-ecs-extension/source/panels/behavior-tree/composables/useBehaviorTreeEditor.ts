@@ -559,26 +559,19 @@ export function useBehaviorTreeEditor() {
 
         // 全局拖拽结束处理
         const handleGlobalDragEnd = (event: DragEvent) => {
-            console.log('🔚 全局拖拽结束，是否正在拖拽条件:', conditionAttachment.dragState.isDraggingCondition);
             if (conditionAttachment.dragState.isDraggingCondition) {
                 setTimeout(() => {
-                    console.log('⏰ 延迟重置拖拽状态');
                     conditionAttachment.resetDragState();
-                }, 100); // 延迟重置，确保drop事件先执行
+                }, 100);
             }
         };
 
-        // 全局拖拽监听器用于调试
         const handleGlobalDragOver = (event: DragEvent) => {
-            if (conditionAttachment.dragState.isDraggingCondition) {
-                console.log('🌐 全局dragover，鼠标位置:', event.clientX, event.clientY, '目标:', event.target);
-            }
+            // 静默处理拖拽悬停
         };
 
         const handleGlobalDrop = (event: DragEvent) => {
-            if (conditionAttachment.dragState.isDraggingCondition) {
-                console.log('🌐 全局drop事件，目标:', event.target, '位置:', event.clientX, event.clientY);
-            }
+            // 静默处理拖拽放置
         };
         
         document.addEventListener('load-behavior-tree-file', handleLoadBehaviorTreeFile as EventListener);
@@ -631,30 +624,21 @@ export function useBehaviorTreeEditor() {
         clearAllConnections,
         copyToClipboard,
         saveToFile,
-        // 节点选择相关
         selectNode: (nodeId: string) => {
-            // 选中普通节点时，取消条件节点的选中
             appState.selectedNodeId.value = nodeId;
             appState.selectedConditionNodeId.value = null;
-            console.log('🎯 选中节点:', nodeId);
         },
         selectConditionNode: (decoratorNode: any) => {
-            // 选中条件节点时，取消装饰器节点的选中
             appState.selectedNodeId.value = null;
             appState.selectedConditionNodeId.value = decoratorNode.id;
-            console.log('📝 选中条件节点进行编辑:', decoratorNode.attachedCondition?.name);
         },
-        // 统一的属性更新方法（支持普通节点和条件节点）
         updateNodeProperty: (path: string, value: any) => {
-            // 如果选中的是条件节点，更新装饰器节点的属性
             if (appState.selectedConditionNodeId.value) {
                 const decoratorNode = appState.getNodeByIdLocal(appState.selectedConditionNodeId.value);
                 if (decoratorNode) {
-                    // 使用通用方法更新属性
                     const keys = path.split('.');
                     let current: any = decoratorNode;
                     
-                    // 导航到目标属性的父对象
                     for (let i = 0; i < keys.length - 1; i++) {
                         const key = keys[i];
                         if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
@@ -663,18 +647,13 @@ export function useBehaviorTreeEditor() {
                         current = current[key];
                     }
                     
-                    // 设置最终值
                     const finalKey = keys[keys.length - 1];
                     current[finalKey] = value;
-                    
-                    console.log('📝 更新条件属性:', path, '=', value);
                 }
             } else {
-                // 普通节点属性更新
                 nodeOps.updateNodeProperty(path, value);
             }
         },
-        // 条件吸附功能
         conditionDragState: conditionAttachment.dragState,
         startConditionDrag: conditionAttachment.startConditionDrag,
         handleDecoratorDragOver: conditionAttachment.handleDecoratorDragOver,
@@ -684,48 +663,43 @@ export function useBehaviorTreeEditor() {
         removeConditionFromDecorator: conditionAttachment.removeConditionFromDecorator,
         canAcceptCondition: conditionAttachment.canAcceptCondition,
         resetDragState: conditionAttachment.resetDragState,
-        // 合并的画布拖拽处理
+        
         handleCanvasDrop: (event: DragEvent) => {
-            // 先尝试条件拖拽处理
             if (conditionAttachment.handleCanvasDrop(event)) {
-                return; // 如果是条件拖拽，直接返回
+                return;
             }
-            // 否则使用正常的节点拖拽处理
             nodeOps.onCanvasDrop(event);
         },
-        // 条件节点拖拽处理
+        
         handleConditionNodeDragStart: (event: DragEvent, template: any) => {
-            console.log('🎯 条件节点拖拽事件:', template.name, template.isDraggableCondition);
             if (template.isDraggableCondition) {
                 conditionAttachment.startConditionDrag(event, template);
             } else {
                 nodeOps.onNodeDragStart(event, template);
             }
         },
-        // 节点拖拽事件处理
+        
         handleNodeDrop: (event: DragEvent, node: any) => {
-            console.log('📦 节点拖拽放置:', node.name, node.type, 'isDraggingCondition:', conditionAttachment.dragState.isDraggingCondition);
             if (node.type === 'conditional-decorator') {
                 event.preventDefault();
                 event.stopPropagation();
                 return conditionAttachment.attachConditionToDecorator(event, node);
             }
         },
+        
         handleNodeDragOver: (event: DragEvent, node: any) => {
-            console.log('🔄 节点拖拽悬停:', node.name, node.type, 'isDraggingCondition:', conditionAttachment.dragState.isDraggingCondition);
             if (node.type === 'conditional-decorator') {
                 event.preventDefault();
                 event.stopPropagation();
                 return conditionAttachment.handleDecoratorDragOver(event, node);
             }
         },
+        
         handleNodeDragLeave: (event: DragEvent, node: any) => {
-            console.log('🔙 节点拖拽离开:', node.name, node.type);
             if (node.type === 'conditional-decorator') {
                 conditionAttachment.handleDecoratorDragLeave(node);
             }
         },
-        // Blackboard拖拽相关功能
         isBlackboardDroppable,
         isBlackboardReference,
         handleBlackboardDrop,
@@ -733,7 +707,6 @@ export function useBehaviorTreeEditor() {
         handleBlackboardDragLeave,
         clearBlackboardReference,
         
-        // Blackboard常驻侧边面板功能
         blackboardCollapsed: computed({
             get: () => blackboardSidebarState.collapsed,
             set: (value: boolean) => blackboardSidebarState.collapsed = value

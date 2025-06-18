@@ -51,30 +51,6 @@ export function useBlackboard() {
         allowedValuesText: ''
     });
 
-    const showAddVariableDialog = ref(false);
-    const editingVariable = ref<BlackboardVariable | null>(null);
-    const newVariable = reactive({
-        name: '',
-        type: 'string' as any,
-        defaultValue: '' as any,
-        defaultValueText: '',
-        description: '',
-        group: '',
-        readonly: false,
-        min: undefined as number | undefined,
-        max: undefined as number | undefined,
-        optionsText: ''
-    });
-
-    const showImportExportDialog = ref(false);
-    const activeTab = ref('export');
-    const exportData = computed(() => {
-        const data = Array.from(blackboardVariables.value.values());
-        return JSON.stringify(data, null, 2);
-    });
-    const importData = ref('');
-    const clearBeforeImport = ref(false);
-
     const blackboardCollapsed = ref(false);
     const blackboardTransparent = ref(true);
 
@@ -106,18 +82,6 @@ export function useBlackboard() {
         });
         
         return sortedGroups;
-    });
-
-    const groups = computed(() => {
-        const groupSet = new Set<string>();
-        blackboardVariables.value.forEach(variable => {
-            groupSet.add(variable.group || '未分组');
-        });
-        return Array.from(groupSet);
-    });
-
-    const isValidVariable = computed(() => {
-        return newVariable.name.trim().length > 0;
     });
 
     const groupedBlackboardVariables = () => {
@@ -240,31 +204,6 @@ export function useBlackboard() {
         }
     };
 
-    const onTypeChange = () => {
-        switch (newVariable.type) {
-            case 'string':
-                newVariable.defaultValue = '';
-                break;
-            case 'number':
-                newVariable.defaultValue = 0;
-                break;
-            case 'boolean':
-                newVariable.defaultValue = false;
-                break;
-            case 'vector2':
-                newVariable.defaultValue = { x: 0, y: 0 };
-                break;
-            case 'vector3':
-                newVariable.defaultValue = { x: 0, y: 0, z: 0 };
-                break;
-            case 'object':
-            case 'array':
-                newVariable.defaultValue = '';
-                newVariable.defaultValueText = '';
-                break;
-        }
-    };
-
     const saveBlackboardVariable = () => {
         if (!blackboardModalData.name.trim()) {
             alert('请输入变量名称');
@@ -273,7 +212,6 @@ export function useBlackboard() {
         
         let finalValue = blackboardModalData.defaultValue;
         
-        // 处理对象和数组类型的JSON格式
         if (blackboardModalData.type === 'object' || blackboardModalData.type === 'array') {
             try {
                 if (typeof blackboardModalData.defaultValue === 'string') {
@@ -290,7 +228,6 @@ export function useBlackboard() {
         if (blackboardModalData.constraints.max !== undefined) constraints.max = blackboardModalData.constraints.max;
         if (blackboardModalData.constraints.step !== undefined) constraints.step = blackboardModalData.constraints.step;
         
-        // 处理字符串的可选值列表
         if (blackboardModalData.useAllowedValues && blackboardModalData.allowedValuesText.trim()) {
             constraints.allowedValues = blackboardModalData.allowedValuesText
                 .split('\n')
@@ -317,7 +254,6 @@ export function useBlackboard() {
         showBlackboardModal.value = false;
         editingBlackboardVariable.value = null;
         
-        // 重置模态框数据
         Object.assign(blackboardModalData, {
             name: '',
             type: 'string',
@@ -421,10 +357,6 @@ export function useBlackboard() {
         event.dataTransfer.effectAllowed = 'copy';
     };
 
-    const removeBlackboardVariable = (variableName: string) => {
-        deleteBlackboardVariable(variableName);
-    };
-
     const editVariable = (variable: BlackboardVariable) => {
         editingBlackboardVariable.value = variable;
         
@@ -447,71 +379,20 @@ export function useBlackboard() {
         showBlackboardModal.value = true;
     };
 
-    const onBlackboardDragStart = (event: DragEvent, variable: BlackboardVariable) => {
-        onVariableDragStart(event, variable);
-    };
-
-    const closeAddVariableDialog = () => {
-        showAddVariableDialog.value = false;
-        editingVariable.value = null;
-    };
-
-    const saveVariable = () => {
-        saveBlackboardVariable();
-    };
-
-    const closeImportExportDialog = () => {
-        showImportExportDialog.value = false;
-    };
-
-    const copyExportData = () => {
-        navigator.clipboard.writeText(exportData.value);
-        alert('已复制到剪贴板');
-    };
-
-    const importVariables = () => {
-        try {
-            const data = JSON.parse(importData.value);
-            if (!Array.isArray(data)) {
-                throw new Error('格式错误：期望数组格式');
-            }
-            
-            if (clearBeforeImport.value) {
-                blackboardVariables.value.clear();
-            }
-            
-            let importCount = 0;
-            data.forEach((varData: any) => {
-                if (varData.name && varData.type) {
-                    blackboardVariables.value.set(varData.name, varData);
-                    importCount++;
-                }
-            });
-            
-            alert(`成功导入 ${importCount} 个变量`);
-            showImportExportDialog.value = false;
-            importData.value = '';
-        } catch (error) {
-            alert('导入失败：' + (error as Error).message);
-        }
-    };
-
     const addBlackboardVariable = () => {
-        Object.assign(newVariable, {
+        editingBlackboardVariable.value = null;
+        Object.assign(blackboardModalData, {
             name: '',
             type: 'string',
             defaultValue: '',
-            defaultValueText: '',
             description: '',
             group: '',
-            readonly: false,
-            min: undefined,
-            max: undefined,
-            optionsText: ''
+            readOnly: false,
+            constraints: {},
+            useAllowedValues: false,
+            allowedValuesText: ''
         });
-        
-        editingVariable.value = null;
-        showAddVariableDialog.value = true;
+        showBlackboardModal.value = true;
     };
 
     return {
@@ -522,17 +403,6 @@ export function useBlackboard() {
         blackboardModalData,
         expandedGroups,
         blackboardVariableGroups,
-        
-        showAddVariableDialog,
-        editingVariable,
-        newVariable,
-        groups,
-        showImportExportDialog,
-        activeTab,
-        exportData,
-        importData,
-        clearBeforeImport,
-        isValidVariable,
         blackboardCollapsed,
         blackboardTransparent,
         
@@ -549,24 +419,15 @@ export function useBlackboard() {
         addBlackboardVariable,
         saveBlackboardVariable,
         deleteBlackboardVariable,
-        removeBlackboardVariable,
+        removeBlackboardVariable: deleteBlackboardVariable,
         updateBlackboardVariable,
         editVariable,
         selectVariable,
         clearBlackboard,
-        
-        closeAddVariableDialog,
-        saveVariable,
-        onTypeChange,
-        closeImportExportDialog,
-        copyExportData,
-        importVariables,
-        
         exportBlackboard,
         importBlackboard,
         
-        onBlackboardDragStart,
-        
+        onBlackboardDragStart: onVariableDragStart,
         editBlackboardVariable: editVariable,
         onBlackboardValueChange: (variable: BlackboardVariable) => {
             updateBlackboardVariable(variable.name, variable.value);
