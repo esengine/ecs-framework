@@ -28,6 +28,13 @@ export function useComputedProperties(
     }
 ) {
     // 过滤节点
+    const filteredRootNodes = () => {
+        return nodeTemplates.value.filter(node => 
+            node.category === 'root' && 
+            node.name.toLowerCase().includes(nodeSearchText.value.toLowerCase())
+        );
+    };
+
     const filteredCompositeNodes = () => {
         return nodeTemplates.value.filter(node => 
             node.category === 'composite' && 
@@ -126,6 +133,7 @@ export function useComputedProperties(
     };
 
     return {
+        filteredRootNodes,
         filteredCompositeNodes,
         filteredDecoratorNodes,
         filteredActionNodes,

@@ -17,10 +17,12 @@ export interface NodeTemplate {
     type: string;
     name: string;
     icon: string;
-    category: 'composite' | 'decorator' | 'action' | 'condition' | 'ecs';
+    category: 'composite' | 'decorator' | 'action' | 'condition' | 'ecs' | 'root';
     description: string;
     canHaveChildren: boolean;
     canHaveParent: boolean;
+    maxChildren?: number; // 最大子节点数量限制
+    minChildren?: number; // 最小子节点数量要求
     properties?: Record<string, PropertyDefinition>;
     className?: string; // 对应的实际类名
     namespace?: string; // 命名空间
@@ -30,6 +32,21 @@ export interface NodeTemplate {
  * 基于项目实际行为树系统的节点模板定义
  */
 export const nodeTemplates: NodeTemplate[] = [
+    // 根节点
+    {
+        type: 'root',
+        name: '根节点',
+        icon: '🌳',
+        category: 'root',
+        description: '行为树的根节点，每棵树只能有一个根节点',
+        canHaveChildren: true,
+        canHaveParent: false,
+        maxChildren: 1,
+        minChildren: 1,
+        className: 'BehaviorTree',
+        namespace: 'behaviourTree'
+    },
+
     // 复合节点 (Composites)
     {
         type: 'sequence',
@@ -39,6 +56,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '按顺序执行子节点，任一失败则整体失败',
         canHaveChildren: true,
         canHaveParent: true,
+        minChildren: 1,
         className: 'Sequence',
         namespace: 'behaviourTree/composites',
         properties: {
@@ -60,6 +78,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '按顺序执行子节点，任一成功则整体成功',
         canHaveChildren: true,
         canHaveParent: true,
+        minChildren: 1,
         className: 'Selector',
         namespace: 'behaviourTree/composites',
         properties: {
@@ -81,6 +100,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '并行执行所有子节点',
         canHaveChildren: true,
         canHaveParent: true,
+        minChildren: 2,
         className: 'Parallel',
         namespace: 'behaviourTree/composites'
     },
@@ -92,6 +112,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '并行执行子节点，任一成功则成功',
         canHaveChildren: true,
         canHaveParent: true,
+        minChildren: 2,
         className: 'ParallelSelector',
         namespace: 'behaviourTree/composites'
     },
@@ -103,6 +124,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '随机顺序执行子节点，任一成功则成功',
         canHaveChildren: true,
         canHaveParent: true,
+        minChildren: 2,
         className: 'RandomSelector',
         namespace: 'behaviourTree/composites'
     },
@@ -114,11 +136,12 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '随机顺序执行子节点，任一失败则失败',
         canHaveChildren: true,
         canHaveParent: true,
+        minChildren: 2,
         className: 'RandomSequence',
         namespace: 'behaviourTree/composites'
     },
 
-    // 装饰器节点 (Decorators)
+    // 装饰器节点 (Decorators) - 只能有一个子节点
     {
         type: 'repeater',
         name: '重复器',
@@ -127,6 +150,8 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '重复执行子节点指定次数或无限次',
         canHaveChildren: true,
         canHaveParent: true,
+        maxChildren: 1,
+        minChildren: 1,
         className: 'Repeater',
         namespace: 'behaviourTree/decorators',
         properties: {
@@ -154,6 +179,8 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '反转子节点的执行结果',
         canHaveChildren: true,
         canHaveParent: true,
+        maxChildren: 1,
+        minChildren: 1,
         className: 'Inverter',
         namespace: 'behaviourTree/decorators'
     },
@@ -165,6 +192,8 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '无论子节点结果如何都返回成功',
         canHaveChildren: true,
         canHaveParent: true,
+        maxChildren: 1,
+        minChildren: 1,
         className: 'AlwaysSucceed',
         namespace: 'behaviourTree/decorators'
     },
@@ -176,6 +205,8 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '无论子节点结果如何都返回失败',
         canHaveChildren: true,
         canHaveParent: true,
+        maxChildren: 1,
+        minChildren: 1,
         className: 'AlwaysFail',
         namespace: 'behaviourTree/decorators'
     },
@@ -187,6 +218,8 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '重复执行子节点直到成功',
         canHaveChildren: true,
         canHaveParent: true,
+        maxChildren: 1,
+        minChildren: 1,
         className: 'UntilSuccess',
         namespace: 'behaviourTree/decorators'
     },
@@ -198,6 +231,8 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '重复执行子节点直到失败',
         canHaveChildren: true,
         canHaveParent: true,
+        maxChildren: 1,
+        minChildren: 1,
         className: 'UntilFail',
         namespace: 'behaviourTree/decorators'
     },
@@ -209,6 +244,8 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '基于条件执行子节点',
         canHaveChildren: true,
         canHaveParent: true,
+        maxChildren: 1,
+        minChildren: 1,
         className: 'ConditionalDecorator',
         namespace: 'behaviourTree/decorators',
         properties: {
@@ -222,7 +259,7 @@ export const nodeTemplates: NodeTemplate[] = [
         }
     },
 
-    // 动作节点 (Actions)
+    // 动作节点 (Actions) - 叶子节点，不能有子节点
     {
         type: 'execute-action',
         name: '执行动作',
@@ -231,6 +268,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '执行自定义代码逻辑',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'ExecuteAction',
         namespace: 'behaviourTree/actions',
         properties: {
@@ -258,6 +296,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '等待指定时间后完成',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'WaitAction',
         namespace: 'behaviourTree/actions',
         properties: {
@@ -285,6 +324,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '输出日志信息',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'LogAction',
         namespace: 'behaviourTree/actions',
         properties: {
@@ -313,6 +353,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '运行另一个行为树',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'BehaviorTreeReference',
         namespace: 'behaviourTree/actions',
         properties: {
@@ -326,7 +367,7 @@ export const nodeTemplates: NodeTemplate[] = [
         }
     },
 
-    // 条件节点 (基础条件)
+    // 条件节点 (基础条件) - 叶子节点，不能有子节点
     {
         type: 'execute-conditional',
         name: '执行条件',
@@ -335,6 +376,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '执行自定义条件判断',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'ExecuteActionConditional',
         namespace: 'behaviourTree/conditionals',
         properties: {
@@ -348,7 +390,7 @@ export const nodeTemplates: NodeTemplate[] = [
         }
     },
 
-    // ECS专用节点
+    // ECS专用节点 - 都是叶子节点
     {
         type: 'has-component',
         name: '检查组件',
@@ -357,6 +399,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '检查实体是否包含指定组件',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'HasComponentCondition',
         namespace: 'ecs-integration/behaviors',
         properties: {
@@ -377,6 +420,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '为实体添加组件',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'AddComponentAction',
         namespace: 'ecs-integration/behaviors',
         properties: {
@@ -404,6 +448,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '从实体移除组件',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'RemoveComponentAction',
         namespace: 'ecs-integration/behaviors',
         properties: {
@@ -424,6 +469,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '修改实体组件的属性',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'ModifyComponentAction',
         namespace: 'ecs-integration/behaviors',
         properties: {
@@ -451,6 +497,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '检查实体是否具有指定标签',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'HasTagCondition',
         namespace: 'ecs-integration/behaviors',
         properties: {
@@ -471,6 +518,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '检查实体是否处于激活状态',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'IsActiveCondition',
         namespace: 'ecs-integration/behaviors',
         properties: {
@@ -491,6 +539,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: 'ECS优化的等待动作',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'WaitTimeAction',
         namespace: 'ecs-integration/behaviors',
         properties: {
@@ -511,6 +560,7 @@ export const nodeTemplates: NodeTemplate[] = [
         description: '销毁当前实体',
         canHaveChildren: false,
         canHaveParent: true,
+        maxChildren: 0,
         className: 'DestroyEntityAction',
         namespace: 'ecs-integration/behaviors'
     }

@@ -8,6 +8,7 @@ import { useFileOperations } from './useFileOperations';
 import { useConnectionManager } from './useConnectionManager';
 import { useCanvasManager } from './useCanvasManager';
 import { useNodeDisplay } from './useNodeDisplay';
+import { validateTree as validateTreeStructure } from '../utils/nodeUtils';
 
 /**
  * 主要的行为树编辑器组合功能
@@ -248,32 +249,31 @@ export function useBehaviorTreeEditor() {
 
     // 验证树结构
     const validateTree = () => {
+        // 使用改进的验证函数
+        const validationResult = validateTreeStructure(appState.treeNodes.value);
+        
         const errors: string[] = [];
         const warnings: string[] = [];
         
-        const rootNodes = appState.treeNodes.value.filter(node => 
-            !appState.treeNodes.value.some(otherNode => 
-                otherNode.children?.includes(node.id)
-            )
-        );
-        
-        if (rootNodes.length === 0) {
-            errors.push('没有找到根节点');
-        } else if (rootNodes.length > 1) {
-            warnings.push(`找到多个根节点: ${rootNodes.map(n => n.name).join(', ')}`);
+        if (!validationResult.isValid) {
+            errors.push(validationResult.message);
         }
         
+        // 检查孤立节点（除了根节点）
         appState.treeNodes.value.forEach(node => {
-            const hasParent = appState.treeNodes.value.some(otherNode => 
-                otherNode.children?.includes(node.id)
-            );
-            const hasChildren = node.children && node.children.length > 0;
-            
-            if (!hasParent && !hasChildren && appState.treeNodes.value.length > 1) {
-                warnings.push(`节点 "${node.name}" 是孤立节点`);
+            if (node.type !== 'root') {
+                const hasParent = appState.treeNodes.value.some(otherNode => 
+                    otherNode.children?.includes(node.id)
+                );
+                const hasChildren = node.children && node.children.length > 0;
+                
+                if (!hasParent && !hasChildren && appState.treeNodes.value.length > 1) {
+                    warnings.push(`节点 "${node.name}" 是孤立节点`);
+                }
             }
         });
         
+        // 检查连接完整性
         appState.connections.value.forEach(conn => {
             const sourceNode = appState.treeNodes.value.find(n => n.id === conn.sourceId);
             const targetNode = appState.treeNodes.value.find(n => n.id === conn.targetId);
@@ -286,7 +286,21 @@ export function useBehaviorTreeEditor() {
             }
         });
         
-        let message = '树结构验证完成！\n\n';
+        // 检查节点类型一致性
+        appState.treeNodes.value.forEach(node => {
+            if (node.type === 'root' && node.parent) {
+                errors.push(`根节点 "${node.name}" 不应该有父节点`);
+            }
+            
+            // 检查装饰器节点的限制
+            if (node.type.includes('decorator') || node.type.includes('Decorator')) {
+                if (node.children.length > 1) {
+                    warnings.push(`装饰器节点 "${node.name}" 建议只连接一个子节点，当前有 ${node.children.length} 个`);
+                }
+            }
+        });
+        
+        let message = '🔍 树结构验证完成！\n\n';
         
         if (errors.length > 0) {
             message += `❌ 错误 (${errors.length}):\n${errors.map(e => `• ${e}`).join('\n')}\n\n`;
@@ -297,7 +311,9 @@ export function useBehaviorTreeEditor() {
         }
         
         if (errors.length === 0 && warnings.length === 0) {
-            message += '✅ 没有发现问题！';
+            message += '✅ 没有发现问题！树结构完全符合行为树规范。';
+        } else if (errors.length === 0) {
+            message += '✅ 树结构基本有效，但有一些建议优化的地方。';
         }
         
         alert(message);

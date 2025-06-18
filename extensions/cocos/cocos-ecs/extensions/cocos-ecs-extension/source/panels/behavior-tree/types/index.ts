@@ -13,6 +13,8 @@ export interface TreeNode {
     properties?: Record<string, PropertyDefinition>;
     canHaveChildren: boolean;
     canHaveParent: boolean;
+    maxChildren?: number; // 最大子节点数量限制
+    minChildren?: number; // 最小子节点数量要求
     hasError?: boolean;
 }
 

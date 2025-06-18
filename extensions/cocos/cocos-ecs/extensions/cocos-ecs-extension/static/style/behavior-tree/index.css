@@ -190,6 +190,7 @@
     cursor: grabbing;
 }
 
+.node-item.root { border-left: 3px solid #f6ad55; }
 .node-item.composite { border-left: 3px solid #667eea; }
 .node-item.decorator { border-left: 3px solid #9f7aea; }
 .node-item.action { border-left: 3px solid #48bb78; }

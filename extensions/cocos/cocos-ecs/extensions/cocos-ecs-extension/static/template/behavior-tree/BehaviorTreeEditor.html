@@ -47,6 +47,24 @@
         </div>
         
         <div class="node-categories">
+            <!-- 根节点 -->
+            <div class="category">
+                <h4 class="category-title">🌳 根节点</h4>
+                <div class="node-list">
+                    <div 
+                        v-for="node in filteredRootNodes()" 
+                        :key="node.type"
+                        class="node-item root"
+                        :draggable="true"
+                        @dragstart="onNodeDragStart($event, node)"
+                        :title="node.description"
+                    >
+                        <span class="node-icon">{{ node.icon }}</span>
+                        <span class="node-name">{{ node.name }}</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- 复合节点 -->
             <div class="category">
                 <h4 class="category-title">🔗 复合节点</h4>

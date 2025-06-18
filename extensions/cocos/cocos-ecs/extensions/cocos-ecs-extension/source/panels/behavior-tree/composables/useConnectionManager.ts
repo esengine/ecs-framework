@@ -380,6 +380,28 @@ export function useConnectionManager(
         if (!parentNode || !parentNode.canHaveChildren) return false;
         if (!childNode || !childNode.canHaveParent) return false;
         
+        // 检查子节点数量限制
+        if (parentNode.maxChildren !== undefined) {
+            const currentChildrenCount = parentNode.children ? parentNode.children.length : 0;
+            if (currentChildrenCount >= parentNode.maxChildren) {
+                return false; // 已达到最大子节点数量
+            }
+        }
+        
+        // 检查根节点限制：根节点不能有父节点
+        if (childNode.type === 'root') {
+            return false; // 根节点不能作为其他节点的子节点
+        }
+        
+        // 检查是否只能有一个根节点
+        if (parentNode.type === 'root') {
+            // 根节点只能连接一个子节点
+            const rootNodes = treeNodes.value.filter(n => n.type === 'root');
+            if (rootNodes.length > 1) {
+                return false; // 不能有多个根节点
+            }
+        }
+        
         if (wouldCreateCycle(parentNodeId, childNodeId)) return false;
         if (isDescendant(childNodeId, parentNodeId)) return false;
         

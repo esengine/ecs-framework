@@ -41,6 +41,8 @@ export function createNodeFromTemplate(template: NodeTemplate, x: number = 100, 
         properties: properties,
         canHaveChildren: template.canHaveChildren,
         canHaveParent: template.canHaveParent,
+        maxChildren: template.maxChildren,
+        minChildren: template.minChildren,
         hasError: false
     };
     return node;
@@ -112,13 +114,81 @@ export function validateTree(nodes: TreeNode[]): ValidationResult {
         return { isValid: false, message: '行为树为空' };
     }
     
-    const root = getRootNode(nodes);
-    if (!root) {
+    // 检查根节点
+    const rootNodes = nodes.filter(node => !node.parent);
+    if (rootNodes.length === 0) {
         return { isValid: false, message: '缺少根节点' };
     }
+    if (rootNodes.length > 1) {
+        return { isValid: false, message: `发现多个根节点: ${rootNodes.map(n => n.name).join(', ')}` };
+    }
     
-    // 可以添加更多验证逻辑
-    // 例如：检查循环引用、孤立节点等
+    // 验证每个节点的子节点数量限制
+    for (const node of nodes) {
+        const childrenCount = node.children.length;
+        
+        // 检查最小子节点数量
+        if (node.minChildren !== undefined && childrenCount < node.minChildren) {
+            return { 
+                isValid: false, 
+                message: `节点 "${node.name}" 需要至少 ${node.minChildren} 个子节点，当前只有 ${childrenCount} 个` 
+            };
+        }
+        
+        // 检查最大子节点数量
+        if (node.maxChildren !== undefined && childrenCount > node.maxChildren) {
+            return { 
+                isValid: false, 
+                message: `节点 "${node.name}" 最多只能有 ${node.maxChildren} 个子节点，当前有 ${childrenCount} 个` 
+            };
+        }
+        
+        // 检查装饰器节点的特殊限制
+        if (node.type.includes('decorator') || node.type.includes('Decorator')) {
+            if (childrenCount !== 1) {
+                return { 
+                    isValid: false, 
+                    message: `装饰器节点 "${node.name}" 必须有且只能有一个子节点，当前有 ${childrenCount} 个` 
+                };
+            }
+        }
+        
+        // 检查叶子节点不能有子节点
+        if (!node.canHaveChildren && childrenCount > 0) {
+            return { 
+                isValid: false, 
+                message: `叶子节点 "${node.name}" 不能有子节点，但当前有 ${childrenCount} 个` 
+            };
+        }
+    }
+    
+    // 检查循环引用
+    const visited = new Set<string>();
+    const recursionStack = new Set<string>();
+    
+    function hasCycle(nodeId: string): boolean {
+        if (recursionStack.has(nodeId)) return true;
+        if (visited.has(nodeId)) return false;
+        
+        visited.add(nodeId);
+        recursionStack.add(nodeId);
+        
+        const node = getNodeById(nodes, nodeId);
+        if (node) {
+            for (const childId of node.children) {
+                if (hasCycle(childId)) return true;
+            }
+        }
+        
+        recursionStack.delete(nodeId);
+        return false;
+    }
+    
+    for (const node of nodes) {
+        if (hasCycle(node.id)) {
+            return { isValid: false, message: '检测到循环引用' };
+        }
+    }
     
     return { isValid: true, message: '行为树结构有效' };
 }
