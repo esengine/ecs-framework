@@ -1,13 +1,19 @@
 <!-- 头部工具栏 -->
 <div class="header-toolbar">
     <div class="toolbar-left">
-        <h2>🌳 行为树可视化编辑器 <span v-if="hasUnsavedChanges" class="unsaved-indicator">●</span></h2>
+        <h2>🌳 行为树可视化编辑器 
+            <span v-if="currentFileName" class="current-file">- {{ currentFileName }}</span>
+            <span v-if="hasUnsavedChanges" class="unsaved-indicator">●</span>
+        </h2>
         <div class="toolbar-buttons">
             <button class="tool-btn" @click="newBehaviorTree" title="新建行为树">
                 <span>📄</span> 新建
             </button>
-            <button class="tool-btn" :class="{ 'has-changes': hasUnsavedChanges }" @click="saveBehaviorTree" title="保存行为树">
+            <button class="tool-btn" :class="{ 'has-changes': hasUnsavedChanges }" @click="saveBehaviorTree" :title="currentFilePath ? '保存到: ' + currentFilePath : (currentFileName ? '另存为 ' + currentFileName : '保存行为树')">
                 <span>💾</span> 保存{{ hasUnsavedChanges ? ' *' : '' }}
+            </button>
+            <button class="tool-btn" @click="saveAsBehaviorTree" title="另存为新文件">
+                <span>💾</span> 另存为
             </button>
             <button class="tool-btn" @click="loadBehaviorTree" title="加载行为树">
                 <span>📂</span> 加载

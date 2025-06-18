@@ -54,7 +54,7 @@ export function useNodeOperations(
             selectedNodeId.value = newNode.id;
             
         } catch (error) {
-            console.error('节点创建失败:', error);
+            // 节点创建失败时静默处理
         }
     };
 
@@ -123,44 +123,18 @@ export function useNodeOperations(
 
     // 节点属性更新
     const updateNodeProperty = (path: string, value: any) => {
-        console.log('updateNodeProperty called:', path, value);
         const node = selectedNodeId.value ? getNodeByIdLocal(selectedNodeId.value) : null;
-        if (!node) {
-            console.log('No selected node found');
-            return;
-        }
-        
-        console.log('Current node before update:', JSON.stringify(node, null, 2));
+        if (!node) return;
         
         // 使用通用方法更新属性
         setNestedProperty(node, path, value);
         
-        console.log(`Updated property ${path} to:`, value);
-        console.log('Updated node after change:', JSON.stringify(node, null, 2));
-        
-        // 强制触发响应式更新 - 创建新数组来强制Vue检测变化
+        // 强制触发响应式更新
         const nodeIndex = treeNodes.value.findIndex(n => n.id === node.id);
         if (nodeIndex > -1) {
-            // 创建新的节点数组，确保Vue能检测到变化
             const newNodes = [...treeNodes.value];
-            newNodes[nodeIndex] = { ...node }; // 创建节点副本确保响应式更新
+            newNodes[nodeIndex] = { ...node };
             treeNodes.value = newNodes;
-            
-            console.log('Triggered reactive update - replaced array');
-            
-            // 验证更新是否成功
-            nextTick(() => {
-                const verifyNode = treeNodes.value.find(n => n.id === node.id);
-                console.log('Verification - node after update:', JSON.stringify(verifyNode, null, 2));
-                
-                // 验证属性值
-                const pathParts = path.split('.');
-                let checkValue: any = verifyNode;
-                for (const part of pathParts) {
-                    checkValue = checkValue?.[part];
-                }
-                console.log(`Verification - final value at ${path}:`, checkValue);
-            });
         }
     };
 

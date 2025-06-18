@@ -268,13 +268,102 @@ export const config = behaviorTreeConfig;`;
 
     // 从配置创建行为树节点
     const createTreeFromConfig = (config: any): TreeNode[] => {
-        if (!config || !config.tree) {
+        console.log('createTreeFromConfig被调用，接收到的配置:', config);
+        console.log('nodeTemplates当前数量:', nodeTemplates.value.length);
+        
+        // 处理两种不同的文件格式
+        if (config.nodes && Array.isArray(config.nodes)) {
+            console.log('使用nodes格式处理，节点数量:', config.nodes.length);
+            const result = createTreeFromNodesFormat(config);
+            console.log('nodes格式处理结果:', result);
+            return result;
+        } else if (config.tree) {
+            console.log('使用tree格式处理');
+            const result = createTreeFromTreeFormat(config);
+            console.log('tree格式处理结果:', result);
+            return result;
+        } else {
+            console.log('配置格式不匹配，返回空数组');
+            return [];
+        }
+    };
+    
+    // 处理新格式（nodes数组格式）
+    const createTreeFromNodesFormat = (config: any): TreeNode[] => {
+        console.log('createTreeFromNodesFormat开始处理');
+        
+        if (!config.nodes || !Array.isArray(config.nodes)) {
+            console.log('nodes数据无效');
+            return [];
+        }
+        
+        const nodes: TreeNode[] = [];
+        
+        config.nodes.forEach((nodeConfig: any, index: number) => {
+            console.log(`处理第${index + 1}个节点:`, nodeConfig);
+            
+            const template = findTemplateByType(nodeConfig.type);
+            console.log(`为节点类型 "${nodeConfig.type}" 找到的模板:`, template);
+            
+            if (!template) {
+                console.warn(`未找到节点类型 "${nodeConfig.type}" 的模板`);
+                return;
+            }
+            
+            const node: TreeNode = {
+                id: nodeConfig.id || generateNodeId(),
+                type: template.type,
+                name: nodeConfig.name || template.name,
+                icon: nodeConfig.icon || template.icon,
+                description: nodeConfig.description || template.description,
+                canHaveChildren: template.canHaveChildren,
+                canHaveParent: template.canHaveParent,
+                x: nodeConfig.x || 400,
+                y: nodeConfig.y || 100,
+                properties: {},
+                children: nodeConfig.children || [],
+                parent: nodeConfig.parent,
+                hasError: false
+            };
+            
+            // 恢复属性
+            if (nodeConfig.properties && template.properties) {
+                Object.entries(nodeConfig.properties).forEach(([key, propConfig]: [string, any]) => {
+                    if (template.properties![key]) {
+                        node.properties![key] = {
+                            ...template.properties![key],
+                            value: propConfig.value !== undefined ? propConfig.value : template.properties![key].value
+                        };
+                    }
+                });
+            }
+            
+            // 确保所有模板属性都有默认值
+            if (template.properties) {
+                Object.entries(template.properties).forEach(([key, propDef]) => {
+                    if (!node.properties![key]) {
+                        node.properties![key] = { ...propDef };
+                    }
+                });
+            }
+            
+            console.log(`创建的节点:`, node);
+            nodes.push(node);
+        });
+        
+        console.log(`createTreeFromNodesFormat完成，总共创建了${nodes.length}个节点`);
+        return nodes;
+    };
+    
+    // 处理旧格式（tree对象格式）
+    const createTreeFromTreeFormat = (config: any): TreeNode[] => {
+        if (!config.tree) {
             return [];
         }
         
         const nodes: TreeNode[] = [];
         const processNode = (nodeConfig: any, parent?: TreeNode): TreeNode => {
-            const template = nodeTemplates.value.find(t => t.className === nodeConfig.type);
+            const template = findTemplateByType(nodeConfig.type);
             if (!template) {
                 throw new Error(`未知节点类型: ${nodeConfig.type}`);
             }
@@ -287,21 +376,31 @@ export const config = behaviorTreeConfig;`;
                 description: template.description,
                 canHaveChildren: template.canHaveChildren,
                 canHaveParent: template.canHaveParent,
-                x: 400,  // 默认在画布中心
-                y: 100,  // 从顶部开始
+                x: 400,
+                y: 100,
                 properties: {},
                 children: [],
-                parent: parent?.id // 设置父节点ID
+                parent: parent?.id,
+                hasError: false
             };
             
             // 恢复属性
-            if (nodeConfig.properties) {
+            if (nodeConfig.properties && template.properties) {
                 Object.entries(nodeConfig.properties).forEach(([key, propConfig]: [string, any]) => {
-                    if (template.properties?.[key]) {
+                    if (template.properties![key]) {
                         node.properties![key] = {
-                            ...template.properties[key],
-                            value: propConfig.value
+                            ...template.properties![key],
+                            value: propConfig.value !== undefined ? propConfig.value : template.properties![key].value
                         };
+                    }
+                });
+            }
+            
+            // 确保所有模板属性都有默认值
+            if (template.properties) {
+                Object.entries(template.properties).forEach(([key, propDef]) => {
+                    if (!node.properties![key]) {
+                        node.properties![key] = { ...propDef };
                     }
                 });
             }
@@ -323,6 +422,49 @@ export const config = behaviorTreeConfig;`;
         return nodes;
     };
     
+    // 通过类型名查找模板（支持多种匹配方式）
+    const findTemplateByType = (typeName: string): NodeTemplate | undefined => {
+        // 直接匹配 type 字段
+        let template = nodeTemplates.value.find(t => t.type === typeName);
+        if (template) return template;
+        
+        // 匹配 className 字段
+        template = nodeTemplates.value.find(t => t.className === typeName);
+        if (template) return template;
+        
+        // 大小写不敏感匹配 type
+        template = nodeTemplates.value.find(t => t.type.toLowerCase() === typeName.toLowerCase());
+        if (template) return template;
+        
+        // 大小写不敏感匹配 className
+        template = nodeTemplates.value.find(t => t.className && t.className.toLowerCase() === typeName.toLowerCase());
+        if (template) return template;
+        
+        // 特殊映射处理
+        const typeMapping: Record<string, string> = {
+            'Sequence': 'sequence',
+            'Selector': 'selector',
+            'Parallel': 'parallel',
+            'Inverter': 'inverter',
+            'Repeater': 'repeater',
+            'AlwaysSucceed': 'always-succeed',
+            'AlwaysFail': 'always-fail',
+            'UntilSuccess': 'until-success',
+            'UntilFail': 'until-fail',
+            'ExecuteAction': 'execute-action',
+            'LogAction': 'log-action',
+            'WaitAction': 'wait-action'
+        };
+        
+        const mappedType = typeMapping[typeName];
+        if (mappedType) {
+            template = nodeTemplates.value.find(t => t.type === mappedType);
+            if (template) return template;
+        }
+        
+        return undefined;
+    };
+
     // 生成唯一节点ID
     const generateNodeId = (): string => {
         return 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);

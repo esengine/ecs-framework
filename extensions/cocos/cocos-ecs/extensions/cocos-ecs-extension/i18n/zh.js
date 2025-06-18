@@ -10,6 +10,9 @@ module.exports = {
     
     // 菜单相关
     menu: {
-        panel: "面板"
+        panel: "面板",
+        develop: "开发",
+        create: "创建",
+        open: "打开"
     }
 };

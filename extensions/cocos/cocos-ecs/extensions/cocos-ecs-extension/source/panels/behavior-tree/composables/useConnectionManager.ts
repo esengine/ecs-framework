@@ -291,7 +291,7 @@ export function useConnectionManager(
                 return getPortInfo(elementAtPoint as HTMLElement);
             }
         } catch (error) {
-            console.warn(`[ConnectionManager] elementFromPoint 查询出错:`, error);
+            // 查询出错时静默处理
         }
         
         const allPorts = canvasAreaRef.value.querySelectorAll('.port');

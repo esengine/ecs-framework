@@ -33,7 +33,6 @@ export async function checkBehaviorTreeInstalled(projectPath: string): Promise<I
             packageExists: fs.existsSync(path.join(projectPath, 'package.json'))
         };
     } catch (error) {
-        console.error('检查行为树安装状态失败:', error);
         return {
             installed: false,
             version: null,
@@ -81,9 +80,8 @@ export async function installBehaviorTreeAI(projectPath: string): Promise<void> 
             throw new Error('安装请求失败，未收到主进程响应');
         }
         
-        console.log('行为树AI系统安装完成');
+        // 安装完成
     } catch (error) {
-        console.error('行为树AI系统安装失败:', error);
         throw error;
     }
 }
@@ -102,9 +100,8 @@ export async function updateBehaviorTreeAI(projectPath: string): Promise<void> {
             throw new Error('更新请求失败，未收到主进程响应');
         }
         
-        console.log('行为树AI系统更新完成');
+        // 更新完成
     } catch (error) {
-        console.error('行为树AI系统更新失败:', error);
         throw error;
     }
 } 

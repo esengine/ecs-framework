@@ -19,7 +19,6 @@ export function useInstallation(
             isInstalled.value = result.installed;
             version.value = result.version;
         } catch (error) {
-            console.error('检查安装状态失败:', error);
             isInstalled.value = false;
             version.value = null;
         } finally {
@@ -34,7 +33,7 @@ export function useInstallation(
             await installBehaviorTreeAI(Editor.Project.path);
             await checkInstallStatus();
         } catch (error) {
-            console.error('安装失败:', error);
+            // 安装失败时静默处理
         } finally {
             isInstalling.value = false;
         }

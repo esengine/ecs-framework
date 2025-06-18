@@ -100,20 +100,12 @@
                 "message": "open-panel"
             }
         ],
-        "asset-menu": [
-            {
-                "path": "i18n:menu.create/ECS Framework",
-                "label": "创建行为树文件",
-                "message": "create-behavior-tree-file",
-                "target": "folder"
-            },
-            {
-                "path": "i18n:menu.open",
-                "label": "用行为树编辑器打开",
-                "message": "open-behavior-tree-file",
-                "target": [".bt.json", ".json"]
+        "assets": {
+            "menu": {
+                "methods": "./dist/assets-menu.js",
+                "assetMenu": "onAssetMenu"
             }
-        ],
+        },
         "messages": {
             "open-panel": {
                 "methods": [
@@ -195,14 +187,24 @@
                     "create-behavior-tree-file"
                 ]
             },
-            "open-behavior-tree-file": {
+            "load-behavior-tree-file": {
                 "methods": [
-                    "open-behavior-tree-file"
+                    "load-behavior-tree-file"
                 ]
             },
             "create-behavior-tree-from-editor": {
                 "methods": [
                     "create-behavior-tree-from-editor"
+                ]
+            },
+            "overwrite-behavior-tree-file": {
+                "methods": [
+                    "overwrite-behavior-tree-file"
+                ]
+            },
+            "behavior-tree-panel-load-file": {
+                "methods": [
+                    "behavior-tree.loadBehaviorTreeFile"
                 ]
             }
         }

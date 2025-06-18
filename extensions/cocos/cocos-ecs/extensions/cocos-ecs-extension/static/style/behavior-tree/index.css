@@ -33,6 +33,13 @@
     text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
+.current-file {
+    color: #a0aec0;
+    font-weight: 400;
+    font-size: 16px;
+    margin-left: 8px;
+}
+
 .unsaved-indicator {
     color: #ff6b6b;
     animation: pulse-unsaved 2s infinite;
