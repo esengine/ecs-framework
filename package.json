@@ -52,6 +52,7 @@
     "url": "https://github.com/esengine/ecs-framework.git"
   },
   "dependencies": {
+    "@types/multer": "^1.4.13",
     "@types/ws": "^8.18.1",
     "ws": "^8.18.2"
   }

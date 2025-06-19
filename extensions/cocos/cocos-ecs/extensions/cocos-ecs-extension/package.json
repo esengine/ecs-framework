@@ -14,13 +14,15 @@
     "dependencies": {
         "vue": "^3.1.4",
         "fs-extra": "^10.0.0",
-        "ws": "^8.14.2"
+        "ws": "^8.14.2",
+        "adm-zip": "^0.5.10"
     },
     "devDependencies": {
         "@cocos/creator-types": "^3.8.6",
         "@types/fs-extra": "^9.0.5",
         "@types/node": "^18.17.1",
         "@types/ws": "^8.5.10",
+        "@types/adm-zip": "^0.5.0",
         "typescript": "^5.8.2"
     },
     "panels": {
@@ -98,6 +100,11 @@
                 "path": "i18n:menu.develop/ECS Framework",
                 "label": "ECS 开发工具",
                 "message": "open-panel"
+            },
+            {
+                "path": "i18n:menu.panel/ECS Framework",
+                "label": "检查更新",
+                "message": "check-plugin-updates"
             }
         ],
         "assets": {
@@ -175,6 +182,21 @@
             "check-behavior-tree-installed": {
                 "methods": [
                     "check-behavior-tree-installed"
+                ]
+            },
+            "check-plugin-updates": {
+                "methods": [
+                    "check-plugin-updates"
+                ]
+            },
+            "set-hot-update-config": {
+                "methods": [
+                    "set-hot-update-config"
+                ]
+            },
+            "get-hot-update-config": {
+                "methods": [
+                    "get-hot-update-config"
                 ]
             },
             "open-behavior-tree-docs": {

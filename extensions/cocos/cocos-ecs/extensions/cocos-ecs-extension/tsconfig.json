@@ -7,5 +7,9 @@
             "node",
             "@cocos/creator-types/editor",
         ]
-    }
+    },
+    "exclude": [
+        "admin-backend/**/*",
+        "admin-desktop/**/*"
+    ]
 }

@@ -1,6 +1,6 @@
 // @ts-ignore
 import packageJSON from '../package.json';
-import { EcsFrameworkHandler, BehaviorTreeHandler, PanelHandler } from './handlers';
+import { EcsFrameworkHandler, BehaviorTreeHandler, PanelHandler, HotUpdateHandler } from './handlers';
 import { readJSON } from 'fs-extra';
 import * as path from 'path';
 import { AssetInfo } from '@cocos/creator-types/editor/packages/asset-db/@types/public';
@@ -177,6 +177,29 @@ export const methods: { [key: string]: (...any: any) => any } = {
             throw new Error('文件路径不存在或数据无效');
         }
     },
+
+    // ================ 热更新管理 ================
+    /**
+     * 检查插件更新
+     */
+    'check-plugin-updates'() {
+        return HotUpdateHandler.checkForUpdates(false);
+    },
+
+    /**
+     * 设置热更新配置
+     */
+    'set-hot-update-config'(...args: any[]) {
+        const config = args.length >= 2 ? args[1] : args[0];
+        return HotUpdateHandler.setConfig(config);
+    },
+
+    /**
+     * 获取热更新配置
+     */
+    'get-hot-update-config'() {
+        return HotUpdateHandler.getConfig();
+    },
 };
 
 
@@ -187,6 +210,11 @@ export const methods: { [key: string]: (...any: any) => any } = {
  */
 export function load() {
     console.log('[Cocos ECS Extension] 扩展已加载');
+    
+    // 初始化热更新系统
+    HotUpdateHandler.initialize().catch(error => {
+        console.error('[Cocos ECS Extension] 热更新初始化失败:', error);
+    });
 }
 
 /**
@@ -195,4 +223,7 @@ export function load() {
  */
 export function unload() {
     console.log('[Cocos ECS Extension] 扩展已卸载');
+    
+    // 清理热更新资源
+    HotUpdateHandler.cleanup();
 }
