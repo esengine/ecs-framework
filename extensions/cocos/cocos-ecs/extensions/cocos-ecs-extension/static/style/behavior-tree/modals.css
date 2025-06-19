@@ -389,14 +389,15 @@
 .form-textarea {
     width: 100%;
     padding: 12px 16px;
-    background: #1a202c;
+    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
     border: 2px solid #4a5568;
     border-radius: 8px;
-    color: white;
+    color: #e2e8f0;
     font-size: 13px;
     font-family: inherit;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .form-input:focus,
@@ -404,14 +405,35 @@
 .form-textarea:focus {
     border-color: #667eea;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2), 0 4px 12px rgba(102, 126, 234, 0.15);
     transform: translateY(-1px);
 }
 
 .form-input:hover,
 .form-select:hover,
 .form-textarea:hover {
-    border-color: #718096;
+    border-color: #667eea;
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* 美化表单下拉选择框 */
+.form-select {
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23718096" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 12px;
+    padding-right: 48px;
+    cursor: pointer;
+}
+
+.form-select option {
+    background: #2d3748;
+    color: #e2e8f0;
+    padding: 8px 12px;
 }
 
 .form-input::placeholder,
@@ -522,8 +544,40 @@
 }
 
 .allowed-values textarea {
-    margin-top: 6px;
+    margin-top: 8px;
     resize: vertical;
+    min-height: 100px;
+    font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+    border: 2px solid #4a5568;
+    border-radius: 8px;
+    color: #e2e8f0;
+    padding: 12px 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.allowed-values textarea:focus {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2), 0 4px 12px rgba(102, 126, 234, 0.15);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.allowed-values textarea:hover {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.allowed-values textarea::placeholder {
+    color: #718096;
+    font-style: italic;
+    opacity: 0.8;
 }
 
 .checkbox-label {

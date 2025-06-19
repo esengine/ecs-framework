@@ -6,7 +6,7 @@ import {
     IPerformanceDebugData, 
     IComponentDebugData, 
     ISceneDebugData 
-} from '../Types';
+} from '../types';
 import { Core } from '../Core';
 import { Time } from './Time';
 

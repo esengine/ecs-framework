@@ -36,7 +36,11 @@ export function useBehaviorTreeEditor() {
         appState.treeNodes,
         appState.nodeTemplates,
         appState.getNodeByIdLocal,
-        getRootNode
+        getRootNode,
+        computed(() => blackboard.blackboardVariables.value.reduce((map, variable) => {
+            map.set(variable.name, variable);
+            return map;
+        }, new Map()))
     );
     
     const computedProps = useComputedProperties(
@@ -115,7 +119,14 @@ export function useBehaviorTreeEditor() {
         tempConnection: appState.tempConnection,
         showExportModal: appState.showExportModal,
         codeGeneration: codeGen,
-        updateConnections: connectionManager.updateConnections
+        updateConnections: connectionManager.updateConnections,
+        blackboardOperations: {
+            getBlackboardVariables: () => blackboard.blackboardVariables.value,
+            loadBlackboardVariables: (variables: any[]) => {
+                blackboard.loadBlackboardFromArray(variables);
+            },
+            clearBlackboard: blackboard.clearBlackboard
+        }
     });
 
     const canvasManager = useCanvasManager(
@@ -250,6 +261,51 @@ export function useBehaviorTreeEditor() {
         }
     };
 
+    // 节点类型识别相关方法
+    const getOriginalNodeName = (nodeType: string): string => {
+        const template = appState.nodeTemplates.value.find(t => t.type === nodeType);
+        return template?.name || nodeType;
+    };
+
+    const getNodeTemplate = (nodeType: string) => {
+        return appState.nodeTemplates.value.find(t => t.type === nodeType);
+    };
+
+    const getNodeCategory = (nodeType: string): string => {
+        const template = getNodeTemplate(nodeType);
+        if (!template) return 'unknown';
+        
+        const category = template.category || 'unknown';
+        const categoryMap: Record<string, string> = {
+            'root': '根节点',
+            'composite': '组合',
+            'decorator': '装饰器',
+            'action': '动作',
+            'condition': '条件',
+            'ecs': 'ECS'
+        };
+        
+        return categoryMap[category] || category;
+    };
+
+    const isNodeNameCustomized = (node: any): boolean => {
+        if (!node) return false;
+        const originalName = getOriginalNodeName(node.type);
+        return node.name !== originalName;
+    };
+
+    const resetNodeToOriginalName = () => {
+        if (!appState.selectedNodeId.value) return;
+        
+        const selectedNode = appState.getNodeByIdLocal(appState.selectedNodeId.value);
+        if (!selectedNode) return;
+        
+        const originalName = getOriginalNodeName(selectedNode.type);
+        nodeOps.updateNodeProperty('name', originalName);
+        
+        console.log(`节点名称已重置为原始名称: ${originalName}`);
+    };
+
     const startNodeDrag = (event: MouseEvent, node: any) => {
         event.stopPropagation();
         event.preventDefault();
@@ -306,12 +362,13 @@ export function useBehaviorTreeEditor() {
         installation.handleInstall();
     };
 
-    // 自动布局功能
+    // 紧凑子树布局算法 - 体现行为树的层次结构
     const autoLayout = () => {
         if (appState.treeNodes.value.length === 0) {
             return;
         }
         
+        // 找到根节点
         const rootNode = appState.treeNodes.value.find(node => 
             !appState.treeNodes.value.some(otherNode => 
                 otherNode.children?.includes(node.id)
@@ -319,56 +376,224 @@ export function useBehaviorTreeEditor() {
         );
         
         if (!rootNode) {
+            console.warn('未找到根节点，无法进行自动布局');
             return;
         }
         
-        const levelNodes: { [level: number]: any[] } = {};
-        const visited = new Set<string>();
-        
-        const queue = [{ node: rootNode, level: 0 }];
-        
-        while (queue.length > 0) {
-            const { node, level } = queue.shift()!;
+        // 计算节点尺寸
+        const getNodeSize = (node: any) => {
+            let width = 180;
+            let height = 100;
             
-            if (visited.has(node.id)) continue;
-            visited.add(node.id);
-            
-            if (!levelNodes[level]) {
-                levelNodes[level] = [];
+            // 根据节点类型调整基础尺寸
+            switch (node.category || node.type) {
+                case 'root':
+                    width = 200; height = 70;
+                    break;
+                case 'composite':
+                    width = 160; height = 90;
+                    break;
+                case 'decorator':
+                    width = 140; height = 80;
+                    break;
+                case 'action':
+                    width = 180; height = 100;
+                    break;
+                case 'condition':
+                    width = 150; height = 85;
+                    break;
             }
-            levelNodes[level].push(node);
             
-            if (node.children && Array.isArray(node.children)) {
+            // 根据属性数量动态调整
+            if (node.properties) {
+                const propertyCount = Object.keys(node.properties).length;
+                height += propertyCount * 20;
+            }
+            
+            // 根据名称长度调整宽度
+            if (node.name) {
+                const nameWidth = node.name.length * 8 + 40;
+                width = Math.max(width, nameWidth);
+            }
+            
+            return { width, height };
+        };
+        
+        // 紧凑子树布局核心算法
+        const layoutSubtree = (node: any, parentX = 0, parentY = 0, depth = 0): { width: number, height: number } => {
+            const nodeSize = getNodeSize(node);
+            
+            // 如果是叶子节点，直接返回自身尺寸
+            if (!node.children || node.children.length === 0) {
+                node.x = parentX;
+                node.y = parentY;
+                return { width: nodeSize.width, height: nodeSize.height };
+            }
+            
+            // 递归布局所有子节点，收集子树信息
+            const childSubtrees: Array<{ node: any, width: number, height: number }> = [];
+            let totalChildrenWidth = 0;
+            let maxChildHeight = 0;
+            
+            const childY = parentY + nodeSize.height + 60; // 子节点距离父节点的垂直间距
+            const siblingSpacing = 40; // 同级子节点间的水平间距
+            
+            // 先计算每个子树的尺寸
+            node.children.forEach((childId: string) => {
+                const childNode = appState.treeNodes.value.find(n => n.id === childId);
+                if (childNode) {
+                    const subtreeInfo = layoutSubtree(childNode, 0, childY, depth + 1);
+                    childSubtrees.push({ node: childNode, ...subtreeInfo });
+                    totalChildrenWidth += subtreeInfo.width;
+                    maxChildHeight = Math.max(maxChildHeight, subtreeInfo.height);
+                }
+            });
+            
+            // 添加子节点间的间距
+            if (childSubtrees.length > 1) {
+                totalChildrenWidth += (childSubtrees.length - 1) * siblingSpacing;
+            }
+            
+            // 计算父节点的最终位置（在子节点的中心上方）
+            const subtreeWidth = Math.max(nodeSize.width, totalChildrenWidth);
+            node.x = parentX + subtreeWidth / 2 - nodeSize.width / 2;
+            node.y = parentY;
+            
+            // 布局子节点（以父节点为中心分布）
+            let currentX = parentX + subtreeWidth / 2 - totalChildrenWidth / 2;
+            
+            childSubtrees.forEach(({ node: childNode, width: childWidth }) => {
+                // 将子节点定位到其子树的中心
+                const childCenterOffset = childWidth / 2;
+                childNode.x = currentX + childCenterOffset - getNodeSize(childNode).width / 2;
+                
+                // 递归调整子树中所有节点的位置
+                adjustSubtreePosition(childNode, currentX, childY);
+                
+                currentX += childWidth + siblingSpacing;
+            });
+            
+            // 返回整个子树的尺寸
+            const subtreeHeight = nodeSize.height + 60 + maxChildHeight;
+            return { width: subtreeWidth, height: subtreeHeight };
+        };
+        
+        // 递归调整子树位置
+        const adjustSubtreePosition = (node: any, baseX: number, baseY: number) => {
+            const nodeSize = getNodeSize(node);
+            
+            if (!node.children || node.children.length === 0) {
+                return;
+            }
+            
+            // 计算子节点的总宽度
+            let totalChildrenWidth = 0;
+            const siblingSpacing = 40;
+            
+            node.children.forEach((childId: string) => {
+                const childNode = appState.treeNodes.value.find(n => n.id === childId);
+                if (childNode) {
+                    const childSubtreeWidth = calculateSubtreeWidth(childNode);
+                    totalChildrenWidth += childSubtreeWidth;
+                }
+            });
+            
+            if (node.children.length > 1) {
+                totalChildrenWidth += (node.children.length - 1) * siblingSpacing;
+            }
+            
+            // 重新定位子节点
+            let currentX = baseX + Math.max(nodeSize.width, totalChildrenWidth) / 2 - totalChildrenWidth / 2;
+            const childY = baseY + nodeSize.height + 60;
+            
+            node.children.forEach((childId: string) => {
+                const childNode = appState.treeNodes.value.find(n => n.id === childId);
+                if (childNode) {
+                    const childSubtreeWidth = calculateSubtreeWidth(childNode);
+                    const childCenterOffset = childSubtreeWidth / 2;
+                    childNode.x = currentX + childCenterOffset - getNodeSize(childNode).width / 2;
+                    childNode.y = childY;
+                    
+                    adjustSubtreePosition(childNode, currentX, childY);
+                    currentX += childSubtreeWidth + siblingSpacing;
+                }
+            });
+        };
+        
+        // 计算子树宽度
+        const calculateSubtreeWidth = (node: any): number => {
+            const nodeSize = getNodeSize(node);
+            
+            if (!node.children || node.children.length === 0) {
+                return nodeSize.width;
+            }
+            
+            let totalChildrenWidth = 0;
+            const siblingSpacing = 40;
+            
+            node.children.forEach((childId: string) => {
+                const childNode = appState.treeNodes.value.find(n => n.id === childId);
+                if (childNode) {
+                    totalChildrenWidth += calculateSubtreeWidth(childNode);
+                }
+            });
+            
+            if (node.children.length > 1) {
+                totalChildrenWidth += (node.children.length - 1) * siblingSpacing;
+            }
+            
+            return Math.max(nodeSize.width, totalChildrenWidth);
+        };
+        
+        // 开始布局 - 从根节点开始
+        const startX = 400; // 画布中心X
+        const startY = 50;  // 顶部留白
+        
+        const treeInfo = layoutSubtree(rootNode, startX, startY);
+        
+        // 处理孤立节点
+        const connectedNodeIds = new Set<string>();
+        const collectConnectedNodes = (node: any) => {
+            connectedNodeIds.add(node.id);
+            if (node.children) {
                 node.children.forEach((childId: string) => {
                     const childNode = appState.treeNodes.value.find(n => n.id === childId);
-                    if (childNode && !visited.has(childId)) {
-                        queue.push({ node: childNode, level: level + 1 });
+                    if (childNode) {
+                        collectConnectedNodes(childNode);
                     }
                 });
             }
+        };
+        collectConnectedNodes(rootNode);
+        
+        const orphanNodes = appState.treeNodes.value.filter(node => !connectedNodeIds.has(node.id));
+        if (orphanNodes.length > 0) {
+            const orphanY = startY + treeInfo.height + 100;
+            orphanNodes.forEach((node, index) => {
+                node.x = startX + (index - orphanNodes.length / 2) * 200;
+                node.y = orphanY + Math.floor(index / 5) * 120;
+            });
         }
         
-        const nodeWidth = 200;
-        const nodeHeight = 150;
-        const startX = 400;
-        const startY = 100;
-        
-        Object.keys(levelNodes).forEach(levelStr => {
-            const level = parseInt(levelStr);
-            const nodes = levelNodes[level];
-            const totalWidth = (nodes.length - 1) * nodeWidth;
-            const offsetX = -totalWidth / 2;
-            
-            nodes.forEach((node, index) => {
-                node.x = startX + offsetX + index * nodeWidth;
-                node.y = startY + level * nodeHeight;
-            });
-        });
-        
-        setTimeout(() => {
+        // 强制更新连接线
+        const forceUpdateConnections = () => {
             connectionManager.updateConnections();
-        }, 100);
+            
+            nextTick(() => {
+                connectionManager.updateConnections();
+                
+                setTimeout(() => {
+                    connectionManager.updateConnections();
+                }, 150);
+            });
+        };
+        
+        forceUpdateConnections();
+        
+        console.log(`紧凑子树布局完成：${appState.treeNodes.value.length} 个节点已重新排列`);
     };
+
+
 
     // 验证树结构
     const validateTree = () => {
@@ -829,6 +1054,13 @@ export function useBehaviorTreeEditor() {
         handleBlackboardDragOver,
         handleBlackboardDragLeave,
         clearBlackboardReference,
+        
+        // 节点类型识别方法
+        getOriginalNodeName,
+        getNodeTemplate,
+        getNodeCategory,
+        isNodeNameCustomized,
+        resetNodeToOriginalName,
         
         blackboardCollapsed: computed({
             get: () => blackboardSidebarState.collapsed,

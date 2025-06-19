@@ -297,6 +297,17 @@ export function useBlackboard() {
         }
     };
 
+    const resetBlackboardToDefaults = () => {
+        if (confirm('确定要重置所有变量到默认值吗？')) {
+            blackboardVariables.value.forEach((variable, name) => {
+                if (variable.defaultValue !== undefined) {
+                    variable.value = variable.defaultValue;
+                    blackboardVariables.value.set(name, { ...variable });
+                }
+            });
+        }
+    };
+
     const exportBlackboard = () => {
         const data = Array.from(blackboardVariables.value.values());
         const json = JSON.stringify(data, null, 2);
@@ -309,6 +320,19 @@ export function useBlackboard() {
         }
     };
 
+    const loadBlackboardFromArray = (variables: BlackboardVariable[]) => {
+        blackboardVariables.value.clear();
+        variables.forEach(variable => {
+            if (variable.name && variable.type) {
+                blackboardVariables.value.set(variable.name, variable);
+                
+                // 展开变量所在的组
+                const groupName = variable.group || '未分组';
+                expandedGroups.value.add(groupName);
+            }
+        });
+    };
+    
     const importBlackboard = () => {
         const input = document.createElement('input');
         input.type = 'file';
@@ -436,6 +460,8 @@ export function useBlackboard() {
         editVariable,
         selectVariable,
         clearBlackboard,
+        resetBlackboardToDefaults,
+        loadBlackboardFromArray,
         exportBlackboard,
         importBlackboard,
         

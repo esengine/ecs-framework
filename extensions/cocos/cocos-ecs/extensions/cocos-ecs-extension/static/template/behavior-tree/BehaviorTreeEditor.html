@@ -218,7 +218,7 @@
             </div>
             <div class="canvas-actions">
                 <button @click="centerView">居中</button>
-                <button @click="autoLayout">自动布局</button>
+                <button @click="autoLayout" title="紧凑子树布局 - 子节点紧贴父节点">自动布局</button>
                 <button @click="validateTree">验证</button>
                 <button @click="clearAllConnections" title="清除所有连接线" v-if="connections.length > 0">清除连线</button>
             </div>
@@ -279,6 +279,7 @@
                     v-for="node in treeNodes" 
                     :key="node.id"
                     :data-node-id="node.id"
+                    :data-original-name="isNodeNameCustomized(node) ? getOriginalNodeName(node.type) : ''"
                     class="tree-node"
                     :class="[
                         'node-' + node.type, 
@@ -303,7 +304,7 @@
                 >
                     <div class="node-header">
                         <span class="node-icon">{{ node.icon }}</span>
-                        <span class="node-title">{{ node.name }}</span>
+                        <span class="node-title" :class="{ 'customized': isNodeNameCustomized(node) }">{{ node.name }}</span>
                         <button class="node-delete" @click.stop="deleteNode(node.id)">×</button>
                     </div>
                     <div class="node-body">
@@ -424,17 +425,60 @@
             </div>
             
             <div v-if="activeNode" class="node-properties">
+                <!-- 节点类型信息区域 -->
+                <div class="property-section node-type-info">
+                    <h4>
+                        <span class="node-type-icon">{{ activeNode.icon }}</span>
+                        节点类型信息
+                        <button 
+                            class="reset-name-btn" 
+                            @click="resetNodeToOriginalName"
+                            :title="'重置为原始名称: ' + getOriginalNodeName(activeNode.type)"
+                            v-if="isNodeNameCustomized(activeNode)"
+                        >
+                            🔄 恢复原名
+                        </button>
+                    </h4>
+                    <div class="node-type-details">
+                        <div class="type-info-row">
+                            <span class="info-label">原始类型:</span>
+                            <span class="info-value original-type">
+                                {{ getOriginalNodeName(activeNode.type) }}
+                                <span class="type-badge" :class="'badge-' + getNodeCategory(activeNode.type)">
+                                    {{ getNodeCategory(activeNode.type) }}
+                                </span>
+                            </span>
+                        </div>
+                        <div class="type-info-row">
+                            <span class="info-label">节点ID:</span>
+                            <span class="info-value node-id">{{ activeNode.type }}</span>
+                        </div>
+                        <div class="type-info-row" v-if="getNodeTemplate(activeNode.type)">
+                            <span class="info-label">原始描述:</span>
+                            <span class="info-value original-description">{{ getNodeTemplate(activeNode.type).description }}</span>
+                        </div>
+                        <div class="type-info-row" v-if="isNodeNameCustomized(activeNode)">
+                            <span class="info-label">⚠️ 自定义名称:</span>
+                            <span class="info-value custom-name">{{ activeNode.name }}</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="property-section">
                     <h4>基本信息</h4>
                     <div class="property-item">
                         <label>节点名称:</label>
-                        <input 
-                            type="text" 
-                            :value="activeNode.name" 
-                            @input="updateNodeProperty('name', $event.target.value)"
-                            :key="activeNode.id + '_name'"
-                            :disabled="activeNode.isConditionNode"
-                        >
+                        <div class="name-input-container">
+                            <input 
+                                type="text" 
+                                :value="activeNode.name" 
+                                @input="updateNodeProperty('name', $event.target.value)"
+                                :key="activeNode.id + '_name'"
+                                :disabled="activeNode.isConditionNode"
+                                :placeholder="getOriginalNodeName(activeNode.type)"
+                            >
+                            <span v-if="isNodeNameCustomized(activeNode)" class="custom-indicator" title="已自定义名称">✏️</span>
+                        </div>
                     </div>
                     <div class="property-item">
                         <label>描述:</label>
@@ -443,6 +487,7 @@
                             @input="updateNodeProperty('description', $event.target.value)"
                             :key="activeNode.id + '_description'"
                             :disabled="activeNode.isConditionNode"
+                            :placeholder="getNodeTemplate(activeNode.type)?.description || '请输入节点描述...'"
                         ></textarea>
                     </div>
                 </div>
@@ -722,6 +767,7 @@
         
         <div class="blackboard-actions">
             <button @click="showBlackboardModal = true" class="add-var-btn">+ 添加变量</button>
+            <button @click="resetBlackboardToDefaults" v-if="blackboardVariables.length > 0" class="reset-btn" title="重置所有变量到默认值">🔄 重置</button>
             <button @click="clearBlackboard" v-if="blackboardVariables.length > 0" class="clear-btn">清空</button>
         </div>
         

@@ -6,8 +6,6 @@ import { ComponentIndexManager, IndexType } from './ComponentIndex';
 import { ArchetypeSystem } from './ArchetypeSystem';
 import { DirtyTrackingSystem, DirtyFlag } from './DirtyTrackingSystem';
 import { EventBus } from './EventBus';
-import { ECSEventType } from '../CoreEvents';
-import { IEntityEventData, IComponentEventData } from '../../Types';
 
 /**
  * 实体查询构建器

@@ -7,7 +7,7 @@ import { PoolManager } from './Utils/Pool';
 import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
 import { Scene } from './ECS/Scene';
 import { DebugReporter } from './Utils/DebugReporter';
-import { ICoreConfig, IECSDebugConfig } from './Types';
+import { ICoreConfig, IECSDebugConfig } from './types';
 
 /**
  * 游戏引擎核心类

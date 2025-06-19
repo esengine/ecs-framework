@@ -1106,4 +1106,10 @@ export const nodeTemplates: NodeTemplate[] = [
             }
         }
     }
-]; 
+];
+
+// 导出所有节点模板
+export const allNodeTemplates: NodeTemplate[] = nodeTemplates;
+
+// 为了保持向后兼容，保留原来的导出
+export { nodeTemplates as default }; 

@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { TreeNode, DragState, Connection } from '../types';
-import { nodeTemplates } from '../data/nodeTemplates';
+import { allNodeTemplates as nodeTemplates } from '../data/nodeTemplates';
 
 /**
  * 应用状态管理

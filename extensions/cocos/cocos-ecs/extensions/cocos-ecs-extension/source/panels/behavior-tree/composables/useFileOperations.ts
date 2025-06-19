@@ -11,11 +11,17 @@ interface FileOperationOptions {
         createTreeFromConfig: (config: any) => TreeNode[];
     };
     updateConnections?: () => void;
+    blackboardOperations?: {
+        getBlackboardVariables: () => any[];
+        loadBlackboardVariables: (variables: any[]) => void;
+        clearBlackboard: () => void;
+    };
 }
 
 interface FileData {
     nodes: TreeNode[];
     connections: Connection[];
+    blackboard?: any[];
     metadata: {
         name: string;
         created: string;
@@ -31,7 +37,8 @@ export function useFileOperations(options: FileOperationOptions) {
         tempConnection,
         showExportModal,
         codeGeneration,
-        updateConnections
+        updateConnections,
+        blackboardOperations
     } = options;
 
     const hasUnsavedChanges = ref(false);
@@ -70,7 +77,7 @@ export function useFileOperations(options: FileOperationOptions) {
     };
 
     const exportBehaviorTreeData = (): FileData => {
-        return {
+        const data: FileData = {
             nodes: treeNodes.value,
             connections: connections.value,
             metadata: {
@@ -79,6 +86,16 @@ export function useFileOperations(options: FileOperationOptions) {
                 version: '1.0'
             }
         };
+        
+        // 包含黑板数据
+        if (blackboardOperations) {
+            const blackboardVariables = blackboardOperations.getBlackboardVariables();
+            if (blackboardVariables.length > 0) {
+                data.blackboard = blackboardVariables;
+            }
+        }
+        
+        return data;
     };
 
     const showMessage = (message: string, type: 'success' | 'error' = 'success') => {
@@ -165,6 +182,12 @@ export function useFileOperations(options: FileOperationOptions) {
             selectedNodeId.value = null;
             connections.value = [];
             tempConnection.value.path = '';
+            
+            // 清空黑板
+            if (blackboardOperations) {
+                blackboardOperations.clearBlackboard();
+            }
+            
             clearCurrentFile();
             markAsSaved();
         }
@@ -409,6 +432,11 @@ export function useFileOperations(options: FileOperationOptions) {
                 setCurrentFile('untitled', filePath);
             }
             
+            // 加载黑板数据
+            if (blackboardOperations && parsedData.blackboard && Array.isArray(parsedData.blackboard)) {
+                blackboardOperations.loadBlackboardVariables(parsedData.blackboard);
+            }
+            
             selectedNodeId.value = null;
             tempConnection.value.path = '';
             
@@ -462,6 +490,11 @@ export function useFileOperations(options: FileOperationOptions) {
                             }
                             
                             tempConnection.value.path = '';
+                            
+                            // 加载黑板数据
+                            if (blackboardOperations && config.blackboard && Array.isArray(config.blackboard)) {
+                                blackboardOperations.loadBlackboardVariables(config.blackboard);
+                            }
                             
                             const fileName = file.name.replace(/\.(json|bt)$/, '');
                             setCurrentFile(fileName, '');

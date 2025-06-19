@@ -1,8 +1,6 @@
 import { Component } from './Component';
 import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
 import { EventBus } from './Core/EventBus';
-import { ECSEventType } from './CoreEvents';
-import { IComponentEventData } from '../Types';
 
 /**
  * 实体比较器

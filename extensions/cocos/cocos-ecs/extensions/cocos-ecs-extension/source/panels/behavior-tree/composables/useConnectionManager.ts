@@ -462,25 +462,49 @@ export function useConnectionManager(
         updateConnections();
     };
 
-    // 更新连接线
+    // 改进的连接线更新方法
     const updateConnections = () => {
+        // 立即清空现有连接
         connections.value.length = 0;
         
-        // 添加一个小延迟，确保DOM已经更新
-        setTimeout(() => {
-            treeNodes.value.forEach(node => {
-            if (node.children) {
+        // 创建新的连接数据
+        const newConnections: Connection[] = [];
+        
+        // 遍历所有节点建立连接
+        treeNodes.value.forEach(node => {
+            if (node.children && node.children.length > 0) {
                 node.children.forEach(childId => {
                     const childNode = treeNodes.value.find(n => n.id === childId);
                     if (childNode) {
+                        // 尝试获取端口位置
                         const parentPos = getPortPosition(node.id, 'output');
                         const childPos = getPortPosition(childId, 'input');
                         
                         if (parentPos && childPos) {
-                            const controlOffset = Math.abs(childPos.y - parentPos.y) * 0.5;
+                            // 计算贝塞尔曲线路径
+                            const deltaY = Math.abs(childPos.y - parentPos.y);
+                            const controlOffset = Math.max(30, Math.min(deltaY * 0.5, 80));
+                            
                             const path = `M ${parentPos.x} ${parentPos.y} C ${parentPos.x} ${parentPos.y + controlOffset} ${childPos.x} ${childPos.y - controlOffset} ${childPos.x} ${childPos.y}`;
                             
-                            connections.value.push({
+                            newConnections.push({
+                                id: `${node.id}-${childId}`,
+                                sourceId: node.id,
+                                targetId: childId,
+                                path: path,
+                                active: false
+                            });
+                        } else {
+                            // 如果无法获取实际位置，使用计算位置作为后备
+                            const fallbackParentPos = getCalculatedPortPosition(node, 'output');
+                            const fallbackChildPos = getCalculatedPortPosition(childNode, 'input');
+                            
+                            const deltaY = Math.abs(fallbackChildPos.y - fallbackParentPos.y);
+                            const controlOffset = Math.max(30, Math.min(deltaY * 0.5, 80));
+                            
+                            const path = `M ${fallbackParentPos.x} ${fallbackParentPos.y} C ${fallbackParentPos.x} ${fallbackParentPos.y + controlOffset} ${fallbackChildPos.x} ${fallbackChildPos.y - controlOffset} ${fallbackChildPos.x} ${fallbackChildPos.y}`;
+                            
+                            newConnections.push({
                                 id: `${node.id}-${childId}`,
                                 sourceId: node.id,
                                 targetId: childId,
@@ -492,7 +516,50 @@ export function useConnectionManager(
                 });
             }
         });
-        }, 50); // 50ms延迟，确保DOM渲染完成
+        
+        // 批量更新连接
+        connections.value.push(...newConnections);
+        
+        // 如果有DOM元素，进行二次精确更新
+        if (canvasAreaRef.value) {
+            setTimeout(() => {
+                // 二次更新，使用实际DOM位置
+                const updatedConnections: Connection[] = [];
+                
+                treeNodes.value.forEach(node => {
+                    if (node.children && node.children.length > 0) {
+                        node.children.forEach(childId => {
+                            const childNode = treeNodes.value.find(n => n.id === childId);
+                            if (childNode) {
+                                const parentPos = getPortPosition(node.id, 'output');
+                                const childPos = getPortPosition(childId, 'input');
+                                
+                                if (parentPos && childPos) {
+                                    const deltaY = Math.abs(childPos.y - parentPos.y);
+                                    const controlOffset = Math.max(30, Math.min(deltaY * 0.5, 80));
+                                    
+                                    const path = `M ${parentPos.x} ${parentPos.y} C ${parentPos.x} ${parentPos.y + controlOffset} ${childPos.x} ${childPos.y - controlOffset} ${childPos.x} ${childPos.y}`;
+                                    
+                                    updatedConnections.push({
+                                        id: `${node.id}-${childId}`,
+                                        sourceId: node.id,
+                                        targetId: childId,
+                                        path: path,
+                                        active: false
+                                    });
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                // 如果二次更新得到了有效结果，替换连接数据
+                if (updatedConnections.length > 0) {
+                    connections.value.length = 0;
+                    connections.value.push(...updatedConnections);
+                }
+            }, 100); // 100ms延迟，确保DOM完全渲染
+        }
     };
 
     // 删除连接线

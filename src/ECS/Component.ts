@@ -1,4 +1,4 @@
-import type { IComponent } from '../Types';
+import type { IComponent } from '../types';
 
 /**
  * 游戏组件基类

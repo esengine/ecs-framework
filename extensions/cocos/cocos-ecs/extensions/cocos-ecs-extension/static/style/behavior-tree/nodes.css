@@ -328,4 +328,66 @@
         opacity: 1;
         transform: scale(1);
     }
-} 
+}
+
+/* 节点类型提示 */
+.tree-node[data-original-name]:not([data-original-name=""]):hover::after {
+    content: "原始: " attr(data-original-name);
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: #f7fafc;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    animation: tooltipFadeIn 0.3s ease forwards;
+    border: 1px solid #4a5568;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.tree-node.node-selected[data-original-name]:not([data-original-name=""]) .node-header::before {
+    content: "📝";
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #f59e0b;
+    color: white;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    border: 2px solid #2d3748;
+    z-index: 5;
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* 节点标题自定义指示器 */
+.node-title.customized {
+    color: #f6ad55;
+    position: relative;
+}
+
+.node-title.customized::after {
+    content: " ✏️";
+    font-size: 10px;
+    opacity: 0.7;
+}

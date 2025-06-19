@@ -9,7 +9,8 @@ export function useCodeGeneration(
     treeNodes: Ref<TreeNode[]>,
     nodeTemplates: Ref<NodeTemplate[]>,
     getNodeByIdLocal: (id: string) => TreeNode | undefined,
-    rootNode: () => TreeNode | null
+    rootNode: () => TreeNode | null,
+    blackboardVariables?: Ref<Map<string, any>>
 ) {
     
     // 生成行为树配置JSON
@@ -20,7 +21,7 @@ export function useCodeGeneration(
             return null;
         }
         
-        return {
+        const config: any = {
             version: "1.0.0",
             type: "behavior-tree",
             metadata: {
@@ -30,6 +31,13 @@ export function useCodeGeneration(
             },
             tree: generateNodeConfig(root)
         };
+        
+        // 包含黑板数据
+        if (blackboardVariables && blackboardVariables.value.size > 0) {
+            config.blackboard = Array.from(blackboardVariables.value.values());
+        }
+        
+        return config;
     };
 
     // 生成可读的配置JSON字符串

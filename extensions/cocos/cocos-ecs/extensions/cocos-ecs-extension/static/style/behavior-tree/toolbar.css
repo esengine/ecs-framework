@@ -71,6 +71,42 @@
     color: #e2e8f0;
 }
 
+/* 布局组样式 */
+.layout-group {
+    display: flex;
+    gap: 4px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 2px;
+    align-items: center;
+}
+
+.layout-group button {
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    min-width: 70px;
+}
+
+.layout-group button:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.layout-group button:active {
+    transform: translateY(0);
+    background: rgba(255,255,255,0.15);
+}
+
 
 
 .tool-btn.has-changes {
