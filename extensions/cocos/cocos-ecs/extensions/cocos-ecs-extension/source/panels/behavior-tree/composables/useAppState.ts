@@ -56,7 +56,7 @@ export function useAppState() {
     
     // UI状态
     const showExportModal = ref(false);
-    const exportFormat = ref('json');
+    const exportFormat = ref('json'); // 默认JSON格式，TypeScript暂时禁用
     
     // 工具函数
     const getNodeByIdLocal = (id: string): TreeNode | undefined => {

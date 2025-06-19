@@ -83,6 +83,15 @@
     overflow: hidden;
 }
 
+/* 条件装饰器节点的node-body需要更大的宽度 */
+.tree-node.node-conditional-decorator .node-body {
+    max-width: 176px; /* 基础状态 */
+}
+
+.tree-node.node-conditional-decorator.has-attached-condition .node-body {
+    max-width: 196px; /* 附加条件后更宽 */
+}
+
 .node-description {
     margin-bottom: 6px;
     color: #cbd5e0;

@@ -346,15 +346,27 @@ export function useBlackboard() {
     };
 
     const onVariableDragStart = (event: DragEvent, variable: BlackboardVariable) => {
-        if (!event.dataTransfer) return;
+        if (!event.dataTransfer) {
+            return;
+        }
         
-        event.dataTransfer.setData('application/blackboard-variable', JSON.stringify({
+        const dragData = {
             name: variable.name,
             type: variable.type,
             value: variable.value
-        }));
+        };
         
+        event.dataTransfer.setData('application/blackboard-variable', JSON.stringify(dragData));
         event.dataTransfer.effectAllowed = 'copy';
+        
+        // 添加视觉反馈
+        const dragElement = event.currentTarget as HTMLElement;
+        if (dragElement) {
+            dragElement.style.opacity = '0.8';
+            setTimeout(() => {
+                dragElement.style.opacity = '1';
+            }, 100);
+        }
     };
 
     const editVariable = (variable: BlackboardVariable) => {

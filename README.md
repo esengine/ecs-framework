@@ -31,8 +31,27 @@ npm install @esengine/ecs-framework
 ```typescript
 import { Core, Scene, Entity, Component, EntitySystem } from '@esengine/ecs-framework';
 
-// 创建核心实例
-const core = Core.create(true); // 调试模式
+// 创建核心实例 - 使用配置对象（推荐）
+const core = Core.create({
+    debug: true,                    // 启用调试模式
+    enableEntitySystems: true,     // 启用实体系统
+    debugConfig: {                 // 可选：调试配置
+        enabled: true,
+        websocketUrl: 'ws://localhost:8080',
+        autoReconnect: true,
+        updateInterval: 1000,
+        channels: {
+            entities: true,
+            systems: true,
+            performance: true,
+            components: true,
+            scenes: true
+        }
+    }
+});
+
+// 简化创建 - 向后兼容（仍然支持）
+const core2 = Core.create(true); // 等同于 { debug: true, enableEntitySystems: true }
 
 // 创建场景
 const scene = new Scene();
@@ -305,6 +324,7 @@ enum ECSEventType {
 | 实体管理器 | ✅ 统一接口 | ❌ 低级 API | ✅ 高级接口 |
 | 性能优化 | ✅ 多重优化 | ✅ 极致性能 | ✅ React 优化 |
 | JavaScript引擎集成 | ✅ 专为JS引擎设计 | ✅ 通用设计 | ⚠️ 主要 React |
+| 可视化调试工具 | ✅ [Cocos插件](https://store.cocos.com/app/detail/7823) | ❌ 无官方工具 | ✅ React DevTools |
 
 **选择指南：**
 - 选择本框架：需要完整的游戏开发工具链和中文社区支持
@@ -331,6 +351,7 @@ ecs-framework/
 ### 🎯 新手入门
 - **[📖 新手教程完整指南](docs/beginner-tutorials.md)** - 完整学习路径，从零开始 ⭐ **强烈推荐**
 - **[🚀 快速入门](docs/getting-started.md)** - 详细的入门教程，包含Laya/Cocos/Node.js集成指南 ⭐ **平台集成必读**
+  - 💡 **Cocos Creator用户特别提示**：我们提供[专用调试插件](https://store.cocos.com/app/detail/7823)，支持可视化ECS调试
 - [🧠 技术概念详解](docs/concepts-explained.md) - 通俗易懂的技术概念解释 ⭐ **推荐新手阅读**
 - [🎯 位掩码使用指南](docs/bitmask-guide.md) - 位掩码概念、原理和高级使用技巧
 - [💡 使用场景示例](docs/use-cases.md) - 不同类型游戏的具体应用案例

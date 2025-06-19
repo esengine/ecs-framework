@@ -292,7 +292,45 @@ export const nodeTemplates: NodeTemplate[] = [
         minChildren: 1,
         className: 'ConditionalDecorator',
         namespace: 'behaviourTree/decorators',
-        properties: {}
+        properties: {
+            conditionType: {
+                name: '条件类型',
+                type: 'select',
+                value: 'custom',
+                options: ['custom', 'random', 'hasComponent', 'hasTag', 'isActive', 'numericCompare', 'propertyExists'],
+                description: '装饰器使用的条件类型',
+                required: false
+            },
+            executeWhenTrue: {
+                name: '条件为真时执行',
+                type: 'boolean',
+                value: true,
+                description: '条件为真时是否执行子节点',
+                required: false
+            },
+            executeWhenFalse: {
+                name: '条件为假时执行',
+                type: 'boolean',
+                value: false,
+                description: '条件为假时是否执行子节点',
+                required: false
+            },
+            checkInterval: {
+                name: '检查间隔',
+                type: 'number',
+                value: 0,
+                description: '条件检查间隔时间（秒），0表示每帧检查',
+                required: false
+            },
+            abortType: {
+                name: '中止类型',
+                type: 'select',
+                value: 'None',
+                options: ['None', 'LowerPriority', 'Self', 'Both'],
+                description: '决定节点在何种情况下会被中止',
+                required: false
+            }
+        }
     },
 
     // 动作节点 (Actions) - 叶子节点，不能有子节点

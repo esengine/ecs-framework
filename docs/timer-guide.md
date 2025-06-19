@@ -488,8 +488,9 @@ class LevelTimer {
         
         console.log("⏰ 时间到！游戏结束");
         
-        // 触发游戏结束
-        Core.emitter.emit('level:timeout');
+        // 触发游戏结束（需要在实际使用中获取EntityManager实例）
+        // 示例：entityManager.eventBus.emit('level:timeout');
+        console.log('触发关卡超时事件');
     }
     
     completeLevel() {
@@ -509,7 +510,8 @@ class LevelTimer {
         const bonus = Math.floor(timeLeft * 10); // 每秒剩余10分
         if (bonus > 0) {
             console.log(`时间奖励：${bonus} 分`);
-            Core.emitter.emit('score:time_bonus', { bonus });
+            // 触发时间奖励事件（需要在实际使用中获取EntityManager实例）
+            // 示例：entityManager.eventBus.emit('score:time_bonus', { bonus });
         }
     }
     

@@ -22,6 +22,11 @@ export interface TreeNode {
         name: string;
         icon: string;
     };
+    // 条件节点相关（用于虚拟条件节点）
+    isConditionNode?: boolean;
+    parentDecorator?: TreeNode;
+    // 条件显示状态
+    conditionExpanded?: boolean; // 条件是否展开显示详细信息
 }
 
 export interface Connection {

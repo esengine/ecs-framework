@@ -69,7 +69,8 @@ class HealthSystem extends EntitySystem {
         entity.addComponent(new DeadComponent());
         
         // 触发死亡事件
-        Core.emitter.emit('entity:died', {
+        const eventBus = this.scene.entityManager.eventBus;
+        eventBus.emit('entity:died', {
             entityId: entity.id,
             entityName: entity.name
         });
@@ -235,7 +236,8 @@ class SpawnSystem extends IntervalSystem {
         spawner.lastSpawnTime = Time.totalTime;
         
         // 发送生成事件
-        Core.emitter.emit('enemy:spawned', {
+        const eventBus = this.scene.entityManager.eventBus;
+        eventBus.emit('enemy:spawned', {
             enemyId: enemy.id,
             spawnPoint: spawnPoint,
             spawnerEntity: spawnerEntity.id
@@ -270,18 +272,17 @@ class ScoreSystem extends PassiveSystem {
     initialize() {
         super.initialize();
         
-        // 监听游戏事件（使用Core.emitter）
-        Core.emitter.addObserver('enemy:killed', this.onEnemyKilled, this);
-        Core.emitter.addObserver('item:collected', this.onItemCollected, this);
-        Core.emitter.addObserver('combo:broken', this.onComboBroken, this);
+        // 监听游戏事件（使用EntityManager的事件系统）
+        const eventBus = this.scene.entityManager.eventBus;
+        eventBus.on('enemy:killed', this.onEnemyKilled, { context: this });
+        eventBus.on('item:collected', this.onItemCollected, { context: this });
+        eventBus.on('combo:broken', this.onComboBroken, { context: this });
     }
     
     // PassiveSystem被移除时清理
     destroy() {
-        // 清理事件监听
-        Core.emitter.removeObserver('enemy:killed', this.onEnemyKilled, this);
-        Core.emitter.removeObserver('item:collected', this.onItemCollected, this);
-        Core.emitter.removeObserver('combo:broken', this.onComboBroken, this);
+        // 事件监听会在系统销毁时自动清理
+        // 如需手动清理，可以保存listenerId并调用eventBus.off()
     }
     
     private onEnemyKilled(data: { enemyType: string; position: { x: number; y: number } }) {
@@ -305,7 +306,8 @@ class ScoreSystem extends PassiveSystem {
         this.score += points;
         
         // 发送分数更新事件
-        Core.emitter.emit('score:updated', {
+        const eventBus = this.scene.entityManager.eventBus;
+        eventBus.emit('score:updated', {
             score: this.score,
             points: points,
             multiplier: this.multiplier,
@@ -415,7 +417,8 @@ class CollisionSystem extends EntitySystem {
         
         if (collision) {
             // 发送碰撞事件，让其他系统响应
-            Core.emitter.emit('collision:detected', {
+            const eventBus = this.scene.entityManager.eventBus;
+            eventBus.emit('collision:detected', {
                 entity1: collider1,
                 entity2: collider2,
                 collisionPoint: point
@@ -427,7 +430,8 @@ class CollisionSystem extends EntitySystem {
 class HealthSystem extends PassiveSystem {
     onAddedToScene() {
         // 监听碰撞事件
-        Core.emitter.addObserver('collision:detected', this.onCollision, this);
+        const eventBus = this.scene.entityManager.eventBus;
+        eventBus.on('collision:detected', this.onCollision, { context: this });
     }
     
     private onCollision(data: CollisionEventData) {

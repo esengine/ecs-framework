@@ -159,23 +159,51 @@ export function useBehaviorTreeEditor() {
         
         try {
             const blackboardData = event.dataTransfer?.getData('application/blackboard-variable');
-            if (!blackboardData) return;
+            
+            if (!blackboardData) {
+                return;
+            }
             
             const variable = JSON.parse(blackboardData);
-            const activeNode = computedProps.activeNode.value;
             
-            if (!activeNode || !activeNode.properties) return;
-            
-            const property = activeNode.properties[propertyKey];
-            if (!property) return;
-            
-            // 设置Blackboard引用
-            const referenceValue = `{{${variable.name}}}`;
-            nodeOps.updateNodeProperty(`properties.${propertyKey}.value`, referenceValue);
-            
-            // 移除拖拽样式
-            const element = event.currentTarget as HTMLElement;
-            element.classList.remove('drag-over');
+            // 检查当前是否在编辑条件节点
+            if (appState.selectedConditionNodeId.value) {
+                // 条件节点：直接更新装饰器的属性
+                const decoratorNode = appState.getNodeByIdLocal(appState.selectedConditionNodeId.value);
+                if (decoratorNode) {
+                    const referenceValue = `{{${variable.name}}}`;
+                    
+                    if (!decoratorNode.properties) {
+                        decoratorNode.properties = {};
+                    }
+                    decoratorNode.properties[propertyKey] = referenceValue;
+                    
+                    // 强制触发响应式更新
+                    const nodeIndex = appState.treeNodes.value.findIndex(n => n.id === decoratorNode.id);
+                    if (nodeIndex > -1) {
+                        const newNodes = [...appState.treeNodes.value];
+                        newNodes[nodeIndex] = { ...decoratorNode };
+                        appState.treeNodes.value = newNodes;
+                    }
+                }
+            } else {
+                // 普通节点：使用原来的逻辑
+                const activeNode = computedProps.activeNode.value;
+                
+                if (!activeNode || !activeNode.properties) {
+                    return;
+                }
+                
+                const property = activeNode.properties[propertyKey];
+                
+                if (!property) {
+                    return;
+                }
+                
+                // 设置Blackboard引用
+                const referenceValue = `{{${variable.name}}}`;
+                nodeOps.updateNodeProperty(`properties.${propertyKey}.value`, referenceValue);
+            }
             
         } catch (error) {
             console.error('处理Blackboard拖拽失败:', error);
@@ -187,6 +215,7 @@ export function useBehaviorTreeEditor() {
         event.stopPropagation();
         
         const hasBlackboardData = event.dataTransfer?.types.includes('application/blackboard-variable');
+        
         if (hasBlackboardData) {
             event.dataTransfer!.dropEffect = 'copy';
             const element = event.currentTarget as HTMLElement;
@@ -200,7 +229,25 @@ export function useBehaviorTreeEditor() {
     };
 
     const clearBlackboardReference = (propertyKey: string) => {
-        nodeOps.updateNodeProperty(`properties.${propertyKey}.value`, '');
+        // 检查当前是否在编辑条件节点
+        if (appState.selectedConditionNodeId.value) {
+            // 条件节点：直接清除装饰器的属性
+            const decoratorNode = appState.getNodeByIdLocal(appState.selectedConditionNodeId.value);
+            if (decoratorNode && decoratorNode.properties) {
+                decoratorNode.properties[propertyKey] = '';
+                
+                // 强制触发响应式更新
+                const nodeIndex = appState.treeNodes.value.findIndex(n => n.id === decoratorNode.id);
+                if (nodeIndex > -1) {
+                    const newNodes = [...appState.treeNodes.value];
+                    newNodes[nodeIndex] = { ...decoratorNode };
+                    appState.treeNodes.value = newNodes;
+                }
+            }
+        } else {
+            // 普通节点：使用原来的逻辑
+            nodeOps.updateNodeProperty(`properties.${propertyKey}.value`, '');
+        }
     };
 
     const startNodeDrag = (event: MouseEvent, node: any) => {
@@ -461,61 +508,127 @@ export function useBehaviorTreeEditor() {
         }
     };
 
-    // 保存到文件
-    const saveToFile = () => {
-        const code = computedProps.exportedCode();
-        const format = appState.exportFormat.value;
-        const extension = format === 'json' ? '.json' : '.ts';
-        const mimeType = format === 'json' ? 'application/json' : 'text/typescript';
-        
-        // 创建文件并下载
-        const blob = new Blob([code], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `behavior_tree_config${extension}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        URL.revokeObjectURL(url);
-        
-        // 显示成功消息
-        const toast = document.createElement('div');
-        toast.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            background: #4caf50;
-            color: white;
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-            z-index: 10001;
-            opacity: 0;
-            transform: translateX(100%);
-            transition: all 0.3s ease;
-        `;
-        toast.textContent = `文件已保存: behavior_tree_config${extension}`;
-        
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(0)';
-        }, 10);
-        
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100%)';
+    // 保存到文件 - 使用Cocos Creator扩展API提供保存路径选择
+    const saveToFile = async () => {
+        try {
+            const code = computedProps.exportedCode();
+            const format = appState.exportFormat.value;
+            const extension = format === 'json' ? '.json' : '.ts';
+            const fileType = format === 'json' ? 'JSON配置文件' : 'TypeScript文件';
+            
+            // 使用Cocos Creator的文件保存对话框
+            const result = await Editor.Dialog.save({
+                title: `保存${fileType}`,
+                filters: [
+                    { 
+                        name: fileType, 
+                        extensions: extension === '.json' ? ['json'] : ['ts'] 
+                    },
+                    { 
+                        name: '所有文件', 
+                        extensions: ['*'] 
+                    }
+                ]
+            });
+            
+            if (result.canceled || !result.filePath) {
+                return; // 用户取消了保存
+            }
+            
+            // 写入文件
+            const fs = require('fs-extra');
+            await fs.writeFile(result.filePath, code, 'utf8');
+            
+            // 显示成功消息
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                background: #4caf50;
+                color: white;
+                border-radius: 4px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+                z-index: 10001;
+                opacity: 0;
+                transform: translateX(100%);
+                transition: all 0.3s ease;
+                max-width: 400px;
+                word-wrap: break-word;
+            `;
+            
+            const path = require('path');
+            const fileName = path.basename(result.filePath);
+            toast.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 4px;">✅ 文件保存成功</div>
+                <div style="font-size: 12px; opacity: 0.9;">文件名: ${fileName}</div>
+                <div style="font-size: 11px; opacity: 0.7; margin-top: 2px;">路径: ${result.filePath}</div>
+            `;
+            
+            document.body.appendChild(toast);
+            
             setTimeout(() => {
-                if (document.body.contains(toast)) {
-                    document.body.removeChild(toast);
-                }
-            }, 300);
-        }, 3000);
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateX(0)';
+            }, 10);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
+                }, 300);
+            }, 4000);
+            
+        } catch (error: any) {
+            console.error('保存文件失败:', error);
+            
+            // 显示错误消息
+            const errorToast = document.createElement('div');
+            errorToast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                background: #f56565;
+                color: white;
+                border-radius: 4px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+                z-index: 10001;
+                opacity: 0;
+                transform: translateX(100%);
+                transition: all 0.3s ease;
+                max-width: 400px;
+                word-wrap: break-word;
+            `;
+            errorToast.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 4px;">❌ 保存失败</div>
+                <div style="font-size: 12px;">${error?.message || error}</div>
+            `;
+            
+            document.body.appendChild(errorToast);
+            
+            setTimeout(() => {
+                errorToast.style.opacity = '1';
+                errorToast.style.transform = 'translateX(0)';
+            }, 10);
+            
+            setTimeout(() => {
+                errorToast.style.opacity = '0';
+                errorToast.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (document.body.contains(errorToast)) {
+                        document.body.removeChild(errorToast);
+                    }
+                }, 300);
+            }, 5000);
+        }
     };
+
+
 
     onMounted(() => {
         // 自动检查安装状态
@@ -634,23 +747,31 @@ export function useBehaviorTreeEditor() {
         },
         updateNodeProperty: (path: string, value: any) => {
             if (appState.selectedConditionNodeId.value) {
+                // 条件节点的属性更新 - 需要同步到装饰器
                 const decoratorNode = appState.getNodeByIdLocal(appState.selectedConditionNodeId.value);
                 if (decoratorNode) {
-                    const keys = path.split('.');
-                    let current: any = decoratorNode;
-                    
-                    for (let i = 0; i < keys.length - 1; i++) {
-                        const key = keys[i];
-                        if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
-                            current[key] = {};
+                    // 解析路径，例如 "properties.variableName.value" -> "variableName"
+                    const pathParts = path.split('.');
+                    if (pathParts[0] === 'properties' && pathParts[2] === 'value') {
+                        const propertyName = pathParts[1];
+                        
+                        // 直接更新装饰器的属性
+                        if (!decoratorNode.properties) {
+                            decoratorNode.properties = {};
                         }
-                        current = current[key];
+                        decoratorNode.properties[propertyName] = value;
+                        
+                        // 强制触发响应式更新
+                        const nodeIndex = appState.treeNodes.value.findIndex(n => n.id === decoratorNode.id);
+                        if (nodeIndex > -1) {
+                            const newNodes = [...appState.treeNodes.value];
+                            newNodes[nodeIndex] = { ...decoratorNode };
+                            appState.treeNodes.value = newNodes;
+                        }
                     }
-                    
-                    const finalKey = keys[keys.length - 1];
-                    current[finalKey] = value;
                 }
             } else {
+                // 普通节点属性更新
                 nodeOps.updateNodeProperty(path, value);
             }
         },
@@ -660,9 +781,11 @@ export function useBehaviorTreeEditor() {
         handleDecoratorDragLeave: conditionAttachment.handleDecoratorDragLeave,
         attachConditionToDecorator: conditionAttachment.attachConditionToDecorator,
         getConditionDisplayText: conditionAttachment.getConditionDisplayText,
+        getConditionProperties: conditionAttachment.getConditionProperties,
         removeConditionFromDecorator: conditionAttachment.removeConditionFromDecorator,
         canAcceptCondition: conditionAttachment.canAcceptCondition,
         resetDragState: conditionAttachment.resetDragState,
+        toggleConditionExpanded: conditionAttachment.toggleConditionExpanded,
         
         handleCanvasDrop: (event: DragEvent) => {
             if (conditionAttachment.handleCanvasDrop(event)) {

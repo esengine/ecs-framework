@@ -135,18 +135,47 @@ export function useNodeOperations(
 
     // 节点属性更新
     const updateNodeProperty = (path: string, value: any) => {
-        const node = selectedNodeId.value ? getNodeByIdLocal(selectedNodeId.value) : null;
-        if (!node) return;
+        const selectedNode = selectedNodeId.value ? getNodeByIdLocal(selectedNodeId.value) : null;
+        if (!selectedNode) return;
         
-        // 使用通用方法更新属性
-        setNestedProperty(node, path, value);
-        
-        // 强制触发响应式更新
-        const nodeIndex = treeNodes.value.findIndex(n => n.id === node.id);
-        if (nodeIndex > -1) {
-            const newNodes = [...treeNodes.value];
-            newNodes[nodeIndex] = { ...node };
-            treeNodes.value = newNodes;
+        // 检查是否是条件节点的属性更新
+        if (selectedNode.isConditionNode && selectedNode.parentDecorator) {
+            // 条件节点的属性更新需要同步到装饰器
+            updateConditionNodeProperty(selectedNode.parentDecorator, path, value);
+        } else {
+            // 普通节点的属性更新
+            setNestedProperty(selectedNode, path, value);
+            
+            // 强制触发响应式更新
+            const nodeIndex = treeNodes.value.findIndex(n => n.id === selectedNode.id);
+            if (nodeIndex > -1) {
+                const newNodes = [...treeNodes.value];
+                newNodes[nodeIndex] = { ...selectedNode };
+                treeNodes.value = newNodes;
+            }
+        }
+    };
+
+    // 更新条件节点属性到装饰器
+    const updateConditionNodeProperty = (decoratorNode: TreeNode, path: string, value: any) => {
+        // 解析属性路径，例如 "properties.variableName.value" -> "variableName"
+        const pathParts = path.split('.');
+        if (pathParts[0] === 'properties' && pathParts[2] === 'value') {
+            const propertyName = pathParts[1];
+            
+            // 直接更新装饰器的属性
+            if (!decoratorNode.properties) {
+                decoratorNode.properties = {};
+            }
+            decoratorNode.properties[propertyName] = value;
+            
+            // 强制触发响应式更新
+            const nodeIndex = treeNodes.value.findIndex(n => n.id === decoratorNode.id);
+            if (nodeIndex > -1) {
+                const newNodes = [...treeNodes.value];
+                newNodes[nodeIndex] = { ...decoratorNode };
+                treeNodes.value = newNodes;
+            }
         }
     };
 

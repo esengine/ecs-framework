@@ -387,16 +387,12 @@ class HealthComponent extends Component {
         this.currentHealth -= damage;
         
         // 发送事件，让其他系统响应
-        Core.emitter.emit('health:damaged', {
-            entity: this.entity,
-            damage: damage,
-            remainingHealth: this.currentHealth
-        });
+        // 注意：需要在实际使用中获取EntityManager实例
+        // 示例：entityManager.eventBus.emit('health:damaged', {...});
         
         if (this.currentHealth <= 0) {
-            Core.emitter.emit('health:died', {
-                entity: this.entity
-            });
+            // 示例：entityManager.eventBus.emit('health:died', {...});
+            console.log('实体死亡');
         }
     }
 }
@@ -406,12 +402,13 @@ class AnimationComponent extends Component {
     onAddedToEntity() {
         super.onAddedToEntity();
         
-        // 监听受伤事件
-        Core.emitter.addObserver('health:damaged', this.onDamaged, this);
+        // 监听受伤事件（需要在实际使用中获取EntityManager实例）
+        // 示例：entityManager.eventBus.on('health:damaged', this.onDamaged, { context: this });
     }
     
     onRemovedFromEntity() {
-        Core.emitter.removeObserver('health:damaged', this.onDamaged, this);
+        // 事件监听会在组件移除时自动清理
+        // 如需手动清理，保存listenerId并调用eventBus.off()
         super.onRemovedFromEntity();
     }
     

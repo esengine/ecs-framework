@@ -287,7 +287,8 @@
                             'node-error': node.hasError,
                             'dragging': dragState.dragNode && dragState.dragNode.id === node.id,
                             'condition-hover': conditionDragState.hoveredDecoratorId === node.id,
-                            'can-accept-condition': canAcceptCondition(node) && conditionDragState.isDraggingCondition
+                            'can-accept-condition': canAcceptCondition(node) && conditionDragState.isDraggingCondition,
+                            'has-attached-condition': node.type === 'conditional-decorator' && node.attachedCondition
                         }
                     ]"
                     :style="{ 
@@ -321,6 +322,25 @@
                                     <span class="condition-text">{{ getConditionDisplayText(node) }}</span>
                                     <span class="edit-hint">📝</span>
                                 </div>
+                                
+                                <!-- 展开时显示条件属性 -->
+                                <div v-if="node.conditionExpanded" class="condition-properties">
+                                    <div class="properties-divider"></div>
+                                    <div 
+                                        v-for="(value, key) in getConditionProperties(node)" 
+                                        :key="key"
+                                        class="condition-property-item"
+                                    >
+                                        <span class="condition-property-label">{{ key }}:</span>
+                                        <span class="condition-property-value">{{ value }}</span>
+                                    </div>
+                                </div>
+                                
+                                <button 
+                                    class="toggle-condition-btn" 
+                                    @click.stop="toggleConditionExpanded(node)"
+                                    :title="node.conditionExpanded ? '收缩详情' : '展开详情'"
+                                >{{ node.conditionExpanded ? '▲' : '▼' }}</button>
                                 <button 
                                     class="remove-condition-btn" 
                                     @click.stop="removeConditionFromDecorator(node)"
@@ -440,13 +460,35 @@
                     >
                         <label>{{ prop.name }}:</label>
                         <div class="property-input-container">
+                            <!-- Blackboard 拖拽目标区域 -->
+                            <div 
+                                v-if="isBlackboardDroppable(prop)" 
+                                class="blackboard-drop-zone"
+                                :class="{ 'has-reference': isBlackboardReference(prop.value) }"
+                                @drop="handleBlackboardDrop($event, key)"
+                                @dragover="handleBlackboardDragOver"
+                                @dragleave="handleBlackboardDragLeave"
+                            >
+                                <div v-if="!isBlackboardReference(prop.value)" class="drop-placeholder">
+                                    <span class="drop-icon">📋</span>
+                                    <span class="drop-text">拖拽Blackboard变量到此处</span>
+                                </div>
+                                <div v-else class="blackboard-reference">
+                                    <span class="ref-icon">🔗</span>
+                                    <span class="ref-text">{{ prop.value }}</span>
+                                    <button class="clear-ref" @click="clearBlackboardReference(key)" title="清除引用">×</button>
+                                </div>
+                            </div>
+                            
+                            <!-- 输入控件 -->
                             <input 
                                 v-if="prop.type === 'string'"
                                 type="text" 
                                 :value="prop.value"
                                 @input="updateNodeProperty('properties.' + key + '.value', $event.target.value)"
                                 :key="activeNode.id + '_' + key + '_string'"
-                                :placeholder="'拖拽Blackboard变量或直接输入'"
+                                :placeholder="isBlackboardDroppable(prop) ? '或直接输入值' : '请输入值'"
+                                :class="{ 'with-blackboard': isBlackboardDroppable(prop) }"
                             >
                             <input 
                                 v-else-if="prop.type === 'number'"
@@ -454,7 +496,8 @@
                                 :value="prop.value"
                                 @input="updateNodeProperty('properties.' + key + '.value', parseFloat($event.target.value) || 0)"
                                 :key="activeNode.id + '_' + key + '_number'"
-                                :placeholder="'拖拽Blackboard变量或直接输入'"
+                                :placeholder="isBlackboardDroppable(prop) ? '或直接输入值' : '请输入值'"
+                                :class="{ 'with-blackboard': isBlackboardDroppable(prop) }"
                             >
                             <input 
                                 v-else-if="prop.type === 'boolean'"
@@ -487,12 +530,6 @@
                                     {{ option }}
                                 </option>
                             </select>
-                            
-                            <div v-if="isBlackboardReference(prop.value)" class="blackboard-reference">
-                                <span class="ref-icon">🔗</span>
-                                <span class="ref-text">{{ prop.value }}</span>
-                                <button class="clear-ref" @click="clearBlackboardReference(key)" title="清除引用">×</button>
-                            </div>
                         </div>
                         <p v-if="prop.description" class="property-help">{{ prop.description }}</p>
                     </div>
@@ -688,6 +725,14 @@
             <button @click="clearBlackboard" v-if="blackboardVariables.length > 0" class="clear-btn">清空</button>
         </div>
         
+        <!-- 使用提示 -->
+        <div v-if="blackboardVariables.length > 0" class="blackboard-usage-hint">
+            <div class="hint-content">
+                <span class="hint-icon">💡</span>
+                <span class="hint-text">拖拽变量名使用</span>
+            </div>
+        </div>
+        
         <div class="blackboard-scroll-area">
             <div v-if="blackboardVariables.length > 0" class="blackboard-groups">
                 <div 
@@ -702,16 +747,22 @@
                             :key="variable.name"
                             class="variable-item"
                             :class="variable.type"
-                            :draggable="true"
-                            @dragstart="onBlackboardDragStart($event, variable)"
                             :title="variable.description"
                         >
                             <div class="variable-header">
-                                <span class="variable-name">{{ variable.name }}</span>
-                                <span class="variable-type">{{ getTypeDisplayName(variable.type) }}</span>
+                                <div 
+                                    class="variable-drag-area"
+                                    :draggable="true"
+                                    @dragstart="onBlackboardDragStart($event, variable)"
+                                    @click.stop
+                                >
+                                    <span class="variable-name">{{ variable.name }}</span>
+                                    <span class="variable-type">{{ getTypeDisplayName(variable.type) }}</span>
+                                    <span class="drag-hint">🎯</span>
+                                </div>
                                 <div class="variable-actions">
-                                    <button @click="editBlackboardVariable(variable)" class="edit-btn">✏️</button>
-                                    <button @click="removeBlackboardVariable(variable.name)" class="remove-btn">🗑️</button>
+                                    <button @click.stop="editBlackboardVariable(variable)" class="edit-btn">✏️</button>
+                                    <button @click.stop="removeBlackboardVariable(variable.name)" class="remove-btn">🗑️</button>
                                 </div>
                             </div>
                             
@@ -720,6 +771,7 @@
                                     v-if="variable.constraints && variable.constraints.allowedValues" 
                                     v-model="variable.value"
                                     @change="onBlackboardValueChange(variable)"
+                                    @click.stop
                                     :disabled="variable.readOnly"
                                 >
                                     <option 
@@ -755,28 +807,51 @@
 <div v-if="showExportModal" class="modal-overlay" @click="showExportModal = false">
     <div class="modal-content" @click.stop>
         <div class="modal-header">
-            <h3>导出配置</h3>
+            <h3>⚡ 导出行为树配置</h3>
             <button @click="showExportModal = false">×</button>
         </div>
         <div class="modal-body">
             <div class="export-options">
+                <h4 style="margin: 0 0 12px 0; color: #e2e8f0; font-size: 14px;">📄 选择导出格式：</h4>
                 <label>
-                    <input type="radio" v-model="exportFormat" value="json"> JSON配置
+                    <input type="radio" v-model="exportFormat" value="json"> 
+                    <span>📄 JSON配置文件</span>
+                    <small style="display: block; margin-left: 24px; color: #a0aec0; font-size: 11px;">适用于运行时动态加载行为树</small>
                 </label>
-                <label>
-                    <input type="radio" v-model="exportFormat" value="typescript"> TypeScript代码
+                <label class="disabled-option">
+                    <input type="radio" v-model="exportFormat" value="typescript" disabled> 
+                    <span>📝 TypeScript代码 (暂不可用)</span>
+                    <small style="display: block; margin-left: 24px; color: #6b7280; font-size: 11px;">此功能正在开发中，敬请期待</small>
                 </label>
             </div>
-            <textarea 
-                class="export-code" 
-                :value="exportedCode()" 
-                readonly
-            ></textarea>
+            <div class="preview-section">
+                <h4 style="margin: 0 0 8px 0; color: #e2e8f0; font-size: 13px;">📋 代码预览：</h4>
+                <textarea 
+                    class="export-code" 
+                    :value="exportedCode()" 
+                    readonly
+                ></textarea>
+            </div>
+            
+            <div class="usage-hint" style="margin-top: 16px; padding: 12px; background: rgba(102, 126, 234, 0.08); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: 6px;">
+                <div style="color: #a0aec0; font-size: 12px; line-height: 1.4;">
+                    <strong style="color: #e2e8f0;">💡 使用提示：</strong><br/>
+                    <span v-if="exportFormat === 'json'">
+                        • JSON配置可用于运行时动态加载行为树<br/>
+                        • 使用 BehaviorTreeBuilder.fromConfig() 方法构建行为树<br/>
+                        • 可以保存为 .json 文件在项目中使用
+                    </span>
+                    <span v-else>
+                        • 当前仅支持JSON格式导出<br/>
+                        • TypeScript代码生成功能正在开发中
+                    </span>
+                </div>
+            </div>
         </div>
         <div class="modal-footer">
-            <button @click="copyToClipboard">复制到剪贴板</button>
-            <button @click="saveToFile">保存到文件</button>
-            <button @click="showExportModal = false">关闭</button>
+            <button @click="copyToClipboard" class="copy-btn">📋 复制到剪贴板</button>
+            <button @click="saveToFile" class="save-file-btn">💾 保存到文件</button>
+            <button @click="showExportModal = false" class="close-btn">❌ 关闭</button>
         </div>
     </div>
 </div> 

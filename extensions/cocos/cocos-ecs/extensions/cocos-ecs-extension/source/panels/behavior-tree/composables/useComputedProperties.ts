@@ -86,17 +86,215 @@ export function useComputedProperties(
         const decoratorNode = treeNodes.value.find(n => n.id === selectedConditionNodeId.value);
         if (!decoratorNode || !decoratorNode.attachedCondition) return null;
         
+        // 根据条件类型重新构建属性结构
+        const conditionProperties = reconstructConditionProperties(
+            decoratorNode.attachedCondition.type,
+            decoratorNode.properties || {}
+        );
+        
         // 创建一个虚拟的条件节点对象，用于属性编辑
         return {
             id: decoratorNode.id + '_condition',
             name: decoratorNode.attachedCondition.name + '（条件）',
             type: decoratorNode.attachedCondition.type,
             icon: decoratorNode.attachedCondition.icon,
-            properties: decoratorNode.properties || {},
+            properties: conditionProperties,
             isConditionNode: true,
             parentDecorator: decoratorNode
         };
     });
+
+    /**
+     * 根据条件类型重新构建属性结构
+     * 将装饰器的扁平属性转换回条件模板的属性结构
+     */
+    const reconstructConditionProperties = (conditionType: string, decoratorProperties: Record<string, any>) => {
+        switch (conditionType) {
+            case 'condition-random':
+                return {
+                    successProbability: {
+                        type: 'number',
+                        name: '成功概率',
+                        value: decoratorProperties.successProbability || 0.5,
+                        description: '条件成功的概率 (0.0 - 1.0)'
+                    }
+                };
+
+            case 'condition-component':
+                return {
+                    componentType: {
+                        type: 'string',
+                        name: '组件类型',
+                        value: decoratorProperties.componentType || '',
+                        description: '要检查的组件类型名称'
+                    }
+                };
+
+            case 'condition-tag':
+                return {
+                    tagValue: {
+                        type: 'number',
+                        name: '标签值',
+                        value: decoratorProperties.tagValue || 0,
+                        description: '要检查的标签值'
+                    }
+                };
+
+            case 'condition-active':
+                return {
+                    checkHierarchy: {
+                        type: 'boolean',
+                        name: '检查层级激活',
+                        value: decoratorProperties.checkHierarchy || false,
+                        description: '是否检查整个层级的激活状态'
+                    }
+                };
+
+            case 'condition-numeric':
+                return {
+                    propertyPath: {
+                        type: 'string',
+                        name: '属性路径',
+                        value: decoratorProperties.propertyPath || 'context.someValue',
+                        description: '要比较的数值属性路径'
+                    },
+                    compareOperator: {
+                        type: 'select',
+                        name: '比较操作符',
+                        value: decoratorProperties.compareOperator || 'greater',
+                        options: ['greater', 'less', 'equal', 'greaterEqual', 'lessEqual', 'notEqual'],
+                        description: '数值比较的操作符'
+                    },
+                    compareValue: {
+                        type: 'number',
+                        name: '比较值',
+                        value: decoratorProperties.compareValue || 0,
+                        description: '用于比较的目标值'
+                    }
+                };
+
+            case 'condition-property':
+                return {
+                    propertyPath: {
+                        type: 'string',
+                        name: '属性路径',
+                        value: decoratorProperties.propertyPath || 'context.someProperty',
+                        description: '要检查的属性路径'
+                    }
+                };
+
+            case 'condition-custom':
+                return {
+                    conditionCode: {
+                        type: 'code',
+                        name: '条件代码',
+                        value: decoratorProperties.conditionCode || '(context) => true',
+                        description: '自定义条件判断函数'
+                    }
+                };
+
+            // Blackboard相关条件（使用实际的模板类型名）
+            case 'blackboard-variable-exists':
+                return {
+                    variableName: {
+                        type: 'string',
+                        name: '变量名',
+                        value: decoratorProperties.variableName || '',
+                        description: '要检查的黑板变量名'
+                    },
+                    invert: {
+                        type: 'boolean',
+                        name: '反转结果',
+                        value: decoratorProperties.invert || false,
+                        description: '是否反转检查结果'
+                    }
+                };
+
+            case 'blackboard-value-comparison':
+                return {
+                    variableName: {
+                        type: 'string',
+                        name: '变量名',
+                        value: decoratorProperties.variableName || '',
+                        description: '要比较的黑板变量名'
+                    },
+                    operator: {
+                        type: 'select',
+                        name: '比较操作符',
+                        value: decoratorProperties.operator || 'equal',
+                        options: ['equal', 'notEqual', 'greater', 'greaterOrEqual', 'less', 'lessOrEqual', 'contains', 'notContains'],
+                        description: '比较操作类型'
+                    },
+                    compareValue: {
+                        type: 'string',
+                        name: '比较值',
+                        value: decoratorProperties.compareValue || '',
+                        description: '用于比较的值（留空则使用比较变量）'
+                    },
+                    compareVariable: {
+                        type: 'string',
+                        name: '比较变量名',
+                        value: decoratorProperties.compareVariable || '',
+                        description: '用于比较的另一个黑板变量名'
+                    }
+                };
+
+            case 'blackboard-variable-type-check':
+                return {
+                    variableName: {
+                        type: 'string',
+                        name: '变量名',
+                        value: decoratorProperties.variableName || '',
+                        description: '要检查的黑板变量名'
+                    },
+                    expectedType: {
+                        type: 'select',
+                        name: '期望类型',
+                        value: decoratorProperties.expectedType || 'string',
+                        options: ['string', 'number', 'boolean', 'vector2', 'vector3', 'object', 'array'],
+                        description: '期望的变量类型'
+                    }
+                };
+
+            case 'blackboard-variable-range-check':
+                return {
+                    variableName: {
+                        type: 'string',
+                        name: '变量名',
+                        value: decoratorProperties.variableName || '',
+                        description: '要检查的数值型黑板变量名'
+                    },
+                    minValue: {
+                        type: 'number',
+                        name: '最小值',
+                        value: decoratorProperties.minValue || 0,
+                        description: '范围的最小值（包含）'
+                    },
+                    maxValue: {
+                        type: 'number',
+                        name: '最大值',
+                        value: decoratorProperties.maxValue || 100,
+                        description: '范围的最大值（包含）'
+                    }
+                };
+
+            default:
+                // 对于未知的条件类型，尝试从装饰器属性中推断
+                const reconstructed: Record<string, any> = {};
+                Object.keys(decoratorProperties).forEach(key => {
+                    if (key !== 'conditionType') {
+                        reconstructed[key] = {
+                            type: typeof decoratorProperties[key] === 'number' ? 'number' :
+                                  typeof decoratorProperties[key] === 'boolean' ? 'boolean' : 'string',
+                            name: key,
+                            value: decoratorProperties[key],
+                            description: `${key}参数`
+                        };
+                    }
+                });
+                return reconstructed;
+        }
+    };
 
     // 当前显示在属性面板的节点（普通节点或条件节点）
     const activeNode = computed(() => selectedConditionNode.value || selectedNode.value);

@@ -56,8 +56,10 @@
     background: #2d3748;
     border-radius: 12px;
     box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
-    max-width: 90vw;
+    max-width: 95vw;
     max-height: 90vh;
+    min-width: 800px;
+    width: auto;
     display: flex;
     flex-direction: column;
     border: 1px solid #4a5568;
@@ -138,18 +140,119 @@
     overflow-y: auto;
     padding: 24px;
     background: #2d3748;
+    min-width: 750px;
 }
 
+/* 导出选项样式增强 */
 .export-options {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid #4a5568;
+    border-radius: 8px;
 }
 
 .export-options label {
-    display: block;
-    margin-bottom: 8px;
-    color: #e2e8f0;
-    font-size: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid #4a5568;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
     font-weight: 500;
+    position: relative;
+}
+
+.export-options label:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: #667eea;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.export-options label:has(input[type="radio"]:checked) {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.export-options input[type="radio"] {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #4a5568;
+    border-radius: 50%;
+    background: #1a202c;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.export-options input[type="radio"]:checked {
+    border-color: #667eea;
+    background: #667eea;
+}
+
+.export-options input[type="radio"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+}
+
+.export-options label span {
+    color: #e2e8f0;
+    font-weight: 600;
+    flex: 1;
+}
+
+.export-options label small {
+    display: block;
+    margin-top: 4px;
+    color: #a0aec0;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.3;
+}
+
+/* 禁用选项样式 */
+.export-options label.disabled-option {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.01);
+    border-color: #374151;
+}
+
+.export-options label.disabled-option:hover {
+    background: rgba(255, 255, 255, 0.01);
+    border-color: #374151;
+    transform: none;
+    box-shadow: none;
+}
+
+.export-options label.disabled-option span {
+    color: #6b7280;
+}
+
+.export-options label.disabled-option input[type="radio"] {
+    border-color: #374151;
+    cursor: not-allowed;
+}
+
+.export-options label.disabled-option input[type="radio"]:disabled {
+    background: #1f2937;
 }
 
 .code-output {
@@ -217,21 +320,37 @@
     transform: translateY(0);
 }
 
-.modal-footer .save-btn {
-    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+.modal-footer .copy-btn {
+    background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+    border: 1px solid #3182ce;
 }
 
-.modal-footer .save-btn:hover {
+.modal-footer .copy-btn:hover {
+    background: linear-gradient(135deg, #2c5282 0%, #2a4365 100%);
+    border-color: #2c5282;
+}
+
+.modal-footer .save-file-btn {
     background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+    border: 1px solid #38a169;
 }
 
-.modal-footer .cancel-btn {
-    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+.modal-footer .save-file-btn:hover {
+    background: linear-gradient(135deg, #2f855a 0%, #276749 100%);
+    border-color: #2f855a;
 }
 
-.modal-footer .cancel-btn:hover {
-    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+.modal-footer .close-btn {
+    background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
+    border: 1px solid #718096;
 }
+
+.modal-footer .close-btn:hover {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    border-color: #4a5568;
+}
+
+
 
 /* Blackboard模态框特定样式 */
 .blackboard-modal {
@@ -427,5 +546,11 @@
     font-size: 11px;
     color: #e2e8f0;
     resize: none;
-    min-height: 300px;
+    min-height: 400px;
+    width: 100%;
+    box-sizing: border-box;
+    line-height: 1.4;
+    overflow-y: auto;
+    white-space: pre;
+    word-wrap: break-word;
 } 

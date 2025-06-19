@@ -19,28 +19,64 @@ Core 是框架的核心管理类，负责游戏的生命周期管理。
 ### 创建和配置
 
 ```typescript
-import { Core } from '@esengine/ecs-framework';
+import { Core, ICoreConfig } from '@esengine/ecs-framework';
 
-// 创建核心实例（调试模式）
-const core = Core.create(true);
+// 创建核心实例（使用配置对象 - 推荐）
+const config: ICoreConfig = {
+    debug: true,                    // 启用调试模式
+    enableEntitySystems: true,     // 启用实体系统
+    debugConfig: {                 // 可选：远程调试配置
+        enabled: true,
+        websocketUrl: 'ws://localhost:8080',
+        autoReconnect: true,
+        updateInterval: 1000,
+        channels: {
+            entities: true,
+            systems: true,
+            performance: true,
+            components: true,
+            scenes: true
+        }
+    }
+};
+const core = Core.create(config);
 
-// 创建核心实例（发布模式）
-const core = Core.create(false);
+// 简化创建（向后兼容）
+const core1 = Core.create(true);   // 调试模式
+const core2 = Core.create(false);  // 发布模式
+const core3 = Core.create();       // 默认调试模式
 ```
 
 ### 事件系统
 
 ```typescript
-import { CoreEvents } from '@esengine/ecs-framework';
+import { EntityManager, ECSEventType } from '@esengine/ecs-framework';
 
-// 监听核心事件
-Core.emitter.addObserver(CoreEvents.frameUpdated, this.onUpdate, this);
+// 获取EntityManager的事件系统
+const entityManager = new EntityManager();
+const eventBus = entityManager.eventBus;
 
-// 发送帧更新事件
-Core.emitter.emit(CoreEvents.frameUpdated);
+// 监听实体事件
+eventBus.onEntityCreated((data) => {
+    console.log(`实体创建: ${data.entityName}`);
+});
+
+eventBus.onComponentAdded((data) => {
+    console.log(`组件添加: ${data.componentType}`);
+});
 
 // 发送自定义事件
-Core.emitter.emit("customEvent", { data: "value" });
+eventBus.emit("customEvent", { data: "value" });
+
+// 使用事件装饰器（推荐）
+import { EventHandler } from '@esengine/ecs-framework';
+
+class GameSystem {
+    @EventHandler('entity:died')
+    onEntityDied(data: any) {
+        console.log('实体死亡:', data);
+    }
+}
 ```
 
 ### 定时器系统

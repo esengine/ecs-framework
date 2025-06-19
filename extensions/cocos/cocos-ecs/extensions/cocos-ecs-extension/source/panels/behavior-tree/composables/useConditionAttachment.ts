@@ -161,6 +161,38 @@ export function useConditionAttachment(
                     conditionCode: conditionTemplate.properties?.conditionCode?.value || '(context) => true'
                 };
 
+            // Blackboard相关条件支持
+            case 'blackboard-variable-exists':
+                return {
+                    ...baseConfig,
+                    variableName: conditionTemplate.properties?.variableName?.value || '',
+                    invert: conditionTemplate.properties?.invert?.value || false
+                };
+
+            case 'blackboard-value-comparison':
+                return {
+                    ...baseConfig,
+                    variableName: conditionTemplate.properties?.variableName?.value || '',
+                    operator: conditionTemplate.properties?.operator?.value || 'equal',
+                    compareValue: conditionTemplate.properties?.compareValue?.value || '',
+                    compareVariable: conditionTemplate.properties?.compareVariable?.value || ''
+                };
+
+            case 'blackboard-variable-type-check':
+                return {
+                    ...baseConfig,
+                    variableName: conditionTemplate.properties?.variableName?.value || '',
+                    expectedType: conditionTemplate.properties?.expectedType?.value || 'string'
+                };
+
+            case 'blackboard-variable-range-check':
+                return {
+                    ...baseConfig,
+                    variableName: conditionTemplate.properties?.variableName?.value || '',
+                    minValue: conditionTemplate.properties?.minValue?.value || 0,
+                    maxValue: conditionTemplate.properties?.maxValue?.value || 100
+                };
+
             default:
                 return baseConfig;
         }
@@ -177,7 +209,12 @@ export function useConditionAttachment(
             'condition-active': 'isActive',
             'condition-numeric': 'numericCompare',
             'condition-property': 'propertyExists',
-            'condition-custom': 'custom'
+            'condition-custom': 'custom',
+            // Blackboard相关条件
+            'blackboard-variable-exists': 'blackboardExists',
+            'blackboard-value-comparison': 'blackboardCompare',
+            'blackboard-variable-type-check': 'blackboardTypeCheck',
+            'blackboard-variable-range-check': 'blackboardRangeCheck'
         };
         
         return typeMap[template.type] || 'custom';
@@ -190,27 +227,19 @@ export function useConditionAttachment(
         event: DragEvent, 
         decoratorNode: TreeNode
     ): boolean => {
-        console.log('🎯 执行条件吸附:', decoratorNode.name, dragState.conditionTemplate?.name);
-        
         event.preventDefault();
         event.stopPropagation();
         
         if (!dragState.isDraggingCondition || !dragState.conditionTemplate) {
-            console.log('❌ 拖拽状态无效:', { 
-                isDragging: dragState.isDraggingCondition, 
-                hasTemplate: !!dragState.conditionTemplate 
-            });
             return false;
         }
 
         if (!isConditionalDecorator(decoratorNode)) {
-            console.log('❌ 不是条件装饰器:', decoratorNode.type);
             return false;
         }
 
         // 获取条件配置
         const conditionConfig = mapConditionToDecoratorProperties(dragState.conditionTemplate);
-        console.log('📝 条件配置:', conditionConfig);
         
         // 更新装饰器属性
         if (!decoratorNode.properties) {
@@ -225,8 +254,11 @@ export function useConditionAttachment(
             name: dragState.conditionTemplate.name,
             icon: dragState.conditionTemplate.icon
         };
-
-        console.log('✅ 条件吸附成功!', decoratorNode.attachedCondition);
+        
+        // 初始化为收缩状态
+        if (decoratorNode.conditionExpanded === undefined) {
+            decoratorNode.conditionExpanded = false;
+        }
 
         // 重置拖拽状态
         resetDragState();
@@ -260,7 +292,6 @@ export function useConditionAttachment(
      * 重置拖拽状态
      */
     const resetDragState = () => {
-        console.log('🔄 重置拖拽状态');
         dragState.isDraggingCondition = false;
         dragState.conditionTemplate = null;
         dragState.mousePosition = null;
@@ -268,45 +299,126 @@ export function useConditionAttachment(
     };
 
     /**
-     * 获取条件显示文本
+     * 获取条件显示文本（简化版始终显示条件名称）
      */
-    const getConditionDisplayText = (decoratorNode: TreeNode): string => {
-        if (!decoratorNode.attachedCondition || !decoratorNode.properties) {
+    const getConditionDisplayText = (decoratorNode: TreeNode, expanded: boolean = false): string => {
+        if (!decoratorNode.attachedCondition) {
             return '';
         }
 
-        const conditionType = decoratorNode.properties.conditionType;
-        
-        switch (conditionType) {
-            case 'random':
-                const probability = decoratorNode.properties.successProbability || 0.5;
-                return `${(probability * 100).toFixed(0)}%概率`;
-                
-            case 'hasComponent':
-                return `有${decoratorNode.properties.componentType || 'Component'}`;
-                
-            case 'hasTag':
-                return `标签=${decoratorNode.properties.tagValue || 0}`;
-                
-            case 'isActive':
-                const checkHierarchy = decoratorNode.properties.checkHierarchy;
-                return checkHierarchy ? '激活(含层级)' : '激活';
-                
-            case 'numericCompare':
-                const path = decoratorNode.properties.propertyPath || 'value';
-                const operator = decoratorNode.properties.compareOperator || '>';
-                const value = decoratorNode.properties.compareValue || 0;
-                return `${path} ${operator} ${value}`;
-                
-            case 'propertyExists':
-                return `存在${decoratorNode.properties.propertyPath || 'property'}`;
-                
-            case 'custom':
-                return '自定义条件';
-                
-            default:
-                return decoratorNode.attachedCondition.name;
+        // 始终返回条件名称，不管是否展开
+        return decoratorNode.attachedCondition.name;
+    };
+
+    /**
+     * 获取条件的可见属性（用于展开时显示）
+     */
+    const getConditionProperties = (decoratorNode: TreeNode): Record<string, any> => {
+        if (!decoratorNode.attachedCondition || !decoratorNode.properties) {
+            return {};
         }
+
+        const conditionType = decoratorNode.attachedCondition.type;
+        const visibleProps: Record<string, any> = {};
+        
+        // 根据条件类型筛选相关属性
+        switch (conditionType) {
+            case 'condition-random':
+                if ('successProbability' in decoratorNode.properties) {
+                    visibleProps['成功概率'] = `${(decoratorNode.properties.successProbability * 100).toFixed(1)}%`;
+                }
+                break;
+                
+            case 'condition-component':
+                if ('componentType' in decoratorNode.properties) {
+                    visibleProps['组件类型'] = decoratorNode.properties.componentType;
+                }
+                break;
+                
+            case 'condition-tag':
+                if ('tagValue' in decoratorNode.properties) {
+                    visibleProps['标签值'] = decoratorNode.properties.tagValue;
+                }
+                break;
+                
+            case 'condition-active':
+                if ('checkHierarchy' in decoratorNode.properties) {
+                    visibleProps['检查层级'] = decoratorNode.properties.checkHierarchy ? '是' : '否';
+                }
+                break;
+                
+            case 'condition-numeric':
+                if ('propertyPath' in decoratorNode.properties) {
+                    visibleProps['属性路径'] = decoratorNode.properties.propertyPath;
+                }
+                if ('compareOperator' in decoratorNode.properties) {
+                    visibleProps['比较操作'] = decoratorNode.properties.compareOperator;
+                }
+                if ('compareValue' in decoratorNode.properties) {
+                    visibleProps['比较值'] = decoratorNode.properties.compareValue;
+                }
+                break;
+                
+            case 'condition-property':
+                if ('propertyPath' in decoratorNode.properties) {
+                    visibleProps['属性路径'] = decoratorNode.properties.propertyPath;
+                }
+                break;
+                
+            case 'blackboard-variable-exists':
+                if ('variableName' in decoratorNode.properties) {
+                    visibleProps['变量名'] = decoratorNode.properties.variableName;
+                }
+                if ('invert' in decoratorNode.properties) {
+                    visibleProps['反转结果'] = decoratorNode.properties.invert ? '是' : '否';
+                }
+                break;
+                
+            case 'blackboard-value-comparison':
+                if ('variableName' in decoratorNode.properties) {
+                    visibleProps['变量名'] = decoratorNode.properties.variableName;
+                }
+                if ('operator' in decoratorNode.properties) {
+                    visibleProps['操作符'] = decoratorNode.properties.operator;
+                }
+                if ('compareValue' in decoratorNode.properties) {
+                    visibleProps['比较值'] = decoratorNode.properties.compareValue;
+                }
+                if ('compareVariable' in decoratorNode.properties) {
+                    visibleProps['比较变量'] = decoratorNode.properties.compareVariable;
+                }
+                break;
+                
+            case 'blackboard-variable-type-check':
+                if ('variableName' in decoratorNode.properties) {
+                    visibleProps['变量名'] = decoratorNode.properties.variableName;
+                }
+                if ('expectedType' in decoratorNode.properties) {
+                    visibleProps['期望类型'] = decoratorNode.properties.expectedType;
+                }
+                break;
+                
+            case 'blackboard-variable-range-check':
+                if ('variableName' in decoratorNode.properties) {
+                    visibleProps['变量名'] = decoratorNode.properties.variableName;
+                }
+                if ('minValue' in decoratorNode.properties) {
+                    visibleProps['最小值'] = decoratorNode.properties.minValue;
+                }
+                if ('maxValue' in decoratorNode.properties) {
+                    visibleProps['最大值'] = decoratorNode.properties.maxValue;
+                }
+                break;
+        }
+
+        return visibleProps;
+    };
+
+    /**
+     * 切换条件展开状态
+     */
+    const toggleConditionExpanded = (decoratorNode: TreeNode) => {
+        decoratorNode.conditionExpanded = !decoratorNode.conditionExpanded;
     };
 
     /**
@@ -314,10 +426,34 @@ export function useConditionAttachment(
      */
     const removeConditionFromDecorator = (decoratorNode: TreeNode) => {
         if (decoratorNode.attachedCondition) {
+            // 删除附加的条件信息
             delete decoratorNode.attachedCondition;
             
-            // 完全清空所有属性，回到初始空白状态
-            decoratorNode.properties = {};
+            // 重置展开状态
+            decoratorNode.conditionExpanded = false;
+            
+            // 保留装饰器的基础属性，只删除条件相关的属性
+            const preservedProperties: Record<string, any> = {};
+            
+            // 条件装饰器的基础属性
+            const baseDecoratorProperties = [
+                'executeWhenTrue',
+                'executeWhenFalse', 
+                'checkInterval',
+                'abortType'
+            ];
+            
+            // 保留基础属性
+            if (decoratorNode.properties) {
+                baseDecoratorProperties.forEach(key => {
+                    if (key in decoratorNode.properties!) {
+                        preservedProperties[key] = decoratorNode.properties![key];
+                    }
+                });
+            }
+            
+            // 重置为只包含基础属性的对象
+            decoratorNode.properties = preservedProperties;
         }
     };
 
@@ -339,6 +475,8 @@ export function useConditionAttachment(
         getConditionDisplayText,
         removeConditionFromDecorator,
         canAcceptCondition,
-        isConditionalDecorator
+        isConditionalDecorator,
+        toggleConditionExpanded,
+        getConditionProperties
     };
-} 
+}

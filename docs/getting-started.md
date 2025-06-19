@@ -29,6 +29,145 @@ Core.update(deltaTime);
 - 更精确的时间控制
 - 统一的API，简化集成
 
+## Core配置
+
+### 基础配置
+
+ECS框架提供了灵活的配置选项来满足不同项目需求：
+
+```typescript
+import { Core, ICoreConfig } from '@esengine/ecs-framework';
+
+// 方式1：简化配置（向后兼容）
+Core.create(true);  // 启用调试模式
+Core.create(false); // 发布模式
+Core.create();      // 默认调试模式
+
+// 方式2：详细配置（推荐）
+const config: ICoreConfig = {
+    debug: true,                    // 启用调试模式
+    enableEntitySystems: true,     // 启用实体系统（默认true）
+    debugConfig: {                 // 可选：远程调试配置
+        enabled: true,
+        websocketUrl: 'ws://localhost:8080',
+        autoReconnect: true,
+        updateInterval: 1000,       // 调试数据更新间隔（毫秒）
+        channels: {                 // 调试数据通道
+            entities: true,         // 实体信息
+            systems: true,          // 系统信息
+            performance: true,      // 性能数据
+            components: true,       // 组件信息
+            scenes: true           // 场景信息
+        }
+    }
+};
+
+const core = Core.create(config);
+```
+
+### 调试功能
+
+ECS框架内置了强大的调试功能，支持运行时监控和远程调试：
+
+#### Cocos Creator专用调试插件
+
+**🎯 对于Cocos Creator用户，我们提供了专门的可视化调试插件：**
+
+- **插件地址**：[cocos-ecs-framework 调试插件](https://store.cocos.com/app/detail/7823)
+- **插件版本**：v1.0.0
+- **支持版本**：Cocos Creator v3.0.0+
+- **支持平台**：Android | iOS | HTML5
+
+这个插件提供了完整的ECS可视化调试界面，包括实体查看器、组件编辑器、系统监控、性能分析等功能。
+
+#### 通用调试配置
+
+```typescript
+// 运行时启用调试
+Core.enableDebug({
+    enabled: true,
+    websocketUrl: 'ws://localhost:8080',
+    autoReconnect: true,
+    updateInterval: 500,
+    channels: {
+        entities: true,
+        systems: true,
+        performance: true,
+        components: false,    // 可以选择性禁用某些通道
+        scenes: true
+    }
+});
+
+// 获取调试数据
+const debugData = Core.getDebugData();
+console.log('当前实体数量:', debugData?.entities?.totalEntities);
+
+// 禁用调试
+Core.disableDebug();
+
+// 检查调试状态
+if (Core.isDebugEnabled) {
+    console.log('调试模式已启用');
+}
+```
+
+### 生产环境配置建议
+
+```typescript
+// 开发环境 - Cocos Creator
+const devConfigForCocos: ICoreConfig = {
+    debug: true,
+    enableEntitySystems: true,
+    debugConfig: {
+        enabled: true,
+        websocketUrl: 'ws://localhost:8080',  // 连接Cocos插件
+        autoReconnect: true,
+        updateInterval: 1000,
+        channels: {
+            entities: true,
+            systems: true,
+            performance: true,
+            components: true,
+            scenes: true
+        }
+    }
+};
+
+// 开发环境 - 其他平台
+const devConfig: ICoreConfig = {
+    debug: true,
+    enableEntitySystems: true,
+    debugConfig: {
+        enabled: true,
+        websocketUrl: 'ws://localhost:8080',
+        autoReconnect: true,
+        updateInterval: 1000,
+        channels: {
+            entities: true,
+            systems: true,
+            performance: true,
+            components: true,
+            scenes: true
+        }
+    }
+};
+
+// 生产环境
+const prodConfig: ICoreConfig = {
+    debug: false,                   // 关闭调试以提升性能
+    enableEntitySystems: true,
+    // debugConfig 可以省略或设为 undefined
+};
+
+const isDevelopment = process.env.NODE_ENV === 'development';
+Core.create(isDevelopment ? devConfig : prodConfig);
+```
+
+**💡 调试功能说明：**
+- **Cocos Creator**：推荐使用[官方调试插件](https://store.cocos.com/app/detail/7823)获得最佳调试体验
+- **其他平台**：可以通过WebSocket连接自定义调试工具
+- **生产环境**：建议关闭调试功能以获得最佳性能
+
 ## 平台集成
 
 ### Laya引擎
@@ -44,8 +183,10 @@ class LayaECSGame extends LayaScene {
     constructor() {
         super();
         
-        // 初始化ECS框架
-        Core.create(true);
+        // 初始化ECS框架（简化方式）
+        Core.create(true); // 启用调试模式
+        // 完整配置示例: Core.create({ debug: true, enableEntitySystems: true, debugConfig: {...} })
+        
         this.ecsScene = new ECSScene();
         this.ecsScene.name = "LayaGameScene";
         Core.scene = this.ecsScene;
@@ -117,8 +258,10 @@ export class ECSGameManager extends CocosComponent {
     private entityManager: EntityManager;
     
     start() {
-        // 初始化ECS框架
-        Core.create(true);
+        // 初始化ECS框架（简化方式）
+        Core.create(true); // 启用调试模式
+        // 完整配置示例: Core.create({ debug: true, enableEntitySystems: true, debugConfig: {...} })
+        
         this.ecsScene = new ECSScene();
         this.ecsScene.name = "CocosGameScene";
         Core.scene = this.ecsScene;
@@ -172,6 +315,12 @@ class CocosRenderSystem extends EntitySystem {
 // 将ECSGameManager脚本挂载到场景根节点
 ```
 
+**🔧 Cocos Creator调试提示：**
+为了获得最佳的ECS调试体验，建议安装我们的专用调试插件：
+- 插件地址：[https://store.cocos.com/app/detail/7823](https://store.cocos.com/app/detail/7823)
+- 支持Cocos Creator v3.0.0+
+- 提供实体查看器、组件编辑器、系统监控等功能
+
 ### Node.js后端
 
 ```typescript
@@ -185,7 +334,10 @@ class ServerGameManager {
     private lastUpdate: number = Date.now();
     
     constructor() {
-        Core.create(true);
+        // 初始化ECS框架（简化方式）
+        Core.create(true); // 启用调试模式
+        // 完整配置示例: Core.create({ debug: true, enableEntitySystems: true, debugConfig: {...} })
+        
         this.scene = new Scene();
         this.scene.name = "ServerScene";
         Core.scene = this.scene;
@@ -276,7 +428,10 @@ class BrowserGame {
     private entityManager: EntityManager;
     
     constructor() {
-        Core.create(true);
+        // 初始化ECS框架（简化方式）
+        Core.create(true); // 启用调试模式
+        // 完整配置示例: Core.create({ debug: true, enableEntitySystems: true, debugConfig: {...} })
+        
         this.scene = new Scene();
         this.scene.name = "BrowserScene";
         Core.scene = this.scene;
