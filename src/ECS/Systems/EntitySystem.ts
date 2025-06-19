@@ -77,7 +77,6 @@ export abstract class EntitySystem implements ISystemBase {
     constructor(matcher?: Matcher) {
         this._matcher = matcher ? matcher : Matcher.empty();
         this._systemName = this.constructor.name;
-        this.initialize();
     }
 
     private _scene!: Scene;
