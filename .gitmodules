@@ -4,3 +4,6 @@
 [submodule "thirdparty/admin-backend"]
 	path = thirdparty/admin-backend
 	url = https://github.com/esengine/admin-backend.git
+[submodule "extensions/cocos/cocos-ecs/extensions/cocos-ecs-extension"]
+	path = extensions/cocos/cocos-ecs/extensions/cocos-ecs-extension
+	url = https://github.com/esengine/cocos-ecs-extension.git
