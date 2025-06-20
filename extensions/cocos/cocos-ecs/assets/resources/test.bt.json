@@ -1,0 +1,283 @@
+{
+  "nodes": [
+    {
+      "id": "root_1",
+      "type": "root",
+      "name": "行为树指南根",
+      "children": [
+        "selector_main"
+      ]
+    },
+    {
+      "id": "selector_main",
+      "type": "selector",
+      "name": "主选择器",
+      "properties": {
+        "abortType": "LowerPriority"
+      },
+      "children": [
+        "repeater_patrol",
+        "selector_combat",
+        "sequence_idle"
+      ]
+    },
+    {
+      "id": "repeater_patrol",
+      "type": "repeater",
+      "name": "巡逻重复器",
+      "properties": {
+        "count": -1,
+        "continueOnFailure": true,
+        "delayBetween": false
+      },
+      "children": [
+        "sequence_patrol"
+      ]
+    },
+    {
+      "id": "sequence_patrol",
+      "type": "sequence",
+      "name": "巡逻序列",
+      "properties": {
+        "abortType": "None"
+      },
+      "children": [
+        "decorator_patrol_check",
+        "action_patrol"
+      ]
+    },
+    {
+      "id": "decorator_patrol_check",
+      "type": "conditional-decorator",
+      "name": "巡逻条件检查",
+      "properties": {
+        "conditionType": "custom",
+        "executeWhenTrue": true,
+        "executeWhenFalse": false,
+        "checkInterval": 1
+      },
+      "children": [
+        "log_patrolling"
+      ],
+      "condition": {
+        "type": "condition-custom",
+        "properties": {
+          "conditionCode": {
+            "name": "条件代码",
+            "type": "code",
+            "value": "(context) => {\n  // 检查是否处于巡逻状态\n  return context.blackboard && context.blackboard.getValue('state') === 'patrol';\n}",
+            "description": "条件判断函数代码",
+            "required": true
+          },
+          "conditionName": {
+            "name": "条件名称",
+            "type": "string",
+            "value": "巡逻状态检查",
+            "description": "用于调试的条件名称",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "log_patrolling",
+      "type": "log-action",
+      "name": "记录巡逻",
+      "properties": {
+        "message": "正在执行巡逻任务，当前状态: {{state}}",
+        "logLevel": "info"
+      }
+    },
+    {
+      "id": "action_patrol",
+      "type": "set-blackboard-value",
+      "name": "执行巡逻",
+      "properties": {
+        "variableName": "lastAction",
+        "value": "{{state}}_执行中",
+        "force": false
+      }
+    },
+    {
+      "id": "selector_combat",
+      "type": "selector",
+      "name": "战斗选择器",
+      "properties": {
+        "abortType": "None"
+      },
+      "children": [
+        "sequence_attack",
+        "sequence_defend"
+      ]
+    },
+    {
+      "id": "sequence_attack",
+      "type": "sequence",
+      "name": "攻击序列",
+      "properties": {
+        "abortType": "Self"
+      },
+      "children": [
+        "inverter_enemy",
+        "action_attack"
+      ]
+    },
+    {
+      "id": "inverter_enemy",
+      "type": "inverter",
+      "name": "敌人检查反转",
+      "children": [
+        "condition_enemy"
+      ]
+    },
+    {
+      "id": "condition_enemy",
+      "type": "condition-random",
+      "name": "随机敌人出现",
+      "properties": {
+        "successProbability": 0.3
+      }
+    },
+    {
+      "id": "action_attack",
+      "type": "log-action",
+      "name": "攻击动作",
+      "properties": {
+        "message": "发动攻击！生命值: {{health}}, 能量: {{energy}}",
+        "logLevel": "warn"
+      }
+    },
+    {
+      "id": "sequence_defend",
+      "type": "sequence",
+      "name": "防御序列",
+      "properties": {
+        "abortType": "None"
+      },
+      "children": [
+        "wait_defend",
+        "action_defend"
+      ]
+    },
+    {
+      "id": "wait_defend",
+      "type": "wait-action",
+      "name": "防御准备",
+      "properties": {
+        "waitTime": 0.5,
+        "useExternalTime": false
+      }
+    },
+    {
+      "id": "action_defend",
+      "type": "execute-action",
+      "name": "执行防御",
+      "properties": {
+        "actionCode": "(context) => {\n  // 防御逻辑\n  console.log('开始防御姿态');\n  if(context.blackboard) {\n    context.blackboard.setValue('defendActive', true);\n    context.blackboard.setValue('lastAction', '防御中');\n  }\n  return 'success';\n}",
+        "actionName": "防御动作_生命值{{health}}"
+      }
+    },
+    {
+      "id": "sequence_idle",
+      "type": "sequence",
+      "name": "闲置序列",
+      "properties": {
+        "abortType": "None"
+      },
+      "children": [
+        "action_idle",
+        "log_status",
+        "wait_idle"
+      ]
+    },
+    {
+      "id": "action_idle",
+      "type": "set-blackboard-value",
+      "name": "设置闲置",
+      "properties": {
+        "variableName": "state",
+        "value": "idle",
+        "force": false
+      }
+    },
+    {
+      "id": "log_status",
+      "type": "log-action",
+      "name": "状态报告",
+      "properties": {
+        "message": "状态报告 - 当前: {{state}}, 上次动作: {{lastAction}}, 防御中: {{defendActive}}",
+        "logLevel": "debug"
+      }
+    },
+    {
+      "id": "wait_idle",
+      "type": "wait-action",
+      "name": "闲置等待",
+      "properties": {
+        "waitTime": 3,
+        "useExternalTime": false
+      }
+    }
+  ],
+  "blackboard": [
+    {
+      "name": "state",
+      "type": "string",
+      "value": "patrol",
+      "description": "当前状态",
+      "group": "核心状态",
+      "constraints": {
+        "allowedValues": [
+          "idle",
+          "patrol",
+          "combat",
+          "defend"
+        ]
+      }
+    },
+    {
+      "name": "lastAction",
+      "type": "string",
+      "value": "",
+      "description": "最后执行的动作",
+      "group": "核心状态"
+    },
+    {
+      "name": "defendActive",
+      "type": "boolean",
+      "value": false,
+      "description": "是否正在防御",
+      "group": "战斗状态"
+    },
+    {
+      "name": "health",
+      "type": "number",
+      "value": 100,
+      "description": "生命值",
+      "group": "属性",
+      "constraints": {
+        "min": 0,
+        "max": 100,
+        "step": 1
+      }
+    },
+    {
+      "name": "energy",
+      "type": "number",
+      "value": 50,
+      "description": "能量值",
+      "group": "属性",
+      "constraints": {
+        "min": 0,
+        "max": 100,
+        "step": 1
+      }
+    }
+  ],
+  "metadata": {
+    "name": "behavior-tree",
+    "created": "2025-06-20T07:17:15.437Z",
+    "version": "1.0",
+    "exportType": "clean"
+  }
+}

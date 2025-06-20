@@ -7,3 +7,6 @@
 [submodule "extensions/cocos/cocos-ecs/extensions/cocos-ecs-extension"]
 	path = extensions/cocos/cocos-ecs/extensions/cocos-ecs-extension
 	url = https://github.com/esengine/cocos-ecs-extension.git
+[submodule "extensions/cocos/cocos-ecs/extensions/behaviour-tree"]
+	path = extensions/cocos/cocos-ecs/extensions/behaviour-tree
+	url = https://github.com/esengine/behaviour-tree.git
