@@ -323,6 +323,102 @@ class ScoreSystem extends PassiveSystem {
 - UI更新系统
 - 成就系统
 
+## 系统生命周期方法
+
+系统提供了多个生命周期方法，可以根据需要重写：
+
+### 重要的生命周期方法
+
+```typescript
+class ExampleSystem extends EntitySystem {
+    /**
+     * 系统初始化 - 系统被添加到场景时调用
+     * 用于设置事件监听器、初始化资源等
+     */
+    initialize() {
+        super.initialize();
+        
+        // 设置事件监听
+        const eventBus = this.scene.entityManager.eventBus;
+        eventBus.on('someEvent', this.handleEvent, { context: this });
+        
+        console.log('系统已初始化');
+    }
+    
+    /**
+     * 实体被添加到系统时调用
+     * @param entity 被添加的实体
+     */
+    protected onAdded(entity: Entity) {
+        console.log(`实体 ${entity.name} 被添加到系统`);
+        
+        // 可以在这里对新实体进行特殊处理
+        const component = entity.getComponent(SomeComponent);
+        component.initialize();
+    }
+    
+    /**
+     * 实体从系统中移除时调用
+     * @param entity 被移除的实体
+     */
+    protected onRemoved(entity: Entity) {
+        console.log(`实体 ${entity.name} 从系统中移除`);
+        
+        // 清理与该实体相关的资源
+        this.cleanupEntityResources(entity);
+    }
+    
+    /**
+     * 每帧处理开始前调用
+     */
+    protected begin() {
+        // 预处理逻辑，如重置计数器
+        this.frameCounter++;
+    }
+    
+    /**
+     * 主要处理逻辑 - 每帧调用
+     * @param entities 符合条件的实体列表
+     */
+    protected process(entities: Entity[]) {
+        for (const entity of entities) {
+            // 处理每个实体
+            this.processEntity(entity);
+        }
+    }
+    
+    /**
+     * 后期处理 - 在process之后调用
+     * @param entities 符合条件的实体列表
+     */
+    protected lateProcess(entities: Entity[]) {
+        // 后期处理逻辑，如碰撞检测后的响应
+        this.handlePostProcessing();
+    }
+    
+    /**
+     * 每帧处理结束后调用
+     */
+    protected end() {
+        // 后处理逻辑，如统计数据更新
+        this.updateStatistics();
+    }
+}
+```
+
+### 生命周期执行顺序
+
+系统的生命周期方法按以下顺序执行：
+
+1. **initialize()** - 系统被添加到场景时执行一次
+2. **onAdded(entity)** - 当实体符合系统条件时执行
+3. **onRemoved(entity)** - 当实体不再符合系统条件时执行
+4. 每帧循环：
+   - **begin()** - 帧开始前
+   - **process(entities)** - 主要处理逻辑
+   - **lateProcess(entities)** - 后期处理
+   - **end()** - 帧结束后
+
 ## 系统管理和注册
 
 ### 在场景中添加系统
@@ -428,7 +524,9 @@ class CollisionSystem extends EntitySystem {
 }
 
 class HealthSystem extends PassiveSystem {
-    onAddedToScene() {
+    initialize() {
+        super.initialize();
+        
         // 监听碰撞事件
         const eventBus = this.scene.entityManager.eventBus;
         eventBus.on('collision:detected', this.onCollision, { context: this });
