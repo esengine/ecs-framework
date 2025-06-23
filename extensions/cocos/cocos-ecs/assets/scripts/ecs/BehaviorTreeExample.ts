@@ -2,9 +2,9 @@ import { _decorator, Component, Node, Label, Button, resources, JsonAsset } from
 import { 
     BehaviorTreeBuilder, 
     BehaviorTree, 
-    Blackboard, 
-    BehaviorTreeJSONConfig 
+    Blackboard
 } from '@esengine/ai';
+import type { BehaviorTreeJSONConfig } from '@esengine/ai';
 
 const { ccclass, property } = _decorator;
 

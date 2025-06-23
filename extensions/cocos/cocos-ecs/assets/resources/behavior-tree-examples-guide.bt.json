@@ -620,132 +620,132 @@
       "id": "root_1-selector_main",
       "sourceId": "root_1",
       "targetId": "selector_main",
-      "path": "M 1349.21875 128 C 1349.21875 158 1359.21875 152 1359.21875 182",
+      "path": "M 1350.000006198883 125.66623544692993 C 1350.000006198883 155.66623544692993 1360.000006198883 155.04567861557007 1360.000006198883 185.04567861557007",
       "active": false
     },
     {
       "id": "selector_main-repeater_patrol",
       "sourceId": "selector_main",
       "targetId": "repeater_patrol",
-      "path": "M 1359.21875 278 C 1359.21875 320 590 320 590 362",
+      "path": "M 1360.000006198883 274.9542908668518 C 1360.000006198883 320.00000619888306 590.000006198883 320.00000619888306 590.000006198883 365.0457215309143",
       "active": false
     },
     {
       "id": "selector_main-selector_combat",
       "sourceId": "selector_main",
       "targetId": "selector_combat",
-      "path": "M 1359.21875 278 C 1359.21875 320 1250 320 1250 362",
+      "path": "M 1360.000006198883 274.9542908668518 C 1360.000006198883 320.00000619888306 1250.000006198883 320.00000619888306 1250.000006198883 365.0457215309143",
       "active": false
     },
     {
       "id": "selector_main-sequence_idle",
       "sourceId": "selector_main",
       "targetId": "sequence_idle",
-      "path": "M 1359.21875 278 C 1359.21875 320 2019.21875 320 2019.21875 362",
+      "path": "M 1360.000006198883 274.9542908668518 C 1360.000006198883 320.00000619888306 2020.0001282691956 320.00000619888306 2020.0001282691956 365.0457215309143",
       "active": false
     },
     {
       "id": "repeater_patrol-sequence_patrol",
       "sourceId": "repeater_patrol",
       "targetId": "sequence_patrol",
-      "path": "M 590 458 C 590 520 590 520 590 582",
+      "path": "M 590.000006198883 454.9542908668518 C 590.000006198883 519.9999756813049 590.000006198883 519.9999756813049 590.000006198883 585.045660495758",
       "active": false
     },
     {
       "id": "sequence_patrol-decorator_patrol_check",
       "sourceId": "sequence_patrol",
       "targetId": "decorator_patrol_check",
-      "path": "M 590 678 C 590 720 510 720 510 762",
+      "path": "M 590.000006198883 674.9542908668518 C 590.000006198883 721.4701294898987 510.00000619888306 721.4701294898987 510.00000619888306 767.9859681129456",
       "active": false
     },
     {
       "id": "sequence_patrol-action_patrol",
       "sourceId": "sequence_patrol",
       "targetId": "action_patrol",
-      "path": "M 590 678 C 590 720 700 720 700 762",
+      "path": "M 590.000006198883 674.9542908668518 C 590.000006198883 720.0783143043518 700.000006198883 720.0783143043518 700.000006198883 765.2023377418518",
       "active": false
     },
     {
       "id": "decorator_patrol_check-log_patrolling",
       "sourceId": "decorator_patrol_check",
       "targetId": "log_patrolling",
-      "path": "M 510 942.078125 C 510 972.078125 480 972 480 1002",
+      "path": "M 510.00000619888306 934.6140809059143 C 510.00000619888306 969.908209323883 480.00000619888306 969.908209323883 480.00000619888306 1005.2023377418518",
       "active": false
     },
     {
       "id": "selector_combat-sequence_attack",
       "sourceId": "selector_combat",
       "targetId": "sequence_attack",
-      "path": "M 1250 458 C 1250 500 1030 500 1030 542",
+      "path": "M 1250.000006198883 454.9542908668518 C 1250.000006198883 499.99997568130493 1030.000006198883 499.99997568130493 1030.000006198883 545.045660495758",
       "active": false
     },
     {
       "id": "selector_combat-sequence_defend",
       "sourceId": "selector_combat",
       "targetId": "sequence_defend",
-      "path": "M 1250 458 C 1250 500 1470 500 1470 542",
+      "path": "M 1250.000006198883 454.9542908668518 C 1250.000006198883 499.99997568130493 1470.000006198883 499.99997568130493 1470.000006198883 545.045660495758",
       "active": false
     },
     {
       "id": "sequence_attack-inverter_enemy",
       "sourceId": "sequence_attack",
       "targetId": "inverter_enemy",
-      "path": "M 1030 638 C 1030 680 920 680 920 722",
+      "path": "M 1030.000006198883 634.9542908668518 C 1030.000006198883 679.644049167633 920.000006198883 679.644049167633 920.000006198883 724.3338074684143",
       "active": false
     },
     {
       "id": "sequence_attack-action_attack",
       "sourceId": "sequence_attack",
       "targetId": "action_attack",
-      "path": "M 1030 638 C 1030 680 1140 680 1140 722",
+      "path": "M 1030.000006198883 634.9542908668518 C 1030.000006198883 680.0783143043518 1140.000006198883 680.0783143043518 1140.000006198883 725.2023377418518",
       "active": false
     },
     {
       "id": "inverter_enemy-condition_enemy",
       "sourceId": "inverter_enemy",
       "targetId": "condition_enemy",
-      "path": "M 920 798 C 920 840 920 840 920 882",
+      "path": "M 920.000006198883 795.6662049293518 C 920.000006198883 840.355963230133 920.000006198883 840.355963230133 920.000006198883 885.0457215309143",
       "active": false
     },
     {
       "id": "sequence_defend-wait_defend",
       "sourceId": "sequence_defend",
       "targetId": "wait_defend",
-      "path": "M 1470 638 C 1470 680 1360 680 1360 722",
+      "path": "M 1470.000006198883 634.9542908668518 C 1470.000006198883 680.000006198883 1360.000006198883 680.000006198883 1360.000006198883 725.0457215309143",
       "active": false
     },
     {
       "id": "sequence_defend-action_defend",
       "sourceId": "sequence_defend",
       "targetId": "action_defend",
-      "path": "M 1470 638 C 1470 680 1580 680 1580 722",
+      "path": "M 1470.000006198883 634.9542908668518 C 1470.000006198883 680.0783143043518 1580.000006198883 680.0783143043518 1580.000006198883 725.2023377418518",
       "active": false
     },
     {
       "id": "sequence_idle-action_idle",
       "sourceId": "sequence_idle",
       "targetId": "action_idle",
-      "path": "M 2019.21875 458 C 2019.21875 500 1800 500 1800 542",
+      "path": "M 2020.0001282691956 454.9542908668518 C 2020.0001282691956 500.0782837867737 1800.0001282691956 500.0782837867737 1800.0001282691956 545.2022767066956",
       "active": false
     },
     {
       "id": "sequence_idle-log_status",
       "sourceId": "sequence_idle",
       "targetId": "log_status",
-      "path": "M 2019.21875 458 C 2019.21875 500 2019.21875 500 2019.21875 542",
+      "path": "M 2020.0001282691956 454.9542908668518 C 2020.0001282691956 500.0782837867737 2020.0001282691956 500.0782837867737 2020.0001282691956 545.2022767066956",
       "active": false
     },
     {
       "id": "sequence_idle-wait_idle",
       "sourceId": "sequence_idle",
       "targetId": "wait_idle",
-      "path": "M 2019.21875 458 C 2019.21875 500 2238.4375 500 2238.4375 542",
+      "path": "M 2020.0001282691956 454.9542908668518 C 2020.0001282691956 499.99997568130493 2240.0001282691956 499.99997568130493 2240.0001282691956 545.045660495758",
       "active": false
     }
   ],
   "metadata": {
-    "name": "behavior-tree-examples-guide",
-    "created": "2025-06-19T04:28:44.589Z",
+    "name": "assets/resources/behavior-tree-examples-guide",
+    "created": "2025-06-22T11:04:28.781Z",
     "version": "1.0"
   },
   "blackboard": [

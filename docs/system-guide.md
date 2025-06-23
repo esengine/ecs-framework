@@ -133,7 +133,65 @@ class GameLogicSystem extends ProcessingSystem {
         const gameTime = Time.totalTime;
         console.log(`游戏时间: ${gameTime.toFixed(1)}秒`);
     }
+    
+    private triggerVictory() {
+        console.log("游戏胜利！");
+        // 处理胜利逻辑
+    }
+    
+    private triggerGameOver() {
+        console.log("游戏结束！");
+        // 处理游戏结束逻辑
+    }
 }
+```
+
+**适用场景：**
+- 全局游戏逻辑系统
+- 胜负判断系统
+- UI更新系统
+- 不依赖特定实体的处理
+
+## AI系统示例
+
+下面是一个完整的AI系统示例，展示EntitySystem的典型用法：
+
+```typescript
+import { EntitySystem, Matcher, Entity } from '@esengine/ecs-framework';
+
+enum AIState {
+    IDLE,
+    PATROL,
+    CHASE,
+    ATTACK
+}
+
+class AISystem extends EntitySystem {
+    constructor() {
+        // 匹配所有有AI组件和位置组件的实体
+        super(Matcher.empty().all(AIComponent, PositionComponent));
+    }
+    
+    // 处理每个匹配的实体
+    public processEntity(entity: Entity) {
+        const ai = entity.getComponent(AIComponent);
+        const position = entity.getComponent(PositionComponent);
+        
+        switch (ai.state) {
+            case AIState.IDLE:
+                this.processIdle(entity, ai);
+                break;
+            case AIState.PATROL:
+                this.processPatrol(entity, ai, position);
+                break;
+            case AIState.CHASE:
+                this.processChase(entity, ai, position);
+                break;
+            case AIState.ATTACK:
+                this.processAttack(entity, ai);
+                break;
+        }
+    }
     
     private processIdle(entity: Entity, ai: AIComponent) {
         ai.idleTimer += Time.deltaTime;
