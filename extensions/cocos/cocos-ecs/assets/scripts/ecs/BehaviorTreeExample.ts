@@ -74,12 +74,12 @@ export class BehaviorTreeExample extends Component {
         try {
             this.updateStatus('加载行为树配置...');
             
-            // 从resources目录加载test.bt.json文件
-            resources.load('test.bt', JsonAsset, (err, jsonAsset: JsonAsset) => {
+            // 从resources目录加载simple-example.bt.json文件
+            resources.load('simple-example.bt', JsonAsset, (err, jsonAsset: JsonAsset) => {
                 if (err) {
                     console.error('加载行为树配置失败:', err);
                     this.updateStatus('加载失败: ' + err.message);
-                    this.updateLog('❌ 加载test.bt.json失败: ' + err.message);
+                    this.updateLog('❌ 加载simple-example.bt.json失败: ' + err.message);
                     return;
                 }
                 
