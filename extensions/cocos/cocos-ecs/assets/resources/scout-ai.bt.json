@@ -1,0 +1,859 @@
+{
+  "nodes": [
+    {
+      "id": "root",
+      "type": "root",
+      "name": "侦察兵AI根节点",
+      "children": [
+        "main-selector"
+      ]
+    },
+    {
+      "id": "main-selector",
+      "type": "selector",
+      "name": "主选择器",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "根据优先级选择行为：生存 > 命令执行 > 自主侦察",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "survival-sequence",
+        "command-sequence",
+        "autonomous-sequence"
+      ]
+    },
+    {
+      "id": "survival-sequence",
+      "type": "sequence",
+      "name": "生存序列",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "处理威胁和生存相关行为",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "threat-detection",
+        "survival-selector"
+      ]
+    },
+    {
+      "id": "threat-detection",
+      "type": "conditional-decorator",
+      "name": "威胁检测",
+      "properties": {
+        "conditionType": "custom",
+        "executeWhenTrue": true,
+        "executeWhenFalse": false,
+        "checkInterval": 0,
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "检测周围是否有威胁",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "survival-selector"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "threatDetected",
+          "compareOperator": "equals",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "survival-selector",
+      "type": "selector",
+      "name": "生存选择器",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "选择合适的生存策略",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "stealth-escape",
+        "evasive-maneuver",
+        "emergency-retreat"
+      ]
+    },
+    {
+      "id": "stealth-escape",
+      "type": "sequence",
+      "name": "隐蔽脱离",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "使用隐蔽能力脱离危险",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "can-stealth-check",
+        "activate-stealth",
+        "stealth-retreat"
+      ]
+    },
+    {
+      "id": "can-stealth-check",
+      "type": "conditional-decorator",
+      "name": "隐蔽能力检查",
+      "properties": {
+        "conditionType": "custom",
+        "executeWhenTrue": true,
+        "executeWhenFalse": false,
+        "checkInterval": 0,
+        "abortType": "None"
+      },
+      "children": [
+        "activate-stealth"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "stealthAvailable",
+          "compareOperator": "equals",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "activate-stealth",
+      "type": "event-action",
+      "name": "激活隐蔽",
+      "properties": {
+        "eventName": "activate-stealth",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "激活隐蔽模式",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "stealth-retreat",
+      "type": "event-action",
+      "name": "隐蔽撤退",
+      "properties": {
+        "eventName": "stealth-retreat",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "在隐蔽状态下撤退",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "evasive-maneuver",
+      "type": "event-action",
+      "name": "规避机动",
+      "properties": {
+        "eventName": "evasive-maneuver",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "执行规避机动动作",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "emergency-retreat",
+      "type": "event-action",
+      "name": "紧急撤退",
+      "properties": {
+        "eventName": "emergency-retreat",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "快速撤退到安全区域",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "command-sequence",
+      "type": "sequence",
+      "name": "命令执行",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "执行玩家发布的侦察命令",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "has-command-check",
+        "command-selector"
+      ]
+    },
+    {
+      "id": "has-command-check",
+      "type": "conditional-decorator",
+      "name": "命令检查",
+      "properties": {
+        "conditionType": "custom",
+        "executeWhenTrue": true,
+        "executeWhenFalse": false,
+        "checkInterval": 0,
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "检查是否有待执行的命令",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "command-selector"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "hasTarget",
+          "compareOperator": "equals",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "command-selector",
+      "type": "selector",
+      "name": "命令选择器",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "根据命令类型选择执行方式",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "scout-command",
+        "move-command",
+        "observe-command",
+        "patrol-command"
+      ]
+    },
+    {
+      "id": "scout-command",
+      "type": "sequence",
+      "name": "侦察命令",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "执行区域侦察任务",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "is-scout-command",
+        "scout-sequence"
+      ]
+    },
+    {
+      "id": "is-scout-command",
+      "type": "conditional-decorator",
+      "name": "侦察命令检查",
+      "properties": {
+        "conditionType": "custom",
+        "executeWhenTrue": true,
+        "executeWhenFalse": false,
+        "checkInterval": 0,
+        "abortType": "None"
+      },
+      "children": [
+        "scout-sequence"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "currentCommand",
+          "compareOperator": "equals",
+          "compareValue": "scout"
+        }
+      }
+    },
+    {
+      "id": "scout-sequence",
+      "type": "sequence",
+      "name": "侦察序列",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "完整的侦察流程",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "approach-carefully",
+        "scan-area",
+        "report-findings"
+      ]
+    },
+    {
+      "id": "approach-carefully",
+      "type": "event-action",
+      "name": "谨慎接近",
+      "properties": {
+        "eventName": "approach-carefully",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "谨慎接近目标区域",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "scan-area",
+      "type": "event-action",
+      "name": "扫描区域",
+      "properties": {
+        "eventName": "scan-area",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "扫描并记录区域信息",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "report-findings",
+      "type": "event-action",
+      "name": "报告发现",
+      "properties": {
+        "eventName": "report-findings",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "向指挥部报告侦察结果",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "move-command",
+      "type": "sequence",
+      "name": "移动命令",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "执行移动到目标位置",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "is-move-command",
+        "stealth-move"
+      ]
+    },
+    {
+      "id": "is-move-command",
+      "type": "conditional-decorator",
+      "name": "移动命令检查",
+      "properties": {
+        "conditionType": "custom",
+        "executeWhenTrue": true,
+        "executeWhenFalse": false,
+        "checkInterval": 0,
+        "abortType": "None"
+      },
+      "children": [
+        "stealth-move"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "currentCommand",
+          "compareOperator": "equals",
+          "compareValue": "move"
+        }
+      }
+    },
+    {
+      "id": "stealth-move",
+      "type": "event-action",
+      "name": "隐蔽移动",
+      "properties": {
+        "eventName": "stealth-move",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "以隐蔽方式移动到目标位置",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "observe-command",
+      "type": "sequence",
+      "name": "观察命令",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "执行目标观察任务",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "is-observe-command",
+        "observe-target"
+      ]
+    },
+    {
+      "id": "is-observe-command",
+      "type": "conditional-decorator",
+      "name": "观察命令检查",
+      "properties": {
+        "conditionType": "custom",
+        "executeWhenTrue": true,
+        "executeWhenFalse": false,
+        "checkInterval": 0,
+        "abortType": "None"
+      },
+      "children": [
+        "observe-target"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "currentCommand",
+          "compareOperator": "equals",
+          "compareValue": "observe"
+        }
+      }
+    },
+    {
+      "id": "observe-target",
+      "type": "event-action",
+      "name": "观察目标",
+      "properties": {
+        "eventName": "observe-target",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "持续观察指定目标",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "patrol-command",
+      "type": "sequence",
+      "name": "巡逻命令",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "执行区域巡逻",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "is-patrol-command",
+        "reconnaissance-patrol"
+      ]
+    },
+    {
+      "id": "is-patrol-command",
+      "type": "conditional-decorator",
+      "name": "巡逻命令检查",
+      "properties": {
+        "conditionType": "custom",
+        "executeWhenTrue": true,
+        "executeWhenFalse": false,
+        "checkInterval": 0,
+        "abortType": "None"
+      },
+      "children": [
+        "reconnaissance-patrol"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "currentCommand",
+          "compareOperator": "equals",
+          "compareValue": "patrol"
+        }
+      }
+    },
+    {
+      "id": "reconnaissance-patrol",
+      "type": "event-action",
+      "name": "侦察巡逻",
+      "properties": {
+        "eventName": "reconnaissance-patrol",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "在指定区域进行侦察巡逻",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "autonomous-sequence",
+      "type": "sequence",
+      "name": "自主行为",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "没有命令时的自主侦察行为",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "autonomous-selector"
+      ]
+    },
+    {
+      "id": "autonomous-selector",
+      "type": "selector",
+      "name": "自主选择器",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "选择自主行为模式",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "explore-unknown",
+        "monitor-area",
+        "return-to-base"
+      ]
+    },
+    {
+      "id": "explore-unknown",
+      "type": "sequence",
+      "name": "探索未知区域",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "自主探索未知区域",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "has-unknown-area",
+        "explore-action"
+      ]
+    },
+    {
+      "id": "has-unknown-area",
+      "type": "conditional-decorator",
+      "name": "未知区域检查",
+      "properties": {
+        "conditionType": "custom",
+        "executeWhenTrue": true,
+        "executeWhenFalse": false,
+        "checkInterval": 0,
+        "abortType": "None"
+      },
+      "children": [
+        "explore-action"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "hasUnknownArea",
+          "compareOperator": "equals",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "explore-action",
+      "type": "event-action",
+      "name": "探索行动",
+      "properties": {
+        "eventName": "explore-unknown-area",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "探索最近的未知区域",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "monitor-area",
+      "type": "sequence",
+      "name": "监控区域",
+      "properties": {
+        "abortType": "None",
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "监控重要区域",
+          "description": "",
+          "required": false
+        }
+      },
+      "children": [
+        "has-monitoring-target",
+        "monitor-action"
+      ]
+    },
+    {
+      "id": "has-monitoring-target",
+      "type": "conditional-decorator",
+      "name": "监控目标检查",
+      "properties": {
+        "conditionType": "custom",
+        "executeWhenTrue": true,
+        "executeWhenFalse": false,
+        "checkInterval": 0,
+        "abortType": "None"
+      },
+      "children": [
+        "monitor-action"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "hasMonitoringTarget",
+          "compareOperator": "equals",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "monitor-action",
+      "type": "event-action",
+      "name": "监控行动",
+      "properties": {
+        "eventName": "monitor-strategic-area",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "监控战略重要区域",
+          "description": "",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "return-to-base",
+      "type": "event-action",
+      "name": "返回基地",
+      "properties": {
+        "eventName": "return-to-base",
+        "parameters": "{}",
+        "timeout": 0,
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "返回基地待命",
+          "description": "",
+          "required": false
+        }
+      }
+    }
+  ],
+  "blackboard": [
+    {
+      "name": "unitType",
+      "type": "string",
+      "value": "scout",
+      "description": "单位类型"
+    },
+    {
+      "name": "currentHealth",
+      "type": "number",
+      "value": 80,
+      "description": "当前生命值"
+    },
+    {
+      "name": "maxHealth",
+      "type": "number",
+      "value": 80,
+      "description": "最大生命值"
+    },
+    {
+      "name": "threatDetected",
+      "type": "boolean",
+      "value": false,
+      "description": "是否检测到威胁"
+    },
+    {
+      "name": "stealthAvailable",
+      "type": "boolean",
+      "value": true,
+      "description": "隐蔽能力是否可用"
+    },
+    {
+      "name": "currentCommand",
+      "type": "string",
+      "value": "idle",
+      "description": "当前执行的命令"
+    },
+    {
+      "name": "hasTarget",
+      "type": "boolean",
+      "value": false,
+      "description": "是否有目标"
+    },
+    {
+      "name": "targetPosition",
+      "type": "object",
+      "value": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "description": "目标位置"
+    },
+    {
+      "name": "hasUnknownArea",
+      "type": "boolean",
+      "value": true,
+      "description": "是否有未探索的区域"
+    },
+    {
+      "name": "hasMonitoringTarget",
+      "type": "boolean",
+      "value": false,
+      "description": "是否有需要监控的目标"
+    },
+    {
+      "name": "visionRange",
+      "type": "number",
+      "value": 8,
+      "description": "视野范围"
+    },
+    {
+      "name": "moveSpeed",
+      "type": "number",
+      "value": 5,
+      "description": "移动速度"
+    },
+    {
+      "name": "stealthDuration",
+      "type": "number",
+      "value": 10,
+      "description": "隐蔽持续时间"
+    },
+    {
+      "name": "detectionRadius",
+      "type": "number",
+      "value": 6,
+      "description": "威胁检测半径"
+    },
+    {
+      "name": "lastReportTime",
+      "type": "number",
+      "value": 0,
+      "description": "上次报告时间"
+    },
+    {
+      "name": "exploredAreas",
+      "type": "array",
+      "value": [],
+      "description": "已探索区域列表"
+    },
+    {
+      "name": "intelligenceData",
+      "type": "object",
+      "value": {},
+      "description": "收集的情报数据"
+    }
+  ],
+  "metadata": {
+    "name": "behavior-tree",
+    "created": "2025-06-24T09:20:19.582Z",
+    "version": "1.0",
+    "exportType": "clean"
+  }
+}

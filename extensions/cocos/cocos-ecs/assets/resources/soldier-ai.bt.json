@@ -1,0 +1,483 @@
+{
+  "id": "soldier-ai",
+  "name": "士兵AI行为树",
+  "description": "士兵单位的战斗AI系统，包含攻击、防御、巡逻等军事行为",
+  "version": "1.0.0",
+  "author": "ECS Framework",
+  "nodes": [
+    {
+      "id": "root",
+      "type": "root",
+      "name": "士兵AI根节点",
+      "description": "士兵AI的根节点，管理所有战斗行为",
+      "children": ["main-selector"]
+    },
+    {
+      "id": "main-selector",
+      "type": "selector",
+      "name": "主行为选择器",
+      "description": "按优先级选择士兵行为：撤退 > 战斗 > 巡逻 > 待命",
+      "children": ["retreat-behavior", "combat-behavior", "patrol-behavior", "standby-behavior"]
+    },
+    {
+      "id": "retreat-behavior",
+      "type": "conditional-decorator",
+      "name": "撤退行为",
+      "description": "生命值过低时撤退",
+      "children": ["retreat-sequence"],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "shouldRetreat",
+          "compareOperator": "equals",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "retreat-sequence",
+      "type": "sequence",
+      "name": "撤退序列",
+      "description": "执行撤退的完整流程",
+      "children": ["set-retreat-state", "call-for-help", "retreat-move"]
+    },
+    {
+      "id": "set-retreat-state",
+      "type": "set-blackboard-value",
+      "name": "设置撤退状态",
+      "description": "将士兵状态设置为撤退",
+      "properties": {
+        "variableName": "currentState",
+        "value": "retreating"
+      }
+    },
+    {
+      "id": "call-for-help",
+      "type": "event-action",
+      "name": "呼叫支援",
+      "description": "向附近友军发出支援请求",
+      "properties": {
+        "eventName": "call-for-help"
+      }
+    },
+    {
+      "id": "retreat-move",
+      "type": "event-action",
+      "name": "撤退移动",
+      "description": "快速移动到安全区域",
+      "properties": {
+        "eventName": "retreat-to-safety"
+      }
+    },
+    {
+      "id": "combat-behavior",
+      "type": "conditional-decorator",
+      "name": "战斗行为",
+      "description": "发现敌人时进入战斗状态",
+      "children": ["combat-selector"],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "hasEnemy",
+          "compareOperator": "equals",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "combat-selector",
+      "type": "selector",
+      "name": "战斗选择器",
+      "description": "根据距离选择战斗策略",
+      "children": ["ranged-attack", "close-combat", "chase-enemy"]
+    },
+    {
+      "id": "ranged-attack",
+      "type": "conditional-decorator",
+      "name": "远程攻击",
+      "description": "在远程攻击范围内时使用远程武器",
+      "children": ["ranged-sequence"],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "isInRangedRange",
+          "compareOperator": "equals",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "ranged-sequence",
+      "type": "sequence",
+      "name": "远程攻击序列",
+      "description": "执行远程攻击的完整流程",
+      "children": ["aim-target", "ranged-cooldown-check", "fire-ranged"]
+    },
+    {
+      "id": "aim-target",
+      "type": "event-action",
+      "name": "瞄准目标",
+      "description": "瞄准敌方目标",
+      "properties": {
+        "eventName": "aim-at-target"
+      }
+    },
+    {
+      "id": "ranged-cooldown-check",
+      "type": "conditional-decorator",
+      "name": "远程冷却检查",
+      "description": "检查远程攻击冷却时间",
+      "children": ["execute-ranged"],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "canRangedAttack",
+          "compareOperator": "equals",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "execute-ranged",
+      "type": "event-action",
+      "name": "执行远程攻击",
+      "description": "发射远程武器",
+      "properties": {
+        "eventName": "ranged-attack"
+      }
+    },
+    {
+      "id": "fire-ranged",
+      "type": "log-action",
+      "name": "远程攻击日志",
+      "description": "记录远程攻击",
+      "properties": {
+        "message": "士兵执行远程攻击"
+      }
+    },
+    {
+      "id": "close-combat",
+      "type": "conditional-decorator",
+      "name": "近战攻击",
+      "description": "在近战范围内时使用近战武器",
+      "children": ["melee-sequence"],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "isInMeleeRange",
+          "compareOperator": "equals",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "melee-sequence",
+      "type": "sequence",
+      "name": "近战攻击序列",
+      "description": "执行近战攻击的完整流程",
+      "children": ["melee-cooldown-check", "execute-melee", "melee-log"]
+    },
+    {
+      "id": "melee-cooldown-check",
+      "type": "conditional-decorator",
+      "name": "近战冷却检查",
+      "description": "检查近战攻击冷却时间",
+      "children": ["melee-attack"],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "canMeleeAttack",
+          "compareOperator": "equals",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "melee-attack",
+      "type": "event-action",
+      "name": "近战攻击",
+      "description": "执行近战攻击",
+      "properties": {
+        "eventName": "melee-attack"
+      }
+    },
+    {
+      "id": "execute-melee",
+      "type": "set-blackboard-value",
+      "name": "更新近战冷却",
+      "description": "重置近战攻击冷却时间",
+      "properties": {
+        "variableName": "lastMeleeTime",
+        "value": "currentTime"
+      }
+    },
+    {
+      "id": "melee-log",
+      "type": "log-action",
+      "name": "近战攻击日志",
+      "description": "记录近战攻击",
+      "properties": {
+        "message": "士兵执行近战攻击"
+      }
+    },
+    {
+      "id": "chase-enemy",
+      "type": "sequence",
+      "name": "追击敌人",
+      "description": "追击敌方目标",
+      "children": ["set-chase-state", "move-to-enemy"]
+    },
+    {
+      "id": "set-chase-state",
+      "type": "set-blackboard-value",
+      "name": "设置追击状态",
+      "description": "将士兵状态设置为追击",
+      "properties": {
+        "variableName": "currentState",
+        "value": "chasing"
+      }
+    },
+    {
+      "id": "move-to-enemy",
+      "type": "event-action",
+      "name": "移动到敌人",
+      "description": "快速移动到敌人位置",
+      "properties": {
+        "eventName": "move-to-target"
+      }
+    },
+    {
+      "id": "patrol-behavior",
+      "type": "conditional-decorator",
+      "name": "巡逻行为",
+      "description": "没有敌人时执行巡逻",
+      "children": ["patrol-sequence"],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "currentCommand",
+          "compareOperator": "equals",
+          "compareValue": "patrol"
+        }
+      }
+    },
+    {
+      "id": "patrol-sequence",
+      "type": "sequence",
+      "name": "巡逻序列",
+      "description": "执行巡逻的完整流程",
+      "children": ["set-patrol-state", "patrol-move", "patrol-scan", "patrol-wait"]
+    },
+    {
+      "id": "set-patrol-state",
+      "type": "set-blackboard-value",
+      "name": "设置巡逻状态",
+      "description": "将士兵状态设置为巡逻",
+      "properties": {
+        "variableName": "currentState",
+        "value": "patrolling"
+      }
+    },
+    {
+      "id": "patrol-move",
+      "type": "event-action",
+      "name": "巡逻移动",
+      "description": "沿巡逻路线移动",
+      "properties": {
+        "eventName": "patrol-move"
+      }
+    },
+    {
+      "id": "patrol-scan",
+      "type": "event-action",
+      "name": "扫描敌人",
+      "description": "扫描周围是否有敌人",
+      "properties": {
+        "eventName": "scan-for-enemies"
+      }
+    },
+    {
+      "id": "patrol-wait",
+      "type": "wait-action",
+      "name": "巡逻等待",
+      "description": "在巡逻点等待",
+      "properties": {
+        "waitTime": 2.0
+      }
+    },
+    {
+      "id": "standby-behavior",
+      "type": "sequence",
+      "name": "待命行为",
+      "description": "默认的待命状态",
+      "children": ["set-standby-state", "standby-wait"]
+    },
+    {
+      "id": "set-standby-state",
+      "type": "set-blackboard-value",
+      "name": "设置待命状态",
+      "description": "将士兵状态设置为待命",
+      "properties": {
+        "variableName": "currentState",
+        "value": "standby"
+      }
+    },
+    {
+      "id": "standby-wait",
+      "type": "wait-action",
+      "name": "待命等待",
+      "description": "待命状态下等待",
+      "properties": {
+        "waitTime": 1.0
+      }
+    }
+  ],
+  "blackboard": [
+    {
+      "name": "currentState",
+      "type": "string",
+      "value": "standby",
+      "description": "士兵当前状态（standby、patrolling、chasing、attacking、retreating）",
+      "group": "状态"
+    },
+    {
+      "name": "currentCommand",
+      "type": "string",
+      "value": "patrol",
+      "description": "当前接收的命令（patrol、attack、defend、move、standby）",
+      "group": "命令"
+    },
+    {
+      "name": "hasEnemy",
+      "type": "boolean",
+      "value": false,
+      "description": "是否发现敌人",
+      "group": "战斗"
+    },
+    {
+      "name": "enemyDistance",
+      "type": "number",
+      "value": 999,
+      "description": "与最近敌人的距离",
+      "group": "战斗"
+    },
+    {
+      "name": "isInMeleeRange",
+      "type": "boolean",
+      "value": false,
+      "description": "是否在近战攻击范围内",
+      "group": "战斗"
+    },
+    {
+      "name": "isInRangedRange",
+      "type": "boolean",
+      "value": false,
+      "description": "是否在远程攻击范围内",
+      "group": "战斗"
+    },
+    {
+      "name": "canMeleeAttack",
+      "type": "boolean",
+      "value": true,
+      "description": "是否可以进行近战攻击（冷却检查）",
+      "group": "战斗"
+    },
+    {
+      "name": "canRangedAttack",
+      "type": "boolean",
+      "value": true,
+      "description": "是否可以进行远程攻击（冷却检查）",
+      "group": "战斗"
+    },
+    {
+      "name": "lastMeleeTime",
+      "type": "number",
+      "value": 0,
+      "description": "上次近战攻击时间",
+      "group": "战斗"
+    },
+    {
+      "name": "lastRangedTime",
+      "type": "number",
+      "value": 0,
+      "description": "上次远程攻击时间",
+      "group": "战斗"
+    },
+    {
+      "name": "meleeCooldown",
+      "type": "number",
+      "value": 1.0,
+      "description": "近战攻击冷却时间",
+      "group": "属性"
+    },
+    {
+      "name": "rangedCooldown",
+      "type": "number",
+      "value": 2.0,
+      "description": "远程攻击冷却时间",
+      "group": "属性"
+    },
+    {
+      "name": "meleeRange",
+      "type": "number",
+      "value": 2.0,
+      "description": "近战攻击范围",
+      "group": "属性"
+    },
+    {
+      "name": "rangedRange",
+      "type": "number",
+      "value": 8.0,
+      "description": "远程攻击范围",
+      "group": "属性"
+    },
+    {
+      "name": "shouldRetreat",
+      "type": "boolean",
+      "value": false,
+      "description": "是否应该撤退（生命值低或寡不敌众）",
+      "group": "战斗"
+    },
+    {
+      "name": "currentHealth",
+      "type": "number",
+      "value": 100,
+      "description": "当前生命值",
+      "group": "状态"
+    },
+    {
+      "name": "maxHealth",
+      "type": "number",
+      "value": 100,
+      "description": "最大生命值",
+      "group": "状态"
+    },
+    {
+      "name": "armor",
+      "type": "number",
+      "value": 10,
+      "description": "护甲值",
+      "group": "属性"
+    },
+    {
+      "name": "moveSpeed",
+      "type": "number",
+      "value": 4.0,
+      "description": "移动速度",
+      "group": "属性"
+    },
+    {
+      "name": "patrolRadius",
+      "type": "number",
+      "value": 10.0,
+      "description": "巡逻半径",
+      "group": "属性"
+    }
+  ],
+  "metadata": {
+    "created": "2024-01-01T00:00:00.000Z",
+    "nodeCount": 35,
+    "editorVersion": "1.0.0",
+    "description": "士兵AI展示了完整的战斗单位行为模式，包括多种攻击方式、战术撤退、巡逻警戒等军事行为的智能决策。"
+  }
+} 

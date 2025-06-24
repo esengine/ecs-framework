@@ -1,0 +1,1915 @@
+{
+  "nodes": [
+    {
+      "id": "root",
+      "type": "root",
+      "name": "士兵AI根节点",
+      "position": {
+        "x": 400,
+        "y": 50
+      },
+      "properties": {},
+      "children": [
+        "main-selector"
+      ],
+      "x": 2230,
+      "y": 50,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "main-selector",
+      "type": "selector",
+      "name": "主行为选择器",
+      "position": {
+        "x": 400,
+        "y": 150
+      },
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "Self",
+            "LowerPriority",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "retreat-behavior",
+        "combat-behavior",
+        "patrol-behavior",
+        "standby-behavior"
+      ],
+      "x": 2240,
+      "y": 180,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "retreat-behavior",
+      "type": "conditional-decorator",
+      "name": "撤退行为",
+      "position": {
+        "x": 150,
+        "y": 250
+      },
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "select",
+          "value": "custom",
+          "description": "装饰器使用的条件类型",
+          "options": [
+            "custom",
+            "random",
+            "hasComponent",
+            "hasTag",
+            "isActive",
+            "numericCompare",
+            "propertyExists"
+          ],
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "retreat-sequence"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "shouldRetreat",
+          "operator": "equal",
+          "compareValue": true
+        }
+      },
+      "x": 630,
+      "y": 358,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false,
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "icon": "⚖️",
+        "properties": {
+          "variableName": "shouldRetreat",
+          "operator": "equal",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "retreat-sequence",
+      "type": "sequence",
+      "name": "撤退序列",
+      "position": {
+        "x": 150,
+        "y": 350
+      },
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "set-retreat-state",
+        "call-for-help",
+        "retreat-move"
+      ],
+      "x": 630,
+      "y": 637.5,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "set-retreat-state",
+      "type": "set-blackboard-value",
+      "name": "设置撤退状态",
+      "position": {
+        "x": 50,
+        "y": 450
+      },
+      "properties": {
+        "variableName": {
+          "name": "变量名",
+          "type": "string",
+          "value": "currentState",
+          "description": "要设置的黑板变量名",
+          "required": true
+        },
+        "value": {
+          "name": "值",
+          "type": "string",
+          "value": "retreating",
+          "description": "要设置的值",
+          "required": false
+        },
+        "sourceVariable": {
+          "name": "源变量名",
+          "type": "string",
+          "value": "",
+          "description": "从另一个黑板变量复制值",
+          "required": false
+        },
+        "force": {
+          "name": "强制设置",
+          "type": "boolean",
+          "value": false,
+          "description": "是否忽略只读限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 400,
+      "y": 815.5,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "call-for-help",
+      "type": "event-action",
+      "name": "呼叫支援",
+      "position": {
+        "x": 150,
+        "y": 450
+      },
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "call-for-help",
+          "description": "要触发的事件名称",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 630,
+      "y": 815.5,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "retreat-move",
+      "type": "event-action",
+      "name": "撤退移动",
+      "position": {
+        "x": 250,
+        "y": 450
+      },
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "retreat-to-safety",
+          "description": "要触发的事件名称",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 860,
+      "y": 815.5,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "combat-behavior",
+      "type": "conditional-decorator",
+      "name": "战斗行为",
+      "position": {
+        "x": 350,
+        "y": 250
+      },
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "select",
+          "value": "custom",
+          "description": "装饰器使用的条件类型",
+          "options": [
+            "custom",
+            "random",
+            "hasComponent",
+            "hasTag",
+            "isActive",
+            "numericCompare",
+            "propertyExists"
+          ],
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "combat-selector"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "hasEnemy",
+          "operator": "equal",
+          "compareValue": true
+        }
+      },
+      "x": 1895,
+      "y": 358,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false,
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "properties": {
+          "variableName": "hasEnemy",
+          "operator": "equal",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "combat-selector",
+      "type": "selector",
+      "name": "战斗选择器",
+      "position": {
+        "x": 350,
+        "y": 350
+      },
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "Self",
+            "LowerPriority",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "ranged-attack",
+        "close-combat",
+        "chase-enemy"
+      ],
+      "x": 1895,
+      "y": 637.5,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "ranged-attack",
+      "type": "conditional-decorator",
+      "name": "远程攻击",
+      "position": {
+        "x": 250,
+        "y": 450
+      },
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "select",
+          "value": "custom",
+          "description": "装饰器使用的条件类型",
+          "options": [
+            "custom",
+            "random",
+            "hasComponent",
+            "hasTag",
+            "isActive",
+            "numericCompare",
+            "propertyExists"
+          ],
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "ranged-sequence"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "isInRangedRange",
+          "operator": "equal",
+          "compareValue": true
+        }
+      },
+      "x": 1320,
+      "y": 815.5,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false,
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "properties": {
+          "variableName": "isInRangedRange",
+          "operator": "equal",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "ranged-sequence",
+      "type": "sequence",
+      "name": "远程攻击序列",
+      "position": {
+        "x": 250,
+        "y": 550
+      },
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "aim-target",
+        "ranged-cooldown-check",
+        "fire-ranged"
+      ],
+      "x": 1320,
+      "y": 1095,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "aim-target",
+      "type": "event-action",
+      "name": "瞄准目标",
+      "position": {
+        "x": 150,
+        "y": 650
+      },
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "aim-at-target",
+          "description": "要触发的事件名称",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 1090,
+      "y": 1273,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "ranged-cooldown-check",
+      "type": "conditional-decorator",
+      "name": "远程冷却检查",
+      "position": {
+        "x": 250,
+        "y": 650
+      },
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "select",
+          "value": "custom",
+          "description": "装饰器使用的条件类型",
+          "options": [
+            "custom",
+            "random",
+            "hasComponent",
+            "hasTag",
+            "isActive",
+            "numericCompare",
+            "propertyExists"
+          ],
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "execute-ranged"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "canRangedAttack",
+          "operator": "equal",
+          "compareValue": true
+        }
+      },
+      "x": 1320,
+      "y": 1273,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false,
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "properties": {
+          "variableName": "canRangedAttack",
+          "operator": "equal",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "execute-ranged",
+      "type": "event-action",
+      "name": "执行远程攻击",
+      "position": {
+        "x": 250,
+        "y": 750
+      },
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "ranged-attack",
+          "description": "要触发的事件名称",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 1320,
+      "y": 1552.5,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "fire-ranged",
+      "type": "log-action",
+      "name": "远程攻击日志",
+      "position": {
+        "x": 350,
+        "y": 650
+      },
+      "properties": {
+        "message": {
+          "name": "日志消息",
+          "type": "string",
+          "value": "士兵执行远程攻击",
+          "description": "要记录的日志消息",
+          "required": true
+        },
+        "logLevel": {
+          "name": "日志级别",
+          "type": "select",
+          "value": "info",
+          "description": "日志输出级别",
+          "options": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 1550,
+      "y": 1273,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "close-combat",
+      "type": "conditional-decorator",
+      "name": "近战攻击",
+      "position": {
+        "x": 350,
+        "y": 450
+      },
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "select",
+          "value": "custom",
+          "description": "装饰器使用的条件类型",
+          "options": [
+            "custom",
+            "random",
+            "hasComponent",
+            "hasTag",
+            "isActive",
+            "numericCompare",
+            "propertyExists"
+          ],
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "melee-sequence"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "isInMeleeRange",
+          "operator": "equal",
+          "compareValue": true
+        }
+      },
+      "x": 2010,
+      "y": 815.5,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false,
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "properties": {
+          "variableName": "isInMeleeRange",
+          "operator": "equal",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "melee-sequence",
+      "type": "sequence",
+      "name": "近战攻击序列",
+      "position": {
+        "x": 350,
+        "y": 550
+      },
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "melee-cooldown-check",
+        "execute-melee",
+        "melee-log"
+      ],
+      "x": 2010,
+      "y": 1095,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "melee-cooldown-check",
+      "type": "conditional-decorator",
+      "name": "近战冷却检查",
+      "position": {
+        "x": 300,
+        "y": 650
+      },
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "select",
+          "value": "custom",
+          "description": "装饰器使用的条件类型",
+          "options": [
+            "custom",
+            "random",
+            "hasComponent",
+            "hasTag",
+            "isActive",
+            "numericCompare",
+            "propertyExists"
+          ],
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "melee-attack"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "canMeleeAttack",
+          "operator": "equal",
+          "compareValue": true
+        }
+      },
+      "x": 1780,
+      "y": 1273,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false,
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "properties": {
+          "variableName": "canMeleeAttack",
+          "operator": "equal",
+          "compareValue": true
+        }
+      }
+    },
+    {
+      "id": "melee-attack",
+      "type": "event-action",
+      "name": "近战攻击",
+      "position": {
+        "x": 300,
+        "y": 750
+      },
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "melee-attack",
+          "description": "要触发的事件名称",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 1780,
+      "y": 1552.5,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "execute-melee",
+      "type": "set-blackboard-value",
+      "name": "更新近战冷却",
+      "position": {
+        "x": 350,
+        "y": 650
+      },
+      "properties": {
+        "variableName": {
+          "name": "变量名",
+          "type": "string",
+          "value": "lastMeleeTime",
+          "description": "要设置的黑板变量名",
+          "required": true
+        },
+        "value": {
+          "name": "值",
+          "type": "string",
+          "value": "currentTime",
+          "description": "要设置的值",
+          "required": false
+        },
+        "sourceVariable": {
+          "name": "源变量名",
+          "type": "string",
+          "value": "",
+          "description": "从另一个黑板变量复制值",
+          "required": false
+        },
+        "force": {
+          "name": "强制设置",
+          "type": "boolean",
+          "value": false,
+          "description": "是否忽略只读限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 2010,
+      "y": 1273,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "melee-log",
+      "type": "log-action",
+      "name": "近战攻击日志",
+      "position": {
+        "x": 400,
+        "y": 650
+      },
+      "properties": {
+        "message": {
+          "name": "日志消息",
+          "type": "string",
+          "value": "士兵执行近战攻击",
+          "description": "要记录的日志消息",
+          "required": true
+        },
+        "logLevel": {
+          "name": "日志级别",
+          "type": "select",
+          "value": "info",
+          "description": "日志输出级别",
+          "options": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 2240,
+      "y": 1273,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "chase-enemy",
+      "type": "sequence",
+      "name": "追击敌人",
+      "position": {
+        "x": 450,
+        "y": 450
+      },
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "set-chase-state",
+        "move-to-enemy"
+      ],
+      "x": 2585,
+      "y": 815.5,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "set-chase-state",
+      "type": "set-blackboard-value",
+      "name": "设置追击状态",
+      "position": {
+        "x": 400,
+        "y": 550
+      },
+      "properties": {
+        "variableName": {
+          "name": "变量名",
+          "type": "string",
+          "value": "currentState",
+          "description": "要设置的黑板变量名",
+          "required": true
+        },
+        "value": {
+          "name": "值",
+          "type": "string",
+          "value": "chasing",
+          "description": "要设置的值",
+          "required": false
+        },
+        "sourceVariable": {
+          "name": "源变量名",
+          "type": "string",
+          "value": "",
+          "description": "从另一个黑板变量复制值",
+          "required": false
+        },
+        "force": {
+          "name": "强制设置",
+          "type": "boolean",
+          "value": false,
+          "description": "是否忽略只读限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 2470,
+      "y": 993.5,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "move-to-enemy",
+      "type": "event-action",
+      "name": "移动到敌人",
+      "position": {
+        "x": 500,
+        "y": 550
+      },
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "move-to-target",
+          "description": "要触发的事件名称",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 2700,
+      "y": 993.5,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "patrol-behavior",
+      "type": "conditional-decorator",
+      "name": "巡逻行为",
+      "position": {
+        "x": 550,
+        "y": 250
+      },
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "select",
+          "value": "custom",
+          "description": "装饰器使用的条件类型",
+          "options": [
+            "custom",
+            "random",
+            "hasComponent",
+            "hasTag",
+            "isActive",
+            "numericCompare",
+            "propertyExists"
+          ],
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "patrol-sequence"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {
+          "variableName": "currentCommand",
+          "operator": "equal",
+          "compareValue": "patrol"
+        }
+      },
+      "x": 3275,
+      "y": 358,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false,
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "properties": {
+          "variableName": "currentCommand",
+          "operator": "equal",
+          "compareValue": "patrol"
+        }
+      }
+    },
+    {
+      "id": "patrol-sequence",
+      "type": "sequence",
+      "name": "巡逻序列",
+      "position": {
+        "x": 550,
+        "y": 350
+      },
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "set-patrol-state",
+        "patrol-move",
+        "patrol-scan",
+        "patrol-wait"
+      ],
+      "x": 3275,
+      "y": 637.5,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "set-patrol-state",
+      "type": "set-blackboard-value",
+      "name": "设置巡逻状态",
+      "position": {
+        "x": 450,
+        "y": 450
+      },
+      "properties": {
+        "variableName": {
+          "name": "变量名",
+          "type": "string",
+          "value": "currentState",
+          "description": "要设置的黑板变量名",
+          "required": true
+        },
+        "value": {
+          "name": "值",
+          "type": "string",
+          "value": "patrolling",
+          "description": "要设置的值",
+          "required": false
+        },
+        "sourceVariable": {
+          "name": "源变量名",
+          "type": "string",
+          "value": "",
+          "description": "从另一个黑板变量复制值",
+          "required": false
+        },
+        "force": {
+          "name": "强制设置",
+          "type": "boolean",
+          "value": false,
+          "description": "是否忽略只读限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 2930,
+      "y": 815.5,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "patrol-move",
+      "type": "event-action",
+      "name": "巡逻移动",
+      "position": {
+        "x": 550,
+        "y": 450
+      },
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "patrol-move",
+          "description": "要触发的事件名称",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 3160,
+      "y": 815.5,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "patrol-scan",
+      "type": "event-action",
+      "name": "扫描敌人",
+      "position": {
+        "x": 650,
+        "y": 450
+      },
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "scan-for-enemies",
+          "description": "要触发的事件名称",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 3390,
+      "y": 815.5,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "patrol-wait",
+      "type": "wait-action",
+      "name": "巡逻等待",
+      "position": {
+        "x": 750,
+        "y": 450
+      },
+      "properties": {
+        "waitTime": {
+          "name": "等待时间",
+          "type": "number",
+          "value": 2,
+          "description": "等待的时间（秒）",
+          "required": true
+        },
+        "useExternalTime": {
+          "name": "使用外部时间",
+          "type": "boolean",
+          "value": false,
+          "description": "是否使用上下文提供的deltaTime，否则使用内部时间计算",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 3620,
+      "y": 815.5,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "standby-behavior",
+      "type": "sequence",
+      "name": "待命行为",
+      "position": {
+        "x": 750,
+        "y": 250
+      },
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "children": [
+        "set-standby-state",
+        "standby-wait"
+      ],
+      "x": 3965,
+      "y": 358,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "set-standby-state",
+      "type": "set-blackboard-value",
+      "name": "设置待命状态",
+      "position": {
+        "x": 700,
+        "y": 350
+      },
+      "properties": {
+        "variableName": {
+          "name": "变量名",
+          "type": "string",
+          "value": "currentState",
+          "description": "要设置的黑板变量名",
+          "required": true
+        },
+        "value": {
+          "name": "值",
+          "type": "string",
+          "value": "standby",
+          "description": "要设置的值",
+          "required": false
+        },
+        "sourceVariable": {
+          "name": "源变量名",
+          "type": "string",
+          "value": "",
+          "description": "从另一个黑板变量复制值",
+          "required": false
+        },
+        "force": {
+          "name": "强制设置",
+          "type": "boolean",
+          "value": false,
+          "description": "是否忽略只读限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 3850,
+      "y": 536,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "standby-wait",
+      "type": "wait-action",
+      "name": "待命等待",
+      "position": {
+        "x": 800,
+        "y": 350
+      },
+      "properties": {
+        "waitTime": {
+          "name": "等待时间",
+          "type": "number",
+          "value": 1,
+          "description": "等待的时间（秒）",
+          "required": true
+        },
+        "useExternalTime": {
+          "name": "使用外部时间",
+          "type": "boolean",
+          "value": false,
+          "description": "是否使用上下文提供的deltaTime，否则使用内部时间计算",
+          "required": false
+        }
+      },
+      "children": [],
+      "x": 4080,
+      "y": 536,
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    }
+  ],
+  "connections": [
+    {
+      "id": "root-main-selector",
+      "sourceId": "root",
+      "targetId": "main-selector",
+      "path": "M 2310 128 C 2310 158 2320 152 2320 182",
+      "active": false
+    },
+    {
+      "id": "main-selector-retreat-behavior",
+      "sourceId": "main-selector",
+      "targetId": "retreat-behavior",
+      "path": "M 2320 278 C 2320 319 740 319 740 360",
+      "active": false
+    },
+    {
+      "id": "main-selector-combat-behavior",
+      "sourceId": "main-selector",
+      "targetId": "combat-behavior",
+      "path": "M 2320 278 C 2320 319 2005 319 2005 360",
+      "active": false
+    },
+    {
+      "id": "main-selector-patrol-behavior",
+      "sourceId": "main-selector",
+      "targetId": "patrol-behavior",
+      "path": "M 2320 278 C 2320 319 3385 319 3385 360",
+      "active": false
+    },
+    {
+      "id": "main-selector-standby-behavior",
+      "sourceId": "main-selector",
+      "targetId": "standby-behavior",
+      "path": "M 2320 278 C 2320 319 4045 319 4045 360",
+      "active": false
+    },
+    {
+      "id": "retreat-behavior-retreat-sequence",
+      "sourceId": "retreat-behavior",
+      "targetId": "retreat-sequence",
+      "path": "M 740 543.78125 C 740 591.640625 710 591.640625 710 639.5",
+      "active": false
+    },
+    {
+      "id": "retreat-sequence-set-retreat-state",
+      "sourceId": "retreat-sequence",
+      "targetId": "set-retreat-state",
+      "path": "M 710 735.5 C 710 776.5 480 776.5 480 817.5",
+      "active": false
+    },
+    {
+      "id": "retreat-sequence-call-for-help",
+      "sourceId": "retreat-sequence",
+      "targetId": "call-for-help",
+      "path": "M 710 735.5 C 710 776.5 710 776.5 710 817.5",
+      "active": false
+    },
+    {
+      "id": "retreat-sequence-retreat-move",
+      "sourceId": "retreat-sequence",
+      "targetId": "retreat-move",
+      "path": "M 710 735.5 C 710 775.7634887695312 940.4739379882812 775.7634887695312 940.4739379882812 816.0269775390625",
+      "active": false
+    },
+    {
+      "id": "combat-behavior-combat-selector",
+      "sourceId": "combat-behavior",
+      "targetId": "combat-selector",
+      "path": "M 2005 543.78125 C 2005 591.640625 1975 591.640625 1975 639.5",
+      "active": false
+    },
+    {
+      "id": "combat-selector-ranged-attack",
+      "sourceId": "combat-selector",
+      "targetId": "ranged-attack",
+      "path": "M 1975 735.5 C 1975 776.5 1430 776.5 1430 817.5",
+      "active": false
+    },
+    {
+      "id": "combat-selector-close-combat",
+      "sourceId": "combat-selector",
+      "targetId": "close-combat",
+      "path": "M 1975 735.5 C 1975 776.5 2120 776.5 2120 817.5",
+      "active": false
+    },
+    {
+      "id": "combat-selector-chase-enemy",
+      "sourceId": "combat-selector",
+      "targetId": "chase-enemy",
+      "path": "M 1975 735.5 C 1975 776.5 2665 776.5 2665 817.5",
+      "active": false
+    },
+    {
+      "id": "ranged-attack-ranged-sequence",
+      "sourceId": "ranged-attack",
+      "targetId": "ranged-sequence",
+      "path": "M 1430 1001.28125 C 1430 1049.140625 1400 1049.140625 1400 1097",
+      "active": false
+    },
+    {
+      "id": "ranged-sequence-aim-target",
+      "sourceId": "ranged-sequence",
+      "targetId": "aim-target",
+      "path": "M 1400 1193 C 1400 1234 1170 1234 1170 1275",
+      "active": false
+    },
+    {
+      "id": "ranged-sequence-ranged-cooldown-check",
+      "sourceId": "ranged-sequence",
+      "targetId": "ranged-cooldown-check",
+      "path": "M 1400 1193 C 1400 1234 1430 1234 1430 1275",
+      "active": false
+    },
+    {
+      "id": "ranged-sequence-fire-ranged",
+      "sourceId": "ranged-sequence",
+      "targetId": "fire-ranged",
+      "path": "M 1400 1193 C 1400 1234 1630 1234 1630 1275",
+      "active": false
+    },
+    {
+      "id": "ranged-cooldown-check-execute-ranged",
+      "sourceId": "ranged-cooldown-check",
+      "targetId": "execute-ranged",
+      "path": "M 1430 1458.78125 C 1430 1506.640625 1400 1506.640625 1400 1554.5",
+      "active": false
+    },
+    {
+      "id": "close-combat-melee-sequence",
+      "sourceId": "close-combat",
+      "targetId": "melee-sequence",
+      "path": "M 2120 1001.28125 C 2120 1049.140625 2090 1049.140625 2090 1097",
+      "active": false
+    },
+    {
+      "id": "melee-sequence-melee-cooldown-check",
+      "sourceId": "melee-sequence",
+      "targetId": "melee-cooldown-check",
+      "path": "M 2090 1193 C 2090 1234 1890 1234 1890 1275",
+      "active": false
+    },
+    {
+      "id": "melee-sequence-execute-melee",
+      "sourceId": "melee-sequence",
+      "targetId": "execute-melee",
+      "path": "M 2090 1193 C 2090 1234 2090 1234 2090 1275",
+      "active": false
+    },
+    {
+      "id": "melee-sequence-melee-log",
+      "sourceId": "melee-sequence",
+      "targetId": "melee-log",
+      "path": "M 2090 1193 C 2090 1234 2320 1234 2320 1275",
+      "active": false
+    },
+    {
+      "id": "melee-cooldown-check-melee-attack",
+      "sourceId": "melee-cooldown-check",
+      "targetId": "melee-attack",
+      "path": "M 1890 1458.78125 C 1890 1506.640625 1860 1506.640625 1860 1554.5",
+      "active": false
+    },
+    {
+      "id": "chase-enemy-set-chase-state",
+      "sourceId": "chase-enemy",
+      "targetId": "set-chase-state",
+      "path": "M 2665 913.5 C 2665 954.5 2550 954.5 2550 995.5",
+      "active": false
+    },
+    {
+      "id": "chase-enemy-move-to-enemy",
+      "sourceId": "chase-enemy",
+      "targetId": "move-to-enemy",
+      "path": "M 2665 913.5 C 2665 954.5 2780 954.5 2780 995.5",
+      "active": false
+    },
+    {
+      "id": "patrol-behavior-patrol-sequence",
+      "sourceId": "patrol-behavior",
+      "targetId": "patrol-sequence",
+      "path": "M 3385 543.78125 C 3385 591.640625 3355 591.640625 3355 639.5",
+      "active": false
+    },
+    {
+      "id": "patrol-sequence-set-patrol-state",
+      "sourceId": "patrol-sequence",
+      "targetId": "set-patrol-state",
+      "path": "M 3355 735.5 C 3355 776.5 3010 776.5 3010 817.5",
+      "active": false
+    },
+    {
+      "id": "patrol-sequence-patrol-move",
+      "sourceId": "patrol-sequence",
+      "targetId": "patrol-move",
+      "path": "M 3355 735.5 C 3355 776.5 3240 776.5 3240 817.5",
+      "active": false
+    },
+    {
+      "id": "patrol-sequence-patrol-scan",
+      "sourceId": "patrol-sequence",
+      "targetId": "patrol-scan",
+      "path": "M 3355 735.5 C 3355 776.5 3470 776.5 3470 817.5",
+      "active": false
+    },
+    {
+      "id": "patrol-sequence-patrol-wait",
+      "sourceId": "patrol-sequence",
+      "targetId": "patrol-wait",
+      "path": "M 3355 735.5 C 3355 776.5 3700 776.5 3700 817.5",
+      "active": false
+    },
+    {
+      "id": "standby-behavior-set-standby-state",
+      "sourceId": "standby-behavior",
+      "targetId": "set-standby-state",
+      "path": "M 4045 456 C 4045 497 3930 497 3930 538",
+      "active": false
+    },
+    {
+      "id": "standby-behavior-standby-wait",
+      "sourceId": "standby-behavior",
+      "targetId": "standby-wait",
+      "path": "M 4045 456 C 4045 497 4160 497 4160 538",
+      "active": false
+    }
+  ],
+  "metadata": {
+    "name": "assets/resources/soldier-ai.btree",
+    "created": "2025-06-24T10:16:48.539Z",
+    "version": "1.0"
+  },
+  "blackboard": [
+    {
+      "name": "currentState",
+      "type": "string",
+      "value": "standby",
+      "description": "士兵当前状态（standby、patrolling、chasing、attacking、retreating）"
+    },
+    {
+      "name": "currentCommand",
+      "type": "string",
+      "value": "patrol",
+      "description": "当前接收的命令（patrol、attack、defend、move、standby）"
+    },
+    {
+      "name": "hasEnemy",
+      "type": "boolean",
+      "value": false,
+      "description": "是否发现敌人"
+    },
+    {
+      "name": "enemyDistance",
+      "type": "number",
+      "value": 999,
+      "description": "与最近敌人的距离"
+    },
+    {
+      "name": "isInMeleeRange",
+      "type": "boolean",
+      "value": false,
+      "description": "是否在近战攻击范围内"
+    },
+    {
+      "name": "isInRangedRange",
+      "type": "boolean",
+      "value": false,
+      "description": "是否在远程攻击范围内"
+    },
+    {
+      "name": "canMeleeAttack",
+      "type": "boolean",
+      "value": true,
+      "description": "是否可以进行近战攻击（冷却检查）"
+    },
+    {
+      "name": "canRangedAttack",
+      "type": "boolean",
+      "value": true,
+      "description": "是否可以进行远程攻击（冷却检查）"
+    },
+    {
+      "name": "lastMeleeTime",
+      "type": "number",
+      "value": 0,
+      "description": "上次近战攻击时间"
+    },
+    {
+      "name": "lastRangedTime",
+      "type": "number",
+      "value": 0,
+      "description": "上次远程攻击时间"
+    },
+    {
+      "name": "meleeCooldown",
+      "type": "number",
+      "value": 1,
+      "description": "近战攻击冷却时间"
+    },
+    {
+      "name": "rangedCooldown",
+      "type": "number",
+      "value": 2,
+      "description": "远程攻击冷却时间"
+    },
+    {
+      "name": "meleeRange",
+      "type": "number",
+      "value": 2,
+      "description": "近战攻击范围"
+    },
+    {
+      "name": "rangedRange",
+      "type": "number",
+      "value": 8,
+      "description": "远程攻击范围"
+    },
+    {
+      "name": "shouldRetreat",
+      "type": "boolean",
+      "value": false,
+      "description": "是否应该撤退（生命值低或寡不敌众）"
+    },
+    {
+      "name": "currentHealth",
+      "type": "number",
+      "value": 100,
+      "description": "当前生命值"
+    },
+    {
+      "name": "maxHealth",
+      "type": "number",
+      "value": 100,
+      "description": "最大生命值"
+    },
+    {
+      "name": "armor",
+      "type": "number",
+      "value": 10,
+      "description": "护甲值"
+    },
+    {
+      "name": "moveSpeed",
+      "type": "number",
+      "value": 4,
+      "description": "移动速度"
+    },
+    {
+      "name": "patrolRadius",
+      "type": "number",
+      "value": 10,
+      "description": "巡逻半径"
+    }
+  ]
+}
