@@ -88,11 +88,16 @@ export class BehaviorTreeComponent extends ECSComponent {
     private setupBlackboard() {
         if (!this.blackboard || !this.cocosNode) return;
         
-        // 设置基础信息
-        this.blackboard.setValue('entityName', this.cocosNode.name);
-        this.blackboard.setValue('currentTime', Date.now() / 1000);
-        this.blackboard.setValue('deltaTime', 0.016);
-        this.blackboard.setValue('worldPosition', this.cocosNode.worldPosition);
+        // 注意：只设置行为树中实际定义的变量
+        // 这些变量需要在对应的.btree文件的blackboard数组中预先定义
+        
+        // 设置基础信息 - 注释掉未在行为树中定义的变量
+        // this.blackboard.setValue('entityName', this.cocosNode.name);
+        // this.blackboard.setValue('currentTime', Date.now() / 1000);
+        // this.blackboard.setValue('deltaTime', 0.016);
+        // this.blackboard.setValue('worldPosition', this.cocosNode.worldPosition);
+        
+        console.log('BehaviorTreeComponent黑板设置完成，未设置任何变量以避免警告');
     }
     
     /**
@@ -107,13 +112,14 @@ export class BehaviorTreeComponent extends ECSComponent {
         
         this.lastTickTime = 0;
         
-        // 更新黑板中的时间信息
+        // 更新黑板中的时间信息 - 注释掉未在行为树中定义的变量
         if (this.blackboard) {
-            this.blackboard.setValue('deltaTime', deltaTime);
-            this.blackboard.setValue('currentTime', Date.now() / 1000);
-            if (this.cocosNode) {
-                this.blackboard.setValue('worldPosition', this.cocosNode.worldPosition);
-            }
+            // 只更新行为树中实际定义的变量
+            // this.blackboard.setValue('deltaTime', deltaTime);
+            // this.blackboard.setValue('currentTime', Date.now() / 1000);
+            // if (this.cocosNode) {
+            //     this.blackboard.setValue('worldPosition', this.cocosNode.worldPosition);
+            // }
         }
         
         // 执行行为树

@@ -1,0 +1,111 @@
+{
+  "name": "miner-ai",
+  "description": "简化版矿工AI - 挖矿存储循环",
+  "blackboard": {
+    "variables": [
+      {
+        "name": "unitType",
+        "type": "string",
+        "value": "miner",
+        "group": "基础属性",
+        "description": "单位类型"
+      },
+      {
+        "name": "currentCommand", 
+        "type": "string",
+        "value": "mine",
+        "group": "命令状态",
+        "description": "当前命令"
+      },
+      {
+        "name": "hasOre",
+        "type": "boolean", 
+        "value": false,
+        "group": "工作状态",
+        "description": "是否携带矿石"
+      },
+      {
+        "name": "targetPosition",
+        "type": "vector3",
+        "value": null,
+        "group": "移动属性", 
+        "description": "目标位置"
+      },
+      {
+        "name": "hasTarget",
+        "type": "boolean",
+        "value": false,
+        "group": "移动属性",
+        "description": "是否有目标"
+      },
+      {
+        "name": "isMoving",
+        "type": "boolean",
+        "value": false,
+        "group": "移动属性", 
+        "description": "是否正在移动"
+      },
+      {
+        "name": "currentHealth",
+        "type": "number",
+        "value": 100,
+        "group": "基础属性",
+        "description": "当前生命值"
+      },
+      {
+        "name": "maxHealth", 
+        "type": "number",
+        "value": 100,
+        "group": "基础属性",
+        "description": "最大生命值"
+      }
+    ]
+  },
+  "root": {
+    "type": "selector",
+    "name": "矿工主选择器",
+    "children": [
+      {
+        "type": "sequence",
+        "name": "存储矿石序列",
+        "children": [
+          {
+            "type": "blackboard-value-comparison",
+            "name": "检查是否携带矿石",
+            "variable": "hasOre",
+            "operator": "==",
+            "value": true
+          },
+          {
+            "type": "execute-action",
+            "name": "前往仓库存储",
+            "action": "store-ore"
+          }
+        ]
+      },
+      {
+        "type": "sequence", 
+        "name": "挖矿序列",
+        "children": [
+          {
+            "type": "blackboard-value-comparison",
+            "name": "检查是否没有矿石",
+            "variable": "hasOre",
+            "operator": "==", 
+            "value": false
+          },
+          {
+            "type": "execute-action",
+            "name": "寻找并挖掘矿石",
+            "action": "find-and-mine-ore"
+          }
+        ]
+      },
+      {
+        "type": "execute-action",
+        "name": "默认待机",
+        "action": "idle-behavior"
+      }
+    ]
+  }
+} 

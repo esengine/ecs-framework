@@ -1,5 +1,6 @@
 import { _decorator, Component, Node, Vec3, Material, MeshRenderer, Color, tween } from 'cc';
 import { BehaviorTreeManager } from './BehaviorTreeManager';
+import { RTSBehaviorHandler } from './RTSBehaviorHandler';
 
 const { ccclass, property } = _decorator;
 
@@ -29,7 +30,7 @@ export class UnitController extends Component {
     public unitType: string = '';
     public maxHealth: number = 100;
     public currentHealth: number = 100;
-    public moveSpeed: number = 3;
+    public moveSpeed: number = 1.5;
     public attackRange: number = 2;
     public attackDamage: number = 25;
     public isSelected: boolean = false;
@@ -40,7 +41,13 @@ export class UnitController extends Component {
     public attackCooldown: number = 1.5;
     public color: string = 'white';
     
+    // 移动状态管理
+    private isMoving: boolean = false;
+    private moveStartTime: number = 0;
+    private lastTargetUpdateTime: number = 0;
+    
     private behaviorTreeManager: BehaviorTreeManager | null = null;
+    private behaviorHandler: Component | null = null;
     private meshRenderer: MeshRenderer | null = null;
     
     onLoad() {
@@ -48,6 +55,14 @@ export class UnitController extends Component {
         
         // 创建行为树管理器
         this.behaviorTreeManager = this.addComponent(BehaviorTreeManager);
+        
+        // 添加RTS行为处理器
+        try {
+            // 添加RTSBehaviorHandler组件
+            this.behaviorHandler = this.addComponent(RTSBehaviorHandler);
+        } catch (error) {
+            console.warn('RTSBehaviorHandler组件添加失败，将使用默认行为处理', error);
+        }
     }
     
     /**
@@ -65,12 +80,15 @@ export class UnitController extends Component {
         // 设置材质颜色
         this.setUnitColor(config.color);
         
+        // 设置节点名称显示单位类型
+        this.node.name = `${config.unitType.toUpperCase()}_${this.node.name}`;
+        
         // 初始化行为树
         if (this.behaviorTreeManager) {
             this.behaviorTreeManager.initializeBehaviorTree(config.behaviorTreeName, this);
         }
         
-        console.log(`单位 ${this.node.name} 设置完成 - 类型: ${config.unitType}, 行为树: ${config.behaviorTreeName}`);
+        console.log(`🎮 单位设置完成: ${this.node.name} | 类型: ${config.unitType.toUpperCase()} | 行为树: ${config.behaviorTreeName}`);
     }
     
     /**
@@ -92,6 +110,8 @@ export class UnitController extends Component {
         const color = colorMap[colorName] || Color.WHITE;
         this.meshRenderer.material.setProperty('mainColor', color);
     }
+    
+
     
     /**
      * 设置选择状态
@@ -166,6 +186,29 @@ export class UnitController extends Component {
     }
     
     /**
+     * 设置黑板变量值
+     */
+    setBlackboardValue(key: string, value: any) {
+        if (this.behaviorTreeManager) {
+            this.behaviorTreeManager.updateBlackboardValue(key, value);
+        }
+    }
+    
+    /**
+     * 设置移动目标
+     */
+    setTarget(position: Vec3) {
+        this.targetPosition = position.clone();
+    }
+    
+    /**
+     * 清除移动目标
+     */
+    clearTarget() {
+        this.targetPosition = Vec3.ZERO.clone();
+    }
+    
+    /**
      * 受到伤害
      */
     takeDamage(damage: number) {
@@ -219,23 +262,45 @@ export class UnitController extends Component {
     }
     
     /**
-     * 移动到目标位置
+     * 移动到目标位置（只在水平面移动，不改变Y轴）
      */
-    moveToTarget(targetPos: Vec3, speed?: number): boolean {
+    moveToTarget(targetPos: Vec3, speed?: number, deltaTime?: number): boolean {
         const currentPos = this.node.worldPosition;
-        const distance = currentPos.subtract(targetPos).length();
         
-        if (distance < 0.5) {
+        // 只计算水平面距离（忽略Y轴）
+        const currentPos2D = new Vec3(currentPos.x, 0, currentPos.z);
+        const targetPos2D = new Vec3(targetPos.x, 0, targetPos.z);
+        const distance = currentPos2D.subtract(targetPos2D).length();
+        
+        if (distance < 0.8) { // 增加到达阈值，减少抖动
+            this.isMoving = false;
             return true; // 已到达目标
         }
         
-        // 简单的移动逻辑
-        const direction = targetPos.subtract(currentPos).normalize();
+        // 平滑移动逻辑（只在水平面）
+        const direction2D = targetPos2D.subtract(currentPos2D).normalize();
         const moveSpeed = speed || this.moveSpeed;
-        const deltaTime = 1/60; // 假设60fps
+        const dt = deltaTime || 0.016; // 使用传入的deltaTime或默认值
         
-        const newPosition = currentPos.add(direction.multiplyScalar(moveSpeed * deltaTime));
+        // 计算移动距离，确保不会超过目标位置
+        const moveDistance = Math.min(moveSpeed * dt, distance);
+        const movement2D = direction2D.multiplyScalar(moveDistance);
+        
+        // 新位置保持原有的Y轴位置
+        const newPosition = new Vec3(
+            currentPos.x + movement2D.x,
+            currentPos.y, // 保持Y轴不变
+            currentPos.z + movement2D.z
+        );
+        
         this.node.setWorldPosition(newPosition);
+        this.isMoving = true;
+        
+        // 减少日志输出频率
+        if (Date.now() - this.moveStartTime > 1000) { // 每秒输出一次
+            console.log(`${this.node.name}: 移动中 距离目标${distance.toFixed(2)}米`);
+            this.moveStartTime = Date.now();
+        }
         
         return false; // 还在移动中
     }
@@ -263,26 +328,56 @@ export class UnitController extends Component {
     }
     
     update(deltaTime: number) {
-        // 更新行为树黑板中的时间相关变量
+        // 自动移动逻辑 - 如果有目标位置就自动移动
+        if (this.targetPosition && !this.targetPosition.equals(Vec3.ZERO)) {
+            const arrived = this.moveToTarget(this.targetPosition, undefined, deltaTime);
+            if (arrived) {
+                // 不要清除目标位置，让行为树决定下一步动作
+                this.isMoving = false;
+                
+                // 更新黑板状态
+                if (this.behaviorTreeManager) {
+                    this.behaviorTreeManager.updateBlackboardValue('isMoving', false);
+                    // 不要设置hasTarget为false，让行为树自己管理
+                }
+            } else {
+                this.isMoving = true;
+                
+                // 更新移动状态到黑板
+                if (this.behaviorTreeManager) {
+                    this.behaviorTreeManager.updateBlackboardValue('isMoving', true);
+                }
+            }
+        }
+        
+        // 更新行为树黑板中的核心变量
         if (this.behaviorTreeManager) {
-            this.behaviorTreeManager.updateBlackboardValue('deltaTime', deltaTime);
-            this.behaviorTreeManager.updateBlackboardValue('currentTime', Date.now() / 1000);
+            // 基础属性更新
+            this.behaviorTreeManager.updateBlackboardValue('currentHealth', this.currentHealth);
+            this.behaviorTreeManager.updateBlackboardValue('healthPercentage', this.currentHealth / this.maxHealth);
+            this.behaviorTreeManager.updateBlackboardValue('isLowHealth', this.currentHealth < this.maxHealth * 0.3);
+            
+            // 命令状态更新
+            this.behaviorTreeManager.updateBlackboardValue('currentCommand', this.currentCommand);
+            this.behaviorTreeManager.updateBlackboardValue('hasTarget', this.targetPosition && !this.targetPosition.equals(Vec3.ZERO));
+            this.behaviorTreeManager.updateBlackboardValue('targetPosition', this.targetPosition);
+            this.behaviorTreeManager.updateBlackboardValue('isSelected', this.isSelected);
+            this.behaviorTreeManager.updateBlackboardValue('isMoving', this.isMoving);
+            
+            // 位置信息更新
             this.behaviorTreeManager.updateBlackboardValue('worldPosition', this.node.worldPosition);
             
-            // 更新距离信息
-            if (this.targetPosition) {
-                const distance = this.node.worldPosition.subtract(this.targetPosition).length();
-                this.behaviorTreeManager.updateBlackboardValue('distanceToTarget', distance);
-                this.behaviorTreeManager.updateBlackboardValue('isInAttackRange', distance <= this.attackRange);
-                this.behaviorTreeManager.updateBlackboardValue('isCloseToTarget', distance <= 1.0);
+            // 根据单位类型设置特定的黑板变量
+            if (this.unitType === 'worker') {
+                // 工人特有的变量
+                // 这里可以添加工人特有的状态更新
+            } else if (this.unitType === 'soldier') {
+                // 士兵特有的变量
+                this.behaviorTreeManager.updateBlackboardValue('lastAttackTime', this.lastAttackTime);
+            } else if (this.unitType === 'scout') {
+                // 侦察兵特有的变量
+                // 这里可以添加侦察兵特有的状态更新
             }
-            
-            // 更新状态标志
-            this.behaviorTreeManager.updateBlackboardValue('isIdle', this.currentCommand === 'idle');
-            this.behaviorTreeManager.updateBlackboardValue('isMoving', this.currentCommand === 'move');
-            this.behaviorTreeManager.updateBlackboardValue('isAttacking', this.currentCommand === 'attack');
-            this.behaviorTreeManager.updateBlackboardValue('isGathering', this.currentCommand === 'gather');
-            this.behaviorTreeManager.updateBlackboardValue('isPatrolling', this.currentCommand === 'patrol');
         }
         
         // 调试信息显示

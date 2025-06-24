@@ -1,0 +1,454 @@
+{
+  "nodes": [
+    {
+      "id": "root",
+      "type": "root",
+      "name": "矿工AI根节点",
+      "position": {
+        "x": 400,
+        "y": 100
+      },
+      "properties": {},
+      "children": [
+        "main-selector"
+      ],
+      "canHaveChildren": true,
+      "canHaveParent": false,
+      "hasError": false
+    },
+    {
+      "id": "main-selector",
+      "type": "selector",
+      "name": "矿工主选择器",
+      "position": {
+        "x": 400,
+        "y": 200
+      },
+      "properties": {
+        "description": {
+          "name": "描述",
+          "type": "string",
+          "value": "矿工主要行为选择：有矿石就存储，没矿石就挖矿，否则待机",
+          "required": false
+        }
+      },
+      "children": [
+        "store-conditional",
+        "mine-conditional",
+        "idle-action"
+      ],
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "store-conditional",
+      "type": "conditional-decorator",
+      "name": "检查是否携带矿石",
+      "position": {
+        "x": 200,
+        "y": 250
+      },
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "string",
+          "value": "blackboardCompare",
+          "description": "条件判断类型",
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": ["None", "LowerPriority", "Self", "Both"],
+          "required": false
+        },
+        "shouldReevaluate": true,
+        "variableName": "hasOre",
+        "operator": "equal",
+        "compareValue": "true"
+      },
+      "children": [
+        "store-sequence"
+      ],
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "icon": "⚖️"
+      },
+      "conditionExpanded": false,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "mine-conditional",
+      "type": "conditional-decorator",
+      "name": "检查是否没有矿石",
+      "position": {
+        "x": 400,
+        "y": 250
+      },
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "string",
+          "value": "blackboardCompare",
+          "description": "条件判断类型",
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": ["None", "LowerPriority", "Self", "Both"],
+          "required": false
+        },
+        "shouldReevaluate": true,
+        "variableName": "hasOre",
+        "operator": "equal",
+        "compareValue": "false"
+      },
+      "children": [
+        "mine-sequence"
+      ],
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "icon": "⚖️"
+      },
+      "conditionExpanded": false,
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "store-sequence",
+      "type": "sequence",
+      "name": "存储矿石序列",
+      "position": {
+        "x": 200,
+        "y": 350
+      },
+      "properties": {
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "去仓库存储矿石，然后设置状态为无矿石",
+          "required": false
+        }
+      },
+      "children": [
+        "store-ore-action",
+        "set-no-ore"
+      ],
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "mine-sequence",
+      "type": "sequence",
+      "name": "挖矿序列",
+      "position": {
+        "x": 400,
+        "y": 350
+      },
+      "properties": {
+        "description": {
+          "name": "description",
+          "type": "string",
+          "value": "寻找并挖掘矿石，然后设置状态为有矿石",
+          "required": false
+        }
+      },
+      "children": [
+        "mine-ore-action",
+        "set-has-ore"
+      ],
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "store-ore-action",
+      "type": "event-action",
+      "name": "前往仓库存储",
+      "position": {
+        "x": 150,
+        "y": 450
+      },
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "store-ore",
+          "description": "要执行的事件名称",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "set-no-ore",
+      "type": "set-blackboard-value",
+      "name": "设置无矿石状态",
+      "position": {
+        "x": 250,
+        "y": 450
+      },
+      "properties": {
+        "variableName": {
+          "name": "变量名",
+          "type": "string",
+          "value": "hasOre",
+          "description": "黑板变量名",
+          "required": true
+        },
+        "value": {
+          "name": "设置值",
+          "type": "string",
+          "value": "false",
+          "description": "要设置的值（留空则使用源变量）",
+          "required": false
+        },
+        "force": {
+          "name": "强制设置",
+          "type": "boolean",
+          "value": false,
+          "description": "是否忽略只读限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "mine-ore-action",
+      "type": "event-action",
+      "name": "寻找并挖掘矿石",
+      "position": {
+        "x": 350,
+        "y": 450
+      },
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "find-and-mine-ore",
+          "description": "要执行的事件名称",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "set-has-ore",
+      "type": "set-blackboard-value",
+      "name": "设置有矿石状态",
+      "position": {
+        "x": 450,
+        "y": 450
+      },
+      "properties": {
+        "variableName": {
+          "name": "变量名",
+          "type": "string",
+          "value": "hasOre",
+          "description": "黑板变量名",
+          "required": true
+        },
+        "value": {
+          "name": "设置值",
+          "type": "string",
+          "value": "true",
+          "description": "要设置的值（留空则使用源变量）",
+          "required": false
+        },
+        "force": {
+          "name": "强制设置",
+          "type": "boolean",
+          "value": false,
+          "description": "是否忽略只读限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    },
+    {
+      "id": "idle-action",
+      "type": "event-action",
+      "name": "默认待机",
+      "position": {
+        "x": 600,
+        "y": 250
+      },
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "idle-behavior",
+          "description": "要执行的事件名称",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "children": [],
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "hasError": false
+    }
+  ],
+  "connections": [],
+  "metadata": {
+    "name": "miner-ai",
+    "description": "矿工AI示例 - 展示条件装饰器的正确使用方式",
+    "version": "1.0",
+    "created": "2025-06-24T15:00:13.826Z"
+  },
+  "blackboard": [
+    {
+      "name": "unitType",
+      "type": "string",
+      "value": "miner",
+      "description": "单位类型 - 可拖拽到事件参数中",
+      "group": "基础属性"
+    },
+    {
+      "name": "hasOre",
+      "type": "boolean",
+      "value": false,
+      "description": "是否携带矿石 - 核心状态变量，被条件节点和设置节点使用",
+      "group": "工作状态"
+    },
+    {
+      "name": "currentHealth",
+      "type": "number",
+      "value": 100,
+      "description": "当前生命值 - 可拖拽用于健康检查条件",
+      "group": "基础属性"
+    },
+    {
+      "name": "maxHealth",
+      "type": "number",
+      "value": 100,
+      "description": "最大生命值",
+      "group": "基础属性"
+    },
+    {
+      "name": "targetPosition",
+      "type": "object",
+      "value": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "description": "目标位置 - 移动系统使用",
+      "group": "移动属性"
+    },
+    {
+      "name": "isMoving",
+      "type": "boolean",
+      "value": false,
+      "description": "是否正在移动",
+      "group": "移动属性"
+    }
+  ]
+}

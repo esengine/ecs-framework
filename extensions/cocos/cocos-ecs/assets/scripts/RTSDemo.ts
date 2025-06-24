@@ -1,236 +1,174 @@
-import { _decorator, Component, Node, Vec3, instantiate, Prefab, Camera } from 'cc';
+import { _decorator, Component, Node, Vec3, Color, MeshRenderer, Material, BoxCollider, geometry, PhysicsSystem, director } from 'cc';
+import { SimplePrefabFactory } from './components/SimplePrefabFactory';
 import { UnitController } from './components/UnitController';
-import { RTSCameraController } from './controllers/RTSCameraController';
-import { UIController } from './controllers/UIController';
+import { BehaviorTreeManager } from './components/BehaviorTreeManager';
 
 const { ccclass, property } = _decorator;
 
 /**
- * RTS演示项目主控制器
- * 展示行为树在3D RTS游戏中的应用
+ * 简化版矿工挖矿演示
+ * 核心逻辑：矿工挖矿 → 运输 → 存储 → 重复
  */
-@ccclass('RTSDemo')
-export class RTSDemo extends Component {
+@ccclass('MinerDemo')
+export class MinerDemo extends Component {
     
-    @property(Prefab)
-    unitPrefab: Prefab = null!;
+    @property
+    minerCount: number = 3; // 矿工数量
     
-    @property(Prefab)
-    buildingPrefab: Prefab = null!;
+    @property  
+    oreCount: number = 8; // 矿石数量
     
-    @property(Prefab)
-    resourcePrefab: Prefab = null!;
+    private factory: SimplePrefabFactory = new SimplePrefabFactory();
+    private miners: Node[] = [];
+    private ores: Node[] = [];
+    private warehouse: Node | null = null;
+    private ground: Node | null = null;
     
-    @property(Node)
-    gameWorld: Node = null!;
-    
-    @property(Camera)
-    mainCamera: Camera = null!;
-    
-    @property(Node)
-    uiRoot: Node = null!;
-    
-    private cameraController: RTSCameraController = null!;
-    private uiController: UIController = null!;
-    
-    // 游戏状态
-    private units: Node[] = [];
-    private buildings: Node[] = [];
-    private resources: Node[] = [];
-    private selectedUnits: Node[] = [];
-    
-    onLoad() {
-        console.log('RTS Demo 初始化开始...');
-        this.initializeControllers();
-        this.setupScene();
-        console.log('RTS Demo 初始化完成！');
+    start() {
+        console.log('🎮 启动矿工挖矿演示');
+        this.createWorld();
+        this.createWarehouse();
+        this.createOres();
+        this.createMiners();
+        this.logGameStatus();
     }
     
     /**
-     * 初始化控制器
+     * 创建游戏世界
      */
-    private initializeControllers() {
-        // 相机控制器
-        this.cameraController = this.mainCamera.getComponent(RTSCameraController) || 
-                               this.mainCamera.addComponent(RTSCameraController);
-        
-        // UI控制器
-        this.uiController = this.uiRoot.getComponent(UIController) || 
-                           this.uiRoot.addComponent(UIController);
-        
-        // 设置UI回调
-        this.uiController.onUnitSelected = this.onUnitSelected.bind(this);
-        this.uiController.onCommandIssued = this.onCommandIssued.bind(this);
-        
-        console.log('控制器初始化完成');
+    private createWorld() {
+        // 创建地面
+        this.ground = this.factory.createGround(this.node, new Vec3(0, 0, 0), new Vec3(20, 0.2, 20));
+        console.log('🌍 创建游戏世界：20x20地面');
     }
     
     /**
-     * 设置场景
+     * 创建仓库
      */
-    private setupScene() {
-        this.createUnits();
-        this.createBuildings();
-        this.createResources();
-        
-        // 设置初始相机位置
-        this.mainCamera.node.setPosition(0, 20, 15);
-        this.mainCamera.node.lookAt(Vec3.ZERO);
-        
-        console.log('场景设置完成');
+    private createWarehouse() {
+        // 在地图中心创建仓库
+        this.warehouse = this.factory.createBuilding(
+            this.node, 
+            new Vec3(0, 1, 0), 
+            new Vec3(2, 2, 2), 
+            Color.GRAY,
+            'warehouse'
+        );
+        console.log('🏭 创建仓库：位置(0,1,0)');
     }
     
     /**
-     * 创建单位
+     * 创建矿石
      */
-    private createUnits() {
-        const unitTypes = [
-            { name: 'Worker', behaviorTree: 'worker-ai', color: 'blue' },
-            { name: 'Soldier', behaviorTree: 'soldier-ai', color: 'red' },
-            { name: 'Scout', behaviorTree: 'scout-ai', color: 'green' }
-        ];
+    private createOres() {
+        console.log(`⛏️ 创建${this.oreCount}个矿石`);
         
-        unitTypes.forEach((type, typeIndex) => {
-            for (let i = 0; i < 3; i++) {
-                const unit = instantiate(this.unitPrefab);
-                unit.name = `${type.name}_${i + 1}`;
-                
-                // 设置位置
-                const angle = (i / 3) * Math.PI * 2;
-                const radius = 3 + typeIndex * 2;
-                const x = Math.cos(angle) * radius;
-                const z = Math.sin(angle) * radius;
-                unit.setPosition(x, 0, z);
-                
-                // 添加到场景
-                this.gameWorld.addChild(unit);
-                this.units.push(unit);
-                
-                // 配置单位组件
-                const unitController = unit.getComponent(UnitController) || unit.addComponent(UnitController);
-                unitController.setup({
-                    unitType: type.name.toLowerCase(),
-                    behaviorTreeName: type.behaviorTree,
-                    maxHealth: 100,
-                    moveSpeed: 3,
-                    attackRange: 2,
-                    attackDamage: 25,
-                    color: type.color
-                });
-                
-                console.log(`创建单位: ${unit.name} at (${x.toFixed(1)}, 0, ${z.toFixed(1)})`);
-            }
-        });
-    }
-    
-    /**
-     * 创建建筑
-     */
-    private createBuildings() {
-        const buildingPositions = [
-            { pos: new Vec3(-10, 0, -10), name: 'MainBase' },
-            { pos: new Vec3(10, 0, 10), name: 'Barracks' },
-            { pos: new Vec3(-8, 0, 8), name: 'ResourceCenter' }
-        ];
-        
-        buildingPositions.forEach((building, index) => {
-            const buildingNode = instantiate(this.buildingPrefab);
-            buildingNode.name = building.name;
-            buildingNode.setPosition(building.pos);
+        for (let i = 0; i < this.oreCount; i++) {
+            // 随机分布矿石，避开仓库区域
+            let position: Vec3;
+            do {
+                position = new Vec3(
+                    (Math.random() - 0.5) * 16, // -8到8
+                    0.5,
+                    (Math.random() - 0.5) * 16  // -8到8
+                );
+            } while (Vec3.distance(position, new Vec3(0, 0.5, 0)) < 4); // 距离仓库至少4米
             
-            this.gameWorld.addChild(buildingNode);
-            this.buildings.push(buildingNode);
+            const ore = this.factory.createResource(
+                this.node,
+                position,
+                new Vec3(0.8, 0.8, 0.8),
+                Color.YELLOW,
+                'ore'
+            );
             
-            console.log(`创建建筑: ${building.name} at ${building.pos}`);
-        });
-    }
-    
-    /**
-     * 创建资源
-     */
-    private createResources() {
-        const resourcePositions = [
-            new Vec3(5, 0, -5),
-            new Vec3(-5, 0, 5),
-            new Vec3(8, 0, -8),
-            new Vec3(-8, 0, -5),
-            new Vec3(6, 0, 6)
-        ];
-        
-        resourcePositions.forEach((pos, index) => {
-            const resource = instantiate(this.resourcePrefab);
-            resource.name = `Resource_${index + 1}`;
-            resource.setPosition(pos);
-            
-            this.gameWorld.addChild(resource);
-            this.resources.push(resource);
-            
-            console.log(`创建资源: ${resource.name} at ${pos}`);
-        });
-    }
-    
-    /**
-     * 单位选择回调
-     */
-    private onUnitSelected(units: Node[]) {
-        // 取消之前的选择
-        this.selectedUnits.forEach(unit => {
-            const unitController = unit.getComponent(UnitController);
-            if (unitController) {
-                unitController.setSelected(false);
-            }
-        });
-        
-        // 设置新选择
-        this.selectedUnits = units;
-        this.selectedUnits.forEach(unit => {
-            const unitController = unit.getComponent(UnitController);
-            if (unitController) {
-                unitController.setSelected(true);
-            }
-        });
-        
-        console.log(`选择了 ${units.length} 个单位`);
-        this.uiController.setSelectedUnitsCount(units.length);
-    }
-    
-    /**
-     * 命令发布回调
-     */
-    private onCommandIssued(command: string, target?: Vec3 | Node) {
-        if (this.selectedUnits.length === 0) {
-            console.log('没有选择单位');
-            return;
+            this.ores.push(ore);
+            console.log(`  💎 矿石${i+1}：位置(${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)})`);
         }
+    }
+    
+    /**
+     * 创建矿工
+     */
+    private createMiners() {
+        console.log(`👷 创建${this.minerCount}个矿工`);
         
-        this.selectedUnits.forEach(unit => {
-            const unitController = unit.getComponent(UnitController);
-            if (unitController) {
-                unitController.issueCommand(command, target);
-            }
-        });
-        
-        console.log(`发布命令: ${command} 给 ${this.selectedUnits.length} 个单位`);
+        for (let i = 0; i < this.minerCount; i++) {
+            // 矿工围绕仓库分布
+            const angle = (i / this.minerCount) * Math.PI * 2;
+            const radius = 3;
+            const position = new Vec3(
+                Math.cos(angle) * radius,
+                1,
+                Math.sin(angle) * radius
+            );
+            
+            const miner = this.factory.createUnit(
+                this.node,
+                position,
+                new Vec3(0.8, 0.8, 0.8),
+                Color.BLUE,
+                'miner'
+            );
+            
+            // 添加矿工控制器
+            const unitController = miner.addComponent(UnitController);
+            unitController.unitType = 'miner';
+            unitController.maxHealth = 100;
+            unitController.currentHealth = 100;
+            unitController.moveSpeed = 2.0;
+            unitController.currentCommand = 'mine'; // 默认挖矿命令
+            
+            // 添加行为树管理器
+            const behaviorManager = miner.addComponent(BehaviorTreeManager);
+            
+            // 初始化行为树
+            behaviorManager.initializeBehaviorTree('miner-ai', unitController);
+            
+            this.miners.push(miner);
+            console.log(`  👷 矿工${i+1}：位置(${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)})`);
+        }
     }
     
     /**
-     * 获取所有单位
+     * 记录游戏状态
      */
-    getAllUnits(): Node[] {
-        return [...this.units];
+    private logGameStatus() {
+        console.log('\n📊 游戏状态总览：');
+        console.log(`  🏭 仓库：1个`);
+        console.log(`  💎 矿石：${this.ores.length}个`);
+        console.log(`  👷 矿工：${this.miners.length}个`);
+        console.log(`  🎯 游戏目标：矿工自动挖矿并运输到仓库`);
+        console.log('\n🎮 游戏逻辑：');
+        console.log('  1. 矿工寻找最近的矿石');
+        console.log('  2. 移动到矿石位置并挖掘');
+        console.log('  3. 携带矿石返回仓库');
+        console.log('  4. 存储矿石并重复循环');
     }
     
     /**
-     * 获取所有建筑
+     * 获取所有矿石位置（供AI使用）
      */
-    getAllBuildings(): Node[] {
-        return [...this.buildings];
+    public getAllOres(): Node[] {
+        return this.ores.filter(ore => ore && ore.isValid);
     }
     
     /**
-     * 获取所有资源
+     * 获取仓库位置（供AI使用）
      */
-    getAllResources(): Node[] {
-        return [...this.resources];
+    public getWarehouse(): Node | null {
+        return this.warehouse;
+    }
+    
+    /**
+     * 移除已开采的矿石
+     */
+    public removeOre(ore: Node) {
+        const index = this.ores.indexOf(ore);
+        if (index > -1) {
+            this.ores.splice(index, 1);
+            ore.destroy();
+            console.log(`💎 矿石已开采，剩余${this.ores.length}个矿石`);
+        }
     }
 } 
