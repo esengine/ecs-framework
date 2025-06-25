@@ -12,7 +12,7 @@ const { ccclass, property } = _decorator;
 export class SimpleMinerDemo extends Component {
     
     @property
-    minerCount: number = 2;
+    minerCount: number = 1;
     
     @property  
     goldMineCount: number = 3;

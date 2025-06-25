@@ -16,12 +16,8 @@ export class StatusUIManager extends Component {
     static createStatusUIForMiner(miner: Node): MinerStatusUI | null {
         const canvas = find('Canvas') || director.getScene()?.getChildByName('Canvas');
         if (!canvas) {
-            console.error('[StatusUIManager] 未找到Canvas');
             return null;
         }
-        
-        const minerIndex = this.extractMinerIndex(miner.name);
-        const yOffset = minerIndex * 20;
         
         const uiRoot = new Node(`${miner.name}_StatusUI`);
         canvas.addChild(uiRoot);
@@ -60,7 +56,6 @@ export class StatusUIManager extends Component {
         
         const statusUI = uiRoot.addComponent(MinerStatusUI);
         statusUI.setFollowTarget(miner);
-        statusUI.yOffset = 100 + yOffset;
         
         const nameNode = new Node('NameLabel');
         uiRoot.addChild(nameNode);
@@ -238,7 +233,6 @@ export class StatusUIManager extends Component {
     static createWarehouseUI(warehouse: Node): MinerStatusUI | null {
         const canvas = find('Canvas') || director.getScene()?.getChildByName('Canvas');
         if (!canvas) {
-            console.error('[StatusUIManager] 未找到Canvas');
             return null;
         }
         
@@ -273,7 +267,6 @@ export class StatusUIManager extends Component {
         
         const statusUI = uiRoot.addComponent(MinerStatusUI);
         statusUI.setFollowTarget(warehouse);
-        statusUI.yOffset = 150;
         
         statusUI.nameLabel = null;
         statusUI.statusLabel = null;

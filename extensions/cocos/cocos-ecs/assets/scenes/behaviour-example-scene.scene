@@ -1,7 +1,7 @@
 [
   {
     "__type__": "cc.SceneAsset",
-    "_name": "scene",
+    "_name": "behaviour-example-scene",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_native": "",
@@ -11,7 +11,7 @@
   },
   {
     "__type__": "cc.Scene",
-    "_name": "scene",
+    "_name": "behaviour-example-scene",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": null,
@@ -565,7 +565,7 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "minerCount": 2,
+    "minerCount": 1,
     "goldMineCount": 3,
     "_id": "86AIY7iYlMNqJsDC/+LIMU"
   },

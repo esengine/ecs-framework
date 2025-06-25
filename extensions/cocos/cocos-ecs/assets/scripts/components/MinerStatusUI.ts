@@ -31,13 +31,7 @@ export class MinerStatusUI extends Component {
         this.camera = find('Main Camera')?.getComponent(Camera) || director.getScene()?.getComponentInChildren(Camera);
         this.canvas = find('Canvas')?.getComponent(Canvas) || director.getScene()?.getComponentInChildren(Canvas);
         
-        if (!this.camera) {
-            console.warn('[MinerStatusUI] 未找到主摄像机');
-        }
-        
-        if (!this.canvas) {
-            console.warn('[MinerStatusUI] 未找到Canvas');
-        }
+
         
         if (this.nameLabel && this.followTarget) {
             this.nameLabel.string = this.followTarget.name;
@@ -58,20 +52,17 @@ export class MinerStatusUI extends Component {
         if (!this.followTarget || !this.camera || !this.canvas) return;
         
         const targetWorldPos = this.followTarget.worldPosition.clone();
-        targetWorldPos.y += this.yOffset / 100;
-        
-        const screenPos = this.camera.worldToScreen(targetWorldPos);
-        
-        const canvasTransform = this.canvas.node.getComponent(UITransform);
-        if (canvasTransform) {
-            const canvasPos = new Vec3(
-                screenPos.x - canvasTransform.width / 2,
-                screenPos.y - canvasTransform.height / 2,
-                0
-            );
-            
-            this.node.setPosition(canvasPos);
+        // 根据目标类型设置不同的Y偏移
+        if (this.followTarget.name.includes('Warehouse')) {
+            targetWorldPos.y += 3.0; // 仓库偏移更高
+        } else {
+            targetWorldPos.y += 2.0; // 矿工偏移
         }
+        
+        // 将世界坐标直接转换为UI坐标
+        const uiPos = new Vec3();
+        this.camera.convertToUINode(targetWorldPos, this.canvas.node, uiPos);
+        this.node.setPosition(uiPos);
     }
     
     setFollowTarget(target: Node) {
