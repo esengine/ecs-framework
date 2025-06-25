@@ -1,0 +1,1395 @@
+{
+  "version": "1.0",
+  "type": "behavior-tree-editor",
+  "metadata": {
+    "name": "assets/resources/miner-stamina-ai.btree",
+    "created": "2025-06-25T08:41:23.672Z",
+    "modified": "2025-06-25T08:41:23.672Z",
+    "version": "1.0",
+    "editorVersion": "1.0.0"
+  },
+  "nodes": [
+    {
+      "id": "node_15iffhg4p",
+      "type": "root",
+      "name": "根节点",
+      "icon": "🌳",
+      "description": "行为树的根节点，每棵树只能有一个根节点",
+      "x": 1080,
+      "y": 50,
+      "children": [
+        "node_o6tsnrxyg"
+      ],
+      "properties": {},
+      "canHaveChildren": true,
+      "canHaveParent": false,
+      "maxChildren": 1,
+      "minChildren": 1,
+      "hasError": false
+    },
+    {
+      "id": "node_o6tsnrxyg",
+      "type": "selector",
+      "name": "选择器",
+      "icon": "?",
+      "description": "按顺序执行子节点，任一成功则整体成功",
+      "x": 1090,
+      "y": 208,
+      "children": [
+        "node_tljchzbno",
+        "node_txhx0hau5",
+        "node_r9kvcwv8u",
+        "node_520hedw22"
+      ],
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "LowerPriority",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "minChildren": 1,
+      "hasError": false,
+      "parent": "node_15iffhg4p"
+    },
+    {
+      "id": "node_tljchzbno",
+      "type": "conditional-decorator",
+      "name": "休息条件装饰器",
+      "icon": "🔀",
+      "description": "基于条件执行子节点（拖拽条件节点到此装饰器来配置条件）",
+      "x": 515,
+      "y": 414,
+      "children": [
+        "node_ulp8qx68h"
+      ],
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "select",
+          "value": "blackboardCompare",
+          "description": "装饰器使用的条件类型",
+          "options": [
+            "custom",
+            "random",
+            "hasComponent",
+            "hasTag",
+            "isActive",
+            "numericCompare",
+            "propertyExists"
+          ],
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "LowerPriority",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        },
+        "shouldReevaluate": {
+          "name": "shouldReevaluate",
+          "type": "string",
+          "value": {
+            "name": "shouldReevaluate",
+            "type": "string",
+            "value": {
+              "name": "shouldReevaluate",
+              "type": "string",
+              "value": {
+                "name": "shouldReevaluate",
+                "type": "string",
+                "value": {
+                  "name": "shouldReevaluate",
+                  "type": "string",
+                  "value": true,
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "variableName": {
+          "name": "variableName",
+          "type": "string",
+          "value": {
+            "name": "variableName",
+            "type": "string",
+            "value": {
+              "name": "variableName",
+              "type": "string",
+              "value": {
+                "name": "variableName",
+                "type": "string",
+                "value": {
+                  "name": "variableName",
+                  "type": "string",
+                  "value": "{{isLowStamina}}",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "operator": {
+          "name": "operator",
+          "type": "string",
+          "value": {
+            "name": "operator",
+            "type": "string",
+            "value": {
+              "name": "operator",
+              "type": "string",
+              "value": {
+                "name": "operator",
+                "type": "string",
+                "value": {
+                  "name": "operator",
+                  "type": "string",
+                  "value": "equal",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "compareValue": {
+          "name": "compareValue",
+          "type": "string",
+          "value": {
+            "name": "compareValue",
+            "type": "string",
+            "value": {
+              "name": "compareValue",
+              "type": "string",
+              "value": {
+                "name": "compareValue",
+                "type": "string",
+                "value": {
+                  "name": "compareValue",
+                  "type": "string",
+                  "value": "true",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "compareVariable": {
+          "name": "compareVariable",
+          "type": "string",
+          "value": {
+            "name": "compareVariable",
+            "type": "string",
+            "value": {
+              "name": "compareVariable",
+              "type": "string",
+              "value": {
+                "name": "compareVariable",
+                "type": "string",
+                "value": {
+                  "name": "compareVariable",
+                  "type": "string",
+                  "value": "",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        }
+      },
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "maxChildren": 1,
+      "minChildren": 1,
+      "hasError": false,
+      "parent": "node_o6tsnrxyg",
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "icon": "⚖️"
+      },
+      "conditionExpanded": false
+    },
+    {
+      "id": "node_txhx0hau5",
+      "type": "conditional-decorator",
+      "name": "存储条件装饰器",
+      "icon": "🔀",
+      "description": "基于条件执行子节点（拖拽条件节点到此装饰器来配置条件）",
+      "x": 975,
+      "y": 414,
+      "children": [
+        "node_dhsz8rgl1"
+      ],
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "select",
+          "value": "blackboardCompare",
+          "description": "装饰器使用的条件类型",
+          "options": [
+            "custom",
+            "random",
+            "hasComponent",
+            "hasTag",
+            "isActive",
+            "numericCompare",
+            "propertyExists"
+          ],
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "LowerPriority",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        },
+        "shouldReevaluate": {
+          "name": "shouldReevaluate",
+          "type": "string",
+          "value": {
+            "name": "shouldReevaluate",
+            "type": "string",
+            "value": {
+              "name": "shouldReevaluate",
+              "type": "string",
+              "value": {
+                "name": "shouldReevaluate",
+                "type": "string",
+                "value": {
+                  "name": "shouldReevaluate",
+                  "type": "string",
+                  "value": true,
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "variableName": {
+          "name": "variableName",
+          "type": "string",
+          "value": {
+            "name": "variableName",
+            "type": "string",
+            "value": {
+              "name": "variableName",
+              "type": "string",
+              "value": {
+                "name": "variableName",
+                "type": "string",
+                "value": {
+                  "name": "variableName",
+                  "type": "string",
+                  "value": "{{hasOre}}",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "operator": {
+          "name": "operator",
+          "type": "string",
+          "value": {
+            "name": "operator",
+            "type": "string",
+            "value": {
+              "name": "operator",
+              "type": "string",
+              "value": {
+                "name": "operator",
+                "type": "string",
+                "value": {
+                  "name": "operator",
+                  "type": "string",
+                  "value": "equal",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "compareValue": {
+          "name": "compareValue",
+          "type": "string",
+          "value": {
+            "name": "compareValue",
+            "type": "string",
+            "value": {
+              "name": "compareValue",
+              "type": "string",
+              "value": {
+                "name": "compareValue",
+                "type": "string",
+                "value": {
+                  "name": "compareValue",
+                  "type": "string",
+                  "value": "true",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "compareVariable": {
+          "name": "compareVariable",
+          "type": "string",
+          "value": {
+            "name": "compareVariable",
+            "type": "string",
+            "value": {
+              "name": "compareVariable",
+              "type": "string",
+              "value": {
+                "name": "compareVariable",
+                "type": "string",
+                "value": {
+                  "name": "compareVariable",
+                  "type": "string",
+                  "value": "",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        }
+      },
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "maxChildren": 1,
+      "minChildren": 1,
+      "hasError": false,
+      "parent": "node_o6tsnrxyg",
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "icon": "⚖️"
+      },
+      "conditionExpanded": false
+    },
+    {
+      "id": "node_r9kvcwv8u",
+      "type": "conditional-decorator",
+      "name": "挖矿条件装饰器",
+      "icon": "🔀",
+      "description": "基于条件执行子节点（拖拽条件节点到此装饰器来配置条件）",
+      "x": 1435,
+      "y": 414,
+      "children": [
+        "node_zguxml6u7"
+      ],
+      "properties": {
+        "conditionType": {
+          "name": "条件类型",
+          "type": "select",
+          "value": "blackboardCompare",
+          "description": "装饰器使用的条件类型",
+          "options": [
+            "custom",
+            "random",
+            "hasComponent",
+            "hasTag",
+            "isActive",
+            "numericCompare",
+            "propertyExists"
+          ],
+          "required": false
+        },
+        "executeWhenTrue": {
+          "name": "条件为真时执行",
+          "type": "boolean",
+          "value": true,
+          "description": "条件为真时是否执行子节点",
+          "required": false
+        },
+        "executeWhenFalse": {
+          "name": "条件为假时执行",
+          "type": "boolean",
+          "value": false,
+          "description": "条件为假时是否执行子节点",
+          "required": false
+        },
+        "checkInterval": {
+          "name": "检查间隔",
+          "type": "number",
+          "value": 0,
+          "description": "条件检查间隔时间（秒），0表示每帧检查",
+          "required": false
+        },
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "LowerPriority",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        },
+        "shouldReevaluate": {
+          "name": "shouldReevaluate",
+          "type": "string",
+          "value": {
+            "name": "shouldReevaluate",
+            "type": "string",
+            "value": {
+              "name": "shouldReevaluate",
+              "type": "string",
+              "value": {
+                "name": "shouldReevaluate",
+                "type": "string",
+                "value": {
+                  "name": "shouldReevaluate",
+                  "type": "string",
+                  "value": true,
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "variableName": {
+          "name": "variableName",
+          "type": "string",
+          "value": {
+            "name": "variableName",
+            "type": "string",
+            "value": {
+              "name": "variableName",
+              "type": "string",
+              "value": {
+                "name": "variableName",
+                "type": "string",
+                "value": {
+                  "name": "variableName",
+                  "type": "string",
+                  "value": "{{isLowStamina}}",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "operator": {
+          "name": "operator",
+          "type": "string",
+          "value": {
+            "name": "operator",
+            "type": "string",
+            "value": {
+              "name": "operator",
+              "type": "string",
+              "value": {
+                "name": "operator",
+                "type": "string",
+                "value": {
+                  "name": "operator",
+                  "type": "string",
+                  "value": "equal",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "compareValue": {
+          "name": "compareValue",
+          "type": "string",
+          "value": {
+            "name": "compareValue",
+            "type": "string",
+            "value": {
+              "name": "compareValue",
+              "type": "string",
+              "value": {
+                "name": "compareValue",
+                "type": "string",
+                "value": {
+                  "name": "compareValue",
+                  "type": "string",
+                  "value": "false",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        },
+        "compareVariable": {
+          "name": "compareVariable",
+          "type": "string",
+          "value": {
+            "name": "compareVariable",
+            "type": "string",
+            "value": {
+              "name": "compareVariable",
+              "type": "string",
+              "value": {
+                "name": "compareVariable",
+                "type": "string",
+                "value": {
+                  "name": "compareVariable",
+                  "type": "string",
+                  "value": "",
+                  "description": "",
+                  "required": false
+                },
+                "description": "",
+                "required": false
+              },
+              "description": "",
+              "required": false
+            },
+            "description": "",
+            "required": false
+          },
+          "description": "",
+          "required": false
+        }
+      },
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "maxChildren": 1,
+      "minChildren": 1,
+      "hasError": false,
+      "parent": "node_o6tsnrxyg",
+      "attachedCondition": {
+        "type": "blackboard-value-comparison",
+        "name": "黑板值比较",
+        "icon": "⚖️"
+      },
+      "conditionExpanded": false
+    },
+    {
+      "id": "node_ulp8qx68h",
+      "type": "sequence",
+      "name": "序列器",
+      "icon": "→",
+      "description": "按顺序执行子节点，任一失败则整体失败",
+      "x": 515,
+      "y": 804,
+      "children": [
+        "node_0fgq85ovw",
+        "node_9v13vpqyr"
+      ],
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "minChildren": 1,
+      "hasError": false,
+      "parent": "node_tljchzbno"
+    },
+    {
+      "id": "node_0fgq85ovw",
+      "type": "event-action",
+      "name": "回家休息",
+      "icon": "📢",
+      "description": "执行已注册的事件处理函数（推荐）",
+      "x": 400,
+      "y": 1010,
+      "children": [],
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "go-home-rest",
+          "description": "要执行的事件名称（如：enemy.attack, player.move）",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "maxChildren": 0,
+      "hasError": false,
+      "parent": "node_ulp8qx68h"
+    },
+    {
+      "id": "node_9v13vpqyr",
+      "type": "event-action",
+      "name": "恢复体力",
+      "icon": "📢",
+      "description": "执行已注册的事件处理函数（推荐）",
+      "x": 630,
+      "y": 1010,
+      "children": [],
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "recover-stamina",
+          "description": "要执行的事件名称（如：enemy.attack, player.move）",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "maxChildren": 0,
+      "hasError": false,
+      "parent": "node_ulp8qx68h"
+    },
+    {
+      "id": "node_ui4ja9mlj",
+      "type": "event-action",
+      "name": "前往仓库存储",
+      "icon": "📢",
+      "description": "执行已注册的事件处理函数（推荐）",
+      "x": 860,
+      "y": 1010,
+      "children": [],
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "store-ore",
+          "description": "要执行的事件名称（如：enemy.attack, player.move）",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "maxChildren": 0,
+      "hasError": false,
+      "parent": "node_dhsz8rgl1"
+    },
+    {
+      "id": "node_969njccy2",
+      "type": "event-action",
+      "name": "挖掘金矿",
+      "icon": "📢",
+      "description": "执行已注册的事件处理函数（推荐）",
+      "x": 1320,
+      "y": 1010,
+      "children": [],
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "mine-gold-ore",
+          "description": "要执行的事件名称（如：enemy.attack, player.move）",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "maxChildren": 0,
+      "hasError": false,
+      "parent": "node_zguxml6u7"
+    },
+    {
+      "id": "node_520hedw22",
+      "type": "event-action",
+      "name": "默认待机",
+      "icon": "📢",
+      "description": "执行已注册的事件处理函数（推荐）",
+      "x": 1780,
+      "y": 414,
+      "children": [],
+      "properties": {
+        "eventName": {
+          "name": "事件名称",
+          "type": "string",
+          "value": "idle-behavior",
+          "description": "要执行的事件名称（如：enemy.attack, player.move）",
+          "required": true
+        },
+        "parameters": {
+          "name": "事件参数",
+          "type": "string",
+          "value": "{}",
+          "description": "传递给事件处理函数的参数（JSON格式）",
+          "required": false
+        },
+        "timeout": {
+          "name": "超时时间",
+          "type": "number",
+          "value": 0,
+          "description": "事件执行超时时间（秒），0表示无限制",
+          "required": false
+        }
+      },
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "maxChildren": 0,
+      "hasError": false,
+      "parent": "node_o6tsnrxyg"
+    },
+    {
+      "id": "node_o5c7hv5wx",
+      "type": "set-blackboard-value",
+      "name": "设置黑板变量",
+      "icon": "📝",
+      "description": "设置黑板变量的值",
+      "x": 1090,
+      "y": 1010,
+      "children": [],
+      "properties": {
+        "variableName": {
+          "name": "变量名",
+          "type": "string",
+          "value": "{{hasOre}}",
+          "description": "黑板变量名",
+          "required": true
+        },
+        "value": {
+          "name": "设置值",
+          "type": "string",
+          "value": "false",
+          "description": "要设置的值（留空则使用源变量）",
+          "required": false
+        },
+        "sourceVariable": {
+          "name": "源变量名",
+          "type": "string",
+          "value": "",
+          "description": "从另一个黑板变量复制值",
+          "required": false
+        },
+        "force": {
+          "name": "强制设置",
+          "type": "boolean",
+          "value": false,
+          "description": "是否忽略只读限制",
+          "required": false
+        }
+      },
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "maxChildren": 0,
+      "hasError": false,
+      "parent": "node_dhsz8rgl1"
+    },
+    {
+      "id": "node_zf0sgkqev",
+      "type": "set-blackboard-value",
+      "name": "设置黑板变量",
+      "icon": "📝",
+      "description": "设置黑板变量的值",
+      "x": 1550,
+      "y": 1010,
+      "children": [],
+      "properties": {
+        "variableName": {
+          "name": "变量名",
+          "type": "string",
+          "value": "{{hasOre}}",
+          "description": "黑板变量名",
+          "required": true
+        },
+        "value": {
+          "name": "设置值",
+          "type": "string",
+          "value": "true",
+          "description": "要设置的值（留空则使用源变量）",
+          "required": false
+        },
+        "sourceVariable": {
+          "name": "源变量名",
+          "type": "string",
+          "value": "",
+          "description": "从另一个黑板变量复制值",
+          "required": false
+        },
+        "force": {
+          "name": "强制设置",
+          "type": "boolean",
+          "value": false,
+          "description": "是否忽略只读限制",
+          "required": false
+        }
+      },
+      "canHaveChildren": false,
+      "canHaveParent": true,
+      "maxChildren": 0,
+      "hasError": false,
+      "parent": "node_zguxml6u7"
+    },
+    {
+      "id": "node_dhsz8rgl1",
+      "type": "sequence",
+      "name": "序列器",
+      "icon": "→",
+      "description": "按顺序执行子节点，任一失败则整体失败",
+      "x": 975,
+      "y": 804,
+      "children": [
+        "node_ui4ja9mlj",
+        "node_o5c7hv5wx"
+      ],
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "minChildren": 1,
+      "hasError": false,
+      "parent": "node_txhx0hau5"
+    },
+    {
+      "id": "node_zguxml6u7",
+      "type": "sequence",
+      "name": "序列器",
+      "icon": "→",
+      "description": "按顺序执行子节点，任一失败则整体失败",
+      "x": 1435,
+      "y": 804,
+      "children": [
+        "node_969njccy2",
+        "node_zf0sgkqev"
+      ],
+      "properties": {
+        "abortType": {
+          "name": "中止类型",
+          "type": "select",
+          "value": "None",
+          "description": "决定节点在何种情况下会被中止",
+          "options": [
+            "None",
+            "LowerPriority",
+            "Self",
+            "Both"
+          ],
+          "required": false
+        }
+      },
+      "canHaveChildren": true,
+      "canHaveParent": true,
+      "minChildren": 1,
+      "hasError": false,
+      "parent": "node_r9kvcwv8u"
+    }
+  ],
+  "connections": [
+    {
+      "id": "node_15iffhg4p-node_o6tsnrxyg",
+      "sourceId": "node_15iffhg4p",
+      "targetId": "node_o6tsnrxyg",
+      "path": "M 1159.999999999999 144.9999999999999 C 1159.999999999999 176.69639587402332 1170.5931091308585 176.69639587402332 1170.5931091308585 208.39279174804673",
+      "active": false
+    },
+    {
+      "id": "node_o6tsnrxyg-node_tljchzbno",
+      "sourceId": "node_o6tsnrxyg",
+      "targetId": "node_tljchzbno",
+      "path": "M 1169.4068908691397 336.32621765136696 C 1169.4068908691397 376.16310119628884 625.0000381469722 376.16310119628884 625.0000381469722 415.99998474121065",
+      "active": false
+    },
+    {
+      "id": "node_o6tsnrxyg-node_txhx0hau5",
+      "sourceId": "node_o6tsnrxyg",
+      "targetId": "node_txhx0hau5",
+      "path": "M 1169.4068908691397 336.32621765136696 C 1169.4068908691397 376.16310119628884 1084.999999999999 376.16310119628884 1084.999999999999 415.99998474121065",
+      "active": false
+    },
+    {
+      "id": "node_o6tsnrxyg-node_r9kvcwv8u",
+      "sourceId": "node_o6tsnrxyg",
+      "targetId": "node_r9kvcwv8u",
+      "path": "M 1169.4068908691397 336.32621765136696 C 1169.4068908691397 376.16310119628884 1545.0000762939442 376.16310119628884 1545.0000762939442 415.99998474121065",
+      "active": false
+    },
+    {
+      "id": "node_o6tsnrxyg-node_520hedw22",
+      "sourceId": "node_o6tsnrxyg",
+      "targetId": "node_520hedw22",
+      "path": "M 1169.4068908691397 336.32621765136696 C 1169.4068908691397 376.16310119628884 1860.000076293944 376.16310119628884 1860.000076293944 415.99998474121065",
+      "active": false
+    },
+    {
+      "id": "node_tljchzbno-node_ulp8qx68h",
+      "sourceId": "node_tljchzbno",
+      "targetId": "node_ulp8qx68h",
+      "path": "M 625.0000381469722 642.0781707763667 C 625.0000381469722 722.0781707763667 595.0000381469722 726.0000610351557 595.0000381469722 806.0000610351557",
+      "active": false
+    },
+    {
+      "id": "node_txhx0hau5-node_dhsz8rgl1",
+      "sourceId": "node_txhx0hau5",
+      "targetId": "node_dhsz8rgl1",
+      "path": "M 1084.999999999999 642.0781707763667 C 1084.999999999999 722.0781707763667 1054.9999999999993 726.0000610351557 1054.9999999999993 806.0000610351557",
+      "active": false
+    },
+    {
+      "id": "node_r9kvcwv8u-node_zguxml6u7",
+      "sourceId": "node_r9kvcwv8u",
+      "targetId": "node_zguxml6u7",
+      "path": "M 1545.0000762939442 642.0781707763667 C 1545.0000762939442 722.0781707763667 1515.0000762939442 726.0000610351557 1515.0000762939442 806.0000610351557",
+      "active": false
+    },
+    {
+      "id": "node_ulp8qx68h-node_0fgq85ovw",
+      "sourceId": "node_ulp8qx68h",
+      "targetId": "node_0fgq85ovw",
+      "path": "M 595.0000381469722 932.5937652587884 C 595.0000381469722 972.2969055175774 480.0000381469723 972.2969055175774 480.0000381469723 1012.0000457763664",
+      "active": false
+    },
+    {
+      "id": "node_ulp8qx68h-node_9v13vpqyr",
+      "sourceId": "node_ulp8qx68h",
+      "targetId": "node_9v13vpqyr",
+      "path": "M 595.0000381469722 932.5937652587884 C 595.0000381469722 972.2969055175774 709.9999999999994 972.2969055175774 709.9999999999994 1012.0000457763664",
+      "active": false
+    },
+    {
+      "id": "node_dhsz8rgl1-node_ui4ja9mlj",
+      "sourceId": "node_dhsz8rgl1",
+      "targetId": "node_ui4ja9mlj",
+      "path": "M 1054.9999999999993 932.5937652587884 C 1054.9999999999993 972.2969055175774 939.9999999999993 972.2969055175774 939.9999999999993 1012.0000457763664",
+      "active": false
+    },
+    {
+      "id": "node_dhsz8rgl1-node_o5c7hv5wx",
+      "sourceId": "node_dhsz8rgl1",
+      "targetId": "node_o5c7hv5wx",
+      "path": "M 1054.9999999999993 932.5937652587884 C 1054.9999999999993 972.2969055175774 1169.999999999999 972.2969055175774 1169.999999999999 1012.0000457763664",
+      "active": false
+    },
+    {
+      "id": "node_zguxml6u7-node_969njccy2",
+      "sourceId": "node_zguxml6u7",
+      "targetId": "node_969njccy2",
+      "path": "M 1515.0000762939442 932.5937652587884 C 1515.0000762939442 972.2969055175774 1400.0000762939442 972.2969055175774 1400.0000762939442 1012.0000457763664",
+      "active": false
+    },
+    {
+      "id": "node_zguxml6u7-node_zf0sgkqev",
+      "sourceId": "node_zguxml6u7",
+      "targetId": "node_zf0sgkqev",
+      "path": "M 1515.0000762939442 932.5937652587884 C 1515.0000762939442 972.2969055175774 1630.0000762939442 972.2969055175774 1630.0000762939442 1012.0000457763664",
+      "active": false
+    }
+  ],
+  "blackboard": [
+    {
+      "name": "unitType",
+      "type": "string",
+      "value": "miner",
+      "defaultValue": "miner",
+      "description": "单位类型",
+      "group": "基础属性",
+      "readOnly": false
+    },
+    {
+      "name": "currentHealth",
+      "type": "number",
+      "value": 100,
+      "defaultValue": 100,
+      "description": "当前生命值",
+      "group": "基础属性",
+      "readOnly": false
+    },
+    {
+      "name": "maxHealth",
+      "type": "number",
+      "value": 100,
+      "defaultValue": 100,
+      "description": "最大生命值",
+      "group": "基础属性",
+      "readOnly": false
+    },
+    {
+      "name": "stamina",
+      "type": "number",
+      "value": 100,
+      "defaultValue": 100,
+      "description": "当前体力值 - 挖矿会消耗体力",
+      "group": "体力系统",
+      "readOnly": false
+    },
+    {
+      "name": "maxStamina",
+      "type": "number",
+      "value": 100,
+      "defaultValue": 100,
+      "description": "最大体力值",
+      "group": "体力系统",
+      "readOnly": false
+    },
+    {
+      "name": "staminaPercentage",
+      "type": "number",
+      "value": 1,
+      "defaultValue": 1,
+      "description": "体力百分比",
+      "group": "体力系统",
+      "readOnly": false
+    },
+    {
+      "name": "isLowStamina",
+      "type": "boolean",
+      "value": false,
+      "defaultValue": false,
+      "description": "是否低体力 - 体力低于20%时为true",
+      "group": "体力系统",
+      "readOnly": false
+    },
+    {
+      "name": "isResting",
+      "type": "boolean",
+      "value": false,
+      "defaultValue": false,
+      "description": "是否正在休息",
+      "group": "体力系统",
+      "readOnly": false
+    },
+    {
+      "name": "homePosition",
+      "type": "vector3",
+      "value": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "defaultValue": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "description": "家的位置 - 矿工休息的地方",
+      "group": "体力系统",
+      "readOnly": false
+    },
+    {
+      "name": "hasOre",
+      "type": "boolean",
+      "value": false,
+      "defaultValue": false,
+      "description": "是否携带矿石",
+      "group": "工作状态",
+      "readOnly": false
+    },
+    {
+      "name": "currentCommand",
+      "type": "string",
+      "value": "mine",
+      "defaultValue": "mine",
+      "description": "当前命令",
+      "group": "工作状态",
+      "readOnly": false
+    },
+    {
+      "name": "hasTarget",
+      "type": "boolean",
+      "value": false,
+      "defaultValue": false,
+      "description": "是否有目标",
+      "group": "工作状态",
+      "readOnly": false
+    },
+    {
+      "name": "targetPosition",
+      "type": "vector3",
+      "value": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "defaultValue": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "description": "目标位置",
+      "group": "移动属性",
+      "readOnly": false
+    },
+    {
+      "name": "isMoving",
+      "type": "boolean",
+      "value": false,
+      "defaultValue": false,
+      "description": "是否正在移动",
+      "group": "移动属性",
+      "readOnly": false
+    }
+  ],
+  "editorState": {
+    "canvasView": {
+      "panX": 0,
+      "panY": 0,
+      "zoomLevel": 1
+    },
+    "selectedNodeId": "node_o6tsnrxyg",
+    "uiSettings": {
+      "showDescriptions": true,
+      "showNodeProperties": true,
+      "layoutAlgorithm": "compact"
+    }
+  }
+}

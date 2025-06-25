@@ -1,5 +1,5 @@
 import { _decorator, Component, resources, JsonAsset, Vec3 } from 'cc';
-import { BehaviorTree, BehaviorTreeBuilder, Blackboard, BehaviorTreeJSONConfig, ExecutionContext, EventRegistry } from '@esengine/ai';
+import { BehaviorTree, BehaviorTreeBuilder, Blackboard, BehaviorTreeJSONConfig, ExecutionContext, EventRegistry, ActionResult } from '@esengine/ai';
 import { UnitController } from './UnitController';
 import { RTSBehaviorHandler } from './RTSBehaviorHandler';
 
@@ -59,10 +59,7 @@ export class BehaviorTreeManager extends Component {
             this.setupBlackboard();
             this.isLoaded = true;
             this.isRunning = true;
-            console.log(`✅ 行为树初始化成功: ${behaviorTreeName} for ${this.unitController.node.name}`);
-            console.log(`   - 行为树: ${this.behaviorTree ? '已创建' : '未创建'}`);
-            console.log(`   - 黑板变量: ${this.blackboard ? '已创建' : '未创建'}`);
-            console.log(`   - 运行状态: ${this.isRunning ? '运行中' : '已停止'}`);
+
         } catch (error) {
             console.error(`行为树初始化失败: ${behaviorTreeName}`, error);
         }
@@ -74,7 +71,7 @@ export class BehaviorTreeManager extends Component {
     private async loadBehaviorTree(behaviorTreeName: string): Promise<void> {
         return new Promise((resolve, reject) => {
             const jsonPath = `${behaviorTreeName}.bt`;
-            console.log(`🔍 尝试加载行为树文件: ${jsonPath}`);
+    
             
             resources.load(jsonPath, JsonAsset, (err, asset) => {
                 if (err) {
@@ -116,11 +113,13 @@ export class BehaviorTreeManager extends Component {
     private createEventRegistry(): EventRegistry {
         const registry = new EventRegistry();
         
-        // 注册简化的矿工行为事件处理器
+        // 注册体力系统矿工行为事件处理器
         const eventHandlers = {
-            // 矿工核心行为
-            'find-and-mine-ore': (context: any, params?: any) => this.callBehaviorHandler('onFindAndMineOre', params),
+            // 矿工体力系统核心行为
+            'mine-gold-ore': (context: any, params?: any) => this.callBehaviorHandler('onMineGoldOre', params),
             'store-ore': (context: any, params?: any) => this.callBehaviorHandler('onStoreOre', params),
+            'go-home-rest': (context: any, params?: any) => this.callBehaviorHandler('onGoHomeRest', params),
+            'recover-stamina': (context: any, params?: any) => this.callBehaviorHandler('onRecoverStamina', params),
             'idle-behavior': (context: any, params?: any) => this.callBehaviorHandler('onIdleBehavior', params)
         };
         
@@ -135,7 +134,7 @@ export class BehaviorTreeManager extends Component {
     /**
      * 调用行为处理器的方法
      */
-    private callBehaviorHandler(methodName: string, params: any = {}): string {
+    private callBehaviorHandler(methodName: string, params: any = {}): ActionResult {
         if (!this.behaviorHandler) {
             console.error(`BehaviorTreeManager: RTSBehaviorHandler未初始化 - ${this.node.name}`);
             return 'failure';
@@ -145,9 +144,7 @@ export class BehaviorTreeManager extends Component {
             // 直接调用RTSBehaviorHandler的方法
             const method = (this.behaviorHandler as any)[methodName];
             if (typeof method === 'function') {
-                console.log(`🎯 调用行为处理器: ${methodName} (${this.node.name})`);
                 const result = method.call(this.behaviorHandler, params);
-                console.log(`📤 行为处理器返回: ${methodName} -> "${result}" (${this.node.name})`);
                 return result || 'success'; // 确保有返回值
             } else {
                 console.error(`BehaviorTreeManager: 方法不存在: ${methodName}`);
@@ -174,6 +171,14 @@ export class BehaviorTreeManager extends Component {
         this.blackboard.setValue('hasTarget', false);
         this.blackboard.setValue('targetPosition', null);
         this.blackboard.setValue('isMoving', false);
+        
+        // 设置体力系统信息
+        this.blackboard.setValue('stamina', this.unitController.currentStamina);
+        this.blackboard.setValue('maxStamina', this.unitController.maxStamina);
+        this.blackboard.setValue('staminaPercentage', this.unitController.currentStamina / this.unitController.maxStamina);
+        this.blackboard.setValue('isLowStamina', this.unitController.currentStamina < this.unitController.maxStamina * 0.2);
+        this.blackboard.setValue('isResting', false);
+        this.blackboard.setValue('homePosition', this.unitController.homePosition);
     }
     
     /**
@@ -220,11 +225,19 @@ export class BehaviorTreeManager extends Component {
         
         // 更新矿工状态信息
         if (this.unitController) {
+            // 基础属性
             this.blackboard.setValue('currentHealth', this.unitController.currentHealth);
             this.blackboard.setValue('currentCommand', this.unitController.currentCommand);
             this.blackboard.setValue('hasTarget', this.unitController.targetPosition && !this.unitController.targetPosition.equals(Vec3.ZERO));
             this.blackboard.setValue('targetPosition', this.unitController.targetPosition);
             this.blackboard.setValue('isMoving', this.unitController.targetPosition && !this.unitController.targetPosition.equals(Vec3.ZERO));
+            
+            // 体力系统状态
+            this.blackboard.setValue('stamina', this.unitController.currentStamina);
+            this.blackboard.setValue('maxStamina', this.unitController.maxStamina);
+            this.blackboard.setValue('staminaPercentage', this.unitController.currentStamina / this.unitController.maxStamina);
+            this.blackboard.setValue('isLowStamina', this.unitController.currentStamina < this.unitController.maxStamina * 0.2);
+            this.blackboard.setValue('homePosition', this.unitController.homePosition);
         }
         
         // 执行行为树

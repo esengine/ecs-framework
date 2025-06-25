@@ -26,10 +26,10 @@
         "__id__": 7
       },
       {
-        "__id__": 9
+        "__id__": 8
       },
       {
-        "__id__": 10
+        "__id__": 14
       }
     ],
     "_active": true,
@@ -257,72 +257,6 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "RTSDemo",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "_parent": {
-      "__id__": 1
-    },
-    "_children": [],
-    "_active": true,
-    "_components": [
-      {
-        "__id__": 8
-      }
-    ],
-    "_prefab": null,
-    "_lpos": {
-      "__type__": "cc.Vec3",
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "_lrot": {
-      "__type__": "cc.Quat",
-      "x": 0,
-      "y": 0,
-      "z": 0,
-      "w": 1
-    },
-    "_lscale": {
-      "__type__": "cc.Vec3",
-      "x": 1,
-      "y": 1,
-      "z": 1
-    },
-    "_mobility": 0,
-    "_layer": 1073741824,
-    "_euler": {
-      "__type__": "cc.Vec3",
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "_id": "aaq4MG2HtHboRayLQRrQKj"
-  },
-  {
-    "__type__": "c33869Km+9Bb7dw/OyRztvE",
-    "_name": "",
-    "_objFlags": 0,
-    "__editorExtras__": {},
-    "node": {
-      "__id__": 7
-    },
-    "_enabled": true,
-    "__prefab": null,
-    "gameWorld": {
-      "__id__": 9
-    },
-    "mainCamera": {
-      "__id__": 6
-    },
-    "uiRoot": {
-      "__id__": 10
-    },
-    "_id": "950MqG3LtHsLiq9V5owd43"
-  },
-  {
-    "__type__": "cc.Node",
     "_name": "GameWorld",
     "_objFlags": 0,
     "__editorExtras__": {},
@@ -372,19 +306,19 @@
     },
     "_children": [
       {
-        "__id__": 11
+        "__id__": 9
       }
     ],
     "_active": true,
     "_components": [
       {
+        "__id__": 11
+      },
+      {
+        "__id__": 12
+      },
+      {
         "__id__": 13
-      },
-      {
-        "__id__": 14
-      },
-      {
-        "__id__": 15
       }
     ],
     "_prefab": null,
@@ -423,13 +357,13 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
-      "__id__": 10
+      "__id__": 8
     },
     "_children": [],
     "_active": true,
     "_components": [
       {
-        "__id__": 12
+        "__id__": 10
       }
     ],
     "_prefab": null,
@@ -468,7 +402,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 11
+      "__id__": 9
     },
     "_enabled": true,
     "__prefab": null,
@@ -476,7 +410,7 @@
     "_priority": 1073741824,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 499.8270893371758,
+    "_orthoHeight": 360,
     "_near": 1,
     "_far": 2000,
     "_color": {
@@ -514,7 +448,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 10
+      "__id__": 8
     },
     "_enabled": true,
     "__prefab": null,
@@ -536,12 +470,12 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 10
+      "__id__": 8
     },
     "_enabled": true,
     "__prefab": null,
     "_cameraComponent": {
-      "__id__": 12
+      "__id__": 10
     },
     "_alignCanvasWithScreen": true,
     "_id": "9d3SdE3ORAOZ6AG/imW6NO"
@@ -552,7 +486,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 10
+      "__id__": 8
     },
     "_enabled": true,
     "__prefab": null,
@@ -575,6 +509,65 @@
     "_alignMode": 2,
     "_lockFlags": 0,
     "_id": "4a8iJypC1J8pMml467hQ6c"
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "RTSDemo",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "_parent": {
+      "__id__": 1
+    },
+    "_children": [],
+    "_active": true,
+    "_components": [
+      {
+        "__id__": 15
+      }
+    ],
+    "_prefab": null,
+    "_lpos": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "_lrot": {
+      "__type__": "cc.Quat",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1
+    },
+    "_lscale": {
+      "__type__": "cc.Vec3",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
+    "_mobility": 0,
+    "_layer": 1073741824,
+    "_euler": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "_id": "89cmsd2gNNsq155xC7mob8"
+  },
+  {
+    "__type__": "c33869Km+9Bb7dw/OyRztvE",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 14
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "minerCount": 2,
+    "goldMineCount": 3,
+    "_id": "86AIY7iYlMNqJsDC/+LIMU"
   },
   {
     "__type__": "cc.SceneGlobals",

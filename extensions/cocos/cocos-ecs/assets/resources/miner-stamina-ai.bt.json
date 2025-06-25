@@ -1,0 +1,317 @@
+{
+  "nodes": [
+    {
+      "id": "node_15iffhg4p",
+      "type": "root",
+      "name": "根节点",
+      "description": "行为树的根节点，每棵树只能有一个根节点",
+      "children": [
+        "node_o6tsnrxyg"
+      ]
+    },
+    {
+      "id": "node_o6tsnrxyg",
+      "type": "selector",
+      "name": "选择器",
+      "description": "按顺序执行子节点，任一成功则整体成功",
+      "properties": {
+        "abortType": "LowerPriority"
+      },
+      "children": [
+        "node_tljchzbno",
+        "node_txhx0hau5",
+        "node_r9kvcwv8u",
+        "node_520hedw22"
+      ]
+    },
+    {
+      "id": "node_tljchzbno",
+      "type": "conditional-decorator",
+      "name": "休息条件装饰器",
+      "description": "基于条件执行子节点（拖拽条件节点到此装饰器来配置条件）",
+      "properties": {
+        "conditionType": "blackboardCompare",
+        "executeWhenTrue": true,
+        "abortType": "LowerPriority",
+        "shouldReevaluate": true,
+        "variableName": "{{isLowStamina}}",
+        "operator": "equal",
+        "compareValue": "true"
+      },
+      "children": [
+        "node_ulp8qx68h"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {}
+      }
+    },
+    {
+      "id": "node_txhx0hau5",
+      "type": "conditional-decorator",
+      "name": "存储条件装饰器",
+      "description": "基于条件执行子节点（拖拽条件节点到此装饰器来配置条件）",
+      "properties": {
+        "conditionType": "blackboardCompare",
+        "executeWhenTrue": true,
+        "abortType": "LowerPriority",
+        "shouldReevaluate": true,
+        "variableName": "{{hasOre}}",
+        "operator": "equal",
+        "compareValue": "true"
+      },
+      "children": [
+        "node_dhsz8rgl1"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {}
+      }
+    },
+    {
+      "id": "node_r9kvcwv8u",
+      "type": "conditional-decorator",
+      "name": "挖矿条件装饰器",
+      "description": "基于条件执行子节点（拖拽条件节点到此装饰器来配置条件）",
+      "properties": {
+        "conditionType": "blackboardCompare",
+        "executeWhenTrue": true,
+        "abortType": "LowerPriority",
+        "shouldReevaluate": true,
+        "variableName": "{{isLowStamina}}",
+        "operator": "equal",
+        "compareValue": "false"
+      },
+      "children": [
+        "node_zguxml6u7"
+      ],
+      "condition": {
+        "type": "blackboard-value-comparison",
+        "properties": {}
+      }
+    },
+    {
+      "id": "node_ulp8qx68h",
+      "type": "sequence",
+      "name": "序列器",
+      "description": "按顺序执行子节点，任一失败则整体失败",
+      "properties": {
+        "abortType": "None"
+      },
+      "children": [
+        "node_0fgq85ovw",
+        "node_9v13vpqyr"
+      ]
+    },
+    {
+      "id": "node_0fgq85ovw",
+      "type": "event-action",
+      "name": "回家休息",
+      "description": "执行已注册的事件处理函数（推荐）",
+      "properties": {
+        "eventName": "go-home-rest",
+        "parameters": "{}"
+      }
+    },
+    {
+      "id": "node_9v13vpqyr",
+      "type": "event-action",
+      "name": "恢复体力",
+      "description": "执行已注册的事件处理函数（推荐）",
+      "properties": {
+        "eventName": "recover-stamina",
+        "parameters": "{}"
+      }
+    },
+    {
+      "id": "node_ui4ja9mlj",
+      "type": "event-action",
+      "name": "前往仓库存储",
+      "description": "执行已注册的事件处理函数（推荐）",
+      "properties": {
+        "eventName": "store-ore",
+        "parameters": "{}"
+      }
+    },
+    {
+      "id": "node_969njccy2",
+      "type": "event-action",
+      "name": "挖掘金矿",
+      "description": "执行已注册的事件处理函数（推荐）",
+      "properties": {
+        "eventName": "mine-gold-ore",
+        "parameters": "{}"
+      }
+    },
+    {
+      "id": "node_520hedw22",
+      "type": "event-action",
+      "name": "默认待机",
+      "description": "执行已注册的事件处理函数（推荐）",
+      "properties": {
+        "eventName": "idle-behavior",
+        "parameters": "{}"
+      }
+    },
+    {
+      "id": "node_o5c7hv5wx",
+      "type": "set-blackboard-value",
+      "name": "设置黑板变量",
+      "description": "设置黑板变量的值",
+      "properties": {
+        "variableName": "{{hasOre}}",
+        "value": "false"
+      }
+    },
+    {
+      "id": "node_zf0sgkqev",
+      "type": "set-blackboard-value",
+      "name": "设置黑板变量",
+      "description": "设置黑板变量的值",
+      "properties": {
+        "variableName": "{{hasOre}}",
+        "value": "true"
+      }
+    },
+    {
+      "id": "node_dhsz8rgl1",
+      "type": "sequence",
+      "name": "序列器",
+      "description": "按顺序执行子节点，任一失败则整体失败",
+      "properties": {
+        "abortType": "None"
+      },
+      "children": [
+        "node_ui4ja9mlj",
+        "node_o5c7hv5wx"
+      ]
+    },
+    {
+      "id": "node_zguxml6u7",
+      "type": "sequence",
+      "name": "序列器",
+      "description": "按顺序执行子节点，任一失败则整体失败",
+      "properties": {
+        "abortType": "None"
+      },
+      "children": [
+        "node_969njccy2",
+        "node_zf0sgkqev"
+      ]
+    }
+  ],
+  "blackboard": [
+    {
+      "name": "unitType",
+      "type": "string",
+      "value": "miner",
+      "description": "单位类型",
+      "group": "基础属性"
+    },
+    {
+      "name": "currentHealth",
+      "type": "number",
+      "value": 100,
+      "description": "当前生命值",
+      "group": "基础属性"
+    },
+    {
+      "name": "maxHealth",
+      "type": "number",
+      "value": 100,
+      "description": "最大生命值",
+      "group": "基础属性"
+    },
+    {
+      "name": "stamina",
+      "type": "number",
+      "value": 100,
+      "description": "当前体力值 - 挖矿会消耗体力",
+      "group": "体力系统"
+    },
+    {
+      "name": "maxStamina",
+      "type": "number",
+      "value": 100,
+      "description": "最大体力值",
+      "group": "体力系统"
+    },
+    {
+      "name": "staminaPercentage",
+      "type": "number",
+      "value": 1,
+      "description": "体力百分比",
+      "group": "体力系统"
+    },
+    {
+      "name": "isLowStamina",
+      "type": "boolean",
+      "value": false,
+      "description": "是否低体力 - 体力低于20%时为true",
+      "group": "体力系统"
+    },
+    {
+      "name": "isResting",
+      "type": "boolean",
+      "value": false,
+      "description": "是否正在休息",
+      "group": "体力系统"
+    },
+    {
+      "name": "homePosition",
+      "type": "vector3",
+      "value": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "description": "家的位置 - 矿工休息的地方",
+      "group": "体力系统"
+    },
+    {
+      "name": "hasOre",
+      "type": "boolean",
+      "value": false,
+      "description": "是否携带矿石",
+      "group": "工作状态"
+    },
+    {
+      "name": "currentCommand",
+      "type": "string",
+      "value": "mine",
+      "description": "当前命令",
+      "group": "工作状态"
+    },
+    {
+      "name": "hasTarget",
+      "type": "boolean",
+      "value": false,
+      "description": "是否有目标",
+      "group": "工作状态"
+    },
+    {
+      "name": "targetPosition",
+      "type": "vector3",
+      "value": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "description": "目标位置",
+      "group": "移动属性"
+    },
+    {
+      "name": "isMoving",
+      "type": "boolean",
+      "value": false,
+      "description": "是否正在移动",
+      "group": "移动属性"
+    }
+  ],
+  "metadata": {
+    "name": "behavior-tree",
+    "created": "2025-06-25T08:41:25.401Z",
+    "version": "1.0",
+    "exportType": "clean"
+  }
+}

@@ -1,10 +1,9 @@
-import { _decorator, Component, Node, Vec3, MeshRenderer, BoxCollider, RigidBody, Mesh, Material, Color, primitives, utils } from 'cc';
+import { _decorator, Component, Node, Vec3, MeshRenderer, BoxCollider, RigidBody, Material, Color, primitives, utils } from 'cc';
 
 const { ccclass, property } = _decorator;
 
 /**
- * 简单预制体工厂 - 创建基本的游戏对象
- * 用于在没有预制体资源时创建基本的单位、建筑和资源
+ * 简单预制体工厂
  */
 @ccclass('SimplePrefabFactory')
 export class SimplePrefabFactory extends Component {
@@ -36,7 +35,6 @@ export class SimplePrefabFactory extends Component {
         const rigidBody = unit.addComponent(RigidBody);
         rigidBody.type = RigidBody.Type.KINEMATIC;
         
-        console.log(`创建单位: ${name}`);
         return unit;
     }
     
@@ -67,7 +65,6 @@ export class SimplePrefabFactory extends Component {
         const collider = building.addComponent(BoxCollider);
         collider.size = size;
         
-        console.log(`创建建筑: ${name}`);
         return building;
     }
     
@@ -94,7 +91,6 @@ export class SimplePrefabFactory extends Component {
         const collider = resource.addComponent(BoxCollider);
         collider.size = new Vec3(1, 1, 1);
         
-        console.log(`创建资源: ${name}`);
         return resource;
     }
     
@@ -125,7 +121,6 @@ export class SimplePrefabFactory extends Component {
         const collider = ground.addComponent(BoxCollider);
         collider.size = size;
         
-        console.log(`创建地面: ${size}`);
         return ground;
     }
 } 
