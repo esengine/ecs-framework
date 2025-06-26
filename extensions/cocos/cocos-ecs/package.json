@@ -6,6 +6,6 @@
   },
   "dependencies": {
     "@esengine/ecs-framework": "^2.1.22",
-    "@esengine/ai": "^2.0.14"
+    "@esengine/ai": "^2.0.15"
   }
 }
