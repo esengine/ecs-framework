@@ -10,3 +10,6 @@
 [submodule "extensions/cocos/cocos-ecs/extensions/behaviour-tree"]
 	path = extensions/cocos/cocos-ecs/extensions/behaviour-tree
 	url = https://github.com/esengine/behaviour-tree.git
+[submodule "extensions/cocos/cocos-ecs/extensions/cocos-terrain-gen"]
+	path = extensions/cocos/cocos-ecs/extensions/cocos-terrain-gen
+	url = https://github.com/esengine/cocos-terrain-gen.git
