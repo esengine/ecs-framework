@@ -1,4 +1,4 @@
-import { IComponentDebugData } from '../../types';
+import { IComponentDebugData } from '../../Types';
 import { Core } from '../../Core';
 
 /**

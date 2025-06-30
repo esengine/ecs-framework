@@ -1,4 +1,4 @@
-import { IEntityDebugData } from '../../types';
+import { IEntityDebugData } from '../../Types';
 import { Core } from '../../Core';
 import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';

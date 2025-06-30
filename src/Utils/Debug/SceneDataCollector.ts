@@ -1,4 +1,4 @@
-import { ISceneDebugData } from '../../types';
+import { ISceneDebugData } from '../../Types';
 import { Core } from '../../Core';
 
 /**

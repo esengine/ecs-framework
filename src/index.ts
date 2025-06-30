@@ -18,4 +18,4 @@ export * from './ECS';
 
 // 工具类和类型定义
 export * from './Utils';
-export * from './types'; 
+export * from './Types'; 

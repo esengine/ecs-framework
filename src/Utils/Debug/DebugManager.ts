@@ -1,4 +1,4 @@
-import { IECSDebugConfig, IECSDebugData } from '../../types';
+import { IECSDebugConfig, IECSDebugData } from '../../Types';
 import { EntityDataCollector } from './EntityDataCollector';
 import { SystemDataCollector } from './SystemDataCollector';
 import { PerformanceDataCollector } from './PerformanceDataCollector';

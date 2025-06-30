@@ -1,4 +1,4 @@
-import { IPerformanceDebugData } from '../../types';
+import { IPerformanceDebugData } from '../../Types';
 import { Time } from '../Time';
 
 /**

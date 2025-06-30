@@ -3,7 +3,7 @@ import { Core } from '../../Core';
 import { Matcher } from '../Utils/Matcher';
 import { PerformanceMonitor } from '../../Utils/PerformanceMonitor';
 import type { Scene } from '../Scene';
-import type { ISystemBase } from '../../types';
+import type { ISystemBase } from '../../Types';
 
 /**
  * 实体系统的基类

@@ -8,7 +8,7 @@ import {
     ISystemEventData,
     ISceneEventData,
     IPerformanceEventData
-} from '../../types';
+} from '../../Types';
 import { 
     TypeSafeEventSystem, 
     EventListenerConfig, 
