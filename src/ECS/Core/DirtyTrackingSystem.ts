@@ -329,7 +329,7 @@ export class DirtyTrackingSystem {
                 try {
                     listener.callback(dirtyData);
                 } catch (error) {
-                    console.error('Dirty listener error:', error);
+                    console.error('脏数据监听器错误:', error);
                 }
             }
         }
@@ -346,7 +346,7 @@ export class DirtyTrackingSystem {
                 try {
                     listener.callback(dirtyData);
                 } catch (error) {
-                    console.error('Dirty listener notification error:', error);
+                    console.error('脏数据监听器通知错误:', error);
                 }
             }
         }

@@ -83,8 +83,8 @@ export class TypeSafeEventSystem {
      * @returns 监听器ID（用于移除）
      */
     public on<T>(
-        eventType: string, 
-        handler: EventHandler<T>, 
+        eventType: string,
+        handler: EventHandler<T>,
         config: EventListenerConfig = {}
     ): string {
         return this.addListener(eventType, handler, config);
@@ -98,8 +98,8 @@ export class TypeSafeEventSystem {
      * @returns 监听器ID
      */
     public once<T>(
-        eventType: string, 
-        handler: EventHandler<T>, 
+        eventType: string,
+        handler: EventHandler<T>,
         config: EventListenerConfig = {}
     ): string {
         return this.addListener(eventType, handler, { ...config, once: true });
@@ -113,8 +113,8 @@ export class TypeSafeEventSystem {
      * @returns 监听器ID
      */
     public onAsync<T>(
-        eventType: string, 
-        handler: AsyncEventHandler<T>, 
+        eventType: string,
+        handler: AsyncEventHandler<T>,
         config: EventListenerConfig = {}
     ): string {
         return this.addListener(eventType, handler, { ...config, async: true });
@@ -134,7 +134,7 @@ export class TypeSafeEventSystem {
         if (index === -1) return false;
 
         listeners.splice(index, 1);
-        
+
         // 如果没有监听器了，清理相关数据
         if (listeners.length === 0) {
             this.listeners.delete(eventType);
@@ -204,7 +204,7 @@ export class TypeSafeEventSystem {
                     toRemove.push(listener.id);
                 }
             } catch (error) {
-                console.error(`Error in event handler for ${eventType}:`, error);
+                console.error(`事件处理器执行错误 ${eventType}:`, error);
             }
         }
 
@@ -241,7 +241,7 @@ export class TypeSafeEventSystem {
 
         // 处理批处理事件
         this.processBatch(eventType, batch);
-        
+
         // 清空队列
         this.batchQueue.delete(eventType);
     }
@@ -323,12 +323,12 @@ export class TypeSafeEventSystem {
      * @returns 监听器ID
      */
     private addListener<T>(
-        eventType: string, 
-        handler: EventHandler<T> | AsyncEventHandler<T>, 
+        eventType: string,
+        handler: EventHandler<T> | AsyncEventHandler<T>,
         config: EventListenerConfig
     ): string {
         let listeners = this.listeners.get(eventType);
-        
+
         if (!listeners) {
             listeners = [];
             this.listeners.set(eventType, listeners);
@@ -336,7 +336,7 @@ export class TypeSafeEventSystem {
 
         // 检查监听器数量限制
         if (listeners.length >= this.maxListeners) {
-            console.warn(`Maximum listeners (${this.maxListeners}) exceeded for event type: ${eventType}`);
+            console.warn(`事件类型 ${eventType} 的监听器数量超过最大限制 (${this.maxListeners})`);
             return '';
         }
 
@@ -392,7 +392,7 @@ export class TypeSafeEventSystem {
                     toRemove.push(listener.id);
                 }
             } catch (error) {
-                console.error(`Error in sync event handler for ${eventType}:`, error);
+                console.error(`同步事件处理器执行错误 ${eventType}:`, error);
             }
         }
 
@@ -409,7 +409,7 @@ export class TypeSafeEventSystem {
                     toRemove.push(listener.id);
                 }
             } catch (error) {
-                console.error(`Error in async event handler for ${eventType}:`, error);
+                console.error(`异步事件处理器执行错误 ${eventType}:`, error);
             }
         });
 
@@ -472,7 +472,7 @@ export class TypeSafeEventSystem {
         batch.push(event);
 
         const config = this.batchConfigs.get(eventType)!;
-        
+
         // 如果达到批处理大小，立即处理
         if (batch.length >= config.batchSize) {
             this.flushBatch(eventType);
@@ -484,7 +484,7 @@ export class TypeSafeEventSystem {
             const timer = setTimeout(() => {
                 this.flushBatch(eventType);
             }, config.delay);
-            
+
             this.batchTimers.set(eventType, timer as any);
         }
     }
@@ -513,7 +513,7 @@ export class TypeSafeEventSystem {
      */
     private clearBatch(eventType: string): void {
         this.batchQueue.delete(eventType);
-        
+
         const timer = this.batchTimers.get(eventType);
         if (timer) {
             clearTimeout(timer);
@@ -526,7 +526,7 @@ export class TypeSafeEventSystem {
      */
     private clearAllBatches(): void {
         this.batchQueue.clear();
-        
+
         for (const timer of this.batchTimers.values()) {
             clearTimeout(timer);
         }
@@ -583,10 +583,10 @@ export const GlobalEventSystem = new TypeSafeEventSystem();
 export function EventListener(eventType: string, config: EventListenerConfig = {}) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         const originalMethod = descriptor.value;
-        
+
         // 在类实例化时自动注册监听器
-        const initMethod = target.constructor.prototype.initEventListeners || function() {};
-        target.constructor.prototype.initEventListeners = function() {
+        const initMethod = target.constructor.prototype.initEventListeners || function () { };
+        target.constructor.prototype.initEventListeners = function () {
             initMethod.call(this);
             GlobalEventSystem.on(eventType, originalMethod.bind(this), config);
         };
@@ -601,9 +601,9 @@ export function EventListener(eventType: string, config: EventListenerConfig = {
 export function AsyncEventListener(eventType: string, config: EventListenerConfig = {}) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         const originalMethod = descriptor.value;
-        
-        const initMethod = target.constructor.prototype.initEventListeners || function() {};
-        target.constructor.prototype.initEventListeners = function() {
+
+        const initMethod = target.constructor.prototype.initEventListeners || function () { };
+        target.constructor.prototype.initEventListeners = function () {
             initMethod.call(this);
             GlobalEventSystem.onAsync(eventType, originalMethod.bind(this), config);
         };

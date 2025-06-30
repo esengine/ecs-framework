@@ -6,7 +6,7 @@ import { PerformanceMonitor } from './Utils/PerformanceMonitor';
 import { PoolManager } from './Utils/Pool';
 import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
 import { Scene } from './ECS/Scene';
-import { DebugReporter } from './Utils/DebugReporter';
+import { DebugManager } from './Utils/Debug';
 import { ICoreConfig, IECSDebugConfig } from './types';
 
 /**
@@ -110,11 +110,11 @@ export class Core {
     public _scene?: Scene;
 
     /**
-     * 调试报告器
+     * 调试管理器
      * 
      * 负责收集和发送调试数据。
      */
-    public _debugReporter?: DebugReporter;
+    public _debugManager?: DebugManager;
 
     /**
      * Core配置
@@ -154,9 +154,9 @@ export class Core {
         Core.entitySystemsEnabled = this._config.enableEntitySystems || true;
         this.debug = this._config.debug || true;
 
-        // 初始化调试报告器
+        // 初始化调试管理器
         if (this._config.debugConfig?.enabled) {
-            this._debugReporter = new DebugReporter(this, this._config.debugConfig);
+            this._debugManager = new DebugManager(this, this._config.debugConfig);
         }
 
         this.initialize();
@@ -330,10 +330,10 @@ export class Core {
             return;
         }
 
-        if (this._instance._debugReporter) {
-            this._instance._debugReporter.updateConfig(config);
+        if (this._instance._debugManager) {
+            this._instance._debugManager.updateConfig(config);
         } else {
-            this._instance._debugReporter = new DebugReporter(this._instance, config);
+            this._instance._debugManager = new DebugManager(this._instance, config);
         }
 
         // 更新Core配置
@@ -346,9 +346,9 @@ export class Core {
     public static disableDebug(): void {
         if (!this._instance) return;
 
-        if (this._instance._debugReporter) {
-            this._instance._debugReporter.stop();
-            this._instance._debugReporter = undefined;
+        if (this._instance._debugManager) {
+            this._instance._debugManager.stop();
+            this._instance._debugManager = undefined;
         }
 
         // 更新Core配置
@@ -363,11 +363,11 @@ export class Core {
      * @returns 当前调试数据，如果调试未启用则返回null
      */
     public static getDebugData(): any {
-        if (!this._instance?._debugReporter) {
+        if (!this._instance?._debugManager) {
             return null;
         }
 
-        return this._instance._debugReporter.getDebugData();
+        return this._instance._debugManager.getDebugData();
     }
 
     /**
@@ -393,9 +393,9 @@ export class Core {
             this._ecsAPI = createECSAPI(scene, scene.querySystem, scene.eventSystem);
         }
 
-        // 通知调试报告器场景已变更
-        if (this._debugReporter) {
-            this._debugReporter.onSceneChanged();
+        // 通知调试管理器场景已变更
+        if (this._debugManager) {
+            this._debugManager.onSceneChanged();
         }
     }
 
@@ -455,6 +455,11 @@ export class Core {
             this._scene.update();
             const entityCount = (this._scene as any).entities?.count || 0;
             this._performanceMonitor.endMonitoring('Scene.update', sceneStartTime, entityCount);
+        }
+
+        // 更新调试管理器（基于FPS的数据发送）
+        if (this._debugManager) {
+            this._debugManager.onFrameUpdate(deltaTime);
         }
 
         // 结束性能监控

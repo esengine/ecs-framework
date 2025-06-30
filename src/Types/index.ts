@@ -246,8 +246,10 @@ export interface IECSDebugConfig {
     websocketUrl: string;
     /** 是否自动重连 */
     autoReconnect?: boolean;
-    /** 数据更新间隔（毫秒） */
+    /** 数据更新间隔（毫秒）- 已弃用，使用debugFrameRate替代 */
     updateInterval?: number;
+    /** 调试数据发送帧率 (60fps, 30fps, 15fps) */
+    debugFrameRate?: 60 | 30 | 15;
     /** 数据通道配置 */
     channels: {
         entities: boolean;
@@ -329,6 +331,44 @@ export interface IEntityDebugData {
         enabled: boolean;
         componentCount: number;
         components: string[];
+    }>;
+    /** 实体层次结构（根实体） */
+    entityHierarchy?: Array<{
+        id: number;
+        name: string;
+        active: boolean;
+        enabled: boolean;
+        activeInHierarchy: boolean;
+        componentCount: number;
+        componentTypes: string[];
+        parentId: number | null;
+        children: any[];
+        depth: number;
+        tag: number;
+        updateOrder: number;
+    }>;
+    /** 实体详细信息映射 */
+    entityDetailsMap?: Record<number, {
+        id: number;
+        name: string;
+        active: boolean;
+        enabled: boolean;
+        activeInHierarchy: boolean;
+        destroyed: boolean;
+        tag: number;
+        updateOrder: number;
+        componentMask: string;
+        parentId: number | null;
+        parentName: string | null;
+        childCount: number;
+        childIds: number[];
+        depth: number;
+        components: Array<{
+            typeName: string;
+            properties: Record<string, any>;
+        }>;
+        componentCount: number;
+        componentTypes: string[];
     }>;
 }
 

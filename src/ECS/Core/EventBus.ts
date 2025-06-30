@@ -47,7 +47,7 @@ export class EventBus implements IEventBus {
         const enhancedData = this.enhanceEventData(eventType, data);
         
         if (this.isDebugMode) {
-            console.log(`[EventBus] Emitting event: ${eventType}`, enhancedData);
+            console.log(`[EventBus] 发射事件: ${eventType}`, enhancedData);
         }
         
         this.eventSystem.emitSync(eventType, enhancedData);
@@ -65,7 +65,7 @@ export class EventBus implements IEventBus {
         const enhancedData = this.enhanceEventData(eventType, data);
         
         if (this.isDebugMode) {
-            console.log(`[EventBus] Emitting async event: ${eventType}`, enhancedData);
+            console.log(`[EventBus] 发射异步事件: ${eventType}`, enhancedData);
         }
         
         await this.eventSystem.emit(eventType, enhancedData);
@@ -93,7 +93,7 @@ export class EventBus implements IEventBus {
         };
         
         if (this.isDebugMode) {
-            console.log(`[EventBus] Adding listener for: ${eventType}`, eventConfig);
+            console.log(`[EventBus] 添加监听器: ${eventType}`, eventConfig);
         }
         
         return this.eventSystem.on(eventType, handler, eventConfig);
@@ -136,7 +136,7 @@ export class EventBus implements IEventBus {
      */
     public off(eventType: string, listenerId: string): boolean {
         if (this.isDebugMode) {
-            console.log(`[EventBus] Removing listener: ${listenerId} for event: ${eventType}`);
+            console.log(`[EventBus] 移除监听器: ${listenerId} 事件: ${eventType}`);
         }
         
         return this.eventSystem.off(eventType, listenerId);
@@ -148,7 +148,7 @@ export class EventBus implements IEventBus {
      */
     public offAll(eventType: string): void {
         if (this.isDebugMode) {
-            console.log(`[EventBus] Removing all listeners for event: ${eventType}`);
+            console.log(`[EventBus] 移除所有监听器: ${eventType}`);
         }
         
         this.eventSystem.offAll(eventType);
@@ -186,7 +186,7 @@ export class EventBus implements IEventBus {
      */
     public clear(): void {
         if (this.isDebugMode) {
-            console.log('[EventBus] Clearing all listeners');
+            console.log('[EventBus] 清空所有监听器');
         }
         
         this.eventSystem.clear();
@@ -379,7 +379,7 @@ export class EventBus implements IEventBus {
     private validateEventType(eventType: string): void {
         if (!EventTypeValidator.isValid(eventType)) {
             if (this.isDebugMode) {
-                console.warn(`[EventBus] Unknown event type: ${eventType}`);
+                console.warn(`[EventBus] 未知事件类型: ${eventType}`);
             }
             // 在调试模式下添加自定义事件类型
             if (this.isDebugMode) {

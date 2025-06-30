@@ -857,7 +857,7 @@ export class Entity {
                 addedComponents.push(this.addComponent(component));
             } catch (error) {
                 // 如果某个组件添加失败，继续添加其他组件
-                console.warn(`Failed to add component ${component.constructor.name}:`, error);
+                console.warn(`添加组件失败 ${component.constructor.name}:`, error);
             }
         }
         
