@@ -7,9 +7,6 @@ import { Component } from '../../ECS/Component';
  * 实体数据收集器
  */
 export class EntityDataCollector {
-    /**
-     * 收集实体数据
-     */
     public collectEntityData(): IEntityDebugData {
         const scene = Core.scene;
         if (!scene) {
@@ -25,7 +22,6 @@ export class EntityDataCollector {
         try {
             stats = entityList.getStats ? entityList.getStats() : this.calculateFallbackEntityStats(entityList);
         } catch (error) {
-            // console.warn('[ECS Debug] 获取实体统计失败:', error);
             return {
                 totalEntities: 0,
                 activeEntities: 0,
@@ -38,8 +34,121 @@ export class EntityDataCollector {
             };
         }
 
-        // 利用ArchetypeSystem的缓存数据
         const archetypeData = this.collectArchetypeData(scene);
+        
+        return {
+            totalEntities: stats.totalEntities,
+            activeEntities: stats.activeEntities,
+            pendingAdd: stats.pendingAdd || 0,
+            pendingRemove: stats.pendingRemove || 0,
+            entitiesPerArchetype: archetypeData.distribution,
+            topEntitiesByComponents: archetypeData.topEntities,
+            entityHierarchy: [],
+            entityDetailsMap: {}
+        };
+    }
+
+
+    public getRawEntityList(): Array<{
+        id: number;
+        name: string;
+        active: boolean;
+        enabled: boolean;
+        activeInHierarchy: boolean;
+        componentCount: number;
+        componentTypes: string[];
+        parentId: number | null;
+        childIds: number[];
+        depth: number;
+        tag: number;
+        updateOrder: number;
+    }> {
+        const scene = Core.scene;
+        if (!scene) return [];
+
+        const entityList = (scene as any).entities;
+        if (!entityList?.buffer) return [];
+
+        return entityList.buffer.map((entity: Entity) => ({
+            id: entity.id,
+            name: entity.name || `Entity_${entity.id}`,
+            active: entity.active !== false,
+            enabled: entity.enabled !== false,
+            activeInHierarchy: entity.activeInHierarchy !== false,
+            componentCount: entity.components.length,
+            componentTypes: entity.components.map((component: Component) => component.constructor.name),
+            parentId: entity.parent?.id || null,
+            childIds: entity.children?.map((child: Entity) => child.id) || [],
+            depth: entity.getDepth ? entity.getDepth() : 0,
+            tag: entity.tag || 0,
+            updateOrder: entity.updateOrder || 0
+        }));
+    }
+
+
+    public getEntityDetails(entityId: number): any {
+        try {
+            const scene = Core.scene;
+            if (!scene) return null;
+
+            const entityList = (scene as any).entities;
+            if (!entityList?.buffer) return null;
+
+            const entity = entityList.buffer.find((e: any) => e.id === entityId);
+            if (!entity) return null;
+
+            const baseDebugInfo = entity.getDebugInfo ?
+                entity.getDebugInfo() :
+                this.buildFallbackEntityInfo(entity);
+
+            const componentDetails = this.extractComponentDetails(entity.components);
+
+            return {
+                ...baseDebugInfo,
+                parentName: entity.parent?.name || null,
+                components: componentDetails || [],
+                componentCount: entity.components?.length || 0,
+                componentTypes: entity.components?.map((comp: any) => comp.constructor.name) || []
+            };
+        } catch (error) {
+            return {
+                error: `获取实体详情失败: ${error instanceof Error ? error.message : String(error)}`,
+                components: [],
+                componentCount: 0,
+                componentTypes: []
+            };
+        }
+    }
+
+
+    public collectEntityDataWithMemory(): IEntityDebugData {
+        const scene = Core.scene;
+        if (!scene) {
+            return this.getEmptyEntityDebugData();
+        }
+
+        const entityList = (scene as any).entities;
+        if (!entityList) {
+            return this.getEmptyEntityDebugData();
+        }
+
+        let stats;
+        try {
+            stats = entityList.getStats ? entityList.getStats() : this.calculateFallbackEntityStats(entityList);
+        } catch (error) {
+        return {
+            totalEntities: 0,
+            activeEntities: 0,
+            pendingAdd: 0,
+            pendingRemove: 0,
+            entitiesPerArchetype: [],
+            topEntitiesByComponents: [],
+            entityHierarchy: [],
+            entityDetailsMap: {}
+        };
+    }
+
+        const archetypeData = this.collectArchetypeDataWithMemory(scene);
         
         return {
             totalEntities: stats.totalEntities,
@@ -53,64 +162,82 @@ export class EntityDataCollector {
         };
     }
 
-    /**
-     * 获取空的实体数据
-     */
-    private getEmptyEntityDebugData(): IEntityDebugData {
-        return {
-            totalEntities: 0,
-            activeEntities: 0,
-            pendingAdd: 0,
-            pendingRemove: 0,
-            entitiesPerArchetype: [],
-            topEntitiesByComponents: [],
-            entityHierarchy: [],
-            entityDetailsMap: {}
-        };
-    }
 
-    /**
-     * 计算实体统计信息
-     */
-    private calculateFallbackEntityStats(entityList: any): any {
-        const allEntities = entityList.buffer || [];
-        const activeEntities = allEntities.filter((entity: any) => 
-            entity.enabled && !entity._isDestroyed
-        );
-        
-        return {
-            totalEntities: allEntities.length,
-            activeEntities: activeEntities.length,
-            pendingAdd: 0,
-            pendingRemove: 0,
-            averageComponentsPerEntity: activeEntities.length > 0 ? 
-                allEntities.reduce((sum: number, e: any) => sum + (e.components?.length || 0), 0) / activeEntities.length : 0
-        };
-    }
-
-    /**
-     * 收集原型数据
-     */
     private collectArchetypeData(scene: any): {
         distribution: Array<{ signature: string; count: number; memory: number }>;
         topEntities: Array<{ id: string; name: string; componentCount: number; memory: number }>;
     } {
-        // 利用ArchetypeSystem的缓存数据
         if (scene && scene.archetypeSystem && typeof scene.archetypeSystem.getAllArchetypes === 'function') {
             return this.extractArchetypeStatistics(scene.archetypeSystem);
         }
 
-        // 回退到传统方法
         const entityContainer = { entities: scene.entities?.buffer || [] };
         return {
-            distribution: this.getArchetypeDistribution(entityContainer),
-            topEntities: this.getTopEntitiesByComponents(entityContainer)
+            distribution: this.getArchetypeDistributionFast(entityContainer),
+            topEntities: this.getTopEntitiesByComponentsFast(entityContainer)
         };
     }
 
-    /**
-     * 提取原型统计信息
-     */
+    private getArchetypeDistributionFast(entityContainer: any): Array<{ signature: string; count: number; memory: number }> {
+        const distribution = new Map<string, { count: number; componentTypes: string[] }>();
+
+        if (entityContainer && entityContainer.entities) {
+            entityContainer.entities.forEach((entity: any) => {
+                const componentTypes = entity.components?.map((comp: any) => comp.constructor.name) || [];
+                const signature = componentTypes.length > 0 ? componentTypes.sort().join(', ') : '无组件';
+
+                const existing = distribution.get(signature);
+                if (existing) {
+                    existing.count++;
+                } else {
+                    distribution.set(signature, { count: 1, componentTypes });
+                }
+            });
+        }
+
+        return Array.from(distribution.entries())
+            .map(([signature, data]) => ({
+                signature,
+                count: data.count,
+                memory: 0
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 20);
+    }
+
+    private getTopEntitiesByComponentsFast(entityContainer: any): Array<{ id: string; name: string; componentCount: number; memory: number }> {
+        if (!entityContainer || !entityContainer.entities) {
+            return [];
+        }
+
+        return entityContainer.entities
+            .map((entity: any) => ({
+                id: entity.id.toString(),
+                name: entity.name || `Entity_${entity.id}`,
+                componentCount: entity.components?.length || 0,
+                memory: 0
+            }))
+            .sort((a: any, b: any) => b.componentCount - a.componentCount)
+            .slice(0, 10);
+    }
+
+
+    private collectArchetypeDataWithMemory(scene: any): {
+        distribution: Array<{ signature: string; count: number; memory: number }>;
+        topEntities: Array<{ id: string; name: string; componentCount: number; memory: number }>;
+    } {
+        if (scene && scene.archetypeSystem && typeof scene.archetypeSystem.getAllArchetypes === 'function') {
+            return this.extractArchetypeStatisticsWithMemory(scene.archetypeSystem);
+        }
+
+        const entityContainer = { entities: scene.entities?.buffer || [] };
+        return {
+            distribution: this.getArchetypeDistributionWithMemory(entityContainer),
+            topEntities: this.getTopEntitiesByComponentsWithMemory(entityContainer)
+        };
+    }
+
+
     private extractArchetypeStatistics(archetypeSystem: any): {
         distribution: Array<{ signature: string; count: number; memory: number }>;
         topEntities: Array<{ id: string; name: string; componentCount: number; memory: number }>;
@@ -123,7 +250,43 @@ export class EntityDataCollector {
             const signature = archetype.componentTypes?.map((type: any) => type.name).join(',') || 'Unknown';
             const entityCount = archetype.entities?.length || 0;
             
-            // 计算实际内存使用量
+            distribution.push({
+                signature,
+                count: entityCount,
+                memory: 0
+            });
+
+            if (archetype.entities) {
+                archetype.entities.slice(0, 5).forEach((entity: any) => {
+                    topEntities.push({
+                        id: entity.id.toString(),
+                        name: entity.name || `Entity_${entity.id}`,
+                        componentCount: entity.components?.length || 0,
+                        memory: 0
+                    });
+                });
+            }
+        });
+
+        distribution.sort((a, b) => b.count - a.count);
+        topEntities.sort((a, b) => b.componentCount - a.componentCount);
+
+        return { distribution, topEntities };
+    }
+
+
+    private extractArchetypeStatisticsWithMemory(archetypeSystem: any): {
+        distribution: Array<{ signature: string; count: number; memory: number }>;
+        topEntities: Array<{ id: string; name: string; componentCount: number; memory: number }>;
+    } {
+        const archetypes = archetypeSystem.getAllArchetypes();
+        const distribution: Array<{ signature: string; count: number; memory: number }> = [];
+        const topEntities: Array<{ id: string; name: string; componentCount: number; memory: number }> = [];
+
+        archetypes.forEach((archetype: any) => {
+            const signature = archetype.componentTypes?.map((type: any) => type.name).join(',') || 'Unknown';
+            const entityCount = archetype.entities?.length || 0;
+
             let actualMemory = 0;
             if (archetype.entities && archetype.entities.length > 0) {
                 const sampleSize = Math.min(5, archetype.entities.length);
@@ -142,7 +305,6 @@ export class EntityDataCollector {
                 memory: actualMemory
             });
 
-            // 收集组件数量最多的实体
             if (archetype.entities) {
                 archetype.entities.slice(0, 5).forEach((entity: any) => {
                     topEntities.push({
@@ -155,85 +317,199 @@ export class EntityDataCollector {
             }
         });
 
-        // 按实体数量排序
         distribution.sort((a, b) => b.count - a.count);
         topEntities.sort((a, b) => b.componentCount - a.componentCount);
 
         return { distribution, topEntities };
     }
 
-    /**
-     * 计算实体内存使用量
-     */
-    public estimateEntityMemoryUsage(entity: any): number {
-        const startTime = performance.now();
-        
-        let totalSize = 0;
-        
-        // 计算实体基础大小
-        totalSize += this.calculateObjectSize(entity, ['components', 'children', 'parent']);
-        
-        // 计算组件大小
-        if (entity.components) {
-            entity.components.forEach((component: any) => {
-                totalSize += this.calculateObjectSize(component, ['entity']);
+
+    private getArchetypeDistribution(entityContainer: any): Array<{ signature: string; count: number; memory: number }> {
+        const distribution = new Map<string, number>();
+
+        if (entityContainer && entityContainer.entities) {
+            entityContainer.entities.forEach((entity: any) => {
+                const signature = entity.componentMask?.toString() || '0';
+                const existing = distribution.get(signature);
+                distribution.set(signature, (existing || 0) + 1);
             });
         }
-        
-        // 记录计算耗时
-        const executionTime = performance.now() - startTime;
-        if (executionTime > 1) {
-            // console.debug(`[ECS Debug] 实体${entity.id}内存计算耗时: ${executionTime.toFixed(2)}ms`);
-        }
-        
-        return totalSize;
+
+        return Array.from(distribution.entries())
+            .map(([signature, count]) => ({ signature, count, memory: 0 }))
+            .sort((a, b) => b.count - a.count);
     }
 
-    /**
-     * 计算对象大小
-     */
+    private getArchetypeDistributionWithMemory(entityContainer: any): Array<{ signature: string; count: number; memory: number }> {
+        const distribution = new Map<string, { count: number; memory: number; componentTypes: string[] }>();
+
+        if (entityContainer && entityContainer.entities) {
+            entityContainer.entities.forEach((entity: any) => {
+                const componentTypes = entity.components?.map((comp: any) => comp.constructor.name) || [];
+                const signature = componentTypes.length > 0 ? componentTypes.sort().join(', ') : '无组件';
+
+                const existing = distribution.get(signature);
+                let memory = this.estimateEntityMemoryUsage(entity);
+
+                if (isNaN(memory) || memory < 0) {
+                    memory = 0;
+                }
+
+                if (existing) {
+                    existing.count++;
+                    existing.memory += memory;
+                } else {
+                    distribution.set(signature, { count: 1, memory, componentTypes });
+                }
+            });
+        }
+
+        return Array.from(distribution.entries())
+            .map(([signature, data]) => ({
+                signature,
+                count: data.count,
+                memory: isNaN(data.memory) ? 0 : data.memory
+            }))
+            .sort((a, b) => b.count - a.count);
+    }
+
+
+    private getTopEntitiesByComponents(entityContainer: any): Array<{ id: string; name: string; componentCount: number; memory: number }> {
+        if (!entityContainer || !entityContainer.entities) {
+            return [];
+        }
+
+        return entityContainer.entities
+            .map((entity: any) => ({
+                id: entity.id.toString(),
+                name: entity.name || `Entity_${entity.id}`,
+                componentCount: entity.components?.length || 0,
+                memory: 0
+            }))
+            .sort((a: any, b: any) => b.componentCount - a.componentCount);
+    }
+
+
+    private getTopEntitiesByComponentsWithMemory(entityContainer: any): Array<{ id: string; name: string; componentCount: number; memory: number }> {
+        if (!entityContainer || !entityContainer.entities) {
+            return [];
+        }
+
+        return entityContainer.entities
+            .map((entity: any) => ({
+                id: entity.id.toString(),
+                name: entity.name || `Entity_${entity.id}`,
+                componentCount: entity.components?.length || 0,
+                memory: this.estimateEntityMemoryUsage(entity)
+            }))
+            .sort((a: any, b: any) => b.componentCount - a.componentCount);
+    }
+
+
+    private getEmptyEntityDebugData(): IEntityDebugData {
+        return {
+            totalEntities: 0,
+            activeEntities: 0,
+            pendingAdd: 0,
+            pendingRemove: 0,
+            entitiesPerArchetype: [],
+            topEntitiesByComponents: [],
+            entityHierarchy: [],
+            entityDetailsMap: {}
+        };
+    }
+
+
+    private calculateFallbackEntityStats(entityList: any): any {
+        const allEntities = entityList.buffer || [];
+        const activeEntities = allEntities.filter((entity: any) =>
+            entity.enabled && !entity._isDestroyed
+        );
+
+        return {
+            totalEntities: allEntities.length,
+            activeEntities: activeEntities.length,
+            pendingAdd: 0,
+            pendingRemove: 0,
+            averageComponentsPerEntity: activeEntities.length > 0 ?
+                allEntities.reduce((sum: number, e: any) => sum + (e.components?.length || 0), 0) / activeEntities.length : 0
+        };
+    }
+
+    public estimateEntityMemoryUsage(entity: any): number {
+        try {
+            let totalSize = 0;
+
+            const entitySize = this.calculateObjectSize(entity, ['components', 'children', 'parent']);
+            if (!isNaN(entitySize) && entitySize > 0) {
+                totalSize += entitySize;
+            }
+
+            if (entity.components && Array.isArray(entity.components)) {
+                entity.components.forEach((component: any) => {
+                    const componentSize = this.calculateObjectSize(component, ['entity']);
+                    if (!isNaN(componentSize) && componentSize > 0) {
+                        totalSize += componentSize;
+                    }
+                });
+            }
+
+            return isNaN(totalSize) || totalSize < 0 ? 0 : totalSize;
+        } catch (error) {
+            return 0;
+        }
+    }
+
     public calculateObjectSize(obj: any, excludeKeys: string[] = []): number {
         if (!obj || typeof obj !== 'object') return 0;
         
+        try {
         let size = 0;
         const visited = new WeakSet();
-        
-        const calculate = (item: any): number => {
-            if (!item || typeof item !== 'object' || visited.has(item)) return 0;
+            const maxDepth = 3;
+
+            const calculate = (item: any, depth: number = 0): number => {
+                if (!item || typeof item !== 'object' || visited.has(item) || depth >= maxDepth) {
+                    return 0;
+                }
             visited.add(item);
             
             let itemSize = 0;
             
             try {
-                for (const key in item) {
+                    const keys = Object.keys(item);
+                    for (let i = 0; i < Math.min(keys.length, 50); i++) {
+                        const key = keys[i];
                     if (excludeKeys.includes(key)) continue;
                     
                     const value = item[key];
-                    itemSize += key.length * 2; // key size
+                        itemSize += key.length * 2;
                     
                     if (typeof value === 'string') {
-                        itemSize += value.length * 2;
+                            itemSize += Math.min(value.length * 2, 1000);
                     } else if (typeof value === 'number') {
                         itemSize += 8;
                     } else if (typeof value === 'boolean') {
                         itemSize += 4;
                     } else if (typeof value === 'object' && value !== null) {
-                        itemSize += calculate(value);
+                            itemSize += calculate(value, depth + 1);
+                        }
                     }
+                } catch (error) {
+                    return 0;
                 }
-            } catch (error) {
-                // 忽略无法访问的属性
-            }
-            
-            return itemSize;
-        };
-        
-        return calculate(obj);
+
+                return isNaN(itemSize) ? 0 : itemSize;
+            };
+
+            size = calculate(obj);
+            return isNaN(size) || size < 0 ? 0 : size;
+        } catch (error) {
+            return 0;
+        }
     }
 
-    /**
-     * 构建实体层次结构树
-     */
+
     private buildEntityHierarchyTree(entityList: { buffer?: Entity[] }): Array<{
         id: number;
         name: string;
@@ -252,7 +528,7 @@ export class EntityDataCollector {
 
         const rootEntities: any[] = [];
 
-        // 直接遍历实体缓冲区，只收集根实体
+
         entityList.buffer.forEach((entity: Entity) => {
             if (!entity.parent) {
                 const hierarchyNode = this.buildEntityHierarchyNode(entity);
@@ -318,34 +594,28 @@ export class EntityDataCollector {
         if (!entityList?.buffer) return {};
 
         const entityDetailsMap: Record<number, any> = {};
-        
-        // 批量处理实体，减少函数调用开销
         const entities = entityList.buffer;
-        const batchSize = 50;
+        const batchSize = 100;
         
         for (let i = 0; i < entities.length; i += batchSize) {
             const batch = entities.slice(i, i + batchSize);
             
             batch.forEach((entity: Entity) => {
-                // 优先使用Entity的getDebugInfo方法
                 const baseDebugInfo = entity.getDebugInfo ? 
                     entity.getDebugInfo() : 
                     this.buildFallbackEntityInfo(entity);
 
-                // 利用组件缓存统计信息
                 const componentCacheStats = (entity as any).getComponentCacheStats ? 
                     (entity as any).getComponentCacheStats() : null;
 
                 const componentDetails = this.extractComponentDetails(entity.components);
 
-                // 构建完整的实体详情对象
                 entityDetailsMap[entity.id] = {
                     ...baseDebugInfo,
                     parentName: entity.parent?.name || null,
                     components: componentDetails,
                     componentTypes: baseDebugInfo.componentTypes || 
                         componentDetails.map((comp) => comp.typeName),
-                    // 添加缓存性能信息
                     cachePerformance: componentCacheStats ? {
                         hitRate: componentCacheStats.cacheStats.hitRate,
                         size: componentCacheStats.cacheStats.size,
@@ -384,17 +654,14 @@ export class EntityDataCollector {
     /**
      * 提取组件详细信息
      */
-    private extractComponentDetails(components: Component[]): Array<{
+    public extractComponentDetails(components: Component[]): Array<{
         typeName: string;
         properties: Record<string, any>;
     }> {
         return components.map((component: Component) => {
-            // 获取组件类型名称，优先使用constructor.name
             let typeName = component.constructor.name;
             
-            // 如果constructor.name为空或者是通用名称，尝试其他方法
             if (!typeName || typeName === 'Object' || typeName === 'Function') {
-                // 尝试从类型管理器获取
                 try {
                     const { ComponentTypeManager } = require('../../ECS/Utils/ComponentTypeManager');
                     const typeManager = ComponentTypeManager.instance;
@@ -402,267 +669,277 @@ export class EntityDataCollector {
                     const typeId = typeManager.getTypeId(componentType);
                     typeName = typeManager.getTypeName(typeId);
                 } catch (error) {
-                    // 如果类型管理器不可用，使用默认名称
                     typeName = 'UnknownComponent';
                 }
             }
             
-            const componentDetail = {
+            return {
                 typeName: typeName,
-                properties: {} as Record<string, any>
+                properties: {
+                    _componentId: component.constructor.name,
+                    _propertyCount: Object.keys(component).filter(key => !key.startsWith('_') && key !== 'entity').length,
+                    _lazyLoad: true
+                }
             };
+        });
+    }
 
-            // 安全地提取组件属性
-            try {
+    /**
+     * 获取组件的完整属性信息（仅在需要时调用）
+     */
+    public getComponentProperties(entityId: number, componentIndex: number): Record<string, any> {
+        try {
+            const scene = Core.scene;
+            if (!scene) return {};
+
+            const entityList = (scene as any).entities;
+            if (!entityList?.buffer) return {};
+
+            const entity = entityList.buffer.find((e: any) => e.id === entityId);
+            if (!entity || componentIndex >= entity.components.length) return {};
+
+            const component = entity.components[componentIndex];
+            const properties: Record<string, any> = {};
+
                 const propertyKeys = Object.keys(component);
                 propertyKeys.forEach(propertyKey => {
-                    // 跳过私有属性和实体引用，避免循环引用
                     if (!propertyKey.startsWith('_') && propertyKey !== 'entity') {
                         const propertyValue = (component as any)[propertyKey];
                         if (propertyValue !== undefined && propertyValue !== null) {
-                            componentDetail.properties[propertyKey] = this.formatPropertyValue(propertyValue);
-                        }
+                        properties[propertyKey] = this.formatPropertyValue(propertyValue);
+                    }
                     }
                 });
-            } catch (error) {
-                componentDetail.properties['_extractionError'] = '属性提取失败';
-            }
 
-            return componentDetail;
-        });
+            return properties;
+            } catch (error) {
+            return { _error: '属性提取失败' };
+            }
     }
 
     /**
      * 格式化属性值
      */
     private formatPropertyValue(value: any, depth: number = 0): any {
-        // 防止无限递归，限制最大深度
-        if (depth > 5) {
-            return value?.toString() || 'null';
+        if (value === null || value === undefined) {
+            return value;
         }
 
-        if (typeof value === 'object' && value !== null) {
-            if (Array.isArray(value)) {
-                // 对于数组，总是返回完整数组，让前端决定如何显示
-                return value.map(item => this.formatPropertyValue(item, depth + 1));
-            } else {
-                // 通用对象处理：提取所有可枚举属性，不限制数量
+        if (typeof value !== 'object') {
+            if (typeof value === 'string' && value.length > 200) {
+                return `[长字符串: ${value.length}字符] ${value.substring(0, 100)}...`;
+            }
+            return value;
+        }
+
+        if (depth === 0) {
+            return this.formatObjectFirstLevel(value);
+        } else {
+            return this.createLazyLoadPlaceholder(value);
+        }
+    }
+
+    /**
+     * 格式化对象第一层
+     */
+    private formatObjectFirstLevel(obj: any): any {
+        try {
+            if (Array.isArray(obj)) {
+                if (obj.length === 0) return [];
+
+                if (obj.length > 10) {
+                    const sample = obj.slice(0, 3).map(item => this.formatPropertyValue(item, 1));
+                    return {
+                        _isLazyArray: true,
+                        _arrayLength: obj.length,
+                        _sample: sample,
+                        _summary: `数组[${obj.length}个元素]`
+                    };
+                }
+
+                return obj.map(item => this.formatPropertyValue(item, 1));
+            }
+
+            const keys = Object.keys(obj);
+            if (keys.length === 0) return {};
+
+            const result: any = {};
+            let processedCount = 0;
+            const maxProperties = 15;
+
+            for (const key of keys) {
+                if (processedCount >= maxProperties) {
+                    result._hasMoreProperties = true;
+                    result._totalProperties = keys.length;
+                    result._hiddenCount = keys.length - processedCount;
+                    break;
+                }
+
+                if (key.startsWith('_') || key.startsWith('$') || typeof obj[key] === 'function') {
+                    continue;
+                }
+
                 try {
-                    const keys = Object.keys(value);
-                    if (keys.length === 0) {
-                        return {};
+                    const value = obj[key];
+                    if (value !== null && value !== undefined) {
+                        result[key] = this.formatPropertyValue(value, 1);
+                        processedCount++;
                     }
-                    
-                    const result: any = {};
-                    keys.forEach(key => {
-                        const propValue = value[key];
-                        // 避免循环引用和函数属性
-                        if (propValue !== value && typeof propValue !== 'function') {
-                            try {
-                                result[key] = this.formatPropertyValue(propValue, depth + 1);
-                            } catch (error) {
-                                // 如果属性访问失败，记录错误信息
-                                result[key] = `[访问失败: ${error instanceof Error ? error.message : String(error)}]`;
-                            }
-                        }
-                    });
-                    return result;
                 } catch (error) {
-                    return `[对象解析失败: ${error instanceof Error ? error.message : String(error)}]`;
+                    result[key] = `[访问失败: ${error instanceof Error ? error.message : String(error)}]`;
+                    processedCount++;
                 }
             }
+
+            return result;
+        } catch (error) {
+            return `[对象解析失败: ${error instanceof Error ? error.message : String(error)}]`;
         }
-        return value;
     }
 
     /**
-     * 获取Archetype分布
+     * 创建懒加载占位符
      */
-    private getArchetypeDistribution(entityContainer: any): Array<{ signature: string; count: number; memory: number }> {
-        const distribution = new Map<string, { count: number; memory: number }>();
-
-        if (entityContainer && entityContainer.entities) {
-            entityContainer.entities.forEach((entity: any) => {
-                const signature = entity.componentMask?.toString() || '0';
-                const existing = distribution.get(signature);
-                const memory = this.estimateEntityMemoryUsage(entity);
-            
-                if (existing) {
-                    existing.count++;
-                    existing.memory += memory;
-                } else {
-                    distribution.set(signature, { count: 1, memory });
-                }
-            });
-        }
-        
-        return Array.from(distribution.entries())
-            .map(([signature, data]) => ({ signature, ...data }))
-            .sort((a, b) => b.count - a.count);
-    }
-
-    /**
-     * 获取组件数量最多的实体
-     */
-    private getTopEntitiesByComponents(entityContainer: any): Array<{ id: string; name: string; componentCount: number; memory: number }> {
-        if (!entityContainer || !entityContainer.entities) {
-            return [];
-        }
-
-        return entityContainer.entities
-            .map((entity: any) => ({
-                id: entity.id.toString(),
-                name: entity.name || `Entity_${entity.id}`,
-                componentCount: entity.components?.length || 0,
-                memory: this.estimateEntityMemoryUsage(entity)
-            }))
-            .sort((a: any, b: any) => b.componentCount - a.componentCount);
-    }
-
-    /**
-     * 提取实体详细信息
-     */
-    private extractEntityDetails(entity: any): any {
-        const components = entity.components || [];
-        const componentDetails = this.extractComponentDetails(components);
-        
-        // 格式化组件掩码为更可读的形式
-        const componentMask = entity.componentMask || entity._componentMask || 0;
-        const componentMaskBinary = componentMask.toString(2).padStart(32, '0');
-        const componentMaskHex = '0x' + componentMask.toString(16).toUpperCase().padStart(8, '0');
-        
-        // 生成组件掩码的可读描述
-        const maskDescription = this.generateComponentMaskDescription(componentMask, components);
+    private createLazyLoadPlaceholder(obj: any): any {
+        try {
+            const typeName = obj.constructor?.name || 'Object';
+            const summary = this.getObjectSummary(obj, typeName);
         
         return {
-            id: entity.id,
-            name: entity.name || `Entity_${entity.id}`,
-            active: entity.active !== false,
-            enabled: entity.enabled !== false,
-            activeInHierarchy: entity.activeInHierarchy !== false,
-            updateOrder: entity.updateOrder || 0,
-            tag: entity.tag || '未分配',
-            depth: entity.depth || 0,
-            componentMask: componentMask,
-            componentMaskHex: componentMaskHex,
-            componentMaskBinary: componentMaskBinary,
-            componentMaskDescription: maskDescription,
-            componentCount: components.length,
-            components: componentDetails,
-            
-            // 层次关系信息
-            parentId: entity.parent?.id || null,
-            parentName: entity.parent?.name || null,
-            childCount: entity.children?.length || 0,
-            childIds: entity.children?.map((child: any) => child.id).slice(0, 10) || [], // 最多显示10个子实体ID
-            
-            // 内存信息
-            estimatedMemory: this.estimateEntityMemoryUsage(entity),
-            
-            // 额外的调试信息
-            destroyed: entity.destroyed || false,
-            scene: entity.scene?.name || '未知场景',
-            transform: this.extractTransformInfo(entity),
-            
-            // 实体状态描述
-            statusDescription: this.generateEntityStatusDescription(entity)
-        };
-    }
-
-    /**
-     * 生成组件掩码的可读描述
-     */
-    private generateComponentMaskDescription(mask: number, components: any[]): string {
-        if (mask === 0) {
-            return '无组件';
-        }
-        
-        if (components.length === 0) {
-            return `掩码值: ${mask} (组件信息不可用)`;
-        }
-        
-        const componentNames = components.map(c => c.constructor.name);
-        if (componentNames.length <= 3) {
-            return `包含: ${componentNames.join(', ')}`;
-        } else {
-            return `包含: ${componentNames.slice(0, 3).join(', ')} 等${componentNames.length}个组件`;
-        }
-    }
-
-    /**
-     * 生成实体状态描述
-     */
-    private generateEntityStatusDescription(entity: any): string {
-        const statuses = [];
-        
-        if (entity.destroyed) {
-            statuses.push('已销毁');
-        } else {
-            if (entity.active === false) {
-                statuses.push('非活跃');
-            }
-            if (entity.enabled === false) {
-                statuses.push('已禁用');
-            }
-            if (entity.activeInHierarchy === false) {
-                statuses.push('层次非活跃');
-            }
-            if (statuses.length === 0) {
-                statuses.push('正常运行');
-            }
-        }
-        
-        return statuses.join(', ');
-    }
-
-    /**
-     * 提取变换信息
-     */
-    private extractTransformInfo(entity: any): any {
-        try {
-            // 尝试获取Transform组件或position/rotation/scale信息
-            const transform = entity.transform || entity.getComponent?.('Transform') || null;
-            
-            if (transform) {
-                return {
-                    position: this.formatVector3(transform.position || transform.localPosition),
-                    rotation: this.formatVector3(transform.rotation || transform.localRotation),
-                    scale: this.formatVector3(transform.scale || transform.localScale),
-                    worldPosition: this.formatVector3(transform.worldPosition),
-                };
-            }
-            
-            // 如果没有Transform组件，检查是否有直接的位置信息
-            if (entity.position || entity.x !== undefined) {
-                return {
-                    position: this.formatVector3({
-                        x: entity.x || entity.position?.x || 0,
-                        y: entity.y || entity.position?.y || 0,
-                        z: entity.z || entity.position?.z || 0
-                    })
-                };
-            }
-            
-            return null;
+                _isLazyObject: true,
+                _typeName: typeName,
+                _summary: summary,
+                _objectId: this.generateObjectId(obj)
+            };
         } catch (error) {
-            return null;
+            return {
+                _isLazyObject: true,
+                _typeName: 'Unknown',
+                _summary: `无法分析的对象: ${error instanceof Error ? error.message : String(error)}`,
+                _objectId: Math.random().toString(36).substr(2, 9)
+            };
         }
     }
 
     /**
-     * 格式化Vector3对象
+     * 获取对象摘要信息
      */
-    private formatVector3(vector: any): string | null {
-        if (!vector) return null;
-        
+    private getObjectSummary(obj: any, typeName: string): string {
         try {
-            const x = typeof vector.x === 'number' ? vector.x.toFixed(2) : '0.00';
-            const y = typeof vector.y === 'number' ? vector.y.toFixed(2) : '0.00';
-            const z = typeof vector.z === 'number' ? vector.z.toFixed(2) : '0.00';
-            
-            return `(${x}, ${y}, ${z})`;
+            if (typeName.toLowerCase().includes('vec') || typeName.toLowerCase().includes('vector')) {
+                if (obj.x !== undefined && obj.y !== undefined) {
+                    const z = obj.z !== undefined ? obj.z : '';
+                    return `${typeName}(${obj.x}, ${obj.y}${z ? ', ' + z : ''})`;
+                }
+            }
+
+            if (typeName.toLowerCase().includes('color')) {
+                if (obj.r !== undefined && obj.g !== undefined && obj.b !== undefined) {
+                    const a = obj.a !== undefined ? obj.a : 1;
+                    return `${typeName}(${obj.r}, ${obj.g}, ${obj.b}, ${a})`;
+                }
+            }
+
+            if (typeName.toLowerCase().includes('node')) {
+                const name = obj.name || obj._name || '未命名';
+                return `${typeName}: ${name}`;
+            }
+
+            if (typeName.toLowerCase().includes('component')) {
+                const nodeName = obj.node?.name || obj.node?._name || '';
+                return `${typeName}${nodeName ? ` on ${nodeName}` : ''}`;
+            }
+
+            const keys = Object.keys(obj);
+            if (keys.length === 0) {
+                return `${typeName} (空对象)`;
+            }
+
+            return `${typeName} (${keys.length}个属性)`;
         } catch (error) {
-            return vector.toString();
+            return `${typeName} (无法分析)`;
         }
+    }
+
+    /**
+     * 生成对象ID
+     */
+    private generateObjectId(obj: any): string {
+        try {
+            if (obj.id !== undefined) return `obj_${obj.id}`;
+            if (obj._id !== undefined) return `obj_${obj._id}`;
+            if (obj.uuid !== undefined) return `obj_${obj.uuid}`;
+            if (obj._uuid !== undefined) return `obj_${obj._uuid}`;
+
+            return `obj_${Math.random().toString(36).substr(2, 9)}`;
+        } catch {
+            return `obj_${Math.random().toString(36).substr(2, 9)}`;
+        }
+    }
+
+    /**
+     * 展开懒加载对象（供调试面板调用）
+     */
+    public expandLazyObject(entityId: number, componentIndex: number, propertyPath: string): any {
+        try {
+            const scene = Core.scene;
+            if (!scene) return null;
+
+            const entityList = (scene as any).entities;
+            if (!entityList?.buffer) return null;
+
+            // 找到对应的实体
+            const entity = entityList.buffer.find((e: any) => e.id === entityId);
+            if (!entity) return null;
+
+            // 找到对应的组件
+            if (componentIndex >= entity.components.length) return null;
+            const component = entity.components[componentIndex];
+
+            // 根据属性路径找到对象
+            const targetObject = this.getObjectByPath(component, propertyPath);
+            if (!targetObject) return null;
+
+            // 展开这个对象的第一层属性
+            return this.formatObjectFirstLevel(targetObject);
+        } catch (error) {
+            return {
+                error: `展开失败: ${error instanceof Error ? error.message : String(error)}`
+            };
+        }
+    }
+
+    /**
+     * 根据路径获取对象
+     */
+    private getObjectByPath(root: any, path: string): any {
+        if (!path) return root;
+
+        const parts = path.split('.');
+        let current = root;
+
+        for (const part of parts) {
+            if (current === null || current === undefined) return null;
+
+            // 处理数组索引
+            if (part.includes('[') && part.includes(']')) {
+                const arrayName = part.substring(0, part.indexOf('['));
+                const index = parseInt(part.substring(part.indexOf('[') + 1, part.indexOf(']')));
+
+                if (arrayName) {
+                    current = current[arrayName];
+                }
+
+                if (Array.isArray(current) && index >= 0 && index < current.length) {
+                    current = current[index];
+                } else {
+                    return null;
+                }
+            } else {
+                current = current[part];
+            }
+        }
+
+        return current;
     }
 } 

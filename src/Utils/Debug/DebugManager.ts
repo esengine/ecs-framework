@@ -136,6 +136,22 @@ export class DebugManager {
                     }
                     break;
 
+                case 'expand_lazy_object':
+                    this.handleExpandLazyObjectRequest(message);
+                    break;
+
+                case 'get_component_properties':
+                    this.handleGetComponentPropertiesRequest(message);
+                    break;
+
+                case 'get_raw_entity_list':
+                    this.handleGetRawEntityListRequest(message);
+                    break;
+
+                case 'get_entity_details':
+                    this.handleGetEntityDetailsRequest(message);
+                    break;
+
                 case 'ping':
                     this.webSocketManager.send({
                         type: 'pong',
@@ -149,8 +165,138 @@ export class DebugManager {
             }
         } catch (error) {
             // console.error('[ECS Debug] 处理消息失败:', error);
+            if (message.requestId) {
+                this.webSocketManager.send({
+                    type: 'error_response',
+                    requestId: message.requestId,
+                    error: error instanceof Error ? error.message : String(error)
+                });
+            }
         }
     }
+
+    /**
+     * 处理展开懒加载对象请求
+     */
+    private handleExpandLazyObjectRequest(message: any): void {
+        try {
+            const { entityId, componentIndex, propertyPath, requestId } = message;
+            
+            if (entityId === undefined || componentIndex === undefined || !propertyPath) {
+                this.webSocketManager.send({
+                    type: 'expand_lazy_object_response',
+                    requestId,
+                    error: '缺少必要参数'
+                });
+                return;
+            }
+
+            const expandedData = this.entityCollector.expandLazyObject(entityId, componentIndex, propertyPath);
+            
+            this.webSocketManager.send({
+                type: 'expand_lazy_object_response',
+                requestId,
+                data: expandedData
+            });
+        } catch (error) {
+            this.webSocketManager.send({
+                type: 'expand_lazy_object_response',
+                requestId: message.requestId,
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
+
+    /**
+     * 处理获取组件属性请求
+     */
+    private handleGetComponentPropertiesRequest(message: any): void {
+        try {
+            const { entityId, componentIndex, requestId } = message;
+            
+            if (entityId === undefined || componentIndex === undefined) {
+                this.webSocketManager.send({
+                    type: 'get_component_properties_response',
+                    requestId,
+                    error: '缺少必要参数'
+                });
+                return;
+            }
+
+            const properties = this.entityCollector.getComponentProperties(entityId, componentIndex);
+            
+            this.webSocketManager.send({
+                type: 'get_component_properties_response',
+                requestId,
+                data: properties
+            });
+        } catch (error) {
+            this.webSocketManager.send({
+                type: 'get_component_properties_response',
+                requestId: message.requestId,
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
+
+    /**
+     * 处理获取原始实体列表请求
+     */
+    private handleGetRawEntityListRequest(message: any): void {
+        try {
+            const { requestId } = message;
+            
+            const rawEntityList = this.entityCollector.getRawEntityList();
+            
+            this.webSocketManager.send({
+                type: 'get_raw_entity_list_response',
+                requestId,
+                data: rawEntityList
+            });
+        } catch (error) {
+            this.webSocketManager.send({
+                type: 'get_raw_entity_list_response',
+                requestId: message.requestId,
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
+
+    /**
+     * 处理获取实体详情请求
+     */
+    private handleGetEntityDetailsRequest(message: any): void {
+        try {
+            const { entityId, requestId } = message;
+            
+            if (entityId === undefined) {
+                this.webSocketManager.send({
+                    type: 'get_entity_details_response',
+                    requestId,
+                    error: '缺少实体ID参数'
+                });
+                return;
+            }
+
+            const entityDetails = this.entityCollector.getEntityDetails(entityId);
+            
+            this.webSocketManager.send({
+                type: 'get_entity_details_response',
+                requestId,
+                data: entityDetails
+            });
+        } catch (error) {
+            this.webSocketManager.send({
+                type: 'get_entity_details_response',
+                requestId: message.requestId,
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
+
+
+
+
 
     /**
      * 处理内存快照请求
@@ -174,60 +320,46 @@ export class DebugManager {
      * 捕获内存快照
      */
     private captureMemorySnapshot(): any {
-        const scene = Core.scene;
-        if (!scene) {
-            throw new Error('没有活跃的场景');
-        }
-
-        const entityList = (scene as any).entities;
-        if (!entityList?.buffer) {
-            throw new Error('无法访问实体列表');
-        }
-
         const timestamp = Date.now();
 
-        // 1. 收集基础内存信息
+        // 使用专门的内存计算方法收集实体数据
+        const entityData = this.entityCollector.collectEntityDataWithMemory();
+
+        // 收集其他内存统计
         const baseMemoryInfo = this.collectBaseMemoryInfo();
-
-        // 2. 收集实体内存统计
-        const entityMemoryStats = this.collectEntityMemoryStats(entityList);
-
-        // 3. 收集组件内存统计
-        const componentMemoryStats = this.collectComponentMemoryStats(entityList);
-
-        // 4. 收集系统内存统计
+        const componentMemoryStats = this.collectComponentMemoryStats((Core.scene as any)?.entities);
         const systemMemoryStats = this.collectSystemMemoryStats();
-
-        // 5. 收集对象池内存统计
         const poolMemoryStats = this.collectPoolMemoryStats();
-
-        // 6. 收集性能监控器统计
         const performanceStats = this.collectPerformanceStats();
+
+        // 计算总内存使用量
+        const totalEntityMemory = entityData.entitiesPerArchetype.reduce((sum, arch) => sum + arch.memory, 0);
 
         return {
             timestamp,
             version: '2.0',
             summary: {
-                totalEntities: entityList.buffer.length,
+                totalEntities: entityData.totalEntities,
                 totalMemoryUsage: baseMemoryInfo.usedMemory,
                 totalMemoryLimit: baseMemoryInfo.totalMemory,
                 memoryUtilization: (baseMemoryInfo.usedMemory / baseMemoryInfo.totalMemory * 100),
                 gcCollections: baseMemoryInfo.gcCollections,
-                entityMemory: entityMemoryStats.totalMemory,
+                entityMemory: totalEntityMemory,
                 componentMemory: componentMemoryStats.totalMemory,
                 systemMemory: systemMemoryStats.totalMemory,
                 poolMemory: poolMemoryStats.totalMemory
             },
             baseMemory: baseMemoryInfo,
-            entities: entityMemoryStats,
+            entities: {
+                totalMemory: totalEntityMemory,
+                entityCount: entityData.totalEntities,
+                archetypes: entityData.entitiesPerArchetype,
+                largestEntities: entityData.topEntitiesByComponents
+            },
             components: componentMemoryStats,
             systems: systemMemoryStats,
             pools: poolMemoryStats,
-            performance: performanceStats,
-            // 保持向后兼容
-            totalEntities: entityList.buffer.length,
-            totalMemory: entityMemoryStats.totalMemory,
-            detailedArchetypes: entityMemoryStats.archetypes
+            performance: performanceStats
         };
     }
 
@@ -275,87 +407,7 @@ export class DebugManager {
         return memoryInfo;
     }
 
-    /**
-     * 收集实体内存统计
-     */
-    private collectEntityMemoryStats(entityList: any): any {
-        const archetypeStats = new Map<string, { count: number; memory: number; entities: any[] }>();
-        const entitySizeDistribution = new Map<string, number>(); // 按大小范围分布
-        let totalMemory = 0;
-        let maxEntityMemory = 0;
-        let minEntityMemory = Number.MAX_VALUE;
-        const largestEntities: any[] = [];
 
-        for (const entity of entityList.buffer) {
-            if (!entity || entity.destroyed) continue;
-
-            // 生成组件签名
-            const componentTypes = entity.components ?
-                entity.components.map((c: any) => c.constructor.name).sort() : [];
-            const signature = componentTypes.length > 0 ? componentTypes.join(',') : 'Empty';
-
-            // 计算实体内存使用
-            const entityMemory = this.entityCollector.estimateEntityMemoryUsage(entity);
-            totalMemory += entityMemory;
-            maxEntityMemory = Math.max(maxEntityMemory, entityMemory);
-            minEntityMemory = Math.min(minEntityMemory, entityMemory);
-
-            // 收集大实体信息
-            largestEntities.push({
-                id: entity.id,
-                name: entity.name || `Entity_${entity.id}`,
-                memory: entityMemory,
-                componentCount: componentTypes.length,
-                componentTypes: componentTypes
-            });
-
-            // 内存大小分布统计
-            const sizeCategory = this.getMemorySizeCategory(entityMemory);
-            entitySizeDistribution.set(sizeCategory, (entitySizeDistribution.get(sizeCategory) || 0) + 1);
-
-            // 更新原型统计
-            if (!archetypeStats.has(signature)) {
-                archetypeStats.set(signature, { count: 0, memory: 0, entities: [] });
-            }
-            const stats = archetypeStats.get(signature)!;
-            stats.count++;
-            stats.memory += entityMemory;
-            stats.entities.push({
-                id: entity.id,
-                name: entity.name || `Entity_${entity.id}`,
-                memory: entityMemory,
-                componentCount: componentTypes.length
-            });
-        }
-
-        // 排序并限制返回的实体数量
-        largestEntities.sort((a, b) => b.memory - a.memory);
-
-        // 转换原型统计
-        const archetypes = Array.from(archetypeStats.entries()).map(([signature, stats]) => ({
-            signature,
-            count: stats.count,
-            memory: stats.memory,
-            averageMemory: stats.memory / stats.count,
-            percentage: totalMemory > 0 ? (stats.memory / totalMemory * 100) : 0,
-            entities: stats.entities.sort((a, b) => b.memory - a.memory).slice(0, 5) // 只返回前5个最大的
-        })).sort((a, b) => b.memory - a.memory);
-
-        return {
-            totalMemory,
-            entityCount: entityList.buffer.length,
-            averageEntityMemory: totalMemory / entityList.buffer.length,
-            maxEntityMemory,
-            minEntityMemory: minEntityMemory === Number.MAX_VALUE ? 0 : minEntityMemory,
-            archetypes,
-            largestEntities: largestEntities.slice(0, 10),
-            sizeDistribution: Array.from(entitySizeDistribution.entries()).map(([category, count]) => ({
-                category,
-                count,
-                percentage: (count / entityList.buffer.length * 100)
-            }))
-        };
-    }
 
     /**
      * 收集组件内存统计

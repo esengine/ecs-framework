@@ -42,11 +42,12 @@ export class ECSManager extends Component {
             // 1. 创建Core实例，启用调试功能
             if (this.debugMode) {
                 Core.create({
+                    debug: true,
+                    enableEntitySystems: true,
                     debugConfig: {
                         enabled: true,
                         websocketUrl: 'ws://localhost:8080',
                         autoReconnect: true,
-                        updateInterval: 100,
                         debugFrameRate: 30,
                         channels: {
                             entities: true,
@@ -57,9 +58,13 @@ export class ECSManager extends Component {
                         }
                     }
                 });
-                // ECS调试模式已启用
+                console.log('✅ ECS调试模式已启用');
             } else {
-                Core.create(false);
+                Core.create({
+                    debug: false,
+                    enableEntitySystems: true
+                });
+                console.log('ℹ️ ECS调试模式已禁用');
             }
             
             // 2. 创建游戏场景
