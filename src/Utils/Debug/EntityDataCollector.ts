@@ -103,8 +103,13 @@ export class EntityDataCollector {
 
             const componentDetails = this.extractComponentDetails(entity.components);
 
+            const sceneInfo = this.getSceneInfo(scene);
+
             return {
                 ...baseDebugInfo,
+                scene: sceneInfo.name,
+                sceneName: sceneInfo.name,
+                sceneType: sceneInfo.type,
                 parentName: entity.parent?.name || null,
                 components: componentDetails || [],
                 componentCount: entity.components?.length || 0,
@@ -113,11 +118,38 @@ export class EntityDataCollector {
         } catch (error) {
             return {
                 error: `获取实体详情失败: ${error instanceof Error ? error.message : String(error)}`,
+                scene: '获取失败',
                 components: [],
                 componentCount: 0,
                 componentTypes: []
             };
         }
+    }
+
+    private getSceneInfo(scene: any): { name: string; type: string } {
+        let sceneName = '当前场景';
+        let sceneType = 'Scene';
+        
+        try {
+            if (scene.name && typeof scene.name === 'string' && scene.name.trim()) {
+                sceneName = scene.name.trim();
+            } else if (scene.constructor && scene.constructor.name) {
+                sceneName = scene.constructor.name;
+                sceneType = scene.constructor.name;
+            } else if (scene._name && typeof scene._name === 'string' && scene._name.trim()) {
+                sceneName = scene._name.trim();
+            } else {
+                const sceneClassName = Object.getPrototypeOf(scene)?.constructor?.name;
+                if (sceneClassName && sceneClassName !== 'Object') {
+                    sceneName = sceneClassName;
+                    sceneType = sceneClassName;
+                }
+            }
+        } catch (error) {
+            sceneName = '场景名获取失败';
+        }
+        
+        return { name: sceneName, type: sceneType };
     }
 
 
@@ -463,49 +495,60 @@ export class EntityDataCollector {
     public calculateObjectSize(obj: any, excludeKeys: string[] = []): number {
         if (!obj || typeof obj !== 'object') return 0;
         
-        try {
-        let size = 0;
         const visited = new WeakSet();
-            const maxDepth = 3;
-
-            const calculate = (item: any, depth: number = 0): number => {
-                if (!item || typeof item !== 'object' || visited.has(item) || depth >= maxDepth) {
-                    return 0;
-                }
+        const maxDepth = 2;
+        
+        const calculate = (item: any, depth: number = 0): number => {
+            if (!item || typeof item !== 'object' || depth >= maxDepth) {
+                return 0;
+            }
+            
+            if (visited.has(item)) return 0;
             visited.add(item);
             
-            let itemSize = 0;
+            let itemSize = 32;
             
             try {
-                    const keys = Object.keys(item);
-                    for (let i = 0; i < Math.min(keys.length, 50); i++) {
-                        const key = keys[i];
-                    if (excludeKeys.includes(key)) continue;
+                const keys = Object.keys(item);
+                const maxKeys = Math.min(keys.length, 20);
+                
+                for (let i = 0; i < maxKeys; i++) {
+                    const key = keys[i];
+                    if (excludeKeys.includes(key) || 
+                        key === 'constructor' || 
+                        key === '__proto__' ||
+                        key.startsWith('_cc_') ||
+                        key.startsWith('__')) {
+                        continue;
+                    }
                     
                     const value = item[key];
-                        itemSize += key.length * 2;
+                    itemSize += key.length * 2;
                     
                     if (typeof value === 'string') {
-                            itemSize += Math.min(value.length * 2, 1000);
+                        itemSize += Math.min(value.length * 2, 200);
                     } else if (typeof value === 'number') {
                         itemSize += 8;
                     } else if (typeof value === 'boolean') {
                         itemSize += 4;
+                    } else if (Array.isArray(value)) {
+                        itemSize += 40 + Math.min(value.length * 8, 160);
                     } else if (typeof value === 'object' && value !== null) {
-                            itemSize += calculate(value, depth + 1);
-                        }
+                        itemSize += calculate(value, depth + 1);
                     }
-                } catch (error) {
-                    return 0;
                 }
-
-                return isNaN(itemSize) ? 0 : itemSize;
-            };
-
-            size = calculate(obj);
-            return isNaN(size) || size < 0 ? 0 : size;
+            } catch (error) {
+                return 64;
+            }
+            
+            return itemSize;
+        };
+        
+        try {
+            const size = calculate(obj);
+            return Math.max(size, 32);
         } catch (error) {
-            return 0;
+            return 64;
         }
     }
 
@@ -632,6 +675,9 @@ export class EntityDataCollector {
      * 构建实体基础信息
      */
     private buildFallbackEntityInfo(entity: Entity): any {
+        const scene = Core.scene;
+        const sceneInfo = this.getSceneInfo(scene);
+        
         return {
             name: entity.name || `Entity_${entity.id}`,
             id: entity.id,
@@ -639,6 +685,9 @@ export class EntityDataCollector {
             active: entity.active !== false,
             activeInHierarchy: entity.activeInHierarchy !== false,
             destroyed: entity.isDestroyed || false,
+            scene: sceneInfo.name,
+            sceneName: sceneInfo.name,
+            sceneType: sceneInfo.type,
             componentCount: entity.components.length,
             componentTypes: entity.components.map((component: Component) => component.constructor.name),
             componentMask: entity.componentMask?.toString() || '0',
@@ -673,13 +722,33 @@ export class EntityDataCollector {
                 }
             }
             
+            // 提取实际的组件属性
+            const properties: Record<string, any> = {};
+            
+            try {
+                const propertyKeys = Object.keys(component);
+                propertyKeys.forEach(propertyKey => {
+                    if (!propertyKey.startsWith('_') && propertyKey !== 'entity' && propertyKey !== 'constructor') {
+                        const propertyValue = (component as any)[propertyKey];
+                        if (propertyValue !== undefined && propertyValue !== null) {
+                            properties[propertyKey] = this.formatPropertyValue(propertyValue);
+                        }
+                    }
+                });
+                
+                // 如果没有找到任何属性，添加一些调试信息
+                if (Object.keys(properties).length === 0) {
+                    properties._info = '该组件没有公开属性';
+                    properties._componentId = component.constructor.name;
+                }
+            } catch (error) {
+                properties._error = '属性提取失败';
+                properties._componentId = component.constructor.name;
+            }
+            
             return {
                 typeName: typeName,
-                properties: {
-                    _componentId: component.constructor.name,
-                    _propertyCount: Object.keys(component).filter(key => !key.startsWith('_') && key !== 'entity').length,
-                    _lazyLoad: true
-                }
+                properties: properties
             };
         });
     }
