@@ -5,8 +5,10 @@ import { Core } from '../../Core';
  * 组件数据收集器
  */
 export class ComponentDataCollector {
+    private static componentSizeCache = new Map<string, number>();
+
     /**
-     * 收集组件数据
+     * 收集组件数据（轻量版，不计算实际内存大小）
      */
     public collectComponentData(): IComponentDebugData {
         const scene = Core.scene;
@@ -69,7 +71,8 @@ export class ComponentDataCollector {
             componentStats: Array.from(componentStats.entries()).map(([typeName, stats]) => {
                 const poolSize = poolSizes.get(typeName) || 0;
                 const poolUtilization = poolUtilizations.get(typeName) || 0;
-                const memoryPerInstance = this.calculateComponentMemorySize(typeName);
+                // 使用预估的基础内存大小，避免每帧计算
+                const memoryPerInstance = this.getEstimatedComponentSize(typeName);
                 
                 return {
                     typeName,
@@ -85,14 +88,93 @@ export class ComponentDataCollector {
     }
 
     /**
-     * 计算组件实际内存大小
+     * 获取组件类型的估算内存大小（基于预设值，不进行实际计算）
      */
-    private calculateComponentMemorySize(typeName: string): number {
+    private getEstimatedComponentSize(typeName: string): number {
+        if (ComponentDataCollector.componentSizeCache.has(typeName)) {
+            return ComponentDataCollector.componentSizeCache.get(typeName)!;
+        }
+
         const scene = Core.scene;
-        if (!scene) return 32;
+        if (!scene) return 64;
         
         const entityList = (scene as any).entities;
-        if (!entityList?.buffer) return 32;
+        if (!entityList?.buffer) return 64;
+        
+        let calculatedSize = 64;
+        
+        try {
+            for (const entity of entityList.buffer) {
+                if (entity.components) {
+                    const component = entity.components.find((c: any) => c.constructor.name === typeName);
+                    if (component) {
+                        calculatedSize = this.calculateQuickObjectSize(component);
+                        break;
+                    }
+                }
+            }
+        } catch (error) {
+            calculatedSize = 64;
+        }
+        
+        ComponentDataCollector.componentSizeCache.set(typeName, calculatedSize);
+        return calculatedSize;
+    }
+
+    private calculateQuickObjectSize(obj: any): number {
+        if (!obj || typeof obj !== 'object') return 8;
+        
+        let size = 32;
+        const visited = new WeakSet();
+        
+        const calculate = (item: any, depth: number = 0): number => {
+            if (!item || typeof item !== 'object' || visited.has(item) || depth > 3) {
+                return 0;
+            }
+            visited.add(item);
+            
+            let itemSize = 0;
+            
+            try {
+                const keys = Object.keys(item);
+                for (let i = 0; i < Math.min(keys.length, 20); i++) {
+                    const key = keys[i];
+                    if (key === 'entity' || key === '_entity' || key === 'constructor') continue;
+                    
+                    const value = item[key];
+                    itemSize += key.length * 2;
+                    
+                    if (typeof value === 'string') {
+                        itemSize += Math.min(value.length * 2, 200);
+                    } else if (typeof value === 'number') {
+                        itemSize += 8;
+                    } else if (typeof value === 'boolean') {
+                        itemSize += 4;
+                    } else if (typeof value === 'object' && value !== null) {
+                        itemSize += calculate(value, depth + 1);
+                    }
+                }
+            } catch (error) {
+                return 32;
+            }
+            
+            return itemSize;
+        };
+        
+        size += calculate(obj);
+        return Math.max(size, 32);
+    }
+
+    /**
+     * 为内存快照功能提供的详细内存计算
+     * 只在用户主动请求内存快照时调用
+     */
+    public calculateDetailedComponentMemory(typeName: string): number {
+        const scene = Core.scene;
+        if (!scene) return this.getEstimatedComponentSize(typeName);
+        
+        const entityList = (scene as any).entities;
+        if (!entityList?.buffer) return this.getEstimatedComponentSize(typeName);
         
         try {
             // 找到第一个包含此组件的实体，分析组件大小
@@ -105,18 +187,18 @@ export class ComponentDataCollector {
                 }
             }
         } catch (error) {
-            // 忽略错误，使用默认值
+            // 忽略错误，使用估算值
         }
         
-        // 如果无法计算，返回基础大小
-        return 32; // 基础对象开销
+        return this.getEstimatedComponentSize(typeName);
     }
 
     /**
-     * 估算对象内存大小
+     * 估算对象内存大小（仅用于内存快照）
+     * 优化版本：减少递归深度，提高性能
      */
     private estimateObjectSize(obj: any, visited = new WeakSet(), depth = 0): number {
-        if (obj === null || obj === undefined || depth > 50) return 0;
+        if (obj === null || obj === undefined || depth > 10) return 0;
         if (visited.has(obj)) return 0;
         
         let size = 0;
@@ -124,55 +206,55 @@ export class ComponentDataCollector {
         
         switch (type) {
             case 'boolean':
-                size = 1;
+                size = 4;
                 break;
             case 'number':
                 size = 8;
                 break;
             case 'string':
-                const stringSize = 24 + (obj.length * 2);
-                size = Math.ceil(stringSize / 8) * 8;
+                size = 24 + Math.min(obj.length * 2, 1000);
                 break;
             case 'object':
                 visited.add(obj);
                 
                 if (Array.isArray(obj)) {
                     size = 40 + (obj.length * 8);
-                    for (let i = 0; i < obj.length; i++) {
+                    const maxElements = Math.min(obj.length, 50);
+                    for (let i = 0; i < maxElements; i++) {
                         size += this.estimateObjectSize(obj[i], visited, depth + 1);
                     }
                 } else {
                     size = 32;
-                    const allKeys = [
-                        ...Object.getOwnPropertyNames(obj),
-                        ...Object.getOwnPropertySymbols(obj)
-                    ];
                     
-                    for (const key of allKeys) {
-                        try {
-                            if (typeof key === 'string' && (
-                                key === 'constructor' || 
+                    try {
+                        const ownKeys = Object.getOwnPropertyNames(obj);
+                        const maxProps = Math.min(ownKeys.length, 30);
+                        
+                        for (let i = 0; i < maxProps; i++) {
+                            const key = ownKeys[i];
+                            
+                            if (key === 'constructor' || 
                                 key === '__proto__' ||
-                                key === 'entity' || key === '_entity'
-                            )) {
+                                key === 'entity' || 
+                                key === '_entity' ||
+                                key.startsWith('_cc_') ||
+                                key.startsWith('__')) {
                                 continue;
                             }
                             
-                            const descriptor = Object.getOwnPropertyDescriptor(obj, key);
-                            if (!descriptor) continue;
-                            
-                            if (typeof key === 'string') {
+                            try {
                                 size += 16 + (key.length * 2);
-                            } else {
-                                size += 24;
+                                
+                                const value = obj[key];
+                                if (value !== undefined && value !== null) {
+                                    size += this.estimateObjectSize(value, visited, depth + 1);
+                                }
+                            } catch (error) {
+                                continue;
                             }
-                            
-                            if (descriptor.value !== undefined) {
-                                size += this.estimateObjectSize(descriptor.value, visited, depth + 1);
-                            }
-                        } catch (error) {
-                            continue;
                         }
+                    } catch (error) {
+                        size = 128;
                     }
                 }
                 break;
@@ -181,5 +263,9 @@ export class ComponentDataCollector {
         }
         
         return Math.ceil(size / 8) * 8;
+    }
+
+    public static clearCache(): void {
+        ComponentDataCollector.componentSizeCache.clear();
     }
 } 

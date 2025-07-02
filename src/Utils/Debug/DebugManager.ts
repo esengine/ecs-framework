@@ -410,33 +410,57 @@ export class DebugManager {
 
 
     /**
-     * 收集组件内存统计
+     * 收集组件内存统计（仅用于内存快照）
      */
     private collectComponentMemoryStats(entityList: any): any {
         const componentStats = new Map<string, { count: number; totalMemory: number; instances: any[] }>();
         let totalComponentMemory = 0;
 
+        // 首先统计组件类型和数量
+        const componentTypeCounts = new Map<string, number>();
         for (const entity of entityList.buffer) {
             if (!entity || entity.destroyed || !entity.components) continue;
 
             for (const component of entity.components) {
                 const typeName = component.constructor.name;
-                const componentMemory = this.entityCollector.calculateObjectSize(component, ['entity']);
-                totalComponentMemory += componentMemory;
-
-                if (!componentStats.has(typeName)) {
-                    componentStats.set(typeName, { count: 0, totalMemory: 0, instances: [] });
-                }
-
-                const stats = componentStats.get(typeName)!;
-                stats.count++;
-                stats.totalMemory += componentMemory;
-                stats.instances.push({
-                    entityId: entity.id,
-                    entityName: entity.name || `Entity_${entity.id}`,
-                    memory: componentMemory
-                });
+                componentTypeCounts.set(typeName, (componentTypeCounts.get(typeName) || 0) + 1);
             }
+        }
+
+        // 为每种组件类型计算详细内存（只计算一次，然后乘以数量）
+        for (const [typeName, count] of componentTypeCounts.entries()) {
+            const detailedMemoryPerInstance = this.componentCollector.calculateDetailedComponentMemory(typeName);
+            const totalMemoryForType = detailedMemoryPerInstance * count;
+            totalComponentMemory += totalMemoryForType;
+
+            // 收集该类型组件的实例信息（用于显示最大的几个实例）
+            const instances: any[] = [];
+            let instanceCount = 0;
+            
+            for (const entity of entityList.buffer) {
+                if (!entity || entity.destroyed || !entity.components) continue;
+                
+                for (const component of entity.components) {
+                    if (component.constructor.name === typeName) {
+                        instances.push({
+                            entityId: entity.id,
+                            entityName: entity.name || `Entity_${entity.id}`,
+                            memory: detailedMemoryPerInstance // 使用统一的详细计算结果
+                        });
+                        instanceCount++;
+                        
+                        // 限制收集的实例数量，避免过多数据
+                        if (instanceCount >= 100) break;
+                    }
+                }
+                if (instanceCount >= 100) break;
+            }
+
+            componentStats.set(typeName, {
+                count: count,
+                totalMemory: totalMemoryForType,
+                instances: instances.slice(0, 10) // 只保留前10个实例用于显示
+            });
         }
 
         const componentBreakdown = Array.from(componentStats.entries()).map(([typeName, stats]) => ({
@@ -456,9 +480,6 @@ export class DebugManager {
         };
     }
 
-    /**
-     * 收集系统内存统计
-     */
     private collectSystemMemoryStats(): any {
         const scene = Core.scene;
         let totalSystemMemory = 0;
@@ -467,12 +488,23 @@ export class DebugManager {
         try {
             const entityProcessors = (scene as any).entityProcessors;
             if (entityProcessors && entityProcessors.processors) {
+                const systemTypeMemoryCache = new Map<string, number>();
+                
                 for (const system of entityProcessors.processors) {
-                    const systemMemory = this.entityCollector.calculateObjectSize(system);
+                    const systemTypeName = system.constructor.name;
+                    
+                    let systemMemory: number;
+                    if (systemTypeMemoryCache.has(systemTypeName)) {
+                        systemMemory = systemTypeMemoryCache.get(systemTypeName)!;
+                    } else {
+                        systemMemory = this.calculateQuickSystemSize(system);
+                        systemTypeMemoryCache.set(systemTypeName, systemMemory);
+                    }
+                    
                     totalSystemMemory += systemMemory;
 
                     systemBreakdown.push({
-                        name: system.constructor.name,
+                        name: systemTypeName,
                         memory: systemMemory,
                         enabled: system.enabled !== false,
                         updateOrder: system.updateOrder || 0
@@ -488,6 +520,39 @@ export class DebugManager {
             systemCount: systemBreakdown.length,
             breakdown: systemBreakdown.sort((a, b) => b.memory - a.memory)
         };
+    }
+
+    private calculateQuickSystemSize(system: any): number {
+        if (!system || typeof system !== 'object') return 64;
+        
+        let size = 128;
+        
+        try {
+            const keys = Object.keys(system);
+            for (let i = 0; i < Math.min(keys.length, 15); i++) {
+                const key = keys[i];
+                if (key === 'entities' || key === 'scene' || key === 'constructor') continue;
+                
+                const value = system[key];
+                size += key.length * 2;
+                
+                if (typeof value === 'string') {
+                    size += Math.min(value.length * 2, 100);
+                } else if (typeof value === 'number') {
+                    size += 8;
+                } else if (typeof value === 'boolean') {
+                    size += 4;
+                } else if (Array.isArray(value)) {
+                    size += 40 + Math.min(value.length * 8, 200);
+                } else if (typeof value === 'object' && value !== null) {
+                    size += 64;
+                }
+            }
+        } catch (error) {
+            return 128;
+        }
+        
+        return Math.max(size, 64);
     }
 
     /**
