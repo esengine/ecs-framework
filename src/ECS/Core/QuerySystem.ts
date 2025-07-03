@@ -421,25 +421,34 @@ export class QuerySystem {
             };
         }
 
-        let entities: Entity[];
+        let entities: Entity[] = [];
 
         const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'AND');
         if (archetypeResult.archetypes.length > 0) {
             this.queryStats.archetypeHits++;
-            entities = [];
             for (const archetype of archetypeResult.archetypes) {
                 entities.push(...archetype.entities);
             }
-        } else if (componentTypes.length === 1) {
-            this.queryStats.indexHits++;
-            const indexResult = this.componentIndexManager.query(componentTypes[0]);
-            entities = Array.from(indexResult);
         } else {
-            const indexResult = this.componentIndexManager.queryMultiple(componentTypes, 'AND');
-            entities = Array.from(indexResult);
+            try {
+                if (componentTypes.length === 1) {
+                    this.queryStats.indexHits++;
+                    const indexResult = this.componentIndexManager.query(componentTypes[0]);
+                    entities = Array.from(indexResult);
+                } else {
+                    const indexResult = this.componentIndexManager.queryMultiple(componentTypes, 'AND');
+                    entities = Array.from(indexResult);
+                }
+            } catch (error) {
+                entities = [];
+            }
         }
 
-        // 缓存结果
+        if (entities.length === 0 && this.entities.length > 0) {
+            this.queryStats.linearScans++;
+            entities = this.queryByLinearScan(componentTypes);
+        }
+
         this.addToCache(cacheKey, entities);
 
         return {
