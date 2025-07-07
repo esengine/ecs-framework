@@ -31,7 +31,7 @@ module.exports = [
   {
     input: 'bin/index.js',
     output: {
-      file: 'dist/index.js',
+      file: 'dist/index.mjs',
       format: 'es',
       banner,
       sourcemap: true,
@@ -53,13 +53,12 @@ module.exports = [
     }
   },
   
-  // UMD构建（可选）
+  // CommonJS构建
   {
     input: 'bin/index.js',
     output: {
-      file: 'dist/index.umd.js',
-      format: 'umd',
-      name: 'ECSFramework',
+      file: 'dist/index.cjs',
+      format: 'cjs',
       banner,
       sourcemap: true,
       exports: 'named'
