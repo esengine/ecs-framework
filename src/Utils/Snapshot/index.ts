@@ -14,6 +14,6 @@ export { SnapshotManager } from './SnapshotManager';
 export { 
     ISnapshotExtension, 
     Serializable, 
-    SnapshotConfig as SnapshotConfigDecorator,
+    SnapshotConfigDecorator,
     SnapshotExtension 
 } from './SnapshotExtension'; 

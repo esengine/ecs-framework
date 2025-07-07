@@ -44,13 +44,13 @@ function generatePackageJson() {
         name: sourcePackage.name,
         version: sourcePackage.version,
         description: sourcePackage.description,
-        main: 'index.js',
+        main: 'index.umd.js',
         module: 'index.js',
         types: 'index.d.ts',
-        type: 'module',
         exports: {
             '.': {
                 import: './index.js',
+                require: './index.umd.js',
                 types: './index.d.ts'
             }
         },

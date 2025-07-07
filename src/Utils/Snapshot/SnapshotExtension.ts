@@ -55,7 +55,7 @@ export function Serializable(config?: Partial<SnapshotConfig>) {
  * 
  * 用于配置组件的快照行为
  */
-export function SnapshotConfig(config: SnapshotConfig) {
+export function SnapshotConfigDecorator(config: SnapshotConfig) {
     return function (target: any) {
         target.prototype.snapshotConfig = config;
     };
