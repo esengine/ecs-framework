@@ -6,6 +6,7 @@
   },
   "dependencies": {
     "@esengine/ai": "^2.0.15",
-    "@esengine/ecs-framework": "^2.1.23"
+    "@esengine/ecs-framework": "^2.1.23",
+    "@esengine/cocos-nexus": "^1.0.1"
   }
 }

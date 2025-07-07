@@ -13,3 +13,6 @@
 [submodule "extensions/cocos/cocos-ecs/extensions/cocos-terrain-gen"]
 	path = extensions/cocos/cocos-ecs/extensions/cocos-terrain-gen
 	url = https://github.com/esengine/cocos-terrain-gen.git
+[submodule "examples/lawn-mower-demo"]
+	path = examples/lawn-mower-demo
+	url = https://github.com/esengine/lawn-mower-demo.git

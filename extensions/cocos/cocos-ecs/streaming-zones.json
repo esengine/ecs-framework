@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "zones": [
+    {
+      "id": "mco83tjfk4ed7a2de4",
+      "name": "123",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "width": 100,
+        "height": 100,
+        "depth": 100
+      },
+      "priority": 1,
+      "preloadDistance": 50,
+      "unloadDistance": 100,
+      "visible": true,
+      "color": [
+        0,
+        1,
+        0,
+        0.5
+      ],
+      "resourcePaths": [],
+      "sceneNodeUuids": [],
+      "enabled": true,
+      "metadata": {
+        "created": 1751597801547,
+        "modified": 1751597801548,
+        "version": "1.0.0"
+      }
+    }
+  ],
+  "settings": {
+    "defaultPreloadDistance": 50,
+    "defaultUnloadDistance": 100,
+    "defaultPriority": 1,
+    "autoSave": true,
+    "gridSize": 10,
+    "snapToGrid": false
+  }
+}
