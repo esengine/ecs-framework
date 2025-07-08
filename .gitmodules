@@ -22,3 +22,6 @@
 [submodule "thirdparty/mvvm-ui-framework"]
 	path = thirdparty/mvvm-ui-framework
 	url = https://github.com/esengine/mvvm-ui-framework.git
+[submodule "thirdparty/cocos-nexus"]
+	path = thirdparty/cocos-nexus
+	url = https://github.com/esengine/cocos-nexus.git
