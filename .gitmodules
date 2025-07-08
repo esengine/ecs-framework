@@ -16,6 +16,9 @@
 [submodule "examples/lawn-mower-demo"]
 	path = examples/lawn-mower-demo
 	url = https://github.com/esengine/lawn-mower-demo.git
+[submodule "extensions/cocos/cocos-ecs/extensions/mvvm-designer"]
+	path = extensions/cocos/cocos-ecs/extensions/mvvm-designer
+	url = https://github.com/esengine/mvvm-designer.git
 [submodule "thirdparty/mvvm-ui-framework"]
 	path = thirdparty/mvvm-ui-framework
 	url = https://github.com/esengine/mvvm-ui-framework.git
