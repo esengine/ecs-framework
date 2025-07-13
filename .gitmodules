@@ -25,3 +25,6 @@
 [submodule "thirdparty/cocos-nexus"]
 	path = thirdparty/cocos-nexus
 	url = https://github.com/esengine/cocos-nexus.git
+[submodule "extensions/cocos/cocos-ecs/extensions/utilityai_designer"]
+	path = extensions/cocos/cocos-ecs/extensions/utilityai_designer
+	url = https://github.com/esengine/utilityai_designer.git
