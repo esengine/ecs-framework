@@ -23,143 +23,7 @@ export class EntityComparer {
     }
 }
 
-/**
- * 组件缓存项
- */
-interface ComponentCacheEntry<T extends Component = Component> {
-    component: T;
-    lastAccessed: number;
-    accessCount: number;
-}
 
-/**
- * 组件缓存配置
- */
-interface ComponentCacheConfig {
-    maxSize: number;
-    ttl: number; // 生存时间（毫秒）
-    enableLRU: boolean; // 是否启用LRU淘汰策略
-}
-
-/**
- * 高性能组件缓存
- */
-class ComponentCache {
-    private cache = new Map<ComponentType, ComponentCacheEntry>();
-    private accessOrder: ComponentType[] = [];
-    private config: ComponentCacheConfig;
-
-    constructor(config: ComponentCacheConfig = {
-        maxSize: 16,
-        ttl: 5000,
-        enableLRU: true
-    }) {
-        this.config = config;
-    }
-
-    public get<T extends Component>(type: ComponentType<T>): T | null {
-        const entry = this.cache.get(type);
-        if (!entry) {
-            return null;
-        }
-
-        // 检查TTL
-        if (Date.now() - entry.lastAccessed > this.config.ttl) {
-            this.cache.delete(type);
-            this.removeFromAccessOrder(type);
-            return null;
-        }
-
-        // 更新访问信息
-        entry.lastAccessed = Date.now();
-        entry.accessCount++;
-
-        // 更新LRU顺序
-        if (this.config.enableLRU) {
-            this.updateAccessOrder(type);
-        }
-
-        return entry.component as T;
-    }
-
-    public set<T extends Component>(type: ComponentType<T>, component: T): void {
-        // 检查缓存大小限制
-        if (this.cache.size >= this.config.maxSize && !this.cache.has(type)) {
-            this.evictLeastRecentlyUsed();
-        }
-
-        const entry: ComponentCacheEntry<T> = {
-            component,
-            lastAccessed: Date.now(),
-            accessCount: 1
-        };
-
-        this.cache.set(type, entry);
-
-        if (this.config.enableLRU) {
-            this.updateAccessOrder(type);
-        }
-    }
-
-    public delete(type: ComponentType): boolean {
-        const deleted = this.cache.delete(type);
-        if (deleted) {
-            this.removeFromAccessOrder(type);
-        }
-        return deleted;
-    }
-
-    public clear(): void {
-        this.cache.clear();
-        this.accessOrder.length = 0;
-    }
-
-    public has(type: ComponentType): boolean {
-        return this.cache.has(type);
-    }
-
-    private evictLeastRecentlyUsed(): void {
-        if (this.accessOrder.length > 0) {
-            const lruType = this.accessOrder[0];
-            this.cache.delete(lruType);
-            this.accessOrder.shift();
-        }
-    }
-
-    private updateAccessOrder(type: ComponentType): void {
-        this.removeFromAccessOrder(type);
-        this.accessOrder.push(type);
-    }
-
-    private removeFromAccessOrder(type: ComponentType): void {
-        const index = this.accessOrder.indexOf(type);
-        if (index !== -1) {
-            this.accessOrder.splice(index, 1);
-        }
-    }
-
-    public getStats(): {
-        size: number;
-        maxSize: number;
-        hitRate: number;
-        averageAccessCount: number;
-    } {
-        let totalAccess = 0;
-        let totalHits = 0;
-
-        for (const entry of this.cache.values()) {
-            totalAccess += entry.accessCount;
-            totalHits++;
-        }
-
-        return {
-            size: this.cache.size,
-            maxSize: this.config.maxSize,
-            hitRate: totalAccess > 0 ? totalHits / totalAccess : 0,
-            averageAccessCount: this.cache.size > 0 ? totalAccess / this.cache.size : 0
-        };
-    }
-}
 
 /**
  * 游戏实体类
@@ -298,36 +162,14 @@ export class Entity {
     private _componentTypeToIndex = new Map<ComponentType, number>();
 
     /**
-     * 组件缓存
-     * 
-     * 高性能组件访问缓存。
-     */
-    private _componentCache: ComponentCache;
-
-    /**
-     * 组件访问统计
-     * 
-     * 记录组件访问的性能统计信息。
-     */
-    private _componentAccessStats = new Map<ComponentType, {
-        accessCount: number;
-        lastAccessed: number;
-        cacheHits: number;
-        cacheMisses: number;
-    }>();
-
-    /**
      * 构造函数
-     * 
+     *
      * @param name - 实体名称
      * @param id - 实体唯一标识符
      */
     constructor(name: string, id: number) {
         this.name = name;
         this.id = id;
-        
-        // 初始化组件缓存
-        this._componentCache = new ComponentCache();
     }
 
     /**
@@ -488,7 +330,7 @@ export class Entity {
      */
     private addComponentInternal<T extends Component>(component: T): T {
         const componentType = component.constructor as ComponentType<T>;
-        
+
         // 注册组件类型（如果尚未注册）
         if (!ComponentRegistry.isRegistered(componentType)) {
             ComponentRegistry.register(componentType);
@@ -496,25 +338,14 @@ export class Entity {
 
         // 设置组件的实体引用
         component.entity = this;
-        
+
         // 添加到组件列表并建立索引映射
         const index = this.components.length;
         this.components.push(component);
         this._componentTypeToIndex.set(componentType, index);
-        
+
         // 更新位掩码
         this._componentMask |= ComponentRegistry.getBitMask(componentType);
-        
-        // 添加到缓存
-        this._componentCache.set(componentType, component);
-        
-        // 初始化访问统计
-        this._componentAccessStats.set(componentType, {
-            accessCount: 0,
-            lastAccessed: Date.now(),
-            cacheHits: 0,
-            cacheMisses: 0
-        });
 
         return component;
     }
@@ -575,26 +406,14 @@ export class Entity {
      * @returns 组件实例或null
      */
     public getComponent<T extends Component>(type: ComponentType<T>): T | null {
-        // 更新访问统计
-        this.updateComponentAccessStats(type);
-
-        // 首先检查位掩码，快速排除
+        // 首先检查位掩码，快速排除（O(1)）
         if (!ComponentRegistry.isRegistered(type)) {
-            this.recordCacheMiss(type);
             return null;
         }
-        
+
         const mask = ComponentRegistry.getBitMask(type);
         if ((this._componentMask & mask) === BigInt(0)) {
-            this.recordCacheMiss(type);
             return null;
-        }
-
-        // 尝试从缓存获取（O(1)）
-        const cachedComponent = this._componentCache.get(type);
-        if (cachedComponent) {
-            this.recordCacheHit(type);
-            return cachedComponent;
         }
 
         // 尝试从索引映射获取（O(1)）
@@ -602,9 +421,6 @@ export class Entity {
         if (index !== undefined && index < this.components.length) {
             const component = this.components[index];
             if (component && component.constructor === type) {
-                // 添加到缓存
-                this._componentCache.set(type, component);
-                this.recordCacheHit(type);
                 return component as T;
             }
         }
@@ -613,74 +429,26 @@ export class Entity {
         if (this.scene && this.scene.componentStorageManager) {
             const component = this.scene.componentStorageManager.getComponent(this.id, type);
             if (component) {
-                // 更新本地缓存和索引
-                this._componentCache.set(type, component);
+                // 重建索引映射
                 this.rebuildComponentIndex();
-                this.recordCacheHit(type);
                 return component;
             }
         }
 
-        // 最后回退到线性搜索并重建索引
+        // 最后回退到线性搜索并重建索引（O(n)，但n很小且很少发生）
         for (let i = 0; i < this.components.length; i++) {
             const component = this.components[i];
             if (component instanceof type) {
                 // 重建索引映射
                 this._componentTypeToIndex.set(type, i);
-                this._componentCache.set(type, component);
-                this.recordCacheHit(type);
                 return component as T;
             }
         }
-        
-        this.recordCacheMiss(type);
+
         return null;
     }
 
-    /**
-     * 更新组件访问统计
-     * 
-     * @param type - 组件类型
-     */
-    private updateComponentAccessStats(type: ComponentType): void {
-        let stats = this._componentAccessStats.get(type);
-        if (!stats) {
-            stats = {
-                accessCount: 0,
-                lastAccessed: Date.now(),
-                cacheHits: 0,
-                cacheMisses: 0
-            };
-            this._componentAccessStats.set(type, stats);
-        }
-        
-        stats.accessCount++;
-        stats.lastAccessed = Date.now();
-    }
 
-    /**
-     * 记录缓存命中
-     * 
-     * @param type - 组件类型
-     */
-    private recordCacheHit(type: ComponentType): void {
-        const stats = this._componentAccessStats.get(type);
-        if (stats) {
-            stats.cacheHits++;
-        }
-    }
-
-    /**
-     * 记录缓存未命中
-     * 
-     * @param type - 组件类型
-     */
-    private recordCacheMiss(type: ComponentType): void {
-        const stats = this._componentAccessStats.get(type);
-        if (stats) {
-            stats.cacheMisses++;
-        }
-    }
 
     /**
      * 重建组件索引映射
@@ -745,12 +513,6 @@ export class Entity {
             this.rebuildComponentIndex();
         }
 
-        // 从缓存中移除
-        this._componentCache.delete(componentType);
-        
-        // 清除访问统计
-        this._componentAccessStats.delete(componentType);
-
         // 更新位掩码
         if (ComponentRegistry.isRegistered(componentType)) {
             this._componentMask &= ~ComponentRegistry.getBitMask(componentType);
@@ -810,10 +572,8 @@ export class Entity {
         // 复制组件列表，避免在迭代时修改
         const componentsToRemove = [...this.components];
         
-        // 清空所有缓存和索引
-        this._componentCache.clear();
+        // 清空索引和位掩码
         this._componentTypeToIndex.clear();
-        this._componentAccessStats.clear();
         this._componentMask = BigInt(0);
         
         // 移除组件
@@ -880,83 +640,7 @@ export class Entity {
         return removedComponents;
     }
 
-    /**
-     * 获取组件缓存统计信息
-     * 
-     * @returns 缓存统计信息
-     */
-    public getComponentCacheStats(): {
-        cacheStats: ReturnType<ComponentCache['getStats']>;
-        accessStats: Map<string, {
-            accessCount: number;
-            lastAccessed: number;
-            cacheHits: number;
-            cacheMisses: number;
-            hitRate: number;
-        }>;
-        indexMappingSize: number;
-        totalComponents: number;
-    } {
-        const accessStats = new Map<string, {
-            accessCount: number;
-            lastAccessed: number;
-            cacheHits: number;
-            cacheMisses: number;
-            hitRate: number;
-        }>();
 
-        for (const [componentType, stats] of this._componentAccessStats) {
-            const total = stats.cacheHits + stats.cacheMisses;
-            accessStats.set(componentType.name, {
-                ...stats,
-                hitRate: total > 0 ? stats.cacheHits / total : 0
-            });
-        }
-
-        return {
-            cacheStats: this._componentCache.getStats(),
-            accessStats,
-            indexMappingSize: this._componentTypeToIndex.size,
-            totalComponents: this.components.length
-        };
-    }
-
-    /**
-     * 预热组件缓存
-     * 
-     * 将所有组件添加到缓存中，提升后续访问性能
-     */
-    public warmUpComponentCache(): void {
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            const componentType = component.constructor as ComponentType;
-            
-            // 更新索引映射
-            this._componentTypeToIndex.set(componentType, i);
-            
-            // 添加到缓存
-            this._componentCache.set(componentType, component);
-        }
-    }
-
-    /**
-     * 清理组件缓存
-     * 
-     * 清除过期的缓存项，释放内存
-     */
-    public cleanupComponentCache(): void {
-        // ComponentCache内部会自动处理TTL过期
-        // 这里我们可以强制清理一些不常用的缓存项
-        
-        const now = Date.now();
-        const cleanupThreshold = 30000; // 30秒未访问的组件从缓存中移除
-        
-        for (const [componentType, stats] of this._componentAccessStats) {
-            if (now - stats.lastAccessed > cleanupThreshold && stats.accessCount < 5) {
-                this._componentCache.delete(componentType);
-            }
-        }
-    }
 
     /**
      * 获取所有指定类型的组件
@@ -1279,32 +963,8 @@ export class Entity {
         childCount: number;
         childIds: number[];
         depth: number;
-        componentCache: {
-            size: number;
-            maxSize: number;
-            hitRate: number;
-            averageAccessCount: number;
-        };
-        componentAccessStats: Array<{
-            componentType: string;
-            accessCount: number;
-            cacheHits: number;
-            cacheMisses: number;
-            hitRate: number;
-            lastAccessed: string;
-        }>;
         indexMappingSize: number;
     } {
-        const cacheStats = this.getComponentCacheStats();
-        const accessStatsArray = Array.from(cacheStats.accessStats.entries()).map(([type, stats]) => ({
-            componentType: type,
-            accessCount: stats.accessCount,
-            cacheHits: stats.cacheHits,
-            cacheMisses: stats.cacheMisses,
-            hitRate: stats.hitRate,
-            lastAccessed: new Date(stats.lastAccessed).toISOString()
-        }));
-
         return {
             name: this.name,
             id: this.id,
@@ -1319,9 +979,7 @@ export class Entity {
             childCount: this._children.length,
             childIds: this._children.map(c => c.id),
             depth: this.getDepth(),
-            componentCache: cacheStats.cacheStats,
-            componentAccessStats: accessStatsArray,
-            indexMappingSize: cacheStats.indexMappingSize
+            indexMappingSize: this._componentTypeToIndex.size
         };
     }
 }
