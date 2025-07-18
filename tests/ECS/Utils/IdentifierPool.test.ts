@@ -209,7 +209,7 @@ describe('IdentifierPool 世代式ID池测试', () => {
             
             expect(() => {
                 pool.checkOut();
-            }).toThrow('实体索引已达到硬件限制');
+            }).toThrow('实体索引已达到框架设计限制');
         });
 
         test('应该能处理边界值', () => {
