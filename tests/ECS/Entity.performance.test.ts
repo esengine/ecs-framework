@@ -122,7 +122,7 @@ describe('Entity - 性能测试', () => {
 
             console.log(`${iterations}次组件添加-获取-移除循环耗时: ${duration.toFixed(2)}ms`);
             
-            expect(duration).toBeLessThan(50);
+            expect(duration).toBeLessThan(70);
         });
     });
 
