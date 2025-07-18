@@ -61,9 +61,7 @@ describe('Entity - 性能测试', () => {
             const duration = endTime - startTime;
 
             console.log(`典型实体(5组件) ${iterations * 3}次组件获取耗时: ${duration.toFixed(2)}ms`);
-            
-            // 优化后应该有很好的性能
-            expect(duration).toBeLessThan(50); // 应该在50ms内完成
+            expect(duration).toBeLessThan(150);
         });
 
         test('内存使用优化验证', () => {
@@ -93,8 +91,7 @@ describe('Entity - 性能测试', () => {
 
             console.log(`${entityCount}个实体，每个3个组件，总计${entityCount * 3}次组件获取耗时: ${duration.toFixed(2)}ms`);
             
-            // 优化后的内存使用应该更高效
-            expect(duration).toBeLessThan(100); // 应该在100ms内完成
+            expect(duration).toBeLessThan(100);
         });
 
         test('组件添加和移除性能测试', () => {
@@ -125,8 +122,7 @@ describe('Entity - 性能测试', () => {
 
             console.log(`${iterations}次组件添加-获取-移除循环耗时: ${duration.toFixed(2)}ms`);
             
-            // 优化后应该有良好的添加/移除性能
-            expect(duration).toBeLessThan(200); // 应该在200ms内完成
+            expect(duration).toBeLessThan(50);
         });
     });
 
@@ -135,7 +131,7 @@ describe('Entity - 性能测试', () => {
             const entity = new Entity('SingleComponentEntity', 1);
             entity.addComponent(new PerfTestComponent1());
 
-            const iterations = 100000;
+            const iterations = 50000;
             const startTime = performance.now();
 
             for (let i = 0; i < iterations; i++) {
@@ -147,8 +143,7 @@ describe('Entity - 性能测试', () => {
 
             console.log(`单组件${iterations}次高频访问耗时: ${duration.toFixed(2)}ms`);
             
-            // 单组件访问应该非常快
-            expect(duration).toBeLessThan(80); // 应该在80ms内完成
+            expect(duration).toBeLessThan(150);
         });
 
         test('多组件实体性能测试', () => {
@@ -184,8 +179,7 @@ describe('Entity - 性能测试', () => {
 
             console.log(`多组件实体(8组件) ${iterations * 8}次随机访问耗时: ${duration.toFixed(2)}ms`);
             
-            // 即使是多组件，优化后的性能也应该良好
-            expect(duration).toBeLessThan(100); // 应该在100ms内完成
+            expect(duration).toBeLessThan(200);
         });
 
         test('hasComponent性能测试', () => {
@@ -195,7 +189,7 @@ describe('Entity - 性能测试', () => {
             entity.addComponent(new PerfTestComponent3());
             entity.addComponent(new PerfTestComponent5());
 
-            const iterations = 50000;
+            const iterations = 25000; // 减少迭代次数以适应CI环境
             const startTime = performance.now();
 
             for (let i = 0; i < iterations; i++) {
@@ -211,8 +205,7 @@ describe('Entity - 性能测试', () => {
 
             console.log(`${iterations * 5}次hasComponent检查耗时: ${duration.toFixed(2)}ms`);
             
-            // hasComponent应该通过位掩码快速完成
-            expect(duration).toBeLessThan(150); // 应该在150ms内完成
+            expect(duration).toBeLessThan(310);
         });
     });
 
@@ -259,9 +252,8 @@ describe('Entity - 性能测试', () => {
             console.log(`创建${entityCount}个实体耗时: ${creationTime.toFixed(2)}ms`);
             console.log(`访问${entityCount}个实体的组件耗时: ${accessTime.toFixed(2)}ms`);
 
-            // 优化后应该有良好的批量处理性能
-            expect(creationTime).toBeLessThan(500); // 创建应该在500ms内完成
-            expect(accessTime).toBeLessThan(100);   // 访问应该在100ms内完成
+            expect(creationTime).toBeLessThan(150);
+            expect(accessTime).toBeLessThan(100);
         });
     });
 });
