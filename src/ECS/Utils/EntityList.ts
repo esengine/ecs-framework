@@ -81,6 +81,11 @@ export class EntityList {
             
             // 更新名称索引
             this.updateNameIndex(entity, false);
+            
+            // 回收实体ID到ID池
+            if (this._scene && this._scene.identifierPool) {
+                this._scene.identifierPool.checkIn(entity.id);
+            }
         }
     }
 
@@ -88,8 +93,19 @@ export class EntityList {
      * 移除所有实体
      */
     public removeAllEntities(): void {
+        // 收集所有实体ID用于回收
+        const idsToRecycle: number[] = [];
+        
         for (let i = this.buffer.length - 1; i >= 0; i--) {
+            idsToRecycle.push(this.buffer[i].id);
             this.buffer[i].destroy();
+        }
+        
+        // 批量回收ID
+        if (this._scene && this._scene.identifierPool) {
+            for (const id of idsToRecycle) {
+                this._scene.identifierPool.checkIn(id);
+            }
         }
         
         this.buffer.length = 0;
