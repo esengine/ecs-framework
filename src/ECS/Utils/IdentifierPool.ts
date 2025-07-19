@@ -34,9 +34,14 @@ export class IdentifierPool {
     
     /**
      * 每个索引对应的世代版本
-     * 动态扩展的Map，按需分配内存
+     * 使用Uint16Array提供缓存友好的连续内存布局
      */
-    private _generations = new Map<number, number>();
+    private _generations: Uint16Array;
+    
+    /**
+     * 当前_generations数组的容量
+     */
+    private _generationsCapacity: number;
     
     /**
      * 延迟回收队列
@@ -91,6 +96,10 @@ export class IdentifierPool {
         this._recycleDelay = recycleDelay;
         this._expansionBlockSize = expansionBlockSize;
         
+        // 初始化Uint16Array，预分配第一个块
+        this._generationsCapacity = this._expansionBlockSize;
+        this._generations = new Uint16Array(this._generationsCapacity);
+        
         // 预分配第一个块的世代信息
         this._preAllocateGenerations(0, this._expansionBlockSize);
     }
@@ -128,7 +137,7 @@ export class IdentifierPool {
             this._ensureGenerationCapacity(index);
         }
         
-        const generation = this._generations.get(index) || 1;
+        const generation = (index < this._generationsCapacity) ? this._generations[index] : 1;
         this._stats.totalAllocated++;
         this._stats.currentActive++;
         
@@ -222,8 +231,9 @@ export class IdentifierPool {
         let totalGeneration = 0;
         let generationCount = 0;
         
-        for (const [index, generation] of this._generations) {
-            if (index < this._nextAvailableIndex) {
+        for (let index = 0; index < Math.min(this._nextAvailableIndex, this._generationsCapacity); index++) {
+            const generation = this._generations[index];
+            if (generation > 0) {
                 totalGeneration += generation;
                 generationCount++;
             }
@@ -244,7 +254,7 @@ export class IdentifierPool {
             memoryUsage: this._calculateMemoryUsage(),
             memoryExpansions: this._stats.memoryExpansions,
             averageGeneration: Math.round(averageGeneration * 100) / 100,
-            generationStorageSize: this._generations.size
+            generationStorageSize: this._generationsCapacity
         };
     }
 
@@ -294,7 +304,9 @@ export class IdentifierPool {
                     newGeneration = 1; // 重置为1而不是0
                 }
                 
-                this._generations.set(item.index, newGeneration);
+                // 确保容量足够
+                this._ensureGenerationCapacity(item.index);
+                this._generations[item.index] = newGeneration;
                 
                 // 添加到空闲列表
                 this._freeIndices.push(item.index);
@@ -315,8 +327,8 @@ export class IdentifierPool {
     private _preAllocateGenerations(startIndex: number, count: number): void {
         for (let i = 0; i < count; i++) {
             const index = startIndex + i;
-            if (index <= IdentifierPool.MAX_INDEX) {
-                this._generations.set(index, 1);
+            if (index <= IdentifierPool.MAX_INDEX && index < this._generationsCapacity) {
+                this._generations[index] = 1;
             }
         }
         this._stats.memoryExpansions++;
@@ -329,12 +341,31 @@ export class IdentifierPool {
      * @private
      */
     private _ensureGenerationCapacity(index: number): void {
-        if (!this._generations.has(index)) {
-            // 计算需要扩展的起始位置
-            const expansionStart = Math.floor(index / this._expansionBlockSize) * this._expansionBlockSize;
+        if (index >= this._generationsCapacity) {
+            // 计算新的容量，扩展到能包含该索引的下一个块边界
+            const newCapacity = Math.ceil((index + 1) / this._expansionBlockSize) * this._expansionBlockSize;
             
-            // 预分配一个块
-            this._preAllocateGenerations(expansionStart, this._expansionBlockSize);
+            // 创建新的更大的数组
+            const newGenerations = new Uint16Array(newCapacity);
+            
+            // 复制现有数据
+            newGenerations.set(this._generations);
+            
+            // 保存旧容量
+            const oldCapacity = this._generationsCapacity;
+            
+            // 更新引用和容量
+            this._generations = newGenerations;
+            this._generationsCapacity = newCapacity;
+            
+            // 初始化新分配的区域
+            for (let i = oldCapacity; i < newCapacity; i++) {
+                if (i <= IdentifierPool.MAX_INDEX) {
+                    this._generations[i] = 1;
+                }
+            }
+            
+            this._stats.memoryExpansions++;
         }
     }
 
@@ -345,11 +376,11 @@ export class IdentifierPool {
      * @private
      */
     private _calculateMemoryUsage(): number {
-        const generationMapSize = this._generations.size * 16; // Map overhead + number pair
+        const generationArraySize = this._generationsCapacity * 2; // Uint16Array: 2 bytes per element
         const freeIndicesSize = this._freeIndices.length * 8;
         const pendingRecycleSize = this._pendingRecycle.length * 32;
         
-        return generationMapSize + freeIndicesSize + pendingRecycleSize;
+        return generationArraySize + freeIndicesSize + pendingRecycleSize;
     }
 
     /**
@@ -399,7 +430,10 @@ export class IdentifierPool {
             return false;
         }
         
-        const currentGeneration = this._generations.get(index);
-        return currentGeneration !== undefined && currentGeneration === generation;
+        if (index >= this._generationsCapacity) {
+            return false;
+        }
+        const currentGeneration = this._generations[index];
+        return currentGeneration !== 0 && currentGeneration === generation;
     }
 }
