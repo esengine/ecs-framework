@@ -404,8 +404,8 @@ export class Scene {
             entities: this.entities.buffer.map(entity => ({
                 name: entity.name,
                 id: entity.id,
-                componentCount: entity.components.length,
-                componentTypes: entity.components.map(c => c.constructor.name)
+                componentCount: entity.componentCount,
+                componentTypes: Array.from(entity.componentTypes).map(type => type.name)
             })),
             processors: this.entityProcessors.processors.map(processor => ({
                 name: processor.constructor.name,

@@ -7,6 +7,11 @@
 // 设置测试超时时间（毫秒）
 jest.setTimeout(10000);
 
+// 添加BigInt序列化支持
+(BigInt.prototype as any).toJSON = function() {
+  return this.toString();
+};
+
 // 模拟控制台方法以减少测试输出噪音
 const originalConsoleLog = console.log;
 const originalConsoleWarn = console.warn;

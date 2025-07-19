@@ -187,7 +187,7 @@ export class ArchetypeSystem {
      * 获取实体的组件类型列表
      */
     private getEntityComponentTypes(entity: Entity): ComponentType[] {
-        return entity.components.map(component => component.constructor as ComponentType);
+        return Array.from(entity.componentTypes);
     }
     
     /**
