@@ -78,11 +78,11 @@ export class Entity {
     public readonly id: number;
     
     /**
-     * 组件集合
+     * 组件数量缓存
      * 
-     * 存储实体拥有的所有组件。
+     * 用于快速获取组件数量，避免遍历存储系统。
      */
-    public readonly components: Component[] = [];
+    private _componentCount: number = 0;
     
     /**
      * 所属场景引用
@@ -155,11 +155,11 @@ export class Entity {
     private _componentMask: bigint = BigInt(0);
 
     /**
-     * 组件类型到索引的映射
+     * 缓存的组件类型集合
      * 
-     * 用于快速定位组件在数组中的位置。
+     * 用于快速检查实体是否拥有特定组件类型，避免重复查询存储系统。
      */
-    private _componentTypeToIndex = new Map<ComponentType, number>();
+    private _componentTypes = new Set<ComponentType>();
 
     /**
      * 构造函数
@@ -308,6 +308,24 @@ export class Entity {
     }
 
     /**
+     * 获取组件数量
+     * 
+     * @returns 实体拥有的组件数量
+     */
+    public get componentCount(): number {
+        return this._componentCount;
+    }
+
+    /**
+     * 获取组件类型集合（只读）
+     * 
+     * @returns 实体拥有的组件类型集合
+     */
+    public get componentTypes(): ReadonlySet<ComponentType> {
+        return this._componentTypes;
+    }
+
+    /**
      * 创建并添加组件
      * 
      * @param componentType - 组件类型
@@ -339,10 +357,9 @@ export class Entity {
         // 设置组件的实体引用
         component.entity = this;
 
-        // 添加到组件列表并建立索引映射
-        const index = this.components.length;
-        this.components.push(component);
-        this._componentTypeToIndex.set(componentType, index);
+        // 更新组件类型缓存和数量
+        this._componentTypes.add(componentType);
+        this._componentCount++;
 
         // 更新位掩码
         this._componentMask |= ComponentRegistry.getBitMask(componentType);
@@ -416,52 +433,15 @@ export class Entity {
             return null;
         }
 
-        // 尝试从索引映射获取（O(1)）
-        const index = this._componentTypeToIndex.get(type);
-        if (index !== undefined && index < this.components.length) {
-            const component = this.components[index];
-            if (component && component.constructor === type) {
-                return component as T;
-            }
-        }
-
-        // 如果场景有组件存储管理器，从存储器获取
+        // 从组件存储管理器获取组件（统一存储）
         if (this.scene && this.scene.componentStorageManager) {
-            const component = this.scene.componentStorageManager.getComponent(this.id, type);
-            if (component) {
-                // 重建索引映射
-                this.rebuildComponentIndex();
-                return component;
-            }
-        }
-
-        // 最后回退到线性搜索并重建索引（O(n)，但n很小且很少发生）
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            if (component instanceof type) {
-                // 重建索引映射
-                this._componentTypeToIndex.set(type, i);
-                return component as T;
-            }
+            return this.scene.componentStorageManager.getComponent(this.id, type);
         }
 
         return null;
     }
 
 
-
-    /**
-     * 重建组件索引映射
-     */
-    private rebuildComponentIndex(): void {
-        this._componentTypeToIndex.clear();
-        
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            const componentType = component.constructor as ComponentType;
-            this._componentTypeToIndex.set(componentType, i);
-        }
-    }
 
     /**
      * 检查实体是否有指定类型的组件
@@ -504,13 +484,10 @@ export class Entity {
     public removeComponent(component: Component): void {
         const componentType = component.constructor as ComponentType;
         
-        // 从组件列表中移除
-        const index = this.components.indexOf(component);
-        if (index !== -1) {
-            this.components.splice(index, 1);
-            
-            // 重建索引映射（因为数组索引发生了变化）
-            this.rebuildComponentIndex();
+        // 更新组件类型缓存和数量
+        if (this._componentTypes.has(componentType)) {
+            this._componentTypes.delete(componentType);
+            this._componentCount--;
         }
 
         // 更新位掩码
@@ -569,31 +546,30 @@ export class Entity {
      * 移除所有组件
      */
     public removeAllComponents(): void {
-        // 复制组件列表，避免在迭代时修改
-        const componentsToRemove = [...this.components];
+        // 获取所有组件类型，避免在迭代时修改
+        const componentTypesToRemove = Array.from(this._componentTypes);
         
-        // 清空索引和位掩码
-        this._componentTypeToIndex.clear();
+        // 清空缓存和位掩码
+        this._componentTypes.clear();
+        this._componentCount = 0;
         this._componentMask = BigInt(0);
         
-        // 移除组件
-        for (const component of componentsToRemove) {
-            const componentType = component.constructor as ComponentType;
-            
-            // 从组件存储管理器中移除
-            if (this.scene && this.scene.componentStorageManager) {
+        // 移除所有组件
+        if (this.scene && this.scene.componentStorageManager) {
+            for (const componentType of componentTypesToRemove) {
+                const component = this.scene.componentStorageManager.getComponent(this.id, componentType);
+                if (component) {
+                    // 调用组件的生命周期方法
+                    component.onRemovedFromEntity();
+                    
+                    // 清除组件的实体引用
+                    component.entity = null as any;
+                }
+                
+                // 从组件存储管理器中移除
                 this.scene.componentStorageManager.removeComponent(this.id, componentType);
             }
-
-            // 调用组件的生命周期方法
-            component.onRemovedFromEntity();
-            
-            // 清除组件的实体引用
-            component.entity = null as any;
         }
-        
-        // 清空组件列表
-        this.components.length = 0;
 
         // 通知场景实体已改变
         if (this.scene && this.scene.entityProcessors) {
@@ -633,11 +609,97 @@ export class Entity {
     public removeComponentsByTypes<T extends Component>(componentTypes: ComponentType<T>[]): (T | null)[] {
         const removedComponents: (T | null)[] = [];
         
-        for (const componentType of componentTypes) {
-            removedComponents.push(this.removeComponentByType(componentType));
+        // 如果有存储管理器，使用批量操作
+        if (this.scene && this.scene.componentStorageManager && componentTypes.length > 1) {
+            this.scene.componentStorageManager.beginBatchUpdate();
+            
+            for (const componentType of componentTypes) {
+                removedComponents.push(this.removeComponentByType(componentType));
+            }
+            
+            this.scene.componentStorageManager.commitBatchUpdates();
+        } else {
+            // 逐个移除
+            for (const componentType of componentTypes) {
+                removedComponents.push(this.removeComponentByType(componentType));
+            }
         }
         
         return removedComponents;
+    }
+
+    /**
+     * 批量添加组件（优化版本）
+     * 
+     * 使用批量操作模式来提升性能，特别适合在实体初始化时添加多个组件。
+     * 
+     * @param components - 要添加的组件数组
+     * @returns 添加的组件数组
+     */
+    public addComponentsBatch<T extends Component>(components: T[]): T[] {
+        if (components.length === 0) {
+            return [];
+        }
+
+        const addedComponents: T[] = [];
+
+        // 如果有存储管理器且组件数量大于1，使用批量操作
+        if (this.scene && this.scene.componentStorageManager && components.length > 1) {
+            this.scene.componentStorageManager.beginBatchUpdate();
+            
+            try {
+                for (const component of components) {
+                    try {
+                        addedComponents.push(this.addComponent(component));
+                    } catch (error) {
+                        console.warn(`批量添加组件失败 ${component.constructor.name}:`, error);
+                    }
+                }
+            } finally {
+                this.scene.componentStorageManager.commitBatchUpdates();
+            }
+        } else {
+            // 使用原有的批量添加方法
+            return this.addComponents(components);
+        }
+
+        return addedComponents;
+    }
+
+    /**
+     * 快速检查多个组件类型
+     * 
+     * 优化的批量组件检查，减少重复的位掩码计算。
+     * 
+     * @param componentTypes - 要检查的组件类型数组
+     * @returns 对应的检查结果数组
+     */
+    public hasMultipleComponents(componentTypes: ComponentType[]): boolean[] {
+        const results: boolean[] = new Array(componentTypes.length);
+        
+        for (let i = 0; i < componentTypes.length; i++) {
+            results[i] = this.hasComponent(componentTypes[i]);
+        }
+        
+        return results;
+    }
+
+    /**
+     * 批量获取多个组件
+     * 
+     * 优化的批量组件获取，减少存储器查找开销。
+     * 
+     * @param componentTypes - 要获取的组件类型数组
+     * @returns 对应的组件数组，不存在的组件为null
+     */
+    public getMultipleComponents(componentTypes: ComponentType[]): (Component | null)[] {
+        const results: (Component | null)[] = new Array(componentTypes.length);
+        
+        for (let i = 0; i < componentTypes.length; i++) {
+            results[i] = this.getComponent(componentTypes[i]);
+        }
+        
+        return results;
     }
 
 
@@ -651,9 +713,11 @@ export class Entity {
     public getComponents<T extends Component>(type: ComponentType<T>): T[] {
         const result: T[] = [];
         
-        for (const component of this.components) {
-            if (component instanceof type) {
-                result.push(component as T);
+        // 从组件存储管理器获取
+        if (this.scene && this.scene.componentStorageManager) {
+            const component = this.scene.componentStorageManager.getComponent(this.id, type);
+            if (component) {
+                result.push(component);
             }
         }
         
@@ -854,9 +918,12 @@ export class Entity {
      */
     private onActiveChanged(): void {
         // 通知所有组件活跃状态改变
-        for (const component of this.components) {
-            if ('onActiveChanged' in component && typeof component.onActiveChanged === 'function') {
-                (component as any).onActiveChanged();
+        if (this.scene && this.scene.componentStorageManager) {
+            for (const componentType of this._componentTypes) {
+                const component = this.scene.componentStorageManager.getComponent(this.id, componentType);
+                if (component && 'onActiveChanged' in component && typeof component.onActiveChanged === 'function') {
+                    (component as any).onActiveChanged();
+                }
             }
         }
 
@@ -881,9 +948,12 @@ export class Entity {
         }
 
         // 更新所有组件
-        for (const component of this.components) {
-            if (component.enabled) {
-                component.update();
+        if (this.scene && this.scene.componentStorageManager) {
+            for (const componentType of this._componentTypes) {
+                const component = this.scene.componentStorageManager.getComponent(this.id, componentType);
+                if (component && component.enabled) {
+                    component.update();
+                }
             }
         }
 
@@ -963,7 +1033,7 @@ export class Entity {
         childCount: number;
         childIds: number[];
         depth: number;
-        indexMappingSize: number;
+        cachedComponentTypesSize: number;
     } {
         return {
             name: this.name,
@@ -972,14 +1042,14 @@ export class Entity {
             active: this._active,
             activeInHierarchy: this.activeInHierarchy,
             destroyed: this._isDestroyed,
-            componentCount: this.components.length,
-            componentTypes: this.components.map(c => c.constructor.name),
+            componentCount: this._componentCount,
+            componentTypes: Array.from(this._componentTypes).map(t => t.name),
             componentMask: this._componentMask.toString(2), // 二进制表示
             parentId: this._parent?.id || null,
             childCount: this._children.length,
             childIds: this._children.map(c => c.id),
             depth: this.getDepth(),
-            indexMappingSize: this._componentTypeToIndex.size
+            cachedComponentTypesSize: this._componentTypes.size
         };
     }
 }

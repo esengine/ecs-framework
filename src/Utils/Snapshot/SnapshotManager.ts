@@ -293,10 +293,15 @@ export class SnapshotManager {
     private createEntitySnapshot(entity: Entity): EntitySnapshot | null {
         const componentSnapshots: ComponentSnapshot[] = [];
         
-        for (const component of entity.components) {
-            const componentSnapshot = this.createComponentSnapshot(component);
-            if (componentSnapshot) {
-                componentSnapshots.push(componentSnapshot);
+        if (entity.componentTypes && entity.scene?.componentStorageManager) {
+            for (const componentType of entity.componentTypes) {
+                const component = entity.scene.componentStorageManager.getComponent(entity.id, componentType);
+                if (component) {
+                    const componentSnapshot = this.createComponentSnapshot(component);
+                    if (componentSnapshot) {
+                        componentSnapshots.push(componentSnapshot);
+                    }
+                }
             }
         }
         
@@ -533,12 +538,12 @@ export class SnapshotManager {
         }
         
         // 检查组件数量变化
-        if (entity.components.length !== baseSnapshot.components.length) {
+        if (entity.componentCount !== baseSnapshot.components.length) {
             return true;
         }
-        
+
         // 检查组件类型变化
-        const currentComponentTypes = new Set(entity.components.map(c => c.constructor.name));
+        const currentComponentTypes = new Set(Array.from(entity.componentTypes).map(type => type.name));
         const baseComponentTypes = new Set(baseSnapshot.components.map(c => c.type));
         
         if (currentComponentTypes.size !== baseComponentTypes.size) {
@@ -565,12 +570,16 @@ export class SnapshotManager {
             baseComponentMap.set(comp.type, comp);
         }
         
-        for (const component of entity.components) {
-            const baseComponent = baseComponentMap.get(component.constructor.name);
-            
-            if (!baseComponent) {
-                const componentSnapshot = this.createComponentSnapshot(component);
-                if (componentSnapshot) {
+        if (entity.componentTypes && entity.scene?.componentStorageManager) {
+            for (const componentType of entity.componentTypes) {
+                const component = entity.scene.componentStorageManager.getComponent(entity.id, componentType);
+                if (!component) continue;
+
+                const baseComponent = baseComponentMap.get(componentType.name);
+
+                if (!baseComponent) {
+                    const componentSnapshot = this.createComponentSnapshot(component);
+                    if (componentSnapshot) {
                     changedComponents.push(componentSnapshot);
                 }
             } else {
@@ -581,8 +590,9 @@ export class SnapshotManager {
                     }
                 }
             }
+            }
         }
-        
+
         return changedComponents;
     }
 

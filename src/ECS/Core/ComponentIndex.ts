@@ -68,12 +68,9 @@ export class HashComponentIndex implements IComponentIndex {
     private _lastUpdated = Date.now();
     
     public addEntity(entity: Entity): void {
-        const components = entity.components;
-        const componentTypes = new Set<ComponentType>();
-        
-        for (const component of components) {
-            const componentType = component.constructor as ComponentType;
-            componentTypes.add(componentType);
+        const componentTypes = entity.componentTypes;
+
+        for (const componentType of componentTypes) {
             
             let entities = this._componentToEntities.get(componentType);
             if (!entities) {
@@ -83,7 +80,7 @@ export class HashComponentIndex implements IComponentIndex {
             entities.add(entity);
         }
         
-        this._entityToComponents.set(entity, componentTypes);
+        this._entityToComponents.set(entity, new Set(componentTypes));
         this._lastUpdated = Date.now();
     }
     
@@ -229,9 +226,8 @@ export class BitmapComponentIndex implements IComponentIndex {
     
     public addEntity(entity: Entity): void {
         let bitmap = 0;
-        
-        for (const component of entity.components) {
-            const componentType = component.constructor as ComponentType;
+
+        for (const componentType of entity.componentTypes) {
             let bit = this._componentTypeToBit.get(componentType);
             
             if (bit === undefined) {

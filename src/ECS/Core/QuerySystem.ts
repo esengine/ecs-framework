@@ -283,9 +283,8 @@ export class QuerySystem {
         maskSet.add(entity);
 
         // 组件类型索引 - 批量处理
-        const components = entity.components;
-        for (let i = 0; i < components.length; i++) {
-            const componentType = components[i].constructor as ComponentType;
+        const componentTypes = entity.componentTypes;
+        for (const componentType of componentTypes) {
             let typeSet = this.entityIndex.byComponentType.get(componentType);
             if (!typeSet) {
                 typeSet = new Set();
@@ -333,8 +332,7 @@ export class QuerySystem {
         }
 
         // 从组件类型索引移除
-        for (const component of entity.components) {
-            const componentType = component.constructor as ComponentType;
+        for (const componentType of entity.componentTypes) {
             const typeSet = this.entityIndex.byComponentType.get(componentType);
             if (typeSet) {
                 typeSet.delete(entity);

@@ -106,8 +106,12 @@ export class Matcher {
      * @returns 组件位掩码
      */
     private getEntityBits(entity: Entity): Bits {
-        const components = entity.components;
-        return ComponentTypeManager.instance.getEntityBits(components);
+        const bits = new Bits();
+        for (const componentType of entity.componentTypes) {
+            const typeId = ComponentTypeManager.instance.getTypeId(componentType);
+            bits.set(typeId);
+        }
+        return bits;
     }
 
     /**

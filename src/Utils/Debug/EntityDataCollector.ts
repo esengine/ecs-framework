@@ -75,8 +75,8 @@ export class EntityDataCollector {
             active: entity.active !== false,
             enabled: entity.enabled !== false,
             activeInHierarchy: entity.activeInHierarchy !== false,
-            componentCount: entity.components.length,
-            componentTypes: entity.components.map((component: Component) => component.constructor.name),
+            componentCount: entity.componentCount,
+            componentTypes: Array.from(entity.componentTypes).map(type => type.name),
             parentId: entity.parent?.id || null,
             childIds: entity.children?.map((child: Entity) => child.id) || [],
             depth: entity.getDepth ? entity.getDepth() : 0,
@@ -101,7 +101,7 @@ export class EntityDataCollector {
                 entity.getDebugInfo() :
                 this.buildFallbackEntityInfo(entity);
 
-            const componentDetails = this.extractComponentDetails(entity.components);
+            const componentDetails = this.extractComponentDetailsFromEntity(entity);
 
             const sceneInfo = this.getSceneInfo(scene);
 
@@ -112,8 +112,8 @@ export class EntityDataCollector {
                 sceneType: sceneInfo.type,
                 parentName: entity.parent?.name || null,
                 components: componentDetails || [],
-                componentCount: entity.components?.length || 0,
-                componentTypes: entity.components?.map((comp: any) => comp.constructor.name) || []
+                componentCount: entity.componentCount || 0,
+                componentTypes: Array.from(entity.componentTypes || []).map((type: any) => type.name)
             };
         } catch (error) {
             return {
@@ -215,7 +215,7 @@ export class EntityDataCollector {
 
         if (entityContainer && entityContainer.entities) {
             entityContainer.entities.forEach((entity: any) => {
-                const componentTypes = entity.components?.map((comp: any) => comp.constructor.name) || [];
+                const componentTypes = Array.from(entity.componentTypes || []).map((type: any) => type.name);
                 const signature = componentTypes.length > 0 ? componentTypes.sort().join(', ') : '无组件';
 
                 const existing = distribution.get(signature);
@@ -246,7 +246,7 @@ export class EntityDataCollector {
             .map((entity: any) => ({
                 id: entity.id.toString(),
                 name: entity.name || `Entity_${entity.id}`,
-                componentCount: entity.components?.length || 0,
+                componentCount: entity.componentCount || 0,
                 memory: 0
             }))
             .sort((a: any, b: any) => b.componentCount - a.componentCount)
@@ -293,7 +293,7 @@ export class EntityDataCollector {
                     topEntities.push({
                         id: entity.id.toString(),
                         name: entity.name || `Entity_${entity.id}`,
-                        componentCount: entity.components?.length || 0,
+                        componentCount: entity.componentCount || 0,
                         memory: 0
                     });
                 });
@@ -342,7 +342,7 @@ export class EntityDataCollector {
                     topEntities.push({
                         id: entity.id.toString(),
                         name: entity.name || `Entity_${entity.id}`,
-                        componentCount: entity.components?.length || 0,
+                        componentCount: entity.componentCount || 0,
                         memory: this.estimateEntityMemoryUsage(entity)
                     });
                 });
@@ -377,7 +377,7 @@ export class EntityDataCollector {
 
         if (entityContainer && entityContainer.entities) {
             entityContainer.entities.forEach((entity: any) => {
-                const componentTypes = entity.components?.map((comp: any) => comp.constructor.name) || [];
+                const componentTypes = Array.from(entity.componentTypes || []).map((type: any) => type.name);
                 const signature = componentTypes.length > 0 ? componentTypes.sort().join(', ') : '无组件';
 
                 const existing = distribution.get(signature);
@@ -415,7 +415,7 @@ export class EntityDataCollector {
             .map((entity: any) => ({
                 id: entity.id.toString(),
                 name: entity.name || `Entity_${entity.id}`,
-                componentCount: entity.components?.length || 0,
+                componentCount: entity.componentCount || 0,
                 memory: 0
             }))
             .sort((a: any, b: any) => b.componentCount - a.componentCount);
@@ -431,7 +431,7 @@ export class EntityDataCollector {
             .map((entity: any) => ({
                 id: entity.id.toString(),
                 name: entity.name || `Entity_${entity.id}`,
-                componentCount: entity.components?.length || 0,
+                componentCount: entity.componentCount || 0,
                 memory: this.estimateEntityMemoryUsage(entity)
             }))
             .sort((a: any, b: any) => b.componentCount - a.componentCount);
@@ -464,7 +464,7 @@ export class EntityDataCollector {
             pendingAdd: 0,
             pendingRemove: 0,
             averageComponentsPerEntity: activeEntities.length > 0 ?
-                allEntities.reduce((sum: number, e: any) => sum + (e.components?.length || 0), 0) / activeEntities.length : 0
+                allEntities.reduce((sum: number, e: any) => sum + (e.componentCount || 0), 0) / activeEntities.length : 0
         };
     }
 
@@ -477,13 +477,20 @@ export class EntityDataCollector {
                 totalSize += entitySize;
             }
 
-            if (entity.components && Array.isArray(entity.components)) {
-                entity.components.forEach((component: any) => {
-                    const componentSize = this.calculateObjectSize(component, ['entity']);
-                    if (!isNaN(componentSize) && componentSize > 0) {
-                        totalSize += componentSize;
+            if (entity.componentTypes && entity.scene?.componentStorageManager) {
+                for (const componentType of entity.componentTypes) {
+                    try {
+                        const component = entity.scene.componentStorageManager.getComponent(entity.id, componentType);
+                        if (component) {
+                            const componentSize = this.calculateObjectSize(component, ['entity']);
+                            if (!isNaN(componentSize) && componentSize > 0) {
+                                totalSize += componentSize;
+                            }
+                        }
+                    } catch (error) {
+                        // 忽略获取失败的组件
                     }
-                });
+                }
             }
 
             return isNaN(totalSize) || totalSize < 0 ? 0 : totalSize;
@@ -599,8 +606,8 @@ export class EntityDataCollector {
             active: entity.active !== false,
             enabled: entity.enabled !== false,
             activeInHierarchy: entity.activeInHierarchy !== false,
-            componentCount: entity.components.length,
-            componentTypes: entity.components.map((component: Component) => component.constructor.name),
+            componentCount: entity.componentCount,
+            componentTypes: Array.from(entity.componentTypes).map(type => type.name),
             parentId: entity.parent?.id || null,
             children: [] as any[],
             depth: entity.getDepth ? entity.getDepth() : 0,
@@ -623,8 +630,8 @@ export class EntityDataCollector {
         }
 
         // 收集所有组件详细属性信息
-        if (entity.components && entity.components.length > 0) {
-            (node as any).componentDetails = this.extractComponentDetails(entity.components);
+        if (entity.componentTypes && entity.componentTypes.size > 0) {
+            (node as any).componentDetails = this.extractComponentDetailsFromEntity(entity);
         }
 
         return node;
@@ -651,7 +658,7 @@ export class EntityDataCollector {
                 const componentCacheStats = (entity as any).getComponentCacheStats ? 
                     (entity as any).getComponentCacheStats() : null;
 
-                const componentDetails = this.extractComponentDetails(entity.components);
+                const componentDetails = this.extractComponentDetailsFromEntity(entity);
 
                 entityDetailsMap[entity.id] = {
                     ...baseDebugInfo,
@@ -688,8 +695,8 @@ export class EntityDataCollector {
             scene: sceneInfo.name,
             sceneName: sceneInfo.name,
             sceneType: sceneInfo.type,
-            componentCount: entity.components.length,
-            componentTypes: entity.components.map((component: Component) => component.constructor.name),
+            componentCount: entity.componentCount,
+            componentTypes: Array.from(entity.componentTypes).map(type => type.name),
             componentMask: entity.componentMask?.toString() || '0',
             parentId: entity.parent?.id || null,
             childCount: entity.children?.length || 0,
@@ -698,6 +705,45 @@ export class EntityDataCollector {
             tag: entity.tag || 0,
             updateOrder: entity.updateOrder || 0
         };
+    }
+
+    /**
+     * 从实体提取组件详细信息
+     */
+    public extractComponentDetailsFromEntity(entity: any): Array<{
+        typeName: string;
+        properties: Record<string, any>;
+    }> {
+        const details: Array<{ typeName: string; properties: Record<string, any> }> = [];
+
+        if (entity.componentTypes && entity.scene?.componentStorageManager) {
+            for (const componentType of entity.componentTypes) {
+                try {
+                    const component = entity.scene.componentStorageManager.getComponent(entity.id, componentType);
+                    if (component) {
+                        const typeName = componentType.name || 'UnknownComponent';
+                        const properties: Record<string, any> = {};
+
+                        const propertyKeys = Object.keys(component);
+                        propertyKeys.forEach(propertyKey => {
+                            if (!propertyKey.startsWith('_') && propertyKey !== 'entity') {
+                                try {
+                                    properties[propertyKey] = component[propertyKey];
+                                } catch (error) {
+                                    properties[propertyKey] = `[获取失败: ${error}]`;
+                                }
+                            }
+                        });
+
+                        details.push({ typeName, properties });
+                    }
+                } catch (error) {
+                    // 忽略获取失败的组件
+                }
+            }
+        }
+
+        return details;
     }
 
     /**
@@ -765,9 +811,14 @@ export class EntityDataCollector {
             if (!entityList?.buffer) return {};
 
             const entity = entityList.buffer.find((e: any) => e.id === entityId);
-            if (!entity || componentIndex >= entity.components.length) return {};
+            if (!entity || !entity.componentTypes) return {};
 
-            const component = entity.components[componentIndex];
+            const componentTypes = Array.from(entity.componentTypes);
+            if (componentIndex >= componentTypes.length) return {};
+
+            const componentType = componentTypes[componentIndex];
+            const component = entity.scene?.componentStorageManager?.getComponent(entity.id, componentType);
+            if (!component) return {};
             const properties: Record<string, any> = {};
 
                 const propertyKeys = Object.keys(component);
@@ -962,8 +1013,12 @@ export class EntityDataCollector {
             if (!entity) return null;
 
             // 找到对应的组件
-            if (componentIndex >= entity.components.length) return null;
-            const component = entity.components[componentIndex];
+            const componentTypes = Array.from(entity.componentTypes || []);
+            if (componentIndex >= componentTypes.length) return null;
+
+            const componentType = componentTypes[componentIndex];
+            const component = entity.scene?.componentStorageManager?.getComponent(entity.id, componentType);
+            if (!component) return null;
 
             // 根据属性路径找到对象
             const targetObject = this.getObjectByPath(component, propertyPath);

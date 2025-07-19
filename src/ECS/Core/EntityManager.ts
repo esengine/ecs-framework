@@ -596,6 +596,167 @@ export class EntityManager {
     }
     
     /**
+     * 批量创建实体
+     * 
+     * 创建多个实体并进行批量优化，适合同时创建大量相似实体的场景。
+     * 
+     * @param names 实体名称数组，如果为空则自动生成名称
+     * @param count 要创建的实体数量（如果names为空时使用）
+     * @returns 创建的实体数组
+     * 
+     * @example
+     * ```typescript
+     * // 创建100个敌人实体
+     * const enemies = entityManager.createEntitiesBatch([], 100);
+     * 
+     * // 创建指定名称的实体
+     * const npcs = entityManager.createEntitiesBatch(['NPC_1', 'NPC_2', 'NPC_3']);
+     * ```
+     */
+    public createEntitiesBatch(names: string[] = [], count?: number): Entity[] {
+        const entitiesToCreate = count || names.length;
+        if (entitiesToCreate === 0) {
+            return [];
+        }
+
+        const entities: Entity[] = [];
+        const currentTime = Date.now();
+
+        // 预分配ID以减少IdentifierPool的调用开销
+        const baseId = this._identifierPool.checkOut();
+        const ids: number[] = [baseId];
+        
+        for (let i = 1; i < entitiesToCreate; i++) {
+            ids.push(this._identifierPool.checkOut());
+        }
+
+        // 批量创建实体
+        for (let i = 0; i < entitiesToCreate; i++) {
+            const name = names[i] || `Entity_Batch_${currentTime}_${i}`;
+            const entity = new Entity(name, ids[i]);
+            
+            entities.push(entity);
+            this._entities.set(ids[i], entity);
+            
+            // 批量更新索引
+            this.updateNameIndex(entity, true);
+            this.updateTagIndex(entity, true);
+            
+            // 批量更新性能系统
+            this._componentIndexManager.addEntity(entity);
+            this._archetypeSystem.addEntity(entity);
+            this._dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_ADDED);
+        }
+
+        // 批量发射事件
+        for (const entity of entities) {
+            this._eventBus.emitEntityCreated({
+                timestamp: currentTime,
+                source: 'EntityManager',
+                entityId: entity.id,
+                entityName: entity.name,
+                entityTag: entity.tag?.toString()
+            });
+        }
+
+        return entities;
+    }
+
+    /**
+     * 批量销毁实体
+     * 
+     * 销毁多个实体并进行批量优化，比逐个销毁更高效。
+     * 
+     * @param entitiesOrIds 要销毁的实体数组，可以是实体对象、名称或ID
+     * @returns 成功销毁的实体数量
+     * 
+     * @example
+     * ```typescript
+     * // 销毁一组实体
+     * const count = entityManager.destroyEntitiesBatch([entity1, entity2, entity3]);
+     * 
+     * // 按ID销毁
+     * const count = entityManager.destroyEntitiesBatch([1, 2, 3, 4, 5]);
+     * ```
+     */
+    public destroyEntitiesBatch(entitiesOrIds: (Entity | string | number)[]): number {
+        if (entitiesOrIds.length === 0) {
+            return 0;
+        }
+
+        const entitiesToDestroy: Entity[] = [];
+        const currentTime = Date.now();
+
+        // 收集所有有效的实体
+        for (const entityOrId of entitiesOrIds) {
+            let entity: Entity | null = null;
+            
+            if (typeof entityOrId === 'string') {
+                entity = this.getEntityByName(entityOrId);
+            } else if (typeof entityOrId === 'number') {
+                entity = this._entities.get(entityOrId) || null;
+            } else {
+                entity = this._entities.get(entityOrId.id) || null;
+            }
+            
+            if (entity) {
+                entitiesToDestroy.push(entity);
+            }
+        }
+
+        // 批量更新系统状态
+        for (const entity of entitiesToDestroy) {
+            this._destroyedEntities.add(entity.id);
+            this.updateNameIndex(entity, false);
+            this.updateTagIndex(entity, false);
+            
+            this._componentIndexManager.removeEntity(entity);
+            this._archetypeSystem.removeEntity(entity);
+            this._dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_REMOVED);
+        }
+
+        // 批量发射销毁事件
+        for (const entity of entitiesToDestroy) {
+            this._eventBus.emitEntityDestroyed({
+                timestamp: currentTime,
+                source: 'EntityManager',
+                entityId: entity.id,
+                entityName: entity.name,
+                entityTag: entity.tag?.toString()
+            });
+        }
+
+        // 批量执行销毁和清理
+        for (const entity of entitiesToDestroy) {
+            entity.destroy();
+            this._entities.delete(entity.id);
+            this._identifierPool.checkIn(entity.id);
+        }
+
+        return entitiesToDestroy.length;
+    }
+
+    /**
+     * 批量查询包含指定组件的实体
+     * 
+     * 优化的批量查询方法，比多次调用getEntitiesWithComponent更高效。
+     * 
+     * @param componentTypes 组件类型数组
+     * @returns 按组件类型分组的实体映射
+     */
+    public getEntitiesWithMultipleComponents(
+        componentTypes: ComponentType[]
+    ): Map<ComponentType, Entity[]> {
+        const results = new Map<ComponentType, Entity[]>();
+        
+        for (const componentType of componentTypes) {
+            results.set(componentType, this.getEntitiesWithComponent(componentType));
+        }
+        
+        return results;
+    }
+
+    /**
      * 获取事件总线实例
      * 
      * 允许外部代码监听和发射ECS相关事件。

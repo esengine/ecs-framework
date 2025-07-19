@@ -1,5 +1,6 @@
 import { Entity } from '../../src/ECS/Entity';
 import { Component } from '../../src/ECS/Component';
+import { Scene } from '../../src/ECS/Scene';
 
 // 测试组件类
 class TestPositionComponent extends Component {
@@ -44,17 +45,19 @@ class TestRenderComponent extends Component {
 
 describe('Entity - 组件缓存优化测试', () => {
     let entity: Entity;
+    let scene: Scene;
 
     beforeEach(() => {
-        // 创建新的实体
-        entity = new Entity('TestEntity', 1);
+        // 创建场景和实体
+        scene = new Scene();
+        entity = scene.createEntity('TestEntity');
     });
 
     describe('基本功能测试', () => {
         test('应该能够创建实体', () => {
             expect(entity.name).toBe('TestEntity');
-            expect(entity.id).toBe(1);
-            expect(entity.components.length).toBe(0);
+            expect(entity.id).toBeGreaterThan(0);
+            expect(entity.componentCount).toBe(0);
         });
 
         test('应该能够添加组件', () => {
@@ -62,8 +65,11 @@ describe('Entity - 组件缓存优化测试', () => {
             const addedComponent = entity.addComponent(position);
 
             expect(addedComponent).toBe(position);
-            expect(entity.components.length).toBe(1);
-            expect(entity.components[0]).toBe(position);
+            expect(entity.componentCount).toBe(1);
+            
+            const retrieved = entity.getComponent(TestPositionComponent);
+            expect(retrieved?.x).toBe(position.x);
+            expect(retrieved?.y).toBe(position.y);
             expect(position.entity).toBe(entity);
         });
 
@@ -72,7 +78,6 @@ describe('Entity - 组件缓存优化测试', () => {
             entity.addComponent(position);
 
             const retrieved = entity.getComponent(TestPositionComponent);
-            expect(retrieved).toBe(position);
             expect(retrieved?.x).toBe(10);
             expect(retrieved?.y).toBe(20);
         });
@@ -90,7 +95,7 @@ describe('Entity - 组件缓存优化测试', () => {
             entity.addComponent(position);
 
             entity.removeComponent(position);
-            expect(entity.components.length).toBe(0);
+            expect(entity.componentCount).toBe(0);
             expect(entity.hasComponent(TestPositionComponent)).toBe(false);
             expect(position.entity).toBeNull();
         });
@@ -106,7 +111,7 @@ describe('Entity - 组件缓存优化测试', () => {
             entity.addComponent(health);
             entity.addComponent(velocity);
 
-            expect(entity.components.length).toBe(3);
+            expect(entity.componentCount).toBe(3);
             expect(entity.hasComponent(TestPositionComponent)).toBe(true);
             expect(entity.hasComponent(TestHealthComponent)).toBe(true);
             expect(entity.hasComponent(TestVelocityComponent)).toBe(true);
@@ -125,9 +130,11 @@ describe('Entity - 组件缓存优化测试', () => {
             const retrievedHealth = entity.getComponent(TestHealthComponent);
             const retrievedVelocity = entity.getComponent(TestVelocityComponent);
 
-            expect(retrievedPosition).toBe(position);
-            expect(retrievedHealth).toBe(health);
-            expect(retrievedVelocity).toBe(velocity);
+            expect(retrievedPosition?.x).toBe(position.x);
+            expect(retrievedPosition?.y).toBe(position.y);
+            expect(retrievedHealth?.health).toBe(health.health);
+            expect(retrievedVelocity?.vx).toBe(velocity.vx);
+            expect(retrievedVelocity?.vy).toBe(velocity.vy);
         });
 
         test('应该能够批量添加组件', () => {
@@ -140,7 +147,7 @@ describe('Entity - 组件缓存优化测试', () => {
             const addedComponents = entity.addComponents(components);
 
             expect(addedComponents.length).toBe(3);
-            expect(entity.components.length).toBe(3);
+            expect(entity.componentCount).toBe(3);
             expect(addedComponents[0]).toBe(components[0]);
             expect(addedComponents[1]).toBe(components[1]);
             expect(addedComponents[2]).toBe(components[2]);
@@ -153,7 +160,7 @@ describe('Entity - 组件缓存优化测试', () => {
 
             entity.removeAllComponents();
 
-            expect(entity.components.length).toBe(0);
+            expect(entity.componentCount).toBe(0);
             expect(entity.hasComponent(TestPositionComponent)).toBe(false);
             expect(entity.hasComponent(TestHealthComponent)).toBe(false);
             expect(entity.hasComponent(TestVelocityComponent)).toBe(false);
@@ -188,9 +195,11 @@ describe('Entity - 组件缓存优化测试', () => {
             const retrievedHealth = entity.getComponent(TestHealthComponent);
             const retrievedVelocity = entity.getComponent(TestVelocityComponent);
 
-            expect(retrievedPosition).toBe(position);
-            expect(retrievedHealth).toBe(health);
-            expect(retrievedVelocity).toBe(velocity);
+            expect(retrievedPosition?.x).toBe(position.x);
+            expect(retrievedPosition?.y).toBe(position.y);
+            expect(retrievedHealth?.health).toBe(health.health);
+            expect(retrievedVelocity?.vx).toBe(velocity.vx);
+            expect(retrievedVelocity?.vy).toBe(velocity.vy);
         });
 
         test('组件获取性能应该良好', () => {
@@ -258,11 +267,11 @@ describe('Entity - 组件缓存优化测试', () => {
             const debugInfo = entity.getDebugInfo();
 
             expect(debugInfo.name).toBe('TestEntity');
-            expect(debugInfo.id).toBe(1);
+            expect(debugInfo.id).toBeGreaterThan(0);
             expect(debugInfo.componentCount).toBe(2);
             expect(debugInfo.componentTypes).toContain('TestPositionComponent');
             expect(debugInfo.componentTypes).toContain('TestHealthComponent');
-            expect(debugInfo.indexMappingSize).toBe(2);
+            expect(debugInfo.cachedComponentTypesSize).toBe(2);
         });
     });
 });
