@@ -107,10 +107,9 @@ export class Matcher {
      */
     private getEntityBits(entity: Entity): Bits {
         const bits = new Bits();
-        for (const componentType of entity.componentTypes) {
-            const typeId = ComponentTypeManager.instance.getTypeId(componentType);
-            bits.set(typeId);
-        }
+        // TODO: componentTypes moved to ComponentManager
+        // Need ComponentManager reference to implement this
+        console.warn('getEntityBits needs ComponentManager implementation');
         return bits;
     }
 

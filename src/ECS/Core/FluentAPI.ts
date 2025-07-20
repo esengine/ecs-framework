@@ -16,7 +16,7 @@ export class EntityBuilder {
     constructor(scene: Scene, storageManager: ComponentStorageManager) {
         this.scene = scene;
         this.storageManager = storageManager;
-        this.entity = new Entity("", scene.identifierPool.checkOut());
+        this.entity = new Entity(scene.identifierPool.checkOut(), "");
     }
 
     /**
@@ -45,7 +45,7 @@ export class EntityBuilder {
      * @returns 实体构建器
      */
     public with<T extends Component>(component: T): EntityBuilder {
-        this.entity.addComponent(component);
+        this.storageManager.addComponent(this.entity.id, component);
         return this;
     }
 
@@ -56,7 +56,7 @@ export class EntityBuilder {
      */
     public withComponents(...components: Component[]): EntityBuilder {
         for (const component of components) {
-            this.entity.addComponent(component);
+            this.storageManager.addComponent(this.entity.id, component);
         }
         return this;
     }
@@ -69,7 +69,7 @@ export class EntityBuilder {
      */
     public withIf<T extends Component>(condition: boolean, component: T): EntityBuilder {
         if (condition) {
-            this.entity.addComponent(component);
+            this.storageManager.addComponent(this.entity.id, component);
         }
         return this;
     }
@@ -81,7 +81,7 @@ export class EntityBuilder {
      */
     public withFactory<T extends Component>(factory: () => T): EntityBuilder {
         const component = factory();
-        this.entity.addComponent(component);
+        this.storageManager.addComponent(this.entity.id, component);
         return this;
     }
 
@@ -95,7 +95,7 @@ export class EntityBuilder {
         componentType: ComponentType<T>, 
         configurator: (component: T) => void
     ): EntityBuilder {
-        const component = this.entity.getComponent(componentType);
+        const component = this.storageManager.getComponent(this.entity.id, componentType);
         if (component) {
             configurator(component);
         }
@@ -108,7 +108,8 @@ export class EntityBuilder {
      * @returns 实体构建器
      */
     public enabled(enabled: boolean = true): EntityBuilder {
-        this.entity.enabled = enabled;
+        // Note: Entity no longer has enabled property, this is managed elsewhere
+        // TODO: Implement through EntityManager or remove this method
         return this;
     }
 
@@ -118,7 +119,8 @@ export class EntityBuilder {
      * @returns 实体构建器
      */
     public active(active: boolean = true): EntityBuilder {
-        this.entity.active = active;
+        // Note: Entity no longer has active property, this is managed elsewhere
+        // TODO: Implement through EntityManager or remove this method
         return this;
     }
 
@@ -129,7 +131,8 @@ export class EntityBuilder {
      */
     public withChild(childBuilder: EntityBuilder): EntityBuilder {
         const child = childBuilder.build();
-        this.entity.addChild(child);
+        // Note: Entity no longer has addChild method, this is managed by HierarchyManager
+        // TODO: Implement through HierarchyManager
         return this;
     }
 
@@ -141,7 +144,8 @@ export class EntityBuilder {
     public withChildren(...childBuilders: EntityBuilder[]): EntityBuilder {
         for (const childBuilder of childBuilders) {
             const child = childBuilder.build();
-            this.entity.addChild(child);
+            // Note: Entity no longer has addChild method, this is managed by HierarchyManager
+            // TODO: Implement through HierarchyManager
         }
         return this;
     }
@@ -154,7 +158,8 @@ export class EntityBuilder {
     public withChildFactory(childFactory: (parent: Entity) => EntityBuilder): EntityBuilder {
         const childBuilder = childFactory(this.entity);
         const child = childBuilder.build();
-        this.entity.addChild(child);
+        // Note: Entity no longer has addChild method, this is managed by HierarchyManager
+        // TODO: Implement through HierarchyManager
         return this;
     }
 
@@ -167,7 +172,8 @@ export class EntityBuilder {
     public withChildIf(condition: boolean, childBuilder: EntityBuilder): EntityBuilder {
         if (condition) {
             const child = childBuilder.build();
-            this.entity.addChild(child);
+            // Note: Entity no longer has addChild method, this is managed by HierarchyManager
+            // TODO: Implement through HierarchyManager
         }
         return this;
     }
@@ -524,9 +530,8 @@ export class EntityBatchOperator {
      * @returns 批量操作器
      */
     public addComponent<T extends Component>(component: T): EntityBatchOperator {
-        for (const entity of this.entities) {
-            entity.addComponent(component);
-        }
+        // Note: Entity no longer has addComponent method
+        // TODO: Implement through ComponentManager
         return this;
     }
 
@@ -536,9 +541,8 @@ export class EntityBatchOperator {
      * @returns 批量操作器
      */
     public removeComponent<T extends Component>(componentType: ComponentType<T>): EntityBatchOperator {
-        for (const entity of this.entities) {
-            entity.removeComponentByType(componentType);
-        }
+        // Note: Entity no longer has removeComponentByType method
+        // TODO: Implement through ComponentManager
         return this;
     }
 
@@ -548,9 +552,8 @@ export class EntityBatchOperator {
      * @returns 批量操作器
      */
     public setActive(active: boolean): EntityBatchOperator {
-        for (const entity of this.entities) {
-            entity.active = active;
-        }
+        // Note: Entity no longer has active property
+        // TODO: Implement through EntityManager
         return this;
     }
 

@@ -1,6 +1,7 @@
 import { Entity } from '../Entity';
 import { Component } from '../Component';
 import { ComponentRegistry, ComponentType } from './ComponentStorage';
+import { ComponentManager } from './ComponentManager';
 
 import { ComponentPoolManager } from './ComponentPool';
 import { BitMaskOptimizer } from './BitMaskOptimizer';
@@ -86,6 +87,9 @@ export class QuerySystem {
     private entities: Entity[] = [];
     private entityIndex: EntityIndex;
     private indexDirty = true;
+    
+    /** 组件管理器引用 */
+    private _componentManager?: ComponentManager;
 
     // 查询缓存系统
     private queryCache = new Map<string, QueryCacheEntry>();
@@ -112,7 +116,8 @@ export class QuerySystem {
         dirtyChecks: 0
     };
 
-    constructor() {
+    constructor(componentManager?: ComponentManager) {
+        this._componentManager = componentManager;
         this.entityIndex = {
             byMask: new Map(),
             byComponentType: new Map(),
@@ -129,6 +134,11 @@ export class QuerySystem {
         this.componentIndexManager = new ComponentIndexManager(IndexType.HASH);
         this.archetypeSystem = new ArchetypeSystem();
         this.dirtyTrackingSystem = new DirtyTrackingSystem();
+        
+        // 设置组件管理器引用
+        if (this._componentManager) {
+            this.archetypeSystem.setComponentManager(this._componentManager);
+        }
 
         // 设置索引更新批处理器的回调
         this.indexUpdateBatcher.onBatchAdd = (entities) => {
@@ -272,7 +282,11 @@ export class QuerySystem {
      * 将实体添加到各种索引中（优化版本）
      */
     private addEntityToIndexes(entity: Entity): void {
-        const mask = entity.componentMask;
+        if (!this._componentManager) {
+            console.warn('ComponentManager not set in QuerySystem');
+            return;
+        }
+        const mask = this._componentManager.getComponentMask(entity.id);
 
         // 组件掩码索引 - 优化Map操作
         let maskSet = this.entityIndex.byMask.get(mask);
@@ -283,7 +297,7 @@ export class QuerySystem {
         maskSet.add(entity);
 
         // 组件类型索引 - 批量处理
-        const componentTypes = entity.componentTypes;
+        const componentTypes = this._componentManager.getComponentTypes(entity.id);
         for (const componentType of componentTypes) {
             let typeSet = this.entityIndex.byComponentType.get(componentType);
             if (!typeSet) {
@@ -320,7 +334,11 @@ export class QuerySystem {
      * 从各种索引中移除实体
      */
     private removeEntityFromIndexes(entity: Entity): void {
-        const mask = entity.componentMask;
+        if (!this._componentManager) {
+            console.warn('ComponentManager not set in QuerySystem');
+            return;
+        }
+        const mask = this._componentManager.getComponentMask(entity.id);
 
         // 从组件掩码索引移除
         const maskSet = this.entityIndex.byMask.get(mask);
@@ -332,7 +350,8 @@ export class QuerySystem {
         }
 
         // 从组件类型索引移除
-        for (const componentType of entity.componentTypes) {
+        const componentTypes = this._componentManager.getComponentTypes(entity.id);
+        for (const componentType of componentTypes) {
             const typeSet = this.entityIndex.byComponentType.get(componentType);
             if (typeSet) {
                 typeSet.delete(entity);
@@ -492,7 +511,9 @@ export class QuerySystem {
         const result: Entity[] = [];
 
         for (const entity of smallestSet) {
-            if ((entity.componentMask & mask) === mask) {
+            if (!this._componentManager) continue;
+            const entityMask = this._componentManager.getComponentMask(entity.id);
+            if ((entityMask & mask) === mask) {
                 result.push(entity);
             }
         }
@@ -510,10 +531,15 @@ export class QuerySystem {
      * @returns 匹配的实体列表
      */
     private queryByLinearScan(componentTypes: ComponentType[]): Entity[] {
+        if (!this._componentManager) {
+            console.warn('ComponentManager not set in QuerySystem');
+            return [];
+        }
         const mask = this.createComponentMask(componentTypes);
-        return this.entities.filter(entity =>
-            (entity.componentMask & mask) === mask
-        );
+        return this.entities.filter(entity => {
+            const entityMask = this._componentManager!.getComponentMask(entity.id);
+            return (entityMask & mask) === mask;
+        });
     }
 
     /**
@@ -609,7 +635,7 @@ export class QuerySystem {
 
         const mask = this.createComponentMask(componentTypes);
         const entities = this.entities.filter(entity =>
-            (entity.componentMask & mask) === BigInt(0)
+            this._componentManager && (this._componentManager.getComponentMask(entity.id) & mask) === BigInt(0)
         );
 
         this.addToCache(cacheKey, entities);

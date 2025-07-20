@@ -1,6 +1,7 @@
 import { Entity } from '../Entity';
 import { Component } from '../Component';
 import { ComponentType } from './ComponentStorage';
+import { ComponentManager } from './ComponentManager';
 
 /**
  * 组件索引类型
@@ -66,9 +67,18 @@ export class HashComponentIndex implements IComponentIndex {
     private _queryCount = 0;
     private _totalQueryTime = 0;
     private _lastUpdated = Date.now();
+    private _componentManager?: ComponentManager;
+    
+    public setComponentManager(componentManager: ComponentManager): void {
+        this._componentManager = componentManager;
+    }
     
     public addEntity(entity: Entity): void {
-        const componentTypes = entity.componentTypes;
+        if (!this._componentManager) {
+            console.warn('ComponentManager not set in HashComponentIndex');
+            return;
+        }
+        const componentTypes = this._componentManager.getComponentTypes(entity.id);
 
         for (const componentType of componentTypes) {
             
@@ -85,8 +95,11 @@ export class HashComponentIndex implements IComponentIndex {
     }
     
     public removeEntity(entity: Entity): void {
-        const componentTypes = this._entityToComponents.get(entity);
-        if (!componentTypes) return;
+        if (!this._componentManager) {
+            console.warn('ComponentManager not set in HashComponentIndex');
+            return;
+        }
+        const componentTypes = this._componentManager.getComponentTypes(entity.id);
         
         for (const componentType of componentTypes) {
             const entities = this._componentToEntities.get(componentType);
@@ -223,11 +236,21 @@ export class BitmapComponentIndex implements IComponentIndex {
     private _queryCount = 0;
     private _totalQueryTime = 0;
     private _lastUpdated = Date.now();
+    private _componentManager?: ComponentManager;
+    
+    public setComponentManager(componentManager: ComponentManager): void {
+        this._componentManager = componentManager;
+    }
     
     public addEntity(entity: Entity): void {
+        if (!this._componentManager) {
+            console.warn('ComponentManager not set in BitmapComponentIndex');
+            return;
+        }
         let bitmap = 0;
+        const componentTypes = this._componentManager.getComponentTypes(entity.id);
 
-        for (const componentType of entity.componentTypes) {
+        for (const componentType of componentTypes) {
             let bit = this._componentTypeToBit.get(componentType);
             
             if (bit === undefined) {
@@ -369,9 +392,17 @@ export class ComponentIndexManager {
     private _indexHistory: Map<IndexType, IndexStats> = new Map();
     private _autoOptimize = true;
     private _optimizationThreshold = 1000;
+    private _componentManager?: ComponentManager;
     
     constructor(initialType: IndexType = IndexType.HASH) {
         this._activeIndex = this.createIndex(initialType);
+    }
+    
+    public setComponentManager(componentManager: ComponentManager): void {
+        this._componentManager = componentManager;
+        if (this._activeIndex instanceof HashComponentIndex || this._activeIndex instanceof BitmapComponentIndex) {
+            (this._activeIndex as any).setComponentManager?.(componentManager);
+        }
     }
     
     /**
@@ -453,16 +484,27 @@ export class ComponentIndexManager {
      * 创建指定类型的索引
      */
     private createIndex(type: IndexType): IComponentIndex {
+        let index: IComponentIndex;
         switch (type) {
             case IndexType.HASH:
-                return new HashComponentIndex();
+                index = new HashComponentIndex();
+                break;
             case IndexType.BITMAP:
-                return new BitmapComponentIndex();
+                index = new BitmapComponentIndex();
+                break;
             case IndexType.SORTED:
-                return new HashComponentIndex();
+                index = new HashComponentIndex();
+                break;
             default:
-                return new HashComponentIndex();
+                index = new HashComponentIndex();
         }
+        
+        // 设置ComponentManager引用
+        if (this._componentManager && (index instanceof HashComponentIndex || index instanceof BitmapComponentIndex)) {
+            (index as any).setComponentManager(this._componentManager);
+        }
+        
+        return index;
     }
     
     /**

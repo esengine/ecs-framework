@@ -73,7 +73,7 @@ export abstract class Component implements IComponent {
      * @returns 如果组件和所属实体都启用则返回true
      */
     public get enabled(): boolean {
-        return this.entity ? this.entity.enabled && this._enabled : this._enabled;
+        return this._enabled;
     }
 
     /**

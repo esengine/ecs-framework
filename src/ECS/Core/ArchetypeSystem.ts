@@ -1,5 +1,6 @@
 import { Entity } from '../Entity';
 import { ComponentType } from './ComponentStorage';
+import { ComponentManager } from './ComponentManager';
 
 /**
  * 原型标识符
@@ -50,6 +51,9 @@ export class ArchetypeSystem {
     
     /** 组件类型到原型的映射 */
     private _componentToArchetypes = new Map<ComponentType, Set<Archetype>>();
+    
+    /** 组件管理器引用 */
+    private _componentManager?: ComponentManager;
     
     /** 查询缓存 */
     private _queryCache = new Map<string, {
@@ -184,10 +188,21 @@ export class ArchetypeSystem {
     }
     
     /**
+     * 设置组件管理器引用
+     */
+    public setComponentManager(componentManager: ComponentManager): void {
+        this._componentManager = componentManager;
+    }
+    
+    /**
      * 获取实体的组件类型列表
      */
     private getEntityComponentTypes(entity: Entity): ComponentType[] {
-        return Array.from(entity.componentTypes);
+        if (!this._componentManager) {
+            console.warn('ComponentManager not set in ArchetypeSystem');
+            return [];
+        }
+        return Array.from(this._componentManager.getComponentTypes(entity.id));
     }
     
     /**

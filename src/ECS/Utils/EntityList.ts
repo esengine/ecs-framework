@@ -98,7 +98,7 @@ export class EntityList {
         
         for (let i = this.buffer.length - 1; i >= 0; i--) {
             idsToRecycle.push(this.buffer[i].id);
-            this.buffer[i].destroy();
+            this.buffer[i].markDestroyed();
         }
         
         // 批量回收ID
@@ -145,8 +145,9 @@ export class EntityList {
         try {
             for (let i = 0; i < this.buffer.length; i++) {
                 const entity = this.buffer[i];
-                if (entity.enabled && !entity.isDestroyed) {
-                    entity.update();
+                // TODO: enabled and update methods moved to other managers
+                if (!entity.isDestroyed) {
+                    // entity.update() - moved to systems
                 }
             }
         } finally {
@@ -211,9 +212,10 @@ export class EntityList {
         const result: Entity[] = [];
         
         for (const entity of this.buffer) {
-            if (entity.hasComponent(componentType)) {
-                result.push(entity);
-            }
+            // TODO: hasComponent moved to ComponentManager
+            // if (entity.hasComponent(componentType)) {
+            //     result.push(entity);
+            // }
         }
         
         return result;
@@ -288,7 +290,8 @@ export class EntityList {
     } {
         let activeCount = 0;
         for (const entity of this.buffer) {
-            if (entity.enabled && !entity.isDestroyed) {
+            // TODO: enabled property moved to HierarchyComponent
+            if (!entity.isDestroyed) {
                 activeCount++;
             }
         }

@@ -4,10 +4,10 @@ import { ITimer } from './Utils/Timers/ITimer';
 import { Time } from './Utils/Time';
 import { PerformanceMonitor } from './Utils/PerformanceMonitor';
 import { PoolManager } from './Utils/Pool';
-import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
 import { Scene } from './ECS/Scene';
-import { DebugManager } from './Utils/Debug';
+// import { DebugManager } from './Utils/Debug'; // Temporarily disabled
 import { ICoreConfig, IECSDebugConfig } from './Types';
+import { ECSFluentAPI } from './ECS/Core/FluentAPI';
 
 /**
  * 游戏引擎核心类
@@ -114,7 +114,7 @@ export class Core {
      * 
      * 负责收集和发送调试数据。
      */
-    public _debugManager?: DebugManager;
+    // public _debugManager?: DebugManager; // Temporarily disabled
 
     /**
      * Core配置
@@ -156,7 +156,7 @@ export class Core {
 
         // 初始化调试管理器
         if (this._config.debugConfig?.enabled) {
-            this._debugManager = new DebugManager(this, this._config.debugConfig);
+            // this._debugManager = new DebugManager(this, this._config.debugConfig); // Temporarily disabled
         }
 
         this.initialize();
@@ -330,11 +330,12 @@ export class Core {
             return;
         }
 
-        if (this._instance._debugManager) {
-            this._instance._debugManager.updateConfig(config);
-        } else {
-            this._instance._debugManager = new DebugManager(this._instance, config);
-        }
+        // Debug manager temporarily disabled
+        // if (this._instance._debugManager) {
+        //     this._instance._debugManager.updateConfig(config);
+        // } else {
+        //     this._instance._debugManager = new DebugManager(this._instance, config);
+        // }
 
         // 更新Core配置
         this._instance._config.debugConfig = config;
@@ -346,10 +347,11 @@ export class Core {
     public static disableDebug(): void {
         if (!this._instance) return;
 
-        if (this._instance._debugManager) {
-            this._instance._debugManager.stop();
-            this._instance._debugManager = undefined;
-        }
+        // Debug manager temporarily disabled
+        // if (this._instance._debugManager) {
+        //     this._instance._debugManager.stop();
+        //     this._instance._debugManager = undefined;
+        // }
 
         // 更新Core配置
         if (this._instance._config.debugConfig) {
@@ -363,11 +365,12 @@ export class Core {
      * @returns 当前调试数据，如果调试未启用则返回null
      */
     public static getDebugData(): any {
-        if (!this._instance?._debugManager) {
-            return null;
-        }
-
-        return this._instance._debugManager.getDebugData();
+        // Debug manager temporarily disabled
+        return null;
+        // if (!this._instance?._debugManager) {
+        //     return null;
+        // }
+        // return this._instance._debugManager.getDebugData();
     }
 
     /**
@@ -390,13 +393,14 @@ export class Core {
         // 初始化ECS API（如果场景支持）
         if (this._scene && typeof (this._scene as any).querySystem !== 'undefined') {
             const scene = this._scene as any;
-            this._ecsAPI = createECSAPI(scene, scene.querySystem, scene.eventSystem);
+            // TODO: Update to use new EntityManager-based architecture
+            // this._ecsAPI = createECSAPICompat(entityManager, componentManager, hierarchyManager);
         }
 
-        // 通知调试管理器场景已变更
-        if (this._debugManager) {
-            this._debugManager.onSceneChanged();
-        }
+        // 通知调试管理器场景已变更 - temporarily disabled
+        // if (this._debugManager) {
+        //     this._debugManager.onSceneChanged();
+        // }
     }
 
     /**
@@ -458,9 +462,10 @@ export class Core {
         }
 
         // 更新调试管理器（基于FPS的数据发送）
-        if (this._debugManager) {
-            this._debugManager.onFrameUpdate(deltaTime);
-        }
+        // Debug manager temporarily disabled
+        // if (this._debugManager) {
+        //     this._debugManager.onFrameUpdate(deltaTime);
+        // }
 
         // 结束性能监控
         this._performanceMonitor.endMonitoring('Core.update', frameStartTime);

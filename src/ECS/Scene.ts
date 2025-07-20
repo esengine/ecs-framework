@@ -188,7 +188,7 @@ export class Scene {
      * @param name 实体名称
      */
     public createEntity(name: string) {
-        let entity = new Entity(name, this.identifierPool.checkOut());
+        let entity = new Entity(this.identifierPool.checkOut(), name);
         return this.addEntity(entity);
     }
 
@@ -199,7 +199,7 @@ export class Scene {
      */
     public addEntity(entity: Entity, deferCacheClear: boolean = false) {
         this.entities.add(entity);
-        entity.scene = this;
+        // 在新架构中，实体不再持有scene引用
         
         // 将实体添加到查询系统（可延迟缓存清理）
         this.querySystem.addEntity(entity, deferCacheClear);
@@ -221,8 +221,7 @@ export class Scene {
         
         // 批量创建实体对象，不立即添加到系统
         for (let i = 0; i < count; i++) {
-            const entity = new Entity(`${namePrefix}_${i}`, this.identifierPool.checkOut());
-            entity.scene = this;
+            const entity = new Entity(this.identifierPool.checkOut(), `${namePrefix}_${i}`);
             entities.push(entity);
         }
         
@@ -251,7 +250,7 @@ export class Scene {
         
         // 批量创建实体，延迟缓存清理
         for (let i = 0; i < count; i++) {
-            const entity = new Entity(`${namePrefix}_${i}`, this.identifierPool.checkOut());
+            const entity = new Entity(this.identifierPool.checkOut(), `${namePrefix}_${i}`);
             entities.push(entity);
             this.addEntity(entity, true); // 延迟缓存清理
         }
@@ -267,7 +266,9 @@ export class Scene {
      */
     public destroyAllEntities() {
         for (let i = 0; i < this.entities.count; i++) {
-            this.entities.buffer[i].destroy();
+            // TODO: 需要EntityManager来销毁实体
+            // entityManager.destroyEntity(this.entities.buffer[i]);
+            this.entities.buffer[i].markDestroyed();
         }
     }
 
@@ -402,10 +403,10 @@ export class Scene {
             processorCount: this.entityProcessors.count,
             isRunning: this._didSceneBegin,
             entities: this.entities.buffer.map(entity => ({
-                name: entity.name,
+                name: entity.name || 'Unknown',
                 id: entity.id,
-                componentCount: entity.componentCount,
-                componentTypes: Array.from(entity.componentTypes).map(type => type.name)
+                componentCount: 0, // TODO: 需要ComponentManager获取组件数量
+                componentTypes: [] // TODO: 需要ComponentManager获取组件类型
             })),
             processors: this.entityProcessors.processors.map(processor => ({
                 name: processor.constructor.name,

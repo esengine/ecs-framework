@@ -20,5 +20,5 @@ export * from './ECS';
 export * from './Utils';
 export * from './Types';
 
-// 快照系统（可选模块）
-export * from './Utils/Snapshot'; 
+// 快照系统（可选模块） - Temporarily disabled
+// export * from './Utils/Snapshot'; 

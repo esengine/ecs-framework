@@ -6,6 +6,9 @@ import { ComponentIndexManager, IndexType } from './ComponentIndex';
 import { ArchetypeSystem } from './ArchetypeSystem';
 import { DirtyTrackingSystem, DirtyFlag } from './DirtyTrackingSystem';
 import { EventBus } from './EventBus';
+import { ComponentManager } from './ComponentManager';
+import { HierarchyManager } from './HierarchyManager';
+import { HierarchyComponent } from '../Components/HierarchyComponent';
 
 /**
  * 实体查询构建器
@@ -36,8 +39,6 @@ export class EntityQueryBuilder {
     private _withoutTags: number[] = [];
     /** 是否只查询激活状态的实体 */
     private _activeOnly: boolean = false;
-    /** 是否只查询启用状态的实体 */
-    private _enabledOnly: boolean = false;
     /** 自定义过滤条件 */
     private _customPredicates: Array<(entity: Entity) => boolean> = [];
     
@@ -124,17 +125,6 @@ export class EntityQueryBuilder {
         return this;
     }
     
-    /**
-     * 添加启用状态过滤条件
-     * 
-     * 返回的实体必须处于启用状态（enabled = true）。
-     * 
-     * @returns 查询构建器实例，支持链式调用
-     */
-    public enabled(): EntityQueryBuilder {
-        this._enabledOnly = true;
-        return this;
-    }
     
     /**
      * 添加自定义过滤条件
@@ -219,20 +209,18 @@ export class EntityQueryBuilder {
      * @returns 实体是否匹配所有查询条件
      */
     private matchesEntity(entity: Entity): boolean {
-        // 检查激活状态
-        if (this._activeOnly && !entity.active) {
-            return false;
-        }
-        
-        // 检查启用状态
-        if (this._enabledOnly && !entity.enabled) {
-            return false;
+        // 检查激活状态 - 现在通过HierarchyComponent检查
+        if (this._activeOnly) {
+            const hierarchy = this.entityManager.componentManager.getComponent(entity.id, HierarchyComponent);
+            if (!hierarchy?.activeInHierarchy) {
+                return false;
+            }
         }
         
         // 检查必须包含的组件
         if (this._allComponents.length > 0) {
             for (const componentType of this._allComponents) {
-                if (!entity.hasComponent(componentType)) {
+                if (!this.entityManager.componentManager.hasComponent(entity.id, componentType)) {
                     return false;
                 }
             }
@@ -242,7 +230,7 @@ export class EntityQueryBuilder {
         if (this._anyComponents.length > 0) {
             let hasAny = false;
             for (const componentType of this._anyComponents) {
-                if (entity.hasComponent(componentType)) {
+                if (this.entityManager.componentManager.hasComponent(entity.id, componentType)) {
                     hasAny = true;
                     break;
                 }
@@ -255,7 +243,7 @@ export class EntityQueryBuilder {
         // 检查不能包含的组件
         if (this._withoutComponents.length > 0) {
             for (const componentType of this._withoutComponents) {
-                if (entity.hasComponent(componentType)) {
+                if (this.entityManager.componentManager.hasComponent(entity.id, componentType)) {
                     return false;
                 }
             }
@@ -329,6 +317,10 @@ export class EntityManager {
     private _dirtyTrackingSystem: DirtyTrackingSystem;
     /** 事件总线 */
     private _eventBus: EventBus;
+    /** 组件管理器 */
+    private _componentManager: ComponentManager;
+    /** 层次结构管理器 */
+    private _hierarchyManager: HierarchyManager;
     
     /**
      * 创建实体管理器实例
@@ -344,8 +336,13 @@ export class EntityManager {
         this._dirtyTrackingSystem = new DirtyTrackingSystem();
         this._eventBus = new EventBus(false);
         
-        // 设置Entity的静态事件总线引用
-        Entity.eventBus = this._eventBus;
+        // 初始化管理器系统
+        this._componentManager = new ComponentManager(this._eventBus, null); // componentStorage will be set later
+        this._hierarchyManager = new HierarchyManager(this._componentManager, this._eventBus);
+        
+        // 设置组件管理器引用
+        this._archetypeSystem.setComponentManager(this._componentManager);
+        this._componentIndexManager.setComponentManager(this._componentManager);
     }
     
     /**
@@ -367,8 +364,12 @@ export class EntityManager {
     public get activeEntityCount(): number {
         let count = 0;
         for (const entity of this._entities.values()) {
-            if (entity.active && !entity.isDestroyed) {
-                count++;
+            if (!entity.isDestroyed) {
+                // 检查层次结构中的激活状态
+                const hierarchy = this._componentManager.getComponent(entity.id, HierarchyComponent);
+                if (hierarchy?.activeInHierarchy !== false) {
+                    count++;
+                }
             }
         }
         return count;
@@ -390,7 +391,7 @@ export class EntityManager {
      */
     public createEntity(name: string = `Entity_${Date.now()}`): Entity {
         const id = this._identifierPool.checkOut();
-        const entity = new Entity(name, id);
+        const entity = new Entity(id, name);
         
         this._entities.set(id, entity);
         this.updateNameIndex(entity, true);
@@ -465,7 +466,14 @@ export class EntityManager {
             entityTag: entity.tag?.toString()
         });
         
-        entity.destroy();
+        // 清理层次结构
+        this._hierarchyManager.cleanupEntity(entity.id);
+        
+        // 移除所有组件
+        this._componentManager.removeAllComponents(entity.id, entity.name, entity.tag?.toString());
+        
+        // 标记实体为已销毁
+        entity.markDestroyed();
         this._entities.delete(entity.id);
         this._identifierPool.checkIn(entity.id);
         
@@ -633,7 +641,7 @@ export class EntityManager {
         // 批量创建实体
         for (let i = 0; i < entitiesToCreate; i++) {
             const name = names[i] || `Entity_Batch_${currentTime}_${i}`;
-            const entity = new Entity(name, ids[i]);
+            const entity = new Entity(ids[i], name);
             
             entities.push(entity);
             this._entities.set(ids[i], entity);
@@ -728,7 +736,14 @@ export class EntityManager {
 
         // 批量执行销毁和清理
         for (const entity of entitiesToDestroy) {
-            entity.destroy();
+            // 清理层次结构
+            this._hierarchyManager.cleanupEntity(entity.id);
+            
+            // 移除所有组件
+            this._componentManager.removeAllComponents(entity.id, entity.name, entity.tag?.toString());
+            
+            // 标记实体为已销毁
+            entity.markDestroyed();
             this._entities.delete(entity.id);
             this._identifierPool.checkIn(entity.id);
         }
@@ -765,6 +780,28 @@ export class EntityManager {
      */
     public get eventBus(): EventBus {
         return this._eventBus;
+    }
+    
+    /**
+     * 获取组件管理器实例
+     * 
+     * 提供对组件管理器的访问，用于组件操作。
+     * 
+     * @returns 组件管理器实例
+     */
+    public get componentManager(): ComponentManager {
+        return this._componentManager;
+    }
+    
+    /**
+     * 获取层次结构管理器实例
+     * 
+     * 提供对层次结构管理器的访问，用于实体父子关系操作。
+     * 
+     * @returns 层次结构管理器实例
+     */
+    public get hierarchyManager(): HierarchyManager {
+        return this._hierarchyManager;
     }
     
     /**
