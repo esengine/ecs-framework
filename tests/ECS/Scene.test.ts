@@ -507,6 +507,8 @@ describe('Scene - 场景管理系统测试', () => {
         });
 
         test('系统处理过程中的异常应该被正确处理', () => {
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            
             class ErrorSystem extends EntitySystem {
                 constructor() {
                     super(Matcher.empty().all(PositionComponent));
@@ -527,6 +529,8 @@ describe('Scene - 场景管理系统测试', () => {
             expect(() => {
                 scene.update();
             }).not.toThrow();
+            
+            consoleSpy.mockRestore();
         });
 
         test('空场景的更新应该安全', () => {

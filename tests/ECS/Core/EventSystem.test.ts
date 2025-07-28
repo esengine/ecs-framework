@@ -306,6 +306,8 @@ describe('EventSystem - 事件系统测试', () => {
         });
 
         test('异步事件处理中的错误应该被正确处理', async () => {
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            
             let successHandlerCalled = false;
             
             eventSystem.on('error:event', async () => {
@@ -321,6 +323,8 @@ describe('EventSystem - 事件系统测试', () => {
             
             // 成功的处理器应该被调用
             expect(successHandlerCalled).toBe(true);
+            
+            consoleSpy.mockRestore();
         });
     });
 
@@ -487,6 +491,8 @@ describe('EventSystem - 事件系统测试', () => {
 
     describe('错误处理', () => {
         test('监听器中的错误不应该影响其他监听器', () => {
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            
             let successHandlerCalled = false;
             
             eventSystem.on('error:event', () => {
@@ -504,6 +510,8 @@ describe('EventSystem - 事件系统测试', () => {
             
             // 成功的处理器应该被调用
             expect(successHandlerCalled).toBe(true);
+            
+            consoleSpy.mockRestore();
         });
 
         test('应该能够处理监听器注册和移除中的边界情况', () => {
