@@ -6,6 +6,7 @@ import { EntitySystem } from './Systems/EntitySystem';
 import { ComponentStorageManager } from './Core/ComponentStorage';
 import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem, GlobalEventSystem } from './Core/EventSystem';
+import { EventBus } from './Core/EventBus';
 
 /**
  * 游戏场景类
@@ -99,6 +100,16 @@ export class Scene {
         this.querySystem = new QuerySystem();
         this.eventSystem = new TypeSafeEventSystem();
 
+        if (!Entity.eventBus) {
+            Entity.eventBus = new EventBus(false);
+        }
+        
+        if (Entity.eventBus) {
+            Entity.eventBus.onComponentAdded((data: any) => {
+                this.eventSystem.emitSync('component:added', data);
+            });
+        }
+
         this.initialize();
     }
 
@@ -189,6 +200,9 @@ export class Scene {
      */
     public createEntity(name: string) {
         let entity = new Entity(name, this.identifierPool.checkOut());
+        
+        this.eventSystem.emitSync('entity:created', { entityName: name, entity, scene: this });
+        
         return this.addEntity(entity);
     }
 
@@ -266,9 +280,7 @@ export class Scene {
      * 从场景中删除所有实体
      */
     public destroyAllEntities() {
-        for (let i = 0; i < this.entities.count; i++) {
-            this.entities.buffer[i].destroy();
-        }
+        this.entities.removeAllEntities();
     }
 
     /**
@@ -322,6 +334,10 @@ export class Scene {
      * @param processor 处理器
      */
     public addEntityProcessor(processor: EntitySystem) {
+        if (this.entityProcessors.processors.includes(processor)) {
+            return processor;
+        }
+        
         processor.scene = this;
         this.entityProcessors.add(processor);
 
@@ -343,6 +359,7 @@ export class Scene {
      */
     public removeEntityProcessor(processor: EntitySystem) {
         this.entityProcessors.remove(processor);
+        processor.scene = null;
     }
 
     /**

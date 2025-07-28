@@ -151,8 +151,8 @@ export class Core {
         // 初始化对象池管理器
         this._poolManager = PoolManager.getInstance();
         
-        Core.entitySystemsEnabled = this._config.enableEntitySystems || true;
-        this.debug = this._config.debug || true;
+        Core.entitySystemsEnabled = this._config.enableEntitySystems ?? true;
+        this.debug = this._config.debug ?? true;
 
         // 初始化调试管理器
         if (this._config.debugConfig?.enabled) {

@@ -79,16 +79,16 @@ export abstract class EntitySystem implements ISystemBase {
         this._systemName = this.constructor.name;
     }
 
-    private _scene!: Scene;
+    private _scene: Scene | null = null;
 
     /**
      * 这个系统所属的场景
      */
-    public get scene(): Scene {
+    public get scene(): Scene | null {
         return this._scene;
     }
 
-    public set scene(value: Scene) {
+    public set scene(value: Scene | null) {
         this._scene = value;
         this._entities = [];
     }
@@ -108,7 +108,9 @@ export abstract class EntitySystem implements ISystemBase {
      */
     public setUpdateOrder(order: number): void {
         this._updateOrder = order;
-        this.scene.entityProcessors.setDirty();
+        if (this.scene && this.scene.entityProcessors) {
+            this.scene.entityProcessors.setDirty();
+        }
     }
 
     /**

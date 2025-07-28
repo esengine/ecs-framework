@@ -346,6 +346,23 @@ export class EntityManager {
         
         // 设置Entity的静态事件总线引用
         Entity.eventBus = this._eventBus;
+        
+        // 监听组件事件来同步更新索引
+        this._eventBus.on('component:added', (data: any) => {
+            const entity = this._entities.get(data.entityId);
+            if (entity) {
+                this._componentIndexManager.addEntity(entity);
+                this._archetypeSystem.addEntity(entity);
+            }
+        });
+        
+        this._eventBus.on('component:removed', (data: any) => {
+            const entity = this._entities.get(data.entityId);
+            if (entity) {
+                this._componentIndexManager.removeEntity(entity);
+                this._archetypeSystem.removeEntity(entity);
+            }
+        });
     }
     
     /**
@@ -518,7 +535,8 @@ export class EntityManager {
      * @returns 具有指定标签的实体数组
      */
     public getEntitiesByTag(tag: number): Entity[] {
-        return [...(this._entitiesByTag.get(tag) || [])];
+        return Array.from(this._entities.values())
+            .filter(entity => entity.tag === tag);
     }
     
     /**

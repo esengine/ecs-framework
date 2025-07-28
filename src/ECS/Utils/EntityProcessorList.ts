@@ -71,7 +71,11 @@ export class EntityProcessorList {
     public update(): void {
         this.sortProcessors();
         for (const processor of this._processors) {
-            processor.update();
+            try {
+                processor.update();
+            } catch (error) {
+                console.error(`Error in processor ${processor.constructor.name}:`, error);
+            }
         }
     }
 

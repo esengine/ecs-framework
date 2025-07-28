@@ -15,6 +15,29 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
+  // 设置覆盖度阈值
+  coverageThreshold: {
+    global: {
+      branches: 40,
+      functions: 50,
+      lines: 50,
+      statements: 50
+    },
+    // 核心模块要求更高覆盖率
+    './src/ECS/Core/': {
+      branches: 50,
+      functions: 60,
+      lines: 60,
+      statements: 60
+    },
+    // ECS基础模块
+    './src/ECS/': {
+      branches: 45,
+      functions: 55,
+      lines: 55,
+      statements: 55
+    }
+  },
   verbose: true,
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
