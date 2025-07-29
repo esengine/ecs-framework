@@ -75,6 +75,14 @@ export class ComponentRegistry {
     public static getAllRegisteredTypes(): Map<Function, number> {
         return new Map(this.componentTypes);
     }
+
+    /**
+     * 重置注册表（用于测试）
+     */
+    public static reset(): void {
+        this.componentTypes.clear();
+        this.nextBitIndex = 0;
+    }
 }
 
 /**

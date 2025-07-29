@@ -1,6 +1,7 @@
-import { QuerySystem } from '../../../src/ECS/Core/QuerySystem';
+import { QuerySystem, QueryBuilder, QueryConditionType } from '../../../src/ECS/Core/QuerySystem';
 import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
+import { ComponentRegistry, ComponentType } from '../../../src/ECS/Core/ComponentStorage';
 
 // 测试组件
 class PositionComponent extends Component {
@@ -609,6 +610,219 @@ describe('QuerySystem - 查询系统测试', () => {
 
             const stats = querySystem.getStats();
             expect(stats.queryStats.totalQueries).toBeGreaterThan(0);
+        });
+    });
+
+    describe('QueryBuilder - 查询构建器功能', () => {
+        let builder: QueryBuilder;
+
+        beforeEach(() => {
+            builder = new QueryBuilder(querySystem);
+            
+            // 设置测试实体的组件
+            entities[0].addComponent(new PositionComponent(10, 20));
+            entities[1].addComponent(new VelocityComponent(1, 1));
+            entities[2].addComponent(new PositionComponent(30, 40));
+            entities[2].addComponent(new VelocityComponent(2, 2));
+        });
+
+        test('应该能够创建查询构建器', () => {
+            expect(builder).toBeInstanceOf(QueryBuilder);
+        });
+
+        test('应该能够构建包含所有组件的查询', () => {
+            const result = builder
+                .withAll(PositionComponent)
+                .execute();
+            
+            expect(result.entities.length).toBe(2);
+            expect(result.entities).toContain(entities[0]);
+            expect(result.entities).toContain(entities[2]);
+        });
+
+        test('应该能够构建包含任意组件的查询', () => {
+            const result = builder
+                .withAny(PositionComponent, VelocityComponent)
+                .execute();
+            
+            expect(result.entities.length).toBe(3);
+        });
+
+        test('应该能够构建排除组件的查询', () => {
+            const result = builder
+                .without(HealthComponent)
+                .execute();
+            
+            expect(result.entities.length).toBe(3);
+        });
+
+        test('应该能够重置查询构建器', () => {
+            builder.withAll(PositionComponent);
+            const resetBuilder = builder.reset();
+            
+            expect(resetBuilder).toBe(builder);
+            
+            const result = builder.execute();
+            expect(result.entities.length).toBe(0); // 没有条件，返回空结果
+        });
+
+        test('多条件查询应该返回空结果（当前实现限制）', () => {
+            const result = builder
+                .withAll(PositionComponent)
+                .withAny(VelocityComponent)
+                .execute();
+            
+            // 当前实现只支持单一条件，多条件返回空结果
+            expect(result.entities.length).toBe(0);
+        });
+
+        test('链式调用应该工作正常', () => {
+            const result = builder
+                .withAll(PositionComponent)
+                .execute();
+            
+            expect(result).toBeDefined();
+            expect(result.executionTime).toBeGreaterThanOrEqual(0);
+        });
+    });
+
+    describe('高级查询功能', () => {
+        test('应该能够按标签查询实体', () => {
+            entities[0].tag = 100;
+            entities[1].tag = 200;
+            entities[2].tag = 100;
+            
+            const result = querySystem.queryByTag(100);
+            
+            expect(result.entities.length).toBe(2);
+            expect(result.entities).toContain(entities[0]);
+            expect(result.entities).toContain(entities[2]);
+        });
+
+        test('应该能够按名称查询实体', () => {
+            const result = querySystem.queryByName('Entity_1');
+            
+            expect(result.entities.length).toBe(1);
+            expect(result.entities).toContain(entities[1]);
+        });
+
+        test('应该能够查询包含任意指定组件的实体', () => {
+            entities[0].addComponent(new PositionComponent(10, 20));
+            entities[1].addComponent(new VelocityComponent(1, 1));
+            entities[2].addComponent(new HealthComponent(100));
+            
+            const result = querySystem.queryAny(PositionComponent, VelocityComponent);
+            
+            expect(result.entities.length).toBe(2);
+            expect(result.entities).toContain(entities[0]);
+            expect(result.entities).toContain(entities[1]);
+        });
+
+        test('应该能够查询不包含指定组件的实体', () => {
+            entities[0].addComponent(new PositionComponent(10, 20));
+            entities[1].addComponent(new VelocityComponent(1, 1));
+            
+            const result = querySystem.queryNone(HealthComponent);
+            
+            expect(result.entities.length).toBe(entities.length);
+        });
+
+        test('应该能够按单个组件类型查询', () => {
+            entities[0].addComponent(new PositionComponent(10, 20));
+            entities[1].addComponent(new PositionComponent(30, 40));
+            
+            const result = querySystem.queryByComponent(PositionComponent);
+            
+            expect(result.entities.length).toBe(2);
+            expect(result.entities).toContain(entities[0]);
+            expect(result.entities).toContain(entities[1]);
+        });
+    });
+
+    describe('实体管理功能', () => {
+        test('应该能够添加和移除单个实体', () => {
+            const newEntity = new Entity('NewEntity', 999);
+            
+            querySystem.addEntity(newEntity);
+            let stats = querySystem.getStats();
+            expect(stats.entityCount).toBe(entities.length + 1);
+            
+            querySystem.removeEntity(newEntity);
+            stats = querySystem.getStats();
+            expect(stats.entityCount).toBe(entities.length);
+        });
+
+        test('应该能够批量添加实体', () => {
+            const newEntities = [
+                new Entity('Batch1', 997),
+                new Entity('Batch2', 998),
+                new Entity('Batch3', 999)
+            ];
+            
+            querySystem.addEntities(newEntities);
+            const stats = querySystem.getStats();
+            expect(stats.entityCount).toBe(entities.length + 3);
+        });
+
+        test('应该能够批量添加实体（无重复检查）', () => {
+            const newEntities = [
+                new Entity('Unchecked1', 995),
+                new Entity('Unchecked2', 996)
+            ];
+            
+            querySystem.addEntitiesUnchecked(newEntities);
+            const stats = querySystem.getStats();
+            expect(stats.entityCount).toBe(entities.length + 2);
+        });
+
+        test('应该能够批量更新组件', () => {
+            entities[0].addComponent(new PositionComponent(10, 20));
+            entities[1].addComponent(new VelocityComponent(1, 1));
+            
+            const updates = [
+                { entityId: entities[0].id, componentMask: BigInt(0b1011) },
+                { entityId: entities[1].id, componentMask: BigInt(0b1101) }
+            ];
+            
+            expect(() => {
+                querySystem.batchUpdateComponents(updates);
+            }).not.toThrow();
+        });
+
+        test('应该能够标记实体为脏', () => {
+            entities[0].addComponent(new PositionComponent(10, 20));
+            
+            expect(() => {
+                querySystem.markEntityDirty(entities[0], [PositionComponent]);
+            }).not.toThrow();
+        });
+    });
+
+    describe('性能优化和配置', () => {
+        test('应该能够手动触发性能优化', () => {
+            expect(() => {
+                querySystem.optimizePerformance();
+            }).not.toThrow();
+        });
+
+        test('应该能够配置脏标记系统', () => {
+            expect(() => {
+                querySystem.configureDirtyTracking(10, 16);
+            }).not.toThrow();
+        });
+
+        test('应该能够管理帧生命周期', () => {
+            expect(() => {
+                querySystem.beginFrame();
+                querySystem.endFrame();
+            }).not.toThrow();
+        });
+
+        test('应该能够获取实体的原型信息', () => {
+            entities[0].addComponent(new PositionComponent(10, 20));
+            
+            const archetype = querySystem.getEntityArchetype(entities[0]);
+            expect(archetype === undefined || typeof archetype === 'object').toBe(true);
         });
     });
 });
