@@ -137,6 +137,13 @@ export class ComponentPoolManager {
     }
 
     /**
+     * 重置管理器，移除所有注册的池
+     */
+    reset(): void {
+        this.pools.clear();
+    }
+
+    /**
      * 获取池统计信息
      */
     getPoolStats(): Map<string, { available: number; maxSize: number }> {
