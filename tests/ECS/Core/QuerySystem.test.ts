@@ -405,6 +405,7 @@ describe('QuerySystem - 查询系统测试', () => {
 
     describe('查询统计和性能监控', () => {
         test('应该能够获取查询统计信息', () => {
+            querySystem.clearCache(); // 确保测试隔离
             entities[0].addComponent(new PositionComponent(10, 20));
             entities[1].addComponent(new VelocityComponent(1, 1));
 
@@ -460,6 +461,7 @@ describe('QuerySystem - 查询系统测试', () => {
 
     describe('内存管理和优化', () => {
         test('大量查询不应该导致内存泄漏', () => {
+            querySystem.clearCache(); // 确保测试隔离
             const entityCount = 1000;
             const testEntities: Entity[] = [];
 
