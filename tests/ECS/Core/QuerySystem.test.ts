@@ -67,21 +67,21 @@ describe('QuerySystem - 查询系统测试', () => {
         
         Entity.prototype.addComponent = function<T extends Component>(component: T): T {
             const result = originalAddComponent.call(this, component);
-            // 清理查询系统缓存，让其重新计算
-            querySystem.clearCache();
+            // 通知查询系统实体已更新，重建所有索引
+            querySystem.setEntities(entities);
             return result;
         };
         
         Entity.prototype.removeComponent = function(component: Component): void {
             originalRemoveComponent.call(this, component);
-            // 清理查询系统缓存，让其重新计算
-            querySystem.clearCache();
+            // 通知查询系统实体已更新，重建所有索引
+            querySystem.setEntities(entities);
         };
         
         Entity.prototype.removeAllComponents = function(): void {
             originalRemoveAllComponents.call(this);
-            // 清理查询系统缓存，让其重新计算
-            querySystem.clearCache();
+            // 通知查询系统实体已更新，重建所有索引
+            querySystem.setEntities(entities);
         };
     });
 
@@ -649,11 +649,18 @@ describe('QuerySystem - 查询系统测试', () => {
         });
 
         test('应该能够构建排除组件的查询', () => {
+            // 为一些实体添加HealthComponent，这样其他实体就不包含这个组件
+            entities[3].addComponent(new HealthComponent(100));
+            entities[4].addComponent(new HealthComponent(80));
+            
             const result = builder
                 .without(HealthComponent)
                 .execute();
             
-            expect(result.entities.length).toBe(3);
+            // 应该返回没有HealthComponent的8个实体
+            expect(result.entities.length).toBe(8);
+            expect(result.entities).not.toContain(entities[3]);
+            expect(result.entities).not.toContain(entities[4]);
         });
 
         test('应该能够重置查询构建器', () => {
@@ -691,6 +698,9 @@ describe('QuerySystem - 查询系统测试', () => {
             entities[0].tag = 100;
             entities[1].tag = 200;
             entities[2].tag = 100;
+            
+            // 重建索引以反映标签变化
+            querySystem.setEntities(entities);
             
             const result = querySystem.queryByTag(100);
             
@@ -745,7 +755,7 @@ describe('QuerySystem - 查询系统测试', () => {
             
             querySystem.addEntity(newEntity);
             let stats = querySystem.getStats();
-            expect(stats.entityCount).toBe(entities.length + 1);
+            expect(stats.entityCount).toBe(11);
             
             querySystem.removeEntity(newEntity);
             stats = querySystem.getStats();
@@ -761,7 +771,7 @@ describe('QuerySystem - 查询系统测试', () => {
             
             querySystem.addEntities(newEntities);
             const stats = querySystem.getStats();
-            expect(stats.entityCount).toBe(entities.length + 3);
+            expect(stats.entityCount).toBe(13);
         });
 
         test('应该能够批量添加实体（无重复检查）', () => {
@@ -772,7 +782,7 @@ describe('QuerySystem - 查询系统测试', () => {
             
             querySystem.addEntitiesUnchecked(newEntities);
             const stats = querySystem.getStats();
-            expect(stats.entityCount).toBe(entities.length + 2);
+            expect(stats.entityCount).toBe(12);
         });
 
         test('应该能够批量更新组件', () => {

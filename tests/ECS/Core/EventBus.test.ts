@@ -325,9 +325,9 @@ describe('EventBus - 事件总线测试', () => {
             });
 
             eventBus.emitPerformanceWarning({
-                level: 'warning',
-                message: 'FPS dropped below threshold',
-                data: { fps: 30, threshold: 60 },
+                operation: 'frame_render',
+                executionTime: 16.67,
+                metadata: { fps: 30, threshold: 60, message: 'FPS dropped below threshold' },
                 timestamp: Date.now()
             });
 
@@ -496,8 +496,8 @@ describe('事件装饰器测试', () => {
     test('EventHandler装饰器应该能够自动注册监听器', () => {
         const instance = new TestClass();
         
-        // 手动调用初始化方法（在实际应用中会在构造函数中调用）
-        if (typeof instance.initEventListeners === 'function') {
+        // 手动调用初始化方法来注册装饰器定义的监听器
+        if (typeof (instance as any).initEventListeners === 'function') {
             (instance as any).initEventListeners();
         }
         
@@ -511,8 +511,8 @@ describe('事件装饰器测试', () => {
     test('AsyncEventHandler装饰器应该能够自动注册异步监听器', async () => {
         const instance = new TestClass();
         
-        // 手动调用初始化方法
-        if (typeof instance.initEventListeners === 'function') {
+        // 手动调用初始化方法来注册装饰器定义的监听器
+        if (typeof (instance as any).initEventListeners === 'function') {
             (instance as any).initEventListeners();
         }
         

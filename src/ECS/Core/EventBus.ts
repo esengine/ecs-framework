@@ -394,6 +394,15 @@ export class EventBus implements IEventBus {
      * @param data 原始数据
      */
     private enhanceEventData<T>(eventType: string, data: T): T & IEventData {
+        // 处理null或undefined数据
+        if (data === null || data === undefined) {
+            return {
+                timestamp: Date.now(),
+                eventId: `${eventType}_${++this.eventIdCounter}`,
+                source: 'EventBus'
+            } as T & IEventData;
+        }
+        
         const enhanced = data as T & IEventData;
         
         // 如果数据还没有基础事件属性，添加它们
