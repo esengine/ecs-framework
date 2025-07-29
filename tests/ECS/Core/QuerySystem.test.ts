@@ -260,14 +260,14 @@ describe('QuerySystem - 查询系统测试', () => {
                 testEntities.push(entity);
             }
             
-            // 将实体添加到查询系统
-            querySystem.setEntities([...entities, ...testEntities]);
-            
-            // 添加组件
+            // 先添加组件
             for (const entity of testEntities) {
                 entity.addComponent(new PositionComponent(0, 0));
                 entity.addComponent(new VelocityComponent(1, 1));
             }
+            
+            // 将实体添加到查询系统
+            querySystem.setEntities([...entities, ...testEntities]);
 
             const startTime = performance.now();
             const result = querySystem.queryAll(PositionComponent, VelocityComponent);
@@ -317,10 +317,7 @@ describe('QuerySystem - 查询系统测试', () => {
                 testEntities.push(entity);
             }
             
-            // 将实体添加到查询系统
-            querySystem.setEntities([...entities, ...testEntities]);
-            
-            // 随机分配组件
+            // 先随机分配组件
             for (let i = 0; i < entityCount; i++) {
                 const entity = testEntities[i];
                 
@@ -338,6 +335,9 @@ describe('QuerySystem - 查询系统测试', () => {
                     entity.addComponent(new RenderComponent(true));
                 }
             }
+            
+            // 将实体添加到查询系统
+            querySystem.setEntities([...entities, ...testEntities]);
 
             const startTime = performance.now();
             

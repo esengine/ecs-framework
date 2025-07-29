@@ -378,9 +378,15 @@ export class QuerySystem {
         this.entityIndex.byComponentType.clear();
         this.entityIndex.byTag.clear();
         this.entityIndex.byName.clear();
+        
+        // 清理ArchetypeSystem和ComponentIndexManager
+        this.archetypeSystem.clear();
+        this.componentIndexManager.clear();
 
         for (const entity of this.entities) {
             this.addEntityToIndexes(entity);
+            this.componentIndexManager.addEntity(entity);
+            this.archetypeSystem.addEntity(entity);
         }
 
         this.indexDirty = false;
@@ -897,15 +903,25 @@ export class QuerySystem {
      * @returns 生成的位掩码
      */
     private createComponentMask(componentTypes: ComponentType[]): bigint {
-        // 使用位掩码优化器创建掩码
-        const componentNames = componentTypes.map(type => type.name);
-
-        // 确保组件类型已注册到优化器
-        for (const name of componentNames) {
-            this.bitMaskOptimizer.registerComponentType(name);
+        let mask = BigInt(0);
+        let hasValidComponents = false;
+        
+        for (const type of componentTypes) {
+            try {
+                const bitMask = ComponentRegistry.getBitMask(type);
+                mask |= bitMask;
+                hasValidComponents = true;
+            } catch (error) {
+                console.warn(`组件类型 ${type.name} 未注册，跳过`);
+            }
         }
-
-        return this.bitMaskOptimizer.createCombinedMask(componentNames);
+        
+        // 如果没有有效的组件类型，返回一个不可能匹配的掩码
+        if (!hasValidComponents) {
+            return BigInt(-1); // 所有位都是1，不可能与任何实体匹配
+        }
+        
+        return mask;
     }
 
     /**
