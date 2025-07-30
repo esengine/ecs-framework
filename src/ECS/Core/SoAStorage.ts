@@ -36,6 +36,18 @@ export function Float64(target: any, propertyKey: string | symbol): void {
 }
 
 /**
+ * 32位浮点数装饰器
+ * 标记字段使用Float32Array存储（默认类型，平衡性能和精度）
+ */
+export function Float32(target: any, propertyKey: string | symbol): void {
+    const key = String(propertyKey);
+    if (!target.constructor.__float32Fields) {
+        target.constructor.__float32Fields = new Set();
+    }
+    target.constructor.__float32Fields.add(key);
+}
+
+/**
  * 32位整数装饰器
  * 标记字段使用Int32Array存储（适用于整数值）
  */
@@ -46,6 +58,7 @@ export function Int32(target: any, propertyKey: string | symbol): void {
     }
     target.constructor.__int32Fields.add(key);
 }
+
 
 /**
  * 序列化Map装饰器
@@ -98,7 +111,6 @@ export function DeepCopy(target: any, propertyKey: string | symbol): void {
 /**
  * SoA存储器（需要装饰器启用）
  * 使用Structure of Arrays存储模式，在大规模批量操作时提供优异性能
- * 适用场景：>5000实体的批量更新操作
  */
 export class SoAStorage<T extends Component> {
     private fields = new Map<string, Float32Array | Float64Array | Int32Array>();
@@ -121,6 +133,7 @@ export class SoAStorage<T extends Component> {
         const instance = new componentType();
         const highPrecisionFields = (componentType as any).__highPrecisionFields || new Set();
         const float64Fields = (componentType as any).__float64Fields || new Set();
+        const float32Fields = (componentType as any).__float32Fields || new Set();
         const int32Fields = (componentType as any).__int32Fields || new Set();
         const serializeMapFields = (componentType as any).__serializeMapFields || new Set();
         const serializeSetFields = (componentType as any).__serializeSetFields || new Set();
@@ -142,6 +155,9 @@ export class SoAStorage<T extends Component> {
                     } else if (int32Fields.has(key)) {
                         // 使用Int32Array存储
                         this.fields.set(key, new Int32Array(this._capacity));
+                    } else if (float32Fields.has(key)) {
+                        // 使用Float32Array存储
+                        this.fields.set(key, new Float32Array(this._capacity));
                     } else {
                         // 默认使用Float32Array
                         this.fields.set(key, new Float32Array(this._capacity));
