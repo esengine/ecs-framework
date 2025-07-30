@@ -405,8 +405,11 @@ export class EntityManager {
      * const enemy = entityManager.createEntity(); // 使用默认名称
      * ```
      */
-    public createEntity(name: string = `Entity_${Date.now()}`): Entity {
+    public createEntity(name?: string): Entity {
         const id = this._identifierPool.checkOut();
+        if (!name) {
+            name = `Entity_${id}`;
+        }
         const entity = new Entity(name, id);
         
         this._entities.set(id, entity);
@@ -427,6 +430,67 @@ export class EntityManager {
         });
         
         return entity;
+    }
+
+    /**
+     * 批量创建实体
+     * 
+     * 为了优化大量实体创建的性能，批量处理索引更新和事件发射。
+     * 适用于需要创建大量实体的场景，如子弹、粒子等。
+     * 
+     * @param count 要创建的实体数量
+     * @param namePrefix 实体名称前缀，默认为 Entity
+     * @param skipEvents 是否跳过事件发射以提升性能，默认为 false
+     * @returns 创建的实体数组
+     * 
+     * @example
+     * const bullets = entityManager.createEntitiesBatch(100, "Bullet", true);
+     * const particles = entityManager.createEntitiesBatch(500, "Particle");
+     */
+    public createEntitiesBatch(
+        count: number, 
+        namePrefix: string = "Entity", 
+        skipEvents: boolean = false
+    ): Entity[] {
+        if (count <= 0) return [];
+        
+        const entities: Entity[] = [];
+        
+        // 批量分配ID和创建Entity对象
+        for (let i = 0; i < count; i++) {
+            const id = this._identifierPool.checkOut();
+            const name = `${namePrefix}_${id}`;
+            const entity = new Entity(name, id);
+            
+            entities.push(entity);
+            this._entities.set(id, entity);
+        }
+        
+        // 批量更新索引
+        for (const entity of entities) {
+            this.updateNameIndex(entity, true);
+            this.updateTagIndex(entity, true);
+            this._componentIndexManager.addEntity(entity);
+            this._archetypeSystem.addEntity(entity);
+            this._dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_ADDED);
+        }
+        
+        // 批量发射事件
+        if (!skipEvents) {
+            const timestamp = Date.now();
+            for (const entity of entities) {
+                this._eventBus.emitEntityCreated({
+                    timestamp,
+                    source: 'EntityManager',
+                    entityId: entity.id,
+                    entityName: entity.name,
+                    entityTag: entity.tag?.toString()
+                });
+            }
+        }
+        
+        
+        return entities;
     }
     
     /**
