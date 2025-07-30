@@ -1,4 +1,5 @@
 import { Component } from '../Component';
+import { IBigIntLike, BigIntFactory } from '../Utils/BigIntCompatibility';
 
 /**
  * 组件类型定义
@@ -38,12 +39,12 @@ export class ComponentRegistry {
      * @param componentType 组件类型
      * @returns 位掩码
      */
-    public static getBitMask<T extends Component>(componentType: ComponentType<T>): bigint {
+    public static getBitMask<T extends Component>(componentType: ComponentType<T>): IBigIntLike {
         const bitIndex = this.componentTypes.get(componentType);
         if (bitIndex === undefined) {
             throw new Error(`Component type ${componentType.name} is not registered`);
         }
-        return BigInt(1) << BigInt(bitIndex);
+        return BigIntFactory.one().shiftLeft(bitIndex);
     }
 
     /**
@@ -365,12 +366,13 @@ export class ComponentStorageManager {
      * @param entityId 实体ID
      * @returns 组件位掩码
      */
-    public getComponentMask(entityId: number): bigint {
-        let mask = BigInt(0);
+    public getComponentMask(entityId: number): IBigIntLike {
+        let mask = BigIntFactory.zero();
         
         for (const [componentType, storage] of this.storages.entries()) {
             if (storage.hasComponent(entityId)) {
-                mask |= ComponentRegistry.getBitMask(componentType as ComponentType);
+                const componentMask = ComponentRegistry.getBitMask(componentType as ComponentType);
+                mask = mask.or(componentMask);
             }
         }
         

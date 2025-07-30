@@ -1,4 +1,5 @@
 import { BitMaskOptimizer } from '../../../src/ECS/Core/BitMaskOptimizer';
+import { BigIntFactory } from '../../../src/ECS/Utils/BigIntCompatibility';
 
 describe('BitMaskOptimizer - 位掩码优化器测试', () => {
     let optimizer: BitMaskOptimizer;
@@ -58,15 +59,15 @@ describe('BitMaskOptimizer - 位掩码优化器测试', () => {
 
         it('应该能够创建单个组件的掩码', () => {
             const mask = optimizer.createSingleComponentMask('Transform');
-            expect(mask).toBe(1n);
+            expect(mask.toString()).toBe('1');
         });
 
         it('不同组件应该有不同的掩码', () => {
             const transformMask = optimizer.createSingleComponentMask('Transform');
             const velocityMask = optimizer.createSingleComponentMask('Velocity');
             
-            expect(transformMask).toBe(1n);
-            expect(velocityMask).toBe(2n);
+            expect(transformMask.toString()).toBe('1');
+            expect(velocityMask.toString()).toBe('2');
         });
 
         it('创建未注册组件的掩码应该抛出错误', () => {
@@ -91,7 +92,7 @@ describe('BitMaskOptimizer - 位掩码优化器测试', () => {
 
         it('应该能够创建多个组件的组合掩码', () => {
             const mask = optimizer.createCombinedMask(['Transform', 'Velocity']);
-            expect(mask).toBe(3n); // 1n | 2n = 3n
+            expect(mask.toString()).toBe('3'); // 1 | 2 = 3
         });
 
         it('组件顺序不应该影响掩码结果', () => {
@@ -102,12 +103,12 @@ describe('BitMaskOptimizer - 位掩码优化器测试', () => {
 
         it('三个组件的组合掩码应该正确', () => {
             const mask = optimizer.createCombinedMask(['Transform', 'Velocity', 'Health']);
-            expect(mask).toBe(7n); // 1n | 2n | 4n = 7n
+            expect(mask.toString()).toBe('7'); // 1 | 2 | 4 = 7
         });
 
         it('空数组应该返回0掩码', () => {
             const mask = optimizer.createCombinedMask([]);
-            expect(mask).toBe(0n);
+            expect(mask.isZero()).toBe(true);
         });
 
         it('包含未注册组件应该抛出错误', () => {
@@ -181,7 +182,7 @@ describe('BitMaskOptimizer - 位掩码优化器测试', () => {
             const originalMask = optimizer.createSingleComponentMask('Transform');
             const newMask = optimizer.removeComponentFromMask(originalMask, 'Velocity');
             
-            expect(newMask).toBe(originalMask);
+            expect(newMask.equals(originalMask)).toBe(true);
         });
     });
 
@@ -203,7 +204,7 @@ describe('BitMaskOptimizer - 位掩码优化器测试', () => {
         });
 
         it('空掩码应该返回空数组', () => {
-            const componentNames = optimizer.maskToComponentNames(0n);
+            const componentNames = optimizer.maskToComponentNames(BigIntFactory.zero());
             expect(componentNames).toEqual([]);
         });
 
@@ -218,7 +219,7 @@ describe('BitMaskOptimizer - 位掩码优化器测试', () => {
         });
 
         it('空掩码的组件数量应该为0', () => {
-            expect(optimizer.getComponentCount(0n)).toBe(0);
+            expect(optimizer.getComponentCount(BigIntFactory.zero())).toBe(0);
         });
     });
 
@@ -288,12 +289,12 @@ describe('BitMaskOptimizer - 位掩码优化器测试', () => {
             }
             
             const mask = optimizer.createSingleComponentMask('Component63');
-            expect(mask).toBe(1n << 63n);
+            expect(mask.toString()).toBe(BigIntFactory.one().shiftLeft(63).toString());
         });
 
         it('空组件名称数组的组合掩码', () => {
             const mask = optimizer.createCombinedMask([]);
-            expect(mask).toBe(0n);
+            expect(mask.isZero()).toBe(true);
             expect(optimizer.getComponentCount(mask)).toBe(0);
         });
     });

@@ -1,9 +1,13 @@
+import { IBigIntLike, BigIntFactory } from '../Utils/BigIntCompatibility';
+
 /**
  * 位掩码优化器，用于预计算和缓存常用的组件掩码
+ * 
+ * 使用BigInt兼容层确保在所有平台上的正常运行。
  */
 export class BitMaskOptimizer {
     private static instance: BitMaskOptimizer;
-    private maskCache = new Map<string, bigint>();
+    private maskCache = new Map<string, IBigIntLike>();
     private componentTypeMap = new Map<string, number>();
     private nextComponentId = 0;
 
@@ -35,8 +39,10 @@ export class BitMaskOptimizer {
 
     /**
      * 创建单个组件的掩码
+     * @param componentName 组件名称
+     * @returns 组件掩码
      */
-    createSingleComponentMask(componentName: string): bigint {
+    createSingleComponentMask(componentName: string): IBigIntLike {
         const cacheKey = `single:${componentName}`;
         
         if (this.maskCache.has(cacheKey)) {
@@ -48,15 +54,17 @@ export class BitMaskOptimizer {
             throw new Error(`Component type not registered: ${componentName}`);
         }
 
-        const mask = 1n << BigInt(componentId);
+        const mask = BigIntFactory.one().shiftLeft(componentId);
         this.maskCache.set(cacheKey, mask);
         return mask;
     }
 
     /**
      * 创建多个组件的组合掩码
+     * @param componentNames 组件名称数组
+     * @returns 组合掩码
      */
-    createCombinedMask(componentNames: string[]): bigint {
+    createCombinedMask(componentNames: string[]): IBigIntLike {
         const sortedNames = [...componentNames].sort();
         const cacheKey = `combined:${sortedNames.join(',')}`;
         
@@ -64,13 +72,14 @@ export class BitMaskOptimizer {
             return this.maskCache.get(cacheKey)!;
         }
 
-        let mask = 0n;
+        let mask = BigIntFactory.zero();
         for (const componentName of componentNames) {
             const componentId = this.getComponentTypeId(componentName);
             if (componentId === undefined) {
                 throw new Error(`Component type not registered: ${componentName}`);
             }
-            mask |= 1n << BigInt(componentId);
+            const componentMask = BigIntFactory.one().shiftLeft(componentId);
+            mask = mask.or(componentMask);
         }
 
         this.maskCache.set(cacheKey, mask);
@@ -79,42 +88,59 @@ export class BitMaskOptimizer {
 
     /**
      * 检查掩码是否包含指定组件
+     * @param mask 要检查的掩码
+     * @param componentName 组件名称
+     * @returns 是否包含指定组件
      */
-    maskContainsComponent(mask: bigint, componentName: string): boolean {
+    maskContainsComponent(mask: IBigIntLike, componentName: string): boolean {
         const componentMask = this.createSingleComponentMask(componentName);
-        return (mask & componentMask) !== 0n;
+        return !mask.and(componentMask).isZero();
     }
 
     /**
      * 检查掩码是否包含所有指定组件
+     * @param mask 要检查的掩码
+     * @param componentNames 组件名称数组
+     * @returns 是否包含所有指定组件
      */
-    maskContainsAllComponents(mask: bigint, componentNames: string[]): boolean {
+    maskContainsAllComponents(mask: IBigIntLike, componentNames: string[]): boolean {
         const requiredMask = this.createCombinedMask(componentNames);
-        return (mask & requiredMask) === requiredMask;
+        const intersection = mask.and(requiredMask);
+        return intersection.equals(requiredMask);
     }
 
     /**
      * 检查掩码是否包含任一指定组件
+     * @param mask 要检查的掩码
+     * @param componentNames 组件名称数组
+     * @returns 是否包含任一指定组件
      */
-    maskContainsAnyComponent(mask: bigint, componentNames: string[]): boolean {
+    maskContainsAnyComponent(mask: IBigIntLike, componentNames: string[]): boolean {
         const anyMask = this.createCombinedMask(componentNames);
-        return (mask & anyMask) !== 0n;
+        return !mask.and(anyMask).isZero();
     }
 
     /**
      * 添加组件到掩码
+     * @param mask 原始掩码
+     * @param componentName 要添加的组件名称
+     * @returns 新的掩码
      */
-    addComponentToMask(mask: bigint, componentName: string): bigint {
+    addComponentToMask(mask: IBigIntLike, componentName: string): IBigIntLike {
         const componentMask = this.createSingleComponentMask(componentName);
-        return mask | componentMask;
+        return mask.or(componentMask);
     }
 
     /**
      * 从掩码中移除组件
+     * @param mask 原始掩码
+     * @param componentName 要移除的组件名称
+     * @returns 新的掩码
      */
-    removeComponentFromMask(mask: bigint, componentName: string): bigint {
+    removeComponentFromMask(mask: IBigIntLike, componentName: string): IBigIntLike {
         const componentMask = this.createSingleComponentMask(componentName);
-        return mask & ~componentMask;
+        const notComponentMask = componentMask.not();
+        return mask.and(notComponentMask);
     }
 
     /**
@@ -155,12 +181,12 @@ export class BitMaskOptimizer {
     /**
      * 将掩码转换为组件名称数组
      */
-    maskToComponentNames(mask: bigint): string[] {
+    maskToComponentNames(mask: IBigIntLike): string[] {
         const componentNames: string[] = [];
         
         for (const [componentName, componentId] of this.componentTypeMap) {
-            const componentMask = 1n << BigInt(componentId);
-            if ((mask & componentMask) !== 0n) {
+            const componentMask = BigIntFactory.one().shiftLeft(componentId);
+            if (!mask.and(componentMask).isZero()) {
                 componentNames.push(componentName);
             }
         }
@@ -171,15 +197,16 @@ export class BitMaskOptimizer {
     /**
      * 获取掩码中组件的数量
      */
-    getComponentCount(mask: bigint): number {
+    getComponentCount(mask: IBigIntLike): number {
         let count = 0;
-        let tempMask = mask;
+        let tempMask = mask.clone();
+        const one = BigIntFactory.one();
         
-        while (tempMask !== 0n) {
-            if ((tempMask & 1n) !== 0n) {
+        while (!tempMask.isZero()) {
+            if (!tempMask.and(one).isZero()) {
                 count++;
             }
-            tempMask >>= 1n;
+            tempMask = tempMask.shiftRight(1);
         }
         
         return count;

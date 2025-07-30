@@ -5,6 +5,7 @@ import {
     ComponentType 
 } from '../../../src/ECS/Core/ComponentStorage';
 import { Component } from '../../../src/ECS/Component';
+import { BigIntFactory } from '../../../src/ECS/Utils/BigIntCompatibility';
 
 // 测试组件类
 class TestComponent extends Component {
@@ -93,8 +94,8 @@ describe('ComponentRegistry - 组件注册表测试', () => {
             const mask1 = ComponentRegistry.getBitMask(TestComponent);
             const mask2 = ComponentRegistry.getBitMask(PositionComponent);
             
-            expect(mask1).toBe(BigInt(1)); // 2^0
-            expect(mask2).toBe(BigInt(2)); // 2^1
+            expect(mask1.toString()).toBe('1'); // 2^0
+            expect(mask2.toString()).toBe('2'); // 2^1
         });
 
         test('应该能够获取组件的位索引', () => {
@@ -491,13 +492,12 @@ describe('ComponentStorageManager - 组件存储管理器测试', () => {
             const mask = manager.getComponentMask(1);
             
             // 应该包含TestComponent(位0)和PositionComponent(位1)的掩码
-            const expectedMask = BigInt(1) | BigInt(2); // 0b11
-            expect(mask).toBe(expectedMask);
+            expect(mask.toString()).toBe('3'); // 1 | 2 = 3
         });
 
         test('没有组件的实体应该有零掩码', () => {
             const mask = manager.getComponentMask(999);
-            expect(mask).toBe(BigInt(0));
+            expect(mask.isZero()).toBe(true);
         });
 
         test('添加和移除组件应该更新掩码', () => {
@@ -506,15 +506,15 @@ describe('ComponentStorageManager - 组件存储管理器测试', () => {
             
             manager.addComponent(1, new TestComponent(100));
             let mask = manager.getComponentMask(1);
-            expect(mask).toBe(BigInt(1));
+            expect(mask.toString()).toBe('1');
             
             manager.addComponent(1, new PositionComponent(10, 20));
             mask = manager.getComponentMask(1);
-            expect(mask).toBe(BigInt(3)); // 0b11
+            expect(mask.toString()).toBe('3'); // 0b11
             
             manager.removeComponent(1, TestComponent);
             mask = manager.getComponentMask(1);
-            expect(mask).toBe(BigInt(2)); // 0b10
+            expect(mask.toString()).toBe('2'); // 0b10
         });
     });
 

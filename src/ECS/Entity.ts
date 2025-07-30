@@ -1,6 +1,7 @@
 import { Component } from './Component';
 import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
 import { EventBus } from './Core/EventBus';
+import { IBigIntLike, BigIntFactory } from './Utils/BigIntCompatibility';
 
 /**
  * 实体比较器
@@ -152,7 +153,7 @@ export class Entity {
      * 
      * 用于快速查询实体拥有的组件类型。
      */
-    private _componentMask: bigint = BigInt(0);
+    private _componentMask: IBigIntLike = BigIntFactory.zero();
 
     /**
      * 组件类型到索引的映射
@@ -303,7 +304,7 @@ export class Entity {
      * 
      * @returns 实体的组件位掩码
      */
-    public get componentMask(): bigint {
+    public get componentMask(): IBigIntLike {
         return this._componentMask;
     }
 
@@ -345,7 +346,8 @@ export class Entity {
         this._componentTypeToIndex.set(componentType, index);
 
         // 更新位掩码
-        this._componentMask |= ComponentRegistry.getBitMask(componentType);
+        const componentMask = ComponentRegistry.getBitMask(componentType);
+        this._componentMask = this._componentMask.or(componentMask);
 
         return component;
     }
@@ -412,7 +414,7 @@ export class Entity {
         }
 
         const mask = ComponentRegistry.getBitMask(type);
-        if ((this._componentMask & mask) === BigInt(0)) {
+        if (this._componentMask.and(mask).isZero()) {
             return null;
         }
 
@@ -475,7 +477,7 @@ export class Entity {
         }
         
         const mask = ComponentRegistry.getBitMask(type);
-        return (this._componentMask & mask) !== BigInt(0);
+        return !this._componentMask.and(mask).isZero();
     }
 
     /**
@@ -515,7 +517,8 @@ export class Entity {
 
         // 更新位掩码
         if (ComponentRegistry.isRegistered(componentType)) {
-            this._componentMask &= ~ComponentRegistry.getBitMask(componentType);
+            const componentMask = ComponentRegistry.getBitMask(componentType);
+            this._componentMask = this._componentMask.and(componentMask.not());
         }
 
         // 从组件存储管理器中移除
@@ -574,7 +577,7 @@ export class Entity {
         
         // 清空索引和位掩码
         this._componentTypeToIndex.clear();
-        this._componentMask = BigInt(0);
+        this._componentMask = BigIntFactory.zero();
         
         // 移除组件
         for (const component of componentsToRemove) {

@@ -8,6 +8,7 @@ import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
 import { Scene } from './ECS/Scene';
 import { DebugManager } from './Utils/Debug';
 import { ICoreConfig, IECSDebugConfig } from './Types';
+import { BigIntFactory, EnvironmentInfo } from './ECS/Utils/BigIntCompatibility';
 
 /**
  * 游戏引擎核心类
@@ -122,6 +123,11 @@ export class Core {
     private _config: ICoreConfig;
 
     /**
+     * 兼容性信息
+     */
+    private _environmentInfo: EnvironmentInfo;
+
+    /**
      * 创建核心实例
      * 
      * @param config - Core配置对象
@@ -135,6 +141,9 @@ export class Core {
             enableEntitySystems: true,
             ...config
         };
+
+        // 检测环境兼容性
+        this._environmentInfo = BigIntFactory.getEnvironmentInfo();
 
         // 初始化管理器
         this._timerManager = new TimerManager();
@@ -157,6 +166,11 @@ export class Core {
         // 初始化调试管理器
         if (this._config.debugConfig?.enabled) {
             this._debugManager = new DebugManager(this, this._config.debugConfig);
+        }
+
+        // 在调试模式下显示兼容性信息
+        if (this._config.debug) {
+            this.logCompatibilityInfo();
         }
 
         this.initialize();
@@ -380,6 +394,24 @@ export class Core {
     }
 
     /**
+     * 获取环境兼容性信息
+     * 
+     * @returns 环境兼容性信息
+     */
+    public static getEnvironmentInfo(): EnvironmentInfo | null {
+        return this._instance?._environmentInfo || null;
+    }
+
+    /**
+     * 检查BigInt是否支持
+     * 
+     * @returns 是否支持BigInt
+     */
+    public static get supportsBigInt(): boolean {
+        return this._instance?._environmentInfo.supportsBigInt || false;
+    }
+
+    /**
      * 场景切换回调
      * 
      * 在场景切换时调用，用于重置时间系统等。
@@ -406,6 +438,24 @@ export class Core {
      */
     protected initialize() {
         // 核心系统初始化
+    }
+
+    /**
+     * 记录兼容性信息
+     * 
+     * 在控制台输出当前环境的兼容性信息和建议。
+     */
+    private logCompatibilityInfo(): void {
+        const info = this._environmentInfo;
+        
+        console.log('ECS Framework 兼容性检测结果:');
+        console.log(`   环境: ${info.environment}`);
+        console.log(`   JavaScript引擎: ${info.jsEngine}`);
+        console.log(`   BigInt支持: ${info.supportsBigInt ? '支持' : '不支持'}`);
+        
+        if (!info.supportsBigInt) {
+            console.warn('BigInt兼容模式已启用');
+        }
     }
 
     /**

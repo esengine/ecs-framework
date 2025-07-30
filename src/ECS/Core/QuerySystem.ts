@@ -1,6 +1,7 @@
 import { Entity } from '../Entity';
 import { Component } from '../Component';
 import { ComponentRegistry, ComponentType } from './ComponentStorage';
+import { IBigIntLike, BigIntFactory } from '../Utils/BigIntCompatibility';
 
 import { ComponentPoolManager } from './ComponentPool';
 import { BitMaskOptimizer } from './BitMaskOptimizer';
@@ -27,7 +28,7 @@ export enum QueryConditionType {
 export interface QueryCondition {
     type: QueryConditionType;
     componentTypes: ComponentType[];
-    mask: bigint;
+    mask: IBigIntLike;
 }
 
 /**
@@ -46,7 +47,7 @@ export interface QueryResult {
  * 实体索引结构
  */
 interface EntityIndex {
-    byMask: Map<bigint, Set<Entity>>;
+    byMask: Map<string, Set<Entity>>;
     byComponentType: Map<ComponentType, Set<Entity>>;
     byTag: Map<number, Set<Entity>>;
     byName: Map<string, Set<Entity>>;
@@ -275,10 +276,11 @@ export class QuerySystem {
         const mask = entity.componentMask;
 
         // 组件掩码索引 - 优化Map操作
-        let maskSet = this.entityIndex.byMask.get(mask);
+        const maskKey = mask.toString();
+        let maskSet = this.entityIndex.byMask.get(maskKey);
         if (!maskSet) {
             maskSet = new Set();
-            this.entityIndex.byMask.set(mask, maskSet);
+            this.entityIndex.byMask.set(maskKey, maskSet);
         }
         maskSet.add(entity);
 
@@ -324,11 +326,12 @@ export class QuerySystem {
         const mask = entity.componentMask;
 
         // 从组件掩码索引移除
-        const maskSet = this.entityIndex.byMask.get(mask);
+        const maskKey = mask.toString();
+        const maskSet = this.entityIndex.byMask.get(maskKey);
         if (maskSet) {
             maskSet.delete(entity);
             if (maskSet.size === 0) {
-                this.entityIndex.byMask.delete(mask);
+                this.entityIndex.byMask.delete(maskKey);
             }
         }
 
@@ -500,7 +503,7 @@ export class QuerySystem {
         const result: Entity[] = [];
 
         for (const entity of smallestSet) {
-            if ((entity.componentMask & mask) === mask) {
+            if (entity.componentMask.and(mask).equals(mask)) {
                 result.push(entity);
             }
         }
@@ -520,7 +523,7 @@ export class QuerySystem {
     private queryByLinearScan(componentTypes: ComponentType[]): Entity[] {
         const mask = this.createComponentMask(componentTypes);
         return this.entities.filter(entity =>
-            (entity.componentMask & mask) === mask
+            entity.componentMask.and(mask).equals(mask)
         );
     }
 
@@ -617,7 +620,7 @@ export class QuerySystem {
 
         const mask = this.createComponentMask(componentTypes);
         const entities = this.entities.filter(entity =>
-            (entity.componentMask & mask) === BigInt(0)
+            entity.componentMask.and(mask).isZero()
         );
 
         this.addToCache(cacheKey, entities);
@@ -902,14 +905,14 @@ export class QuerySystem {
      * @param componentTypes 组件类型列表
      * @returns 生成的位掩码
      */
-    private createComponentMask(componentTypes: ComponentType[]): bigint {
-        let mask = BigInt(0);
+    private createComponentMask(componentTypes: ComponentType[]): IBigIntLike {
+        let mask = BigIntFactory.zero();
         let hasValidComponents = false;
         
         for (const type of componentTypes) {
             try {
                 const bitMask = ComponentRegistry.getBitMask(type);
-                mask |= bitMask;
+                mask = mask.or(bitMask);
                 hasValidComponents = true;
             } catch (error) {
                 console.warn(`组件类型 ${type.name} 未注册，跳过`);
@@ -918,7 +921,7 @@ export class QuerySystem {
         
         // 如果没有有效的组件类型，返回一个不可能匹配的掩码
         if (!hasValidComponents) {
-            return BigInt(-1); // 所有位都是1，不可能与任何实体匹配
+            return BigIntFactory.create(-1); // 所有位都是1，不可能与任何实体匹配
         }
         
         return mask;
@@ -1161,12 +1164,12 @@ export class QueryBuilder {
     /**
      * 创建组件掩码
      */
-    private createComponentMask(componentTypes: ComponentType[]): bigint {
-        let mask = BigInt(0);
+    private createComponentMask(componentTypes: ComponentType[]): IBigIntLike {
+        let mask = BigIntFactory.zero();
         for (const type of componentTypes) {
             try {
                 const bitMask = ComponentRegistry.getBitMask(type);
-                mask |= bitMask;
+                mask = mask.or(bitMask);
             } catch (error) {
                 console.warn(`组件类型 ${type.name} 未注册，跳过`);
             }
