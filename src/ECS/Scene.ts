@@ -340,7 +340,7 @@ export class Scene {
         
         processor.scene = this;
         this.entityProcessors.add(processor);
-
+        processor.initialize();
         processor.setUpdateOrder(this.entityProcessors.count - 1);
         return processor;
     }
@@ -359,6 +359,7 @@ export class Scene {
      */
     public removeEntityProcessor(processor: EntitySystem) {
         this.entityProcessors.remove(processor);
+        processor.reset();
         processor.scene = null;
     }
 

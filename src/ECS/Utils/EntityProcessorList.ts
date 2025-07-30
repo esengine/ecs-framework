@@ -50,12 +50,11 @@ export class EntityProcessorList {
 
     /**
      * 开始处理
+     * 
+     * 对所有处理器进行排序以确保正确的执行顺序。
      */
     public begin(): void {
         this.sortProcessors();
-        for (const processor of this._processors) {
-            processor.initialize();
-        }
     }
 
     /**

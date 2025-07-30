@@ -34,6 +34,7 @@ export abstract class EntitySystem implements ISystemBase {
     private _enabled: boolean = true;
     private _performanceMonitor = PerformanceMonitor.instance;
     private _systemName: string;
+    private _initialized: boolean = false;
 
     /**
      * 获取系统处理的实体列表
@@ -117,9 +118,17 @@ export abstract class EntitySystem implements ISystemBase {
      * 系统初始化
      * 
      * 在系统创建时调用，自动检查场景中已存在的实体是否匹配此系统。
+     * 防止重复初始化以避免实体被重复处理。
      * 子类可以重写此方法进行额外的初始化操作。
      */
     public initialize(): void {
+        // 防止重复初始化
+        if (this._initialized) {
+            return;
+        }
+        
+        this._initialized = true;
+        
         if (this.scene?.entities?.buffer) {
             for (const entity of this.scene.entities.buffer) {
                 this.onChanged(entity);
@@ -127,6 +136,16 @@ export abstract class EntitySystem implements ISystemBase {
         }
         
         // 子类可以重写此方法进行额外初始化
+    }
+
+    /**
+     * 重置系统状态
+     * 
+     * 当系统从场景中移除时调用，重置初始化状态以便重新添加时能正确初始化。
+     */
+    public reset(): void {
+        this._initialized = false;
+        this._entities.length = 0;
     }
 
     /**

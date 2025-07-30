@@ -527,7 +527,9 @@ export class Entity {
         }
 
         // 调用组件的生命周期方法
-        component.onRemovedFromEntity();
+        if (component.onRemovedFromEntity) {
+            component.onRemovedFromEntity();
+        }
         
         // 发射组件移除事件
         if (Entity.eventBus) {
