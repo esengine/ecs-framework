@@ -7,7 +7,7 @@ import {
 import { Component } from '../../../src/ECS/Component';
 import { BigIntFactory } from '../../../src/ECS/Utils/BigIntCompatibility';
 
-// 测试组件类
+// 测试组件类（默认使用原始存储）
 class TestComponent extends Component {
     constructor(public value: number = 0) {
         super();

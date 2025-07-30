@@ -33,6 +33,7 @@
     "publish:npm": "npm run build:npm && cd dist && npm publish",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:performance": "jest --config jest.performance.config.js",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage",
     "test:clear": "jest --clearCache"

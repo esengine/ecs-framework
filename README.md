@@ -14,6 +14,7 @@ TypeScript ECS (Entity-Component-System) 框架，专为游戏开发设计。
 - 📡 **[类型安全事件系统](docs/concepts-explained.md#事件系统)** - 事件装饰器和异步事件处理
 - 🔍 **[查询系统](docs/concepts-explained.md#实体管理)** - 流式 API 和智能缓存
 - ⚡ **[性能优化](docs/concepts-explained.md#性能优化技术)** - 组件索引、Archetype 系统、脏标记
+- 🚀 **[SoA 存储优化](docs/soa-storage-guide.md)** - 大规模实体的向量化批量操作和内存优化
 - 🎯 **[实体管理器](docs/concepts-explained.md#实体管理)** - 统一的实体生命周期管理
 - 🧰 **调试工具** - 内置性能监控和调试信息
 
@@ -83,6 +84,31 @@ class HealthComponent extends Component {
     }
 }
 ```
+
+### SoA 高性能组件 (大规模场景推荐)
+
+对于需要处理大量实体的场景，可以使用 SoA 存储优化获得显著性能提升：
+
+```typescript
+import { Component, EnableSoA, Float32, Int32 } from '@esengine/ecs-framework';
+
+// 启用 SoA 优化的高性能组件
+@EnableSoA
+class OptimizedTransformComponent extends Component {
+    @Float32 public x: number = 0;
+    @Float32 public y: number = 0;
+    @Float32 public rotation: number = 0;
+}
+
+@EnableSoA  
+class ParticleComponent extends Component {
+    @Float32 public velocityX: number = 0;
+    @Float32 public velocityY: number = 0;
+    @Int32 public lifeTime: number = 1000;
+}
+```
+
+> ⚠️ **使用建议**: SoA 优化适用于大规模场景和批量操作。小规模应用请使用普通组件以避免不必要的复杂度。详见 [SoA 存储优化指南](docs/soa-storage-guide.md)。
 
 ### 创建实体
 
@@ -374,6 +400,7 @@ ecs-framework/
 
 ### 性能相关
 - [性能优化指南](docs/performance-optimization.md) - 性能优化技术和策略
+- [SoA 存储优化指南](docs/soa-storage-guide.md) - 大规模实体系统的高级性能优化 ⭐ **大规模项目推荐**
 
 ## 构建
 
