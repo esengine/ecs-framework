@@ -507,6 +507,8 @@ class ArrayBigInt implements IBigIntLike {
  */
 export class BigIntFactory {
     private static _supportsBigInt: boolean | null = null;
+    private static _cachedZero: IBigIntLike | null = null;
+    private static _cachedOne: IBigIntLike | null = null;
     // 缓存检测结果以避免重复检测
     
     /**
@@ -592,7 +594,10 @@ export class BigIntFactory {
      * @returns 零值的IBigIntLike实例
      */
     public static zero(): IBigIntLike {
-        return this.create(0);
+        if (!this._cachedZero) {
+            this._cachedZero = this.create(0);
+        }
+        return this._cachedZero;
     }
     
     /**
@@ -600,7 +605,10 @@ export class BigIntFactory {
      * @returns 1值的IBigIntLike实例
      */
     public static one(): IBigIntLike {
-        return this.create(1);
+        if (!this._cachedOne) {
+            this._cachedOne = this.create(1);
+        }
+        return this._cachedOne;
     }
     
     /**

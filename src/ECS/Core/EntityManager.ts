@@ -416,9 +416,11 @@ export class EntityManager {
         this.updateNameIndex(entity, true);
         this.updateTagIndex(entity, true);
         
-        this._componentIndexManager.addEntity(entity);
-        this._archetypeSystem.addEntity(entity);
-        this._dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_ADDED);
+        if (entity.components.length > 0) {
+            this._componentIndexManager.addEntity(entity);
+            this._archetypeSystem.addEntity(entity);
+            this._dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_ADDED);
+        }
         
         // 发射实体创建事件
         this._eventBus.emitEntityCreated({
@@ -470,9 +472,12 @@ export class EntityManager {
         for (const entity of entities) {
             this.updateNameIndex(entity, true);
             this.updateTagIndex(entity, true);
-            this._componentIndexManager.addEntity(entity);
-            this._archetypeSystem.addEntity(entity);
-            this._dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_ADDED);
+            
+            if (entity.components.length > 0) {
+                this._componentIndexManager.addEntity(entity);
+                this._archetypeSystem.addEntity(entity);
+                this._dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_ADDED);
+            }
         }
         
         // 批量发射事件

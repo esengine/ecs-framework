@@ -1,5 +1,4 @@
 import { Entity } from '../Entity';
-import { Component } from '../Component';
 import { ComponentType } from './ComponentStorage';
 
 /**
@@ -67,17 +66,29 @@ export class HashComponentIndex implements IComponentIndex {
     private _totalQueryTime = 0;
     private _lastUpdated = Date.now();
     
+    private _setPool: Set<Entity>[] = [];
+    private _componentTypeSetPool: Set<ComponentType>[] = [];
+    
     public addEntity(entity: Entity): void {
-        const components = entity.components;
-        const componentTypes = new Set<ComponentType>();
+        if (entity.components.length === 0) {
+            const componentTypes = this._componentTypeSetPool.pop() || new Set<ComponentType>();
+            componentTypes.clear();
+            this._entityToComponents.set(entity, componentTypes);
+            this._lastUpdated = Date.now();
+            return;
+        }
         
-        for (const component of components) {
+        const componentTypes = this._componentTypeSetPool.pop() || new Set<ComponentType>();
+        componentTypes.clear();
+        
+        for (const component of entity.components) {
             const componentType = component.constructor as ComponentType;
             componentTypes.add(componentType);
             
             let entities = this._componentToEntities.get(componentType);
             if (!entities) {
-                entities = new Set();
+                entities = this._setPool.pop() || new Set<Entity>();
+                entities.clear();
                 this._componentToEntities.set(componentType, entities);
             }
             entities.add(entity);
@@ -97,17 +108,28 @@ export class HashComponentIndex implements IComponentIndex {
                 entities.delete(entity);
                 if (entities.size === 0) {
                     this._componentToEntities.delete(componentType);
+                    if (this._setPool.length < 50) {
+                        entities.clear();
+                        this._setPool.push(entities);
+                    }
                 }
             }
         }
         
         this._entityToComponents.delete(entity);
+        
+        if (this._componentTypeSetPool.length < 50) {
+            componentTypes.clear();
+            this._componentTypeSetPool.push(componentTypes);
+        }
+        
         this._lastUpdated = Date.now();
     }
     
     public query(componentType: ComponentType): Set<Entity> {
         const startTime = performance.now();
-        const result = new Set(this._componentToEntities.get(componentType) || []);
+        const entities = this._componentToEntities.get(componentType);
+        const result = entities ? new Set(entities) : new Set<Entity>();
         
         this._queryCount++;
         this._totalQueryTime += performance.now() - startTime;
@@ -383,7 +405,10 @@ export class ComponentIndexManager {
      */
     public addEntity(entity: Entity): void {
         this._activeIndex.addEntity(entity);
-        this.checkOptimization();
+        
+        if (this._autoOptimize && this._activeIndex.getStats().queryCount % 100 === 0) {
+            this.checkOptimization();
+        }
     }
     
     /**
