@@ -4,38 +4,70 @@ import { Component } from '../../../src/ECS/Component';
 
 // 测试组件
 class PositionComponent extends Component {
-    constructor(public x: number = 0, public y: number = 0) {
+    public x: number;
+    public y: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [x = 0, y = 0] = args as [number?, number?];
+        this.x = x;
+        this.y = y;
     }
 }
 
 class VelocityComponent extends Component {
-    constructor(public vx: number = 0, public vy: number = 0) {
+    public vx: number;
+    public vy: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [vx = 0, vy = 0] = args as [number?, number?];
+        this.vx = vx;
+        this.vy = vy;
     }
 }
 
 class HealthComponent extends Component {
-    constructor(public health: number = 100, public maxHealth: number = 100) {
+    public health: number;
+    public maxHealth: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [health = 100, maxHealth = 100] = args as [number?, number?];
+        this.health = health;
+        this.maxHealth = maxHealth;
     }
 }
 
 class RenderComponent extends Component {
-    constructor(public visible: boolean = true, public color: string = 'white') {
+    public visible: boolean;
+    public color: string;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [visible = true, color = 'white'] = args as [boolean?, string?];
+        this.visible = visible;
+        this.color = color;
     }
 }
 
 class AIComponent extends Component {
-    constructor(public intelligence: number = 50) {
+    public intelligence: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [intelligence = 50] = args as [number?];
+        this.intelligence = intelligence;
     }
 }
 
 class PlayerComponent extends Component {
-    constructor(public name: string = 'Player') {
+    public name: string;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [name = 'Player'] = args as [string?];
+        this.name = name;
     }
 }
 

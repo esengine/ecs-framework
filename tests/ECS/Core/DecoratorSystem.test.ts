@@ -7,20 +7,37 @@ import { EventBus } from '../../../src/ECS/Core/EventBus';
 
 // 测试组件
 class TransformComponent extends Component {
-    constructor(public x: number = 0, public y: number = 0, public rotation: number = 0) {
+    public x: number = 0;
+    public y: number = 0;
+    public rotation: number = 0;
+    
+    constructor(...args: unknown[]) {
         super();
+        if (args.length >= 1) this.x = args[0] as number;
+        if (args.length >= 2) this.y = args[1] as number;
+        if (args.length >= 3) this.rotation = args[2] as number;
     }
 }
 
 class VelocityComponent extends Component {
-    constructor(public vx: number = 0, public vy: number = 0) {
+    public vx: number = 0;
+    public vy: number = 0;
+    
+    constructor(...args: unknown[]) {
         super();
+        if (args.length >= 1) this.vx = args[0] as number;
+        if (args.length >= 2) this.vy = args[1] as number;
     }
 }
 
 class HealthComponent extends Component {
-    constructor(public health: number = 100, public maxHealth: number = 100) {
+    public health: number = 100;
+    public maxHealth: number = 100;
+    
+    constructor(...args: unknown[]) {
         super();
+        if (args.length >= 1) this.health = args[0] as number;
+        if (args.length >= 2) this.maxHealth = args[1] as number;
     }
 }
 

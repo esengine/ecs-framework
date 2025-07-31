@@ -5,38 +5,70 @@ import { ComponentRegistry, ComponentType } from '../../../src/ECS/Core/Componen
 
 // 测试组件
 class PositionComponent extends Component {
-    constructor(public x: number = 0, public y: number = 0) {
+    public x: number;
+    public y: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [x = 0, y = 0] = args as [number?, number?];
+        this.x = x;
+        this.y = y;
     }
 }
 
 class VelocityComponent extends Component {
-    constructor(public vx: number = 0, public vy: number = 0) {
+    public vx: number;
+    public vy: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [vx = 0, vy = 0] = args as [number?, number?];
+        this.vx = vx;
+        this.vy = vy;
     }
 }
 
 class HealthComponent extends Component {
-    constructor(public health: number = 100, public maxHealth: number = 100) {
+    public health: number;
+    public maxHealth: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [health = 100, maxHealth = 100] = args as [number?, number?];
+        this.health = health;
+        this.maxHealth = maxHealth;
     }
 }
 
 class RenderComponent extends Component {
-    constructor(public visible: boolean = true, public layer: number = 0) {
+    public visible: boolean;
+    public layer: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [visible = true, layer = 0] = args as [boolean?, number?];
+        this.visible = visible;
+        this.layer = layer;
     }
 }
 
 class AIComponent extends Component {
-    constructor(public behavior: string = 'idle') {
+    public behavior: string;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [behavior = 'idle'] = args as [string?];
+        this.behavior = behavior;
     }
 }
 
 class PhysicsComponent extends Component {
-    constructor(public mass: number = 1.0) {
+    public mass: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [mass = 1.0] = args as [number?];
+        this.mass = mass;
     }
 }
 

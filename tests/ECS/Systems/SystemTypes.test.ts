@@ -9,14 +9,22 @@ import { Matcher } from '../../../src/ECS/Utils/Matcher';
 
 // 测试组件
 class TestComponent extends Component {
-    constructor(public value: number = 0) {
+    public value: number = 0;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [value = 0] = args as [number?];
+        this.value = value;
     }
 }
 
 class AnotherComponent extends Component {
-    constructor(public name: string = 'test') {
+    public name: string = 'test';
+    
+    constructor(...args: unknown[]) {
         super();
+        const [name = 'test'] = args as [string?];
+        this.name = name;
     }
 }
 

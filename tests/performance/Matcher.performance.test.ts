@@ -11,26 +11,42 @@ import { Matcher } from '../../src/ECS/Utils/Matcher';
 
 // 测试组件
 class Position extends Component {
-    constructor(public x: number = 0, public y: number = 0) {
+    public x: number = 0;
+    public y: number = 0;
+    
+    constructor(...args: unknown[]) {
         super();
+        if (args.length >= 1) this.x = args[0] as number;
+        if (args.length >= 2) this.y = args[1] as number;
     }
 }
 
 class Velocity extends Component {
-    constructor(public vx: number = 0, public vy: number = 0) {
+    public vx: number = 0;
+    public vy: number = 0;
+    
+    constructor(...args: unknown[]) {
         super();
+        if (args.length >= 1) this.vx = args[0] as number;
+        if (args.length >= 2) this.vy = args[1] as number;
     }
 }
 
 class Health extends Component {
-    constructor(public hp: number = 100) {
+    public hp: number = 100;
+    
+    constructor(...args: unknown[]) {
         super();
+        if (args.length >= 1) this.hp = args[0] as number;
     }
 }
 
 class Weapon extends Component {
-    constructor(public damage: number = 10) {
+    public damage: number = 10;
+    
+    constructor(...args: unknown[]) {
         super();
+        if (args.length >= 1) this.damage = args[0] as number;
     }
 }
 

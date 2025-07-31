@@ -1,6 +1,6 @@
 /**
  * Matcher完整测试套件
- * 包含功能测试、性能测试和向后兼容性测试
+ * 测试新的Matcher条件构建功能和QuerySystem集成
  */
 
 import { Scene } from '../../../src/ECS/Scene';
@@ -10,20 +10,36 @@ import { Matcher } from '../../../src/ECS/Utils/Matcher';
 
 // 测试组件
 class Position extends Component {
-    constructor(public x: number = 0, public y: number = 0) {
+    public x: number = 0;
+    public y: number = 0;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [x = 0, y = 0] = args as [number?, number?];
+        this.x = x;
+        this.y = y;
     }
 }
 
 class Velocity extends Component {
-    constructor(public vx: number = 0, public vy: number = 0) {
+    public vx: number = 0;
+    public vy: number = 0;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [vx = 0, vy = 0] = args as [number?, number?];
+        this.vx = vx;
+        this.vy = vy;
     }
 }
 
 class Health extends Component {
-    constructor(public hp: number = 100) {
+    public hp: number = 100;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [hp = 100] = args as [number?];
+        this.hp = hp;
     }
 }
 
@@ -71,293 +87,202 @@ describe('Matcher测试套件', () => {
         scene.end();
     });
 
-    describe('新API测试', () => {
-        test('create()应该创建有效的matcher', () => {
-            const matcher = Matcher.create(scene.querySystem);
-            expect(matcher).toBeInstanceOf(Matcher);
-        });
-        
-        test('all()查询应该正确工作', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Position, Health);
+    describe('Matcher条件构建测试', () => {
+        test('Matcher.all()应该创建正确的查询条件', () => {
+            const matcher = Matcher.all(Position, Health);
+            const condition = matcher.getCondition();
             
-            const result = matcher.query();
-            expect(result).toHaveLength(2);
-            expect(result.map(e => e.name).sort()).toEqual(['MovingAlive', 'StillAlive']);
+            expect(condition.all).toContain(Position);
+            expect(condition.all).toContain(Health);
+            expect(condition.all.length).toBe(2);
         });
         
-        test('any()查询应该正确工作', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .any(Health, Dead);
+        test('Matcher.any()应该创建正确的查询条件', () => {
+            const matcher = Matcher.any(Health, Dead);
+            const condition = matcher.getCondition();
             
-            const result = matcher.query();
-            expect(result).toHaveLength(4); // 所有实体
+            expect(condition.any).toContain(Health);
+            expect(condition.any).toContain(Dead);
+            expect(condition.any.length).toBe(2);
         });
         
-        test('none()查询应该正确工作', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Position)
-                .none(Dead);
+        test('Matcher.none()应该创建正确的查询条件', () => {
+            const matcher = Matcher.none(Dead);
+            const condition = matcher.getCondition();
             
-            const result = matcher.query();
-            expect(result).toHaveLength(2);
-            expect(result.map(e => e.name).sort()).toEqual(['MovingAlive', 'StillAlive']);
+            expect(condition.none).toContain(Dead);
+            expect(condition.none.length).toBe(1);
         });
         
-        test('复合查询应该正确工作', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Position)
+        test('链式调用应该正确工作', () => {
+            const matcher = Matcher.all(Position)
                 .any(Health, Velocity)
                 .none(Dead);
             
-            const result = matcher.query();
-            expect(result).toHaveLength(2);
-            expect(result.map(e => e.name).sort()).toEqual(['MovingAlive', 'StillAlive']);
+            const condition = matcher.getCondition();
+            expect(condition.all).toContain(Position);
+            expect(condition.any).toContain(Health);
+            expect(condition.any).toContain(Velocity);
+            expect(condition.none).toContain(Dead);
         });
         
-        test('matches()应该正确检查单个实体', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Position, Velocity);
+        test('byComponent()应该创建单组件查询条件', () => {
+            const matcher = Matcher.byComponent(Position);
+            const condition = matcher.getCondition();
             
-            expect(matcher.matches(entities[0])).toBe(true);  // MovingAlive
-            expect(matcher.matches(entities[1])).toBe(false); // StillAlive
-            expect(matcher.matches(entities[2])).toBe(true);  // MovingDead
-            expect(matcher.matches(entities[3])).toBe(false); // StillDead
+            expect(condition.component).toBe(Position);
         });
         
-        test('count()和exists()应该正确工作', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Health);
+        test('byTag()应该创建标签查询条件', () => {
+            const matcher = Matcher.byTag(123);
+            const condition = matcher.getCondition();
             
-            expect(matcher.count()).toBe(2);
-            expect(matcher.exists()).toBe(true);
-            
-            const emptyMatcher = Matcher.create(scene.querySystem)
-                .all(Health, Dead);
-            
-            expect(emptyMatcher.count()).toBe(0);
-            expect(emptyMatcher.exists()).toBe(false);
+            expect(condition.tag).toBe(123);
         });
         
-        test('clone()应该创建独立的matcher', () => {
-            const baseMatcher = Matcher.create(scene.querySystem)
-                .all(Position);
+        test('byName()应该创建名称查询条件', () => {
+            const matcher = Matcher.byName('TestEntity');
+            const condition = matcher.getCondition();
             
-            const livingMatcher = baseMatcher.clone()
-                .all(Health)
-                .none(Dead);
-            
-            const deadMatcher = baseMatcher.clone()
-                .all(Dead);
-            
-            expect(livingMatcher.count()).toBe(2);
-            expect(deadMatcher.count()).toBe(2);
-            expect(baseMatcher.count()).toBe(4); // 原始matcher不受影响
-        });
-        
-        test('reset()应该清空所有条件', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Position)
-                .any(Health)
-                .none(Dead);
-            
-            expect(matcher.count()).toBe(2);
-            
-            matcher.reset();
-            expect(matcher.count()).toBe(4); // 所有实体
+            expect(condition.name).toBe('TestEntity');
         });
     });
-
-    describe('向后兼容性测试', () => {
-        test('empty()和withQuerySystem()应该正常工作', () => {
-            const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-            
-            const matcher = Matcher.empty()
-                .all(Position, Health)
-                .withQuerySystem(scene.querySystem);
-            
-            const result = matcher.query();
-            expect(result).toHaveLength(2);
-            
-            // 应该有deprecation警告
-            expect(consoleSpy).toHaveBeenCalledWith(
-                'withQuerySystem() is deprecated. Use Matcher.create(querySystem) instead.'
-            );
-            
-            consoleSpy.mockRestore();
+    
+    describe('QuerySystem集成测试', () => {
+        test('使用QuerySystem的queryAll()查询所有匹配实体', () => {
+            const result = scene.querySystem.queryAll(Position, Health);
+            expect(result.entities.map(e => e.name).sort()).toEqual(['MovingAlive', 'StillAlive']);
         });
         
-        test('deprecated方法应该工作并显示警告', () => {
-            const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-            
-            const matcher = Matcher.empty()
-                .all(Position)
-                .withQuerySystem(scene.querySystem);
-            
-            // 测试deprecated方法
-            expect(matcher.isInterestedEntity(entities[0])).toBe(true);
-            const result = matcher.queryEntities();
-            expect(result).toHaveLength(4);
-            
-            // 测试getter方法
-            expect(matcher.getAllSet()).toEqual([Position]);
-            expect(matcher.getExclusionSet()).toEqual([]);
-            expect(matcher.getOneSet()).toEqual([]);
-            
-            // 验证警告
-            expect(consoleSpy).toHaveBeenCalledWith(
-                'isInterestedEntity() is deprecated. Use matches() instead.'
-            );
-            expect(consoleSpy).toHaveBeenCalledWith(
-                'queryEntities() is deprecated. Use query() instead.'
-            );
-            
-            consoleSpy.mockRestore();
+        test('使用QuerySystem的queryAny()查询任一匹配实体', () => {
+            const result = scene.querySystem.queryAny(Health, Dead);
+            expect(result.entities.length).toBe(4); // 所有实体都有Health或Dead
         });
         
-        test('无QuerySystem时应该抛出错误', () => {
-            const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-            
-            const matcher = Matcher.empty()
-                .all(Position, Health);
-            
-            // 应该抛出错误而不是回退
-            expect(() => matcher.matches(entities[0])).toThrow(
-                'Matcher requires QuerySystem. Use Matcher.create(querySystem) or call withQuerySystem() first.'
-            );
-            
-            expect(() => matcher.query()).toThrow(
-                'Matcher requires QuerySystem. Use Matcher.create(querySystem) or call withQuerySystem() first.'
-            );
-            
-            consoleSpy.mockRestore();
+        test('使用QuerySystem的queryNone()查询排除实体', () => {
+            const result = scene.querySystem.queryNone(Dead);
+            const aliveEntities = result.entities.filter(e => e.hasComponent(Position));
+            expect(aliveEntities.map(e => e.name).sort()).toEqual(['MovingAlive', 'StillAlive']);
         });
         
-        test('新旧API应该产生相同结果', () => {
-            const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+        test('QuerySystem查询性能统计', () => {
+            scene.querySystem.queryAll(Position, Velocity);
+            const stats = scene.querySystem.getStats();
             
-            // 旧API
-            const oldMatcher = Matcher.empty()
-                .all(Position)
-                .exclude(Dead)
-                .withQuerySystem(scene.querySystem);
+            expect(stats.queryStats.totalQueries).toBeGreaterThan(0);
+            expect(stats.queryStats.cacheHits).toBeGreaterThanOrEqual(0);
+        });
+    });
+    
+    describe('实际使用场景测试', () => {
+        test('游戏系统中的移动实体查询', () => {
+            // 查询所有可移动的实体（有位置和速度的）
+            const movableEntities = scene.querySystem.queryAll(Position, Velocity);
+            expect(movableEntities.entities.length).toBe(2); // MovingAlive, MovingDead
             
-            // 新API
-            const newMatcher = Matcher.create(scene.querySystem)
-                .all(Position)
-                .none(Dead);
+            movableEntities.entities.forEach(entity => {
+                const pos = entity.getComponent(Position)!;
+                const vel = entity.getComponent(Velocity)!;
+                expect(pos).toBeDefined();
+                expect(vel).toBeDefined();
+            });
+        });
+        
+        test('游戏系统中的活体实体查询', () => {
+            // 查询所有活体实体（有血量，没有死亡标记的）
+            const aliveEntitiesAll = scene.querySystem.queryAll(Health);
+            const deadEntitiesAll = scene.querySystem.queryAll(Dead);
             
-            // 结果应该相同
-            const oldResult = oldMatcher.query().sort((a, b) => a.id - b.id);
-            const newResult = newMatcher.query().sort((a, b) => a.id - b.id);
+            expect(aliveEntitiesAll.entities.length).toBe(2); // MovingAlive, StillAlive
+            expect(deadEntitiesAll.entities.length).toBe(2); // MovingDead, StillDead
+        });
+        
+        test('复杂查询：查找活着的移动实体', () => {
+            // 首先获取所有有位置和速度的实体
+            const movableEntities = scene.querySystem.queryAll(Position, Velocity);
             
-            expect(oldResult).toEqual(newResult);
+            // 然后过滤出活着的（有血量的）
+            const aliveMovableEntities = movableEntities.entities.filter(entity => 
+                entity.hasComponent(Health)
+            );
             
-            // 单个实体检查也应该相同
-            for (const entity of entities) {
-                expect(oldMatcher.matches(entity)).toBe(newMatcher.matches(entity));
+            expect(aliveMovableEntities.length).toBe(1); // 只有MovingAlive
+            expect(aliveMovableEntities[0].name).toBe('MovingAlive');
+        });
+        
+        test('复合查询条件应用', () => {
+            // 使用Matcher建立复杂条件，然后用QuerySystem执行
+            const matcher = Matcher.all(Position).any(Health, Dead);
+            const condition = matcher.getCondition();
+            
+            // 这里演示如何用条件，实际执行需要QuerySystem支持复合条件
+            expect(condition.all).toContain(Position);
+            expect(condition.any).toContain(Health);
+            expect(condition.any).toContain(Dead);
+        });
+    });
+    
+    describe('性能测试', () => {
+        test('大量简单查询的性能', () => {
+            const startTime = performance.now();
+            
+            for (let i = 0; i < 1000; i++) {
+                scene.querySystem.queryAll(Position);
             }
             
-            consoleSpy.mockRestore();
-        });
-    });
-
-    describe('缓存机制测试', () => {
-        test('条件变更应该使缓存失效', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Position);
-            
-            const result1 = matcher.query();
-            
-            // 添加条件
-            matcher.all(Health);
-            const result2 = matcher.query();
-            
-            // 结果应该不同
-            expect(result2.length).toBeLessThan(result1.length);
+            const executionTime = performance.now() - startTime;
+            expect(executionTime).toBeLessThan(100); // 应该在100ms内完成
         });
         
-        test('QuerySystem版本变更应该使缓存失效', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Position);
+        test('复杂查询的性能', () => {
+            const startTime = performance.now();
             
-            const result1 = matcher.query();
+            for (let i = 0; i < 100; i++) {
+                scene.querySystem.queryAll(Position, Health);
+                scene.querySystem.queryAny(Health, Dead);
+                scene.querySystem.queryNone(Dead);
+            }
             
-            // 添加新实体触发版本变更
-            const newEntity = scene.createEntity('NewEntity');
-            newEntity.addComponent(new Position(100, 100));
-            
-            const result2 = matcher.query();
-            
-            // 结果应该包含新实体
-            expect(result2.length).toBe(result1.length + 1);
+            const executionTime = performance.now() - startTime;
+            expect(executionTime).toBeLessThan(50);
         });
         
-        test('重复查询应该使用缓存', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Position);
+        test('不存在组件的查询性能', () => {
+            class NonExistentComponent extends Component {
+                constructor(...args: unknown[]) {
+                    super();
+                }
+            }
             
-            const result1 = matcher.query();
-            const result2 = matcher.query();
-            
-            // 结果应该相同（功能测试，不测性能）
-            expect(result1).toEqual(result2);
+            const result = scene.querySystem.queryAll(NonExistentComponent);
+            expect(result.entities.length).toBe(0);
         });
     });
-
+    
     describe('边界情况测试', () => {
-        test('空条件应该返回所有实体', () => {
-            const matcher = Matcher.create(scene.querySystem);
-            const result = matcher.query();
-            expect(result.length).toBeGreaterThan(0);
+        test('空查询应该返回所有实体', () => {
+            const result = scene.querySystem.queryAll();
+            expect(result.entities.length).toBe(entities.length);
         });
         
-        test('不存在的组件查询应该返回空结果', () => {
-            class NonExistentComponent extends Component {}
+        test('查询不存在的组件应该返回空结果', () => {
+            class NonExistentComponent extends Component {
+                constructor(...args: unknown[]) {
+                    super();
+                }
+            }
             
-            const matcher = Matcher.create(scene.querySystem)
-                .all(NonExistentComponent);
-            
-            expect(matcher.query()).toEqual([]);
-            expect(matcher.count()).toBe(0);
-            expect(matcher.exists()).toBe(false);
+            const result = scene.querySystem.queryAll(NonExistentComponent);
+            expect(result.entities.length).toBe(0);
         });
         
-        test('复杂的排除条件应该正确工作', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Position)
-                .none(Health, Dead); // 排除有血量或死亡的
+        test('Matcher条件构建的边界情况', () => {
+            const emptyMatcher = Matcher.complex();
+            const condition = emptyMatcher.getCondition();
             
-            // 应该没有结果，因为所有有Position的实体都有Health或Dead
-            expect(matcher.query()).toEqual([]);
-        });
-        
-        test('toString()应该提供有用的描述', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Position, Health)
-                .any(Velocity)
-                .none(Dead);
-            
-            const description = matcher.toString();
-            expect(description).toContain('all(Position, Health)');
-            expect(description).toContain('any(Velocity)');
-            expect(description).toContain('none(Dead)');
-        });
-        
-        test('getCondition()应该返回只读条件', () => {
-            const matcher = Matcher.create(scene.querySystem)
-                .all(Position)
-                .any(Health)
-                .none(Dead);
-            
-            const condition = matcher.getCondition();
-            expect(condition.all).toEqual([Position]);
-            expect(condition.any).toEqual([Health]);
-            expect(condition.none).toEqual([Dead]);
-            
-            // 修改返回的条件不应该影响原matcher
-            condition.all.push(Velocity as any);
-            expect(matcher.getCondition().all).toEqual([Position]);
+            expect(condition.all.length).toBe(0);
+            expect(condition.any.length).toBe(0);
+            expect(condition.none.length).toBe(0);
         });
     });
 });

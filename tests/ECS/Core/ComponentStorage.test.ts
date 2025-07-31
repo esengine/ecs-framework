@@ -9,26 +9,48 @@ import { BigIntFactory } from '../../../src/ECS/Utils/BigIntCompatibility';
 
 // 测试组件类（默认使用原始存储）
 class TestComponent extends Component {
-    constructor(public value: number = 0) {
+    public value: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [value = 0] = args as [number?];
+        this.value = value;
     }
 }
 
 class PositionComponent extends Component {
-    constructor(public x: number = 0, public y: number = 0) {
+    public x: number;
+    public y: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [x = 0, y = 0] = args as [number?, number?];
+        this.x = x;
+        this.y = y;
     }
 }
 
 class VelocityComponent extends Component {
-    constructor(public vx: number = 0, public vy: number = 0) {
+    public vx: number;
+    public vy: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [vx = 0, vy = 0] = args as [number?, number?];
+        this.vx = vx;
+        this.vy = vy;
     }
 }
 
 class HealthComponent extends Component {
-    constructor(public health: number = 100, public maxHealth: number = 100) {
+    public health: number;
+    public maxHealth: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [health = 100, maxHealth = 100] = args as [number?, number?];
+        this.health = health;
+        this.maxHealth = maxHealth;
     }
 }
 

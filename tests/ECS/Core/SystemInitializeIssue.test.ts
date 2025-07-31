@@ -6,26 +6,42 @@ import { Matcher } from '../../../src/ECS/Utils/Matcher';
 
 // 测试组件
 class PositionComponent extends Component {
-    constructor(public x: number = 0, public y: number = 0) {
+    public x: number;
+    public y: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        this.x = (args[0] as number) ?? 0;
+        this.y = (args[1] as number) ?? 0;
     }
 }
 
 class VelocityComponent extends Component {
-    constructor(public vx: number = 0, public vy: number = 0) {
+    public vx: number;
+    public vy: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        this.vx = (args[0] as number) ?? 0;
+        this.vy = (args[1] as number) ?? 0;
     }
 }
 
 class HealthComponent extends Component {
-    constructor(public health: number = 100) {
+    public health: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        this.health = (args[0] as number) ?? 100;
     }
 }
 
 class TagComponent extends Component {
-    constructor(public tag: string = '') {
+    public tag: string;
+    
+    constructor(...args: unknown[]) {
         super();
+        this.tag = (args[0] as string) ?? '';
     }
 }
 

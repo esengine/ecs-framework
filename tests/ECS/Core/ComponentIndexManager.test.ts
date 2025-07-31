@@ -5,14 +5,20 @@ import { Component } from '../../../src/ECS/Component';
 
 // 测试用组件
 class TestComponent extends Component {
-    constructor(public value: number = 0) {
+    public value: number = 0;
+    
+    constructor(...args: unknown[]) {
         super();
+        if (args.length >= 1) this.value = args[0] as number;
     }
 }
 
 class AnotherTestComponent extends Component {
-    constructor(public name: string = 'test') {
+    public name: string = 'test';
+    
+    constructor(...args: unknown[]) {
         super();
+        if (args.length >= 1) this.name = args[0] as string;
     }
 }
 

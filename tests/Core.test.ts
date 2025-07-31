@@ -7,8 +7,12 @@ import { ITimer } from '../src/Utils/Timers/ITimer';
 
 // 测试组件
 class TestComponent extends Component {
-    constructor(public value: number = 0) {
+    public value: number;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [value = 0] = args as [number?];
+        this.value = value;
     }
 }
 

@@ -5,8 +5,12 @@ import { EntitySystem } from '../../../src/ECS/Systems/EntitySystem';
 import { ComponentTypeManager } from '../../../src/ECS/Utils/ComponentTypeManager';
 
 class TestComponent extends Component {
-    constructor(public value: number = 0) {
+    public value: number = 0;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [value = 0] = args as [number?];
+        this.value = value;
     }
 }
 
@@ -26,7 +30,7 @@ class TrackingSystem extends EntitySystem {
         }
     }
 
-    public override onChanged(entity: Entity): void {
+    public onChanged(entity: Entity): void {
         this.onChangedCallCount++;
         if (this.isInterestedEntity(entity)) {
             if (!this.trackedEntities.includes(entity)) {

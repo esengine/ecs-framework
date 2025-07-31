@@ -6,8 +6,9 @@ class TestPositionComponent extends Component {
     public x: number = 0;
     public y: number = 0;
     
-    constructor(x: number = 0, y: number = 0) {
+    constructor(...args: unknown[]) {
         super();
+        const [x = 0, y = 0] = args as [number?, number?];
         this.x = x;
         this.y = y;
     }
@@ -16,8 +17,9 @@ class TestPositionComponent extends Component {
 class TestHealthComponent extends Component {
     public health: number = 100;
     
-    constructor(health: number = 100) {
+    constructor(...args: unknown[]) {
         super();
+        const [health = 100] = args as [number?];
         this.health = health;
     }
 }
@@ -26,8 +28,9 @@ class TestVelocityComponent extends Component {
     public vx: number = 0;
     public vy: number = 0;
     
-    constructor(vx: number = 0, vy: number = 0) {
+    constructor(...args: unknown[]) {
         super();
+        const [vx = 0, vy = 0] = args as [number?, number?];
         this.vx = vx;
         this.vy = vy;
     }
@@ -36,8 +39,9 @@ class TestVelocityComponent extends Component {
 class TestRenderComponent extends Component {
     public visible: boolean = true;
     
-    constructor(visible: boolean = true) {
+    constructor(...args: unknown[]) {
         super();
+        const [visible = true] = args as [boolean?];
         this.visible = visible;
     }
 }

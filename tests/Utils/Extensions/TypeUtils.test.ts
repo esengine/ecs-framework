@@ -3,11 +3,19 @@ import { TypeUtils } from '../../../src/Utils/Extensions/TypeUtils';
 describe('TypeUtils - 类型工具类测试', () => {
     // 测试用的类和对象
     class TestClass {
-        constructor(public value: number = 0) {}
+        public value: number = 0;
+        
+        constructor(...args: unknown[]) {
+            if (args.length >= 1) this.value = args[0] as number;
+        }
     }
 
     class AnotherTestClass {
-        constructor(public name: string = '') {}
+        public name: string = '';
+        
+        constructor(...args: unknown[]) {
+            if (args.length >= 1) this.name = args[0] as string;
+        }
     }
 
     function TestFunction() {
@@ -106,12 +114,19 @@ describe('TypeUtils - 类型工具类测试', () => {
 
         it('应该处理继承关系', () => {
             class Parent {
-                constructor(public value: number = 0) {}
+                public value: number = 0;
+                
+                constructor(...args: unknown[]) {
+                    if (args.length >= 1) this.value = args[0] as number;
+                }
             }
             
             class Child extends Parent {
-                constructor(value: number = 0, public name: string = '') {
-                    super(value);
+                public name: string = '';
+                
+                constructor(...args: unknown[]) {
+                    super(args[0]);
+                    if (args.length >= 2) this.name = args[1] as string;
                 }
             }
             
@@ -232,18 +247,28 @@ describe('TypeUtils - 类型工具类测试', () => {
 
         it('应该能够用于多态类型识别', () => {
             class Animal {
-                constructor(public name: string) {}
+                public name: string = '';
+                
+                constructor(...args: unknown[]) {
+                    if (args.length >= 1) this.name = args[0] as string;
+                }
             }
             
             class Dog extends Animal {
-                constructor(name: string, public breed: string) {
-                    super(name);
+                public breed: string = '';
+                
+                constructor(...args: unknown[]) {
+                    super(args[0]);
+                    if (args.length >= 2) this.breed = args[1] as string;
                 }
             }
             
             class Cat extends Animal {
-                constructor(name: string, public color: string) {
-                    super(name);
+                public color: string = '';
+                
+                constructor(...args: unknown[]) {
+                    super(args[0]);
+                    if (args.length >= 2) this.color = args[1] as string;
                 }
             }
             
