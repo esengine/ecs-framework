@@ -4,16 +4,16 @@ import { Time } from '../Time';
 /**
  * 私有类隐藏ITimer的实现
  */
-export class Timer implements ITimer{
-    public context: any;
+export class Timer<TContext = unknown> implements ITimer<TContext>{
+    public context!: TContext;
     public _timeInSeconds: number = 0;
     public _repeats: boolean = false;
-    public _onTime!: (timer: ITimer) => void;
+    public _onTime!: (timer: ITimer<TContext>) => void;
     public _isDone: boolean = false;
     public _elapsedTime: number = 0;
 
     public getContext<T>(): T {
-        return this.context as T;
+        return this.context as unknown as T;
     }
 
     /**
@@ -53,7 +53,7 @@ export class Timer implements ITimer{
         return this._isDone;
     }
 
-    public initialize(timeInsSeconds: number, repeats: boolean, context: any, onTime: (timer: ITimer)=>void){
+    public initialize(timeInsSeconds: number, repeats: boolean, context: TContext, onTime: (timer: ITimer<TContext>)=>void){
         this._timeInSeconds = timeInsSeconds;
         this._repeats = repeats;
         this.context = context;
@@ -64,7 +64,7 @@ export class Timer implements ITimer{
      * 空出对象引用，以便在js需要时GC可以清理它们的引用
      */
     public unload(){
-        this.context = null;
-        this._onTime = null as any;
+        this.context = null as unknown as TContext;
+        this._onTime = null!;
     }
 }

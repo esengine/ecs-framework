@@ -8,7 +8,7 @@ export class TypeUtils {
      * @param obj 对象
      * @returns 对象的构造函数
      */
-    public static getType(obj: any) {
+    public static getType(obj: Record<string, unknown> & { constructor: Function }) {
         return obj.constructor;
     }
 }

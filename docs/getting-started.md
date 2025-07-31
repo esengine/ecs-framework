@@ -71,7 +71,7 @@ ECS框架内置了强大的调试功能，支持运行时监控和远程调试�
 
 #### Cocos Creator专用调试插件
 
-**🎯 对于Cocos Creator用户，我们提供了专门的可视化调试插件：**
+** 对于Cocos Creator用户，我们提供了专门的可视化调试插件：**
 
 - **插件地址**：[cocos-ecs-framework 调试插件](https://store.cocos.com/app/detail/7823)
 - **插件版本**：v1.0.0
@@ -163,7 +163,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 Core.create(isDevelopment ? devConfig : prodConfig);
 ```
 
-**💡 调试功能说明：**
+** 调试功能说明：**
 - **Cocos Creator**：推荐使用[官方调试插件](https://store.cocos.com/app/detail/7823)获得最佳调试体验
 - **其他平台**：可以通过WebSocket连接自定义调试工具
 - **生产环境**：建议关闭调试功能以获得最佳性能
@@ -221,16 +221,29 @@ class LayaECSGame extends LayaScene {
 // Laya渲染系统
 class LayaRenderSystem extends EntitySystem {
     private layaScene: LayaScene;
+    private renderMatcher: Matcher;
     
     constructor(layaScene: LayaScene) {
-        super(Matcher.empty().all(PositionComponent, SpriteComponent));
+        super();
         this.layaScene = layaScene;
     }
     
+    public initialize(): void {
+        super.initialize();
+        // 创建Matcher来查询需要渲染的实体
+        if (this.scene) {
+            this.renderMatcher = Matcher.create(this.scene.querySystem)
+                .all(PositionComponent, SpriteComponent);
+        }
+    }
+    
     protected process(entities: Entity[]): void {
-        entities.forEach(entity => {
-            const pos = entity.getComponent(PositionComponent);
-            const sprite = entity.getComponent(SpriteComponent);
+        // 获取需要渲染的实体
+        const renderableEntities = this.renderMatcher.query();
+        
+        renderableEntities.forEach(entity => {
+            const pos = entity.getComponent(PositionComponent)!;
+            const sprite = entity.getComponent(SpriteComponent)!;
             
             if (pos && sprite && sprite.layaSprite) {
                 sprite.layaSprite.x = pos.x;
@@ -294,18 +307,29 @@ export class ECSGameManager extends CocosComponent {
 // Cocos渲染系统
 class CocosRenderSystem extends EntitySystem {
     private rootNode: Node;
+    private renderMatcher: Matcher;
     
     constructor(rootNode: Node) {
-        super(Matcher.empty().all(PositionComponent, SpriteComponent));
+        super();
         this.rootNode = rootNode;
     }
     
+    public initialize(): void {
+        super.initialize();
+        if (this.scene) {
+            this.renderMatcher = Matcher.create(this.scene.querySystem)
+                .all(PositionComponent, SpriteComponent);
+        }
+    }
+    
     protected process(entities: Entity[]): void {
-        entities.forEach(entity => {
-            const pos = entity.getComponent(PositionComponent);
-            const sprite = entity.getComponent(SpriteComponent);
+        const renderableEntities = this.renderMatcher.query();
+        
+        renderableEntities.forEach(entity => {
+            const pos = entity.getComponent(PositionComponent)!;
+            const sprite = entity.getComponent(SpriteComponent)!;
             
-            if (pos && sprite && sprite.cocosNode) {
+            if (sprite.cocosNode) {
                 sprite.cocosNode.setPosition(pos.x, pos.y);
             }
         });
@@ -315,7 +339,7 @@ class CocosRenderSystem extends EntitySystem {
 // 将ECSGameManager脚本挂载到场景根节点
 ```
 
-**🔧 Cocos Creator调试提示：**
+** Cocos Creator调试提示：**
 为了获得最佳的ECS调试体验，建议安装我们的专用调试插件：
 - 插件地址：[https://store.cocos.com/app/detail/7823](https://store.cocos.com/app/detail/7823)
 - 支持Cocos Creator v3.0.0+
@@ -549,13 +573,13 @@ import { EntitySystem, Entity, Matcher, Time } from '@esengine/ecs-framework';
 
 class MovementSystem extends EntitySystem {
     constructor() {
-        super(Matcher.empty().all(PositionComponent, VelocityComponent));
+        super(Matcher.all(PositionComponent, VelocityComponent));
     }
     
     protected process(entities: Entity[]): void {
-        const movingEntities = this.scene.querySystem.queryAll(PositionComponent, VelocityComponent);
+        const movingEntities = entities;
         
-        movingEntities.entities.forEach(entity => {
+        movingEntities.forEach(entity => {
             const position = entity.getComponent(PositionComponent);
             const velocity = entity.getComponent(VelocityComponent);
             
@@ -568,14 +592,26 @@ class MovementSystem extends EntitySystem {
 }
 
 class HealthSystem extends EntitySystem {
+    private healthMatcher: Matcher;
+    
     constructor() {
-        super(Matcher.empty().all(HealthComponent));
+        super();
+    }
+    
+    public initialize(): void {
+        super.initialize();
+        if (this.scene) {
+            this.healthMatcher = Matcher.create(this.scene.querySystem)
+                .all(HealthComponent);
+        }
     }
     
     protected process(entities: Entity[]): void {
-        const healthEntities = this.scene.querySystem.queryAll(HealthComponent);
+        if (!this.healthMatcher) return;
         
-        healthEntities.entities.forEach(entity => {
+        const healthEntities = this.healthMatcher.query();
+        
+        healthEntities.forEach(entity => {
             const health = entity.getComponent(HealthComponent);
             if (health && health.currentHealth <= 0) {
                 entity.destroy();

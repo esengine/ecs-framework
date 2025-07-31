@@ -17,10 +17,10 @@ export abstract class IntervalSystem extends EntitySystem {
 
     /**
      * 构造函数，初始化时间间隔
-     * @param matcher 实体匹配器
      * @param interval 时间间隔
+     * @param matcher 实体匹配器
      */
-    constructor(matcher: Matcher, interval: number) {
+    constructor(interval: number, matcher?: Matcher) {
         super(matcher);
         this.interval = interval;
     }
@@ -30,7 +30,7 @@ export abstract class IntervalSystem extends EntitySystem {
      * 如果需要进行处理，则更新累积增量和时间间隔余数，返回true
      * 否则返回false
      */
-    protected override checkProcessing(): boolean {
+    protected override onCheckProcessing(): boolean {
         // 更新累积增量
         this.acc += Time.deltaTime;
 

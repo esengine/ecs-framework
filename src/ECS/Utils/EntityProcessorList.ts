@@ -39,7 +39,7 @@ export class EntityProcessorList {
      * 获取指定类型的处理器
      * @param type 处理器类型
      */
-    public getProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T | null {
+    public getProcessor<T extends EntitySystem>(type: new (...args: unknown[]) => T): T | null {
         for (const processor of this._processors) {
             if (processor instanceof type) {
                 return processor as T;

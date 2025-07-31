@@ -1,168 +1,295 @@
-import { Entity } from '../Entity';
-import { Component } from '../Component';
-import { Bits } from './Bits';
-import { ComponentTypeManager } from './ComponentTypeManager';
+import { ComponentType } from '../Core/ComponentStorage';
 
 /**
- * 高性能实体匹配器
- * 用于快速匹配符合条件的实体
+ * 查询条件类型
+ */
+interface QueryCondition {
+    all: ComponentType[];
+    any: ComponentType[];
+    none: ComponentType[];
+    tag?: number;           // 按标签查询
+    name?: string;          // 按名称查询
+    component?: ComponentType; // 单组件查询
+}
+
+/**
+ * 实体匹配条件描述符
+ * 
+ * 用于描述实体查询条件，不执行实际查询
+ * 
+ * @example
+ * ```typescript
+ * const matcher = Matcher.all(Position, Velocity)
+ *   .any(Health, Shield)
+ *   .none(Dead);
+ * 
+ * // 获取查询条件
+ * const condition = matcher.getCondition();
+ * ```
  */
 export class Matcher {
-    protected allSet: (new (...args: any[]) => Component)[] = [];
-    protected exclusionSet: (new (...args: any[]) => Component)[] = [];
-    protected oneSet: (new (...args: any[]) => Component)[] = [];
+    private readonly condition: QueryCondition = {
+        all: [],
+        any: [],
+        none: []
+    };
 
-    // 缓存的位掩码，避免重复计算
-    private _allBits?: Bits;
-    private _exclusionBits?: Bits;
-    private _oneBits?: Bits;
-    private _isDirty = true;
+    private constructor() {
+        // 私有构造函数，只能通过静态方法创建
+    }
 
+    /**
+     * 创建匹配器，要求所有指定的组件
+     * @param types 组件类型
+     */
+    public static all(...types: ComponentType[]): Matcher {
+        const matcher = new Matcher();
+        return matcher.all(...types);
+    }
+
+    /**
+     * 创建匹配器，要求至少一个指定的组件
+     * @param types 组件类型
+     */
+    public static any(...types: ComponentType[]): Matcher {
+        const matcher = new Matcher();
+        return matcher.any(...types);
+    }
+
+    /**
+     * 创建匹配器，排除指定的组件
+     * @param types 组件类型
+     */
+    public static none(...types: ComponentType[]): Matcher {
+        const matcher = new Matcher();
+        return matcher.none(...types);
+    }
+
+    /**
+     * 创建按标签查询的匙配器
+     * @param tag 标签值
+     */
+    public static byTag(tag: number): Matcher {
+        const matcher = new Matcher();
+        return matcher.withTag(tag);
+    }
+
+    /**
+     * 创建按名称查询的匙配器
+     * @param name 实体名称
+     */
+    public static byName(name: string): Matcher {
+        const matcher = new Matcher();
+        return matcher.withName(name);
+    }
+
+    /**
+     * 创建单组件查询的匙配器
+     * @param componentType 组件类型
+     */
+    public static byComponent(componentType: ComponentType): Matcher {
+        const matcher = new Matcher();
+        return matcher.withComponent(componentType);
+    }
+
+    /**
+     * 创建复杂查询构建器
+     */
+    public static complex(): Matcher {
+        return new Matcher();
+    }
+
+    /**
+     * 创建空匙配器（向后兼容）
+     */
     public static empty(): Matcher {
         return new Matcher();
     }
 
-    public getAllSet(): (new (...args: any[]) => Component)[] {
-        return this.allSet;
-    }
-
-    public getExclusionSet(): (new (...args: any[]) => Component)[] {
-        return this.exclusionSet;
-    }
-
-    public getOneSet(): (new (...args: any[]) => Component)[] {
-        return this.oneSet;
-    }
-
     /**
-     * 检查实体是否匹配条件
-     * @param entity 要检查的实体
-     * @returns 是否匹配
+     * 必须包含所有指定组件
+     * @param types 组件类型
      */
-    public isInterestedEntity(entity: Entity): boolean {
-        const entityBits = this.getEntityBits(entity);
-        return this.isInterested(entityBits);
-    }
-
-    /**
-     * 检查组件位掩码是否匹配条件
-     * @param componentBits 组件位掩码
-     * @returns 是否匹配
-     */
-    public isInterested(componentBits: Bits): boolean {
-        this.updateBitsIfDirty();
-
-        // 检查必须包含的组件
-        if (this._allBits && !componentBits.containsAll(this._allBits)) {
-            return false;
-        }
-
-        // 检查排除的组件
-        if (this._exclusionBits && componentBits.intersects(this._exclusionBits)) {
-            return false;
-        }
-
-        // 检查至少包含其中之一的组件
-        if (this._oneBits && !componentBits.intersects(this._oneBits)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * 添加所有包含的组件类型
-     * @param types 所有包含的组件类型列表
-     */
-    public all(...types: (new (...args: any[]) => Component)[]): Matcher {
-        this.allSet.push(...types);
-        this._isDirty = true;
+    public all(...types: ComponentType[]): Matcher {
+        this.condition.all.push(...types);
         return this;
     }
 
     /**
-     * 添加排除包含的组件类型
-     * @param types 排除包含的组件类型列表
+     * 必须包含至少一个指定组件
+     * @param types 组件类型
      */
-    public exclude(...types: (new (...args: any[]) => Component)[]): Matcher {
-        this.exclusionSet.push(...types);
-        this._isDirty = true;
+    public any(...types: ComponentType[]): Matcher {
+        this.condition.any.push(...types);
         return this;
     }
 
     /**
-     * 添加至少包含其中之一的组件类型
-     * @param types 至少包含其中之一的组件类型列表
+     * 不能包含任何指定组件
+     * @param types 组件类型
      */
-    public one(...types: (new (...args: any[]) => Component)[]): Matcher {
-        this.oneSet.push(...types);
-        this._isDirty = true;
+    public none(...types: ComponentType[]): Matcher {
+        this.condition.none.push(...types);
         return this;
     }
 
     /**
-     * 获取实体的组件位掩码
-     * @param entity 实体
-     * @returns 组件位掩码
+     * 排除指定组件（别名方法）
+     * @param types 组件类型
      */
-    private getEntityBits(entity: Entity): Bits {
-        const components = entity.components;
-        return ComponentTypeManager.instance.getEntityBits(components);
+    public exclude(...types: ComponentType[]): Matcher {
+        return this.none(...types);
     }
 
     /**
-     * 如果位掩码已过期，则更新它们
+     * 至少包含其中之一（别名方法）
+     * @param types 组件类型
      */
-    private updateBitsIfDirty(): void {
-        if (!this._isDirty) {
-            return;
-        }
-
-        const typeManager = ComponentTypeManager.instance;
-
-        // 更新必须包含的组件位掩码
-        if (this.allSet.length > 0) {
-            this._allBits = typeManager.createBits(...this.allSet);
-        } else {
-            this._allBits = undefined;
-        }
-
-        // 更新排除的组件位掩码
-        if (this.exclusionSet.length > 0) {
-            this._exclusionBits = typeManager.createBits(...this.exclusionSet);
-        } else {
-            this._exclusionBits = undefined;
-        }
-
-        // 更新至少包含其中之一的组件位掩码
-        if (this.oneSet.length > 0) {
-            this._oneBits = typeManager.createBits(...this.oneSet);
-        } else {
-            this._oneBits = undefined;
-        }
-
-        this._isDirty = false;
+    public one(...types: ComponentType[]): Matcher {
+        return this.any(...types);
     }
 
     /**
-     * 创建匹配器的字符串表示（用于调试）
-     * @returns 字符串表示
+     * 按标签查询
+     * @param tag 标签值
+     */
+    public withTag(tag: number): Matcher {
+        this.condition.tag = tag;
+        return this;
+    }
+
+    /**
+     * 按名称查询
+     * @param name 实体名称
+     */
+    public withName(name: string): Matcher {
+        this.condition.name = name;
+        return this;
+    }
+
+    /**
+     * 单组件查询
+     * @param componentType 组件类型
+     */
+    public withComponent(componentType: ComponentType): Matcher {
+        this.condition.component = componentType;
+        return this;
+    }
+
+    /**
+     * 移除标签条件
+     */
+    public withoutTag(): Matcher {
+        delete this.condition.tag;
+        return this;
+    }
+
+    /**
+     * 移除名称条件
+     */
+    public withoutName(): Matcher {
+        delete this.condition.name;
+        return this;
+    }
+
+    /**
+     * 移除单组件条件
+     */
+    public withoutComponent(): Matcher {
+        delete this.condition.component;
+        return this;
+    }
+
+    /**
+     * 获取查询条件（只读）
+     */
+    public getCondition(): Readonly<QueryCondition> {
+        return {
+            all: [...this.condition.all],
+            any: [...this.condition.any],
+            none: [...this.condition.none],
+            tag: this.condition.tag,
+            name: this.condition.name,
+            component: this.condition.component
+        };
+    }
+
+    /**
+     * 检查是否为空条件
+     */
+    public isEmpty(): boolean {
+        return this.condition.all.length === 0 && 
+               this.condition.any.length === 0 && 
+               this.condition.none.length === 0 &&
+               this.condition.tag === undefined &&
+               this.condition.name === undefined &&
+               this.condition.component === undefined;
+    }
+
+    /**
+     * 重置所有条件
+     */
+    public reset(): Matcher {
+        this.condition.all.length = 0;
+        this.condition.any.length = 0;
+        this.condition.none.length = 0;
+        delete this.condition.tag;
+        delete this.condition.name;
+        delete this.condition.component;
+        return this;
+    }
+
+    /**
+     * 克隆匹配器
+     */
+    public clone(): Matcher {
+        const cloned = new Matcher();
+        cloned.condition.all.push(...this.condition.all);
+        cloned.condition.any.push(...this.condition.any);
+        cloned.condition.none.push(...this.condition.none);
+        if (this.condition.tag !== undefined) {
+            cloned.condition.tag = this.condition.tag;
+        }
+        if (this.condition.name !== undefined) {
+            cloned.condition.name = this.condition.name;
+        }
+        if (this.condition.component !== undefined) {
+            cloned.condition.component = this.condition.component;
+        }
+        return cloned;
+    }
+
+    /**
+     * 字符串表示
      */
     public toString(): string {
         const parts: string[] = [];
         
-        if (this.allSet.length > 0) {
-            parts.push(`all: [${this.allSet.map(t => t.name).join(', ')}]`);
+        if (this.condition.all.length > 0) {
+            parts.push(`all(${this.condition.all.map(t => t.name).join(', ')})`);
         }
         
-        if (this.exclusionSet.length > 0) {
-            parts.push(`exclude: [${this.exclusionSet.map(t => t.name).join(', ')}]`);
+        if (this.condition.any.length > 0) {
+            parts.push(`any(${this.condition.any.map(t => t.name).join(', ')})`);
         }
         
-        if (this.oneSet.length > 0) {
-            parts.push(`one: [${this.oneSet.map(t => t.name).join(', ')}]`);
+        if (this.condition.none.length > 0) {
+            parts.push(`none(${this.condition.none.map(t => t.name).join(', ')})`);
         }
         
-        return `Matcher(${parts.join(', ')})`;
+        if (this.condition.tag !== undefined) {
+            parts.push(`tag(${this.condition.tag})`);
+        }
+        
+        if (this.condition.name !== undefined) {
+            parts.push(`name(${this.condition.name})`);
+        }
+        
+        if (this.condition.component !== undefined) {
+            parts.push(`component(${this.condition.component.name})`);
+        }
+        
+        return `Matcher[${parts.join(' & ')}]`;
     }
+
 }

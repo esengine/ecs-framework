@@ -4,6 +4,7 @@ import { Scene } from '../Scene';
 import { ComponentType, ComponentStorageManager } from './ComponentStorage';
 import { QuerySystem, QueryBuilder } from './QuerySystem';
 import { TypeSafeEventSystem } from './EventSystem';
+import { EntitySystem } from '../Systems/EntitySystem';
 
 /**
  * 实体构建器 - 提供流式API创建和配置实体
@@ -261,7 +262,7 @@ export class SceneBuilder {
      * @param system 系统实例
      * @returns 场景构建器
      */
-    public withSystem(system: any): SceneBuilder {
+    public withSystem(system: EntitySystem): SceneBuilder {
         this.scene.addSystem(system);
         return this;
     }
@@ -271,7 +272,7 @@ export class SceneBuilder {
      * @param systems 系统数组
      * @returns 场景构建器
      */
-    public withSystems(...systems: any[]): SceneBuilder {
+    public withSystems(...systems: EntitySystem[]): SceneBuilder {
         for (const system of systems) {
             this.scene.addSystem(system);
         }
@@ -293,7 +294,7 @@ export class SceneBuilder {
 export class ComponentBuilder<T extends Component> {
     private component: T;
 
-    constructor(componentClass: new (...args: any[]) => T, ...args: any[]) {
+    constructor(componentClass: new (...args: unknown[]) => T, ...args: unknown[]) {
         this.component = new componentClass(...args);
     }
 
@@ -379,8 +380,8 @@ export class ECSFluentAPI {
      * @returns 组件构建器
      */
     public createComponent<T extends Component>(
-        componentClass: new (...args: any[]) => T, 
-        ...args: any[]
+        componentClass: new (...args: unknown[]) => T, 
+        ...args: unknown[]
     ): ComponentBuilder<T> {
         return new ComponentBuilder(componentClass, ...args);
     }
@@ -494,7 +495,7 @@ export class ECSFluentAPI {
         entityCount: number;
         systemCount: number;
         componentStats: Map<string, any>;
-        queryStats: any;
+        queryStats: unknown;
         eventStats: Map<string, any>;
     } {
         return {

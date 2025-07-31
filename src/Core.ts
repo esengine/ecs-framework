@@ -1,6 +1,7 @@
 import { GlobalManager } from './Utils/GlobalManager';
 import { TimerManager } from './Utils/Timers/TimerManager';
 import { ITimer } from './Utils/Timers/ITimer';
+import { Timer } from './Utils/Timers/Timer';
 import { Time } from './Utils/Time';
 import { PerformanceMonitor } from './Utils/PerformanceMonitor';
 import { PoolManager } from './Utils/Pool';
@@ -301,7 +302,7 @@ export class Core {
      * @param type - 管理器类型构造函数
      * @returns 管理器实例，如果未找到则返回null
      */
-    public static getGlobalManager<T extends GlobalManager>(type: new (...args: any[]) => T): T | null {
+    public static getGlobalManager<T extends GlobalManager>(type: new (...args: unknown[]) => T): T | null {
         for (const manager of this._instance._globalManagers) {
             if (manager instanceof type)
                 return manager as T;
@@ -320,7 +321,7 @@ export class Core {
      * @param onTime - 定时器触发时的回调函数
      * @returns 创建的定时器实例
      */
-    public static schedule(timeInSeconds: number, repeats: boolean = false, context: any = null, onTime: (timer: ITimer) => void) {
+    public static schedule<TContext = unknown>(timeInSeconds: number, repeats: boolean = false, context: TContext = null as any, onTime: (timer: ITimer<TContext>) => void): Timer<TContext> {
         return this._instance._timerManager.schedule(timeInSeconds, repeats, context, onTime);
     }
 

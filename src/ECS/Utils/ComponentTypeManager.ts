@@ -28,7 +28,7 @@ export class ComponentTypeManager {
      * @param componentType 组件类型构造函数
      * @returns 组件类型ID
      */
-    public getTypeId<T extends Component>(componentType: new (...args: any[]) => T): number {
+    public getTypeId<T extends Component>(componentType: new (...args: unknown[]) => T): number {
         let typeId = this._componentTypes.get(componentType);
         
         if (typeId === undefined) {
@@ -54,7 +54,7 @@ export class ComponentTypeManager {
      * @param componentTypes 组件类型构造函数数组
      * @returns Bits对象
      */
-    public createBits(...componentTypes: (new (...args: any[]) => Component)[]): Bits {
+    public createBits(...componentTypes: (new (...args: unknown[]) => Component)[]): Bits {
         const bits = new Bits();
         
         for (const componentType of componentTypes) {
@@ -74,7 +74,7 @@ export class ComponentTypeManager {
         const bits = new Bits();
         
         for (const component of components) {
-            const typeId = this.getTypeId(component.constructor as new (...args: any[]) => Component);
+            const typeId = this.getTypeId(component.constructor as new (...args: unknown[]) => Component);
             bits.set(typeId);
         }
         

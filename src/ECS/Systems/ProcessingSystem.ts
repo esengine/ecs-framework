@@ -1,5 +1,6 @@
 import { EntitySystem } from './EntitySystem';
 import { Entity } from '../Entity';
+import { Matcher } from '../Utils/Matcher';
 
 /**
  * 处理系统抽象类
@@ -7,11 +8,10 @@ import { Entity } from '../Entity';
  * 子类需要实现processSystem方法，用于实现具体的处理逻辑
  */
 export abstract class ProcessingSystem extends EntitySystem {
-    /**
-     * 当实体发生变化时，不进行任何操作
-     * @param entity 发生变化的实体
-     */
-    public override onChanged(entity: Entity): void { }
+    
+    constructor(matcher?: Matcher) {
+        super(matcher);
+    }
 
     /**
      * 处理实体，每帧调用processSystem方法进行处理

@@ -10,15 +10,15 @@
 - ⏰ **延迟执行** - 在指定时间后执行某个操作
 - 🔄 **重复执行** - 定期重复执行某个操作  
 - 🛑 **取消执行** - 在执行前取消定时器
-- 🎯 **精确控制** - 精确控制执行时机
+-  **精确控制** - 精确控制执行时机
 
 ### 定时器的优势
 
 相比直接在游戏循环中计时，定时器系统提供：
 - 🧹 **自动管理** - 自动处理定时器的生命周期
-- 🎮 **游戏时间控制** - 支持游戏暂停、时间缩放
+-  **游戏时间控制** - 支持游戏暂停、时间缩放
 - 💾 **内存优化** - 自动回收完成的定时器
-- 🔧 **易于使用** - 简单的API调用
+-  **易于使用** - 简单的API调用
 
 ## 基础定时器使用
 
@@ -499,7 +499,7 @@ class LevelTimer {
             this.updateTimer.stop();
             
             const completionTime = this.timeLimit - this.timeRemaining;
-            console.log(`🎉 关卡完成！用时：${completionTime} 秒`);
+            console.log(` 关卡完成！用时：${completionTime} 秒`);
             
             // 根据剩余时间给予奖励
             this.calculateTimeBonus(this.timeRemaining);

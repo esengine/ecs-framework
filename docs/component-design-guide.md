@@ -267,17 +267,29 @@ class InvincibleComponent extends Component {
 }
 
 // 使用标记组件进行查询
-class GameSystem {
-    updatePlayers() {
-        // 只处理玩家实体
-        const players = this.scene.findEntitiesWithComponent(PlayerComponent);
-        // ...
+class PlayerSystem extends EntitySystem {
+    constructor() {
+        super(Matcher.all(PlayerComponent));
     }
     
-    updateEnemies() {
-        // 只处理敌人实体
-        const enemies = this.scene.findEntitiesWithComponent(EnemyComponent);
-        // ...
+    protected process(entities: Entity[]): void {
+        // entities已经是玩家实体
+        for (const entity of entities) {
+            // 处理玩家逻辑
+        }
+    }
+}
+
+class EnemySystem extends EntitySystem {
+    constructor() {
+        super(Matcher.all(EnemyComponent));
+    }
+    
+    protected process(entities: Entity[]): void {
+        // entities已经是敌人实体
+        for (const entity of entities) {
+            // 处理敌人逻辑
+        }
     }
 }
 ```

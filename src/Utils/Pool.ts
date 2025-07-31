@@ -70,7 +70,7 @@ export class Pool<T extends IPoolable> {
      * @returns 对象池实例
      */
     public static getPool<T extends IPoolable>(
-        type: new (...args: any[]) => T, 
+        type: new (...args: unknown[]) => T, 
         maxSize: number = 100,
         estimatedObjectSize: number = 1024
     ): Pool<T> {
@@ -216,7 +216,7 @@ export class Pool<T extends IPoolable> {
      * @param type 对象类型
      * @returns 对象实例
      */
-    public static obtain<T extends IPoolable>(type: new (...args: any[]) => T): T {
+    public static obtain<T extends IPoolable>(type: new (...args: unknown[]) => T): T {
         return this.getPool(type).obtain();
     }
 
@@ -225,7 +225,7 @@ export class Pool<T extends IPoolable> {
      * @param type 对象类型
      * @param obj 要归还的对象
      */
-    public static free<T extends IPoolable>(type: new (...args: any[]) => T, obj: T): void {
+    public static free<T extends IPoolable>(type: new (...args: unknown[]) => T, obj: T): void {
         this.getPool(type).free(obj);
     }
 
@@ -234,7 +234,7 @@ export class Pool<T extends IPoolable> {
      * @param type 对象类型
      * @param count 要创建的对象数量
      */
-    public static warmUp<T extends IPoolable>(type: new (...args: any[]) => T, count: number): void {
+    public static warmUp<T extends IPoolable>(type: new (...args: unknown[]) => T, count: number): void {
         this.getPool(type).warmUp(count);
     }
 
@@ -242,7 +242,7 @@ export class Pool<T extends IPoolable> {
      * 静态方法：清空指定类型的池
      * @param type 对象类型
      */
-    public static clearPool<T extends IPoolable>(type: new (...args: any[]) => T): void {
+    public static clearPool<T extends IPoolable>(type: new (...args: unknown[]) => T): void {
         const pool = this._pools.get(type);
         if (pool) {
             pool.clear();

@@ -1,5 +1,5 @@
-export interface ITimer {
-    context: any;
+export interface ITimer<TContext = unknown> {
+    context: TContext;
 
     /**
      * 调用stop以停止此计时器再次运行。这对非重复计时器没有影响。

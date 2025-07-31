@@ -7,10 +7,10 @@
 ### 什么是系统？
 
 系统是处理游戏逻辑的地方，它们：
-- 🎯 **专注单一职责** - 每个系统只处理一种类型的逻辑
-- 🔄 **自动执行** - 系统会在每帧自动被调用
-- 📊 **基于组件过滤** - 只处理包含特定组件的实体
-- ⚡ **高性能** - 利用ECS的数据局部性优势
+- **专注单一职责** - 每个系统只处理一种类型的逻辑
+- **自动执行** - 系统会在每帧自动被调用
+- **基于组件过滤** - 只处理包含特定组件的实体
+- **高性能** - 利用ECS的数据局部性优势
 
 ### 系统的工作原理
 
@@ -46,14 +46,17 @@ import { EntitySystem, Entity, Matcher } from '@esengine/ecs-framework';
 
 class HealthSystem extends EntitySystem {
     constructor() {
-        // 使用Matcher指定需要的组件
-        super(Matcher.empty().all(HealthComponent));
+        // 使用Matcher创建查询条件
+        super(Matcher.all(HealthComponent));
+        // 或者使用链式语法
+        // super(Matcher.empty().all(HealthComponent));
     }
     
     // 主要处理逻辑
     protected process(entities: Entity[]) {
+        // 直接使用传入的entities参数，已经是匹配的实体
         for (const entity of entities) {
-            const health = entity.getComponent(HealthComponent);
+            const health = entity.getComponent(HealthComponent)!;
             
             // 处理生命值逻辑
             if (health.currentHealth <= 0) {
@@ -168,12 +171,21 @@ enum AIState {
 
 class AISystem extends EntitySystem {
     constructor() {
-        // 匹配所有有AI组件和位置组件的实体
+        // 复杂匹配条件可以使用链式语法
         super(Matcher.empty().all(AIComponent, PositionComponent));
+        // 或者使用简洁语法
+        // super(Matcher.all(AIComponent, PositionComponent));
     }
     
-    // 处理每个匹配的实体
-    public processEntity(entity: Entity) {
+    // 处理所有匹配的实体
+    protected process(entities: Entity[]) {
+        for (const entity of entities) {
+            this.processEntity(entity);
+        }
+    }
+    
+    // 处理单个实体的逻辑（自定义方法）
+    private processEntity(entity: Entity) {
         const ai = entity.getComponent(AIComponent);
         const position = entity.getComponent(PositionComponent);
         
@@ -251,8 +263,8 @@ class SpawnSystem extends IntervalSystem {
     
     // 每2秒执行一次
     constructor() {
-        // IntervalSystem需要指定Matcher和间隔时间
-        super(Matcher.empty().all(SpawnerComponent), 2.0);
+        // IntervalSystem需要指定间隔时间和Matcher
+        super(2.0, Matcher.all(SpawnerComponent));
     }
     
     // 间隔执行的逻辑（重写process方法）
@@ -312,7 +324,7 @@ class SpawnSystem extends IntervalSystem {
 
 ### 4. PassiveSystem - 被动系统
 
-不主动遍历实体，而是响应事件的系统。
+不处理实体的系统，主要用于事件监听和响应。
 
 ```typescript
 import { PassiveSystem, Matcher, Core } from '@esengine/ecs-framework';
@@ -390,12 +402,11 @@ class ScoreSystem extends PassiveSystem {
 ```typescript
 class ExampleSystem extends EntitySystem {
     /**
-     * 系统初始化 - 系统被添加到场景时调用
+     * 系统初始化回调 - 系统被添加到场景时调用
      * 用于设置事件监听器、初始化资源等
+     * 注意：不要重写initialize()方法，而是重写onInitialize()
      */
-    initialize() {
-        super.initialize();
-        
+    protected onInitialize() {
         // 设置事件监听
         const eventBus = this.scene.entityManager.eventBus;
         eventBus.on('someEvent', this.handleEvent, { context: this });
@@ -404,32 +415,9 @@ class ExampleSystem extends EntitySystem {
     }
     
     /**
-     * 实体被添加到系统时调用
-     * @param entity 被添加的实体
-     */
-    protected onAdded(entity: Entity) {
-        console.log(`实体 ${entity.name} 被添加到系统`);
-        
-        // 可以在这里对新实体进行特殊处理
-        const component = entity.getComponent(SomeComponent);
-        component.initialize();
-    }
-    
-    /**
-     * 实体从系统中移除时调用
-     * @param entity 被移除的实体
-     */
-    protected onRemoved(entity: Entity) {
-        console.log(`实体 ${entity.name} 从系统中移除`);
-        
-        // 清理与该实体相关的资源
-        this.cleanupEntityResources(entity);
-    }
-    
-    /**
      * 每帧处理开始前调用
      */
-    protected begin() {
+    protected onBegin() {
         // 预处理逻辑，如重置计数器
         this.frameCounter++;
     }
@@ -457,7 +445,7 @@ class ExampleSystem extends EntitySystem {
     /**
      * 每帧处理结束后调用
      */
-    protected end() {
+    protected onEnd() {
         // 后处理逻辑，如统计数据更新
         this.updateStatistics();
     }
@@ -468,14 +456,13 @@ class ExampleSystem extends EntitySystem {
 
 系统的生命周期方法按以下顺序执行：
 
-1. **initialize()** - 系统被添加到场景时执行一次
-2. **onAdded(entity)** - 当实体符合系统条件时执行
-3. **onRemoved(entity)** - 当实体不再符合系统条件时执行
-4. 每帧循环：
-   - **begin()** - 帧开始前
-   - **process(entities)** - 主要处理逻辑
-   - **lateProcess(entities)** - 后期处理
-   - **end()** - 帧结束后
+1. **initialize()** - 系统被添加到场景时执行一次（框架调用）
+   - **onInitialize()** - 用户可重写的初始化回调
+2. 每帧循环：
+   - **onBegin()** - 帧开始前（用户可重写）
+   - **process(entities)** - 主要处理逻辑（用户必须实现）
+   - **lateProcess(entities)** - 后期处理（用户可重写）
+   - **onEnd()** - 帧结束后（用户可重写）
 
 ## 系统管理和注册
 
@@ -530,7 +517,7 @@ scene.removeEntityProcessor(gameLogicSystem);
 ### 1. 单一职责原则
 
 ```typescript
-// ✅ 好的设计：每个系统只负责一件事
+// 好的设计：每个系统只负责一件事
 class MovementSystem extends EntitySystem {
     // 只负责移动
 }
@@ -543,7 +530,7 @@ class RenderSystem extends EntitySystem {
     // 只负责渲染
 }
 
-// ❌ 不好的设计：一个系统做太多事情
+// 不好的设计：一个系统做太多事情
 class GameplaySystem extends EntitySystem {
     // 既处理移动，又处理碰撞，还处理渲染...
 }
@@ -650,7 +637,7 @@ A: 非常重要！合理的执行顺序可以避免逻辑错误：
 
 A: 
 - **EntitySystem** - 大部分游戏逻辑（移动、AI、碰撞等）
-- **ProcessingSystem** - 复杂的单实体处理（复杂AI、粒子系统）
+- **ProcessingSystem** - 不依赖特定实体的全局处理（游戏状态管理、全局逻辑）
 - **IntervalSystem** - 不需要每帧执行的逻辑（生成器、自动保存）
 - **PassiveSystem** - 事件响应系统（分数、音效、UI更新）
 

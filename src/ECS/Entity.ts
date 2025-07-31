@@ -3,6 +3,18 @@ import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
 import { EventBus } from './Core/EventBus';
 import { IBigIntLike, BigIntFactory } from './Utils/BigIntCompatibility';
 
+// Forward declaration to avoid circular dependency
+interface IScene {
+    readonly name: string;
+    readonly componentStorageManager: import('./Core/ComponentStorage').ComponentStorageManager;
+    readonly querySystem: import('./Core/QuerySystem').QuerySystem;
+    readonly eventSystem: import('./Core/EventSystem').TypeSafeEventSystem;
+    readonly entities: import('./Utils/EntityList').EntityList;
+    addEntity(entity: Entity): Entity;
+    initialize(): void;
+    update(deltaTime: number): void;
+}
+
 /**
  * 实体比较器
  * 
@@ -90,7 +102,7 @@ export class Entity {
      * 
      * 指向实体所在的场景实例。
      */
-    public scene: any; // 使用any避免循环依赖
+    public scene: IScene | null = null;
     
     /**
      * 更新间隔
@@ -317,7 +329,7 @@ export class Entity {
      */
     public createComponent<T extends Component>(
         componentType: ComponentType<T>, 
-        ...args: any[]
+        ...args: unknown[]
     ): T {
         const component = new componentType(...args);
         return this.addComponent(component);
@@ -391,11 +403,12 @@ export class Entity {
             });
         }
         
-        // 通知场景实体已改变
-        if (this.scene && this.scene.entityProcessors) {
-            for (const processor of this.scene.entityProcessors.processors) {
-                processor.onChanged(this);
-            }
+        
+        // 通知QuerySystem实体组件已改变，需要重新索引
+        if (this.scene && this.scene.querySystem) {
+            // 移除旧的索引，重新添加以更新索引
+            this.scene.querySystem.removeEntity(this);
+            this.scene.querySystem.addEntity(this);
         }
 
         return component;
@@ -489,7 +502,7 @@ export class Entity {
      */
     public getOrCreateComponent<T extends Component>(
         type: ComponentType<T>, 
-        ...args: any[]
+        ...args: unknown[]
     ): T {
         let component = this.getComponent(type);
         if (!component) {
@@ -547,11 +560,12 @@ export class Entity {
         // 清除组件的实体引用
         component.entity = null as any;
 
-        // 通知场景实体已改变
-        if (this.scene && this.scene.entityProcessors) {
-            for (const processor of this.scene.entityProcessors.processors) {
-                processor.onChanged(this);
-            }
+        
+        // 通知QuerySystem实体组件已改变，需要重新索引
+        if (this.scene && this.scene.querySystem) {
+            // 移除旧的索引，重新添加以更新索引
+            this.scene.querySystem.removeEntity(this);
+            this.scene.querySystem.addEntity(this);
         }
     }
 
@@ -600,12 +614,6 @@ export class Entity {
         // 清空组件列表
         this.components.length = 0;
 
-        // 通知场景实体已改变
-        if (this.scene && this.scene.entityProcessors) {
-            for (const processor of this.scene.entityProcessors.processors) {
-                processor.onChanged(this);
-            }
-        }
     }
 
     /**

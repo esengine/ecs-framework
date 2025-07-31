@@ -1,13 +1,13 @@
 /**
  * 用于包装事件的一个小类
  */
-export class FuncPack {
+export class FuncPack<TContext = unknown> {
     /** 函数 */
     public func: Function;
     /** 上下文 */
-    public context: any;
+    public context: TContext;
 
-    constructor(func: Function, context: any) {
+    constructor(func: Function, context: TContext) {
         this.func = func;
         this.context = context;
     }
@@ -16,11 +16,11 @@ export class FuncPack {
 /**
  * 用于事件管理
  */
-export class Emitter<T> {
-    private _messageTable: Map<T, FuncPack[]>;
+export class Emitter<T, TContext = unknown> {
+    private _messageTable: Map<T, FuncPack<TContext>[]>;
 
     constructor() {
-        this._messageTable = new Map<T, FuncPack[]>();
+        this._messageTable = new Map<T, FuncPack<TContext>[]>();
     }
 
     /**
@@ -29,7 +29,7 @@ export class Emitter<T> {
      * @param handler 监听函数
      * @param context 监听上下文
      */
-    public addObserver(eventType: T, handler: Function, context: any) {
+    public addObserver(eventType: T, handler: Function, context: TContext) {
         let list = this._messageTable.get(eventType);
         if (!list) {
             list = [];
@@ -37,7 +37,7 @@ export class Emitter<T> {
         }
 
         if (!this.hasObserver(eventType, handler)) {
-            list.push(new FuncPack(handler, context));
+            list.push(new FuncPack<TContext>(handler, context));
         }
     }
 
@@ -60,7 +60,7 @@ export class Emitter<T> {
      * @param eventType 事件类型
      * @param data 事件数据
      */
-    public emit(eventType: T, ...data: any[]) {
+    public emit<TData = unknown>(eventType: T, ...data: TData[]) {
         let list = this._messageTable.get(eventType);
         if (list) {
             for (let observer of list) {

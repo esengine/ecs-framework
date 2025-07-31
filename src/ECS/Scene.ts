@@ -367,7 +367,7 @@ export class Scene {
      * 获取指定类型的EntitySystem处理器
      * @param type 处理器类型
      */
-    public getEntityProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T | null {
+    public getEntityProcessor<T extends EntitySystem>(type: new (...args: unknown[]) => T): T | null {
         return this.entityProcessors.getProcessor(type);
     }
 

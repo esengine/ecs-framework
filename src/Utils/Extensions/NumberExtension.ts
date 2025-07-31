@@ -8,7 +8,7 @@ export class NumberExtension {
      * @param value 要转换的值
      * @returns 转换后的数字，如果值为undefined则返回0
      */
-    public static toNumber(value: any): number {
+    public static toNumber(value: unknown): number {
         if (value == undefined) return 0;
         return Number(value);
     }

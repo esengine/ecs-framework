@@ -87,6 +87,9 @@ export class QuerySystem {
     private entities: Entity[] = [];
     private entityIndex: EntityIndex;
     private indexDirty = true;
+    
+    // 版本号，用于缓存失效
+    private _version = 0;
 
     // 查询缓存系统
     private queryCache = new Map<string, QueryCacheEntry>();
@@ -190,6 +193,9 @@ export class QuerySystem {
             if (!deferCacheClear) {
                 this.clearQueryCache();
             }
+            
+            // 更新版本号
+            this._version++;
         }
     }
 
@@ -266,6 +272,9 @@ export class QuerySystem {
             this.dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_REMOVED);
 
             this.clearQueryCache();
+            
+            // 更新版本号
+            this._version++;
         }
     }
 
@@ -453,11 +462,6 @@ export class QuerySystem {
             }
         }
 
-        if (entities.length === 0 && this.entities.length > 0) {
-            this.queryStats.linearScans++;
-            entities = this.queryByLinearScan(componentTypes);
-        }
-
         this.addToCache(cacheKey, entities);
 
         return {
@@ -494,8 +498,7 @@ export class QuerySystem {
         }
 
         if (!smallestSet) {
-            this.queryStats.linearScans++;
-            return this.queryByLinearScan(componentTypes);
+            return []; // 如果没有找到任何组件集合，返回空结果
         }
 
         // 从最小集合开始，逐步过滤
@@ -511,21 +514,7 @@ export class QuerySystem {
         return result;
     }
 
-    /**
-     * 线性扫描查询
-     * 
-     * 当索引不可用时的备用查询方法。
-     * 遍历所有实体进行组件匹配检查。
-     * 
-     * @param componentTypes 组件类型列表
-     * @returns 匹配的实体列表
-     */
-    private queryByLinearScan(componentTypes: ComponentType[]): Entity[] {
-        const mask = this.createComponentMask(componentTypes);
-        return this.entities.filter(entity =>
-            entity.componentMask.and(mask).equals(mask)
-        );
-    }
+
 
     /**
      * 查询包含任意指定组件的实体
@@ -574,6 +563,7 @@ export class QuerySystem {
             const indexResult = this.componentIndexManager.queryMultiple(componentTypes, 'OR');
             entities = Array.from(indexResult);
         }
+        
         this.addToCache(cacheKey, entities);
 
         return {
@@ -927,6 +917,20 @@ export class QuerySystem {
         return mask;
     }
 
+    /**
+     * 获取当前版本号（用于缓存失效）
+     */
+    public get version(): number {
+        return this._version;
+    }
+    
+    /**
+     * 获取所有实体
+     */
+    public getAllEntities(): Entity[] {
+        return [...this.entities];
+    }
+    
     /**
      * 获取系统统计信息
      * 

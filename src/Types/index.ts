@@ -37,8 +37,6 @@ export interface IComponent {
 export interface ISystemBase {
     /** 系统名称 */
     readonly systemName: string;
-    /** 系统处理的实体列表 */
-    readonly entities: readonly any[];
     /** 更新顺序/优先级 */
     updateOrder: number;
     /** 系统启用状态 */
@@ -57,7 +55,7 @@ export interface ISystemBase {
  * 
  * 用于类型安全的组件操作
  */
-export type ComponentType<T extends IComponent = IComponent> = new (...args: any[]) => T;
+export type ComponentType<T extends IComponent = IComponent> = new (...args: unknown[]) => T;
 
 /**
  * 事件总线接口
@@ -147,7 +145,7 @@ export interface IEventListenerConfig {
     /** 是否异步执行 */
     async?: boolean;
     /** 执行上下文 */
-    context?: any;
+    context?: unknown;
 }
 
 /**
@@ -233,7 +231,7 @@ export interface IPerformanceEventData extends IEventData {
     /** 内存使用量 */
     memoryUsage?: number;
     /** 额外数据 */
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 /**
@@ -299,6 +297,24 @@ export interface IECSDebugData {
 }
 
 /**
+ * 实体层次结构节点接口
+ */
+export interface IEntityHierarchyNode {
+    id: number;
+    name: string;
+    active: boolean;
+    enabled: boolean;
+    activeInHierarchy: boolean;
+    componentCount: number;
+    componentTypes: string[];
+    parentId: number | null;
+    children: IEntityHierarchyNode[];
+    depth: number;
+    tag: number;
+    updateOrder: number;
+}
+
+/**
  * 实体调试数据接口
  */
 export interface IEntityDebugData {
@@ -342,7 +358,7 @@ export interface IEntityDebugData {
         componentCount: number;
         componentTypes: string[];
         parentId: number | null;
-        children: any[];
+        children: IEntityHierarchyNode[];
         depth: number;
         tag: number;
         updateOrder: number;
@@ -365,7 +381,7 @@ export interface IEntityDebugData {
         depth: number;
         components: Array<{
             typeName: string;
-            properties: Record<string, any>;
+            properties: Record<string, unknown>;
         }>;
         componentCount: number;
         componentTypes: string[];
