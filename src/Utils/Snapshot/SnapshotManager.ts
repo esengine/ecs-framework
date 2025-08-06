@@ -1,11 +1,14 @@
 import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';
 import { ISnapshotable, SceneSnapshot, EntitySnapshot, ComponentSnapshot, SnapshotConfig } from './ISnapshotable';
+import { ProtobufSerializer, SerializedData } from '../Serialization/ProtobufSerializer';
+import { isProtoSerializable } from '../Serialization/ProtobufDecorators';
 
 /**
  * 快照管理器
  * 
  * 负责创建和管理ECS系统的快照，支持完整快照和增量快照
+ * 现在支持protobuf和JSON混合序列化
  */
 export class SnapshotManager {
     /** 默认快照配置 */
@@ -28,7 +31,15 @@ export class SnapshotManager {
     /** 最大缓存数量 */
     private maxCacheSize: number = 10;
     
-
+    /** Protobuf序列化器 */
+    private protobufSerializer: ProtobufSerializer;
+    
+    /**
+     * 构造函数
+     */
+    constructor() {
+        this.protobufSerializer = ProtobufSerializer.getInstance();
+    }
 
     /**
      * 创建场景快照
@@ -281,10 +292,32 @@ export class SnapshotManager {
      */
     public getCacheStats(): {
         snapshotCacheSize: number;
+        protobufStats?: {
+            registeredComponents: number;
+            protobufAvailable: boolean;
+        };
     } {
-        return {
+        const stats: any = {
             snapshotCacheSize: this.snapshotCache.size
         };
+        
+        if (this.protobufSerializer) {
+            stats.protobufStats = this.protobufSerializer.getStats();
+        }
+        
+        return stats;
+    }
+    
+    /**
+     * 手动初始化protobuf支持（可选，通常会自动初始化）
+     * 
+     * @param protobufJs - protobuf.js库实例
+     */
+    public initializeProtobuf(protobufJs: any): void {
+        if (this.protobufSerializer) {
+            this.protobufSerializer.initialize(protobufJs);
+            console.log('[SnapshotManager] Protobuf支持已手动启用');
+        }
     }
 
     /**
@@ -316,12 +349,42 @@ export class SnapshotManager {
 
     /**
      * 创建组件快照
+     * 
+     * 现在支持protobuf和JSON混合序列化
      */
     private createComponentSnapshot(component: Component): ComponentSnapshot | null {
         if (!this.isComponentSnapshotable(component)) {
             return null;
         }
         
+        let serializedData: SerializedData;
+        
+        // 优先尝试protobuf序列化
+        if (isProtoSerializable(component) && this.protobufSerializer.canSerialize(component)) {
+            try {
+                serializedData = this.protobufSerializer.serialize(component);
+            } catch (error) {
+                console.warn(`[SnapshotManager] Protobuf序列化失败，回退到传统方式: ${component.constructor.name}`, error);
+                serializedData = this.createLegacySerializedData(component);
+            }
+        } else {
+            // 使用传统序列化方式
+            serializedData = this.createLegacySerializedData(component);
+        }
+        
+        return {
+            type: component.constructor.name,
+            id: component.id,
+            data: serializedData,
+            enabled: component.enabled,
+            config: this.getComponentSnapshotConfig(component)
+        };
+    }
+    
+    /**
+     * 创建传统序列化数据
+     */
+    private createLegacySerializedData(component: Component): SerializedData {
         let data: any;
         
         if (this.hasSerializeMethod(component)) {
@@ -329,18 +392,18 @@ export class SnapshotManager {
                 data = (component as any).serialize();
             } catch (error) {
                 console.warn(`[SnapshotManager] 组件序列化失败: ${component.constructor.name}`, error);
-                return null;
+                data = this.defaultSerializeComponent(component);
             }
         } else {
             data = this.defaultSerializeComponent(component);
         }
         
+        const jsonString = JSON.stringify(data);
         return {
-            type: component.constructor.name,
-            id: component.id,
+            type: 'json',
+            componentType: component.constructor.name,
             data: data,
-            enabled: component.enabled,
-            config: this.getComponentSnapshotConfig(component)
+            size: new Blob([jsonString]).size
         };
     }
 
@@ -476,6 +539,8 @@ export class SnapshotManager {
 
     /**
      * 从快照恢复组件
+     * 
+     * 现在支持protobuf和JSON混合反序列化
      */
     private restoreComponentFromSnapshot(entity: Entity, componentSnapshot: ComponentSnapshot): void {
         // 查找现有组件
@@ -491,15 +556,40 @@ export class SnapshotManager {
         component.enabled = componentSnapshot.enabled;
         
         // 恢复组件数据
+        const serializedData = componentSnapshot.data as SerializedData;
+        
+        // 检查数据是否为新的SerializedData格式
+        if (serializedData && typeof serializedData === 'object' && 'type' in serializedData) {
+            // 使用新的序列化格式
+            if (serializedData.type === 'protobuf' && isProtoSerializable(component)) {
+                try {
+                    this.protobufSerializer.deserialize(component, serializedData);
+                } catch (error) {
+                    console.warn(`[SnapshotManager] Protobuf反序列化失败: ${componentSnapshot.type}`, error);
+                }
+            } else if (serializedData.type === 'json') {
+                // JSON格式反序列化
+                this.deserializeLegacyData(component, serializedData.data);
+            }
+        } else {
+            // 兼容旧格式数据
+            this.deserializeLegacyData(component, componentSnapshot.data);
+        }
+    }
+    
+    /**
+     * 反序列化传统格式数据
+     */
+    private deserializeLegacyData(component: Component, data: any): void {
         if (this.hasSerializeMethod(component)) {
             try {
-                (component as any).deserialize(componentSnapshot.data);
+                (component as any).deserialize(data);
             } catch (error) {
-                console.warn(`[SnapshotManager] 组件 ${componentSnapshot.type} 反序列化失败:`, error);
+                console.warn(`[SnapshotManager] 组件 ${component.constructor.name} 反序列化失败:`, error);
             }
         } else {
             // 使用默认反序列化
-            this.defaultDeserializeComponent(component, componentSnapshot.data);
+            this.defaultDeserializeComponent(component, data);
         }
     }
 

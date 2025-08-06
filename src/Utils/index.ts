@@ -3,5 +3,6 @@ export * from './Pool';
 export * from './Emitter';
 export * from './GlobalManager';
 export * from './PerformanceMonitor';
+export * from './Serialization';
 export { Time } from './Time';
 export * from './Debug'; 

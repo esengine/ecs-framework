@@ -28,3 +28,6 @@
 [submodule "extensions/cocos/cocos-ecs/extensions/utilityai_designer"]
 	path = extensions/cocos/cocos-ecs/extensions/utilityai_designer
 	url = https://github.com/esengine/utilityai_designer.git
+[submodule "thirdparty/ecs-astar"]
+	path = thirdparty/ecs-astar
+	url = https://github.com/esengine/ecs-astar.git

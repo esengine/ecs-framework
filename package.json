@@ -4,6 +4,9 @@
   "description": "用于Laya、Cocos Creator等JavaScript游戏引擎的高性能ECS框架",
   "main": "bin/index.js",
   "types": "bin/index.d.ts",
+  "bin": {
+    "ecs-proto": "./bin/ecs-proto"
+  },
   "files": [
     "bin/**/*",
     "README.md",
@@ -36,7 +39,10 @@
     "test:performance": "jest --config jest.performance.config.js",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage",
-    "test:clear": "jest --clearCache"
+    "test:clear": "jest --clearCache",
+    "proto:generate": "ecs-proto generate",
+    "proto:compile": "ecs-proto compile",
+    "proto:build": "ecs-proto build"
   },
   "author": "yhh",
   "license": "MIT",
@@ -64,6 +70,8 @@
   "dependencies": {
     "@types/multer": "^1.4.13",
     "@types/ws": "^8.18.1",
+    "protobufjs": "^7.5.3",
+    "reflect-metadata": "^0.2.2",
     "ws": "^8.18.2"
   }
 }

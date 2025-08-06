@@ -1,0 +1,382 @@
+<svg width="1200" height="850" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 渐变定义 - 柔和色调 -->
+    <linearGradient id="coreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8892b0"/>
+      <stop offset="100%" style="stop-color:#a5b4cb"/>
+    </linearGradient>
+    
+    <linearGradient id="sceneGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c9cbf"/>
+      <stop offset="100%" style="stop-color:#9bb5d1"/>
+    </linearGradient>
+    
+    <linearGradient id="entityGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#81b29a"/>
+      <stop offset="100%" style="stop-color:#a8caba"/>
+    </linearGradient>
+    
+    <linearGradient id="componentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#d4a574"/>
+      <stop offset="100%" style="stop-color:#e5c7a0"/>
+    </linearGradient>
+    
+    <linearGradient id="systemGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c49799"/>
+      <stop offset="100%" style="stop-color:#d9b5b7"/>
+    </linearGradient>
+    
+    <linearGradient id="queryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#b0c4de"/>
+      <stop offset="100%" style="stop-color:#d0dff0"/>
+    </linearGradient>
+    
+    <linearGradient id="eventGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c5a3c5"/>
+      <stop offset="100%" style="stop-color:#e0c4e0"/>
+    </linearGradient>
+
+    <!-- 动画定义 -->
+    <style>
+      .data-flow-line {
+        animation: dataFlow 6s linear infinite;
+      }
+      
+      @keyframes dataFlow {
+        0% { stroke-dashoffset: 40; }
+        100% { stroke-dashoffset: 0; }
+      }
+    </style>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1200" height="850" fill="white" rx="15" stroke="#e2e8f0" stroke-width="1"/>
+  
+  <!-- 标题 -->
+  <text x="600" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#2c3e50">
+    ECS Framework 完整架构
+  </text>
+  
+  <!-- Core 核心层 -->
+  <g id="core-layer">
+    <!-- 流程步骤标号 -->
+    <circle cx="480" cy="75" r="15" fill="#8892b0" stroke="white" stroke-width="2"/>
+    <text x="480" y="81" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">1</text>
+    
+    <rect x="400" y="60" width="400" height="60" rx="10" fill="url(#coreGradient)" opacity="0.9"/>
+    <text x="600" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white">
+      Core 框架核心
+    </text>
+    <text x="500" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+      ComponentRegistry • IdentifierPool
+    </text>
+    <text x="700" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+      BitMaskOptimizer • ConfigManager
+    </text>
+    
+  </g>
+  
+  <!-- Scene 场景管理层 -->
+  <g id="scene-layer">
+    <!-- 流程步骤标号 -->
+    <circle cx="280" cy="175" r="15" fill="#7c9cbf" stroke="white" stroke-width="2"/>
+    <text x="280" y="181" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">2</text>
+    
+    <rect x="300" y="150" width="600" height="80" rx="12" fill="url(#sceneGradient)" opacity="0.9"/>
+    <text x="600" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">
+      Scene 场景管理器
+    </text>
+    <text x="450" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+      EntityList
+    </text>
+    <text x="600" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+      ComponentStorageManager
+    </text>
+    <text x="750" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+      EntityProcessors
+    </text>
+    <text x="600" y="215" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+      实体管理 • 组件存储 • 系统调度 • 查询引擎
+    </text>
+    
+  </g>
+
+  <!-- Entity 实体层 -->
+  <g id="entity-layer">
+    <!-- 流程步骤标号 -->
+    <circle cx="30" cy="320" r="15" fill="#81b29a" stroke="white" stroke-width="2"/>
+    <text x="30" y="326" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">3</text>
+    
+    <rect x="50" y="280" width="280" height="180" rx="10" fill="url(#entityGradient)" opacity="0.9"/>
+    <text x="190" y="305" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white">
+      Entity 实体系统
+    </text>
+    
+    <!-- Entity Manager -->
+    <rect x="70" y="320" width="240" height="30" rx="5" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+    <text x="190" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="white">
+      EntityList • 高性能实体集合管理
+    </text>
+    
+    <!-- Entity instances -->
+    <rect x="80" y="360" width="60" height="20" rx="3" fill="rgba(255,255,255,0.4)"/>
+    <text x="110" y="373" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Player</text>
+    
+    <rect x="150" y="360" width="60" height="20" rx="3" fill="rgba(255,255,255,0.4)"/>
+    <text x="180" y="373" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Enemy</text>
+    
+    <rect x="220" y="360" width="60" height="20" rx="3" fill="rgba(255,255,255,0.4)"/>
+    <text x="250" y="373" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">Bullet</text>
+    
+    <!-- Entity features -->
+    <text x="80" y="400" font-family="Arial, sans-serif" font-size="9" fill="white">• 组件容器</text>
+    <text x="80" y="415" font-family="Arial, sans-serif" font-size="9" fill="white">• 层次结构</text>
+    <text x="190" y="400" font-family="Arial, sans-serif" font-size="9" fill="white">• 生命周期管理</text>
+    <text x="190" y="415" font-family="Arial, sans-serif" font-size="9" fill="white">• 状态管理</text>
+    
+    <text x="190" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+      唯一标识 • 无数据逻辑载体
+    </text>
+    
+  </g>
+
+  <!-- Component 组件层 -->
+  <g id="component-layer">
+    <!-- 流程步骤标号 -->
+    <circle cx="650" cy="320" r="15" fill="#d4a574" stroke="white" stroke-width="2"/>
+    <text x="650" y="326" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">4</text>
+    
+    <rect x="360" y="280" width="280" height="180" rx="10" fill="url(#componentGradient)" opacity="0.9"/>
+    <text x="500" y="305" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white">
+      Component 组件系统
+    </text>
+    
+    <!-- Component Storage -->
+    <rect x="380" y="315" width="240" height="40" rx="5" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+    <text x="500" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="white">
+      ComponentStorageManager • SoA/AoS 双模式
+    </text>
+    <text x="500" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="white">
+      ComponentPool • DirtyTrackingSystem
+    </text>
+    
+    <!-- Component types -->
+    <rect x="380" y="360" width="110" height="18" rx="2" fill="rgba(255,255,255,0.4)"/>
+    <text x="435" y="372" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Position {x,y,z}</text>
+    
+    <rect x="500" y="360" width="110" height="18" rx="2" fill="rgba(255,255,255,0.4)"/>
+    <text x="555" y="372" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Velocity {dx,dy,dz}</text>
+    
+    <rect x="380" y="385" width="110" height="18" rx="2" fill="rgba(255,255,255,0.4)"/>
+    <text x="435" y="397" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Health {hp,max}</text>
+    
+    <rect x="500" y="385" width="110" height="18" rx="2" fill="rgba(255,255,255,0.4)"/>
+    <text x="555" y="397" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">Render {sprite}</text>
+    
+    <!-- Component features -->
+    <text x="380" y="420" font-family="Arial, sans-serif" font-size="9" fill="white">• @EnableSoA 优化</text>
+    <text x="520" y="420" font-family="Arial, sans-serif" font-size="9" fill="white">• 对象池管理</text>
+    <text x="380" y="435" font-family="Arial, sans-serif" font-size="9" fill="white">• 序列化支持</text>
+    <text x="520" y="435" font-family="Arial, sans-serif" font-size="9" fill="white">• 类型安全</text>
+    
+    <text x="500" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+      纯数据结构 • 描述实体属性
+    </text>
+    
+  </g>
+
+  <!-- System 系统层 -->
+  <g id="system-layer">
+    <!-- 流程步骤标号 -->
+    <circle cx="1160" cy="320" r="15" fill="#c49799" stroke="white" stroke-width="2"/>
+    <text x="1160" y="326" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">5</text>
+    
+    <rect x="870" y="280" width="280" height="180" rx="10" fill="url(#systemGradient)" opacity="0.9"/>
+    <text x="1010" y="305" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white">
+      System 系统层
+    </text>
+    
+    <!-- System Processors -->
+    <rect x="890" y="320" width="240" height="30" rx="5" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+    <text x="1010" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="white">
+      EntityProcessors • 系统调度管理
+    </text>
+    
+    <!-- System instances -->
+    <rect x="890" y="360" width="110" height="18" rx="2" fill="rgba(255,255,255,0.4)"/>
+    <text x="945" y="372" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">MovementSystem</text>
+    
+    <rect x="1010" y="360" width="110" height="18" rx="2" fill="rgba(255,255,255,0.4)"/>
+    <text x="1065" y="372" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">RenderSystem</text>
+    
+    <rect x="890" y="385" width="110" height="18" rx="2" fill="rgba(255,255,255,0.4)"/>
+    <text x="945" y="397" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">PhysicsSystem</text>
+    
+    <rect x="1010" y="385" width="110" height="18" rx="2" fill="rgba(255,255,255,0.4)"/>
+    <text x="1065" y="397" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">AISystem</text>
+    
+    <!-- System features -->
+    <text x="890" y="420" font-family="Arial, sans-serif" font-size="9" fill="white">• Matcher 查询</text>
+    <text x="1020" y="420" font-family="Arial, sans-serif" font-size="9" fill="white">• 性能监控</text>
+    <text x="890" y="435" font-family="Arial, sans-serif" font-size="9" fill="white">• 优先级调度</text>
+    <text x="1020" y="435" font-family="Arial, sans-serif" font-size="9" fill="white">• 热插拔</text>
+    
+    <text x="1010" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
+      业务逻辑处理 • 操作组件数据
+    </text>
+    
+  </g>
+
+  <!-- Query 查询层 -->
+  <g id="query-layer">
+    <!-- 流程步骤标号 -->
+    <circle cx="30" cy="540" r="15" fill="#b0c4de" stroke="white" stroke-width="2"/>
+    <text x="30" y="546" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">6</text>
+    
+    <rect x="50" y="500" width="500" height="120" rx="10" fill="url(#queryGradient)" opacity="0.9"/>
+    <text x="300" y="525" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">
+      Query 查询系统
+    </text>
+    
+    <!-- Query components -->
+    <rect x="70" y="540" width="140" height="60" rx="5" fill="rgba(255,255,255,0.6)" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+    <text x="140" y="555" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#4a5568">Matcher</text>
+    <text x="140" y="570" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">withAll()</text>
+    <text x="140" y="582" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">withAny()</text>
+    <text x="140" y="594" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">withNone()</text>
+    
+    <rect x="230" y="540" width="140" height="60" rx="5" fill="rgba(255,255,255,0.6)" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+    <text x="300" y="555" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#4a5568">QuerySystem</text>
+    <text x="300" y="570" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">查询缓存</text>
+    <text x="300" y="582" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">批量优化</text>
+    <text x="300" y="594" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">实时更新</text>
+    
+    <rect x="390" y="540" width="140" height="60" rx="5" fill="rgba(255,255,255,0.6)" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+    <text x="460" y="553" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#4a5568">ArchetypeSystem</text>
+    <text x="460" y="568" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#4a5568">组件组合分组</text>
+    <text x="460" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#4a5568">原型级缓存</text>
+    <text x="460" y="592" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#4a5568">BitSet优化查询</text>
+    
+  </g>
+
+  <!-- Event 事件系统 -->
+  <g id="event-layer">
+    <!-- 流程步骤标号 -->
+    <circle cx="1160" cy="540" r="15" fill="#c5a3c5" stroke="white" stroke-width="2"/>
+    <text x="1160" y="546" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">7</text>
+    
+    <rect x="580" y="500" width="570" height="120" rx="10" fill="url(#eventGradient)" opacity="0.9"/>
+    <text x="865" y="525" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">
+      Event 事件系统
+    </text>
+    
+    <!-- Event components -->
+    <rect x="600" y="540" width="150" height="60" rx="5" fill="rgba(255,255,255,0.6)" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+    <text x="675" y="555" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#4a5568">TypeSafeEventSystem</text>
+    <text x="675" y="570" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">同步/异步</text>
+    <text x="675" y="582" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">优先级排序</text>
+    <text x="675" y="594" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">批处理机制</text>
+    
+    <rect x="770" y="540" width="150" height="60" rx="5" fill="rgba(255,255,255,0.6)" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+    <text x="845" y="555" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#4a5568">Performance Monitor</text>
+    <text x="845" y="570" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">性能统计</text>
+    <text x="845" y="582" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">阈值告警</text>
+    <text x="845" y="594" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">实时监控</text>
+    
+    <rect x="940" y="540" width="150" height="60" rx="5" fill="rgba(255,255,255,0.6)" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+    <text x="1015" y="555" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#4a5568">Debug Manager</text>
+    <text x="1015" y="570" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">WebSocket通信</text>
+    <text x="1015" y="582" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">实时调试数据</text>
+    <text x="1015" y="594" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#4a5568">内存快照</text>
+    
+  </g>
+
+  <!-- 数据流连接线 -->
+  <!-- 1. Core to Scene - 初始化流程 -->
+  <path d="M 600 120 Q 600 135 600 150" stroke="#8892b0" stroke-width="3" fill="none" stroke-dasharray="10,5" class="data-flow-line"/>
+  <polygon points="595,145 600,150 605,145" fill="#8892b0"/>
+  <text x="620" y="135" font-family="Arial, sans-serif" font-size="10" fill="#8892b0" font-weight="bold">初始化</text>
+  
+  <!-- 2. Scene to Entity/Component/System - 管理流程 -->
+  <path d="M 400 230 Q 300 250 190 280" stroke="#7c9cbf" stroke-width="3" fill="none" stroke-dasharray="8,4" class="data-flow-line"/>
+  <polygon points="195,275 190,280 200,282" fill="#7c9cbf"/>
+  <text x="295" y="250" font-family="Arial, sans-serif" font-size="9" fill="#7c9cbf">管理实体</text>
+  
+  <path d="M 600 230 Q 600 250 500 280" stroke="#7c9cbf" stroke-width="3" fill="none" stroke-dasharray="8,4" class="data-flow-line"/>
+  <polygon points="495,275 500,280 505,275" fill="#7c9cbf"/>
+  <text x="550" y="250" font-family="Arial, sans-serif" font-size="9" fill="#7c9cbf">存储组件</text>
+  
+  <path d="M 800 230 Q 900 250 1010 280" stroke="#7c9cbf" stroke-width="3" fill="none" stroke-dasharray="8,4" class="data-flow-line"/>
+  <polygon points="1005,275 1010,280 1000,282" fill="#7c9cbf"/>
+  <text x="905" y="250" font-family="Arial, sans-serif" font-size="9" fill="#7c9cbf">调度系统</text>
+  
+  <!-- 3. Entity to Component - 组件附加 -->
+  <path d="M 330 370 Q 350 370 360 370" stroke="#81b29a" stroke-width="3" fill="none" stroke-dasharray="6,3" class="data-flow-line"/>
+  <polygon points="355,365 360,370 355,375" fill="#81b29a"/>
+  <text x="345" y="360" font-family="Arial, sans-serif" font-size="9" fill="#81b29a" font-weight="bold">附加组件</text>
+  
+  <!-- 4. Component to System - 数据处理 -->
+  <path d="M 640 370 Q 750 370 870 370" stroke="#d4a574" stroke-width="3" fill="none" stroke-dasharray="6,3" class="data-flow-line"/>
+  <polygon points="865,365 870,370 865,375" fill="#d4a574"/>
+  <text x="755" y="360" font-family="Arial, sans-serif" font-size="9" fill="#d4a574" font-weight="bold">处理数据</text>
+  
+  <!-- 5. Scene to Query/Event - 查询和事件 -->
+  <path d="M 450 230 Q 350 350 300 500" stroke="#b0c4de" stroke-width="2" fill="none" stroke-dasharray="5,2" class="data-flow-line"/>
+  <polygon points="305,495 300,500 295,495" fill="#b0c4de"/>
+  <text x="375" y="365" font-family="Arial, sans-serif" font-size="8" fill="#b0c4de">查询支持</text>
+  
+  <path d="M 750 230 Q 850 350 865 500" stroke="#c5a3c5" stroke-width="2" fill="none" stroke-dasharray="5,2" class="data-flow-line"/>
+  <polygon points="860,495 865,500 870,495" fill="#c5a3c5"/>
+  <text x="808" y="365" font-family="Arial, sans-serif" font-size="8" fill="#c5a3c5">事件通知</text>
+  
+  <!-- 6. Query to System - 查询结果 -->
+  <path d="M 460 540 Q 680 480 900 380" stroke="#b0c4de" stroke-width="3" fill="none" stroke-dasharray="4,2" class="data-flow-line"/>
+  <polygon points="895,375 900,380 895,385" fill="#b0c4de"/>
+  <text x="680" y="470" font-family="Arial, sans-serif" font-size="9" fill="#b0c4de" font-weight="bold">匹配结果</text>
+  
+  <!-- 7. System回流 - 数据修改和事件 -->
+  <path d="M 900 400 Q 800 420 700 430 Q 600 440 500 430 Q 400 420 350 400" stroke="#c49799" stroke-width="2" fill="none" stroke-dasharray="3,2" class="data-flow-line"/>
+  <text x="625" y="415" font-family="Arial, sans-serif" font-size="8" fill="#c49799">修改组件数据</text>
+  
+  <path d="M 1000 460 Q 1050 480 1100 500" stroke="#c5a3c5" stroke-width="2" fill="none" stroke-dasharray="3,2" class="data-flow-line"/>
+  <text x="1050" y="475" font-family="Arial, sans-serif" font-size="8" fill="#c5a3c5">触发事件</text>
+  
+  <!-- 工作流程说明 -->
+  <g id="workflow">
+    <rect x="50" y="720" width="1100" height="120" rx="8" fill="rgba(108, 117, 125, 0.05)" stroke="#6c757d" stroke-width="1" stroke-dasharray="5,3"/>
+    <text x="600" y="745" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#495057">
+      🔄 ECS 框架7步工作流程
+    </text>
+    
+    <!-- 流程步骤详解 -->
+    <g id="step-details">
+      <text x="70" y="770" font-family="Arial, sans-serif" font-size="11" fill="#8892b0" font-weight="bold">①初始化</text>
+      <text x="70" y="785" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">Core.create()</text>
+      
+      <text x="170" y="770" font-family="Arial, sans-serif" font-size="11" fill="#7c9cbf" font-weight="bold">②场景管理</text>
+      <text x="170" y="785" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">Scene.initialize()</text>
+      
+      <text x="280" y="770" font-family="Arial, sans-serif" font-size="11" fill="#81b29a" font-weight="bold">③创建实体</text>
+      <text x="280" y="785" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">Entity.create()</text>
+      
+      <text x="380" y="770" font-family="Arial, sans-serif" font-size="11" fill="#d4a574" font-weight="bold">④附加组件</text>
+      <text x="380" y="785" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">addComponent()</text>
+      
+      <text x="480" y="770" font-family="Arial, sans-serif" font-size="11" fill="#c49799" font-weight="bold">⑤系统处理</text>
+      <text x="480" y="785" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">System.process()</text>
+      
+      <text x="580" y="770" font-family="Arial, sans-serif" font-size="11" fill="#b0c4de" font-weight="bold">⑥查询匹配</text>
+      <text x="580" y="785" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">Matcher.query()</text>
+      
+      <text x="680" y="770" font-family="Arial, sans-serif" font-size="11" fill="#c5a3c5" font-weight="bold">⑦事件通知</text>
+      <text x="680" y="785" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">Event.emit()</text>
+    </g>
+    
+    <text x="600" y="810" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#6c757d">
+      每帧循环：查询实体 → 匹配组件 → 执行系统逻辑 → 修改数据 → 触发事件 → 性能监控
+    </text>
+    <text x="600" y="828" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#6c757d">
+      💡 鼠标悬停各组件查看详细API • 圆形数字显示执行顺序 • 不同颜色连线代表不同数据流
+    </text>
+  </g>
+</svg>
