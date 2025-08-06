@@ -8,7 +8,7 @@ import { isProtoSerializable } from '../Serialization/ProtobufDecorators';
  * 快照管理器
  * 
  * 负责创建和管理ECS系统的快照，支持完整快照和增量快照
- * 现在支持protobuf和JSON混合序列化
+ * 使用protobuf序列化
  */
 export class SnapshotManager {
     /** 默认快照配置 */
@@ -167,15 +167,13 @@ export class SnapshotManager {
             component.enabled = componentSnapshot.enabled;
             
             // 恢复组件数据
-            if (this.hasSerializeMethod(component)) {
-                try {
-                    (component as any).deserialize(componentSnapshot.data);
-                } catch (error) {
-                    console.warn(`[SnapshotManager] 组件 ${componentSnapshot.type} 反序列化失败:`, error);
-                }
-            } else {
-                this.defaultDeserializeComponent(component, componentSnapshot.data);
+            const serializedData = componentSnapshot.data as SerializedData;
+            
+            if (!isProtoSerializable(component)) {
+                throw new Error(`[SnapshotManager] 组件 ${component.constructor.name} 不支持protobuf反序列化`);
             }
+            
+            this.protobufSerializer.deserialize(component, serializedData);
         } catch (error) {
             console.error(`[SnapshotManager] 创建组件失败: ${componentSnapshot.type}`, error);
         }
@@ -350,27 +348,18 @@ export class SnapshotManager {
     /**
      * 创建组件快照
      * 
-     * 现在支持protobuf和JSON混合序列化
+     * 使用protobuf序列化
      */
     private createComponentSnapshot(component: Component): ComponentSnapshot | null {
         if (!this.isComponentSnapshotable(component)) {
             return null;
         }
         
-        let serializedData: SerializedData;
-        
-        // 优先尝试protobuf序列化
-        if (isProtoSerializable(component) && this.protobufSerializer.canSerialize(component)) {
-            try {
-                serializedData = this.protobufSerializer.serialize(component);
-            } catch (error) {
-                console.warn(`[SnapshotManager] Protobuf序列化失败，回退到传统方式: ${component.constructor.name}`, error);
-                serializedData = this.createLegacySerializedData(component);
-            }
-        } else {
-            // 使用传统序列化方式
-            serializedData = this.createLegacySerializedData(component);
+        if (!isProtoSerializable(component)) {
+            throw new Error(`[SnapshotManager] 组件 ${component.constructor.name} 不支持protobuf序列化，请添加@ProtoSerializable装饰器`);
         }
+        
+        const serializedData = this.protobufSerializer.serialize(component);
         
         return {
             type: component.constructor.name,
@@ -379,76 +368,6 @@ export class SnapshotManager {
             enabled: component.enabled,
             config: this.getComponentSnapshotConfig(component)
         };
-    }
-    
-    /**
-     * 创建传统序列化数据
-     */
-    private createLegacySerializedData(component: Component): SerializedData {
-        let data: any;
-        
-        if (this.hasSerializeMethod(component)) {
-            try {
-                data = (component as any).serialize();
-            } catch (error) {
-                console.warn(`[SnapshotManager] 组件序列化失败: ${component.constructor.name}`, error);
-                data = this.defaultSerializeComponent(component);
-            }
-        } else {
-            data = this.defaultSerializeComponent(component);
-        }
-        
-        const jsonString = JSON.stringify(data);
-        return {
-            type: 'json',
-            componentType: component.constructor.name,
-            data: data,
-            size: new Blob([jsonString]).size
-        };
-    }
-
-    /**
-     * 默认组件序列化
-     */
-    private defaultSerializeComponent(component: Component): any {
-        const data: any = {};
-        
-        // 只序列化公共属性
-        for (const key in component) {
-            if (component.hasOwnProperty(key) && 
-                typeof (component as any)[key] !== 'function' && 
-                key !== 'id' && 
-                key !== 'entity' &&
-                key !== '_enabled' &&
-                key !== '_updateOrder') {
-                
-                const value = (component as any)[key];
-                if (this.isSerializableValue(value)) {
-                    data[key] = value;
-                }
-            }
-        }
-        
-        return data;
-    }
-
-    /**
-     * 检查值是否可序列化
-     */
-    private isSerializableValue(value: any): boolean {
-        if (value === null || value === undefined) return true;
-        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true;
-        if (Array.isArray(value)) return value.every(v => this.isSerializableValue(v));
-        if (typeof value === 'object') {
-            // 简单对象检查，避免循环引用
-            try {
-                JSON.stringify(value);
-                return true;
-            } catch {
-                return false;
-            }
-        }
-        return false;
     }
 
     /**
@@ -472,12 +391,6 @@ export class SnapshotManager {
         return SnapshotManager.DEFAULT_CONFIG;
     }
 
-    /**
-     * 检查组件是否有序列化方法
-     */
-    private hasSerializeMethod(component: Component): boolean {
-        return typeof (component as any).serialize === 'function';
-    }
 
     /**
      * 恢复完整快照
@@ -540,7 +453,7 @@ export class SnapshotManager {
     /**
      * 从快照恢复组件
      * 
-     * 现在支持protobuf和JSON混合反序列化
+ * 使用protobuf反序列化
      */
     private restoreComponentFromSnapshot(entity: Entity, componentSnapshot: ComponentSnapshot): void {
         // 查找现有组件
@@ -558,56 +471,11 @@ export class SnapshotManager {
         // 恢复组件数据
         const serializedData = componentSnapshot.data as SerializedData;
         
-        // 检查数据是否为新的SerializedData格式
-        if (serializedData && typeof serializedData === 'object' && 'type' in serializedData) {
-            // 使用新的序列化格式
-            if (serializedData.type === 'protobuf' && isProtoSerializable(component)) {
-                try {
-                    this.protobufSerializer.deserialize(component, serializedData);
-                } catch (error) {
-                    console.warn(`[SnapshotManager] Protobuf反序列化失败: ${componentSnapshot.type}`, error);
-                }
-            } else if (serializedData.type === 'json') {
-                // JSON格式反序列化
-                this.deserializeLegacyData(component, serializedData.data);
-            }
-        } else {
-            // 兼容旧格式数据
-            this.deserializeLegacyData(component, componentSnapshot.data);
+        if (!isProtoSerializable(component)) {
+            throw new Error(`[SnapshotManager] 组件 ${component.constructor.name} 不支持protobuf反序列化`);
         }
-    }
-    
-    /**
-     * 反序列化传统格式数据
-     */
-    private deserializeLegacyData(component: Component, data: any): void {
-        if (this.hasSerializeMethod(component)) {
-            try {
-                (component as any).deserialize(data);
-            } catch (error) {
-                console.warn(`[SnapshotManager] 组件 ${component.constructor.name} 反序列化失败:`, error);
-            }
-        } else {
-            // 使用默认反序列化
-            this.defaultDeserializeComponent(component, data);
-        }
-    }
-
-    /**
-     * 默认组件反序列化
-     */
-    private defaultDeserializeComponent(component: Component, data: any): void {
-        for (const key in data) {
-            if (component.hasOwnProperty(key) && 
-                typeof (component as any)[key] !== 'function' && 
-                key !== 'id' && 
-                key !== 'entity' &&
-                key !== '_enabled' &&
-                key !== '_updateOrder') {
-                
-                (component as any)[key] = data[key];
-            }
-        }
+        
+        this.protobufSerializer.deserialize(component, serializedData);
     }
 
     /**
