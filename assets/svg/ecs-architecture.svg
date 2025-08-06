@@ -376,7 +376,7 @@
       每帧循环：查询实体 → 匹配组件 → 执行系统逻辑 → 修改数据 → 触发事件 → 性能监控
     </text>
     <text x="600" y="828" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#6c757d">
-      💡 鼠标悬停各组件查看详细API • 圆形数字显示执行顺序 • 不同颜色连线代表不同数据流
+      💡 圆形数字显示执行顺序 • 不同颜色连线代表不同数据流
     </text>
   </g>
 </svg>
