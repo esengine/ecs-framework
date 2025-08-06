@@ -35,6 +35,8 @@ export abstract class EntitySystem implements ISystemBase {
     private _systemName: string;
     private _initialized: boolean = false;
     private _matcher: Matcher;
+    private _trackedEntities: Set<Entity> = new Set();
+    private _lastQueryResult: Entity[] = [];
 
     /**
      * 获取系统处理的实体列表（动态查询）
@@ -134,6 +136,10 @@ export abstract class EntitySystem implements ISystemBase {
      * 子类可以重写此方法进行初始化操作。
      */
     protected onInitialize(): void {
+        // 初始化时触发一次实体查询，以便正确跟踪现有实体
+        if (this.scene) {
+            this.queryEntities();
+        }
         // 子类可以重写此方法进行初始化
     }
 
@@ -144,6 +150,8 @@ export abstract class EntitySystem implements ISystemBase {
      */
     public reset(): void {
         this._initialized = false;
+        this._trackedEntities.clear();
+        this._lastQueryResult = [];
     }
 
     /**
@@ -151,24 +159,30 @@ export abstract class EntitySystem implements ISystemBase {
      */
     private queryEntities(): Entity[] {
         if (!this.scene?.querySystem || !this._matcher) {
+            this._lastQueryResult = [];
             return [];
         }
 
         const condition = this._matcher.getCondition();
         const querySystem = this.scene.querySystem;
+        let currentEntities: Entity[] = [];
         
         // 空条件返回所有实体
         if (this._matcher.isEmpty()) {
-            return querySystem.getAllEntities();
+            currentEntities = querySystem.getAllEntities();
+        } else if (this.isSingleCondition(condition)) {
+            // 单一条件优化查询
+            currentEntities = this.executeSingleConditionQuery(condition, querySystem);
+        } else {
+            // 复合查询
+            currentEntities = this.executeComplexQuery(condition, querySystem);
         }
 
-        // 单一条件优化查询
-        if (this.isSingleCondition(condition)) {
-            return this.executeSingleConditionQuery(condition, querySystem);
-        }
-
-        // 复合查询
-        return this.executeComplexQuery(condition, querySystem);
+        // 检查实体变化并触发回调
+        this.updateEntityTracking(currentEntities);
+        
+        this._lastQueryResult = currentEntities;
+        return currentEntities;
     }
 
     /**
@@ -435,5 +449,50 @@ export abstract class EntitySystem implements ISystemBase {
         const perfInfo = perfData ? ` (${perfData.executionTime.toFixed(2)}ms)` : '';
         
         return `${this._systemName}[${entityCount} entities]${perfInfo}`;
+    }
+
+    /**
+     * 更新实体跟踪，检查新增和移除的实体
+     */
+    private updateEntityTracking(currentEntities: Entity[]): void {
+        const currentSet = new Set(currentEntities);
+        
+        // 检查新增的实体
+        for (const entity of currentEntities) {
+            if (!this._trackedEntities.has(entity)) {
+                this._trackedEntities.add(entity);
+                this.onAdded(entity);
+            }
+        }
+        
+        // 检查移除的实体
+        for (const entity of this._trackedEntities) {
+            if (!currentSet.has(entity)) {
+                this._trackedEntities.delete(entity);
+                this.onRemoved(entity);
+            }
+        }
+    }
+
+    /**
+     * 当实体被添加到系统时调用
+     * 
+     * 子类可以重写此方法来处理实体添加事件。
+     * 
+     * @param entity 被添加的实体
+     */
+    protected onAdded(_entity: Entity): void {
+        // 子类可以重写此方法
+    }
+
+    /**
+     * 当实体从系统中移除时调用
+     * 
+     * 子类可以重写此方法来处理实体移除事件。
+     * 
+     * @param entity 被移除的实体
+     */
+    protected onRemoved(_entity: Entity): void {
+        // 子类可以重写此方法
     }
 }

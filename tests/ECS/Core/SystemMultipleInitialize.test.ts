@@ -24,9 +24,16 @@ class TrackingSystem extends EntitySystem {
         const wasInitialized = (this as any)._initialized;
         super.initialize();
         
-        // 只有在真正执行初始化时才增加计数
+        // 只有在真正执行初始化时才增加计数和处理实体
         if (!wasInitialized) {
             this.initializeCallCount++;
+            
+            // 处理所有现有实体
+            if (this.scene) {
+                for (const entity of this.scene.entities.buffer) {
+                    this.onChanged(entity);
+                }
+            }
         }
     }
 

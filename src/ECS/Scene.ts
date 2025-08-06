@@ -5,7 +5,7 @@ import { IdentifierPool } from './Utils/IdentifierPool';
 import { EntitySystem } from './Systems/EntitySystem';
 import { ComponentStorageManager } from './Core/ComponentStorage';
 import { QuerySystem } from './Core/QuerySystem';
-import { TypeSafeEventSystem, GlobalEventSystem } from './Core/EventSystem';
+import { TypeSafeEventSystem } from './Core/EventSystem';
 import { EventBus } from './Core/EventBus';
 
 /**
@@ -164,6 +164,9 @@ export class Scene {
         // 移除所有实体
         this.entities.removeAllEntities();
 
+        // 清理查询系统中的实体引用和缓存
+        this.querySystem.setEntities([]);
+
         // 清空组件存储
         this.componentStorageManager.clear();
 
@@ -281,6 +284,9 @@ export class Scene {
      */
     public destroyAllEntities() {
         this.entities.removeAllEntities();
+        
+        // 清理查询系统中的实体引用和缓存
+        this.querySystem.setEntities([]);
     }
 
     /**

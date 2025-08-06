@@ -9,8 +9,9 @@ class TestPositionComponent extends Component {
     public y: number = 0;
     public z: number = 0;
     
-    constructor(x = 0, y = 0, z = 0) {
+    constructor(...args: unknown[]) {
         super();
+        const [x = 0, y = 0, z = 0] = args as [number?, number?, number?];
         this.x = x;
         this.y = y;
         this.z = z;
@@ -24,8 +25,9 @@ class TestVelocityComponent extends Component {
     public vz: number = 0;
     public maxSpeed: number = 100;
     
-    constructor(vx = 0, vy = 0, vz = 0) {
+    constructor(...args: unknown[]) {
         super();
+        const [vx = 0, vy = 0, vz = 0] = args as [number?, number?, number?];
         this.vx = vx;
         this.vy = vy;
         this.vz = vz;
@@ -38,8 +40,9 @@ class TestHealthComponent extends Component {
     public max: number = 100;
     public regeneration: number = 1;
     
-    constructor(current = 100, max = 100) {
+    constructor(...args: unknown[]) {
         super();
+        const [current = 100, max = 100] = args as [number?, number?];
         this.current = current;
         this.max = max;
     }
@@ -51,8 +54,9 @@ class OriginalPositionComponent extends Component {
     public y: number = 0;
     public z: number = 0;
     
-    constructor(x = 0, y = 0, z = 0) {
+    constructor(...args: unknown[]) {
         super();
+        const [x = 0, y = 0, z = 0] = args as [number?, number?, number?];
         this.x = x;
         this.y = y;
         this.z = z;
@@ -65,8 +69,9 @@ class OriginalVelocityComponent extends Component {
     public vz: number = 0;
     public maxSpeed: number = 100;
     
-    constructor(vx = 0, vy = 0, vz = 0) {
+    constructor(...args: unknown[]) {
         super();
+        const [vx = 0, vy = 0, vz = 0] = args as [number?, number?, number?];
         this.vx = vx;
         this.vy = vy;
         this.vz = vz;
@@ -78,8 +83,9 @@ class OriginalHealthComponent extends Component {
     public max: number = 100;
     public regeneration: number = 1;
     
-    constructor(current = 100, max = 100) {
+    constructor(...args: unknown[]) {
         super();
+        const [current = 100, max = 100] = args as [number?, number?];
         this.current = current;
         this.max = max;
     }

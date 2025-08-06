@@ -933,8 +933,16 @@ export class Entity {
         this.removeAllComponents();
         
         // 从场景中移除
-        if (this.scene && this.scene.entities) {
-            this.scene.entities.remove(this);
+        if (this.scene) {
+            // 从查询系统中移除
+            if (this.scene.querySystem) {
+                this.scene.querySystem.removeEntity(this);
+            }
+            
+            // 从实体列表中移除
+            if (this.scene.entities) {
+                this.scene.entities.remove(this);
+            }
         }
     }
 
