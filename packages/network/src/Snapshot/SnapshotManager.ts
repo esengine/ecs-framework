@@ -1,8 +1,100 @@
-import { Entity, Component } from '@esengine/ecs-framework';
+import { Entity, Component, ComponentType } from '@esengine/ecs-framework';
 import { ISnapshotable, SceneSnapshot, EntitySnapshot, ComponentSnapshot, SnapshotConfig } from './ISnapshotable';
 import { ProtobufSerializer } from '../Serialization/ProtobufSerializer';
 import { SerializedData } from '../Serialization/SerializationTypes';
 import { isProtoSerializable } from '../Serialization/ProtobufDecorators';
+import { 
+    NetworkComponentType, 
+    IComponentFactory,
+    SerializationTarget,
+    TypeGuards,
+    INetworkSyncable
+} from '../types/NetworkTypes';
+
+/**
+ * 组件类型注册表
+ */
+class ComponentTypeRegistry implements IComponentFactory {
+    private static _instance: ComponentTypeRegistry | null = null;
+    private _componentTypes: Map<string, NetworkComponentType> = new Map();
+    
+    public static get Instance(): ComponentTypeRegistry {
+        if (!ComponentTypeRegistry._instance) {
+            ComponentTypeRegistry._instance = new ComponentTypeRegistry();
+        }
+        return ComponentTypeRegistry._instance;
+    }
+    
+    /**
+     * 注册组件类型
+     */
+    public register<T extends Component & INetworkSyncable>(name: string, constructor: NetworkComponentType<T>): void {
+        this._componentTypes.set(name, constructor);
+    }
+    
+    /**
+     * 获取组件构造函数
+     */
+    public get(name: string): NetworkComponentType | undefined {
+        return this._componentTypes.get(name);
+    }
+    
+    /**
+     * 自动注册组件类型（通过构造函数名）
+     */
+    public autoRegister<T extends Component & INetworkSyncable>(constructor: NetworkComponentType<T>): void {
+        this.register(constructor.name, constructor);
+    }
+    
+    /**
+     * 获取所有已注册的组件类型
+     */
+    public getAllTypes(): string[] {
+        return Array.from(this._componentTypes.keys());
+    }
+    
+    /**
+     * 检查组件类型是否已注册（按名称）
+     */
+    public isRegisteredByName(name: string): boolean {
+        return this._componentTypes.has(name);
+    }
+    
+    /**
+     * 清除所有注册
+     */
+    public clear(): void {
+        this._componentTypes.clear();
+    }
+    
+    /**
+     * 创建组件实例
+     */
+    public create<T extends Component & INetworkSyncable>(
+        componentType: NetworkComponentType<T>,
+        ...args: unknown[]
+    ): T {
+        return new componentType(...args);
+    }
+    
+    /**
+     * 检查组件类型是否已注册
+     */
+    public isRegistered<T extends Component & INetworkSyncable>(
+        componentType: NetworkComponentType<T>
+    ): boolean {
+        return this._componentTypes.has(componentType.name);
+    }
+    
+    /**
+     * 获取组件类型名称
+     */
+    public getTypeName<T extends Component & INetworkSyncable>(
+        componentType: NetworkComponentType<T>
+    ): string {
+        return componentType.name;
+    }
+}
 
 /**
  * 快照管理器
@@ -34,11 +126,15 @@ export class SnapshotManager {
     /** Protobuf序列化器 */
     private protobufSerializer: ProtobufSerializer;
     
+    /** 组件类型注册表 */
+    private componentRegistry: ComponentTypeRegistry;
+    
     /**
      * 构造函数
      */
     constructor() {
         this.protobufSerializer = ProtobufSerializer.getInstance();
+        this.componentRegistry = ComponentTypeRegistry.Instance;
     }
 
 
@@ -183,9 +279,13 @@ export class SnapshotManager {
     /**
      * 获取组件类型
      */
-    private getComponentType(typeName: string): any {
-        // TODO: 实现组件类型注册表或者使用其他方式获取组件类型
-        return null;
+    private getComponentType(typeName: string): NetworkComponentType | null {
+        const componentType = this.componentRegistry.get(typeName);
+        if (!componentType) {
+            console.warn(`[SnapshotManager] 组件类型 ${typeName} 未注册，请先调用 registerComponentType() 注册`);
+            return null;
+        }
+        return componentType;
     }
 
     /**
@@ -317,6 +417,43 @@ export class SnapshotManager {
             console.log('[SnapshotManager] Protobuf支持已手动启用');
         }
     }
+    
+    /**
+     * 注册组件类型
+     * 
+     * @param constructor - 组件构造函数
+     */
+    public registerComponentType<T extends Component & INetworkSyncable>(constructor: NetworkComponentType<T>): void {
+        this.componentRegistry.autoRegister(constructor);
+        console.log(`[SnapshotManager] 已注册组件类型: ${constructor.name}`);
+    }
+    
+    /**
+     * 批量注册组件类型
+     * 
+     * @param constructors - 组件构造函数数组
+     */
+    public registerComponentTypes(constructors: Array<NetworkComponentType>): void {
+        for (const constructor of constructors) {
+            this.registerComponentType(constructor as any);
+        }
+    }
+    
+    /**
+     * 检查组件类型是否已注册
+     * 
+     * @param typeName - 组件类型名称
+     */
+    public isComponentTypeRegistered(typeName: string): boolean {
+        return this.componentRegistry.isRegisteredByName(typeName);
+    }
+    
+    /**
+     * 获取所有已注册的组件类型
+     */
+    public getRegisteredComponentTypes(): string[] {
+        return this.componentRegistry.getAllTypes();
+    }
 
     /**
      * 创建实体快照
@@ -384,8 +521,9 @@ export class SnapshotManager {
      */
     private getComponentSnapshotConfig(component: Component): SnapshotConfig {
         // 检查组件是否有自定义配置
-        if ((component as any).snapshotConfig) {
-            return { ...SnapshotManager.DEFAULT_CONFIG, ...(component as any).snapshotConfig };
+        const componentWithConfig = component as Component & { snapshotConfig?: Partial<SnapshotConfig> };
+        if (componentWithConfig.snapshotConfig) {
+            return { ...SnapshotManager.DEFAULT_CONFIG, ...componentWithConfig.snapshotConfig };
         }
         
         return SnapshotManager.DEFAULT_CONFIG;
@@ -457,7 +595,13 @@ export class SnapshotManager {
      */
     private restoreComponentFromSnapshot(entity: Entity, componentSnapshot: ComponentSnapshot): void {
         // 查找现有组件
-        let component = entity.getComponent(componentSnapshot.type as any);
+        const componentType = this.getComponentType(componentSnapshot.type);
+        if (!componentType) {
+            console.warn(`[SnapshotManager] 组件类型 ${componentSnapshot.type} 未注册，无法恢复`);
+            return;
+        }
+        
+        let component = entity.getComponent(componentType);
         
         if (!component) {
             // 组件不存在，需要创建
@@ -554,7 +698,8 @@ export class SnapshotManager {
         
         if (this.hasChangeDetectionMethod(component)) {
             try {
-                return (component as any).hasChanged(baseComponent.data);
+                const componentWithMethod = component as Component & { hasChanged(data: unknown): boolean };
+                return componentWithMethod.hasChanged(baseComponent.data);
             } catch {
                 return true;
             }
@@ -566,7 +711,7 @@ export class SnapshotManager {
     /**
      * 检查组件是否有变化检测方法
      */
-    private hasChangeDetectionMethod(component: Component): boolean {
+    private hasChangeDetectionMethod(component: Component): component is Component & { hasChanged(data: unknown): boolean } {
         return typeof (component as any).hasChanged === 'function';
     }
 

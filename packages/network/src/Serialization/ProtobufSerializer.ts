@@ -5,16 +5,21 @@
  */
 
 import { Component } from '@esengine/ecs-framework';
-import { BigIntFactory } from '@esengine/ecs-framework';
+import * as protobuf from 'protobufjs';
 import { 
-    ProtobufRegistry, 
-    ProtoComponentDefinition, 
-    ProtoFieldDefinition,
-    ProtoFieldType,
+    ProtobufRegistry,
     isProtoSerializable,
     getProtoName 
 } from './ProtobufDecorators';
 import { SerializedData } from './SerializationTypes';
+
+/**
+ * 可序列化组件接口
+ */
+interface SerializableComponent extends Component {
+    readonly constructor: { name: string };
+}
+
 
 
 /**
@@ -24,15 +29,14 @@ export class ProtobufSerializer {
     private registry: ProtobufRegistry;
     private static instance: ProtobufSerializer;
     
-    /** protobuf.js库实例 */
-    private protobuf: any = null;
-    private root: any = null;
+    /** protobuf.js根对象 */
+    private root: protobuf.Root | null = null;
     
     /** MessageType缓存映射表 */
-    private messageTypeCache: Map<string, any> = new Map();
+    private messageTypeCache: Map<string, protobuf.Type> = new Map();
     
     /** 组件序列化数据缓存 */
-    private componentDataCache: Map<string, any> = new Map();
+    private componentDataCache: Map<string, Record<string, any>> = new Map();
     
     /** 缓存访问计数器 */
     private cacheAccessCount: Map<string, number> = new Map();
@@ -78,6 +82,7 @@ export class ProtobufSerializer {
         }
         if (options.clearCache) {
             this.messageTypeCache.clear();
+            this.cacheAccessCount.clear();
         }
         if (options.clearAllCaches) {
             this.clearAllCaches();
@@ -98,12 +103,10 @@ export class ProtobufSerializer {
      */
     private async initializeProtobuf(): Promise<void> {
         try {
-            // 动态导入protobufjs
-            this.protobuf = await import('protobufjs');
             this.buildProtoDefinitions();
             console.log('[ProtobufSerializer] Protobuf支持已启用');
         } catch (error) {
-            throw new Error('[ProtobufSerializer] 无法加载protobufjs: ' + error);
+            throw new Error('[ProtobufSerializer] 初始化protobuf失败: ' + error);
         }
     }
     
@@ -116,11 +119,14 @@ export class ProtobufSerializer {
     
     /**
      * 手动初始化protobuf.js库
-     * @param protobufJs protobuf.js库实例
+     * @param protobufRoot protobuf根对象
      */
-    public initialize(protobufJs: any): void {
-        this.protobuf = protobufJs;
-        this.buildProtoDefinitions();
+    public initialize(protobufRoot?: protobuf.Root): void {
+        if (protobufRoot) {
+            this.root = protobufRoot;
+        } else {
+            this.buildProtoDefinitions();
+        }
         console.log('[ProtobufSerializer] Protobuf支持已手动启用');
     }
     
@@ -129,7 +135,7 @@ export class ProtobufSerializer {
      * @param component 要序列化的组件
      * @returns 序列化数据
      */
-    public serialize(component: Component): SerializedData {
+    public serialize(component: SerializableComponent): SerializedData {
         const componentType = component.constructor.name;
         
         // 检查是否支持protobuf序列化
@@ -142,30 +148,22 @@ export class ProtobufSerializer {
             throw new Error(`组件 ${componentType} 未设置protobuf名称`);
         }
         
-        const definition = this.registry.getComponentDefinition(protoName);
-        if (!definition) {
-            throw new Error(`未找到组件定义: ${protoName}`);
-        }
-        
         // 获取protobuf消息类型
         const MessageType = this.getMessageType(protoName);
         if (!MessageType) {
             throw new Error(`未找到消息类型: ${protoName}`);
         }
         
-        // 构建protobuf数据对象
-        const protoData = this.buildProtoData(component, definition);
-        
-        // 数据验证
-        if (this.enableValidation) {
-            const error = MessageType.verify(protoData);
+        // 数据验证（可选）
+        if (this.enableValidation && MessageType.verify) {
+            const error = MessageType.verify(component);
             if (error) {
                 throw new Error(`数据验证失败: ${error}`);
             }
         }
         
-        // 创建消息并编码
-        const message = MessageType.create(protoData);
+        // 直接让protobufjs处理序列化
+        const message = MessageType.create(component);
         const buffer = MessageType.encode(message).finish();
         
         return {
@@ -181,7 +179,7 @@ export class ProtobufSerializer {
      * @param component 目标组件实例
      * @param serializedData 序列化数据
      */
-    public deserialize(component: Component, serializedData: SerializedData): void {
+    public deserialize(component: SerializableComponent, serializedData: SerializedData): void {
         if (serializedData.type !== 'protobuf') {
             throw new Error(`不支持的序列化类型: ${serializedData.type}`);
         }
@@ -196,19 +194,19 @@ export class ProtobufSerializer {
             throw new Error(`未找到消息类型: ${protoName}`);
         }
         
-        // 解码消息
+        // 解码消息并直接应用到组件
         const message = MessageType.decode(serializedData.data);
-        const data = MessageType.toObject(message);
+        const decoded = MessageType.toObject(message);
         
-        // 应用数据到组件
-        this.applyDataToComponent(component, data);
+        // 直接应用解码后的数据到组件
+        Object.assign(component, decoded);
     }
     
     /**
      * 检查组件是否支持protobuf序列化
      */
-    public canSerialize(component: Component): boolean {
-        if (!this.protobuf) return false;
+    public canSerialize(component: SerializableComponent): boolean {
+        if (!this.root) return false;
         return isProtoSerializable(component);
     }
     
@@ -221,7 +219,7 @@ export class ProtobufSerializer {
      * @returns 序列化结果数组
      */
     public serializeBatch(
-        components: Component[], 
+        components: SerializableComponent[], 
         options?: {
             continueOnError?: boolean;
             maxBatchSize?: number;
@@ -283,12 +281,9 @@ export class ProtobufSerializer {
                 }
             }
             
-            // 预编译消息类型和字段定义
-            const compiledType = this.getCompiledMessageType(protoName, definition, MessageType);
-            
             for (const component of groupComponents) {
                 try {
-                    const result = this.serializeSingleComponent(component, definition, compiledType);
+                    const result = this.serializeSingleComponent(component, MessageType);
                     results.push(result);
                 } catch (error) {
                     if (continueOnError) {
@@ -308,22 +303,19 @@ export class ProtobufSerializer {
      * 序列化单个组件
      */
     private serializeSingleComponent(
-        component: Component, 
-        definition: ProtoComponentDefinition,
-        compiledType: any
+        component: SerializableComponent, 
+        MessageType: protobuf.Type
     ): SerializedData {
-        const protoData = this.buildProtoData(component, definition);
-        
         // 数据验证
-        if (this.enableValidation && compiledType.verify) {
-            const error = compiledType.verify(protoData);
+        if (this.enableValidation && MessageType.verify) {
+            const error = MessageType.verify(component);
             if (error) {
                 throw new Error(`[ProtobufSerializer] 数据验证失败: ${error}`);
             }
         }
         
-        const message = compiledType.create(protoData);
-        const buffer = compiledType.encode(message).finish();
+        const message = MessageType.create(component);
+        const buffer = MessageType.encode(message).finish();
         
         return {
             type: 'protobuf',
@@ -337,11 +329,11 @@ export class ProtobufSerializer {
      * 按类型分组组件
      */
     private groupComponentsByType(
-        components: Component[], 
+        components: SerializableComponent[], 
         continueOnError: boolean, 
         errors: Error[]
-    ): Map<string, Component[]> {
-        const componentGroups = new Map<string, Component[]>();
+    ): Map<string, SerializableComponent[]> {
+        const componentGroups = new Map<string, SerializableComponent[]>();
         
         for (const component of components) {
             try {
@@ -370,18 +362,33 @@ export class ProtobufSerializer {
         return componentGroups;
     }
     
+    
+    
     /**
-     * 获取编译后的消息类型
+     * 根据需要清理缓存
      */
-    private getCompiledMessageType(_protoName: string, _definition: ProtoComponentDefinition, MessageType: any): any {
-        // TODO: 实现消息类型编译和缓存优化
-        return MessageType;
+    private cleanupCacheIfNeeded(): void {
+        if (this.messageTypeCache.size <= this.maxCacheSize) {
+            return;
+        }
+        
+        const entries = Array.from(this.cacheAccessCount.entries())
+            .sort((a, b) => a[1] - b[1]) 
+            .slice(0, Math.floor(this.maxCacheSize * 0.2)); 
+        
+        for (const [key] of entries) {
+            this.messageTypeCache.delete(key);
+            this.cacheAccessCount.delete(key);
+            this.componentDataCache.delete(key);
+        }
+        
+        console.log(`[ProtobufSerializer] 清理了 ${entries.length} 个缓存项`);
     }
     
     /**
      * 将数组分割成批次
      */
-    private splitIntoBatches<T>(items: T[], batchSize: number): T[][] {
+    private splitIntoBatches<T extends SerializableComponent>(items: T[], batchSize: number): T[][] {
         const batches: T[][] = [];
         for (let i = 0; i < items.length; i += batchSize) {
             batches.push(items.slice(i, i + batchSize));
@@ -402,7 +409,7 @@ export class ProtobufSerializer {
     } {
         return {
             registeredComponents: this.registry.getAllComponents().size,
-            protobufAvailable: !!this.protobuf,
+            protobufAvailable: !!this.root,
             messageTypeCacheSize: this.messageTypeCache.size,
             componentDataCacheSize: this.componentDataCache.size,
             enableComponentDataCache: this.enableComponentDataCache,
@@ -410,191 +417,22 @@ export class ProtobufSerializer {
         };
     }
     
-    /**
-     * 构建protobuf数据对象
-     */
-    private buildProtoData(component: Component, definition: ProtoComponentDefinition): any {
-        const componentType = component.constructor.name;
-        
-        // 生成缓存键
-        const cacheKey = this.generateComponentCacheKey(component, componentType);
-        
-        // 检查缓存
-        if (this.enableComponentDataCache && this.componentDataCache.has(cacheKey)) {
-            this.updateCacheAccess(cacheKey);
-            return this.componentDataCache.get(cacheKey);
-        }
-        
-        const data: any = {};
-        
-        for (const [propertyName, fieldDef] of definition.fields) {
-            const value = (component as any)[propertyName];
-            
-            if (value !== undefined && value !== null) {
-                data[fieldDef.name] = this.convertValueToProtoType(value, fieldDef);
-            }
-        }
-        
-        // 缓存结果，仅在启用且数据较小时缓存
-        if (this.enableComponentDataCache && JSON.stringify(data).length < 1000) {
-            this.setCacheWithLRU(cacheKey, data);
-        }
-        
-        return data;
-    }
     
-    /**
-     * 转换值到protobuf类型
-     */
-    private convertValueToProtoType(value: any, fieldDef: ProtoFieldDefinition): any {
-        if (fieldDef.repeated && Array.isArray(value)) {
-            return value.map(v => this.convertSingleValue(v, fieldDef.type));
-        }
-        
-        return this.convertSingleValue(value, fieldDef.type);
-    }
     
-    /**
-     * 转换单个值为protobuf类型
-     */
-    private convertSingleValue(value: any, type: ProtoFieldType): any {
-        switch (type) {
-            case ProtoFieldType.INT32:
-            case ProtoFieldType.UINT32:
-            case ProtoFieldType.SINT32:
-            case ProtoFieldType.FIXED32:
-            case ProtoFieldType.SFIXED32:
-                return typeof value === 'number' ? (value | 0) : (parseInt(value) || 0);
-                
-            case ProtoFieldType.INT64:
-            case ProtoFieldType.UINT64:
-            case ProtoFieldType.SINT64:
-            case ProtoFieldType.FIXED64:
-            case ProtoFieldType.SFIXED64:
-                // 使用BigIntFactory处理64位整数以确保兼容性
-                const bigIntValue = BigIntFactory.create(value || 0);
-                return bigIntValue.valueOf(); // 转换为数值用于protobuf
-                
-            case ProtoFieldType.FLOAT:
-            case ProtoFieldType.DOUBLE:
-                return typeof value === 'number' ? value : (parseFloat(value) || 0);
-                
-            case ProtoFieldType.BOOL:
-                return typeof value === 'boolean' ? value : Boolean(value);
-                
-            case ProtoFieldType.STRING:
-                return typeof value === 'string' ? value : String(value);
-                
-            case ProtoFieldType.BYTES:
-                if (value instanceof Uint8Array) return value;
-                if (value instanceof ArrayBuffer) return new Uint8Array(value);
-                if (typeof value === 'string') return new TextEncoder().encode(value);
-                return new Uint8Array();
-                
-            case ProtoFieldType.TIMESTAMP:
-                if (value instanceof Date) {
-                    return {
-                        seconds: Math.floor(value.getTime() / 1000),
-                        nanos: (value.getTime() % 1000) * 1000000
-                    };
-                }
-                if (typeof value === 'string') {
-                    const date = new Date(value);
-                    return {
-                        seconds: Math.floor(date.getTime() / 1000),
-                        nanos: (date.getTime() % 1000) * 1000000
-                    };
-                }
-                return { seconds: 0, nanos: 0 };
-                
-            case ProtoFieldType.DURATION:
-                if (typeof value === 'number') {
-                    return {
-                        seconds: Math.floor(value / 1000),
-                        nanos: (value % 1000) * 1000000
-                    };
-                }
-                return { seconds: 0, nanos: 0 };
-                
-            case ProtoFieldType.STRUCT:
-                if (value && typeof value === 'object') {
-                    return this.convertObjectToStruct(value);
-                }
-                return {};
-                
-            case ProtoFieldType.MESSAGE:
-            case ProtoFieldType.ENUM:
-                // 对于自定义消息和枚举，直接返回值，让protobuf.js处理
-                return value;
-                
-            default:
-                return value;
-        }
-    }
     
-    /**
-     * 转换对象为Protobuf Struct格式
-     */
-    private convertObjectToStruct(obj: any): any {
-        const result: any = { fields: {} };
-        
-        for (const [key, value] of Object.entries(obj)) {
-            result.fields[key] = this.convertValueToStructValue(value);
-        }
-        
-        return result;
-    }
     
-    /**
-     * 转换值为Protobuf Value格式
-     */
-    private convertValueToStructValue(value: any): any {
-        if (value === null) return { nullValue: 0 };
-        if (typeof value === 'number') return { numberValue: value };
-        if (typeof value === 'string') return { stringValue: value };
-        if (typeof value === 'boolean') return { boolValue: value };
-        if (Array.isArray(value)) {
-            return {
-                listValue: {
-                    values: value.map(v => this.convertValueToStructValue(v))
-                }
-            };
-        }
-        if (typeof value === 'object') {
-            return { structValue: this.convertObjectToStruct(value) };
-        }
-        return { stringValue: String(value) };
-    }
     
-    /**
-     * 应用数据到组件
-     */
-    private applyDataToComponent(component: Component, data: any): void {
-        const protoName = getProtoName(component);
-        if (!protoName) return;
-        
-        const definition = this.registry.getComponentDefinition(protoName);
-        if (!definition) return;
-        
-        for (const [propertyName, fieldDef] of definition.fields) {
-            const value = data[fieldDef.name];
-            if (value !== undefined) {
-                (component as any)[propertyName] = value;
-            }
-        }
-    }
     
     /**
      * 构建protobuf定义
      */
     private buildProtoDefinitions(): void {
-        if (!this.protobuf) return;
-        
         try {
             const protoDefinition = this.registry.generateProtoDefinition();
-            this.root = this.protobuf.parse(protoDefinition).root;
+            this.root = protobuf.parse(protoDefinition).root;
             // 清空缓存，schema已更新
             this.messageTypeCache.clear();
+            this.cacheAccessCount.clear();
         } catch (error) {
             console.error('[ProtobufSerializer] 构建protobuf定义失败:', error);
         }
@@ -603,91 +441,37 @@ export class ProtobufSerializer {
     /**
      * 获取消息类型并缓存结果
      */
-    private getMessageType(typeName: string): any {
+    private getMessageType(typeName: string): protobuf.Type | null {
         if (!this.root) return null;
         
         // 检查缓存
         const fullTypeName = `ecs.${typeName}`;
         if (this.messageTypeCache.has(fullTypeName)) {
-            return this.messageTypeCache.get(fullTypeName);
+            this.cacheAccessCount.set(fullTypeName, (this.cacheAccessCount.get(fullTypeName) || 0) + 1);
+            return this.messageTypeCache.get(fullTypeName)!;
         }
         
         try {
             const messageType = this.root.lookupType(fullTypeName);
-            // 缓存结果
-            this.messageTypeCache.set(fullTypeName, messageType);
-            return messageType;
+            if (messageType) {
+                // 缓存MessageType
+                this.messageTypeCache.set(fullTypeName, messageType);
+                this.cacheAccessCount.set(fullTypeName, 1);
+                
+                this.cleanupCacheIfNeeded();
+                return messageType;
+            }
+            return null;
         } catch (error) {
             console.warn(`[ProtobufSerializer] 未找到消息类型: ${fullTypeName}`);
-            // 缓存null结果以避免重复查找
-            this.messageTypeCache.set(fullTypeName, null);
             return null;
         }
     }
     
     
-    /**
-     * 生成组件缓存键
-     */
-    private generateComponentCacheKey(component: Component, componentType: string): string {
-        // TODO: 考虑更高效的缓存键生成策略
-        const properties = Object.keys(component).sort();
-        const values = properties.map(key => String((component as any)[key])).join('|');
-        return `${componentType}:${this.simpleHash(values)}`;
-    }
     
-    /**
-     * 简单哈希函数
-     */
-    private simpleHash(str: string): string {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
-        }
-        return hash.toString(36);
-    }
     
-    /**
-     * 更新缓存访问计数
-     */
-    private updateCacheAccess(cacheKey: string): void {
-        const currentCount = this.cacheAccessCount.get(cacheKey) || 0;
-        this.cacheAccessCount.set(cacheKey, currentCount + 1);
-    }
     
-    /**
-     * 使用LRU策略设置缓存
-     */
-    private setCacheWithLRU(cacheKey: string, data: any): void {
-        // 检查是否需要淘汰缓存
-        if (this.componentDataCache.size >= this.maxCacheSize) {
-            this.evictLRUCache();
-        }
-        
-        this.componentDataCache.set(cacheKey, data);
-        this.cacheAccessCount.set(cacheKey, 1);
-    }
     
-    /**
-     * 淘汰LRU缓存项
-     */
-    private evictLRUCache(): void {
-        let lruKey = '';
-        let minAccessCount = Number.MAX_SAFE_INTEGER;
-        
-        // 找到访问次数最少的缓存项
-        for (const [key, count] of this.cacheAccessCount) {
-            if (count < minAccessCount) {
-                minAccessCount = count;
-                lruKey = key;
-            }
-        }
-        
-        if (lruKey) {
-            this.componentDataCache.delete(lruKey);
-            this.cacheAccessCount.delete(lruKey);
-        }
-    }
+    
 }

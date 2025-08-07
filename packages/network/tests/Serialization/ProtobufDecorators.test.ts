@@ -2,7 +2,7 @@
  * Protobuf装饰器测试
  */
 
-import { Component } from '../../../src/ECS/Component';
+import { Component } from '@esengine/ecs-framework';
 import { 
     ProtoSerializable, 
     ProtoField, 
@@ -14,7 +14,7 @@ import {
     ProtobufRegistry,
     isProtoSerializable,
     getProtoName
-} from '../../../src/Utils/Serialization/ProtobufDecorators';
+} from '../../src/Serialization/ProtobufDecorators';
 
 // 测试组件
 @ProtoSerializable('TestPosition')

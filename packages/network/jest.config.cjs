@@ -42,12 +42,19 @@ module.exports = {
   verbose: true,
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.test.json',
+      tsconfig: 'tsconfig.json',
+      useESM: true,
     }],
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^@esengine/ecs-framework$': '<rootDir>/../core/src/index.ts',
+    '^@esengine/ecs-framework/(.*)$': '<rootDir>/../core/src/$1',
   },
+  extensionsToTreatAsEsm: ['.ts'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(@esengine)/)',
+  ],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   // 测试超时设置
   testTimeout: 10000,

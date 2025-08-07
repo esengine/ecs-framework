@@ -6,35 +6,42 @@
 
 import 'reflect-metadata';
 import { Component } from '@esengine/ecs-framework';
+import * as protobuf from 'protobufjs';
 
 /**
- * Protobuf字段类型枚举
+ * 使用protobufjs官方字段类型定义
  */
-export enum ProtoFieldType {
-    DOUBLE = 'double',
-    FLOAT = 'float',
-    INT32 = 'int32',
-    INT64 = 'int64',
-    UINT32 = 'uint32',
-    UINT64 = 'uint64',
-    SINT32 = 'sint32',
-    SINT64 = 'sint64',
-    FIXED32 = 'fixed32',
-    FIXED64 = 'fixed64',
-    SFIXED32 = 'sfixed32',
-    SFIXED64 = 'sfixed64',
-    BOOL = 'bool',
-    STRING = 'string',
-    BYTES = 'bytes',
-    // 扩展类型
-    MESSAGE = 'message',
-    ENUM = 'enum',
-    ANY = 'google.protobuf.Any',
-    TIMESTAMP = 'google.protobuf.Timestamp',
-    DURATION = 'google.protobuf.Duration',
-    STRUCT = 'google.protobuf.Struct',
-    VALUE = 'google.protobuf.Value'
-}
+export type ProtoFieldType = keyof typeof protobuf.types.basic | keyof typeof protobuf.types.defaults | 'message' | 'enum';
+
+/**
+ * protobufjs官方字段类型常量
+ */
+export const ProtoTypes = {
+    // 基本数值类型
+    DOUBLE: 'double' as ProtoFieldType,
+    FLOAT: 'float' as ProtoFieldType,
+    INT32: 'int32' as ProtoFieldType,
+    INT64: 'int64' as ProtoFieldType,
+    UINT32: 'uint32' as ProtoFieldType,
+    UINT64: 'uint64' as ProtoFieldType,
+    SINT32: 'sint32' as ProtoFieldType,
+    SINT64: 'sint64' as ProtoFieldType,
+    FIXED32: 'fixed32' as ProtoFieldType,
+    FIXED64: 'fixed64' as ProtoFieldType,
+    SFIXED32: 'sfixed32' as ProtoFieldType,
+    SFIXED64: 'sfixed64' as ProtoFieldType,
+    BOOL: 'bool' as ProtoFieldType,
+    STRING: 'string' as ProtoFieldType,
+    BYTES: 'bytes' as ProtoFieldType,
+    // 复合类型
+    MESSAGE: 'message' as ProtoFieldType,
+    ENUM: 'enum' as ProtoFieldType
+} as const;
+
+/**
+ * protobufjs官方类型映射
+ */
+export const ProtobufTypes = protobuf.types;
 
 /**
  * 字段同步优先级
@@ -342,7 +349,7 @@ export function ProtoField(
         // 添加字段定义
         target._protoFields.set(propertyKey, {
             fieldNumber,
-            type: inferredType || ProtoFieldType.STRING,
+            type: inferredType || ProtoTypes.STRING,
             repeated: options?.repeated || false,
             optional: options?.optional || false,
             name: propertyKey,
@@ -363,26 +370,27 @@ export function ProtoField(
  * 自动推断protobuf类型
  */
 function inferProtoType(jsType: any): ProtoFieldType {
-    if (!jsType) return ProtoFieldType.STRING;
+    if (!jsType) return ProtoTypes.STRING;
     
     switch (jsType) {
         case Number:
-            return ProtoFieldType.DOUBLE;
+            return ProtoTypes.DOUBLE;
         case Boolean:
-            return ProtoFieldType.BOOL;
+            return ProtoTypes.BOOL;
         case String:
-            return ProtoFieldType.STRING;
+            return ProtoTypes.STRING;
         case Date:
-            return ProtoFieldType.TIMESTAMP;
+            // 对于Date类型，使用int64存储时间戳或者使用message类型
+            return ProtoTypes.INT64;
         case Array:
-            return ProtoFieldType.STRING;
+            return ProtoTypes.STRING;
         case Uint8Array:
         case ArrayBuffer:
-            return ProtoFieldType.BYTES;
+            return ProtoTypes.BYTES;
         case Object:
-            return ProtoFieldType.STRUCT;
+            return ProtoTypes.MESSAGE;
         default:
-            return ProtoFieldType.STRING;
+            return ProtoTypes.STRING;
     }
 }
 
@@ -390,41 +398,44 @@ function inferProtoType(jsType: any): ProtoFieldType {
  * 便捷装饰器 - 常用类型
  */
 export const ProtoInt32 = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.INT32, options);
+    ProtoField(fieldNumber, ProtoTypes.INT32, options);
 
 export const ProtoFloat = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.FLOAT, options);
+    ProtoField(fieldNumber, ProtoTypes.FLOAT, options);
 
 export const ProtoString = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.STRING, options);
+    ProtoField(fieldNumber, ProtoTypes.STRING, options);
 
 export const ProtoBool = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.BOOL, options);
+    ProtoField(fieldNumber, ProtoTypes.BOOL, options);
 
 // 扩展的便捷装饰器
 export const ProtoDouble = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.DOUBLE, options);
+    ProtoField(fieldNumber, ProtoTypes.DOUBLE, options);
 
 export const ProtoInt64 = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.INT64, options);
+    ProtoField(fieldNumber, ProtoTypes.INT64, options);
 
 export const ProtoUint32 = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.UINT32, options);
+    ProtoField(fieldNumber, ProtoTypes.UINT32, options);
 
 export const ProtoUint64 = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.UINT64, options);
+    ProtoField(fieldNumber, ProtoTypes.UINT64, options);
 
 export const ProtoBytes = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.BYTES, options);
+    ProtoField(fieldNumber, ProtoTypes.BYTES, options);
 
+// 对于时间戳，使用int64存储毫秒时间戳
 export const ProtoTimestamp = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.TIMESTAMP, options);
+    ProtoField(fieldNumber, ProtoTypes.INT64, options);
 
+// 对于持续时间，使用int32存储毫秒数
 export const ProtoDuration = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.DURATION, options);
+    ProtoField(fieldNumber, ProtoTypes.INT32, options);
 
+// 对于结构体，使用message类型
 export const ProtoStruct = (fieldNumber: number, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.STRUCT, options);
+    ProtoField(fieldNumber, ProtoTypes.MESSAGE, options);
 
 /**
  * 自定义消息类型装饰器
@@ -433,7 +444,7 @@ export const ProtoStruct = (fieldNumber: number, options?: { repeated?: boolean;
  * @param options 额外选项
  */
 export const ProtoMessage = (fieldNumber: number, customTypeName: string, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.MESSAGE, { ...options, customTypeName });
+    ProtoField(fieldNumber, ProtoTypes.MESSAGE, { ...options, customTypeName });
 
 /**
  * 枚举类型装饰器
@@ -442,7 +453,7 @@ export const ProtoMessage = (fieldNumber: number, customTypeName: string, option
  * @param options 额外选项
  */
 export const ProtoEnum = (fieldNumber: number, enumValues: Record<string, number>, options?: { repeated?: boolean; optional?: boolean }) =>
-    ProtoField(fieldNumber, ProtoFieldType.ENUM, { ...options, enumValues });
+    ProtoField(fieldNumber, ProtoTypes.ENUM, { ...options, enumValues });
 
 /**
  * 检查组件是否支持protobuf序列化

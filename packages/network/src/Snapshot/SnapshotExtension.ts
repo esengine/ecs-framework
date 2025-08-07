@@ -1,4 +1,4 @@
-import { Component } from '@esengine/ecs-framework';
+import { Component, ComponentType } from '@esengine/ecs-framework';
 import { ISnapshotable, SnapshotConfig } from './ISnapshotable';
 
 /**
@@ -26,10 +26,12 @@ export interface ISnapshotExtension {
  * 用于标记组件属性为可序列化
  */
 export function Serializable(config?: Partial<SnapshotConfig>) {
-    return function (target: any, propertyKey: string) {
+    return function <T extends Component>(target: T, propertyKey: keyof T) {
+        const comp = target as T & { snapshotConfig?: SnapshotConfig; _serializableProperties?: Set<string> };
+        
         // 确保组件有快照配置
-        if (!target.snapshotConfig) {
-            target.snapshotConfig = {
+        if (!comp.snapshotConfig) {
+            comp.snapshotConfig = {
                 includeInSnapshot: true,
                 compressionLevel: 0,
                 syncPriority: 5,
@@ -38,14 +40,14 @@ export function Serializable(config?: Partial<SnapshotConfig>) {
         }
         
         // 标记属性为可序列化
-        if (!target._serializableProperties) {
-            target._serializableProperties = new Set<string>();
+        if (!comp._serializableProperties) {
+            comp._serializableProperties = new Set<string>();
         }
-        target._serializableProperties.add(propertyKey);
+        comp._serializableProperties.add(propertyKey as string);
         
         // 应用配置
         if (config) {
-            Object.assign(target.snapshotConfig, config);
+            Object.assign(comp.snapshotConfig, config);
         }
     };
 }
@@ -56,7 +58,7 @@ export function Serializable(config?: Partial<SnapshotConfig>) {
  * 用于配置组件的快照行为
  */
 export function SnapshotConfigDecorator(config: SnapshotConfig) {
-    return function (target: any) {
+    return function <T extends ComponentType>(target: T) {
         target.prototype.snapshotConfig = config;
     };
 }
@@ -71,7 +73,7 @@ export class SnapshotExtension {
      * @param component - 目标组件
      * @param config - 快照配置
      */
-    public static enableSnapshot(component: Component, config?: Partial<SnapshotConfig>): void {
+    public static enableSnapshot<T extends Component>(component: T, config?: Partial<SnapshotConfig>): void {
         const defaultConfig: SnapshotConfig = {
             includeInSnapshot: true,
             compressionLevel: 0,
@@ -79,7 +81,7 @@ export class SnapshotExtension {
             enableIncremental: true
         };
         
-        (component as any).snapshotConfig = { ...defaultConfig, ...config };
+        (component as T & { snapshotConfig?: SnapshotConfig }).snapshotConfig = { ...defaultConfig, ...config };
     }
 
     /**
@@ -87,9 +89,10 @@ export class SnapshotExtension {
      * 
      * @param component - 目标组件
      */
-    public static disableSnapshot(component: Component): void {
-        if ((component as any).snapshotConfig) {
-            (component as any).snapshotConfig.includeInSnapshot = false;
+    public static disableSnapshot<T extends Component>(component: T): void {
+        const comp = component as T & { snapshotConfig?: SnapshotConfig };
+        if (comp.snapshotConfig) {
+            comp.snapshotConfig.includeInSnapshot = false;
         }
     }
 
@@ -99,9 +102,9 @@ export class SnapshotExtension {
      * @param component - 目标组件
      * @returns 是否支持快照
      */
-    public static isSnapshotable(component: Component): boolean {
-        const config = (component as any).snapshotConfig;
-        return config && config.includeInSnapshot;
+    public static isSnapshotable<T extends Component>(component: T): component is T & ISnapshotExtension {
+        const config = (component as T & { snapshotConfig?: SnapshotConfig }).snapshotConfig;
+        return config?.includeInSnapshot === true;
     }
 
     /**
@@ -110,17 +113,17 @@ export class SnapshotExtension {
      * @param component - 目标组件
      * @returns 可序列化属性列表
      */
-    public static getSerializableProperties(component: Component): string[] {
-        const properties = (component as any)._serializableProperties;
-        if (properties) {
-            return Array.from(properties);
+    public static getSerializableProperties<T extends Component>(component: T): (keyof T)[] {
+        const comp = component as T & { _serializableProperties?: Set<string> };
+        if (comp._serializableProperties) {
+            return Array.from(comp._serializableProperties) as (keyof T)[];
         }
         
         // 如果没有标记，返回所有公共属性
-        const publicProperties: string[] = [];
+        const publicProperties: (keyof T)[] = [];
         for (const key in component) {
             if (component.hasOwnProperty(key) && 
-                typeof (component as any)[key] !== 'function' && 
+                typeof component[key] !== 'function' && 
                 key !== 'id' && 
                 key !== 'entity' &&
                 key !== '_enabled' &&
@@ -138,13 +141,13 @@ export class SnapshotExtension {
      * @param component - 目标组件
      * @returns 序列化数据
      */
-    public static createDefaultSerializer(component: Component): () => any {
-        return function() {
-            const data: any = {};
+    public static createDefaultSerializer<T extends Component>(component: T): () => Partial<T> {
+        return function(): Partial<T> {
+            const data = {} as Partial<T>;
             const properties = SnapshotExtension.getSerializableProperties(component);
             
             for (const prop of properties) {
-                const value = (component as any)[prop];
+                const value = component[prop];
                 if (value !== undefined && value !== null) {
                     data[prop] = value;
                 }
@@ -160,13 +163,13 @@ export class SnapshotExtension {
      * @param component - 目标组件
      * @returns 反序列化函数
      */
-    public static createDefaultDeserializer(component: Component): (data: any) => void {
-        return function(data: any) {
+    public static createDefaultDeserializer<T extends Component>(component: T): (data: Partial<T>) => void {
+        return function(data: Partial<T>): void {
             const properties = SnapshotExtension.getSerializableProperties(component);
             
             for (const prop of properties) {
-                if (data.hasOwnProperty(prop)) {
-                    (component as any)[prop] = data[prop];
+                if (data.hasOwnProperty(prop) && data[prop] !== undefined) {
+                    component[prop] = data[prop]!;
                 }
             }
         };
@@ -178,12 +181,12 @@ export class SnapshotExtension {
      * @param component - 目标组件
      * @returns 变化检测函数
      */
-    public static createSimpleChangeDetector(component: Component): (baseData: any) => boolean {
-        return function(baseData: any) {
+    public static createSimpleChangeDetector<T extends Component>(component: T): (baseData: Partial<T>) => boolean {
+        return function(baseData: Partial<T>): boolean {
             const properties = SnapshotExtension.getSerializableProperties(component);
             
             for (const prop of properties) {
-                const currentValue = (component as any)[prop];
+                const currentValue = component[prop];
                 const baseValue = baseData[prop];
                 
                 if (currentValue !== baseValue) {
@@ -201,12 +204,12 @@ export class SnapshotExtension {
      * @param component - 目标组件
      * @returns 变化检测函数
      */
-    public static createDeepChangeDetector(component: Component): (baseData: any) => boolean {
-        return function(baseData: any) {
+    public static createDeepChangeDetector<T extends Component>(component: T): (baseData: Partial<T>) => boolean {
+        return function(baseData: Partial<T>): boolean {
             const properties = SnapshotExtension.getSerializableProperties(component);
             
             for (const prop of properties) {
-                const currentValue = (component as any)[prop];
+                const currentValue = component[prop];
                 const baseValue = baseData[prop];
                 
                 if (SnapshotExtension.deepCompare(currentValue, baseValue)) {
@@ -221,24 +224,26 @@ export class SnapshotExtension {
     /**
      * 深度比较两个值
      */
-    private static deepCompare(value1: any, value2: any): boolean {
+    private static deepCompare(value1: unknown, value2: unknown): boolean {
         if (value1 === value2) return false;
         
         if (typeof value1 !== typeof value2) return true;
         
         if (value1 === null || value2 === null) return value1 !== value2;
         
-        if (typeof value1 !== 'object') return value1 !== value2;
+        if (typeof value1 !== 'object' || typeof value2 !== 'object') return value1 !== value2;
         
         if (Array.isArray(value1) !== Array.isArray(value2)) return true;
         
-        if (Array.isArray(value1)) {
+        if (Array.isArray(value1) && Array.isArray(value2)) {
             if (value1.length !== value2.length) return true;
             for (let i = 0; i < value1.length; i++) {
                 if (this.deepCompare(value1[i], value2[i])) return true;
             }
             return false;
         }
+        
+        if (!value1 || !value2) return true;
         
         const keys1 = Object.keys(value1);
         const keys2 = Object.keys(value2);
@@ -247,7 +252,7 @@ export class SnapshotExtension {
         
         for (const key of keys1) {
             if (!keys2.includes(key)) return true;
-            if (this.deepCompare(value1[key], value2[key])) return true;
+            if (this.deepCompare((value1 as Record<string, unknown>)[key], (value2 as Record<string, unknown>)[key])) return true;
         }
         
         return false;

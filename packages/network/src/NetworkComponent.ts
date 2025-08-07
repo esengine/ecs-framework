@@ -1,5 +1,10 @@
 import { Component } from '@esengine/ecs-framework';
 import { INetworkSyncable } from './INetworkSyncable';
+import { NetworkRole } from './NetworkRole';
+import { NetworkEnvironment } from './Core/NetworkEnvironment';
+import { createSyncVarProxy, isSyncVarProxied, destroySyncVarProxy } from './SyncVar/SyncVarProxy';
+import { SyncVarManager } from './SyncVar/SyncVarManager';
+import { getSyncVarMetadata } from './SyncVar/SyncVarDecorator';
 
 /**
  * 网络组件基类
@@ -25,7 +30,29 @@ import { INetworkSyncable } from './INetworkSyncable';
  *         this.x = x;
  *         this.y = y;
  *     }
+ * 
+ *     // 客户端特有逻辑
+ *     public onClientUpdate(): void {
+ *         if (__CLIENT__) {
+ *             // 客户端构建时才包含此逻辑
+ *             this.handleInputPrediction();
+ *             this.interpolatePosition();
+ *         }
+ *     }
+ * 
+ *     // 服务端特有逻辑  
+ *     public onServerUpdate(): void {
+ *         if (__SERVER__) {
+ *             // 服务端构建时才包含此逻辑
+ *             this.validateMovement();
+ *             this.broadcastToClients();
+ *         }
+ *     }
  * }
+ * 
+ * // 使用方式（角色由环境自动检测）
+ * const position = new PositionComponent(10, 20);
+ * // 角色由 NetworkManager.StartServer() 或 StartClient() 决定
  * ```
  */
 export abstract class NetworkComponent extends Component implements INetworkSyncable {
@@ -42,6 +69,75 @@ export abstract class NetworkComponent extends Component implements INetworkSync
      * 记录每个字段最后修改的时间
      */
     private _fieldTimestamps: Map<number, number> = new Map();
+
+    /**
+     * 构造函数
+     * 
+     * 角色信息通过NetworkEnvironment自动获取，无需手动传入
+     */
+    constructor() {
+        super();
+        this.initializeSyncVar();
+        this.ensureComponentRegistered();
+    }
+    
+    /**
+     * 确保当前组件类型已注册到ComponentRegistry
+     */
+    private ensureComponentRegistered(): void {
+        try {
+            const { ComponentRegistry } = require('@esengine/ecs-framework');
+            
+            // 检查当前组件类型是否已注册
+            if (!ComponentRegistry.isRegistered(this.constructor)) {
+                // 如果未注册，自动注册
+                ComponentRegistry.register(this.constructor);
+                console.log(`[NetworkComponent] 自动注册组件类型: ${this.constructor.name}`);
+            }
+        } catch (error) {
+            console.warn(`[NetworkComponent] 无法注册组件类型 ${this.constructor.name}:`, error);
+        }
+    }
+    
+    /**
+     * 初始化SyncVar系统
+     * 
+     * 如果组件有SyncVar字段，自动创建代理来监听变化
+     */
+    private initializeSyncVar(): void {
+        const metadata = getSyncVarMetadata(this.constructor);
+        if (metadata.length > 0) {
+            console.log(`[NetworkComponent] ${this.constructor.name} 发现 ${metadata.length} 个SyncVar字段，将启用代理监听`);
+        }
+    }
+
+    /**
+     * 获取网络角色
+     * 
+     * 从全局网络环境获取当前角色
+     * @returns 当前组件的网络角色
+     */
+    public getRole(): NetworkRole {
+        return NetworkEnvironment.getPrimaryRole();
+    }
+
+    /**
+     * 检查是否为客户端角色
+     * 
+     * @returns 是否为客户端
+     */
+    public isClient(): boolean {
+        return NetworkEnvironment.isClient;
+    }
+
+    /**
+     * 检查是否为服务端角色
+     * 
+     * @returns 是否为服务端
+     */
+    public isServer(): boolean {
+        return NetworkEnvironment.isServer;
+    }
 
     /**
      * 获取网络同步状态
@@ -157,5 +253,114 @@ export abstract class NetworkComponent extends Component implements INetworkSync
             result.set(fieldNumber, this._fieldTimestamps.get(fieldNumber) || 0);
         }
         return result;
+    }
+    
+    /**
+     * 获取待同步的SyncVar变化
+     * 
+     * @returns 待同步的变化数组
+     */
+    public getSyncVarChanges(): any[] {
+        const syncVarManager = SyncVarManager.Instance;
+        return syncVarManager.getPendingChanges(this);
+    }
+    
+    /**
+     * 创建SyncVar同步数据
+     * 
+     * @returns 同步数据，如果没有变化则返回null
+     */
+    public createSyncVarData(): any {
+        const syncVarManager = SyncVarManager.Instance;
+        return syncVarManager.createSyncData(this);
+    }
+    
+    /**
+     * 应用SyncVar同步数据
+     * 
+     * @param syncData - 同步数据
+     */
+    public applySyncVarData(syncData: any): void {
+        const syncVarManager = SyncVarManager.Instance;
+        syncVarManager.applySyncData(this, syncData);
+    }
+    
+    /**
+     * 清除SyncVar变化记录
+     * 
+     * @param propertyKeys - 要清除的属性名数组，如果不提供则清除所有
+     */
+    public clearSyncVarChanges(propertyKeys?: string[]): void {
+        const syncVarManager = SyncVarManager.Instance;
+        syncVarManager.clearChanges(this, propertyKeys);
+    }
+    
+    /**
+     * 检查组件是否有SyncVar字段
+     * 
+     * @returns 是否有SyncVar字段
+     */
+    public hasSyncVars(): boolean {
+        const metadata = getSyncVarMetadata(this.constructor);
+        return metadata.length > 0;
+    }
+    
+    /**
+     * 获取SyncVar统计信息
+     * 
+     * @returns 统计信息
+     */
+    public getSyncVarStats(): any {
+        const metadata = getSyncVarMetadata(this.constructor);
+        const syncVarManager = SyncVarManager.Instance;
+        const changes = syncVarManager.getPendingChanges(this);
+        
+        return {
+            totalSyncVars: metadata.length,
+            pendingChanges: changes.length,
+            syncVarFields: metadata.map(m => ({
+                propertyKey: m.propertyKey,
+                fieldNumber: m.fieldNumber,
+                hasHook: !!m.options.hook,
+                authorityOnly: !!m.options.authorityOnly
+            }))
+        };
+    }
+
+    /**
+     * 客户端更新逻辑
+     * 
+     * 子类可以重写此方法实现客户端特有的逻辑，如：
+     * - 输入预测
+     * - 状态插值
+     * - 回滚重放
+     */
+    public onClientUpdate(): void {
+        // 默认空实现，子类可根据需要重写
+    }
+
+    /**
+     * 服务端更新逻辑
+     * 
+     * 子类可以重写此方法实现服务端特有的逻辑，如：
+     * - 输入验证
+     * - 权威状态计算
+     * - 状态广播
+     */
+    public onServerUpdate(): void {
+        // 默认空实现，子类可根据需要重写
+    }
+
+    /**
+     * 统一的更新入口
+     * 
+     * 根据角色调用相应的更新方法
+     */
+    public override update(): void {
+        if (this.isClient()) {
+            this.onClientUpdate();
+        } else if (this.isServer()) {
+            this.onServerUpdate();
+        }
     }
 }

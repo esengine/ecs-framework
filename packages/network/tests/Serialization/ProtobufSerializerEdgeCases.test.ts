@@ -2,9 +2,8 @@
  * Protobuf序列化器边界情况测试
  */
 
-import { Component } from '../../../src/ECS/Component';
-import { BigIntFactory } from '../../../src/ECS/Utils/BigIntCompatibility';
-import { ProtobufSerializer } from '../../../src/Utils/Serialization/ProtobufSerializer';
+import { Component, BigIntFactory } from '@esengine/ecs-framework';
+import { ProtobufSerializer } from '../../src/Serialization/ProtobufSerializer';
 import { 
     ProtoSerializable, 
     ProtoFloat,
@@ -16,7 +15,7 @@ import {
     ProtoDouble,
     ProtoInt64,
     ProtoStruct
-} from '../../../src/Utils/Serialization/ProtobufDecorators';
+} from '../../src/Serialization/ProtobufDecorators';
 
 // 边界测试组件
 @ProtoSerializable('EdgeCaseComponent')
@@ -103,6 +102,9 @@ class NonSerializableComponent extends Component {
 
 // Mock protobuf.js
 const mockProtobuf = {
+    Root: jest.fn(),
+    Type: jest.fn(),
+    Field: jest.fn(),
     parse: jest.fn().mockReturnValue({
         root: {
             lookupType: jest.fn().mockImplementation((typeName: string) => {
@@ -125,7 +127,8 @@ const mockProtobuf = {
                         arrayValue: [1.1, 2.2, 3.3],
                         name: 'TestComponent'
                     })),
-                    toObject: jest.fn().mockImplementation((message) => message)
+                    toObject: jest.fn().mockImplementation((message) => message),
+                    fromObject: jest.fn().mockImplementation((obj) => obj)
                 };
             }),
             lookupTypeOrEnum: jest.fn().mockImplementation((typeName: string) => {
@@ -139,7 +142,9 @@ const mockProtobuf = {
                         decode: jest.fn().mockImplementation(() => ({
                             seconds: 1609459200,
                             nanos: 0
-                        }))
+                        })),
+                        toObject: jest.fn().mockImplementation((message) => message),
+                        fromObject: jest.fn().mockImplementation((obj) => obj)
                     };
                 }
                 return null;

@@ -4,7 +4,7 @@
  */
 
 import 'reflect-metadata';
-import { Component } from '../../../src/ECS/Component';
+import { Component } from '@esengine/ecs-framework';
 import { 
     ProtoSerializable, 
     ProtoFloat,
@@ -12,7 +12,7 @@ import {
     ProtoString,
     ProtoBool,
     ProtobufRegistry
-} from '../../../src/Utils/Serialization/ProtobufDecorators';
+} from '../../src/Serialization/ProtobufDecorators';
 
 // 测试组件
 @ProtoSerializable('Position')
