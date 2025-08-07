@@ -3,7 +3,8 @@
  */
 
 import { Component } from '../../../src/ECS/Component';
-import { ProtobufSerializer, SerializedData } from '../../../src/Utils/Serialization/ProtobufSerializer';
+import { ProtobufSerializer } from '../../../src/Utils/Serialization/ProtobufSerializer';
+import { SerializedData } from '../../../src/Utils/Serialization/SerializationTypes';
 import { 
     ProtoSerializable, 
     ProtoFloat,

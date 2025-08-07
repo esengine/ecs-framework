@@ -4,8 +4,8 @@
  * 处理组件的protobuf序列化和反序列化
  */
 
-import { Component } from '../../ECS/Component';
-import { BigIntFactory } from '../../ECS/Utils/BigIntCompatibility';
+import { Component } from '@esengine/ecs-framework';
+import { BigIntFactory } from '@esengine/ecs-framework';
 import { 
     ProtobufRegistry, 
     ProtoComponentDefinition, 
@@ -134,51 +134,46 @@ export class ProtobufSerializer {
         
         // 检查是否支持protobuf序列化
         if (!isProtoSerializable(component)) {
-            return this.fallbackToJsonSerialization(component, `组件 ${componentType} 不支持protobuf序列化`);
+            throw new Error(`组件 ${componentType} 不支持protobuf序列化，请添加@ProtoSerializable装饰器`);
         }
         
         const protoName = getProtoName(component);
         if (!protoName) {
-            return this.fallbackToJsonSerialization(component, `组件 ${componentType} 未设置protobuf名称`);
+            throw new Error(`组件 ${componentType} 未设置protobuf名称`);
         }
         
         const definition = this.registry.getComponentDefinition(protoName);
         if (!definition) {
-            return this.fallbackToJsonSerialization(component, `未找到组件定义: ${protoName}`);
+            throw new Error(`未找到组件定义: ${protoName}`);
         }
         
         // 获取protobuf消息类型
         const MessageType = this.getMessageType(protoName);
         if (!MessageType) {
-            return this.fallbackToJsonSerialization(component, `未找到消息类型: ${protoName}`);
+            throw new Error(`未找到消息类型: ${protoName}`);
         }
         
-        try {
-            // 构建protobuf数据对象
-            const protoData = this.buildProtoData(component, definition);
-            
-            // 数据验证
-            if (this.enableValidation) {
-                const error = MessageType.verify(protoData);
-                if (error) {
-                    return this.fallbackToJsonSerialization(component, `数据验证失败: ${error}`);
-                }
+        // 构建protobuf数据对象
+        const protoData = this.buildProtoData(component, definition);
+        
+        // 数据验证
+        if (this.enableValidation) {
+            const error = MessageType.verify(protoData);
+            if (error) {
+                throw new Error(`数据验证失败: ${error}`);
             }
-            
-            // 创建消息并编码
-            const message = MessageType.create(protoData);
-            const buffer = MessageType.encode(message).finish();
-            
-            return {
-                type: 'protobuf',
-                componentType: componentType,
-                data: buffer,
-                size: buffer.length
-            };
-            
-        } catch (error) {
-            return this.fallbackToJsonSerialization(component, `序列化失败: ${error}`);
         }
+        
+        // 创建消息并编码
+        const message = MessageType.create(protoData);
+        const buffer = MessageType.encode(message).finish();
+        
+        return {
+            type: 'protobuf',
+            componentType: componentType,
+            data: buffer,
+            size: buffer.length
+        };
     }
     
     /**
@@ -187,37 +182,26 @@ export class ProtobufSerializer {
      * @param serializedData 序列化数据
      */
     public deserialize(component: Component, serializedData: SerializedData): void {
-        // 如果是JSON数据，使用JSON反序列化
-        if (serializedData.type === 'json') {
-            this.deserializeFromJson(component, serializedData);
-            return;
+        if (serializedData.type !== 'protobuf') {
+            throw new Error(`不支持的序列化类型: ${serializedData.type}`);
         }
         
-        // Protobuf反序列化
         const protoName = getProtoName(component);
         if (!protoName) {
-            console.warn(`[ProtobufSerializer] 组件 ${component.constructor.name} 未设置protobuf名称，跳过反序列化`);
-            return;
+            throw new Error(`组件 ${component.constructor.name} 未设置protobuf名称`);
         }
         
         const MessageType = this.getMessageType(protoName);
         if (!MessageType) {
-            console.warn(`[ProtobufSerializer] 未找到消息类型: ${protoName}，跳过反序列化`);
-            return;
+            throw new Error(`未找到消息类型: ${protoName}`);
         }
         
-        try {
-            // 解码消息
-            const message = MessageType.decode(serializedData.data);
-            const data = MessageType.toObject(message);
-            
-            // 应用数据到组件
-            this.applyDataToComponent(component, data);
-            
-        } catch (error) {
-            console.error(`[ProtobufSerializer] 反序列化失败: ${component.constructor.name} - ${error}`);
-            // 不抛出异常，避免影响整个反序列化流程
-        }
+        // 解码消息
+        const message = MessageType.decode(serializedData.data);
+        const data = MessageType.toObject(message);
+        
+        // 应用数据到组件
+        this.applyDataToComponent(component, data);
     }
     
     /**
@@ -293,15 +277,6 @@ export class ProtobufSerializer {
                 const error = new Error(`[ProtobufSerializer] 组件类型 ${protoName} 未正确注册`);
                 if (continueOnError) {
                     errors.push(error);
-                    // 回退到JSON序列化
-                    for (const component of groupComponents) {
-                        try {
-                            const jsonResult = this.fallbackToJsonSerialization(component, `组件类型 ${protoName} 未正确注册`);
-                            results.push(jsonResult);
-                        } catch (jsonError) {
-                            errors.push(jsonError instanceof Error ? jsonError : new Error(String(jsonError)));
-                        }
-                    }
                     continue;
                 } else {
                     throw error;
@@ -318,13 +293,6 @@ export class ProtobufSerializer {
                 } catch (error) {
                     if (continueOnError) {
                         errors.push(error instanceof Error ? error : new Error(String(error)));
-                        // 尝试JSON回退
-                        try {
-                            const jsonResult = this.fallbackToJsonSerialization(component, `Protobuf序列化失败: ${error}`);
-                            results.push(jsonResult);
-                        } catch (jsonError) {
-                            errors.push(jsonError instanceof Error ? jsonError : new Error(String(jsonError)));
-                        }
                     } else {
                         throw error;
                     }
@@ -657,116 +625,6 @@ export class ProtobufSerializer {
         }
     }
     
-    /**
-     * 回退到JSON序列化
-     */
-    private fallbackToJsonSerialization(component: Component, reason: string): SerializedData {
-        console.warn(`[ProtobufSerializer] ${reason}，回退到JSON序列化`);
-        
-        try {
-            const data = this.serializeToJson(component);
-            const jsonString = JSON.stringify(data);
-            const encoder = new TextEncoder();
-            const buffer = encoder.encode(jsonString);
-            
-            return {
-                type: 'json',
-                componentType: component.constructor.name,
-                data: data,
-                size: buffer.length
-            };
-        } catch (error) {
-            console.error(`[ProtobufSerializer] JSON序列化也失败: ${error}`);
-            throw new Error(`[ProtobufSerializer] 序列化完全失败: ${component.constructor.name}`);
-        }
-    }
-    
-    /**
-     * 从JSON数据反序列化
-     */
-    private deserializeFromJson(component: Component, serializedData: SerializedData): void {
-        try {
-            if (typeof (component as any).deserialize === 'function') {
-                // 使用组件的自定义反序列化方法
-                (component as any).deserialize(serializedData.data);
-            } else {
-                // 默认的属性赋值
-                Object.assign(component, serializedData.data);
-            }
-        } catch (error) {
-            console.error(`[ProtobufSerializer] JSON反序列化失败: ${component.constructor.name} - ${error}`);
-        }
-    }
-    
-    /**
-     * 序列化为JSON对象
-     */
-    private serializeToJson(component: Component): any {
-        if (typeof (component as any).serialize === 'function') {
-            // 使用组件的自定义序列化方法
-            return (component as any).serialize();
-        } else {
-            // 默认的属性序列化
-            const data: any = {};
-            
-            // 获取所有可枚举属性
-            for (const key of Object.keys(component)) {
-                const value = (component as any)[key];
-                if (this.isSerializableValue(value)) {
-                    data[key] = this.deepCloneSerializableValue(value);
-                }
-            }
-            
-            return data;
-        }
-    }
-    
-    /**
-     * 检查值是否可序列化
-     */
-    private isSerializableValue(value: any): boolean {
-        if (value === null || value === undefined) return true;
-        if (typeof value === 'function') return false;
-        if (value instanceof Date) return true;
-        if (Array.isArray(value)) return true;
-        if (value instanceof Map || value instanceof Set) return true;
-        if (typeof value === 'object' && value.constructor === Object) return true;
-        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true;
-        return false;
-    }
-    
-    /**
-     * 深拷贝可序列化的值
-     */
-    private deepCloneSerializableValue(value: any): any {
-        if (value === null || value === undefined) return value;
-        if (typeof value !== 'object') return value;
-        if (value instanceof Date) return value.toISOString();
-        
-        if (Array.isArray(value)) {
-            return value.map(item => this.deepCloneSerializableValue(item));
-        }
-        
-        if (value instanceof Map) {
-            return Array.from(value.entries());
-        }
-        
-        if (value instanceof Set) {
-            return Array.from(value);
-        }
-        
-        if (value.constructor === Object) {
-            const result: any = {};
-            for (const key in value) {
-                if (value.hasOwnProperty(key) && this.isSerializableValue(value[key])) {
-                    result[key] = this.deepCloneSerializableValue(value[key]);
-                }
-            }
-            return result;
-        }
-        
-        return value;
-    }
     
     /**
      * 生成组件缓存键

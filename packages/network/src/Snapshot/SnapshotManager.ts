@@ -1,10 +1,8 @@
-import { Entity } from '../../ECS/Entity';
-import { Component } from '../../ECS/Component';
+import { Entity, Component } from '@esengine/ecs-framework';
 import { ISnapshotable, SceneSnapshot, EntitySnapshot, ComponentSnapshot, SnapshotConfig } from './ISnapshotable';
 import { ProtobufSerializer } from '../Serialization/ProtobufSerializer';
 import { SerializedData } from '../Serialization/SerializationTypes';
 import { isProtoSerializable } from '../Serialization/ProtobufDecorators';
-import { ComponentRegistry } from '../../ECS/Core/ComponentStorage';
 
 /**
  * 快照管理器
@@ -186,7 +184,8 @@ export class SnapshotManager {
      * 获取组件类型
      */
     private getComponentType(typeName: string): any {
-        return ComponentRegistry.getComponentType(typeName);
+        // TODO: 实现组件类型注册表或者使用其他方式获取组件类型
+        return null;
     }
 
     /**

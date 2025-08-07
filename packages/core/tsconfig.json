@@ -1,17 +1,19 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
     "target": "ES2020",
-    "module": "CommonJS",
+    "module": "ES2020",
     "moduleResolution": "node",
+    "allowImportingTsExtensions": false,
     "lib": ["ES2020", "DOM"],
+    "outDir": "./bin",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": false,
-    "declarationMap": false,
+    "declaration": true,
+    "declarationMap": true,
     "sourceMap": true,
     "removeComments": false,
     "noImplicitAny": true,
@@ -29,18 +31,15 @@
     "downlevelIteration": true,
     "isolatedModules": false,
     "allowJs": true,
-    "resolveJsonModule": true,
-    "types": ["jest", "node"]
+    "resolveJsonModule": true
   },
   "include": [
-    "tests/**/*.ts",
-    "src/**/*.ts"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
     "bin",
-    "dist",
-    "examples",
-    "thirdparty"
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
-} 
+}

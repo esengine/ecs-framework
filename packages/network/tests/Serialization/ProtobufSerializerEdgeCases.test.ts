@@ -127,6 +127,22 @@ const mockProtobuf = {
                     })),
                     toObject: jest.fn().mockImplementation((message) => message)
                 };
+            }),
+            lookupTypeOrEnum: jest.fn().mockImplementation((typeName: string) => {
+                if (typeName === 'google.protobuf.Timestamp') {
+                    return {
+                        verify: jest.fn().mockReturnValue(null),
+                        create: jest.fn().mockImplementation((data) => data),
+                        encode: jest.fn().mockReturnValue({
+                            finish: jest.fn().mockReturnValue(new Uint8Array([1, 2, 3, 4]))
+                        }),
+                        decode: jest.fn().mockImplementation(() => ({
+                            seconds: 1609459200,
+                            nanos: 0
+                        }))
+                    };
+                }
+                return null;
             })
         }
     })
@@ -239,12 +255,13 @@ describe('ProtobufSerializer边界情况测试', () => {
     });
     
     describe('循环引用测试', () => {
-        it('应该处理循环引用对象', () => {
+        it('应该拒绝循环引用对象并抛出错误', () => {
             const component = new CircularComponent('circular');
             
-            // 应该回退到JSON序列化
-            const result = serializer.serialize(component);
-            expect(result).toBeDefined();
+            // 循环引用应该抛出错误，不再回退到JSON序列化
+            expect(() => {
+                serializer.serialize(component);
+            }).toThrow();
         });
     });
     
@@ -259,13 +276,13 @@ describe('ProtobufSerializer边界情况测试', () => {
     });
     
     describe('非序列化组件测试', () => {
-        it('应该回退到JSON序列化', () => {
+        it('应该拒绝非protobuf组件并抛出错误', () => {
             const component = new NonSerializableComponent();
             
-            const result = serializer.serialize(component);
-            expect(result.type).toBe('json');
-            expect(result.componentType).toBe('NonSerializableComponent');
-            expect(result.data).toEqual({ data: 'test' });
+            // 没有protobuf装饰器的组件应该抛出错误，不再回退到JSON序列化
+            expect(() => {
+                serializer.serialize(component);
+            }).toThrow();
         });
     });
     
@@ -282,10 +299,15 @@ describe('ProtobufSerializer边界情况测试', () => {
                 new IncompleteComponent('mixed'),
             ];
             
+            // continueOnError: true 时，只有可序列化的组件能成功，其他会被跳过
             const results = serializer.serializeBatch(components, { continueOnError: true });
-            expect(results.length).toBeGreaterThanOrEqual(2);
-            expect(results.some(r => r.type === 'protobuf')).toBe(true);
-            expect(results.some(r => r.type === 'json')).toBe(true);
+            expect(results.length).toBeGreaterThanOrEqual(1);
+            expect(results.every(r => r.type === 'protobuf')).toBe(true);
+            
+            // continueOnError: false 时应该抛出错误
+            expect(() => {
+                serializer.serializeBatch(components, { continueOnError: false });
+            }).toThrow();
         });
         
         it('应该处理批量数据', () => {
@@ -297,26 +319,22 @@ describe('ProtobufSerializer边界情况测试', () => {
         });
         
         it('应该处理序列化错误', () => {
-            // 模拟序列化失败
-            const mockType = mockProtobuf.parse().root.lookupType('ecs.EdgeCaseComponent');
-            mockType.verify.mockReturnValue('Validation error');
-            
-            const components = [new EdgeCaseComponent()];
+            // 创建会导致序列化失败的组件
+            const components = [new NonSerializableComponent()];
             
             // continueOnError = false 应该抛出异常
             expect(() => {
                 serializer.serializeBatch(components, { continueOnError: false });
             }).toThrow();
             
-            // continueOnError = true 应该回退到JSON
+            // continueOnError = true 应该返回空数组（跳过失败的组件）
             const results = serializer.serializeBatch(components, { continueOnError: true });
-            expect(results).toHaveLength(1);
-            expect(results[0].type).toBe('json');
+            expect(results).toHaveLength(0);
         });
     });
     
     describe('反序列化边界测试', () => {
-        it('应该处理JSON类型的反序列化', () => {
+        it('应该拒绝JSON类型的反序列化并抛出错误', () => {
             const component = new NonSerializableComponent();
             const serializedData = {
                 type: 'json' as const,
@@ -325,8 +343,10 @@ describe('ProtobufSerializer边界情况测试', () => {
                 size: 100
             };
             
-            serializer.deserialize(component, serializedData);
-            expect(component.data).toBe('deserialized');
+            // JSON类型的数据应该被拒绝，抛出错误
+            expect(() => {
+                serializer.deserialize(component, serializedData);
+            }).toThrow();
         });
         
         it('应该优雅处理反序列化错误', () => {

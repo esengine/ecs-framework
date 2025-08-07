@@ -18,7 +18,4 @@ export * from './ECS';
 
 // 工具类和类型定义
 export * from './Utils';
-export * from './Types';
-
-// 快照系统（可选模块）
-export * from './Utils/Snapshot'; 
+export * from './Types'; 

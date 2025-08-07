@@ -1,4 +1,4 @@
-import { Component } from '../../ECS/Component';
+import { Component } from '@esengine/ecs-framework';
 import { ISnapshotable, SnapshotConfig } from './ISnapshotable';
 
 /**

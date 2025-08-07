@@ -1,16 +1,10 @@
 {
-  "name": "@esengine/ecs-framework",
+  "name": "@esengine/ecs-framework-monorepo",
   "version": "2.1.29",
-  "description": "用于Laya、Cocos Creator等JavaScript游戏引擎的高性能ECS框架",
-  "main": "bin/index.js",
-  "types": "bin/index.d.ts",
-  "bin": {
-    "ecs-proto": "./bin/ecs-proto"
-  },
-  "files": [
-    "bin/**/*",
-    "README.md",
-    "LICENSE"
+  "description": "ECS Framework Monorepo - 高性能ECS框架及其网络插件",
+  "private": true,
+  "workspaces": [
+    "packages/*"
   ],
   "keywords": [
     "ecs",
@@ -22,27 +16,22 @@
     "egret"
   ],
   "scripts": {
-    "clean": "rimraf bin dist",
-    "build:ts": "tsc",
-    "prebuild": "npm run clean",
-    "build": "npm run build:ts",
-    "build:watch": "tsc --watch",
-    "rebuild": "npm run clean && npm run build",
-    "build:npm": "npm run build && node scripts/build-rollup.js",
-    "preversion": "npm run rebuild",
-    "publish:patch": "npm version patch && npm run build:npm && cd dist && npm publish",
-    "publish:minor": "npm version minor && npm run build:npm && cd dist && npm publish",
-    "publish:major": "npm version major && npm run build:npm && cd dist && npm publish",
-    "publish:npm": "npm run build:npm && cd dist && npm publish",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:performance": "jest --config jest.performance.config.js",
-    "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage",
-    "test:clear": "jest --clearCache",
-    "proto:generate": "ecs-proto generate",
-    "proto:compile": "ecs-proto compile",
-    "proto:build": "ecs-proto build"
+    "bootstrap": "lerna bootstrap",
+    "clean": "lerna run clean",
+    "build": "npm run build:core && npm run build:network",
+    "build:core": "cd packages/core && npm run build",
+    "build:network": "cd packages/network && npm run build",
+    "build:npm": "npm run build:npm:core && npm run build:npm:network",
+    "build:npm:core": "cd packages/core && npm run build:npm",
+    "build:npm:network": "cd packages/network && npm run build:npm",
+    "test": "lerna run test",
+    "test:coverage": "lerna run test:coverage",
+    "test:ci": "lerna run test:ci",
+    "prepare:publish": "npm run build:npm && node scripts/pre-publish-check.cjs",
+    "sync:versions": "node scripts/sync-versions.cjs",
+    "publish:all": "npm run prepare:publish && lerna publish",
+    "publish": "lerna publish",
+    "version": "lerna version"
   },
   "author": "yhh",
   "license": "MIT",
@@ -54,9 +43,11 @@
     "@types/node": "^20.19.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "lerna": "^8.1.8",
     "rimraf": "^5.0.0",
     "rollup": "^4.42.0",
     "rollup-plugin-dts": "^6.2.1",
+    "semver": "^7.6.3",
     "ts-jest": "^29.4.0",
     "typescript": "^5.8.3"
   },

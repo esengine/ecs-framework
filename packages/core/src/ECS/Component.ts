@@ -152,6 +152,7 @@ export abstract class Component implements IComponent {
      */
     public update(): void {
     }
+    
 }
 
 // 避免循环引用，在文件末尾导入Entity

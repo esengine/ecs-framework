@@ -1,0 +1,63 @@
+{
+  "name": "@esengine/ecs-framework",
+  "version": "2.1.29",
+  "description": "用于Laya、Cocos Creator等JavaScript游戏引擎的高性能ECS框架",
+  "type": "module",
+  "main": "bin/index.js",
+  "types": "bin/index.d.ts",
+  "files": [
+    "bin/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "ecs",
+    "entity-component-system",
+    "game-engine",
+    "typescript",
+    "laya",
+    "cocos",
+    "egret"
+  ],
+  "scripts": {
+    "clean": "rimraf bin dist",
+    "build:ts": "tsc",
+    "prebuild": "npm run clean",
+    "build": "npm run build:ts",
+    "build:watch": "tsc --watch",
+    "rebuild": "npm run clean && npm run build",
+    "build:npm": "npm run build && node build-rollup.cjs",
+    "preversion": "npm run rebuild",
+    "test": "jest --config jest.config.cjs",
+    "test:watch": "jest --watch --config jest.config.cjs",
+    "test:performance": "jest --config jest.performance.config.cjs",
+    "test:coverage": "jest --coverage --config jest.config.cjs",
+    "test:ci": "jest --ci --coverage --config jest.config.cjs",
+    "test:clear": "jest --clearCache"
+  },
+  "author": "yhh",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.19.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "rimraf": "^5.0.0",
+    "rollup": "^4.42.0",
+    "rollup-plugin-dts": "^6.2.1",
+    "ts-jest": "^29.4.0",
+    "typescript": "^5.8.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/esengine/ecs-framework.git",
+    "directory": "packages/core"
+  }
+}

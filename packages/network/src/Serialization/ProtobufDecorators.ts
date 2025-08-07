@@ -5,8 +5,7 @@
  */
 
 import 'reflect-metadata';
-import { Component } from '../../ECS/Component';
-import { BigIntFactory } from '../../ECS/Utils/BigIntCompatibility';
+import { Component } from '@esengine/ecs-framework';
 
 /**
  * Protobuf字段类型枚举
@@ -38,6 +37,20 @@ export enum ProtoFieldType {
 }
 
 /**
+ * 字段同步优先级
+ */
+export enum FieldSyncPriority {
+    /** 关键字段 - 每帧必须同步 */
+    CRITICAL = 'critical',
+    /** 高优先级 - 高频同步 */
+    HIGH = 'high',
+    /** 中等优先级 - 中频同步 */
+    MEDIUM = 'medium',
+    /** 低优先级 - 低频同步 */
+    LOW = 'low'
+}
+
+/**
  * Protobuf字段定义接口
  */
 export interface ProtoFieldDefinition {
@@ -57,6 +70,30 @@ export interface ProtoFieldDefinition {
     enumValues?: Record<string, number>;
     /** 默认值 */
     defaultValue?: any;
+    
+    // 帧同步特定选项
+    /** 同步优先级 */
+    syncPriority?: FieldSyncPriority;
+    /** 数值精度（用于量化压缩） */
+    precision?: number;
+    /** 是否支持插值 */
+    interpolation?: boolean;
+    /** 量化位数 */
+    quantizationBits?: number;
+    /** 变化阈值（小于此值不同步） */
+    changeThreshold?: number;
+}
+
+/**
+ * 组件同步模式
+ */
+export enum ComponentSyncMode {
+    /** 完整同步 - 传输所有字段 */
+    FULL = 'full',
+    /** 增量同步 - 只传输变化字段 */
+    DELTA = 'delta',
+    /** 自适应 - 根据变化量自动选择 */
+    ADAPTIVE = 'adaptive'
 }
 
 /**
@@ -69,6 +106,16 @@ export interface ProtoComponentDefinition {
     fields: Map<string, ProtoFieldDefinition>;
     /** 构造函数 */
     constructor: any;
+    
+    // 帧同步特定选项
+    /** 同步模式 */
+    syncMode?: ComponentSyncMode;
+    /** 同步频率（每秒同步次数） */
+    syncFrequency?: number;
+    /** 是否启用压缩 */
+    enableCompression?: boolean;
+    /** 网络优先级 */
+    networkPriority?: number;
 }
 
 /**
@@ -149,19 +196,38 @@ export class ProtobufRegistry {
 }
 
 /**
+ * 组件同步选项接口
+ */
+export interface ComponentSyncOptions {
+    /** 同步模式 */
+    syncMode?: ComponentSyncMode;
+    /** 同步频率（每秒同步次数） */
+    syncFrequency?: number;
+    /** 是否启用压缩 */
+    enableCompression?: boolean;
+    /** 网络优先级（1-10，数字越大优先级越高） */
+    networkPriority?: number;
+}
+
+/**
  * ProtoSerializable 组件装饰器
  * 
- * 标记组件支持protobuf序列化
+ * 标记组件支持protobuf序列化，专为帧同步框架优化
  * @param protoName protobuf消息名称，默认使用类名
+ * @param options 同步选项
  * @example
  * ```typescript
- * @ProtoSerializable('Position')
+ * @ProtoSerializable('Position', {
+ *     syncMode: ComponentSyncMode.DELTA,
+ *     syncFrequency: 30,
+ *     networkPriority: 8
+ * })
  * class PositionComponent extends Component {
  *     // 组件实现
  * }
  * ```
  */
-export function ProtoSerializable(protoName?: string) {
+export function ProtoSerializable(protoName?: string, options?: ComponentSyncOptions) {
     return function <T extends { new(...args: any[]): Component }>(constructor: T) {
         const componentName = protoName || constructor.name;
         const registry = ProtobufRegistry.getInstance();
@@ -174,7 +240,11 @@ export function ProtoSerializable(protoName?: string) {
         registry.registerComponent(componentName, {
             name: componentName,
             fields: fields,
-            constructor: constructor
+            constructor: constructor,
+            syncMode: options?.syncMode || ComponentSyncMode.FULL,
+            syncFrequency: options?.syncFrequency || 30,
+            enableCompression: options?.enableCompression || true,
+            networkPriority: options?.networkPriority || 5
         });
         
         // 标记组件支持protobuf
@@ -186,24 +256,55 @@ export function ProtoSerializable(protoName?: string) {
 }
 
 /**
+ * 字段同步选项接口
+ */
+export interface FieldSyncOptions {
+    /** 是否为数组 */
+    repeated?: boolean;
+    /** 是否可选 */
+    optional?: boolean;
+    /** 自定义类型名称 */
+    customTypeName?: string;
+    /** 枚举值映射 */
+    enumValues?: Record<string, number>;
+    /** 默认值 */
+    defaultValue?: any;
+    
+    // 帧同步特定选项
+    /** 同步优先级 */
+    syncPriority?: FieldSyncPriority;
+    /** 数值精度（用于量化压缩） */
+    precision?: number;
+    /** 是否支持插值 */
+    interpolation?: boolean;
+    /** 量化位数 */
+    quantizationBits?: number;
+    /** 变化阈值（小于此值不同步） */
+    changeThreshold?: number;
+}
+
+/**
  * ProtoField 字段装饰器
  * 
- * 标记字段参与protobuf序列化
+ * 标记字段参与protobuf序列化，针对帧同步进行优化
  * @param fieldNumber protobuf字段编号，必须唯一且大于0
  * @param type 字段类型，默认自动推断
- * @param options 额外选项
- * @param options.repeated 是否为数组
- * @param options.optional 是否可选
- * @param options.customTypeName 自定义类型名称
- * @param options.enumValues 枚举值映射
- * @param options.defaultValue 默认值
+ * @param options 字段选项
  * @example
  * ```typescript
  * class PositionComponent extends Component {
- *     @ProtoField(1, ProtoFieldType.FLOAT)
+ *     @ProtoField(1, ProtoFieldType.FLOAT, {
+ *         syncPriority: FieldSyncPriority.CRITICAL,
+ *         precision: 0.01,
+ *         interpolation: true
+ *     })
  *     public x: number = 0;
  *     
- *     @ProtoField(2, ProtoFieldType.FLOAT)
+ *     @ProtoField(2, ProtoFieldType.FLOAT, {
+ *         syncPriority: FieldSyncPriority.CRITICAL,
+ *         precision: 0.01,
+ *         interpolation: true
+ *     })
  *     public y: number = 0;
  * }
  * ```
@@ -211,13 +312,7 @@ export function ProtoSerializable(protoName?: string) {
 export function ProtoField(
     fieldNumber: number,
     type?: ProtoFieldType,
-    options?: {
-        repeated?: boolean;
-        optional?: boolean;
-        customTypeName?: string;
-        enumValues?: Record<string, number>;
-        defaultValue?: any;
-    }
+    options?: FieldSyncOptions
 ) {
     return function (target: any, propertyKey: string) {
         // 验证字段编号
@@ -253,7 +348,13 @@ export function ProtoField(
             name: propertyKey,
             customTypeName: options?.customTypeName,
             enumValues: options?.enumValues,
-            defaultValue: options?.defaultValue
+            defaultValue: options?.defaultValue,
+            // 帧同步特定选项
+            syncPriority: options?.syncPriority || FieldSyncPriority.MEDIUM,
+            precision: options?.precision,
+            interpolation: options?.interpolation || false,
+            quantizationBits: options?.quantizationBits,
+            changeThreshold: options?.changeThreshold || 0
         });
     };
 }

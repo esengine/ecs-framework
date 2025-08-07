@@ -1,0 +1,25 @@
+{
+  "version": "independent",
+  "npmClient": "npm",
+  "command": {
+    "publish": {
+      "registry": "https://registry.npmjs.org/",
+      "allowBranch": ["master", "main"],
+      "conventionalCommits": true,
+      "message": "chore(release): publish packages",
+      "topologicalSort": true,
+      "verifyAccess": true,
+      "verifyRegistry": true
+    },
+    "version": {
+      "allowBranch": ["master", "main"],
+      "conventionalCommits": true,
+      "message": "chore(release): version packages",
+      "push": false
+    }
+  },
+  "packages": [
+    "packages/*"
+  ],
+  "useWorkspaces": true
+}

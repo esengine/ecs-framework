@@ -121,7 +121,15 @@ describe('ProtobufDecorators', () => {
                 type: ProtoFieldType.FLOAT,
                 repeated: false,
                 optional: false,
-                name: 'x'
+                name: 'x',
+                customTypeName: undefined,
+                enumValues: undefined,
+                defaultValue: undefined,
+                syncPriority: 'medium',
+                precision: undefined,
+                interpolation: false,
+                quantizationBits: undefined,
+                changeThreshold: 0
             });
             
             const yField = definition!.fields.get('y');
@@ -130,7 +138,15 @@ describe('ProtobufDecorators', () => {
                 type: ProtoFieldType.FLOAT,
                 repeated: false,
                 optional: false,
-                name: 'y'
+                name: 'y',
+                customTypeName: undefined,
+                enumValues: undefined,
+                defaultValue: undefined,
+                syncPriority: 'medium',
+                precision: undefined,
+                interpolation: false,
+                quantizationBits: undefined,
+                changeThreshold: 0
             });
         });
         

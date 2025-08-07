@@ -5,3 +5,4 @@ export { IdentifierPool } from './IdentifierPool';
 export { Matcher } from './Matcher';
 export { Bits } from './Bits';
 export { ComponentTypeManager } from './ComponentTypeManager';
+export { BigIntFactory } from './BigIntCompatibility';
