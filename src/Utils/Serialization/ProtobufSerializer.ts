@@ -13,18 +13,8 @@ import {
     isProtoSerializable,
     getProtoName 
 } from './ProtobufDecorators';
+import { SerializedData } from './SerializationTypes';
 
-/**
- * 序列化数据接口
- */
-export interface SerializedData {
-    /** 组件类型名称 */
-    componentType: string;
-    /** 序列化后的数据 */
-    data: Uint8Array;
-    /** 数据大小（字节） */
-    size: number;
-}
 
 /**
  * Protobuf序列化器
@@ -143,6 +133,7 @@ export class ProtobufSerializer {
             const buffer = MessageType.encode(message).finish();
             
             return {
+                type: 'protobuf',
                 componentType: componentType,
                 data: buffer,
                 size: buffer.length
@@ -245,6 +236,7 @@ export class ProtobufSerializer {
                     const buffer = MessageType.encode(message).finish();
                     
                     results.push({
+                        type: 'protobuf',
                         componentType: component.constructor.name,
                         data: buffer,
                         size: buffer.length

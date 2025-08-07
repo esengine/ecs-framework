@@ -1,8 +1,10 @@
 import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';
 import { ISnapshotable, SceneSnapshot, EntitySnapshot, ComponentSnapshot, SnapshotConfig } from './ISnapshotable';
-import { ProtobufSerializer, SerializedData } from '../Serialization/ProtobufSerializer';
+import { ProtobufSerializer } from '../Serialization/ProtobufSerializer';
+import { SerializedData } from '../Serialization/SerializationTypes';
 import { isProtoSerializable } from '../Serialization/ProtobufDecorators';
+import { ComponentRegistry } from '../../ECS/Core/ComponentStorage';
 
 /**
  * 快照管理器
@@ -40,6 +42,7 @@ export class SnapshotManager {
     constructor() {
         this.protobufSerializer = ProtobufSerializer.getInstance();
     }
+
 
     /**
      * 创建场景快照
@@ -183,9 +186,7 @@ export class SnapshotManager {
      * 获取组件类型
      */
     private getComponentType(typeName: string): any {
-        // 这里需要与组件注册系统集成
-        // 暂时返回null，实际实现需要组件类型管理器
-        return null;
+        return ComponentRegistry.getComponentType(typeName);
     }
 
     /**

@@ -71,7 +71,7 @@
       ComponentRegistry • IdentifierPool
     </text>
     <text x="700" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">
-      BitMaskOptimizer • ConfigManager
+      EventBus • ConfigManager
     </text>
     
   </g>

@@ -4,8 +4,6 @@ import { ComponentRegistry, ComponentType } from './ComponentStorage';
 import { IBigIntLike, BigIntFactory } from '../Utils/BigIntCompatibility';
 
 import { ComponentPoolManager } from './ComponentPool';
-import { BitMaskOptimizer } from './BitMaskOptimizer';
-import { IndexUpdateBatcher } from './IndexUpdateBatcher';
 import { ComponentIndexManager, IndexType } from './ComponentIndex';
 import { ArchetypeSystem, Archetype, ArchetypeQueryResult } from './ArchetypeSystem';
 import { DirtyTrackingSystem, DirtyFlag } from './DirtyTrackingSystem';
@@ -98,8 +96,6 @@ export class QuerySystem {
 
     // 优化组件
     private componentPoolManager: ComponentPoolManager;
-    private bitMaskOptimizer: BitMaskOptimizer;
-    private indexUpdateBatcher: IndexUpdateBatcher;
 
     // 新增性能优化系统
     private componentIndexManager: ComponentIndexManager;
@@ -126,33 +122,10 @@ export class QuerySystem {
 
         // 初始化优化组件
         this.componentPoolManager = ComponentPoolManager.getInstance();
-        this.bitMaskOptimizer = BitMaskOptimizer.getInstance();
-        this.indexUpdateBatcher = new IndexUpdateBatcher();
-
         // 初始化新的性能优化系统
         this.componentIndexManager = new ComponentIndexManager(IndexType.HASH);
         this.archetypeSystem = new ArchetypeSystem();
         this.dirtyTrackingSystem = new DirtyTrackingSystem();
-
-        // 设置索引更新批处理器的回调
-        this.indexUpdateBatcher.onBatchAdd = (entities) => {
-            for (const entity of entities) {
-                this.addEntityToIndexes(entity);
-            }
-        };
-
-        this.indexUpdateBatcher.onBatchRemove = (entities) => {
-            for (const entity of entities) {
-                this.removeEntityFromIndexes(entity);
-            }
-        };
-
-        this.indexUpdateBatcher.onBatchUpdate = (updates) => {
-            for (const update of updates) {
-                this.removeEntityFromIndexes(update.entity);
-                this.addEntityToIndexes(update.entity);
-            }
-        };
     }
 
 

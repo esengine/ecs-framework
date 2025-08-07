@@ -18,5 +18,4 @@ export {
     DirtyListener 
 } from '../DirtyTrackingSystem';
 
-export { IndexUpdateBatcher } from '../IndexUpdateBatcher';
-export { BitMaskOptimizer } from '../BitMaskOptimizer'; 
+ 
