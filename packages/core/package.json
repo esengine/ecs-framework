@@ -5,6 +5,16 @@
   "type": "module",
   "main": "bin/index.js",
   "types": "bin/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./bin/index.d.ts",
+      "import": "./bin/index.js",
+      "development": {
+        "types": "./src/index.ts",
+        "import": "./src/index.ts"
+      }
+    }
+  },
   "files": [
     "bin/**/*",
     "README.md",

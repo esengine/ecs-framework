@@ -11,15 +11,6 @@ export { NetworkConnection, ConnectionState } from './NetworkConnection';
 export { NetworkEnvironment, NetworkEnvironmentState } from './NetworkEnvironment';
 export { NetworkIdentity, NetworkIdentityRegistry } from './NetworkIdentity';
 export { NetworkPerformanceMonitor } from './NetworkPerformanceMonitor';
-export { 
-    LoggerManager, 
-    ConsoleLogger, 
-    Logger, 
-    createLogger, 
-    setGlobalLogLevel,
-    LogLevel 
-} from './Logger';
-
 // 事件接口导出
 export type { NetworkServerEvents } from './NetworkServer';
 export type { NetworkClientEvents } from './NetworkClient';
@@ -27,6 +18,3 @@ export type { NetworkConnectionEvents } from './NetworkConnection';
 
 // 性能监控类型导出
 export type { NetworkMetrics, PerformanceSnapshot } from './NetworkPerformanceMonitor';
-
-// 日志类型导出
-export type { ILogger, LoggerConfig } from './Logger';

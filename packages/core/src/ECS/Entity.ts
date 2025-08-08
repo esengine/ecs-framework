@@ -2,6 +2,7 @@ import { Component } from './Component';
 import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
 import { EventBus } from './Core/EventBus';
 import { IBigIntLike, BigIntFactory } from './Utils/BigIntCompatibility';
+import { createLogger } from '../Utils/Logger';
 
 // Forward declaration to avoid circular dependency
 interface IScene {
@@ -65,6 +66,11 @@ export class EntityComparer {
  * ```
  */
 export class Entity {
+    /**
+     * Entity专用日志器
+     */
+    private static _logger = createLogger('Entity');
+    
     /**
      * 实体比较器实例
      */
@@ -630,7 +636,7 @@ export class Entity {
                 addedComponents.push(this.addComponent(component));
             } catch (error) {
                 // 如果某个组件添加失败，继续添加其他组件
-                console.warn(`添加组件失败 ${component.constructor.name}:`, error);
+                Entity._logger.warn(`添加组件失败 ${component.constructor.name}:`, error);
             }
         }
         

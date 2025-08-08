@@ -1,6 +1,7 @@
 import { createSyncVarProxy } from './SyncVarProxy';
 import { getSyncVarMetadata } from './SyncVarDecorator';
 import { INetworkSyncable } from '../types/NetworkTypes';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * SyncVar工厂函数
@@ -16,6 +17,8 @@ import { INetworkSyncable } from '../types/NetworkTypes';
  * @param args - 构造函数参数
  * @returns 带代理的组件实例
  */
+const logger = createLogger('SyncVarFactory');
+
 export function createNetworkComponent<T extends INetworkSyncable>(
     ComponentClass: new (...args: any[]) => T,
     ...args: any[]
@@ -36,7 +39,7 @@ export function createNetworkComponent<T extends INetworkSyncable>(
         debugLog: false // 可以根据需要启用调试
     });
     
-    console.log(`[SyncVarFactory] 为 ${ComponentClass.name} 创建了SyncVar代理，包含 ${metadata.length} 个同步字段`);
+    logger.debug(`为 ${ComponentClass.name} 创建了SyncVar代理，包含 ${metadata.length} 个同步字段`);
     
     return proxy;
 }

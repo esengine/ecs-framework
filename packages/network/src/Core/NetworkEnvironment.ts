@@ -1,4 +1,5 @@
 import { NetworkRole } from '../NetworkRole';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * 网络环境状态
@@ -21,6 +22,7 @@ export enum NetworkEnvironmentState {
  * 避免在构造函数中传递角色参数，保持与核心ECS框架的兼容性
  */
 export class NetworkEnvironment {
+    private static readonly logger = createLogger('NetworkEnvironment');
     private static _instance: NetworkEnvironment | null = null;
     private _state: NetworkEnvironmentState = NetworkEnvironmentState.None;
     private _serverStartTime: number = 0;
@@ -52,7 +54,7 @@ export class NetworkEnvironment {
         }
         
         instance._serverStartTime = Date.now();
-        console.log(`[NetworkEnvironment] 环境设置为: ${instance._state}`);
+        NetworkEnvironment.logger.info(`环境设置为: ${instance._state}`);
     }
     
     /**
@@ -69,7 +71,7 @@ export class NetworkEnvironment {
         }
         
         instance._clientConnectTime = Date.now();
-        console.log(`[NetworkEnvironment] 环境设置为: ${instance._state}`);
+        NetworkEnvironment.logger.info(`环境设置为: ${instance._state}`);
     }
     
     /**
@@ -85,7 +87,7 @@ export class NetworkEnvironment {
         }
         
         instance._serverStartTime = 0;
-        console.log(`[NetworkEnvironment] 服务端模式已清除，当前状态: ${instance._state}`);
+        NetworkEnvironment.logger.info(`服务端模式已清除，当前状态: ${instance._state}`);
     }
     
     /**
@@ -101,7 +103,7 @@ export class NetworkEnvironment {
         }
         
         instance._clientConnectTime = 0;
-        console.log(`[NetworkEnvironment] 客户端模式已清除，当前状态: ${instance._state}`);
+        NetworkEnvironment.logger.info(`客户端模式已清除，当前状态: ${instance._state}`);
     }
     
     /**
@@ -112,7 +114,7 @@ export class NetworkEnvironment {
         instance._state = NetworkEnvironmentState.None;
         instance._serverStartTime = 0;
         instance._clientConnectTime = 0;
-        console.log('[NetworkEnvironment] 环境状态已重置');
+        NetworkEnvironment.logger.info('环境状态已重置');
     }
     
     /**
@@ -241,6 +243,6 @@ export class NetworkEnvironment {
             instance._clientConnectTime = clientConnectTime;
         }
         
-        console.log(`[NetworkEnvironment] 强制设置环境状态为: ${state}`);
+        NetworkEnvironment.logger.debug(`强制设置环境状态为: ${state}`);
     }
 }

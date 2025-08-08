@@ -2,7 +2,7 @@ import { SyncVarManager } from './SyncVarManager';
 import { NetworkIdentityRegistry, NetworkIdentity } from '../Core/NetworkIdentity';
 import { SyncVarUpdateMessage } from '../Messaging/MessageTypes';
 import { NetworkEnvironment } from '../Core/NetworkEnvironment';
-import { ComponentRegistry } from '@esengine/ecs-framework';
+import { ComponentRegistry, createLogger } from '@esengine/ecs-framework';
 import { NetworkComponent } from '../NetworkComponent';
 
 /**
@@ -69,6 +69,7 @@ export class DefaultSyncPriorityCalculator implements ISyncPriorityCalculator {
  * 支持批处理、优先级排序和性能优化
  */
 export class SyncVarSyncScheduler {
+    private static readonly logger = createLogger('SyncVarSyncScheduler');
     private static _instance: SyncVarSyncScheduler | null = null;
     
     private _config: SyncVarSyncConfig;
@@ -130,7 +131,7 @@ export class SyncVarSyncScheduler {
             this.start();
         }
         
-        console.log('[SyncVarSyncScheduler] 调度器配置已更新:', this._config);
+        SyncVarSyncScheduler.logger.debug('调度器配置已更新:', this._config);
     }
     
     /**
@@ -140,7 +141,7 @@ export class SyncVarSyncScheduler {
      */
     public setPriorityCalculator(calculator: ISyncPriorityCalculator): void {
         this._priorityCalculator = calculator;
-        console.log('[SyncVarSyncScheduler] 优先级计算器已更新');
+        SyncVarSyncScheduler.logger.debug('优先级计算器已更新');
     }
     
     /**
@@ -150,7 +151,7 @@ export class SyncVarSyncScheduler {
      */
     public setMessageSendCallback(callback: (message: SyncVarUpdateMessage) => Promise<void>): void {
         this._messageSendCallback = callback;
-        console.log('[SyncVarSyncScheduler] 消息发送回调已设置');
+        SyncVarSyncScheduler.logger.debug('消息发送回调已设置');
     }
     
     /**
@@ -158,7 +159,7 @@ export class SyncVarSyncScheduler {
      */
     public start(): void {
         if (this._isRunning) {
-            console.warn('[SyncVarSyncScheduler] 调度器已经在运行');
+            SyncVarSyncScheduler.logger.warn('调度器已经在运行');
             return;
         }
         
@@ -170,7 +171,7 @@ export class SyncVarSyncScheduler {
             this.performSyncCycle();
         }, this._config.syncInterval);
         
-        console.log(`[SyncVarSyncScheduler] 调度器已启动，同步间隔: ${this._config.syncInterval}ms`);
+        SyncVarSyncScheduler.logger.info(`调度器已启动，同步间隔: ${this._config.syncInterval}ms`);
     }
     
     /**
@@ -188,7 +189,7 @@ export class SyncVarSyncScheduler {
             this._syncTimer = null;
         }
         
-        console.log('[SyncVarSyncScheduler] 调度器已停止');
+        SyncVarSyncScheduler.logger.info('调度器已停止');
     }
     
     /**
@@ -235,7 +236,7 @@ export class SyncVarSyncScheduler {
             
         } catch (error) {
             this._stats.errors++;
-            console.error('[SyncVarSyncScheduler] 同步周期执行失败:', error);
+            SyncVarSyncScheduler.logger.error('同步周期执行失败:', error);
         }
     }
     
@@ -285,7 +286,7 @@ export class SyncVarSyncScheduler {
                     });
                 }
             } catch (error) {
-                console.error(`[SyncVarSyncScheduler] 处理网络对象失败: ${identity.networkId}`, error);
+                SyncVarSyncScheduler.logger.error(`处理网络对象失败: ${identity.networkId}`, error);
             }
         }
         
@@ -298,7 +299,7 @@ export class SyncVarSyncScheduler {
     private getNetworkComponents(identity: NetworkIdentity): NetworkComponent[] {
         const entity = identity.entity;
         if (!entity) {
-            console.warn(`[SyncVarSyncScheduler] NetworkIdentity ${identity.networkId} 缺少Entity引用`);
+            SyncVarSyncScheduler.logger.warn(`NetworkIdentity ${identity.networkId} 缺少Entity引用`);
             return [];
         }
         
@@ -318,7 +319,7 @@ export class SyncVarSyncScheduler {
                 }
             }
         } catch (error) {
-            console.error(`[SyncVarSyncScheduler] 获取网络组件失败 (${identity.networkId}):`, error);
+            SyncVarSyncScheduler.logger.error(`获取网络组件失败 (${identity.networkId}):`, error);
         }
         
         return networkComponents;
@@ -383,7 +384,7 @@ export class SyncVarSyncScheduler {
                 }
                 
             } catch (error) {
-                console.error(`[SyncVarSyncScheduler] 处理同步候选对象失败: ${candidate.identity.networkId}`, error);
+                SyncVarSyncScheduler.logger.error(`处理同步候选对象失败: ${candidate.identity.networkId}`, error);
             }
         }
         
@@ -398,7 +399,7 @@ export class SyncVarSyncScheduler {
      */
     private async sendMessageBatch(messages: SyncVarUpdateMessage[]): Promise<void> {
         if (!this._messageSendCallback) {
-            console.warn('[SyncVarSyncScheduler] 没有设置消息发送回调，消息被丢弃');
+            SyncVarSyncScheduler.logger.warn('没有设置消息发送回调，消息被丢弃');
             return;
         }
         
@@ -407,7 +408,7 @@ export class SyncVarSyncScheduler {
                 await this._messageSendCallback(message);
                 this._stats.totalMessagesSent++;
             } catch (error) {
-                console.error('[SyncVarSyncScheduler] 发送SyncVar消息失败:', error);
+                SyncVarSyncScheduler.logger.error('发送SyncVar消息失败:', error);
                 this._stats.errors++;
             }
         }
@@ -458,7 +459,7 @@ export class SyncVarSyncScheduler {
             lastCycleTime: 0,
             errors: 0
         };
-        console.log('[SyncVarSyncScheduler] 统计信息已重置');
+        SyncVarSyncScheduler.logger.debug('统计信息已重置');
     }
     
     /**

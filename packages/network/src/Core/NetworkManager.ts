@@ -1,6 +1,7 @@
 import { NetworkServer } from './NetworkServer';
 import { NetworkClient } from './NetworkClient';
 import { NetworkEnvironment } from './NetworkEnvironment';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * 网络管理器 - 网络框架的核心入口
@@ -9,6 +10,7 @@ import { NetworkEnvironment } from './NetworkEnvironment';
  * 支持启动服务端、客户端，管理连接状态
  */
 export class NetworkManager {
+    private static readonly _logger = createLogger('NetworkManager');
     private static _instance: NetworkManager | null = null;
     private _server: NetworkServer | null = null;
     private _client: NetworkClient | null = null;
@@ -38,7 +40,7 @@ export class NetworkManager {
         const instance = NetworkManager.Instance;
         
         if (instance._isServer) {
-            console.warn('[NetworkManager] 服务端已经在运行');
+            NetworkManager._logger.warn('服务端已经在运行');
             return false;
         }
         
@@ -50,10 +52,10 @@ export class NetworkManager {
             // 自动设置网络环境为服务端模式
             NetworkEnvironment.SetServerMode();
             
-            console.log(`[NetworkManager] 服务端启动成功，监听 ${host}:${port}`);
+            NetworkManager._logger.info(`服务端启动成功，监听 ${host}:${port}`);
             return true;
         } catch (error) {
-            console.error('[NetworkManager] 服务端启动失败:', error);
+            NetworkManager._logger.error('服务端启动失败:', error);
             instance._server = null;
             return false;
         }
@@ -69,7 +71,7 @@ export class NetworkManager {
         const instance = NetworkManager.Instance;
         
         if (instance._isClient) {
-            console.warn('[NetworkManager] 客户端已经在运行');
+            NetworkManager._logger.warn('客户端已经在运行');
             return false;
         }
         
@@ -81,10 +83,10 @@ export class NetworkManager {
             // 自动设置网络环境为客户端模式
             NetworkEnvironment.SetClientMode();
             
-            console.log(`[NetworkManager] 客户端连接成功: ${url}`);
+            NetworkManager._logger.info(`客户端连接成功: ${url}`);
             return true;
         } catch (error) {
-            console.error('[NetworkManager] 客户端连接失败:', error);
+            NetworkManager._logger.error('客户端连接失败:', error);
             instance._client = null;
             return false;
         }
@@ -104,7 +106,7 @@ export class NetworkManager {
             // 清除服务端环境模式
             NetworkEnvironment.ClearServerMode();
             
-            console.log('[NetworkManager] 服务端已停止');
+            NetworkManager._logger.info('服务端已停止');
         }
     }
     
@@ -122,7 +124,7 @@ export class NetworkManager {
             // 清除客户端环境模式
             NetworkEnvironment.ClearClientMode();
             
-            console.log('[NetworkManager] 客户端已断开连接');
+            NetworkManager._logger.info('客户端已断开连接');
         }
     }
     

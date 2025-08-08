@@ -4,12 +4,13 @@ import { ITimer } from './Utils/Timers/ITimer';
 import { Timer } from './Utils/Timers/Timer';
 import { Time } from './Utils/Time';
 import { PerformanceMonitor } from './Utils/PerformanceMonitor';
-import { PoolManager } from './Utils/Pool';
+import { PoolManager } from './Utils/Pool/PoolManager';
 import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
 import { Scene } from './ECS/Scene';
 import { DebugManager } from './Utils/Debug';
 import { ICoreConfig, IECSDebugConfig } from './Types';
 import { BigIntFactory, EnvironmentInfo } from './ECS/Utils/BigIntCompatibility';
+import { createLogger } from './Utils/Logger';
 
 /**
  * 游戏引擎核心类
@@ -33,7 +34,7 @@ import { BigIntFactory, EnvironmentInfo } from './ECS/Utils/BigIntCompatibility'
  * 
  * // 调度定时器
  * Core.schedule(1.0, false, null, (timer) => {
- *     console.log("1秒后执行");
+ *     Core._logger.info("1秒后执行");
  * });
  * ```
  */
@@ -49,6 +50,11 @@ export class Core {
      * 全局核心实例
      */
     private static _instance: Core;
+
+    /**
+     * Core专用日志器
+     */
+    private static _logger = createLogger('Core');
     
     /**
      * 实体系统启用状态
@@ -265,7 +271,7 @@ export class Core {
      */
     public static update(deltaTime: number): void {
         if (!this._instance) {
-            console.warn("Core实例未创建，请先调用Core.create()");
+            Core._logger.warn("Core实例未创建，请先调用Core.create()");
             return;
         }
         
@@ -341,7 +347,7 @@ export class Core {
      */
     public static enableDebug(config: IECSDebugConfig): void {
         if (!this._instance) {
-            console.warn("Core实例未创建，请先调用Core.create()");
+            Core._logger.warn("Core实例未创建，请先调用Core.create()");
             return;
         }
 
@@ -449,13 +455,13 @@ export class Core {
     private logCompatibilityInfo(): void {
         const info = this._environmentInfo;
         
-        console.log('ECS Framework 兼容性检测结果:');
-        console.log(`   环境: ${info.environment}`);
-        console.log(`   JavaScript引擎: ${info.jsEngine}`);
-        console.log(`   BigInt支持: ${info.supportsBigInt ? '支持' : '不支持'}`);
+        Core._logger.info('ECS Framework 兼容性检测结果:');
+        Core._logger.info(`   环境: ${info.environment}`);
+        Core._logger.info(`   JavaScript引擎: ${info.jsEngine}`);
+        Core._logger.info(`   BigInt支持: ${info.supportsBigInt ? '支持' : '不支持'}`);
         
         if (!info.supportsBigInt) {
-            console.warn('BigInt兼容模式已启用');
+            Core._logger.warn('BigInt兼容模式已启用');
         }
     }
 

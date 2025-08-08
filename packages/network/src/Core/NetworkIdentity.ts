@@ -1,4 +1,4 @@
-import { Component } from '@esengine/ecs-framework';
+import { Component, createLogger } from '@esengine/ecs-framework';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -8,6 +8,8 @@ import { v4 as uuidv4 } from 'uuid';
  * 每个需要网络同步的实体都必须拥有此组件
  */
 export class NetworkIdentity extends Component {
+    private static readonly logger = createLogger('NetworkIdentity');
+    
     /**
      * 网络对象唯一ID
      */
@@ -74,7 +76,7 @@ export class NetworkIdentity extends Component {
         // 自动注册到NetworkIdentityRegistry
         NetworkIdentityRegistry.Instance.register(this);
         
-        console.log(`[NetworkIdentity] 创建网络对象: ${this.networkId}, 权威: ${hasAuthority}`);
+        NetworkIdentity.logger.debug(` 创建网络对象: ${this.networkId}, 权威: ${hasAuthority}`);
     }
     
     /**
@@ -86,7 +88,7 @@ export class NetworkIdentity extends Component {
         const oldOwnerId = this.ownerId;
         this.ownerId = ownerId;
         
-        console.log(`[NetworkIdentity] 对象 ${this.networkId} 拥有者变更: ${oldOwnerId} -> ${ownerId}`);
+        NetworkIdentity.logger.debug(` 对象 ${this.networkId} 拥有者变更: ${oldOwnerId} -> ${ownerId}`);
     }
     
     /**
@@ -97,7 +99,7 @@ export class NetworkIdentity extends Component {
     public setAuthority(hasAuthority: boolean): void {
         if (this.hasAuthority !== hasAuthority) {
             this.hasAuthority = hasAuthority;
-            console.log(`[NetworkIdentity] 对象 ${this.networkId} 权威状态变更: ${hasAuthority}`);
+            NetworkIdentity.logger.debug(` 对象 ${this.networkId} 权威状态变更: ${hasAuthority}`);
         }
     }
     
@@ -107,7 +109,7 @@ export class NetworkIdentity extends Component {
     public activate(): void {
         if (!this.isNetworkActive) {
             this.isNetworkActive = true;
-            console.log(`[NetworkIdentity] 激活网络对象: ${this.networkId}`);
+            NetworkIdentity.logger.debug(` 激活网络对象: ${this.networkId}`);
         }
     }
     
@@ -117,7 +119,7 @@ export class NetworkIdentity extends Component {
     public deactivate(): void {
         if (this.isNetworkActive) {
             this.isNetworkActive = false;
-            console.log(`[NetworkIdentity] 停用网络对象: ${this.networkId}`);
+            NetworkIdentity.logger.debug(` 停用网络对象: ${this.networkId}`);
         }
     }
     
@@ -178,7 +180,7 @@ export class NetworkIdentity extends Component {
     public cleanup(): void {
         NetworkIdentityRegistry.Instance.unregister(this.networkId);
         this.deactivate();
-        console.log(`[NetworkIdentity] 清理网络对象: ${this.networkId}`);
+        NetworkIdentity.logger.debug(` 清理网络对象: ${this.networkId}`);
     }
 }
 
@@ -188,6 +190,7 @@ export class NetworkIdentity extends Component {
  * 管理所有网络对象的注册和查找
  */
 export class NetworkIdentityRegistry {
+    private static readonly logger = createLogger('NetworkIdentityRegistry');
     private static _instance: NetworkIdentityRegistry | null = null;
     
     /**
@@ -226,7 +229,7 @@ export class NetworkIdentityRegistry {
      */
     public register(identity: NetworkIdentity): void {
         if (this._identities.has(identity.networkId)) {
-            console.warn(`[NetworkIdentityRegistry] 网络对象ID重复: ${identity.networkId}`);
+            NetworkIdentityRegistry.logger.warn(` 网络对象ID重复: ${identity.networkId}`);
             return;
         }
         
@@ -242,7 +245,7 @@ export class NetworkIdentityRegistry {
             this._authorityObjects.add(identity);
         }
         
-        console.log(`[NetworkIdentityRegistry] 注册网络对象: ${identity.networkId}`);
+        NetworkIdentityRegistry.logger.debug(` 注册网络对象: ${identity.networkId}`);
     }
     
     /**
@@ -266,7 +269,7 @@ export class NetworkIdentityRegistry {
         // 从权威对象集合中移除
         this._authorityObjects.delete(identity);
         
-        console.log(`[NetworkIdentityRegistry] 注销网络对象: ${networkId}`);
+        NetworkIdentityRegistry.logger.debug(` 注销网络对象: ${networkId}`);
         return true;
     }
     
@@ -386,7 +389,7 @@ export class NetworkIdentityRegistry {
             identity.setAuthority(false);
         }
         
-        console.log(`[NetworkIdentityRegistry] 清理断开连接客户端 ${disconnectedOwnerId} 的 ${ownerObjects.length} 个对象`);
+        NetworkIdentityRegistry.logger.debug(` 清理断开连接客户端 ${disconnectedOwnerId} 的 ${ownerObjects.length} 个对象`);
         return ownerObjects;
     }
     
@@ -473,6 +476,6 @@ export class NetworkIdentityRegistry {
         this._identities.clear();
         this._ownerObjects.clear();
         this._authorityObjects.clear();
-        console.log('[NetworkIdentityRegistry] 已清空注册表');
+        NetworkIdentityRegistry.logger.info(' 已清空注册表');
     }
 }

@@ -12,6 +12,7 @@ import {
     getProtoName 
 } from './ProtobufDecorators';
 import { SerializedData } from './SerializationTypes';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * 可序列化组件接口
@@ -28,6 +29,7 @@ interface SerializableComponent extends Component {
 export class ProtobufSerializer {
     private registry: ProtobufRegistry;
     private static instance: ProtobufSerializer;
+    private static readonly logger = createLogger('ProtobufSerializer');
     
     /** protobuf.js根对象 */
     private root: protobuf.Root | null = null;
@@ -104,7 +106,7 @@ export class ProtobufSerializer {
     private async initializeProtobuf(): Promise<void> {
         try {
             this.buildProtoDefinitions();
-            console.log('[ProtobufSerializer] Protobuf支持已启用');
+            ProtobufSerializer.logger.info('Protobuf支持已启用');
         } catch (error) {
             throw new Error('[ProtobufSerializer] 初始化protobuf失败: ' + error);
         }
@@ -127,7 +129,7 @@ export class ProtobufSerializer {
         } else {
             this.buildProtoDefinitions();
         }
-        console.log('[ProtobufSerializer] Protobuf支持已手动启用');
+        ProtobufSerializer.logger.info('Protobuf支持已手动启用');
     }
     
     /**
@@ -247,7 +249,7 @@ export class ProtobufSerializer {
         
         // 记录错误统计
         if (errors.length > 0) {
-            console.warn(`[ProtobufSerializer] 批量序列化完成，${results.length} 成功，${errors.length} 失败`);
+            ProtobufSerializer.logger.warn(`批量序列化完成，${results.length} 成功，${errors.length} 失败`);
         }
         
         return results;
@@ -382,7 +384,7 @@ export class ProtobufSerializer {
             this.componentDataCache.delete(key);
         }
         
-        console.log(`[ProtobufSerializer] 清理了 ${entries.length} 个缓存项`);
+        ProtobufSerializer.logger.debug(`清理了 ${entries.length} 个缓存项`);
     }
     
     /**
@@ -434,7 +436,7 @@ export class ProtobufSerializer {
             this.messageTypeCache.clear();
             this.cacheAccessCount.clear();
         } catch (error) {
-            console.error('[ProtobufSerializer] 构建protobuf定义失败:', error);
+            ProtobufSerializer.logger.error('构建protobuf定义失败:', error);
         }
     }
     
@@ -463,7 +465,7 @@ export class ProtobufSerializer {
             }
             return null;
         } catch (error) {
-            console.warn(`[ProtobufSerializer] 未找到消息类型: ${fullTypeName}`);
+            ProtobufSerializer.logger.warn(`未找到消息类型: ${fullTypeName}`);
             return null;
         }
     }

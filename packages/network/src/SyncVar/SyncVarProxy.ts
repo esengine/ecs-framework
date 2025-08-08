@@ -1,6 +1,7 @@
 import { getSyncVarMetadata, isSyncVar } from './SyncVarDecorator';
 import { SyncVarManager } from './SyncVarManager';
 import { INetworkSyncable, SyncVarValue, TypeGuards } from '../types/NetworkTypes';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * SyncVar代理配置
@@ -36,9 +37,11 @@ export function createSyncVarProxy<T extends INetworkSyncable>(
     
     // 检查目标是否有SyncVar
     const metadata = getSyncVarMetadata(target.constructor);
+    const logger = createLogger('SyncVarProxy');
+    
     if (metadata.length === 0) {
         if (debugLog) {
-            console.log(`[SyncVarProxy] 对象 ${target.constructor.name} 没有SyncVar，返回原对象`);
+            logger.debug(`对象 ${target.constructor.name} 没有SyncVar，返回原对象`);
         }
         return target;
     }
@@ -47,7 +50,7 @@ export function createSyncVarProxy<T extends INetworkSyncable>(
     syncVarManager.initializeComponent(target);
     
     if (debugLog) {
-        console.log(`[SyncVarProxy] 为 ${target.constructor.name} 创建代理，SyncVar字段:`, 
+        logger.debug(`为 ${target.constructor.name} 创建代理，SyncVar字段:`, 
             metadata.map(m => m.propertyKey));
     }
     
@@ -81,7 +84,7 @@ export function createSyncVarProxy<T extends INetworkSyncable>(
             const value = Reflect.get(obj, prop);
             
             if (debugLog && isSyncVar(obj, propertyKey)) {
-                console.log(`[SyncVarProxy] GET ${obj.constructor.name}.${propertyKey} = ${value}`);
+                logger.debug(`GET ${obj.constructor.name}.${propertyKey} = ${value}`);
             }
             
             return value;
@@ -117,7 +120,7 @@ export function createSyncVarProxy<T extends INetworkSyncable>(
             const oldValue = originalValues.get(propertyKey);
             
             if (debugLog) {
-                console.log(`[SyncVarProxy] SET ${obj.constructor.name}.${propertyKey} = ${newValue} (was ${oldValue})`);
+                logger.debug(`SET ${obj.constructor.name}.${propertyKey} = ${newValue} (was ${oldValue})`);
             }
             
             // 设置新值
@@ -133,7 +136,7 @@ export function createSyncVarProxy<T extends INetworkSyncable>(
                         syncVarManager.recordChange(obj, propertyKey, oldValue, newValue);
                     }
                 } catch (error) {
-                    console.error(`[SyncVarProxy] 记录SyncVar变化失败:`, error);
+                    logger.error(`记录SyncVar变化失败:`, error);
                 }
             }
             
@@ -147,7 +150,7 @@ export function createSyncVarProxy<T extends INetworkSyncable>(
             const propertyKey = prop as string;
             
             if (typeof prop === 'string' && isSyncVar(obj, propertyKey)) {
-                console.warn(`[SyncVarProxy] 尝试删除SyncVar属性 ${propertyKey}，这可能会导致同步问题`);
+                logger.warn(`尝试删除SyncVar属性 ${propertyKey}，这可能会导致同步问题`);
             }
             
             return Reflect.deleteProperty(obj, prop);
@@ -180,7 +183,7 @@ export function createSyncVarProxy<T extends INetworkSyncable>(
     (proxy as T & { _syncVarProxied: boolean; _syncVarOptions: SyncVarProxyOptions })._syncVarOptions = options;
     
     if (debugLog) {
-        console.log(`[SyncVarProxy] ${target.constructor.name} 代理创建完成`);
+        logger.debug(`${target.constructor.name} 代理创建完成`);
     }
     
     return proxy;
@@ -229,7 +232,8 @@ export function destroySyncVarProxy(proxy: INetworkSyncable & { _syncVarProxied?
     proxy._syncVarProxied = false;
     proxy._syncVarDestroyed = true;
     
-    console.log(`[SyncVarProxy] ${proxy.constructor?.name || 'Unknown'} 代理已销毁`);
+    const logger = createLogger('SyncVarProxy');
+    logger.debug(`${proxy.constructor?.name || 'Unknown'} 代理已销毁`);
 }
 
 /**

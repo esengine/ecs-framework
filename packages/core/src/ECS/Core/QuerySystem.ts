@@ -2,6 +2,7 @@ import { Entity } from '../Entity';
 import { Component } from '../Component';
 import { ComponentRegistry, ComponentType } from './ComponentStorage';
 import { IBigIntLike, BigIntFactory } from '../Utils/BigIntCompatibility';
+import { createLogger } from '../../Utils/Logger';
 
 import { ComponentPoolManager } from './ComponentPool';
 import { ComponentIndexManager, IndexType } from './ComponentIndex';
@@ -82,6 +83,7 @@ interface QueryCacheEntry {
  * ```
  */
 export class QuerySystem {
+    private _logger = createLogger('QuerySystem');
     private entities: Entity[] = [];
     private entityIndex: EntityIndex;
     private indexDirty = true;
@@ -390,7 +392,7 @@ export class QuerySystem {
      * ```typescript
      * // 查询同时具有位置和速度组件的实体
      * const result = querySystem.queryAll(PositionComponent, VelocityComponent);
-     * console.log(`找到 ${result.count} 个移动实体`);
+     * logger.info(`找到 ${result.count} 个移动实体`);
      * ```
      */
     public queryAll(...componentTypes: ComponentType[]): QueryResult {
@@ -502,7 +504,7 @@ export class QuerySystem {
      * ```typescript
      * // 查询具有武器或护甲组件的实体
      * const result = querySystem.queryAny(WeaponComponent, ArmorComponent);
-     * console.log(`找到 ${result.count} 个装备实体`);
+     * logger.info(`找到 ${result.count} 个装备实体`);
      * ```
      */
     public queryAny(...componentTypes: ComponentType[]): QueryResult {
@@ -560,7 +562,7 @@ export class QuerySystem {
      * ```typescript
      * // 查询不具有AI和玩家控制组件的实体（如静态物体）
      * const result = querySystem.queryNone(AIComponent, PlayerControlComponent);
-     * console.log(`找到 ${result.count} 个静态实体`);
+     * logger.info(`找到 ${result.count} 个静态实体`);
      * ```
      */
     public queryNone(...componentTypes: ComponentType[]): QueryResult {
@@ -878,7 +880,7 @@ export class QuerySystem {
                 mask = mask.or(bitMask);
                 hasValidComponents = true;
             } catch (error) {
-                console.warn(`组件类型 ${type.name} 未注册，跳过`);
+                this._logger.warn(`组件类型 ${type.name} 未注册，跳过`);
             }
         }
         
@@ -1054,6 +1056,7 @@ export class QuerySystem {
  * ```
  */
 export class QueryBuilder {
+    private _logger = createLogger('QueryBuilder');
     private conditions: QueryCondition[] = [];
     private querySystem: QuerySystem;
 
@@ -1148,7 +1151,7 @@ export class QueryBuilder {
                 const bitMask = ComponentRegistry.getBitMask(type);
                 mask = mask.or(bitMask);
             } catch (error) {
-                console.warn(`组件类型 ${type.name} 未注册，跳过`);
+                this._logger.warn(`组件类型 ${type.name} 未注册，跳过`);
             }
         }
         return mask;

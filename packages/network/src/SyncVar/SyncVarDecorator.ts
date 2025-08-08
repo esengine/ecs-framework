@@ -1,4 +1,7 @@
 import 'reflect-metadata';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('SyncVarDecorator');
 
 /**
  * SyncVar配置选项
@@ -151,7 +154,8 @@ export function getSyncVarMetadataForProperty(target: any, propertyKey: string):
  *     public isReady: boolean = false;
  *     
  *     onNameChanged(oldName: string, newName: string) {
- *         console.log(`Name changed: ${oldName} -> ${newName}`);
+ *         const logger = createLogger('PlayerComponent');
+ *         logger.info(`Name changed: ${oldName} -> ${newName}`);
  *     }
  * }
  * ```
@@ -165,7 +169,7 @@ export function SyncVar(options: SyncVarOptions = {}): PropertyDecorator {
         // 获取属性类型
         const type = Reflect.getMetadata('design:type', target, propertyKey);
         if (!type) {
-            console.warn(`[SyncVar] 无法获取属性 ${propertyKey} 的类型信息`);
+            logger.warn(`无法获取属性 ${propertyKey} 的类型信息`);
         }
         
         // 获取现有元数据
@@ -174,7 +178,7 @@ export function SyncVar(options: SyncVarOptions = {}): PropertyDecorator {
         // 检查是否已经存在
         const existingIndex = existingMetadata.findIndex(m => m.propertyKey === propertyKey);
         if (existingIndex !== -1) {
-            console.warn(`[SyncVar] 属性 ${propertyKey} 已经被标记为SyncVar，将覆盖配置`);
+            logger.warn(`属性 ${propertyKey} 已经被标记为SyncVar，将覆盖配置`);
             existingMetadata[existingIndex].options = options;
             existingMetadata[existingIndex].type = type;
         } else {
@@ -194,7 +198,7 @@ export function SyncVar(options: SyncVarOptions = {}): PropertyDecorator {
         // 保存元数据
         setSyncVarMetadata(target.constructor, existingMetadata);
         
-        console.log(`[SyncVar] 注册同步变量: ${target.constructor.name}.${propertyKey}, 字段编号: ${existingMetadata.find(m => m.propertyKey === propertyKey)?.fieldNumber}`);
+        logger.debug(`注册同步变量: ${target.constructor.name}.${propertyKey}, 字段编号: ${existingMetadata.find(m => m.propertyKey === propertyKey)?.fieldNumber}`);
     };
 }
 

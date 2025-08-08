@@ -1,6 +1,7 @@
 import { NetworkMessage } from './NetworkMessage';
 import { NetworkConnection } from '../Core/NetworkConnection';
 import { INetworkMessage, MessageData } from '../types/NetworkTypes';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * 消息处理器接口
@@ -31,6 +32,7 @@ interface MessageHandlerInfo<T extends MessageData = MessageData> {
  * 支持消息优先级和类型匹配
  */
 export class MessageHandler {
+    private static readonly logger = createLogger('MessageHandler');
     private static _instance: MessageHandler | null = null;
     private _handlers: Map<number, MessageHandlerInfo[]> = new Map();
     private _messageClasses: Map<number, new (...args: any[]) => INetworkMessage> = new Map();
@@ -74,7 +76,7 @@ export class MessageHandler {
         // 检查是否已经注册了相同的处理器
         const existingIndex = handlers.findIndex(h => h.handler === handler);
         if (existingIndex !== -1) {
-            console.warn(`[MessageHandler] 消息类型 ${messageType} 的处理器已存在，将替换优先级`);
+            MessageHandler.logger.warn(`消息类型 ${messageType} 的处理器已存在，将替换优先级`);
             handlers[existingIndex].priority = priority;
         } else {
                 // 添加新处理器
@@ -88,7 +90,7 @@ export class MessageHandler {
         // 按优先级排序（数字越小优先级越高）
         handlers.sort((a, b) => a.priority - b.priority);
         
-        console.log(`[MessageHandler] 注册消息处理器: 类型=${messageType}, 优先级=${priority}`);
+        MessageHandler.logger.debug(`注册消息处理器: 类型=${messageType}, 优先级=${priority}`);
     }
     
     /**
@@ -106,7 +108,7 @@ export class MessageHandler {
         const index = handlers.findIndex(h => h.handler === handler);
         if (index !== -1) {
             handlers.splice(index, 1);
-            console.log(`[MessageHandler] 注销消息处理器: 类型=${messageType}`);
+            MessageHandler.logger.debug(`注销消息处理器: 类型=${messageType}`);
         }
         
         // 如果没有处理器了，清理映射
@@ -125,7 +127,7 @@ export class MessageHandler {
      */
     public async handleRawMessage(data: Uint8Array, connection?: NetworkConnection): Promise<boolean> {
         if (data.length < 4) {
-            console.error('[MessageHandler] 消息数据长度不足，至少需要4字节消息类型');
+            MessageHandler.logger.error('消息数据长度不足，至少需要4字节消息类型');
             return false;
         }
         
@@ -136,7 +138,7 @@ export class MessageHandler {
         // 查找消息类
         const MessageClass = this._messageClasses.get(messageType);
         if (!MessageClass) {
-            console.warn(`[MessageHandler] 未知的消息类型: ${messageType}`);
+            MessageHandler.logger.warn(`未知的消息类型: ${messageType}`);
             return false;
         }
         
@@ -147,7 +149,7 @@ export class MessageHandler {
             
             return await this.handleMessage(message, connection);
         } catch (error) {
-            console.error(`[MessageHandler] 消息反序列化失败 (类型=${messageType}):`, error);
+            MessageHandler.logger.error(`消息反序列化失败 (类型=${messageType}):`, error);
             return false;
         }
     }
@@ -164,7 +166,7 @@ export class MessageHandler {
         const handlers = this._handlers.get(messageType);
         
         if (!handlers || handlers.length === 0) {
-            console.warn(`[MessageHandler] 没有找到消息类型 ${messageType} 的处理器`);
+            MessageHandler.logger.warn(`没有找到消息类型 ${messageType} 的处理器`);
             return false;
         }
         
@@ -182,7 +184,7 @@ export class MessageHandler {
                 
                 handledCount++;
             } catch (error) {
-                console.error(`[MessageHandler] 处理器执行错误 (类型=${messageType}, 优先级=${handlerInfo.priority}):`, error);
+                MessageHandler.logger.error(`处理器执行错误 (类型=${messageType}, 优先级=${handlerInfo.priority}):`, error);
                 // 继续执行其他处理器
             }
         }
@@ -226,7 +228,7 @@ export class MessageHandler {
     public clear(): void {
         this._handlers.clear();
         this._messageClasses.clear();
-        console.log('[MessageHandler] 已清除所有消息处理器');
+        MessageHandler.logger.info('已清除所有消息处理器');
     }
     
     /**

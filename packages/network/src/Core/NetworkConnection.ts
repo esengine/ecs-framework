@@ -1,4 +1,5 @@
 import WebSocket from 'isomorphic-ws';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * 网络连接状态
@@ -27,6 +28,7 @@ export interface NetworkConnectionEvents {
  * 支持二进制消息传输，集成心跳检测
  */
 export class NetworkConnection {
+    private static readonly logger = createLogger('NetworkConnection');
     private _ws: WebSocket | null = null;
     private _state: ConnectionState = ConnectionState.Disconnected;
     private _connectionId: string = '';
@@ -96,13 +98,13 @@ export class NetworkConnection {
                     // 将字符串转换为Uint8Array
                     data = new TextEncoder().encode(event.data);
                 } else {
-                    console.warn('[NetworkConnection] 收到未知类型的消息:', typeof event.data);
+                    NetworkConnection.logger.warn(' 收到未知类型的消息:', typeof event.data);
                     return;
                 }
                 
                 this.emit('message', data);
             } catch (error) {
-                console.error('[NetworkConnection] 消息处理错误:', error);
+                NetworkConnection.logger.error(' 消息处理错误:', error);
             }
         };
     }
@@ -136,7 +138,7 @@ export class NetworkConnection {
             try {
                 this._ws.send('ping');
             } catch (error) {
-                console.error('[NetworkConnection] 心跳发送失败:', error);
+                NetworkConnection.logger.error(' 心跳发送失败:', error);
             }
         }
     }
@@ -149,7 +151,7 @@ export class NetworkConnection {
      */
     public send(data: Uint8Array): boolean {
         if (!this._ws || this._state !== ConnectionState.Connected) {
-            console.warn('[NetworkConnection] 连接未就绪，无法发送数据');
+            NetworkConnection.logger.warn(' 连接未就绪，无法发送数据');
             return false;
         }
         
@@ -157,7 +159,7 @@ export class NetworkConnection {
             this._ws.send(data);
             return true;
         } catch (error) {
-            console.error('[NetworkConnection] 数据发送失败:', error);
+            NetworkConnection.logger.error(' 数据发送失败:', error);
             return false;
         }
     }
@@ -179,7 +181,7 @@ export class NetworkConnection {
             try {
                 this._ws.close(1000, reason);
             } catch (error) {
-                console.error('[NetworkConnection] 连接关闭失败:', error);
+                NetworkConnection.logger.error(' 连接关闭失败:', error);
             }
             this._ws = null;
         }
@@ -236,7 +238,7 @@ export class NetworkConnection {
                 try {
                     handler(...args);
                 } catch (error) {
-                    console.error(`[NetworkConnection] 事件处理器错误 (${event}):`, error);
+                    NetworkConnection.logger.error(`事件处理器错误 (${event}):`, error);
                 }
             });
         }

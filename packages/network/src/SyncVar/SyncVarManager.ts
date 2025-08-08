@@ -12,6 +12,7 @@ import {
     NetworkComponentType,
     TypeGuards
 } from '../types/NetworkTypes';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * SyncVar变化记录
@@ -83,6 +84,7 @@ export interface SyncVarSyncData {
  */
 export class SyncVarManager {
     private static _instance: SyncVarManager | null = null;
+    private static readonly logger = createLogger('SyncVarManager');
     
     /**
      * 组件实例的SyncVar变化监听器
@@ -133,7 +135,7 @@ export class SyncVarManager {
         }
         
         if (validationErrors.length > 0) {
-            console.error(`[SyncVarManager] 组件 ${component.constructor.name} 的SyncVar配置错误:`, validationErrors);
+            SyncVarManager.logger.error(`组件 ${component.constructor.name} 的SyncVar配置错误:`, validationErrors);
             return false;
         }
         
@@ -141,7 +143,7 @@ export class SyncVarManager {
         this._componentChanges.set(componentId, []);
         this._lastSyncTimes.set(componentId, new Map());
         
-        console.log(`[SyncVarManager] 初始化组件 ${component.constructor.name} 的SyncVar系统，共 ${metadata.length} 个同步变量`);
+        SyncVarManager.logger.info(`初始化组件 ${component.constructor.name} 的SyncVar系统，共 ${metadata.length} 个同步变量`);
         return true;
     }
     
@@ -174,13 +176,13 @@ export class SyncVarManager {
         const metadata = getSyncVarMetadataForProperty(component, propertyKey);
         
         if (!metadata) {
-            console.warn(`[SyncVarManager] 属性 ${propertyKey} 不是SyncVar`);
+            SyncVarManager.logger.warn(`属性 ${propertyKey} 不是SyncVar`);
             return;
         }
         
         // 检查值是否真的发生了变化
         if (!TypeGuards.isSyncVarValue(oldValue) || !TypeGuards.isSyncVarValue(newValue)) {
-            console.warn(`[SyncVarManager] 无效的SyncVar值类型: ${typeof oldValue}, ${typeof newValue}`);
+            SyncVarManager.logger.warn(`无效的SyncVar值类型: ${typeof oldValue}, ${typeof newValue}`);
             return;
         }
         
@@ -195,14 +197,14 @@ export class SyncVarManager {
         
         if (metadata.options.throttleMs && metadata.options.throttleMs > 0) {
             if (now - lastSyncTime < metadata.options.throttleMs) {
-                console.log(`[SyncVarManager] 属性 ${propertyKey} 变化过于频繁，跳过同步`);
+                SyncVarManager.logger.debug(`属性 ${propertyKey} 变化过于频繁，跳过同步`);
                 return;
             }
         }
         
         // 检查权限
         if (metadata.options.authorityOnly && !this.hasAuthority(component)) {
-            console.warn(`[SyncVarManager] 属性 ${propertyKey} 需要权限才能修改，但当前没有权限`);
+            SyncVarManager.logger.warn(`属性 ${propertyKey} 需要权限才能修改，但当前没有权限`);
             return;
         }
         
@@ -229,7 +231,7 @@ export class SyncVarManager {
             lastSyncTimes.set(propertyKey, now);
         }
         
-        console.log(`[SyncVarManager] 记录变化: ${component.constructor.name}.${propertyKey} = ${newValue} (was ${oldValue})`);
+        SyncVarManager.logger.debug(`记录变化: ${component.constructor.name}.${propertyKey} = ${newValue} (was ${oldValue})`);
         
         // 触发hook回调
         this.triggerHook(component, metadata, oldValue, newValue);
@@ -294,7 +296,7 @@ export class SyncVarManager {
                     data: serializedData
                 });
             } catch (error) {
-                console.error(`[SyncVarManager] 序列化失败 ${change.propertyKey}:`, error);
+                SyncVarManager.logger.error(`序列化失败 ${change.propertyKey}:`, error);
             }
         }
         
@@ -322,7 +324,7 @@ export class SyncVarManager {
         for (const update of syncData.fieldUpdates) {
             const meta = metadataMap.get(update.fieldNumber);
             if (!meta) {
-                console.warn(`[SyncVarManager] 未找到字段编号 ${update.fieldNumber} 的元数据`);
+                SyncVarManager.logger.warn(`未找到字段编号 ${update.fieldNumber} 的元数据`);
                 continue;
             }
             
@@ -336,9 +338,9 @@ export class SyncVarManager {
                 // 触发hook回调
                 this.triggerHook(component, meta, oldValue, newValue);
                 
-                console.log(`[SyncVarManager] 应用同步: ${component.constructor.name}.${meta.propertyKey} = ${newValue}`);
+                SyncVarManager.logger.debug(`应用同步: ${component.constructor.name}.${meta.propertyKey} = ${newValue}`);
             } catch (error) {
-                console.error(`[SyncVarManager] 反序列化失败 ${meta.propertyKey}:`, error);
+                SyncVarManager.logger.error(`反序列化失败 ${meta.propertyKey}:`, error);
             }
         }
     }
@@ -421,7 +423,7 @@ export class SyncVarManager {
     private shouldSync(component: any, metadata: SyncVarMetadata): boolean {
         // 权限检查：权威字段只有在有权限时才同步
         if (metadata.options.authorityOnly && !this.hasAuthority(component)) {
-            console.log(`[SyncVarManager] 字段 ${metadata.propertyKey} 是权威字段，但当前没有权限，跳过同步`);
+            SyncVarManager.logger.debug(`字段 ${metadata.propertyKey} 是权威字段，但当前没有权限，跳过同步`);
             return false;
         }
         
@@ -457,7 +459,7 @@ export class SyncVarManager {
             try {
                 hookFunction.call(component, oldValue, newValue);
             } catch (error) {
-                console.error(`[SyncVarManager] Hook函数执行失败 ${metadata.options.hook}:`, error);
+                SyncVarManager.logger.error(`Hook函数执行失败 ${metadata.options.hook}:`, error);
             }
         }
     }
@@ -641,7 +643,7 @@ export class SyncVarManager {
             syncSequence
         );
         
-        console.log(`[SyncVarManager] 创建SyncVar更新消息: ${component.constructor.name}, ${fieldUpdates.length} 个字段`);
+        SyncVarManager.logger.debug(`创建SyncVar更新消息: ${component.constructor.name}, ${fieldUpdates.length} 个字段`);
         return message;
     }
     
@@ -653,7 +655,7 @@ export class SyncVarManager {
      */
     public applySyncVarUpdateMessage(component: any, message: SyncVarUpdateMessage): void {
         if (message.componentType !== component.constructor.name) {
-            console.warn(`[SyncVarManager] 组件类型不匹配: 期望 ${component.constructor.name}, 收到 ${message.componentType}`);
+            SyncVarManager.logger.warn(`组件类型不匹配: 期望 ${component.constructor.name}, 收到 ${message.componentType}`);
             return;
         }
         
@@ -663,7 +665,7 @@ export class SyncVarManager {
         for (const fieldUpdate of message.fieldUpdates) {
             const meta = metadataMap.get(fieldUpdate.fieldNumber);
             if (!meta) {
-                console.warn(`[SyncVarManager] 未找到字段编号 ${fieldUpdate.fieldNumber} 的元数据`);
+                SyncVarManager.logger.warn(`未找到字段编号 ${fieldUpdate.fieldNumber} 的元数据`);
                 continue;
             }
             
@@ -672,7 +674,7 @@ export class SyncVarManager {
             if (fieldUpdate.authorityOnly && NetworkEnvironment.isClient && !this.hasAuthority(component)) {
                 // 如果这是来自服务端的更新，则允许应用
                 // 这里简单实现：客户端接受所有权威字段的更新
-                console.log(`[SyncVarManager] 客户端接受权威字段更新: ${fieldUpdate.propertyKey}`);
+                SyncVarManager.logger.debug(`客户端接受权威字段更新: ${fieldUpdate.propertyKey}`);
             }
             
             try {
@@ -684,9 +686,9 @@ export class SyncVarManager {
                 // 触发hook回调
                 this.triggerHook(component, meta, oldValue, fieldUpdate.newValue);
                 
-                console.log(`[SyncVarManager] 应用SyncVar消息更新: ${component.constructor.name}.${meta.propertyKey} = ${fieldUpdate.newValue}`);
+                SyncVarManager.logger.debug(`应用SyncVar消息更新: ${component.constructor.name}.${meta.propertyKey} = ${fieldUpdate.newValue}`);
             } catch (error) {
-                console.error(`[SyncVarManager] 应用SyncVar更新失败 ${meta.propertyKey}:`, error);
+                SyncVarManager.logger.error(`应用SyncVar更新失败 ${meta.propertyKey}:`, error);
             }
         }
         

@@ -1,4 +1,5 @@
 import { SyncVarUpdateMessage, SyncVarFieldUpdate } from '../Messaging/MessageTypes';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * SyncVar优化配置
@@ -325,6 +326,7 @@ export class SyncVarDistanceCuller {
  * SyncVar性能优化器
  */
 export class SyncVarOptimizer {
+    private static readonly logger = createLogger('SyncVarOptimizer');
     private _config: SyncVarOptimizationConfig;
     private _messageMerger: SyncVarMessageMerger;
     private _rateLimiter: SyncVarRateLimiter;
@@ -376,7 +378,7 @@ export class SyncVarOptimizer {
         // 频率限制检查
         if (!this._rateLimiter.canSend(message.networkId)) {
             this._stats.messagesBlocked++;
-            console.log(`[SyncVarOptimizer] 消息被频率限制阻止: ${message.networkId}`);
+            SyncVarOptimizer.logger.debug(` 消息被频率限制阻止: ${message.networkId}`);
             return;
         }
         
@@ -385,7 +387,7 @@ export class SyncVarOptimizer {
         
         if (validObservers.length === 0 && targetObservers.length > 0) {
             this._stats.messagesBlocked++;
-            console.log(`[SyncVarOptimizer] 消息被距离剔除阻止: ${message.networkId}`);
+            SyncVarOptimizer.logger.debug(` 消息被距离剔除阻止: ${message.networkId}`);
             return;
         }
         
@@ -393,7 +395,7 @@ export class SyncVarOptimizer {
         this._messageMerger.addMessage(message, (mergedMessage) => {
             if (mergedMessage !== message) {
                 this._stats.messagesMerged++;
-                console.log(`[SyncVarOptimizer] 消息已合并: ${message.networkId}`);
+                SyncVarOptimizer.logger.debug(` 消息已合并: ${message.networkId}`);
             }
             
             onOptimized([mergedMessage], validObservers);
@@ -412,7 +414,7 @@ export class SyncVarOptimizer {
      */
     public configure(config: Partial<SyncVarOptimizationConfig>): void {
         this._config = { ...this._config, ...config };
-        console.log('[SyncVarOptimizer] 配置已更新:', this._config);
+        SyncVarOptimizer.logger.info(' 配置已更新:', this._config);
     }
     
     /**

@@ -4,7 +4,7 @@ import { NetworkConnection } from '../Core/NetworkConnection';
 import { NetworkIdentityRegistry } from '../Core/NetworkIdentity';
 import { SyncVarManager } from './SyncVarManager';
 import { NetworkEnvironment } from '../Core/NetworkEnvironment';
-import { ComponentRegistry } from '@esengine/ecs-framework';
+import { ComponentRegistry, createLogger } from '@esengine/ecs-framework';
 import { NetworkManager } from '../Core/NetworkManager';
 
 /**
@@ -13,6 +13,7 @@ import { NetworkManager } from '../Core/NetworkManager';
  * 处理接收到的SyncVar更新消息，自动查找目标网络对象并应用更新
  */
 export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessage> {
+    private static readonly logger = createLogger('SyncVarMessageHandler');
     private _processedMessages: Set<string> = new Set();
     private _maxProcessedCache: number = 1000;
     
@@ -27,7 +28,7 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
             // 生成消息唯一标识符用于去重
             const messageKey = this.generateMessageKey(message);
             if (this._processedMessages.has(messageKey)) {
-                console.log(`[SyncVarMessageHandler] 跳过重复消息: ${messageKey}`);
+                SyncVarMessageHandler.logger.debug(` 跳过重复消息: ${messageKey}`);
                 return;
             }
             
@@ -36,27 +37,27 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
             
             // 验证消息基本有效性
             if (!this.validateMessage(message)) {
-                console.error('[SyncVarMessageHandler] 消息验证失败');
+                SyncVarMessageHandler.logger.error(' 消息验证失败');
                 return;
             }
             
             // 查找目标网络对象
             const targetIdentity = NetworkIdentityRegistry.Instance.find(message.networkId);
             if (!targetIdentity) {
-                console.warn(`[SyncVarMessageHandler] 未找到网络对象: ${message.networkId}`);
+                SyncVarMessageHandler.logger.warn(` 未找到网络对象: ${message.networkId}`);
                 return;
             }
             
             // 权限检查
             if (!this.checkAuthority(message, connection, targetIdentity)) {
-                console.warn(`[SyncVarMessageHandler] 权限检查失败: ${message.networkId}`);
+                SyncVarMessageHandler.logger.warn(` 权限检查失败: ${message.networkId}`);
                 return;
             }
             
             // 查找目标组件
             const targetComponent = this.findTargetComponent(targetIdentity, message.componentType);
             if (!targetComponent) {
-                console.warn(`[SyncVarMessageHandler] 未找到目标组件: ${message.componentType} on ${message.networkId}`);
+                SyncVarMessageHandler.logger.warn(` 未找到目标组件: ${message.componentType} on ${message.networkId}`);
                 return;
             }
             
@@ -74,10 +75,10 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
                 await this.forwardToOtherClients(message, connection);
             }
             
-            console.log(`[SyncVarMessageHandler] 成功处理SyncVar更新: ${message.networkId}.${message.componentType}, ${message.fieldUpdates.length}个字段`);
+            SyncVarMessageHandler.logger.debug(` 成功处理SyncVar更新: ${message.networkId}.${message.componentType}, ${message.fieldUpdates.length}个字段`);
             
         } catch (error) {
-            console.error('[SyncVarMessageHandler] 处理SyncVar更新失败:', error);
+            SyncVarMessageHandler.logger.error(' 处理SyncVar更新失败:', error);
         }
     }
     
@@ -106,12 +107,12 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
      */
     private validateMessage(message: SyncVarUpdateMessage): boolean {
         if (!message.networkId || !message.componentType) {
-            console.error('[SyncVarMessageHandler] 消息缺少必要字段');
+            SyncVarMessageHandler.logger.error(' 消息缺少必要字段');
             return false;
         }
         
         if (!message.fieldUpdates || message.fieldUpdates.length === 0) {
-            console.error('[SyncVarMessageHandler] 消息没有字段更新');
+            SyncVarMessageHandler.logger.error(' 消息没有字段更新');
             return false;
         }
         
@@ -119,7 +120,7 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
         const now = Date.now();
         const maxAge = 60000; // 1分钟
         if (message.timestamp > now + 5000 || message.timestamp < now - maxAge) {
-            console.warn(`[SyncVarMessageHandler] 消息时间戳异常: ${message.timestamp}, 当前: ${now}`);
+            SyncVarMessageHandler.logger.warn(` 消息时间戳异常: ${message.timestamp}, 当前: ${now}`);
             return false;
         }
         
@@ -143,7 +144,7 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
                     // 非拥有者只能发送非权威字段更新
                     const hasAuthorityOnlyUpdates = message.fieldUpdates.some(update => update.authorityOnly);
                     if (hasAuthorityOnlyUpdates) {
-                        console.warn(`[SyncVarMessageHandler] 非拥有者 ${connection.connectionId} 尝试修改权威字段`);
+                        SyncVarMessageHandler.logger.warn(` 非拥有者 ${connection.connectionId} 尝试修改权威字段`);
                         return false;
                     }
                 }
@@ -165,7 +166,7 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
     private findTargetComponent(targetIdentity: any, componentType: string): any {
         const entity = targetIdentity.entity;
         if (!entity || typeof entity.getComponent !== 'function') {
-            console.error('[SyncVarMessageHandler] NetworkIdentity缺少有效的Entity引用');
+            SyncVarMessageHandler.logger.error(' NetworkIdentity缺少有效的Entity引用');
             return null;
         }
         
@@ -179,13 +180,13 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
             // 使用Entity的getComponent方法查找组件
             const component = entity.getComponent(ComponentClass);
             if (!component) {
-                console.warn(`[SyncVarMessageHandler] Entity ${entity.id} 上未找到组件: ${componentType}`);
+                SyncVarMessageHandler.logger.warn(` Entity ${entity.id} 上未找到组件: ${componentType}`);
                 return null;
             }
             
             return component;
         } catch (error) {
-            console.error(`[SyncVarMessageHandler] 查找组件失败: ${componentType}`, error);
+            SyncVarMessageHandler.logger.error(`查找组件失败: ${componentType}`, error);
             return null;
         }
     }
@@ -197,7 +198,7 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
         const componentClass = ComponentRegistry.getComponentType(componentType);
         
         if (!componentClass) {
-            console.warn(`[SyncVarMessageHandler] 未找到组件类型: ${componentType}`);
+            SyncVarMessageHandler.logger.warn(` 未找到组件类型: ${componentType}`);
             return null;
         }
         
@@ -213,7 +214,7 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
         try {
             syncVarManager.applySyncVarUpdateMessage(targetComponent, message);
         } catch (error) {
-            console.error('[SyncVarMessageHandler] 应用SyncVar更新失败:', error);
+            SyncVarMessageHandler.logger.error(' 应用SyncVar更新失败:', error);
             throw error;
         }
     }
@@ -230,7 +231,7 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
             const server = NetworkManager.GetServer();
             
             if (!server || !server.isRunning) {
-                console.warn('[SyncVarMessageHandler] NetworkServer未运行，无法转发消息');
+                SyncVarMessageHandler.logger.warn(' NetworkServer未运行，无法转发消息');
                 return;
             }
             
@@ -238,12 +239,12 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
             const successCount = await server.broadcastSyncVarMessageExcept(message, senderConnection.connectionId);
             
             if (successCount > 0) {
-                console.log(`[SyncVarMessageHandler] 成功转发消息给 ${successCount} 个其他客户端 (发送者: ${senderConnection.connectionId})`);
+                SyncVarMessageHandler.logger.debug(` 成功转发消息给 ${successCount} 个其他客户端 (发送者: ${senderConnection.connectionId})`);
             } else {
-                console.log(`[SyncVarMessageHandler] 没有其他客户端需要转发消息 (发送者: ${senderConnection.connectionId})`);
+                SyncVarMessageHandler.logger.debug(` 没有其他客户端需要转发消息 (发送者: ${senderConnection.connectionId})`);
             }
         } catch (error) {
-            console.error(`[SyncVarMessageHandler] 转发消息失败 (发送者: ${senderConnection.connectionId}):`, error);
+            SyncVarMessageHandler.logger.error(`转发消息失败 (发送者: ${senderConnection.connectionId}):`, error);
         }
     }
     
@@ -267,7 +268,7 @@ export class SyncVarMessageHandler implements IMessageHandler<SyncVarUpdateMessa
      */
     public clearProcessedCache(): void {
         this._processedMessages.clear();
-        console.log('[SyncVarMessageHandler] 已清理消息处理缓存');
+        SyncVarMessageHandler.logger.info('已清理消息处理缓存');
     }
     
     /**

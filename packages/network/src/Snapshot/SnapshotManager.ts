@@ -1,4 +1,4 @@
-import { Entity, Component, ComponentType } from '@esengine/ecs-framework';
+import { Entity, Component, ComponentType, createLogger } from '@esengine/ecs-framework';
 import { ISnapshotable, SceneSnapshot, EntitySnapshot, ComponentSnapshot, SnapshotConfig } from './ISnapshotable';
 import { ProtobufSerializer } from '../Serialization/ProtobufSerializer';
 import { SerializedData } from '../Serialization/SerializationTypes';
@@ -103,6 +103,8 @@ class ComponentTypeRegistry implements IComponentFactory {
  * 使用protobuf序列化
  */
 export class SnapshotManager {
+    private static readonly logger = createLogger('SnapshotManager');
+    
     /** 默认快照配置 */
     private static readonly DEFAULT_CONFIG: SnapshotConfig = {
         includeInSnapshot: true,
@@ -240,7 +242,7 @@ export class SnapshotManager {
             
             return entity;
         } catch (error) {
-            console.error(`[SnapshotManager] 创建实体失败: ${entitySnapshot.name}`, error);
+            SnapshotManager.logger.error(`创建实体失败: ${entitySnapshot.name}`, error);
             return null;
         }
     }
@@ -253,7 +255,7 @@ export class SnapshotManager {
             // 尝试获取组件构造函数
             const componentType = this.getComponentType(componentSnapshot.type);
             if (!componentType) {
-                console.warn(`[SnapshotManager] 未知组件类型: ${componentSnapshot.type}`);
+                SnapshotManager.logger.warn(`未知组件类型: ${componentSnapshot.type}`);
                 return;
             }
             
@@ -272,7 +274,7 @@ export class SnapshotManager {
             
             this.protobufSerializer.deserialize(component, serializedData);
         } catch (error) {
-            console.error(`[SnapshotManager] 创建组件失败: ${componentSnapshot.type}`, error);
+            SnapshotManager.logger.error(`创建组件失败: ${componentSnapshot.type}`, error);
         }
     }
 
@@ -282,7 +284,7 @@ export class SnapshotManager {
     private getComponentType(typeName: string): NetworkComponentType | null {
         const componentType = this.componentRegistry.get(typeName);
         if (!componentType) {
-            console.warn(`[SnapshotManager] 组件类型 ${typeName} 未注册，请先调用 registerComponentType() 注册`);
+            SnapshotManager.logger.warn(`组件类型 ${typeName} 未注册，请先调用 registerComponentType() 注册`);
             return null;
         }
         return componentType;
@@ -414,7 +416,7 @@ export class SnapshotManager {
     public initializeProtobuf(protobufJs: any): void {
         if (this.protobufSerializer) {
             this.protobufSerializer.initialize(protobufJs);
-            console.log('[SnapshotManager] Protobuf支持已手动启用');
+            SnapshotManager.logger.info('Protobuf支持已手动启用');
         }
     }
     
@@ -425,7 +427,7 @@ export class SnapshotManager {
      */
     public registerComponentType<T extends Component & INetworkSyncable>(constructor: NetworkComponentType<T>): void {
         this.componentRegistry.autoRegister(constructor);
-        console.log(`[SnapshotManager] 已注册组件类型: ${constructor.name}`);
+        SnapshotManager.logger.debug(`已注册组件类型: ${constructor.name}`);
     }
     
     /**
@@ -597,7 +599,7 @@ export class SnapshotManager {
         // 查找现有组件
         const componentType = this.getComponentType(componentSnapshot.type);
         if (!componentType) {
-            console.warn(`[SnapshotManager] 组件类型 ${componentSnapshot.type} 未注册，无法恢复`);
+            SnapshotManager.logger.warn(`组件类型 ${componentSnapshot.type} 未注册，无法恢复`);
             return;
         }
         
@@ -605,7 +607,7 @@ export class SnapshotManager {
         
         if (!component) {
             // 组件不存在，需要创建
-            console.warn(`[SnapshotManager] 组件 ${componentSnapshot.type} 不存在于实体 ${entity.name}，无法恢复`);
+            SnapshotManager.logger.warn(`组件 ${componentSnapshot.type} 不存在于实体 ${entity.name}，无法恢复`);
             return;
         }
         

@@ -3,6 +3,7 @@
  * 
  * 监控网络连接的性能指标，包括延迟、吞吐量、包丢失率等
  */
+import { createLogger } from '@esengine/ecs-framework';
 
 export interface NetworkMetrics {
     /** 往返时延 (ms) */
@@ -56,6 +57,7 @@ export interface PerformanceSnapshot {
  * 网络性能监控器
  */
 export class NetworkPerformanceMonitor {
+    private static readonly logger = createLogger('NetworkPerformanceMonitor');
     private static _instance: NetworkPerformanceMonitor | null = null;
     
     /** 性能快照历史 */
@@ -117,7 +119,7 @@ export class NetworkPerformanceMonitor {
      */
     public startMonitoring(interval: number = 1000): void {
         if (this._isMonitoring) {
-            console.warn('[NetworkPerformanceMonitor] 监控已在运行');
+            NetworkPerformanceMonitor.logger.warn('监控已在运行');
             return;
         }
         
@@ -128,7 +130,7 @@ export class NetworkPerformanceMonitor {
             this.collectMetrics();
         }, this._monitoringInterval);
         
-        console.log(`[NetworkPerformanceMonitor] 开始性能监控，间隔: ${interval}ms`);
+        NetworkPerformanceMonitor.logger.info(`开始性能监控，间隔: ${interval}ms`);
     }
     
     /**
@@ -145,7 +147,7 @@ export class NetworkPerformanceMonitor {
         }
         
         this._isMonitoring = false;
-        console.log('[NetworkPerformanceMonitor] 停止性能监控');
+        NetworkPerformanceMonitor.logger.info('停止性能监控');
     }
     
     /**
@@ -308,7 +310,7 @@ export class NetworkPerformanceMonitor {
                 syncDataSize: stats.totalDataSize || 0
             };
         } catch (error) {
-            console.warn('[NetworkPerformanceMonitor] 获取SyncVar统计失败:', error);
+            NetworkPerformanceMonitor.logger.warn('获取SyncVar统计失败:', error);
             return undefined;
         }
     }
@@ -337,7 +339,7 @@ export class NetworkPerformanceMonitor {
         
         if (warnings.length > 0) {
             this.emit('performanceWarning', warnings);
-            console.warn('[NetworkPerformanceMonitor] 性能警告:', warnings.join(', '));
+            NetworkPerformanceMonitor.logger.warn('性能警告:', warnings.join(', '));
         }
     }
     
@@ -418,7 +420,7 @@ export class NetworkPerformanceMonitor {
         this._snapshots = [];
         this._rttHistory = [];
         this._bandwidthWindow = [];
-        console.log('[NetworkPerformanceMonitor] 清除历史数据');
+        NetworkPerformanceMonitor.logger.debug('清除历史数据');
     }
     
     /**
@@ -504,7 +506,7 @@ export class NetworkPerformanceMonitor {
                 try {
                     listener(...args);
                 } catch (error) {
-                    console.error(`[NetworkPerformanceMonitor] 事件处理器错误 (${event}):`, error);
+                    NetworkPerformanceMonitor.logger.error(`事件处理器错误 (${event}):`, error);
                 }
             });
         }
@@ -530,7 +532,7 @@ export class NetworkPerformanceMonitor {
             this._bandwidthWindowSize = options.bandwidthWindowSize;
         }
         
-        console.log('[NetworkPerformanceMonitor] 配置已更新:', options);
+        NetworkPerformanceMonitor.logger.info('配置已更新:', options);
     }
     
     /**

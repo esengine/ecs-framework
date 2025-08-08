@@ -6,6 +6,7 @@ import { SyncVarMessageHandler } from '../SyncVar/SyncVarMessageHandler';
 import { SyncVarSyncScheduler } from '../SyncVar/SyncVarSyncScheduler';
 import { MessageHandler } from '../Messaging/MessageHandler';
 import { NetworkPerformanceMonitor } from './NetworkPerformanceMonitor';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * 服务端事件接口
@@ -26,6 +27,7 @@ export interface NetworkServerEvents {
  * 支持多客户端连接，提供广播和单播功能
  */
 export class NetworkServer {
+    private static readonly _logger = createLogger('NetworkServer');
     private _wss: WebSocketServer | null = null;
     private _connections: Map<string, NetworkConnection> = new Map();
     private _isRunning: boolean = false;
@@ -104,13 +106,13 @@ export class NetworkServer {
                     // 启动性能监控
                     this.startPerformanceMonitoring();
                     
-                    console.log(`[NetworkServer] 服务器启动成功: ${host}:${port}`);
+                    NetworkServer._logger.info(`服务器启动成功: ${host}:${port}`);
                     this.emit('serverStarted', port, host);
                     resolve();
                 });
                 
                 this._wss.on('error', (error) => {
-                    console.error('[NetworkServer] 服务器错误:', error);
+                    NetworkServer._logger.error('服务器错误:', error);
                     this.emit('error', error);
                     
                     if (!this._isRunning) {
@@ -154,7 +156,7 @@ export class NetworkServer {
                 this._host = '';
                 this._startTime = 0;
                 
-                console.log('[NetworkServer] 服务器已停止');
+                NetworkServer._logger.info('服务器已停止');
                 this.emit('serverStopped');
                 resolve();
             });
@@ -170,7 +172,7 @@ export class NetworkServer {
     private handleNewConnection(ws: WebSocket, request: any): void {
         // 检查连接数限制
         if (this._connections.size >= NetworkServer.MAX_CONNECTIONS) {
-            console.warn('[NetworkServer] 达到最大连接数限制，拒绝新连接');
+            NetworkServer._logger.warn('达到最大连接数限制，拒绝新连接');
             ws.close(1013, 'Server full');
             return;
         }
@@ -185,13 +187,13 @@ export class NetworkServer {
         // 设置连接事件监听
         connection.on('connected', () => {
             this._connections.set(connectionId, connection);
-            console.log(`[NetworkServer] 客户端连接: ${connectionId} (${clientAddress})`);
+            NetworkServer._logger.info(`客户端连接: ${connectionId} (${clientAddress})`);
             this.emit('clientConnected', connection);
         });
         
         connection.on('disconnected', (reason) => {
             this._connections.delete(connectionId);
-            console.log(`[NetworkServer] 客户端断开: ${connectionId} (${reason})`);
+            NetworkServer._logger.info(`客户端断开: ${connectionId} (${reason})`);
             this.emit('clientDisconnected', connection, reason);
         });
         
@@ -205,7 +207,7 @@ export class NetworkServer {
         });
         
         connection.on('error', (error) => {
-            console.error(`[NetworkServer] 连接错误 ${connectionId}:`, error);
+            NetworkServer._logger.error(`连接错误 ${connectionId}:`, error);
             this.emit('error', error);
         });
     }
@@ -220,7 +222,7 @@ export class NetworkServer {
     public sendToClient(connectionId: string, data: Uint8Array): boolean {
         const connection = this._connections.get(connectionId);
         if (!connection) {
-            console.warn(`[NetworkServer] 连接不存在: ${connectionId}`);
+            NetworkServer._logger.warn(`连接不存在: ${connectionId}`);
             return false;
         }
         
@@ -370,7 +372,7 @@ export class NetworkServer {
                 try {
                     handler(...args);
                 } catch (error) {
-                    console.error(`[NetworkServer] 事件处理器错误 (${event}):`, error);
+                    NetworkServer._logger.error(`事件处理器错误 (${event}):`, error);
                 }
             });
         }
@@ -417,9 +419,9 @@ export class NetworkServer {
     private startSyncVarScheduler(): void {
         try {
             this._syncScheduler.start();
-            console.log('[NetworkServer] SyncVar同步调度器已启动');
+            NetworkServer._logger.info('SyncVar同步调度器已启动');
         } catch (error) {
-            console.error('[NetworkServer] 启动SyncVar调度器失败:', error);
+            NetworkServer._logger.error('启动SyncVar调度器失败:', error);
         }
     }
     
@@ -429,9 +431,9 @@ export class NetworkServer {
     private stopSyncVarScheduler(): void {
         try {
             this._syncScheduler.stop();
-            console.log('[NetworkServer] SyncVar同步调度器已停止');
+            NetworkServer._logger.info('SyncVar同步调度器已停止');
         } catch (error) {
-            console.error('[NetworkServer] 停止SyncVar调度器失败:', error);
+            NetworkServer._logger.error('停止SyncVar调度器失败:', error);
         }
     }
     
@@ -445,9 +447,9 @@ export class NetworkServer {
             const serializedMessage = message.serialize();
             const successCount = this.broadcast(serializedMessage);
             
-            console.log(`[NetworkServer] 广播SyncVar消息: ${message.networkId}.${message.componentType}, 成功发送到 ${successCount} 个客户端`);
+            NetworkServer._logger.info(`广播SyncVar消息: ${message.networkId}.${message.componentType}, 成功发送到 ${successCount} 个客户端`);
         } catch (error) {
-            console.error('[NetworkServer] 广播SyncVar消息失败:', error);
+            NetworkServer._logger.error('广播SyncVar消息失败:', error);
         }
     }
     
@@ -462,7 +464,7 @@ export class NetworkServer {
             const serializedMessage = message.serialize();
             return this.sendToClient(connectionId, serializedMessage);
         } catch (error) {
-            console.error(`[NetworkServer] 发送SyncVar消息到客户端 ${connectionId} 失败:`, error);
+            NetworkServer._logger.error(`发送SyncVar消息到客户端 ${connectionId} 失败:`, error);
             return false;
         }
     }
@@ -481,7 +483,7 @@ export class NetworkServer {
             
             return this.sendToMultipleClients(targetConnections, serializedMessage);
         } catch (error) {
-            console.error('[NetworkServer] 广播SyncVar消息（排除指定客户端）失败:', error);
+            NetworkServer._logger.error('广播SyncVar消息（排除指定客户端）失败:', error);
             return 0;
         }
     }
@@ -506,9 +508,9 @@ export class NetworkServer {
     private startPerformanceMonitoring(): void {
         try {
             this._performanceMonitor.startMonitoring();
-            console.log('[NetworkServer] 性能监控已启动');
+            NetworkServer._logger.info('性能监控已启动');
         } catch (error) {
-            console.error('[NetworkServer] 启动性能监控失败:', error);
+            NetworkServer._logger.error('启动性能监控失败:', error);
         }
     }
     
@@ -518,9 +520,9 @@ export class NetworkServer {
     private stopPerformanceMonitoring(): void {
         try {
             this._performanceMonitor.stopMonitoring();
-            console.log('[NetworkServer] 性能监控已停止');
+            NetworkServer._logger.info('性能监控已停止');
         } catch (error) {
-            console.error('[NetworkServer] 停止性能监控失败:', error);
+            NetworkServer._logger.error('停止性能监控失败:', error);
         }
     }
     

@@ -1,6 +1,7 @@
 import { Entity } from '../Entity';
 import { Component } from '../Component';
 import { ComponentType } from './ComponentStorage';
+import { createLogger } from '../../Utils/Logger';
 
 /**
  * 脏标记类型
@@ -89,7 +90,7 @@ export interface DirtyStats {
  * dirtySystem.addListener({
  *     flags: DirtyFlag.TRANSFORM_CHANGED,
  *     callback: (data) => {
- *         console.log('Entity position changed:', data.entity.name);
+ *         logger.debug('Entity position changed:', data.entity.name);
  *     }
  * });
  * 
@@ -98,6 +99,7 @@ export interface DirtyStats {
  * ```
  */
 export class DirtyTrackingSystem {
+    private static readonly _logger = createLogger('DirtyTrackingSystem');
     /** 脏实体映射表 */
     private _dirtyEntities = new Map<Entity, DirtyData>();
     
@@ -329,7 +331,7 @@ export class DirtyTrackingSystem {
                 try {
                     listener.callback(dirtyData);
                 } catch (error) {
-                    console.error('脏数据监听器错误:', error);
+                    DirtyTrackingSystem._logger.error('脏数据监听器错误:', error);
                 }
             }
         }
@@ -346,7 +348,7 @@ export class DirtyTrackingSystem {
                 try {
                     listener.callback(dirtyData);
                 } catch (error) {
-                    console.error('脏数据监听器通知错误:', error);
+                    DirtyTrackingSystem._logger.error('脏数据监听器通知错误:', error);
                 }
             }
         }

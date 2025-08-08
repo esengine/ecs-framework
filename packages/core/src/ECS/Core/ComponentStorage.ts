@@ -1,6 +1,7 @@
 import { Component } from '../Component';
 import { IBigIntLike, BigIntFactory } from '../Utils/BigIntCompatibility';
 import { SoAStorage, EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, SerializeArray, DeepCopy } from './SoAStorage';
+import { createLogger } from '../../Utils/Logger';
 
 // 重新导出装饰器
 export { EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, SerializeArray, DeepCopy };
@@ -15,6 +16,7 @@ export type ComponentType<T extends Component = Component> = new (...args: unkno
  * 管理组件类型的位掩码分配
  */
 export class ComponentRegistry {
+    protected static readonly _logger = createLogger('ComponentStorage');
     private static componentTypes = new Map<Function, number>();
     private static componentNameToType = new Map<string, Function>();
     private static componentNameToId = new Map<string, number>();
@@ -400,6 +402,7 @@ export class ComponentStorage<T extends Component> {
  * 管理所有组件类型的存储器
  */
 export class ComponentStorageManager {
+    private static readonly _logger = createLogger('ComponentStorage');
     private storages = new Map<Function, ComponentStorage<any> | SoAStorage<any>>();
 
     /**
@@ -417,7 +420,7 @@ export class ComponentStorageManager {
             if (enableSoA) {
                 // 使用SoA优化存储
                 storage = new SoAStorage(componentType);
-                console.log(`[SoA] 为 ${componentType.name} 启用SoA优化（适用于大规模批量操作）`);
+                ComponentStorageManager._logger.info(`为 ${componentType.name} 启用SoA优化（适用于大规模批量操作）`);
             } else {
                 // 默认使用原始存储
                 storage = new ComponentStorage(componentType);

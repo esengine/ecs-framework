@@ -1,3 +1,5 @@
+import { createLogger } from '../../Utils/Logger';
+
 /**
  * 事件处理器函数类型
  */
@@ -66,6 +68,7 @@ export interface EventBatchConfig {
  * 支持同步/异步事件、优先级、批处理等功能
  */
 export class TypeSafeEventSystem {
+    private static readonly _logger = createLogger('EventSystem');
     private listeners = new Map<string, InternalEventListener[]>();
     private stats = new Map<string, EventStats>();
     private batchQueue = new Map<string, any[]>();
@@ -204,7 +207,7 @@ export class TypeSafeEventSystem {
                     toRemove.push(listener.id);
                 }
             } catch (error) {
-                console.error(`事件处理器执行错误 ${eventType}:`, error);
+                TypeSafeEventSystem._logger.error(`事件处理器执行错误 ${eventType}:`, error);
             }
         }
 
@@ -336,7 +339,7 @@ export class TypeSafeEventSystem {
 
         // 检查监听器数量限制
         if (listeners.length >= this.maxListeners) {
-            console.warn(`事件类型 ${eventType} 的监听器数量超过最大限制 (${this.maxListeners})`);
+            TypeSafeEventSystem._logger.warn(`事件类型 ${eventType} 的监听器数量超过最大限制 (${this.maxListeners})`);
             return '';
         }
 
@@ -392,7 +395,7 @@ export class TypeSafeEventSystem {
                     toRemove.push(listener.id);
                 }
             } catch (error) {
-                console.error(`同步事件处理器执行错误 ${eventType}:`, error);
+                TypeSafeEventSystem._logger.error(`同步事件处理器执行错误 ${eventType}:`, error);
             }
         }
 
@@ -409,7 +412,7 @@ export class TypeSafeEventSystem {
                     toRemove.push(listener.id);
                 }
             } catch (error) {
-                console.error(`异步事件处理器执行错误 ${eventType}:`, error);
+                TypeSafeEventSystem._logger.error(`异步事件处理器执行错误 ${eventType}:`, error);
             }
         });
 

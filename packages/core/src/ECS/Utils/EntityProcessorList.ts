@@ -1,10 +1,12 @@
 import { EntitySystem } from '../Systems/EntitySystem';
+import { createLogger } from '../../Utils/Logger';
 
 /**
  * 实体处理器列表管理器
  * 管理场景中的所有实体系统
  */
 export class EntityProcessorList {
+    private static readonly _logger = createLogger('EntityProcessorList');
     private _processors: EntitySystem[] = [];
     private _isDirty = false;
 
@@ -73,7 +75,7 @@ export class EntityProcessorList {
             try {
                 processor.update();
             } catch (error) {
-                console.error(`Error in processor ${processor.constructor.name}:`, error);
+                EntityProcessorList._logger.error(`Error in processor ${processor.constructor.name}:`, error);
             }
         }
     }

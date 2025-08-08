@@ -13,6 +13,17 @@ export { TimerManager } from './Utils/Timers/TimerManager';
 export { ITimer } from './Utils/Timers/ITimer';
 export { Timer } from './Utils/Timers/Timer';
 
+// 日志系统
+export { 
+    LoggerManager, 
+    ConsoleLogger, 
+    Logger, 
+    createLogger, 
+    setGlobalLogLevel,
+    LogLevel 
+} from './Utils/Logger';
+export type { ILogger, LoggerConfig } from './Utils/Logger';
+
 // ECS核心组件
 export * from './ECS';
 

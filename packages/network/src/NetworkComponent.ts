@@ -5,6 +5,7 @@ import { NetworkEnvironment } from './Core/NetworkEnvironment';
 import { createSyncVarProxy, isSyncVarProxied, destroySyncVarProxy } from './SyncVar/SyncVarProxy';
 import { SyncVarManager } from './SyncVar/SyncVarManager';
 import { getSyncVarMetadata } from './SyncVar/SyncVarDecorator';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * 网络组件基类
@@ -92,10 +93,12 @@ export abstract class NetworkComponent extends Component implements INetworkSync
             if (!ComponentRegistry.isRegistered(this.constructor)) {
                 // 如果未注册，自动注册
                 ComponentRegistry.register(this.constructor);
-                console.log(`[NetworkComponent] 自动注册组件类型: ${this.constructor.name}`);
+                const logger = createLogger('NetworkComponent');
+                logger.debug(`自动注册组件类型: ${this.constructor.name}`);
             }
         } catch (error) {
-            console.warn(`[NetworkComponent] 无法注册组件类型 ${this.constructor.name}:`, error);
+            const logger = createLogger('NetworkComponent');
+            logger.warn(`无法注册组件类型 ${this.constructor.name}:`, error);
         }
     }
     
@@ -107,7 +110,8 @@ export abstract class NetworkComponent extends Component implements INetworkSync
     private initializeSyncVar(): void {
         const metadata = getSyncVarMetadata(this.constructor);
         if (metadata.length > 0) {
-            console.log(`[NetworkComponent] ${this.constructor.name} 发现 ${metadata.length} 个SyncVar字段，将启用代理监听`);
+            const logger = createLogger('NetworkComponent');
+            logger.debug(`${this.constructor.name} 发现 ${metadata.length} 个SyncVar字段，将启用代理监听`);
         }
     }
 

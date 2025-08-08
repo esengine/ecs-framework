@@ -4,6 +4,7 @@ import { SyncVarUpdateMessage } from '../Messaging/MessageTypes';
 import { SyncVarMessageHandler } from '../SyncVar/SyncVarMessageHandler';
 import { MessageHandler } from '../Messaging/MessageHandler';
 import { NetworkPerformanceMonitor } from './NetworkPerformanceMonitor';
+import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * 客户端事件接口
@@ -24,6 +25,7 @@ export interface NetworkClientEvents {
  * 提供消息发送和接收功能
  */
 export class NetworkClient {
+    private static readonly logger = createLogger('NetworkClient');
     private _connection: NetworkConnection | null = null;
     private _url: string = '';
     private _isConnected: boolean = false;
@@ -129,7 +131,7 @@ export class NetworkClient {
         
         // 设置连接事件监听
         this._connection.on('connected', () => {
-            console.log(`[NetworkClient] 连接成功: ${this._url}`);
+            NetworkClient.logger.info(`连接成功: ${this._url}`);
             this.emit('connected');
             
             // 如果这是重连，触发重连成功事件
@@ -139,7 +141,7 @@ export class NetworkClient {
         });
         
         this._connection.on('disconnected', (reason) => {
-            console.log(`[NetworkClient] 连接断开: ${reason}`);
+            NetworkClient.logger.info(`连接断开: ${reason}`);
             this.handleDisconnection(reason);
         });
         
@@ -153,7 +155,7 @@ export class NetworkClient {
         });
         
         this._connection.on('error', (error) => {
-            console.error('[NetworkClient] 连接错误:', error);
+            NetworkClient.logger.error('连接错误:', error);
             this.emit('error', error);
         });
         
@@ -214,7 +216,7 @@ export class NetworkClient {
             this._maxReconnectDelay
         );
         
-        console.log(`[NetworkClient] ${delay}ms后尝试重连 (${this._reconnectAttempts}/${this._maxReconnectAttempts})`);
+        NetworkClient.logger.info(`${delay}ms后尝试重连 (${this._reconnectAttempts}/${this._maxReconnectAttempts})`);
         this.emit('reconnecting', this._reconnectAttempts);
         
         this._reconnectTimer = setTimeout(async () => {
@@ -266,7 +268,7 @@ export class NetworkClient {
      */
     public send(data: Uint8Array): boolean {
         if (!this._connection || !this._isConnected) {
-            console.warn('[NetworkClient] 未连接，无法发送数据');
+            NetworkClient.logger.warn('未连接，无法发送数据');
             return false;
         }
         
@@ -364,7 +366,7 @@ export class NetworkClient {
                 try {
                     handler(...args);
                 } catch (error) {
-                    console.error(`[NetworkClient] 事件处理器错误 (${event}):`, error);
+                    NetworkClient.logger.error(`事件处理器错误 (${event}):`, error);
                 }
             });
         }
@@ -449,14 +451,14 @@ export class NetworkClient {
             const success = this.send(serializedMessage);
             
             if (success) {
-                console.log(`[NetworkClient] 发送SyncVar消息: ${message.networkId}.${message.componentType}`);
+                NetworkClient.logger.debug(`发送SyncVar消息: ${message.networkId}.${message.componentType}`);
             } else {
-                console.warn(`[NetworkClient] SyncVar消息发送失败: ${message.networkId}.${message.componentType}`);
+                NetworkClient.logger.warn(`SyncVar消息发送失败: ${message.networkId}.${message.componentType}`);
             }
             
             return success;
         } catch (error) {
-            console.error('[NetworkClient] 发送SyncVar消息失败:', error);
+            NetworkClient.logger.error('发送SyncVar消息失赅:', error);
             return false;
         }
     }
@@ -476,7 +478,7 @@ export class NetworkClient {
             }
         }
         
-        console.log(`[NetworkClient] 批量发送SyncVar消息: ${successCount}/${messages.length} 成功`);
+        NetworkClient.logger.debug(`批量发送SyncVar消息: ${successCount}/${messages.length} 成功`);
         return successCount;
     }
     

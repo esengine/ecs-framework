@@ -1,0 +1,196 @@
+import { Component } from '../../Component';
+import { IBigIntLike, BigIntFactory } from '../../Utils/BigIntCompatibility';
+import { createLogger } from '../../../Utils/Logger';
+
+/**
+ * 组件类型定义
+ */
+export type ComponentType<T extends Component = Component> = new (...args: unknown[]) => T;
+
+/**
+ * 组件注册表
+ * 管理组件类型的位掩码分配
+ */
+export class ComponentRegistry {
+    protected static readonly _logger = createLogger('ComponentStorage');
+    private static componentTypes = new Map<Function, number>();
+    private static componentNameToType = new Map<string, Function>();
+    private static componentNameToId = new Map<string, number>();
+    private static maskCache = new Map<string, IBigIntLike>();
+    private static nextBitIndex = 0;
+    private static maxComponents = 64; // 支持最多64种组件类型
+
+    /**
+     * 注册组件类型并分配位掩码
+     * @param componentType 组件类型
+     * @returns 分配的位索引
+     */
+    public static register<T extends Component>(componentType: ComponentType<T>): number {
+        if (this.componentTypes.has(componentType)) {
+            return this.componentTypes.get(componentType)!;
+        }
+
+        if (this.nextBitIndex >= this.maxComponents) {
+            throw new Error(`Maximum number of component types (${this.maxComponents}) exceeded`);
+        }
+
+        const bitIndex = this.nextBitIndex++;
+        this.componentTypes.set(componentType, bitIndex);
+        this.componentNameToType.set(componentType.name, componentType);
+        this.componentNameToId.set(componentType.name, bitIndex);
+        return bitIndex;
+    }
+
+    /**
+     * 获取组件类型的位掩码
+     * @param componentType 组件类型
+     * @returns 位掩码
+     */
+    public static getBitMask<T extends Component>(componentType: ComponentType<T>): IBigIntLike {
+        const bitIndex = this.componentTypes.get(componentType);
+        if (bitIndex === undefined) {
+            throw new Error(`Component type ${componentType.name} is not registered`);
+        }
+        return BigIntFactory.one().shiftLeft(bitIndex);
+    }
+
+    /**
+     * 获取组件类型的位索引
+     * @param componentType 组件类型
+     * @returns 位索引
+     */
+    public static getBitIndex<T extends Component>(componentType: ComponentType<T>): number {
+        const bitIndex = this.componentTypes.get(componentType);
+        if (bitIndex === undefined) {
+            throw new Error(`Component type ${componentType.name} is not registered`);
+        }
+        return bitIndex;
+    }
+
+    /**
+     * 检查组件类型是否已注册
+     * @param componentType 组件类型
+     * @returns 是否已注册
+     */
+    public static isRegistered<T extends Component>(componentType: ComponentType<T>): boolean {
+        return this.componentTypes.has(componentType);
+    }
+
+    /**
+     * 通过名称获取组件类型
+     * @param componentName 组件名称
+     * @returns 组件类型构造函数
+     */
+    public static getComponentType(componentName: string): Function | null {
+        return this.componentNameToType.get(componentName) || null;
+    }
+
+    /**
+     * 获取所有已注册的组件类型
+     * @returns 组件类型映射
+     */
+    public static getAllRegisteredTypes(): Map<Function, number> {
+        return new Map(this.componentTypes);
+    }
+
+    /**
+     * 获取所有组件名称到类型的映射
+     * @returns 名称到类型的映射
+     */
+    public static getAllComponentNames(): Map<string, Function> {
+        return new Map(this.componentNameToType);
+    }
+
+    /**
+     * 通过名称获取组件类型ID
+     * @param componentName 组件名称
+     * @returns 组件类型ID
+     */
+    public static getComponentId(componentName: string): number | undefined {
+        return this.componentNameToId.get(componentName);
+    }
+
+    /**
+     * 注册组件类型（通过名称）
+     * @param componentName 组件名称
+     * @returns 分配的组件ID
+     */
+    public static registerComponentByName(componentName: string): number {
+        if (this.componentNameToId.has(componentName)) {
+            return this.componentNameToId.get(componentName)!;
+        }
+
+        if (this.nextBitIndex >= this.maxComponents) {
+            throw new Error(`Maximum number of component types (${this.maxComponents}) exceeded`);
+        }
+
+        const bitIndex = this.nextBitIndex++;
+        this.componentNameToId.set(componentName, bitIndex);
+        return bitIndex;
+    }
+
+    /**
+     * 创建单个组件的掩码
+     * @param componentName 组件名称
+     * @returns 组件掩码
+     */
+    public static createSingleComponentMask(componentName: string): IBigIntLike {
+        const cacheKey = `single:${componentName}`;
+        
+        if (this.maskCache.has(cacheKey)) {
+            return this.maskCache.get(cacheKey)!;
+        }
+
+        const componentId = this.getComponentId(componentName);
+        if (componentId === undefined) {
+            throw new Error(`Component type ${componentName} is not registered`);
+        }
+
+        const mask = BigIntFactory.one().shiftLeft(componentId);
+        this.maskCache.set(cacheKey, mask);
+        return mask;
+    }
+
+    /**
+     * 创建多个组件的掩码
+     * @param componentNames 组件名称数组
+     * @returns 组合掩码
+     */
+    public static createComponentMask(componentNames: string[]): IBigIntLike {
+        const sortedNames = [...componentNames].sort();
+        const cacheKey = `multi:${sortedNames.join(',')}`;
+        
+        if (this.maskCache.has(cacheKey)) {
+            return this.maskCache.get(cacheKey)!;
+        }
+
+        let mask = BigIntFactory.zero();
+        for (const name of componentNames) {
+            const componentId = this.getComponentId(name);
+            if (componentId !== undefined) {
+                mask = mask.or(BigIntFactory.one().shiftLeft(componentId));
+            }
+        }
+
+        this.maskCache.set(cacheKey, mask);
+        return mask;
+    }
+
+    /**
+     * 清除掩码缓存
+     */
+    public static clearMaskCache(): void {
+        this.maskCache.clear();
+    }
+
+    /**
+     * 重置注册表（用于测试）
+     */
+    public static reset(): void {
+        this.componentTypes.clear();
+        this.componentNameToType.clear();
+        this.componentNameToId.clear();
+        this.maskCache.clear();
+        this.nextBitIndex = 0;
+    }
+}

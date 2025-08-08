@@ -1,5 +1,6 @@
 import { Component } from '../Component';
 import { ComponentType } from './ComponentStorage';
+import { createLogger } from '../../Utils/Logger';
 
 /**
  * 启用SoA优化装饰器
@@ -113,6 +114,7 @@ export function DeepCopy(target: any, propertyKey: string | symbol): void {
  * 使用Structure of Arrays存储模式，在大规模批量操作时提供优异性能
  */
 export class SoAStorage<T extends Component> {
+    private static readonly _logger = createLogger('SoAStorage');
     private fields = new Map<string, Float32Array | Float64Array | Int32Array>();
     private stringFields = new Map<string, string[]>(); // 专门存储字符串
     private serializedFields = new Map<string, string[]>(); // 序列化存储Map/Set/Array
@@ -276,7 +278,7 @@ export class SoAStorage<T extends Component> {
                 return JSON.stringify(value);
             }
         } catch (error) {
-            console.warn(`SoA序列化字段 ${key} 失败:`, error);
+            SoAStorage._logger.warn(`SoA序列化字段 ${key} 失败:`, error);
             return '{}';
         }
     }
@@ -301,7 +303,7 @@ export class SoAStorage<T extends Component> {
                 return parsed;
             }
         } catch (error) {
-            console.warn(`SoA反序列化字段 ${key} 失败:`, error);
+            SoAStorage._logger.warn(`SoA反序列化字段 ${key} 失败:`, error);
             return null;
         }
     }
