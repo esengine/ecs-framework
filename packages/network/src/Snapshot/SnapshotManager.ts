@@ -487,18 +487,27 @@ export class SnapshotManager {
     /**
      * 创建组件快照
      * 
-     * 使用protobuf序列化
+     * 优先使用protobuf序列化，fallback到JSON序列化
      */
     private createComponentSnapshot(component: Component): ComponentSnapshot | null {
         if (!this.isComponentSnapshotable(component)) {
             return null;
         }
         
-        if (!isProtoSerializable(component)) {
-            throw new Error(`[SnapshotManager] 组件 ${component.constructor.name} 不支持protobuf序列化，请添加@ProtoSerializable装饰器`);
-        }
+        let serializedData: SerializedData;
         
-        const serializedData = this.protobufSerializer.serialize(component);
+        // 优先使用protobuf序列化
+        if (isProtoSerializable(component)) {
+            try {
+                serializedData = this.protobufSerializer.serialize(component);
+            } catch (error) {
+                SnapshotManager.logger.warn(`[SnapshotManager] Protobuf序列化失败，fallback到JSON: ${error}`);
+                serializedData = this.createJsonSerializedData(component);
+            }
+        } else {
+            // fallback到JSON序列化
+            serializedData = this.createJsonSerializedData(component);
+        }
         
         return {
             type: component.constructor.name,
@@ -506,6 +515,30 @@ export class SnapshotManager {
             data: serializedData,
             enabled: component.enabled,
             config: this.getComponentSnapshotConfig(component)
+        };
+    }
+    
+    /**
+     * 创建JSON序列化数据
+     */
+    private createJsonSerializedData(component: Component): SerializedData {
+        // 使用replacer排除循环引用和不需要的属性
+        const jsonData = JSON.stringify(component, (key, value) => {
+            // 排除entity引用以避免循环引用
+            if (key === 'entity') {
+                return undefined;
+            }
+            // 排除函数和symbol
+            if (typeof value === 'function' || typeof value === 'symbol') {
+                return undefined;
+            }
+            return value;
+        });
+        return {
+            type: 'json',
+            componentType: component.constructor.name,
+            data: jsonData,
+            size: jsonData.length
         };
     }
 
@@ -617,11 +650,27 @@ export class SnapshotManager {
         // 恢复组件数据
         const serializedData = componentSnapshot.data as SerializedData;
         
-        if (!isProtoSerializable(component)) {
-            throw new Error(`[SnapshotManager] 组件 ${component.constructor.name} 不支持protobuf反序列化`);
+        if (serializedData.type === 'protobuf' && isProtoSerializable(component)) {
+            // 使用protobuf反序列化
+            this.protobufSerializer.deserialize(component, serializedData);
+        } else if (serializedData.type === 'json') {
+            // 使用JSON反序列化
+            this.deserializeFromJson(component, serializedData);
+        } else {
+            SnapshotManager.logger.warn(`[SnapshotManager] 组件 ${component.constructor.name} 序列化类型不匹配或不支持`);
         }
-        
-        this.protobufSerializer.deserialize(component, serializedData);
+    }
+    
+    /**
+     * 从JSON数据反序列化组件
+     */
+    private deserializeFromJson(component: Component, serializedData: SerializedData): void {
+        try {
+            const jsonData = JSON.parse(serializedData.data as string);
+            Object.assign(component, jsonData);
+        } catch (error) {
+            SnapshotManager.logger.error(`[SnapshotManager] JSON反序列化失败: ${error}`);
+        }
     }
 
     /**

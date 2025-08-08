@@ -105,33 +105,26 @@ class CustomComponent extends Component {
     }
 }
 
-// Mock protobuf.js
-const mockProtobuf = {
-    Root: jest.fn(),
-    Type: jest.fn(),
-    Field: jest.fn(),
-    parse: jest.fn().mockReturnValue({
-        root: {
-            lookupType: jest.fn().mockImplementation((typeName: string) => {
-                // 模拟protobuf消息类型
-                return {
-                    verify: jest.fn().mockReturnValue(null), // 验证通过
-                    create: jest.fn().mockImplementation((data) => data),
-                    encode: jest.fn().mockReturnValue({
-                        finish: jest.fn().mockReturnValue(new Uint8Array([1, 2, 3, 4])) // 模拟编码结果
-                    }),
-                    decode: jest.fn().mockImplementation(() => ({
-                        x: 10, y: 20, z: 30,
-                        maxHealth: 100, currentHealth: 80, isDead: false,
-                        playerName: 'TestPlayer', playerId: 1001, level: 5
-                    })),
-                    toObject: jest.fn().mockImplementation((message) => message),
-                    fromObject: jest.fn().mockImplementation((obj) => obj)
-                };
-            })
-        }
+// Mock protobuf.js Root
+const mockProtobufRoot = {
+    lookupType: jest.fn().mockImplementation((typeName: string) => {
+        // 模拟protobuf消息类型
+        return {
+            verify: jest.fn().mockReturnValue(null), // 验证通过
+            create: jest.fn().mockImplementation((data) => data),
+            encode: jest.fn().mockReturnValue({
+                finish: jest.fn().mockReturnValue(new Uint8Array([1, 2, 3, 4])) // 模拟编码结果
+            }),
+            decode: jest.fn().mockImplementation(() => ({
+                x: 10, y: 20, z: 30,
+                maxHealth: 100, currentHealth: 80, isDead: false,
+                playerName: 'TestPlayer', playerId: 1001, level: 5
+            })),
+            toObject: jest.fn().mockImplementation((message) => message),
+            fromObject: jest.fn().mockImplementation((obj) => obj)
+        };
     })
-};
+} as any;
 
 describe('ProtobufSerializer', () => {
     let serializer: ProtobufSerializer;
@@ -144,21 +137,20 @@ describe('ProtobufSerializer', () => {
     
     describe('初始化', () => {
         it('应该正确初始化protobuf支持', () => {
-            serializer.initialize(mockProtobuf);
+            serializer.initialize(mockProtobufRoot);
             
-            expect(mockProtobuf.parse).toHaveBeenCalled();
             expect(serializer.canSerialize(new PositionComponent())).toBe(true);
         });
         
-        it('没有初始化时应该无法序列化protobuf组件', () => {
+        it('自动初始化后应该能够序列化protobuf组件', () => {
             const newSerializer = new (ProtobufSerializer as any)();
-            expect(newSerializer.canSerialize(new PositionComponent())).toBe(false);
+            expect(newSerializer.canSerialize(new PositionComponent())).toBe(true);
         });
     });
     
     describe('序列化', () => {
         beforeEach(() => {
-            serializer.initialize(mockProtobuf);
+            serializer.initialize(mockProtobufRoot);
         });
         
         it('应该正确序列化protobuf组件', () => {
@@ -197,7 +189,7 @@ describe('ProtobufSerializer', () => {
     
     describe('反序列化', () => {
         beforeEach(() => {
-            serializer.initialize(mockProtobuf);
+            serializer.initialize(mockProtobufRoot);
         });
         
         it('应该正确反序列化protobuf数据', () => {
@@ -239,7 +231,7 @@ describe('ProtobufSerializer', () => {
             };
             
             // 模拟解码失败
-            const mockType = mockProtobuf.parse().root.lookupType('ecs.Position');
+            const mockType = mockProtobufRoot.lookupType('ecs.Position');
             mockType.decode.mockImplementation(() => {
                 throw new Error('解码失败');
             });
@@ -253,24 +245,24 @@ describe('ProtobufSerializer', () => {
     
     describe('统计信息', () => {
         it('应该返回正确的统计信息', () => {
-            serializer.initialize(mockProtobuf);
+            serializer.initialize(mockProtobufRoot);
             const stats = serializer.getStats();
             
             expect(stats.protobufAvailable).toBe(true);
             expect(stats.registeredComponents).toBeGreaterThan(0);
         });
         
-        it('未初始化时应该返回正确的状态', () => {
+        it('自动初始化后应该返回正确的状态', () => {
             const newSerializer = new (ProtobufSerializer as any)();
             const stats = newSerializer.getStats();
             
-            expect(stats.protobufAvailable).toBe(false);
+            expect(stats.protobufAvailable).toBe(true);
         });
     });
     
     describe('边界情况', () => {
         beforeEach(() => {
-            serializer.initialize(mockProtobuf);
+            serializer.initialize(mockProtobufRoot);
         });
         
         it('应该处理空值和undefined', () => {

@@ -2,18 +2,16 @@
  * Protobuf序列化性能测试
  */
 
-import { Component } from '../../../src/ECS/Component';
-import { Entity } from '../../../src/ECS/Entity';
-import { Scene } from '../../../src/ECS/Scene';
-import { SnapshotManager } from '../../../src/Utils/Snapshot/SnapshotManager';
-import { ProtobufSerializer } from '../../../src/Utils/Serialization/ProtobufSerializer';
+import { Component, Entity, Scene } from '@esengine/ecs-framework';
+import { SnapshotManager } from '../../src/Snapshot/SnapshotManager';
+import { ProtobufSerializer } from '../../src/Serialization/ProtobufSerializer';
 import { 
     ProtoSerializable, 
     ProtoFloat,
     ProtoInt32,
     ProtoString,
     ProtoBool
-} from '../../../src/Utils/Serialization/ProtobufDecorators';
+} from '../../src/Serialization/ProtobufDecorators';
 
 // 性能测试组件
 @ProtoSerializable('PerfPosition')
@@ -103,26 +101,31 @@ class JsonPlayerComponent extends Component {
 
 // Mock protobuf.js for performance testing
 const createMockProtobuf = () => {
-    const mockEncodedData = new Uint8Array(32); // 模拟32字节的编码数据
+    const mockEncodedData = new Uint8Array(32);
     mockEncodedData.fill(1);
     
     return {
         parse: jest.fn().mockReturnValue({
             root: {
-                lookupType: jest.fn().mockImplementation((typeName: string) => ({
-                    verify: jest.fn().mockReturnValue(null),
-                    create: jest.fn().mockImplementation((data) => data),
-                    encode: jest.fn().mockReturnValue({
-                        finish: jest.fn().mockReturnValue(mockEncodedData)
-                    }),
-                    decode: jest.fn().mockReturnValue({
-                        x: 10, y: 20, z: 30,
-                        vx: 1, vy: 2, vz: 3,
-                        maxHealth: 100, currentHealth: 80, isDead: false, regenerationRate: 0.5,
-                        name: 'TestPlayer', level: 5, experience: 1000, score: 5000, isOnline: true
-                    }),
-                    toObject: jest.fn().mockImplementation((message) => message)
-                }))
+                lookupType: jest.fn().mockImplementation((typeName: string) => {
+                    // 根据类型名返回相应的数据
+                    const mockData: Record<string, any> = {
+                        'ecs.PerfPosition': { x: 10, y: 20, z: 30 },
+                        'ecs.PerfVelocity': { vx: 1, vy: 2, vz: 3 },
+                        'ecs.PerfHealth': { maxHealth: 100, currentHealth: 80, isDead: false, regenerationRate: 0.5 },
+                        'ecs.PerfPlayer': { name: 'TestPlayer', level: 5, experience: 1000, score: 5000, isOnline: true }
+                    };
+                    
+                    return {
+                        verify: jest.fn().mockReturnValue(null),
+                        create: jest.fn().mockImplementation((data) => data),
+                        encode: jest.fn().mockReturnValue({
+                            finish: jest.fn().mockReturnValue(mockEncodedData)
+                        }),
+                        decode: jest.fn().mockReturnValue(mockData[typeName] || {}),
+                        toObject: jest.fn().mockImplementation((message) => message)
+                    };
+                })
             }
         })
     };
@@ -134,11 +137,12 @@ describe('Protobuf序列化性能测试', () => {
     let scene: Scene;
     
     beforeEach(() => {
+        const mockProtobuf = createMockProtobuf();
         protobufSerializer = ProtobufSerializer.getInstance();
-        protobufSerializer.initialize(createMockProtobuf());
+        protobufSerializer.initialize(mockProtobuf.parse().root as any);
         
         snapshotManager = new SnapshotManager();
-        snapshotManager.initializeProtobuf(createMockProtobuf());
+        snapshotManager.initializeProtobuf(mockProtobuf.parse().root as any);
         
         scene = new Scene();
         jest.clearAllMocks();

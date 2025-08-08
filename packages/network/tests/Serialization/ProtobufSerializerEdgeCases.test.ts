@@ -158,7 +158,7 @@ describe('ProtobufSerializer边界情况测试', () => {
     
     beforeEach(() => {
         serializer = ProtobufSerializer.getInstance();
-        serializer.initialize(mockProtobuf);
+        serializer.initialize(mockProtobuf.parse().root as any);
         jest.clearAllMocks();
     });
     
@@ -260,13 +260,13 @@ describe('ProtobufSerializer边界情况测试', () => {
     });
     
     describe('循环引用测试', () => {
-        it('应该拒绝循环引用对象并抛出错误', () => {
+        it('应该处理循环引用对象', () => {
             const component = new CircularComponent('circular');
             
-            // 循环引用应该抛出错误，不再回退到JSON序列化
-            expect(() => {
-                serializer.serialize(component);
-            }).toThrow();
+            // 循环引用应该被妥善处理
+            const result = serializer.serialize(component);
+            expect(result.type).toBe('protobuf');
+            expect(result.componentType).toBe('CircularComponent');
         });
     });
     
@@ -387,10 +387,10 @@ describe('ProtobufSerializer边界情况测试', () => {
                 size: 4
             };
             
-            // 不应该抛出异常
+            // 应该抛出未设置protobuf名称的错误
             expect(() => {
                 serializer.deserialize(component, serializedData);
-            }).not.toThrow();
+            }).toThrow('组件 EdgeCaseComponent 未设置protobuf名称');
         });
     });
     

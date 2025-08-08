@@ -3,40 +3,17 @@ import { createNetworkComponent } from '../src/SyncVar/SyncVarFactory';
 import { createSyncVarProxy } from '../src/SyncVar/SyncVarProxy';
 import { NetworkComponent } from '../src/NetworkComponent';
 
-// 模拟NetworkComponent基类
-class MockNetworkComponent {
-    private _dirtyFields: Set<number> = new Set();
-    private _fieldTimestamps: Map<number, number> = new Map();
-    
-    constructor() {}
-    
-    public isClient(): boolean { return true; }
-    public isServer(): boolean { return false; }
-    public getRole(): string { return 'client'; }
-    
-    public getSyncVarChanges(): any[] {
-        const syncVarManager = SyncVarManager.Instance;
-        return syncVarManager.getPendingChanges(this);
-    }
-    
-    public createSyncVarData(): any {
-        const syncVarManager = SyncVarManager.Instance;
-        return syncVarManager.createSyncData(this);
-    }
-    
-    public applySyncVarData(syncData: any): void {
-        const syncVarManager = SyncVarManager.Instance;
-        syncVarManager.applySyncData(this, syncData);
-    }
-    
-    public hasSyncVars(): boolean {
-        const metadata = getSyncVarMetadata(this.constructor);
-        return metadata.length > 0;
-    }
-}
-
 // 测试用的组件类
-class TestPlayerComponent extends MockNetworkComponent {
+class TestPlayerComponent extends NetworkComponent {
+    private _hasAuthority: boolean = false;
+    
+    public hasAuthority(): boolean {
+        return this._hasAuthority;
+    }
+    
+    public setAuthority(hasAuthority: boolean): void {
+        this._hasAuthority = hasAuthority;
+    }
     @SyncVar()
     public health: number = 100;
     
@@ -60,8 +37,10 @@ class TestPlayerComponent extends MockNetworkComponent {
     }
 }
 
-class TestComponentWithoutSyncVar extends MockNetworkComponent {
+class TestComponentWithoutSyncVar extends NetworkComponent {
     public normalField: number = 42;
+    
+    public hasAuthority(): boolean { return true; }
 }
 
 describe('SyncVar系统测试', () => {
@@ -114,11 +93,13 @@ describe('SyncVar系统测试', () => {
         });
         
         test('非SyncVar字段不应该被记录', () => {
-            class TestMixedComponent extends MockNetworkComponent {
+            class TestMixedComponent extends NetworkComponent {
                 @SyncVar()
                 public syncField: number = 1;
                 
                 public normalField: number = 2;
+                
+                public hasAuthority(): boolean { return true; }
             }
             
             const instance = new TestMixedComponent();

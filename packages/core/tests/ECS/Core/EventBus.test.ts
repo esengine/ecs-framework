@@ -173,7 +173,7 @@ describe('EventBus - 事件总线测试', () => {
         });
 
         test('应该能够设置调试模式', () => {
-            const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+            const consoleSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
             
             eventBus.setDebugMode(true);
             eventBus.on('debug:event', () => {});

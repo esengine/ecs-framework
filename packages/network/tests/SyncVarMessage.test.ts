@@ -2,24 +2,11 @@ import { SyncVarUpdateMessage, SyncVarFieldUpdate, MessageType } from '../src/Me
 import { SyncVar, getSyncVarMetadata, SyncVarManager } from '../src/SyncVar';
 import { createSyncVarProxy } from '../src/SyncVar/SyncVarProxy';
 import { NetworkEnvironment, NetworkEnvironmentState } from '../src/Core/NetworkEnvironment';
+import { NetworkComponent } from '../src/NetworkComponent';
 
-// 模拟NetworkComponent基类
-class MockNetworkComponent {
+// 测试用的组件类
+class TestPlayerComponent extends NetworkComponent {
     private _hasAuthority: boolean = false;
-    
-    constructor() {}
-    
-    public isClient(): boolean { 
-        return NetworkEnvironment.isClient; 
-    }
-    
-    public isServer(): boolean { 
-        return NetworkEnvironment.isServer; 
-    }
-    
-    public getRole(): string { 
-        return NetworkEnvironment.getPrimaryRole(); 
-    }
     
     public hasAuthority(): boolean {
         return this._hasAuthority;
@@ -28,10 +15,6 @@ class MockNetworkComponent {
     public setAuthority(hasAuthority: boolean): void {
         this._hasAuthority = hasAuthority;
     }
-}
-
-// 测试用的组件类
-class TestPlayerComponent extends MockNetworkComponent {
     @SyncVar()
     public health: number = 100;
     

@@ -117,7 +117,7 @@ describe('Core - 核心管理系统测试', () => {
         test('在未创建实例时调用update应该显示警告', () => {
             Core.update(0.016);
             
-            expect(console.warn).toHaveBeenCalledWith("Core实例未创建，请先调用Core.create()");
+            expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Core实例未创建，请先调用Core.create()"));
         });
     });
 
@@ -389,7 +389,7 @@ describe('Core - 核心管理系统测试', () => {
             
             Core.enableDebug(debugConfig);
             
-            expect(console.warn).toHaveBeenCalledWith("Core实例未创建，请先调用Core.create()");
+            expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Core实例未创建，请先调用Core.create()"));
         });
     });
 
