@@ -28,7 +28,27 @@ module.exports = {
   verbose: true,
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.json',
+      tsconfig: {
+        target: 'ES2020',
+        module: 'CommonJS',
+        moduleResolution: 'node',
+        lib: ['ES2020', 'DOM'],
+        strict: true,
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        skipLibCheck: true,
+        forceConsistentCasingInFileNames: true,
+        experimentalDecorators: true,
+        emitDecoratorMetadata: true,
+        isolatedModules: false,
+        allowJs: true,
+        resolveJsonModule: true,
+        baseUrl: '.',
+        paths: {
+          '@esengine/ecs-framework': ['../core/src'],
+          '@esengine/ecs-framework/*': ['../core/src/*']
+        }
+      },
       useESM: false,
     }],
   },
