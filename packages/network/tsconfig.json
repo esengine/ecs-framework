@@ -29,23 +29,16 @@
     "downlevelIteration": true,
     "isolatedModules": false,
     "allowJs": true,
-    "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "@esengine/ecs-framework": ["../core/src"],
-      "@esengine/ecs-framework/*": ["../core/src/*"]
-    }
+    "resolveJsonModule": true
   },
   "include": [
     "src/**/*"
   ],
-  "typeRoots": [
-    "./node_modules/@types",
-    "./src/types"
-  ],
   "exclude": [
     "node_modules",
     "bin",
+    "dist",
+    "tests",
     "**/*.test.ts",
     "**/*.spec.ts"
   ]

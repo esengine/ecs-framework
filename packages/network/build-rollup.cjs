@@ -14,7 +14,7 @@ async function main() {
 
         // 执行Rollup构建
         console.log('📦 执行 Rollup 构建...');
-        execSync('rollup -c rollup.config.cjs', { stdio: 'inherit' });
+        execSync('npx rollup -c rollup.config.cjs', { stdio: 'inherit' });
 
         // 生成package.json
         console.log('📋 生成 package.json...');
