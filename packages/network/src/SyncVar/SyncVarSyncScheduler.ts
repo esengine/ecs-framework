@@ -475,4 +475,211 @@ export class SyncVarSyncScheduler {
     public get isRunning(): boolean {
         return this._isRunning;
     }
+
+    /**
+     * 智能调度配置
+     * 根据网络状况动态调整同步策略
+     */
+    public applyNetworkAdaptiveConfig(adaptiveConfig: {
+        suggestedSyncInterval: number;
+        suggestedBatchSize: number;
+        prioritizeUpdate: boolean;
+    }): void {
+        const oldConfig = { ...this._config };
+        
+        // 应用建议的同步间隔，但不超出安全范围
+        this._config.syncInterval = Math.max(
+            Math.min(adaptiveConfig.suggestedSyncInterval, 1000), // 最大1秒
+            this._config.minSyncInterval // 最小间隔
+        );
+        
+        // 应用建议的批处理大小
+        this._config.maxBatchSize = Math.max(
+            Math.min(adaptiveConfig.suggestedBatchSize, 100), // 最大100
+            1 // 最小1
+        );
+        
+        // 根据优先级更新标志调整其他参数
+        if (adaptiveConfig.prioritizeUpdate) {
+            // 高优先级模式：减少每帧处理对象数，确保重要更新及时处理
+            this._config.maxObjectsPerFrame = Math.max(
+                Math.floor(this._config.maxObjectsPerFrame * 0.7),
+                10
+            );
+            this._config.enablePrioritySort = true;
+        } else {
+            // 正常模式：恢复标准设置
+            this._config.maxObjectsPerFrame = 50;
+        }
+        
+        SyncVarSyncScheduler.logger.info('应用网络自适应配置:', {
+            oldInterval: oldConfig.syncInterval,
+            newInterval: this._config.syncInterval,
+            oldBatchSize: oldConfig.maxBatchSize,
+            newBatchSize: this._config.maxBatchSize,
+            prioritizeMode: adaptiveConfig.prioritizeUpdate
+        });
+        
+        // 重启调度器以应用新配置
+        if (this._isRunning) {
+            this.stop();
+            this.start();
+        }
+    }
+
+    /**
+     * 网络拥塞控制
+     * 根据拥塞状态调整同步行为
+     */
+    public applyCongestionControl(congestionInfo: {
+        isCongested: boolean;
+        congestionLevel: 'none' | 'light' | 'moderate' | 'severe';
+    }): void {
+        if (!congestionInfo.isCongested) {
+            // 无拥塞：可以恢复正常配置
+            this.resetToOptimalConfig();
+            return;
+        }
+        
+        const emergencyConfig = { ...this._config };
+        
+        switch (congestionInfo.congestionLevel) {
+            case 'light':
+                // 轻微拥塞：适度降低频率
+                emergencyConfig.syncInterval = Math.max(this._config.syncInterval * 1.2, 80);
+                emergencyConfig.maxBatchSize = Math.min(this._config.maxBatchSize * 1.5, 15);
+                break;
+                
+            case 'moderate':
+                // 中度拥塞：显著降低频率，增加批处理
+                emergencyConfig.syncInterval = Math.max(this._config.syncInterval * 1.5, 120);
+                emergencyConfig.maxBatchSize = Math.min(this._config.maxBatchSize * 2, 25);
+                emergencyConfig.maxObjectsPerFrame = Math.max(
+                    Math.floor(this._config.maxObjectsPerFrame * 0.6),
+                    15
+                );
+                break;
+                
+            case 'severe':
+                // 严重拥塞：最保守策略
+                emergencyConfig.syncInterval = Math.max(this._config.syncInterval * 2, 200);
+                emergencyConfig.maxBatchSize = Math.min(this._config.maxBatchSize * 3, 50);
+                emergencyConfig.maxObjectsPerFrame = Math.max(
+                    Math.floor(this._config.maxObjectsPerFrame * 0.4),
+                    10
+                );
+                emergencyConfig.enablePrioritySort = true; // 强制启用优先级排序
+                break;
+        }
+        
+        this._config = emergencyConfig;
+        
+        SyncVarSyncScheduler.logger.warn(`应用拥塞控制策略 [${congestionInfo.congestionLevel}]:`, {
+            syncInterval: this._config.syncInterval,
+            maxBatchSize: this._config.maxBatchSize,
+            maxObjectsPerFrame: this._config.maxObjectsPerFrame
+        });
+        
+        // 重启调度器以应用拥塞控制配置
+        if (this._isRunning) {
+            this.stop();
+            this.start();
+        }
+    }
+
+    /**
+     * 重置到优化配置
+     * 当网络状况改善时调用
+     */
+    private resetToOptimalConfig(): void {
+        const optimalConfig: SyncVarSyncConfig = {
+            syncInterval: 50, // 20fps
+            maxBatchSize: 10,
+            maxObjectsPerFrame: 50,
+            enablePrioritySort: true,
+            minSyncInterval: 16, // 最小16ms (60fps)
+            enableIncrementalSync: true
+        };
+        
+        const configChanged = (
+            this._config.syncInterval !== optimalConfig.syncInterval ||
+            this._config.maxBatchSize !== optimalConfig.maxBatchSize ||
+            this._config.maxObjectsPerFrame !== optimalConfig.maxObjectsPerFrame
+        );
+        
+        if (configChanged) {
+            this._config = optimalConfig;
+            SyncVarSyncScheduler.logger.info('恢复到优化配置');
+            
+            if (this._isRunning) {
+                this.stop();
+                this.start();
+            }
+        }
+    }
+
+    /**
+     * 智能批处理优化
+     * 基于网络状况和组件变化频率动态调整批处理策略
+     */
+    public optimizeBatching(): void {
+        // 分析最近的同步统计
+        const recentSuccessRate = this.calculateRecentSuccessRate();
+        const avgProcessingTime = this._stats.averageCycleTime;
+        
+        // 根据成功率调整批处理大小
+        if (recentSuccessRate < 0.8) {
+            // 成功率低，减少批处理大小
+            this._config.maxBatchSize = Math.max(
+                Math.floor(this._config.maxBatchSize * 0.8),
+                2
+            );
+            SyncVarSyncScheduler.logger.debug(`批处理优化: 降低批大小到 ${this._config.maxBatchSize} (成功率: ${recentSuccessRate.toFixed(2)})`);
+        } else if (recentSuccessRate > 0.95 && avgProcessingTime < this._config.syncInterval * 0.5) {
+            // 成功率高且处理时间充足，可以增加批处理大小
+            this._config.maxBatchSize = Math.min(
+                Math.floor(this._config.maxBatchSize * 1.1),
+                30
+            );
+            SyncVarSyncScheduler.logger.debug(`批处理优化: 提升批大小到 ${this._config.maxBatchSize}`);
+        }
+    }
+
+    /**
+     * 计算最近的成功率
+     * 这里简化实现，实际可以基于更复杂的统计
+     */
+    private calculateRecentSuccessRate(): number {
+        // 简化实现：基于错误率计算成功率
+        const totalOperations = this._stats.totalSyncCycles;
+        if (totalOperations === 0) return 1.0;
+        
+        const errorRate = this._stats.errors / totalOperations;
+        return Math.max(0, 1 - errorRate);
+    }
+
+    /**
+     * 动态优先级调整
+     * 根据组件活跃度和网络状况调整优先级计算
+     */
+    public updatePriorityStrategy(networkQuality: number): void {
+        if (networkQuality >= 80) {
+            // 高质量网络：可以使用复杂的优先级计算
+            this._priorityCalculator = new DefaultSyncPriorityCalculator();
+        } else {
+            // 低质量网络：使用简化的优先级计算，减少CPU开销
+            this._priorityCalculator = new SimplifiedPriorityCalculator();
+        }
+    }
+}
+
+/**
+ * 简化优先级计算器
+ * 在网络状况不佳时使用，减少计算开销
+ */
+class SimplifiedPriorityCalculator implements ISyncPriorityCalculator {
+    public calculatePriority(component: any, identity: NetworkIdentity): number {
+        // 简化的优先级计算：仅基于权威性
+        return identity.hasAuthority ? 10 : 5;
+    }
 }

@@ -202,8 +202,7 @@ export class NetworkServer {
             this.emit('clientMessage', connection, data);
             
             // 自动处理消息
-            const { MessageHandler } = require('../Messaging/MessageHandler');
-            await MessageHandler.Instance.handleRawMessage(data, connection);
+            await this._messageHandler.handleRawMessage(data, connection);
         });
         
         connection.on('error', (error) => {

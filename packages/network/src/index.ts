@@ -19,7 +19,10 @@ export { NetworkComponent } from './NetworkComponent';
 export { INetworkSyncable } from './INetworkSyncable';
 export { NetworkRole } from './NetworkRole';
 
-// Protobuf序列化系统
+// TSRPC网络通信系统
+export * from './TSRPC';
+
+// 装饰器序列化系统（用于组件同步）
 export * from './Serialization';
 
 // 快照系统（帧同步）

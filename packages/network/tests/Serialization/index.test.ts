@@ -3,10 +3,7 @@
  */
 
 // 导入所有测试
-import './ProtobufDecorators.test';
-import './ProtobufSerializer.test';
-import './SnapshotManagerIntegration.test';
-import './Performance.test';
+import './TsrpcSerializer.test';
 
 // 这个文件确保所有序列化相关的测试都被包含在测试套件中
 describe('序列化模块集成测试', () => {

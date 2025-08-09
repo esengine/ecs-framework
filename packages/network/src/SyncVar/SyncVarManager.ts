@@ -12,7 +12,10 @@ import {
     NetworkComponentType,
     TypeGuards
 } from '../types/NetworkTypes';
-import { createLogger } from '@esengine/ecs-framework';
+import { SYNCVAR_CONFIG } from '../constants/NetworkConstants';
+import { INetworkComponent } from '../types/CoreTypes';
+import { ComponentIdGenerator } from './ComponentIdGenerator';
+import { SyncVarAuthorityManager } from './SyncVarAuthority';
 
 /**
  * SyncVar变化记录
@@ -84,7 +87,12 @@ export interface SyncVarSyncData {
  */
 export class SyncVarManager {
     private static _instance: SyncVarManager | null = null;
-    private static readonly logger = createLogger('SyncVarManager');
+    private static readonly logger = { 
+        info: console.log, 
+        warn: console.warn, 
+        error: console.error, 
+        debug: console.debug 
+    };
     
     /**
      * 组件实例的SyncVar变化监听器
@@ -116,7 +124,7 @@ export class SyncVarManager {
      * @param component - 网络组件实例
      * @returns 是否成功初始化
      */
-    public initializeComponent(component: INetworkSyncable): boolean {
+    public initializeComponent<T extends INetworkSyncable>(component: T): boolean {
         const componentId = this.getComponentId(component);
         const metadata = getSyncVarMetadata(component.constructor as NetworkComponentType);
         
@@ -152,7 +160,7 @@ export class SyncVarManager {
      * 
      * @param component - 网络组件实例
      */
-    public cleanupComponent(component: INetworkSyncable): void {
+    public cleanupComponent<T extends INetworkSyncable>(component: T): void {
         const componentId = this.getComponentId(component);
         this._componentChanges.delete(componentId);
         this._lastSyncTimes.delete(componentId);
@@ -166,8 +174,8 @@ export class SyncVarManager {
      * @param oldValue - 旧值
      * @param newValue - 新值
      */
-    public recordChange(
-        component: INetworkSyncable, 
+    public recordChange<T extends INetworkSyncable>(
+        component: T, 
         propertyKey: string, 
         oldValue: SyncVarValue, 
         newValue: SyncVarValue
@@ -243,7 +251,7 @@ export class SyncVarManager {
      * @param component - 组件实例
      * @returns 待同步的变化数组
      */
-    public getPendingChanges(component: any): SyncVarChange[] {
+    public getPendingChanges<T extends INetworkSyncable>(component: T): SyncVarChange[] {
         const componentId = this.getComponentId(component);
         const changes = this._componentChanges.get(componentId) || [];
         return changes.filter(change => change.needsSync);
@@ -255,7 +263,7 @@ export class SyncVarManager {
      * @param component - 组件实例
      * @param propertyKeys - 要清除的属性名数组，如果不提供则清除所有
      */
-    public clearChanges(component: any, propertyKeys?: string[]): void {
+    public clearChanges<T extends INetworkSyncable>(component: T, propertyKeys?: string[]): void {
         const componentId = this.getComponentId(component);
         const changes = this._componentChanges.get(componentId);
         
@@ -279,7 +287,7 @@ export class SyncVarManager {
      * @param component - 组件实例
      * @returns 同步数据
      */
-    public createSyncData(component: any): SyncVarSyncData | null {
+    public createSyncData<T extends INetworkSyncable>(component: T): SyncVarSyncData | null {
         const pendingChanges = this.getPendingChanges(component);
         
         if (pendingChanges.length === 0) {
@@ -317,7 +325,7 @@ export class SyncVarManager {
      * @param component - 组件实例
      * @param syncData - 同步数据
      */
-    public applySyncData(component: any, syncData: SyncVarSyncData): void {
+    public applySyncData<T extends INetworkSyncable>(component: T, syncData: SyncVarSyncData): void {
         const metadata = getSyncVarMetadata(component.constructor);
         const metadataMap = new Map(metadata.map(m => [m.fieldNumber, m]));
         
@@ -346,15 +354,30 @@ export class SyncVarManager {
     }
     
     /**
+     * ID生成器实例
+     */
+    private static _idGenerator: ComponentIdGenerator | null = null;
+    
+    /**
+     * 获取ID生成器实例
+     */
+    private static getIdGenerator(): ComponentIdGenerator {
+        if (!SyncVarManager._idGenerator) {
+            SyncVarManager._idGenerator = new ComponentIdGenerator();
+        }
+        return SyncVarManager._idGenerator;
+    }
+    
+    /**
      * 生成组件的唯一ID
      * 
      * @param component - 组件实例
      * @returns 唯一ID
      */
-    private getComponentId(component: any): string {
-        // 简单实现，将来可以集成网络ID系统
+    private getComponentId<T extends INetworkSyncable>(component: T): string {
         if (!component._syncVarId) {
-            component._syncVarId = `${component.constructor.name}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const idGenerator = SyncVarManager.getIdGenerator();
+            component._syncVarId = idGenerator.generateId(component);
         }
         return component._syncVarId;
     }
@@ -366,7 +389,7 @@ export class SyncVarManager {
      * @param b - 值B
      * @returns 是否相等
      */
-    private isValueEqual(a: any, b: any): boolean {
+    private isValueEqual(a: unknown, b: unknown): boolean {
         // 基础类型比较
         if (typeof a !== typeof b) {
             return false;
@@ -378,39 +401,33 @@ export class SyncVarManager {
         
         // 对象比较（浅比较）
         if (typeof a === 'object' && a !== null && b !== null) {
-            const keysA = Object.keys(a);
-            const keysB = Object.keys(b);
+            const keysA = Object.keys(a as Record<string, unknown>);
+            const keysB = Object.keys(b as Record<string, unknown>);
             
             if (keysA.length !== keysB.length) {
                 return false;
             }
             
-            return keysA.every(key => a[key] === b[key]);
+            return keysA.every(key => (a as Record<string, unknown>)[key] === (b as Record<string, unknown>)[key]);
         }
         
         return false;
     }
     
     /**
+     * 权限管理器实例
+     */
+    private _authorityManager: SyncVarAuthorityManager = SyncVarAuthorityManager.Instance;
+    
+    /**
      * 检查组件是否有修改权限
      * 
      * @param component - 组件实例
+     * @param clientId - 客户端ID（可选）
      * @returns 是否有权限
      */
-    private hasAuthority(component: any): boolean {
-        // 简单实现：服务端始终有权限
-        if (NetworkEnvironment.isServer) {
-            return true;
-        }
-        
-        // 客户端检查组件的权限设置
-        // 如果组件有hasAuthority方法，使用它；否则默认客户端没有权限
-        if (typeof component.hasAuthority === 'function') {
-            return component.hasAuthority();
-        }
-        
-        // 默认情况下，客户端对权威字段没有权限
-        return false;
+    private hasAuthority<T extends INetworkSyncable>(component: T, clientId?: string): boolean {
+        return this._authorityManager.hasAuthority(component as unknown as INetworkComponent, clientId);
     }
     
     /**
@@ -420,7 +437,7 @@ export class SyncVarManager {
      * @param metadata - SyncVar元数据
      * @returns 是否应该同步
      */
-    private shouldSync(component: any, metadata: SyncVarMetadata): boolean {
+    private shouldSync<T extends INetworkSyncable>(component: T, metadata: SyncVarMetadata): boolean {
         // 权限检查：权威字段只有在有权限时才同步
         if (metadata.options.authorityOnly && !this.hasAuthority(component)) {
             SyncVarManager.logger.debug(`字段 ${metadata.propertyKey} 是权威字段，但当前没有权限，跳过同步`);
@@ -449,7 +466,7 @@ export class SyncVarManager {
      * @param oldValue - 旧值
      * @param newValue - 新值
      */
-    private triggerHook(component: any, metadata: SyncVarMetadata, oldValue: any, newValue: any): void {
+    private triggerHook<T extends INetworkSyncable>(component: T, metadata: SyncVarMetadata, oldValue: unknown, newValue: unknown): void {
         if (!metadata.options.hook) {
             return;
         }
@@ -472,7 +489,7 @@ export class SyncVarManager {
      * @param value - 值
      * @returns 序列化数据
      */
-    private serializeValue(component: any, propertyKey: string, value: any): Uint8Array {
+    private serializeValue<T extends INetworkSyncable>(component: T, propertyKey: string, value: unknown): Uint8Array {
         const metadata = getSyncVarMetadataForProperty(component, propertyKey);
         
         if (metadata?.options.serializer) {
@@ -490,7 +507,7 @@ export class SyncVarManager {
      * @param data - 序列化数据
      * @returns 反序列化的值
      */
-    private deserializeValue(component: any, propertyKey: string, data: Uint8Array): any {
+    private deserializeValue<T extends INetworkSyncable>(component: T, propertyKey: string, data: Uint8Array): unknown {
         const metadata = getSyncVarMetadataForProperty(component, propertyKey);
         
         if (metadata?.options.deserializer) {
@@ -503,7 +520,7 @@ export class SyncVarManager {
     /**
      * 将值序列化为二进制数据
      */
-    private serializeValueToBinary(value: any): Uint8Array {
+    private serializeValueToBinary(value: unknown): Uint8Array {
         if (value === null || value === undefined) {
             return new Uint8Array([0]);
         }
@@ -543,7 +560,7 @@ export class SyncVarManager {
     /**
      * 从二进制数据反序列化值
      */
-    private deserializeValueFromBinary(data: Uint8Array): any {
+    private deserializeValueFromBinary(data: Uint8Array): unknown {
         if (data.length === 0) return null;
         
         const view = new DataView(data.buffer, data.byteOffset);
@@ -574,13 +591,13 @@ export class SyncVarManager {
      * @param propertyKey - 属性名
      * @param value - 值
      */
-    private setValueDirectly(component: any, propertyKey: string, value: any): void {
+    private setValueDirectly<T extends INetworkSyncable>(component: T, propertyKey: string, value: unknown): void {
         // 临时禁用代理监听
         const originalValue = component._syncVarDisabled;
         component._syncVarDisabled = true;
         
         try {
-            component[propertyKey] = value;
+            (component as Record<string, unknown>)[propertyKey] = value;
         } finally {
             component._syncVarDisabled = originalValue;
         }
@@ -596,8 +613,8 @@ export class SyncVarManager {
      * @param isFullSync - 是否是完整同步
      * @returns SyncVar更新消息，如果没有待同步的变化则返回null
      */
-    public createSyncVarUpdateMessage(
-        component: any, 
+    public createSyncVarUpdateMessage<T extends INetworkSyncable>(
+        component: T, 
         networkId: string = '', 
         senderId: string = '',
         syncSequence: number = 0,
@@ -653,7 +670,7 @@ export class SyncVarManager {
      * @param component - 组件实例
      * @param message - SyncVar更新消息
      */
-    public applySyncVarUpdateMessage(component: any, message: SyncVarUpdateMessage): void {
+    public applySyncVarUpdateMessage<T extends INetworkSyncable>(component: T, message: SyncVarUpdateMessage): void {
         if (message.componentType !== component.constructor.name) {
             SyncVarManager.logger.warn(`组件类型不匹配: 期望 ${component.constructor.name}, 收到 ${message.componentType}`);
             return;
@@ -705,8 +722,8 @@ export class SyncVarManager {
      * @param syncSequence - 同步序号
      * @returns SyncVar更新消息数组
      */
-    public createBatchSyncVarUpdateMessages(
-        components: any[], 
+    public createBatchSyncVarUpdateMessages<T extends INetworkSyncable>(
+        components: T[], 
         networkIds: string[] = [],
         senderId: string = '',
         syncSequence: number = 0
@@ -738,7 +755,7 @@ export class SyncVarManager {
      * @param components - 组件数组
      * @returns 有待同步变化的组件数组
      */
-    public filterComponentsWithChanges(components: any[]): any[] {
+    public filterComponentsWithChanges<T extends INetworkSyncable>(components: T[]): T[] {
         return components.filter(component => {
             const pendingChanges = this.getPendingChanges(component);
             return pendingChanges.length > 0;
@@ -751,7 +768,7 @@ export class SyncVarManager {
      * @param component - 组件实例
      * @returns 变化统计信息
      */
-    public getComponentChangeStats(component: any): {
+    public getComponentChangeStats<T extends INetworkSyncable>(component: T): {
         totalChanges: number;
         pendingChanges: number;
         lastChangeTime: number;

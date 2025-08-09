@@ -1,12 +1,12 @@
 import { NetworkMessage } from './NetworkMessage';
 import { NetworkConnection } from '../Core/NetworkConnection';
-import { INetworkMessage, MessageData } from '../types/NetworkTypes';
+import { IBasicNetworkMessage, MessageData } from '../types/NetworkTypes';
 import { createLogger } from '@esengine/ecs-framework';
 
 /**
  * 消息处理器接口
  */
-export interface IMessageHandler<T extends INetworkMessage = INetworkMessage> {
+export interface IMessageHandler<T extends IBasicNetworkMessage = IBasicNetworkMessage> {
     /**
      * 处理消息
      * 
@@ -20,8 +20,8 @@ export interface IMessageHandler<T extends INetworkMessage = INetworkMessage> {
  * 消息处理器注册信息
  */
 interface MessageHandlerInfo<T extends MessageData = MessageData> {
-    handler: IMessageHandler<INetworkMessage<T>>;
-    messageClass: new (...args: any[]) => INetworkMessage<T>;
+    handler: IMessageHandler<IBasicNetworkMessage<T>>;
+    messageClass: new (...args: any[]) => IBasicNetworkMessage<T>;
     priority: number;
 }
 
@@ -35,7 +35,7 @@ export class MessageHandler {
     private static readonly logger = createLogger('MessageHandler');
     private static _instance: MessageHandler | null = null;
     private _handlers: Map<number, MessageHandlerInfo[]> = new Map();
-    private _messageClasses: Map<number, new (...args: any[]) => INetworkMessage> = new Map();
+    private _messageClasses: Map<number, new (...args: any[]) => IBasicNetworkMessage> = new Map();
     
     /**
      * 获取消息处理器单例
@@ -57,7 +57,7 @@ export class MessageHandler {
      * @param handler - 消息处理器
      * @param priority - 处理优先级（数字越小优先级越高）
      */
-    public registerHandler<TData extends MessageData, T extends INetworkMessage<TData>>(
+    public registerHandler<TData extends MessageData, T extends IBasicNetworkMessage<TData>>(
         messageType: number,
         messageClass: new (...args: any[]) => T,
         handler: IMessageHandler<T>,
@@ -81,8 +81,8 @@ export class MessageHandler {
         } else {
                 // 添加新处理器
             handlers.push({
-                handler: handler as IMessageHandler<INetworkMessage>,
-                messageClass: messageClass as new (...args: any[]) => INetworkMessage,
+                handler: handler as IMessageHandler<IBasicNetworkMessage>,
+                messageClass: messageClass as new (...args: any[]) => IBasicNetworkMessage,
                 priority
             });
         }
@@ -161,7 +161,7 @@ export class MessageHandler {
      * @param connection - 发送消息的连接（服务端有效）
      * @returns 是否成功处理
      */
-    public async handleMessage(message: INetworkMessage, connection?: NetworkConnection): Promise<boolean> {
+    public async handleMessage(message: IBasicNetworkMessage, connection?: NetworkConnection): Promise<boolean> {
         const messageType = message.messageType;
         const handlers = this._handlers.get(messageType);
         
@@ -279,7 +279,7 @@ export class MessageHandler {
  * @param messageClass - 消息类构造函数
  * @param priority - 处理优先级
  */
-export function MessageHandlerDecorator<TData extends MessageData, T extends INetworkMessage<TData>>(
+export function MessageHandlerDecorator<TData extends MessageData, T extends IBasicNetworkMessage<TData>>(
     messageType: number,
     messageClass: new (...args: any[]) => T,
     priority: number = 0

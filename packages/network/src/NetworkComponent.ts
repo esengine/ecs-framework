@@ -2,10 +2,11 @@ import { Component } from '@esengine/ecs-framework';
 import { INetworkSyncable } from './INetworkSyncable';
 import { NetworkRole } from './NetworkRole';
 import { NetworkEnvironment } from './Core/NetworkEnvironment';
-import { createSyncVarProxy, isSyncVarProxied, destroySyncVarProxy } from './SyncVar/SyncVarProxy';
 import { SyncVarManager } from './SyncVar/SyncVarManager';
 import { getSyncVarMetadata } from './SyncVar/SyncVarDecorator';
-import { createLogger } from '@esengine/ecs-framework';
+import { ComponentRegistry } from '@esengine/ecs-framework';
+import { isTsrpcSerializable } from './Serialization/TsrpcDecorators';
+import { TsrpcSerializer } from './Serialization/TsrpcSerializer';
 
 /**
  * 网络组件基类
@@ -16,14 +17,14 @@ import { createLogger } from '@esengine/ecs-framework';
  * @example
  * ```typescript
  * import { NetworkComponent } from '@esengine/ecs-framework-network';
- * import { ProtoSerializable, ProtoFloat } from '@esengine/ecs-framework-network';
+ * import { TsrpcSerializable, SyncField } from '@esengine/ecs-framework-network';
  * 
- * @ProtoSerializable('Position')
+ * @TsrpcSerializable()
  * class PositionComponent extends NetworkComponent {
- *     @ProtoFloat(1)
+ *     @SyncField()
  *     public x: number = 0;
  *     
- *     @ProtoFloat(2)
+ *     @SyncField()
  *     public y: number = 0;
  *     
  *     constructor(x: number = 0, y: number = 0) {
@@ -57,6 +58,13 @@ import { createLogger } from '@esengine/ecs-framework';
  * ```
  */
 export abstract class NetworkComponent extends Component implements INetworkSyncable {
+    /** SyncVar内部ID */
+    _syncVarId?: string;
+    /** SyncVar监听禁用标志 */
+    _syncVarDisabled?: boolean;
+    
+    /** 允许通过字符串键访问属性 */
+    [propertyKey: string]: unknown;
     /**
      * 脏字段标记集合
      * 
@@ -87,17 +95,16 @@ export abstract class NetworkComponent extends Component implements INetworkSync
      */
     private ensureComponentRegistered(): void {
         try {
-            const { ComponentRegistry } = require('@esengine/ecs-framework');
             
             // 检查当前组件类型是否已注册
-            if (!ComponentRegistry.isRegistered(this.constructor)) {
+            if (!ComponentRegistry.isRegistered(this.constructor as any)) {
                 // 如果未注册，自动注册
-                ComponentRegistry.register(this.constructor);
-                const logger = createLogger('NetworkComponent');
+                ComponentRegistry.register(this.constructor as any);
+                const logger = { info: console.log, warn: console.warn, error: console.error, debug: console.debug };
                 logger.debug(`自动注册组件类型: ${this.constructor.name}`);
             }
         } catch (error) {
-            const logger = createLogger('NetworkComponent');
+            const logger = { info: console.log, warn: console.warn, error: console.error, debug: console.debug };
             logger.warn(`无法注册组件类型 ${this.constructor.name}:`, error);
         }
     }
@@ -110,7 +117,7 @@ export abstract class NetworkComponent extends Component implements INetworkSync
     private initializeSyncVar(): void {
         const metadata = getSyncVarMetadata(this.constructor);
         if (metadata.length > 0) {
-            const logger = createLogger('NetworkComponent');
+            const logger = { info: console.log, warn: console.warn, error: console.error, debug: console.debug };
             logger.debug(`${this.constructor.name} 发现 ${metadata.length} 个SyncVar字段，将启用代理监听`);
         }
     }
@@ -150,19 +157,20 @@ export abstract class NetworkComponent extends Component implements INetworkSync
      * @returns 序列化的网络状态数据
      */
     public getNetworkState(): Uint8Array {
-        const { isProtoSerializable } = require('./Serialization/ProtobufDecorators');
-        const { ProtobufSerializer } = require('./Serialization/ProtobufSerializer');
-        
-        if (!isProtoSerializable(this)) {
-            throw new Error(`组件 ${this.constructor.name} 不支持网络同步，请添加@ProtoSerializable装饰器`);
+        if (!isTsrpcSerializable(this)) {
+            throw new Error(`组件 ${this.constructor.name} 不支持网络同步，请添加@TsrpcSerializable装饰器`);
         }
         
         try {
-            const serializer = ProtobufSerializer.getInstance();
+            const serializer = TsrpcSerializer.getInstance();
             const serializedData = serializer.serialize(this);
+            if (!serializedData) {
+                throw new Error(`序列化失败: 组件=${this.constructor.name}`);
+            }
             return serializedData.data;
         } catch (error) {
-            throw new Error(`获取网络状态失败: ${error}`);
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            throw new Error(`获取网络状态失败: 组件=${this.constructor.name}, 错误=${errorMsg}, 可能原因: 序列化字段格式错误或网络连接问题`);
         }
     }
     
@@ -173,27 +181,44 @@ export abstract class NetworkComponent extends Component implements INetworkSync
      * @param data - 网络状态数据
      */
     public applyNetworkState(data: Uint8Array): void {
-        const { isProtoSerializable } = require('./Serialization/ProtobufDecorators');
-        const { ProtobufSerializer } = require('./Serialization/ProtobufSerializer');
-        
-        if (!isProtoSerializable(this)) {
-            throw new Error(`组件 ${this.constructor.name} 不支持网络同步，请添加@ProtoSerializable装饰器`);
+        if (!isTsrpcSerializable(this)) {
+            throw new Error(`组件 ${this.constructor.name} 不支持网络同步，请添加@TsrpcSerializable装饰器`);
         }
         
         try {
-            const serializer = ProtobufSerializer.getInstance();
+            const serializer = TsrpcSerializer.getInstance();
             const serializedData = {
-                type: 'protobuf' as const,
+                type: 'tsrpc' as const,
                 componentType: this.constructor.name,
                 data: data,
                 size: data.length
             };
-            serializer.deserialize(this, serializedData);
+            
+            // 反序列化并应用到当前组件实例
+            const deserializedComponent = serializer.deserialize(serializedData, this.constructor as any);
+            if (!deserializedComponent) {
+                throw new Error(`反序列化失败: 组件=${this.constructor.name}`);
+            }
+            
+            // 将反序列化的数据应用到当前实例
+            Object.assign(this, deserializedComponent);
             
             // 应用后清理脏字段标记
             this.markClean();
         } catch (error) {
-            throw new Error(`应用网络状态失败: ${error}`);
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            // 记录错误但不完全阻止组件运行
+            console.warn(`应用网络状态失败: 组件=${this.constructor.name}, 错误=${errorMsg}, 尝试恢复到安全状态`);
+            
+            // 尝试恢复到安全状态
+            try {
+                this.markClean(); // 至少清理脏字段标记
+            } catch (cleanupError) {
+                // 如果连清理都失败，则抛出原始错误
+                throw new Error(`应用网络状态失败: 组件=${this.constructor.name}, 原始错误=${errorMsg}, 清理失败=${cleanupError}, 组件可能处于不一致状态`);
+            }
+            
+            throw new Error(`应用网络状态失败: 组件=${this.constructor.name}, 错误=${errorMsg}, 已恢复到安全状态`);
         }
     }
     

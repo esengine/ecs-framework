@@ -1,8 +1,8 @@
 import { Entity, Component, ComponentType, createLogger } from '@esengine/ecs-framework';
 import { ISnapshotable, SceneSnapshot, EntitySnapshot, ComponentSnapshot, SnapshotConfig } from './ISnapshotable';
-import { ProtobufSerializer } from '../Serialization/ProtobufSerializer';
+import { TsrpcSerializer } from '../Serialization/TsrpcSerializer';
 import { SerializedData } from '../Serialization/SerializationTypes';
-import { isProtoSerializable } from '../Serialization/ProtobufDecorators';
+import { isTsrpcSerializable } from '../Serialization/TsrpcDecorators';
 import { 
     NetworkComponentType, 
     IComponentFactory,
@@ -125,8 +125,8 @@ export class SnapshotManager {
     /** 最大缓存数量 */
     private maxCacheSize: number = 10;
     
-    /** Protobuf序列化器 */
-    private protobufSerializer: ProtobufSerializer;
+    /** TSRPC序列化器 */
+    private tsrpcSerializer: TsrpcSerializer;
     
     /** 组件类型注册表 */
     private componentRegistry: ComponentTypeRegistry;
@@ -135,7 +135,7 @@ export class SnapshotManager {
      * 构造函数
      */
     constructor() {
-        this.protobufSerializer = ProtobufSerializer.getInstance();
+        this.tsrpcSerializer = TsrpcSerializer.getInstance();
         this.componentRegistry = ComponentTypeRegistry.Instance;
     }
 
@@ -268,11 +268,11 @@ export class SnapshotManager {
             // 恢复组件数据
             const serializedData = componentSnapshot.data as SerializedData;
             
-            if (!isProtoSerializable(component)) {
-                throw new Error(`[SnapshotManager] 组件 ${component.constructor.name} 不支持protobuf反序列化`);
+            if (!isTsrpcSerializable(component)) {
+                throw new Error(`[SnapshotManager] 组件 ${component.constructor.name} 不支持TSRPC反序列化`);
             }
             
-            this.protobufSerializer.deserialize(component, serializedData);
+            this.tsrpcSerializer.deserialize(serializedData);
         } catch (error) {
             SnapshotManager.logger.error(`创建组件失败: ${componentSnapshot.type}`, error);
         }
@@ -392,33 +392,22 @@ export class SnapshotManager {
      */
     public getCacheStats(): {
         snapshotCacheSize: number;
-        protobufStats?: {
+        tsrpcStats?: {
             registeredComponents: number;
-            protobufAvailable: boolean;
+            tsrpcAvailable: boolean;
         };
     } {
         const stats: any = {
             snapshotCacheSize: this.snapshotCache.size
         };
         
-        if (this.protobufSerializer) {
-            stats.protobufStats = this.protobufSerializer.getStats();
+        if (this.tsrpcSerializer) {
+            stats.tsrpcStats = this.tsrpcSerializer.getStats();
         }
         
         return stats;
     }
     
-    /**
-     * 手动初始化protobuf支持（可选，通常会自动初始化）
-     * 
-     * @param protobufJs - protobuf.js库实例
-     */
-    public initializeProtobuf(protobufJs: any): void {
-        if (this.protobufSerializer) {
-            this.protobufSerializer.initialize(protobufJs);
-            SnapshotManager.logger.info('Protobuf支持已手动启用');
-        }
-    }
     
     /**
      * 注册组件类型
@@ -487,7 +476,7 @@ export class SnapshotManager {
     /**
      * 创建组件快照
      * 
-     * 优先使用protobuf序列化，fallback到JSON序列化
+     * 优先使用TSRPC序列化，fallback到JSON序列化
      */
     private createComponentSnapshot(component: Component): ComponentSnapshot | null {
         if (!this.isComponentSnapshotable(component)) {
@@ -496,12 +485,17 @@ export class SnapshotManager {
         
         let serializedData: SerializedData;
         
-        // 优先使用protobuf序列化
-        if (isProtoSerializable(component)) {
+        // 优先使用TSRPC序列化
+        if (isTsrpcSerializable(component)) {
             try {
-                serializedData = this.protobufSerializer.serialize(component);
+                const tsrpcResult = this.tsrpcSerializer.serialize(component);
+                if (tsrpcResult) {
+                    serializedData = tsrpcResult;
+                } else {
+                    throw new Error('TSRPC序列化返回null');
+                }
             } catch (error) {
-                SnapshotManager.logger.warn(`[SnapshotManager] Protobuf序列化失败，fallback到JSON: ${error}`);
+                SnapshotManager.logger.warn(`[SnapshotManager] TSRPC序列化失败，fallback到JSON: ${error}`);
                 serializedData = this.createJsonSerializedData(component);
             }
         } else {
@@ -626,7 +620,7 @@ export class SnapshotManager {
     /**
      * 从快照恢复组件
      * 
- * 使用protobuf反序列化
+ * 使用TSRPC反序列化
      */
     private restoreComponentFromSnapshot(entity: Entity, componentSnapshot: ComponentSnapshot): void {
         // 查找现有组件
@@ -650,9 +644,9 @@ export class SnapshotManager {
         // 恢复组件数据
         const serializedData = componentSnapshot.data as SerializedData;
         
-        if (serializedData.type === 'protobuf' && isProtoSerializable(component)) {
-            // 使用protobuf反序列化
-            this.protobufSerializer.deserialize(component, serializedData);
+        if (serializedData.type === 'tsrpc' && isTsrpcSerializable(component)) {
+            // 使用TSRPC反序列化
+            this.tsrpcSerializer.deserialize(serializedData);
         } else if (serializedData.type === 'json') {
             // 使用JSON反序列化
             this.deserializeFromJson(component, serializedData);

@@ -4,6 +4,8 @@
  * 监控网络连接的性能指标，包括延迟、吞吐量、包丢失率等
  */
 import { createLogger } from '@esengine/ecs-framework';
+import { HeartbeatManager, HeartbeatStats } from './HeartbeatManager';
+import { NetworkConnection } from './NetworkConnection';
 
 export interface NetworkMetrics {
     /** 往返时延 (ms) */
@@ -103,6 +105,9 @@ export class NetworkPerformanceMonitor {
     /** 事件监听器 */
     private _eventListeners: Map<string, Function[]> = new Map();
     
+    /** 心跳管理器映射 */
+    private _heartbeatManagers: Map<string, HeartbeatManager> = new Map();
+    
     public static get Instance(): NetworkPerformanceMonitor {
         if (!NetworkPerformanceMonitor._instance) {
             NetworkPerformanceMonitor._instance = new NetworkPerformanceMonitor();
@@ -200,8 +205,8 @@ export class NetworkPerformanceMonitor {
         // 计算带宽
         const { uploadBandwidth, downloadBandwidth } = this.calculateBandwidth();
         
-        // 模拟包丢失率（实际应用中需要通过心跳包检测）
-        const packetLoss = this.estimatePacketLoss();
+        // 获取真实的包丢失率（优先使用心跳管理器数据）
+        const packetLoss = this.getAccuratePacketLoss();
         
         // 计算连接质量评分
         const connectionQuality = this.calculateConnectionQuality(avgRtt, jitter, packetLoss);
@@ -257,19 +262,43 @@ export class NetworkPerformanceMonitor {
     
     /**
      * 估算包丢失率
+     * 使用多种指标进行更精确的丢包检测
      */
     private estimatePacketLoss(): number {
-        // 实际实现中应该通过心跳包或消息确认机制来检测包丢失
-        // 这里提供一个简单的估算
-        const recentRtt = this._rttHistory.slice(-5);
-        if (recentRtt.length === 0) return 0;
+        const recentRtt = this._rttHistory.slice(-10); // 增加样本数量
+        if (recentRtt.length < 3) return 0; // 需要足够的样本
         
+        // 1. 基于RTT标准差的检测
         const avgRtt = recentRtt.reduce((a, b) => a + b, 0) / recentRtt.length;
-        const maxRtt = Math.max(...recentRtt);
+        const variance = recentRtt.reduce((sum, rtt) => sum + Math.pow(rtt - avgRtt, 2), 0) / recentRtt.length;
+        const stdDev = Math.sqrt(variance);
+        const coefficientOfVariation = stdDev / avgRtt;
         
-        // 基于RTT变化估算丢包率
-        const rttVariation = maxRtt / avgRtt - 1;
-        return Math.min(rttVariation * 0.1, 0.1); // 最大10%丢包率
+        // 2. 异常RTT值检测（可能是重传导致）
+        const threshold = avgRtt + 2 * stdDev;
+        const abnormalRttCount = recentRtt.filter(rtt => rtt > threshold).length;
+        const abnormalRttRatio = abnormalRttCount / recentRtt.length;
+        
+        // 3. 基于连续超时的检测
+        let consecutiveHighRtt = 0;
+        let maxConsecutive = 0;
+        for (const rtt of recentRtt) {
+            if (rtt > avgRtt * 1.5) {
+                consecutiveHighRtt++;
+                maxConsecutive = Math.max(maxConsecutive, consecutiveHighRtt);
+            } else {
+                consecutiveHighRtt = 0;
+            }
+        }
+        const consecutiveImpact = Math.min(maxConsecutive / recentRtt.length * 2, 1);
+        
+        // 综合评估丢包率
+        const basePacketLoss = Math.min(coefficientOfVariation * 0.3, 0.15);
+        const abnormalAdjustment = abnormalRttRatio * 0.1;
+        const consecutiveAdjustment = consecutiveImpact * 0.05;
+        
+        const totalPacketLoss = basePacketLoss + abnormalAdjustment + consecutiveAdjustment;
+        return Math.min(totalPacketLoss, 0.2); // 最大20%丢包率
     }
     
     /**
@@ -296,22 +325,87 @@ export class NetworkPerformanceMonitor {
     
     /**
      * 获取SyncVar统计信息
+     * 改进异常处理，提供更详细的错误信息和降级策略
+     * 使用懒加载避免循环依赖问题
      */
     private getSyncVarStatistics(): PerformanceSnapshot['syncVarStats'] {
         try {
-            const { SyncVarSyncScheduler } = require('../SyncVar/SyncVarSyncScheduler');
-            const scheduler = SyncVarSyncScheduler.Instance;
+            // 使用懒加载获取SyncVarSyncScheduler，避免循环依赖
+            const scheduler = this.getSyncVarScheduler();
+            
+            if (!scheduler) {
+                NetworkPerformanceMonitor.logger.debug('SyncVarSyncScheduler实例不存在，可能尚未初始化');
+                return {
+                    syncedComponents: 0,
+                    syncedFields: 0,
+                    averageSyncRate: 0,
+                    syncDataSize: 0
+                };
+            }
+            
+            // 检查getStats方法是否存在
+            if (typeof scheduler.getStats !== 'function') {
+                NetworkPerformanceMonitor.logger.warn('SyncVarSyncScheduler缺少getStats方法');
+                return {
+                    syncedComponents: 0,
+                    syncedFields: 0,
+                    averageSyncRate: 0,
+                    syncDataSize: 0
+                };
+            }
+            
             const stats = scheduler.getStats();
             
-            return {
-                syncedComponents: stats.totalComponents || 0,
-                syncedFields: stats.totalFields || 0,
-                averageSyncRate: stats.averageFrequency || 0,
-                syncDataSize: stats.totalDataSize || 0
+            // 验证统计数据的有效性
+            const validatedStats = {
+                syncedComponents: (typeof stats.totalComponents === 'number') ? Math.max(0, stats.totalComponents) : 0,
+                syncedFields: (typeof stats.totalFields === 'number') ? Math.max(0, stats.totalFields) : 0,
+                averageSyncRate: (typeof stats.averageFrequency === 'number') ? Math.max(0, stats.averageFrequency) : 0,
+                syncDataSize: (typeof stats.totalDataSize === 'number') ? Math.max(0, stats.totalDataSize) : 0
             };
+            
+            return validatedStats;
+            
         } catch (error) {
-            NetworkPerformanceMonitor.logger.warn('获取SyncVar统计失败:', error);
-            return undefined;
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            NetworkPerformanceMonitor.logger.warn(`获取SyncVar统计失败: ${errorMsg}, 返回默认统计数据`);
+            
+            // 返回安全的默认值而不是undefined
+            return {
+                syncedComponents: 0,
+                syncedFields: 0,
+                averageSyncRate: 0,
+                syncDataSize: 0
+            };
+        }
+    }
+
+    /**
+     * 懒加载获取SyncVarSyncScheduler实例，避免循环依赖
+     */
+    private getSyncVarScheduler(): any | null {
+        try {
+            // 检查全局对象中是否已有实例
+            const globalObj = (globalThis as any);
+            if (globalObj.SyncVarSyncScheduler && globalObj.SyncVarSyncScheduler.Instance) {
+                return globalObj.SyncVarSyncScheduler.Instance;
+            }
+            
+            // 尝试动态导入（仅在必要时）
+            try {
+                const SyncVarModule = require('../SyncVar/SyncVarSyncScheduler');
+                if (SyncVarModule.SyncVarSyncScheduler && SyncVarModule.SyncVarSyncScheduler.Instance) {
+                    return SyncVarModule.SyncVarSyncScheduler.Instance;
+                }
+            } catch (requireError) {
+                // 如果动态require失败，返回null而不是抛出错误
+                NetworkPerformanceMonitor.logger.debug('无法动态加载SyncVarSyncScheduler模块');
+            }
+            
+            return null;
+        } catch (error) {
+            NetworkPerformanceMonitor.logger.debug('获取SyncVarScheduler实例失败');
+            return null;
         }
     }
     
@@ -552,5 +646,213 @@ export class NetworkPerformanceMonitor {
             rttHistoryLength: this._rttHistory.length,
             bandwidthWindowSize: this._bandwidthWindow.length
         };
+    }
+
+    /**
+     * 网络质量自适应机制
+     * 根据网络状况动态调整同步策略
+     */
+    public adaptNetworkStrategy(): {
+        suggestedSyncInterval: number;
+        suggestedBatchSize: number;
+        suggestedCompressionLevel: number;
+        prioritizeUpdate: boolean;
+    } {
+        const metrics = this.getCurrentMetrics();
+        
+        // 基础设置
+        let syncInterval = 50; // 默认50ms
+        let batchSize = 10;   // 默认批大小
+        let compressionLevel = 1; // 默认压缩级别
+        let prioritizeUpdate = false;
+        
+        // 根据连接质量调整
+        if (metrics.connectionQuality >= 80) {
+            // 高质量网络: 高频更新，小批次
+            syncInterval = 33; // 30fps
+            batchSize = 5;
+            compressionLevel = 0; // 不压缩
+        } else if (metrics.connectionQuality >= 60) {
+            // 中等质量网络: 标准设置
+            syncInterval = 50; // 20fps
+            batchSize = 10;
+            compressionLevel = 1;
+        } else if (metrics.connectionQuality >= 40) {
+            // 低质量网络: 降低频率，增加批处理
+            syncInterval = 100; // 10fps
+            batchSize = 20;
+            compressionLevel = 2;
+            prioritizeUpdate = true;
+        } else {
+            // 极低质量网络: 最保守设置
+            syncInterval = 200; // 5fps
+            batchSize = 50;
+            compressionLevel = 3;
+            prioritizeUpdate = true;
+        }
+        
+        // 根据RTT进一步调整
+        if (metrics.rtt > 300) {
+            syncInterval = Math.max(syncInterval * 1.5, 200);
+            batchSize = Math.min(batchSize * 2, 100);
+        }
+        
+        // 根据丢包率调整
+        if (metrics.packetLoss > 0.1) {
+            syncInterval = Math.max(syncInterval * 1.2, 150);
+            compressionLevel = Math.min(compressionLevel + 1, 3);
+            prioritizeUpdate = true;
+        }
+        
+        return {
+            suggestedSyncInterval: Math.round(syncInterval),
+            suggestedBatchSize: Math.round(batchSize),
+            suggestedCompressionLevel: compressionLevel,
+            prioritizeUpdate
+        };
+    }
+
+    /**
+     * 检测网络拥塞状态
+     */
+    public detectNetworkCongestion(): {
+        isCongested: boolean;
+        congestionLevel: 'none' | 'light' | 'moderate' | 'severe';
+        suggestedAction: string;
+    } {
+        const recentSnapshots = this._snapshots.slice(-5);
+        if (recentSnapshots.length < 3) {
+            return {
+                isCongested: false,
+                congestionLevel: 'none',
+                suggestedAction: '数据不足，继续监控'
+            };
+        }
+        
+        // 计算趋势
+        const rttTrend = this.calculateTrend(recentSnapshots.map(s => s.metrics.rtt));
+        const packetLossTrend = this.calculateTrend(recentSnapshots.map(s => s.metrics.packetLoss));
+        const qualityTrend = this.calculateTrend(recentSnapshots.map(s => s.metrics.connectionQuality));
+        
+        // 检测拥塞指标
+        const avgRtt = recentSnapshots.reduce((sum, s) => sum + s.metrics.rtt, 0) / recentSnapshots.length;
+        const avgPacketLoss = recentSnapshots.reduce((sum, s) => sum + s.metrics.packetLoss, 0) / recentSnapshots.length;
+        const avgQuality = recentSnapshots.reduce((sum, s) => sum + s.metrics.connectionQuality, 0) / recentSnapshots.length;
+        
+        // 拥塞判定
+        let congestionLevel: 'none' | 'light' | 'moderate' | 'severe' = 'none';
+        let suggestedAction = '网络状况良好';
+        
+        if (avgRtt > 500 || avgPacketLoss > 0.15 || avgQuality < 30) {
+            congestionLevel = 'severe';
+            suggestedAction = '严重拥塞，建议降低同步频率至最低，启用高压缩';
+        } else if (avgRtt > 300 || avgPacketLoss > 0.08 || avgQuality < 50) {
+            congestionLevel = 'moderate';
+            suggestedAction = '中等拥塞，建议减少同步频率，启用压缩';
+        } else if (avgRtt > 150 || avgPacketLoss > 0.03 || avgQuality < 70) {
+            congestionLevel = 'light';
+            suggestedAction = '轻微拥塞，建议适度降低同步频率';
+        }
+        
+        const isCongested = congestionLevel !== 'none';
+        
+        return {
+            isCongested,
+            congestionLevel,
+            suggestedAction
+        };
+    }
+
+    /**
+     * 计算数据趋势（斜率）
+     */
+    private calculateTrend(values: number[]): number {
+        if (values.length < 2) return 0;
+        
+        const n = values.length;
+        let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+        
+        for (let i = 0; i < n; i++) {
+            sumX += i;
+            sumY += values[i];
+            sumXY += i * values[i];
+            sumX2 += i * i;
+        }
+        
+        const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        return slope;
+    }
+
+    /**
+     * 为连接添加心跳监控
+     */
+    public addHeartbeatMonitoring(connectionId: string, connection: NetworkConnection): void {
+        if (!this._heartbeatManagers.has(connectionId)) {
+            const heartbeatManager = new HeartbeatManager(connection);
+            this._heartbeatManagers.set(connectionId, heartbeatManager);
+            heartbeatManager.start();
+            NetworkPerformanceMonitor.logger.info(`为连接 ${connectionId} 启动心跳监控`);
+        }
+    }
+
+    /**
+     * 移除连接的心跳监控
+     */
+    public removeHeartbeatMonitoring(connectionId: string): void {
+        const heartbeatManager = this._heartbeatManagers.get(connectionId);
+        if (heartbeatManager) {
+            heartbeatManager.stop();
+            this._heartbeatManagers.delete(connectionId);
+            NetworkPerformanceMonitor.logger.info(`移除连接 ${connectionId} 的心跳监控`);
+        }
+    }
+
+    /**
+     * 获取精确的包丢失率（优先使用心跳数据）
+     */
+    private getAccuratePacketLoss(): number {
+        let totalPacketLoss = 0;
+        let count = 0;
+
+        // 从心跳管理器获取真实丢包率
+        for (const heartbeatManager of this._heartbeatManagers.values()) {
+            const stats = heartbeatManager.getStats();
+            totalPacketLoss += stats.packetLossRate;
+            count++;
+        }
+
+        if (count > 0) {
+            return totalPacketLoss / count;
+        }
+
+        // 回退到估算方法
+        return this.estimatePacketLoss();
+    }
+
+    /**
+     * 获取心跳统计信息
+     */
+    public getHeartbeatStats(): Map<string, HeartbeatStats> {
+        const stats = new Map<string, HeartbeatStats>();
+        
+        for (const [connectionId, manager] of this._heartbeatManagers) {
+            stats.set(connectionId, manager.getStats());
+        }
+
+        return stats;
+    }
+
+    /**
+     * 获取所有连接的健康状态
+     */
+    public getConnectionHealth(): Map<string, boolean> {
+        const health = new Map<string, boolean>();
+        
+        for (const [connectionId, manager] of this._heartbeatManagers) {
+            const stats = manager.getStats();
+            health.set(connectionId, stats.isAlive);
+        }
+
+        return health;
     }
 }

@@ -1,7 +1,7 @@
 {
   "name": "@esengine/ecs-framework-network",
   "version": "1.0.0",
-  "description": "ECS框架网络插件 - 提供protobuf序列化、帧同步和快照功能",
+  "description": "ECS框架网络插件 - 提供TSRPC网络通信、帧同步和快照功能",
   "type": "module",
   "main": "bin/index.js",
   "types": "bin/index.d.ts",
@@ -14,7 +14,7 @@
     "ecs",
     "networking",
     "frame-sync",
-    "protobuf",
+    "tsrpc",
     "serialization",
     "multiplayer",
     "game-engine",
@@ -37,11 +37,12 @@
   "author": "yhh",
   "license": "MIT",
   "dependencies": {
-    "protobufjs": "^7.5.3",
     "reflect-metadata": "^0.2.2",
     "ws": "^8.18.0",
     "isomorphic-ws": "^5.0.0",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "tsrpc": "^3.4.19",
+    "tsbuffer": "^2.2.10"
   },
   "peerDependencies": {
     "@esengine/ecs-framework": ">=2.1.29"

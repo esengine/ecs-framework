@@ -1,4 +1,6 @@
 import { NetworkMessage, JsonMessage } from './NetworkMessage';
+import { MessageType as CoreMessageType } from '../types/MessageTypes';
+import { MESSAGE_CONFIG } from '../constants/NetworkConstants';
 
 /**
  * 内置消息类型枚举

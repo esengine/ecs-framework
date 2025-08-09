@@ -16,9 +16,12 @@ export enum ConnectionState {
  */
 export interface NetworkConnectionEvents {
     connected: () => void;
-    disconnected: (reason?: string) => void;
+    disconnected: (reason?: string, code?: number) => void;
     message: (data: Uint8Array) => void;
     error: (error: Error) => void;
+    reconnecting: (attempt: number) => void;
+    reconnected: () => void;
+    reconnectFailed: (error: Error) => void;
 }
 
 /**
@@ -38,9 +41,21 @@ export class NetworkConnection {
     private _pingInterval: NodeJS.Timeout | null = null;
     private _eventHandlers: Map<keyof NetworkConnectionEvents, Function[]> = new Map();
     
+    // 重连相关属性
+    private _reconnectAttempts: number = 0;
+    private _maxReconnectAttempts: number = 5;
+    private _reconnectInterval: number = 1000; // 1秒
+    private _maxReconnectInterval: number = 30000; // 30秒
+    private _reconnectTimer: NodeJS.Timeout | null = null;
+    private _enableAutoReconnect: boolean = true;
+    private _originalUrl: string = '';
+    
     // 心跳配置
     private static readonly PING_INTERVAL = 30000; // 30秒
     private static readonly PING_TIMEOUT = 5000;   // 5秒超时
+    
+    // 错误分类
+    private static readonly RECOVERABLE_CODES = [1006, 1011, 1012, 1013, 1014];
     
     /**
      * 构造函数
@@ -48,12 +63,32 @@ export class NetworkConnection {
      * @param ws - WebSocket实例
      * @param connectionId - 连接ID
      * @param address - 连接地址
+     * @param options - 连接选项
      */
-    constructor(ws: WebSocket, connectionId: string, address: string = '') {
+    constructor(
+        ws: WebSocket, 
+        connectionId: string, 
+        address: string = '',
+        options?: {
+            enableAutoReconnect?: boolean;
+            maxReconnectAttempts?: number;
+            reconnectInterval?: number;
+            maxReconnectInterval?: number;
+        }
+    ) {
         this._ws = ws;
         this._connectionId = connectionId;
         this._address = address;
+        this._originalUrl = address;
         this._connectedTime = Date.now();
+        
+        // 设置重连选项
+        if (options) {
+            this._enableAutoReconnect = options.enableAutoReconnect ?? true;
+            this._maxReconnectAttempts = options.maxReconnectAttempts ?? 5;
+            this._reconnectInterval = options.reconnectInterval ?? 1000;
+            this._maxReconnectInterval = options.maxReconnectInterval ?? 30000;
+        }
         
         this.setupWebSocket();
         this.startPingInterval();
@@ -67,13 +102,31 @@ export class NetworkConnection {
         
         this._ws.onopen = () => {
             this._state = ConnectionState.Connected;
+            
+            // 重连成功，重置重连状态
+            if (this._reconnectAttempts > 0) {
+                NetworkConnection.logger.info(`重连成功 (第 ${this._reconnectAttempts} 次尝试)`);
+                this.resetReconnectState();
+                this.emit('reconnected');
+            }
+            
             this.emit('connected');
         };
         
         this._ws.onclose = (event) => {
             this._state = ConnectionState.Disconnected;
             this.stopPingInterval();
-            this.emit('disconnected', event.reason);
+            
+            const reason = event.reason || '连接已关闭';
+            const code = event.code;
+            
+            NetworkConnection.logger.warn(`连接断开: ${reason} (code: ${code})`);
+            this.emit('disconnected', reason, code);
+            
+            // 判断是否需要自动重连
+            if (this._enableAutoReconnect && this.shouldReconnect(code)) {
+                this.scheduleReconnect();
+            }
         };
         
         this._ws.onerror = (event) => {
@@ -165,6 +218,119 @@ export class NetworkConnection {
     }
     
     /**
+     * 判断是否应该重连
+     */
+    private shouldReconnect(code: number): boolean {
+        // 正常关闭不需要重连
+        if (code === 1000) {
+            return false;
+        }
+        
+        // 检查是否是可恢复的错误代码
+        return NetworkConnection.RECOVERABLE_CODES.includes(code) || code === 1006;
+    }
+    
+    /**
+     * 安排重连
+     */
+    private scheduleReconnect(): void {
+        if (this._reconnectAttempts >= this._maxReconnectAttempts) {
+            NetworkConnection.logger.error(`重连失败，已达到最大重试次数 ${this._maxReconnectAttempts}`);
+            this.emit('reconnectFailed', new Error(`重连失败，已达到最大重试次数`));
+            return;
+        }
+        
+        this._reconnectAttempts++;
+        const delay = Math.min(
+            this._reconnectInterval * Math.pow(2, this._reconnectAttempts - 1),
+            this._maxReconnectInterval
+        );
+        
+        NetworkConnection.logger.info(`将在 ${delay}ms 后尝试第 ${this._reconnectAttempts} 次重连`);
+        this.emit('reconnecting', this._reconnectAttempts);
+        
+        this._reconnectTimer = setTimeout(() => {
+            this.attemptReconnect();
+        }, delay);
+    }
+    
+    /**
+     * 尝试重连
+     */
+    private attemptReconnect(): void {
+        if (this._state === ConnectionState.Connected) {
+            return;
+        }
+        
+        try {
+            NetworkConnection.logger.info(`正在尝试重连到 ${this._originalUrl}`);
+            
+            // 创建新的WebSocket连接
+            this._ws = new WebSocket(this._originalUrl);
+            this._state = ConnectionState.Connecting;
+            
+            // 重新设置事件处理
+            this.setupWebSocket();
+            
+        } catch (error) {
+            NetworkConnection.logger.error(`重连失败:`, error);
+            
+            // 继续下一次重连尝试
+            setTimeout(() => {
+                this.scheduleReconnect();
+            }, 1000);
+        }
+    }
+    
+    /**
+     * 重置重连状态
+     */
+    private resetReconnectState(): void {
+        this._reconnectAttempts = 0;
+        
+        if (this._reconnectTimer) {
+            clearTimeout(this._reconnectTimer);
+            this._reconnectTimer = null;
+        }
+    }
+    
+    /**
+     * 设置重连配置
+     */
+    public setReconnectOptions(options: {
+        enableAutoReconnect?: boolean;
+        maxReconnectAttempts?: number;
+        reconnectInterval?: number;
+        maxReconnectInterval?: number;
+    }): void {
+        if (options.enableAutoReconnect !== undefined) {
+            this._enableAutoReconnect = options.enableAutoReconnect;
+        }
+        if (options.maxReconnectAttempts !== undefined) {
+            this._maxReconnectAttempts = options.maxReconnectAttempts;
+        }
+        if (options.reconnectInterval !== undefined) {
+            this._reconnectInterval = options.reconnectInterval;
+        }
+        if (options.maxReconnectInterval !== undefined) {
+            this._maxReconnectInterval = options.maxReconnectInterval;
+        }
+    }
+    
+    /**
+     * 手动重连
+     */
+    public reconnect(): void {
+        if (this._state === ConnectionState.Connected) {
+            NetworkConnection.logger.warn('连接已存在，无需重连');
+            return;
+        }
+        
+        this.resetReconnectState();
+        this.attemptReconnect();
+    }
+    
+    /**
      * 关闭连接
      * 
      * @param reason - 关闭原因
@@ -175,6 +341,11 @@ export class NetworkConnection {
         }
         
         this._state = ConnectionState.Disconnecting;
+        
+        // 主动关闭时禁用自动重连
+        this._enableAutoReconnect = false;
+        this.resetReconnectState();
+        
         this.stopPingInterval();
         
         if (this._ws) {

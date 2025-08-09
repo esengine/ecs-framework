@@ -12,6 +12,11 @@ import { SerializedData } from '../Serialization/SerializationTypes';
  * 扩展核心组件接口，添加网络同步功能
  */
 export interface INetworkSyncable extends IComponent {
+    /** 内部SyncVar ID */
+    _syncVarId?: string;
+    /** 是否禁用SyncVar监听 */
+    _syncVarDisabled?: boolean;
+    
     /**
      * 获取网络同步状态
      */
@@ -36,6 +41,9 @@ export interface INetworkSyncable extends IComponent {
      * 标记字段为脏状态
      */
     markFieldDirty(fieldNumber: number): void;
+    
+    /** 允许通过字符串键访问属性 */
+    [propertyKey: string]: unknown;
 }
 
 /**
@@ -110,10 +118,10 @@ export type MessageData =
     | null;
 
 /**
- * 网络消息基接口
- * 为所有网络消息提供类型安全的基础
+ * 基础网络消息接口
+ * 为SyncVar等网络同步功能提供消息接口
  */
-export interface INetworkMessage<TData extends MessageData = MessageData> {
+export interface IBasicNetworkMessage<TData extends MessageData = MessageData> {
     /** 消息类型 */
     readonly messageType: number;
     /** 消息数据 */
