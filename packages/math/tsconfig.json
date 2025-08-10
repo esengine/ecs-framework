@@ -1,0 +1,30 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./bin",
+    "rootDir": "./src",
+    "declarationMap": true,
+    "declaration": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "bin",
+    "dist",
+    "tests",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}
