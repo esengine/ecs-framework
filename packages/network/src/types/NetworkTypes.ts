@@ -1,306 +1,162 @@
 /**
- * 网络库类型定义
- * 
- * 基于核心库的类型系统，为网络功能提供特定的类型约束
+ * 网络库核心类型定义
  */
 
-import { ComponentType, IComponent, Component } from '@esengine/ecs-framework';
-import { SerializedData } from '../Serialization/SerializationTypes';
 
 /**
- * 网络同步组件接口
- * 扩展核心组件接口，添加网络同步功能
+ * 网络连接状态
  */
-export interface INetworkSyncable extends IComponent {
-    /** 内部SyncVar ID */
-    _syncVarId?: string;
-    /** 是否禁用SyncVar监听 */
-    _syncVarDisabled?: boolean;
-    
-    /**
-     * 获取网络同步状态
-     */
-    getNetworkState(): Uint8Array;
-    
-    /**
-     * 应用网络状态
-     */
-    applyNetworkState(data: Uint8Array): void;
-    
-    /**
-     * 获取脏字段列表
-     */
-    getDirtyFields(): number[];
-    
-    /**
-     * 标记为干净状态
-     */
-    markClean(): void;
-    
-    /**
-     * 标记字段为脏状态
-     */
-    markFieldDirty(fieldNumber: number): void;
-    
-    /** 允许通过字符串键访问属性 */
-    [propertyKey: string]: unknown;
+export type NetworkConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+
+/**
+ * 网络端类型
+ */
+export type NetworkSide = 'client' | 'server' | 'host';
+
+/**
+ * 网络消息类型
+ */
+export interface NetworkMessage {
+  /** 消息类型 */
+  type: string;
+  /** 网络对象ID */
+  networkId: number;
+  /** 消息数据 */
+  data: any;
+  /** 时间戳 */
+  timestamp: number;
 }
 
 /**
- * 网络组件构造函数类型
- * 基于核心库的ComponentType，添加网络特性约束
+ * 同步变量消息
  */
-export type NetworkComponentType<T extends Component & INetworkSyncable = Component & INetworkSyncable> = ComponentType<T>;
-
-/**
- * SyncVar值类型约束
- * 定义可以被SyncVar同步的值类型
- */
-export type SyncVarValue = 
-    | string 
-    | number 
-    | boolean 
-    | null 
-    | undefined
-    | Date
-    | Uint8Array
-    | Record<string, unknown>
-    | unknown[];
-
-
-/**
- * SyncVar元数据接口
- * 用于类型安全的SyncVar配置
- */
-export interface ISyncVarMetadata<T = SyncVarValue> {
-    /** 属性名 */
-    propertyKey: string;
-    /** 字段编号 */
-    fieldNumber: number;
-    /** 配置选项 */
-    options: ISyncVarOptions<T>;
+export interface SyncVarMessage extends NetworkMessage {
+  type: 'syncvar';
+  /** 组件类型名 */
+  componentType: string;
+  /** 属性名 */
+  propertyName: string;
+  /** 属性值 */
+  value: any;
 }
 
 /**
- * SyncVar选项接口
+ * RPC消息
  */
-export interface ISyncVarOptions<T = SyncVarValue> {
-    /** Hook回调函数名 */
-    hook?: string;
-    /** 是否仅权威端可修改 */
-    authorityOnly?: boolean;
-    /** 节流时间（毫秒） */
-    throttleMs?: number;
-    /** 自定义序列化函数 */
-    serializer?: (value: T) => Uint8Array;
-    /** 自定义反序列化函数 */
-    deserializer?: (data: Uint8Array) => T;
+export interface RpcMessage extends NetworkMessage {
+  type: 'rpc';
+  /** RPC方法名 */
+  methodName: string;
+  /** RPC参数 */
+  args: any[];
+  /** 是否为客户端RPC */
+  isClientRpc: boolean;
 }
 
 /**
- * 组件序列化目标类型
- * 约束可以被序列化的组件类型
+ * 网络配置选项
  */
-export type SerializationTarget = Component & INetworkSyncable & {
-    readonly constructor: NetworkComponentType;
-};
-
-/**
- * 消息数据约束类型
- * 定义网络消息中可以传输的数据类型
- */
-export type MessageData = 
-    | Record<string, unknown>
-    | Uint8Array
-    | string
-    | number
-    | boolean
-    | null;
-
-/**
- * 基础网络消息接口
- * 为SyncVar等网络同步功能提供消息接口
- */
-export interface IBasicNetworkMessage<TData extends MessageData = MessageData> {
-    /** 消息类型 */
-    readonly messageType: number;
-    /** 消息数据 */
-    readonly data: TData;
-    /** 发送者ID */
-    senderId?: string;
-    /** 消息时间戳 */
-    timestamp: number;
-    /** 消息序列号 */
-    sequence?: number;
-    
-    /** 序列化消息 */
-    serialize(): Uint8Array;
-    /** 反序列化消息 */
-    deserialize(data: Uint8Array): void;
-    /** 获取消息大小 */
-    getSize(): number;
+export interface NetworkConfig {
+  /** 服务器端口 */
+  port?: number;
+  /** 服务器地址 */
+  host?: string;
+  /** 房间ID */
+  roomId?: string;
+  /** 最大连接数 */
+  maxConnections?: number;
+  /** 同步频率 (Hz) */
+  syncRate?: number;
+  /** 是否启用压缩 */
+  compression?: boolean;
 }
 
 /**
- * SyncVar更新数据接口
+ * 网络统计信息
  */
-export interface ISyncVarFieldUpdate {
-    /** 字段编号 */
-    fieldNumber: number;
-    /** 属性名 */
-    propertyKey: string;
-    /** 新值 */
-    newValue: SyncVarValue;
-    /** 旧值 */
-    oldValue: SyncVarValue;
-    /** 时间戳 */
-    timestamp: number;
-    /** 是否需要权限 */
-    authorityOnly?: boolean;
+export interface NetworkStats {
+  /** 连接数 */
+  connectionCount: number;
+  /** 发送的字节数 */
+  bytesSent: number;
+  /** 接收的字节数 */
+  bytesReceived: number;
+  /** 发送的消息数 */
+  messagesSent: number;
+  /** 接收的消息数 */
+  messagesReceived: number;
+  /** 平均延迟 (ms) */
+  averageLatency: number;
 }
 
 /**
- * 快照数据接口
+ * 网络事件处理器
  */
-export interface ISnapshotData {
-    /** 组件类型名 */
-    componentType: string;
-    /** 序列化数据 */
-    data: SerializedData;
-    /** 组件ID */
-    componentId: number;
-    /** 是否启用 */
-    enabled: boolean;
+export interface NetworkEventHandlers {
+  /** 连接建立 */
+  onConnected: () => void;
+  /** 连接断开 */
+  onDisconnected: (reason?: string) => void;
+  /** 客户端加入 */
+  onClientConnected: (clientId: number) => void;
+  /** 客户端离开 */
+  onClientDisconnected: (clientId: number, reason?: string) => void;
+  /** 发生错误 */
+  onError: (error: Error) => void;
 }
 
 /**
- * 类型安全的组件工厂接口
+ * 网络行为接口
+ * 所有网络组件都需要实现此接口
  */
-export interface IComponentFactory {
-    /** 创建组件实例 */
-    create<T extends Component & INetworkSyncable>(
-        componentType: NetworkComponentType<T>,
-        ...args: unknown[]
-    ): T;
-    
-    /** 检查组件类型是否已注册 */
-    isRegistered<T extends Component & INetworkSyncable>(
-        componentType: NetworkComponentType<T>
-    ): boolean;
-    
-    /** 获取组件类型名称 */
-    getTypeName<T extends Component & INetworkSyncable>(
-        componentType: NetworkComponentType<T>
-    ): string;
+export interface INetworkBehaviour {
+  /** 网络身份组件引用 */
+  networkIdentity: any | null;
+  /** 是否拥有权威 */
+  hasAuthority: boolean;
+  /** 是否为本地玩家 */
+  isLocalPlayer: boolean;
+  /** 是否在服务端 */
+  isServer: boolean;
+  /** 是否在客户端 */
+  isClient: boolean;
 }
 
 /**
- * 网络性能指标接口
+ * 同步变量元数据
  */
-export interface INetworkPerformanceMetrics {
-    /** RTT（往返时间） */
-    rtt: number;
-    /** 带宽利用率 */
-    bandwidth: number;
-    /** 丢包率 */
-    packetLoss: number;
-    /** 抖动 */
-    jitter: number;
-    /** 连接质量评分 */
-    quality: number;
-    /** 最后更新时间 */
-    lastUpdate: number;
+export interface SyncVarMetadata {
+  /** 属性名 */
+  propertyName: string;
+  /** 是否仅权威端可修改 */
+  authorityOnly: boolean;
+  /** 变化回调函数名 */
+  onChanged?: string;
 }
 
 /**
- * 序列化上下文接口
- * 为序列化过程提供上下文信息
+ * RPC元数据
  */
-export interface ISerializationContext {
-    /** 目标组件类型 */
-    componentType: string;
-    /** 序列化选项 */
-    options?: {
-        enableValidation?: boolean;
-        compressionLevel?: number;
-    };
+export interface RpcMetadata {
+  /** 方法名 */
+  methodName: string;
+  /** 是否为客户端RPC */
+  isClientRpc: boolean;
+  /** 是否需要权威验证 */
+  requiresAuthority: boolean;
 }
 
-/**
- * 类型守卫函数类型定义
- */
-export type TypeGuard<T> = (value: unknown) => value is T;
 
 /**
- * 常用类型守卫函数
+ * 网络连接信息
  */
-export const TypeGuards = {
-    /** 检查是否为SyncVar值 */
-    isSyncVarValue: ((value: unknown): value is SyncVarValue => {
-        return value === null || 
-               value === undefined ||
-               typeof value === 'string' ||
-               typeof value === 'number' ||
-               typeof value === 'boolean' ||
-               value instanceof Date ||
-               value instanceof Uint8Array ||
-               (typeof value === 'object' && value !== null);
-    }) as TypeGuard<SyncVarValue>,
-    
-    /** 检查是否为网络消息数据 */
-    isMessageData: ((value: unknown): value is MessageData => {
-        return value === null ||
-               typeof value === 'string' ||
-               typeof value === 'number' ||
-               typeof value === 'boolean' ||
-               value instanceof Uint8Array ||
-               (typeof value === 'object' && value !== null && !(value instanceof Date));
-    }) as TypeGuard<MessageData>,
-    
-    /** 检查是否为序列化目标 */
-    isSerializationTarget: ((value: unknown): value is SerializationTarget => {
-        return typeof value === 'object' &&
-               value !== null &&
-               'getNetworkState' in value &&
-               'applyNetworkState' in value &&
-               typeof (value as { getNetworkState?: unknown }).getNetworkState === 'function';
-    }) as TypeGuard<SerializationTarget>
-} as const;
-
-/**
- * 网络错误类型枚举
- */
-export enum NetworkErrorType {
-    CONNECTION_FAILED = 'CONNECTION_FAILED',
-    SERIALIZATION_FAILED = 'SERIALIZATION_FAILED',
-    DESERIALIZATION_FAILED = 'DESERIALIZATION_FAILED',
-    SYNC_VAR_ERROR = 'SYNC_VAR_ERROR',
-    MESSAGE_TIMEOUT = 'MESSAGE_TIMEOUT',
-    INVALID_DATA = 'INVALID_DATA',
-    PERMISSION_DENIED = 'PERMISSION_DENIED'
-}
-
-/**
- * 网络错误接口
- */
-export interface INetworkError extends Error {
-    readonly type: NetworkErrorType;
-    readonly code?: string | number;
-    readonly context?: Record<string, unknown>;
-    readonly timestamp: number;
-}
-
-/**
- * 创建类型安全的网络错误
- */
-export function createNetworkError(
-    type: NetworkErrorType,
-    message: string,
-    context?: Record<string, unknown>
-): INetworkError {
-    const error = new Error(message) as INetworkError;
-    Object.defineProperty(error, 'type', { value: type, writable: false });
-    Object.defineProperty(error, 'context', { value: context, writable: false });
-    Object.defineProperty(error, 'timestamp', { value: Date.now(), writable: false });
-    return error;
+export interface NetworkConnection {
+  /** 连接ID */
+  id: number;
+  /** 连接状态 */
+  state: NetworkConnectionState;
+  /** 延迟 (ms) */
+  latency: number;
+  /** 最后活跃时间 */
+  lastActivity: number;
 }

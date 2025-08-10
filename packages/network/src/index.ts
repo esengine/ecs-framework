@@ -1,29 +1,27 @@
 /**
- * ECS Framework Network Plugin - 网络插件
+ * ECS Network Library
  * 
- * 为ECS框架提供完整的网络同步和多人游戏功能
- * 支持客户端-服务端模式
+ * 基于 ECS 架构和 TSRPC 的网络同步库
+ * 提供简洁易用的网络组件和同步机制
  */
 
-// 核心网络管理
-export * from './Core';
+// 核心组件
+export { NetworkManager } from './NetworkManager';
+export { NetworkIdentity } from './NetworkIdentity';
+export { NetworkBehaviour } from './NetworkBehaviour';
 
-// 消息系统
-export * from './Messaging';
+// 装饰器
+export { SyncVar } from './decorators/SyncVar';
+export { ClientRpc } from './decorators/ClientRpc';
+export { Command } from './decorators/Command';
 
-// SyncVar同步变量系统
-export * from './SyncVar';
+// 核心管理器
+export { SyncVarManager } from './core/SyncVarManager';
+export { RpcManager } from './core/RpcManager';
+export { NetworkRegistry } from './core/NetworkRegistry';
 
-// 网络组件基类
-export { NetworkComponent } from './NetworkComponent';
-export { INetworkSyncable } from './INetworkSyncable';
-export { NetworkRole } from './NetworkRole';
+// 传输层
+export * from './transport';
 
-// TSRPC网络通信系统
-export * from './TSRPC';
-
-// 装饰器序列化系统（用于组件同步）
-export * from './Serialization';
-
-// 快照系统（帧同步）
-export * from './Snapshot';
+// 类型定义
+export * from './types/NetworkTypes';
