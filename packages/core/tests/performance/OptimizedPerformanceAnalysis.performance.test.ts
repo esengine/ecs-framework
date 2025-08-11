@@ -1,6 +1,6 @@
-import { EntityManager } from '../../../src/ECS/Core/EntityManager';
-import { ComponentTypeManager } from '../../../src/ECS/Utils/ComponentTypeManager';
-import { Entity } from '../../../src/ECS/Entity';
+import { EntityManager } from '../../src/ECS/Core/EntityManager';
+import { ComponentTypeManager } from '../../src/ECS/Utils/ComponentTypeManager';
+import { Entity } from '../../src/ECS/Entity';
 
 describe('优化后的性能分析 - ComponentIndexManager优化', () => {
     let entityManager: EntityManager;

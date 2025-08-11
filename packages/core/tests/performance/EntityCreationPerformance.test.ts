@@ -1,5 +1,5 @@
-import { EntityManager } from '../../../src/ECS/Core/EntityManager';
-import { ComponentTypeManager } from '../../../src/ECS/Utils/ComponentTypeManager';
+import { EntityManager } from '../../src/ECS/Core/EntityManager';
+import { ComponentTypeManager } from '../../src/ECS/Utils/ComponentTypeManager';
 
 describe('实体创建性能分析', () => {
     let entityManager: EntityManager;
@@ -59,7 +59,7 @@ describe('实体创建性能分析', () => {
         const directEntities: any[] = [];
         for (let i = 0; i < entityCount; i++) {
             // 直接创建Entity，不通过EntityManager的复杂逻辑
-            directEntities.push(new (require('../../../src/ECS/Entity').Entity)(`Direct_${i}`, i));
+            directEntities.push(new (require('../../src/ECS/Entity').Entity)(`Direct_${i}`, i));
         }
         endTime = performance.now();
         console.log(`4. 直接创建Entity: ${(endTime - startTime).toFixed(2)}ms`);
@@ -91,7 +91,7 @@ describe('实体创建性能分析', () => {
             
             // 步骤2: Entity创建
             stepTime = performance.now();
-            const entity = new (require('../../../src/ECS/Entity').Entity)(name, id);
+            const entity = new (require('../../src/ECS/Entity').Entity)(name, id);
             stepTimes['Entity创建'] = (stepTimes['Entity创建'] || 0) + (performance.now() - stepTime);
             
             // 步骤3: 各种索引更新

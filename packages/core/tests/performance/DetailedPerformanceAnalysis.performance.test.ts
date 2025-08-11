@@ -1,6 +1,6 @@
-import { EntityManager } from '../../../src/ECS/Core/EntityManager';
-import { ComponentTypeManager } from '../../../src/ECS/Utils/ComponentTypeManager';
-import { Entity } from '../../../src/ECS/Entity';
+import { EntityManager } from '../../src/ECS/Core/EntityManager';
+import { ComponentTypeManager } from '../../src/ECS/Utils/ComponentTypeManager';
+import { Entity } from '../../src/ECS/Entity';
 
 describe('详细性能分析 - 逐步测量', () => {
     let entityManager: EntityManager;

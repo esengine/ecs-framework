@@ -1,6 +1,6 @@
-import { Component } from '../../../src/ECS/Component';
-import { ComponentStorage, ComponentStorageManager, EnableSoA } from '../../../src/ECS/Core/ComponentStorage';
-import { SoAStorage } from '../../../src/ECS/Core/SoAStorage';
+import { Component } from '../../src/ECS/Component';
+import { ComponentStorage, ComponentStorageManager, EnableSoA } from '../../src/ECS/Core/ComponentStorage';
+import { SoAStorage } from '../../src/ECS/Core/SoAStorage';
 
 // 测试用统一组件结构（启用SoA）
 @EnableSoA

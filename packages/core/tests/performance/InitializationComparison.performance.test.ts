@@ -1,6 +1,6 @@
-import { Entity } from '../../../src/ECS/Entity';
-import { BigIntFactory } from '../../../src/ECS/Utils/BigIntCompatibility';
-import { ComponentType } from '../../../src/ECS/Core/ComponentStorage';
+import { Entity } from '../../src/ECS/Entity';
+import { BigIntFactory } from '../../src/ECS/Utils/BigIntCompatibility';
+import { ComponentType } from '../../src/ECS/Core/ComponentStorage';
 
 describe('初始化方式性能对比', () => {
     test('对比不同初始化方式的性能', () => {
