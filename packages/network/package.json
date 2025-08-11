@@ -46,7 +46,7 @@
     "tsbuffer": "^2.2.10",
     "tsrpc": "^3.4.19",
     "uuid": "^10.0.0",
-    "ws": "^8.18.0"
+    "ws": "^7.5.9"
   },
   "peerDependencies": {
     "@esengine/ecs-framework": ">=2.1.29"
