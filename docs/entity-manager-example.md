@@ -157,7 +157,7 @@ console.log('查询统计:', queryStats);
 ### 1. 高效查询
 
 ```typescript
-// ✅ 好的做法：缓存查询结果
+// 好的做法：缓存查询结果
 class CombatSystem extends EntitySystem {
     private cachedEnemies: Entity[] = [];
     private lastUpdateFrame = 0;
@@ -184,7 +184,7 @@ class CombatSystem extends EntitySystem {
 ### 2. 批量操作
 
 ```typescript
-// ✅ 好的做法：批量创建和配置
+// 好的做法：批量创建和配置
 function createBulletWave(count: number): Entity[] {
     // 使用Scene的批量创建
     const bullets = scene.createEntities(count, "Bullet");
@@ -208,7 +208,7 @@ function createBulletWave(count: number): Entity[] {
 ### 3. 内存管理
 
 ```typescript
-// ✅ 好的做法：及时清理无用实体
+// 好的做法：及时清理无用实体
 class CleanupSystem extends EntitySystem {
     protected process(entities: Entity[]): void {
         // 清理超出边界的子弹
@@ -241,7 +241,7 @@ class CleanupSystem extends EntitySystem {
 ### 4. 查询优化
 
 ```typescript
-// ✅ 好的做法：使用合适的查询方法
+// 好的做法：使用合适的查询方法
 class GameSystem extends EntitySystem {
     findTargetsInRange(attacker: Entity, range: number): Entity[] {
         const attackerPos = attacker.getComponent(PositionComponent);

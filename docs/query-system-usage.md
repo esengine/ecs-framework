@@ -526,12 +526,12 @@ class InefficientSystem extends EntitySystem {
 #### 选择合适的创建方式
 
 ```typescript
-// ✅ 推荐：单一条件使用静态方法
+// 推荐：单一条件使用静态方法
 const movingEntities = Matcher.all(PositionComponent, VelocityComponent);
 const playerEntities = Matcher.byTag(PLAYER_TAG);
 const specificEntity = Matcher.byName("Boss");
 
-// ✅ 推荐：复杂条件使用链式调用
+// 推荐：复杂条件使用链式调用
 const complexMatcher = Matcher.empty()
     .all(PositionComponent, HealthComponent)
     .any(WeaponComponent, MagicComponent)
@@ -554,12 +554,12 @@ const combatUnits = Matcher.all(PositionComponent, HealthComponent)
 #### 合理的克隆和重用
 
 ```typescript
-// ✅ 推荐：基础匹配器重用
+// 推荐：基础匹配器重用
 const livingEntityMatcher = Matcher.all(HealthComponent).none(DeadComponent);
 const livingPlayerMatcher = livingEntityMatcher.clone().all(PlayerComponent);
 const livingEnemyMatcher = livingEntityMatcher.clone().all(EnemyComponent);
 
-// ✅ 推荐：重置匹配器重用
+// 推荐：重置匹配器重用
 const reusableMatcher = Matcher.empty();
 
 // 用于玩家系统

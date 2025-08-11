@@ -2,7 +2,7 @@
 
 本文档详细介绍 ECS Framework 的核心 API 和使用方法。
 
-> 🤔 **不熟悉ECS概念？** 建议先阅读 [技术概念详解](concepts-explained.md) 了解ECS架构基础和性能优化原理
+> **不熟悉ECS概念？** 建议先阅读 [技术概念详解](concepts-explained.md) 了解ECS架构基础和性能优化原理
 
 ## ECS 架构概述
 

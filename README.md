@@ -10,7 +10,7 @@
 
 TypeScript ECS (Entity-Component-System) 框架，专为游戏开发设计。
 
-## 💡 项目特色
+## 项目特色
 
 <div align="center">
 
@@ -61,9 +61,8 @@ class PositionComponent extends Component {
     public x: number = 0;
     public y: number = 0;
     
-    constructor(...args: unknown[]) {
+    constructor(x: number = 0, y: number = 0) {
         super();
-        const [x = 0, y = 0] = args as [number?, number?];
         this.x = x;
         this.y = y;
     }
@@ -73,9 +72,8 @@ class VelocityComponent extends Component {
     public x: number = 0;
     public y: number = 0;
     
-    constructor(...args: unknown[]) {
+    constructor(x: number = 0, y: number = 0) {
         super();
-        const [x = 0, y = 0] = args as [number?, number?];
         this.x = x;
         this.y = y;
     }
@@ -116,7 +114,7 @@ Core.update(deltaTime);
 ```typescript
 import { Matcher } from '@esengine/ecs-framework';
 
-// 方式1：使用Matcher和EntitySystem
+// 使用Matcher和EntitySystem进行高效查询
 class QuerySystem extends EntitySystem {
     constructor() {
         super(Matcher.all(PositionComponent, VelocityComponent).none(HealthComponent));
@@ -128,23 +126,37 @@ class QuerySystem extends EntitySystem {
     }
 }
 
-// 方式2：手动过滤场景中的实体
-const results = scene.entities.buffer.filter(entity => 
-    entity.hasComponent(PositionComponent) && 
-    entity.hasComponent(VelocityComponent) &&
-    !entity.hasComponent(HealthComponent)
-);
+// 更复杂的查询条件
+class CombatSystem extends EntitySystem {
+    constructor() {
+        super(
+            Matcher
+                .all(PositionComponent, HealthComponent)  // 必须有位置和血量
+                .any(WeaponComponent, MagicComponent)     // 有武器或魔法
+                .none(DeadComponent)                      // 不能是死亡状态
+        );
+    }
+    
+    protected override process(entities: Entity[]) {
+        // 处理战斗逻辑
+    }
+}
 ```
 
 ### 事件系统
 
 ```typescript
-import { EventHandler, ECSEventType } from '@esengine/ecs-framework';
+import { EventHandler, ECSEventType, IEntityEventData } from '@esengine/ecs-framework';
 
 class GameSystem {
     @EventHandler(ECSEventType.ENTITY_DESTROYED)
-    onEntityDestroyed(data: any) {
-        console.log('实体销毁:', data.entityName);
+    onEntityDestroyed(data: IEntityEventData) {
+        console.log('实体销毁:', data.entityName, '实体ID:', data.entityId);
+    }
+    
+    @EventHandler(ECSEventType.ENTITY_CREATED) 
+    onEntityCreated(data: IEntityEventData) {
+        console.log('实体创建:', data.entityName, '标签:', data.entityTag);
     }
 }
 ```
@@ -169,10 +181,10 @@ class OptimizedTransformComponent extends Component {
 ```
 
 **性能优势**：
-- 🚀 **缓存友好** - 连续内存访问，缓存命中率提升85%
-- ⚡ **批量处理** - 同类型数据处理速度提升2-3倍  
-- 🔄 **热切换** - 开发期AoS便于调试，生产期SoA提升性能
-- 🎯 **自动优化** - `@EnableSoA`装饰器自动转换存储结构
+- **缓存友好** - 连续内存访问，缓存命中率提升85%
+- **批量处理** - 同类型数据处理速度提升2-3倍  
+- **热切换** - 开发期AoS便于调试，生产期SoA提升性能
+- **自动优化** - `@EnableSoA`装饰器自动转换存储结构
 
 ## 平台集成
 
@@ -185,9 +197,9 @@ update(deltaTime: number) {
 ```
 
 **专用调试插件**：
-- 🔧 [ECS 可视化调试插件](https://store.cocos.com/app/detail/7823) - 提供完整的可视化调试界面
-- 📊 实体查看器、组件编辑器、系统监控
-- 📈 性能分析和实时数据监控
+- [ECS 可视化调试插件](https://store.cocos.com/app/detail/7823) - 提供完整的可视化调试界面
+- 实体查看器、组件编辑器、系统监控
+- 性能分析和实时数据监控
 
 ### Laya 引擎
 ```typescript
@@ -222,16 +234,16 @@ function gameLoop(currentTime: number) {
 ### 查询 API
 
 ```typescript
-// Matcher API - 用于EntitySystem
+// Matcher API - 推荐方式，高效且类型安全
 Matcher.all(...components)      // 包含所有组件
-Matcher.any(...components)      // 包含任意组件
+Matcher.any(...components)      // 包含任意组件  
 Matcher.none(...components)     // 不包含组件
 
-// 手动查询 - 用于场景实体过滤
-scene.entities.buffer.filter(entity => 
-    entity.hasComponent(ComponentA) &&
-    entity.tag === someTag
-);
+// 组合查询示例
+Matcher
+    .all(PositionComponent, VelocityComponent)  // 必须有这些组件
+    .any(PlayerComponent, AIComponent)          // 其中之一
+    .none(DeadComponent, DisabledComponent);    // 排除这些
 ```
 
 ## 文档

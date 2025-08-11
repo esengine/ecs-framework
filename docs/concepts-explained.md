@@ -156,7 +156,7 @@ componentIndex.setIndexType(StateComponent, 'bitmap');      // 状态组件变�
 | **内存使用** | 较少 | 随实体数增加 |
 | **批量操作** | 一般 | 优秀 |
 
-#### 🤔 快速决策流程
+#### 快速决策流程
 
 **第一步：判断组件变化频率**
 - 组件经常添加/删除？ → 选择 **位图索引**
@@ -217,7 +217,7 @@ componentIndex.setIndexType(CombatComponent, 'bitmap');    // 战斗状态临时
 const entityCount = 100000;
 componentIndex.setIndexType(UnitComponent, 'bitmap'); // 内存占用过大！
 
-// ✅ 正确：大量实体用哈希索引
+// 正确：大量实体用哈希索引
 componentIndex.setIndexType(UnitComponent, 'hash');
 ```
 
@@ -226,7 +226,7 @@ componentIndex.setIndexType(UnitComponent, 'hash');
 // ❌ 错误：Buff频繁添加删除，哈希索引效率低
 componentIndex.setIndexType(BuffComponent, 'hash');   // 添加删除慢！
 
-// ✅ 正确：变化频繁的组件用位图索引
+// 正确：变化频繁的组件用位图索引
 componentIndex.setIndexType(BuffComponent, 'bitmap');
 ```
 
@@ -237,7 +237,7 @@ componentIndex.setIndexType(PositionComponent, 'hash');
 componentIndex.setIndexType(BuffComponent, 'hash');      // 应该用bitmap
 componentIndex.setIndexType(TemporaryComponent, 'hash'); // 应该用bitmap
 
-// ✅ 正确：根据组件特性选择
+// 正确：根据组件特性选择
 componentIndex.setIndexType(PositionComponent, 'hash');    // 稳定组件
 componentIndex.setIndexType(BuffComponent, 'bitmap');      // 变化组件
 componentIndex.setIndexType(TemporaryComponent, 'bitmap'); // 临时组件

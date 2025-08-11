@@ -43,7 +43,7 @@ SoA (Structure of Arrays) 存储模式是ECS框架中的高级性能优化特性
 
 ## 适用场景
 
-### ✅ 推荐使用SoA的场景
+### 推荐使用SoA的场景
 
 1. **大规模实体系统**
    ```typescript
@@ -203,7 +203,7 @@ class GameComponent extends Component {
 ### 1. 合理的组件设计
 
 ```typescript
-// ✅ 好的设计：纯数值组件
+// 好的设计：纯数值组件
 @EnableSoA
 class TransformComponent extends Component {
     @Float64 public x: number = 0;
@@ -225,7 +225,7 @@ class MixedComponent extends Component {
 ### 2. 批量操作优化
 
 ```typescript
-// ✅ 使用向量化操作
+// 使用向量化操作
 const storage = entityManager.getStorage(TransformComponent) as SoAStorage<TransformComponent>;
 storage.performVectorizedOperation((fields, indices) => {
     const x = fields.get('x') as Float64Array;
@@ -250,7 +250,7 @@ for (const entity of entities) {
 ### 3. 组件分离策略
 
 ```typescript
-// ✅ 将频繁批量操作的数据分离
+// 将频繁批量操作的数据分离
 @EnableSoA
 class PositionComponent extends Component {
     @Float32 public x: number = 0;

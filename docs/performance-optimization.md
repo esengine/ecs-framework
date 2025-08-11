@@ -16,16 +16,16 @@
 ### 使用高效的查询方法
 
 ```typescript
-// ✅ 推荐：使用标签查询（快速）
+// 推荐：使用标签查询（快速）
 const enemies = entityManager.getEntitiesByTag(2);
 
-// ✅ 推荐：使用组件查询
+// 推荐：使用组件查询
 const healthEntities = entityManager.getEntitiesWithComponent(HealthComponent);
 
-// ✅ 推荐：使用Scene的查询系统
+// 推荐：使用Scene的查询系统
 const movingEntities = scene.querySystem.queryAll(PositionComponent, VelocityComponent);
 
-// ⚠️ 谨慎：自定义条件查询（较慢）
+// 谨慎：自定义条件查询（较慢）
 const nearbyEnemies = entityManager
     .query()
     .withAll(PositionComponent)
@@ -68,7 +68,7 @@ class OptimizedCombatSystem extends EntitySystem {
 ### 批量创建实体
 
 ```typescript
-// ✅ 推荐：使用Scene的批量创建
+// 推荐：使用Scene的批量创建
 function createEnemyWave(count: number): Entity[] {
     const enemies = scene.createEntities(count, "Enemy");
     
@@ -144,7 +144,7 @@ class EntityReusableManager {
 ### 数据局部性优化
 
 ```typescript
-// ✅ 推荐：紧凑的数据结构
+// 推荐：紧凑的数据结构
 class OptimizedPositionComponent extends Component {
     public x: number = 0;
     public y: number = 0;

@@ -9,7 +9,7 @@
 **核心理念：** 组件主要存储数据，复杂逻辑放在系统中处理。
 
 ```typescript
-// ✅ 好的设计：主要是数据
+// 好的设计：主要是数据
 class HealthComponent extends Component {
     public maxHealth: number;
     public currentHealth: number;
@@ -56,7 +56,7 @@ class BadHealthComponent extends Component {
 每个组件只负责一个方面的数据。
 
 ```typescript
-// ✅ 好的设计：单一职责
+// 好的设计：单一职责
 class PositionComponent extends Component {
     public x: number = 0;
     public y: number = 0;
@@ -108,7 +108,7 @@ class TransformComponent extends Component {
 使用多个小组件组合，而不是大而全的组件继承。
 
 ```typescript
-// ✅ 好的设计：组合方式
+// 好的设计：组合方式
 class Player {
     constructor(scene: Scene) {
         const player = scene.createEntity("Player");
@@ -390,7 +390,7 @@ class InventoryComponent extends Component {
 组件间不应直接通信，通过系统或事件系统进行通信。
 
 ```typescript
-// ✅ 好的设计：通过事件通信
+// 好的设计：通过事件通信
 class HealthComponent extends Component {
     public currentHealth: number;
     public maxHealth: number;
@@ -555,7 +555,7 @@ class BulletPool {
 保持组件数据紧凑，避免不必要的对象分配。
 
 ```typescript
-// ✅ 好的设计：紧凑的数据结构
+// 好的设计：紧凑的数据结构
 class ParticleComponent extends Component {
     // 使用基本类型，避免对象分配
     public x: number = 0;
