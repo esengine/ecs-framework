@@ -1,15 +1,6 @@
-/**
- * Matcher性能测试
- * 
- * 注意：性能测试结果可能因平台而异，主要用于性能回归检测
- */
-
-import { Scene } from '../../src/ECS/Scene';
-import { Entity } from '../../src/ECS/Entity';
 import { Component } from '../../src/ECS/Component';
 import { Matcher } from '../../src/ECS/Utils/Matcher';
 
-// 测试组件
 class Position extends Component {
     public x: number = 0;
     public y: number = 0;
@@ -50,260 +41,301 @@ class Weapon extends Component {
     }
 }
 
-describe('Matcher性能测试', () => {
-    let scene: Scene;
-    
-    beforeEach(() => {
-        scene = new Scene();
-        scene.begin();
+describe('Matcher 性能测试', () => {
+    test('大量 Matcher 创建性能', () => {
+        console.log('\n=== Matcher 创建性能测试 ===');
+        
+        const iterationCount = 10000;
+        
+        const staticStart = performance.now();
+        for (let i = 0; i < iterationCount; i++) {
+            Matcher.all(Position, Velocity);
+        }
+        const staticTime = performance.now() - staticStart;
+        
+        const complexStart = performance.now();
+        for (let i = 0; i < iterationCount; i++) {
+            Matcher.complex()
+                .all(Position, Velocity)
+                .any(Health, Weapon)
+                .none(Weapon);
+        }
+        const complexTime = performance.now() - complexStart;
+        
+        console.log(`静态方法创建: ${staticTime.toFixed(3)}ms (${(staticTime/iterationCount*1000).toFixed(3)}μs/次)`);
+        console.log(`复杂链式创建: ${complexTime.toFixed(3)}ms (${(complexTime/iterationCount*1000).toFixed(3)}μs/次)`);
+        
+        expect(staticTime).toBeLessThan(1000);
+        expect(complexTime).toBeLessThan(2000);
     });
     
-    afterEach(() => {
-        scene.end();
+    test('Matcher getCondition() 性能', () => {
+        console.log('\n=== getCondition() 性能测试 ===');
+        
+        const matcher = Matcher.all(Position, Velocity, Health)
+            .any(Weapon)
+            .none(Health)
+            .withTag(123)
+            .withName('TestEntity')
+            .withComponent(Position);
+        
+        const iterationCount = 50000;
+        
+        const start = performance.now();
+        for (let i = 0; i < iterationCount; i++) {
+            matcher.getCondition();
+        }
+        const time = performance.now() - start;
+        
+        console.log(`getCondition() 调用: ${time.toFixed(3)}ms (${(time/iterationCount*1000).toFixed(3)}μs/次)`);
+        
+        expect(time).toBeLessThan(500);
     });
     
-    const createTestEntities = (count: number): Entity[] => {
-        const entities: Entity[] = [];
-        for (let i = 0; i < count; i++) {
-            const entity = scene.createEntity(`Entity${i}`);
+    test('Matcher clone() 性能', () => {
+        console.log('\n=== clone() 性能测试 ===');
+        
+        const originalMatcher = Matcher.all(Position, Velocity, Health)
+            .any(Weapon)
+            .none(Health)
+            .withTag(123)
+            .withName('TestEntity')
+            .withComponent(Position);
+        
+        const iterationCount = 10000;
+        
+        const start = performance.now();
+        for (let i = 0; i < iterationCount; i++) {
+            originalMatcher.clone();
+        }
+        const time = performance.now() - start;
+        
+        console.log(`clone() 调用: ${time.toFixed(3)}ms (${(time/iterationCount*1000).toFixed(3)}μs/次)`);
+        
+        expect(time).toBeLessThan(1000);
+    });
+    
+    test('Matcher toString() 性能', () => {
+        console.log('\n=== toString() 性能测试 ===');
+        
+        const simpleMatcherStart = performance.now();
+        const simpleMatcher = Matcher.all(Position);
+        for (let i = 0; i < 10000; i++) {
+            simpleMatcher.toString();
+        }
+        const simpleTime = performance.now() - simpleMatcherStart;
+        
+        const complexMatcherStart = performance.now();
+        const complexMatcher = Matcher.all(Position, Velocity, Health)
+            .any(Weapon)
+            .none(Health)
+            .withTag(123)
+            .withName('TestEntity')
+            .withComponent(Position);
+        for (let i = 0; i < 10000; i++) {
+            complexMatcher.toString();
+        }
+        const complexTime = performance.now() - complexMatcherStart;
+        
+        console.log(`简单 toString(): ${simpleTime.toFixed(3)}ms (${(simpleTime/10000*1000).toFixed(3)}μs/次)`);
+        console.log(`复杂 toString(): ${complexTime.toFixed(3)}ms (${(complexTime/10000*1000).toFixed(3)}μs/次)`);
+        
+        expect(simpleTime).toBeLessThan(200);
+        expect(complexTime).toBeLessThan(500);
+    });
+    
+    test('Matcher isEmpty() 性能', () => {
+        console.log('\n=== isEmpty() 性能测试 ===');
+        
+        const emptyMatcher = Matcher.empty();
+        const fullMatcher = Matcher.all(Position, Velocity)
+            .any(Health)
+            .none(Weapon)
+            .withTag(123);
+        
+        const iterationCount = 100000;
+        
+        const emptyStart = performance.now();
+        for (let i = 0; i < iterationCount; i++) {
+            emptyMatcher.isEmpty();
+        }
+        const emptyTime = performance.now() - emptyStart;
+        
+        const fullStart = performance.now();
+        for (let i = 0; i < iterationCount; i++) {
+            fullMatcher.isEmpty();
+        }
+        const fullTime = performance.now() - fullStart;
+        
+        console.log(`空匹配器 isEmpty(): ${emptyTime.toFixed(3)}ms (${(emptyTime/iterationCount*1000).toFixed(3)}μs/次)`);
+        console.log(`复杂匹配器 isEmpty(): ${fullTime.toFixed(3)}ms (${(fullTime/iterationCount*1000).toFixed(3)}μs/次)`);
+        
+        expect(emptyTime).toBeLessThan(100);
+        expect(fullTime).toBeLessThan(200);
+    });
+    
+    test('Matcher reset() 性能', () => {
+        console.log('\n=== reset() 性能测试 ===');
+        
+        const iterationCount = 50000;
+        
+        const start = performance.now();
+        for (let i = 0; i < iterationCount; i++) {
+            const matcher = Matcher.all(Position, Velocity, Health)
+                .any(Weapon)
+                .none(Health)
+                .withTag(123)
+                .withName('TestEntity')
+                .withComponent(Position);
+            matcher.reset();
+        }
+        const time = performance.now() - start;
+        
+        console.log(`reset() 调用: ${time.toFixed(3)}ms (${(time/iterationCount*1000).toFixed(3)}μs/次)`);
+        
+        expect(time).toBeLessThan(1000);
+    });
+    
+    test('大规模链式调用性能', () => {
+        console.log('\n=== 大规模链式调用性能测试 ===');
+        
+        const iterationCount = 5000;
+        
+        const start = performance.now();
+        for (let i = 0; i < iterationCount; i++) {
+            Matcher.empty()
+                .all(Position)
+                .all(Velocity)
+                .all(Health)
+                .any(Weapon)
+                .any(Health)
+                .none(Weapon)
+                .none(Health)
+                .withTag(i)
+                .withName(`Entity${i}`)
+                .withComponent(Position)
+                .withoutTag()
+                .withoutName()
+                .withoutComponent()
+                .withTag(i * 2)
+                .withName(`NewEntity${i}`)
+                .withComponent(Velocity);
+        }
+        const time = performance.now() - start;
+        
+        console.log(`大规模链式调用: ${time.toFixed(3)}ms (${(time/iterationCount*1000).toFixed(3)}μs/次)`);
+        
+        expect(time).toBeLessThan(2000);
+    });
+    
+    test('内存分配性能测试', () => {
+        console.log('\n=== 内存分配性能测试 ===');
+        
+        const iterationCount = 10000;
+        const matchers: Matcher[] = [];
+        
+        const start = performance.now();
+        for (let i = 0; i < iterationCount; i++) {
+            const matcher = Matcher.all(Position, Velocity)
+                .any(Health, Weapon)
+                .none(Health)
+                .withTag(i)
+                .withName(`Entity${i}`);
+            matchers.push(matcher);
+        }
+        const allocationTime = performance.now() - start;
+        
+        const cloneStart = performance.now();
+        const clonedMatchers = matchers.map(m => m.clone());
+        const cloneTime = performance.now() - cloneStart;
+        
+        const conditionStart = performance.now();
+        const conditions = matchers.map(m => m.getCondition());
+        const conditionTime = performance.now() - conditionStart;
+        
+        console.log(`创建 ${iterationCount} 个 Matcher: ${allocationTime.toFixed(3)}ms`);
+        console.log(`克隆 ${iterationCount} 个 Matcher: ${cloneTime.toFixed(3)}ms`);
+        console.log(`获取 ${iterationCount} 个条件: ${conditionTime.toFixed(3)}ms`);
+        
+        expect(allocationTime).toBeLessThan(1500);
+        expect(cloneTime).toBeLessThan(1000);
+        expect(conditionTime).toBeLessThan(500);
+        
+        expect(matchers.length).toBe(iterationCount);
+        expect(clonedMatchers.length).toBe(iterationCount);
+        expect(conditions.length).toBe(iterationCount);
+    });
+    
+    test('字符串操作性能对比', () => {
+        console.log('\n=== 字符串操作性能对比 ===');
+        
+        const simpleMatcher = Matcher.all(Position);
+        const complexMatcher = Matcher.all(Position, Velocity, Health, Weapon)
+            .any(Health, Weapon)
+            .none(Position, Velocity)
+            .withTag(123456)
+            .withName('VeryLongEntityNameForPerformanceTesting')
+            .withComponent(Health);
+        
+        const iterationCount = 10000;
+        
+        const simpleStart = performance.now();
+        for (let i = 0; i < iterationCount; i++) {
+            simpleMatcher.toString();
+        }
+        const simpleTime = performance.now() - simpleStart;
+        
+        const complexStart = performance.now();
+        for (let i = 0; i < iterationCount; i++) {
+            complexMatcher.toString();
+        }
+        const complexTime = performance.now() - complexStart;
+        
+        console.log(`简单匹配器字符串化: ${simpleTime.toFixed(3)}ms`);
+        console.log(`复杂匹配器字符串化: ${complexTime.toFixed(3)}ms`);
+        console.log(`复杂度影响: ${(complexTime/simpleTime).toFixed(2)}x`);
+        
+        expect(simpleTime).toBeLessThan(200);
+        expect(complexTime).toBeLessThan(800);
+    });
+    
+    test('批量操作性能基准', () => {
+        console.log('\n=== 批量操作性能基准 ===');
+        
+        const batchSize = 1000;
+        const operationCount = 10;
+        
+        const totalStart = performance.now();
+        
+        for (let batch = 0; batch < operationCount; batch++) {
+            const matchers: Matcher[] = [];
             
-            // 确定性的组件分配
-            if (i % 3 !== 0) entity.addComponent(new Position(i, i));
-            if (i % 2 === 0) entity.addComponent(new Velocity(i % 10, i % 10));
-            if (i % 4 !== 0) entity.addComponent(new Health(100 - (i % 50)));
-            if (i % 5 === 0) entity.addComponent(new Weapon(i % 20));
+            for (let i = 0; i < batchSize; i++) {
+                const matcher = Matcher.complex()
+                    .all(Position, Velocity)
+                    .any(Health, Weapon)
+                    .withTag(batch * batchSize + i);
+                
+                matchers.push(matcher);
+            }
             
-            entities.push(entity);
-        }
-        return entities;
-    };
-    
-    test('小规模性能测试 (100个实体)', () => {
-        const entities = createTestEntities(100);
-        const matcher = Matcher.create(scene.querySystem)
-            .all(Position, Velocity);
-        
-        console.log('\n=== 小规模测试 (100个实体) ===');
-        
-        // 传统逐个检查
-        const matcherStart = performance.now();
-        let matcherCount = 0;
-        for (const entity of entities) {
-            if (matcher.matches(entity)) {
-                matcherCount++;
-            }
-        }
-        const matcherTime = performance.now() - matcherStart;
-        
-        // QuerySystem批量查询
-        const queryStart = performance.now();
-        const queryResult = scene.querySystem.queryAll(Position, Velocity);
-        const queryTime = performance.now() - queryStart;
-        
-        // Matcher批量查询
-        const batchStart = performance.now();
-        const batchResult = matcher.query();
-        const batchTime = performance.now() - batchStart;
-        
-        console.log(`传统逐个: ${matcherTime.toFixed(3)}ms (${matcherCount}个匹配)`);
-        console.log(`QuerySystem: ${queryTime.toFixed(3)}ms (${queryResult.count}个匹配)`);
-        console.log(`Matcher批量: ${batchTime.toFixed(3)}ms (${batchResult.length}个匹配)`);
-        console.log(`性能提升: ${(matcherTime/batchTime).toFixed(1)}x`);
-        
-        // 验证结果一致性
-        expect(matcherCount).toBe(queryResult.count);
-        expect(batchResult.length).toBe(queryResult.count);
-        
-        // 性能断言（宽松，避免平台差异）
-        expect(batchTime).toBeLessThan(matcherTime * 2);
-    });
-    
-    test('中等规模性能测试 (1000个实体)', () => {
-        const entities = createTestEntities(1000);
-        const matcher = Matcher.create(scene.querySystem)
-            .all(Position, Velocity);
-        
-        console.log('\n=== 中等规模测试 (1000个实体) ===');
-        
-        // 传统方式
-        const matcherStart = performance.now();
-        let matcherCount = 0;
-        for (const entity of entities) {
-            if (matcher.matches(entity)) {
-                matcherCount++;
-            }
-        }
-        const matcherTime = performance.now() - matcherStart;
-        
-        // QuerySystem方式
-        const queryStart = performance.now();
-        const queryResult = scene.querySystem.queryAll(Position, Velocity);
-        const queryTime = performance.now() - queryStart;
-        
-        console.log(`传统逐个: ${matcherTime.toFixed(3)}ms (${matcherCount}个匹配)`);
-        console.log(`QuerySystem: ${queryTime.toFixed(3)}ms (${queryResult.count}个匹配)`);
-        console.log(`性能提升: ${(matcherTime/queryTime).toFixed(1)}x`);
-        
-        expect(matcherCount).toBe(queryResult.count);
-        expect(queryTime).toBeLessThan(matcherTime);
-    });
-    
-    test('大规模性能测试 (5000个实体)', () => {
-        const entities = createTestEntities(5000);
-        const matcher = Matcher.create(scene.querySystem)
-            .all(Position, Velocity);
-        
-        console.log('\n=== 大规模测试 (5000个实体) ===');
-        
-        // 传统方式
-        const matcherStart = performance.now();
-        let matcherCount = 0;
-        for (const entity of entities) {
-            if (matcher.matches(entity)) {
-                matcherCount++;
-            }
-        }
-        const matcherTime = performance.now() - matcherStart;
-        
-        // QuerySystem方式
-        const queryStart = performance.now();
-        const queryResult = scene.querySystem.queryAll(Position, Velocity);
-        const queryTime = performance.now() - queryStart;
-        
-        console.log(`传统逐个: ${matcherTime.toFixed(3)}ms (${matcherCount}个匹配)`);
-        console.log(`QuerySystem: ${queryTime.toFixed(3)}ms (${queryResult.count}个匹配)`);
-        console.log(`性能提升: ${(matcherTime/queryTime).toFixed(1)}x`);
-        
-        expect(matcherCount).toBe(queryResult.count);
-        expect(queryTime).toBeLessThan(matcherTime);
-    });
-    
-    test('重复查询缓存性能', () => {
-        createTestEntities(2000);
-        const matcher = Matcher.create(scene.querySystem)
-            .all(Position, Velocity);
-        const repeatCount = 10;
-        
-        console.log('\n=== 重复查询缓存测试 (2000个实体, 10次查询) ===');
-        
-        // 首次查询（建立缓存）
-        const firstResult = matcher.query();
-        
-        // 重复查询测试
-        const repeatStart = performance.now();
-        for (let i = 0; i < repeatCount; i++) {
-            const result = matcher.query();
-            expect(result.length).toBe(firstResult.length);
-        }
-        const repeatTime = performance.now() - repeatStart;
-        
-        // QuerySystem重复查询对比
-        const queryStart = performance.now();
-        for (let i = 0; i < repeatCount; i++) {
-            scene.querySystem.queryAll(Position, Velocity);
-        }
-        const queryTime = performance.now() - queryStart;
-        
-        console.log(`Matcher重复: ${repeatTime.toFixed(3)}ms (${(repeatTime/repeatCount).toFixed(3)}ms/次)`);
-        console.log(`QuerySystem重复: ${queryTime.toFixed(3)}ms (${(queryTime/repeatCount).toFixed(3)}ms/次)`);
-        console.log(`缓存优势: ${(queryTime/repeatTime).toFixed(1)}x`);
-        
-        // 宽松的性能断言（允许平台差异）
-        expect(repeatTime).toBeLessThan(queryTime * 5);
-    });
-    
-    test('复杂查询性能测试', () => {
-        const entities = createTestEntities(1000);
-        
-        console.log('\n=== 复杂查询测试 (1000个实体) ===');
-        console.log('查询条件: all(Position) + any(Velocity, Weapon) + none(Health)');
-        
-        // Matcher复杂查询
-        const matcher = Matcher.create(scene.querySystem)
-            .all(Position)
-            .any(Velocity, Weapon)
-            .none(Health);
-        
-        const matcherStart = performance.now();
-        let matcherCount = 0;
-        for (const entity of entities) {
-            if (matcher.matches(entity)) {
-                matcherCount++;
-            }
-        }
-        const matcherTime = performance.now() - matcherStart;
-        
-        // QuerySystem分步查询
-        const queryStart = performance.now();
-        const posResult = scene.querySystem.queryAll(Position);
-        const velResult = scene.querySystem.queryAll(Velocity);
-        const weaponResult = scene.querySystem.queryAll(Weapon);
-        const healthResult = scene.querySystem.queryAll(Health);
-        
-        const posSet = new Set(posResult.entities);
-        const velSet = new Set(velResult.entities);
-        const weaponSet = new Set(weaponResult.entities);
-        const healthSet = new Set(healthResult.entities);
-        
-        let queryCount = 0;
-        for (const entity of entities) {
-            const hasPos = posSet.has(entity);
-            const hasVelOrWeapon = velSet.has(entity) || weaponSet.has(entity);
-            const hasHealth = healthSet.has(entity);
+            matchers.forEach(m => {
+                m.getCondition();
+                m.toString();
+                m.isEmpty();
+            });
             
-            if (hasPos && hasVelOrWeapon && !hasHealth) {
-                queryCount++;
-            }
+            const cloned = matchers.map(m => m.clone());
+            cloned.forEach(m => m.reset());
         }
-        const queryTime = performance.now() - queryStart;
         
-        console.log(`Matcher复杂: ${matcherTime.toFixed(3)}ms (${matcherCount}个匹配)`);
-        console.log(`分步QuerySystem: ${queryTime.toFixed(3)}ms (${queryCount}个匹配)`);
-        console.log(`性能比: ${(matcherTime/queryTime).toFixed(2)}x`);
+        const totalTime = performance.now() - totalStart;
+        const totalOperations = batchSize * operationCount * 5; // 每个matcher执行5个操作
         
-        // 验证结果一致性
-        expect(matcherCount).toBe(queryCount);
+        console.log(`批量操作总时间: ${totalTime.toFixed(3)}ms`);
+        console.log(`总操作数: ${totalOperations}`);
+        console.log(`平均每操作: ${(totalTime/totalOperations*1000).toFixed(3)}μs`);
         
-        // 宽松的性能断言（复杂查询可能有差异）
-        expect(matcherTime).toBeLessThan(queryTime * 10);
-    });
-    
-    test('缓存失效性能影响', () => {
-        createTestEntities(1000);
-        const matcher = Matcher.create(scene.querySystem)
-            .all(Position);
-        
-        console.log('\n=== 缓存失效性能测试 ===');
-        
-        // 首次查询
-        const firstStart = performance.now();
-        const firstResult = matcher.query();
-        const firstTime = performance.now() - firstStart;
-        
-        // 重复查询（缓存命中）
-        const cachedStart = performance.now();
-        const cachedResult = matcher.query();
-        const cachedTime = performance.now() - cachedStart;
-        
-        // 添加新实体（使缓存失效）
-        const newEntity = scene.createEntity('CacheInvalidator');
-        newEntity.addComponent(new Position(999, 999));
-        
-        // 缓存失效后的查询
-        const invalidatedStart = performance.now();
-        const invalidatedResult = matcher.query();
-        const invalidatedTime = performance.now() - invalidatedStart;
-        
-        console.log(`首次查询: ${firstTime.toFixed(3)}ms (${firstResult.length}个结果)`);
-        console.log(`缓存查询: ${cachedTime.toFixed(3)}ms (${cachedResult.length}个结果)`);
-        console.log(`失效查询: ${invalidatedTime.toFixed(3)}ms (${invalidatedResult.length}个结果)`);
-        
-        // 验证功能正确性
-        expect(cachedResult.length).toBe(firstResult.length);
-        expect(invalidatedResult.length).toBe(firstResult.length + 1);
-        
-        // 性能验证
-        expect(cachedTime).toBeLessThan(firstTime);
-        expect(invalidatedTime).toBeGreaterThan(cachedTime);
+        expect(totalTime).toBeLessThan(5000);
     });
 });
