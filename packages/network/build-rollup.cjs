@@ -46,6 +46,7 @@ function generatePackageJson() {
         description: sourcePackage.description,
         main: 'index.cjs',
         module: 'index.mjs',
+        unpkg: 'index.umd.js',
         types: 'index.d.ts',
         exports: {
             '.': {
@@ -59,6 +60,8 @@ function generatePackageJson() {
             'index.mjs.map',
             'index.cjs',
             'index.cjs.map',
+            'index.umd.js',
+            'index.umd.js.map',
             'index.d.ts',
             'README.md',
             'LICENSE'
@@ -67,7 +70,7 @@ function generatePackageJson() {
             'ecs',
             'networking',
             'frame-sync',
-            'protobuf',
+            'tsrpc',
             'serialization',
             'multiplayer',
             'game-engine',
@@ -77,14 +80,13 @@ function generatePackageJson() {
         author: sourcePackage.author,
         license: sourcePackage.license,
         repository: sourcePackage.repository,
+        bugs: sourcePackage.bugs,
+        homepage: sourcePackage.homepage,
         engines: {
             node: '>=16.0.0'
         },
-        dependencies: {
-            '@esengine/ecs-framework': sourcePackage.peerDependencies['@esengine/ecs-framework'],
-            'protobufjs': sourcePackage.dependencies.protobufjs,
-            'reflect-metadata': sourcePackage.dependencies['reflect-metadata']
-        },
+        dependencies: sourcePackage.dependencies,
+        peerDependencies: sourcePackage.peerDependencies,
         sideEffects: false
     };
 
@@ -109,7 +111,7 @@ function copyFiles() {
 
 function showBuildResults() {
     const distDir = './dist';
-    const files = ['index.mjs', 'index.cjs', 'index.d.ts'];
+    const files = ['index.mjs', 'index.cjs', 'index.umd.js', 'index.d.ts'];
     
     console.log('\n📊 构建结果:');
     files.forEach(file => {

@@ -1,6 +1,6 @@
 {
   "name": "@esengine/ecs-framework-network",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "ECS框架网络插件 - 提供TSRPC网络通信、帧同步和快照功能",
   "type": "module",
   "main": "bin/index.js",

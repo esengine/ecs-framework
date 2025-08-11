@@ -82,6 +82,36 @@ module.exports = [
     }
   },
   
+  // UMD构建 - 用于CDN和浏览器直接使用
+  {
+    input: 'bin/index.js',
+    output: {
+      file: 'dist/index.umd.js',
+      format: 'umd',
+      name: 'ECSNetwork',
+      banner,
+      sourcemap: true,
+      exports: 'named',
+      globals: {
+        '@esengine/ecs-framework': 'ECS',
+        'protobufjs': 'protobuf',
+        'reflect-metadata': 'Reflect'
+      }
+    },
+    plugins: [
+      ...commonPlugins,
+      terser({
+        format: {
+          comments: /^!/
+        }
+      })
+    ],
+    external: ['@esengine/ecs-framework', 'protobufjs', 'reflect-metadata'],
+    treeshake: {
+      moduleSideEffects: false
+    }
+  },
+  
   // 类型定义构建
   {
     input: 'bin/index.d.ts',

@@ -76,6 +76,31 @@ module.exports = [
       moduleSideEffects: false
     }
   },
+
+  // UMD构建 - 用于CDN和浏览器直接使用
+  {
+    input: 'bin/index.js',
+    output: {
+      file: 'dist/index.umd.js',
+      format: 'umd',
+      name: 'ECS',
+      banner,
+      sourcemap: true,
+      exports: 'named'
+    },
+    plugins: [
+      ...commonPlugins,
+      terser({
+        format: {
+          comments: /^!/
+        }
+      })
+    ],
+    external: [],
+    treeshake: {
+      moduleSideEffects: false
+    }
+  },
   
   // 类型定义构建
   {

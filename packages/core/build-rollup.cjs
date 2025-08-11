@@ -46,6 +46,7 @@ function generatePackageJson() {
         description: sourcePackage.description,
         main: 'index.cjs',
         module: 'index.mjs',
+        unpkg: 'index.umd.js',
         types: 'index.d.ts',
         exports: {
             '.': {
@@ -59,6 +60,8 @@ function generatePackageJson() {
             'index.mjs.map',
             'index.cjs',
             'index.cjs.map',
+            'index.umd.js',
+            'index.umd.js.map',
             'index.d.ts',
             'README.md',
             'LICENSE',
@@ -110,7 +113,7 @@ function copyFiles() {
 
 function showBuildResults() {
     const distDir = './dist';
-    const files = ['index.mjs', 'index.cjs', 'index.d.ts'];
+    const files = ['index.mjs', 'index.cjs', 'index.umd.js', 'index.d.ts'];
     
     console.log('\n📊 构建结果:');
     files.forEach(file => {
