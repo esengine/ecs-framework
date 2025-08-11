@@ -31,3 +31,9 @@
 [submodule "thirdparty/ecs-astar"]
 	path = thirdparty/ecs-astar
 	url = https://github.com/esengine/ecs-astar.git
+[submodule "examples/electric-world"]
+	path = examples/electric-world
+	url = https://github.com/esengine/electric-world.git
+[submodule "examples/lawn-mower-demo"]
+	path = examples/lawn-mower-demod
+	url = https://github.com/esengine/lawn-mower-demo.git
