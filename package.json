@@ -32,6 +32,8 @@
     "prepare:publish": "npm run build:npm && node scripts/pre-publish-check.cjs",
     "sync:versions": "node scripts/sync-versions.cjs",
     "publish:all": "npm run prepare:publish && lerna publish",
+    "publish:core": "cd packages/core && npm run build:npm && npm publish",
+    "publish:core:patch": "cd packages/core && npm version patch && npm run build:npm && npm publish",
     "publish": "lerna publish",
     "version": "lerna version"
   },
