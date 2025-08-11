@@ -29,6 +29,7 @@
     "build:watch": "tsc --watch",
     "rebuild": "npm run clean && npm run build",
     "build:npm": "npm run build && node build-rollup.cjs",
+    "publish:npm": "npm run build:npm && cd dist && npm publish",
     "test": "jest --config jest.config.cjs",
     "test:watch": "jest --watch --config jest.config.cjs",
     "test:coverage": "jest --coverage --config jest.config.cjs",
