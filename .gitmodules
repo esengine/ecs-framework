@@ -13,9 +13,6 @@
 [submodule "extensions/cocos/cocos-ecs/extensions/cocos-terrain-gen"]
 	path = extensions/cocos/cocos-ecs/extensions/cocos-terrain-gen
 	url = https://github.com/esengine/cocos-terrain-gen.git
-[submodule "examples/lawn-mower-demo"]
-	path = examples/lawn-mower-demo
-	url = https://github.com/esengine/lawn-mower-demo.git
 [submodule "extensions/cocos/cocos-ecs/extensions/mvvm-designer"]
 	path = extensions/cocos/cocos-ecs/extensions/mvvm-designer
 	url = https://github.com/esengine/mvvm-designer.git
@@ -35,5 +32,5 @@
 	path = examples/electric-world
 	url = https://github.com/esengine/electric-world.git
 [submodule "examples/lawn-mower-demo"]
-	path = examples/lawn-mower-demod
+	path = examples/lawn-mower-demo
 	url = https://github.com/esengine/lawn-mower-demo.git

@@ -4,7 +4,7 @@
 
 import 'reflect-metadata';
 import { TsrpcTransport } from '../src/transport/TsrpcTransport';
-import { NetworkConfig } from '../src/types/NetworkTypes';
+import { NetworkConfig } from '../src/Types/NetworkTypes';
 
 // 简化测试，只验证基本功能
 describe('TSRPC传输层测试', () => {

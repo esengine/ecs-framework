@@ -9,9 +9,9 @@ import { NetworkBehaviour } from '../src/NetworkBehaviour';
 import { SyncVar } from '../src/decorators/SyncVar';
 import { ClientRpc } from '../src/decorators/ClientRpc';
 import { Command } from '../src/decorators/Command';
-import { NetworkRegistry } from '../src/core/NetworkRegistry';
-import { SyncVarManager } from '../src/core/SyncVarManager';
-import { RpcManager } from '../src/core/RpcManager';
+import { NetworkRegistry } from '../src/Core/NetworkRegistry';
+import { SyncVarManager } from '../src/Core/SyncVarManager';
+import { RpcManager } from '../src/Core/RpcManager';
 
 // 测试用的玩家组件
 class TestPlayerComponent extends NetworkBehaviour {
@@ -140,11 +140,11 @@ describe('网络库基础功能测试', () => {
       expect(messages.length).toBeGreaterThanOrEqual(2);
 
       // 验证消息内容
-      const healthMessage = messages.find(m => m.propertyName === 'health');
+      const healthMessage = messages.find((m: any) => m.propertyName === 'health');
       expect(healthMessage).toBeDefined();
       expect(healthMessage?.value).toBe(80);
 
-      const nameMessage = messages.find(m => m.propertyName === 'playerName');
+      const nameMessage = messages.find((m: any) => m.propertyName === 'playerName');
       expect(nameMessage).toBeDefined();
       expect(nameMessage?.value).toBe('TestPlayer');
     });
@@ -190,7 +190,7 @@ describe('网络库基础功能测试', () => {
         playerComponent.showDamageEffect(25, { x: 100, y: 200 });
         
         const rpcMessages = RpcManager.instance.getPendingRpcMessages();
-        const damageMessage = rpcMessages.find(m => m.methodName === 'showDamageEffect');
+        const damageMessage = rpcMessages.find((m: any) => m.methodName === 'showDamageEffect');
         expect(damageMessage).toBeDefined();
         expect(damageMessage?.isClientRpc).toBe(true);
       }
