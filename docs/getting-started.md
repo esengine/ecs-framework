@@ -221,31 +221,18 @@ class LayaECSGame extends LayaScene {
 // Laya渲染系统
 class LayaRenderSystem extends EntitySystem {
     private layaScene: LayaScene;
-    private renderMatcher: Matcher;
     
     constructor(layaScene: LayaScene) {
-        super();
+        super(Matcher.all(PositionComponent, SpriteComponent));
         this.layaScene = layaScene;
     }
     
-    public initialize(): void {
-        super.initialize();
-        // 创建Matcher来查询需要渲染的实体
-        if (this.scene) {
-            this.renderMatcher = Matcher.create(this.scene.querySystem)
-                .all(PositionComponent, SpriteComponent);
-        }
-    }
-    
-    protected process(entities: Entity[]): void {
-        // 获取需要渲染的实体
-        const renderableEntities = this.renderMatcher.query();
-        
-        renderableEntities.forEach(entity => {
+    protected override process(entities: Entity[]): void {
+        entities.forEach(entity => {
             const pos = entity.getComponent(PositionComponent)!;
             const sprite = entity.getComponent(SpriteComponent)!;
             
-            if (pos && sprite && sprite.layaSprite) {
+            if (sprite.layaSprite) {
                 sprite.layaSprite.x = pos.x;
                 sprite.layaSprite.y = pos.y;
             }
@@ -260,7 +247,7 @@ Laya.Scene.open("GameScene.scene", false, null, null, LayaECSGame);
 ### Cocos Creator
 
 ```typescript
-import { Component as CocosComponent, _decorator } from 'cc';
+import { Component as CocosComponent, _decorator, Node } from 'cc';
 import { Core, Scene as ECSScene, EntityManager, EntitySystem } from '@esengine/ecs-framework';
 
 const { ccclass, property } = _decorator;
@@ -307,25 +294,14 @@ export class ECSGameManager extends CocosComponent {
 // Cocos渲染系统
 class CocosRenderSystem extends EntitySystem {
     private rootNode: Node;
-    private renderMatcher: Matcher;
     
     constructor(rootNode: Node) {
-        super();
+        super(Matcher.all(PositionComponent, SpriteComponent));
         this.rootNode = rootNode;
     }
     
-    public initialize(): void {
-        super.initialize();
-        if (this.scene) {
-            this.renderMatcher = Matcher.create(this.scene.querySystem)
-                .all(PositionComponent, SpriteComponent);
-        }
-    }
-    
-    protected process(entities: Entity[]): void {
-        const renderableEntities = this.renderMatcher.query();
-        
-        renderableEntities.forEach(entity => {
+    protected override process(entities: Entity[]): void {
+        entities.forEach(entity => {
             const pos = entity.getComponent(PositionComponent)!;
             const sprite = entity.getComponent(SpriteComponent)!;
             
@@ -507,8 +483,9 @@ class PositionComponent extends Component {
     public x: number = 0;
     public y: number = 0;
     
-    constructor(x: number = 0, y: number = 0) {
+    constructor(...args: unknown[]) {
         super();
+        const [x = 0, y = 0] = args as [number?, number?];
         this.x = x;
         this.y = y;
     }
@@ -524,8 +501,9 @@ class VelocityComponent extends Component {
     public x: number = 0;
     public y: number = 0;
     
-    constructor(x: number = 0, y: number = 0) {
+    constructor(...args: unknown[]) {
         super();
+        const [x = 0, y = 0] = args as [number?, number?];
         this.x = x;
         this.y = y;
     }
@@ -541,8 +519,9 @@ class HealthComponent extends Component {
     public maxHealth: number = 100;
     public currentHealth: number = 100;
     
-    constructor(maxHealth: number = 100) {
+    constructor(...args: unknown[]) {
         super();
+        const [maxHealth = 100] = args as [number?];
         this.maxHealth = maxHealth;
         this.currentHealth = maxHealth;
     }
@@ -576,44 +555,26 @@ class MovementSystem extends EntitySystem {
         super(Matcher.all(PositionComponent, VelocityComponent));
     }
     
-    protected process(entities: Entity[]): void {
-        const movingEntities = entities;
-        
-        movingEntities.forEach(entity => {
-            const position = entity.getComponent(PositionComponent);
-            const velocity = entity.getComponent(VelocityComponent);
+    protected override process(entities: Entity[]): void {
+        entities.forEach(entity => {
+            const position = entity.getComponent(PositionComponent)!;
+            const velocity = entity.getComponent(VelocityComponent)!;
             
-            if (position && velocity) {
-                position.x += velocity.x * Time.deltaTime;
-                position.y += velocity.y * Time.deltaTime;
-            }
+            position.x += velocity.x * Time.deltaTime;
+            position.y += velocity.y * Time.deltaTime;
         });
     }
 }
 
 class HealthSystem extends EntitySystem {
-    private healthMatcher: Matcher;
-    
     constructor() {
-        super();
+        super(Matcher.all(HealthComponent));
     }
     
-    public initialize(): void {
-        super.initialize();
-        if (this.scene) {
-            this.healthMatcher = Matcher.create(this.scene.querySystem)
-                .all(HealthComponent);
-        }
-    }
-    
-    protected process(entities: Entity[]): void {
-        if (!this.healthMatcher) return;
-        
-        const healthEntities = this.healthMatcher.query();
-        
-        healthEntities.forEach(entity => {
-            const health = entity.getComponent(HealthComponent);
-            if (health && health.currentHealth <= 0) {
+    protected override process(entities: Entity[]): void {
+        entities.forEach(entity => {
+            const health = entity.getComponent(HealthComponent)!;
+            if (health.currentHealth <= 0) {
                 entity.destroy();
             }
         });

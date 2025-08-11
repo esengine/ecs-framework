@@ -49,7 +49,7 @@ npm install @esengine/ecs-framework
 ### 1. 基础使用
 
 ```typescript
-import { Core, Scene, Entity, Component, EntitySystem } from '@esengine/ecs-framework';
+import { Core, Scene, Entity, Component, EntitySystem, Matcher, Time } from '@esengine/ecs-framework';
 
 // 创建核心实例
 const core = Core.create({ debug: true });
@@ -58,14 +58,26 @@ Core.scene = scene;
 
 // 定义组件
 class PositionComponent extends Component {
-    constructor(public x: number = 0, public y: number = 0) {
+    public x: number = 0;
+    public y: number = 0;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [x = 0, y = 0] = args as [number?, number?];
+        this.x = x;
+        this.y = y;
     }
 }
 
 class VelocityComponent extends Component {
-    constructor(public dx: number = 0, public dy: number = 0) {
+    public x: number = 0;
+    public y: number = 0;
+    
+    constructor(...args: unknown[]) {
         super();
+        const [x = 0, y = 0] = args as [number?, number?];
+        this.x = x;
+        this.y = y;
     }
 }
 
@@ -76,15 +88,17 @@ entity.addComponent(new VelocityComponent(5, 0));
 
 // 创建系统
 class MovementSystem extends EntitySystem {
-    public process(entities: Entity[]) {
+    constructor() {
+        super(Matcher.all(PositionComponent, VelocityComponent));
+    }
+    
+    protected override process(entities: Entity[]) {
         for (const entity of entities) {
-            const position = entity.getComponent(PositionComponent);
-            const velocity = entity.getComponent(VelocityComponent);
+            const position = entity.getComponent(PositionComponent)!;
+            const velocity = entity.getComponent(VelocityComponent)!;
             
-            if (position && velocity) {
-                position.x += velocity.dx;
-                position.y += velocity.dy;
-            }
+            position.x += velocity.x * Time.deltaTime;
+            position.y += velocity.y * Time.deltaTime;
         }
     }
 }
@@ -100,16 +114,26 @@ Core.update(deltaTime);
 ### 查询系统
 
 ```typescript
-import { EntityManager } from '@esengine/ecs-framework';
+import { Matcher } from '@esengine/ecs-framework';
 
-const entityManager = new EntityManager();
+// 方式1：使用Matcher和EntitySystem
+class QuerySystem extends EntitySystem {
+    constructor() {
+        super(Matcher.all(PositionComponent, VelocityComponent).none(HealthComponent));
+    }
+    
+    protected override process(entities: Entity[]) {
+        // 处理匹配的实体
+        console.log(`Found ${entities.length} entities`);
+    }
+}
 
-// 流式查询 API
-const results = entityManager
-    .query()
-    .withAll(PositionComponent, VelocityComponent)
-    .withNone(HealthComponent)
-    .execute();
+// 方式2：手动过滤场景中的实体
+const results = scene.entities.buffer.filter(entity => 
+    entity.hasComponent(PositionComponent) && 
+    entity.hasComponent(VelocityComponent) &&
+    !entity.hasComponent(HealthComponent)
+);
 ```
 
 ### 事件系统
@@ -119,7 +143,7 @@ import { EventHandler, ECSEventType } from '@esengine/ecs-framework';
 
 class GameSystem {
     @EventHandler(ECSEventType.ENTITY_DESTROYED)
-    onEntityDestroyed(data: EntityDestroyedEventData) {
+    onEntityDestroyed(data: any) {
         console.log('实体销毁:', data.entityName);
     }
 }
@@ -198,12 +222,16 @@ function gameLoop(currentTime: number) {
 ### 查询 API
 
 ```typescript
-entityManager.query()
-    .withAll(...components)      // 包含所有组件
-    .withAny(...components)      // 包含任意组件
-    .withNone(...components)     // 不包含组件
-    .withTag(tag)                // 包含标签
-    .execute()                   // 执行查询
+// Matcher API - 用于EntitySystem
+Matcher.all(...components)      // 包含所有组件
+Matcher.any(...components)      // 包含任意组件
+Matcher.none(...components)     // 不包含组件
+
+// 手动查询 - 用于场景实体过滤
+scene.entities.buffer.filter(entity => 
+    entity.hasComponent(ComponentA) &&
+    entity.tag === someTag
+);
 ```
 
 ## 文档
