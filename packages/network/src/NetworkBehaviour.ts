@@ -6,7 +6,7 @@
  */
 
 import { Component } from '@esengine/ecs-framework';
-import { INetworkBehaviour } from './types/NetworkTypes';
+import { INetworkBehaviour } from './Types/NetworkTypes';
 import { NetworkIdentity } from './NetworkIdentity';
 import { NetworkManager } from './NetworkManager';
 

@@ -7,7 +7,7 @@
 import { WsServer } from 'tsrpc';
 import { createLogger } from '@esengine/ecs-framework';
 import { serviceProto, ServiceType } from './protocols/serviceProto';
-import { NetworkConfig, NetworkMessage } from '../types/NetworkTypes';
+import { NetworkConfig, NetworkMessage } from '../Types/NetworkTypes';
 import { 
   ReqJoinRoom, ResJoinRoom,
   ReqServerStatus, ResServerStatus,

@@ -16,12 +16,12 @@ export { ClientRpc } from './decorators/ClientRpc';
 export { Command } from './decorators/Command';
 
 // 核心管理器
-export { SyncVarManager } from './core/SyncVarManager';
-export { RpcManager } from './core/RpcManager';
-export { NetworkRegistry } from './core/NetworkRegistry';
+export { SyncVarManager } from './Core/SyncVarManager';
+export { RpcManager } from './Core/RpcManager';
+export { NetworkRegistry } from './Core/NetworkRegistry';
 
 // 传输层
 export * from './transport';
 
 // 类型定义
-export * from './types/NetworkTypes';
+export * from './Types/NetworkTypes';

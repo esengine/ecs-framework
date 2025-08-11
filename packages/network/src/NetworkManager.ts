@@ -18,10 +18,10 @@ import {
   SyncVarMessage,
   RpcMessage,
   NetworkMessage
-} from './types/NetworkTypes';
-import { NetworkRegistry } from './core/NetworkRegistry';
-import { SyncVarManager } from './core/SyncVarManager';
-import { RpcManager } from './core/RpcManager';
+} from './Types/NetworkTypes';
+import { NetworkRegistry } from './Core/NetworkRegistry';
+import { SyncVarManager } from './Core/SyncVarManager';
+import { RpcManager } from './Core/RpcManager';
 import { NetworkIdentity } from './NetworkIdentity';
 import { NetworkBehaviour } from './NetworkBehaviour';
 import { TsrpcTransport, TransportEventHandlers } from './transport/TsrpcTransport';

@@ -1,6 +1,6 @@
 {
   "name": "@esengine/ecs-framework-network",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "ECS框架网络插件 - 提供TSRPC网络通信、帧同步和快照功能",
   "type": "module",
   "main": "bin/index.js",
@@ -34,9 +34,9 @@
     "test:coverage": "jest --coverage --config jest.config.cjs",
     "test:ci": "jest --ci --coverage --config jest.config.cjs",
     "test:clear": "jest --clearCache",
-    "publish:patch": "npm version patch && npm publish",
-    "publish:minor": "npm version minor && npm publish",
-    "publish:major": "npm version major && npm publish"
+    "publish:patch": "npm version patch && npm run build:npm && cd dist && npm publish",
+    "publish:minor": "npm version minor && npm run build:npm && cd dist && npm publish",
+    "publish:major": "npm version major && npm run build:npm && cd dist && npm publish"
   },
   "author": "yhh",
   "license": "MIT",

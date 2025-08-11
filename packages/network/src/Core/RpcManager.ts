@@ -7,7 +7,7 @@
 import { createLogger } from '@esengine/ecs-framework';
 import { NetworkBehaviour } from '../NetworkBehaviour';
 import { NetworkRegistry } from './NetworkRegistry';
-import { RpcMessage, RpcMetadata } from '../types/NetworkTypes';
+import { RpcMessage, RpcMetadata } from '../Types/NetworkTypes';
 import { getClientRpcMetadata } from '../decorators/ClientRpc';
 import { getCommandMetadata } from '../decorators/Command';
 

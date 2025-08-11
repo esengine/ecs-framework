@@ -35,9 +35,9 @@
     "test:coverage": "jest --coverage --config jest.config.cjs",
     "test:ci": "jest --ci --coverage --config jest.config.cjs",
     "test:clear": "jest --clearCache",
-    "publish:patch": "npm version patch && npm publish",
-    "publish:minor": "npm version minor && npm publish",
-    "publish:major": "npm version major && npm publish"
+    "publish:patch": "npm version patch && npm run build:npm && cd dist && npm publish",
+    "publish:minor": "npm version minor && npm run build:npm && cd dist && npm publish",
+    "publish:major": "npm version major && npm run build:npm && cd dist && npm publish"
   },
   "author": "yhh",
   "license": "MIT",

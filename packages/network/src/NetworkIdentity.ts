@@ -6,7 +6,7 @@
  */
 
 import { Component } from '@esengine/ecs-framework';
-import { INetworkBehaviour } from './types/NetworkTypes';
+import { INetworkBehaviour } from './Types/NetworkTypes';
 
 export class NetworkIdentity extends Component {
   /** 网络对象的唯一标识符 */

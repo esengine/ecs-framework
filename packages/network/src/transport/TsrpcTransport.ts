@@ -7,7 +7,7 @@
 import { createLogger } from '@esengine/ecs-framework';
 import { TsrpcServer } from './TsrpcServer';
 import { TsrpcClient } from './TsrpcClient';
-import { NetworkConfig, NetworkMessage, NetworkSide } from '../types/NetworkTypes';
+import { NetworkConfig, NetworkMessage, NetworkSide } from '../Types/NetworkTypes';
 
 const logger = createLogger('TsrpcTransport');
 

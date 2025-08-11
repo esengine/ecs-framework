@@ -6,7 +6,7 @@
  */
 
 import 'reflect-metadata';
-import { RpcMetadata } from '../types/NetworkTypes';
+import { RpcMetadata } from '../Types/NetworkTypes';
 
 /**
  * ClientRpc 装饰器选项

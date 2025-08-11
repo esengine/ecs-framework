@@ -6,7 +6,7 @@
  */
 
 import 'reflect-metadata';
-import { SyncVarMetadata } from '../types/NetworkTypes';
+import { SyncVarMetadata } from '../Types/NetworkTypes';
 
 /**
  * SyncVar 装饰器选项

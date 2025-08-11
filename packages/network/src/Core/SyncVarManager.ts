@@ -7,7 +7,7 @@
 import { createLogger } from '@esengine/ecs-framework';
 import { NetworkBehaviour } from '../NetworkBehaviour';
 import { getSyncVarMetadata, SYNCVAR_METADATA_KEY } from '../decorators/SyncVar';
-import { SyncVarMessage, SyncVarMetadata } from '../types/NetworkTypes';
+import { SyncVarMessage, SyncVarMetadata } from '../Types/NetworkTypes';
 
 const logger = createLogger('SyncVarManager');
 
