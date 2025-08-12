@@ -491,7 +491,7 @@ if (renderSystem) {
 }
 
 // 设置为当前场景
-Core.scene = scene;
+Core.setScene(scene;
 ```
 
 ### 系统的启用和禁用

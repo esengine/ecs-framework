@@ -107,7 +107,7 @@ const scene = new Scene();
 scene.name = "GameScene";
 
 // 设置为当前场景
-Core.scene = scene;
+Core.setScene(scene;
 
 // 场景生命周期
 scene.begin();  // 开始场景

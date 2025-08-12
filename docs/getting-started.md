@@ -189,7 +189,7 @@ class LayaECSGame extends LayaScene {
         
         this.ecsScene = new ECSScene();
         this.ecsScene.name = "LayaGameScene";
-        Core.scene = this.ecsScene;
+        Core.setScene(this.ecsScene);
         
         this.entityManager = new EntityManager();
         this.setupSystems();
@@ -264,7 +264,7 @@ export class ECSGameManager extends CocosComponent {
         
         this.ecsScene = new ECSScene();
         this.ecsScene.name = "CocosGameScene";
-        Core.scene = this.ecsScene;
+        Core.setScene(this.ecsScene);
         
         this.entityManager = new EntityManager();
         this.setupSystems();
@@ -340,7 +340,7 @@ class ServerGameManager {
         
         this.scene = new Scene();
         this.scene.name = "ServerScene";
-        Core.scene = this.scene;
+        Core.setScene(this.scene);
         
         this.entityManager = new EntityManager();
         this.setupSystems();
@@ -434,7 +434,7 @@ class BrowserGame {
         
         this.scene = new Scene();
         this.scene.name = "BrowserScene";
-        Core.scene = this.scene;
+        Core.setScene(this.scene);
         
         this.entityManager = new EntityManager();
         this.setupSystems();

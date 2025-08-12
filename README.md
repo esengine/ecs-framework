@@ -54,7 +54,7 @@ import { Core, Scene, Entity, Component, EntitySystem, Matcher, Time } from '@es
 // 创建核心实例
 const core = Core.create({ debug: true });
 const scene = new Scene();
-Core.scene = scene;
+Core.setScene(scene);
 
 // 定义组件
 class PositionComponent extends Component {

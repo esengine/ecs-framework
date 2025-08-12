@@ -14,27 +14,6 @@ import { IScene, ISceneConfig } from './IScene';
  * 
  * 实现IScene接口，提供场景的基础功能。
  * 推荐使用组合而非继承的方式来构建自定义场景。
- * 
- * @example
- * ```typescript
- * // 推荐的组合方式
- * class GameScene implements IScene {
- *     private scene = new Scene();
- *     
- *     public initialize(): void {
- *         this.scene.initialize();
- *         // 自定义初始化逻辑
- *     }
- * }
- * 
- * // 仍然支持继承方式
- * class GameScene extends Scene {
- *     public initialize(): void {
- *         super.initialize();
- *         // 自定义逻辑
- *     }
- * }
- * ```
  */
 export class Scene implements IScene {
     /**
@@ -98,10 +77,6 @@ export class Scene implements IScene {
         return this.entityProcessors.processors;
     }
 
-    /**
-     * 是否已完成基础初始化
-     */
-    private _isBaseInitialized = false;
 
     /**
      * 创建场景实例
@@ -127,16 +102,6 @@ export class Scene implements IScene {
             Entity.eventBus.onComponentAdded((data: unknown) => {
                 this.eventSystem.emitSync('component:added', data);
             });
-        }
-
-        // 标记基础初始化完成
-        this._isBaseInitialized = true;
-
-        // 立即调用初始化，但确保在基础设施就绪后
-        this.initialize();
-        
-        if (config?.autoStart) {
-            this.begin();
         }
     }
 
@@ -284,27 +249,6 @@ export class Scene implements IScene {
         return entities;
     }
 
-    /**
-     * 批量创建实体
-     * @param count 要创建的实体数量
-     * @param namePrefix 实体名称前缀
-     * @returns 创建的实体列表
-     */
-    public createEntitiesOld(count: number, namePrefix: string = "Entity"): Entity[] {
-        const entities: Entity[] = [];
-        
-        // 批量创建实体，延迟缓存清理
-        for (let i = 0; i < count; i++) {
-            const entity = new Entity(`${namePrefix}_${i}`, this.identifierPool.checkOut());
-            entities.push(entity);
-            this.addEntity(entity, true); // 延迟缓存清理
-        }
-        
-        // 最后统一清理缓存
-        this.querySystem.clearCache();
-        
-        return entities;
-    }
 
     /**
      * 从场景中删除所有实体

@@ -16,7 +16,7 @@ export interface IScene {
     /**
      * 场景名称
      */
-    readonly name: string;
+    name: string;
 
     /**
      * 场景中的实体集合
@@ -147,10 +147,6 @@ export interface ISceneConfig {
      * 场景名称
      */
     name?: string;
-    /**
-     * 是否自动开始
-     */
-    autoStart?: boolean;
     /**
      * 调试配置
      */

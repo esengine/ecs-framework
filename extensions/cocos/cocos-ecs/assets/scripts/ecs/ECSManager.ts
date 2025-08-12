@@ -71,7 +71,7 @@ export class ECSManager extends Component {
             const gameScene = new GameScene();
             
             // 3. 设置为当前场景（会自动调用scene.begin()）
-            Core.scene = gameScene;
+            Core.setScene(gameScene);
             
             this.isInitialized = true;
             // ECS框架初始化完成

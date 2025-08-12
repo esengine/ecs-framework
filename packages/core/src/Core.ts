@@ -205,11 +205,23 @@ export class Core {
     }
 
     /**
-     * 设置当前活动的场景
+     * 设置当前场景（已废弃）
+     * 
+     * @deprecated 请使用 Core.setScene() 方法代替。scene setter 可能导致场景延迟激活的时序问题，
+     * 而 setScene() 提供更好的类型安全性和可预测的激活时序。
+     * 
+     * 迁移示例：
+     * ```typescript
+     * // 旧方式（已废弃）
+     * Core.scene = myScene;
+     * 
+     * // 新方式（推荐）
+     * Core.setScene(myScene);
+     * ```
      * 
      * 如果当前没有场景，会立即切换；否则会在下一帧切换。
      * 
-     * @param value - 要设置的场景实例
+     * @param value - 场景实例
      */
     public static set scene(value: IScene | null) {
         if (!value) return;
@@ -222,10 +234,24 @@ export class Core {
     }
 
     /**
-     * 类型安全的场景设置方法
+     * 类型安全的场景设置方法（推荐）
+     * 
+     * 这是设置场景的推荐方法，提供更好的类型安全性和可预测的激活时序。
+     * 相比于 scene setter，此方法能确保场景正确初始化和激活。
+     * 
+     * 如果当前没有场景，会立即切换；否则会在下一帧切换。
      * 
      * @param scene - 要设置的场景实例
-     * @returns 设置的场景实例
+     * @returns 设置的场景实例，便于链式调用
+     * 
+     * @example
+     * ```typescript
+     * const myScene = new MyScene();
+     * Core.setScene(myScene);
+     * 
+     * // 链式调用
+     * const scene = Core.setScene(new MyScene()).addSystem(new MySystem());
+     * ```
      */
     public static setScene<T extends IScene>(scene: T): T {
         if (this._instance._scene == null) {
@@ -447,6 +473,7 @@ export class Core {
     private setSceneInternal(scene: IScene): void {
         this._scene = scene;
         this.onSceneChanged();
+        this._scene.initialize();
         this._scene.begin();
     }
 

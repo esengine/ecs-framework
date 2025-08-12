@@ -137,6 +137,14 @@ describe('Core - 核心管理系统测试', () => {
             expect(testScene.beginCalled).toBe(true);
         });
 
+        test('应该能够使用推荐的setScene方法设置场景', () => {
+            const scene = Core.setScene(testScene);
+            
+            expect(Core.scene).toBe(testScene);
+            expect(testScene.beginCalled).toBe(true);
+            expect(scene).toBe(testScene); // 应该返回场景实例
+        });
+
         test('设置新场景应该触发场景切换', () => {
             const firstScene = new TestScene();
             const secondScene = new TestScene();

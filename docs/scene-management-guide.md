@@ -19,9 +19,11 @@ import { Scene, Core } from '@esengine/ecs-framework';
 // 创建场景
 const gameScene = new Scene();
 
-// 设置为当前活动场景
-Core.scene = gameScene;
+// 设置为当前活动场景（推荐使用setScene方法）
+Core.setScene(gameScene);
 ```
+
+> **注意**: `Core.scene = ` 设置方式已被标记为废弃，推荐使用 `Core.setScene()` 方法。新方法提供更好的类型安全性和可预测的激活时序。
 
 ### 场景的生命周期
 
@@ -113,7 +115,7 @@ class MenuScene extends Scene {
     private transitionToGame() {
         // 切换到游戏场景
         const gameScene = new GameScene();
-        Core.scene = gameScene;
+        Core.setScene(gameScene);
     }
 }
 ```
@@ -251,7 +253,7 @@ class SceneManager {
         
         // 创建新场景
         this.currentScene = this.createScene(sceneType, data);
-        Core.scene = this.currentScene;
+        Core.setScene(this.currentScene);
         
         console.log(`切换到场景: ${sceneType}`);
     }
@@ -265,7 +267,7 @@ class SceneManager {
             }
             
             this.currentScene = previousScene;
-            Core.scene = this.currentScene;
+            Core.setScene(this.currentScene);
             return true;
         }
         return false;
@@ -280,7 +282,7 @@ class SceneManager {
         }
         
         this.currentScene = this.createScene(sceneType, data);
-        Core.scene = this.currentScene;
+        Core.setScene(this.currentScene);
     }
     
     popScene() {
@@ -291,7 +293,7 @@ class SceneManager {
             
             this.currentScene = this.sceneHistory.pop()!;
             this.resumeScene(this.currentScene);
-            Core.scene = this.currentScene;
+            Core.setScene(this.currentScene);
         }
     }
     
@@ -359,7 +361,7 @@ class TransitionManager {
         
         // 切换场景
         fromScene.onDestroy();
-        Core.scene = toScene;
+        Core.setScene(toScene);
         
         // 淡入新场景
         await this.fadeIn(overlay, duration / 2);
@@ -382,7 +384,7 @@ class TransitionManager {
         
         // 切换场景
         fromScene.onDestroy();
-        Core.scene = toScene;
+        Core.setScene(toScene);
         
         // 从相反方向滑入新场景
         await this.slideScene(toScene, -slideDistance);

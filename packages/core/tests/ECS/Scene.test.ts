@@ -142,6 +142,27 @@ describe('Scene - 场景管理系统测试', () => {
             expect(scene.entities.count).toBe(0);
             expect(scene.entityProcessors.count).toBe(0);
         });
+
+        test('应该能够使用配置创建场景', () => {
+            const configScene = new Scene({ name: "ConfigScene" });
+            expect(configScene.name).toBe("ConfigScene");
+        });
+
+        test('应该能够获取调试信息', () => {
+            scene.name = "DebugScene";
+            scene.createEntity("TestEntity");
+            scene.addEntityProcessor(new MovementSystem());
+            
+            const debugInfo = scene.getDebugInfo();
+            
+            expect(debugInfo.name).toBe("Scene");
+            expect(debugInfo.entityCount).toBe(1);
+            expect(debugInfo.processorCount).toBe(1);
+            expect(debugInfo.isRunning).toBe(false);
+            expect(debugInfo.entities).toBeDefined();
+            expect(debugInfo.processors).toBeDefined();
+            expect(debugInfo.componentStats).toBeDefined();
+        });
     });
 
     describe('实体管理', () => {
@@ -445,6 +466,19 @@ describe('Scene - 场景管理系统测试', () => {
             
             expect(stats.queryStats.totalQueries).toBeGreaterThan(0);
             expect(parseFloat(stats.cacheStats.hitRate)).toBeGreaterThanOrEqual(0);
+        });
+
+        test('应该能够压缩组件存储', () => {
+            // 创建一些实体和组件
+            const entities = scene.createEntities(10, "Entity");
+            entities.forEach(entity => {
+                entity.addComponent(new PositionComponent(Math.random() * 100, Math.random() * 100));
+            });
+            
+            // 压缩组件存储应该不抛出异常
+            expect(() => {
+                scene.compactComponentStorage();
+            }).not.toThrow();
         });
     });
 
