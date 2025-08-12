@@ -7,6 +7,7 @@ import { PerformanceMonitor } from './Utils/PerformanceMonitor';
 import { PoolManager } from './Utils/Pool/PoolManager';
 import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
 import { Scene } from './ECS/Scene';
+import { IScene } from './ECS/IScene';
 import { DebugManager } from './Utils/Debug';
 import { ICoreConfig, IECSDebugConfig } from './Types';
 import { BigIntFactory, EnvironmentInfo } from './ECS/Utils/BigIntCompatibility';
@@ -75,7 +76,7 @@ export class Core {
      * 
      * 存储下一帧要切换到的场景实例。
      */
-    public _nextScene: Scene | null = null;
+    public _nextScene: IScene | null = null;
     
     /**
      * 全局管理器集合
@@ -115,7 +116,7 @@ export class Core {
     /**
      * 当前活动场景
      */
-    public _scene?: Scene;
+    public _scene?: IScene;
 
     /**
      * 调试管理器
@@ -197,7 +198,7 @@ export class Core {
      * 
      * @returns 当前场景实例，如果没有则返回null
      */
-    public static get scene(): Scene | null {
+    public static get scene(): IScene | null {
         if (!this._instance)
             return null;
         return this._instance._scene || null;
@@ -209,22 +210,39 @@ export class Core {
      * 如果当前没有场景，会立即切换；否则会在下一帧切换。
      * 
      * @param value - 要设置的场景实例
-     * @throws {Error} 当场景为空时抛出错误
      */
-    public static set scene(value: Scene | null) {
+    public static set scene(value: IScene | null) {
         if (!value) return;
-        
-        if (!value) {
-            throw new Error("场景不能为空");
-        }
 
         if (this._instance._scene == null) {
-            this._instance._scene = value;
-            this._instance.onSceneChanged();
-            this._instance._scene.begin();
+            this._instance.setSceneInternal(value);
         } else {
             this._instance._nextScene = value;
         }
+    }
+
+    /**
+     * 类型安全的场景设置方法
+     * 
+     * @param scene - 要设置的场景实例
+     * @returns 设置的场景实例
+     */
+    public static setScene<T extends IScene>(scene: T): T {
+        if (this._instance._scene == null) {
+            this._instance.setSceneInternal(scene);
+        } else {
+            this._instance._nextScene = scene;
+        }
+        return scene;
+    }
+
+    /**
+     * 类型安全的场景获取方法
+     * 
+     * @returns 当前场景实例
+     */
+    public static getScene<T extends IScene>(): T | null {
+        return this._instance?._scene as T || null;
     }
 
     /**
@@ -327,8 +345,11 @@ export class Core {
      * @param onTime - 定时器触发时的回调函数
      * @returns 创建的定时器实例
      */
-    public static schedule<TContext = unknown>(timeInSeconds: number, repeats: boolean = false, context: TContext = null as any, onTime: (timer: ITimer<TContext>) => void): Timer<TContext> {
-        return this._instance._timerManager.schedule(timeInSeconds, repeats, context, onTime);
+    public static schedule<TContext = unknown>(timeInSeconds: number, repeats: boolean = false, context?: TContext, onTime?: (timer: ITimer<TContext>) => void): Timer<TContext> {
+        if (!onTime) {
+            throw new Error('onTime callback is required');
+        }
+        return this._instance._timerManager.schedule(timeInSeconds, repeats, context as TContext, onTime);
     }
 
     /**
@@ -383,7 +404,7 @@ export class Core {
      * 
      * @returns 当前调试数据，如果调试未启用则返回null
      */
-    public static getDebugData(): any {
+    public static getDebugData(): unknown {
         if (!this._instance?._debugManager) {
             return null;
         }
@@ -419,6 +440,17 @@ export class Core {
     }
 
     /**
+     * 内部场景设置方法
+     * 
+     * @param scene - 要设置的场景实例
+     */
+    private setSceneInternal(scene: IScene): void {
+        this._scene = scene;
+        this.onSceneChanged();
+        this._scene.begin();
+    }
+
+    /**
      * 场景切换回调
      * 
      * 在场景切换时调用，用于重置时间系统等。
@@ -427,14 +459,27 @@ export class Core {
         Time.sceneChanged();
         
         // 初始化ECS API（如果场景支持）
-        if (this._scene && typeof (this._scene as any).querySystem !== 'undefined') {
-            const scene = this._scene as any;
-            this._ecsAPI = createECSAPI(scene, scene.querySystem, scene.eventSystem);
+        if (this._scene && this._scene.querySystem && this._scene.eventSystem) {
+            this._ecsAPI = createECSAPI(this._scene, this._scene.querySystem, this._scene.eventSystem);
         }
 
-        // 通知调试管理器场景已变更
+        // 延迟调试管理器通知，避免在场景初始化过程中干扰属性
         if (this._debugManager) {
-            this._debugManager.onSceneChanged();
+            // 使用 requestAnimationFrame 确保在场景完全初始化后再收集数据
+            if (typeof requestAnimationFrame !== 'undefined') {
+                requestAnimationFrame(() => {
+                    if (this._debugManager) {
+                        this._debugManager.onSceneChanged();
+                    }
+                });
+            } else {
+                // 兜底：使用 setTimeout
+                setTimeout(() => {
+                    if (this._debugManager) {
+                        this._debugManager.onSceneChanged();
+                    }
+                }, 0);
+            }
         }
     }
 
@@ -480,8 +525,8 @@ export class Core {
         Time.update(deltaTime);
 
         // 更新FPS监控（如果性能监控器支持）
-        if (typeof (this._performanceMonitor as any).updateFPS === 'function') {
-            (this._performanceMonitor as any).updateFPS(Time.deltaTime);
+        if ('updateFPS' in this._performanceMonitor && typeof this._performanceMonitor.updateFPS === 'function') {
+            this._performanceMonitor.updateFPS(Time.deltaTime);
         }
 
         // 更新全局管理器
@@ -510,7 +555,7 @@ export class Core {
         if (this._scene != null && this._scene.update) {
             const sceneStartTime = this._performanceMonitor.startMonitoring('Scene.update');
             this._scene.update();
-            const entityCount = (this._scene as any).entities?.count || 0;
+            const entityCount = this._scene.entities?.count || 0;
             this._performanceMonitor.endMonitoring('Scene.update', sceneStartTime, entityCount);
         }
 

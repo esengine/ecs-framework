@@ -1,6 +1,6 @@
 import { Entity } from '../../Entity';
 import { Component } from '../../Component';
-import { Scene } from '../../Scene';
+import { IScene } from '../../IScene';
 import { ComponentType } from '../ComponentStorage';
 import { QuerySystem, QueryBuilder } from '../QuerySystem';
 import { TypeSafeEventSystem } from '../EventSystem';
@@ -14,11 +14,11 @@ import { EntityBatchOperator } from './EntityBatchOperator';
  * 提供统一的流式接口
  */
 export class ECSFluentAPI {
-    private scene: Scene;
+    private scene: IScene;
     private querySystem: QuerySystem;
     private eventSystem: TypeSafeEventSystem;
 
-    constructor(scene: Scene, querySystem: QuerySystem, eventSystem: TypeSafeEventSystem) {
+    constructor(scene: IScene, querySystem: QuerySystem, eventSystem: TypeSafeEventSystem) {
         this.scene = scene;
         this.querySystem = querySystem;
         this.eventSystem = eventSystem;
@@ -86,7 +86,7 @@ export class ECSFluentAPI {
      * @returns 实体或null
      */
     public findByName(name: string): Entity | null {
-        return this.scene.getEntityByName(name);
+        return this.scene.findEntity(name);
     }
 
     /**
@@ -95,7 +95,7 @@ export class ECSFluentAPI {
      * @returns 实体数组
      */
     public findByTag(tag: number): Entity[] {
-        return this.scene.getEntitiesByTag(tag);
+        return this.scene.findEntitiesByTag(tag);
     }
 
     /**
@@ -161,16 +161,16 @@ export class ECSFluentAPI {
     public getStats(): {
         entityCount: number;
         systemCount: number;
-        componentStats: Map<string, any>;
+        componentStats: Map<string, unknown>;
         queryStats: unknown;
-        eventStats: Map<string, any>;
+        eventStats: Map<string, unknown>;
     } {
         return {
             entityCount: this.scene.entities.count,
             systemCount: this.scene.systems.length,
             componentStats: this.scene.componentStorageManager.getAllStats(),
             queryStats: this.querySystem.getStats(),
-            eventStats: this.eventSystem.getStats() as Map<string, any>
+            eventStats: this.eventSystem.getStats() as Map<string, unknown>
         };
     }
 }
@@ -183,7 +183,7 @@ export class ECSFluentAPI {
  * @returns ECS流式API实例
  */
 export function createECSAPI(
-    scene: Scene, 
+    scene: IScene, 
     querySystem: QuerySystem, 
     eventSystem: TypeSafeEventSystem
 ): ECSFluentAPI {
@@ -202,7 +202,7 @@ export let ECS: ECSFluentAPI;
  * @param eventSystem 事件系统
  */
 export function initializeECS(
-    scene: Scene, 
+    scene: IScene, 
     querySystem: QuerySystem, 
     eventSystem: TypeSafeEventSystem
 ): void {

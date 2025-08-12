@@ -1,6 +1,6 @@
 import { Entity } from '../../Entity';
 import { Component } from '../../Component';
-import { Scene } from '../../Scene';
+import { IScene } from '../../IScene';
 import { ComponentType, ComponentStorageManager } from '../ComponentStorage';
 
 /**
@@ -8,10 +8,10 @@ import { ComponentType, ComponentStorageManager } from '../ComponentStorage';
  */
 export class EntityBuilder {
     private entity: Entity;
-    private scene: Scene;
+    private scene: IScene;
     private storageManager: ComponentStorageManager;
 
-    constructor(scene: Scene, storageManager: ComponentStorageManager) {
+    constructor(scene: IScene, storageManager: ComponentStorageManager) {
         this.scene = scene;
         this.storageManager = storageManager;
         this.entity = new Entity("", scene.identifierPool.checkOut());

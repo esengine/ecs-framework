@@ -1,0 +1,118 @@
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+console.log('🚀 使用 Rollup 构建 network-shared 包...');
+
+async function main() {
+    try {
+        if (fs.existsSync('./dist')) {
+            console.log('🧹 清理旧的构建文件...');
+            execSync('rimraf ./dist', { stdio: 'inherit' });
+        }
+
+        console.log('📦 执行 Rollup 构建...');
+        execSync('rollup -c rollup.config.cjs', { stdio: 'inherit' });
+
+        console.log('📋 生成 package.json...');
+        generatePackageJson();
+
+        console.log('📁 复制必要文件...');
+        copyFiles();
+
+        showBuildResults();
+
+        console.log('✅ network-shared 构建完成！');
+        console.log('\n🚀 发布命令:');
+        console.log('cd dist && npm publish');
+
+    } catch (error) {
+        console.error('❌ 构建失败:', error.message);
+        process.exit(1);
+    }
+}
+
+function generatePackageJson() {
+    const sourcePackage = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+    
+    const distPackage = {
+        name: sourcePackage.name,
+        version: sourcePackage.version,
+        description: sourcePackage.description,
+        main: 'index.cjs',
+        module: 'index.mjs',
+        unpkg: 'index.umd.js',
+        types: 'index.d.ts',
+        exports: {
+            '.': {
+                import: './index.mjs',
+                require: './index.cjs',
+                types: './index.d.ts'
+            }
+        },
+        files: [
+            'index.mjs',
+            'index.mjs.map',
+            'index.cjs', 
+            'index.cjs.map',
+            'index.umd.js',
+            'index.umd.js.map',
+            'index.d.ts',
+            'README.md',
+            'LICENSE'
+        ],
+        keywords: [
+            'ecs',
+            'networking',
+            'shared',
+            'decorators',
+            'protobuf',
+            'serialization',
+            'game-engine',
+            'typescript'
+        ],
+        author: sourcePackage.author,
+        license: sourcePackage.license,
+        repository: sourcePackage.repository,
+        dependencies: sourcePackage.dependencies,
+        peerDependencies: sourcePackage.peerDependencies,
+        engines: {
+            node: '>=16.0.0'
+        },
+        sideEffects: false
+    };
+
+    fs.writeFileSync('./dist/package.json', JSON.stringify(distPackage, null, 2));
+}
+
+function copyFiles() {
+    const filesToCopy = [
+        { src: './README.md', dest: './dist/README.md' },
+        { src: '../../LICENSE', dest: './dist/LICENSE' }
+    ];
+
+    filesToCopy.forEach(({ src, dest }) => {
+        if (fs.existsSync(src)) {
+            fs.copyFileSync(src, dest);
+            console.log(`  ✓ 复制: ${path.basename(dest)}`);
+        } else {
+            console.log(`  ⚠️  文件不存在: ${src}`);
+        }
+    });
+}
+
+function showBuildResults() {
+    const distDir = './dist';
+    const files = ['index.mjs', 'index.cjs', 'index.umd.js', 'index.d.ts'];
+    
+    console.log('\n📊 构建结果:');
+    files.forEach(file => {
+        const filePath = path.join(distDir, file);
+        if (fs.existsSync(filePath)) {
+            const size = fs.statSync(filePath).size;
+            console.log(`  ${file}: ${(size / 1024).toFixed(1)}KB`);
+        }
+    });
+}
+
+main().catch(console.error);
