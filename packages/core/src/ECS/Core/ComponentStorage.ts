@@ -8,8 +8,9 @@ export { EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, S
 
 /**
  * 组件类型定义
+ * 支持任意构造函数签名，提供更好的类型安全性
  */
-export type ComponentType<T extends Component = Component> = new (...args: unknown[]) => T;
+export type ComponentType<T extends Component = Component> = new (...args: any[]) => T;
 
 /**
  * 组件注册表

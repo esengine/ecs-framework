@@ -335,7 +335,7 @@ export class Entity {
      */
     public createComponent<T extends Component>(
         componentType: ComponentType<T>, 
-        ...args: unknown[]
+        ...args: any[]
     ): T {
         const component = new componentType(...args);
         return this.addComponent(component);
@@ -508,7 +508,7 @@ export class Entity {
      */
     public getOrCreateComponent<T extends Component>(
         type: ComponentType<T>, 
-        ...args: unknown[]
+        ...args: any[]
     ): T {
         let component = this.getComponent(type);
         if (!component) {

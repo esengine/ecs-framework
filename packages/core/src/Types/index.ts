@@ -54,8 +54,9 @@ export interface ISystemBase {
  * 组件类型定义
  * 
  * 用于类型安全的组件操作
+ * 支持任意构造函数签名，提供更好的类型安全性
  */
-export type ComponentType<T extends IComponent = IComponent> = new (...args: unknown[]) => T;
+export type ComponentType<T extends IComponent = IComponent> = new (...args: any[]) => T;
 
 /**
  * 事件总线接口
