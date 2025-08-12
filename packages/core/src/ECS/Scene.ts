@@ -7,27 +7,36 @@ import { ComponentStorageManager } from './Core/ComponentStorage';
 import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem } from './Core/EventSystem';
 import { EventBus } from './Core/EventBus';
+import { IScene, ISceneConfig } from './IScene';
 
 /**
- * 游戏场景类
+ * 游戏场景默认实现类
  * 
- * 管理游戏场景中的所有实体和系统，提供场景生命周期管理。
- * 场景是游戏世界的容器，负责协调实体和系统的运行。
+ * 实现IScene接口，提供场景的基础功能。
+ * 推荐使用组合而非继承的方式来构建自定义场景。
  * 
  * @example
  * ```typescript
+ * // 推荐的组合方式
+ * class GameScene implements IScene {
+ *     private scene = new Scene();
+ *     
+ *     public initialize(): void {
+ *         this.scene.initialize();
+ *         // 自定义初始化逻辑
+ *     }
+ * }
+ * 
+ * // 仍然支持继承方式
  * class GameScene extends Scene {
  *     public initialize(): void {
- *         // 创建游戏实体
- *         const player = this.createEntity("Player");
- *         
- *         // 添加系统
- *         this.addEntityProcessor(new MovementSystem());
+ *         super.initialize();
+ *         // 自定义逻辑
  *     }
  * }
  * ```
  */
-export class Scene {
+export class Scene implements IScene {
     /**
      * 场景名称
      * 
@@ -90,9 +99,14 @@ export class Scene {
     }
 
     /**
+     * 是否已完成基础初始化
+     */
+    private _isBaseInitialized = false;
+
+    /**
      * 创建场景实例
      */
-    constructor() {
+    constructor(config?: ISceneConfig) {
         this.entities = new EntityList(this);
         this.entityProcessors = new EntityProcessorList();
         this.identifierPool = new IdentifierPool();
@@ -100,17 +114,30 @@ export class Scene {
         this.querySystem = new QuerySystem();
         this.eventSystem = new TypeSafeEventSystem();
 
+        // 应用配置
+        if (config?.name) {
+            this.name = config.name;
+        }
+
         if (!Entity.eventBus) {
             Entity.eventBus = new EventBus(false);
         }
         
         if (Entity.eventBus) {
-            Entity.eventBus.onComponentAdded((data: any) => {
+            Entity.eventBus.onComponentAdded((data: unknown) => {
                 this.eventSystem.emitSync('component:added', data);
             });
         }
 
+        // 标记基础初始化完成
+        this._isBaseInitialized = true;
+
+        // 立即调用初始化，但确保在基础设施就绪后
         this.initialize();
+        
+        if (config?.autoStart) {
+            this.begin();
+        }
     }
 
     /**

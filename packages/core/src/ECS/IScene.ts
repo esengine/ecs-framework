@@ -1,0 +1,158 @@
+import { Entity } from './Entity';
+import { EntityList } from './Utils/EntityList';
+import { EntityProcessorList } from './Utils/EntityProcessorList';
+import { IdentifierPool } from './Utils/IdentifierPool';
+import { EntitySystem } from './Systems/EntitySystem';
+import { ComponentStorageManager } from './Core/ComponentStorage';
+import { QuerySystem } from './Core/QuerySystem';
+import { TypeSafeEventSystem } from './Core/EventSystem';
+
+/**
+ * 场景接口定义
+ * 
+ * 定义场景应该实现的核心功能和属性，使用接口而非继承提供更灵活的实现方式。
+ */
+export interface IScene {
+    /**
+     * 场景名称
+     */
+    readonly name: string;
+
+    /**
+     * 场景中的实体集合
+     */
+    readonly entities: EntityList;
+    
+    /**
+     * 实体系统处理器集合
+     */
+    readonly entityProcessors: EntityProcessorList;
+    
+    /**
+     * 标识符池
+     */
+    readonly identifierPool: IdentifierPool;
+    
+    /**
+     * 组件存储管理器
+     */
+    readonly componentStorageManager: ComponentStorageManager;
+    
+    /**
+     * 查询系统
+     */
+    readonly querySystem: QuerySystem;
+
+    /**
+     * 事件系统
+     */
+    readonly eventSystem: TypeSafeEventSystem;
+
+    /**
+     * 获取系统列表
+     */
+    readonly systems: EntitySystem[];
+
+    /**
+     * 初始化场景
+     */
+    initialize(): void;
+
+    /**
+     * 场景开始运行时的回调
+     */
+    onStart(): void;
+
+    /**
+     * 场景卸载时的回调
+     */
+    unload(): void;
+
+    /**
+     * 开始场景
+     */
+    begin(): void;
+
+    /**
+     * 结束场景
+     */
+    end(): void;
+
+    /**
+     * 更新场景
+     */
+    update(): void;
+
+    /**
+     * 创建实体
+     */
+    createEntity(name: string): Entity;
+
+    /**
+     * 添加实体
+     */
+    addEntity(entity: Entity, deferCacheClear?: boolean): Entity;
+
+    /**
+     * 批量创建实体
+     */
+    createEntities(count: number, namePrefix?: string): Entity[];
+
+    /**
+     * 销毁所有实体
+     */
+    destroyAllEntities(): void;
+
+    /**
+     * 查找实体
+     */
+    findEntity(name: string): Entity | null;
+
+    /**
+     * 根据标签查找实体
+     */
+    findEntitiesByTag(tag: number): Entity[];
+
+    /**
+     * 添加实体处理器
+     */
+    addEntityProcessor(processor: EntitySystem): EntitySystem;
+
+    /**
+     * 移除实体处理器
+     */
+    removeEntityProcessor(processor: EntitySystem): void;
+
+    /**
+     * 获取实体处理器
+     */
+    getEntityProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T | null;
+}
+
+/**
+ * 场景工厂接口
+ */
+export interface ISceneFactory<T extends IScene> {
+    /**
+     * 创建场景实例
+     */
+    createScene(): T;
+}
+
+/**
+ * 场景配置接口
+ */
+export interface ISceneConfig {
+    /**
+     * 场景名称
+     */
+    name?: string;
+    /**
+     * 是否自动开始
+     */
+    autoStart?: boolean;
+    /**
+     * 调试配置
+     */
+    debug?: boolean;
+}

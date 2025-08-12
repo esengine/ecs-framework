@@ -6,6 +6,7 @@ import { ComponentDataCollector } from './ComponentDataCollector';
 import { SceneDataCollector } from './SceneDataCollector';
 import { WebSocketManager } from './WebSocketManager';
 import { Core } from '../../Core';
+import { Component } from '../../ECS/Component';
 
 /**
  * 调试管理器
@@ -181,7 +182,7 @@ export class DebugManager {
     private handleExpandLazyObjectRequest(message: any): void {
         try {
             const { entityId, componentIndex, propertyPath, requestId } = message;
-            
+
             if (entityId === undefined || componentIndex === undefined || !propertyPath) {
                 this.webSocketManager.send({
                     type: 'expand_lazy_object_response',
@@ -192,7 +193,7 @@ export class DebugManager {
             }
 
             const expandedData = this.entityCollector.expandLazyObject(entityId, componentIndex, propertyPath);
-            
+
             this.webSocketManager.send({
                 type: 'expand_lazy_object_response',
                 requestId,
@@ -213,7 +214,7 @@ export class DebugManager {
     private handleGetComponentPropertiesRequest(message: any): void {
         try {
             const { entityId, componentIndex, requestId } = message;
-            
+
             if (entityId === undefined || componentIndex === undefined) {
                 this.webSocketManager.send({
                     type: 'get_component_properties_response',
@@ -224,7 +225,7 @@ export class DebugManager {
             }
 
             const properties = this.entityCollector.getComponentProperties(entityId, componentIndex);
-            
+
             this.webSocketManager.send({
                 type: 'get_component_properties_response',
                 requestId,
@@ -245,9 +246,9 @@ export class DebugManager {
     private handleGetRawEntityListRequest(message: any): void {
         try {
             const { requestId } = message;
-            
+
             const rawEntityList = this.entityCollector.getRawEntityList();
-            
+
             this.webSocketManager.send({
                 type: 'get_raw_entity_list_response',
                 requestId,
@@ -268,7 +269,7 @@ export class DebugManager {
     private handleGetEntityDetailsRequest(message: any): void {
         try {
             const { entityId, requestId } = message;
-            
+
             if (entityId === undefined) {
                 this.webSocketManager.send({
                     type: 'get_entity_details_response',
@@ -279,7 +280,7 @@ export class DebugManager {
             }
 
             const entityDetails = this.entityCollector.getEntityDetails(entityId);
-            
+
             this.webSocketManager.send({
                 type: 'get_entity_details_response',
                 requestId,
@@ -327,7 +328,8 @@ export class DebugManager {
 
         // 收集其他内存统计
         const baseMemoryInfo = this.collectBaseMemoryInfo();
-        const componentMemoryStats = this.collectComponentMemoryStats((Core.scene as any)?.entities);
+        const scene = Core.scene;
+        const componentMemoryStats = scene?.entities ? this.collectComponentMemoryStats(scene.entities) : { totalMemory: 0, componentTypes: 0, totalInstances: 0, breakdown: [] };
         const systemMemoryStats = this.collectSystemMemoryStats();
         const poolMemoryStats = this.collectPoolMemoryStats();
         const performanceStats = this.collectPerformanceStats();
@@ -366,18 +368,44 @@ export class DebugManager {
     /**
      * 收集基础内存信息
      */
-    private collectBaseMemoryInfo(): any {
-        const memoryInfo: any = {
+    private collectBaseMemoryInfo(): {
+        totalMemory: number;
+        usedMemory: number;
+        freeMemory: number;
+        gcCollections: number;
+        heapInfo: {
+            totalJSHeapSize: number;
+            usedJSHeapSize: number;
+            jsHeapSizeLimit: number;
+        } | null;
+        detailedMemory?: unknown;
+    } {
+        const memoryInfo = {
             totalMemory: 0,
             usedMemory: 0,
             freeMemory: 0,
             gcCollections: 0,
-            heapInfo: null
+            heapInfo: null as {
+                totalJSHeapSize: number;
+                usedJSHeapSize: number;
+                jsHeapSizeLimit: number;
+            } | null,
+            detailedMemory: undefined as unknown
         };
 
         try {
-            if ((performance as any).memory) {
-                const perfMemory = (performance as any).memory;
+            // 类型安全的performance memory访问
+            const performanceWithMemory = performance as Performance & {
+                memory?: {
+                    jsHeapSizeLimit?: number;
+                    usedJSHeapSize?: number;
+                    totalJSHeapSize?: number;
+                };
+                measureUserAgentSpecificMemory?: () => Promise<unknown>;
+            };
+
+            if (performanceWithMemory.memory) {
+                const perfMemory = performanceWithMemory.memory;
                 memoryInfo.totalMemory = perfMemory.jsHeapSizeLimit || 512 * 1024 * 1024;
                 memoryInfo.usedMemory = perfMemory.usedJSHeapSize || 0;
                 memoryInfo.freeMemory = memoryInfo.totalMemory - memoryInfo.usedMemory;
@@ -392,9 +420,8 @@ export class DebugManager {
             }
 
             // 尝试获取GC信息
-            if ((performance as any).measureUserAgentSpecificMemory) {
-                // 这是一个实验性API，可能不可用
-                (performance as any).measureUserAgentSpecificMemory().then((result: any) => {
+            if (performanceWithMemory.measureUserAgentSpecificMemory) {
+                performanceWithMemory.measureUserAgentSpecificMemory().then((result: unknown) => {
                     memoryInfo.detailedMemory = result;
                 }).catch(() => {
                     // 忽略错误
@@ -412,8 +439,24 @@ export class DebugManager {
     /**
      * 收集组件内存统计（仅用于内存快照）
      */
-    private collectComponentMemoryStats(entityList: any): any {
-        const componentStats = new Map<string, { count: number; totalMemory: number; instances: any[] }>();
+    private collectComponentMemoryStats(entityList: { buffer: Array<{ id: number; name?: string; destroyed?: boolean; components?: Component[] }> }): {
+        totalMemory: number;
+        componentTypes: number;
+        totalInstances: number;
+        breakdown: Array<{
+            typeName: string;
+            instanceCount: number;
+            totalMemory: number;
+            averageMemory: number;
+            percentage: number;
+            largestInstances: Array<{
+                entityId: number;
+                entityName: string;
+                memory: number;
+            }>;
+        }>;
+    } {
+        const componentStats = new Map<string, { count: number; totalMemory: number; instances: Array<{ entityId: number; entityName: string; memory: number }> }>();
         let totalComponentMemory = 0;
 
         // 首先统计组件类型和数量
@@ -434,12 +477,12 @@ export class DebugManager {
             totalComponentMemory += totalMemoryForType;
 
             // 收集该类型组件的实例信息（用于显示最大的几个实例）
-            const instances: any[] = [];
+            const instances: Array<{ entityId: number; entityName: string; memory: number }> = [];
             let instanceCount = 0;
-            
+
             for (const entity of entityList.buffer) {
                 if (!entity || entity.destroyed || !entity.components) continue;
-                
+
                 for (const component of entity.components) {
                     if (component.constructor.name === typeName) {
                         instances.push({
@@ -448,7 +491,7 @@ export class DebugManager {
                             memory: detailedMemoryPerInstance // 使用统一的详细计算结果
                         });
                         instanceCount++;
-                        
+
                         // 限制收集的实例数量，避免过多数据
                         if (instanceCount >= 100) break;
                     }
@@ -480,19 +523,33 @@ export class DebugManager {
         };
     }
 
-    private collectSystemMemoryStats(): any {
+    private collectSystemMemoryStats(): {
+        totalMemory: number;
+        systemCount: number;
+        breakdown: Array<{
+            name: string;
+            memory: number;
+            enabled: boolean;
+            updateOrder: number;
+        }>;
+    } {
         const scene = Core.scene;
         let totalSystemMemory = 0;
-        const systemBreakdown: any[] = [];
+        const systemBreakdown: Array<{
+            name: string;
+            memory: number;
+            enabled: boolean;
+            updateOrder: number;
+        }> = [];
 
         try {
-            const entityProcessors = (scene as any).entityProcessors;
+            const entityProcessors = scene?.entityProcessors;
             if (entityProcessors && entityProcessors.processors) {
                 const systemTypeMemoryCache = new Map<string, number>();
-                
+
                 for (const system of entityProcessors.processors) {
                     const systemTypeName = system.constructor.name;
-                    
+
                     let systemMemory: number;
                     if (systemTypeMemoryCache.has(systemTypeName)) {
                         systemMemory = systemTypeMemoryCache.get(systemTypeName)!;
@@ -500,7 +557,7 @@ export class DebugManager {
                         systemMemory = this.calculateQuickSystemSize(system);
                         systemTypeMemoryCache.set(systemTypeName, systemMemory);
                     }
-                    
+
                     totalSystemMemory += systemMemory;
 
                     systemBreakdown.push({
@@ -522,20 +579,20 @@ export class DebugManager {
         };
     }
 
-    private calculateQuickSystemSize(system: any): number {
+    private calculateQuickSystemSize(system: unknown): number {
         if (!system || typeof system !== 'object') return 64;
-        
+
         let size = 128;
-        
+
         try {
             const keys = Object.keys(system);
             for (let i = 0; i < Math.min(keys.length, 15); i++) {
                 const key = keys[i];
                 if (key === 'entities' || key === 'scene' || key === 'constructor') continue;
-                
-                const value = system[key];
+
+                const value = (system as Record<string, unknown>)[key];
                 size += key.length * 2;
-                
+
                 if (typeof value === 'string') {
                     size += Math.min(value.length * 2, 100);
                 } else if (typeof value === 'number') {
@@ -551,16 +608,34 @@ export class DebugManager {
         } catch (error) {
             return 128;
         }
-        
+
         return Math.max(size, 64);
     }
 
     /**
      * 收集对象池内存统计
      */
-    private collectPoolMemoryStats(): any {
+    private collectPoolMemoryStats(): {
+        totalMemory: number;
+        poolCount: number;
+        breakdown: Array<{
+            typeName: string;
+            maxSize: number;
+            currentSize: number;
+            estimatedMemory: number;
+            utilization: number;
+            hitRate?: number;
+        }>;
+    } {
         let totalPoolMemory = 0;
-        const poolBreakdown: any[] = [];
+        const poolBreakdown: Array<{
+            typeName: string;
+            maxSize: number;
+            currentSize: number;
+            estimatedMemory: number;
+            utilization: number;
+            hitRate?: number;
+        }> = [];
 
         try {
             // 尝试获取组件池统计
@@ -569,7 +644,7 @@ export class DebugManager {
             const poolStats = poolManager.getPoolStats();
 
             for (const [typeName, stats] of poolStats.entries()) {
-                const poolData = stats as any; // 类型断言
+                const poolData = stats as { maxSize: number; currentSize?: number };
                 const poolMemory = poolData.maxSize * 32; // 估算每个对象32字节
                 totalPoolMemory += poolMemory;
 
@@ -591,7 +666,12 @@ export class DebugManager {
             const poolStats = Pool.getStats();
 
             for (const [typeName, stats] of Object.entries(poolStats)) {
-                const poolData = stats as any; // 类型断言
+                const poolData = stats as {
+                    maxSize: number;
+                    size: number;
+                    estimatedMemoryUsage: number;
+                    hitRate: number;
+                };
                 totalPoolMemory += poolData.estimatedMemoryUsage;
                 poolBreakdown.push({
                     typeName: `Pool_${typeName}`,
@@ -616,9 +696,21 @@ export class DebugManager {
     /**
      * 收集性能统计信息
      */
-    private collectPerformanceStats(): any {
+    private collectPerformanceStats(): {
+        enabled: boolean;
+        systemCount?: number;
+        warnings?: unknown[];
+        topSystems?: Array<{
+            name: string;
+            averageTime: number;
+            maxTime: number;
+            samples: number;
+        }>;
+        error?: string;
+    } {
         try {
-            const performanceMonitor = (Core.Instance as any)._performanceMonitor;
+            const coreInstance = Core.Instance as Core & { _performanceMonitor?: unknown };
+            const performanceMonitor = coreInstance._performanceMonitor;
             if (!performanceMonitor) {
                 return { enabled: false };
             }
@@ -626,35 +718,25 @@ export class DebugManager {
             const stats = performanceMonitor.getAllSystemStats();
             const warnings = performanceMonitor.getPerformanceWarnings();
 
-                         return {
-                enabled: performanceMonitor.enabled,
+            return {
+                enabled: (performanceMonitor as { enabled?: boolean }).enabled ?? false,
                 systemCount: stats.size,
                 warnings: warnings.slice(0, 10), // 最多10个警告
-                topSystems: Array.from(stats.entries() as any).map((entry: any) => {
-                    const [name, stat] = entry;
+                topSystems: Array.from(stats.entries()).map((entry) => {
+                    const [name, stat] = entry as [string, { averageTime: number; maxTime: number; executionCount: number }];
                     return {
                         name,
                         averageTime: stat.averageTime,
                         maxTime: stat.maxTime,
                         samples: stat.executionCount
                     };
-                }).sort((a: any, b: any) => b.averageTime - a.averageTime).slice(0, 5)
+                }).sort((a, b) => b.averageTime - a.averageTime).slice(0, 5)
             };
-        } catch (error: any) {
-            return { enabled: false, error: error.message };
+        } catch (error: unknown) {
+            return { enabled: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
 
-    /**
-     * 获取内存大小分类
-     */
-    private getMemorySizeCategory(memoryBytes: number): string {
-        if (memoryBytes < 1024) return '< 1KB';
-        if (memoryBytes < 10 * 1024) return '1-10KB';
-        if (memoryBytes < 100 * 1024) return '10-100KB';
-        if (memoryBytes < 1024 * 1024) return '100KB-1MB';
-        return '> 1MB';
-    }
 
     /**
      * 获取调试数据
@@ -677,12 +759,14 @@ export class DebugManager {
         }
 
         if (this.config.channels.systems) {
-            const performanceMonitor = (Core.Instance as any)._performanceMonitor;
+            const coreInstance = Core.Instance as Core & { _performanceMonitor?: unknown };
+            const performanceMonitor = coreInstance._performanceMonitor;
             debugData.systems = this.systemCollector.collectSystemData(performanceMonitor);
         }
 
         if (this.config.channels.performance) {
-            const performanceMonitor = (Core.Instance as any)._performanceMonitor;
+            const coreInstance = Core.Instance as Core & { _performanceMonitor?: unknown };
+            const performanceMonitor = coreInstance._performanceMonitor;
             debugData.performance = this.performanceCollector.collectPerformanceData(performanceMonitor);
         }
 
