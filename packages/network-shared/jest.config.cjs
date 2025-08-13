@@ -18,16 +18,10 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
     global: {
-      branches: 60,
+      branches: 70,
       functions: 70,
       lines: 70,
       statements: 70
-    },
-    './src/decorators/': {
-      branches: 70,
-      functions: 80,
-      lines: 80,
-      statements: 80
     }
   },
   verbose: true,
@@ -39,6 +33,7 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^@esengine/ecs-framework$': '<rootDir>/../core/src/index.ts',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
@@ -49,5 +44,8 @@ module.exports = {
     '<rootDir>/bin/',
     '<rootDir>/dist/',
     '<rootDir>/node_modules/'
+  ],
+  transformIgnorePatterns: [
+    'node_modules/(?!(.*\\.mjs$|@esengine))'
   ]
 };

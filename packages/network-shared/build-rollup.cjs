@@ -2,27 +2,32 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-console.log('🚀 使用 Rollup 构建 network-shared 包...');
+console.log('🚀 使用 Rollup 构建 @esengine/network-shared 包...');
 
 async function main() {
     try {
+        // 清理旧的dist目录
         if (fs.existsSync('./dist')) {
             console.log('🧹 清理旧的构建文件...');
             execSync('rimraf ./dist', { stdio: 'inherit' });
         }
 
+        // 执行Rollup构建
         console.log('📦 执行 Rollup 构建...');
-        execSync('rollup -c rollup.config.cjs', { stdio: 'inherit' });
+        execSync('npx rollup -c rollup.config.cjs', { stdio: 'inherit' });
 
+        // 生成package.json
         console.log('📋 生成 package.json...');
         generatePackageJson();
 
+        // 复制其他文件
         console.log('📁 复制必要文件...');
         copyFiles();
 
+        // 输出构建结果
         showBuildResults();
 
-        console.log('✅ network-shared 构建完成！');
+        console.log('✅ @esengine/network-shared 构建完成！');
         console.log('\n🚀 发布命令:');
         console.log('cd dist && npm publish');
 
@@ -53,7 +58,7 @@ function generatePackageJson() {
         files: [
             'index.mjs',
             'index.mjs.map',
-            'index.cjs', 
+            'index.cjs',
             'index.cjs.map',
             'index.umd.js',
             'index.umd.js.map',
@@ -63,19 +68,20 @@ function generatePackageJson() {
         ],
         keywords: [
             'ecs',
-            'networking',
+            'network',
+            'multiplayer',
+            'game',
             'shared',
-            'decorators',
-            'protobuf',
-            'serialization',
-            'game-engine',
-            'typescript'
+            'typescript',
+            'cocos-creator',
+            'laya'
         ],
         author: sourcePackage.author,
         license: sourcePackage.license,
         repository: sourcePackage.repository,
-        dependencies: sourcePackage.dependencies,
         peerDependencies: sourcePackage.peerDependencies,
+        dependencies: sourcePackage.dependencies,
+        publishConfig: sourcePackage.publishConfig,
         engines: {
             node: '>=16.0.0'
         },
@@ -88,7 +94,7 @@ function generatePackageJson() {
 function copyFiles() {
     const filesToCopy = [
         { src: './README.md', dest: './dist/README.md' },
-        { src: '../../LICENSE', dest: './dist/LICENSE' }
+        { src: './LICENSE', dest: './dist/LICENSE' }
     ];
 
     filesToCopy.forEach(({ src, dest }) => {

@@ -1,43 +1,26 @@
 /**
- * ECS Framework Network Shared
- * 
- * 共享的网络组件、装饰器和类型定义
+ * @esengine/network-shared
+ * ECS Framework网络层 - 共享组件和协议
  */
 
-// 确保 reflect-metadata 被导入
-import 'reflect-metadata';
-
 // 类型定义
-export * from './types';
+export * from './types/NetworkTypes';
+export * from './types/TransportTypes';
 
-// 装饰器
-export * from './decorators';
+// 协议消息
+export * from './protocols/MessageTypes';
 
-// 核心类
-export * from './core';
+// 核心组件
+export * from './components/NetworkIdentity';
 
-// 序列化工具
-export * from './serialization';
+// 装饰器系统 (待实现)
+// export * from './decorators/SyncVar';
+// export * from './decorators/ServerRpc';
+// export * from './decorators/ClientRpc';
+// export * from './decorators/NetworkComponent';
 
-// 协议编译器
-export * from './protocol';
+// 事件系统
+export * from './events/NetworkEvents';
 
-// 工具函数
-export * from './utils';
-
-// 版本信息
-export const VERSION = '1.0.0';
-
-// 默认配置
-export const DEFAULT_NETWORK_CONFIG = {
-  port: 7777,
-  host: 'localhost',
-  maxConnections: 100,
-  syncRate: 20,
-  snapshotRate: 5,
-  compression: true,
-  encryption: false,
-  timeout: 30000,
-  maxReconnectAttempts: 3,
-  reconnectInterval: 5000
-};
+// 序列化系统 (待实现)
+// export * from './serialization/NetworkSerializer';

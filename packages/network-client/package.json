@@ -1,8 +1,7 @@
 {
-  "name": "@esengine/ecs-framework-network-client",
-  "version": "1.0.17",
-  "description": "ECS Framework 网络库 - 客户端实现",
-  "type": "module",
+  "name": "@esengine/network-client",
+  "version": "1.0.1",
+  "description": "ECS Framework网络层 - 客户端实现",
   "main": "bin/index.js",
   "types": "bin/index.d.ts",
   "exports": {
@@ -22,15 +21,16 @@
   ],
   "keywords": [
     "ecs",
-    "networking",
+    "network",
     "client",
-    "prediction",
-    "interpolation",
-    "game-engine",
+    "multiplayer",
+    "game",
+    "browser",
+    "cocos",
     "typescript"
   ],
   "scripts": {
-    "clean": "rimraf bin dist",
+    "clean": "rimraf bin dist tsconfig.tsbuildinfo",
     "build:ts": "tsc",
     "prebuild": "npm run clean",
     "build": "npm run build:ts",
@@ -45,32 +45,21 @@
     "test": "jest --config jest.config.cjs",
     "test:watch": "jest --watch --config jest.config.cjs",
     "test:coverage": "jest --coverage --config jest.config.cjs",
-    "test:ci": "jest --ci --coverage --config jest.config.cjs",
-    "test:clear": "jest --clearCache"
+    "test:ci": "jest --ci --coverage --config jest.config.cjs"
   },
   "author": "yhh",
   "license": "MIT",
   "dependencies": {
-    "ws": "^8.18.0"
-  },
-  "peerDependencies": {
-    "@esengine/ecs-framework": ">=2.1.29",
-    "@esengine/ecs-framework-network-shared": ">=1.0.0"
+    "@esengine/ecs-framework": "file:../core",
+    "@esengine/network-shared": "file:../network-shared",
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
-    "@esengine/ecs-framework": "*",
-    "@esengine/ecs-framework-network-shared": "*",
-    "@rollup/plugin-commonjs": "^28.0.3",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-terser": "^0.4.4",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.19.0",
-    "@types/ws": "^8.5.13",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "rimraf": "^5.0.0",
-    "rollup": "^4.42.0",
-    "rollup-plugin-dts": "^6.2.1",
     "ts-jest": "^29.4.0",
     "typescript": "^5.8.3"
   },

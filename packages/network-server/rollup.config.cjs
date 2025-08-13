@@ -7,23 +7,33 @@ const { readFileSync } = require('fs');
 const pkg = JSON.parse(readFileSync('./package.json', 'utf8'));
 
 const banner = `/**
- * @esengine/ecs-framework-network-server v${pkg.version}
- * ECS Framework 网络库 - 服务端实现
+ * @esengine/network-server v${pkg.version}
+ * ECS网络层服务端实现
  * 
  * @author ${pkg.author}
  * @license ${pkg.license}
  */`;
 
+// 外部依赖，不打包进bundle (Node.js环境，保持依赖外部化)
 const external = [
-  'ws', 
-  'uuid', 
   '@esengine/ecs-framework',
-  '@esengine/ecs-framework-network-shared'
+  '@esengine/network-shared', 
+  'ws',
+  'reflect-metadata',
+  'http',
+  'https',
+  'crypto',
+  'events',
+  'stream',
+  'util',
+  'fs',
+  'path'
 ];
 
 const commonPlugins = [
   resolve({
-    preferBuiltins: true
+    preferBuiltins: true,
+    browser: false
   }),
   commonjs({
     include: /node_modules/
@@ -57,7 +67,7 @@ module.exports = [
     }
   },
   
-  // CommonJS构建
+  // CommonJS构建 (Node.js主要格式)
   {
     input: 'bin/index.js',
     output: {
@@ -88,7 +98,7 @@ module.exports = [
       file: 'dist/index.d.ts',
       format: 'es',
       banner: `/**
- * @esengine/ecs-framework-network-server v${pkg.version}
+ * @esengine/network-server v${pkg.version}
  * TypeScript definitions
  */`
     },

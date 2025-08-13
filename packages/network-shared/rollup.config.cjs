@@ -7,14 +7,15 @@ const { readFileSync } = require('fs');
 const pkg = JSON.parse(readFileSync('./package.json', 'utf8'));
 
 const banner = `/**
- * @esengine/ecs-framework-network-shared v${pkg.version}
- * ECS Framework 网络库 - 共享组件和类型定义
+ * @esengine/network-shared v${pkg.version}
+ * ECS网络层共享组件和协议
  * 
  * @author ${pkg.author}
  * @license ${pkg.license}
  */`;
 
-const external = ['reflect-metadata', 'protobufjs', 'uuid', '@esengine/ecs-framework'];
+// 外部依赖，不打包进bundle
+const external = ['@esengine/ecs-framework', 'reflect-metadata'];
 
 const commonPlugins = [
   resolve({
@@ -77,7 +78,7 @@ module.exports = [
     }
   },
 
-  // UMD构建
+  // UMD构建 - 包含所有依赖，用于浏览器直接使用
   {
     input: 'bin/index.js',
     output: {
@@ -88,10 +89,8 @@ module.exports = [
       sourcemap: true,
       exports: 'named',
       globals: {
-        'reflect-metadata': 'ReflectMetadata',
-        'protobufjs': 'protobuf',
-        'uuid': 'uuid',
-        '@esengine/ecs-framework': 'ECS'
+        '@esengine/ecs-framework': 'ECS',
+        'reflect-metadata': 'Reflect'
       }
     },
     plugins: [
@@ -115,7 +114,7 @@ module.exports = [
       file: 'dist/index.d.ts',
       format: 'es',
       banner: `/**
- * @esengine/ecs-framework-network-shared v${pkg.version}
+ * @esengine/network-shared v${pkg.version}
  * TypeScript definitions
  */`
     },

@@ -7,17 +7,18 @@ const { readFileSync } = require('fs');
 const pkg = JSON.parse(readFileSync('./package.json', 'utf8'));
 
 const banner = `/**
- * @esengine/ecs-framework-network-client v${pkg.version}
- * ECS Framework 网络库 - 客户端实现
+ * @esengine/network-client v${pkg.version}
+ * ECS网络层客户端实现
  * 
  * @author ${pkg.author}
  * @license ${pkg.license}
  */`;
 
+// 外部依赖，不打包进bundle
 const external = [
-  'ws', 
   '@esengine/ecs-framework',
-  '@esengine/ecs-framework-network-shared'
+  '@esengine/network-shared',
+  'reflect-metadata'
 ];
 
 const commonPlugins = [
@@ -81,7 +82,7 @@ module.exports = [
     }
   },
 
-  // UMD构建
+  // UMD构建 - 用于浏览器直接使用
   {
     input: 'bin/index.js',
     output: {
@@ -92,10 +93,9 @@ module.exports = [
       sourcemap: true,
       exports: 'named',
       globals: {
-        'ws': 'WebSocket',
-        'uuid': 'uuid',
         '@esengine/ecs-framework': 'ECS',
-        '@esengine/ecs-framework-network-shared': 'ECSNetworkShared'
+        '@esengine/network-shared': 'ECSNetworkShared',
+        'reflect-metadata': 'Reflect'
       }
     },
     plugins: [
@@ -119,7 +119,7 @@ module.exports = [
       file: 'dist/index.d.ts',
       format: 'es',
       banner: `/**
- * @esengine/ecs-framework-network-client v${pkg.version}
+ * @esengine/network-client v${pkg.version}
  * TypeScript definitions
  */`
     },

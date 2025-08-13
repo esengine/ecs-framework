@@ -1,8 +1,7 @@
 {
-  "name": "@esengine/ecs-framework-network-shared",
-  "version": "1.0.15",
-  "description": "ECS Framework 网络库 - 共享组件和类型定义",
-  "type": "module",
+  "name": "@esengine/network-shared",
+  "version": "1.0.2",
+  "description": "ECS Framework网络层 - 共享组件和协议",
   "main": "bin/index.js",
   "types": "bin/index.d.ts",
   "exports": {
@@ -22,17 +21,15 @@
   ],
   "keywords": [
     "ecs",
-    "networking",
-    "shared",
-    "decorators",
-    "protobuf",
-    "serialization",
-    "game-engine",
-    "typescript"
+    "network",
+    "multiplayer",
+    "game",
+    "typescript",
+    "shared"
   ],
   "scripts": {
-    "clean": "rimraf bin dist",
-    "build:ts": "tsc",
+    "clean": "rimraf bin dist tsconfig.tsbuildinfo",
+    "build:ts": "tsc --build",
     "prebuild": "npm run clean",
     "build": "npm run build:ts",
     "build:watch": "tsc --watch",
@@ -46,30 +43,19 @@
     "test": "jest --config jest.config.cjs",
     "test:watch": "jest --watch --config jest.config.cjs",
     "test:coverage": "jest --coverage --config jest.config.cjs",
-    "test:ci": "jest --ci --coverage --config jest.config.cjs",
-    "test:clear": "jest --clearCache"
+    "test:ci": "jest --ci --coverage --config jest.config.cjs"
   },
   "author": "yhh",
   "license": "MIT",
   "dependencies": {
-    "reflect-metadata": "^0.2.2",
-    "protobufjs": "^7.5.3"
-  },
-  "peerDependencies": {
-    "@esengine/ecs-framework": ">=2.1.29"
+    "@esengine/ecs-framework": "file:../core",
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
-    "@esengine/ecs-framework": "*",
-    "@rollup/plugin-commonjs": "^28.0.3",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-terser": "^0.4.4",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.19.0",
     "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
     "rimraf": "^5.0.0",
-    "rollup": "^4.42.0",
-    "rollup-plugin-dts": "^6.2.1",
     "ts-jest": "^29.4.0",
     "typescript": "^5.8.3"
   },

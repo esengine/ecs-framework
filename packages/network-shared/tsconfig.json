@@ -8,6 +8,7 @@
     "outDir": "./bin",
     "rootDir": "./src",
     "strict": true,
+    "composite": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
@@ -40,7 +41,11 @@
     "node_modules",
     "bin",
     "**/*.test.ts",
-    "**/*.spec.ts",
-    "src/protocol/analyzer/**/*"
+    "**/*.spec.ts"
+  ],
+  "references": [
+    {
+      "path": "../core"
+    }
   ]
 }

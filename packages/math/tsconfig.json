@@ -6,6 +6,7 @@
     "declaration": true,
     "sourceMap": true,
     "strict": true,
+    "composite": true,
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "node",

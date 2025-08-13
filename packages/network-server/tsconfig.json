@@ -8,6 +8,7 @@
     "outDir": "./bin",
     "rootDir": "./src",
     "strict": true,
+    "composite": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
@@ -41,5 +42,13 @@
     "bin",
     "**/*.test.ts",
     "**/*.spec.ts"
+  ],
+  "references": [
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../network-shared"
+    }
   ]
 }

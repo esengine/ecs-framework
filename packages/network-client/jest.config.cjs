@@ -1,7 +1,7 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
   preset: 'ts-jest',
-  testEnvironment: 'jsdom', // 客户端库使用 jsdom 环境
+  testEnvironment: 'jsdom', // 客户端使用jsdom环境
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.ts', '**/*.spec.ts'],
   testPathIgnorePatterns: ['/node_modules/'],
@@ -18,16 +18,10 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
     global: {
-      branches: 60,
+      branches: 70,
       functions: 70,
       lines: 70,
       statements: 70
-    },
-    './src/core/': {
-      branches: 70,
-      functions: 80,
-      lines: 80,
-      statements: 80
     }
   },
   verbose: true,
