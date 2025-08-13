@@ -2,6 +2,7 @@ import { IEntityDebugData } from '../../Types';
 import { Core } from '../../Core';
 import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';
+import { ComponentTypeManager } from '../../ECS/Utils/ComponentTypeManager';
 
 /**
  * 实体数据收集器
@@ -712,7 +713,6 @@ export class EntityDataCollector {
             
             if (!typeName || typeName === 'Object' || typeName === 'Function') {
                 try {
-                    const { ComponentTypeManager } = require('../../ECS/Utils/ComponentTypeManager');
                     const typeManager = ComponentTypeManager.instance;
                     const componentType = component.constructor as any;
                     const typeId = typeManager.getTypeId(componentType);

@@ -78,4 +78,39 @@ export class Emitter<T, TContext = unknown> {
         let list = this._messageTable.get(eventType);
         return list ? list.some(observer => observer.func === handler) : false;
     }
+
+    /**
+     * 移除指定事件类型的所有监听器
+     * @param eventType 事件类型
+     */
+    public removeAllObservers(eventType?: T): void {
+        if (eventType !== undefined) {
+            this._messageTable.delete(eventType);
+        } else {
+            this._messageTable.clear();
+        }
+    }
+
+    /**
+     * 释放所有资源，清理所有监听器
+     */
+    public dispose(): void {
+        this._messageTable.clear();
+    }
+
+    /**
+     * 获取事件类型数量
+     */
+    public getEventTypeCount(): number {
+        return this._messageTable.size;
+    }
+
+    /**
+     * 获取指定事件类型的监听器数量
+     * @param eventType 事件类型
+     */
+    public getObserverCount(eventType: T): number {
+        const list = this._messageTable.get(eventType);
+        return list ? list.length : 0;
+    }
 }

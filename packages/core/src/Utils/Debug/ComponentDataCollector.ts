@@ -1,5 +1,6 @@
 import { IComponentDebugData } from '../../Types';
 import { Core } from '../../Core';
+import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
 
 /**
  * 组件数据收集器
@@ -49,7 +50,6 @@ export class ComponentDataCollector {
         let poolSizes = new Map<string, number>();
         
         try {
-            const { ComponentPoolManager } = require('../../ECS/Core/ComponentPool');
             const poolManager = ComponentPoolManager.getInstance();
             const poolStats = poolManager.getPoolStats();
             const utilizations = poolManager.getPoolUtilization();

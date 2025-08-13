@@ -8,6 +8,7 @@
     "outDir": "./bin",
     "rootDir": "./src",
     "strict": true,
+    "composite": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,

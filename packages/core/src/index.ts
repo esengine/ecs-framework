@@ -27,6 +27,9 @@ export type { ILogger, LoggerConfig } from './Utils/Logger';
 // ECS核心组件
 export * from './ECS';
 
+// 事件系统
+export { ECSEventType, EventPriority, EVENT_TYPES, EventTypeValidator } from './ECS/CoreEvents';
+
 // 工具类和类型定义
 export * from './Utils';
 export * from './Types'; 

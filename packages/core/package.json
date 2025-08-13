@@ -1,8 +1,7 @@
 {
   "name": "@esengine/ecs-framework",
-  "version": "2.1.35",
+  "version": "2.1.41",
   "description": "用于Laya、Cocos Creator等JavaScript游戏引擎的高性能ECS框架",
-  "type": "module",
   "main": "bin/index.js",
   "types": "bin/index.d.ts",
   "exports": {
@@ -30,7 +29,7 @@
     "egret"
   ],
   "scripts": {
-    "clean": "rimraf bin dist",
+    "clean": "rimraf bin dist tsconfig.tsbuildinfo",
     "build:ts": "tsc",
     "prebuild": "npm run clean",
     "build": "npm run build:ts",

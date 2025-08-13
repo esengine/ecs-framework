@@ -1,5 +1,6 @@
 import { IPerformanceDebugData } from '../../Types';
 import { Time } from '../Time';
+import { Core } from '../../Core';
 
 /**
  * 性能数据收集器
@@ -64,7 +65,6 @@ export class PerformanceDataCollector {
         if (!performanceMonitor) {
             // 尝试从Core实例获取性能监视器
             try {
-                const { Core } = require('../../Core');
                 const coreInstance = Core.Instance;
                 if (coreInstance && (coreInstance as any)._performanceMonitor) {
                     performanceMonitor = (coreInstance as any)._performanceMonitor;

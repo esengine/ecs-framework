@@ -7,6 +7,8 @@ import { SceneDataCollector } from './SceneDataCollector';
 import { WebSocketManager } from './WebSocketManager';
 import { Core } from '../../Core';
 import { Component } from '../../ECS/Component';
+import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
+import { Pool } from '../../Utils/Pool';
 
 /**
  * 调试管理器
@@ -639,7 +641,6 @@ export class DebugManager {
 
         try {
             // 尝试获取组件池统计
-            const { ComponentPoolManager } = require('../../ECS/Core/ComponentPool');
             const poolManager = ComponentPoolManager.getInstance();
             const poolStats = poolManager.getPoolStats();
 
@@ -662,8 +663,7 @@ export class DebugManager {
 
         try {
             // 尝试获取通用对象池统计
-            const { Pool } = require('../../Utils/Pool');
-            const poolStats = Pool.getStats();
+            const poolStats = Pool.getAllPoolStats();
 
             for (const [typeName, stats] of Object.entries(poolStats)) {
                 const poolData = stats as {
