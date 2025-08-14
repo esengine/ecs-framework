@@ -3,6 +3,7 @@ import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
 import { EventBus } from './Core/EventBus';
 import { IBigIntLike, BigIntFactory } from './Utils/BigIntCompatibility';
 import { createLogger } from '../Utils/Logger';
+import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
 
 // Forward declaration to avoid circular dependency
 interface IScene {
@@ -382,7 +383,7 @@ export class Entity {
         
         // 检查是否已有此类型的组件
         if (this.hasComponent(componentType)) {
-            throw new Error(`Entity ${this.name} already has component ${componentType.name}`);
+            throw new Error(`Entity ${this.name} already has component ${getComponentTypeName(componentType)}`);
         }
 
         // 使用内部方法添加组件
@@ -404,7 +405,7 @@ export class Entity {
                 entityId: this.id,
                 entityName: this.name,
                 entityTag: this.tag?.toString(),
-                componentType: componentType.name,
+                componentType: getComponentTypeName(componentType),
                 component: component
             });
         }
@@ -558,7 +559,7 @@ export class Entity {
                 entityId: this.id,
                 entityName: this.name,
                 entityTag: this.tag?.toString(),
-                componentType: componentType.name,
+                componentType: getComponentTypeName(componentType),
                 component: component
             });
         }
@@ -636,7 +637,7 @@ export class Entity {
                 addedComponents.push(this.addComponent(component));
             } catch (error) {
                 // 如果某个组件添加失败，继续添加其他组件
-                Entity._logger.warn(`添加组件失败 ${component.constructor.name}:`, error);
+                Entity._logger.warn(`添加组件失败 ${getComponentInstanceTypeName(component)}:`, error);
             }
         }
         
@@ -1000,7 +1001,7 @@ export class Entity {
             activeInHierarchy: this.activeInHierarchy,
             destroyed: this._isDestroyed,
             componentCount: this.components.length,
-            componentTypes: this.components.map(c => c.constructor.name),
+            componentTypes: this.components.map(c => getComponentInstanceTypeName(c)),
             componentMask: this._componentMask.toString(2), // 二进制表示
             parentId: this._parent?.id || null,
             childCount: this._children.length,

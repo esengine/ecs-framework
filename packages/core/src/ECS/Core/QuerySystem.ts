@@ -3,6 +3,7 @@ import { Component } from '../Component';
 import { ComponentRegistry, ComponentType } from './ComponentStorage';
 import { IBigIntLike, BigIntFactory } from '../Utils/BigIntCompatibility';
 import { createLogger } from '../../Utils/Logger';
+import { getComponentTypeName } from '../Decorators';
 
 import { ComponentPoolManager } from './ComponentPool';
 import { ComponentIndexManager, IndexType } from './ComponentIndex';
@@ -163,6 +164,7 @@ export class QuerySystem {
             this.componentIndexManager.addEntity(entity);
             this.archetypeSystem.addEntity(entity);
             this.dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_ADDED);
+
 
             // 只有在非延迟模式下才立即清理缓存
             if (!deferCacheClear) {
@@ -400,7 +402,7 @@ export class QuerySystem {
         this.queryStats.totalQueries++;
 
         // 生成缓存键
-        const cacheKey = `all:${componentTypes.map(t => t.name).sort().join(',')}`;
+        const cacheKey = `all:${componentTypes.map(t => getComponentTypeName(t)).sort().join(',')}`;
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
@@ -511,7 +513,7 @@ export class QuerySystem {
         const startTime = performance.now();
         this.queryStats.totalQueries++;
 
-        const cacheKey = `any:${componentTypes.map(t => t.name).sort().join(',')}`;
+        const cacheKey = `any:${componentTypes.map(t => getComponentTypeName(t)).sort().join(',')}`;
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
@@ -569,7 +571,7 @@ export class QuerySystem {
         const startTime = performance.now();
         this.queryStats.totalQueries++;
 
-        const cacheKey = `none:${componentTypes.map(t => t.name).sort().join(',')}`;
+        const cacheKey = `none:${componentTypes.map(t => getComponentTypeName(t)).sort().join(',')}`;
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
@@ -713,7 +715,7 @@ export class QuerySystem {
         const startTime = performance.now();
         this.queryStats.totalQueries++;
 
-        const cacheKey = `component:${componentType.name}`;
+        const cacheKey = `component:${getComponentTypeName(componentType)}`;
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
@@ -880,7 +882,7 @@ export class QuerySystem {
                 mask = mask.or(bitMask);
                 hasValidComponents = true;
             } catch (error) {
-                this._logger.warn(`组件类型 ${type.name} 未注册，跳过`);
+                this._logger.warn(`组件类型 ${getComponentTypeName(type)} 未注册，跳过`);
             }
         }
         
@@ -958,7 +960,7 @@ export class QuerySystem {
                 componentIndex: this.componentIndexManager.getStats(),
                 archetypeSystem: this.archetypeSystem.getAllArchetypes().map(a => ({
                     id: a.id,
-                    componentTypes: a.componentTypes.map(t => t.name),
+                    componentTypes: a.componentTypes.map(t => getComponentTypeName(t)),
                     entityCount: a.entities.length
                 })),
                 dirtyTracking: this.dirtyTrackingSystem.getStats()
@@ -1151,7 +1153,7 @@ export class QueryBuilder {
                 const bitMask = ComponentRegistry.getBitMask(type);
                 mask = mask.or(bitMask);
             } catch (error) {
-                this._logger.warn(`组件类型 ${type.name} 未注册，跳过`);
+                this._logger.warn(`组件类型 ${getComponentTypeName(type)} 未注册，跳过`);
             }
         }
         return mask;

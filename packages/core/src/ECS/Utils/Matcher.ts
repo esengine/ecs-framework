@@ -1,4 +1,5 @@
 import { ComponentType } from '../Core/ComponentStorage';
+import { getComponentTypeName } from '../Decorators';
 
 /**
  * 查询条件类型
@@ -266,15 +267,15 @@ export class Matcher {
         const parts: string[] = [];
         
         if (this.condition.all.length > 0) {
-            parts.push(`all(${this.condition.all.map(t => t.name).join(', ')})`);
+            parts.push(`all(${this.condition.all.map(t => getComponentTypeName(t)).join(', ')})`);
         }
         
         if (this.condition.any.length > 0) {
-            parts.push(`any(${this.condition.any.map(t => t.name).join(', ')})`);
+            parts.push(`any(${this.condition.any.map(t => getComponentTypeName(t)).join(', ')})`);
         }
         
         if (this.condition.none.length > 0) {
-            parts.push(`none(${this.condition.none.map(t => t.name).join(', ')})`);
+            parts.push(`none(${this.condition.none.map(t => getComponentTypeName(t)).join(', ')})`);
         }
         
         if (this.condition.tag !== undefined) {
@@ -286,7 +287,7 @@ export class Matcher {
         }
         
         if (this.condition.component !== undefined) {
-            parts.push(`component(${this.condition.component.name})`);
+            parts.push(`component(${getComponentTypeName(this.condition.component)})`);
         }
         
         return `Matcher[${parts.join(' & ')}]`;

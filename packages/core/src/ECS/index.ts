@@ -3,6 +3,7 @@ export { Component } from './Component';
 export { ECSEventType, EventPriority, EVENT_TYPES, EventTypeValidator } from './CoreEvents';
 export * from './Systems';
 export * from './Utils';
+export * from './Decorators';
 export { Scene } from './Scene';
 export { IScene, ISceneFactory, ISceneConfig } from './IScene';
 export { EntityManager, EntityQueryBuilder } from './Core/EntityManager';

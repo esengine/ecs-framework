@@ -3,6 +3,7 @@ import { Core } from '../../Core';
 import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';
 import { ComponentTypeManager } from '../../ECS/Utils/ComponentTypeManager';
+import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
 
 /**
  * 实体数据收集器
@@ -77,7 +78,7 @@ export class EntityDataCollector {
             enabled: entity.enabled !== false,
             activeInHierarchy: entity.activeInHierarchy !== false,
             componentCount: entity.components.length,
-            componentTypes: entity.components.map((component: Component) => component.constructor.name),
+            componentTypes: entity.components.map((component: Component) => getComponentInstanceTypeName(component)),
             parentId: entity.parent?.id || null,
             childIds: entity.children?.map((child: Entity) => child.id) || [],
             depth: entity.getDepth ? entity.getDepth() : 0,
@@ -114,7 +115,7 @@ export class EntityDataCollector {
                 parentName: entity.parent?.name || null,
                 components: componentDetails || [],
                 componentCount: entity.components?.length || 0,
-                componentTypes: entity.components?.map((comp: any) => comp.constructor.name) || []
+                componentTypes: entity.components?.map((comp: any) => getComponentInstanceTypeName(comp)) || []
             };
         } catch (error) {
             return {
@@ -216,7 +217,7 @@ export class EntityDataCollector {
 
         if (entityContainer && entityContainer.entities) {
             entityContainer.entities.forEach((entity: any) => {
-                const componentTypes = entity.components?.map((comp: any) => comp.constructor.name) || [];
+                const componentTypes = entity.components?.map((comp: any) => getComponentInstanceTypeName(comp)) || [];
                 const signature = componentTypes.length > 0 ? componentTypes.sort().join(', ') : '无组件';
 
                 const existing = distribution.get(signature);
@@ -378,7 +379,7 @@ export class EntityDataCollector {
 
         if (entityContainer && entityContainer.entities) {
             entityContainer.entities.forEach((entity: any) => {
-                const componentTypes = entity.components?.map((comp: any) => comp.constructor.name) || [];
+                const componentTypes = entity.components?.map((comp: any) => getComponentInstanceTypeName(comp)) || [];
                 const signature = componentTypes.length > 0 ? componentTypes.sort().join(', ') : '无组件';
 
                 const existing = distribution.get(signature);
@@ -601,7 +602,7 @@ export class EntityDataCollector {
             enabled: entity.enabled !== false,
             activeInHierarchy: entity.activeInHierarchy !== false,
             componentCount: entity.components.length,
-            componentTypes: entity.components.map((component: Component) => component.constructor.name),
+            componentTypes: entity.components.map((component: Component) => getComponentInstanceTypeName(component)),
             parentId: entity.parent?.id || null,
             children: [] as any[],
             depth: entity.getDepth ? entity.getDepth() : 0,
@@ -690,7 +691,7 @@ export class EntityDataCollector {
             sceneName: sceneInfo.name,
             sceneType: sceneInfo.type,
             componentCount: entity.components.length,
-            componentTypes: entity.components.map((component: Component) => component.constructor.name),
+            componentTypes: entity.components.map((component: Component) => getComponentInstanceTypeName(component)),
             componentMask: entity.componentMask?.toString() || '0',
             parentId: entity.parent?.id || null,
             childCount: entity.children?.length || 0,
@@ -709,7 +710,7 @@ export class EntityDataCollector {
         properties: Record<string, any>;
     }> {
         return components.map((component: Component) => {
-            let typeName = component.constructor.name;
+            let typeName = getComponentInstanceTypeName(component);
             
             if (!typeName || typeName === 'Object' || typeName === 'Function') {
                 try {
@@ -739,11 +740,11 @@ export class EntityDataCollector {
                 // 如果没有找到任何属性，添加一些调试信息
                 if (Object.keys(properties).length === 0) {
                     properties._info = '该组件没有公开属性';
-                    properties._componentId = component.constructor.name;
+                    properties._componentId = getComponentInstanceTypeName(component);
                 }
             } catch (error) {
                 properties._error = '属性提取失败';
-                properties._componentId = component.constructor.name;
+                properties._componentId = getComponentInstanceTypeName(component);
             }
             
             return {

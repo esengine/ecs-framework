@@ -1,4 +1,5 @@
 import { Component } from '../../ECS/Component';
+import { getComponentInstanceTypeName } from '../../ECS/Decorators';
 
 /**
  * 调试数据格式化工具
@@ -56,7 +57,7 @@ export class DebugDataFormatter {
     }> {
         return components.map((component: Component) => {
             const componentDetail = {
-                typeName: component.constructor.name,
+                typeName: getComponentInstanceTypeName(component),
                 properties: {} as Record<string, any>
             };
 

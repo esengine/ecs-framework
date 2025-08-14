@@ -1,5 +1,6 @@
 import { ISystemDebugData } from '../../Types';
 import { Core } from '../../Core';
+import { getSystemInstanceTypeName } from '../../ECS/Decorators';
 
 /**
  * 系统数据收集器
@@ -43,13 +44,13 @@ export class SystemDataCollector {
         return {
             totalSystems: systems.length,
             systemsInfo: systems.map((system: any) => {
-                const systemName = system.systemName || system.constructor.name;
+                const systemName = system.systemName || getSystemInstanceTypeName(system);
                 const stats = systemStats.get(systemName);
                 const data = systemData.get(systemName);
                 
                 return {
                     name: systemName,
-                    type: system.constructor.name,
+                    type: getSystemInstanceTypeName(system),
                     entityCount: system.entities?.length || 0,
                     executionTime: stats?.averageTime || data?.executionTime || 0,
                     minExecutionTime: stats?.minTime === Number.MAX_VALUE ? 0 : (stats?.minTime || 0),

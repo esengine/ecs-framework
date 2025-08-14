@@ -1,5 +1,6 @@
 import { Component } from '../Component';
 import { Bits } from './Bits';
+import { getComponentTypeName } from '../Decorators';
 
 /**
  * 组件类型管理器
@@ -34,7 +35,7 @@ export class ComponentTypeManager {
         if (typeId === undefined) {
             typeId = this._nextTypeId++;
             this._componentTypes.set(componentType, typeId);
-            this._typeNames.set(typeId, componentType.name);
+            this._typeNames.set(typeId, getComponentTypeName(componentType));
         }
         
         return typeId;

@@ -2,6 +2,7 @@ import { Component } from '../Component';
 import { IBigIntLike, BigIntFactory } from '../Utils/BigIntCompatibility';
 import { SoAStorage, EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, SerializeArray, DeepCopy } from './SoAStorage';
 import { createLogger } from '../../Utils/Logger';
+import { getComponentTypeName } from '../Decorators';
 
 // 重新导出装饰器
 export { EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, SerializeArray, DeepCopy };
@@ -41,8 +42,8 @@ export class ComponentRegistry {
 
         const bitIndex = this.nextBitIndex++;
         this.componentTypes.set(componentType, bitIndex);
-        this.componentNameToType.set(componentType.name, componentType);
-        this.componentNameToId.set(componentType.name, bitIndex);
+        this.componentNameToType.set(getComponentTypeName(componentType), componentType);
+        this.componentNameToId.set(getComponentTypeName(componentType), bitIndex);
         return bitIndex;
     }
 
@@ -54,7 +55,7 @@ export class ComponentRegistry {
     public static getBitMask<T extends Component>(componentType: ComponentType<T>): IBigIntLike {
         const bitIndex = this.componentTypes.get(componentType);
         if (bitIndex === undefined) {
-            throw new Error(`Component type ${componentType.name} is not registered`);
+            throw new Error(`Component type ${getComponentTypeName(componentType)} is not registered`);
         }
         return BigIntFactory.one().shiftLeft(bitIndex);
     }
@@ -67,7 +68,7 @@ export class ComponentRegistry {
     public static getBitIndex<T extends Component>(componentType: ComponentType<T>): number {
         const bitIndex = this.componentTypes.get(componentType);
         if (bitIndex === undefined) {
-            throw new Error(`Component type ${componentType.name} is not registered`);
+            throw new Error(`Component type ${getComponentTypeName(componentType)} is not registered`);
         }
         return bitIndex;
     }
@@ -229,7 +230,7 @@ export class ComponentStorage<T extends Component> {
     public addComponent(entityId: number, component: T): void {
         // 检查实体是否已有此组件
         if (this.entityToIndex.has(entityId)) {
-            throw new Error(`Entity ${entityId} already has component ${this.componentType.name}`);
+            throw new Error(`Entity ${entityId} already has component ${getComponentTypeName(this.componentType)}`);
         }
 
         let index: number;
@@ -421,7 +422,7 @@ export class ComponentStorageManager {
             if (enableSoA) {
                 // 使用SoA优化存储
                 storage = new SoAStorage(componentType);
-                ComponentStorageManager._logger.info(`为 ${componentType.name} 启用SoA优化（适用于大规模批量操作）`);
+                ComponentStorageManager._logger.info(`为 ${getComponentTypeName(componentType)} 启用SoA优化（适用于大规模批量操作）`);
             } else {
                 // 默认使用原始存储
                 storage = new ComponentStorage(componentType);
@@ -521,7 +522,7 @@ export class ComponentStorageManager {
         const stats = new Map<string, any>();
         
         for (const [componentType, storage] of this.storages.entries()) {
-            const typeName = (componentType as any).name || 'Unknown';
+            const typeName = getComponentTypeName(componentType as ComponentType);
             stats.set(typeName, storage.getStats());
         }
         

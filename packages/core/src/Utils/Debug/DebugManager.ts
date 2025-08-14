@@ -9,6 +9,7 @@ import { Core } from '../../Core';
 import { Component } from '../../ECS/Component';
 import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
 import { Pool } from '../../Utils/Pool';
+import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
 
 /**
  * 调试管理器
@@ -467,7 +468,7 @@ export class DebugManager {
             if (!entity || entity.destroyed || !entity.components) continue;
 
             for (const component of entity.components) {
-                const typeName = component.constructor.name;
+                const typeName = getComponentInstanceTypeName(component);
                 componentTypeCounts.set(typeName, (componentTypeCounts.get(typeName) || 0) + 1);
             }
         }
@@ -486,7 +487,7 @@ export class DebugManager {
                 if (!entity || entity.destroyed || !entity.components) continue;
 
                 for (const component of entity.components) {
-                    if (component.constructor.name === typeName) {
+                    if (getComponentInstanceTypeName(component) === typeName) {
                         instances.push({
                             entityId: entity.id,
                             entityName: entity.name || `Entity_${entity.id}`,
@@ -550,7 +551,7 @@ export class DebugManager {
                 const systemTypeMemoryCache = new Map<string, number>();
 
                 for (const system of entityProcessors.processors) {
-                    const systemTypeName = system.constructor.name;
+                    const systemTypeName = getSystemInstanceTypeName(system);
 
                     let systemMemory: number;
                     if (systemTypeMemoryCache.has(systemTypeName)) {

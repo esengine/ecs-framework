@@ -1,6 +1,7 @@
 import { Component } from '../../Component';
 import { IBigIntLike, BigIntFactory } from '../../Utils/BigIntCompatibility';
 import { createLogger } from '../../../Utils/Logger';
+import { getComponentTypeName } from '../../Decorators';
 
 /**
  * 组件类型定义
@@ -26,8 +27,11 @@ export class ComponentRegistry {
      * @returns 分配的位索引
      */
     public static register<T extends Component>(componentType: ComponentType<T>): number {
+        const typeName = getComponentTypeName(componentType);
+        
         if (this.componentTypes.has(componentType)) {
-            return this.componentTypes.get(componentType)!;
+            const existingIndex = this.componentTypes.get(componentType)!;
+            return existingIndex;
         }
 
         if (this.nextBitIndex >= this.maxComponents) {
@@ -36,8 +40,9 @@ export class ComponentRegistry {
 
         const bitIndex = this.nextBitIndex++;
         this.componentTypes.set(componentType, bitIndex);
-        this.componentNameToType.set(componentType.name, componentType);
-        this.componentNameToId.set(componentType.name, bitIndex);
+        this.componentNameToType.set(typeName, componentType);
+        this.componentNameToId.set(typeName, bitIndex);
+        
         return bitIndex;
     }
 
@@ -49,7 +54,8 @@ export class ComponentRegistry {
     public static getBitMask<T extends Component>(componentType: ComponentType<T>): IBigIntLike {
         const bitIndex = this.componentTypes.get(componentType);
         if (bitIndex === undefined) {
-            throw new Error(`Component type ${componentType.name} is not registered`);
+            const typeName = getComponentTypeName(componentType);
+            throw new Error(`Component type ${typeName} is not registered`);
         }
         return BigIntFactory.one().shiftLeft(bitIndex);
     }
@@ -62,7 +68,8 @@ export class ComponentRegistry {
     public static getBitIndex<T extends Component>(componentType: ComponentType<T>): number {
         const bitIndex = this.componentTypes.get(componentType);
         if (bitIndex === undefined) {
-            throw new Error(`Component type ${componentType.name} is not registered`);
+            const typeName = getComponentTypeName(componentType);
+            throw new Error(`Component type ${typeName} is not registered`);
         }
         return bitIndex;
     }

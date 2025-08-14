@@ -1,5 +1,6 @@
 import { EntitySystem } from '../Systems/EntitySystem';
 import { createLogger } from '../../Utils/Logger';
+import { getSystemInstanceTypeName } from '../Decorators';
 
 /**
  * 实体处理器列表管理器
@@ -75,7 +76,7 @@ export class EntityProcessorList {
             try {
                 processor.update();
             } catch (error) {
-                EntityProcessorList._logger.error(`Error in processor ${processor.constructor.name}:`, error);
+                EntityProcessorList._logger.error(`Error in processor ${getSystemInstanceTypeName(processor)}:`, error);
             }
         }
     }

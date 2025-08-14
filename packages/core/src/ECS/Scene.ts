@@ -8,6 +8,7 @@ import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem } from './Core/EventSystem';
 import { EventBus } from './Core/EventBus';
 import { IScene, ISceneConfig } from './IScene';
+import { getComponentInstanceTypeName, getSystemInstanceTypeName } from './Decorators';
 
 /**
  * 游戏场景默认实现类
@@ -392,7 +393,7 @@ export class Scene implements IScene {
         componentStats: Map<string, any>;
     } {
         return {
-            name: this.constructor.name,
+            name: this.name || this.constructor.name,
             entityCount: this.entities.count,
             processorCount: this.entityProcessors.count,
             isRunning: this._didSceneBegin,
@@ -400,10 +401,10 @@ export class Scene implements IScene {
                 name: entity.name,
                 id: entity.id,
                 componentCount: entity.components.length,
-                componentTypes: entity.components.map(c => c.constructor.name)
+                componentTypes: entity.components.map(c => getComponentInstanceTypeName(c))
             })),
             processors: this.entityProcessors.processors.map(processor => ({
-                name: processor.constructor.name,
+                name: getSystemInstanceTypeName(processor),
                 updateOrder: processor.updateOrder,
                 entityCount: (processor as any)._entities?.length || 0
             })),

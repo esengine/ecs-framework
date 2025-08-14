@@ -1,5 +1,6 @@
 import { Entity } from '../Entity';
 import { ComponentType } from './ComponentStorage';
+import { getComponentTypeName } from '../Decorators';
 
 /**
  * 原型标识符
@@ -103,7 +104,7 @@ export class ArchetypeSystem {
     public queryArchetypes(componentTypes: ComponentType[], operation: 'AND' | 'OR' = 'AND'): ArchetypeQueryResult {
         const startTime = performance.now();
         
-        const cacheKey = `${operation}:${componentTypes.map(t => t.name).sort().join(',')}`;
+        const cacheKey = `${operation}:${componentTypes.map(t => getComponentTypeName(t)).sort().join(',')}`;
         
         // 检查缓存
         const cached = this._queryCache.get(cacheKey);
@@ -195,7 +196,7 @@ export class ArchetypeSystem {
      */
     private generateArchetypeId(componentTypes: ComponentType[]): ArchetypeId {
         return componentTypes
-            .map(type => type.name)
+            .map(type => getComponentTypeName(type))
             .sort()
             .join('|');
     }

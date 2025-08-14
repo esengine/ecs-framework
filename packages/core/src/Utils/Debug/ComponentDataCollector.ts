@@ -1,6 +1,7 @@
 import { IComponentDebugData } from '../../Types';
 import { Core } from '../../Core';
 import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
+import { getComponentInstanceTypeName } from '../../ECS/Decorators';
 
 /**
  * 组件数据收集器
@@ -36,7 +37,7 @@ export class ComponentDataCollector {
         entityList.buffer.forEach((entity: any) => {
             if (entity.components) {
                 entity.components.forEach((component: any) => {
-                    const typeName = component.constructor.name;
+                    const typeName = getComponentInstanceTypeName(component);
                     const stats = componentStats.get(typeName) || { count: 0, entities: 0 };
                     stats.count++;
                     totalInstances++;
@@ -106,7 +107,7 @@ export class ComponentDataCollector {
         try {
             for (const entity of entityList.buffer) {
                 if (entity.components) {
-                    const component = entity.components.find((c: any) => c.constructor.name === typeName);
+                    const component = entity.components.find((c: any) => getComponentInstanceTypeName(c) === typeName);
                     if (component) {
                         calculatedSize = this.calculateQuickObjectSize(component);
                         break;
@@ -180,7 +181,7 @@ export class ComponentDataCollector {
             // 找到第一个包含此组件的实体，分析组件大小
             for (const entity of entityList.buffer) {
                 if (entity.components) {
-                    const component = entity.components.find((c: any) => c.constructor.name === typeName);
+                    const component = entity.components.find((c: any) => getComponentInstanceTypeName(c) === typeName);
                     if (component) {
                         return this.estimateObjectSize(component);
                     }
