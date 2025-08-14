@@ -49,7 +49,7 @@ npm install @esengine/ecs-framework
 ### 1. 基础使用
 
 ```typescript
-import { Core, Scene, Entity, Component, EntitySystem, Matcher, Time } from '@esengine/ecs-framework';
+import { Core, Scene, Entity, Component, EntitySystem, ECSComponent, ECSSystem, Matcher, Time } from '@esengine/ecs-framework';
 
 // 创建核心实例
 const core = Core.create({ debug: true });
@@ -57,6 +57,7 @@ const scene = new Scene();
 Core.setScene(scene);
 
 // 定义组件
+@ECSComponent('Position')
 class PositionComponent extends Component {
     public x: number = 0;
     public y: number = 0;
@@ -68,6 +69,7 @@ class PositionComponent extends Component {
     }
 }
 
+@ECSComponent('Velocity')
 class VelocityComponent extends Component {
     public x: number = 0;
     public y: number = 0;
@@ -85,6 +87,7 @@ entity.addComponent(new PositionComponent(100, 100));
 entity.addComponent(new VelocityComponent(5, 0));
 
 // 创建系统
+@ECSSystem('Movement')
 class MovementSystem extends EntitySystem {
     constructor() {
         super(Matcher.all(PositionComponent, VelocityComponent));
@@ -107,14 +110,48 @@ scene.addEntityProcessor(new MovementSystem());
 Core.update(deltaTime);
 ```
 
+### 2. 类型装饰器
+
+在代码压缩混淆后，类名会改变导致框架无法识别组件类型。使用装饰器确保稳定性：
+
+```typescript
+import { ECSComponent, ECSSystem } from '@esengine/ecs-framework';
+
+// 组件装饰器
+@ECSComponent('Position')
+class PositionComponent extends Component {
+    public x: number = 0;
+    public y: number = 0;
+}
+
+@ECSComponent('Velocity') 
+class VelocityComponent extends Component {
+    public x: number = 0;
+    public y: number = 0;
+}
+
+// 系统装饰器
+@ECSSystem('Movement')
+class MovementSystem extends EntitySystem {
+    constructor() {
+        super(Matcher.all(PositionComponent, VelocityComponent));
+    }
+    
+    protected override process(entities: Entity[]) {
+        // 处理逻辑
+    }
+}
+```
+
 ## 高级特性
 
 ### 查询系统
 
 ```typescript
-import { Matcher } from '@esengine/ecs-framework';
+import { Matcher, ECSSystem } from '@esengine/ecs-framework';
 
 // 使用Matcher和EntitySystem进行高效查询
+@ECSSystem('Query')
 class QuerySystem extends EntitySystem {
     constructor() {
         super(Matcher.all(PositionComponent, VelocityComponent).none(HealthComponent));
@@ -127,6 +164,7 @@ class QuerySystem extends EntitySystem {
 }
 
 // 更复杂的查询条件
+@ECSSystem('Combat')
 class CombatSystem extends EntitySystem {
     constructor() {
         super(
