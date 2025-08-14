@@ -57,7 +57,7 @@ const scene = new Scene();
 Core.setScene(scene);
 
 // 定义组件
-@ECSComponent('Position')
+@ECSComponent('PositionComponent')
 class PositionComponent extends Component {
     public x: number = 0;
     public y: number = 0;
@@ -87,7 +87,7 @@ entity.addComponent(new PositionComponent(100, 100));
 entity.addComponent(new VelocityComponent(5, 0));
 
 // 创建系统
-@ECSSystem('Movement')
+@ECSSystem('MovementSystem')
 class MovementSystem extends EntitySystem {
     constructor() {
         super(Matcher.all(PositionComponent, VelocityComponent));
@@ -118,20 +118,20 @@ Core.update(deltaTime);
 import { ECSComponent, ECSSystem } from '@esengine/ecs-framework';
 
 // 组件装饰器
-@ECSComponent('Position')
+@ECSComponent('PositionComponent')
 class PositionComponent extends Component {
     public x: number = 0;
     public y: number = 0;
 }
 
-@ECSComponent('Velocity') 
+@ECSComponent('VelocityComponent') 
 class VelocityComponent extends Component {
     public x: number = 0;
     public y: number = 0;
 }
 
 // 系统装饰器
-@ECSSystem('Movement')
+@ECSSystem('MovementSystem')
 class MovementSystem extends EntitySystem {
     constructor() {
         super(Matcher.all(PositionComponent, VelocityComponent));
@@ -151,7 +151,7 @@ class MovementSystem extends EntitySystem {
 import { Matcher, ECSSystem } from '@esengine/ecs-framework';
 
 // 使用Matcher和EntitySystem进行高效查询
-@ECSSystem('Query')
+@ECSSystem('QuerySystem')
 class QuerySystem extends EntitySystem {
     constructor() {
         super(Matcher.all(PositionComponent, VelocityComponent).none(HealthComponent));
@@ -164,7 +164,7 @@ class QuerySystem extends EntitySystem {
 }
 
 // 更复杂的查询条件
-@ECSSystem('Combat')
+@ECSSystem('CombatSystem')
 class CombatSystem extends EntitySystem {
     constructor() {
         super(
