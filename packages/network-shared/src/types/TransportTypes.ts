@@ -23,14 +23,14 @@ export interface ITransport {
    * @param clientId 客户端ID
    * @param data 数据
    */
-  send(clientId: string, data: Buffer | string): void;
+  send(clientId: string, data: ArrayBuffer | string): void;
 
   /**
    * 广播数据到所有客户端
    * @param data 数据
    * @param exclude 排除的客户端ID列表
    */
-  broadcast(data: Buffer | string, exclude?: string[]): void;
+  broadcast(data: ArrayBuffer | string, exclude?: string[]): void;
 
   /**
    * 监听客户端连接事件
@@ -48,7 +48,7 @@ export interface ITransport {
    * 监听消息接收事件
    * @param handler 处理函数
    */
-  onMessage(handler: (clientId: string, data: Buffer | string) => void): void;
+  onMessage(handler: (clientId: string, data: ArrayBuffer | string) => void): void;
 
   /**
    * 监听错误事件
@@ -96,13 +96,13 @@ export interface IClientTransport {
    * 发送数据到服务器
    * @param data 数据
    */
-  send(data: Buffer | string): void;
+  send(data: ArrayBuffer | string): void;
 
   /**
    * 监听服务器消息
    * @param handler 处理函数
    */
-  onMessage(handler: (data: Buffer | string) => void): void;
+  onMessage(handler: (data: ArrayBuffer | string) => void): void;
 
   /**
    * 监听连接状态变化

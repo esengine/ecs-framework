@@ -3,24 +3,16 @@
  * ECS Framework网络层 - 服务端实现
  */
 
-// 核心服务器 (待实现)
-// export * from './core/NetworkServer';
-// export * from './core/ClientConnection';
+// 核心服务器
+export * from './core/NetworkServer';
+export * from './core/ConnectionManager';
 
-// 传输层 (待实现)
-// export * from './transport/WebSocketTransport';
-// export * from './transport/HttpTransport';
+// 传输层
+export * from './transport/WebSocketTransport';
 
-// 系统层 (待实现)
-// export * from './systems/SyncVarSystem';
-// export * from './systems/RpcSystem';
-
-// 房间管理 (待实现)
-// export * from './rooms/Room';
-// export * from './rooms/RoomManager';
-
-// 认证授权 (待实现)
-// export * from './auth/AuthManager';
+// 房间管理
+export * from './rooms/Room';
+export * from './rooms/RoomManager';
 
 // 重新导出shared包的类型
 export * from '@esengine/network-shared';

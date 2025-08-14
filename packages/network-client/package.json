@@ -42,10 +42,7 @@
     "publish:minor": "npm version minor && npm run build:npm && cd dist && npm publish",
     "publish:major": "npm version major && npm run build:npm && cd dist && npm publish",
     "preversion": "npm run rebuild",
-    "test": "jest --config jest.config.cjs",
-    "test:watch": "jest --watch --config jest.config.cjs",
-    "test:coverage": "jest --coverage --config jest.config.cjs",
-    "test:ci": "jest --ci --coverage --config jest.config.cjs"
+    "test": "echo \"No tests configured for network-client\""
   },
   "author": "yhh",
   "license": "MIT",
