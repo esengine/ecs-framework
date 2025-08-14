@@ -69,7 +69,7 @@ class PositionComponent extends Component {
     }
 }
 
-@ECSComponent('Velocity')
+@ECSComponent('VelocityComponent')
 class VelocityComponent extends Component {
     public x: number = 0;
     public y: number = 0;
