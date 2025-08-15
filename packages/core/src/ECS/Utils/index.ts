@@ -6,3 +6,5 @@ export { Matcher } from './Matcher';
 export { Bits } from './Bits';
 export { ComponentTypeManager } from './ComponentTypeManager';
 export { BigIntFactory } from './BigIntCompatibility';
+export { SparseSet } from './SparseSet';
+export { ComponentSparseSet } from './ComponentSparseSet';

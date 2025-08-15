@@ -2,7 +2,7 @@ import { Entity } from '../Entity';
 import { Component } from '../Component';
 import { ComponentType } from './ComponentStorage';
 import { IdentifierPool } from '../Utils/IdentifierPool';
-import { ComponentIndexManager, IndexType } from './ComponentIndex';
+import { ComponentIndexManager } from './ComponentIndex';
 import { ArchetypeSystem } from './ArchetypeSystem';
 import { DirtyTrackingSystem, DirtyFlag } from './DirtyTrackingSystem';
 import { EventBus } from './EventBus';
@@ -339,7 +339,7 @@ export class EntityManager {
         this._identifierPool = new IdentifierPool();
         
         // 初始化性能优化系统
-        this._componentIndexManager = new ComponentIndexManager(IndexType.HASH);
+        this._componentIndexManager = new ComponentIndexManager();
         this._archetypeSystem = new ArchetypeSystem();
         this._dirtyTrackingSystem = new DirtyTrackingSystem();
         this._eventBus = new EventBus(false);

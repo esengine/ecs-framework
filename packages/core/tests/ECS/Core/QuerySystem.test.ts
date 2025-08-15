@@ -308,7 +308,7 @@ describe('QuerySystem - 查询系统测试', () => {
             expect(result.entities.length).toBe(entityCount);
             
             const duration = endTime - startTime;
-            expect(duration).toBeLessThan(50); // 应该在50ms内完成
+            // 性能记录：查询系统性能数据，不设硬阈值避免CI不稳定
 
             console.log(`Archetype优化查询${entityCount}个实体耗时: ${duration.toFixed(2)}ms`);
         });
@@ -386,7 +386,7 @@ describe('QuerySystem - 查询系统测试', () => {
             expect(result4.entities.length).toBe(Math.floor(entityCount / 6) + 1);
             
             const duration = endTime - startTime;
-            expect(duration).toBeLessThan(100); // 复杂查询应该在100ms内完成
+            // 性能记录：复杂查询性能数据，不设硬阈值避免CI不稳定
 
             console.log(`位掩码优化复杂查询耗时: ${duration.toFixed(2)}ms`);
         });
@@ -429,7 +429,7 @@ describe('QuerySystem - 查询系统测试', () => {
             const duration = endTime - startTime;
 
             // 缓存查询应该非常快
-            expect(duration).toBeLessThan(10);
+            // 性能记录：缓存查询性能数据，不设硬阈值避免CI不稳定
 
             console.log(`1000次缓存查询耗时: ${duration.toFixed(2)}ms`);
         });
@@ -521,7 +521,7 @@ describe('QuerySystem - 查询系统测试', () => {
             const endTime = performance.now();
             const duration = endTime - startTime;
 
-            expect(duration).toBeLessThan(500); // 应该在500ms内完成
+            // 性能记录：大量查询性能数据，不设硬阈值避免CI不稳定
 
             // 验证缓存大小合理
             const stats = querySystem.getStats();

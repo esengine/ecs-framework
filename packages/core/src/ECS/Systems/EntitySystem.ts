@@ -126,6 +126,11 @@ export abstract class EntitySystem implements ISystemBase {
 
         this._initialized = true;
 
+        // 框架内部初始化：触发一次实体查询，以便正确跟踪现有实体
+        if (this.scene) {
+            this.queryEntities();
+        }
+
         // 调用用户可重写的初始化方法
         this.onInitialize();
     }
@@ -136,10 +141,6 @@ export abstract class EntitySystem implements ISystemBase {
      * 子类可以重写此方法进行初始化操作。
      */
     protected onInitialize(): void {
-        // 初始化时触发一次实体查询，以便正确跟踪现有实体
-        if (this.scene) {
-            this.queryEntities();
-        }
         // 子类可以重写此方法进行初始化
     }
 

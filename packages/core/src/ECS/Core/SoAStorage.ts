@@ -473,6 +473,18 @@ export class SoAStorage<T extends Component> {
         return this.fields.get(fieldName) || null;
     }
     
+    public getTypedFieldArray<K extends keyof T>(fieldName: K): Float32Array | Float64Array | Int32Array | null {
+        return this.fields.get(String(fieldName)) || null;
+    }
+    
+    public getEntityIndex(entityId: number): number | undefined {
+        return this.entityToIndex.get(entityId);
+    }
+    
+    public getEntityIdByIndex(index: number): number | undefined {
+        return this.indexToEntity[index];
+    }
+    
     public size(): number {
         return this._size;
     }

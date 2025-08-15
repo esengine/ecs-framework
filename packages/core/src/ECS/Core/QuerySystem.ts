@@ -6,7 +6,7 @@ import { createLogger } from '../../Utils/Logger';
 import { getComponentTypeName } from '../Decorators';
 
 import { ComponentPoolManager } from './ComponentPool';
-import { ComponentIndexManager, IndexType } from './ComponentIndex';
+import { ComponentIndexManager } from './ComponentIndex';
 import { ArchetypeSystem, Archetype, ArchetypeQueryResult } from './ArchetypeSystem';
 import { DirtyTrackingSystem, DirtyFlag } from './DirtyTrackingSystem';
 
@@ -126,7 +126,7 @@ export class QuerySystem {
         // 初始化优化组件
         this.componentPoolManager = ComponentPoolManager.getInstance();
         // 初始化新的性能优化系统
-        this.componentIndexManager = new ComponentIndexManager(IndexType.HASH);
+        this.componentIndexManager = new ComponentIndexManager();
         this.archetypeSystem = new ArchetypeSystem();
         this.dirtyTrackingSystem = new DirtyTrackingSystem();
     }
@@ -973,14 +973,6 @@ export class QuerySystem {
         };
     }
 
-    /**
-     * 切换组件索引类型
-     * 
-     * @param indexType 新的索引类型
-     */
-    public switchComponentIndexType(indexType: IndexType): void {
-        this.componentIndexManager.switchIndexType(indexType);
-    }
 
     /**
      * 配置脏标记系统
@@ -1000,11 +992,7 @@ export class QuerySystem {
         this.cleanupCache();
 
         const stats = this.componentIndexManager.getStats();
-        if (stats.avgQueryTime > 2.0 && stats.type !== IndexType.HASH) {
-            this.switchComponentIndexType(IndexType.HASH);
-        } else if (stats.memoryUsage > 50 * 1024 * 1024 && stats.type !== IndexType.BITMAP) {
-            this.switchComponentIndexType(IndexType.BITMAP);
-        }
+        // 基于SparseSet的索引已自动优化，无需手动切换索引类型
     }
 
     /**

@@ -1,8 +1,8 @@
 export { 
-    ComponentIndexManager, 
-    HashComponentIndex, 
-    BitmapComponentIndex, 
-    IndexType 
+    ComponentIndexManager,
+    ComponentIndex,
+    IComponentIndex,
+    IndexStats
 } from '../ComponentIndex';
 
 export { 

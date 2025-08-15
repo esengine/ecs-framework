@@ -34,7 +34,7 @@ ECS 是一种基于组合而非继承的软件架构模式：
 
 - **完整的 TypeScript 支持** - 强类型检查和代码提示
 - **高效查询系统** - 流式 API 和智能缓存
-- **性能优化技术** - 组件索引、Archetype 系统、脏标记
+- **性能优化技术** - SparseSet索引、Archetype 系统、脏标记
 - **事件系统** - 类型安全的事件处理
 - **调试工具** - 内置性能监控和 [Cocos Creator 可视化调试插件](https://store.cocos.com/app/detail/7823)
 

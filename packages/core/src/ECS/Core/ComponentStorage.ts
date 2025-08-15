@@ -408,6 +408,86 @@ export class ComponentStorageManager {
     private storages = new Map<Function, ComponentStorage<any> | SoAStorage<any>>();
 
     /**
+     * 检查组件类型是否启用SoA存储
+     * @param componentType 组件类型
+     * @returns 是否为SoA存储
+     */
+    public isSoAStorage<T extends Component>(componentType: ComponentType<T>): boolean {
+        const storage = this.storages.get(componentType);
+        return storage instanceof SoAStorage;
+    }
+
+    /**
+     * 获取SoA存储器（类型安全）
+     * @param componentType 组件类型
+     * @returns SoA存储器或null
+     */
+    public getSoAStorage<T extends Component>(componentType: ComponentType<T>): SoAStorage<T> | null {
+        const storage = this.getStorage(componentType);
+        return storage instanceof SoAStorage ? storage : null;
+    }
+
+    /**
+     * 直接获取SoA字段数组（类型安全）
+     * @param componentType 组件类型
+     * @param fieldName 字段名
+     * @returns TypedArray或null
+     */
+    public getFieldArray<T extends Component>(
+        componentType: ComponentType<T>, 
+        fieldName: string
+    ): Float32Array | Float64Array | Int32Array | null {
+        const soaStorage = this.getSoAStorage(componentType);
+        return soaStorage ? soaStorage.getFieldArray(fieldName) : null;
+    }
+
+    /**
+     * 直接获取SoA字段数组（类型安全，带字段名检查）
+     * @param componentType 组件类型
+     * @param fieldName 字段名（类型检查）
+     * @returns TypedArray或null
+     */
+    public getTypedFieldArray<T extends Component, K extends keyof T>(
+        componentType: ComponentType<T>, 
+        fieldName: K
+    ): Float32Array | Float64Array | Int32Array | null {
+        const soaStorage = this.getSoAStorage(componentType);
+        return soaStorage ? soaStorage.getTypedFieldArray(fieldName) : null;
+    }
+
+    /**
+     * 获取SoA存储的活跃索引
+     * @param componentType 组件类型
+     * @returns 活跃索引数组或空数组
+     */
+    public getActiveIndices<T extends Component>(componentType: ComponentType<T>): number[] {
+        const soaStorage = this.getSoAStorage(componentType);
+        return soaStorage ? soaStorage.getActiveIndices() : [];
+    }
+
+    /**
+     * 获取实体在SoA存储中的索引
+     * @param componentType 组件类型
+     * @param entityId 实体ID
+     * @returns 存储索引或undefined
+     */
+    public getEntityIndex<T extends Component>(componentType: ComponentType<T>, entityId: number): number | undefined {
+        const soaStorage = this.getSoAStorage(componentType);
+        return soaStorage ? soaStorage.getEntityIndex(entityId) : undefined;
+    }
+
+    /**
+     * 根据索引获取实体ID
+     * @param componentType 组件类型
+     * @param index 存储索引
+     * @returns 实体ID或undefined
+     */
+    public getEntityIdByIndex<T extends Component>(componentType: ComponentType<T>, index: number): number | undefined {
+        const soaStorage = this.getSoAStorage(componentType);
+        return soaStorage ? soaStorage.getEntityIdByIndex(index) : undefined;
+    }
+
+    /**
      * 获取或创建组件存储器（默认原始存储）
      * @param componentType 组件类型
      * @returns 组件存储器
