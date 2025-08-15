@@ -37,18 +37,22 @@ class Enemy extends Player {  // 敌人需要射击但不需要玩家控制？
 **ECS 方式：**
 ```typescript
 // 数据和逻辑分离，灵活组合
-const player = createEntity()
-    .add(PositionComponent)    // 位置数据
-    .add(HealthComponent)      // 生命值数据  
-    .add(PlayerInputComponent) // 玩家输入标记
+const player = scene.createEntity("Player")
+    .addComponent(new PositionComponent())    // 位置数据
+    .addComponent(new HealthComponent())      // 生命值数据  
+    .addComponent(new PlayerInputComponent()) // 玩家输入标记
 
-const enemy = createEntity()
-    .add(PositionComponent)    // 复用位置数据
-    .add(HealthComponent)      // 复用生命值数据
-    .add(AIComponent)          // AI标记
+const enemy = scene.createEntity("Enemy")
+    .addComponent(new PositionComponent())    // 复用位置数据
+    .addComponent(new HealthComponent())      // 复用生命值数据
+    .addComponent(new AIComponent())          // AI标记
 
-// 系统处理具有特定组件的实体
-MovementSystem.process([PositionComponent, VelocityComponent]);
+// 系统自动处理具有特定组件的实体
+class MovementSystem extends EntitySystem {
+    onUpdate() {
+        // 处理具有Position和Velocity组件的实体
+    }
+}
 ```
 
 ### ECS 的优势
@@ -84,11 +88,12 @@ function findEntitiesWithHealth() {
 }
 ```
 
-**解决方案：** 建立索引，直接访问
+**解决方案：** 查询系统，直接访问
 ```typescript
-// 快的方式：索引查找 O(1)
-const healthIndex = componentIndex.get(HealthComponent);
-const entitiesWithHealth = healthIndex.getEntities(); // 直接获取
+// 快的方式：使用查询系统 O(1)
+const entitiesWithHealth = entityManager.query()
+    .withAll(HealthComponent)
+    .execute(); // 直接获取，SparseSet自动优化
 ```
 
 **应用场景：**
@@ -96,152 +101,28 @@ const entitiesWithHealth = healthIndex.getEntities(); // 直接获取
 - 大规模实体场景（数千到数万个实体）
 - 实时游戏中的系统更新
 
-### 索引类型选择指南
+### SparseSet 组件索引
 
-框架提供两种索引类型，选择合适的类型对性能至关重要：
+**什么是 SparseSet？**
+SparseSet是一种高效的数据结构，结合了哈希表的快速访问和数组的缓存友好特性。
 
-#### 🔸 哈希索引 (Hash Index)
-
-**适用场景：**
-- 实体数量较多（> 1000个）
-- 组件数据变化不频繁
-- 需要快速查找特定实体
-
-**优势：**
-- 查询速度极快 O(1)
-- 内存使用相对较少
-- 适合大量实体
-
-**缺点：**
-- 添加/删除组件时有额外开销
-- 不适合频繁变化的组件
+**SparseSet 的优势：**
+- **O(1) 添加/删除/查找** - 所有基本操作都是常数时间
+- **缓存友好遍历** - 密集数组存储，提高遍历性能
+- **内存高效** - 自动管理稀疏和密集数据
+- **无需配置** - 框架自动选择最优策略
 
 ```typescript
-// 适合哈希索引的组件
-componentIndex.setIndexType(PositionComponent, 'hash');     // 位置变化不频繁
-componentIndex.setIndexType(HealthComponent, 'hash');       // 生命值组件稳定
-componentIndex.setIndexType(PlayerComponent, 'hash');       // 玩家标记组件
+// 统一的查询API，无需手动配置
+const entitiesWithHealth = entityManager.query()
+    .withAll(HealthComponent)
+    .execute(); // O(1) 访问，SparseSet自动优化
 ```
 
-#### 🔹 位图索引 (Bitmap Index)
-
-**适用场景：**
-- 组件频繁添加/删除
-- 实体数量适中（< 1000个）
-- 需要批量操作
-
-**优势：**
-- 添加/删除组件极快
-- 批量查询效率高
-- 内存访问模式好
-
-**缺点：**
-- 随实体数量增长，内存占用增加
-- 稀疏数据时效率降低
-
-```typescript
-// 适合位图索引的组件
-componentIndex.setIndexType(BuffComponent, 'bitmap');       // Buff经常添加删除
-componentIndex.setIndexType(TemporaryComponent, 'bitmap');   // 临时组件
-componentIndex.setIndexType(StateComponent, 'bitmap');      // 状态组件变化频繁
-```
-
-####  选择决策表
-
-| 考虑因素 | 哈希索引 (Hash) | 位图索引 (Bitmap) |
-|---------|----------------|-------------------|
-| **实体数量** | > 1,000 | < 10,000 |
-| **组件变化频率** | 低频变化 | 高频变化 |
-| **查询频率** | 高频查询 | 中等查询 |
-| **内存使用** | 较少 | 随实体数增加 |
-| **批量操作** | 一般 | 优秀 |
-
-#### 快速决策流程
-
-**第一步：判断组件变化频率**
-- 组件经常添加/删除？ → 选择 **位图索引**
-- 组件相对稳定？ → 继续第二步
-
-**第二步：判断实体数量**
-- 实体数量 > 1000？ → 选择 **哈希索引**
-- 实体数量 < 1000？ → 选择 **位图索引**
-
-**第三步：特殊情况**
-- 需要频繁批量操作？ → 选择 **位图索引**
-- 内存使用很重要？ → 选择 **哈希索引**
-
-####  实际游戏中的选择示例
-
-**射击游戏：**
-```typescript
-// 稳定组件用哈希索引
-componentIndex.setIndexType(PositionComponent, 'hash');    // 实体位置稳定存在
-componentIndex.setIndexType(HealthComponent, 'hash');      // 生命值组件持续存在
-componentIndex.setIndexType(WeaponComponent, 'hash');      // 武器组件不常变化
-
-// 变化组件用位图索引
-componentIndex.setIndexType(BuffComponent, 'bitmap');      // Buff频繁添加删除
-componentIndex.setIndexType(ReloadingComponent, 'bitmap'); // 装弹状态临时组件
-```
-
-**策略游戏：**
-```typescript
-// 大量单位，核心组件用哈希
-componentIndex.setIndexType(UnitComponent, 'hash');        // 单位类型稳定
-componentIndex.setIndexType(OwnerComponent, 'hash');       // 所属玩家稳定
-
-// 状态组件用位图
-componentIndex.setIndexType(SelectedComponent, 'bitmap');  // 选中状态常变化
-componentIndex.setIndexType(MovingComponent, 'bitmap');    // 移动状态变化
-componentIndex.setIndexType(AttackingComponent, 'bitmap'); // 攻击状态临时
-```
-
-**RPG游戏：**
-```typescript
-// 角色核心属性用哈希
-componentIndex.setIndexType(StatsComponent, 'hash');       // 属性组件稳定
-componentIndex.setIndexType(InventoryComponent, 'hash');   // 背包组件稳定
-componentIndex.setIndexType(LevelComponent, 'hash');       // 等级组件稳定
-
-// 临时状态用位图
-componentIndex.setIndexType(StatusEffectComponent, 'bitmap'); // 状态效果变化
-componentIndex.setIndexType(QuestComponent, 'bitmap');     // 任务状态变化
-componentIndex.setIndexType(CombatComponent, 'bitmap');    // 战斗状态临时
-```
-
-#### ❌ 常见选择错误
-
-**错误示例1：大量实体使用位图索引**
-```typescript
-// ❌ 错误：10万个单位用位图索引，内存爆炸
-const entityCount = 100000;
-componentIndex.setIndexType(UnitComponent, 'bitmap'); // 内存占用过大！
-
-// 正确：大量实体用哈希索引
-componentIndex.setIndexType(UnitComponent, 'hash');
-```
-
-**错误示例2：频繁变化组件用哈希索引**
-```typescript
-// ❌ 错误：Buff频繁添加删除，哈希索引效率低
-componentIndex.setIndexType(BuffComponent, 'hash');   // 添加删除慢！
-
-// 正确：变化频繁的组件用位图索引
-componentIndex.setIndexType(BuffComponent, 'bitmap');
-```
-
-**错误示例3：不考虑实际使用场景**
-```typescript
-// ❌ 错误：所有组件都用同一种索引
-componentIndex.setIndexType(PositionComponent, 'hash');
-componentIndex.setIndexType(BuffComponent, 'hash');      // 应该用bitmap
-componentIndex.setIndexType(TemporaryComponent, 'hash'); // 应该用bitmap
-
-// 正确：根据组件特性选择
-componentIndex.setIndexType(PositionComponent, 'hash');    // 稳定组件
-componentIndex.setIndexType(BuffComponent, 'bitmap');      // 变化组件
-componentIndex.setIndexType(TemporaryComponent, 'bitmap'); // 临时组件
-```
+**应用场景：**
+- 任意规模的实体场景（从几十到数万）
+- 频繁的组件添加/删除操作
+- 高性能的批量查询需求
 
 ### Archetype 系统
 
@@ -396,21 +277,20 @@ class GameManager {
 
 ### 实体生命周期
 
-**创建实体的不同方式：**
+**创建实体的方式：**
 ```typescript
 // 单个创建 - 适用于重要实体
 const player = scene.createEntity("Player");
+player.addComponent(new PositionComponent());
+player.addComponent(new HealthComponent());
 
-// 批量创建 - 适用于大量相似实体
-const bullets = scene.createEntities(100, "Bullet");
-
-// 延迟创建 - 避免性能峰值
-// 分批创建大量实体以避免单帧卡顿
+// 批量创建 - 需要循环处理
+const bullets: Entity[] = [];
 for (let i = 0; i < 100; i++) {
-    setTimeout(() => {
-        const batch = scene.createEntities(10, "Enemy");
-        // 配置批次实体...
-    }, i * 16); // 每16ms创建一批
+    const bullet = scene.createEntity(`Bullet_${i}`);
+    bullet.addComponent(new PositionComponent());
+    bullet.addComponent(new VelocityComponent());
+    bullets.push(bullet);
 }
 ```
 
@@ -440,21 +320,21 @@ const result = entityManager
 
 ### 批量操作
 
-**为什么需要批量操作？**
+**批量操作的优化：**
 ```typescript
-// 慢的方式：逐个处理
+// 优化的批量创建方式
+const bullets: Entity[] = [];
 for (let i = 0; i < 1000; i++) {
-    const bullet = createEntity();
+    const bullet = scene.createEntity(`Bullet_${i}`);
     bullet.addComponent(new PositionComponent());
     bullet.addComponent(new VelocityComponent());
+    bullets.push(bullet);
 }
 
-// 快的方式：批量处理
-const bullets = scene.createEntities(1000, "Bullet");
-bullets.forEach(bullet => {
-    bullet.addComponent(new PositionComponent());
-    bullet.addComponent(new VelocityComponent());
-});
+// 批量查询操作
+const allMovableEntities = entityManager.query()
+    .withAll(PositionComponent, VelocityComponent)
+    .execute();
 ```
 
 **应用场景：**
@@ -462,49 +342,17 @@ bullets.forEach(bullet => {
 - 加载关卡时创建大量实体
 - 清理场景时删除大量实体
 
-## 性能建议
-
-### 什么时候使用这些优化？
-
-| 实体数量 | 推荐配置 | 说明 |
-|---------|---------|------|
-| < 1,000 | 默认配置 | 简单场景，不需要特殊优化 |
-| 1,000 - 10,000 | 启用组件索引 | 中等规模，索引提升查询速度 |
-| 10,000 - 50,000 | 启用Archetype | 大规模场景，分组优化 |
-| > 50,000 | 全部优化 | 超大规模，需要所有优化技术 |
-
-### 常见使用误区
-
-**错误：过度优化**
-```typescript
-// 不要在小项目中使用所有优化
-const entityManager = new EntityManager();
-entityManager.enableAllOptimizations(); // 小项目不需要
-```
-
-**正确：按需优化**
-```typescript
-// 根据实际需求选择优化
-if (entityCount > 10000) {
-    entityManager.enableArchetypeSystem();
-}
-if (hasFrequentQueries) {
-    entityManager.enableComponentIndex();
-}
-```
 
 ## 总结
 
-这些技术概念可能看起来复杂，但它们解决的都是实际开发中的具体问题：
+ECS框架包含以下核心技术概念：
 
-1. **ECS架构** - 让代码更灵活、可维护
-2. **组件索引** - 让查询更快速
-3. **Archetype系统** - 让批量操作更高效  
-4. **脏标记系统** - 让更新更智能
-5. **事件系统** - 让组件间通信更安全
-6. **实体管理** - 让大规模场景成为可能
-
-从简单的场景开始，随着项目复杂度增加，逐步引入这些优化技术。
+1. **ECS架构** - 组件化设计模式
+2. **SparseSet索引** - 高效的组件查询
+3. **Archetype系统** - 实体分组优化
+4. **脏标记系统** - 变化检测机制
+5. **事件系统** - 组件间通信
+6. **实体管理** - 生命周期管理
 
 ## 框架类型系统
 

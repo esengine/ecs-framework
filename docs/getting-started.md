@@ -598,14 +598,15 @@ enemies.forEach(enemy => {
     enemy.addComponent(new HealthComponent(50));
 });
 
-// 查询实体
+// 查询实体 - 推荐方式
 const movingEntities = entityManager
     .query()
     .withAll(PositionComponent, VelocityComponent)
     .execute();
 
+// 简单查询方式
 const healthEntities = entityManager.getEntitiesWithComponent(HealthComponent);
-const enemiesByTag = entityManager.getEntitiesByTag(2);
+const taggedEntities = entityManager.getEntitiesByTag(2);
 ```
 
 ## 事件系统
