@@ -43,6 +43,7 @@
     "test": "jest --config jest.config.cjs",
     "test:watch": "jest --watch --config jest.config.cjs",
     "test:coverage": "jest --coverage --config jest.config.cjs",
+    "pretest:ci": "npm run build",
     "test:ci": "jest --ci --coverage --config jest.config.cjs"
   },
   "author": "yhh",
