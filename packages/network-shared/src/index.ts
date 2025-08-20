@@ -6,6 +6,7 @@
 // 类型定义
 export * from './types/NetworkTypes';
 export * from './types/TransportTypes';
+export * from './types/RpcTypes';
 
 // 协议消息
 export * from './protocols/MessageTypes';
@@ -35,6 +36,12 @@ export {
 
 // 装饰器系统
 export * from './decorators';
+
+// RPC系统
+export * from './rpc/RpcMetadataManager';
+export * from './rpc/RpcCallHandler';
+export * from './rpc/RpcCallProxy';
+export * from './rpc/RpcReliabilityManager';
 
 // 同步系统
 export { SyncVarManager, SyncBatch } from './sync/SyncVarManager';
