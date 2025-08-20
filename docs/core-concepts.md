@@ -14,7 +14,7 @@ ECS 架构将传统的面向对象设计分解为三个核心部分：
 
 ## Core（核心）
 
-Core 是框架的核心管理类，负责游戏的生命周期管理。
+Core 是框架的核心管理类，负责游戏的生命周期管理。框架采用融合设计，既支持传统的单Scene模式（向后兼容），也支持高级的多World/多Scene架构。
 
 ### 创建和配置
 
@@ -45,6 +45,40 @@ const core = Core.create(config);
 const core1 = Core.create(true);   // 调试模式
 const core2 = Core.create(false);  // 发布模式
 const core3 = Core.create();       // 默认调试模式
+```
+
+### 场景管理API
+
+```typescript
+// 单Scene模式（默认，向后兼容）
+const scene = new Scene();
+Core.setScene(scene);           // 设置场景
+const currentScene = Core.getScene(); // 获取当前场景
+
+// 多World模式（高级功能）
+Core.enableWorldManager();     // 启用World管理器
+const worldManager = Core.getWorldManager();
+
+// 创建World
+const gameWorld = worldManager.createWorld('GameWorld', {
+    name: 'GameWorld',
+    maxScenes: 10,
+    autoCleanup: true
+});
+
+// 在World中管理Scene
+const battleScene = gameWorld.createScene('battle', new Scene());
+const uiScene = gameWorld.createScene('ui', new Scene());
+
+gameWorld.setSceneActive('battle', true);
+gameWorld.setSceneActive('ui', true);
+
+// 启动World
+gameWorld.start();
+
+// 获取World统计
+const worldStats = gameWorld.getStats();
+console.log('World状态:', worldStats);
 ```
 
 ### 事件系统
@@ -404,6 +438,235 @@ console.log("实体数量:", stats.entityCount);
 console.log("系统数量:", stats.processorCount);
 ```
 
+## World（世界）
+
+World是Scene的容器，提供了更高级的场景管理功能。每个World可以包含多个Scene，适用于复杂的游戏架构。
+
+### World基本使用
+
+```typescript
+import { World, Scene, IWorldConfig } from '@esengine/ecs-framework';
+
+// 创建World配置
+const worldConfig: IWorldConfig = {
+    name: 'GameWorld',
+    debug: true,
+    maxScenes: 10,
+    autoCleanup: true
+};
+
+// 创建World
+const gameWorld = new World(worldConfig);
+
+// 在World中创建Scene
+const battleScene = gameWorld.createScene('battle', new Scene());
+const uiScene = gameWorld.createScene('ui', new Scene());
+const menuScene = gameWorld.createScene('menu');
+
+// 激活Scene
+gameWorld.setSceneActive('battle', true);
+gameWorld.setSceneActive('ui', true);
+
+// 启动World
+gameWorld.start();
+```
+
+### World生命周期管理
+
+```typescript
+// 启动World（启动所有全局System）
+gameWorld.start();
+
+// 检查World状态
+if (gameWorld.isActive) {
+    console.log('World正在运行');
+}
+
+// 停止World（停止所有Scene和全局System）
+gameWorld.stop();
+
+// 销毁World（清理所有资源）
+gameWorld.destroy();
+```
+
+### Scene管理
+
+```typescript
+// 获取Scene
+const battleScene = gameWorld.getScene<Scene>('battle');
+
+// 检查Scene是否激活
+if (gameWorld.isSceneActive('battle')) {
+    console.log('战斗场景正在运行');
+}
+
+// 移除Scene
+gameWorld.removeScene('menu');
+
+// 获取所有Scene ID
+const sceneIds = gameWorld.getSceneIds();
+console.log('所有Scene:', sceneIds);
+
+// 获取活跃Scene数量
+const activeCount = gameWorld.getActiveSceneCount();
+console.log('活跃Scene数量:', activeCount);
+```
+
+### 全局System管理
+
+World支持全局System，这些System会在所有Scene之前执行，适用于跨Scene的业务逻辑：
+
+```typescript
+import { IGlobalSystem } from '@esengine/ecs-framework';
+
+// 全局网络同步系统
+class GlobalNetworkSystem implements IGlobalSystem {
+    public readonly name = 'GlobalNetworkSystem';
+    
+    public initialize(): void {
+        // 初始化网络连接
+        console.log('网络系统初始化');
+    }
+    
+    public update(): void {
+        // 处理全局网络同步逻辑
+        // 注意：全局系统处理的是World级别的逻辑，不直接处理实体
+        // 如需处理特定实体，请在Scene中使用EntitySystem
+        this.syncGlobalNetworkState();
+    }
+    
+    public reset(): void {
+        // 重置系统状态
+    }
+    
+    public destroy(): void {
+        // 清理网络连接
+        console.log('网络系统销毁');
+    }
+    
+    private syncGlobalNetworkState(): void {
+        // 全局网络状态同步
+    }
+}
+
+// 添加全局System
+const networkSystem = gameWorld.addGlobalSystem(new GlobalNetworkSystem());
+
+// 获取全局System
+const existingSystem = gameWorld.getGlobalSystem(GlobalNetworkSystem);
+
+// 移除全局System
+gameWorld.removeGlobalSystem(networkSystem);
+```
+
+> **注意**：全局System适用于World级别的业务逻辑（如网络管理、资源管理、全局状态管理等）。如果需要处理具体的实体和组件，请在Scene中使用EntitySystem。
+
+### World状态监控
+
+```typescript
+// 获取World状态
+const status = gameWorld.getStatus();
+console.log('World状态:', {
+    name: status.name,
+    isActive: status.isActive,
+    sceneCount: status.sceneCount,
+    activeSceneCount: status.activeSceneCount,
+    globalSystemCount: status.globalSystemCount,
+    scenes: status.scenes
+});
+
+// 获取World统计信息
+const stats = gameWorld.getStats();
+console.log('World统计:', {
+    totalEntities: stats.totalEntities,
+    totalSystems: stats.totalSystems,
+    memoryUsage: stats.memoryUsage
+});
+```
+
+## WorldManager（世界管理器）
+
+WorldManager是单例模式的World管理器，负责管理多个World实例。
+
+### WorldManager基本使用
+
+```typescript
+import { WorldManager, IWorldManagerConfig } from '@esengine/ecs-framework';
+
+// 获取WorldManager实例
+const worldManager = WorldManager.getInstance({
+    maxWorlds: 50,
+    autoCleanup: true,
+    debug: true
+});
+
+// 或者通过Core获取
+Core.enableWorldManager();
+const worldManager2 = Core.getWorldManager();
+```
+
+### World管理
+
+```typescript
+// 创建World
+const gameWorld = worldManager.createWorld('GameRoom_001', {
+    name: 'GameRoom_001',
+    maxScenes: 5,
+    autoCleanup: true
+});
+
+// 获取World
+const existingWorld = worldManager.getWorld('GameRoom_001');
+
+// 检查World是否存在
+if (worldManager.getWorld('GameRoom_001')) {
+    console.log('World存在');
+}
+
+// 销毁World
+worldManager.removeWorld('GameRoom_001');
+
+// 获取所有World ID
+const worldIds = worldManager.getWorldIds();
+console.log('所有World ID:', worldIds);
+
+// 获取活跃World
+const activeWorlds = worldManager.getActiveWorlds();
+console.log('活跃World数量:', activeWorlds.length);
+```
+
+### WorldManager统计和监控
+
+```typescript
+// 获取WorldManager状态
+const managerStatus = worldManager.getStatus();
+console.log('WorldManager状态:', {
+    totalWorlds: managerStatus.totalWorlds,
+    activeWorlds: managerStatus.activeWorlds,
+    maxWorlds: managerStatus.maxWorlds,
+    memoryUsage: managerStatus.memoryUsage
+});
+
+// 获取所有World的统计
+const allStats = worldManager.getAllWorldStats();
+allStats.forEach(stat => {
+    console.log(`World ${stat.worldName}:`, stat);
+});
+
+// 清理空闲World
+const cleanedCount = worldManager.cleanup();
+console.log(`清理了 ${cleanedCount} 个空闲World`);
+```
+
+### 使用场景
+
+World和WorldManager适用于：
+- **游戏服务器**：每个房间一个独立World
+- **复杂客户端**：按功能分层管理Scene（游戏层、UI层、特效层）
+- **并发世界**：需要同时运行多个独立游戏世界的场景
+
+> **完整示例和最佳实践**：查看 [场景管理完整指南](scene-management-guide.md#world多场景管理) 了解详细的实现方案和架构设计
+
 ## System（系统）
 
 系统处理实体集合，实现游戏的核心逻辑。
@@ -646,11 +909,18 @@ const movingEntities = scene.querySystem.queryAll(PositionComponent, VelocityCom
 
 ECS Framework 提供了完整的实体组件系统架构：
 
-- **Core** 管理游戏生命周期和全局功能
+- **Core** 管理游戏生命周期和全局功能，支持单Scene和多World模式
 - **Entity** 作为游戏对象的基础容器
 - **Component** 实现具体的功能模块，支持对象池优化
 - **System** 处理游戏逻辑
 - **Scene** 管理游戏世界状态，支持批量操作
+- **World** 高级场景容器，支持多Scene管理和全局System
+- **WorldManager** 管理多个World实例，适用于复杂架构
 - **高级优化** 位掩码优化器、组件对象池、批量操作等
 
-通过合理使用这些核心概念和优化功能，可以构建出高性能、结构清晰、易于维护的游戏代码。 
+### 架构选择指南
+
+- **单Scene模式**：适合简单游戏、单机游戏、原型开发
+- **多World模式**：适合多人游戏服务器、复杂应用、需要场景隔离的项目
+
+框架采用融合设计，确保向后兼容性的同时提供强大的扩展能力。通过合理使用这些核心概念和优化功能，可以构建出高性能、结构清晰、易于维护的游戏代码。 

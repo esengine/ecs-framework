@@ -1,6 +1,6 @@
 # 场景管理完整指南
 
-场景（Scene）是ECS框架中管理游戏对象和系统的核心容器。本指南将详细介绍如何有效地使用场景来构建和管理你的游戏。
+场景（Scene）是ECS框架中管理游戏对象和系统的核心容器。框架采用融合设计，既支持传统的单Scene模式（向后兼容），也支持高级的多World/多Scene架构。本指南将详细介绍如何有效地使用场景来构建和管理你的游戏。
 
 ## 场景基础概念
 
@@ -24,6 +24,47 @@ Core.setScene(gameScene);
 ```
 
 > **注意**: `Core.scene = ` 设置方式已被标记为废弃，推荐使用 `Core.setScene()` 方法。新方法提供更好的类型安全性和可预测的激活时序。
+
+### 架构选择指南
+
+ECS框架提供两种使用模式：
+
+#### 1. 单Scene模式（默认，向后兼容）
+
+```typescript
+// 传统用法，无需任何修改
+const scene = new Scene();
+Core.setScene(scene);
+```
+
+**适用场景：**
+- 简单游戏、单机游戏
+- 原型开发、快速验证
+- 学习ECS架构
+- 不需要复杂场景管理的项目
+
+#### 2. 多World模式（高级功能）
+
+```typescript
+// 启用World管理器
+Core.enableWorldManager();
+const worldManager = Core.getWorldManager();
+
+// 创建多个World，每个World可包含多个Scene
+const roomWorld = worldManager.createWorld('Room_001');
+const battleScene = roomWorld.createScene('battle');
+const uiScene = roomWorld.createScene('ui');
+
+roomWorld.start();
+roomWorld.setSceneActive('battle', true);
+roomWorld.setSceneActive('ui', true);
+```
+
+**适用场景：**
+- 多人游戏服务器（每个房间一个World）
+- 复杂应用架构（需要场景隔离）
+- 需要并发处理多个游戏世界
+- 高级场景管理需求
 
 ### 场景的生命周期
 
@@ -214,9 +255,374 @@ class GameScene extends Scene {
 }
 ```
 
-## 场景切换和管理
+## World多场景管理
 
-### 1. 场景管理器
+### 1. World基础使用
+
+对于需要复杂场景管理的项目，可以使用World系统：
+
+```typescript
+import { Core, World, Scene, WorldManager, IGlobalSystem } from '@esengine/ecs-framework';
+
+// 定义全局系统（跨Scene的业务逻辑）
+class NetworkSyncSystem implements IGlobalSystem {
+    public readonly name = 'NetworkSyncSystem';
+    
+    public initialize(): void {
+        console.log('网络同步系统初始化');
+    }
+    
+    public update(): void {
+        // 同步所有Scene的网络状态
+        this.syncNetworkData();
+    }
+    
+    public reset(): void {
+        // 重置网络连接
+    }
+    
+    public destroy(): void {
+        console.log('网络同步系统销毁');
+    }
+    
+    private syncNetworkData(): void {
+        // 网络数据同步逻辑
+    }
+}
+
+class PlayerManagementSystem implements IGlobalSystem {
+    public readonly name = 'PlayerManagementSystem';
+    
+    public initialize(): void {
+        console.log('玩家管理系统初始化');
+    }
+    
+    public update(): void {
+        // 管理跨Scene的玩家数据
+        this.managePlayerStates();
+    }
+    
+    public reset(): void {
+        // 重置玩家状态
+    }
+    
+    public destroy(): void {
+        console.log('玩家管理系统销毁');
+    }
+    
+    private managePlayerStates(): void {
+        // 玩家状态管理逻辑
+    }
+}
+
+// 启用World管理功能
+Core.enableWorldManager();
+const worldManager = Core.getWorldManager();
+
+// 创建游戏房间World
+const roomWorld = worldManager.createWorld('GameRoom_001', {
+    name: 'GameRoom_001',
+    maxScenes: 5,
+    autoCleanup: true,
+    debug: true
+});
+
+// 在World中创建多个Scene
+const gameScene = roomWorld.createScene('game', new GameScene());
+const uiScene = roomWorld.createScene('ui', new UIScene());
+const backgroundScene = roomWorld.createScene('background', new BackgroundScene());
+
+// 添加全局系统（跨Scene的系统）
+roomWorld.addGlobalSystem(new NetworkSyncSystem());
+roomWorld.addGlobalSystem(new PlayerManagementSystem());
+
+// 启动World并激活Scene
+roomWorld.start();
+roomWorld.setSceneActive('game', true);
+roomWorld.setSceneActive('ui', true);
+roomWorld.setSceneActive('background', true);
+```
+
+### 2. 多房间游戏服务器示例
+
+```typescript
+// 房间管理系统
+class RoomManagementSystem implements IGlobalSystem {
+    public readonly name = 'RoomManagementSystem';
+    private roomId: string;
+    
+    constructor(roomId: string) {
+        this.roomId = roomId;
+    }
+    
+    public initialize(): void {
+        console.log(`房间管理系统初始化: ${this.roomId}`);
+    }
+    
+    public update(): void {
+        // 管理房间状态、玩家进出等
+        this.manageRoomState();
+    }
+    
+    public reset(): void {
+        // 重置房间状态
+    }
+    
+    public destroy(): void {
+        console.log(`房间管理系统销毁: ${this.roomId}`);
+    }
+    
+    private manageRoomState(): void {
+        // 房间状态管理逻辑
+    }
+}
+
+// 玩家同步系统
+class PlayerSyncSystem implements IGlobalSystem {
+    public readonly name = 'PlayerSyncSystem';
+    
+    public initialize(): void {
+        console.log('玩家同步系统初始化');
+    }
+    
+    public update(): void {
+        // 同步房间内所有玩家的状态
+        this.syncPlayerData();
+    }
+    
+    public reset(): void {
+        // 重置同步状态
+    }
+    
+    public destroy(): void {
+        console.log('玩家同步系统销毁');
+    }
+    
+    private syncPlayerData(): void {
+        // 玩家数据同步逻辑
+    }
+}
+
+class MultiRoomGameServer {
+    private worldManager: WorldManager;
+    private rooms: Map<string, World> = new Map();
+
+    constructor() {
+        Core.create({ debug: false });
+        Core.enableWorldManager();
+        this.worldManager = Core.getWorldManager();
+    }
+
+    // 创建游戏房间
+    createRoom(roomId: string): World {
+        const roomWorld = this.worldManager.createWorld(`Room_${roomId}`, {
+            name: `GameRoom_${roomId}`,
+            maxScenes: 3,
+            autoCleanup: true
+        });
+
+        // 房间内的Scene设置
+        const gameScene = roomWorld.createScene('game', new ServerGameScene());
+        const lobbyScene = roomWorld.createScene('lobby', new LobbyScene());
+        
+        // 设置房间级的全局系统
+        roomWorld.addGlobalSystem(new RoomManagementSystem(roomId));
+        roomWorld.addGlobalSystem(new PlayerSyncSystem());
+
+        // 启动房间
+        roomWorld.start();
+        roomWorld.setSceneActive('lobby', true); // 默认激活大厅
+
+        this.rooms.set(roomId, roomWorld);
+        console.log(`创建房间: ${roomId}`);
+        
+        return roomWorld;
+    }
+
+    // 开始游戏
+    startGame(roomId: string): boolean {
+        const roomWorld = this.rooms.get(roomId);
+        if (!roomWorld) return false;
+
+        // 停用大厅，激活游戏Scene
+        roomWorld.setSceneActive('lobby', false);
+        roomWorld.setSceneActive('game', true);
+
+        console.log(`房间 ${roomId} 开始游戏`);
+        return true;
+    }
+
+    // 销毁房间
+    destroyRoom(roomId: string): boolean {
+        const roomWorld = this.rooms.get(roomId);
+        if (!roomWorld) return false;
+
+        roomWorld.destroy();
+        this.rooms.delete(roomId);
+        console.log(`销毁房间: ${roomId}`);
+        return true;
+    }
+
+    // 获取服务器状态
+    getServerStats() {
+        return {
+            totalRooms: this.rooms.size,
+            activeWorlds: this.worldManager.getActiveWorlds().length,
+            rooms: Array.from(this.rooms.keys()).map(roomId => ({
+                roomId,
+                world: this.rooms.get(roomId)?.getStatus()
+            }))
+        };
+    }
+
+    // 游戏循环
+    start(): void {
+        const gameLoop = () => {
+            const deltaTime = 1000 / 60; // 60 TPS
+            Core.update(deltaTime / 1000);
+            setTimeout(gameLoop, deltaTime);
+        };
+        gameLoop();
+    }
+}
+
+// 使用示例
+const gameServer = new MultiRoomGameServer();
+gameServer.start();
+
+// 创建房间
+const room1 = gameServer.createRoom('room_001');
+const room2 = gameServer.createRoom('room_002');
+
+// 开始游戏
+setTimeout(() => {
+    gameServer.startGame('room_001');
+}, 5000);
+
+console.log('服务器状态:', gameServer.getServerStats());
+```
+
+### 3. 客户端多Scene管理示例
+
+```typescript
+class GameClient {
+    private worldManager: WorldManager;
+    private mainWorld: World;
+
+    constructor() {
+        Core.create({ debug: true });
+        Core.enableWorldManager();
+        this.worldManager = Core.getWorldManager();
+        
+        this.setupGameWorld();
+    }
+
+    private setupGameWorld(): void {
+        // 创建主游戏世界
+        this.mainWorld = this.worldManager.createWorld('MainWorld', {
+            name: 'ClientWorld',
+            maxScenes: 10,
+            autoCleanup: false // 客户端通常不需要自动清理
+        });
+
+        // 创建不同层级的Scene
+        this.createGameplayScenes();
+        this.createUIScenes();
+        this.createEffectScenes();
+
+        // 启动世界
+        this.mainWorld.start();
+        this.activateDefaultScenes();
+    }
+
+    private createGameplayScenes(): void {
+        // 游戏主场景
+        const gameScene = this.mainWorld.createScene('gameplay', new GameplayScene());
+        
+        // 背景场景
+        const backgroundScene = this.mainWorld.createScene('background', new BackgroundScene());
+        
+        // 特效场景
+        const effectsScene = this.mainWorld.createScene('effects', new EffectsScene());
+    }
+
+    private createUIScenes(): void {
+        // 主UI场景
+        const mainUIScene = this.mainWorld.createScene('mainUI', new MainUIScene());
+        
+        // 菜单场景
+        const menuScene = this.mainWorld.createScene('menu', new MenuScene());
+        
+        // 设置场景
+        const settingsScene = this.mainWorld.createScene('settings', new SettingsScene());
+    }
+
+    private createEffectScenes(): void {
+        // 粒子效果场景
+        const particleScene = this.mainWorld.createScene('particles', new ParticleScene());
+        
+        // 音效场景
+        const audioScene = this.mainWorld.createScene('audio', new AudioScene());
+    }
+
+    private activateDefaultScenes(): void {
+        // 激活基础Scene
+        this.mainWorld.setSceneActive('background', true);
+        this.mainWorld.setSceneActive('gameplay', true);
+        this.mainWorld.setSceneActive('mainUI', true);
+        this.mainWorld.setSceneActive('particles', true);
+        this.mainWorld.setSceneActive('audio', true);
+        
+        // 菜单和设置默认不激活
+        this.mainWorld.setSceneActive('menu', false);
+        this.mainWorld.setSceneActive('settings', false);
+    }
+
+    // 切换到菜单
+    showMenu(): void {
+        this.mainWorld.setSceneActive('gameplay', false);
+        this.mainWorld.setSceneActive('menu', true);
+    }
+
+    // 切换回游戏
+    hideMenu(): void {
+        this.mainWorld.setSceneActive('menu', false);
+        this.mainWorld.setSceneActive('gameplay', true);
+    }
+
+    // 显示设置
+    showSettings(): void {
+        this.mainWorld.setSceneActive('settings', true);
+    }
+
+    // 隐藏设置
+    hideSettings(): void {
+        this.mainWorld.setSceneActive('settings', false);
+    }
+
+    // 获取World状态
+    getWorldStatus() {
+        return this.mainWorld.getStatus();
+    }
+}
+
+// 使用示例
+const gameClient = new GameClient();
+
+// 显示菜单
+gameClient.showMenu();
+
+// 5秒后返回游戏
+setTimeout(() => {
+    gameClient.hideMenu();
+}, 5000);
+
+console.log('客户端World状态:', gameClient.getWorldStatus());
+```
+
+## 传统场景切换和管理
+
+### 1. 单Scene模式场景管理器
 
 > **注意：** 以下的 SceneManager、TransitionManager 等是自定义的场景管理类示例，不是ECS框架提供的内置API。你可以基于这些示例实现自己的场景管理系统。
 
@@ -731,6 +1137,47 @@ A:
 
 ### Q: 多个场景可以同时存在吗？
 
-A: 框架同时只支持一个活跃场景，但可以通过场景栈实现多场景管理（如暂停菜单）。
+A: 
+- **单Scene模式**：框架同时只支持一个活跃场景，但可以通过场景栈实现多场景管理（如暂停菜单）
+- **多World模式**：每个World可以包含多个同时激活的Scene，支持复杂的多场景架构
 
-通过合理使用场景系统，你可以构建出结构清晰、性能优良的游戏架构！ 
+### Q: 什么时候使用World系统？
+
+A:
+- 多人游戏服务器（每个房间独立管理）
+- 需要并发运行多个独立游戏世界
+- 复杂的客户端架构（游戏层、UI层、特效层分离）
+- 需要跨Scene的全局系统支持
+
+### Q: World和Scene的性能影响？
+
+A:
+- **单Scene模式**：最佳性能，适合简单项目
+- **多World模式**：每个World独立更新，合理使用不会显著影响性能
+- **建议**：根据项目复杂度选择合适的架构
+
+### Q: 如何从单Scene迁移到多World？
+
+A:
+```typescript
+// 原始单Scene代码
+const scene = new Scene();
+Core.setScene(scene);
+
+// 迁移到World模式（可选）
+Core.enableWorldManager();
+const world = Core.getWorldManager().createWorld('MainWorld');
+const scene = world.createScene('main', new Scene());
+world.start();
+world.setSceneActive('main', true);
+```
+
+### Q: World系统的最佳实践？
+
+A:
+1. **服务器端**：每个游戏房间使用独立World
+2. **客户端**：按功能层级划分Scene（游戏、UI、特效）
+3. **全局系统**：将跨Scene的逻辑放在World的全局System中
+4. **资源管理**：使用World的autoCleanup功能自动清理空闲资源
+
+通过合理选择单Scene或多World架构，你可以构建出结构清晰、性能优良的游戏架构！ 

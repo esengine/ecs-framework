@@ -33,7 +33,7 @@ Core.update(deltaTime);
 
 ### 基础配置
 
-ECS框架提供了灵活的配置选项来满足不同项目需求：
+ECS框架提供了灵活的配置选项来满足不同项目需求。框架采用融合设计，既支持传统的单Scene模式（向后兼容），也支持高级的多World/多Scene架构：
 
 ```typescript
 import { Core, ICoreConfig } from '@esengine/ecs-framework';
@@ -64,6 +64,31 @@ const config: ICoreConfig = {
 
 const core = Core.create(config);
 ```
+
+### 架构说明
+
+ECS框架支持两种使用模式：
+
+1. **单Scene模式（默认，向后兼容）**：
+   ```typescript
+   // 传统用法，无需任何修改
+   const scene = new Scene();
+   Core.setScene(scene);
+   ```
+
+2. **多World模式（高级功能）**：
+   ```typescript
+   // 启用World管理器，支持多World/多Scene架构
+   Core.enableWorldManager();
+   const roomWorld = Core.getWorldManager().createWorld('Room_001');
+   const battleScene = roomWorld.createScene('battle');
+   ```
+
+**使用场景：**
+- **单Scene模式**：适合简单游戏、单机游戏、原型开发
+- **多World模式**：适合多人游戏服务器、复杂应用、需要场景隔离的项目
+
+> **详细了解World系统**：查看 [场景管理完整指南](scene-management-guide.md) 获取完整的多World架构示例和最佳实践
 
 ### 调试功能
 
@@ -324,7 +349,7 @@ class CocosRenderSystem extends EntitySystem {
 ### Node.js后端
 
 ```typescript
-import { Core, Scene, EntityManager, EntitySystem, Time } from '@esengine/ecs-framework';
+import { Core, Scene, EntityManager, EntitySystem, Time, World } from '@esengine/ecs-framework';
 
 class ServerGameManager {
     private scene: Scene;
@@ -338,6 +363,7 @@ class ServerGameManager {
         Core.create(true); // 启用调试模式
         // 完整配置示例: Core.create({ debug: true, enableEntitySystems: true, debugConfig: {...} })
         
+        // 单Scene模式（简单场景）
         this.scene = new Scene();
         this.scene.name = "ServerScene";
         Core.setScene(this.scene);
@@ -417,6 +443,8 @@ class ServerGameManager {
 const server = new ServerGameManager();
 server.start();
 ```
+
+> **多房间游戏服务器示例**：查看 [场景管理完整指南](scene-management-guide.md#world多场景管理) 了解如何使用多World架构实现复杂的多房间游戏服务器
 
 ### 原生浏览器
 

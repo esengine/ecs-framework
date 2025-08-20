@@ -6,8 +6,8 @@ import { Time } from './Utils/Time';
 import { PerformanceMonitor } from './Utils/PerformanceMonitor';
 import { PoolManager } from './Utils/Pool/PoolManager';
 import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
-import { Scene } from './ECS/Scene';
 import { IScene } from './ECS/IScene';
+import { WorldManager } from './ECS/WorldManager';
 import { DebugManager } from './Utils/Debug';
 import { ICoreConfig, IECSDebugConfig } from './Types';
 import { BigIntFactory, EnvironmentInfo } from './ECS/Utils/BigIntCompatibility';
@@ -46,6 +46,20 @@ export class Core {
      * 当设置为true时，游戏循环将暂停执行。
      */
     public static paused = false;
+
+    /**
+     * 默认World ID
+     * 
+     * 用于单Scene模式的默认World标识
+     */
+    private static readonly DEFAULT_WORLD_ID = '__default__';
+
+    /**
+     * 默认Scene ID
+     * 
+     * 用于单Scene模式的默认Scene标识
+     */
+    private static readonly DEFAULT_SCENE_ID = '__main__';
     
     /**
      * 全局核心实例
@@ -71,12 +85,6 @@ export class Core {
      */
     public readonly debug: boolean;
     
-    /**
-     * 待切换的场景
-     * 
-     * 存储下一帧要切换到的场景实例。
-     */
-    public _nextScene: IScene | null = null;
     
     /**
      * 全局管理器集合
@@ -113,10 +121,6 @@ export class Core {
      */
     public _ecsAPI?: ECSFluentAPI;
     
-    /**
-     * 当前活动场景
-     */
-    public _scene?: IScene;
 
     /**
      * 调试管理器
@@ -124,6 +128,13 @@ export class Core {
      * 负责收集和发送调试数据。
      */
     public _debugManager?: DebugManager;
+
+    /**
+     * World管理器
+     * 
+     * 管理多个World实例，支持多房间/多世界架构。
+     */
+    public _worldManager?: WorldManager;
 
     /**
      * Core配置
@@ -194,82 +205,63 @@ export class Core {
     }
 
     /**
-     * 获取当前活动的场景
+     * 获取当前活动的场景（属性访问器）
      * 
      * @returns 当前场景实例，如果没有则返回null
      */
     public static get scene(): IScene | null {
-        if (!this._instance)
-            return null;
-        return this._instance._scene || null;
+        return this.getScene();
     }
 
     /**
-     * 设置当前场景（已废弃）
+     * 获取当前活动的场景（方法调用）
      * 
-     * @deprecated 请使用 Core.setScene() 方法代替。scene setter 可能导致场景延迟激活的时序问题，
-     * 而 setScene() 提供更好的类型安全性和可预测的激活时序。
-     * 
-     * 迁移示例：
-     * ```typescript
-     * // 旧方式（已废弃）
-     * Core.scene = myScene;
-     * 
-     * // 新方式（推荐）
-     * Core.setScene(myScene);
-     * ```
-     * 
-     * 如果当前没有场景，会立即切换；否则会在下一帧切换。
-     * 
-     * @param value - 场景实例
+     * @returns 当前场景实例，如果没有则返回null
      */
-    public static set scene(value: IScene | null) {
-        if (!value) return;
-
-        if (this._instance._scene == null) {
-            this._instance.setSceneInternal(value);
-        } else {
-            this._instance._nextScene = value;
+    public static getScene<T extends IScene>(): T | null {
+        if (!this._instance) {
+            return null;
         }
+
+        // 确保默认World存在
+        this._instance.ensureDefaultWorld();
+        
+        const defaultWorld = this._instance._worldManager!.getWorld(this.DEFAULT_WORLD_ID);
+        return defaultWorld?.getScene(this.DEFAULT_SCENE_ID) as T || null;
     }
 
+
     /**
-     * 类型安全的场景设置方法（推荐）
-     * 
-     * 这是设置场景的推荐方法，提供更好的类型安全性和可预测的激活时序。
-     * 相比于 scene setter，此方法能确保场景正确初始化和激活。
-     * 
-     * 如果当前没有场景，会立即切换；否则会在下一帧切换。
+     * 设置当前场景
      * 
      * @param scene - 要设置的场景实例
      * @returns 设置的场景实例，便于链式调用
-     * 
-     * @example
-     * ```typescript
-     * const myScene = new MyScene();
-     * Core.setScene(myScene);
-     * 
-     * // 链式调用
-     * const scene = Core.setScene(new MyScene()).addSystem(new MySystem());
-     * ```
      */
     public static setScene<T extends IScene>(scene: T): T {
-        if (this._instance._scene == null) {
-            this._instance.setSceneInternal(scene);
-        } else {
-            this._instance._nextScene = scene;
+        if (!this._instance) {
+            throw new Error("Core实例未创建，请先调用Core.create()");
         }
+
+        // 确保默认World存在
+        this._instance.ensureDefaultWorld();
+        
+        const defaultWorld = this._instance._worldManager!.getWorld(this.DEFAULT_WORLD_ID)!;
+        
+        // 移除旧的主Scene（如果存在）
+        if (defaultWorld.getScene(this.DEFAULT_SCENE_ID)) {
+            defaultWorld.removeScene(this.DEFAULT_SCENE_ID);
+        }
+
+        // 添加新Scene到默认World
+        defaultWorld.createScene(this.DEFAULT_SCENE_ID, scene);
+        defaultWorld.setSceneActive(this.DEFAULT_SCENE_ID, true);
+
+        // 触发场景切换回调
+        this._instance.onSceneChanged();
+        
         return scene;
     }
 
-    /**
-     * 类型安全的场景获取方法
-     * 
-     * @returns 当前场景实例
-     */
-    public static getScene<T extends IScene>(): T | null {
-        return this._instance?._scene as T || null;
-    }
 
     /**
      * 创建Core实例
@@ -466,15 +458,61 @@ export class Core {
     }
 
     /**
-     * 内部场景设置方法
+     * 获取WorldManager实例
      * 
-     * @param scene - 要设置的场景实例
+     * @returns WorldManager实例，如果未初始化则自动创建
      */
-    private setSceneInternal(scene: IScene): void {
-        this._scene = scene;
-        this.onSceneChanged();
-        this._scene.initialize();
-        this._scene.begin();
+    public static getWorldManager(): WorldManager {
+        if (!this._instance) {
+            throw new Error("Core实例未创建，请先调用Core.create()");
+        }
+
+        if (!this._instance._worldManager) {
+            // 多World模式的配置（用户主动获取WorldManager）
+            this._instance._worldManager = WorldManager.getInstance({
+                maxWorlds: 50,
+                autoCleanup: true,
+                cleanupInterval: 60000,
+                debug: this._instance._config.debug
+            });
+        }
+
+        return this._instance._worldManager;
+    }
+
+    /**
+     * 启用World管理
+     * 
+     * 显式启用World功能，用于多房间/多世界架构
+     */
+    public static enableWorldManager(): WorldManager {
+        return this.getWorldManager();
+    }
+
+    /**
+     * 确保默认World存在
+     * 
+     * 内部方法，用于懒初始化默认World
+     */
+    private ensureDefaultWorld(): void {
+        if (!this._worldManager) {
+            this._worldManager = WorldManager.getInstance({
+                maxWorlds: 1,        // 单场景用户只需要1个World
+                autoCleanup: false,   // 单场景不需要自动清理
+                cleanupInterval: 0,   // 禁用清理定时器
+                debug: this._config.debug
+            });
+        }
+
+        // 检查默认World是否存在
+        if (!this._worldManager.getWorld(Core.DEFAULT_WORLD_ID)) {
+            this._worldManager.createWorld(Core.DEFAULT_WORLD_ID, {
+                name: 'DefaultWorld',
+                maxScenes: 1,
+                autoCleanup: false
+            });
+            this._worldManager.setWorldActive(Core.DEFAULT_WORLD_ID, true);
+        }
     }
 
     /**
@@ -485,28 +523,19 @@ export class Core {
     public onSceneChanged() {
         Time.sceneChanged();
         
+        // 获取当前Scene（从默认World）
+        const currentScene = Core.getScene();
+        
         // 初始化ECS API（如果场景支持）
-        if (this._scene && this._scene.querySystem && this._scene.eventSystem) {
-            this._ecsAPI = createECSAPI(this._scene, this._scene.querySystem, this._scene.eventSystem);
+        if (currentScene && currentScene.querySystem && currentScene.eventSystem) {
+            this._ecsAPI = createECSAPI(currentScene, currentScene.querySystem, currentScene.eventSystem);
         }
 
         // 延迟调试管理器通知，避免在场景初始化过程中干扰属性
         if (this._debugManager) {
-            // 使用 requestAnimationFrame 确保在场景完全初始化后再收集数据
-            if (typeof requestAnimationFrame !== 'undefined') {
-                requestAnimationFrame(() => {
-                    if (this._debugManager) {
-                        this._debugManager.onSceneChanged();
-                    }
-                });
-            } else {
-                // 兜底：使用 setTimeout
-                setTimeout(() => {
-                    if (this._debugManager) {
-                        this._debugManager.onSceneChanged();
-                    }
-                }, 0);
-            }
+            queueMicrotask(() => {
+                this._debugManager?.onSceneChanged();
+            });
         }
     }
 
@@ -567,23 +596,25 @@ export class Core {
         // 更新对象池管理器
         this._poolManager.update();
 
-        // 处理场景切换
-        if (this._nextScene != null) {
-            if (this._scene != null)
-                this._scene.end();
+        // 更新所有World
+        if (this._worldManager) {
+            const worldsStartTime = this._performanceMonitor.startMonitoring('Worlds.update');
+            const activeWorlds = this._worldManager.getActiveWorlds();
+            let totalWorldEntities = 0;
 
-            this._scene = this._nextScene;
-            this._nextScene = null;
-            this.onSceneChanged();
-            this._scene.begin();
-        }
+            for (const world of activeWorlds) {
+                // 更新World的全局System
+                world.updateGlobalSystems();
+                
+                // 更新World中的所有Scene
+                world.updateScenes();
 
-        // 更新当前场景
-        if (this._scene != null && this._scene.update) {
-            const sceneStartTime = this._performanceMonitor.startMonitoring('Scene.update');
-            this._scene.update();
-            const entityCount = this._scene.entities?.count || 0;
-            this._performanceMonitor.endMonitoring('Scene.update', sceneStartTime, entityCount);
+                // 统计实体数量（用于性能监控）
+                const worldStats = world.getStats();
+                totalWorldEntities += worldStats.totalEntities;
+            }
+
+            this._performanceMonitor.endMonitoring('Worlds.update', worldsStartTime, totalWorldEntities);
         }
 
         // 更新调试管理器（基于FPS的数据发送）
