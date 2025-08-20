@@ -12,5 +12,11 @@ export * from './core/ConnectionStateManager';
 export * from './transport/WebSocketClient';
 export * from './transport/ReconnectionManager';
 
+// 系统
+export * from './systems';
+
+// 同步模块
+export * from './sync';
+
 // 重新导出shared包的类型
 export * from '@esengine/network-shared';

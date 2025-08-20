@@ -14,5 +14,11 @@ export * from './transport/WebSocketTransport';
 export * from './rooms/Room';
 export * from './rooms/RoomManager';
 
+// 系统
+export * from './systems';
+
+// 同步模块
+export * from './sync';
+
 // 重新导出shared包的类型
 export * from '@esengine/network-shared';
