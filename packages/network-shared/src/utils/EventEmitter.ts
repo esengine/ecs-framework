@@ -8,7 +8,7 @@ import { Emitter } from '@esengine/ecs-framework';
  * 网络事件发射器，专为网络层设计
  * 使用字符串或symbol作为事件类型，简化API
  */
-export class EventEmitter extends Emitter<string | symbol, void> {
+export class EventEmitter<T = Record<string, (...args: any[]) => void>> extends Emitter<string | symbol, void> {
     constructor() {
         super();
     }

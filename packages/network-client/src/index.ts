@@ -10,7 +10,12 @@ export * from './core/ConnectionStateManager';
 
 // 传输层
 export * from './transport/WebSocketClient';
-export * from './transport/ReconnectionManager';
+export { 
+    ReconnectionManager as ClientReconnectionManager,
+    ReconnectionConfig as ClientReconnectionConfig,
+    ReconnectionState as ClientReconnectionState,
+    ReconnectionStrategy as ClientReconnectionStrategy
+} from './transport/ReconnectionManager';
 
 // 系统
 export * from './systems';

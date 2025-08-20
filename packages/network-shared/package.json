@@ -1,6 +1,6 @@
 {
   "name": "@esengine/network-shared",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "ECS Framework网络层 - 共享组件和协议",
   "main": "bin/index.js",
   "types": "bin/index.d.ts",

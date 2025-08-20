@@ -1,6 +1,6 @@
 {
   "name": "@esengine/network-client",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "ECS Framework网络层 - 客户端实现",
   "main": "bin/index.js",
   "types": "bin/index.d.ts",

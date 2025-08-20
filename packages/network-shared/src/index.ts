@@ -58,5 +58,25 @@ export {
 // 监控系统
 export * from './monitoring';
 
+// 状态管理
+export * from './state';
+
+// 高级序列化
+export { 
+    AdvancedSerializer,
+    SerializationResult as AdvancedSerializationResult,
+    DeserializationResult as AdvancedDeserializationResult,
+    TypeRegistry,
+    SerializationContext,
+    IncrementalUpdate,
+    AdvancedSerializerEvents
+} from './serialization/AdvancedSerializer';
+
+// 断线重连
+export * from './reconnection';
+
+// 数据持久化
+export * from './persistence';
+
 // 工具类
 export * from './utils';

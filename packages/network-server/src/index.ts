@@ -14,6 +14,9 @@ export * from './transport/WebSocketTransport';
 export * from './rooms/Room';
 export * from './rooms/RoomManager';
 
+// 认证授权
+export * from './auth';
+
 // 系统
 export * from './systems';
 
