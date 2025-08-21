@@ -1,5 +1,6 @@
 import { Entity } from '../Entity';
 import { Component } from '../Component';
+import { Core } from '../../Core';
 
 /**
  * 高性能实体列表管理器
@@ -138,15 +139,19 @@ export class EntityList {
 
     /**
      * 更新所有实体
+     * 注意：此功能不符合纯ECS设计，默认禁用。建议使用System来处理更新逻辑
      */
     public update(): void {
         this._isUpdating = true;
         
         try {
-            for (let i = 0; i < this.buffer.length; i++) {
-                const entity = this.buffer[i];
-                if (entity.enabled && !entity.isDestroyed) {
-                    entity.update();
+            // 只有启用Entity/Component更新功能时才遍历实体
+            if (Core.entityComponentUpdateEnabled) {
+                for (let i = 0; i < this.buffer.length; i++) {
+                    const entity = this.buffer[i];
+                    if (entity.enabled && !entity.isDestroyed) {
+                        entity.update();
+                    }
                 }
             }
         } finally {

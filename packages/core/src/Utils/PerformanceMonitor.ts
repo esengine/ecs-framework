@@ -400,4 +400,23 @@ export class PerformanceMonitor {
             }
         }
     }
+
+    /**
+     * 更新FPS监控
+     * @param deltaTime 当前帧时间间隔
+     */
+    public updateFPS(deltaTime: number): void {
+        if (!this._isEnabled) {
+            return;
+        }
+
+        // 计算当前FPS
+        const fps = 1 / deltaTime;
+        this._fpsHistory.push(fps);
+
+        // 保持历史记录在合理范围内
+        if (this._fpsHistory.length > this._maxRecentSamples) {
+            this._fpsHistory.shift();
+        }
+    }
 } 

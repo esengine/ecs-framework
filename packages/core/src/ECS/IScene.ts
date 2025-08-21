@@ -84,6 +84,11 @@ export interface IScene {
     update(): void;
 
     /**
+     * 固定步长更新场景
+     */
+    fixedUpdate(): void;
+
+    /**
      * 创建实体
      */
     createEntity(name: string): Entity;

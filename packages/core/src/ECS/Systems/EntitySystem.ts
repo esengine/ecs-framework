@@ -400,6 +400,30 @@ export abstract class EntitySystem implements ISystemBase {
     }
 
     /**
+     * 固定步长更新系统
+     * 
+     * 用于物理计算、网络同步等需要确定性更新的逻辑。
+     * 子类可以重写此方法来实现固定步长更新逻辑。
+     */
+    public fixedUpdate(): void {
+        if (!this._enabled || !this.onCheckProcessing()) {
+            return;
+        }
+
+        const startTime = this._performanceMonitor.startMonitoring(`${this._systemName}_Fixed`);
+        let entityCount = 0;
+
+        try {
+            // 动态查询实体并处理
+            const entities = this.queryEntities();
+            entityCount = entities.length;
+            this.fixedProcess(entities);
+        } finally {
+            this._performanceMonitor.endMonitoring(`${this._systemName}_Fixed`, startTime, entityCount);
+        }
+    }
+
+    /**
      * 后期更新系统
      * 
      * 在所有系统的update方法执行完毕后调用。
@@ -441,6 +465,18 @@ export abstract class EntitySystem implements ISystemBase {
      */
     protected process(_entities: Entity[]): void {
         // 子类必须实现此方法
+    }
+
+    /**
+     * 固定步长处理实体列表
+     * 
+     * 用于物理计算、网络同步等需要确定性更新的逻辑。
+     * 子类可以重写此方法来实现固定步长处理逻辑。
+     * 
+     * @param entities 要处理的实体列表
+     */
+    protected fixedProcess(_entities: Entity[]): void {
+        // 子类可以重写此方法
     }
 
     /**

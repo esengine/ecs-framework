@@ -4,6 +4,7 @@ import { EventBus } from './Core/EventBus';
 import { IBigIntLike, BigIntFactory } from './Utils/BigIntCompatibility';
 import { createLogger } from '../Utils/Logger';
 import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
+import { Core } from '../Core';
 
 // Forward declaration to avoid circular dependency
 interface IScene {
@@ -205,8 +206,12 @@ export class Entity {
      * 获取父实体
      * 
      * @returns 父实体，如果没有父实体则返回null
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public get parent(): Entity | null {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
         return this._parent;
     }
 
@@ -214,8 +219,12 @@ export class Entity {
      * 获取子实体数组的只读副本
      * 
      * @returns 子实体数组的副本
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public get children(): readonly Entity[] {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
         return [...this._children];
     }
 
@@ -223,8 +232,12 @@ export class Entity {
      * 获取子实体数量
      * 
      * @returns 子实体的数量
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public get childCount(): number {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
         return this._children.length;
     }
 
@@ -255,11 +268,18 @@ export class Entity {
      * 获取实体的有效活跃状态
      * 
      * 考虑父实体的活跃状态，只有当实体本身和所有父实体都处于活跃状态时才返回true。
+     * 如果父子关系功能未启用，则仅返回自身的活跃状态。
      * 
      * @returns 有效的活跃状态
      */
     public get activeInHierarchy(): boolean {
         if (!this._active) return false;
+        
+        // 如果父子关系功能未启用，只检查自身状态
+        if (!Core.entityHierarchyEnabled) {
+            return true;
+        }
+        
         if (this._parent) return this._parent.activeInHierarchy;
         return true;
     }
@@ -685,8 +705,13 @@ export class Entity {
      * 
      * @param child - 要添加的子实体
      * @returns 添加的子实体
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public addChild(child: Entity): Entity {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
+
         if (child === this) {
             throw new Error("Entity cannot be its own child");
         }
@@ -718,8 +743,13 @@ export class Entity {
      * 
      * @param child - 要移除的子实体
      * @returns 是否成功移除
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public removeChild(child: Entity): boolean {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
+
         const index = this._children.indexOf(child);
         if (index === -1) {
             return false;
@@ -734,8 +764,14 @@ export class Entity {
 
     /**
      * 移除所有子实体
+     * 
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public removeAllChildren(): void {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
+
         // 复制子实体列表，避免在迭代时修改
         const childrenToRemove = [...this._children];
         
@@ -750,8 +786,13 @@ export class Entity {
      * @param name - 子实体名称
      * @param recursive - 是否递归查找
      * @returns 找到的子实体或null
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public findChild(name: string, recursive: boolean = false): Entity | null {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
+
         // 在直接子实体中查找
         for (const child of this._children) {
             if (child.name === name) {
@@ -778,8 +819,13 @@ export class Entity {
      * @param tag - 标签
      * @param recursive - 是否递归查找
      * @returns 找到的子实体数组
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public findChildrenByTag(tag: number, recursive: boolean = false): Entity[] {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
+
         const result: Entity[] = [];
 
         // 在直接子实体中查找
@@ -803,8 +849,13 @@ export class Entity {
      * 获取根实体
      * 
      * @returns 层次结构的根实体
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public getRoot(): Entity {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
+
         let root: Entity = this;
         while (root._parent) {
             root = root._parent;
@@ -817,8 +868,13 @@ export class Entity {
      * 
      * @param entity - 要检查的实体
      * @returns 如果是祖先则返回true
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public isAncestorOf(entity: Entity): boolean {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
+
         let current = entity._parent;
         while (current) {
             if (current === this) {
@@ -834,8 +890,13 @@ export class Entity {
      * 
      * @param entity - 要检查的实体
      * @returns 如果是后代则返回true
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public isDescendantOf(entity: Entity): boolean {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
+
         return entity.isAncestorOf(this);
     }
 
@@ -843,8 +904,13 @@ export class Entity {
      * 获取层次深度
      * 
      * @returns 在层次结构中的深度（根实体为0）
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public getDepth(): number {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
+
         let depth = 0;
         let current = this._parent;
         while (current) {
@@ -859,8 +925,13 @@ export class Entity {
      * 
      * @param callback - 对每个子实体执行的回调函数
      * @param recursive - 是否递归遍历
+     * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public forEachChild(callback: (child: Entity, index: number) => void, recursive: boolean = false): void {
+        if (!Core.entityHierarchyEnabled) {
+            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        }
+
         this._children.forEach((child, index) => {
             callback(child, index);
             if (recursive) {
@@ -894,8 +965,14 @@ export class Entity {
      * 更新实体
      * 
      * 调用所有组件的更新方法，并更新子实体。
+     * 注意：此功能不符合纯ECS设计，默认禁用，需要在Core配置中启用
      */
     public update(): void {
+        // 检查是否启用Entity/Component更新遍历功能
+        if (!Core.entityComponentUpdateEnabled) {
+            return;
+        }
+
         if (!this.activeInHierarchy || this._isDestroyed) {
             return;
         }
@@ -907,9 +984,11 @@ export class Entity {
             }
         }
 
-        // 更新所有子实体
-        for (const child of this._children) {
-            child.update();
+        // 更新所有子实体（如果启用父子关系）
+        if (Core.entityHierarchyEnabled) {
+            for (const child of this._children) {
+                child.update();
+            }
         }
     }
 
@@ -925,15 +1004,17 @@ export class Entity {
 
         this._isDestroyed = true;
         
-        // 销毁所有子实体
-        const childrenToDestroy = [...this._children];
-        for (const child of childrenToDestroy) {
-            child.destroy();
-        }
-        
-        // 从父实体中移除
-        if (this._parent) {
-            this._parent.removeChild(this);
+        // 销毁所有子实体（如果启用父子关系）
+        if (Core.entityHierarchyEnabled) {
+            const childrenToDestroy = [...this._children];
+            for (const child of childrenToDestroy) {
+                child.destroy();
+            }
+            
+            // 从父实体中移除
+            if (this._parent) {
+                this._parent.removeChild(this);
+            }
         }
         
         // 移除所有组件

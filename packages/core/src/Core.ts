@@ -77,6 +77,20 @@ export class Core {
      * 控制是否启用ECS实体系统功能。
      */
     public static entitySystemsEnabled: boolean;
+
+    /**
+     * Entity/Component更新遍历启用状态
+     * 
+     * 控制是否启用Entity遍历Component的update功能（不符合纯ECS设计）
+     */
+    public static entityComponentUpdateEnabled: boolean = false;
+
+    /**
+     * Entity父子关系启用状态
+     * 
+     * 控制是否启用Entity父子关系功能（不符合纯ECS设计）
+     */
+    public static entityHierarchyEnabled: boolean = false;
     
     /**
      * 调试模式标志
@@ -158,6 +172,8 @@ export class Core {
         this._config = {
             debug: true,
             enableEntitySystems: true,
+            enableEntityComponentUpdate: false,
+            enableEntityHierarchy: false,
             ...config
         };
 
@@ -180,6 +196,8 @@ export class Core {
         this._poolManager = PoolManager.getInstance();
         
         Core.entitySystemsEnabled = this._config.enableEntitySystems ?? true;
+        Core.entityComponentUpdateEnabled = this._config.enableEntityComponentUpdate ?? false;
+        Core.entityHierarchyEnabled = this._config.enableEntityHierarchy ?? false;
         this.debug = this._config.debug ?? true;
 
         // 初始化调试管理器
@@ -580,12 +598,42 @@ export class Core {
         // 更新时间系统
         Time.update(deltaTime);
 
-        // 更新FPS监控（如果性能监控器支持）
-        if ('updateFPS' in this._performanceMonitor && typeof this._performanceMonitor.updateFPS === 'function') {
-            this._performanceMonitor.updateFPS(Time.deltaTime);
+        // 更新FPS监控
+        this._performanceMonitor.updateFPS(Time.deltaTime);
+
+        // 执行固定步长更新
+        const fixedSteps = Time.executeFixedSteps();
+        if (fixedSteps > 0) {
+            const fixedUpdateStartTime = this._performanceMonitor.startMonitoring('Core.fixedUpdate');
+            
+            for (let i = 0; i < fixedSteps; i++) {
+                // 更新全局管理器（固定步长）
+                for (const globalManager of this._globalManagers) {
+                    if (globalManager.enabled) {
+                        globalManager.fixedUpdate();
+                    }
+                }
+
+                // 固定步长更新所有World
+                if (this._worldManager) {
+                    const activeWorlds = this._worldManager.getActiveWorlds();
+                    for (const world of activeWorlds) {
+                        // 固定步长更新World的全局System
+                        world.fixedUpdateGlobalSystems();
+                        
+                        // 固定步长更新World中的所有Scene
+                        world.fixedUpdateScenes();
+                    }
+                }
+            }
+            
+            this._performanceMonitor.endMonitoring('Core.fixedUpdate', fixedUpdateStartTime, fixedSteps);
         }
 
-        // 更新全局管理器
+        // 变长时间步长更新
+        const variableUpdateStartTime = this._performanceMonitor.startMonitoring('Core.variableUpdate');
+
+        // 更新全局管理器（变长步长）
         const managersStartTime = this._performanceMonitor.startMonitoring('GlobalManagers.update');
         for (const globalManager of this._globalManagers) {
             if (globalManager.enabled)
@@ -596,7 +644,7 @@ export class Core {
         // 更新对象池管理器
         this._poolManager.update();
 
-        // 更新所有World
+        // 更新所有World（变长步长）
         if (this._worldManager) {
             const worldsStartTime = this._performanceMonitor.startMonitoring('Worlds.update');
             const activeWorlds = this._worldManager.getActiveWorlds();
@@ -616,6 +664,8 @@ export class Core {
 
             this._performanceMonitor.endMonitoring('Worlds.update', worldsStartTime, totalWorldEntities);
         }
+
+        this._performanceMonitor.endMonitoring('Core.variableUpdate', variableUpdateStartTime);
 
         // 更新调试管理器（基于FPS的数据发送）
         if (this._debugManager) {

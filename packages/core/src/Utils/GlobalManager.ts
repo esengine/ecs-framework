@@ -52,4 +52,11 @@ export class GlobalManager {
      */
     public update() {
     }
+
+    /**
+     * 固定步长更新管理器状态的方法
+     * 用于物理计算、网络同步等需要确定性更新的逻辑
+     */
+    public fixedUpdate() {
+    }
 }

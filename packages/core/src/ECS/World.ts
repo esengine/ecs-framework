@@ -25,6 +25,12 @@ export interface IGlobalSystem {
     update(deltaTime?: number): void;
     
     /**
+     * 固定步长更新系统
+     * 用于物理计算、网络同步等需要确定性更新的逻辑
+     */
+    fixedUpdate(): void;
+    
+    /**
      * 重置系统
      */
     reset?(): void;
@@ -335,6 +341,21 @@ export class World {
     }
 
     /**
+     * 固定步长更新World中的全局System
+     * 注意：此方法由Core.update()调用，不应直接调用
+     */
+    public fixedUpdateGlobalSystems(): void {
+        if (!this._isActive) {
+            return;
+        }
+
+        // 固定步长更新全局System
+        for (const system of this._globalSystems) {
+            system.fixedUpdate();
+        }
+    }
+
+    /**
      * 更新World中的所有激活Scene
      * 注意：此方法由Core.update()调用，不应直接调用
      */
@@ -354,6 +375,24 @@ export class World {
         // 自动清理（如果启用）
         if (this._config.autoCleanup && this.shouldAutoCleanup()) {
             this.cleanup();
+        }
+    }
+
+    /**
+     * 固定步长更新World中的所有激活Scene
+     * 注意：此方法由Core.update()调用，不应直接调用
+     */
+    public fixedUpdateScenes(): void {
+        if (!this._isActive) {
+            return;
+        }
+
+        // 固定步长更新所有激活的Scene
+        for (const sceneId of this._activeScenes) {
+            const scene = this._scenes.get(sceneId);
+            if (scene) {
+                scene.fixedUpdate();
+            }
         }
     }
 

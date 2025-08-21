@@ -269,6 +269,10 @@ export interface ICoreConfig {
     enableEntitySystems?: boolean;
     /** 调试配置 */
     debugConfig?: IECSDebugConfig;
+    /** 是否启用Entity/Component的update遍历功能（不符合纯ECS设计，默认false） */
+    enableEntityComponentUpdate?: boolean;
+    /** 是否启用Entity父子关系功能（不符合纯ECS设计，默认false） */
+    enableEntityHierarchy?: boolean;
 }
 
 /**

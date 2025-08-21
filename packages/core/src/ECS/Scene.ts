@@ -191,6 +191,19 @@ export class Scene implements IScene {
     }
 
     /**
+     * 固定步长更新场景
+     * 用于物理计算、网络同步等需要确定性更新的逻辑
+     */
+    public fixedUpdate() {
+        // 固定步长更新实体处理器
+        if (this.entityProcessors != null) {
+            for (const processor of this.entityProcessors.processors) {
+                processor.fixedUpdate();
+            }
+        }
+    }
+
+    /**
      * 将实体添加到此场景，并返回它
      * @param name 实体名称
      */
