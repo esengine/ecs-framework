@@ -118,7 +118,7 @@ describe('TypeDecorators', () => {
                 class EmptyNameSystem extends EntitySystem {
                     protected override process(_entities: any[]): void {}
                 }
-            }).toThrow('ECSSystem装饰器必须提供有效的类型名称');
+            }).toThrow('ECSSystem装饰器必须提供有效的系统名称');
         });
     });
 });

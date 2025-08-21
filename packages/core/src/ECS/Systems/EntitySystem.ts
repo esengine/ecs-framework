@@ -4,7 +4,8 @@ import { Matcher } from '../Utils/Matcher';
 import type { Scene } from '../Scene';
 import type { ISystemBase } from '../../Types';
 import type { QuerySystem } from '../Core/QuerySystem';
-import { getSystemInstanceTypeName } from '../Decorators';
+import { getSystemInstanceTypeName, getSystemInstanceMetadata, SystemMetadata, SystemPhase } from '../Decorators';
+import { Core } from '../../Core';
 
 /**
  * 实体系统的基类
@@ -37,6 +38,15 @@ export abstract class EntitySystem implements ISystemBase {
     private _initialized: boolean = false;
     private _matcher: Matcher;
     private _trackedEntities: Set<Entity> = new Set();
+    
+    // 确定性排序相关属性
+    private _registrationOrder: number = 0;
+    private _systemHash: number = 0;
+    private _systemMetadata: SystemMetadata = { name: '', phase: SystemPhase.Update };
+    private _phase: SystemPhase = SystemPhase.Update;
+    
+    // 静态注册计数器，用于记录系统注册顺序
+    private static _registrationCounter: number = 0;
 
     /**
      * 获取系统处理的实体列表（动态查询）
@@ -77,9 +87,76 @@ export abstract class EntitySystem implements ISystemBase {
         return this._systemName;
     }
 
+    /**
+     * 获取系统的执行阶段
+     */
+    public get phase(): SystemPhase {
+        return this._phase;
+    }
+
+    /**
+     * 获取系统的注册顺序
+     */
+    public get registrationOrder(): number {
+        return this._registrationOrder;
+    }
+
+    /**
+     * 获取系统的哈希值（用于确定性排序）
+     */
+    public get systemHash(): number {
+        return this._systemHash;
+    }
+
+    /**
+     * 获取系统的完整元数据
+     */
+    public get metadata(): SystemMetadata {
+        return this._systemMetadata;
+    }
+
     constructor(matcher?: Matcher) {
         this._matcher = matcher ? matcher : Matcher.empty();
         this._systemName = getSystemInstanceTypeName(this);
+        
+        // 初始化确定性排序相关属性
+        this.initializeInternalProperties();
+    }
+
+    /**
+     * 初始化内部属性（用于确定性排序）
+     */
+    private initializeInternalProperties(): void {
+        // 获取系统元数据
+        this._systemMetadata = getSystemInstanceMetadata(this);
+        this._phase = this._systemMetadata.phase ?? SystemPhase.Update;
+        
+        // 如果元数据中指定了updateOrder，则使用它
+        if (this._systemMetadata.updateOrder !== undefined) {
+            this._updateOrder = this._systemMetadata.updateOrder;
+        }
+        
+        // 分配注册顺序
+        this._registrationOrder = EntitySystem._registrationCounter++;
+        
+        // 生成系统哈希值（基于装饰器名称）
+        this._systemHash = this.generateSystemHash();
+    }
+
+    /**
+     * 生成系统哈希值（基于ECSSystem装饰器名称的简单哈希）
+     * 使用装饰器提供的名称而非类名，避免代码混淆问题
+     */
+    private generateSystemHash(): number {
+        // 使用标准的系统名称获取方法，避免混淆后的问题
+        const systemName = getSystemInstanceTypeName(this);
+        let hash = 0;
+        for (let i = 0; i < systemName.length; i++) {
+            const char = systemName.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // 转换为32位整数
+        }
+        return Math.abs(hash);
     }
 
     private _scene: Scene | null = null;
@@ -181,6 +258,10 @@ export abstract class EntitySystem implements ISystemBase {
         // 检查实体变化并触发回调
         this.updateEntityTracking(currentEntities);
 
+        // 根据配置决定是否对实体进行确定性排序
+        if (Core.deterministicSortingEnabled) {
+            currentEntities.sort((a, b) => a.id - b.id);
+        }
 
         return currentEntities;
     }

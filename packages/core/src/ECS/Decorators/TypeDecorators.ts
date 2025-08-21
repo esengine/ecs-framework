@@ -1,5 +1,6 @@
 import type { Component } from '../Component';
 import type { EntitySystem } from '../Systems/EntitySystem';
+import type { ComponentType } from '../Core/ComponentStorage';
 
 /**
  * 存储组件类型名称的Symbol键
@@ -10,6 +11,41 @@ export const COMPONENT_TYPE_NAME = Symbol('ComponentTypeName');
  * 存储系统类型名称的Symbol键
  */
 export const SYSTEM_TYPE_NAME = Symbol('SystemTypeName');
+
+/**
+ * 存储系统元数据的Symbol键
+ */
+export const SYSTEM_METADATA = Symbol('SystemMetadata');
+
+/**
+ * 系统执行阶段枚举
+ */
+export enum SystemPhase {
+    /** 预更新阶段 - 输入处理、状态重置等 */
+    PreUpdate = 'pre-update',
+    /** 主更新阶段 - 游戏逻辑、移动等 */
+    Update = 'update',
+    /** 后更新阶段 - 渲染准备、动画等 */
+    PostUpdate = 'post-update',
+    /** 固定步长更新阶段 - 物理计算、网络同步等 */
+    FixedUpdate = 'fixed-update'
+}
+
+/**
+ * 系统元数据接口
+ */
+export interface SystemMetadata {
+    /** 系统名称 */
+    name: string;
+    /** 执行阶段，默认为Update */
+    phase?: SystemPhase;
+    /** 系统读取的组件类型，用于依赖分析 */
+    reads?: ComponentType[];
+    /** 系统写入的组件类型，用于依赖分析 */
+    writes?: ComponentType[];
+    /** 手动指定的更新顺序，数字越小越优先执行 */
+    updateOrder?: number;
+}
 
 /**
  * 组件类型装饰器
@@ -40,12 +76,27 @@ export function ECSComponent(typeName: string) {
 
 /**
  * 系统类型装饰器
- * 用于为系统类指定固定的类型名称，避免在代码混淆后失效
+ * 用于为系统类指定固定的类型名称和元数据，避免在代码混淆后失效
  * 
- * @param typeName 系统类型名称
+ * @param metadata 系统元数据或系统名称（向后兼容）
  * @example
  * ```typescript
+ * // 基础用法（向后兼容）
  * @ECSSystem('Movement')
+ * class MovementSystem extends EntitySystem {
+ *     protected process(entities: Entity[]): void {
+ *         // 系统逻辑
+ *     }
+ * }
+ * 
+ * // 完整元数据用法
+ * @ECSSystem({
+ *     name: 'Movement',
+ *     phase: SystemPhase.Update,
+ *     reads: [Position, Velocity],
+ *     writes: [Position],
+ *     updateOrder: 10
+ * })
  * class MovementSystem extends EntitySystem {
  *     protected process(entities: Entity[]): void {
  *         // 系统逻辑
@@ -53,14 +104,32 @@ export function ECSComponent(typeName: string) {
  * }
  * ```
  */
-export function ECSSystem(typeName: string) {
+export function ECSSystem(metadata: SystemMetadata | string) {
     return function <T extends new (...args: any[]) => EntitySystem>(target: T): T {
-        if (!typeName || typeof typeName !== 'string') {
-            throw new Error('ECSSystem装饰器必须提供有效的类型名称');
+        let systemMetadata: SystemMetadata;
+        
+        // 向后兼容：支持旧的string参数
+        if (typeof metadata === 'string') {
+            if (!metadata || typeof metadata !== 'string') {
+                throw new Error('ECSSystem装饰器必须提供有效的系统名称');
+            }
+            systemMetadata = { 
+                name: metadata,
+                phase: SystemPhase.Update // 默认阶段
+            };
+        } else {
+            if (!metadata || !metadata.name) {
+                throw new Error('ECSSystem装饰器必须提供有效的系统名称');
+            }
+            systemMetadata = {
+                ...metadata,
+                phase: metadata.phase ?? SystemPhase.Update // 默认阶段
+            };
         }
         
-        // 在构造函数上存储类型名称
-        (target as any)[SYSTEM_TYPE_NAME] = typeName;
+        // 在构造函数上存储类型名称和元数据
+        (target as any)[SYSTEM_TYPE_NAME] = systemMetadata.name;
+        (target as any)[SYSTEM_METADATA] = systemMetadata;
         
         return target;
     };
@@ -102,6 +171,38 @@ export function getSystemTypeName<T extends EntitySystem>(
     
     // 回退到constructor.name
     return systemType.name || 'UnknownSystem';
+}
+
+/**
+ * 获取系统的完整元数据，优先使用装饰器指定的元数据
+ * 
+ * @param systemType 系统构造函数
+ * @returns 系统元数据
+ */
+export function getSystemMetadata<T extends EntitySystem>(
+    systemType: new (...args: any[]) => T
+): SystemMetadata {
+    // 优先使用装饰器指定的元数据
+    const decoratorMetadata = (systemType as any)[SYSTEM_METADATA];
+    if (decoratorMetadata) {
+        return decoratorMetadata;
+    }
+    
+    // 回退到基础元数据
+    return {
+        name: getSystemTypeName(systemType),
+        phase: SystemPhase.Update
+    };
+}
+
+/**
+ * 获取系统实例的元数据
+ * 
+ * @param systemInstance 系统实例
+ * @returns 系统元数据
+ */
+export function getSystemInstanceMetadata(systemInstance: EntitySystem): SystemMetadata {
+    return getSystemMetadata(systemInstance.constructor as any);
 }
 
 /**

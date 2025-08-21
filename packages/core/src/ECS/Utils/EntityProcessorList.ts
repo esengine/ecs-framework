@@ -1,6 +1,8 @@
 import { EntitySystem } from '../Systems/EntitySystem';
 import { createLogger } from '../../Utils/Logger';
 import { getSystemInstanceTypeName } from '../Decorators';
+import { SystemDependencySorter } from './SystemDependencySorter';
+import { Core } from '../../Core';
 
 /**
  * 实体处理器列表管理器
@@ -92,12 +94,51 @@ export class EntityProcessorList {
 
     /**
      * 排序处理器
+     * 根据配置选择使用确定性排序或传统排序
      */
     private sortProcessors(): void {
         if (this._isDirty) {
-            this._processors.sort((a, b) => a.updateOrder - b.updateOrder);
+            EntityProcessorList._logger.debug('开始系统排序', { 
+                systemCount: this._processors.length,
+                deterministicSorting: Core.deterministicSortingEnabled
+            });
+            
+            const sortStartTime = performance.now();
+            
+            if (Core.deterministicSortingEnabled) {
+                // 使用确定性排序算法（包含依赖拓扑排序）
+                this._processors = SystemDependencySorter.sort(this._processors);
+            } else {
+                // 使用传统排序（仅按updateOrder排序）
+                this._processors = this.traditionalSort(this._processors);
+            }
+            
+            const sortEndTime = performance.now();
+            EntityProcessorList._logger.debug('系统排序完成', { 
+                duration: (sortEndTime - sortStartTime).toFixed(2) + 'ms',
+                sortingType: Core.deterministicSortingEnabled ? 'deterministic' : 'traditional',
+                finalOrder: this._processors.map(p => ({
+                    name: p.systemName,
+                    updateOrder: p.updateOrder
+                }))
+            });
+            
             this._isDirty = false;
         }
+    }
+
+    /**
+     * 传统排序方法（仅按updateOrder排序）
+     */
+    private traditionalSort(systems: EntitySystem[]): EntitySystem[] {
+        return [...systems].sort((a, b) => {
+            // 仅按updateOrder排序
+            if (a.updateOrder !== b.updateOrder) {
+                return a.updateOrder - b.updateOrder;
+            }
+            // updateOrder相同时保持原有顺序
+            return 0;
+        });
     }
 
     /** 获取处理器列表 */

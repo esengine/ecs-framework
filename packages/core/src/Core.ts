@@ -91,6 +91,13 @@ export class Core {
      * 控制是否启用Entity父子关系功能（不符合纯ECS设计）
      */
     public static entityHierarchyEnabled: boolean = false;
+
+    /**
+     * 确定性系统排序启用状态
+     * 
+     * 控制是否启用基于依赖关系的确定性系统排序（默认关闭）
+     */
+    public static deterministicSortingEnabled: boolean = false;
     
     /**
      * 调试模式标志
@@ -198,6 +205,7 @@ export class Core {
         Core.entitySystemsEnabled = this._config.enableEntitySystems ?? true;
         Core.entityComponentUpdateEnabled = this._config.enableEntityComponentUpdate ?? false;
         Core.entityHierarchyEnabled = this._config.enableEntityHierarchy ?? false;
+        Core.deterministicSortingEnabled = this._config.enableDeterministicSorting ?? false;
         this.debug = this._config.debug ?? true;
 
         // 初始化调试管理器

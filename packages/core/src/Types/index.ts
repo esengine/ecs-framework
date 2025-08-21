@@ -273,6 +273,8 @@ export interface ICoreConfig {
     enableEntityComponentUpdate?: boolean;
     /** 是否启用Entity父子关系功能（不符合纯ECS设计，默认false） */
     enableEntityHierarchy?: boolean;
+    /** 是否启用确定性系统排序（基于依赖关系的拓扑排序，默认false） */
+    enableDeterministicSorting?: boolean;
 }
 
 /**

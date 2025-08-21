@@ -4,6 +4,7 @@ import { ComponentRegistry, ComponentType } from './ComponentStorage';
 import { IBigIntLike, BigIntFactory } from '../Utils/BigIntCompatibility';
 import { createLogger } from '../../Utils/Logger';
 import { getComponentTypeName } from '../Decorators';
+import { Core } from '../../Core';
 
 import { ComponentPoolManager } from './ComponentPool';
 import { ComponentIndexManager } from './ComponentIndex';
@@ -131,7 +132,15 @@ export class QuerySystem {
         this.dirtyTrackingSystem = new DirtyTrackingSystem();
     }
 
-
+    /**
+     * 根据配置对实体列表进行排序
+     * 如果启用了确定性排序，按ID排序；否则保持原顺序
+     */
+    private sortEntitiesIfNeeded(entities: Entity[]): void {
+        if (Core.deterministicSortingEnabled) {
+            entities.sort((a, b) => a.id - b.id);
+        }
+    }
 
     /**
      * 设置实体列表并重建索引
@@ -408,9 +417,12 @@ export class QuerySystem {
         const cached = this.getFromCache(cacheKey);
         if (cached) {
             this.queryStats.cacheHits++;
+            // 缓存的实体也要排序以确保确定性
+            const sortedCached = [...cached];
+            this.sortEntitiesIfNeeded(sortedCached);
             return {
-                entities: cached,
-                count: cached.length,
+                entities: sortedCached,
+                count: sortedCached.length,
                 executionTime: performance.now() - startTime,
                 fromCache: true
             };
@@ -439,6 +451,9 @@ export class QuerySystem {
             }
         }
 
+        // 确保实体按ID排序，保证遍历的确定性
+        this.sortEntitiesIfNeeded(entities);
+        
         this.addToCache(cacheKey, entities);
 
         return {
@@ -519,9 +534,12 @@ export class QuerySystem {
         const cached = this.getFromCache(cacheKey);
         if (cached) {
             this.queryStats.cacheHits++;
+            // 缓存的实体也要排序以确保确定性
+            const sortedCached = [...cached];
+            this.sortEntitiesIfNeeded(sortedCached);
             return {
-                entities: cached,
-                count: cached.length,
+                entities: sortedCached,
+                count: sortedCached.length,
                 executionTime: performance.now() - startTime,
                 fromCache: true
             };
@@ -540,6 +558,9 @@ export class QuerySystem {
             const indexResult = this.componentIndexManager.queryMultiple(componentTypes, 'OR');
             entities = Array.from(indexResult);
         }
+        
+        // 确保实体按ID排序，保证遍历的确定性
+        this.sortEntitiesIfNeeded(entities);
         
         this.addToCache(cacheKey, entities);
 
@@ -577,9 +598,12 @@ export class QuerySystem {
         const cached = this.getFromCache(cacheKey);
         if (cached) {
             this.queryStats.cacheHits++;
+            // 缓存的实体也要排序以确保确定性
+            const sortedCached = [...cached];
+            this.sortEntitiesIfNeeded(sortedCached);
             return {
-                entities: cached,
-                count: cached.length,
+                entities: sortedCached,
+                count: sortedCached.length,
                 executionTime: performance.now() - startTime,
                 fromCache: true
             };
@@ -590,6 +614,9 @@ export class QuerySystem {
             entity.componentMask.and(mask).isZero()
         );
 
+        // 确保实体按ID排序，保证遍历的确定性
+        this.sortEntitiesIfNeeded(entities);
+        
         this.addToCache(cacheKey, entities);
 
         return {
@@ -625,9 +652,12 @@ export class QuerySystem {
         const cached = this.getFromCache(cacheKey);
         if (cached) {
             this.queryStats.cacheHits++;
+            // 缓存的实体也要排序以确保确定性
+            const sortedCached = [...cached];
+            this.sortEntitiesIfNeeded(sortedCached);
             return {
-                entities: cached,
-                count: cached.length,
+                entities: sortedCached,
+                count: sortedCached.length,
                 executionTime: performance.now() - startTime,
                 fromCache: true
             };
@@ -638,6 +668,9 @@ export class QuerySystem {
         const entities = Array.from(this.entityIndex.byTag.get(tag) || []);
 
         // 缓存结果
+        // 确保实体按ID排序，保证遍历的确定性
+        this.sortEntitiesIfNeeded(entities);
+        
         this.addToCache(cacheKey, entities);
 
         return {
@@ -673,9 +706,12 @@ export class QuerySystem {
         const cached = this.getFromCache(cacheKey);
         if (cached) {
             this.queryStats.cacheHits++;
+            // 缓存的实体也要排序以确保确定性
+            const sortedCached = [...cached];
+            this.sortEntitiesIfNeeded(sortedCached);
             return {
-                entities: cached,
-                count: cached.length,
+                entities: sortedCached,
+                count: sortedCached.length,
                 executionTime: performance.now() - startTime,
                 fromCache: true
             };
@@ -686,6 +722,9 @@ export class QuerySystem {
         const entities = Array.from(this.entityIndex.byName.get(name) || []);
 
         // 缓存结果
+        // 确保实体按ID排序，保证遍历的确定性
+        this.sortEntitiesIfNeeded(entities);
+        
         this.addToCache(cacheKey, entities);
 
         return {
@@ -721,9 +760,12 @@ export class QuerySystem {
         const cached = this.getFromCache(cacheKey);
         if (cached) {
             this.queryStats.cacheHits++;
+            // 缓存的实体也要排序以确保确定性
+            const sortedCached = [...cached];
+            this.sortEntitiesIfNeeded(sortedCached);
             return {
-                entities: cached,
-                count: cached.length,
+                entities: sortedCached,
+                count: sortedCached.length,
                 executionTime: performance.now() - startTime,
                 fromCache: true
             };
@@ -734,6 +776,9 @@ export class QuerySystem {
         const entities = Array.from(this.entityIndex.byComponentType.get(componentType) || []);
 
         // 缓存结果
+        // 确保实体按ID排序，保证遍历的确定性
+        this.sortEntitiesIfNeeded(entities);
+        
         this.addToCache(cacheKey, entities);
 
         return {
@@ -903,9 +948,12 @@ export class QuerySystem {
     
     /**
      * 获取所有实体
+     * 返回按ID排序的实体列表，确保遍历顺序的确定性
      */
     public getAllEntities(): Entity[] {
-        return [...this.entities];
+        const entities = [...this.entities];
+        this.sortEntitiesIfNeeded(entities);
+        return entities;
     }
     
     /**
