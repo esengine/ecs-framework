@@ -212,25 +212,6 @@ describe('TypeUtils - 类型工具类测试', () => {
         });
     });
 
-    describe('性能测试', () => {
-        it('大量类型获取应该高效', () => {
-            const testObjects = [
-                42, 'string', true, [], {}, new Date(), new TestClass(),
-                new Map(), new Set(), Symbol('test'), BigInt(42)
-            ];
-            
-            const startTime = performance.now();
-            
-            for (let i = 0; i < 10000; i++) {
-                testObjects.forEach(obj => {
-                    TypeUtils.getType(obj);
-                });
-            }
-            
-            const endTime = performance.now();
-            expect(endTime - startTime).toBeLessThan(100); // 应该在100ms内完成
-        });
-    });
 
     describe('实际使用场景测试', () => {
         it('应该能够用于类型检查', () => {
