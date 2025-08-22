@@ -1084,10 +1084,10 @@ export class Entity {
             componentCount: this.components.length,
             componentTypes: this.components.map(c => getComponentInstanceTypeName(c)),
             componentMask: this._componentMask.toString(2), // 二进制表示
-            parentId: this._parent?.id || null,
-            childCount: this._children.length,
-            childIds: this._children.map(c => c.id),
-            depth: this.getDepth(),
+            parentId: Core.entityHierarchyEnabled ? (this._parent?.id || null) : null,
+            childCount: Core.entityHierarchyEnabled ? this._children.length : 0,
+            childIds: Core.entityHierarchyEnabled ? this._children.map(c => c.id) : [],
+            depth: Core.entityHierarchyEnabled ? this.getDepth() : 0,
             indexMappingSize: this._componentTypeToIndex.size
         };
     }

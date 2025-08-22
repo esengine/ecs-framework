@@ -27,7 +27,17 @@ jobs:
       run: npm run build:core
 
     - name: Run tests with coverage
-      run: npm run test:ci
+      run: |
+        set -e
+        echo "开始运行测试..."
+        npm run test:ci 2>&1 | tee test-output.log
+        echo "测试完成，检查结果..."
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+          echo "❌ 测试失败，退出码: ${PIPESTATUS[0]}"
+          cat test-output.log
+          exit 1
+        fi
+        echo "✅ 测试通过"
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4

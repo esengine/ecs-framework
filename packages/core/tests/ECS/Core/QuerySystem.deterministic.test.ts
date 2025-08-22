@@ -28,6 +28,7 @@ describe('QuerySystem确定性测试', () => {
             (Core as any)._instance = null;
         }
         Core.create({ debug: false });
+        Core.deterministicSortingEnabled = true; // 启用确定性排序
         scene = new Scene();
         querySystem = scene.querySystem;
         
@@ -51,6 +52,7 @@ describe('QuerySystem确定性测试', () => {
     });
 
     afterEach(() => {
+        Core.deterministicSortingEnabled = false; // 恢复默认设置
         if ((Core as any)._instance) {
             (Core as any)._instance = null;
         }

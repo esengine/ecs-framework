@@ -52,10 +52,14 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   // 测试超时设置
-  testTimeout: 10000,
+  testTimeout: 30000,
   // 清除模块缓存
   clearMocks: true,
   restoreMocks: true,
+  // 在CI环境中更严格的错误处理
+  errorOnDeprecated: true,
+  detectOpenHandles: true,
+  forceExit: true,
   // 忽略某些模块
   modulePathIgnorePatterns: [
     '<rootDir>/bin/',

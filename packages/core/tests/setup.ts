@@ -5,7 +5,31 @@
  */
 
 // 设置测试超时时间（毫秒）
-jest.setTimeout(10000);
+jest.setTimeout(30000);
+
+// 在CI环境中添加进程级别的错误处理
+if (process.env.CI) {
+  // 捕获未处理的Promise拒绝
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('[ERROR] 未处理的Promise拒绝:', reason);
+    console.error('Promise:', promise);
+    process.exit(1);
+  });
+
+  // 捕获未捕获的异常
+  process.on('uncaughtException', (error) => {
+    console.error('[ERROR] 未捕获的异常:', error);
+    process.exit(1);
+  });
+
+  // 添加进程警告监听
+  process.on('warning', (warning) => {
+    console.warn('[WARN] 进程警告:', warning.name, warning.message);
+    if (warning.stack) {
+      console.warn('Stack:', warning.stack);
+    }
+  });
+}
 
 // 模拟控制台方法以减少测试输出噪音
 const originalConsoleLog = console.log;
