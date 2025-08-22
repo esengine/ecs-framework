@@ -114,6 +114,11 @@ export interface IScene {
     findEntity(name: string): Entity | null;
 
     /**
+     * 根据ID查找实体
+     */
+    findEntityById(id: number): Entity | null;
+
+    /**
      * 根据标签查找实体
      */
     findEntitiesByTag(tag: number): Entity[];

@@ -9,6 +9,8 @@ import { TypeSafeEventSystem } from './Core/EventSystem';
 import { EventBus } from './Core/EventBus';
 import { IScene, ISceneConfig } from './IScene';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from './Decorators';
+import { CommandBuffer } from './Core/CommandBuffer';
+import { SceneCommandBufferContext } from './Core/CommandBuffer/SceneCommandBufferContext';
 
 /**
  * 游戏场景默认实现类
@@ -65,6 +67,13 @@ export class Scene implements IScene {
      * 类型安全的事件系统。
      */
     public readonly eventSystem: TypeSafeEventSystem;
+
+    /**
+     * 命令缓冲器
+     * 
+     * 用于延迟和批处理结构性变更操作。
+     */
+    public readonly commandBuffer: CommandBuffer;
     
     /**
      * 场景是否已开始运行
@@ -89,6 +98,7 @@ export class Scene implements IScene {
         this.componentStorageManager = new ComponentStorageManager();
         this.querySystem = new QuerySystem();
         this.eventSystem = new TypeSafeEventSystem();
+        this.commandBuffer = new CommandBuffer(new SceneCommandBufferContext(this));
 
         // 应用配置
         if (config?.name) {
@@ -188,6 +198,9 @@ export class Scene implements IScene {
         // 更新实体处理器的后处理方法
         if (this.entityProcessors != null)
             this.entityProcessors.lateUpdate();
+
+        // 应用命令缓冲器的结构性变更
+        this.commandBuffer.apply();
     }
 
     /**
@@ -201,6 +214,9 @@ export class Scene implements IScene {
                 processor.fixedUpdate();
             }
         }
+
+        // 在固定更新后也应用命令缓冲器
+        this.commandBuffer.apply();
     }
 
     /**

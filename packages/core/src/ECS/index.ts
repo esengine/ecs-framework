@@ -12,4 +12,5 @@ export { EntityManager, EntityQueryBuilder } from './Core/EntityManager';
 export * from './Core/Events';
 export * from './Core/Query';
 export * from './Core/Performance';
-export * from './Core/Storage'; 
+export * from './Core/Storage';
+export * from './Core/CommandBuffer'; 
