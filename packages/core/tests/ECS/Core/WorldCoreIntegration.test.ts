@@ -63,6 +63,10 @@ class NetworkSyncGlobalSystem implements IGlobalSystem {
         // 同步网络数据等全局逻辑
     }
     
+    public fixedUpdate(): void {
+        // 固定步长网络同步
+    }
+    
     public reset(): void {
         this.updateCount = 0;
     }
@@ -97,6 +101,10 @@ class NetworkGlobalSystem implements IGlobalSystem {
     public update(): void {
         this.syncCount++;
         // 全局网络同步逻辑
+    }
+    
+    public fixedUpdate(): void {
+        // 固定步长全局网络同步
     }
     
     public reset(): void {

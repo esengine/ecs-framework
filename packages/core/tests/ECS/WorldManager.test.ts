@@ -28,6 +28,10 @@ class TestGlobalSystem {
         this.updateCount++;
     }
     
+    public fixedUpdate(): void {
+        // 固定步长更新
+    }
+    
     public reset(): void {
         this.updateCount = 0;
     }

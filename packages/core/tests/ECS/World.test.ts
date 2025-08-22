@@ -37,6 +37,10 @@ class TestGlobalSystem implements IGlobalSystem {
         this.updateCount++;
     }
     
+    public fixedUpdate(): void {
+        // 固定步长更新逻辑
+    }
+    
     public reset(): void {
         this.updateCount = 0;
     }
