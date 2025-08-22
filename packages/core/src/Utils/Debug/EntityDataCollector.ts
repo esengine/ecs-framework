@@ -4,11 +4,13 @@ import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';
 import { ComponentTypeManager } from '../../ECS/Utils/ComponentTypeManager';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
+import { forSystem } from '../PRNG';
 
 /**
  * 实体数据收集器
  */
 export class EntityDataCollector {
+    private static readonly debugRNG = forSystem('EntityDataCollector');
     public collectEntityData(): IEntityDebugData {
         const scene = Core.scene;
         if (!scene) {
@@ -886,7 +888,7 @@ export class EntityDataCollector {
                 _isLazyObject: true,
                 _typeName: 'Unknown',
                 _summary: `无法分析的对象: ${error instanceof Error ? error.message : String(error)}`,
-                _objectId: Math.random().toString(36).substr(2, 9)
+                _objectId: EntityDataCollector.debugRNG.nextU32().toString(36).substr(2, 9)
             };
         }
     }
@@ -941,9 +943,9 @@ export class EntityDataCollector {
             if (obj.uuid !== undefined) return `obj_${obj.uuid}`;
             if (obj._uuid !== undefined) return `obj_${obj._uuid}`;
 
-            return `obj_${Math.random().toString(36).substr(2, 9)}`;
+            return `obj_${EntityDataCollector.debugRNG.nextU32().toString(36).substr(2, 9)}`;
         } catch {
-            return `obj_${Math.random().toString(36).substr(2, 9)}`;
+            return `obj_${EntityDataCollector.debugRNG.nextU32().toString(36).substr(2, 9)}`;
         }
     }
 
