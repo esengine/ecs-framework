@@ -15,6 +15,7 @@ import { QuerySystem } from '../../../src/ECS/Core/QuerySystem';
 import { TypeSafeEventSystem } from '../../../src/ECS/Core/EventSystem';
 import { EntitySystem } from '../../../src/ECS/Systems/EntitySystem';
 import { Matcher } from '../../../src/ECS/Utils/Matcher';
+import { Core } from '../../../src/Core';
 
 // 测试组件
 class TestComponent extends Component {
@@ -78,6 +79,11 @@ describe('FluentAPI - 流式API测试', () => {
 
         beforeEach(() => {
             builder = new EntityBuilder(scene, scene.componentStorageManager);
+            Core.entityHierarchyEnabled = true;
+        });
+
+        afterEach(() => {
+            Core.entityHierarchyEnabled = false;
         });
 
         test('应该能够创建实体构建器', () => {
