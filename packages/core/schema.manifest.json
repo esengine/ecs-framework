@@ -1,0 +1,259 @@
+{
+  "version": 1,
+  "nextComponentId": 8,
+  "nextFieldId": 20,
+  "components": {
+    "TestComponent": {
+      "typeId": 1,
+      "deprecated": false,
+      "fields": {
+        "value": {
+          "id": 1,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 1,
+            "dataType": "number"
+          }
+        },
+        "name": {
+          "id": 2,
+          "dataType": "string",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 2,
+            "dataType": "string"
+          }
+        }
+      },
+      "version": 1,
+      "createdAt": 1755995809728
+    },
+    "InputComponent": {
+      "typeId": 2,
+      "deprecated": false,
+      "fields": {
+        "inputHistory": {
+          "id": 3,
+          "dataType": "custom",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 1,
+            "dataType": "custom"
+          }
+        }
+      },
+      "version": 1,
+      "createdAt": 1755995809744
+    },
+    "GameStateComponent": {
+      "typeId": 3,
+      "deprecated": false,
+      "fields": {
+        "level": {
+          "id": 4,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 1,
+            "dataType": "number"
+          }
+        },
+        "score": {
+          "id": 5,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 2,
+            "dataType": "number"
+          }
+        },
+        "lives": {
+          "id": 6,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 3,
+            "dataType": "number"
+          }
+        }
+      },
+      "version": 1,
+      "createdAt": 1755996237660
+    },
+    "PlayerComponent": {
+      "typeId": 4,
+      "deprecated": false,
+      "fields": {
+        "playerId": {
+          "id": 7,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 1,
+            "dataType": "number"
+          }
+        },
+        "name": {
+          "id": 8,
+          "dataType": "string",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 2,
+            "dataType": "string"
+          }
+        },
+        "x": {
+          "id": 9,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 3,
+            "dataType": "number"
+          }
+        },
+        "y": {
+          "id": 10,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 4,
+            "dataType": "number"
+          }
+        },
+        "health": {
+          "id": 11,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 5,
+            "dataType": "number"
+          }
+        }
+      },
+      "version": 1,
+      "createdAt": 1755996237669
+    },
+    "EnemyComponent": {
+      "typeId": 5,
+      "deprecated": false,
+      "fields": {
+        "enemyType": {
+          "id": 12,
+          "dataType": "string",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 1,
+            "dataType": "string"
+          }
+        },
+        "damage": {
+          "id": 13,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 2,
+            "dataType": "number"
+          }
+        },
+        "x": {
+          "id": 14,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 3,
+            "dataType": "number"
+          }
+        },
+        "y": {
+          "id": 15,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 4,
+            "dataType": "number"
+          }
+        }
+      },
+      "version": 1,
+      "createdAt": 1755996237679
+    },
+    "PositionComponent": {
+      "typeId": 6,
+      "deprecated": false,
+      "fields": {
+        "x": {
+          "id": 16,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 1,
+            "dataType": "number"
+          }
+        },
+        "y": {
+          "id": 17,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 2,
+            "dataType": "number"
+          }
+        }
+      },
+      "version": 1,
+      "createdAt": 1755996372229
+    },
+    "VelocityComponent": {
+      "typeId": 7,
+      "deprecated": false,
+      "fields": {
+        "vx": {
+          "id": 18,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 1,
+            "dataType": "number"
+          }
+        },
+        "vy": {
+          "id": 19,
+          "dataType": "number",
+          "deprecated": false,
+          "nullable": false,
+          "serializationOptions": {
+            "id": 2,
+            "dataType": "number"
+          }
+        }
+      },
+      "version": 1,
+      "createdAt": 1755996372241
+    }
+  },
+  "deprecatedIds": {
+    "components": [],
+    "fields": []
+  },
+  "createdAt": 1755995809725,
+  "updatedAt": 1755996372243
+}

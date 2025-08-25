@@ -54,6 +54,18 @@ export interface IScene {
     readonly systems: EntitySystem[];
 
     /**
+     * 抑制副作用标志
+     * 当为true时，抑制事件派发、日志输出等副作用，用于回放/恢复期间
+     */
+    suspendEffects: boolean;
+
+    /**
+     * 场景执行阶段
+     * 用于控制快照捕获时机
+     */
+    phase: 'Pre' | 'Sim' | 'Post' | 'Idle';
+
+    /**
      * 初始化场景
      */
     initialize(): void;
@@ -161,4 +173,15 @@ export interface ISceneConfig {
      * 调试配置
      */
     debug?: boolean;
+    /**
+     * 快照配置
+     */
+    snapshot?: {
+        /** 快照窗口大小 */
+        windowFrames?: number;
+        /** 是否启用自动快照 */
+        enableAutoSnapshot?: boolean;
+        /** 自动快照间隔 */
+        autoSnapshotInterval?: number;
+    };
 }

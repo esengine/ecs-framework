@@ -259,6 +259,64 @@ export class IdentifierPool {
     }
 
     /**
+     * 获取完整的内部状态用于快照
+     * 
+     * @returns 包含所有内部状态的对象
+     */
+    public getSerializableState(): {
+        nextAvailableIndex: number;
+        freeIndices: number[];
+        generations: [number, number][];
+        pendingRecycle: Array<{
+            index: number;
+            generation: number;
+            timestamp: number;
+        }>;
+        stats: {
+            totalAllocated: number;
+            totalRecycled: number;
+            currentActive: number;
+            memoryExpansions: number;
+        };
+    } {
+        return {
+            nextAvailableIndex: this._nextAvailableIndex,
+            freeIndices: [...this._freeIndices],
+            generations: Array.from(this._generations.entries()),
+            pendingRecycle: [...this._pendingRecycle],
+            stats: { ...this._stats }
+        };
+    }
+
+    /**
+     * 从序列化状态恢复内部状态
+     * 
+     * @param state 要恢复的状态对象
+     */
+    public restoreFromSerializableState(state: {
+        nextAvailableIndex: number;
+        freeIndices: number[];
+        generations: [number, number][];
+        pendingRecycle: Array<{
+            index: number;
+            generation: number;
+            timestamp: number;
+        }>;
+        stats: {
+            totalAllocated: number;
+            totalRecycled: number;
+            currentActive: number;
+            memoryExpansions: number;
+        };
+    }): void {
+        this._nextAvailableIndex = state.nextAvailableIndex;
+        this._freeIndices = [...state.freeIndices];
+        this._generations = new Map(state.generations);
+        this._pendingRecycle = [...state.pendingRecycle];
+        this._stats = { ...state.stats };
+    }
+
+    /**
      * 清理过期的延迟回收项
      * 
      * 将超过延迟时间的回收项真正回收到空闲列表中。

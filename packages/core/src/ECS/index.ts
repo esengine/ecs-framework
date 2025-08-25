@@ -13,4 +13,6 @@ export * from './Core/Events';
 export * from './Core/Query';
 export * from './Core/Performance';
 export * from './Core/Storage';
-export * from './Core/CommandBuffer'; 
+export * from './Core/CommandBuffer';
+export * from './Core/Snapshot';
+export * from './Core/DeterministicTestUtils'; 

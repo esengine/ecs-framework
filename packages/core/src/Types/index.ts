@@ -2,6 +2,8 @@
  * 框架核心类型定义
  */
 
+import type { ComponentRegistry } from '../ECS/Core/Serialization/SchemaManifest';
+
 /**
  * 组件接口
  * 
@@ -260,6 +262,22 @@ export interface IECSDebugConfig {
 }
 
 /**
+ * 序列化配置接口
+ */
+export interface ISerializationConfig {
+    /** 是否启用序列化系统 */
+    enabled?: boolean;
+    /** 用户提供的组件注册表数据 */
+    componentRegistry?: ComponentRegistry;
+    /** 是否启用二进制格式 */
+    binaryMode?: boolean;
+    /** 是否启用压缩 */
+    compression?: boolean;
+    /** 是否跳过默认值 */
+    skipDefaults?: boolean;
+}
+
+/**
  * Core配置接口
  */
 export interface ICoreConfig {
@@ -269,6 +287,8 @@ export interface ICoreConfig {
     enableEntitySystems?: boolean;
     /** 调试配置 */
     debugConfig?: IECSDebugConfig;
+    /** 序列化配置 */
+    serialization?: ISerializationConfig;
     /** 是否启用Entity/Component的update遍历功能（不符合纯ECS设计，默认false） */
     enableEntityComponentUpdate?: boolean;
     /** 是否启用Entity父子关系功能（不符合纯ECS设计，默认false） */

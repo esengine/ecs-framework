@@ -1,6 +1,7 @@
 import { IScene } from './IScene';
 import { Scene } from './Scene';
 import { createLogger } from '../Utils/Logger';
+import { ColumnarSerializer } from './Core/Serialization/ColumnarSerializer';
 
 const logger = createLogger('World');
 
@@ -115,9 +116,9 @@ export class World {
     // ===== Scene管理 =====
 
     /**
-     * 创建并添加Scene到World
+     * 添加Scene实例到World
      */
-    public createScene<T extends IScene>(sceneId: string, sceneInstance?: T): T {
+    public addScene<T extends IScene>(sceneId: string, sceneInstance: T): T {
         if (this._scenes.has(sceneId)) {
             throw new Error(`Scene ID '${sceneId}' 已存在于World '${this.name}' 中`);
         }
@@ -126,14 +127,13 @@ export class World {
             throw new Error(`World '${this.name}' 已达到最大Scene数量限制: ${this._config.maxScenes}`);
         }
 
-        // 如果没有提供Scene实例，创建默认Scene
-        const scene = sceneInstance || (new Scene() as unknown as T);
+        const scene = sceneInstance;
         
         // 设置Scene的标识
-        if ('id' in scene) {
+        if (scene && typeof scene === 'object' && 'id' in scene) {
             (scene as any).id = sceneId;
         }
-        if ('name' in scene && !scene.name) {
+        if (scene && typeof scene === 'object' && 'name' in scene && !scene.name) {
             scene.name = sceneId;
         }
 
@@ -142,8 +142,15 @@ export class World {
         // 初始化Scene
         scene.initialize();
         
-        logger.info(`在World '${this.name}' 中创建Scene: ${sceneId}`);
+        logger.info(`在World '${this.name}' 中添加Scene: ${sceneId}`);
         return scene;
+    }
+
+    /**
+     * 创建默认Scene并添加到World
+     */
+    public createDefaultScene(sceneId: string): Scene {
+        return this.addScene(sceneId, new Scene());
     }
 
     /**
@@ -539,5 +546,86 @@ export class World {
      */
     public get createdAt(): number {
         return this._createdAt;
+    }
+
+    // ===== 序列化支持 =====
+
+    /**
+     * 序列化World数据
+     * 
+     * @param options 序列化选项
+     * @returns 序列化结果
+     */
+    public serialize(options?: {
+        compression?: boolean;
+        skipDefaults?: boolean;
+        strict?: boolean;
+        includeScenes?: string[];
+        excludeScenes?: string[];
+    }) {
+        try {
+            return ColumnarSerializer.serialize(this, {
+                compression: options?.compression ?? true,
+                skipDefaults: options?.skipDefaults ?? true,
+                strict: options?.strict ?? false,
+                maxEntities: 1000000,
+                maxComponents: 10000,
+                ...options
+            });
+        } catch (error) {
+            logger.error(`World序列化失败: ${this.name}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * 从序列化数据反序列化到当前World
+     * 
+     * @param buffer 序列化的二进制数据
+     * @param options 反序列化选项
+     */
+    public deserialize(buffer: ArrayBuffer, options?: {
+        merge?: boolean;
+        clearExisting?: boolean;
+        skipValidation?: boolean;
+    }) {
+        try {
+            const shouldClearExisting = options?.clearExisting ?? true;
+            
+            if (shouldClearExisting) {
+                this.clearAllScenes();
+            }
+            
+            return ColumnarSerializer.deserialize(buffer, this);
+        } catch (error) {
+            logger.error(`World反序列化失败: ${this.name}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * 将World序列化为JSON格式（用于调试和开发）
+     */
+    public toJSON(): any {
+        return {
+            name: this.name,
+            config: this._config,
+            createdAt: this._createdAt,
+            isActive: this._isActive,
+            sceneCount: this._scenes.size,
+            activeSceneCount: this._activeScenes.size,
+            scenes: Array.from(this._scenes.keys()),
+            activeScenes: Array.from(this._activeScenes),
+            globalSystems: this._globalSystems.map(system => system.name)
+        };
+    }
+
+    /**
+     * 清空所有Scene
+     */
+    private clearAllScenes(): void {
+        for (const sceneId of Array.from(this._scenes.keys())) {
+            this.removeScene(sceneId);
+        }
     }
 }

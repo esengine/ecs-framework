@@ -52,7 +52,7 @@ describe('Timer - 定时器测试', () => {
             const testContext: TestContext = { id: 'test', value: 42 };
             timer.initialize(1.0, false, testContext, mockCallback);
             
-            const context = timer.getContext<TestContext>();
+            const context = timer.getContext() as TestContext;
             expect(context.id).toBe('test');
             expect(context.value).toBe(42);
         });
@@ -193,8 +193,8 @@ describe('Timer - 定时器测试', () => {
             
             timer.unload();
             
-            expect(timer.context).toBeNull();
-            expect(timer._onTime).toBeNull();
+            expect(timer.context).toBeUndefined();
+            expect(timer._onTime).toBeUndefined();
         });
     });
 

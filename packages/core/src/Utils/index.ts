@@ -6,4 +6,5 @@ export * from './PerformanceMonitor';
 export { Time } from './Time';
 export * from './Debug';
 export * from './Logger';
-export * from './PRNG'; 
+export * from './PRNG';
+export * from './Hash32'; 

@@ -251,7 +251,8 @@ describe('WorldManager', () => {
             const world2 = worldManager.createWorld('stats-world2');
             
             // 为world1添加一些内容
-            const scene1 = world1.createScene('scene1');
+            const scene1 = new Scene({ name: 'scene1' });
+            world1.addScene('scene1', scene1);
             scene1.createEntity('entity1');
             worldManager.setWorldActive('stats-world1', true);
             
@@ -287,7 +288,8 @@ describe('WorldManager', () => {
             
             // 创建一个有内容的World
             const fullWorld = worldManager.createWorld('full-world');
-            const scene = fullWorld.createScene('scene');
+            const scene = new Scene({ name: 'scene' });
+            fullWorld.addScene('scene', scene);
             scene.createEntity('entity');
             fullWorld.start();
             
@@ -307,8 +309,10 @@ describe('WorldManager', () => {
             const world3 = worldManager.createWorld('update-world3');
             
             // 添加一些内容到World中
-            const scene1 = world1.createScene('scene1');
-            const scene2 = world2.createScene('scene2');
+            const scene1 = new Scene({ name: 'scene1' });
+            world1.addScene('scene1', scene1);
+            const scene2 = new Scene({ name: 'scene2' });
+            world2.addScene('scene2', scene2);
             
             scene1.createEntity('entity1');
             scene2.createEntity('entity2');
@@ -395,7 +399,8 @@ describe('WorldManager', () => {
             // 创建多个World并添加内容
             for (let i = 0; i < 10; i++) {
                 const world = worldManager.createWorld(`memory-world-${i}`);
-                const scene = world.createScene('scene');
+                const scene = new Scene({ name: 'scene' });
+                world.addScene('scene', scene);
                 
                 // 添加一些实体和系统
                 for (let j = 0; j < 5; j++) {

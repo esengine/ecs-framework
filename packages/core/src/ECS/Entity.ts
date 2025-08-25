@@ -5,18 +5,7 @@ import { IBigIntLike, BigIntFactory } from './Utils/BigIntCompatibility';
 import { createLogger } from '../Utils/Logger';
 import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
 import { Core } from '../Core';
-
-// Forward declaration to avoid circular dependency
-interface IScene {
-    readonly name: string;
-    readonly componentStorageManager: import('./Core/ComponentStorage').ComponentStorageManager;
-    readonly querySystem: import('./Core/QuerySystem').QuerySystem;
-    readonly eventSystem: import('./Core/EventSystem').TypeSafeEventSystem;
-    readonly entities: import('./Utils/EntityList').EntityList;
-    addEntity(entity: Entity): Entity;
-    initialize(): void;
-    update(deltaTime: number): void;
-}
+import { IScene } from './IScene';
 
 /**
  * 实体比较器
@@ -414,11 +403,13 @@ export class Entity {
             this.scene.componentStorageManager.addComponent(this.id, component);
         }
 
-        // 调用组件的生命周期方法
-        component.onAddedToEntity();
+        // 调用组件的生命周期方法（仅在未抑制副作用时）
+        if (!this.scene || !this.scene.suspendEffects) {
+            component.onAddedToEntity();
+        }
         
-        // 发射组件添加事件
-        if (Entity.eventBus) {
+        // 发射组件添加事件（仅在未抑制副作用时）
+        if (Entity.eventBus && (!this.scene || !this.scene.suspendEffects)) {
             Entity.eventBus.emitComponentAdded({
                 timestamp: Date.now(),
                 source: 'Entity',
@@ -566,13 +557,13 @@ export class Entity {
             this.scene.componentStorageManager.removeComponent(this.id, componentType);
         }
 
-        // 调用组件的生命周期方法
-        if (component.onRemovedFromEntity) {
+        // 调用组件的生命周期方法（仅在未抑制副作用时）
+        if (component.onRemovedFromEntity && (!this.scene || !this.scene.suspendEffects)) {
             component.onRemovedFromEntity();
         }
         
-        // 发射组件移除事件
-        if (Entity.eventBus) {
+        // 发射组件移除事件（仅在未抑制副作用时）
+        if (Entity.eventBus && (!this.scene || !this.scene.suspendEffects)) {
             Entity.eventBus.emitComponentRemoved({
                 timestamp: Date.now(),
                 source: 'Entity',
@@ -631,8 +622,10 @@ export class Entity {
                 this.scene.componentStorageManager.removeComponent(this.id, componentType);
             }
 
-            // 调用组件的生命周期方法
-            component.onRemovedFromEntity();
+            // 调用组件的生命周期方法（仅在未抑制副作用时）
+            if (!this.scene || !this.scene.suspendEffects) {
+                component.onRemovedFromEntity();
+            }
             
             // 清除组件的实体引用
             component.entity = null as any;

@@ -93,6 +93,14 @@ export class ComponentRegistry {
     }
 
     /**
+     * 获取所有已注册的组件名称到类型的映射
+     * @returns 组件名称到类型的映射
+     */
+    public static getAllRegisteredComponents(): Map<string, Function> {
+        return new Map(this.componentNameToType);
+    }
+
+    /**
      * 获取所有已注册的组件类型
      * @returns 组件类型映射
      */

@@ -9,9 +9,11 @@ import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
 import { IScene } from './ECS/IScene';
 import { WorldManager } from './ECS/WorldManager';
 import { DebugManager } from './Utils/Debug';
-import { ICoreConfig, IECSDebugConfig } from './Types';
+import { DeterministicTestUtils } from './ECS/Core/DeterministicTestUtils';
+import { ICoreConfig, IECSDebugConfig, ISerializationConfig } from './Types';
 import { BigIntFactory, EnvironmentInfo } from './ECS/Utils/BigIntCompatibility';
 import { createLogger } from './Utils/Logger';
+import { SchemaRegistry } from './ECS/Core/Serialization/SchemaRegistry';
 
 /**
  * 游戏引擎核心类
@@ -249,10 +251,12 @@ export class Core {
             return null;
         }
 
-        // 确保默认World存在
-        this._instance.ensureDefaultWorld();
+        // 只有在WorldManager存在且有World时才返回Scene
+        if (!this._instance._worldManager) {
+            return null;
+        }
         
-        const defaultWorld = this._instance._worldManager!.getWorld(this.DEFAULT_WORLD_ID);
+        const defaultWorld = this._instance._worldManager.getWorld(this.DEFAULT_WORLD_ID);
         return defaultWorld?.getScene(this.DEFAULT_SCENE_ID) as T || null;
     }
 
@@ -268,6 +272,11 @@ export class Core {
             throw new Error("Core实例未创建，请先调用Core.create()");
         }
 
+        // 检查scene是否为null或undefined，如果是则忽略
+        if (!scene) {
+            return scene;
+        }
+
         // 确保默认World存在
         this._instance.ensureDefaultWorld();
         
@@ -279,7 +288,7 @@ export class Core {
         }
 
         // 添加新Scene到默认World
-        defaultWorld.createScene(this.DEFAULT_SCENE_ID, scene);
+        defaultWorld.addScene(this.DEFAULT_SCENE_ID, scene);
         defaultWorld.setSceneActive(this.DEFAULT_SCENE_ID, true);
 
         // 触发场景切换回调
@@ -394,6 +403,31 @@ export class Core {
             throw new Error('onTime callback is required');
         }
         return this._instance._timerManager.schedule(timeInSeconds, repeats, context as TContext, onTime);
+    }
+
+    /**
+     * 断言确定性：相同seed执行相同步数应得到相同签名
+     * 
+     * @param scene 场景实例
+     * @param seed 随机种子
+     * @param steps 执行步数
+     * @returns 是否通过断言
+     */
+    public static assertDeterministic(scene: IScene, seed: number, steps: number): boolean {
+        return DeterministicTestUtils.assertDeterministic(scene as any, seed, steps);
+    }
+
+    /**
+     * 断言回滚：从t0快照到t1，然后回滚到t0，重放到t1应得到相同签名
+     * 
+     * @param scene 场景实例
+     * @param seed 随机种子
+     * @param t0 起始时间点
+     * @param t1 结束时间点
+     * @returns 是否通过断言
+     */
+    public static assertRollback(scene: IScene, seed: number, t0: number, t1: number): boolean {
+        return DeterministicTestUtils.assertRollback(scene as any, seed, t0, t1);
     }
 
     /**
@@ -571,7 +605,36 @@ export class Core {
      * 执行核心系统的初始化逻辑。
      */
     protected initialize() {
-        // 核心系统初始化
+        // 初始化序列化系统
+        this.initializeSerialization();
+    }
+
+    /**
+     * 初始化序列化系统
+     */
+    private initializeSerialization(): void {
+        const config = this._config;
+        const serializationConfig: ISerializationConfig = {
+            enabled: true,
+            ...config.serialization
+        };
+
+        if (serializationConfig.enabled) {
+            try {
+                // 用户可以通过配置传入componentRegistry
+                SchemaRegistry.init(serializationConfig.componentRegistry);
+                Core._logger.info('序列化系统已初始化');
+                
+                if (serializationConfig.componentRegistry) {
+                    Core._logger.info('已加载用户提供的组件注册表');
+                } else {
+                    Core._logger.info('使用空注册表，组件将在运行时自动注册');
+                }
+            } catch (error) {
+                Core._logger.error('序列化系统初始化失败:', error);
+                throw error;
+            }
+        }
     }
 
     /**

@@ -21,6 +21,8 @@ import type { IComponent } from '../Types';
  * ```
  */
 export abstract class Component implements IComponent {
+    // 添加索引签名支持动态属性访问（用于序列化）
+    [key: string]: any;
     /**
      * 组件ID生成器
      * 

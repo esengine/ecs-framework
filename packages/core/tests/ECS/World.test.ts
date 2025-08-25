@@ -129,7 +129,8 @@ describe('World', () => {
     
     describe('Scene管理', () => {
         test('创建Scene应该成功', () => {
-            const scene = world.createScene('test-scene');
+            const scene = new Scene({ name: 'test-scene' });
+            world.addScene('test-scene', scene);
             
             expect(scene).toBeDefined();
             expect(world.sceneCount).toBe(1);
@@ -138,7 +139,8 @@ describe('World', () => {
         
         test('创建Scene时传入自定义Scene实例', () => {
             const customScene = new TestScene();
-            const scene = world.createScene('custom-scene', customScene);
+            world.addScene('custom-scene', customScene);
+            const scene = customScene;
             
             expect(scene).toBe(customScene);
             expect(scene.initializeCalled).toBe(true);
@@ -146,28 +148,34 @@ describe('World', () => {
         });
         
         test('重复的Scene ID应该抛出错误', () => {
-            world.createScene('duplicate');
+            const duplicateScene = new Scene({ name: 'duplicate' });
+            world.addScene('duplicate', duplicateScene);
             
             expect(() => {
-                world.createScene('duplicate');
+                const duplicateScene2 = new Scene({ name: 'duplicate' });
+                world.addScene('duplicate', duplicateScene2);
             }).toThrow("Scene ID 'duplicate' 已存在于World 'TestWorld' 中");
         });
         
         test('超出最大Scene数量限制应该抛出错误', () => {
             const limitedWorld = new World({ maxScenes: 2 });
             
-            limitedWorld.createScene('scene1');
-            limitedWorld.createScene('scene2');
+            const scene1 = new Scene({ name: 'scene1' });
+            limitedWorld.addScene('scene1', scene1);
+            const scene2 = new Scene({ name: 'scene2' });
+            limitedWorld.addScene('scene2', scene2);
             
             expect(() => {
-                limitedWorld.createScene('scene3');
+                const scene3 = new Scene({ name: 'scene3' });
+                limitedWorld.addScene('scene3', scene3);
             }).toThrow("World 'World' 已达到最大Scene数量限制: 2");
             
             limitedWorld.destroy();
         });
         
         test('获取Scene应该正确', () => {
-            const scene = world.createScene('get-test');
+            const scene = new Scene({ name: 'get-test' });
+            world.addScene('get-test', scene);
             const retrievedScene = world.getScene('get-test');
             
             expect(retrievedScene).toBe(scene);
@@ -180,7 +188,7 @@ describe('World', () => {
         
         test('移除Scene应该正确清理', () => {
             const testScene = new TestScene();
-            world.createScene('remove-test', testScene);
+            world.addScene('remove-test', testScene);
             world.setSceneActive('remove-test', true);
             
             const removed = world.removeScene('remove-test');
@@ -197,8 +205,10 @@ describe('World', () => {
         });
         
         test('获取所有Scene应该正确', () => {
-            const scene1 = world.createScene('scene1');
-            const scene2 = world.createScene('scene2');
+            const scene1 = new Scene({ name: 'scene1' });
+            world.addScene('scene1', scene1);
+            const scene2 = new Scene({ name: 'scene2' });
+            world.addScene('scene2', scene2);
             
             const allScenes = world.getAllScenes();
             
@@ -211,7 +221,7 @@ describe('World', () => {
     describe('Scene激活管理', () => {
         test('激活Scene应该正确', () => {
             const testScene = new TestScene();
-            world.createScene('active-test', testScene);
+            world.addScene('active-test', testScene);
             
             world.setSceneActive('active-test', true);
             
@@ -221,7 +231,8 @@ describe('World', () => {
         });
         
         test('停用Scene应该正确', () => {
-            world.createScene('deactive-test');
+            const deactiveTestScene = new Scene({ name: 'deactive-test' });
+            world.addScene('deactive-test', deactiveTestScene);
             world.setSceneActive('deactive-test', true);
             
             world.setSceneActive('deactive-test', false);
@@ -305,7 +316,7 @@ describe('World', () => {
         
         test('停止World应该停用所有Scene', () => {
             const testScene = new TestScene();
-            world.createScene('stop-test', testScene);
+            world.addScene('stop-test', testScene);
             world.setSceneActive('stop-test', true);
             world.start();
             
@@ -319,7 +330,7 @@ describe('World', () => {
             const testScene = new TestScene();
             const globalSystem = new TestGlobalSystem();
             
-            world.createScene('destroy-test', testScene);
+            world.addScene('destroy-test', testScene);
             world.addGlobalSystem(globalSystem);
             world.start();
             
@@ -338,7 +349,8 @@ describe('World', () => {
             world.start();
             
             // 创建测试Scene
-            const scene = world.createScene('update-test');
+            const scene = new Scene({ name: 'update-test' });
+            world.addScene('update-test', scene);
             world.setSceneActive('update-test', true);
             
             // 直接测试全局系统更新
@@ -359,8 +371,10 @@ describe('World', () => {
         });
         
         test('updateScenes应该更新激活的Scene', () => {
-            const scene1 = world.createScene('scene1');
-            const scene2 = world.createScene('scene2');
+            const scene1 = new Scene({ name: 'scene1' });
+            world.addScene('scene1', scene1);
+            const scene2 = new Scene({ name: 'scene2' });
+            world.addScene('scene2', scene2);
             
             scene1.addEntityProcessor(new TestSceneSystem());
             scene2.addEntityProcessor(new TestSceneSystem());
@@ -379,8 +393,10 @@ describe('World', () => {
     
     describe('状态和统计', () => {
         test('获取World状态应该正确', () => {
-            world.createScene('status-scene1');
-            world.createScene('status-scene2');
+            const statusScene1 = new Scene({ name: 'status-scene1' });
+            world.addScene('status-scene1', statusScene1);
+            const statusScene2 = new Scene({ name: 'status-scene2' });
+            world.addScene('status-scene2', statusScene2);
             world.setSceneActive('status-scene1', true);
             world.addGlobalSystem(new TestGlobalSystem());
             world.start();
@@ -405,7 +421,8 @@ describe('World', () => {
         test('获取World统计应该包含基本信息', () => {
             world.addGlobalSystem(new TestGlobalSystem());
             
-            const scene = world.createScene('stats-scene');
+            const scene = new Scene({ name: 'stats-scene' });
+            world.addScene('stats-scene', scene);
             const entity = scene.createEntity('stats-entity');
             entity.addComponent(new TestComponent());
             
@@ -429,7 +446,8 @@ describe('World', () => {
             });
             
             // 创建一个空Scene
-            autoCleanWorld.createScene('empty-scene');
+            const emptyScene = new Scene({ name: 'empty-scene' });
+            autoCleanWorld.addScene('empty-scene', emptyScene);
             autoCleanWorld.start();
             
             // 手动触发清理检查
@@ -445,14 +463,16 @@ describe('World', () => {
     describe('错误处理', () => {
         test('Scene ID为空时应该创建默认ID', () => {
             expect(() => {
-                world.createScene('');
+                const emptyNameScene = new Scene({ name: '' });
+                world.addScene('', emptyNameScene);
             }).not.toThrow();
         });
         
         test('极限情况下的资源管理', () => {
             // 创建大量Scene
             for (let i = 0; i < 5; i++) {
-                world.createScene(`scene_${i}`);
+                const scene = new Scene({ name: `scene_${i}` });
+                world.addScene(`scene_${i}`, scene);
                 world.setSceneActive(`scene_${i}`, true);
             }
             

@@ -30,7 +30,7 @@ export class DebugManager {
     private sendInterval: number;
     private isRunning: boolean = false;
 
-    constructor(core: Core, config: IECSDebugConfig) {
+    constructor(_core: Core, config: IECSDebugConfig) {
         this.config = config;
 
         // 初始化数据收集器
@@ -101,7 +101,7 @@ export class DebugManager {
     /**
      * 帧更新回调
      */
-    public onFrameUpdate(deltaTime: number): void {
+    public onFrameUpdate(_deltaTime: number): void {
         if (!this.isRunning || !this.config.enabled) return;
 
         this.frameCounter++;

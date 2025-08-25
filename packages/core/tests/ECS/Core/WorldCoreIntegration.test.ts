@@ -263,9 +263,12 @@ describe('World与Core集成测试', () => {
             const world3 = worldManager.createWorld('World3');
             
             // 为每个World创建Scene和System
-            const scene1 = world1.createScene('scene1', new TestScene());
-            const scene2 = world2.createScene('scene2', new TestScene());
-            const scene3 = world3.createScene('scene3', new TestScene());
+            const scene1 = new TestScene();
+            const scene2 = new TestScene();
+            const scene3 = new TestScene();
+            world1.addScene('scene1', scene1);
+            world2.addScene('scene2', scene2);
+            world3.addScene('scene3', scene3);
             
             // 启动部分World
             worldManager.setWorldActive('World1', true);
@@ -296,7 +299,8 @@ describe('World与Core集成测试', () => {
             world.addGlobalSystem(globalSystem);
             
             // 创建Scene
-            const scene = world.createScene('testScene');
+            const scene = new Scene();
+            world.addScene('testScene', scene);
             
             worldManager.setWorldActive('TestWorld', true);
             world.setSceneActive('testScene', true);
@@ -321,8 +325,10 @@ describe('World与Core集成测试', () => {
             const room2 = worldManager.createWorld('Room_002');
             
             // 为每个房间设置Scene
-            const gameScene1 = room1.createScene('game');
-            const gameScene2 = room2.createScene('game');
+            const gameScene1 = new Scene();
+            const gameScene2 = new Scene();
+            room1.addScene('game', gameScene1);
+            room2.addScene('game', gameScene2);
             
             // 为每个房间添加全局网络系统
             const netSystem1 = new NetworkGlobalSystem();
@@ -364,7 +370,8 @@ describe('World与Core集成测试', () => {
             
             // 创建房间
             const room = worldManager.createWorld('TempRoom');
-            const scene = room.createScene('game');
+            const scene = new Scene();
+            room.addScene('game', scene);
             
             // 添加内容
             for (let i = 0; i < 10; i++) {
@@ -401,9 +408,12 @@ describe('World与Core集成测试', () => {
             const clientWorld = worldManager.createWorld('ClientWorld');
             
             // 创建不同层的Scene
-            const gameplayScene = clientWorld.createScene('gameplay', new TestScene());
-            const uiScene = clientWorld.createScene('ui', new TestScene());
-            const effectsScene = clientWorld.createScene('effects', new TestScene());
+            const gameplayScene = new TestScene();
+            const uiScene = new TestScene();
+            const effectsScene = new TestScene();
+            clientWorld.addScene('gameplay', gameplayScene);
+            clientWorld.addScene('ui', uiScene);
+            clientWorld.addScene('effects', effectsScene);
             
             // 启动世界并激活所有Scene
             worldManager.setWorldActive('ClientWorld', true);
@@ -427,8 +437,10 @@ describe('World与Core集成测试', () => {
             const worldManager = Core.getWorldManager();
             const world = worldManager.createWorld('DynamicWorld');
             
-            const gameScene = world.createScene('game', new TestScene());
-            const menuScene = world.createScene('menu', new TestScene());
+            const gameScene = new TestScene();
+            const menuScene = new TestScene();
+            world.addScene('game', gameScene);
+            world.addScene('menu', menuScene);
             
             worldManager.setWorldActive('DynamicWorld', true);
             
@@ -470,7 +482,8 @@ describe('World与Core集成测试', () => {
                 const world = worldManager.createWorld(`World${i}`);
                 
                 for (let j = 0; j < scenePerWorld; j++) {
-                    const scene = world.createScene(`Scene${j}`, new TestScene());
+                    const scene = new TestScene();
+                    world.addScene(`Scene${j}`, scene);
                     
                     // 添加一些实体
                     for (let k = 0; k < 5; k++) {
@@ -522,7 +535,8 @@ describe('World与Core集成测试', () => {
                     worldIds.push(worldId);
                     
                     const world = worldManager.createWorld(worldId);
-                    const scene = world.createScene('test');
+                    const scene = new Scene();
+                    world.addScene('test', scene);
                     scene.createEntity('entity');
                     
                     worldManager.setWorldActive(worldId, true);

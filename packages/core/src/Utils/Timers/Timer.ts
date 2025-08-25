@@ -12,8 +12,8 @@ export class Timer<TContext = unknown> implements ITimer<TContext>{
     public _isDone: boolean = false;
     public _elapsedTime: number = 0;
 
-    public getContext<T>(): T {
-        return this.context as unknown as T;
+    public getContext(): TContext {
+        return this.context;
     }
 
     /**
@@ -64,7 +64,7 @@ export class Timer<TContext = unknown> implements ITimer<TContext>{
      * 空出对象引用，以便在js需要时GC可以清理它们的引用
      */
     public unload(){
-        this.context = null as unknown as TContext;
-        this._onTime = null!;
+        this.context = undefined as any;
+        this._onTime = undefined as any;
     }
 }

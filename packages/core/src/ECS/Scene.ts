@@ -11,6 +11,7 @@ import { IScene, ISceneConfig } from './IScene';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from './Decorators';
 import { CommandBuffer } from './Core/CommandBuffer';
 import { SceneCommandBufferContext } from './Core/CommandBuffer/SceneCommandBufferContext';
+import { SnapshotManager, SnapshotManagerOptions } from './Core/Snapshot';
 
 /**
  * 游戏场景默认实现类
@@ -25,6 +26,14 @@ export class Scene implements IScene {
      * 用于标识和调试的友好名称。
      */
     public name: string = "";
+
+    /**
+     * 副作用抑制标志
+     * 
+     * 当为true时，抑制事件派发、日志输出等副作用，用于回放/恢复期间。
+     */
+    public suspendEffects: boolean = false;
+    public phase: 'Pre' | 'Sim' | 'Post' | 'Idle' = 'Idle';
 
     /**
      * 场景中的实体集合
@@ -74,6 +83,13 @@ export class Scene implements IScene {
      * 用于延迟和批处理结构性变更操作。
      */
     public readonly commandBuffer: CommandBuffer;
+
+    /**
+     * 快照管理器
+     * 
+     * 用于世界状态的捕获和恢复。
+     */
+    public readonly snapshotManager: SnapshotManager;
     
     /**
      * 场景是否已开始运行
@@ -99,6 +115,13 @@ export class Scene implements IScene {
         this.querySystem = new QuerySystem();
         this.eventSystem = new TypeSafeEventSystem();
         this.commandBuffer = new CommandBuffer(new SceneCommandBufferContext(this));
+        
+        const snapshotOptions: SnapshotManagerOptions = {
+            windowFrames: config?.snapshot?.windowFrames ?? 60,
+            enableAutoSnapshot: config?.snapshot?.enableAutoSnapshot ?? false,
+            autoSnapshotInterval: config?.snapshot?.autoSnapshotInterval ?? 10
+        };
+        this.snapshotManager = new SnapshotManager(this, snapshotOptions);
 
         // 应用配置
         if (config?.name) {
@@ -185,9 +208,13 @@ export class Scene implements IScene {
      * 更新场景，更新实体组件、实体处理器等
      */
     public update() {
+        this.phase = 'Pre';
+        
         // 更新实体列表
         this.entities.updateLists();
 
+        this.phase = 'Sim';
+        
         // 更新实体处理器
         if (this.entityProcessors != null)
             this.entityProcessors.update();
@@ -199,8 +226,15 @@ export class Scene implements IScene {
         if (this.entityProcessors != null)
             this.entityProcessors.lateUpdate();
 
+        this.phase = 'Post';
+        
         // 应用命令缓冲器的结构性变更
         this.commandBuffer.apply();
+
+        // 更新快照管理器（处理自动快照等）
+        this.snapshotManager.update();
+        
+        this.phase = 'Idle';
     }
 
     /**
@@ -208,6 +242,8 @@ export class Scene implements IScene {
      * 用于物理计算、网络同步等需要确定性更新的逻辑
      */
     public fixedUpdate() {
+        this.phase = 'Sim';
+        
         // 固定步长更新实体处理器
         if (this.entityProcessors != null) {
             for (const processor of this.entityProcessors.processors) {
@@ -215,8 +251,12 @@ export class Scene implements IScene {
             }
         }
 
+        this.phase = 'Post';
+
         // 在固定更新后也应用命令缓冲器
         this.commandBuffer.apply();
+        
+        this.phase = 'Idle';
     }
 
     /**

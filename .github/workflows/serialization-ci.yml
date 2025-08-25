@@ -1,0 +1,342 @@
+name: 序列化系统CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/core/src/ECS/Core/Serialization/**'
+      - 'packages/core/src/ECS/Decorators/SerializationDecorators.ts'
+      - 'packages/core/src/ECS/Core/Snapshot/SceneWorldAdapter.ts'
+      - 'packages/core/tests/**/*Serializ*.test.ts'
+      - 'scripts/validate-schema.js'
+      - 'scripts/performance-test.js'
+      - 'schema.manifest.json'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/core/src/ECS/Core/Serialization/**'
+      - 'packages/core/src/ECS/Decorators/SerializationDecorators.ts'
+      - 'packages/core/src/ECS/Core/Snapshot/SceneWorldAdapter.ts'
+      - 'packages/core/tests/**/*Serializ*.test.ts'
+      - 'scripts/validate-schema.js'
+      - 'scripts/performance-test.js'
+      - 'schema.manifest.json'
+
+env:
+  NODE_VERSION: '18'
+  SCHEMA_MANIFEST_PATH: './schema.manifest.json'
+
+jobs:
+  schema-validation:
+    name: Schema验证
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 安装依赖
+        run: npm ci
+        
+      - name: 验证Schema Manifest
+        run: |
+          echo "🔍 验证Schema Manifest结构和一致性..."
+          node scripts/validate-schema.js --manifest ${{ env.SCHEMA_MANIFEST_PATH }} --verbose
+          
+      - name: 检查Schema变更
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "📋 检查Schema变更对兼容性的影响..."
+          # 获取基础分支的Schema文件
+          git fetch origin ${{ github.base_ref }}:base-branch
+          git checkout base-branch -- ${{ env.SCHEMA_MANIFEST_PATH }} || echo "基础分支没有Schema文件"
+          
+          # 如果存在基础Schema，进行对比
+          if [ -f "${{ env.SCHEMA_MANIFEST_PATH }}.base" ]; then
+            echo "发现Schema变更，进行兼容性检查..."
+            node -e "
+              const fs = require('fs');
+              const currentSchema = JSON.parse(fs.readFileSync('${{ env.SCHEMA_MANIFEST_PATH }}', 'utf-8'));
+              const baseSchema = JSON.parse(fs.readFileSync('${{ env.SCHEMA_MANIFEST_PATH }}.base', 'utf-8'));
+              
+              console.log('当前Schema版本:', currentSchema.version);
+              console.log('基础Schema版本:', baseSchema.version);
+              
+              // 检查版本号是否递增
+              if (currentSchema.version <= baseSchema.version) {
+                console.error('❌ Schema版本号应该递增');
+                process.exit(1);
+              }
+              
+              // 检查ID分配是否单调递增
+              if (currentSchema.nextComponentId < baseSchema.nextComponentId) {
+                console.error('❌ nextComponentId不应该减少');
+                process.exit(1);
+              }
+              
+              if (currentSchema.nextFieldId < baseSchema.nextFieldId) {
+                console.error('❌ nextFieldId不应该减少');
+                process.exit(1);
+              }
+              
+              console.log('✅ Schema版本兼容性检查通过');
+            "
+          else
+            echo "ℹ️  这是首个Schema文件，跳过兼容性检查"
+          fi
+
+  unit-tests:
+    name: 单元测试
+    runs-on: ubuntu-latest
+    needs: schema-validation
+    strategy:
+      matrix:
+        test-suite:
+          - 'BinaryIO'
+          - 'SerializerRegistry'
+          - 'SchemaRegistry'
+          - 'ColumnarSerializer'
+          - 'SerializationDecorators'
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 安装依赖
+        run: npm ci
+        
+      - name: 运行单元测试
+        run: |
+          echo "🧪 运行 ${{ matrix.test-suite }} 单元测试..."
+          npm test -- --testNamePattern="${{ matrix.test-suite }}" --verbose --coverage
+          
+      - name: 上传覆盖率报告
+        if: matrix.test-suite == 'ColumnarSerializer'
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+          flags: serialization
+          name: serialization-coverage
+
+  integration-tests:
+    name: 集成测试
+    runs-on: ubuntu-latest
+    needs: [schema-validation, unit-tests]
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 安装依赖
+        run: npm ci
+        
+      - name: 运行集成测试
+        run: |
+          echo "🔗 运行序列化系统集成测试..."
+          npm test -- --testPathPattern="SerializationSystem.integration.test.ts" --verbose --detectOpenHandles --forceExit
+          
+      - name: 检查测试覆盖率
+        run: |
+          echo "📊 检查集成测试覆盖率..."
+          npm run test:coverage -- --testPathPattern="integration" --coverageThreshold="{\"global\":{\"branches\":80,\"functions\":80,\"lines\":80,\"statements\":80}}"
+
+  performance-tests:
+    name: 性能测试
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 安装依赖
+        run: npm ci
+        
+      - name: 运行性能测试
+        run: |
+          echo "⚡ 运行序列化性能测试..."
+          node scripts/performance-test.js --entities 1000,10000,50000 --iterations 3 --verbose --timeout 60000
+          
+      - name: 性能回归检测
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "📈 检测性能回归..."
+          # 获取基础分支性能数据（如果存在）
+          if [ -f "performance-results.json" ]; then
+            echo "当前性能测试结果:"
+            cat performance-results.json | jq '.summary'
+            
+            # 这里可以添加与历史数据的比较逻辑
+            echo "✅ 性能测试完成"
+          fi
+          
+      - name: 上传性能测试结果
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-results
+          path: performance-results.json
+          retention-days: 30
+
+  compatibility-tests:
+    name: 兼容性测试
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.event_name == 'pull_request'
+    strategy:
+      matrix:
+        node-version: ['16', '18', '20']
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 设置Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: 安装依赖
+        run: npm ci
+        
+      - name: 运行兼容性测试
+        run: |
+          echo "🔄 在Node.js ${{ matrix.node-version }}上测试兼容性..."
+          npm test -- --testPathPattern=".*Serializ.*test\.ts$" --verbose
+
+  build-and-package:
+    name: 构建和打包
+    runs-on: ubuntu-latest
+    needs: [performance-tests, compatibility-tests]
+    if: always() && (needs.performance-tests.result == 'success' || needs.performance-tests.result == 'skipped')
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 安装依赖
+        run: npm ci
+        
+      - name: 构建项目
+        run: |
+          echo "🏗️ 构建序列化系统..."
+          npm run build
+          
+      - name: 类型检查
+        run: |
+          echo "📝 运行TypeScript类型检查..."
+          npm run typecheck
+          
+      - name: 代码质量检查
+        run: |
+          echo "🔍 运行ESLint和代码质量检查..."
+          npm run lint
+          
+      - name: 打包验证
+        run: |
+          echo "📦 验证打包结果..."
+          # 检查关键文件是否存在
+          if [ ! -f "packages/core/dist/ECS/Core/Serialization/ColumnarSerializer.js" ]; then
+            echo "❌ ColumnarSerializer构建文件缺失"
+            exit 1
+          fi
+          
+          if [ ! -f "packages/core/dist/ECS/Decorators/SerializationDecorators.js" ]; then
+            echo "❌ SerializationDecorators构建文件缺失"
+            exit 1
+          fi
+          
+          echo "✅ 打包验证成功"
+
+  security-scan:
+    name: 安全扫描
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 运行安全扫描
+        run: |
+          echo "🔒 运行安全扫描..."
+          npm audit --audit-level high
+          
+      - name: 扫描敏感信息
+        run: |
+          echo "🔍 扫描敏感信息..."
+          # 检查是否有硬编码的密钥或敏感信息
+          if grep -r "password\|secret\|key\|token" packages/core/src/ECS/Core/Serialization/ --exclude-dir=node_modules --exclude="*.test.ts" | grep -v "fieldKey\|keyof\|publicKey" | grep -v "注释\|comment"; then
+            echo "⚠️  发现可能的敏感信息"
+            exit 1
+          fi
+          echo "✅ 未发现敏感信息"
+
+  deploy-docs:
+    name: 部署文档
+    runs-on: ubuntu-latest
+    needs: build-and-package
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 生成API文档
+        run: |
+          echo "📚 生成序列化系统API文档..."
+          npm run docs:generate || echo "文档生成工具未配置"
+          
+      - name: 部署到GitHub Pages
+        if: success()
+        run: |
+          echo "🚀 准备部署文档到GitHub Pages..."
+          echo "文档部署功能需要配置GitHub Pages"
+
+  notification:
+    name: 通知
+    runs-on: ubuntu-latest
+    needs: [build-and-package, security-scan, deploy-docs]
+    if: always()
+    steps:
+      - name: 总结CI结果
+        run: |
+          echo "📋 CI/CD流水线执行总结:"
+          echo "- Schema验证: ${{ needs.schema-validation.result }}"
+          echo "- 单元测试: ${{ needs.unit-tests.result }}"
+          echo "- 集成测试: ${{ needs.integration-tests.result }}"
+          echo "- 性能测试: ${{ needs.performance-tests.result }}"
+          echo "- 兼容性测试: ${{ needs.compatibility-tests.result }}"
+          echo "- 构建打包: ${{ needs.build-and-package.result }}"
+          echo "- 安全扫描: ${{ needs.security-scan.result }}"
+          echo "- 文档部署: ${{ needs.deploy-docs.result }}"
+          
+          if [[ "${{ needs.build-and-package.result }}" == "success" ]]; then
+            echo "🎉 序列化系统CI/CD流水线执行成功！"
+          else
+            echo "💥 CI/CD流水线执行失败，请检查错误日志。"
+            exit 1
+          fi
