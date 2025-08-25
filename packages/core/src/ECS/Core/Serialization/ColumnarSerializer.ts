@@ -14,6 +14,9 @@ import { createLogger } from '../../../Utils/Logger';
 import type { SerializableValue } from './SerializationTypes';
 import type { FieldMeta } from '../../Decorators/SerializationDecorators';
 import type { ComponentSchema, FieldSchema } from './SchemaManifest';
+import { CompressionRegistry } from '../Compression/CompressionRegistry';
+import { initializeCompressionSystem } from '../Compression';
+import type { CompressionOptions, CompressionMetadata } from '../Compression/CompressionTypes';
 
 /**
  * 字段数据类型，表示可序列化的字段值
@@ -32,12 +35,26 @@ export interface ColumnarSerializationContext {
     /** 是否启用压缩 */
     compression: boolean;
     
+    /** 压缩器名称 */
+    compressor?: string;
+    
+    /** 压缩选项 */
+    compressionOptions?: CompressionOptions;
+    
+    /** 是否启用加密 */
+    encryption?: boolean;
+    
+    /** 加密器名称 */
+    encryptor?: string;
+    
+    /** 加密密钥 */
+    encryptionKey?: Uint8Array;
+    
     /** 是否跳过默认值 */
     skipDefaults: boolean;
     
     /** 是否启用严格模式（生产环境） */
     strict: boolean;
-    
     
     /** 目标场景ID，未指定时使用智能场景选择 */
     targetSceneId?: string;
@@ -95,6 +112,10 @@ export interface SerializationResult {
         totalSize: number;
         checksum: number;
         createdAt: number;
+        /** 压缩元数据 */
+        compression?: CompressionMetadata;
+        /** 是否加密 */
+        encrypted?: boolean;
     };
     
     /** 性能统计 */
@@ -294,6 +315,24 @@ export class ColumnarSerializer {
     /** 实体查找缓存，避免O(n²)查找 */
     private static entityLookupCache = new Map<number, Entity>();
     
+    /** 压缩系统初始化状态 */
+    private static compressionSystemInitialized = false;
+    
+    /**
+     * 确保压缩系统已初始化
+     */
+    private static ensureCompressionSystemInitialized(): void {
+        if (!this.compressionSystemInitialized) {
+            try {
+                initializeCompressionSystem();
+                this.compressionSystemInitialized = true;
+                this.logger.debug('压缩系统已自动初始化');
+            } catch (error) {
+                this.logger.warn('压缩系统初始化失败，将使用无压缩模式', error);
+            }
+        }
+    }
+
     /**
      * 清理内部缓存
      */
@@ -434,6 +473,9 @@ export class ColumnarSerializer {
     static serialize(world: World, context: ColumnarSerializationContext = this.getDefaultContext()): SerializationResult {
         const startTime = performance.now();
         
+        // 确保压缩系统已初始化
+        this.ensureCompressionSystemInitialized();
+        
         try {
             this.validateContext(context);
             
@@ -441,18 +483,40 @@ export class ColumnarSerializer {
             const columnData = this.collectColumnData(world, context);
             
             // 创建二进制格式
-            const buffer = this.createBinaryFormat(columnData);
+            let buffer = this.createBinaryFormat(columnData);
+            let compressionMetadata: CompressionMetadata | undefined;
+            let isEncrypted = false;
+            
+            // 应用压缩
+            if (context.compression) {
+                const compressionResult = this.applyCompression(buffer, context);
+                buffer = compressionResult.buffer;
+                compressionMetadata = compressionResult.metadata;
+            }
+            
+            // 应用加密
+            if (context.encryption && context.encryptionKey) {
+                const encryptionResult = this.applyEncryption(buffer, context);
+                buffer = encryptionResult.buffer;
+                isEncrypted = true;
+            }
+            
+            // 只在有压缩或加密时嵌入元数据
+            if (compressionMetadata || isEncrypted) {
+                buffer = this.embedMetadata(buffer, compressionMetadata, isEncrypted, context);
+            }
             
             const endTime = performance.now();
             const serializationTime = endTime - startTime;
             
             // 计算元数据
-            const metadata = this.calculateMetadata(buffer, columnData, serializationTime);
+            const metadata = this.calculateMetadata(buffer, columnData, serializationTime, compressionMetadata, isEncrypted);
             
             // 计算性能统计
             const stats = {
                 serializationTime,
-                compressionRatio: 1.0,
+                compressionRatio: compressionMetadata?.originalSize ? 
+                    buffer.byteLength / compressionMetadata.originalSize : 1.0,
                 fieldCount: columnData.reduce((sum, column) => sum + column.fieldBlocks.size, 0)
             };
             
@@ -480,10 +544,34 @@ export class ColumnarSerializer {
     static deserialize(buffer: ArrayBuffer, world: World, context: ColumnarSerializationContext = this.getDefaultContext()): void {
         const startTime = performance.now();
         
+        // 确保压缩系统已初始化
+        this.ensureCompressionSystemInitialized();
+        
         try {
             this.validateContext(context);
             
-            const reader = new BinaryReader(buffer);
+            // 提取元数据并获取实际数据buffer
+            const { originalBuffer, compressionMetadata, isEncrypted, encryptorName } = this.extractMetadata(buffer);
+            let processedBuffer = originalBuffer;
+            
+            this.logger.info(`Metadata: compression=${!!compressionMetadata}, encrypted=${isEncrypted}, encryptor=${encryptorName}`);
+            if (compressionMetadata) {
+                this.logger.info(`Compression: ${compressionMetadata.compressor}, size: ${compressionMetadata.originalSize}`);
+            }
+            
+            // 应用解密
+            if (isEncrypted && encryptorName && context.encryptionKey) {
+                this.logger.info(`应用解密: ${encryptorName}`);
+                processedBuffer = this.applyDecryption(processedBuffer, encryptorName, context.encryptionKey);
+            }
+            
+            // 应用解压缩
+            if (compressionMetadata) {
+                this.logger.info(`应用解压缩: ${compressionMetadata.compressor}`);
+                processedBuffer = this.applyDecompression(processedBuffer, compressionMetadata);
+            }
+            
+            const reader = new BinaryReader(processedBuffer);
             
             // 验证头部
             this.validateHeader(reader);
@@ -1173,7 +1261,15 @@ export class ColumnarSerializer {
         
         for (const [fieldId, groupedFieldData] of fieldGroups) {
             const fieldBlock = columnData.fieldBlocks.get(fieldId)!;
-            const writer = this.acquireWriter();
+            
+            // 如果fieldBlock已有数据，需要追加而不是覆盖
+            let existingWriter: BinaryWriter | null = null;
+            if (fieldBlock.data.length > 0) {
+                existingWriter = this.acquireWriter();
+                existingWriter.writeBytes(fieldBlock.data);
+            }
+            
+            const writer = existingWriter || this.acquireWriter();
             
             try {
                 for (const fieldData of groupedFieldData) {
@@ -2046,7 +2142,13 @@ export class ColumnarSerializer {
     /**
      * 计算元数据
      */
-    private static calculateMetadata(buffer: ArrayBuffer, columnData: ComponentColumnData[], serializationTime: number): SerializationResult['metadata'] {
+    private static calculateMetadata(
+        buffer: ArrayBuffer, 
+        columnData: ComponentColumnData[], 
+        serializationTime: number, 
+        compressionMetadata?: CompressionMetadata, 
+        isEncrypted?: boolean
+    ): SerializationResult['metadata'] {
         const totalEntities = columnData.reduce((sum, column) => sum + column.entityIds.length, 0);
         const checksum = murmur3_32(new Uint8Array(buffer));
         
@@ -2056,7 +2158,9 @@ export class ColumnarSerializer {
             componentTypeCount: columnData.length,
             totalSize: buffer.byteLength,
             checksum,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            compression: compressionMetadata,
+            encrypted: isEncrypted
         };
     }
     
@@ -2435,5 +2539,286 @@ export class ColumnarSerializer {
         }
         
         return entitiesWithLocation;
+    }
+    
+    /**
+     * 应用压缩
+     */
+    private static applyCompression(buffer: ArrayBuffer, context: ColumnarSerializationContext): {
+        buffer: ArrayBuffer;
+        metadata: CompressionMetadata;
+    } {
+        const compressorName = context.compressor || CompressionRegistry.selectBestCompressor(
+            buffer.byteLength,
+            'balanced'
+        );
+        
+        const compressor = CompressionRegistry.getCompressor(compressorName);
+        if (!compressor) {
+            this.logger.warn(`未找到压缩器: ${compressorName}，使用无压缩`);
+            return {
+                buffer,
+                metadata: {
+                    compressor: 'none',
+                    options: {},
+                    originalSize: buffer.byteLength,
+                    timestamp: Date.now()
+                }
+            };
+        }
+        
+        const data = new Uint8Array(buffer);
+        const result = compressor.compress(data, context.compressionOptions);
+        
+        this.logger.debug(
+            `压缩完成: ${data.length} -> ${result.data.length} 字节 ` +
+            `(${compressorName}, 压缩比: ${(result.stats.compressionRatio * 100).toFixed(1)}%)`
+        );
+        
+        return {
+            buffer: result.data.buffer.slice(result.data.byteOffset, result.data.byteOffset + result.data.byteLength) as ArrayBuffer,
+            metadata: {
+                compressor: compressorName,
+                options: context.compressionOptions || {},
+                originalSize: buffer.byteLength,
+                timestamp: Date.now(),
+                checksum: murmur3_32(data)
+            }
+        };
+    }
+    
+    /**
+     * 应用加密
+     */
+    private static applyEncryption(buffer: ArrayBuffer, context: ColumnarSerializationContext): {
+        buffer: ArrayBuffer;
+    } {
+        if (!context.encryptionKey || !context.encryptor) {
+            this.logger.warn('加密配置不完整，跳过加密');
+            return { buffer };
+        }
+        
+        const encryptor = CompressionRegistry.getEncryptor(context.encryptor);
+        if (!encryptor) {
+            this.logger.warn(`未找到加密器: ${context.encryptor}，跳过加密`);
+            return { buffer };
+        }
+        
+        const data = new Uint8Array(buffer);
+        const result = encryptor.encrypt(data, context.encryptionKey);
+        
+        // 创建包含IV和可选tag的完整加密数据
+        const encryptedSize = result.encrypted.length + result.iv.length + (result.tag?.length || 0);
+        const encryptedBuffer = new Uint8Array(encryptedSize + 8); // 额外8字节用于头部
+        
+        // 写入头部信息
+        const view = new DataView(encryptedBuffer.buffer);
+        view.setUint32(0, result.iv.length, true);
+        view.setUint32(4, result.tag?.length || 0, true);
+        
+        // 写入数据
+        let offset = 8;
+        encryptedBuffer.set(result.iv, offset);
+        offset += result.iv.length;
+        
+        if (result.tag) {
+            encryptedBuffer.set(result.tag, offset);
+            offset += result.tag.length;
+        }
+        
+        encryptedBuffer.set(result.encrypted, offset);
+        
+        this.logger.debug(`加密完成: ${data.length} -> ${encryptedBuffer.length} 字节 (${context.encryptor})`);
+        
+        return {
+            buffer: encryptedBuffer.buffer
+        };
+    }
+    
+    /**
+     * 应用解压缩
+     */
+    private static applyDecompression(buffer: ArrayBuffer, metadata: CompressionMetadata): ArrayBuffer {
+        if (metadata.compressor === 'none') {
+            return buffer;
+        }
+        
+        const compressor = CompressionRegistry.getCompressor(metadata.compressor);
+        if (!compressor) {
+            throw new Error(`未找到解压缩器: ${metadata.compressor}`);
+        }
+        
+        const data = new Uint8Array(buffer);
+        const result = compressor.decompress(data, metadata.options);
+        
+        // 验证校验和（如果有）
+        if (metadata.checksum) {
+            const actualChecksum = murmur3_32(result.data);
+            if (actualChecksum !== metadata.checksum) {
+                throw new Error('解压数据校验失败');
+            }
+        }
+        
+        this.logger.debug(
+            `解压完成: ${data.length} -> ${result.data.length} 字节 ` +
+            `(${metadata.compressor})`
+        );
+        
+        return result.data.buffer.slice(result.data.byteOffset, result.data.byteOffset + result.data.byteLength) as ArrayBuffer;
+    }
+    
+    /**
+     * 应用解密
+     */
+    private static applyDecryption(buffer: ArrayBuffer, encryptorName: string, key: Uint8Array): ArrayBuffer {
+        const encryptor = CompressionRegistry.getEncryptor(encryptorName);
+        if (!encryptor) {
+            throw new Error(`未找到解密器: ${encryptorName}`);
+        }
+        
+        const encryptedData = new Uint8Array(buffer);
+        if (encryptedData.length < 8) {
+            throw new Error('加密数据头部不完整');
+        }
+        
+        // 读取头部信息
+        const view = new DataView(encryptedData.buffer, encryptedData.byteOffset);
+        const ivLength = view.getUint32(0, true);
+        const tagLength = view.getUint32(4, true);
+        
+        if (encryptedData.length < 8 + ivLength + tagLength) {
+            throw new Error('加密数据不完整');
+        }
+        
+        // 提取IV、tag和加密数据
+        let offset = 8;
+        const iv = encryptedData.slice(offset, offset + ivLength);
+        offset += ivLength;
+        
+        let tag: Uint8Array | undefined;
+        if (tagLength > 0) {
+            tag = encryptedData.slice(offset, offset + tagLength);
+            offset += tagLength;
+        }
+        
+        const encrypted = encryptedData.slice(offset);
+        
+        // 解密
+        const decrypted = encryptor.decrypt(encrypted, key, iv, tag);
+        
+        this.logger.debug(`解密完成: ${encryptedData.length} -> ${decrypted.length} 字节 (${encryptorName})`);
+        
+        return decrypted.buffer.slice(decrypted.byteOffset, decrypted.byteOffset + decrypted.byteLength) as ArrayBuffer;
+    }
+    
+    /**
+     * 将压缩和加密元数据嵌入到buffer中
+     */
+    private static embedMetadata(
+        buffer: ArrayBuffer, 
+        compressionMetadata: CompressionMetadata | undefined,
+        isEncrypted: boolean,
+        context: ColumnarSerializationContext
+    ): ArrayBuffer {
+        const writer = this.acquireWriter();
+        
+        // 写入扩展头部标识
+        writer.writeU32(0x45584544); // 'EXED' - Extended Data
+        
+        // 写入元数据标志
+        const flags = (compressionMetadata ? 0x01 : 0x00) | (isEncrypted ? 0x02 : 0x00);
+        writer.writeU8(flags);
+        
+        // 写入压缩元数据
+        if (compressionMetadata) {
+            writer.writeString(compressionMetadata.compressor);
+            writer.writeVarInt(compressionMetadata.originalSize);
+            writer.writeU32(compressionMetadata.timestamp);
+            writer.writeU32(compressionMetadata.checksum || 0);
+            // 写入压缩选项（简化）
+            writer.writeU8(compressionMetadata.options?.level || 0);
+        }
+        
+        // 写入加密元数据  
+        if (isEncrypted && context.encryptor) {
+            writer.writeString(context.encryptor);
+        }
+        
+        // 写入原始数据长度
+        writer.writeVarInt(buffer.byteLength);
+        
+        // 写入原始buffer
+        writer.writeBytes(new Uint8Array(buffer));
+        
+        const result = writer.toArrayBuffer();
+        this.releaseWriter(writer);
+        return result;
+    }
+    
+    /**
+     * 从buffer中提取元数据
+     */
+    private static extractMetadata(buffer: ArrayBuffer): {
+        originalBuffer: ArrayBuffer;
+        compressionMetadata?: CompressionMetadata;
+        isEncrypted: boolean;
+        encryptorName?: string;
+    } {
+        const reader = new BinaryReader(buffer);
+        
+        // 检查是否有扩展头部
+        const extHeader = reader.readU32();
+        if (extHeader !== 0x45584544) { // 'EXED'
+            // 没有扩展头部，返回原始buffer
+            return {
+                originalBuffer: buffer,
+                isEncrypted: false
+            };
+        }
+        
+        // 读取标志
+        const flags = reader.readU8();
+        const hasCompression = (flags & 0x01) !== 0;
+        const isEncrypted = (flags & 0x02) !== 0;
+        
+        let compressionMetadata: CompressionMetadata | undefined;
+        let encryptorName: string | undefined;
+        
+        // 读取压缩元数据
+        if (hasCompression) {
+            const compressor = reader.readString();
+            const originalSize = reader.readVarInt();
+            const timestamp = reader.readU32();
+            const checksum = reader.readU32();
+            const level = reader.readU8();
+            
+            compressionMetadata = {
+                compressor,
+                originalSize,
+                timestamp,
+                checksum: checksum || undefined,
+                options: level ? { level } : {}
+            };
+        }
+        
+        // 读取加密元数据
+        if (isEncrypted) {
+            encryptorName = reader.readString();
+        }
+        
+        // 读取原始数据
+        const originalDataLength = reader.readVarInt();
+        const originalDataBytes = reader.readBytes(originalDataLength);
+        const originalBuffer = originalDataBytes.buffer.slice(
+            originalDataBytes.byteOffset,
+            originalDataBytes.byteOffset + originalDataLength
+        );
+        
+        return {
+            originalBuffer,
+            compressionMetadata,
+            isEncrypted,
+            encryptorName
+        };
     }
 }
