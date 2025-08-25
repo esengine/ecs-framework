@@ -1,4 +1,4 @@
-import { Component } from './Component';
+import { Component, IComponentLifecycle } from './Component';
 import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
 import { EventBus } from './Core/EventBus';
 import { IBigIntLike, BigIntFactory } from './Utils/BigIntCompatibility';
@@ -939,8 +939,9 @@ export class Entity {
     private onActiveChanged(): void {
         // 通知所有组件活跃状态改变
         for (const component of this.components) {
-            if ('onActiveChanged' in component && typeof component.onActiveChanged === 'function') {
-                (component as any).onActiveChanged();
+            const lifecycleComponent = component as IComponentLifecycle;
+            if (lifecycleComponent.onActiveChanged) {
+                lifecycleComponent.onActiveChanged();
             }
         }
 

@@ -24,8 +24,10 @@ export class Bits {
      */
     constructor(initialValue?: IBigIntLike | number | string) {
         if (initialValue && typeof initialValue === 'object') {
-            this._value = initialValue;
+            // 假设传入的是IBigIntLike对象
+            this._value = initialValue as IBigIntLike;
         } else {
+            // 传入的是number或string，转换为IBigIntLike
             this._value = BigIntFactory.create(initialValue || 0);
         }
     }

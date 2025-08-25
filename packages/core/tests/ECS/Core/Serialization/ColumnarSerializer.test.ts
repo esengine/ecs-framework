@@ -221,8 +221,6 @@ describe('ColumnarSerializer', () => {
                 compression: true,
                 skipDefaults: false,
                 strict: false,
-                maxEntities: 10000,
-                maxComponents: 100
             };
             
             const result = ColumnarSerializer.serialize(world, context);
@@ -244,8 +242,6 @@ describe('ColumnarSerializer', () => {
                 compression: false,
                 skipDefaults: true,
                 strict: false,
-                maxEntities: 10000,
-                maxComponents: 100
             };
             
             const result = ColumnarSerializer.serialize(world, context);
@@ -282,6 +278,171 @@ describe('ColumnarSerializer', () => {
             expect(() => {
                 ColumnarSerializer.deserialize(invalidBuffer, world);
             }).toThrow();
+        });
+    });
+
+    describe('场景选择功能', () => {
+        test('应该能使用指定的场景ID进行序列化', () => {
+            const world = new World({ name: 'TestWorld' });
+            const gameplayScene = world.addScene('gameplay', new Scene());
+            const uiScene = world.addScene('ui', new Scene());
+            
+            // 在gameplay场景中创建实体
+            const entity = gameplayScene.createEntity('GameEntity');
+            const healthComp = new HealthComponent();
+            healthComp.health = 85;
+            entity.addComponent(healthComp);
+            
+            // 在ui场景中创建实体
+            const uiEntity = uiScene.createEntity('UIEntity');
+            const playerComp = new PlayerComponent();
+            playerComp.name = 'UI';
+            uiEntity.addComponent(playerComp);
+            
+            // 指定序列化gameplay场景
+            const context = {
+                compression: false,
+                skipDefaults: false,
+                strict: false,
+                targetSceneId: 'gameplay'
+            };
+            
+            const result = ColumnarSerializer.serialize(world, context);
+            
+            // 反序列化到新世界
+            const newWorld = new World({ name: 'NewWorld' });
+            ColumnarSerializer.deserialize(result.buffer, newWorld, context);
+            
+            // 验证结果
+            expect(result.buffer).toBeInstanceOf(ArrayBuffer);
+            expect(result.metadata.entityCount).toBe(1); // 只有gameplay场景的实体
+        });
+
+        test('应该在没有main场景时使用第一个可用场景', () => {
+            const world = new World({ name: 'TestWorld' });
+            const firstScene = world.addScene('first', new Scene());
+            const secondScene = world.addScene('second', new Scene());
+            
+            // 在第一个场景中创建实体
+            const entity = firstScene.createEntity('TestEntity');
+            const healthComp = new HealthComponent();
+            healthComp.health = 75;
+            entity.addComponent(healthComp);
+            
+            // 在第二个场景中也创建实体
+            const entity2 = secondScene.createEntity('TestEntity2');
+            const playerComp = new PlayerComponent();
+            playerComp.name = 'Player2';
+            entity2.addComponent(playerComp);
+            
+            // 不指定场景，应该使用第一个场景
+            const result = ColumnarSerializer.serialize(world);
+            
+            expect(result.buffer).toBeInstanceOf(ArrayBuffer);
+            expect(result.metadata.entityCount).toBeGreaterThan(0);
+        });
+
+        test('应该支持自动创建场景', () => {
+            const world = new World({ name: 'TestWorld' });
+            
+            // 准备序列化数据（从另一个世界）
+            const sourceWorld = new World({ name: 'SourceWorld' });
+            const sourceScene = sourceWorld.addScene('main', new Scene());
+            const entity = sourceScene.createEntity('TestEntity');
+            const healthComp = new HealthComponent();
+            healthComp.health = 90;
+            entity.addComponent(healthComp);
+            
+            const serialized = ColumnarSerializer.serialize(sourceWorld);
+            
+            // 反序列化到新世界，指定不存在的场景并自动创建
+            const context = {
+                compression: false,
+                skipDefaults: false,
+                strict: false,
+                targetSceneId: 'newScene',
+                autoCreateScene: true
+            };
+            
+            ColumnarSerializer.deserialize(serialized.buffer, world, context);
+            
+            // 验证场景被创建了
+            const createdScene = world.getScene('newScene');
+            expect(createdScene).not.toBeNull();
+        });
+
+        test('应该在指定场景不存在且不自动创建时使用回退策略', () => {
+            const world = new World({ name: 'TestWorld' });
+            const mainScene = world.addScene('main', new Scene());
+            
+            const entity = mainScene.createEntity('TestEntity');
+            const healthComp = new HealthComponent();
+            healthComp.health = 95;
+            entity.addComponent(healthComp);
+            
+            // 指定不存在的场景，但不自动创建
+            const context = {
+                compression: false,
+                skipDefaults: false,
+                strict: false,
+                targetSceneId: 'nonexistent',
+                autoCreateScene: false
+            };
+            
+            // 应该回退到main场景
+            const result = ColumnarSerializer.serialize(world, context);
+            
+            expect(result.buffer).toBeInstanceOf(ArrayBuffer);
+            expect(result.metadata.entityCount).toBe(1);
+        });
+
+        test('应该支持增量序列化的场景上下文', () => {
+            const world = new World({ name: 'TestWorld' });
+            const gameScene = world.addScene('game', new Scene());
+            
+            const entity = gameScene.createEntity('GameEntity');
+            const healthComp = new HealthComponent();
+            healthComp.health = 85;
+            entity.addComponent(healthComp);
+            
+            // 创建基线快照
+            const baselineResult = ColumnarSerializer.serialize(world);
+            const baselineSnapshot = {
+                frame: 1,
+                seed: 12345,
+                worldSig: 0x12345678,
+                payload: baselineResult.buffer
+            };
+            
+            // 修改实体
+            healthComp.health = 70;
+            
+            // 增量序列化
+            const deltaResult = ColumnarSerializer.serializeDelta(world, baselineSnapshot);
+            
+            // 应用增量到新世界
+            const newWorld = new World({ name: 'NewWorld' });
+            const newScene = newWorld.addScene('game', new Scene());
+            
+            // 先应用基线
+            ColumnarSerializer.deserialize(baselineSnapshot.payload, newWorld, {
+                compression: false,
+                skipDefaults: false,
+                strict: false,
+                targetSceneId: 'game'
+            });
+            
+            // 再应用增量
+            ColumnarSerializer.applyDelta(deltaResult.buffer, newWorld, {
+                context: {
+                    compression: false,
+                    skipDefaults: false,
+                    strict: false,
+                    targetSceneId: 'game'
+                }
+            });
+            
+            expect(deltaResult.buffer).toBeInstanceOf(ArrayBuffer);
         });
     });
 

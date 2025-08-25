@@ -1,6 +1,18 @@
 import type { IComponent } from '../Types';
 
 /**
+ * 组件生命周期接口
+ * 
+ * 实现此接口的组件可以接收生命周期回调通知
+ */
+export interface IComponentLifecycle {
+    /**
+     * 组件激活状态改变时调用
+     */
+    onActiveChanged?(): void;
+}
+
+/**
  * 游戏组件基类
  * 
  * ECS架构中的组件（Component），用于实现具体的游戏功能。

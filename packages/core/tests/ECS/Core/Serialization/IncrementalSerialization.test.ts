@@ -3,10 +3,15 @@ import { World } from '../../../../src/ECS/World';
 import { Scene } from '../../../../src/ECS/Scene';
 import { Component } from '../../../../src/ECS/Component';
 import { Entity } from '../../../../src/ECS/Entity';
+import { Serializable, SerializableField } from '../../../../src/ECS/Decorators/SerializationDecorators';
 
 // 测试组件
+@Serializable()
 class TestComponent extends Component {
+    @SerializableField({ dataType: 'number' })
     public value: number = 0;
+    
+    @SerializableField({ dataType: 'string' })
     public name: string = '';
     
     constructor(value: number = 0, name: string = '') {
@@ -16,8 +21,12 @@ class TestComponent extends Component {
     }
 }
 
+@Serializable()
 class PositionComponent extends Component {
+    @SerializableField({ dataType: 'number' })
     public x: number = 0;
+    
+    @SerializableField({ dataType: 'number' })
     public y: number = 0;
     
     constructor(x: number = 0, y: number = 0) {

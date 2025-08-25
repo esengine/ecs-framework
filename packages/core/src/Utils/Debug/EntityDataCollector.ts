@@ -2,6 +2,7 @@ import { IEntityDebugData } from '../../Types';
 import { Core } from '../../Core';
 import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';
+import { IScene } from '../../ECS/IScene';
 import { ComponentTypeManager } from '../../ECS/Utils/ComponentTypeManager';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
 import { forSystem } from '../PRNG';
@@ -17,7 +18,7 @@ export class EntityDataCollector {
             return this.getEmptyEntityDebugData();
         }
 
-        const entityList = (scene as any).entities;
+        const entityList = scene.entities;
         if (!entityList) {
             return this.getEmptyEntityDebugData();
         }
@@ -70,7 +71,7 @@ export class EntityDataCollector {
         const scene = Core.scene;
         if (!scene) return [];
 
-        const entityList = (scene as any).entities;
+        const entityList = scene.entities;
         if (!entityList?.buffer) return [];
 
         return entityList.buffer.map((entity: Entity) => ({
@@ -95,7 +96,7 @@ export class EntityDataCollector {
             const scene = Core.scene;
             if (!scene) return null;
 
-            const entityList = (scene as any).entities;
+            const entityList = scene.entities;
             if (!entityList?.buffer) return null;
 
             const entity = entityList.buffer.find((e: any) => e.id === entityId);
@@ -130,24 +131,16 @@ export class EntityDataCollector {
         }
     }
 
-    private getSceneInfo(scene: any): { name: string; type: string } {
+    private getSceneInfo(scene: IScene): { name: string; type: string } {
         let sceneName = '当前场景';
         let sceneType = 'Scene';
         
         try {
-            if (scene.name && typeof scene.name === 'string' && scene.name.trim()) {
+            if (scene.name && scene.name.trim()) {
                 sceneName = scene.name.trim();
             } else if (scene.constructor && scene.constructor.name) {
                 sceneName = scene.constructor.name;
                 sceneType = scene.constructor.name;
-            } else if (scene._name && typeof scene._name === 'string' && scene._name.trim()) {
-                sceneName = scene._name.trim();
-            } else {
-                const sceneClassName = Object.getPrototypeOf(scene)?.constructor?.name;
-                if (sceneClassName && sceneClassName !== 'Object') {
-                    sceneName = sceneClassName;
-                    sceneType = sceneClassName;
-                }
             }
         } catch (error) {
             sceneName = '场景名获取失败';
@@ -163,7 +156,7 @@ export class EntityDataCollector {
             return this.getEmptyEntityDebugData();
         }
 
-        const entityList = (scene as any).entities;
+        const entityList = scene.entities;
         if (!entityList) {
             return this.getEmptyEntityDebugData();
         }
@@ -678,9 +671,37 @@ export class EntityDataCollector {
     /**
      * 构建实体基础信息
      */
-    private buildFallbackEntityInfo(entity: Entity): any {
+    private buildFallbackEntityInfo(entity: Entity): {
+        name: string;
+        id: number;
+        enabled: boolean;
+        active: boolean;
+        activeInHierarchy: boolean;
+        destroyed: boolean;
+        scene: string;
+        sceneName: string;
+        sceneType: string;
+        componentCount: number;
+        componentTypes: string[];
+        componentMask: string;
+        parentId: number | null;
+        childCount: number;
+        childIds: number[];
+        position?: { x: number; y: number; z?: number };
+        tags?: string[];
+        layer?: number;
+        isStatic?: boolean;
+        isPrefab?: boolean;
+        systemContext: string;
+        lastUpdate?: number;
+        debugFlags: string[];
+        debugType: string;
+        depth: number;
+        tag: number;
+        updateOrder: number;
+    } {
         const scene = Core.scene;
-        const sceneInfo = this.getSceneInfo(scene);
+        const sceneInfo = scene ? this.getSceneInfo(scene) : { name: '未知场景', type: 'Scene' };
         
         return {
             name: entity.name || `Entity_${entity.id}`,
@@ -700,7 +721,10 @@ export class EntityDataCollector {
             childIds: entity.children.map((child: Entity) => child.id) || [],
             depth: entity.getDepth ? entity.getDepth() : 0,
             tag: entity.tag || 0,
-            updateOrder: entity.updateOrder || 0
+            updateOrder: entity.updateOrder || 0,
+            systemContext: 'ECS',
+            debugFlags: [],
+            debugType: 'Entity'
         };
     }
 
@@ -764,7 +788,7 @@ export class EntityDataCollector {
             const scene = Core.scene;
             if (!scene) return {};
 
-            const entityList = (scene as any).entities;
+            const entityList = scene.entities;
             if (!entityList?.buffer) return {};
 
             const entity = entityList.buffer.find((e: any) => e.id === entityId);
@@ -957,7 +981,7 @@ export class EntityDataCollector {
             const scene = Core.scene;
             if (!scene) return null;
 
-            const entityList = (scene as any).entities;
+            const entityList = scene.entities;
             if (!entityList?.buffer) return null;
 
             // 找到对应的实体

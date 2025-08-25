@@ -1,18 +1,29 @@
 import { Component } from '../../Component';
 import { World } from '../../World';
 import { Entity } from '../../Entity';
+import { IScene } from '../../IScene';
+import { EntityIdentifier } from '../EntityIdentifier';
 import { BinaryWriter, BinaryReader } from './BinaryIO';
 import { SchemaRegistry } from './SchemaRegistry';
-import { SerializerRegistry } from './SerializerRegistry';
 import { ComponentRegistry } from '../ComponentStorage/ComponentRegistry';
 import { getClassSerializationMeta, validateSerializableComponent, shouldSerializeField } from '../../Decorators/SerializationDecorators';
-import { getComponentInstanceTypeName, getComponentTypeName } from '../../Decorators/TypeDecorators';
+import { getComponentInstanceTypeName } from '../../Decorators/TypeDecorators';
 import { murmur3_32 } from '../../../Utils/Hash32';
 import type { Snapshot } from '../Snapshot/SnapshotTypes';
 import { createLogger } from '../../../Utils/Logger';
 import type { SerializableValue } from './SerializationTypes';
 import type { FieldMeta } from '../../Decorators/SerializationDecorators';
 import type { ComponentSchema, FieldSchema } from './SchemaManifest';
+
+/**
+ * 字段数据类型，表示可序列化的字段值
+ */
+type FieldValue = SerializableValue;
+
+/**
+ * 反序列化值类型，包括基本类型和复杂对象
+ */
+type DeserializedValue = string | number | boolean | string[] | number[] | boolean[] | Record<string, unknown> | null | undefined;
 
 /**
  * 列式序列化上下文
@@ -27,11 +38,12 @@ export interface ColumnarSerializationContext {
     /** 是否启用严格模式（生产环境） */
     strict: boolean;
     
-    /** 最大实体数量限制 */
-    maxEntities: number;
     
-    /** 最大组件数量限制 */
-    maxComponents: number;
+    /** 目标场景ID，未指定时使用智能场景选择 */
+    targetSceneId?: string;
+    
+    /** 当目标场景不存在时是否自动创建场景 */
+    autoCreateScene?: boolean;
 }
 
 /**
@@ -143,6 +155,12 @@ export interface EntityChange {
     
     /** 实体ID */
     entityId: number;
+    
+    /** World标识符 */
+    worldId: string;
+    
+    /** Scene标识符 */
+    sceneId: string;
     
     /** 组件变化列表 */
     componentChanges: ComponentChange[];
@@ -285,6 +303,53 @@ export class ColumnarSerializer {
     }
     
     /**
+     * 智能场景选择策略
+     * 
+     * @param world - 目标World实例
+     * @param context - 序列化上下文（包含场景配置）
+     * @returns 选择的场景，如果找不到合适场景则返回null
+     */
+    private static selectTargetScene(world: World, context: ColumnarSerializationContext): IScene | null {
+        // 1. 如果指定了场景ID，优先使用
+        if (context.targetSceneId) {
+            const specifiedScene = world.getScene(context.targetSceneId);
+            if (specifiedScene) {
+                return specifiedScene;
+            }
+            
+            // 如果指定的场景不存在且允许自动创建
+            if (context.autoCreateScene) {
+                this.logger.info(`创建指定场景: ${context.targetSceneId}`);
+                return world.createDefaultScene(context.targetSceneId);
+            } else {
+                this.logger.warn(`指定的场景不存在: ${context.targetSceneId}`);
+            }
+        }
+        
+        // 2. 尝试使用 'main' 场景（向后兼容）
+        const mainScene = world.getScene('main');
+        if (mainScene) {
+            return mainScene;
+        }
+        
+        // 3. 使用第一个可用场景
+        const allScenes = world.getAllScenes();
+        if (allScenes.length > 0) {
+            this.logger.info(`使用第一个可用场景`);
+            return allScenes[0];
+        }
+        
+        // 4. 如果没有场景且允许自动创建，创建默认场景
+        if (context.autoCreateScene) {
+            const defaultSceneName = context.targetSceneId || 'default';
+            this.logger.info(`创建默认场景: ${defaultSceneName}`);
+            return world.createDefaultScene(defaultSceneName);
+        }
+        
+        return null;
+    }
+    
+    /**
      * 获取或创建组件缓存信息
      */
     private static getOrCreateComponentCache(component: Component): ComponentCacheInfo {
@@ -342,7 +407,7 @@ export class ColumnarSerializer {
     private static acquireWriter(): BinaryWriter {
         if (this.writerPool.length > 0) {
             const writer = this.writerPool.pop()!;
-            (writer as any).offset = 0;
+            writer.reset();
             return writer;
         }
         return new BinaryWriter(64 * 1024);
@@ -469,18 +534,40 @@ export class ColumnarSerializer {
             
             const result: DeltaSerializationResult = {
                 buffer,
-                metadata: {
-                    baseFrame: baselineSnapshot?.frame || 0,
-                    deltaFrame: Date.now(),
-                    addedEntities: changes.filter(c => c.changeType === EntityChangeType.ADDED).length,
-                    modifiedEntities: changes.filter(c => c.changeType === EntityChangeType.MODIFIED).length,
-                    removedEntities: changes.filter(c => c.changeType === EntityChangeType.REMOVED).length,
-                    modifiedComponents: changes.reduce((sum, c) => sum + c.componentChanges.length, 0),
-                    totalSize: buffer.byteLength,
-                    compressionRatio: 1.0,
-                    checksum: 0,
-                    createdAt: Date.now()
-                },
+                metadata: (() => {
+                    let addedEntities = 0;
+                    let modifiedEntities = 0;
+                    let removedEntities = 0;
+                    let modifiedComponents = 0;
+                    
+                    for (const change of changes) {
+                        switch (change.changeType) {
+                            case EntityChangeType.ADDED:
+                                addedEntities++;
+                                break;
+                            case EntityChangeType.MODIFIED:
+                                modifiedEntities++;
+                                break;
+                            case EntityChangeType.REMOVED:
+                                removedEntities++;
+                                break;
+                        }
+                        modifiedComponents += change.componentChanges.length;
+                    }
+                    
+                    return {
+                        baseFrame: baselineSnapshot?.frame || 0,
+                        deltaFrame: Date.now(),
+                        addedEntities,
+                        modifiedEntities,
+                        removedEntities,
+                        modifiedComponents,
+                        totalSize: buffer.byteLength,
+                        compressionRatio: 1.0,
+                        checksum: 0,
+                        createdAt: Date.now()
+                    };
+                })(),
                 stats: {
                     serializationTime,
                     changeDetectionTime: 0,
@@ -508,7 +595,11 @@ export class ColumnarSerializer {
     static applyDelta(
         buffer: ArrayBuffer,
         world: World,
-        options: { validateChecksum?: boolean; strictMode?: boolean } = {}
+        options: { 
+            validateChecksum?: boolean; 
+            strictMode?: boolean; 
+            context?: ColumnarSerializationContext 
+        } = {}
     ): void {
         const startTime = performance.now();
         
@@ -522,7 +613,7 @@ export class ColumnarSerializer {
             const entityChanges = this.readEntityChanges(reader, deltaHeader.entityChangesCount);
             
             // 应用变更到World
-            this.applyChangesToWorld(world, entityChanges);
+            this.applyChangesToWorld(world, entityChanges, options.context);
             
             const endTime = performance.now();
             const applyTime = endTime - startTime;
@@ -572,6 +663,8 @@ export class ColumnarSerializer {
         
         for (let i = 0; i < count; i++) {
             const entityId = reader.readVarInt();
+            const worldId = reader.readString();
+            const sceneId = reader.readString();
             const changeType = reader.readU8() as EntityChangeType;
             const componentChangesCount = reader.readVarInt();
             
@@ -602,6 +695,8 @@ export class ColumnarSerializer {
             changes.push({
                 changeType,
                 entityId,
+                worldId,
+                sceneId,
                 componentChanges,
                 timestamp: performance.now()
             });
@@ -615,36 +710,265 @@ export class ColumnarSerializer {
     /**
      * 将变更应用到World
      */
-    private static applyChangesToWorld(world: World, entityChanges: EntityChange[]): void {
+    private static applyChangesToWorld(world: World, entityChanges: EntityChange[], context?: ColumnarSerializationContext): void {
+        const serializationContext = context || this.getDefaultContext();
+        
         for (const entityChange of entityChanges) {
+            const compositeKey = EntityIdentifier.toKey({
+                worldId: entityChange.worldId,
+                sceneId: entityChange.sceneId,
+                localId: entityChange.entityId
+            });
+            
+            this.logger.debug(`处理实体变更: ${compositeKey} (${entityChange.changeType})`);
+            
+            // 智能路由：尝试找到对应的场景
+            const targetScene = this.findOrCreateTargetScene(world, entityChange.worldId, entityChange.sceneId, serializationContext);
+            
+            if (!targetScene) {
+                this.logger.warn(`无法路由实体变更，跳过: ${compositeKey}`);
+                continue;
+            }
+            
             switch (entityChange.changeType) {
                 case EntityChangeType.ADDED:
-                    this.createEntityInWorld(world, entityChange.entityId, entityChange.componentChanges);
+                    this.createEntityInScene(targetScene, entityChange.entityId, entityChange.componentChanges);
                     break;
                 case EntityChangeType.REMOVED:
-                    this.destroyEntityInWorld(world, entityChange.entityId);
+                    this.destroyEntityInScene(targetScene, entityChange.entityId);
                     break;
                 case EntityChangeType.MODIFIED:
-                    this.modifyEntityInWorld(world, entityChange.entityId, entityChange.componentChanges);
+                    this.modifyEntityInScene(targetScene, entityChange.entityId, entityChange.componentChanges);
                     break;
             }
+        }
+    }
+
+    /**
+     * 找到或创建目标场景
+     * 
+     * @param world 目标World
+     * @param originalWorldId 原始WorldId（用于验证）
+     * @param sceneId 场景ID
+     * @param context 序列化上下文
+     * @returns 目标场景，如果无法创建返回null
+     */
+    private static findOrCreateTargetScene(
+        world: World, 
+        originalWorldId: string, 
+        sceneId: string, 
+        context: ColumnarSerializationContext
+    ): IScene | null {
+        // 1. 尝试找到现有场景
+        let scene = world.getScene(sceneId);
+        if (scene) {
+            return scene;
+        }
+        
+        // 2. 如果启用了自动创建场景
+        if (context.autoCreateScene) {
+            this.logger.debug(`自动创建场景: worldId=${originalWorldId}, sceneId=${sceneId} -> targetWorld=${world.name}`);
+            scene = world.createScene(sceneId);
+            return scene;
+        }
+        
+        // 3. 尝试使用默认场景
+        scene = world.getScene('main');
+        if (scene) {
+            this.logger.debug(`使用默认场景: ${sceneId} -> main`);
+            return scene;
+        }
+        
+        // 4. 使用第一个可用场景
+        const firstScene = world.getFirstActiveScene();
+        if (firstScene) {
+            this.logger.debug(`使用第一个可用场景: ${sceneId} -> ${firstScene.name}`);
+            return firstScene;
+        }
+        
+        return null;
+    }
+
+    /**
+     * 在指定Scene中创建实体
+     */
+    private static createEntityInScene(scene: IScene, entityId: number, componentChanges: ComponentChange[]): void {
+        try {
+            // 直接创建Entity实例，指定entityId
+            const entity = new Entity(`Entity_${entityId}`, entityId);
+            
+            // 将实体添加到场景
+            scene.addEntity(entity);
+
+            // 添加所有组件
+            for (const componentChange of componentChanges) {
+                if (componentChange.changeType === ComponentChangeType.ADDED && componentChange.data) {
+                    try {
+                        this.addComponentToEntity(entity, componentChange);
+                    } catch (error) {
+                        this.logger.error(`添加组件失败: typeId=${componentChange.typeId}, error=${error}`);
+                    }
+                }
+            }
+
+            this.logger.debug(`在Scene中创建实体成功: sceneId=${scene.name}, entityId=${entityId}, 组件数量: ${componentChanges.length}`);
+
+        } catch (error) {
+            this.logger.error(`在Scene中创建实体失败: sceneId=${scene.name}, entityId=${entityId}, error=${error}`);
+            throw error;
+        }
+    }
+
+    /**
+     * 在指定Scene中销毁实体
+     */
+    private static destroyEntityInScene(scene: IScene, entityId: number): void {
+        try {
+            const entity = scene.entities?.findEntityById(entityId);
+            if (entity) {
+                entity.destroy();
+                this.logger.debug(`在Scene中销毁实体成功: sceneId=${scene.name}, entityId=${entityId}`);
+            } else {
+                this.logger.warn(`Scene中未找到要销毁的实体: sceneId=${scene.name}, entityId=${entityId}`);
+            }
+        } catch (error) {
+            this.logger.error(`在Scene中销毁实体失败: sceneId=${scene.name}, entityId=${entityId}, error=${error}`);
+            throw error;
+        }
+    }
+
+    /**
+     * 在指定Scene中修改实体
+     */
+    private static modifyEntityInScene(scene: IScene, entityId: number, componentChanges: ComponentChange[]): void {
+        try {
+            const entity = scene.entities?.findEntityById(entityId);
+            if (!entity) {
+                this.logger.warn(`Scene中未找到要修改的实体: sceneId=${scene.name}, entityId=${entityId}`);
+                return;
+            }
+
+            // 处理组件变更
+            for (const componentChange of componentChanges) {
+                try {
+                    switch (componentChange.changeType) {
+                        case ComponentChangeType.ADDED:
+                            if (componentChange.data) {
+                                this.addComponentToEntity(entity, componentChange);
+                            }
+                            break;
+                        case ComponentChangeType.MODIFIED:
+                            if (componentChange.data) {
+                                this.modifyComponentInEntity(entity, componentChange);
+                            }
+                            break;
+                        case ComponentChangeType.REMOVED:
+                            this.removeComponentFromEntity(entity, componentChange.typeId);
+                            break;
+                    }
+                } catch (error) {
+                    this.logger.error(`处理组件变更失败: sceneId=${scene.name}, entityId=${entityId}, typeId=${componentChange.typeId}, error=${error}`);
+                }
+            }
+
+            this.logger.debug(`在Scene中修改实体成功: sceneId=${scene.name}, entityId=${entityId}, 组件变更: ${componentChanges.length}`);
+
+        } catch (error) {
+            this.logger.error(`在Scene中修改实体失败: sceneId=${scene.name}, entityId=${entityId}, error=${error}`);
+            throw error;
         }
     }
     
     /**
      * 在World中创建实体
      */
-    private static createEntityInWorld(world: World, entityId: number, componentChanges: ComponentChange[]): void {
-        // 简化实现：记录日志
-        this.logger.debug(`创建实体: ${entityId}, 组件变更: ${componentChanges.length}`);
+    private static createEntityInWorld(
+        world: World, 
+        entityId: number, 
+        componentChanges: ComponentChange[], 
+        context: ColumnarSerializationContext
+    ): void {
+        try {
+            // 使用智能场景选择
+            const scene = this.selectTargetScene(world, context);
+            if (!scene) {
+                this.logger.error(`无法选择目标场景，无法创建实体: ${entityId}`);
+                return;
+            }
+
+            // 创建实体
+            const entity = scene.createEntity(`Entity_${entityId}`);
+            
+            // 添加组件
+            for (const componentChange of componentChanges) {
+                if (componentChange.changeType !== ComponentChangeType.ADDED || !componentChange.data) {
+                    continue;
+                }
+
+                try {
+                    // 根据typeId查找组件名称
+                    const componentName = this.getComponentNameByTypeId(componentChange.typeId);
+                    if (!componentName) {
+                        this.logger.warn(`未找到组件类型: typeId=${componentChange.typeId}`);
+                        continue;
+                    }
+
+                    // 获取组件构造函数
+                    const ComponentClass = ComponentRegistry.getComponentType(componentName);
+                    if (!ComponentClass) {
+                        this.logger.warn(`未找到组件类: ${componentName}`);
+                        continue;
+                    }
+
+                    // 创建组件实例
+                    const component = new (ComponentClass as new () => Component)();
+
+                    // 反序列化组件数据
+                    this.deserializeComponentData(component, componentName, componentChange.data);
+
+                    // 添加组件到实体
+                    entity.addComponent(component);
+
+                } catch (error) {
+                    this.logger.error(`添加组件失败: typeId=${componentChange.typeId}, error=${error}`);
+                }
+            }
+
+            this.logger.debug(`创建实体成功: ${entityId}, 组件数量: ${componentChanges.length}`);
+
+        } catch (error) {
+            this.logger.error(`创建实体失败: ${entityId}, error=${error}`);
+            throw error;
+        }
     }
     
     /**
      * 在World中销毁实体
      */
     private static destroyEntityInWorld(world: World, entityId: number): void {
-        // 简化实现：忽略实体销毁
-        this.logger.debug(`销毁实体: ${entityId}`);
+        try {
+            // 在所有场景中查找并销毁实体
+            const allScenes = world.getAllScenes();
+            let entityFound = false;
+            
+            for (const scene of allScenes) {
+                const entity = this.findEntityById(scene, entityId);
+                if (entity) {
+                    entity.destroy();
+                    entityFound = true;
+                    this.logger.debug(`在场景中销毁实体成功: ${entityId}`);
+                    break;
+                }
+            }
+            
+            if (!entityFound) {
+                this.logger.warn(`在所有场景中都未找到要销毁的实体: ${entityId}`);
+            }
+
+        } catch (error) {
+            this.logger.error(`销毁实体失败: ${entityId}, error=${error}`);
+            throw error;
+        }
     }
     
     
@@ -652,12 +976,55 @@ export class ColumnarSerializer {
     /**
      * 修改实体
      */
-    private static modifyEntityInWorld(world: World, entityId: number, componentChanges: ComponentChange[]): void {
-        // 简化实现：忽略组件修改
-        this.logger.debug(`修改实体: ${entityId}, 组件变更: ${componentChanges.length}`);
+    private static modifyEntityInWorld(
+        world: World, 
+        entityId: number, 
+        componentChanges: ComponentChange[]
+    ): void {
+        try {
+            // 在所有场景中查找实体
+            const allScenes = world.getAllScenes();
+            let targetEntity = null;
+            
+            for (const scene of allScenes) {
+                const entity = this.findEntityById(scene, entityId);
+                if (entity) {
+                    targetEntity = entity;
+                    break;
+                }
+            }
+
+            if (!targetEntity) {
+                this.logger.warn(`在所有场景中都未找到要修改的实体: ${entityId}`);
+                return;
+            }
+
+            // 处理组件变更
+            for (const componentChange of componentChanges) {
+                try {
+                    switch (componentChange.changeType) {
+                        case ComponentChangeType.ADDED:
+                            this.addComponentToEntity(targetEntity, componentChange);
+                            break;
+                        case ComponentChangeType.MODIFIED:
+                            this.modifyComponentInEntity(targetEntity, componentChange);
+                            break;
+                        case ComponentChangeType.REMOVED:
+                            this.removeComponentFromEntity(targetEntity, componentChange.typeId);
+                            break;
+                    }
+                } catch (error) {
+                    this.logger.error(`处理组件变更失败: entityId=${entityId}, typeId=${componentChange.typeId}, error=${error}`);
+                }
+            }
+
+            this.logger.debug(`修改实体成功: ${entityId}, 组件变更: ${componentChanges.length}`);
+
+        } catch (error) {
+            this.logger.error(`修改实体失败: ${entityId}, error=${error}`);
+            throw error;
+        }
     }
-    
-    
     
     /**
      * 收集列数据
@@ -666,8 +1033,10 @@ export class ColumnarSerializer {
      * @param _context - 序列化上下文配置
      * @returns 按组件类型分组的列式数据数组
      */
-    private static collectColumnData(world: World, _context: ColumnarSerializationContext): ComponentColumnData[] {
-        const entities = this.getAllEntitiesFromWorld(world);
+    private static collectColumnData(world: World, context: ColumnarSerializationContext): ComponentColumnData[] {
+        const entities = context.targetSceneId ? 
+            this.getEntitiesFromTargetScene(world, context) : 
+            this.getAllEntitiesFromWorld(world);
         
         if (entities.length === 0) {
             return [];
@@ -680,9 +1049,6 @@ export class ColumnarSerializer {
         
         // 构建组件缓存和列数据结构
         for (const entity of entities) {
-            if (componentColumns.size >= _context.maxComponents) {
-                throw new Error(`超过最大组件类型限制: ${_context.maxComponents}`);
-            }
             
             for (const component of entity.components) {
                 const constructor = component.constructor;
@@ -717,7 +1083,7 @@ export class ColumnarSerializer {
                 columnData.entityIds.push(entity.id);
                 
                 // 收集字段数据
-                this.collectFieldData(component, columnData, cacheInfo, _context);
+                this.collectFieldData(component, columnData, cacheInfo, context);
             }
         }
         
@@ -735,18 +1101,18 @@ export class ColumnarSerializer {
      * @param component - 要序列化的组件实例
      * @param columnData - 目标列数据容器
      * @param cacheInfo - 组件缓存信息
-     * @param _context - 序列化上下文
+     * @param context - 序列化上下文
      */
     private static collectFieldData(
         component: Component, 
         columnData: ComponentColumnData, 
         cacheInfo: ComponentCacheInfo, 
-        _context: ColumnarSerializationContext
+        context: ColumnarSerializationContext
     ): void {
         const fieldDataToSerialize: Array<{
             fieldId: number;
             fieldMeta: FieldMeta;
-            fieldValue: any;
+            fieldValue: FieldValue;
             dataType: string;
         }> = [];
         
@@ -778,7 +1144,7 @@ export class ColumnarSerializer {
             });
         }
         
-        this.batchSerializeFieldValues(fieldDataToSerialize, columnData, _context);
+        this.batchSerializeFieldValues(fieldDataToSerialize, columnData, context);
     }
     
     
@@ -787,14 +1153,14 @@ export class ColumnarSerializer {
      * 
      * @param fieldDataArray - 字段数据数组
      * @param columnData - 列数据容器
-     * @param _context - 序列化上下文
+     * @param context - 序列化上下文
      */
     private static batchSerializeFieldValues(fieldDataArray: Array<{
         fieldId: number;
         fieldMeta: FieldMeta;
-        fieldValue: any;
+        fieldValue: FieldValue;
         dataType: string;
-    }>, columnData: ComponentColumnData, _context: ColumnarSerializationContext): void {
+    }>, columnData: ComponentColumnData, context: ColumnarSerializationContext): void {
         /** 按fieldId分组的字段数据 */
         const fieldGroups = new Map<number, typeof fieldDataArray>();
         
@@ -813,17 +1179,7 @@ export class ColumnarSerializer {
                 for (const fieldData of groupedFieldData) {
                     const { fieldMeta, fieldValue } = fieldData;
                     
-                    if (fieldMeta.options?.serializer) {
-                        if (typeof fieldMeta.options.serializer === 'string') {
-                            const serializedValue = SerializerRegistry.serialize(fieldMeta.options.serializer, fieldValue);
-                            this.writeValue(writer, serializedValue, 'custom');
-                        } else if (typeof fieldMeta.options.serializer === 'function') {
-                            const serializedValue = fieldMeta.options.serializer(fieldValue);
-                            this.writeValue(writer, serializedValue, 'custom');
-                        }
-                    } else {
-                        this.writeValue(writer, fieldValue, fieldBlock.dataType);
-                    }
+                    this.writeValue(writer, fieldValue, fieldBlock.dataType);
                 }
                 const buffer = writer.toArrayBuffer();
                 fieldBlock.data = new Uint8Array(buffer);
@@ -992,11 +1348,161 @@ export class ColumnarSerializer {
         }
         return null;
     }
+
+    /**
+     * 根据typeId获取组件名称
+     */
+    private static getComponentNameByTypeId(typeId: number): string | null {
+        return SchemaRegistry.getComponentNameById(typeId);
+    }
+
+    /**
+     * 反序列化组件数据
+     */
+    private static deserializeComponentData(component: Component, componentName: string, data: Uint8Array): void {
+        try {
+            const schema = SchemaRegistry.getComponentSchema(componentName);
+            if (!schema) {
+                this.logger.warn(`未找到组件Schema: ${componentName}`);
+                return;
+            }
+
+            const reader = new BinaryReader(data);
+            const meta = getClassSerializationMeta(component.constructor);
+            
+            if (!meta) {
+                this.logger.warn(`组件 ${componentName} 缺少序列化元数据`);
+                return;
+            }
+
+            // 按字段元数据的顺序反序列化
+            for (const fieldMeta of meta.fields) {
+                const fieldName = fieldMeta.name;
+                const fieldSchema = schema.fields[fieldName];
+                
+                if (!fieldSchema || reader.remaining() === 0) {
+                    continue;
+                }
+
+                try {
+                    let value: DeserializedValue;
+                    
+                    value = this.readValue(reader, fieldSchema.dataType || 'custom');
+
+                    // 设置组件字段值
+                    (component as any)[fieldName] = value;
+
+                } catch (error) {
+                    this.logger.warn(`反序列化字段失败: ${componentName}.${fieldName}, error=${error}`);
+                }
+            }
+
+        } catch (error) {
+            this.logger.error(`反序列化组件数据失败: ${componentName}, error=${error}`);
+            throw error;
+        }
+    }
+
+    /**
+     * 在场景中根据ID查找实体
+     */
+    private static findEntityById(scene: IScene, entityId: number): Entity | null {
+        return scene.entities?.findEntityById(entityId) || null;
+    }
+
+    /**
+     * 向实体添加组件
+     */
+    private static addComponentToEntity(entity: Entity, componentChange: ComponentChange): void {
+        if (!componentChange.data) {
+            this.logger.warn(`组件变更缺少数据: typeId=${componentChange.typeId}`);
+            return;
+        }
+
+        // 根据typeId查找组件名称
+        const componentName = this.getComponentNameByTypeId(componentChange.typeId);
+        if (!componentName) {
+            this.logger.warn(`未找到组件类型: typeId=${componentChange.typeId}`);
+            return;
+        }
+
+        // 获取组件构造函数
+        const ComponentClass = ComponentRegistry.getComponentType(componentName);
+        if (!ComponentClass) {
+            this.logger.warn(`未找到组件类: ${componentName}`);
+            return;
+        }
+
+        // 创建组件实例
+        const component = new (ComponentClass as new () => Component)();
+
+        // 反序列化组件数据
+        this.deserializeComponentData(component, componentName, componentChange.data);
+
+        // 添加组件到实体
+        entity.addComponent(component);
+    }
+
+    /**
+     * 修改实体中的组件
+     */
+    private static modifyComponentInEntity(entity: Entity, componentChange: ComponentChange): void {
+        if (!componentChange.data) {
+            this.logger.warn(`组件修改缺少数据: typeId=${componentChange.typeId}`);
+            return;
+        }
+
+        // 根据typeId查找组件名称
+        const componentName = this.getComponentNameByTypeId(componentChange.typeId);
+        if (!componentName) {
+            this.logger.warn(`未找到组件类型: typeId=${componentChange.typeId}`);
+            return;
+        }
+
+        // 获取组件构造函数
+        const ComponentClass = ComponentRegistry.getComponentType(componentName);
+        if (!ComponentClass) {
+            this.logger.warn(`未找到组件类: ${componentName}`);
+            return;
+        }
+
+        // 查找实体中的组件
+        const existingComponent = entity.getComponent(ComponentClass as new () => Component);
+        if (!existingComponent) {
+            this.logger.warn(`实体中没有找到要修改的组件: ${componentName}`);
+            return;
+        }
+
+        // 反序列化并应用到现有组件
+        this.deserializeComponentData(existingComponent, componentName, componentChange.data);
+    }
+
+    /**
+     * 从实体中移除组件
+     */
+    private static removeComponentFromEntity(entity: Entity, typeId: number): void {
+        // 根据typeId查找组件名称
+        const componentName = this.getComponentNameByTypeId(typeId);
+        if (!componentName) {
+            this.logger.warn(`未找到组件类型: typeId=${typeId}`);
+            return;
+        }
+
+        // 获取组件构造函数
+        const ComponentClass = ComponentRegistry.getComponentType(componentName);
+        if (!ComponentClass) {
+            this.logger.warn(`未找到组件类: ${componentName}`);
+            return;
+        }
+
+        // 移除组件
+        entity.removeComponentByType(ComponentClass as new () => Component);
+    }
     
     /**
      * 检查值是否为默认值
      */
-    private static isDefaultValue(value: any, dataType: string): boolean {
+    private static isDefaultValue(value: FieldValue, dataType: string): boolean {
         if (value === null || value === undefined) return true;
         
         switch (dataType) {
@@ -1027,14 +1533,20 @@ export class ColumnarSerializer {
     /**
      * 检查自定义类型是否为默认值
      */
-    private static isDefaultCustomValue(value: any): boolean {
+    private static isDefaultCustomValue(value: FieldValue): boolean {
         if (typeof value === 'object' && value !== null) {
+            // 只处理普通对象，不处理数组
+            if (Array.isArray(value)) {
+                return false;
+            }
+            
             // 检查对象的所有属性是否都为默认值
-            const keys = Object.keys(value);
+            const obj = value as Record<string, unknown>;
+            const keys = Object.keys(obj);
             if (keys.length === 0) return true;
             
             return keys.every(key => {
-                const val = value[key];
+                const val = obj[key];
                 return val === null || val === undefined || val === 0 || val === '' || val === false;
             });
         }
@@ -1076,6 +1588,8 @@ export class ColumnarSerializer {
     private static writeEntityChanges(writer: BinaryWriter, changes: EntityChange[]): void {
         for (const change of changes) {
             writer.writeVarInt(change.entityId);
+            writer.writeString(change.worldId);
+            writer.writeString(change.sceneId);
             writer.writeU8(change.changeType);
             writer.writeVarInt(change.componentChanges.length);
             
@@ -1199,7 +1713,7 @@ export class ColumnarSerializer {
     /**
      * 读取列数据
      */
-    private static readColumnData(reader: BinaryReader, _context: ColumnarSerializationContext): ComponentColumnData[] {
+    private static readColumnData(reader: BinaryReader, context: ColumnarSerializationContext): ComponentColumnData[] {
         // 跳过时间戳
         reader.readU32();
         
@@ -1265,13 +1779,25 @@ export class ColumnarSerializer {
     }
     
     /**
-     * 重建实体和组件 - 优化版本，减少重复查找和内存分配
+     * 重建实体和组件
      */
     private static reconstructEntities(world: World, columnData: ComponentColumnData[], context: ColumnarSerializationContext): void {
         try {
-            const scene = world.getScene('main');
+            // 如果没有数据需要反序列化，直接返回，不创建场景
+            if (columnData.length === 0) {
+                this.logger.debug('没有数据需要反序列化，跳过场景创建');
+                return;
+            }
+            
+            // 在反序列化时，如果目标场景不存在就自动创建
+            const reconstructContext = { 
+                ...context, 
+                autoCreateScene: true  // 反序列化时总是允许自动创建场景
+            };
+            
+            const scene = this.selectTargetScene(world, reconstructContext);
             if (!scene) {
-                this.logger.error('未找到main场景');
+                this.logger.error('无法选择或创建目标场景');
                 return;
             }
 
@@ -1344,14 +1870,6 @@ export class ColumnarSerializer {
                     if (!deserializedFieldData.has(cacheKey)) {
                         let deserializedValues = this.deserializeFieldBlock(fieldBlock, fieldInfo.schema);
                         
-                        if (fieldInfo.schema.serializationOptions?.serializer) {
-                            const serializerName = fieldInfo.schema.serializationOptions.serializer;
-                            if (typeof serializerName === 'string') {
-                                deserializedValues = deserializedValues.map(v => 
-                                    SerializerRegistry.deserialize(serializerName, v)
-                                );
-                            }
-                        }
                         
                         deserializedFieldData.set(cacheKey, deserializedValues);
                     }
@@ -1400,16 +1918,14 @@ export class ColumnarSerializer {
      * 验证上下文
      */
     private static validateContext(context: ColumnarSerializationContext): void {
-        if (context.maxEntities <= 0 || context.maxComponents <= 0) {
-            throw new Error('无效的上下文限制');
-        }
+        // 基本验证，如果需要可以扩展
     }
     
     /**
-     * 反序列化字段块数据 - 优化版本，减少Reader创建开销
+     * 反序列化字段块数据
      */
-    private static deserializeFieldBlock(fieldBlock: FieldBlock, fieldSchema: FieldSchema): any[] {
-        const values: any[] = [];
+    private static deserializeFieldBlock(fieldBlock: FieldBlock, fieldSchema: FieldSchema): DeserializedValue[] {
+        const values: DeserializedValue[] = [];
         const dataType = fieldSchema.dataType || 'custom';
         
         if (fieldBlock.data.length === 0) {
@@ -1442,7 +1958,7 @@ export class ColumnarSerializer {
     /**
      * 读取单个值
      */
-    private static readValue(reader: BinaryReader, dataType: string): any {
+    private static readValue(reader: BinaryReader, dataType: string): DeserializedValue {
         switch (dataType) {
             case 'number':
             case 'float64':
@@ -1523,15 +2039,14 @@ export class ColumnarSerializer {
             compression: true,
             skipDefaults: true,
             strict: false,
-            maxEntities: 1000000, // 100万实体
-            maxComponents: 10000   // 1万组件类型
+            autoCreateScene: false  // 默认不自动创建场景，需要显式指定
         };
     }
     
     /**
      * 计算元数据
      */
-    private static calculateMetadata(buffer: ArrayBuffer, columnData: ComponentColumnData[], _serializationTime: number): SerializationResult['metadata'] {
+    private static calculateMetadata(buffer: ArrayBuffer, columnData: ComponentColumnData[], serializationTime: number): SerializationResult['metadata'] {
         const totalEntities = columnData.reduce((sum, column) => sum + column.entityIds.length, 0);
         const checksum = murmur3_32(new Uint8Array(buffer));
         
@@ -1559,13 +2074,15 @@ export class ColumnarSerializer {
      */
     private static createFullEntityChanges(world: World): EntityChange[] {
         const changes: EntityChange[] = [];
-        const entities = this.getAllEntitiesFromWorld(world);
+        const entitiesWithLocation = this.getAllEntitiesWithLocation(world);
         
-        for (const entity of entities) {
+        for (const { entity, worldId, sceneId } of entitiesWithLocation) {
             const componentChanges = this.createComponentChangesForNewEntity(entity);
             changes.push({
                 changeType: EntityChangeType.ADDED,
                 entityId: entity.id,
+                worldId,
+                sceneId,
                 componentChanges,
                 timestamp: performance.now()
             });
@@ -1578,51 +2095,66 @@ export class ColumnarSerializer {
         const changeDetectionStart = performance.now();
         const entityChanges: EntityChange[] = [];
         
-        // 获取当前所有实体
-        const currentEntities = this.getAllEntitiesFromWorld(world);
-        const currentEntityMap = new Map<number, Entity>();
+        // 获取当前所有实体（带位置信息）
+        const currentEntitiesWithLocation = this.getAllEntitiesWithLocation(world);
+        const currentEntityMap = new Map<string, { entity: Entity; worldId: string; sceneId: string }>();
         
-        for (const entity of currentEntities) {
-            currentEntityMap.set(entity.id, entity);
+        // 使用复合标识符作为键
+        for (const { entity, worldId, sceneId } of currentEntitiesWithLocation) {
+            const compositeKey = EntityIdentifier.toKey({
+                worldId,
+                sceneId,
+                localId: entity.id
+            });
+            currentEntityMap.set(compositeKey, { entity, worldId, sceneId });
         }
         
         // 反序列化基线快照获取基线实体
-        const baseWorld = new World();
+        const baseWorld = new World({ name: `${world.name}_baseline` });
         this.deserialize(baseSnapshot.payload, baseWorld, {
             compression: context.compression,
             skipDefaults: context.skipDefaults,
             strict: context.strict,
-            maxEntities: context.maxEntities,
-            maxComponents: context.maxComponents
         });
         
-        const baseEntities = this.getAllEntitiesFromWorld(baseWorld);
-        const baseEntityMap = new Map<number, Entity>();
+        const baseEntitiesWithLocation = this.getAllEntitiesWithLocation(baseWorld);
+        const baseEntityMap = new Map<string, { entity: Entity; worldId: string; sceneId: string }>();
         
-        for (const entity of baseEntities) {
-            baseEntityMap.set(entity.id, entity);
+        for (const { entity, worldId, sceneId } of baseEntitiesWithLocation) {
+            const compositeKey = EntityIdentifier.toKey({
+                worldId,
+                sceneId,
+                localId: entity.id
+            });
+            baseEntityMap.set(compositeKey, { entity, worldId, sceneId });
         }
         
         // 检测新增和修改的实体
-        for (const [entityId, currentEntity] of currentEntityMap) {
-            const baseEntity = baseEntityMap.get(entityId);
+        for (const [compositeKey, currentEntityData] of currentEntityMap) {
+            const baseEntityData = baseEntityMap.get(compositeKey);
+            const { entity: currentEntity, worldId, sceneId } = currentEntityData;
             
-            if (!baseEntity) {
+            if (!baseEntityData) {
                 // 新增的实体
                 const componentChanges = this.createComponentChangesForNewEntity(currentEntity);
                 entityChanges.push({
                     changeType: EntityChangeType.ADDED,
-                    entityId,
+                    entityId: currentEntity.id,
+                    worldId,
+                    sceneId,
                     componentChanges,
                     timestamp: performance.now()
                 });
             } else {
                 // 检测修改的实体
+                const baseEntity = baseEntityData.entity;
                 const componentChanges = this.detectComponentChanges(currentEntity, baseEntity);
                 if (componentChanges.length > 0) {
                     entityChanges.push({
                         changeType: EntityChangeType.MODIFIED,
-                        entityId,
+                        entityId: currentEntity.id,
+                        worldId,
+                        sceneId,
                         componentChanges,
                         timestamp: performance.now()
                     });
@@ -1632,11 +2164,14 @@ export class ColumnarSerializer {
         
         // 检测删除的实体
         if (context.includeRemovals) {
-            for (const [entityId, baseEntity] of baseEntityMap) {
-                if (!currentEntityMap.has(entityId)) {
+            for (const [compositeKey, baseEntityData] of baseEntityMap) {
+                if (!currentEntityMap.has(compositeKey)) {
+                    const { entity: baseEntity, worldId, sceneId } = baseEntityData;
                     entityChanges.push({
                         changeType: EntityChangeType.REMOVED,
-                        entityId,
+                        entityId: baseEntity.id,
+                        worldId,
+                        sceneId,
                         componentChanges: [],
                         timestamp: performance.now()
                     });
@@ -1777,7 +2312,7 @@ export class ColumnarSerializer {
      * @param dataType - 数据类型
      * @returns 是否相等
      */
-    private static areFieldValuesEqual(value1: any, value2: any, dataType: string): boolean {
+    private static areFieldValuesEqual(value1: FieldValue, value2: FieldValue, dataType: string): boolean {
         if (value1 === value2) return true;
         if (value1 == null || value2 == null) return value1 == value2;
         
@@ -1838,6 +2373,22 @@ export class ColumnarSerializer {
     }
     
     /**
+     * 从目标场景获取实体
+     */
+    private static getEntitiesFromTargetScene(world: World, context: ColumnarSerializationContext): Entity[] {
+        const targetScene = this.selectTargetScene(world, context);
+        if (!targetScene) {
+            return [];
+        }
+        
+        if (targetScene.entities?.buffer) {
+            return [...targetScene.entities.buffer];
+        }
+        
+        return [];
+    }
+    
+    /**
      * 从World获取所有实体
      */
     private static getAllEntitiesFromWorld(world: World): Entity[] {
@@ -1851,5 +2402,38 @@ export class ColumnarSerializer {
         }
         
         return entities;
+    }
+
+    /**
+     * 获取带位置信息的实体列表
+     * 
+     * @param world World实例
+     * @returns 包含实体和位置信息的数组
+     */
+    private static getAllEntitiesWithLocation(world: World): Array<{
+        entity: Entity;
+        worldId: string;
+        sceneId: string;
+    }> {
+        const entitiesWithLocation: Array<{
+            entity: Entity;
+            worldId: string;
+            sceneId: string;
+        }> = [];
+        
+        const scenes = world.getAllScenes();
+        for (const scene of scenes) {
+            if (scene?.entities?.buffer) {
+                for (const entity of scene.entities.buffer) {
+                    entitiesWithLocation.push({
+                        entity,
+                        worldId: world.name,
+                        sceneId: scene.name
+                    });
+                }
+            }
+        }
+        
+        return entitiesWithLocation;
     }
 }

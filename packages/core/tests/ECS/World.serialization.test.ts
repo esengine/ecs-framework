@@ -237,7 +237,7 @@ describe('World序列化功能', () => {
             const newWorld = new World({ name: 'NewWorld' });
             newWorld.deserialize(serialized.buffer);
             
-            expect(newWorld.sceneCount).toBe(0); // World.deserialize 清空现有场景
+            expect(newWorld.sceneCount).toBe(1); // 反序列化包含数据时会创建场景来存放实体
         });
 
         test('反序列化应该清空现有数据（默认行为）', () => {
@@ -304,8 +304,8 @@ describe('World序列化功能', () => {
             const newWorld = new World({ name: 'DeserializedWorld' });
             newWorld.deserialize(serialized.buffer);
             
-            // 由于 World.deserialize 清空现有场景，newWorld.sceneCount 为 0
-            expect(newWorld.sceneCount).toBe(0);
+            // 反序列化包含数据时会创建场景来存放实体
+            expect(newWorld.sceneCount).toBe(1);
         });
 
         test('多次序列化应该产生相同结果', () => {

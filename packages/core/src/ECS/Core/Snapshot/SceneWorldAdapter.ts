@@ -8,7 +8,7 @@ import { WorldAdapter, EncodeOptions, DecodeOptions, SignatureScope, AfterDecode
 import { createLogger } from '../../../Utils/Logger';
 import { murmur3_32, concatBytes, numberToBytes, stringToUtf8Bytes } from '../../../Utils/Hash32';
 import { ColumnarSerializer, ColumnarSerializationContext } from '../Serialization/ColumnarSerializer';
-import { getClassSerializationMeta, validateSerializableComponent } from '../../Decorators/SerializationDecorators';
+import { getClassSerializationMeta, validateSerializableComponent, ClassSerializationMeta, FieldMeta } from '../../Decorators/SerializationDecorators';
 import { SerializerRegistry } from '../Serialization/SerializerRegistry';
 
 /**
@@ -647,9 +647,7 @@ export class SceneWorldAdapter implements WorldAdapter {
         return {
             compression: true,
             skipDefaults: true,
-            strict: true,
-            maxEntities: 1000000, // 100万实体
-            maxComponents: 10000   // 1万组件类型
+            strict: true
         };
     }
 
@@ -666,7 +664,7 @@ export class SceneWorldAdapter implements WorldAdapter {
         
         // 传统序列化接口
         const isSerializableComponent = (comp: Component): comp is Component & { serialize?(): Record<string, unknown> } => {
-            return typeof (comp as any).serialize === 'function';
+            return typeof comp.serialize === 'function';
         };
         
         if (isSerializableComponent(component) && component.serialize) {
@@ -726,7 +724,7 @@ export class SceneWorldAdapter implements WorldAdapter {
     /**
      * 使用装饰器系统序列化组件
      */
-    private _serializeComponentWithDecorators(component: Component, meta: any): Record<string, unknown> {
+    private _serializeComponentWithDecorators(component: Component, meta: ClassSerializationMeta): Record<string, unknown> {
         const result: Record<string, unknown> = {};
         
         for (const fieldMeta of meta.fields) {
@@ -766,7 +764,7 @@ export class SceneWorldAdapter implements WorldAdapter {
     /**
      * 检查字段是否应该序列化
      */
-    private _shouldSerializeField(fieldMeta: any, value: any): boolean {
+    private _shouldSerializeField(fieldMeta: FieldMeta, value: unknown): boolean {
         // 跳过默认值
         if (fieldMeta.options.skipDefaults && fieldMeta.options.defaultValue !== undefined) {
             return value !== fieldMeta.options.defaultValue;
@@ -783,7 +781,7 @@ export class SceneWorldAdapter implements WorldAdapter {
     /**
      * 序列化字段值
      */
-    private _serializeFieldValue(value: any): any {
+    private _serializeFieldValue(value: unknown): unknown {
         if (value == null) return value;
         
         if (typeof value === 'string' || typeof value === 'boolean') {
@@ -825,16 +823,17 @@ export class SceneWorldAdapter implements WorldAdapter {
     /**
      * JSON序列化
      */
-    private _stableStringify(obj: any): string {
+    private _stableStringify(obj: unknown): string {
         return JSON.stringify(obj, (_, value) => {
             // TypedArray和ArrayBuffer保持原样，不参与键排序
             if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) {
                 return value;
             }
             if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-                const sorted: any = {};
-                for (const k of Object.keys(value).sort()) {
-                    sorted[k] = value[k];
+                const sorted: Record<string, unknown> = {};
+                const objValue = value as Record<string, unknown>;
+                for (const k of Object.keys(objValue).sort()) {
+                    sorted[k] = objValue[k];
                 }
                 return sorted;
             }
@@ -869,7 +868,7 @@ export class SceneWorldAdapter implements WorldAdapter {
             } else {
                 // 传统反序列化接口
                 const isSerializableComponent = (comp: Component): comp is Component & { deserialize?(data: Record<string, unknown>): void } => {
-                    return typeof (comp as any).deserialize === 'function';
+                    return typeof comp.deserialize === 'function';
                 };
                 
                 if (isSerializableComponent(component) && component.deserialize) {
@@ -894,14 +893,14 @@ export class SceneWorldAdapter implements WorldAdapter {
     /**
      * 使用装饰器系统反序列化组件
      */
-    private _deserializeComponentWithDecorators(component: Component, data: Record<string, unknown>, meta: any): void {
+    private _deserializeComponentWithDecorators(component: Component, data: Record<string, unknown>, meta: ClassSerializationMeta): void {
         for (const fieldMeta of meta.fields) {
             const fieldName = fieldMeta.name;
             
             if (!(fieldName in data)) {
                 // 字段在数据中不存在，使用默认值或跳过
                 if (fieldMeta.options.defaultValue !== undefined) {
-                    (component as any)[fieldName] = fieldMeta.options.defaultValue;
+                    component[fieldName] = fieldMeta.options.defaultValue;
                 }
                 continue;
             }
@@ -912,13 +911,13 @@ export class SceneWorldAdapter implements WorldAdapter {
             if (fieldMeta.options.deserializer) {
                 if (typeof fieldMeta.options.deserializer === 'string') {
                     try {
-                        (component as any)[fieldName] = SerializerRegistry.deserialize(fieldMeta.options.deserializer, fieldValue);
+                        component[fieldName] = SerializerRegistry.deserialize(fieldMeta.options.deserializer, fieldValue);
                     } catch (error) {
                         this._logger.warn(`反序列化字段失败 ${fieldName}:`, error);
                     }
                 } else {
                     try {
-                        (component as any)[fieldName] = fieldMeta.options.deserializer(fieldValue);
+                        component[fieldName] = fieldMeta.options.deserializer(fieldValue);
                     } catch (error) {
                         this._logger.warn(`反序列化字段失败 ${fieldName}:`, error);
                     }
@@ -926,14 +925,14 @@ export class SceneWorldAdapter implements WorldAdapter {
             } else if (fieldMeta.options.serializer && typeof fieldMeta.options.serializer === 'string') {
                 // 使用序列化器的反序列化功能
                 try {
-                    (component as any)[fieldName] = SerializerRegistry.deserialize(fieldMeta.options.serializer, fieldValue);
+                    component[fieldName] = fieldValue;
                 } catch (error) {
                     this._logger.warn(`反序列化字段失败 ${fieldName}:`, error);
-                    (component as any)[fieldName] = fieldValue;
+                    component[fieldName] = fieldValue;
                 }
             } else {
                 // 直接赋值
-                (component as any)[fieldName] = fieldValue;
+                component[fieldName] = fieldValue;
             }
         }
     }
@@ -961,7 +960,7 @@ export class SceneWorldAdapter implements WorldAdapter {
     /**
      * 按元素类型处理数组
      */
-    private _pushArray(chunks: Uint8Array[], arr: any[]): void {
+    private _pushArray(chunks: Uint8Array[], arr: unknown[]): void {
         if (arr.every(x => typeof x === 'number')) {
             chunks.push(numberToBytes(0x14));
             chunks.push(numberToBytes(arr.length));

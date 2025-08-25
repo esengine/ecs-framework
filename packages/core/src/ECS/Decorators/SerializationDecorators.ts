@@ -15,9 +15,6 @@ export interface SerializableOptions {
     /** 是否启用压缩 */
     compression?: boolean;
     
-    /** 是否启用版本容错 */
-    versionTolerant?: boolean;
-    
     /** 序列化模式 */
     mode?: 'explicit' | 'all-fields';
 }
@@ -29,9 +26,6 @@ export interface SerializableFieldOptions {
     /** 字段ID（由SchemaRegistry分配） */
     id?: number;
     
-    /** 序列化格式 */
-    format?: 'json' | 'binary';
-    
     /** 数据类型 */
     dataType?: FieldDataType;
     
@@ -41,9 +35,6 @@ export interface SerializableFieldOptions {
     /** 自定义反序列化器 */
     deserializer?: string | ((data: any) => any);
     
-    /** 序列化模式 */
-    mode?: 'auto' | 'self';
-    
     /** 是否跳过默认值 */
     skipDefaults?: boolean;
     
@@ -52,13 +43,6 @@ export interface SerializableFieldOptions {
     
     /** 是否可空 */
     nullable?: boolean;
-    
-    /** 二进制序列化选项 */
-    binaryOptions?: {
-        precision?: 'float32' | 'float64';
-        compression?: boolean;
-        encoding?: 'varint' | 'zigzag' | 'raw';
-    };
 }
 
 /**
@@ -70,9 +54,6 @@ export interface ClassSerializationMeta {
     
     /** 字段元数据 */
     fields: FieldMeta[];
-    
-    /** 预编译的快速序列化器 */
-    fastSerializer?: SerializerPair;
 }
 
 /**
@@ -87,18 +68,8 @@ export interface FieldMeta {
     
     /** 序列化选项 */
     options: SerializableFieldOptions;
-    
-    /** 运行时类型推断 */
-    runtimeType?: string;
 }
 
-/**
- * 序列化器对
- */
-export interface SerializerPair {
-    serialize: (instance: Component) => Record<string, unknown>;
-    deserialize: (instance: Component, data: Record<string, unknown>) => void;
-}
 
 /**
  * 组件构造函数类型
@@ -113,17 +84,25 @@ const logger = createLogger('SerializationDecorators');
 /**
  * 组件序列化装饰器
  * 
- * 标记组件可序列化，支持C#风格的命名
+ * 标记组件可序列化
  * 
  * @param options 序列化选项
  * @returns 类装饰器
  * 
  * @example
  * ```typescript
- * @Serializable()
+ * @Serializable({ compression: true, binaryMode: true })
  * class HealthComponent extends Component {
- *     @SerializableField({ id: 1 })
+ *     // ID会自动基于组件名+字段名生成哈希值
+ *     @SerializableField({ dataType: 'number' })
  *     public health: number = 100;
+ *     
+ *     @SerializableField({ skipDefaults: true, defaultValue: 0 })
+ *     public mana: number = 0;
+ *     
+ *     // 也可以手动指定ID（用于兼容性）
+ *     @SerializableField({ id: 100, dataType: 'string' })
+ *     public name: string = '';
  * }
  * ```
  */
@@ -146,7 +125,6 @@ export function Serializable(options: SerializableOptions = {}) {
         } catch (error) {
             const componentName = getComponentTypeName(constructor);
             logger.error(`注册组件Schema失败: ${componentName}`, error);
-            // 简化错误处理，不再区分dev/prod模式
         }
         
         const componentName = getComponentTypeName(constructor);
@@ -189,7 +167,6 @@ export function SerializableField(options: SerializableFieldOptions = {}) {
                 ...options,
                 dataType
             },
-            runtimeType: inferredType
         };
         
         // 检查重复字段
@@ -329,15 +306,6 @@ export function validateSerializableComponent(component: Component): void {
     }
 }
 
-/**
- * 获取所有已注册的可序列化组件
- */
-export function getAllSerializableComponents(): Map<Function, ClassSerializationMeta> {
-    // 注意：这里不能直接返回WeakMap的内容，因为无法遍历
-    // 实际使用中应该维护一个单独的注册表
-    logger.warn('getAllSerializableComponents() 需要在SchemaRegistry中维护组件列表');
-    return new Map();
-}
 
 /**
  * 检查字段是否应该序列化
@@ -368,7 +336,6 @@ export function createFieldDescriptor(field: FieldMeta): string {
     
     if (options.nullable) parts.push('nullable');
     if (options.skipDefaults) parts.push('skipDefaults');
-    if (options.serializer) parts.push(`serializer:${typeof options.serializer === 'string' ? options.serializer : 'custom'}`);
     
     return `${field.name}(${parts.join(',')})`;
 }

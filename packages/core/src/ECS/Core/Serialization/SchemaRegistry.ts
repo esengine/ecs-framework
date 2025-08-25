@@ -28,6 +28,9 @@ export class SchemaRegistry {
     private static registry: ComponentRegistry = { components: {} };
     private static componentIdCache = new Map<string, number>();
     private static fieldIdCache = new Map<string, number>();
+    // 添加反向查找缓存
+    private static componentIdToNameCache = new Map<number, string>();
+    private static fieldIdToKeyCache = new Map<number, string>();
     private static readonly logger = createLogger('SchemaRegistry');
     private static initialized = false;
     
@@ -64,6 +67,8 @@ export class SchemaRegistry {
         this.registry = { components: {} };
         this.componentIdCache.clear();
         this.fieldIdCache.clear();
+        this.componentIdToNameCache.clear();
+        this.fieldIdToKeyCache.clear();
         this.initialized = false;
     }
     
@@ -95,13 +100,19 @@ export class SchemaRegistry {
     private static rebuildCache(): void {
         this.componentIdCache.clear();
         this.fieldIdCache.clear();
+        this.componentIdToNameCache.clear();
+        this.fieldIdToKeyCache.clear();
         
         for (const [componentName, schema] of Object.entries(this.registry.components)) {
-            this.componentIdCache.set(componentName, this.hashString(componentName));
+            const componentId = this.hashString(componentName);
+            this.componentIdCache.set(componentName, componentId);
+            this.componentIdToNameCache.set(componentId, componentName);
             
             for (const fieldName of Object.keys(schema.fields)) {
                 const fieldKey = `${componentName}.${fieldName}`;
-                this.fieldIdCache.set(fieldKey, this.hashString(fieldKey));
+                const fieldId = this.hashString(fieldKey);
+                this.fieldIdCache.set(fieldKey, fieldId);
+                this.fieldIdToKeyCache.set(fieldId, fieldKey);
             }
         }
     }
@@ -128,6 +139,7 @@ export class SchemaRegistry {
         if (!this.componentIdCache.has(componentName)) {
             const id = this.hashString(componentName);
             this.componentIdCache.set(componentName, id);
+            this.componentIdToNameCache.set(id, componentName);
             return id;
         }
         return this.componentIdCache.get(componentName)!;
@@ -151,6 +163,7 @@ export class SchemaRegistry {
         if (!this.fieldIdCache.has(fieldKey)) {
             const id = this.hashString(fieldKey);
             this.fieldIdCache.set(fieldKey, id);
+            this.fieldIdToKeyCache.set(id, fieldKey);
             return id;
         }
         return this.fieldIdCache.get(fieldKey)!;
@@ -189,10 +202,15 @@ export class SchemaRegistry {
         
         this.registry.components[componentName] = componentSchema;
         
-        this.componentIdCache.set(componentName, this.hashString(componentName));
+        const componentId = this.hashString(componentName);
+        this.componentIdCache.set(componentName, componentId);
+        this.componentIdToNameCache.set(componentId, componentName);
+        
         for (const fieldName of Object.keys(componentFields)) {
             const fieldKey = `${componentName}.${fieldName}`;
-            this.fieldIdCache.set(fieldKey, this.hashString(fieldKey));
+            const fieldId = this.hashString(fieldKey);
+            this.fieldIdCache.set(fieldKey, fieldId);
+            this.fieldIdToKeyCache.set(fieldId, fieldKey);
         }
         
         this.logger.debug(`已注册组件: ${componentName}`);
@@ -221,6 +239,34 @@ export class SchemaRegistry {
      */
     static hasComponent(componentName: string): boolean {
         return componentName in this.registry.components;
+    }
+    
+    /**
+     * 根据组件ID获取组件名称
+     * 
+     * @param componentId 组件ID
+     */
+    static getComponentNameById(componentId: number): string | null {
+        return this.componentIdToNameCache.get(componentId) || null;
+    }
+    
+    /**
+     * 根据字段ID获取字段信息
+     * 
+     * @param fieldId 字段ID
+     * @returns 包含组件名和字段名的对象，如果未找到返回null
+     */
+    static getFieldInfoById(fieldId: number): { componentName: string; fieldName: string } | null {
+        const fieldKey = this.fieldIdToKeyCache.get(fieldId);
+        if (!fieldKey) return null;
+        
+        const dotIndex = fieldKey.indexOf('.');
+        if (dotIndex === -1) return null;
+        
+        return {
+            componentName: fieldKey.substring(0, dotIndex),
+            fieldName: fieldKey.substring(dotIndex + 1)
+        };
     }
     
     /**

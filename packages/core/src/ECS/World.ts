@@ -129,11 +129,8 @@ export class World {
 
         const scene = sceneInstance;
         
-        // 设置Scene的标识
-        if (scene && typeof scene === 'object' && 'id' in scene) {
-            (scene as any).id = sceneId;
-        }
-        if (scene && typeof scene === 'object' && 'name' in scene && !scene.name) {
+        // 设置Scene名称
+        if (!scene.name) {
             scene.name = sceneId;
         }
 
@@ -151,6 +148,13 @@ export class World {
      */
     public createDefaultScene(sceneId: string): Scene {
         return this.addScene(sceneId, new Scene());
+    }
+
+    /**
+     * 创建新Scene并添加到World
+     */
+    public createScene(sceneId: string): Scene {
+        return this.createDefaultScene(sceneId);
     }
 
     /**
@@ -232,6 +236,19 @@ export class World {
      */
     public getActiveSceneCount(): number {
         return this._activeScenes.size;
+    }
+
+    /**
+     * 获取第一个活跃的Scene
+     */
+    public getFirstActiveScene(): IScene | null {
+        for (const sceneId of this._activeScenes) {
+            const scene = this._scenes.get(sceneId);
+            if (scene) {
+                return scene;
+            }
+        }
+        return null;
     }
 
     // ===== 全局System管理 =====
@@ -568,8 +585,6 @@ export class World {
                 compression: options?.compression ?? true,
                 skipDefaults: options?.skipDefaults ?? true,
                 strict: options?.strict ?? false,
-                maxEntities: 1000000,
-                maxComponents: 10000,
                 ...options
             });
         } catch (error) {
