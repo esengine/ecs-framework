@@ -1,5 +1,2 @@
 packages:
   - 'packages/**'
-  - 'examples/**'
-  - 'extensions/**'
-  - 'thirdparty/**'
