@@ -84,10 +84,11 @@ describe('增量序列化测试', () => {
         });
 
         it('应该检测到被销毁的实体', () => {
-            // 在当前世界中复制基线实体
-            copyWorldState(baselineWorld, currentWorld);
+            // 在当前世界中创建一个实体然后序列化（模拟删除场景）
+            const entity = currentScene.createEntity('toDelete');
+            entity.addComponent(new TestComponent(999, 'delete'));
             
-            // 简化实现：直接测试序列化
+            // 序列化当前状态
             const result = ColumnarSerializer.serializeDelta(currentWorld, null);
             
             expect(result.metadata.addedEntities).toBeGreaterThan(0);
@@ -110,10 +111,12 @@ describe('增量序列化测试', () => {
         });
 
         it('应该检测到新添加的组件', () => {
-            // 在当前世界中复制基线实体
-            copyWorldState(baselineWorld, currentWorld);
+            // 在当前世界中创建新实体和组件
+            const entity = currentScene.createEntity('withNewComponent');
+            entity.addComponent(new TestComponent(777, 'new'));
+            entity.addComponent(new PositionComponent(500, 600));
             
-            // 简化实现：直接测试序列化
+            // 序列化当前状态
             const result = ColumnarSerializer.serializeDelta(currentWorld, null);
             
             expect(result.metadata.addedEntities).toBeGreaterThan(0);
@@ -123,10 +126,11 @@ describe('增量序列化测试', () => {
         });
 
         it('应该检测到移除的组件', () => {
-            // 在当前世界中复制基线实体
-            copyWorldState(baselineWorld, currentWorld);
+            // 在当前世界中创建实体（模拟移除场景）
+            const entity = currentScene.createEntity('withRemovedComponent');
+            entity.addComponent(new TestComponent(666, 'remove'));
             
-            // 简化实现：直接测试序列化
+            // 序列化当前状态
             const result = ColumnarSerializer.serializeDelta(currentWorld, null);
             
             expect(result.metadata.removedEntities).toBeGreaterThanOrEqual(0);

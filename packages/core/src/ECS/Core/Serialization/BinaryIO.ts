@@ -1,11 +1,9 @@
 /**
- * 生产级二进制IO读写器
+ * 二进制IO读写器
  * 
  * 提供高性能、类型安全的二进制数据序列化/反序列化
- * 支持varint、zigzag、位打包等优化编码
+ * 支持varint、zigzag、位打包等编码
  */
-
-import { murmur3_32 } from '../../../Utils/Hash32';
 
 /**
  * 二进制写入器
@@ -17,55 +15,37 @@ export class BinaryWriter {
     private offset = 0;
     private capacity: number;
     
-    // 安全性限制
-    private static readonly MAX_CAPACITY = 1 << 28; // 256MB
-    private static readonly MAX_STRING_LENGTH = 64 * 1024; // 64KB
-    private static readonly MAX_ARRAY_LENGTH = 1 << 24; // 16M元素
+    private static readonly textEncoder = new TextEncoder();
+    private static readonly MAX_CAPACITY = 1 << 28;
+    private static readonly MAX_STRING_LENGTH = 1 << 20;
+    private static readonly MAX_ARRAY_LENGTH = 1 << 26;
     
-    constructor(initialCapacity = 1 << 20) { // 1MB初始容量
-        if (initialCapacity > BinaryWriter.MAX_CAPACITY) {
-            throw new Error(`初始容量超限: ${initialCapacity} > ${BinaryWriter.MAX_CAPACITY}`);
-        }
-        
-        this.capacity = initialCapacity;
+    constructor(initialCapacity = 1 << 10) {
+        this.capacity = initialCapacity > BinaryWriter.MAX_CAPACITY ? 1 << 20 : initialCapacity;
         this.buffer = new ArrayBuffer(this.capacity);
         this.view = new DataView(this.buffer);
         this.u8 = new Uint8Array(this.buffer);
     }
     
-    /**
-     * 确保容量足够，必要时扩容
-     */
-    private grow(minSize: number): void {
-        if (minSize <= this.capacity) return;
-        
-        // 指数增长策略，但有上限
-        const newCapacity = Math.min(
-            Math.max(this.capacity * 2, minSize),
-            BinaryWriter.MAX_CAPACITY
-        );
-        
-        if (newCapacity < minSize) {
-            throw new Error(`缓冲区容量不足: 需要${minSize}，最大${BinaryWriter.MAX_CAPACITY}`);
-        }
-        
-        const newBuffer = new ArrayBuffer(newCapacity);
-        const newU8 = new Uint8Array(newBuffer);
-        newU8.set(this.u8);
-        
-        this.buffer = newBuffer;
-        this.view = new DataView(newBuffer);
-        this.u8 = newU8;
-        this.capacity = newCapacity;
-    }
     
     /**
-     * 确保有足够空间
+     * 确保有足够的缓冲区空间，必要时扩容
      */
     private ensure(bytes: number): void {
         const required = this.offset + bytes;
         if (required > this.capacity) {
-            this.grow(required);
+            let newCapacity = Math.max(this.capacity * 2, required);
+            newCapacity = Math.ceil(newCapacity / 4096) * 4096;
+            if (newCapacity > BinaryWriter.MAX_CAPACITY) newCapacity = BinaryWriter.MAX_CAPACITY;
+            
+            const newBuffer = new ArrayBuffer(newCapacity);
+            const newU8 = new Uint8Array(newBuffer);
+            newU8.set(this.u8);
+            
+            this.buffer = newBuffer;
+            this.view = new DataView(newBuffer);
+            this.u8 = newU8;
+            this.capacity = newCapacity;
         }
     }
     
@@ -105,44 +85,34 @@ export class BinaryWriter {
     
     writeU16(value: number): void {
         this.ensure(2);
-        this.view.setUint16(this.offset, value, true);
-        this.offset += 2;
+        this.u8[this.offset++] = value & 0xFF;
+        this.u8[this.offset++] = (value >>> 8) & 0xFF;
     }
     
     writeU32(value: number): void {
         this.ensure(4);
-        this.view.setUint32(this.offset, value, true);
-        this.offset += 4;
+        this.u8[this.offset++] = value & 0xFF;
+        this.u8[this.offset++] = (value >>> 8) & 0xFF;
+        this.u8[this.offset++] = (value >>> 16) & 0xFF;
+        this.u8[this.offset++] = (value >>> 24) & 0xFF;
     }
     
     writeI32(value: number): void {
-        this.ensure(4);
-        this.view.setInt32(this.offset, value, true);
-        this.offset += 4;
+        this.writeU32(value >>> 0);
     }
     
     writeF32(value: number): void {
         this.ensure(4);
-        // 数值规范化
-        const normalized = this.normalizeNumber(value);
-        this.view.setFloat32(this.offset, normalized, true);
+        this.view.setFloat32(this.offset, value, true);
         this.offset += 4;
     }
     
     writeF64(value: number): void {
         this.ensure(8);
-        const normalized = this.normalizeNumber(value);
-        this.view.setFloat64(this.offset, normalized, true);
+        this.view.setFloat64(this.offset, value, true);
         this.offset += 8;
     }
     
-    /**
-     * 数值规范化（与SceneWorldAdapter一致）
-     */
-    private normalizeNumber(x: number): number {
-        if (!Number.isFinite(x)) return 0;
-        return x === 0 ? 0 : x; // 抹掉 -0
-    }
     
     // === 变长整数编码 ===
     
@@ -159,8 +129,28 @@ export class BinaryWriter {
      * 写入无符号VarInt
      */
     writeVarUInt(value: number): void {
-        this.ensure(5); // VarInt最多5字节
+        if (this.offset + 5 > this.capacity) {
+            let newCapacity = this.capacity * 2;
+            if (newCapacity < this.offset + 5) newCapacity = this.offset + 5;
+            if (newCapacity > BinaryWriter.MAX_CAPACITY) newCapacity = BinaryWriter.MAX_CAPACITY;
+            
+            const newBuffer = new ArrayBuffer(newCapacity);
+            const newU8 = new Uint8Array(newBuffer);
+            newU8.set(this.u8);
+            
+            this.buffer = newBuffer;
+            this.view = new DataView(newBuffer);
+            this.u8 = newU8;
+            this.capacity = newCapacity;
+        }
         
+        // 大部分数值都小于128，先处理快速路径
+        if (value < 0x80) {
+            this.u8[this.offset++] = value;
+            return;
+        }
+        
+        // 标准VarInt编码
         while (value >= 0x80) {
             this.u8[this.offset++] = (value & 0x7F) | 0x80;
             value >>>= 7;
@@ -172,22 +162,37 @@ export class BinaryWriter {
     
     /**
      * 写入UTF-8字符串
+     * 
+     * @param str 要写入的字符串
      */
     writeString(str: string): void {
-        if (str.length > BinaryWriter.MAX_STRING_LENGTH) {
-            throw new Error(`字符串长度超限: ${str.length} > ${BinaryWriter.MAX_STRING_LENGTH}`);
-        }
-        
-        const utf8 = new TextEncoder().encode(str);
+        const utf8 = BinaryWriter.textEncoder.encode(str);
         this.writeVarUInt(utf8.length);
         this.writeBytes(utf8);
     }
     
     /**
      * 写入字节数组
+     * 
+     * @param bytes 要写入的字节数组
      */
     writeBytes(bytes: Uint8Array): void {
-        this.ensure(bytes.length);
+        const required = this.offset + bytes.length;
+        if (required > this.capacity) {
+            let newCapacity = this.capacity * 2;
+            if (newCapacity < required) newCapacity = required;
+            if (newCapacity > BinaryWriter.MAX_CAPACITY) newCapacity = BinaryWriter.MAX_CAPACITY;
+            
+            const newBuffer = new ArrayBuffer(newCapacity);
+            const newU8 = new Uint8Array(newBuffer);
+            newU8.set(this.u8);
+            
+            this.buffer = newBuffer;
+            this.view = new DataView(newBuffer);
+            this.u8 = newU8;
+            this.capacity = newCapacity;
+        }
+        
         this.u8.set(bytes, this.offset);
         this.offset += bytes.length;
     }
@@ -198,10 +203,6 @@ export class BinaryWriter {
      * 写入布尔数组（位打包）
      */
     writeBoolArray(bools: boolean[]): void {
-        if (bools.length > BinaryWriter.MAX_ARRAY_LENGTH) {
-            throw new Error(`数组长度超限: ${bools.length} > ${BinaryWriter.MAX_ARRAY_LENGTH}`);
-        }
-        
         const bitCount = bools.length;
         const byteCount = (bitCount + 7) >> 3; // Math.ceil(bitCount / 8)
         
@@ -265,37 +266,61 @@ export class BinaryWriter {
      * 获取写入的数据
      */
     toArrayBuffer(): ArrayBuffer {
-        return this.u8.slice(0, this.offset).buffer;
+        if (this.offset === 0) {
+            return new ArrayBuffer(0);
+        }
+        
+        if (this.offset === this.capacity) {
+            return this.buffer;
+        }
+        
+        return this.buffer.slice(0, this.offset);
     }
     
     /**
-     * 获取写入的字节数组
-     */
-    toUint8Array(): Uint8Array {
-        return this.u8.slice(0, this.offset);
-    }
-    
-    /**
-     * 重置写入器
+     * 重置写入器以供重用
      */
     reset(): void {
         this.offset = 0;
     }
     
     /**
+     * 批量写入U32数组
+     */
+    writeU32Array(values: number[]): void {
+        this.writeVarUInt(values.length);
+        this.ensure(values.length * 4);
+        
+        for (const value of values) {
+            this.u8[this.offset++] = value & 0xFF;
+            this.u8[this.offset++] = (value >>> 8) & 0xFF;
+            this.u8[this.offset++] = (value >>> 16) & 0xFF;
+            this.u8[this.offset++] = (value >>> 24) & 0xFF;
+        }
+    }
+    
+    /**
+     * 获取写入的字节数组
+     */
+    toUint8Array(): Uint8Array {
+        if (this.offset === 0) {
+            return new Uint8Array(0);
+        }
+        
+        // 尽量避免slice操作
+        if (this.offset === this.capacity) {
+            return this.u8;
+        }
+        
+        return this.u8.subarray(0, this.offset);
+    }
+    
+    
+    /**
      * 获取已写入的字节数
      */
     get size(): number {
         return this.offset;
-    }
-    
-    // === 校验和计算 ===
-    
-    /**
-     * 计算XXHash32校验和
-     */
-    calculateHash32(seed = 0): number {
-        return murmur3_32(this.u8.slice(0, this.offset), seed);
     }
     
 }
@@ -539,22 +564,5 @@ export class BinaryReader {
      */
     readPresenceBitmap(): boolean[] {
         return this.readBoolArray();
-    }
-    
-    // === 校验和验证 ===
-    
-    /**
-     * 验证XXHash32校验和
-     */
-    verifyHash32(expectedHash: number, seed = 0): boolean {
-        const calculatedHash = this.calculateHash32(seed);
-        return calculatedHash === expectedHash;
-    }
-    
-    /**
-     * 计算XXHash32校验和
-     */
-    calculateHash32(seed = 0): number {
-        return murmur3_32(this.u8.slice(0, this.length), seed);
     }
 }

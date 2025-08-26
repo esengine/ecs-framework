@@ -4,9 +4,8 @@ import { Entity } from '../../Entity';
 import { World } from '../../World';
 import { getComponentInstanceTypeName } from '../../Decorators';
 import { ComponentRegistry, ComponentType } from '../ComponentStorage/ComponentRegistry';
-import { WorldAdapter, EncodeOptions, DecodeOptions, SignatureScope, AfterDecodeCallback, MissingComponentStrategy } from './WorldAdapter';
+import { WorldAdapter, EncodeOptions, DecodeOptions, AfterDecodeCallback, MissingComponentStrategy } from './WorldAdapter';
 import { createLogger } from '../../../Utils/Logger';
-import { murmur3_32, concatBytes, numberToBytes, stringToUtf8Bytes } from '../../../Utils/Hash32';
 import { ColumnarSerializer, ColumnarSerializationContext } from '../Serialization/ColumnarSerializer';
 import { getClassSerializationMeta, validateSerializableComponent, ClassSerializationMeta, FieldMeta } from '../../Decorators/SerializationDecorators';
 import { SerializerRegistry } from '../Serialization/SerializerRegistry';
@@ -104,8 +103,11 @@ interface ComponentStorageData {
 export class SceneWorldAdapter implements WorldAdapter {
     private _logger = createLogger('SceneWorldAdapter');
     private _scene: Scene;
-
     private _afterDecodeCallback?: AfterDecodeCallback;
+    
+    
+    // 版本号系统 - 替代签名计算的轻量解决方案
+    private _lastKnownVersion: number = -1;
 
     constructor(scene: Scene, afterDecodeCallback?: AfterDecodeCallback) {
         this._scene = scene;
@@ -144,7 +146,7 @@ export class SceneWorldAdapter implements WorldAdapter {
                 }
             }
             const startTime = performance.now();
-            const mode = options.mode ?? 'legacy';
+            const mode = options.mode ?? 'columnar';
             
             if (mode === 'columnar') {
                 return this._encodeColumnar(options);
@@ -191,7 +193,6 @@ export class SceneWorldAdapter implements WorldAdapter {
             timestamp: deterministic ? 0 : Date.now(),
             frame: options.frame ?? 0,
             seed: options.seed,
-            schemaHash: this._calculateSchemaHash(),
         };
 
         const jsonString = this._stableStringify(worldState);
@@ -254,19 +255,6 @@ export class SceneWorldAdapter implements WorldAdapter {
             throw new Error(`快照版本不兼容: ${worldState.version}`);
         }
 
-        // Schema哈希校验（快速兼容性判定）
-        if (typeof worldState.schemaHash === 'number') {
-            const currentSchemaHash = this._calculateSchemaHash();
-            if (worldState.schemaHash !== currentSchemaHash) {
-                const msg = `Schema哈希不匹配: 快照=${worldState.schemaHash}, 当前=${currentSchemaHash}, 可能存在组件结构变化`;
-                const strictSchema = options.strictSchema ?? (options.deterministic ?? true);
-                if (strictSchema) {
-                    throw new Error(msg);
-                } else {
-                    this._logger.warn(msg);
-                }
-            }
-        }
 
         const prev = this._scene.suspendEffects;
         this._scene.suspendEffects = true;
@@ -299,19 +287,35 @@ export class SceneWorldAdapter implements WorldAdapter {
     }
 
     /**
-     * 计算世界状态签名
-     * @param scope 签名计算范围
+     * 获取世界状态版本号
      */
-    public signature(scope: SignatureScope = 'simOnly'): number {
-        try {
-            const bytes = scope === 'simOnly' 
-                ? this._collectSignatureBytesStable() 
-                : this._collectFullSignatureBytes();
-            return murmur3_32(bytes);
-        } catch (e) {
-            this._logger.error('计算世界签名失败:', e);
-            return 0;
+    public getVersion(): number {
+        return this._scene.version;
+    }
+    
+    /**
+     * 检查是否有变更
+     * 
+     * 高效检测场景状态是否发生变化，用于避免不必要的数据传输。
+     */
+    public hasChanged(): boolean {
+        const currentVersion = this._scene.version;
+        if (currentVersion !== this._lastKnownVersion) {
+            this._lastKnownVersion = currentVersion;
+            return true;
         }
+        return false;
+    }
+    
+    /**
+     * 获取版本号调试信息
+     */
+    public getVersionDebugInfo(): { version: number, entityVersion: number, componentVersion: number } {
+        return {
+            version: this._scene.version,
+            entityVersion: this._scene.entityVersion,
+            componentVersion: this._scene.componentVersion
+        };
     }
 
     /**
@@ -645,7 +649,6 @@ export class SceneWorldAdapter implements WorldAdapter {
      */
     private _getDefaultColumnarContext(): ColumnarSerializationContext {
         return {
-            compression: true,
             skipDefaults: true,
             strict: true
         };
@@ -940,187 +943,8 @@ export class SceneWorldAdapter implements WorldAdapter {
     /**
      * 数字规范化
      */
-    private _pushNumber32(chunks: Uint8Array[], x: number): void {
-        const v = this._normalizeNumber(x);
-        const f32 = new Float32Array([v]);
-        chunks.push(new Uint8Array(f32.buffer));
-    }
-
-    /**
-     * 处理TypedArray签名
-     */
-    private _pushTypedArray(chunks: Uint8Array[], view: ArrayBufferView): void {
-        // 创建干净的副本，去除byteOffset影响
-        const cleanData = new Uint8Array(view.byteLength);
-        cleanData.set(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
-        chunks.push(numberToBytes(cleanData.byteLength));
-        chunks.push(cleanData);
-    }
-
-    /**
-     * 按元素类型处理数组
-     */
-    private _pushArray(chunks: Uint8Array[], arr: unknown[]): void {
-        if (arr.every(x => typeof x === 'number')) {
-            chunks.push(numberToBytes(0x14));
-            chunks.push(numberToBytes(arr.length));
-            for (const n of arr) this._pushNumber32(chunks, n as number);
-        } else if (arr.every(x => typeof x === 'boolean')) {
-            chunks.push(numberToBytes(0x15));
-            chunks.push(numberToBytes(arr.length));
-            for (const b of arr) chunks.push(numberToBytes(b ? 1 : 0));
-        } else if (arr.every(x => typeof x === 'string')) {
-            chunks.push(numberToBytes(0x16));
-            chunks.push(numberToBytes(arr.length));
-            for (const s of arr) { 
-                const b = stringToUtf8Bytes(s); 
-                chunks.push(numberToBytes(b.length)); 
-                chunks.push(b); 
-            }
-        } else {
-            chunks.push(numberToBytes(0x10));
-        }
-    }
-
-    /**
-     * 数字规范化
-     */
     private _normalizeNumber(x: number): number {
         if (!Number.isFinite(x)) return 0;
         return x === 0 ? 0 : x; // 抹掉 -0
-    }
-
-    /**
-     * 收集签名字节数据
-     */
-    private _collectSignatureBytesStable(): Uint8Array {
-        const chunks: Uint8Array[] = [];
-
-        // 实体（按 id）
-        const entities = this._scene.entities.buffer.slice().sort((a,b)=>a.id-b.id);
-        chunks.push(numberToBytes(entities.length));
-
-        for (const entity of entities) {
-            chunks.push(numberToBytes(entity.id));
-            chunks.push(numberToBytes(entity.tag));
-            chunks.push(numberToBytes(entity.enabled ? 1 : 0));
-
-            // 组件（按 type）
-            const comps = entity.components
-                .map(c => ({ type: getComponentInstanceTypeName(c), c }))
-                .sort((a,b)=>a.type.localeCompare(b.type));
-            chunks.push(numberToBytes(comps.length));
-
-            for (const { type, c } of comps) {
-                chunks.push(stringToUtf8Bytes(type));
-                // 组件字段（键按字典序，排除内部属性）
-                const keys = Object.keys(c).filter(k=>!k.startsWith('_') && k!=='entity' && k!=='id').sort();
-                chunks.push(numberToBytes(keys.length));
-                for (const k of keys) {
-                    chunks.push(stringToUtf8Bytes(k));
-                    const v = c[k];
-                    if (typeof v === 'number') {
-                        chunks.push(numberToBytes(0x01));
-                        this._pushNumber32(chunks, v);
-                    } else if (typeof v === 'boolean') {
-                        chunks.push(numberToBytes(0x02));
-                        chunks.push(numberToBytes(v ? 1 : 0));
-                    } else if (typeof v === 'string') {
-                        chunks.push(numberToBytes(0x03));
-                        chunks.push(stringToUtf8Bytes(v));
-                    } else if (Array.isArray(v)) {
-                        this._pushArray(chunks, v);
-                    } else if (ArrayBuffer.isView(v)) {
-                        chunks.push(numberToBytes(0x05));
-                        this._pushTypedArray(chunks, v as ArrayBufferView);
-                    } else {
-                        chunks.push(numberToBytes(0x00));
-                    }
-                }
-            }
-        }
-
-        // 简化签名：只关注实体数据，忽略系统级统计
-        // 这样确保不同场景但相同实体数据时签名一致
-
-        return concatBytes(...chunks);
-    }
-
-    /**
-     * 收集完整签名数据
-     */
-    private _collectFullSignatureBytes(): Uint8Array {
-        const chunks: Uint8Array[] = [];
-
-        // 先收集核心模拟状态
-        const simBytes = this._collectSignatureBytesStable();
-        chunks.push(simBytes);
-
-        // 添加系统级统计信息
-        // 组件存储统计（按 type）
-        const stats = this._scene.componentStorageManager.getAllStats();
-        const sorted = Array.from(stats.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
-        chunks.push(numberToBytes(sorted.length));
-        for (const [typeName, s] of sorted) {
-            chunks.push(stringToUtf8Bytes(typeName));
-            chunks.push(numberToBytes(s.count));
-        }
-
-        // ID 池统计信息
-        const st = this._scene.identifierPool.getStats();
-        chunks.push(numberToBytes(st.totalAllocated));
-        chunks.push(numberToBytes(st.currentActive));
-        chunks.push(numberToBytes(st.maxUsedIndex));
-
-        return concatBytes(...chunks);
-    }
-
-    /**
-     * 计算Schema哈希
-     */
-    private _calculateSchemaHash(): number {
-        try {
-            // 收集已注册组件的名称和字段信息
-            const componentInfos: string[] = [];
-            // 获取所有已注册组件
-            const registeredComponents = ComponentRegistry.getAllRegisteredComponents();
-            
-            // 获取所有已注册组件的名称并排序
-            const componentNames = Array.from(
-                typeof registeredComponents === 'object' && registeredComponents instanceof Map
-                    ? registeredComponents.keys()
-                    : Object.keys(registeredComponents)
-            ).sort();
-            
-            for (const typeName of componentNames) {
-                componentInfos.push(typeName);
-                
-                // 如果可能，获取组件的字段信息
-                try {
-                    const ComponentClass = ComponentRegistry.getComponentType(typeName) as new () => Component;
-                    if (ComponentClass) {
-                        const instance = new ComponentClass();
-                        const fields = Object.keys(instance)
-                            .filter(k => !k.startsWith('_') && k !== 'entity')
-                            .sort();
-                        componentInfos.push(...fields);
-                    }
-                } catch {
-                    // 忽略无法实例化的组件
-                }
-            }
-            
-            // 对所有信息进行哈希
-            if (componentInfos.length === 0) {
-                return 0;
-            }
-            
-            const schemaString = componentInfos.join('|');
-            const bytes = stringToUtf8Bytes(schemaString);
-            return murmur3_32(bytes);
-        } catch (error) {
-            this._logger.warn('计算Schema哈希失败，使用默认值0:', error);
-            return 0;
-        }
     }
 }

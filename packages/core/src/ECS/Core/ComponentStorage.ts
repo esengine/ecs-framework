@@ -53,11 +53,25 @@ export class ComponentRegistry {
      * @returns 位掩码
      */
     public static getBitMask<T extends Component>(componentType: ComponentType<T>): IBigIntLike {
+        // 首先尝试从缓存获取
+        const componentName = getComponentTypeName(componentType);
+        const cacheKey = `mask:${componentName}`;
+        
+        if (this.maskCache.has(cacheKey)) {
+            return this.maskCache.get(cacheKey)!;
+        }
+
         const bitIndex = this.componentTypes.get(componentType);
         if (bitIndex === undefined) {
-            throw new Error(`Component type ${getComponentTypeName(componentType)} is not registered`);
+            throw new Error(`Component type ${componentName} is not registered`);
         }
-        return BigIntFactory.one().shiftLeft(bitIndex);
+        
+        const mask = BigIntFactory.one().shiftLeft(bitIndex);
+        
+        // 缓存计算结果
+        this.maskCache.set(cacheKey, mask);
+        
+        return mask;
     }
 
     /**

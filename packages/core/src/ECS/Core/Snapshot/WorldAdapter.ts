@@ -22,10 +22,9 @@ export interface WorldAdapter {
     decode(buf: ArrayBuffer, options?: DecodeOptions): void;
 
     /**
-     * 计算世界状态签名
-     * @param scope 签名计算范围，默认simOnly（不含统计/调试信息）
+     * 获取世界状态版本号
      */
-    signature(scope?: SignatureScope): number;
+    getVersion(): number;
 
     /**
      * 设置解码后回调
@@ -68,10 +67,6 @@ export interface DecodeOptions {
     validateIntegrity?: boolean;
 }
 
-/**
- * 签名计算范围
- */
-export type SignatureScope = 'full' | 'simOnly';
 
 /**
  * 组件缺失处理策略

@@ -98,8 +98,8 @@ export class SnapshotStore {
             const startTime = performance.now();
             
             const buf = this._adapter.encode();
-            const sig = this._adapter.signature();
-            const snap = new SnapshotRef(frame, seed, sig, buf);
+            const version = this._adapter.getVersion();
+            const snap = new SnapshotRef(frame, seed, version, buf);
 
             if (!snap.validate()) {
                 this._logger.error('快照验证失败');
@@ -120,7 +120,7 @@ export class SnapshotStore {
 
             const duration = performance.now() - startTime;
             this._logger.debug(
-                `快照捕获完成: 帧=${frame}, 签名=0x${sig.toString(16)}, ` +
+                `快照捕获完成: 帧=${frame}, 版本=${version}, ` +
                 `大小=${snap.size}字节, 耗时=${duration.toFixed(2)}ms`
             );
 
@@ -186,11 +186,11 @@ export class SnapshotStore {
             this._adapter.decode(snap.payload);
             
             // 验证恢复后的状态
-            const currentSig = this._adapter.signature();
-            if (currentSig !== snap.worldSig) {
+            const currentVersion = this._adapter.getVersion();
+            if (currentVersion !== snap.worldSig) {
                 this._logger.warn(
-                    `快照恢复后签名不匹配: 期望=0x${snap.worldSig.toString(16)}, ` +
-                    `实际=0x${currentSig.toString(16)}`
+                    `快照恢复后版本不匹配: 期望=${snap.worldSig}, ` +
+                    `实际=${currentVersion}`
                 );
             }
 

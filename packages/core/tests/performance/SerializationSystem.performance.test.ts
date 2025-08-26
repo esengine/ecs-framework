@@ -119,7 +119,7 @@ describe('序列化系统性能测试', () => {
             
             // 测试传统序列化
             const legacyStart = performance.now();
-            const legacyBuffer = adapter.encode({ mode: 'legacy', deterministic: true });
+            const buffer = adapter.encode({ deterministic: true });
             const legacyEncodeTime = performance.now() - legacyStart;
             
             // 测试列式序列化

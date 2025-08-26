@@ -49,6 +49,26 @@ export interface IScene {
     readonly eventSystem: TypeSafeEventSystem;
 
     /**
+     * 获取场景版本号
+     */
+    readonly version: number;
+
+    /**
+     * 标记实体变更
+     */
+    markEntityChanged(): void;
+
+    /**
+     * 标记组件变更
+     */
+    markComponentChanged(): void;
+
+    /**
+     * 标记场景变更
+     */
+    markSceneChanged(): void;
+
+    /**
      * 获取系统列表
      */
     readonly systems: EntitySystem[];

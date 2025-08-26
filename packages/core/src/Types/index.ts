@@ -311,6 +311,26 @@ export interface IECSDebugData {
     frameworkLoaded: boolean;
     /** 当前场景名称 */
     currentScene: string;
+    /** 是否启用快照模式 */
+    snapshotMode?: boolean;
+    /** 快照统计信息 */
+    snapshotStats?: {
+        frameCounter: number;
+        worldCount: number;
+        totalCachedSnapshots: number;
+        totalPendingTransfers: number;
+        transferMode: string;
+        worldStats: Array<{
+            worldName: string;
+            stats: {
+                frameCounter: number;
+                cachedSnapshots: number;
+                pendingTransfers: number;
+                baselineFrame: number | null;
+                transferMode: string;
+            };
+        }>;
+    };
     /** 实体数据 */
     entities?: IEntityDebugData;
     /** 系统数据 */

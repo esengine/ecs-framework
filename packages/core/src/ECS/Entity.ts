@@ -407,6 +407,11 @@ export class Entity {
         if (!this.scene || !this.scene.suspendEffects) {
             component.onAddedToEntity();
         }
+
+        // 通知场景组件变更
+        if (this.scene) {
+            this.scene.markComponentChanged();
+        }
         
         // 发射组件添加事件（仅在未抑制副作用时）
         if (Entity.eventBus && (!this.scene || !this.scene.suspendEffects)) {
@@ -503,6 +508,12 @@ export class Entity {
      * @returns 如果有该组件则返回true
      */
     public hasComponent<T extends Component>(type: ComponentType<T>): boolean {
+        // 快速路径：直接从索引映射检查
+        if (this._componentTypeToIndex.has(type)) {
+            return true;
+        }
+        
+        // 后备路径：通过位掩码检查
         if (!ComponentRegistry.isRegistered(type)) {
             return false;
         }
@@ -560,6 +571,11 @@ export class Entity {
         // 调用组件的生命周期方法（仅在未抑制副作用时）
         if (component.onRemovedFromEntity && (!this.scene || !this.scene.suspendEffects)) {
             component.onRemovedFromEntity();
+        }
+
+        // 通知场景组件变更
+        if (this.scene) {
+            this.scene.markComponentChanged();
         }
         
         // 发射组件移除事件（仅在未抑制副作用时）
@@ -654,6 +670,125 @@ export class Entity {
             }
         }
         
+        return addedComponents;
+    }
+
+    /**
+     * 高性能批量添加组件
+     * 
+     * 通过批量处理减少重复计算和系统调用，提供更好的性能。
+     * 适用于需要一次性添加多个组件的场景，如实体初始化。
+     * 
+     * @param components - 要添加的组件数组
+     * @param options - 批量添加选项
+     * @returns 添加的组件数组
+     */
+    public addComponentsBatch<T extends Component>(
+        components: T[], 
+        options: {
+            suppressLifecycle?: boolean;
+            suppressEvents?: boolean;
+            suppressQueryUpdate?: boolean;
+        } = {}
+    ): T[] {
+        if (components.length === 0) {
+            return [];
+        }
+
+        const addedComponents: T[] = [];
+        const componentTypes: ComponentType[] = [];
+        
+        // 第一阶段：验证和预处理
+        for (const component of components) {
+            const componentType = component.constructor as ComponentType<T>;
+            
+            // 检查重复组件
+            if (this.hasComponent(componentType)) {
+                Entity._logger.warn(`Entity ${this.name} already has component ${getComponentTypeName(componentType)}, skipping`);
+                continue;
+            }
+            
+            // 检查组件是否已在本批次中
+            if (componentTypes.includes(componentType)) {
+                Entity._logger.warn(`Duplicate component type ${getComponentTypeName(componentType)} in batch, skipping duplicate`);
+                continue;
+            }
+            
+            componentTypes.push(componentType);
+            addedComponents.push(component);
+        }
+
+        if (addedComponents.length === 0) {
+            return [];
+        }
+
+        // 第二阶段：批量注册组件类型
+        const bitMasks: IBigIntLike[] = [];
+        for (const componentType of componentTypes) {
+            if (!ComponentRegistry.isRegistered(componentType)) {
+                ComponentRegistry.register(componentType);
+            }
+            bitMasks.push(ComponentRegistry.getBitMask(componentType));
+        }
+
+        // 第三阶段：批量添加组件到内部数据结构
+        let combinedMask = this._componentMask;
+        for (let i = 0; i < addedComponents.length; i++) {
+            const component = addedComponents[i];
+            const componentType = componentTypes[i];
+            
+            // 设置组件的实体引用
+            component.entity = this;
+            
+            // 添加到组件列表并建立索引映射
+            const index = this.components.length;
+            this.components.push(component);
+            this._componentTypeToIndex.set(componentType, index);
+            
+            // 合并位掩码
+            combinedMask = combinedMask.or(bitMasks[i]);
+        }
+        
+        // 一次性更新位掩码
+        this._componentMask = combinedMask;
+
+        // 第四阶段：批量添加到组件存储管理器
+        if (this.scene && this.scene.componentStorageManager) {
+            for (const component of addedComponents) {
+                this.scene.componentStorageManager.addComponent(this.id, component);
+            }
+        }
+
+        // 第五阶段：批量生命周期和事件处理（如果未抑制）
+        if (!options.suppressLifecycle && (!this.scene || !this.scene.suspendEffects)) {
+            for (const component of addedComponents) {
+                component.onAddedToEntity();
+            }
+        }
+        
+        if (!options.suppressEvents && Entity.eventBus && (!this.scene || !this.scene.suspendEffects)) {
+            for (let i = 0; i < addedComponents.length; i++) {
+                const component = addedComponents[i];
+                const componentType = componentTypes[i];
+                
+                Entity.eventBus.emitComponentAdded({
+                    timestamp: Date.now(),
+                    source: 'Entity',
+                    entityId: this.id,
+                    entityName: this.name,
+                    entityTag: this.tag?.toString(),
+                    componentType: getComponentTypeName(componentType),
+                    component: component
+                });
+            }
+        }
+
+        // 第六阶段：更新QuerySystem（仅一次）
+        if (!options.suppressQueryUpdate && this.scene && this.scene.querySystem) {
+            this.scene.querySystem.removeEntity(this);
+            this.scene.querySystem.addEntity(this);
+        }
+
         return addedComponents;
     }
 

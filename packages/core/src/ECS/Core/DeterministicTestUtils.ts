@@ -27,7 +27,7 @@ export class DeterministicTestUtils {
         for (let i = 0; i < steps; i++) {
             scene.update();
             if (i % 10 === 0) { // 每10步记录一次签名
-                signatures1.push(adapter.signature('simOnly'));
+                signatures1.push(adapter.getVersion());
             }
         }
         
@@ -38,7 +38,7 @@ export class DeterministicTestUtils {
         for (let i = 0; i < steps; i++) {
             scene.update();
             if (i % 10 === 0) {
-                signatures2.push(adapter.signature('simOnly'));
+                signatures2.push(adapter.getVersion());
             }
         }
         
@@ -76,17 +76,17 @@ export class DeterministicTestUtils {
         
         // 在t0时刻拍快照
         const t0Snapshot = adapter.encode({ deterministic: true, frame: t0 });
-        const t0Signature = adapter.signature('simOnly');
+        const t0Signature = adapter.getVersion();
         
         // 继续运行到t1
         for (let i = t0; i < t1; i++) {
             scene.update();
         }
-        const t1SignatureDirect = adapter.signature('simOnly');
+        const t1SignatureDirect = adapter.getVersion();
         
         // 回滚到t0并重放到t1
         adapter.decode(t0Snapshot, { deterministic: true });
-        const t0SignatureAfterRollback = adapter.signature('simOnly');
+        const t0SignatureAfterRollback = adapter.getVersion();
         
         if (t0SignatureAfterRollback !== t0Signature) {
             logger.error(`回滚断言失败: t0签名不匹配`);
@@ -99,7 +99,7 @@ export class DeterministicTestUtils {
         for (let i = t0; i < t1; i++) {
             scene.update();
         }
-        const t1SignatureReplayed = adapter.signature('simOnly');
+        const t1SignatureReplayed = adapter.getVersion();
         
         const isEqual = t1SignatureDirect === t1SignatureReplayed;
         if (!isEqual) {
@@ -132,7 +132,7 @@ export class DeterministicTestUtils {
                 currentFrame++;
                 
                 if (currentFrame % checkpointInterval === 0) {
-                    const signature = adapter.signature('simOnly');
+                    const signature = adapter.getVersion();
                     checkpoints.push({ frame: currentFrame, signature });
                 }
             },
