@@ -18,19 +18,24 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20.x'
-        cache: 'npm'
+        cache: 'pnpm'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: latest
 
     - name: Install dependencies
-      run: npm ci
+      run: pnpm install --frozen-lockfile
 
     - name: Build core package first
-      run: npm run build:core
+      run: pnpm run build:core
 
     - name: Run tests with coverage
       run: |
         set -e
         echo "开始运行测试..."
-        npm run test:ci 2>&1 | tee test-output.log
+        pnpm run test:ci 2>&1 | tee test-output.log
         echo "测试完成，检查结果..."
         if [ ${PIPESTATUS[0]} -ne 0 ]; then
           echo "❌ 测试失败，退出码: ${PIPESTATUS[0]}"
@@ -59,16 +64,21 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20.x'
-        cache: 'npm'
+        cache: 'pnpm'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: latest
 
     - name: Install dependencies
-      run: npm ci
+      run: pnpm install --frozen-lockfile
 
     - name: Build project
-      run: npm run build
+      run: pnpm run build
 
     - name: Build npm package
-      run: npm run build:npm
+      run: pnpm run build:npm
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4

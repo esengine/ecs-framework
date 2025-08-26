@@ -38,10 +38,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: 'pnpm'
+          
+      - name: 设置pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
           
       - name: 安装依赖
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         
       - name: 验证Schema Manifest
         run: |
@@ -110,15 +115,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: 'pnpm'
+          
+      - name: 设置pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
           
       - name: 安装依赖
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         
       - name: 运行单元测试
         run: |
           echo "🧪 运行 ${{ matrix.test-suite }} 单元测试..."
-          npm test -- --testNamePattern="${{ matrix.test-suite }}" --verbose --coverage
+          pnpm test -- --testNamePattern="${{ matrix.test-suite }}" --verbose --coverage
           
       - name: 上传覆盖率报告
         if: matrix.test-suite == 'ColumnarSerializer'
@@ -140,20 +150,25 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: 'pnpm'
+          
+      - name: 设置pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
           
       - name: 安装依赖
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         
       - name: 运行集成测试
         run: |
           echo "🔗 运行序列化系统集成测试..."
-          npm test -- --testPathPattern="SerializationSystem.integration.test.ts" --verbose --detectOpenHandles --forceExit
+          pnpm test -- --testPathPattern="SerializationSystem.integration.test.ts" --verbose --detectOpenHandles --forceExit
           
       - name: 检查测试覆盖率
         run: |
           echo "📊 检查集成测试覆盖率..."
-          npm run test:coverage -- --testPathPattern="integration" --coverageThreshold="{\"global\":{\"branches\":80,\"functions\":80,\"lines\":80,\"statements\":80}}"
+          pnpm run test:coverage -- --testPathPattern="integration" --coverageThreshold="{\"global\":{\"branches\":80,\"functions\":80,\"lines\":80,\"statements\":80}}"
 
   performance-tests:
     name: 性能测试
@@ -167,10 +182,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: 'pnpm'
+          
+      - name: 设置pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
           
       - name: 安装依赖
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         
       - name: 运行性能测试
         run: |
@@ -222,7 +242,7 @@ jobs:
       - name: 运行兼容性测试
         run: |
           echo "🔄 在Node.js ${{ matrix.node-version }}上测试兼容性..."
-          npm test -- --testPathPattern=".*Serializ.*test\.ts$" --verbose
+          pnpm test -- --testPathPattern=".*Serializ.*test\.ts$" --verbose
 
   build-and-package:
     name: 构建和打包
@@ -237,25 +257,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: 'pnpm'
+          
+      - name: 设置pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
           
       - name: 安装依赖
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         
       - name: 构建项目
         run: |
           echo "🏗️ 构建序列化系统..."
-          npm run build
+          pnpm run build
           
       - name: 类型检查
         run: |
           echo "📝 运行TypeScript类型检查..."
-          npm run typecheck
+          pnpm run typecheck
           
       - name: 代码质量检查
         run: |
           echo "🔍 运行ESLint和代码质量检查..."
-          npm run lint
+          pnpm run lint
           
       - name: 打包验证
         run: |
@@ -284,7 +309,7 @@ jobs:
       - name: 运行安全扫描
         run: |
           echo "🔒 运行安全扫描..."
-          npm audit --audit-level high
+          pnpm audit --audit-level high
           
       - name: 扫描敏感信息
         run: |
@@ -308,7 +333,7 @@ jobs:
       - name: 生成API文档
         run: |
           echo "📚 生成序列化系统API文档..."
-          npm run docs:generate || echo "文档生成工具未配置"
+          pnpm run docs:generate || echo "文档生成工具未配置"
           
       - name: 部署到GitHub Pages
         if: success()
