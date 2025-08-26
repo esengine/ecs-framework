@@ -282,7 +282,14 @@ export class NetworkClient extends EventEmitter {
 
         try {
             const serializedMessage = this.serializer.serialize(message);
-            this.transport.send(serializedMessage.data);
+            const data = serializedMessage.data;
+            if (data instanceof Buffer) {
+                this.transport.send(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer);
+            } else if (typeof data === 'string') {
+                this.transport.send(data);
+            } else {
+                this.transport.send(data as unknown as ArrayBuffer);
+            }
 
             this.stats.messages.sent++;
             return true;
