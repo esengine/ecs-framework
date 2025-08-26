@@ -2684,7 +2684,7 @@ export class ColumnarSerializer {
         const originalBuffer = originalDataBytes.buffer.slice(
             originalDataBytes.byteOffset,
             originalDataBytes.byteOffset + originalDataLength
-        );
+        ) as ArrayBuffer;
         
         return {
             originalBuffer,
