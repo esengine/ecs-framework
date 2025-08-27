@@ -332,7 +332,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
             // 触发消息事件
             this.messageHandlers.forEach(handler => {
                 try {
-                    handler(clientId, message);
+                    handler(clientId, message as ArrayBuffer);
                 } catch (error) {
                     this.logger.error('消息事件处理器错误:', error);
                 }

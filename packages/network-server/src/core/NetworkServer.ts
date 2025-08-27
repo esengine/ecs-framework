@@ -286,7 +286,14 @@ export class NetworkServer extends EventEmitter {
 
         try {
             const serializedMessage = this.serializer.serialize(message);
-            this.transport.send(clientId, serializedMessage.data);
+            const data = serializedMessage.data;
+            if (data instanceof Buffer) {
+                this.transport.send(clientId, data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer);
+            } else if (typeof data === 'string') {
+                this.transport.send(clientId, data);
+            } else {
+                this.transport.send(clientId, data as unknown as ArrayBuffer);
+            }
 
             // 更新统计
             this.stats.messages.sent++;
@@ -314,7 +321,14 @@ export class NetworkServer extends EventEmitter {
 
         try {
             const serializedMessage = this.serializer.serialize(message);
-            this.transport.broadcast(serializedMessage.data, exclude);
+            const data = serializedMessage.data;
+            if (data instanceof Buffer) {
+                this.transport.broadcast(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer, exclude);
+            } else if (typeof data === 'string') {
+                this.transport.broadcast(data, exclude);
+            } else {
+                this.transport.broadcast(data as unknown as ArrayBuffer, exclude);
+            }
 
             const clientCount = this.connectionManager.getAllSessions().length - (exclude?.length || 0);
             
