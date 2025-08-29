@@ -15,6 +15,13 @@ interface QueryCondition {
 }
 
 /**
+ * 位掩码查询能力接口
+ */
+export interface IBitMaskQueryable {
+    getBitMaskCondition(): BitMaskCondition;
+}
+
+/**
  * 预编译的位掩码查询条件
  */
 export interface BitMaskCondition {
@@ -45,7 +52,7 @@ export interface BitMaskCondition {
  * const condition = matcher.getCondition();
  * ```
  */
-export class Matcher {
+export class Matcher implements IBitMaskQueryable {
     private readonly condition: QueryCondition = {
         all: [],
         any: [],

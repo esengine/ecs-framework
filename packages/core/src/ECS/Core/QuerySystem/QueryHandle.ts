@@ -1,5 +1,7 @@
 import { Entity } from '../../Entity';
 import { ComponentType } from '../ComponentStorage';
+import { Core } from '../../../Core';
+import type { IBitMaskQueryable, BitMaskCondition } from '../../Utils/Matcher';
 
 /**
  * 实体变更事件类型
@@ -29,6 +31,9 @@ export interface IQueryHandle {
     
     /** 查询条件 */
     readonly condition: QueryCondition;
+    
+    /** 原始Matcher，用于位掩码查询优化 */
+    readonly matcher?: IBitMaskQueryable;
     
     /**
      * 订阅实体变更事件
@@ -71,10 +76,12 @@ export class QueryHandle implements IQueryHandle {
     private _destroyed: boolean = false;
     private _subscribers: Set<(event: EntityChangeEvent) => void> = new Set();
     private _condition: QueryCondition;
+    private _matcher?: IBitMaskQueryable;
 
-    constructor(condition: QueryCondition, initialEntities: Entity[] = []) {
+    constructor(condition: QueryCondition, initialEntities: Entity[] = [], matcher?: IBitMaskQueryable) {
         this._id = this.generateId();
         this._condition = { ...condition };
+        this._matcher = matcher;
         this.setEntities(initialEntities);
     }
 
@@ -92,6 +99,10 @@ export class QueryHandle implements IQueryHandle {
 
     public get condition(): QueryCondition {
         return { ...this._condition };
+    }
+
+    public get matcher(): IBitMaskQueryable | undefined {
+        return this._matcher;
     }
 
     /**
@@ -132,30 +143,29 @@ export class QueryHandle implements IQueryHandle {
         const oldEntitySet = this._entitySet;
 
         // 检测新增的实体
+        const addedEntities: Entity[] = [];
         for (const entity of newEntities) {
             if (!oldEntitySet.has(entity)) {
                 this._entitySet.add(entity);
-                this._entities.push(entity);
+                addedEntities.push(entity);
                 this.notifySubscribers({ entity, type: 'added' });
             }
         }
 
         // 检测移除的实体
-        const toRemove: Entity[] = [];
+        const removedEntities: Entity[] = [];
         for (const entity of oldEntitySet) {
             if (!newEntitySet.has(entity)) {
-                toRemove.push(entity);
+                removedEntities.push(entity);
                 this._entitySet.delete(entity);
                 this.notifySubscribers({ entity, type: 'removed' });
             }
         }
 
-        // 从数组中移除实体
-        for (const entity of toRemove) {
-            const index = this._entities.indexOf(entity);
-            if (index !== -1) {
-                this._entities.splice(index, 1);
-            }
+        // 如果有变更，重建实体数组并排序
+        if (addedEntities.length > 0 || removedEntities.length > 0) {
+            this._entities = Array.from(this._entitySet);
+            this.sortEntitiesIfNeeded();
         }
     }
 
@@ -165,6 +175,16 @@ export class QueryHandle implements IQueryHandle {
     private setEntities(entities: Entity[]): void {
         this._entities = [...entities];
         this._entitySet = new Set(entities);
+        this.sortEntitiesIfNeeded();
+    }
+
+    /**
+     * 根据配置进行确定性排序
+     */
+    private sortEntitiesIfNeeded(): void {
+        if (Core.deterministicSortingEnabled) {
+            this._entities.sort((a, b) => a.id - b.id);
+        }
     }
 
     /**

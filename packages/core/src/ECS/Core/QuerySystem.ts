@@ -11,7 +11,7 @@ import { ComponentIndexManager } from './ComponentIndex';
 import { ArchetypeSystem, Archetype, ArchetypeQueryResult } from './ArchetypeSystem';
 import { DirtyTrackingSystem, DirtyFlag } from './DirtyTrackingSystem';
 import { QueryHandle, IQueryHandle, QueryCondition as QueryHandleCondition } from './QuerySystem/QueryHandle';
-import { BitMaskCondition } from '../Utils/Matcher';
+import { Matcher, BitMaskCondition } from '../Utils/Matcher';
 
 
 /**
@@ -1157,13 +1157,13 @@ export class QuerySystem {
      * @param matcher Matcher实例
      * @returns 查询句柄
      */
-    public createQueryHandleFromMatcher(matcher: import('../Utils/Matcher').Matcher): IQueryHandle {
+    public createQueryHandleFromMatcher(matcher: Matcher): IQueryHandle {
         const bitCondition = matcher.getBitMaskCondition();
         const initialEntities = this.executeBitMaskQuery(bitCondition);
         
-        // 直接使用Matcher的原始条件创建handle
+        // 直接使用Matcher的原始条件创建handle，同时存储Matcher用于位掩码优化
         const condition = matcher.getCondition();
-        const handle = new QueryHandle(condition, initialEntities);
+        const handle = new QueryHandle(condition, initialEntities, matcher);
         
         this.queryHandles.set(handle.id, handle);
         return handle;
@@ -1463,7 +1463,17 @@ export class QuerySystem {
      */
     private updateQueryHandles(): void {
         for (const handle of this.queryHandles.values()) {
-            const newEntities = this.executeQuery(handle.condition);
+            let newEntities: Entity[];
+            
+            // 优先使用位掩码查询（如果有Matcher的话）
+            if (handle.matcher) {
+                const bitCondition = handle.matcher.getBitMaskCondition();
+                newEntities = this.executeBitMaskQuery(bitCondition);
+            } else {
+                // 回退到传统查询
+                newEntities = this.executeQuery(handle.condition);
+            }
+            
             handle.updateEntities(newEntities);
         }
     }

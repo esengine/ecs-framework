@@ -6,7 +6,6 @@ import type { ISystemBase } from '../../Types';
 import type { QuerySystem } from '../Core/QuerySystem';
 import { IQueryHandle } from '../Core/QuerySystem/QueryHandle';
 import { getSystemInstanceTypeName, getSystemInstanceMetadata, SystemMetadata, SystemPhase } from '../Decorators';
-import { Core } from '../../Core';
 
 /**
  * 实体系统的基类
@@ -293,20 +292,14 @@ export abstract class EntitySystem implements ISystemBase {
 
     /**
      * 更新缓存的实体列表
+     * 
+     * QuerySystem已经保证返回的实体数组是确定性排序的，
+     * 因此这里不需要再次排序，直接缓存即可。
      */
     private updateCachedEntities(entities: Entity[]): void {
         this._cachedEntities = [...entities];
         this._cachedEntityCount = this._cachedEntities.length;
-        
-        // 根据配置决定是否对实体进行确定性排序
-        if (Core.deterministicSortingEnabled) {
-            this._cachedEntities.sort((a, b) => a.id - b.id);
-        }
     }
-
-
-
-
 
     /**
      * 更新系统
