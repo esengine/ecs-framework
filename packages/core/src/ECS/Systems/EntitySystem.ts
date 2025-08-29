@@ -4,6 +4,7 @@ import { Matcher } from '../Utils/Matcher';
 import type { Scene } from '../Scene';
 import type { ISystemBase } from '../../Types';
 import type { QuerySystem } from '../Core/QuerySystem';
+import { IQueryHandle, QueryCondition } from '../Core/QuerySystem/QueryHandle';
 import { getSystemInstanceTypeName, getSystemInstanceMetadata, SystemMetadata, SystemPhase } from '../Decorators';
 import { Core } from '../../Core';
 
@@ -38,6 +39,8 @@ export abstract class EntitySystem implements ISystemBase {
     private _initialized: boolean = false;
     private _matcher: Matcher;
     private _trackedEntities: Set<Entity> = new Set();
+    private _queryHandle: IQueryHandle | null = null;
+    private _cachedEntities: Entity[] = [];
     
     // 确定性排序相关属性
     private _registrationOrder: number = 0;
@@ -49,10 +52,10 @@ export abstract class EntitySystem implements ISystemBase {
     private static _registrationCounter: number = 0;
 
     /**
-     * 获取系统处理的实体列表（动态查询）
+     * 获取系统处理的实体列表（从缓存中获取）
      */
     public get entities(): readonly Entity[] {
-        return this.queryEntities();
+        return this._cachedEntities;
     }
 
     /**
@@ -203,9 +206,9 @@ export abstract class EntitySystem implements ISystemBase {
 
         this._initialized = true;
 
-        // 框架内部初始化：触发一次实体查询，以便正确跟踪现有实体
-        if (this.scene) {
-            this.queryEntities();
+        // 框架内部初始化：创建QueryHandle进行订阅式查询
+        if (this.scene && this.scene.querySystem) {
+            this.createQueryHandle();
         }
 
         // 调用用户可重写的初始化方法
@@ -229,227 +232,95 @@ export abstract class EntitySystem implements ISystemBase {
     public reset(): void {
         this._initialized = false;
         this._trackedEntities.clear();
+        
+        // 清理QueryHandle
+        if (this._queryHandle && this.scene && this.scene.querySystem) {
+            this.scene.querySystem.destroyQueryHandle(this._queryHandle);
+            this._queryHandle = null;
+        }
+        
+        this._cachedEntities = [];
     }
 
     /**
-     * 查询匹配的实体
+     * 创建查询句柄进行订阅式查询
      */
-    private queryEntities(): Entity[] {
+    private createQueryHandle(): void {
         if (!this.scene?.querySystem || !this._matcher) {
-            return [];
+            return;
         }
 
-        const condition = this._matcher.getCondition();
-        const querySystem = this.scene.querySystem;
-        let currentEntities: Entity[] = [];
+        const condition = this.convertMatcherToQueryCondition();
+        this._queryHandle = this.scene.querySystem.createQueryHandle(condition);
+        
+        // 初始化缓存的实体列表
+        this.updateCachedEntities(Array.from(this._queryHandle.entities));
+        
+        // 订阅实体变更事件
+        this._queryHandle.subscribe(event => {
+            if (event.type === 'added') {
+                this._trackedEntities.add(event.entity);
+                this.onAdded(event.entity);
+            } else if (event.type === 'removed') {
+                this._trackedEntities.delete(event.entity);
+                this.onRemoved(event.entity);
+            }
+            
+            // 更新缓存的实体列表
+            this.updateCachedEntities(Array.from(this._queryHandle!.entities));
+        });
+    }
 
+    /**
+     * 将Matcher转换为QueryCondition
+     */
+    private convertMatcherToQueryCondition(): QueryCondition {
+        const matcherCondition = this._matcher.getCondition();
+        const condition: QueryCondition = {};
 
-        // 空条件返回所有实体
-        if (this._matcher.isEmpty()) {
-            currentEntities = querySystem.getAllEntities();
-        } else if (this.isSingleCondition(condition)) {
-            // 单一条件优化查询
-            currentEntities = this.executeSingleConditionQuery(condition, querySystem);
-        } else {
-            // 复合查询
-            currentEntities = this.executeComplexQuery(condition, querySystem);
+        if (matcherCondition.all && matcherCondition.all.length > 0) {
+            condition.all = matcherCondition.all;
+        }
+        if (matcherCondition.any && matcherCondition.any.length > 0) {
+            condition.any = matcherCondition.any;
+        }
+        if (matcherCondition.none && matcherCondition.none.length > 0) {
+            condition.none = matcherCondition.none;
+        }
+        if (matcherCondition.tag !== undefined) {
+            condition.tag = matcherCondition.tag;
+        }
+        if (matcherCondition.name !== undefined) {
+            condition.name = matcherCondition.name;
+        }
+        if (matcherCondition.component !== undefined) {
+            condition.component = matcherCondition.component;
         }
 
-        // 检查实体变化并触发回调
-        this.updateEntityTracking(currentEntities);
+        return condition;
+    }
 
+    /**
+     * 更新缓存的实体列表
+     */
+    private updateCachedEntities(entities: Entity[]): void {
+        this._cachedEntities = [...entities];
+        
         // 根据配置决定是否对实体进行确定性排序
         if (Core.deterministicSortingEnabled) {
-            currentEntities.sort((a, b) => a.id - b.id);
+            this._cachedEntities.sort((a, b) => a.id - b.id);
         }
-
-        return currentEntities;
     }
 
     /**
-     * 检查是否为单一条件查询
+     * 查询匹配的实体（已弃用，使用QueryHandle替代）
+     * @deprecated 使用订阅式查询替代每帧查询
      */
-    private isSingleCondition(condition: any): boolean {
-        const conditionCount =
-            (condition.all.length > 0 ? 1 : 0) +
-            (condition.any.length > 0 ? 1 : 0) +
-            (condition.none.length > 0 ? 1 : 0) +
-            (condition.tag !== undefined ? 1 : 0) +
-            (condition.name !== undefined ? 1 : 0) +
-            (condition.component !== undefined ? 1 : 0);
-
-
-        return conditionCount === 1;
+    private queryEntities(): Entity[] {
+        // 已弃用方法，保持向后兼容
+        return this._cachedEntities;
     }
 
-    /**
-     * 执行单一条件查询
-     */
-    private executeSingleConditionQuery(condition: any, querySystem: any): Entity[] {
-        // 按标签查询
-        if (condition.tag !== undefined) {
-            return querySystem.queryByTag(condition.tag).entities;
-        }
-
-        // 按名称查询
-        if (condition.name !== undefined) {
-            return querySystem.queryByName(condition.name).entities;
-        }
-
-        // 单组件查询
-        if (condition.component !== undefined) {
-            return querySystem.queryByComponent(condition.component).entities;
-        }
-
-        // 基础组件查询
-        if (condition.all.length > 0 && condition.any.length === 0 && condition.none.length === 0) {
-            return querySystem.queryAll(...condition.all).entities;
-        }
-
-        if (condition.all.length === 0 && condition.any.length > 0 && condition.none.length === 0) {
-            return querySystem.queryAny(...condition.any).entities;
-        }
-
-        if (condition.all.length === 0 && condition.any.length === 0 && condition.none.length > 0) {
-            return querySystem.queryNone(...condition.none).entities;
-        }
-
-        return [];
-    }
-
-    /**
-     * 执行复合查询
-     */
-    private executeComplexQuery(condition: any, querySystem: QuerySystem): Entity[] {
-        let result: Set<Entity> | null = null;
-
-
-        // 1. 应用标签条件作为基础集合
-        if (condition.tag !== undefined) {
-            const tagResult = querySystem.queryByTag(condition.tag);
-            result = new Set(tagResult.entities);
-        }
-
-        // 2. 应用名称条件
-        if (condition.name !== undefined) {
-            const nameResult = querySystem.queryByName(condition.name);
-            const nameSet = new Set(nameResult.entities);
-
-            if (result) {
-                const intersection = [];
-                for (const entity of result) {
-                    for (const nameEntity of nameSet) {
-                        if (entity === nameEntity || entity.id === nameEntity.id) {
-                            intersection.push(entity);
-                            break;
-                        }
-                    }
-                }
-                result = new Set(intersection);
-            } else {
-                result = nameSet;
-            }
-        }
-
-        // 3. 应用单组件条件
-        if (condition.component !== undefined) {
-            const componentResult = querySystem.queryByComponent(condition.component);
-            const componentSet = new Set(componentResult.entities);
-
-            if (result) {
-                const intersection = [];
-                for (const entity of result) {
-                    for (const componentEntity of componentSet) {
-                        if (entity === componentEntity || entity.id === componentEntity.id) {
-                            intersection.push(entity);
-                            break;
-                        }
-                    }
-                }
-                result = new Set(intersection);
-            } else {
-                result = componentSet;
-            }
-        }
-
-        // 4. 应用all条件
-        if (condition.all.length > 0) {
-            const allResult = querySystem.queryAll(...condition.all);
-            const allSet = new Set(allResult.entities);
-
-
-            if (result) {
-                const intersection = [];
-                for (const entity of result) {
-                    for (const allEntity of allSet) {
-                        if (entity === allEntity || entity.id === allEntity.id) {
-                            intersection.push(entity);
-                            break;
-                        }
-                    }
-                }
-                result = new Set(intersection);
-            } else {
-                result = allSet;
-            }
-        }
-
-        // 5. 应用any条件（求交集）
-        if (condition.any.length > 0) {
-            const anyResult = querySystem.queryAny(...condition.any);
-            const anySet = new Set(anyResult.entities);
-
-
-            if (result) {
-                const intersection = [];
-                for (const entity of result) {
-                    // 通过id匹配来确保正确的交集计算
-                    for (const anyEntity of anySet) {
-                        if (entity === anyEntity || entity.id === anyEntity.id) {
-                            intersection.push(entity);
-                            break;
-                        }
-                    }
-                }
-
-                result = new Set(intersection);
-
-            } else {
-                result = anySet;
-            }
-        }
-
-        // 6. 应用none条件（排除）
-        if (condition.none.length > 0) {
-            if (!result) {
-                // 如果没有前置条件，从所有实体开始
-                result = new Set(querySystem.getAllEntities());
-            }
-
-            const noneResult = querySystem.queryAny(...condition.none);
-            const noneSet = new Set(noneResult.entities);
-
-            const filteredEntities = [];
-            for (const entity of result) {
-                let shouldExclude = false;
-                for (const noneEntity of noneSet) {
-                    if (entity === noneEntity || entity.id === noneEntity.id) {
-                        shouldExclude = true;
-                        break;
-                    }
-                }
-                if (!shouldExclude) {
-                    filteredEntities.push(entity);
-                }
-            }
-            result = new Set(filteredEntities);
-        }
-
-        const finalResult = result ? Array.from(result) : [];
-
-
-        return finalResult;
-    }
 
 
 
@@ -469,12 +340,9 @@ export abstract class EntitySystem implements ISystemBase {
 
         try {
             this.onBegin();
-            // 动态查询实体并处理
-            const entities = this.queryEntities();
-            entityCount = entities.length;
-
-
-            this.process(entities);
+            // 使用缓存的实体列表
+            entityCount = this._cachedEntities.length;
+            this.process(this._cachedEntities);
         } finally {
             this._performanceMonitor.endMonitoring(this._systemName, startTime, entityCount);
         }
@@ -495,10 +363,9 @@ export abstract class EntitySystem implements ISystemBase {
         let entityCount = 0;
 
         try {
-            // 动态查询实体并处理
-            const entities = this.queryEntities();
-            entityCount = entities.length;
-            this.fixedProcess(entities);
+            // 使用缓存的实体列表
+            entityCount = this._cachedEntities.length;
+            this.fixedProcess(this._cachedEntities);
         } finally {
             this._performanceMonitor.endMonitoring(`${this._systemName}_Fixed`, startTime, entityCount);
         }
@@ -518,10 +385,9 @@ export abstract class EntitySystem implements ISystemBase {
         let entityCount = 0;
 
         try {
-            // 动态查询实体并处理
-            const entities = this.queryEntities();
-            entityCount = entities.length;
-            this.lateProcess(entities);
+            // 使用缓存的实体列表
+            entityCount = this._cachedEntities.length;
+            this.lateProcess(this._cachedEntities);
             this.onEnd();
         } finally {
             this._performanceMonitor.endMonitoring(`${this._systemName}_Late`, startTime, entityCount);
@@ -633,25 +499,10 @@ export abstract class EntitySystem implements ISystemBase {
 
     /**
      * 更新实体跟踪，检查新增和移除的实体
+     * @deprecated 订阅式查询中由QueryHandle自动处理实体变更事件
      */
-    private updateEntityTracking(currentEntities: Entity[]): void {
-        const currentSet = new Set(currentEntities);
-
-        // 检查新增的实体
-        for (const entity of currentEntities) {
-            if (!this._trackedEntities.has(entity)) {
-                this._trackedEntities.add(entity);
-                this.onAdded(entity);
-            }
-        }
-
-        // 检查移除的实体
-        for (const entity of this._trackedEntities) {
-            if (!currentSet.has(entity)) {
-                this._trackedEntities.delete(entity);
-                this.onRemoved(entity);
-            }
-        }
+    private updateEntityTracking(_currentEntities: Entity[]): void {
+        // 已弃用方法，订阅式查询中由QueryHandle自动处理实体变更事件
     }
 
     /**

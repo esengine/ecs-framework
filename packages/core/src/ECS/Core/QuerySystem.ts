@@ -10,6 +10,7 @@ import { ComponentPoolManager } from './ComponentPool';
 import { ComponentIndexManager } from './ComponentIndex';
 import { ArchetypeSystem, Archetype, ArchetypeQueryResult } from './ArchetypeSystem';
 import { DirtyTrackingSystem, DirtyFlag } from './DirtyTrackingSystem';
+import { QueryHandle, IQueryHandle, QueryCondition as QueryHandleCondition } from './QuerySystem/QueryHandle';
 
 
 /**
@@ -90,6 +91,10 @@ export class QuerySystem {
         dirtyChecks: 0
     };
 
+    // QueryHandle管理
+    private queryHandles: Map<string, QueryHandle> = new Map();
+    private handleCounter = 0;
+
     constructor() {
         this.entityIndex = {
             byMask: new Map(),
@@ -152,6 +157,7 @@ export class QuerySystem {
             // 只有在非延迟模式下才立即清理缓存
             if (!deferCacheClear) {
                 this.clearQueryCache();
+                this.updateQueryHandles();
             }
             
             // 更新版本号
@@ -186,6 +192,7 @@ export class QuerySystem {
         // 只在有实体被添加时才清理缓存
         if (addedCount > 0) {
             this.clearQueryCache();
+            this.updateQueryHandles();
         }
     }
 
@@ -212,6 +219,7 @@ export class QuerySystem {
 
         // 清理缓存
         this.clearQueryCache();
+        this.updateQueryHandles();
     }
 
     /**
@@ -232,6 +240,7 @@ export class QuerySystem {
             this.dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_REMOVED);
 
             this.clearQueryCache();
+            this.updateQueryHandles();
             
             // 更新版本号
             this._version++;
@@ -878,6 +887,7 @@ export class QuerySystem {
         
         // 批量更新后清除缓存
         this.clearQueryCache();
+        this.updateQueryHandles();
     }
 
 
@@ -1030,6 +1040,7 @@ export class QuerySystem {
         this.queryStats.dirtyChecks++;
         this.dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_MODIFIED, componentTypes);
         this.clearQueryCache();
+        this.updateQueryHandles();
     }
 
     /**
@@ -1039,6 +1050,160 @@ export class QuerySystem {
      */
     public getEntityArchetype(entity: Entity): Archetype | undefined {
         return this.archetypeSystem.getEntityArchetype(entity);
+    }
+
+    /**
+     * 创建查询句柄，支持订阅式实体查询
+     * 
+     * @param condition 查询条件
+     * @returns 查询句柄
+     */
+    public createQueryHandle(condition: QueryHandleCondition): IQueryHandle {
+        const initialEntities = this.executeQuery(condition);
+        const handle = new QueryHandle(condition, initialEntities);
+        
+        this.queryHandles.set(handle.id, handle);
+        return handle;
+    }
+
+    /**
+     * 销毁查询句柄
+     * 
+     * @param handle 要销毁的查询句柄
+     */
+    public destroyQueryHandle(handle: IQueryHandle): void {
+        this.queryHandles.delete(handle.id);
+        handle.destroy();
+    }
+
+    /**
+     * 执行查询条件，返回匹配的实体
+     */
+    private executeQuery(condition: QueryHandleCondition): Entity[] {
+        let entities: Entity[] = [];
+
+        if (condition.all && condition.all.length > 0) {
+            entities = this.queryAll(...condition.all).entities;
+        } else if (condition.any && condition.any.length > 0) {
+            entities = this.queryAny(...condition.any).entities;
+        } else if (condition.none && condition.none.length > 0) {
+            entities = this.queryNone(...condition.none).entities;
+        } else if (condition.tag !== undefined) {
+            entities = this.queryByTag(condition.tag).entities;
+        } else if (condition.name !== undefined) {
+            entities = this.queryByName(condition.name).entities;
+        } else if (condition.component !== undefined) {
+            entities = this.queryByComponent(condition.component).entities;
+        } else {
+            entities = this.getAllEntities();
+        }
+
+        // 如果有多个条件，需要组合查询
+        if (this.hasMultipleConditions(condition)) {
+            entities = this.executeComplexQuery(condition);
+        }
+
+        return entities;
+    }
+
+    /**
+     * 检查是否有多个查询条件
+     */
+    private hasMultipleConditions(condition: QueryHandleCondition): boolean {
+        const conditionCount =
+            (condition.all && condition.all.length > 0 ? 1 : 0) +
+            (condition.any && condition.any.length > 0 ? 1 : 0) +
+            (condition.none && condition.none.length > 0 ? 1 : 0) +
+            (condition.tag !== undefined ? 1 : 0) +
+            (condition.name !== undefined ? 1 : 0) +
+            (condition.component !== undefined ? 1 : 0);
+
+        return conditionCount > 1;
+    }
+
+    /**
+     * 执行复合查询条件
+     */
+    private executeComplexQuery(condition: QueryHandleCondition): Entity[] {
+        let result: Set<Entity> | null = null;
+
+        // 应用标签条件作为基础集合
+        if (condition.tag !== undefined) {
+            const tagResult = this.queryByTag(condition.tag);
+            result = new Set(tagResult.entities);
+        }
+
+        // 应用名称条件
+        if (condition.name !== undefined) {
+            const nameResult = this.queryByName(condition.name);
+            const nameSet = new Set(nameResult.entities);
+
+            if (result) {
+                result = new Set([...result].filter(entity => nameSet.has(entity)));
+            } else {
+                result = nameSet;
+            }
+        }
+
+        // 应用单组件条件
+        if (condition.component !== undefined) {
+            const componentResult = this.queryByComponent(condition.component);
+            const componentSet = new Set(componentResult.entities);
+
+            if (result) {
+                result = new Set([...result].filter(entity => componentSet.has(entity)));
+            } else {
+                result = componentSet;
+            }
+        }
+
+        // 应用all条件
+        if (condition.all && condition.all.length > 0) {
+            const allResult = this.queryAll(...condition.all);
+            const allSet = new Set(allResult.entities);
+
+            if (result) {
+                result = new Set([...result].filter(entity => allSet.has(entity)));
+            } else {
+                result = allSet;
+            }
+        }
+
+        // 应用any条件
+        if (condition.any && condition.any.length > 0) {
+            const anyResult = this.queryAny(...condition.any);
+            const anySet = new Set(anyResult.entities);
+
+            if (result) {
+                result = new Set([...result].filter(entity => anySet.has(entity)));
+            } else {
+                result = anySet;
+            }
+        }
+
+        // 应用none条件（排除）
+        if (condition.none && condition.none.length > 0) {
+            if (!result) {
+                result = new Set(this.getAllEntities());
+            }
+
+            const noneResult = this.queryAny(...condition.none);
+            const noneSet = new Set(noneResult.entities);
+
+            result = new Set([...result].filter(entity => !noneSet.has(entity)));
+        }
+
+        return result ? Array.from(result) : [];
+    }
+
+    /**
+     * 更新所有查询句柄（在实体变更时调用）
+     */
+    private updateQueryHandles(): void {
+        for (const handle of this.queryHandles.values()) {
+            const newEntities = this.executeQuery(handle.condition);
+            handle.updateEntities(newEntities);
+        }
     }
 }
 
