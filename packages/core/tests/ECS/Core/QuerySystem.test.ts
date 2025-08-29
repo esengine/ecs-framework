@@ -1,4 +1,5 @@
-import { QuerySystem, QueryBuilder, QueryConditionType } from '../../../src/ECS/Core/QuerySystem';
+import { QuerySystem } from '../../../src/ECS/Core/QuerySystem';
+import { QueryBuilder, QueryConditionType } from '../../../src/ECS/Core/QuerySystem/QueryBuilder';
 import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
 import { ComponentRegistry, ComponentType } from '../../../src/ECS/Core/ComponentStorage';
