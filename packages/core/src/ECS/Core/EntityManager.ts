@@ -344,10 +344,7 @@ export class EntityManager {
         this._dirtyTrackingSystem = new DirtyTrackingSystem();
         this._eventBus = new EventBus(false);
         
-        // 设置Entity的静态事件总线引用
-        Entity.eventBus = this._eventBus;
-        
-        // 监听组件事件来同步更新索引
+        // 监听组件事件来同步更新索引将在场景级别处理
         this._eventBus.on('component:added', (data: any) => {
             const entity = this._entities.get(data.entityId);
             if (entity) {

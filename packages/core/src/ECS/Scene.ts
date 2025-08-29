@@ -7,7 +7,6 @@ import { EntitySystem } from './Systems/EntitySystem';
 import { ComponentStorageManager } from './Core/ComponentStorage';
 import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem } from './Core/EventSystem';
-import { EventBus } from './Core/EventBus';
 import { IScene, ISceneConfig } from './IScene';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from './Decorators';
 import { CommandBuffer } from './Core/CommandBuffer';
@@ -149,16 +148,6 @@ export class Scene implements IScene {
         // 应用配置
         if (config?.name) {
             this.name = config.name;
-        }
-
-        if (!Entity.eventBus) {
-            Entity.eventBus = new EventBus(false);
-        }
-        
-        if (Entity.eventBus) {
-            Entity.eventBus.onComponentAdded((data: unknown) => {
-                this.eventSystem.emitSync('component:added', data);
-            });
         }
     }
 

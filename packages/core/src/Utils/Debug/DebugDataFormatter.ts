@@ -51,7 +51,7 @@ export class DebugDataFormatter {
     /**
      * 提取组件详细信息
      */
-    public static extractComponentDetails(components: Component[]): Array<{
+    public static extractComponentDetails(components: readonly Component[]): Array<{
         typeName: string;
         properties: Record<string, any>;
     }> {

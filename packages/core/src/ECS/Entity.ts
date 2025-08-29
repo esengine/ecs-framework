@@ -1,11 +1,15 @@
 import { Component, IComponentLifecycle } from './Component';
-import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
-import { EventBus } from './Core/EventBus';
-import { IBigIntLike, BigIntFactory } from './Utils/BigIntCompatibility';
+import { ComponentType } from './Core/ComponentStorage';
+import { IBigIntLike } from './Utils/BigIntCompatibility';
 import { createLogger } from '../Utils/Logger';
 import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
 import { Core } from '../Core';
 import { IScene } from './IScene';
+import { ComponentSet } from './Core/ComponentSet';
+import { SceneBindings } from './Core/SceneBindings';
+import { EntityEvents } from './Core/EntityEvents';
+import { EntityDebugView, EntityDebugInfo } from './Debug/EntityDebugView';
+import { Hierarchy, HierarchyBehavior } from './Core/Hierarchy';
 
 /**
  * 实体比较器
@@ -21,40 +25,18 @@ export class EntityComparer {
      * @returns 比较结果，负数表示self优先级更高，正数表示other优先级更高，0表示相等
      */
     public compare(self: Entity, other: Entity): number {
-        let compare = self.updateOrder - other.updateOrder;
-        if (compare == 0)
-            compare = self.id - other.id;
-        return compare;
+        const updateOrderDiff = self.updateOrder - other.updateOrder;
+        if (updateOrderDiff !== 0) {
+            return updateOrderDiff;
+        }
+        return self.id - other.id;
     }
 }
 
 
 
 /**
- * 游戏实体类
- * 
- * ECS架构中的实体（Entity），作为组件的容器。
- * 实体本身不包含游戏逻辑，所有功能都通过组件来实现。
- * 支持父子关系，可以构建实体层次结构。
- * 
- * @example
- * ```typescript
- * // 创建实体
- * const entity = new Entity("Player", 1);
- * 
- * // 添加组件
- * const healthComponent = entity.addComponent(new HealthComponent(100));
- * 
- * // 获取组件
- * const health = entity.getComponent(HealthComponent);
- * 
- * // 添加位置组件
- * entity.addComponent(new PositionComponent(100, 200));
- * 
- * // 添加子实体
- * const weapon = new Entity("Weapon", 2);
- * entity.addChild(weapon);
- * ```
+ * ECS架构中的实体，作为组件的容器
  */
 export class Entity {
     /**
@@ -67,109 +49,58 @@ export class Entity {
      */
     public static entityComparer: EntityComparer = new EntityComparer();
     
-    /**
-     * 全局事件总线实例
-     * 用于发射组件相关事件
-     */
-    public static eventBus: EventBus | null = null;
     
     /**
      * 实体名称
-     * 
-     * 用于标识和调试的友好名称。
      */
     public name: string;
     
     /**
      * 实体唯一标识符
-     * 
-     * 在场景中唯一的数字标识符。
      */
     public readonly id: number;
     
     /**
-     * 组件集合
-     * 
-     * 存储实体拥有的所有组件。
+     * 组件管理器
      */
-    public readonly components: Component[] = [];
+    private _componentSet: ComponentSet = new ComponentSet();
     
     /**
-     * 所属场景引用
-     * 
-     * 指向实体所在的场景实例。
+     * 所属场景
      */
     public scene: IScene | null = null;
     
     /**
      * 更新间隔
-     * 
-     * 控制实体更新的频率，值越大更新越不频繁。
      */
     public updateInterval: number = 1;
     
     /**
      * 销毁状态标志
-     * 
-     * 标记实体是否已被销毁。
      */
     public _isDestroyed: boolean = false;
 
-    /**
-     * 父实体引用
-     * 
-     * 指向父级实体，用于构建实体层次结构。
-     */
-    private _parent: Entity | null = null;
-
-    /**
-     * 子实体集合
-     * 
-     * 存储所有子级实体的数组。
-     */
-    private _children: Entity[] = [];
 
     /**
      * 激活状态
-     * 
-     * 控制实体是否处于激活状态。
      */
     private _active: boolean = true;
     
     /**
      * 实体标签
-     * 
-     * 用于分类和查询的数字标签。
      */
     private _tag: number = 0;
     
     /**
      * 启用状态
-     * 
-     * 控制实体是否启用更新和处理。
      */
     private _enabled: boolean = true;
     
     /**
      * 更新顺序
-     * 
-     * 控制实体在系统中的更新优先级。
      */
     private _updateOrder: number = 0;
 
-    /**
-     * 组件位掩码
-     * 
-     * 用于快速查询实体拥有的组件类型。
-     */
-    private _componentMask: IBigIntLike = BigIntFactory.zero();
-
-    /**
-     * 组件类型到索引的映射
-     * 
-     * 用于快速定位组件在数组中的位置。
-     */
-    private _componentTypeToIndex = new Map<ComponentType, number>();
 
     /**
      * 构造函数
@@ -184,11 +115,18 @@ export class Entity {
 
     /**
      * 获取销毁状态
-     * 
-     * @returns 如果实体已被销毁则返回true
      */
     public get isDestroyed(): boolean {
         return this._isDestroyed;
+    }
+
+    /**
+     * 获取组件数组的只读视图
+     * 
+     * @returns 组件数组的只读视图
+     */
+    public get components(): readonly Component[] {
+        return this._componentSet.components;
     }
 
     /**
@@ -198,10 +136,17 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public get parent(): Entity | null {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        const parentId = Hierarchy.getParentId(this.id);
+        if (parentId === null) {
+            return null;
         }
-        return this._parent;
+        
+        // 通过场景查找父实体实例
+        if (this.scene) {
+            return this.scene.entities.findEntityById(parentId) || null;
+        }
+        
+        return null;
     }
 
     /**
@@ -211,10 +156,20 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public get children(): readonly Entity[] {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        const childIds = Hierarchy.getChildIds(this.id);
+        if (!this.scene) {
+            return [];
         }
-        return [...this._children];
+        
+        const children: Entity[] = [];
+        for (const childId of childIds) {
+            const child = this.scene.entities.findEntityById(childId);
+            if (child) {
+                children.push(child);
+            }
+        }
+        
+        return children;
     }
 
     /**
@@ -224,10 +179,7 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public get childCount(): number {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
-        }
-        return this._children.length;
+        return Hierarchy.getChildCount(this.id);
     }
 
     /**
@@ -269,7 +221,10 @@ export class Entity {
             return true;
         }
         
-        if (this._parent) return this._parent.activeInHierarchy;
+        const parent = this.parent;
+        if (parent) {
+            return parent.activeInHierarchy;
+        }
         return true;
     }
 
@@ -333,15 +288,11 @@ export class Entity {
      * @returns 实体的组件位掩码
      */
     public get componentMask(): IBigIntLike {
-        return this._componentMask;
+        return this._componentSet.componentMask;
     }
 
     /**
      * 创建并添加组件
-     * 
-     * @param componentType - 组件类型
-     * @param args - 组件构造函数参数
-     * @returns 创建的组件实例
      */
     public createComponent<T extends Component>(
         componentType: ComponentType<T>, 
@@ -352,40 +303,18 @@ export class Entity {
     }
 
     /**
-     * 内部添加组件方法（不进行重复检查，用于初始化）
-     * 
-     * @param component - 要添加的组件实例
-     * @returns 添加的组件实例
+     * 内部添加组件方法
      */
     private addComponentInternal<T extends Component>(component: T): T {
-        const componentType = component.constructor as ComponentType<T>;
-
-        // 注册组件类型（如果尚未注册）
-        if (!ComponentRegistry.isRegistered(componentType)) {
-            ComponentRegistry.register(componentType);
-        }
-
         // 设置组件的实体引用
         component.entity = this;
 
-        // 添加到组件列表并建立索引映射
-        const index = this.components.length;
-        this.components.push(component);
-        this._componentTypeToIndex.set(componentType, index);
-
-        // 更新位掩码
-        const componentMask = ComponentRegistry.getBitMask(componentType);
-        this._componentMask = this._componentMask.or(componentMask);
-
-        return component;
+        // 委托给 ComponentSet 处理
+        return this._componentSet.addComponent(component);
     }
 
     /**
      * 添加组件到实体
-     * 
-     * @param component - 要添加的组件实例
-     * @returns 添加的组件实例
-     * @throws {Error} 如果组件类型已存在
      */
     public addComponent<T extends Component>(component: T): T {
         const componentType = component.constructor as ComponentType<T>;
@@ -404,82 +333,40 @@ export class Entity {
         }
 
         // 调用组件的生命周期方法（仅在未抑制副作用时）
-        if (!this.scene || !this.scene.suspendEffects) {
+        if (!SceneBindings.shouldSuppressEffects(this.scene)) {
             component.onAddedToEntity();
         }
 
-        // 通知场景组件变更
-        if (this.scene) {
-            this.scene.markComponentChanged();
-        }
+        // 发射组件添加事件
+        EntityEvents.emitComponentAdded(this, component);
         
-        // 发射组件添加事件（仅在未抑制副作用时）
-        if (Entity.eventBus && (!this.scene || !this.scene.suspendEffects)) {
-            Entity.eventBus.emitComponentAdded({
-                timestamp: Date.now(),
-                source: 'Entity',
-                entityId: this.id,
-                entityName: this.name,
-                entityTag: this.tag?.toString(),
-                componentType: getComponentTypeName(componentType),
-                component: component
-            });
-        }
-        
-        
-        // 通知QuerySystem实体组件已改变，需要重新索引
-        if (this.scene && this.scene.querySystem) {
-            // 移除旧的索引，重新添加以更新索引
-            this.scene.querySystem.removeEntity(this);
-            this.scene.querySystem.addEntity(this);
-        }
+        // 统一通知场景变更
+        SceneBindings.notifyComponentChanged(this);
 
         return component;
     }
 
     /**
      * 获取指定类型的组件
-     * 
-     * @param type - 组件类型
-     * @returns 组件实例或null
      */
     public getComponent<T extends Component>(type: ComponentType<T>): T | null {
-        // 首先检查位掩码，快速排除（O(1)）
-        if (!ComponentRegistry.isRegistered(type)) {
-            return null;
-        }
-
-        const mask = ComponentRegistry.getBitMask(type);
-        if (this._componentMask.and(mask).isZero()) {
-            return null;
-        }
-
-        // 尝试从索引映射获取（O(1)）
-        const index = this._componentTypeToIndex.get(type);
-        if (index !== undefined && index < this.components.length) {
-            const component = this.components[index];
-            if (component && component.constructor === type) {
-                return component as T;
-            }
+        // 首先从 ComponentSet 获取
+        const component = this._componentSet.getComponent(type);
+        if (component) {
+            return component;
         }
 
         // 如果场景有组件存储管理器，从存储器获取
         if (this.scene && this.scene.componentStorageManager) {
-            const component = this.scene.componentStorageManager.getComponent(this.id, type);
-            if (component) {
-                // 重建索引映射
-                this.rebuildComponentIndex();
-                return component;
-            }
-        }
-
-        // 最后回退到线性搜索并重建索引（O(n)，但n很小且很少发生）
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            if (component instanceof type) {
-                // 重建索引映射
-                this._componentTypeToIndex.set(type, i);
-                return component as T;
+            const storageComponent = this.scene.componentStorageManager.getComponent(this.id, type);
+            if (storageComponent) {
+                // 更新本地索引信息
+                const componentIndex = this._componentSet.components.indexOf(storageComponent);
+                if (componentIndex === -1) {
+                    // 如果组件不在本地数组中，说明索引不一致，标记为脏状态
+                    this._componentSet.markIndexDirty();
+                }
+                return storageComponent;
             }
         }
 
@@ -488,38 +375,12 @@ export class Entity {
 
 
 
-    /**
-     * 重建组件索引映射
-     */
-    private rebuildComponentIndex(): void {
-        this._componentTypeToIndex.clear();
-        
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            const componentType = component.constructor as ComponentType;
-            this._componentTypeToIndex.set(componentType, i);
-        }
-    }
 
     /**
      * 检查实体是否有指定类型的组件
-     * 
-     * @param type - 组件类型
-     * @returns 如果有该组件则返回true
      */
     public hasComponent<T extends Component>(type: ComponentType<T>): boolean {
-        // 快速路径：直接从索引映射检查
-        if (this._componentTypeToIndex.has(type)) {
-            return true;
-        }
-        
-        // 后备路径：通过位掩码检查
-        if (!ComponentRegistry.isRegistered(type)) {
-            return false;
-        }
-        
-        const mask = ComponentRegistry.getBitMask(type);
-        return !this._componentMask.and(mask).isZero();
+        return this._componentSet.hasComponent(type);
     }
 
     /**
@@ -542,25 +403,15 @@ export class Entity {
 
     /**
      * 移除指定的组件
-     * 
-     * @param component - 要移除的组件实例
      */
     public removeComponent(component: Component): void {
         const componentType = component.constructor as ComponentType;
         
-        // 从组件列表中移除
-        const index = this.components.indexOf(component);
-        if (index !== -1) {
-            this.components.splice(index, 1);
-            
-            // 重建索引映射（因为数组索引发生了变化）
-            this.rebuildComponentIndex();
-        }
-
-        // 更新位掩码
-        if (ComponentRegistry.isRegistered(componentType)) {
-            const componentMask = ComponentRegistry.getBitMask(componentType);
-            this._componentMask = this._componentMask.and(componentMask.not());
+        // 委托给 ComponentSet 移除组件
+        const removedComponent = this._componentSet.removeComponent(component);
+        if (!removedComponent) {
+            // 组件不存在，直接返回
+            return;
         }
 
         // 从组件存储管理器中移除
@@ -569,38 +420,18 @@ export class Entity {
         }
 
         // 调用组件的生命周期方法（仅在未抑制副作用时）
-        if (component.onRemovedFromEntity && (!this.scene || !this.scene.suspendEffects)) {
+        if (component.onRemovedFromEntity && !SceneBindings.shouldSuppressEffects(this.scene)) {
             component.onRemovedFromEntity();
         }
 
-        // 通知场景组件变更
-        if (this.scene) {
-            this.scene.markComponentChanged();
-        }
-        
-        // 发射组件移除事件（仅在未抑制副作用时）
-        if (Entity.eventBus && (!this.scene || !this.scene.suspendEffects)) {
-            Entity.eventBus.emitComponentRemoved({
-                timestamp: Date.now(),
-                source: 'Entity',
-                entityId: this.id,
-                entityName: this.name,
-                entityTag: this.tag?.toString(),
-                componentType: getComponentTypeName(componentType),
-                component: component
-            });
-        }
+        // 发射组件移除事件
+        EntityEvents.emitComponentRemoved(this, component);
         
         // 清除组件的实体引用
         component.entity = null as any;
 
-        
-        // 通知QuerySystem实体组件已改变，需要重新索引
-        if (this.scene && this.scene.querySystem) {
-            // 移除旧的索引，重新添加以更新索引
-            this.scene.querySystem.removeEntity(this);
-            this.scene.querySystem.addEntity(this);
-        }
+        // 统一通知场景变更
+        SceneBindings.notifyComponentChanged(this);
     }
 
     /**
@@ -622,12 +453,8 @@ export class Entity {
      * 移除所有组件
      */
     public removeAllComponents(): void {
-        // 复制组件列表，避免在迭代时修改
-        const componentsToRemove = [...this.components];
-        
-        // 清空索引和位掩码
-        this._componentTypeToIndex.clear();
-        this._componentMask = BigIntFactory.zero();
+        // 从 ComponentSet 移除所有组件
+        const componentsToRemove = this._componentSet.removeAllComponents();
         
         // 移除组件
         for (const component of componentsToRemove) {
@@ -639,17 +466,82 @@ export class Entity {
             }
 
             // 调用组件的生命周期方法（仅在未抑制副作用时）
-            if (!this.scene || !this.scene.suspendEffects) {
+            if (!SceneBindings.shouldSuppressEffects(this.scene)) {
                 component.onRemovedFromEntity();
             }
+            
+            // 发射组件移除事件
+            EntityEvents.emitComponentRemoved(this, component);
             
             // 清除组件的实体引用
             component.entity = null as any;
         }
-        
-        // 清空组件列表
-        this.components.length = 0;
 
+        // 统一通知场景变更
+        SceneBindings.notifyComponentChanged(this);
+    }
+
+    /**
+     * 高性能批量移除组件
+     * 
+     * 通过批量处理减少重复计算和系统调用，提供更好的性能。
+     * 适用于需要一次性移除多个组件的场景。
+     * 
+     * @param options - 批量移除选项
+     */
+    public removeAllComponentsBatch(
+        options: {
+            suppressLifecycle?: boolean;
+            suppressEvents?: boolean;
+            suppressQueryUpdate?: boolean;
+        } = {}
+    ): Component[] {
+        if (this._componentSet.size === 0) {
+            return [];
+        }
+
+        // 从 ComponentSet 移除所有组件
+        const componentsToRemove = this._componentSet.removeAllComponents();
+        const componentTypes: ComponentType[] = [];
+        
+        // 收集组件类型信息
+        for (const component of componentsToRemove) {
+            const componentType = component.constructor as ComponentType;
+            componentTypes.push(componentType);
+        }
+        
+        // 批量从组件存储管理器中移除
+        if (this.scene && this.scene.componentStorageManager) {
+            for (const componentType of componentTypes) {
+                this.scene.componentStorageManager.removeComponent(this.id, componentType);
+            }
+        }
+
+        // 批量生命周期处理（如果未抑制）
+        if (!options.suppressLifecycle && (!this.scene || !this.scene.suspendEffects)) {
+            for (const component of componentsToRemove) {
+                component.onRemovedFromEntity();
+            }
+        }
+        
+        // 批量事件发射（如果未抑制）
+        if (!options.suppressEvents) {
+            for (const component of componentsToRemove) {
+                EntityEvents.emitComponentRemoved(this, component);
+            }
+        }
+        
+        // 批量清除组件的实体引用
+        for (const component of componentsToRemove) {
+            component.entity = null as any;
+        }
+
+        // 统一通知场景变更
+        SceneBindings.notifyComponentChanged(this, {
+            suppressQueryUpdate: options.suppressQueryUpdate
+        });
+
+        return componentsToRemove;
     }
 
     /**
@@ -696,98 +588,44 @@ export class Entity {
         }
 
         const addedComponents: T[] = [];
-        const componentTypes: ComponentType[] = [];
         
-        // 第一阶段：验证和预处理
+        // 设置所有组件的实体引用
         for (const component of components) {
-            const componentType = component.constructor as ComponentType<T>;
-            
-            // 检查重复组件
-            if (this.hasComponent(componentType)) {
-                Entity._logger.warn(`Entity ${this.name} already has component ${getComponentTypeName(componentType)}, skipping`);
-                continue;
-            }
-            
-            // 检查组件是否已在本批次中
-            if (componentTypes.includes(componentType)) {
-                Entity._logger.warn(`Duplicate component type ${getComponentTypeName(componentType)} in batch, skipping duplicate`);
-                continue;
-            }
-            
-            componentTypes.push(componentType);
-            addedComponents.push(component);
+            component.entity = this;
         }
+        
+        // 使用 ComponentSet 批量添加组件
+        const actuallyAddedComponents = this._componentSet.addComponents(components);
+        addedComponents.push(...actuallyAddedComponents as T[]);
 
         if (addedComponents.length === 0) {
             return [];
         }
 
-        // 第二阶段：批量注册组件类型
-        const bitMasks: IBigIntLike[] = [];
-        for (const componentType of componentTypes) {
-            if (!ComponentRegistry.isRegistered(componentType)) {
-                ComponentRegistry.register(componentType);
-            }
-            bitMasks.push(ComponentRegistry.getBitMask(componentType));
-        }
-
-        // 第三阶段：批量添加组件到内部数据结构
-        let combinedMask = this._componentMask;
-        for (let i = 0; i < addedComponents.length; i++) {
-            const component = addedComponents[i];
-            const componentType = componentTypes[i];
-            
-            // 设置组件的实体引用
-            component.entity = this;
-            
-            // 添加到组件列表并建立索引映射
-            const index = this.components.length;
-            this.components.push(component);
-            this._componentTypeToIndex.set(componentType, index);
-            
-            // 合并位掩码
-            combinedMask = combinedMask.or(bitMasks[i]);
-        }
-        
-        // 一次性更新位掩码
-        this._componentMask = combinedMask;
-
-        // 第四阶段：批量添加到组件存储管理器
+        // 批量添加到组件存储管理器
         if (this.scene && this.scene.componentStorageManager) {
             for (const component of addedComponents) {
                 this.scene.componentStorageManager.addComponent(this.id, component);
             }
         }
 
-        // 第五阶段：批量生命周期和事件处理（如果未抑制）
+        // 批量生命周期和事件处理（如果未抑制）
         if (!options.suppressLifecycle && (!this.scene || !this.scene.suspendEffects)) {
             for (const component of addedComponents) {
                 component.onAddedToEntity();
             }
         }
         
-        if (!options.suppressEvents && Entity.eventBus && (!this.scene || !this.scene.suspendEffects)) {
-            for (let i = 0; i < addedComponents.length; i++) {
-                const component = addedComponents[i];
-                const componentType = componentTypes[i];
-                
-                Entity.eventBus.emitComponentAdded({
-                    timestamp: Date.now(),
-                    source: 'Entity',
-                    entityId: this.id,
-                    entityName: this.name,
-                    entityTag: this.tag?.toString(),
-                    componentType: getComponentTypeName(componentType),
-                    component: component
-                });
+        if (!options.suppressEvents) {
+            for (const component of addedComponents) {
+                EntityEvents.emitComponentAdded(this, component);
             }
         }
 
-        // 第六阶段：更新QuerySystem（仅一次）
-        if (!options.suppressQueryUpdate && this.scene && this.scene.querySystem) {
-            this.scene.querySystem.removeEntity(this);
-            this.scene.querySystem.addEntity(this);
-        }
+        // 统一通知场景变更
+        SceneBindings.notifyComponentChanged(this, {
+            suppressQueryUpdate: options.suppressQueryUpdate
+        });
 
         return addedComponents;
     }
@@ -817,15 +655,7 @@ export class Entity {
      * @returns 组件实例数组
      */
     public getComponents<T extends Component>(type: ComponentType<T>): T[] {
-        const result: T[] = [];
-        
-        for (const component of this.components) {
-            if (component instanceof type) {
-                result.push(component as T);
-            }
-        }
-        
-        return result;
+        return this._componentSet.getComponents(type);
     }
 
     /**
@@ -836,26 +666,17 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public addChild(child: Entity): Entity {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
-        }
-
         if (child === this) {
             throw new Error("Entity cannot be its own child");
         }
 
-        if (child._parent === this) {
+        const currentParentId = Hierarchy.getParentId(child.id, HierarchyBehavior.ReturnEmpty);
+        if (currentParentId === this.id) {
             return child; // 已经是子实体
         }
 
-        // 如果子实体已有父实体，先从原父实体移除
-        if (child._parent) {
-            child._parent.removeChild(child);
-        }
-
         // 设置父子关系
-        child._parent = this;
-        this._children.push(child);
+        Hierarchy.setParent(child.id, this.id);
 
         // 如果子实体还没有场景，设置为父实体的场景
         if (!child.scene && this.scene) {
@@ -874,19 +695,13 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public removeChild(child: Entity): boolean {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
-        }
-
-        const index = this._children.indexOf(child);
-        if (index === -1) {
+        const parentId = Hierarchy.getParentId(child.id, HierarchyBehavior.ReturnEmpty);
+        if (parentId !== this.id) {
             return false;
         }
 
         // 移除父子关系
-        this._children.splice(index, 1);
-        child._parent = null;
-
+        Hierarchy.removeParent(child.id);
         return true;
     }
 
@@ -896,15 +711,10 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public removeAllChildren(): void {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
-        }
-
-        // 复制子实体列表，避免在迭代时修改
-        const childrenToRemove = [...this._children];
+        const childIds = Hierarchy.getChildIds(this.id);
         
-        for (const child of childrenToRemove) {
-            this.removeChild(child);
+        for (const childId of childIds) {
+            Hierarchy.removeParent(childId);
         }
     }
 
@@ -917,28 +727,25 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public findChild(name: string, recursive: boolean = false): Entity | null {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        if (!this.scene) {
+            return null;
         }
 
-        // 在直接子实体中查找
-        for (const child of this._children) {
-            if (child.name === name) {
-                return child;
+        const foundId = Hierarchy.findChildIdByName(
+            this.id, 
+            name, 
+            recursive, 
+            (entityId) => {
+                const entity = this.scene?.entities.findEntityById(entityId);
+                return entity?.name || '';
             }
+        );
+
+        if (foundId === null) {
+            return null;
         }
 
-        // 递归查找
-        if (recursive) {
-            for (const child of this._children) {
-                const found = child.findChild(name, true);
-                if (found) {
-                    return found;
-                }
-            }
-        }
-
-        return null;
+        return this.scene.entities.findEntityById(foundId) || null;
     }
 
     /**
@@ -950,23 +757,25 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public findChildrenByTag(tag: number, recursive: boolean = false): Entity[] {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        if (!this.scene) {
+            return [];
         }
+
+        const foundIds = Hierarchy.findChildIdsByTag(
+            this.id,
+            tag,
+            recursive,
+            (entityId) => {
+                const entity = this.scene?.entities.findEntityById(entityId);
+                return entity?.tag || 0;
+            }
+        );
 
         const result: Entity[] = [];
-
-        // 在直接子实体中查找
-        for (const child of this._children) {
-            if (child.tag === tag) {
-                result.push(child);
-            }
-        }
-
-        // 递归查找
-        if (recursive) {
-            for (const child of this._children) {
-                result.push(...child.findChildrenByTag(tag, true));
+        for (const foundId of foundIds) {
+            const entity = this.scene.entities.findEntityById(foundId);
+            if (entity) {
+                result.push(entity);
             }
         }
 
@@ -980,15 +789,16 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public getRoot(): Entity {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        const rootId = Hierarchy.getRootId(this.id);
+        
+        if (this.scene) {
+            const rootEntity = this.scene.entities.findEntityById(rootId);
+            if (rootEntity) {
+                return rootEntity;
+            }
         }
-
-        let root: Entity = this;
-        while (root._parent) {
-            root = root._parent;
-        }
-        return root;
+        
+        return this;
     }
 
     /**
@@ -999,18 +809,7 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public isAncestorOf(entity: Entity): boolean {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
-        }
-
-        let current = entity._parent;
-        while (current) {
-            if (current === this) {
-                return true;
-            }
-            current = current._parent;
-        }
-        return false;
+        return Hierarchy.isAncestorOf(this.id, entity.id);
     }
 
     /**
@@ -1021,11 +820,7 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public isDescendantOf(entity: Entity): boolean {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
-        }
-
-        return entity.isAncestorOf(this);
+        return Hierarchy.isDescendantOf(this.id, entity.id);
     }
 
     /**
@@ -1035,17 +830,7 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public getDepth(): number {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
-        }
-
-        let depth = 0;
-        let current = this._parent;
-        while (current) {
-            depth++;
-            current = current._parent;
-        }
-        return depth;
+        return Hierarchy.getDepth(this.id);
     }
 
     /**
@@ -1056,16 +841,21 @@ export class Entity {
      * @throws 如果未启用Entity父子关系功能则抛出错误
      */
     public forEachChild(callback: (child: Entity, index: number) => void, recursive: boolean = false): void {
-        if (!Core.entityHierarchyEnabled) {
-            throw new Error("Entity父子关系功能已禁用。这不符合纯ECS设计，如需使用请在Core配置中启用entityHierarchy选项");
+        if (!this.scene) {
+            return;
         }
 
-        this._children.forEach((child, index) => {
-            callback(child, index);
-            if (recursive) {
-                child.forEachChild(callback, true);
-            }
-        });
+        let index = 0;
+        Hierarchy.forEachChildId(
+            this.id,
+            (childId) => {
+                const child = this.scene?.entities.findEntityById(childId);
+                if (child) {
+                    callback(child, index++);
+                }
+            },
+            recursive
+        );
     }
 
     /**
@@ -1073,7 +863,7 @@ export class Entity {
      */
     private onActiveChanged(): void {
         // 通知所有组件活跃状态改变
-        for (const component of this.components) {
+        for (const component of this._componentSet.components) {
             const lifecycleComponent = component as IComponentLifecycle;
             if (lifecycleComponent.onActiveChanged) {
                 lifecycleComponent.onActiveChanged();
@@ -1081,13 +871,7 @@ export class Entity {
         }
 
         // 通知场景实体状态改变
-        if (this.scene && this.scene.eventSystem) {
-            this.scene.eventSystem.emitSync('entity:activeChanged', { 
-                entity: this, 
-                active: this._active,
-                activeInHierarchy: this.activeInHierarchy
-            });
-        }
+        EntityEvents.emitActiveChanged(this);
     }
 
     /**
@@ -1107,67 +891,60 @@ export class Entity {
         }
 
         // 更新所有组件
-        for (const component of this.components) {
+        for (const component of this._componentSet.components) {
             if (component.enabled) {
                 component.update();
             }
         }
 
         // 更新所有子实体（如果启用父子关系）
-        if (Core.entityHierarchyEnabled) {
-            for (const child of this._children) {
-                child.update();
+        if (Core.entityHierarchyEnabled && this.scene) {
+            const childIds = Hierarchy.getChildIds(this.id, HierarchyBehavior.ReturnEmpty);
+            for (const childId of childIds) {
+                const child = this.scene.entities.findEntityById(childId);
+                if (child) {
+                    child.update();
+                }
             }
         }
     }
 
     /**
      * 销毁实体
-     * 
-     * 移除所有组件、子实体并标记为已销毁。
      */
     public destroy(): void {
         if (this._isDestroyed) {
             return;
         }
 
+        EntityEvents.emitEntityDestroyed(this);
+
         this._isDestroyed = true;
         
         // 销毁所有子实体（如果启用父子关系）
         if (Core.entityHierarchyEnabled) {
-            const childrenToDestroy = [...this._children];
-            for (const child of childrenToDestroy) {
-                child.destroy();
+            const childIds = Hierarchy.getChildIds(this.id, HierarchyBehavior.ReturnEmpty);
+            
+            if (this.scene) {
+                for (const childId of childIds) {
+                    const child = this.scene.entities.findEntityById(childId);
+                    if (child) {
+                        child.destroy();
+                    }
+                }
             }
             
-            // 从父实体中移除
-            if (this._parent) {
-                this._parent.removeChild(this);
-            }
+            // 清理层级关系
+            Hierarchy.cleanup(this.id, HierarchyBehavior.ReturnEmpty);
         }
         
-        // 移除所有组件
         this.removeAllComponents();
         
-        // 从场景中移除
-        if (this.scene) {
-            // 从查询系统中移除
-            if (this.scene.querySystem) {
-                this.scene.querySystem.removeEntity(this);
-            }
-            
-            // 从实体列表中移除
-            if (this.scene.entities) {
-                this.scene.entities.remove(this);
-            }
-        }
+        SceneBindings.removeFromScene(this);
     }
 
     /**
      * 比较实体
-     * 
-     * @param other - 另一个实体
-     * @returns 比较结果
      */
     public compareTo(other: Entity): number {
         return EntityComparer.prototype.compare(this, other);
@@ -1175,49 +952,27 @@ export class Entity {
 
     /**
      * 获取实体的字符串表示
-     * 
-     * @returns 实体的字符串描述
      */
     public toString(): string {
         return `Entity[${this.name}:${this.id}]`;
     }
 
     /**
-     * 获取实体的调试信息（包含组件缓存信息）
+     * 获取实体的调试信息
      * 
      * @returns 包含实体详细信息的对象
      */
-    public getDebugInfo(): {
-        name: string;
-        id: number;
-        enabled: boolean;
-        active: boolean;
-        activeInHierarchy: boolean;
-        destroyed: boolean;
-        componentCount: number;
-        componentTypes: string[];
-        componentMask: string;
-        parentId: number | null;
-        childCount: number;
-        childIds: number[];
-        depth: number;
-        indexMappingSize: number;
-    } {
-        return {
-            name: this.name,
-            id: this.id,
-            enabled: this._enabled,
-            active: this._active,
-            activeInHierarchy: this.activeInHierarchy,
-            destroyed: this._isDestroyed,
-            componentCount: this.components.length,
-            componentTypes: this.components.map(c => getComponentInstanceTypeName(c)),
-            componentMask: this._componentMask.toString(2), // 二进制表示
-            parentId: Core.entityHierarchyEnabled ? (this._parent?.id || null) : null,
-            childCount: Core.entityHierarchyEnabled ? this._children.length : 0,
-            childIds: Core.entityHierarchyEnabled ? this._children.map(c => c.id) : [],
-            depth: Core.entityHierarchyEnabled ? this.getDepth() : 0,
-            indexMappingSize: this._componentTypeToIndex.size
-        };
+    public getDebugInfo(): EntityDebugInfo {
+        return EntityDebugView.getDebugInfo(this);
+    }
+
+    /**
+     * 获取实体的调试字符串表示
+     * 
+     * @param includeComponents - 是否包含组件信息
+     * @returns 格式化的调试字符串
+     */
+    public toDebugString(includeComponents: boolean = false): string {
+        return EntityDebugView.toDebugString(this, includeComponents);
     }
 }

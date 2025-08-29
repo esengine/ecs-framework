@@ -459,8 +459,6 @@ describe('EntityManager - 实体管理器测试', () => {
             expect(entities.length).toBe(entityCount);
             expect(entityManager.entityCount).toBe(entityCount);
             // 性能记录：实体创建性能数据，不设硬阈值避免CI不稳定
-            
-            console.log(`创建${entityCount}个实体耗时: ${duration.toFixed(2)}ms`);
         });
 
         test('大量实体查询性能应该可接受', () => {
@@ -498,8 +496,6 @@ describe('EntityManager - 实体管理器测试', () => {
             expect(velocityResults.length).toBe(entityCount / 2);
             expect(healthResults.length).toBe(Math.floor(entityCount / 3) + 1);
             // 性能记录：复杂查询性能数据，不设硬阈值避免CI不稳定
-            
-            console.log(`${entityCount}个实体的复杂查询耗时: ${duration.toFixed(2)}ms`);
         });
 
         test('实体销毁应该正确清理内存', () => {

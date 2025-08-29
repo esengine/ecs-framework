@@ -15,6 +15,7 @@ export class EntityBuilder {
         this.scene = scene;
         this.storageManager = storageManager;
         this.entity = new Entity("", scene.identifierPool.checkOut());
+        this.entity.scene = scene;
     }
 
     /**
@@ -127,6 +128,8 @@ export class EntityBuilder {
      */
     public withChild(childBuilder: EntityBuilder): EntityBuilder {
         const child = childBuilder.build();
+        // 确保子实体被添加到场景中
+        this.scene.addEntity(child);
         this.entity.addChild(child);
         return this;
     }
@@ -139,6 +142,8 @@ export class EntityBuilder {
     public withChildren(...childBuilders: EntityBuilder[]): EntityBuilder {
         for (const childBuilder of childBuilders) {
             const child = childBuilder.build();
+            // 确保子实体被添加到场景中
+            this.scene.addEntity(child);
             this.entity.addChild(child);
         }
         return this;
@@ -152,6 +157,8 @@ export class EntityBuilder {
     public withChildFactory(childFactory: (parent: Entity) => EntityBuilder): EntityBuilder {
         const childBuilder = childFactory(this.entity);
         const child = childBuilder.build();
+        // 确保子实体被添加到场景中
+        this.scene.addEntity(child);
         this.entity.addChild(child);
         return this;
     }
@@ -165,6 +172,8 @@ export class EntityBuilder {
     public withChildIf(condition: boolean, childBuilder: EntityBuilder): EntityBuilder {
         if (condition) {
             const child = childBuilder.build();
+            // 确保子实体被添加到场景中
+            this.scene.addEntity(child);
             this.entity.addChild(child);
         }
         return this;

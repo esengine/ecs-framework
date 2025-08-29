@@ -442,7 +442,7 @@ export class DebugManager {
     /**
      * 收集组件内存统计（仅用于内存快照）
      */
-    private collectComponentMemoryStats(entityList: { buffer: Array<{ id: number; name?: string; destroyed?: boolean; components?: Component[] }> }): {
+    private collectComponentMemoryStats(entityList: { buffer: Array<{ id: number; name?: string; destroyed?: boolean; components?: readonly Component[] }> }): {
         totalMemory: number;
         componentTypes: number;
         totalInstances: number;
