@@ -95,6 +95,9 @@ export class QuerySystem {
     private queryHandles: Map<string, QueryHandle> = new Map();
     private handleCounter = 0;
 
+    // 实体ID映射，用于高效的ID集合运算
+    private entityIdMap: Map<number, Entity> = new Map();
+
     constructor() {
         this.entityIndex = {
             byMask: new Map(),
@@ -147,6 +150,7 @@ export class QuerySystem {
     public addEntity(entity: Entity, deferCacheClear: boolean = false): void {
         if (!this.entities.includes(entity)) {
             this.entities.push(entity);
+            this.entityIdMap.set(entity.id, entity);
             this.addEntityToIndexes(entity);
 
             this.componentIndexManager.addEntity(entity);
@@ -183,6 +187,7 @@ export class QuerySystem {
         for (const entity of entities) {
             if (!existingIds.has(entity.id)) {
                 this.entities.push(entity);
+                this.entityIdMap.set(entity.id, entity);
                 this.addEntityToIndexes(entity);
                 existingIds.add(entity.id);
                 addedCount++;
@@ -210,6 +215,7 @@ export class QuerySystem {
         // 避免调用栈溢出，分批添加
         for (const entity of entities) {
             this.entities.push(entity);
+            this.entityIdMap.set(entity.id, entity);
         }
 
         // 批量更新索引
@@ -233,6 +239,7 @@ export class QuerySystem {
         const index = this.entities.indexOf(entity);
         if (index !== -1) {
             this.entities.splice(index, 1);
+            this.entityIdMap.delete(entity.id);
             this.removeEntityFromIndexes(entity);
 
             this.componentIndexManager.removeEntity(entity);
@@ -359,12 +366,14 @@ export class QuerySystem {
         this.entityIndex.byComponentType.clear();
         this.entityIndex.byTag.clear();
         this.entityIndex.byName.clear();
+        this.entityIdMap.clear();
         
         // 清理ArchetypeSystem和ComponentIndexManager
         this.archetypeSystem.clear();
         this.componentIndexManager.clear();
 
         for (const entity of this.entities) {
+            this.entityIdMap.set(entity.id, entity);
             this.addEntityToIndexes(entity);
             this.componentIndexManager.addEntity(entity);
             this.archetypeSystem.addEntity(entity);
@@ -1053,6 +1062,78 @@ export class QuerySystem {
     }
 
     /**
+     * 通过ID集合批量获取实体
+     * 
+     * @param ids 实体ID集合
+     * @returns 对应的实体数组
+     */
+    public getEntitiesByIds(ids: Set<number> | number[]): Entity[] {
+        const result: Entity[] = [];
+        const idSet = ids instanceof Set ? ids : new Set(ids);
+        
+        for (const id of idSet) {
+            const entity = this.entityIdMap.get(id);
+            if (entity) {
+                result.push(entity);
+            }
+        }
+
+        // 根据配置决定是否对实体进行确定性排序
+        if (Core.deterministicSortingEnabled) {
+            result.sort((a, b) => a.id - b.id);
+        }
+
+        return result;
+    }
+
+    /**
+     * 将实体数组转换为ID集合
+     */
+    private entitiesToIdSet(entities: Entity[]): Set<number> {
+        return new Set(entities.map(e => e.id));
+    }
+
+    /**
+     * 计算两个ID集合的交集
+     */
+    private intersectIdSets(set1: Set<number>, set2: Set<number>): Set<number> {
+        const result = new Set<number>();
+        const [smaller, larger] = set1.size <= set2.size ? [set1, set2] : [set2, set1];
+        
+        for (const id of smaller) {
+            if (larger.has(id)) {
+                result.add(id);
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * 计算两个ID集合的并集
+     */
+    private unionIdSets(set1: Set<number>, set2: Set<number>): Set<number> {
+        const result = new Set(set1);
+        for (const id of set2) {
+            result.add(id);
+        }
+        return result;
+    }
+
+    /**
+     * 计算ID集合的差集 (set1 - set2)
+     */
+    private subtractIdSets(set1: Set<number>, set2: Set<number>): Set<number> {
+        const result = new Set<number>();
+        for (const id of set1) {
+            if (!set2.has(id)) {
+                result.add(id);
+            }
+        }
+        return result;
+    }
+
+    /**
      * 创建查询句柄，支持订阅式实体查询
      * 
      * @param condition 查询条件
@@ -1122,78 +1203,169 @@ export class QuerySystem {
     }
 
     /**
-     * 执行复合查询条件
+     * 执行复合查询条件（终极优化版 - 使用位运算和原型索引）
      */
     private executeComplexQuery(condition: QueryHandleCondition): Entity[] {
-        let result: Set<Entity> | null = null;
+        // 尝试使用位运算优化
+        const bitMaskResult = this.tryBitMaskQuery(condition);
+        if (bitMaskResult !== null) {
+            return bitMaskResult;
+        }
+
+        // 回退到ID集合运算
+        return this.executeComplexQueryWithIdSets(condition);
+    }
+
+    /**
+     * 尝试使用位运算进行查询优化
+     */
+    private tryBitMaskQuery(condition: QueryHandleCondition): Entity[] | null {
+        // 只有纯组件查询才能使用位运算优化
+        if (condition.tag !== undefined || condition.name !== undefined || condition.component !== undefined) {
+            return null; // 有标签或名称查询，无法用位运算优化
+        }
+
+        try {
+            // 构建查询位掩码
+            let requiredMask = BigIntFactory.zero();
+            let excludedMask = BigIntFactory.zero();
+            let anyMask = BigIntFactory.zero();
+
+            // 处理all条件
+            if (condition.all && condition.all.length > 0) {
+                for (const componentType of condition.all) {
+                    const bitMask = ComponentRegistry.getBitMask(componentType);
+                    requiredMask = requiredMask.or(bitMask);
+                }
+            }
+
+            // 处理none条件
+            if (condition.none && condition.none.length > 0) {
+                for (const componentType of condition.none) {
+                    const bitMask = ComponentRegistry.getBitMask(componentType);
+                    excludedMask = excludedMask.or(bitMask);
+                }
+            }
+
+            // 处理any条件
+            if (condition.any && condition.any.length > 0) {
+                for (const componentType of condition.any) {
+                    const bitMask = ComponentRegistry.getBitMask(componentType);
+                    anyMask = anyMask.or(bitMask);
+                }
+            }
+
+            // 使用位运算直接过滤实体
+            const matchingEntities: Entity[] = [];
+            for (const entity of this.entities) {
+                const entityMask = entity.componentMask;
+
+                // 检查required条件：实体必须包含所有required组件
+                if (!requiredMask.isZero() && !entityMask.and(requiredMask).equals(requiredMask)) {
+                    continue;
+                }
+
+                // 检查excluded条件：实体不能包含任何excluded组件
+                if (!excludedMask.isZero() && !entityMask.and(excludedMask).isZero()) {
+                    continue;
+                }
+
+                // 检查any条件：实体必须包含至少一个any组件
+                if (!anyMask.isZero() && entityMask.and(anyMask).isZero()) {
+                    continue;
+                }
+
+                matchingEntities.push(entity);
+            }
+
+            // 根据配置决定是否对实体进行确定性排序
+            if (Core.deterministicSortingEnabled) {
+                matchingEntities.sort((a, b) => a.id - b.id);
+            }
+
+            return matchingEntities;
+
+        } catch (error) {
+            // 位运算失败，回退到ID集合方式
+            return null;
+        }
+    }
+
+    /**
+     * 使用ID集合运算执行复合查询（回退方案）
+     */
+    private executeComplexQueryWithIdSets(condition: QueryHandleCondition): Entity[] {
+        let resultIds: Set<number> | null = null;
 
         // 应用标签条件作为基础集合
         if (condition.tag !== undefined) {
             const tagResult = this.queryByTag(condition.tag);
-            result = new Set(tagResult.entities);
+            resultIds = this.entitiesToIdSet(tagResult.entities);
         }
 
         // 应用名称条件
         if (condition.name !== undefined) {
             const nameResult = this.queryByName(condition.name);
-            const nameSet = new Set(nameResult.entities);
+            const nameIds = this.entitiesToIdSet(nameResult.entities);
 
-            if (result) {
-                result = new Set([...result].filter(entity => nameSet.has(entity)));
+            if (resultIds) {
+                resultIds = this.intersectIdSets(resultIds, nameIds);
             } else {
-                result = nameSet;
+                resultIds = nameIds;
             }
         }
 
         // 应用单组件条件
         if (condition.component !== undefined) {
             const componentResult = this.queryByComponent(condition.component);
-            const componentSet = new Set(componentResult.entities);
+            const componentIds = this.entitiesToIdSet(componentResult.entities);
 
-            if (result) {
-                result = new Set([...result].filter(entity => componentSet.has(entity)));
+            if (resultIds) {
+                resultIds = this.intersectIdSets(resultIds, componentIds);
             } else {
-                result = componentSet;
+                resultIds = componentIds;
             }
         }
 
         // 应用all条件
         if (condition.all && condition.all.length > 0) {
             const allResult = this.queryAll(...condition.all);
-            const allSet = new Set(allResult.entities);
+            const allIds = this.entitiesToIdSet(allResult.entities);
 
-            if (result) {
-                result = new Set([...result].filter(entity => allSet.has(entity)));
+            if (resultIds) {
+                resultIds = this.intersectIdSets(resultIds, allIds);
             } else {
-                result = allSet;
+                resultIds = allIds;
             }
         }
 
-        // 应用any条件
+        // 应用any条件（交集）
         if (condition.any && condition.any.length > 0) {
             const anyResult = this.queryAny(...condition.any);
-            const anySet = new Set(anyResult.entities);
+            const anyIds = this.entitiesToIdSet(anyResult.entities);
 
-            if (result) {
-                result = new Set([...result].filter(entity => anySet.has(entity)));
+            if (resultIds) {
+                resultIds = this.intersectIdSets(resultIds, anyIds);
             } else {
-                result = anySet;
+                resultIds = anyIds;
             }
         }
 
         // 应用none条件（排除）
         if (condition.none && condition.none.length > 0) {
-            if (!result) {
-                result = new Set(this.getAllEntities());
+            if (!resultIds) {
+                // 如果没有前置条件，从所有实体开始
+                resultIds = this.entitiesToIdSet(this.getAllEntities());
             }
 
             const noneResult = this.queryAny(...condition.none);
-            const noneSet = new Set(noneResult.entities);
+            const noneIds = this.entitiesToIdSet(noneResult.entities);
 
-            result = new Set([...result].filter(entity => !noneSet.has(entity)));
+            resultIds = this.subtractIdSets(resultIds, noneIds);
         }
 
-        return result ? Array.from(result) : [];
+        // 通过ID集合批量映射回实体
+        return resultIds ? this.getEntitiesByIds(resultIds) : [];
     }
 
     /**
