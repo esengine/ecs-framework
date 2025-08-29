@@ -41,6 +41,7 @@ export abstract class EntitySystem implements ISystemBase {
     private _trackedEntities: Set<Entity> = new Set();
     private _queryHandle: IQueryHandle | null = null;
     private _cachedEntities: Entity[] = [];
+    private _cachedEntityCount: number = 0;
     
     // 确定性排序相关属性
     private _registrationOrder: number = 0;
@@ -240,6 +241,7 @@ export abstract class EntitySystem implements ISystemBase {
         }
         
         this._cachedEntities = [];
+        this._cachedEntityCount = 0;
     }
 
     /**
@@ -305,6 +307,7 @@ export abstract class EntitySystem implements ISystemBase {
      */
     private updateCachedEntities(entities: Entity[]): void {
         this._cachedEntities = [...entities];
+        this._cachedEntityCount = this._cachedEntities.length;
         
         // 根据配置决定是否对实体进行确定性排序
         if (Core.deterministicSortingEnabled) {
@@ -312,14 +315,6 @@ export abstract class EntitySystem implements ISystemBase {
         }
     }
 
-    /**
-     * 查询匹配的实体（已弃用，使用QueryHandle替代）
-     * @deprecated 使用订阅式查询替代每帧查询
-     */
-    private queryEntities(): Entity[] {
-        // 已弃用方法，保持向后兼容
-        return this._cachedEntities;
-    }
 
 
 
@@ -490,20 +485,13 @@ export abstract class EntitySystem implements ISystemBase {
      * @returns 系统信息字符串
      */
     public toString(): string {
-        const entityCount = this.entities.length;
+        const entityCount = this._cachedEntityCount;
         const perfData = this.getPerformanceData();
         const perfInfo = perfData ? ` (${perfData.executionTime.toFixed(2)}ms)` : '';
 
         return `${this._systemName}[${entityCount} entities]${perfInfo}`;
     }
 
-    /**
-     * 更新实体跟踪，检查新增和移除的实体
-     * @deprecated 订阅式查询中由QueryHandle自动处理实体变更事件
-     */
-    private updateEntityTracking(_currentEntities: Entity[]): void {
-        // 已弃用方法，订阅式查询中由QueryHandle自动处理实体变更事件
-    }
 
     /**
      * 当实体被添加到系统时调用
