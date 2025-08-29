@@ -100,6 +100,18 @@ export interface PerformanceThresholds {
 }
 
 /**
+ * 采样配置
+ */
+export interface SamplingConfig {
+    /** 采样率 (1 = 每帧, 2 = 每2帧, 10 = 每10帧) */
+    rate: number;
+    /** 阈值采样：只有超过阈值的才详细记录 */
+    thresholdSampling: boolean;
+    /** 阈值采样的执行时间阈值（毫秒） */
+    thresholdMs: number;
+}
+
+/**
  * 高性能监控器
  * 用于监控ECS系统的性能表现，提供详细的分析和优化建议
  */
@@ -112,6 +124,14 @@ export class PerformanceMonitor {
     private _isEnabled = false;
     private _maxRecentSamples = 60; // 保留最近60帧的数据
     private _maxWarnings = 100; // 最大警告数量
+    
+    // 采样控制
+    private _samplingConfig: SamplingConfig = {
+        rate: 1, // 默认每帧采样
+        thresholdSampling: false,
+        thresholdMs: 16.67 // 60fps对应的帧时间
+    };
+    private _frameCounter = 0;
     
     // 性能阈值配置
     private _thresholds: PerformanceThresholds = {
@@ -176,12 +196,19 @@ export class PerformanceMonitor {
     /**
      * 开始监控系统性能
      * @param systemName 系统名称
-     * @returns 开始时间戳
+     * @returns 开始时间戳，如果不需要采样则返回0
      */
     public startMonitoring(systemName: string): number {
         if (!this._isEnabled) {
             return 0;
         }
+        
+        // 采样控制：只有符合采样条件的才真正开始监控
+        this._frameCounter++;
+        if (this._frameCounter % this._samplingConfig.rate !== 0) {
+            return 0;
+        }
+        
         return performance.now();
     }
 
@@ -198,6 +225,12 @@ export class PerformanceMonitor {
 
         const endTime = performance.now();
         const executionTime = endTime - startTime;
+        
+        // 阈值采样：只记录超过阈值的数据
+        if (this._samplingConfig.thresholdSampling && executionTime < this._samplingConfig.thresholdMs) {
+            return;
+        }
+        
         const averageTimePerEntity = entityCount > 0 ? executionTime / entityCount : 0;
 
         // 更新当前性能数据
@@ -213,6 +246,9 @@ export class PerformanceMonitor {
 
         // 更新统计信息
         this.updateStats(systemName, executionTime);
+        
+        // 检查是否需要生成警告
+        this.checkThresholds(systemName, executionTime, entityCount);
     }
 
     /**
@@ -273,6 +309,78 @@ export class PerformanceMonitor {
         
         stats.percentile95 = sortedTimes[Math.floor(len * 0.95)] || 0;
         stats.percentile99 = sortedTimes[Math.floor(len * 0.99)] || 0;
+    }
+
+    /**
+     * 检查阈值并生成警告
+     * @param systemName 系统名称
+     * @param executionTime 执行时间
+     * @param entityCount 实体数量
+     */
+    private checkThresholds(systemName: string, executionTime: number, entityCount: number): void {
+        const now = performance.now();
+        
+        // 检查执行时间阈值
+        if (executionTime >= this._thresholds.executionTime.critical) {
+            this.addWarning({
+                type: PerformanceWarningType.HIGH_EXECUTION_TIME,
+                systemName,
+                message: `系统执行时间过长: ${executionTime.toFixed(2)}ms`,
+                severity: 'critical',
+                timestamp: now,
+                value: executionTime,
+                threshold: this._thresholds.executionTime.critical,
+                suggestion: '考虑优化算法或增加批处理'
+            });
+        } else if (executionTime >= this._thresholds.executionTime.warning) {
+            this.addWarning({
+                type: PerformanceWarningType.HIGH_EXECUTION_TIME,
+                systemName,
+                message: `系统执行时间较长: ${executionTime.toFixed(2)}ms`,
+                severity: 'medium',
+                timestamp: now,
+                value: executionTime,
+                threshold: this._thresholds.executionTime.warning,
+                suggestion: '建议监控性能趋势'
+            });
+        }
+        
+        // 检查实体数量阈值
+        if (entityCount >= this._thresholds.entityCount.critical) {
+            this.addWarning({
+                type: PerformanceWarningType.HIGH_ENTITY_COUNT,
+                systemName,
+                message: `实体数量过多: ${entityCount}`,
+                severity: 'critical',
+                timestamp: now,
+                value: entityCount,
+                threshold: this._thresholds.entityCount.critical,
+                suggestion: '考虑分批处理或实体池化'
+            });
+        } else if (entityCount >= this._thresholds.entityCount.warning) {
+            this.addWarning({
+                type: PerformanceWarningType.HIGH_ENTITY_COUNT,
+                systemName,
+                message: `实体数量较多: ${entityCount}`,
+                severity: 'medium',
+                timestamp: now,
+                value: entityCount,
+                threshold: this._thresholds.entityCount.warning
+            });
+        }
+    }
+
+    /**
+     * 添加性能警告
+     * @param warning 警告信息
+     */
+    private addWarning(warning: PerformanceWarning): void {
+        this._warnings.push(warning);
+        
+        // 限制警告数量
+        if (this._warnings.length > this._maxWarnings) {
+            this._warnings.shift();
+        }
     }
 
     /**
@@ -418,5 +526,63 @@ export class PerformanceMonitor {
         if (this._fpsHistory.length > this._maxRecentSamples) {
             this._fpsHistory.shift();
         }
+    }
+
+    /**
+     * 配置采样设置
+     * @param config 采样配置
+     */
+    public configureSampling(config: Partial<SamplingConfig>): void {
+        this._samplingConfig = { ...this._samplingConfig, ...config };
+        this._frameCounter = 0; // 重置帧计数器
+    }
+
+    /**
+     * 获取当前采样配置
+     * @returns 采样配置
+     */
+    public getSamplingConfig(): SamplingConfig {
+        return { ...this._samplingConfig };
+    }
+
+    /**
+     * 配置性能阈值
+     * @param thresholds 阈值配置
+     */
+    public configureThresholds(thresholds: Partial<PerformanceThresholds>): void {
+        this._thresholds = { ...this._thresholds, ...thresholds };
+    }
+
+    /**
+     * 获取当前阈值配置
+     * @returns 阈值配置
+     */
+    public getThresholds(): PerformanceThresholds {
+        return { ...this._thresholds };
+    }
+
+    /**
+     * 获取所有警告
+     * @returns 警告列表
+     */
+    public getWarnings(): PerformanceWarning[] {
+        return [...this._warnings];
+    }
+
+    /**
+     * 清除所有警告
+     */
+    public clearWarnings(): void {
+        this._warnings.length = 0;
+    }
+
+    /**
+     * 获取指定时间范围内的警告
+     * @param sinceMs 多少毫秒内的警告
+     * @returns 警告列表
+     */
+    public getRecentWarnings(sinceMs: number = 60000): PerformanceWarning[] {
+        const cutoff = performance.now() - sinceMs;
+        return this._warnings.filter(warning => warning.timestamp > cutoff);
     }
 } 

@@ -43,6 +43,11 @@ export abstract class EntitySystem implements ISystemBase {
     private _cachedEntities: Entity[] = [];
     private _cachedEntityCount: number = 0;
     
+    // 性能监控缓存的字符串key
+    private _perfMonitorKey: string = '';
+    private _perfMonitorKeyFixed: string = '';
+    private _perfMonitorKeyLate: string = '';
+    
     // 确定性排序相关属性
     private _registrationOrder: number = 0;
     private _systemHash: number = 0;
@@ -125,6 +130,9 @@ export abstract class EntitySystem implements ISystemBase {
         
         // 初始化确定性排序相关属性
         this.initializeInternalProperties();
+        
+        // 缓存性能监控字符串key
+        this.initializePerformanceKeys();
     }
 
     /**
@@ -161,6 +169,15 @@ export abstract class EntitySystem implements ISystemBase {
             hash = hash & hash; // 转换为32位整数
         }
         return Math.abs(hash);
+    }
+
+    /**
+     * 初始化性能监控缓存的字符串key
+     */
+    private initializePerformanceKeys(): void {
+        this._perfMonitorKey = this._systemName;
+        this._perfMonitorKeyFixed = `${this._systemName}.fixed`;
+        this._perfMonitorKeyLate = `${this._systemName}.late`;
     }
 
     private _scene: Scene | null = null;
@@ -330,7 +347,7 @@ export abstract class EntitySystem implements ISystemBase {
         }
 
 
-        const startTime = this._performanceMonitor.startMonitoring(this._systemName);
+        const startTime = this._performanceMonitor.startMonitoring(this._perfMonitorKey);
         let entityCount = 0;
 
         try {
@@ -339,7 +356,7 @@ export abstract class EntitySystem implements ISystemBase {
             entityCount = this._cachedEntities.length;
             this.process(this._cachedEntities);
         } finally {
-            this._performanceMonitor.endMonitoring(this._systemName, startTime, entityCount);
+            this._performanceMonitor.endMonitoring(this._perfMonitorKey, startTime, entityCount);
         }
     }
 
@@ -354,7 +371,7 @@ export abstract class EntitySystem implements ISystemBase {
             return;
         }
 
-        const startTime = this._performanceMonitor.startMonitoring(`${this._systemName}_Fixed`);
+        const startTime = this._performanceMonitor.startMonitoring(this._perfMonitorKeyFixed);
         let entityCount = 0;
 
         try {
@@ -362,7 +379,7 @@ export abstract class EntitySystem implements ISystemBase {
             entityCount = this._cachedEntities.length;
             this.fixedProcess(this._cachedEntities);
         } finally {
-            this._performanceMonitor.endMonitoring(`${this._systemName}_Fixed`, startTime, entityCount);
+            this._performanceMonitor.endMonitoring(this._perfMonitorKeyFixed, startTime, entityCount);
         }
     }
 
@@ -376,7 +393,7 @@ export abstract class EntitySystem implements ISystemBase {
             return;
         }
 
-        const startTime = this._performanceMonitor.startMonitoring(`${this._systemName}_Late`);
+        const startTime = this._performanceMonitor.startMonitoring(this._perfMonitorKeyLate);
         let entityCount = 0;
 
         try {
@@ -385,7 +402,7 @@ export abstract class EntitySystem implements ISystemBase {
             this.lateProcess(this._cachedEntities);
             this.onEnd();
         } finally {
-            this._performanceMonitor.endMonitoring(`${this._systemName}_Late`, startTime, entityCount);
+            this._performanceMonitor.endMonitoring(this._perfMonitorKeyLate, startTime, entityCount);
         }
     }
 
