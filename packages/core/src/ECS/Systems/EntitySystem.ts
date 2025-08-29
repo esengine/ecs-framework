@@ -4,7 +4,7 @@ import { Matcher } from '../Utils/Matcher';
 import type { Scene } from '../Scene';
 import type { ISystemBase } from '../../Types';
 import type { QuerySystem } from '../Core/QuerySystem';
-import { IQueryHandle, QueryCondition } from '../Core/QuerySystem/QueryHandle';
+import { IQueryHandle } from '../Core/QuerySystem/QueryHandle';
 import { getSystemInstanceTypeName, getSystemInstanceMetadata, SystemMetadata, SystemPhase } from '../Decorators';
 import { Core } from '../../Core';
 
@@ -269,14 +269,14 @@ export abstract class EntitySystem implements ISystemBase {
             return;
         }
 
-        const condition = this.convertMatcherToQueryCondition();
-        this._queryHandle = this.scene.querySystem.createQueryHandle(condition);
+        // 直接使用Matcher创建优化的查询句柄，避免条件转换
+        this._queryHandle = (this.scene.querySystem as any).createQueryHandleFromMatcher(this._matcher);
         
         // 初始化缓存的实体列表
-        this.updateCachedEntities(Array.from(this._queryHandle.entities));
+        this.updateCachedEntities(Array.from(this._queryHandle!.entities));
         
         // 订阅实体变更事件
-        this._queryHandle.subscribe(event => {
+        this._queryHandle!.subscribe(event => {
             if (event.type === 'added') {
                 this._trackedEntities.add(event.entity);
                 this.onAdded(event.entity);
@@ -290,34 +290,6 @@ export abstract class EntitySystem implements ISystemBase {
         });
     }
 
-    /**
-     * 将Matcher转换为QueryCondition
-     */
-    private convertMatcherToQueryCondition(): QueryCondition {
-        const matcherCondition = this._matcher.getCondition();
-        const condition: QueryCondition = {};
-
-        if (matcherCondition.all && matcherCondition.all.length > 0) {
-            condition.all = matcherCondition.all;
-        }
-        if (matcherCondition.any && matcherCondition.any.length > 0) {
-            condition.any = matcherCondition.any;
-        }
-        if (matcherCondition.none && matcherCondition.none.length > 0) {
-            condition.none = matcherCondition.none;
-        }
-        if (matcherCondition.tag !== undefined) {
-            condition.tag = matcherCondition.tag;
-        }
-        if (matcherCondition.name !== undefined) {
-            condition.name = matcherCondition.name;
-        }
-        if (matcherCondition.component !== undefined) {
-            condition.component = matcherCondition.component;
-        }
-
-        return condition;
-    }
 
     /**
      * 更新缓存的实体列表

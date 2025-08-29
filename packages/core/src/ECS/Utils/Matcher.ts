@@ -1,5 +1,6 @@
-import { ComponentType } from '../Core/ComponentStorage';
+import { ComponentType, ComponentRegistry } from '../Core/ComponentStorage';
 import { getComponentTypeName } from '../Decorators';
+import { IBigIntLike, BigIntFactory } from './BigIntCompatibility';
 
 /**
  * 查询条件类型
@@ -11,6 +12,22 @@ interface QueryCondition {
     tag?: number;           // 按标签查询
     name?: string;          // 按名称查询
     component?: ComponentType; // 单组件查询
+}
+
+/**
+ * 预编译的位掩码查询条件
+ */
+export interface BitMaskCondition {
+    /** 必须包含的组件位掩码 */
+    allMask: IBigIntLike;
+    /** 必须排除的组件位掩码 */
+    noneMask: IBigIntLike;
+    /** 任意一个匹配的组件位掩码数组 */
+    anyMasks: IBigIntLike[];
+    /** 是否有非组件条件（tag、name、component） */
+    hasNonComponentConditions: boolean;
+    /** 原始查询条件（用于fallback） */
+    fallbackCondition?: QueryCondition;
 }
 
 /**
@@ -34,6 +51,9 @@ export class Matcher {
         any: [],
         none: []
     };
+
+    private _compiledCondition: BitMaskCondition | null = null;
+    private _needsRecompile = true;
 
     private constructor() {
         // 私有构造函数，只能通过静态方法创建
@@ -108,11 +128,20 @@ export class Matcher {
     }
 
     /**
+     * 标记需要重新编译
+     */
+    private markDirty(): void {
+        this._needsRecompile = true;
+        this._compiledCondition = null;
+    }
+
+    /**
      * 必须包含所有指定组件
      * @param types 组件类型
      */
     public all(...types: ComponentType[]): Matcher {
         this.condition.all.push(...types);
+        this.markDirty();
         return this;
     }
 
@@ -122,6 +151,7 @@ export class Matcher {
      */
     public any(...types: ComponentType[]): Matcher {
         this.condition.any.push(...types);
+        this.markDirty();
         return this;
     }
 
@@ -131,6 +161,7 @@ export class Matcher {
      */
     public none(...types: ComponentType[]): Matcher {
         this.condition.none.push(...types);
+        this.markDirty();
         return this;
     }
 
@@ -156,6 +187,7 @@ export class Matcher {
      */
     public withTag(tag: number): Matcher {
         this.condition.tag = tag;
+        this.markDirty();
         return this;
     }
 
@@ -165,6 +197,7 @@ export class Matcher {
      */
     public withName(name: string): Matcher {
         this.condition.name = name;
+        this.markDirty();
         return this;
     }
 
@@ -174,6 +207,7 @@ export class Matcher {
      */
     public withComponent(componentType: ComponentType): Matcher {
         this.condition.component = componentType;
+        this.markDirty();
         return this;
     }
 
@@ -182,6 +216,7 @@ export class Matcher {
      */
     public withoutTag(): Matcher {
         delete this.condition.tag;
+        this.markDirty();
         return this;
     }
 
@@ -190,6 +225,7 @@ export class Matcher {
      */
     public withoutName(): Matcher {
         delete this.condition.name;
+        this.markDirty();
         return this;
     }
 
@@ -198,7 +234,74 @@ export class Matcher {
      */
     public withoutComponent(): Matcher {
         delete this.condition.component;
+        this.markDirty();
         return this;
+    }
+
+    /**
+     * 编译位掩码条件
+     */
+    private compileBitMask(): BitMaskCondition {
+        if (!this._needsRecompile && this._compiledCondition) {
+            return this._compiledCondition;
+        }
+
+        let allMask = BigIntFactory.zero();
+        let noneMask = BigIntFactory.zero();
+        const anyMasks: IBigIntLike[] = [];
+
+        // 编译all条件
+        for (const componentType of this.condition.all) {
+            if (ComponentRegistry.isRegistered(componentType)) {
+                const mask = ComponentRegistry.getBitMask(componentType);
+                allMask = allMask.or(mask);
+            }
+        }
+
+        // 编译none条件
+        for (const componentType of this.condition.none) {
+            if (ComponentRegistry.isRegistered(componentType)) {
+                const mask = ComponentRegistry.getBitMask(componentType);
+                noneMask = noneMask.or(mask);
+            }
+        }
+
+        // 编译any条件（每个组件单独一个掩码）
+        for (const componentType of this.condition.any) {
+            if (ComponentRegistry.isRegistered(componentType)) {
+                const mask = ComponentRegistry.getBitMask(componentType);
+                anyMasks.push(mask);
+            }
+        }
+
+        // 处理单组件查询（转换为all条件）
+        if (this.condition.component && ComponentRegistry.isRegistered(this.condition.component)) {
+            const mask = ComponentRegistry.getBitMask(this.condition.component);
+            allMask = allMask.or(mask);
+        }
+
+        // 检查是否有非组件条件
+        const hasNonComponentConditions = 
+            this.condition.tag !== undefined ||
+            this.condition.name !== undefined;
+
+        this._compiledCondition = {
+            allMask,
+            noneMask,
+            anyMasks,
+            hasNonComponentConditions,
+            fallbackCondition: hasNonComponentConditions ? this.getCondition() : undefined
+        };
+
+        this._needsRecompile = false;
+        return this._compiledCondition;
+    }
+
+    /**
+     * 获取预编译的位掩码条件
+     */
+    public getBitMaskCondition(): BitMaskCondition {
+        return this.compileBitMask();
     }
 
     /**
@@ -237,6 +340,7 @@ export class Matcher {
         delete this.condition.tag;
         delete this.condition.name;
         delete this.condition.component;
+        this.markDirty();
         return this;
     }
 

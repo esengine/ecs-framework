@@ -11,6 +11,7 @@ import { ComponentIndexManager } from './ComponentIndex';
 import { ArchetypeSystem, Archetype, ArchetypeQueryResult } from './ArchetypeSystem';
 import { DirtyTrackingSystem, DirtyFlag } from './DirtyTrackingSystem';
 import { QueryHandle, IQueryHandle, QueryCondition as QueryHandleCondition } from './QuerySystem/QueryHandle';
+import { BitMaskCondition } from '../Utils/Matcher';
 
 
 /**
@@ -1148,6 +1149,27 @@ export class QuerySystem {
     }
 
     /**
+     * 从Matcher创建优化的查询句柄
+     * 
+     * 直接使用Matcher的预编译位掩码条件创建查询句柄，
+     * 避免EntitySystem的条件转换逻辑。
+     * 
+     * @param matcher Matcher实例
+     * @returns 查询句柄
+     */
+    public createQueryHandleFromMatcher(matcher: import('../Utils/Matcher').Matcher): IQueryHandle {
+        const bitCondition = matcher.getBitMaskCondition();
+        const initialEntities = this.executeBitMaskQuery(bitCondition);
+        
+        // 直接使用Matcher的原始条件创建handle
+        const condition = matcher.getCondition();
+        const handle = new QueryHandle(condition, initialEntities);
+        
+        this.queryHandles.set(handle.id, handle);
+        return handle;
+    }
+
+    /**
      * 销毁查询句柄
      * 
      * @param handle 要销毁的查询句柄
@@ -1219,6 +1241,74 @@ export class QuerySystem {
     /**
      * 尝试使用位运算进行查询优化
      */
+    /**
+     * 执行预编译的位掩码查询
+     * @param bitCondition 预编译的位掩码条件
+     * @returns 匹配的实体列表
+     */
+    public executeBitMaskQuery(bitCondition: BitMaskCondition): Entity[] {
+        // 如果有非组件条件，回退到传统查询
+        if (bitCondition.hasNonComponentConditions && bitCondition.fallbackCondition) {
+            return this.executeQuery(bitCondition.fallbackCondition);
+        }
+
+        // 纯位掩码查询
+        return this.executePureBitMaskQuery(bitCondition);
+    }
+
+    /**
+     * 执行纯位掩码查询（仅组件条件）
+     * @param bitCondition 位掩码条件
+     * @returns 匹配的实体列表
+     */
+    private executePureBitMaskQuery(bitCondition: BitMaskCondition): Entity[] {
+        const results: Entity[] = [];
+
+        for (const entity of this.entities) {
+            if (this.entityMatchesBitMask(entity, bitCondition)) {
+                results.push(entity);
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * 检查实体是否匹配位掩码条件
+     * @param entity 实体
+     * @param bitCondition 位掩码条件
+     * @returns 是否匹配
+     */
+    private entityMatchesBitMask(entity: Entity, bitCondition: BitMaskCondition): boolean {
+        const entityMask = entity.componentMask;
+
+        // 检查all条件：实体必须包含所有指定的组件
+        if (!bitCondition.allMask.isZero()) {
+            const hasAll = entityMask.and(bitCondition.allMask).equals(bitCondition.allMask);
+            if (!hasAll) return false;
+        }
+
+        // 检查none条件：实体不能包含任何指定的组件
+        if (!bitCondition.noneMask.isZero()) {
+            const hasNone = entityMask.and(bitCondition.noneMask).isZero();
+            if (!hasNone) return false;
+        }
+
+        // 检查any条件：实体必须至少包含其中一个组件
+        if (bitCondition.anyMasks.length > 0) {
+            let hasAny = false;
+            for (const anyMask of bitCondition.anyMasks) {
+                if (!entityMask.and(anyMask).isZero()) {
+                    hasAny = true;
+                    break;
+                }
+            }
+            if (!hasAny) return false;
+        }
+
+        return true;
+    }
+
     private tryBitMaskQuery(condition: QueryHandleCondition): Entity[] | null {
         // 只有纯组件查询才能使用位运算优化
         if (condition.tag !== undefined || condition.name !== undefined || condition.component !== undefined) {
