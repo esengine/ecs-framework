@@ -4,18 +4,7 @@ import { EventBus } from './Core/EventBus';
 import { IBigIntLike, BigIntFactory } from './Utils/BigIntCompatibility';
 import { createLogger } from '../Utils/Logger';
 import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
-
-// Forward declaration to avoid circular dependency
-interface IScene {
-    readonly name: string;
-    readonly componentStorageManager: import('./Core/ComponentStorage').ComponentStorageManager;
-    readonly querySystem: import('./Core/QuerySystem').QuerySystem;
-    readonly eventSystem: import('./Core/EventSystem').TypeSafeEventSystem;
-    readonly entities: import('./Utils/EntityList').EntityList;
-    addEntity(entity: Entity): Entity;
-    initialize(): void;
-    update(deltaTime: number): void;
-}
+import type { IScene } from './IScene';
 
 /**
  * 实体比较器
@@ -175,11 +164,9 @@ export class Entity {
     private _componentMask: IBigIntLike = BigIntFactory.zero();
 
     /**
-     * 组件类型到索引的映射
-     * 
-     * 用于快速定位组件在数组中的位置。
+     * 按组件类型ID直址的稀疏数组
      */
-    private _componentTypeToIndex = new Map<ComponentType, number>();
+    private _componentsByTypeId: (Component | undefined)[] = [];
 
     /**
      * 构造函数
@@ -356,13 +343,14 @@ export class Entity {
             ComponentRegistry.register(componentType);
         }
 
+        const typeId = ComponentRegistry.getBitIndex(componentType);
+
         // 设置组件的实体引用
         component.entity = this;
 
-        // 添加到组件列表并建立索引映射
-        const index = this.components.length;
+        // 直址存储
+        this._componentsByTypeId[typeId] = component;
         this.components.push(component);
-        this._componentTypeToIndex.set(componentType, index);
 
         // 更新位掩码
         const componentMask = ComponentRegistry.getBitMask(componentType);
@@ -438,31 +426,33 @@ export class Entity {
             return null;
         }
 
-        // 尝试从索引映射获取（O(1)）
-        const index = this._componentTypeToIndex.get(type);
-        if (index !== undefined && index < this.components.length) {
-            const component = this.components[index];
-            if (component && component.constructor === type) {
-                return component as T;
-            }
+        // 直址访问
+        const typeId = ComponentRegistry.getBitIndex(type);
+        const component = this._componentsByTypeId[typeId];
+        
+        if (component && component.constructor === type) {
+            return component as T;
         }
 
         // 如果场景有组件存储管理器，从存储器获取
         if (this.scene && this.scene.componentStorageManager) {
-            const component = this.scene.componentStorageManager.getComponent(this.id, type);
-            if (component) {
-                // 重建索引映射
-                this.rebuildComponentIndex();
-                return component;
+            const storageComponent = this.scene.componentStorageManager.getComponent(this.id, type);
+            if (storageComponent) {
+                // 同步到稀疏数组
+                this._componentsByTypeId[typeId] = storageComponent;
+                if (!this.components.includes(storageComponent)) {
+                    this.components.push(storageComponent);
+                }
+                return storageComponent;
             }
         }
 
-        // 最后回退到线性搜索并重建索引（O(n)，但n很小且很少发生）
+        // 最后回退到线性搜索
         for (let i = 0; i < this.components.length; i++) {
             const component = this.components[i];
             if (component instanceof type) {
-                // 重建索引映射
-                this._componentTypeToIndex.set(type, i);
+                // 同步到稀疏数组
+                this._componentsByTypeId[typeId] = component;
                 return component as T;
             }
         }
@@ -472,18 +462,6 @@ export class Entity {
 
 
 
-    /**
-     * 重建组件索引映射
-     */
-    private rebuildComponentIndex(): void {
-        this._componentTypeToIndex.clear();
-        
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            const componentType = component.constructor as ComponentType;
-            this._componentTypeToIndex.set(componentType, i);
-        }
-    }
 
     /**
      * 检查实体是否有指定类型的组件
@@ -526,19 +504,20 @@ export class Entity {
     public removeComponent(component: Component): void {
         const componentType = component.constructor as ComponentType;
         
-        // 从组件列表中移除
+        // 从稀疏数组中移除
+        if (ComponentRegistry.isRegistered(componentType)) {
+            const typeId = ComponentRegistry.getBitIndex(componentType);
+            this._componentsByTypeId[typeId] = undefined;
+            
+            // 更新位掩码
+            const componentMask = ComponentRegistry.getBitMask(componentType);
+            this._componentMask = this._componentMask.and(componentMask.not());
+        }
+        
+        // 从迭代数组中移除
         const index = this.components.indexOf(component);
         if (index !== -1) {
             this.components.splice(index, 1);
-            
-            // 重建索引映射（因为数组索引发生了变化）
-            this.rebuildComponentIndex();
-        }
-
-        // 更新位掩码
-        if (ComponentRegistry.isRegistered(componentType)) {
-            const componentMask = ComponentRegistry.getBitMask(componentType);
-            this._componentMask = this._componentMask.and(componentMask.not());
         }
 
         // 从组件存储管理器中移除
@@ -598,8 +577,8 @@ export class Entity {
         // 复制组件列表，避免在迭代时修改
         const componentsToRemove = [...this.components];
         
-        // 清空索引和位掩码
-        this._componentTypeToIndex.clear();
+        // 清空稀疏数组和位掩码
+        this._componentsByTypeId.length = 0;
         this._componentMask = BigIntFactory.zero();
         
         // 移除组件
@@ -1007,7 +986,7 @@ export class Entity {
             childCount: this._children.length,
             childIds: this._children.map(c => c.id),
             depth: this.getDepth(),
-            indexMappingSize: this._componentTypeToIndex.size
+            indexMappingSize: this._componentsByTypeId.filter(c => c !== undefined).length
         };
     }
 }
