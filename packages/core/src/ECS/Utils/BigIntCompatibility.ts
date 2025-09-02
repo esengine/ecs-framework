@@ -1,746 +1,493 @@
 /**
- * BigInt兼容性抽象层
- * 
- * 为不支持BigInt的环境提供兼容实现，确保ECS框架在所有平台上都能正常运行。
- * 自动检测运行时环境的BigInt支持情况，并提供统一的接口。
- * 
- * @example
- * ```typescript
- * // 创建兼容的BigInt值
- * const value = BigIntFactory.create(123);
- * 
- * // 位运算
- * const result = value.or(BigIntFactory.create(456));
- * 
- * // 检查兼容性
- * console.log(BigIntFactory.isNativeSupported()); // true/false
- * ```
+ * 64位掩码兼容层
  */
 
 /**
- * BigInt兼容接口
- * 
- * 定义了BigInt的基本操作接口，支持原生BigInt和兼容实现的统一调用。
+ * 位掩码接口
  */
 export interface IBigIntLike {
-    /**
-     * 获取数值表示
-     * @returns 数值
-     */
     valueOf(): number;
-    
-    /**
-     * 转换为字符串
-     * @param radix 进制，支持2、10、16
-     * @returns 字符串表示
-     */
     toString(radix?: number): string;
-    
-    /**
-     * 位运算：与
-     * @param other 另一个BigInt值
-     * @returns 运算结果
-     */
     and(other: IBigIntLike): IBigIntLike;
-    
-    /**
-     * 位运算：或
-     * @param other 另一个BigInt值
-     * @returns 运算结果
-     */
     or(other: IBigIntLike): IBigIntLike;
-    
-    /**
-     * 位运算：异或
-     * @param other 另一个BigInt值
-     * @returns 运算结果
-     */
     xor(other: IBigIntLike): IBigIntLike;
-    
-    /**
-     * 位运算：非
-     * @param maxBits 最大位数限制
-     * @returns 运算结果
-     */
     not(maxBits?: number): IBigIntLike;
-    
-    /**
-     * 左移位运算
-     * @param bits 移位数
-     * @returns 运算结果
-     */
     shiftLeft(bits: number): IBigIntLike;
-    
-    /**
-     * 右移位运算
-     * @param bits 移位数
-     * @returns 运算结果
-     */
     shiftRight(bits: number): IBigIntLike;
-    
-    /**
-     * 相等比较
-     * @param other 另一个BigInt值
-     * @returns 是否相等
-     */
     equals(other: IBigIntLike): boolean;
-    
-    /**
-     * 检查是否为零
-     * @returns 是否为零
-     */
     isZero(): boolean;
-    
-    /**
-     * 创建副本
-     * @returns 新的实例
-     */
     clone(): IBigIntLike;
 }
 
+
+
 /**
- * 原生BigInt包装器
- * 
- * 为支持BigInt的环境提供统一接口包装。
+ * 掩码工厂类
  */
-class NativeBigInt implements IBigIntLike {
-    constructor(private value: bigint) {}
+export class BigIntFactory {
+    private static _cachedZero: IBigIntLike | null = null;
+    private static _cachedOne: IBigIntLike | null = null;
     
-    valueOf(): number {
-        return Number(this.value);
+    public static create(value: number | string = 0): IBigIntLike {
+        return new BitMask64(value);
     }
     
-    toString(radix?: number): string {
-        if (radix !== undefined && radix !== 10 && radix !== 16 && radix !== 2) {
-            throw new Error('Only radix 2, 10, and 16 are supported');
+    public static zero(): IBigIntLike {
+        if (!this._cachedZero) {
+            this._cachedZero = new BitMask64(0);
         }
-        const result = this.value.toString(radix);
-        if (radix === 16) {
-            return result.toUpperCase();
+        return this._cachedZero.clone();
+    }
+    
+    public static one(): IBigIntLike {
+        if (!this._cachedOne) {
+            this._cachedOne = new BitMask64(1);
         }
-        return result;
+        return this._cachedOne.clone();
     }
     
-    and(other: IBigIntLike): IBigIntLike {
-        const otherBigInt = other instanceof NativeBigInt ? other.value : BigInt(other.valueOf());
-        return new NativeBigInt(this.value & otherBigInt);
+    public static fromBinaryString(binary: string): IBigIntLike {
+        return new BitMask64('0b' + binary);
     }
     
-    or(other: IBigIntLike): IBigIntLike {
-        const otherBigInt = other instanceof NativeBigInt ? other.value : BigInt(other.valueOf());
-        return new NativeBigInt(this.value | otherBigInt);
+    public static fromHexString(hex: string): IBigIntLike {
+        return new BitMask64(hex);
     }
     
-    xor(other: IBigIntLike): IBigIntLike {
-        const otherBigInt = other instanceof NativeBigInt ? other.value : BigInt(other.valueOf());
-        return new NativeBigInt(this.value ^ otherBigInt);
+}
+
+
+/**
+ * 64位掩码结构
+ */
+export interface BitMask64Data {
+    lo: number;
+    hi: number;
+}
+
+/**
+ * 64位掩码工具类
+ */
+export class BitMask64Utils {
+    /** 零掩码常量 */
+    public static readonly ZERO: BitMask64Data = { lo: 0, hi: 0 };
+
+    /**
+     * 创建掩码
+     */
+    public static create(bitIndex: number): BitMask64Data {
+        if (bitIndex < 0 || bitIndex >= 64) {
+            throw new Error(`Bit index ${bitIndex} out of range [0, 63]`);
+        }
+        
+        if (bitIndex < 32) {
+            return { lo: 1 << bitIndex, hi: 0 };
+        } else {
+            return { lo: 0, hi: 1 << (bitIndex - 32) };
+        }
     }
-    
-    not(maxBits: number = 64): IBigIntLike {
-        const mask = (BigInt(1) << BigInt(maxBits)) - BigInt(1);
-        return new NativeBigInt((~this.value) & mask);
+
+    /**
+     * 从数值创建掩码
+     */
+    public static fromNumber(value: number): BitMask64Data {
+        return { lo: value >>> 0, hi: 0 };
     }
-    
-    shiftLeft(bits: number): IBigIntLike {
-        return new NativeBigInt(this.value << BigInt(bits));
+
+    /**
+     * 检查是否有任意位
+     */
+    public static hasAny(mask: BitMask64Data, bits: BitMask64Data): boolean {
+        return (mask.lo & bits.lo) !== 0 || (mask.hi & bits.hi) !== 0;
     }
-    
-    shiftRight(bits: number): IBigIntLike {
-        return new NativeBigInt(this.value >> BigInt(bits));
+
+    /**
+     * 检查是否有所有位
+     */
+    public static hasAll(mask: BitMask64Data, bits: BitMask64Data): boolean {
+        return (mask.lo & bits.lo) === bits.lo && (mask.hi & bits.hi) === bits.hi;
     }
-    
-    equals(other: IBigIntLike): boolean {
-        const otherBigInt = other instanceof NativeBigInt ? other.value : BigInt(other.valueOf());
-        return this.value === otherBigInt;
+
+    /**
+     * 检查是否没有任何位
+     */
+    public static hasNone(mask: BitMask64Data, bits: BitMask64Data): boolean {
+        return (mask.lo & bits.lo) === 0 && (mask.hi & bits.hi) === 0;
     }
-    
-    isZero(): boolean {
-        return this.value === BigInt(0);
+
+    /**
+     * 检查是否为零
+     */
+    public static isZero(mask: BitMask64Data): boolean {
+        return mask.lo === 0 && mask.hi === 0;
     }
-    
-    clone(): IBigIntLike {
-        return new NativeBigInt(this.value);
+
+    /**
+     * 检查是否相等
+     */
+    public static equals(a: BitMask64Data, b: BitMask64Data): boolean {
+        return a.lo === b.lo && a.hi === b.hi;
+    }
+
+    /**
+     * 原地设置位（修改原掩码）
+     */
+    public static setBit(mask: BitMask64Data, bitIndex: number): void {
+        if (bitIndex < 0 || bitIndex >= 64) {
+            throw new Error(`Bit index ${bitIndex} out of range [0, 63]`);
+        }
+        
+        if (bitIndex < 32) {
+            mask.lo |= (1 << bitIndex);
+        } else {
+            mask.hi |= (1 << (bitIndex - 32));
+        }
+    }
+
+    /**
+     * 原地清除位（修改原掩码）
+     */
+    public static clearBit(mask: BitMask64Data, bitIndex: number): void {
+        if (bitIndex < 0 || bitIndex >= 64) {
+            throw new Error(`Bit index ${bitIndex} out of range [0, 63]`);
+        }
+        
+        if (bitIndex < 32) {
+            mask.lo &= ~(1 << bitIndex);
+        } else {
+            mask.hi &= ~(1 << (bitIndex - 32));
+        }
+    }
+
+    /**
+     * 原地或运算（修改原掩码）
+     */
+    public static orInPlace(target: BitMask64Data, other: BitMask64Data): void {
+        target.lo |= other.lo;
+        target.hi |= other.hi;
+    }
+
+    /**
+     * 原地与运算（修改原掩码）
+     */
+    public static andInPlace(target: BitMask64Data, other: BitMask64Data): void {
+        target.lo &= other.lo;
+        target.hi &= other.hi;
+    }
+
+    /**
+     * 原地异或运算（修改原掩码）
+     */
+    public static xorInPlace(target: BitMask64Data, other: BitMask64Data): void {
+        target.lo ^= other.lo;
+        target.hi ^= other.hi;
+    }
+
+    /**
+     * 原地清零
+     */
+    public static clear(mask: BitMask64Data): void {
+        mask.lo = 0;
+        mask.hi = 0;
+    }
+
+    /**
+     * 复制掩码
+     */
+    public static copy(from: BitMask64Data, to: BitMask64Data): void {
+        to.lo = from.lo;
+        to.hi = from.hi;
+    }
+
+    /**
+     * 创建副本
+     */
+    public static clone(mask: BitMask64Data): BitMask64Data {
+        return { lo: mask.lo, hi: mask.hi };
+    }
+
+    /**
+     * 转换为字符串（调试用）
+     */
+    public static toString(mask: BitMask64Data, radix: number = 2): string {
+        if (radix === 2) {
+            const hiBits = mask.hi.toString(2).padStart(32, '0');
+            const loBits = mask.lo.toString(2).padStart(32, '0');
+            return hiBits + loBits;
+        } else if (radix === 16) {
+            const hiBits = mask.hi.toString(16).padStart(8, '0');
+            const loBits = mask.lo.toString(16).padStart(8, '0');
+            return '0x' + hiBits + loBits;
+        } else {
+            throw new Error('Only radix 2 and 16 are supported');
+        }
+    }
+
+    /**
+     * 计算置位数量
+     */
+    public static popCount(mask: BitMask64Data): number {
+        const popCount32 = (n: number) => {
+            n = n - ((n >>> 1) & 0x55555555);
+            n = (n & 0x33333333) + ((n >>> 2) & 0x33333333);
+            return (((n + (n >>> 4)) & 0x0f0f0f0f) * 0x01010101) >>> 24;
+        };
+        
+        return popCount32(mask.lo) + popCount32(mask.hi);
     }
 }
 
 /**
- * 数组模拟BigInt实现
- * 
- * 为不支持BigInt的环境提供兼容实现，使用32位数组模拟大整数运算。
- * 性能略低于原生BigInt，但保证功能一致性。
+ * 64位掩码类
  */
-class ArrayBigInt implements IBigIntLike {
-    private chunks: number[] = []; // 32位块数组
-    private static readonly CHUNK_SIZE = 32;
-    private static readonly CHUNK_MASK = 0xFFFFFFFF;
-    private static readonly CHUNK_MAX = 0x100000000; // 2^32
+export class BitMask64 implements IBigIntLike {
+    private bits: BitMask64Data;
     
-    /**
-     * 构造函数
-     * @param value 初始值，可以是数值、字符串或数组
-     */
-    constructor(value: number | string | number[] = 0) {
+    constructor(value?: number | string | BitMask64Data) {
         if (typeof value === 'number') {
-            this.fromNumber(value);
+            this.bits = BitMask64Utils.fromNumber(value);
         } else if (typeof value === 'string') {
-            this.fromString(value);
+            this.bits = this.fromString(value);
+        } else if (value && typeof value === 'object' && 'lo' in value && 'hi' in value) {
+            this.bits = BitMask64Utils.clone(value);
         } else {
-            this.chunks = value.slice();
-        }
-        this.normalize();
-    }
-    
-    /**
-     * 从数值初始化
-     * @param value 数值
-     */
-    private fromNumber(value: number): void {
-        this.chunks = [];
-        
-        // 处理负数（在位运算中通常不会遇到）
-        if (value < 0) {
-            value = Math.abs(value);
-        }
-        
-        if (value === 0) {
-            this.chunks = [0];
-            return;
-        }
-        
-        while (value > 0) {
-            this.chunks.push(value & ArrayBigInt.CHUNK_MASK);
-            value = Math.floor(value / ArrayBigInt.CHUNK_MAX);
+            this.bits = BitMask64Utils.clone(BitMask64Utils.ZERO);
         }
     }
     
-    /**
-     * 从字符串初始化
-     * @param value 字符串（支持十进制、十六进制、二进制）
-     */
-    private fromString(value: string): void {
+    private fromString(value: string): BitMask64Data {
         value = value.trim();
         
         if (value.startsWith('0x') || value.startsWith('0X')) {
-            // 十六进制
-            this.fromHexString(value.substring(2));
+            const hex = value.substring(2);
+            const num = parseInt(hex.length <= 8 ? hex : hex.substring(hex.length - 8), 16);
+            const hi = hex.length > 8 ? parseInt(hex.substring(0, hex.length - 8), 16) : 0;
+            return { lo: num >>> 0, hi: hi >>> 0 };
         } else if (value.startsWith('0b') || value.startsWith('0B')) {
-            // 二进制
-            this.fromBinaryString(value.substring(2));
+            const binary = value.substring(2);
+            const num = parseInt(binary.length <= 32 ? binary : binary.substring(binary.length - 32), 2);
+            const hi = binary.length > 32 ? parseInt(binary.substring(0, binary.length - 32), 2) : 0;
+            return { lo: num >>> 0, hi: hi >>> 0 };
         } else {
-            // 十进制
-            this.fromDecimalString(value);
-        }
-    }
-    
-    /**
-     * 从十六进制字符串初始化
-     * @param hex 十六进制字符串
-     */
-    private fromHexString(hex: string): void {
-        this.chunks = [0];
-        
-        for (let i = hex.length - 1; i >= 0; i -= 8) {
-            const start = Math.max(0, i - 7);
-            const chunk = parseInt(hex.substring(start, i + 1), 16);
-            this.chunks.push(chunk);
-        }
-        
-        this.normalize();
-    }
-    
-    /**
-     * 从二进制字符串初始化
-     * @param binary 二进制字符串
-     */
-    private fromBinaryString(binary: string): void {
-        this.chunks = [0];
-        
-        for (let i = binary.length - 1; i >= 0; i -= 32) {
-            const start = Math.max(0, i - 31);
-            const chunk = parseInt(binary.substring(start, i + 1), 2);
-            this.chunks.push(chunk);
-        }
-        
-        this.normalize();
-    }
-    
-    /**
-     * 从十进制字符串初始化
-     * @param decimal 十进制字符串
-     */
-    private fromDecimalString(decimal: string): void {
-        // 简化实现，直接转换为数值（在ECS位运算场景中通常是小数值）
-        const num = parseInt(decimal, 10);
-        this.fromNumber(num);
-    }
-    
-    /**
-     * 规范化数组，移除前导零
-     */
-    private normalize(): void {
-        while (this.chunks.length > 1 && this.chunks[this.chunks.length - 1] === 0) {
-            this.chunks.pop();
-        }
-        
-        if (this.chunks.length === 0) {
-            this.chunks = [0];
+            const num = parseInt(value, 10);
+            return BitMask64Utils.fromNumber(num);
         }
     }
     
     valueOf(): number {
-        let result = 0;
-        let multiplier = 1;
+        return this.bits.lo;
+    }
+    
+    toString(radix: number = 10): string {
+        if (radix === 2 || radix === 16) {
+            return BitMask64Utils.toString(this.bits, radix);
+        } else if (radix === 10) {
+            if (this.bits.hi === 0) {
+                return this.bits.lo.toString(10);
+            } else {
+                return `${this.bits.hi * 4294967296 + this.bits.lo}`;
+            }
+        } else {
+            throw new Error('Only radix 2, 10, and 16 are supported');
+        }
+    }
+    
+    and(other: BitMask64): BitMask64 {
+        const result = new BitMask64();
+        result.bits.lo = this.bits.lo & other.bits.lo;
+        result.bits.hi = this.bits.hi & other.bits.hi;
+        return result;
+    }
+    
+    or(other: BitMask64): BitMask64 {
+        const result = new BitMask64();
+        result.bits.lo = this.bits.lo | other.bits.lo;
+        result.bits.hi = this.bits.hi | other.bits.hi;
+        return result;
+    }
+    
+    xor(other: BitMask64): BitMask64 {
+        const result = new BitMask64();
+        result.bits.lo = this.bits.lo ^ other.bits.lo;
+        result.bits.hi = this.bits.hi ^ other.bits.hi;
+        return result;
+    }
+    
+    not(maxBits: number = 64): BitMask64 {
+        const result = new BitMask64();
         
-        for (const chunk of this.chunks) {
-            result += chunk * multiplier;
-            multiplier *= ArrayBigInt.CHUNK_MAX;
-            
-            // 防止溢出
-            if (multiplier > Number.MAX_SAFE_INTEGER) {
-                break;
+        if (maxBits <= 32) {
+            const mask = (1 << maxBits) - 1;
+            result.bits.lo = (~this.bits.lo) & mask;
+            result.bits.hi = 0;
+        } else {
+            result.bits.lo = ~this.bits.lo;
+            if (maxBits < 64) {
+                const remainingBits = maxBits - 32;
+                const mask = (1 << remainingBits) - 1;
+                result.bits.hi = (~this.bits.hi) & mask;
+            } else {
+                result.bits.hi = ~this.bits.hi;
             }
         }
         
         return result;
     }
     
-    toString(radix: number = 10): string {
-        if (radix !== 10 && radix !== 16 && radix !== 2) {
-            throw new Error('Only radix 2, 10, and 16 are supported');
-        }
+    shiftLeft(bits: number): BitMask64 {
+        const result = new BitMask64();
         
-        if (this.isZero()) {
-            return '0';
-        }
-        
-        if (radix === 10) {
-            // 简化实现，转换为数值
-            return this.valueOf().toString(10);
-        } else if (radix === 16) {
-            let result = '';
-            for (let i = this.chunks.length - 1; i >= 0; i--) {
-                const hex = this.chunks[i].toString(16);
-                result += i === this.chunks.length - 1 ? hex : hex.padStart(8, '0');
-            }
-            return result.toUpperCase();
-        } else if (radix === 2) {
-            let result = '';
-            for (let i = this.chunks.length - 1; i >= 0; i--) {
-                const binary = this.chunks[i].toString(2);
-                result += i === this.chunks.length - 1 ? binary : binary.padStart(32, '0');
-            }
+        if (bits === 0) {
+            BitMask64Utils.copy(this.bits, result.bits);
             return result;
         }
         
-        return this.valueOf().toString(radix);
-    }
-    
-    and(other: IBigIntLike): IBigIntLike {
-        const otherArray = other as ArrayBigInt;
-        const maxLength = Math.max(this.chunks.length, otherArray.chunks.length);
-        const result: number[] = [];
-        
-        for (let i = 0; i < maxLength; i++) {
-            const a = i < this.chunks.length ? this.chunks[i] : 0;
-            const b = i < otherArray.chunks.length ? otherArray.chunks[i] : 0;
-            result.push(a & b);
+        if (bits >= 64) {
+            BitMask64Utils.clear(result.bits);
+            return result;
         }
         
-        return new ArrayBigInt(result);
-    }
-    
-    or(other: IBigIntLike): IBigIntLike {
-        const otherArray = other as ArrayBigInt;
-        const maxLength = Math.max(this.chunks.length, otherArray.chunks.length);
-        const result: number[] = [];
-        
-        for (let i = 0; i < maxLength; i++) {
-            const a = i < this.chunks.length ? this.chunks[i] : 0;
-            const b = i < otherArray.chunks.length ? otherArray.chunks[i] : 0;
-            result.push(a | b);
-        }
-        
-        return new ArrayBigInt(result);
-    }
-    
-    xor(other: IBigIntLike): IBigIntLike {
-        const otherArray = other as ArrayBigInt;
-        const maxLength = Math.max(this.chunks.length, otherArray.chunks.length);
-        const result: number[] = [];
-        
-        for (let i = 0; i < maxLength; i++) {
-            const a = i < this.chunks.length ? this.chunks[i] : 0;
-            const b = i < otherArray.chunks.length ? otherArray.chunks[i] : 0;
-            result.push(a ^ b);
-        }
-        
-        return new ArrayBigInt(result);
-    }
-    
-    not(maxBits: number = 64): IBigIntLike {
-        const maxChunks = Math.ceil(maxBits / ArrayBigInt.CHUNK_SIZE);
-        const result: number[] = [];
-        
-        for (let i = 0; i < maxChunks; i++) {
-            const chunk = i < this.chunks.length ? this.chunks[i] : 0;
-            
-            if (i === maxChunks - 1) {
-                // 最后一个块需要处理剩余位数
-                const remainingBits = maxBits % ArrayBigInt.CHUNK_SIZE;
-                if (remainingBits > 0) {
-                    const mask = (1 << remainingBits) - 1;
-                    result.push((~chunk) & mask);
-                } else {
-                    result.push((~chunk) & ArrayBigInt.CHUNK_MASK);
-                }
-            } else {
-                result.push((~chunk) & ArrayBigInt.CHUNK_MASK);
-            }
-        }
-        
-        return new ArrayBigInt(result);
-    }
-    
-    shiftLeft(bits: number): IBigIntLike {
-        if (bits === 0) {
-            return this.clone();
-        }
-        
-        if (bits < 0) {
-            return this.shiftRight(-bits);
-        }
-        
-        const chunkShift = Math.floor(bits / ArrayBigInt.CHUNK_SIZE);
-        const bitShift = bits % ArrayBigInt.CHUNK_SIZE;
-        
-        const result: number[] = new Array(chunkShift).fill(0);
-        
-        if (bitShift === 0) {
-            // 整块移位
-            result.push(...this.chunks);
+        if (bits >= 32) {
+            result.bits.hi = this.bits.lo << (bits - 32);
+            result.bits.lo = 0;
         } else {
-            // 部分位移位
-            let carry = 0;
-            for (const chunk of this.chunks) {
-                const shifted = (chunk << bitShift) | carry;
-                result.push(shifted & ArrayBigInt.CHUNK_MASK);
-                carry = chunk >>> (ArrayBigInt.CHUNK_SIZE - bitShift);
-            }
-            
-            if (carry > 0) {
-                result.push(carry);
-            }
+            result.bits.hi = (this.bits.hi << bits) | (this.bits.lo >>> (32 - bits));
+            result.bits.lo = this.bits.lo << bits;
         }
         
-        return new ArrayBigInt(result);
+        return result;
     }
     
-    shiftRight(bits: number): IBigIntLike {
+    shiftRight(bits: number): BitMask64 {
+        const result = new BitMask64();
+        
         if (bits === 0) {
-            return this.clone();
+            BitMask64Utils.copy(this.bits, result.bits);
+            return result;
         }
         
-        if (bits < 0) {
-            return this.shiftLeft(-bits);
+        if (bits >= 64) {
+            BitMask64Utils.clear(result.bits);
+            return result;
         }
         
-        const chunkShift = Math.floor(bits / ArrayBigInt.CHUNK_SIZE);
-        const bitShift = bits % ArrayBigInt.CHUNK_SIZE;
-        
-        if (chunkShift >= this.chunks.length) {
-            return new ArrayBigInt(0);
-        }
-        
-        const result: number[] = [];
-        
-        if (bitShift === 0) {
-            // 整块移位
-            for (let i = chunkShift; i < this.chunks.length; i++) {
-                result.push(this.chunks[i]);
-            }
+        if (bits >= 32) {
+            result.bits.lo = this.bits.hi >>> (bits - 32);
+            result.bits.hi = 0;
         } else {
-            // 部分位移位
-            let carry = 0;
-            for (let i = this.chunks.length - 1; i >= chunkShift; i--) {
-                const chunk = this.chunks[i];
-                const shifted = (carry << (ArrayBigInt.CHUNK_SIZE - bitShift)) | (chunk >>> bitShift);
-                result.unshift(shifted);
-                carry = chunk & ((1 << bitShift) - 1);
-            }
+            result.bits.lo = (this.bits.lo >>> bits) | (this.bits.hi << (32 - bits));
+            result.bits.hi = this.bits.hi >>> bits;
         }
         
-        return new ArrayBigInt(result.length > 0 ? result : [0]);
+        return result;
     }
     
-    equals(other: IBigIntLike): boolean {
-        if (!(other instanceof ArrayBigInt)) {
-            return false;
-        }
-        
-        if (this.chunks.length !== other.chunks.length) {
-            return false;
-        }
-        
-        for (let i = 0; i < this.chunks.length; i++) {
-            if (this.chunks[i] !== other.chunks[i]) {
-                return false;
-            }
-        }
-        
-        return true;
+    equals(other: BitMask64): boolean {
+        return BitMask64Utils.equals(this.bits, other.bits);
     }
     
     isZero(): boolean {
-        return this.chunks.length === 1 && this.chunks[0] === 0;
+        return BitMask64Utils.isZero(this.bits);
     }
     
-    clone(): IBigIntLike {
-        return new ArrayBigInt(this.chunks.slice());
+    clone(): BitMask64 {
+        return new BitMask64(this.bits);
+    }
+    
+    // 判定方法
+    hasAny(other: BitMask64): boolean {
+        return BitMask64Utils.hasAny(this.bits, other.bits);
+    }
+    
+    hasAll(other: BitMask64): boolean {
+        return BitMask64Utils.hasAll(this.bits, other.bits);
+    }
+    
+    hasNone(other: BitMask64): boolean {
+        return BitMask64Utils.hasNone(this.bits, other.bits);
+    }
+    
+    // 原地修改方法
+    orInPlace(other: BitMask64): this {
+        BitMask64Utils.orInPlace(this.bits, other.bits);
+        return this;
+    }
+    
+    andInPlace(other: BitMask64): this {
+        BitMask64Utils.andInPlace(this.bits, other.bits);
+        return this;
+    }
+    
+    xorInPlace(other: BitMask64): this {
+        BitMask64Utils.xorInPlace(this.bits, other.bits);
+        return this;
+    }
+    
+    setBitInPlace(bitIndex: number): this {
+        BitMask64Utils.setBit(this.bits, bitIndex);
+        return this;
+    }
+    
+    clearBitInPlace(bitIndex: number): this {
+        BitMask64Utils.clearBit(this.bits, bitIndex);
+        return this;
+    }
+    
+    clearInPlace(): this {
+        BitMask64Utils.clear(this.bits);
+        return this;
+    }
+    
+    copyFrom(other: BitMask64): this {
+        BitMask64Utils.copy(other.bits, this.bits);
+        return this;
+    }
+    
+    getRawMask(): BitMask64Data {
+        return this.bits;
+    }
+    
+    static create(bitIndex: number): BitMask64 {
+        const result = new BitMask64();
+        result.bits = BitMask64Utils.create(bitIndex);
+        return result;
+    }
+    
+    static fromNumber(value: number): BitMask64 {
+        return new BitMask64(value);
+    }
+    
+    static zero(): BitMask64 {
+        return new BitMask64();
     }
 }
 
 /**
- * BigInt工厂类
- * 
- * 自动检测运行时环境的BigInt支持情况，并提供统一的创建接口。
- * 在支持BigInt的环境中使用原生实现，在不支持的环境中使用兼容实现。
+ * 掩码工厂类
  */
-export class BigIntFactory {
-    private static _supportsBigInt: boolean | null = null;
-    private static _cachedZero: IBigIntLike | null = null;
-    private static _cachedOne: IBigIntLike | null = null;
-    // 缓存检测结果以避免重复检测
+export class BitMask64Factory {
+    private static _cachedZero: BitMask64 | null = null;
+    private static _cachedOne: BitMask64 | null = null;
     
-    /**
-     * 检查是否支持原生BigInt
-     * @returns 是否支持原生BigInt
-     */
-    public static isNativeSupported(): boolean {
-        if (this._supportsBigInt === null) {
-            this._supportsBigInt = this.detectBigIntSupport();
-        }
-        return this._supportsBigInt;
+    public static create(value: number | string = 0): BitMask64 {
+        return new BitMask64(value);
     }
     
-    /**
-     * 检测BigInt支持情况
-     * @returns 是否支持BigInt
-     */
-    private static detectBigIntSupport(): boolean {
-        try {
-            // 检查BigInt构造函数是否存在
-            if (typeof BigInt === 'undefined') {
-                return false;
-            }
-            
-            // 检查基本BigInt操作
-            const test1 = BigInt(1);
-            const test2 = BigInt(2);
-            const result = test1 | test2;
-            
-            // 检查字面量支持
-            const literal = eval('1n'); // 使用eval避免语法错误
-            
-            // 检查类型
-            if (typeof result !== 'bigint' || typeof literal !== 'bigint') {
-                return false;
-            }
-            
-            // 检查基本运算
-            const shifted = test1 << BigInt(1);
-            const compared = test1 === BigInt(1);
-            
-            return typeof shifted === 'bigint' && compared === true;
-        } catch (error) {
-            // 任何异常都表示不支持
-            return false;
-        }
-    }
-    
-    /**
-     * 创建BigInt兼容值
-     * @param value 初始值
-     * @returns IBigIntLike实例
-     */
-    public static create(value: number | string | bigint = 0): IBigIntLike {
-        if (this.isNativeSupported()) {
-            let bigintValue: bigint;
-            
-            if (typeof value === 'bigint') {
-                bigintValue = value;
-            } else if (typeof value === 'string') {
-                bigintValue = BigInt(value);
-            } else {
-                bigintValue = BigInt(value);
-            }
-            
-            return new NativeBigInt(bigintValue);
-        } else {
-            // 转换bigint类型到兼容类型
-            let compatValue: number | string;
-            
-            if (typeof value === 'bigint') {
-                compatValue = value.toString();
-            } else {
-                compatValue = value;
-            }
-            
-            return new ArrayBigInt(compatValue);
-        }
-    }
-    
-    /**
-     * 创建零值
-     * @returns 零值的IBigIntLike实例
-     */
-    public static zero(): IBigIntLike {
+    public static zero(): BitMask64 {
         if (!this._cachedZero) {
-            this._cachedZero = this.create(0);
+            this._cachedZero = new BitMask64(0);
         }
-        return this._cachedZero;
+        return this._cachedZero.clone();
     }
     
-    /**
-     * 创建1值
-     * @returns 1值的IBigIntLike实例
-     */
-    public static one(): IBigIntLike {
+    public static one(): BitMask64 {
         if (!this._cachedOne) {
-            this._cachedOne = this.create(1);
+            this._cachedOne = new BitMask64(1);
         }
-        return this._cachedOne;
+        return this._cachedOne.clone();
     }
     
-    /**
-     * 从二进制字符串创建
-     * @param binary 二进制字符串
-     * @returns IBigIntLike实例
-     */
-    public static fromBinaryString(binary: string): IBigIntLike {
-        if (this.isNativeSupported()) {
-            const value = BigInt('0b' + binary);
-            return new NativeBigInt(value);
-        } else {
-            return new ArrayBigInt('0b' + binary);
-        }
+    public static fromBitIndex(bitIndex: number): BitMask64 {
+        return BitMask64.create(bitIndex);
     }
-    
-    /**
-     * 从十六进制字符串创建
-     * @param hex 十六进制字符串
-     * @returns IBigIntLike实例
-     */
-    public static fromHexString(hex: string): IBigIntLike {
-        if (this.isNativeSupported()) {
-            const cleanHex = hex.replace(/^0x/i, '');
-            const value = BigInt('0x' + cleanHex);
-            return new NativeBigInt(value);
-        } else {
-            return new ArrayBigInt(hex);
-        }
-    }
-    
-    /**
-     * 获取环境信息
-     * @returns 环境信息对象
-     */
-    public static getEnvironmentInfo(): EnvironmentInfo {
-        return {
-            supportsBigInt: this.isNativeSupported(),
-            environment: this.detectEnvironment(),
-            jsEngine: this.detectJSEngine()
-        };
-    }
-    
-    /**
-     * 检测运行环境
-     * @returns 环境类型
-     */
-    private static detectEnvironment(): string {
-        if (typeof window !== 'undefined') {
-            // 浏览器环境
-            if (typeof navigator !== 'undefined') {
-                const userAgent = navigator.userAgent;
-                
-                if (userAgent.includes('Chrome')) {
-                    const match = userAgent.match(/Chrome\/(\d+)/);
-                    const version = match ? parseInt(match[1]) : 0;
-                    return `Chrome ${version}`;
-                }
-                
-                if (userAgent.includes('Firefox')) {
-                    const match = userAgent.match(/Firefox\/(\d+)/);
-                    const version = match ? parseInt(match[1]) : 0;
-                    return `Firefox ${version}`;
-                }
-                
-                if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
-                    const match = userAgent.match(/Version\/(\d+)/);
-                    const version = match ? parseInt(match[1]) : 0;
-                    return `Safari ${version}`;
-                }
-                
-                return 'Browser (Unknown)';
-            }
-            
-            return 'Browser';
-        } else if (typeof global !== 'undefined') {
-            // Node.js环境
-            if (typeof process !== 'undefined' && process.version) {
-                return `Node.js ${process.version}`;
-            }
-            return 'Node.js';
-        } else if (typeof (globalThis as any).wx !== 'undefined') {
-            // 微信小程序
-            return 'WeChat MiniProgram';
-        } else if (typeof (globalThis as any).cc !== 'undefined') {
-            // Cocos Creator
-            return 'Cocos Creator';
-        } else if (typeof (globalThis as any).Laya !== 'undefined') {
-            // Laya引擎
-            return 'Laya Engine';
-        }
-        
-        return 'Unknown';
-    }
-    
-    /**
-     * 检测JavaScript引擎
-     * @returns JS引擎信息
-     */
-    private static detectJSEngine(): string {
-        try {
-            // V8引擎特征检测
-            if (typeof process !== 'undefined' && process.versions && process.versions.v8) {
-                return `V8 ${process.versions.v8}`;
-            }
-            
-            // SpiderMonkey特征检测
-            if (typeof (globalThis as any).Components !== 'undefined') {
-                return 'SpiderMonkey';
-            }
-            
-            // JavaScriptCore特征检测
-            if (typeof window !== 'undefined' && typeof (window as any).safari !== 'undefined') {
-                return 'JavaScriptCore';
-            }
-            
-            return 'Unknown';
-        } catch {
-            return 'Unknown';
-        }
-    }
-    
-}
-
-/**
- * 环境信息接口
- */
-export interface EnvironmentInfo {
-    /** 是否支持BigInt */
-    supportsBigInt: boolean;
-    /** 运行环境 */
-    environment: string;
-    /** JavaScript引擎 */
-    jsEngine: string;
 }

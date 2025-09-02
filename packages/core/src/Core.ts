@@ -10,7 +10,6 @@ import { IScene } from './ECS/IScene';
 import { WorldManager } from './ECS/WorldManager';
 import { DebugManager } from './Utils/Debug';
 import { ICoreConfig, IECSDebugConfig } from './Types';
-import { BigIntFactory, EnvironmentInfo } from './ECS/Utils/BigIntCompatibility';
 import { createLogger } from './Utils/Logger';
 
 /**
@@ -141,10 +140,6 @@ export class Core {
      */
     private _config: ICoreConfig;
 
-    /**
-     * 兼容性信息
-     */
-    private _environmentInfo: EnvironmentInfo;
 
     /**
      * 创建核心实例
@@ -161,8 +156,6 @@ export class Core {
             ...config
         };
 
-        // 检测环境兼容性
-        this._environmentInfo = BigIntFactory.getEnvironmentInfo();
 
         // 初始化管理器
         this._timerManager = new TimerManager();
@@ -187,10 +180,6 @@ export class Core {
             this._debugManager = new DebugManager(this, this._config.debugConfig);
         }
 
-        // 在调试模式下显示兼容性信息
-        if (this._config.debug) {
-            this.logCompatibilityInfo();
-        }
 
         this.initialize();
     }
@@ -439,23 +428,7 @@ export class Core {
         return this._instance?._config.debugConfig?.enabled || false;
     }
 
-    /**
-     * 获取环境兼容性信息
-     * 
-     * @returns 环境兼容性信息
-     */
-    public static getEnvironmentInfo(): EnvironmentInfo | null {
-        return this._instance?._environmentInfo || null;
-    }
 
-    /**
-     * 检查BigInt是否支持
-     * 
-     * @returns 是否支持BigInt
-     */
-    public static get supportsBigInt(): boolean {
-        return this._instance?._environmentInfo.supportsBigInt || false;
-    }
 
     /**
      * 获取WorldManager实例
@@ -548,23 +521,6 @@ export class Core {
         // 核心系统初始化
     }
 
-    /**
-     * 记录兼容性信息
-     * 
-     * 在控制台输出当前环境的兼容性信息和建议。
-     */
-    private logCompatibilityInfo(): void {
-        const info = this._environmentInfo;
-        
-        Core._logger.info('ECS Framework 兼容性检测结果:');
-        Core._logger.info(`   环境: ${info.environment}`);
-        Core._logger.info(`   JavaScript引擎: ${info.jsEngine}`);
-        Core._logger.info(`   BigInt支持: ${info.supportsBigInt ? '支持' : '不支持'}`);
-        
-        if (!info.supportsBigInt) {
-            Core._logger.warn('BigInt兼容模式已启用');
-        }
-    }
 
     /**
      * 内部更新方法
