@@ -203,15 +203,12 @@ export class ComponentRegistry {
 
 /**
  * 高性能组件存储器
- * 使用SoA（Structure of Arrays）模式存储组件
  */
 export class ComponentStorage<T extends Component> {
-    private components: (T | null)[] = [];
+    private dense: T[] = [];
+    private entityIds: number[] = [];
     private entityToIndex = new Map<number, number>();
-    private indexToEntity: number[] = [];
-    private freeIndices: number[] = [];
     private componentType: ComponentType<T>;
-    private _size = 0;
 
     constructor(componentType: ComponentType<T>) {
         this.componentType = componentType;
@@ -233,22 +230,11 @@ export class ComponentStorage<T extends Component> {
             throw new Error(`Entity ${entityId} already has component ${getComponentTypeName(this.componentType)}`);
         }
 
-        let index: number;
-        
-        if (this.freeIndices.length > 0) {
-            // 重用空闲索引
-            index = this.freeIndices.pop()!;
-            this.components[index] = component;
-            this.indexToEntity[index] = entityId;
-        } else {
-            // 添加到末尾
-            index = this.components.length;
-            this.components.push(component);
-            this.indexToEntity.push(entityId);
-        }
-        
+        // 末尾插入到致密数组
+        const index = this.dense.length;
+        this.dense.push(component);
+        this.entityIds.push(entityId);
         this.entityToIndex.set(entityId, index);
-        this._size++;
     }
 
     /**
@@ -258,7 +244,7 @@ export class ComponentStorage<T extends Component> {
      */
     public getComponent(entityId: number): T | null {
         const index = this.entityToIndex.get(entityId);
-        return index !== undefined ? this.components[index] : null;
+        return index !== undefined ? this.dense[index] : null;
     }
 
     /**
@@ -281,11 +267,25 @@ export class ComponentStorage<T extends Component> {
             return null;
         }
 
-        const component = this.components[index];
+        const component = this.dense[index];
+        const lastIndex = this.dense.length - 1;
+
+        if (index !== lastIndex) {
+            // 将末尾元素交换到要删除的位置
+            const lastComponent = this.dense[lastIndex];
+            const lastEntityId = this.entityIds[lastIndex];
+            
+            this.dense[index] = lastComponent;
+            this.entityIds[index] = lastEntityId;
+            
+            // 更新被交换元素的映射
+            this.entityToIndex.set(lastEntityId, index);
+        }
+
+        // 移除末尾元素
+        this.dense.pop();
+        this.entityIds.pop();
         this.entityToIndex.delete(entityId);
-        this.components[index] = null;
-        this.freeIndices.push(index);
-        this._size--;
 
         return component;
     }
@@ -295,49 +295,36 @@ export class ComponentStorage<T extends Component> {
      * @param callback 回调函数
      */
     public forEach(callback: (component: T, entityId: number, index: number) => void): void {
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            if (component) {
-                callback(component, this.indexToEntity[i], i);
-            }
+        for (let i = 0; i < this.dense.length; i++) {
+            callback(this.dense[i], this.entityIds[i], i);
         }
     }
 
     /**
-     * 获取所有组件（密集数组）
+     * 获取所有组件
      * @returns 组件数组
      */
     public getDenseArray(): { components: T[]; entityIds: number[] } {
-        const components: T[] = [];
-        const entityIds: number[] = [];
-
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            if (component) {
-                components.push(component);
-                entityIds.push(this.indexToEntity[i]);
-            }
-        }
-
-        return { components, entityIds };
+        return {
+            components: [...this.dense],
+            entityIds: [...this.entityIds]
+        };
     }
 
     /**
      * 清空所有组件
      */
     public clear(): void {
-        this.components.length = 0;
+        this.dense.length = 0;
+        this.entityIds.length = 0;
         this.entityToIndex.clear();
-        this.indexToEntity.length = 0;
-        this.freeIndices.length = 0;
-        this._size = 0;
     }
 
     /**
      * 获取组件数量
      */
     public get size(): number {
-        return this._size;
+        return this.dense.length;
     }
 
     /**
@@ -347,34 +334,6 @@ export class ComponentStorage<T extends Component> {
         return this.componentType;
     }
 
-    /**
-     * 压缩存储（移除空洞）
-     */
-    public compact(): void {
-        if (this.freeIndices.length === 0) {
-            return; // 没有空洞，无需压缩
-        }
-
-        const newComponents: T[] = [];
-        const newIndexToEntity: number[] = [];
-        const newEntityToIndex = new Map<number, number>();
-
-        let newIndex = 0;
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            if (component) {
-                newComponents[newIndex] = component;
-                newIndexToEntity[newIndex] = this.indexToEntity[i];
-                newEntityToIndex.set(this.indexToEntity[i], newIndex);
-                newIndex++;
-            }
-        }
-
-        this.components = newComponents;
-        this.indexToEntity = newIndexToEntity;
-        this.entityToIndex = newEntityToIndex;
-        this.freeIndices.length = 0;
-    }
 
     /**
      * 获取存储统计信息
@@ -385,10 +344,10 @@ export class ComponentStorage<T extends Component> {
         freeSlots: number;
         fragmentation: number;
     } {
-        const totalSlots = this.components.length;
-        const usedSlots = this._size;
-        const freeSlots = this.freeIndices.length;
-        const fragmentation = totalSlots > 0 ? freeSlots / totalSlots : 0;
+        const totalSlots = this.dense.length;
+        const usedSlots = this.dense.length;
+        const freeSlots = 0; // 永远无空洞
+        const fragmentation = 0; // 永远无碎片
 
         return {
             totalSlots,
@@ -586,14 +545,6 @@ export class ComponentStorageManager {
         return mask;
     }
 
-    /**
-     * 压缩所有存储器
-     */
-    public compactAll(): void {
-        for (const storage of this.storages.values()) {
-            storage.compact();
-        }
-    }
 
     /**
      * 获取所有存储器的统计信息
