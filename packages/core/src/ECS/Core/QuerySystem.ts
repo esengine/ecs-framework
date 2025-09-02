@@ -1,7 +1,7 @@
 import { Entity } from '../Entity';
 import { Component } from '../Component';
 import { ComponentRegistry, ComponentType } from './ComponentStorage';
-import { IBigIntLike, BigIntFactory } from '../Utils/BigIntCompatibility';
+import { BitMask64Utils, BitMask64Data } from '../Utils/BigIntCompatibility';
 import { createLogger } from '../../Utils/Logger';
 import { getComponentTypeName } from '../Decorators';
 
@@ -28,7 +28,7 @@ export enum QueryConditionType {
 export interface QueryCondition {
     type: QueryConditionType;
     componentTypes: ComponentType[];
-    mask: IBigIntLike;
+    mask: BitMask64Data;
 }
 
 /**
@@ -483,7 +483,7 @@ export class QuerySystem {
         const result: Entity[] = [];
 
         for (const entity of smallestSet) {
-            if (entity.componentMask.and(mask).equals(mask)) {
+            if (BitMask64Utils.hasAll(entity.componentMask, mask)) {
                 result.push(entity);
             }
         }
@@ -587,7 +587,7 @@ export class QuerySystem {
 
         const mask = this.createComponentMask(componentTypes);
         const entities = this.entities.filter(entity =>
-            entity.componentMask.and(mask).isZero()
+            BitMask64Utils.hasNone(entity.componentMask, mask)
         );
 
         this.addToCache(cacheKey, entities);
@@ -872,14 +872,14 @@ export class QuerySystem {
      * @param componentTypes 组件类型列表
      * @returns 生成的位掩码
      */
-    private createComponentMask(componentTypes: ComponentType[]): IBigIntLike {
-        let mask = BigIntFactory.zero();
+    private createComponentMask(componentTypes: ComponentType[]): BitMask64Data {
+        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         let hasValidComponents = false;
         
         for (const type of componentTypes) {
             try {
                 const bitMask = ComponentRegistry.getBitMask(type);
-                mask = mask.or(bitMask);
+                BitMask64Utils.orInPlace(mask, bitMask);
                 hasValidComponents = true;
             } catch (error) {
                 this._logger.warn(`组件类型 ${getComponentTypeName(type)} 未注册，跳过`);
@@ -888,7 +888,7 @@ export class QuerySystem {
         
         // 如果没有有效的组件类型，返回一个不可能匹配的掩码
         if (!hasValidComponents) {
-            return BigIntFactory.create(-1); // 所有位都是1，不可能与任何实体匹配
+            return { lo: 0xFFFFFFFF, hi: 0xFFFFFFFF }; // 所有位都是1，不可能与任何实体匹配
         }
         
         return mask;
@@ -1134,12 +1134,12 @@ export class QueryBuilder {
     /**
      * 创建组件掩码
      */
-    private createComponentMask(componentTypes: ComponentType[]): IBigIntLike {
-        let mask = BigIntFactory.zero();
+    private createComponentMask(componentTypes: ComponentType[]): BitMask64Data {
+        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const type of componentTypes) {
             try {
                 const bitMask = ComponentRegistry.getBitMask(type);
-                mask = mask.or(bitMask);
+                BitMask64Utils.orInPlace(mask, bitMask);
             } catch (error) {
                 this._logger.warn(`组件类型 ${getComponentTypeName(type)} 未注册，跳过`);
             }

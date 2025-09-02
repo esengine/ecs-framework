@@ -1,7 +1,7 @@
 import { Component } from './Component';
 import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
 import { EventBus } from './Core/EventBus';
-import { IBigIntLike, BigIntFactory } from './Utils/BigIntCompatibility';
+import { BitMask64Utils, BitMask64Data } from './Utils/BigIntCompatibility';
 import { createLogger } from '../Utils/Logger';
 import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
 import type { IScene } from './IScene';
@@ -161,7 +161,7 @@ export class Entity {
      * 
      * 用于快速查询实体拥有的组件类型。
      */
-    private _componentMask: IBigIntLike = BigIntFactory.zero();
+    private _componentMask: BitMask64Data = BitMask64Utils.clone(BitMask64Utils.ZERO);
 
     /**
      * 按组件类型ID直址的稀疏数组
@@ -310,7 +310,7 @@ export class Entity {
      * 
      * @returns 实体的组件位掩码
      */
-    public get componentMask(): IBigIntLike {
+    public get componentMask(): BitMask64Data {
         return this._componentMask;
     }
 
@@ -354,7 +354,7 @@ export class Entity {
 
         // 更新位掩码
         const componentMask = ComponentRegistry.getBitMask(componentType);
-        this._componentMask = this._componentMask.or(componentMask);
+        BitMask64Utils.orInPlace(this._componentMask, componentMask);
 
         return component;
     }
@@ -422,7 +422,7 @@ export class Entity {
         }
 
         const mask = ComponentRegistry.getBitMask(type);
-        if (this._componentMask.and(mask).isZero()) {
+        if (BitMask64Utils.hasNone(this._componentMask, mask)) {
             return null;
         }
 
@@ -475,7 +475,7 @@ export class Entity {
         }
         
         const mask = ComponentRegistry.getBitMask(type);
-        return !this._componentMask.and(mask).isZero();
+        return BitMask64Utils.hasAny(this._componentMask, mask);
     }
 
     /**
@@ -510,8 +510,8 @@ export class Entity {
             this._componentsByTypeId[typeId] = undefined;
             
             // 更新位掩码
-            const componentMask = ComponentRegistry.getBitMask(componentType);
-            this._componentMask = this._componentMask.and(componentMask.not());
+            const bitIndex = ComponentRegistry.getBitIndex(componentType);
+            BitMask64Utils.clearBit(this._componentMask, bitIndex);
         }
         
         // 从迭代数组中移除
@@ -579,7 +579,7 @@ export class Entity {
         
         // 清空稀疏数组和位掩码
         this._componentsByTypeId.length = 0;
-        this._componentMask = BigIntFactory.zero();
+        BitMask64Utils.clear(this._componentMask);
         
         // 移除组件
         for (const component of componentsToRemove) {
@@ -981,7 +981,7 @@ export class Entity {
             destroyed: this._isDestroyed,
             componentCount: this.components.length,
             componentTypes: this.components.map(c => getComponentInstanceTypeName(c)),
-            componentMask: this._componentMask.toString(2), // 二进制表示
+            componentMask: BitMask64Utils.toString(this._componentMask, 2), // 二进制表示
             parentId: this._parent?.id || null,
             childCount: this._children.length,
             childIds: this._children.map(c => c.id),
