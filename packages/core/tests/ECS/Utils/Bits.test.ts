@@ -1,5 +1,5 @@
 import { Bits } from '../../../src/ECS/Utils/Bits';
-import { BigIntFactory } from '../../../src/ECS/Utils/BigIntCompatibility';
+import { BitMask64Utils } from '../../../src/ECS/Utils/BigIntCompatibility';
 
 describe('Bits - 高性能位操作类测试', () => {
     let bits: Bits;
@@ -12,12 +12,12 @@ describe('Bits - 高性能位操作类测试', () => {
         it('应该能够创建空的Bits对象', () => {
             expect(bits).toBeDefined();
             expect(bits.isEmpty()).toBe(true);
-            expect(bits.getValue().isZero()).toBe(true);
+            expect(BitMask64Utils.isZero(bits.getValue())).toBe(true);
         });
 
         it('应该能够使用初始值创建Bits对象', () => {
-            const bitsWithValue = new Bits(BigIntFactory.create(5)); // 二进制: 101
-            expect(bitsWithValue.getValue().toString()).toBe('5');
+            const bitsWithValue = new Bits(5); // 二进制: 101
+            expect(bitsWithValue.toHexString()).toBe('0x5');
             expect(bitsWithValue.isEmpty()).toBe(false);
             expect(bitsWithValue.get(0)).toBe(true);  // 第0位
             expect(bitsWithValue.get(1)).toBe(false); // 第1位
@@ -26,7 +26,7 @@ describe('Bits - 高性能位操作类测试', () => {
 
         it('默认构造函数应该创建值为0的对象', () => {
             const defaultBits = new Bits();
-            expect(defaultBits.getValue().isZero()).toBe(true);
+            expect(BitMask64Utils.isZero(defaultBits.getValue())).toBe(true);
         });
     });
 
@@ -34,22 +34,22 @@ describe('Bits - 高性能位操作类测试', () => {
         it('应该能够设置指定位置的位', () => {
             bits.set(0);
             expect(bits.get(0)).toBe(true);
-            expect(bits.getValue().toString()).toBe('1');
+            expect(bits.toHexString()).toBe('0x1');
 
             bits.set(3);
             expect(bits.get(3)).toBe(true);
-            expect(bits.getValue().toString()).toBe('9'); // 1001 in binary
+            expect(bits.toHexString()).toBe('0x9'); // 1001 in binary
         });
 
         it('应该能够清除指定位置的位', () => {
             bits.set(0);
             bits.set(1);
             bits.set(2);
-            expect(bits.getValue().toString()).toBe('7'); // 111 in binary
+            expect(bits.toHexString()).toBe('0x7'); // 111 in binary
 
             bits.clear(1);
             expect(bits.get(1)).toBe(false);
-            expect(bits.getValue().toString()).toBe('5'); // 101 in binary
+            expect(bits.toHexString()).toBe('0x5'); // 101 in binary
         });
 
         it('重复设置同一位应该保持不变', () => {
@@ -57,12 +57,12 @@ describe('Bits - 高性能位操作类测试', () => {
             const value1 = bits.getValue();
             bits.set(0);
             const value2 = bits.getValue();
-            expect(value1.equals(value2)).toBe(true);
+            expect(BitMask64Utils.equals(value1, value2)).toBe(true);
         });
 
         it('清除未设置的位应该安全', () => {
             bits.clear(5);
-            expect(bits.getValue().isZero()).toBe(true);
+            expect(BitMask64Utils.isZero(bits.getValue())).toBe(true);
         });
 
         it('设置负索引应该抛出错误', () => {
@@ -123,7 +123,7 @@ describe('Bits - 高性能位操作类测试', () => {
 
         it('AND运算应该正确', () => {
             const result = bits.and(otherBits);
-            expect(result.getValue().toString()).toBe('4'); // 10101 & 01110 = 00100 = 4
+            expect(result.toHexString()).toBe('0x4'); // 10101 & 01110 = 00100 = 4
             expect(result.get(2)).toBe(true);
             expect(result.get(0)).toBe(false);
             expect(result.get(1)).toBe(false);
@@ -131,7 +131,7 @@ describe('Bits - 高性能位操作类测试', () => {
 
         it('OR运算应该正确', () => {
             const result = bits.or(otherBits);
-            expect(result.getValue().toString()).toBe('31'); // 10101 | 01110 = 11111 = 31
+            expect(result.toHexString()).toBe('0x1F'); // 10101 | 01110 = 11111 = 31
             expect(result.get(0)).toBe(true);
             expect(result.get(1)).toBe(true);
             expect(result.get(2)).toBe(true);
@@ -141,7 +141,7 @@ describe('Bits - 高性能位操作类测试', () => {
 
         it('XOR运算应该正确', () => {
             const result = bits.xor(otherBits);
-            expect(result.getValue().toString()).toBe('27'); // 10101 ^ 01110 = 11011 = 27
+            expect(result.toHexString()).toBe('0x1B'); // 10101 ^ 01110 = 11011 = 27
             expect(result.get(0)).toBe(true);
             expect(result.get(1)).toBe(true);
             expect(result.get(2)).toBe(false); // 相同位XOR为0
@@ -150,16 +150,18 @@ describe('Bits - 高性能位操作类测试', () => {
         });
 
         it('NOT运算应该正确', () => {
-            const simpleBits = new Bits(BigIntFactory.create(5)); // 101 in binary
+            const simpleBits = new Bits(5); // 101 in binary
             const result = simpleBits.not(8); // 限制为8位
-            expect(result.getValue().toString()).toBe('250'); // ~00000101 = 11111010 = 250 (8位)
+            expect(result.toHexString()).toBe('0xFA'); // ~00000101 = 11111010 = 250 (8位)
         });
 
         it('NOT运算默认64位应该正确', () => {
-            const simpleBits = new Bits(BigIntFactory.create(1));
+            const simpleBits = new Bits(1);
             const result = simpleBits.not();
-            const expected = BigIntFactory.one().shiftLeft(64).valueOf() - 2; // 64位全1减去最低位
-            expect(result.getValue().valueOf()).toBe(expected);
+            // 64位全1减去最低位，但由于JavaScript数字精度问题，我们检查特定位
+            expect(result.get(0)).toBe(false); // 位0应该是0
+            expect(result.get(1)).toBe(true);  // 位1应该是1
+            expect(result.get(63)).toBe(true); // 最高位应该是1
         });
     });
 
@@ -234,12 +236,12 @@ describe('Bits - 高性能位操作类测试', () => {
             expect(bits.cardinality()).toBe(2);
         });
 
-        it('大数值的cardinality应该正确', () => {
-            // 设置很多位
-            for (let i = 0; i < 100; i += 2) {
+        it('最大64位的cardinality应该正确', () => {
+            // 设置很多位，但不超过64位限制
+            for (let i = 0; i < 64; i += 2) {
                 bits.set(i);
             }
-            expect(bits.cardinality()).toBe(50);
+            expect(bits.cardinality()).toBe(32); // 32个偶数位
         });
     });
 
@@ -254,7 +256,7 @@ describe('Bits - 高性能位操作类测试', () => {
             expect(bits.isEmpty()).toBe(false);
             bits.clearAll();
             expect(bits.isEmpty()).toBe(true);
-            expect(bits.getValue().isZero()).toBe(true);
+            expect(BitMask64Utils.isZero(bits.getValue())).toBe(true);
         });
 
         it('clearAll后应该能重新设置位', () => {
@@ -276,14 +278,14 @@ describe('Bits - 高性能位操作类测试', () => {
             const newBits = new Bits();
             newBits.copyFrom(bits);
             
-            expect(newBits.getValue().equals(bits.getValue())).toBe(true);
+            expect(BitMask64Utils.equals(newBits.getValue(), bits.getValue())).toBe(true);
             expect(newBits.equals(bits)).toBe(true);
         });
 
         it('clone应该创建相同的副本', () => {
             const clonedBits = bits.clone();
             
-            expect(clonedBits.getValue().equals(bits.getValue())).toBe(true);
+            expect(BitMask64Utils.equals(clonedBits.getValue(), bits.getValue())).toBe(true);
             expect(clonedBits.equals(bits)).toBe(true);
             expect(clonedBits).not.toBe(bits); // 应该是不同的对象
         });
@@ -300,7 +302,7 @@ describe('Bits - 高性能位操作类测试', () => {
     describe('值操作', () => {
         it('getValue和setValue应该正确工作', () => {
             bits.setValue(42);
-            expect(bits.getValue().toString()).toBe('42');
+            expect(bits.toHexString()).toBe('0x2A');
         });
 
         it('setValue应该正确反映在位操作中', () => {
@@ -352,24 +354,24 @@ describe('Bits - 高性能位操作类测试', () => {
 
         it('fromBinaryString应该正确解析', () => {
             const parsedBits = Bits.fromBinaryString('10101');
-            expect(parsedBits.getValue().toString()).toBe('21');
+            expect(parsedBits.toHexString()).toBe('0x15');
             expect(parsedBits.equals(bits)).toBe(true);
         });
 
         it('fromBinaryString应该处理带空格的字符串', () => {
             const parsedBits = Bits.fromBinaryString('0001 0101');
-            expect(parsedBits.getValue().toString()).toBe('21');
+            expect(parsedBits.toHexString()).toBe('0x15');
         });
 
         it('fromHexString应该正确解析', () => {
             const parsedBits = Bits.fromHexString('0x15');
-            expect(parsedBits.getValue().toString()).toBe('21');
+            expect(parsedBits.toHexString()).toBe('0x15');
             expect(parsedBits.equals(bits)).toBe(true);
         });
 
         it('fromHexString应该处理不带0x前缀的字符串', () => {
             const parsedBits = Bits.fromHexString('15');
-            expect(parsedBits.getValue().toString()).toBe('21');
+            expect(parsedBits.toHexString()).toBe('0x15');
         });
     });
 
@@ -429,101 +431,76 @@ describe('Bits - 高性能位操作类测试', () => {
         });
     });
 
-    describe('大数值处理', () => {
-        const supportsBigInt = (() => {
-            try {
-                return typeof BigInt !== 'undefined' && BigInt(0) === 0n;
-            } catch {
-                return false;
-            }
-        })();
-
-        it('应该能够处理超过64位的数值', () => {
-            if (!supportsBigInt) {
-                pending('BigInt not supported in this environment');
-                return;
-            }
-            
-            bits.set(100);
-            expect(bits.get(100)).toBe(true);
+    describe('64位边界处理', () => {
+        it('应该正确处理64位边界', () => {
+            bits.set(63); // 最高位
+            expect(bits.get(63)).toBe(true);
             expect(bits.cardinality()).toBe(1);
         });
 
-        it('应该能够处理非常大的位索引', () => {
-            if (!supportsBigInt) {
-                pending('BigInt not supported in this environment');
-                return;
-            }
-            
-            bits.set(1000);
-            bits.set(2000);
-            expect(bits.get(1000)).toBe(true);
-            expect(bits.get(2000)).toBe(true);
-            expect(bits.cardinality()).toBe(2);
+        it('超过64位索引应该抛出错误', () => {
+            expect(() => bits.set(64)).toThrow('Bit index exceeds 64-bit limit');
+            expect(() => bits.set(100)).toThrow('Bit index exceeds 64-bit limit');
         });
 
-        it('大数值的位运算应该正确', () => {
-            if (!supportsBigInt) {
-                pending('BigInt not supported in this environment');
-                return;
-            }
+        it('64位范围内的位运算应该正确', () => {
+            const bits1 = new Bits();
+            const bits2 = new Bits();
             
-            const largeBits1 = new Bits();
-            const largeBits2 = new Bits();
+            bits1.set(10);
+            bits1.set(20);
             
-            largeBits1.set(100);
-            largeBits1.set(200);
+            bits2.set(10);
+            bits2.set(30);
             
-            largeBits2.set(100);
-            largeBits2.set(150);
-            
-            const result = largeBits1.and(largeBits2);
-            expect(result.get(100)).toBe(true);
-            expect(result.get(150)).toBe(false);
-            expect(result.get(200)).toBe(false);
+            const result = bits1.and(bits2);
+            expect(result.get(10)).toBe(true);
+            expect(result.get(20)).toBe(false);
+            expect(result.get(30)).toBe(false);
         });
     });
 
     describe('性能测试', () => {
-        it('大量位设置操作应该高效', () => {
+        it('64位范围内的位设置操作应该高效', () => {
             const startTime = performance.now();
             
-            for (let i = 0; i < 10000; i++) {
+            // 只在64位范围内设置
+            for (let i = 0; i < 64; i++) {
                 bits.set(i);
             }
             
             const endTime = performance.now();
-            expect(endTime - startTime).toBeLessThan(1000); // 应该在1秒内完成
-            expect(bits.cardinality()).toBe(10000);
+            expect(endTime - startTime).toBeLessThan(100); // 应该在100ms内完成
+            expect(bits.cardinality()).toBe(64);
         });
 
-        it('大量位查询操作应该高效', () => {
+        it('64位范围内的位查询操作应该高效', () => {
             // 先设置一些位
-            for (let i = 0; i < 1000; i += 2) {
+            for (let i = 0; i < 64; i += 2) {
                 bits.set(i);
             }
             
             const startTime = performance.now();
             
             let trueCount = 0;
-            for (let i = 0; i < 10000; i++) {
+            for (let i = 0; i < 64; i++) {
                 if (bits.get(i)) {
                     trueCount++;
                 }
             }
             
             const endTime = performance.now();
-            expect(endTime - startTime).toBeLessThan(100); // 应该在100ms内完成
-            expect(trueCount).toBe(500); // 500个偶数位
+            expect(endTime - startTime).toBeLessThan(10); // 应该在10ms内完成
+            expect(trueCount).toBe(32); // 32个偶数位
         });
 
         it('位运算操作应该高效', () => {
             const otherBits = new Bits();
             
-            // 设置一些位
-            for (let i = 0; i < 1000; i++) {
-                bits.set(i * 2);
-                otherBits.set(i * 2 + 1);
+            // 设置一些位，限制在64位范围内
+            for (let i = 0; i < 32; i++) {
+                bits.set(i * 2);     // 偶数位
+                otherBits.set(i * 2 + 1); // 奇数位
             }
             
             const startTime = performance.now();
@@ -533,13 +510,13 @@ describe('Bits - 高性能位操作类测试', () => {
             }
             
             const endTime = performance.now();
-            expect(endTime - startTime).toBeLessThan(100); // 应该在100ms内完成
+            expect(endTime - startTime).toBeLessThan(50); // 应该在50ms内完成
         });
     });
 
     describe('边界情况和错误处理', () => {
         it('应该处理0值的各种操作', () => {
-            const zeroBits = new Bits(BigIntFactory.zero());
+            const zeroBits = new Bits(0);
             expect(zeroBits.isEmpty()).toBe(true);
             expect(zeroBits.cardinality()).toBe(0);
             expect(zeroBits.getHighestBitIndex()).toBe(-1);
@@ -547,7 +524,7 @@ describe('Bits - 高性能位操作类测试', () => {
         });
 
         it('应该处理最大BigInt值', () => {
-            const maxBits = new Bits(BigIntFactory.create(Number.MAX_SAFE_INTEGER));
+            const maxBits = new Bits(Number.MAX_SAFE_INTEGER);
             expect(maxBits.isEmpty()).toBe(false);
             expect(maxBits.cardinality()).toBeGreaterThan(0);
         });
@@ -563,7 +540,7 @@ describe('Bits - 高性能位操作类测试', () => {
         });
 
         it('连续的设置和清除操作应该正确', () => {
-            for (let i = 0; i < 100; i++) {
+            for (let i = 0; i < 64; i++) {
                 bits.set(i);
                 expect(bits.get(i)).toBe(true);
                 bits.clear(i);
