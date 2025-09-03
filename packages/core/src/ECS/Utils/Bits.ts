@@ -1,235 +1,256 @@
-import { IBigIntLike, BigIntFactory } from './BigIntCompatibility';
+import { BitMask64Data, BitMask64Utils } from './BigIntCompatibility';
 
 /**
- * 高性能位操作类
- * 
- * 基于BigInt实现，支持任意数量的位操作。
- * 自动适配运行环境，在不支持BigInt的环境中使用兼容实现。
- * 
- * @example
- * ```typescript
- * const bits = new Bits();
- * bits.set(0);
- * bits.set(5);
- * console.log(bits.get(0)); // true
- * console.log(bits.get(1)); // false
- * ```
+ * 64位位集合类，用于高效的位操作
+ * 支持最多64个位的设置、清除、查询和逻辑运算
  */
 export class Bits {
-    private _value: IBigIntLike;
+    /** 存储位数据的64位掩码 */
+    private _value: BitMask64Data;
 
     /**
-     * 构造函数
-     * @param initialValue 初始值，可以是IBigIntLike或数值
+     * 构造函数，创建位集合
+     * @param initialValue 初始值，可以是BitMask64Data对象、数字或字符串
      */
-    constructor(initialValue?: IBigIntLike | number | string) {
+    constructor(initialValue?: BitMask64Data | number | string) {
         if (initialValue && typeof initialValue === 'object') {
-            this._value = initialValue;
+            this._value = BitMask64Utils.clone(initialValue);
+        } else if (typeof initialValue === 'number') {
+            this._value = BitMask64Utils.fromNumber(initialValue);
+        } else if (typeof initialValue === 'string') {
+            const num = parseInt(initialValue, 10);
+            this._value = BitMask64Utils.fromNumber(num);
         } else {
-            this._value = BigIntFactory.create(initialValue || 0);
+            this._value = BitMask64Utils.clone(BitMask64Utils.ZERO);
         }
     }
 
     /**
-     * 设置指定位置的位为1
-     * @param index 位索引（从0开始）
-     * @throws {Error} 当索引为负数时抛出错误
+     * 设置指定位为1
+     * @param index 位索引，范围 [0, 63]
+     * @throws 当位索引为负数或超过64位限制时抛出错误
      */
     public set(index: number): void {
         if (index < 0) {
             throw new Error('Bit index cannot be negative');
         }
-        const mask = BigIntFactory.one().shiftLeft(index);
-        this._value = this._value.or(mask);
+        
+        if (index >= 64) {
+            throw new Error('Bit index exceeds 64-bit limit. ECS framework supports max 64 component types.');
+        }
+        
+        BitMask64Utils.setBit(this._value, index);
     }
 
     /**
-     * 清除指定位置的位（设为0）
-     * @param index 位索引（从0开始）
-     * @throws {Error} 当索引为负数时抛出错误
+     * 清除指定位为0
+     * @param index 位索引，范围 [0, 63]
+     * @throws 当位索引为负数时抛出错误
      */
     public clear(index: number): void {
         if (index < 0) {
             throw new Error('Bit index cannot be negative');
         }
-        const mask = BigIntFactory.one().shiftLeft(index).not();
-        this._value = this._value.and(mask);
+        
+        if (index >= 64) {
+            return;
+        }
+        
+        BitMask64Utils.clearBit(this._value, index);
     }
 
     /**
-     * 获取指定位置的位值
-     * @param index 位索引（从0开始）
-     * @returns 位值（true表示1，false表示0）
+     * 获取指定位的值
+     * @param index 位索引
+     * @returns 如果位被设置为1则返回true，否则返回false
      */
     public get(index: number): boolean {
-        if (index < 0) {
+        if (index < 0 || index >= 64) {
             return false;
         }
-        const mask = BigIntFactory.one().shiftLeft(index);
-        return !this._value.and(mask).isZero();
+        
+        const mask = BitMask64Utils.create(index);
+        return BitMask64Utils.hasAny(this._value, mask);
     }
 
     /**
-     * 检查是否包含所有指定的位
-     * @param other 另一个Bits对象
-     * @returns 是否包含所有指定的位
+     * 检查是否包含另一个位集合的所有位
+     * @param other 另一个位集合
+     * @returns 如果包含other的所有设置位则返回true
      */
     public containsAll(other: Bits): boolean {
-        const intersection = this._value.and(other._value);
-        return intersection.equals(other._value);
+        return BitMask64Utils.hasAll(this._value, other._value);
     }
 
     /**
-     * 检查是否包含任意一个指定的位
-     * @param other 另一个Bits对象
-     * @returns 是否包含任意一个指定的位
+     * 检查是否与另一个位集合有交集
+     * @param other 另一个位集合
+     * @returns 如果有共同的设置位则返回true
      */
     public intersects(other: Bits): boolean {
-        return !this._value.and(other._value).isZero();
+        return BitMask64Utils.hasAny(this._value, other._value);
     }
 
     /**
-     * 检查是否不包含任何指定的位
-     * @param other 另一个Bits对象
-     * @returns 是否不包含任何指定的位
+     * 检查是否与另一个位集合没有交集
+     * @param other 另一个位集合
+     * @returns 如果没有共同的设置位则返回true
      */
     public excludes(other: Bits): boolean {
-        return !this.intersects(other);
+        return BitMask64Utils.hasNone(this._value, other._value);
     }
 
     /**
-     * 清空所有位
+     * 清除所有位为0
      */
     public clearAll(): void {
-        this._value = BigIntFactory.zero();
+        BitMask64Utils.clear(this._value);
     }
 
     /**
-     * 检查是否为空（没有设置任何位）
-     * @returns 是否为空
+     * 检查位集合是否为空
+     * @returns 如果所有位都为0则返回true
      */
     public isEmpty(): boolean {
-        return this._value.isZero();
+        return BitMask64Utils.isZero(this._value);
     }
 
     /**
-     * 获取设置的位数量
-     * @returns 设置为1的位数量
+     * 计算设置为1的位数
+     * @returns 设置位的总数
      */
     public cardinality(): number {
-        let count = 0;
-        let value = this._value.clone();
-        
-        while (!value.isZero()) {
-            const one = BigIntFactory.one();
-            if (!value.and(one).isZero()) {
-                count++;
-            }
-            value = value.shiftRight(1);
-        }
-        
-        return count;
+        return BitMask64Utils.popCount(this._value);
     }
 
     /**
-     * 位运算：与
-     * @param other 另一个Bits对象
-     * @returns 新的Bits对象，包含与运算结果
+     * 与另一个位集合执行按位与操作
+     * @param other 另一个位集合
+     * @returns 新的位集合，包含按位与的结果
      */
     public and(other: Bits): Bits {
-        return new Bits(this._value.and(other._value));
+        const result = new Bits();
+        BitMask64Utils.copy(this._value, result._value);
+        BitMask64Utils.andInPlace(result._value, other._value);
+        return result;
     }
 
     /**
-     * 位运算：或
-     * @param other 另一个Bits对象
-     * @returns 新的Bits对象，包含或运算结果
+     * 与另一个位集合执行按位或操作
+     * @param other 另一个位集合
+     * @returns 新的位集合，包含按位或的结果
      */
     public or(other: Bits): Bits {
-        return new Bits(this._value.or(other._value));
+        const result = new Bits();
+        BitMask64Utils.copy(this._value, result._value);
+        BitMask64Utils.orInPlace(result._value, other._value);
+        return result;
     }
 
     /**
-     * 位运算：异或
-     * @param other 另一个Bits对象
-     * @returns 新的Bits对象，包含异或运算结果
+     * 与另一个位集合执行按位异或操作
+     * @param other 另一个位集合
+     * @returns 新的位集合，包含按位异或的结果
      */
     public xor(other: Bits): Bits {
-        return new Bits(this._value.xor(other._value));
+        const result = new Bits();
+        BitMask64Utils.copy(this._value, result._value);
+        BitMask64Utils.xorInPlace(result._value, other._value);
+        return result;
     }
 
     /**
-     * 位运算：非
-     * @param maxBits 最大位数限制，默认64位
-     * @returns 新的Bits对象，包含非运算结果
+     * 执行按位取反操作
+     * @param maxBits 最大位数，默认为64
+     * @returns 新的位集合，包含按位取反的结果
      */
     public not(maxBits: number = 64): Bits {
-        return new Bits(this._value.not(maxBits));
+        if (maxBits > 64) {
+            maxBits = 64;
+        }
+        
+        const result = new Bits();
+        BitMask64Utils.copy(this._value, result._value);
+        
+        if (maxBits <= 32) {
+            const mask = (1 << maxBits) - 1;
+            result._value.lo = (~result._value.lo) & mask;
+            result._value.hi = 0;
+        } else {
+            result._value.lo = ~result._value.lo;
+            if (maxBits < 64) {
+                const remainingBits = maxBits - 32;
+                const mask = (1 << remainingBits) - 1;
+                result._value.hi = (~result._value.hi) & mask;
+            } else {
+                result._value.hi = ~result._value.hi;
+            }
+        }
+        
+        return result;
     }
 
     /**
-     * 复制另一个Bits对象
-     * @param other 要复制的Bits对象
+     * 从另一个位集合复制值
+     * @param other 源位集合
      */
     public copyFrom(other: Bits): void {
-        this._value = other._value.clone();
+        BitMask64Utils.copy(other._value, this._value);
     }
 
     /**
-     * 创建当前Bits的副本
-     * @returns 新的Bits对象副本
+     * 创建当前位集合的深拷贝
+     * @returns 新的位集合，内容与当前位集合相同
      */
     public clone(): Bits {
-        return new Bits(this._value.clone());
+        return new Bits(this._value);
     }
 
     /**
-     * 获取原始值
-     * @returns 原始的IBigIntLike值
+     * 获取内部的64位掩码数据
+     * @returns 内部存储的BitMask64Data对象
      */
-    public getValue(): IBigIntLike {
+    public getValue(): BitMask64Data {
         return this._value;
     }
 
     /**
-     * 设置原始值
-     * @param value 新的值，可以是IBigIntLike或数值
+     * 设置位集合的值
+     * @param value 新值，可以是BitMask64Data对象、数字或字符串
      */
-    public setValue(value: IBigIntLike | number | string): void {
+    public setValue(value: BitMask64Data | number | string): void {
         if (typeof value === 'object') {
-            this._value = value;
+            BitMask64Utils.copy(value, this._value);
+        } else if (typeof value === 'number') {
+            this._value = BitMask64Utils.fromNumber(value);
         } else {
-            this._value = BigIntFactory.create(value);
+            const num = parseInt(value, 10);
+            this._value = BitMask64Utils.fromNumber(num);
         }
     }
 
     /**
-     * 获取调试信息
-     * @returns 返回显示设置位索引的字符串
+     * 将位集合转换为可读字符串
+     * @returns 格式为"Bits[index1, index2, ...]"的字符串
      */
     public toString(): string {
         const bits: string[] = [];
-        let index = 0;
-        let value = this._value.clone();
-        
-        while (!value.isZero()) {
-            const one = BigIntFactory.one();
-            if (!value.and(one).isZero()) {
-                bits.push(index.toString());
+        for (let i = 0; i < 64; i++) {
+            if (this.get(i)) {
+                bits.push(i.toString());
             }
-            value = value.shiftRight(1);
-            index++;
         }
-        
         return `Bits[${bits.join(', ')}]`;
     }
 
     /**
-     * 获取二进制表示
-     * @param maxBits 最大位数，默认64位
-     * @returns 二进制字符串表示
+     * 将位集合转换为二进制字符串
+     * @param maxBits 最大位数，默认为64
+     * @returns 二进制字符串表示，每8位用空格分隔
      */
     public toBinaryString(maxBits: number = 64): string {
+        if (maxBits > 64) maxBits = 64;
+        
         let result = '';
         for (let i = maxBits - 1; i >= 0; i--) {
             result += this.get(i) ? '1' : '0';
@@ -241,81 +262,111 @@ export class Bits {
     }
 
     /**
-     * 获取十六进制表示
-     * @returns 十六进制字符串表示
+     * 将位集合转换为十六进制字符串
+     * @returns 十六进制字符串表示，带0x前缀
      */
     public toHexString(): string {
-        return '0x' + this._value.toString(16).toUpperCase();
+        return BitMask64Utils.toString(this._value, 16);
     }
 
     /**
-     * 从二进制字符串创建Bits
-     * @param binaryString 二进制字符串
-     * @returns 新的Bits对象
+     * 从二进制字符串创建位集合
+     * @param binaryString 二进制字符串，可以包含空格
+     * @returns 新的位集合对象
      */
     public static fromBinaryString(binaryString: string): Bits {
         const cleanString = binaryString.replace(/\s/g, '');
-        const value = BigIntFactory.fromBinaryString(cleanString);
-        return new Bits(value);
+        let data: BitMask64Data;
+        if (cleanString.length <= 32) {
+            const num = parseInt(cleanString, 2);
+            data = { lo: num >>> 0, hi: 0 };
+        } else {
+            const loBits = cleanString.substring(cleanString.length - 32);
+            const hiBits = cleanString.substring(0, cleanString.length - 32);
+            const lo = parseInt(loBits, 2);
+            const hi = parseInt(hiBits, 2);
+            data = { lo: lo >>> 0, hi: hi >>> 0 };
+        }
+        return new Bits(data);
     }
 
     /**
-     * 从十六进制字符串创建Bits
-     * @param hexString 十六进制字符串
-     * @returns 新的Bits对象
+     * 从十六进制字符串创建位集合
+     * @param hexString 十六进制字符串，可以带或不带0x前缀
+     * @returns 新的位集合对象
      */
     public static fromHexString(hexString: string): Bits {
-        const value = BigIntFactory.fromHexString(hexString);
-        return new Bits(value);
+        const cleanString = hexString.replace(/^0x/i, '');
+        let data: BitMask64Data;
+        if (cleanString.length <= 8) {
+            const num = parseInt(cleanString, 16);
+            data = { lo: num >>> 0, hi: 0 };
+        } else {
+            const loBits = cleanString.substring(cleanString.length - 8);
+            const hiBits = cleanString.substring(0, cleanString.length - 8);
+            const lo = parseInt(loBits, 16);
+            const hi = parseInt(hiBits, 16);
+            data = { lo: lo >>> 0, hi: hi >>> 0 };
+        }
+        return new Bits(data);
     }
 
     /**
-     * 比较两个Bits对象是否相等
-     * @param other 另一个Bits对象
-     * @returns 是否相等
+     * 检查是否与另一个位集合相等
+     * @param other 另一个位集合
+     * @returns 如果两个位集合完全相同则返回true
      */
     public equals(other: Bits): boolean {
-        return this._value.equals(other._value);
+        return BitMask64Utils.equals(this._value, other._value);
     }
 
     /**
-     * 获取最高位的索引
-     * @returns 最高位的索引，如果为空则返回-1
+     * 获取最高位设置位的索引
+     * @returns 最高位设置位的索引，如果位集合为空则返回-1
      */
     public getHighestBitIndex(): number {
-        if (this._value.isZero()) {
+        if (BitMask64Utils.isZero(this._value)) {
             return -1;
         }
         
-        let index = 0;
-        let value = this._value.clone();
-        
-        while (!value.shiftRight(1).isZero()) {
-            value = value.shiftRight(1);
-            index++;
+        if (this._value.hi !== 0) {
+            for (let i = 31; i >= 0; i--) {
+                if ((this._value.hi & (1 << i)) !== 0) {
+                    return i + 32;
+                }
+            }
         }
         
-        return index;
+        for (let i = 31; i >= 0; i--) {
+            if ((this._value.lo & (1 << i)) !== 0) {
+                return i;
+            }
+        }
+        
+        return -1;
     }
 
     /**
-     * 获取最低位的索引
-     * @returns 最低位的索引，如果为空则返回-1
+     * 获取最低位设置位的索引
+     * @returns 最低位设置位的索引，如果位集合为空则返回-1
      */
     public getLowestBitIndex(): number {
-        if (this._value.isZero()) {
+        if (BitMask64Utils.isZero(this._value)) {
             return -1;
         }
         
-        let index = 0;
-        let value = this._value.clone();
-        const one = BigIntFactory.one();
-        
-        while (value.and(one).isZero()) {
-            value = value.shiftRight(1);
-            index++;
+        for (let i = 0; i < 32; i++) {
+            if ((this._value.lo & (1 << i)) !== 0) {
+                return i;
+            }
         }
         
-        return index;
+        for (let i = 0; i < 32; i++) {
+            if ((this._value.hi & (1 << i)) !== 0) {
+                return i + 32;
+            }
+        }
+        
+        return -1;
     }
 }

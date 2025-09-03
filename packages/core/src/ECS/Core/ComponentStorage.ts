@@ -1,217 +1,24 @@
 import { Component } from '../Component';
-import { IBigIntLike, BigIntFactory } from '../Utils/BigIntCompatibility';
+import { BitMask64Utils, BitMask64Data } from '../Utils/BigIntCompatibility';
 import { SoAStorage, EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, SerializeArray, DeepCopy } from './SoAStorage';
 import { createLogger } from '../../Utils/Logger';
 import { getComponentTypeName } from '../Decorators';
+import { ComponentRegistry, ComponentType } from './ComponentStorage/ComponentRegistry';
 
-// 重新导出装饰器
+// 重新导出装饰器和核心类型
 export { EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, SerializeArray, DeepCopy };
+export { ComponentRegistry, ComponentType };
 
-/**
- * 组件类型定义
- * 支持任意构造函数签名，提供更好的类型安全性
- */
-export type ComponentType<T extends Component = Component> = new (...args: any[]) => T;
 
-/**
- * 组件注册表
- * 管理组件类型的位掩码分配
- */
-export class ComponentRegistry {
-    protected static readonly _logger = createLogger('ComponentStorage');
-    private static componentTypes = new Map<Function, number>();
-    private static componentNameToType = new Map<string, Function>();
-    private static componentNameToId = new Map<string, number>();
-    private static maskCache = new Map<string, IBigIntLike>();
-    private static nextBitIndex = 0;
-    private static maxComponents = 64; // 支持最多64种组件类型
-
-    /**
-     * 注册组件类型并分配位掩码
-     * @param componentType 组件类型
-     * @returns 分配的位索引
-     */
-    public static register<T extends Component>(componentType: ComponentType<T>): number {
-        if (this.componentTypes.has(componentType)) {
-            return this.componentTypes.get(componentType)!;
-        }
-
-        if (this.nextBitIndex >= this.maxComponents) {
-            throw new Error(`Maximum number of component types (${this.maxComponents}) exceeded`);
-        }
-
-        const bitIndex = this.nextBitIndex++;
-        this.componentTypes.set(componentType, bitIndex);
-        this.componentNameToType.set(getComponentTypeName(componentType), componentType);
-        this.componentNameToId.set(getComponentTypeName(componentType), bitIndex);
-        return bitIndex;
-    }
-
-    /**
-     * 获取组件类型的位掩码
-     * @param componentType 组件类型
-     * @returns 位掩码
-     */
-    public static getBitMask<T extends Component>(componentType: ComponentType<T>): IBigIntLike {
-        const bitIndex = this.componentTypes.get(componentType);
-        if (bitIndex === undefined) {
-            throw new Error(`Component type ${getComponentTypeName(componentType)} is not registered`);
-        }
-        return BigIntFactory.one().shiftLeft(bitIndex);
-    }
-
-    /**
-     * 获取组件类型的位索引
-     * @param componentType 组件类型
-     * @returns 位索引
-     */
-    public static getBitIndex<T extends Component>(componentType: ComponentType<T>): number {
-        const bitIndex = this.componentTypes.get(componentType);
-        if (bitIndex === undefined) {
-            throw new Error(`Component type ${getComponentTypeName(componentType)} is not registered`);
-        }
-        return bitIndex;
-    }
-
-    /**
-     * 检查组件类型是否已注册
-     * @param componentType 组件类型
-     * @returns 是否已注册
-     */
-    public static isRegistered<T extends Component>(componentType: ComponentType<T>): boolean {
-        return this.componentTypes.has(componentType);
-    }
-
-    /**
-     * 通过名称获取组件类型
-     * @param componentName 组件名称
-     * @returns 组件类型构造函数
-     */
-    public static getComponentType(componentName: string): Function | null {
-        return this.componentNameToType.get(componentName) || null;
-    }
-
-    /**
-     * 获取所有已注册的组件类型
-     * @returns 组件类型映射
-     */
-    public static getAllRegisteredTypes(): Map<Function, number> {
-        return new Map(this.componentTypes);
-    }
-
-    /**
-     * 获取所有组件名称到类型的映射
-     * @returns 名称到类型的映射
-     */
-    public static getAllComponentNames(): Map<string, Function> {
-        return new Map(this.componentNameToType);
-    }
-
-    /**
-     * 通过名称获取组件类型ID
-     * @param componentName 组件名称
-     * @returns 组件类型ID
-     */
-    public static getComponentId(componentName: string): number | undefined {
-        return this.componentNameToId.get(componentName);
-    }
-
-    /**
-     * 注册组件类型（通过名称）
-     * @param componentName 组件名称
-     * @returns 分配的组件ID
-     */
-    public static registerComponentByName(componentName: string): number {
-        if (this.componentNameToId.has(componentName)) {
-            return this.componentNameToId.get(componentName)!;
-        }
-
-        if (this.nextBitIndex >= this.maxComponents) {
-            throw new Error(`Maximum number of component types (${this.maxComponents}) exceeded`);
-        }
-
-        const bitIndex = this.nextBitIndex++;
-        this.componentNameToId.set(componentName, bitIndex);
-        return bitIndex;
-    }
-
-    /**
-     * 创建单个组件的掩码
-     * @param componentName 组件名称
-     * @returns 组件掩码
-     */
-    public static createSingleComponentMask(componentName: string): IBigIntLike {
-        const cacheKey = `single:${componentName}`;
-        
-        if (this.maskCache.has(cacheKey)) {
-            return this.maskCache.get(cacheKey)!;
-        }
-
-        const componentId = this.getComponentId(componentName);
-        if (componentId === undefined) {
-            throw new Error(`Component type ${componentName} is not registered`);
-        }
-
-        const mask = BigIntFactory.one().shiftLeft(componentId);
-        this.maskCache.set(cacheKey, mask);
-        return mask;
-    }
-
-    /**
-     * 创建多个组件的掩码
-     * @param componentNames 组件名称数组
-     * @returns 组合掩码
-     */
-    public static createComponentMask(componentNames: string[]): IBigIntLike {
-        const sortedNames = [...componentNames].sort();
-        const cacheKey = `multi:${sortedNames.join(',')}`;
-        
-        if (this.maskCache.has(cacheKey)) {
-            return this.maskCache.get(cacheKey)!;
-        }
-
-        let mask = BigIntFactory.zero();
-        for (const name of componentNames) {
-            const componentId = this.getComponentId(name);
-            if (componentId !== undefined) {
-                mask = mask.or(BigIntFactory.one().shiftLeft(componentId));
-            }
-        }
-
-        this.maskCache.set(cacheKey, mask);
-        return mask;
-    }
-
-    /**
-     * 清除掩码缓存
-     */
-    public static clearMaskCache(): void {
-        this.maskCache.clear();
-    }
-
-    /**
-     * 重置注册表（用于测试）
-     */
-    public static reset(): void {
-        this.componentTypes.clear();
-        this.componentNameToType.clear();
-        this.componentNameToId.clear();
-        this.maskCache.clear();
-        this.nextBitIndex = 0;
-    }
-}
 
 /**
  * 高性能组件存储器
- * 使用SoA（Structure of Arrays）模式存储组件
  */
 export class ComponentStorage<T extends Component> {
-    private components: (T | null)[] = [];
+    private dense: T[] = [];
+    private entityIds: number[] = [];
     private entityToIndex = new Map<number, number>();
-    private indexToEntity: number[] = [];
-    private freeIndices: number[] = [];
     private componentType: ComponentType<T>;
-    private _size = 0;
 
     constructor(componentType: ComponentType<T>) {
         this.componentType = componentType;
@@ -233,22 +40,11 @@ export class ComponentStorage<T extends Component> {
             throw new Error(`Entity ${entityId} already has component ${getComponentTypeName(this.componentType)}`);
         }
 
-        let index: number;
-        
-        if (this.freeIndices.length > 0) {
-            // 重用空闲索引
-            index = this.freeIndices.pop()!;
-            this.components[index] = component;
-            this.indexToEntity[index] = entityId;
-        } else {
-            // 添加到末尾
-            index = this.components.length;
-            this.components.push(component);
-            this.indexToEntity.push(entityId);
-        }
-        
+        // 末尾插入到致密数组
+        const index = this.dense.length;
+        this.dense.push(component);
+        this.entityIds.push(entityId);
         this.entityToIndex.set(entityId, index);
-        this._size++;
     }
 
     /**
@@ -258,7 +54,7 @@ export class ComponentStorage<T extends Component> {
      */
     public getComponent(entityId: number): T | null {
         const index = this.entityToIndex.get(entityId);
-        return index !== undefined ? this.components[index] : null;
+        return index !== undefined ? this.dense[index] : null;
     }
 
     /**
@@ -281,11 +77,25 @@ export class ComponentStorage<T extends Component> {
             return null;
         }
 
-        const component = this.components[index];
+        const component = this.dense[index];
+        const lastIndex = this.dense.length - 1;
+
+        if (index !== lastIndex) {
+            // 将末尾元素交换到要删除的位置
+            const lastComponent = this.dense[lastIndex];
+            const lastEntityId = this.entityIds[lastIndex];
+            
+            this.dense[index] = lastComponent;
+            this.entityIds[index] = lastEntityId;
+            
+            // 更新被交换元素的映射
+            this.entityToIndex.set(lastEntityId, index);
+        }
+
+        // 移除末尾元素
+        this.dense.pop();
+        this.entityIds.pop();
         this.entityToIndex.delete(entityId);
-        this.components[index] = null;
-        this.freeIndices.push(index);
-        this._size--;
 
         return component;
     }
@@ -295,49 +105,36 @@ export class ComponentStorage<T extends Component> {
      * @param callback 回调函数
      */
     public forEach(callback: (component: T, entityId: number, index: number) => void): void {
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            if (component) {
-                callback(component, this.indexToEntity[i], i);
-            }
+        for (let i = 0; i < this.dense.length; i++) {
+            callback(this.dense[i], this.entityIds[i], i);
         }
     }
 
     /**
-     * 获取所有组件（密集数组）
+     * 获取所有组件
      * @returns 组件数组
      */
     public getDenseArray(): { components: T[]; entityIds: number[] } {
-        const components: T[] = [];
-        const entityIds: number[] = [];
-
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            if (component) {
-                components.push(component);
-                entityIds.push(this.indexToEntity[i]);
-            }
-        }
-
-        return { components, entityIds };
+        return {
+            components: [...this.dense],
+            entityIds: [...this.entityIds]
+        };
     }
 
     /**
      * 清空所有组件
      */
     public clear(): void {
-        this.components.length = 0;
+        this.dense.length = 0;
+        this.entityIds.length = 0;
         this.entityToIndex.clear();
-        this.indexToEntity.length = 0;
-        this.freeIndices.length = 0;
-        this._size = 0;
     }
 
     /**
      * 获取组件数量
      */
     public get size(): number {
-        return this._size;
+        return this.dense.length;
     }
 
     /**
@@ -347,34 +144,6 @@ export class ComponentStorage<T extends Component> {
         return this.componentType;
     }
 
-    /**
-     * 压缩存储（移除空洞）
-     */
-    public compact(): void {
-        if (this.freeIndices.length === 0) {
-            return; // 没有空洞，无需压缩
-        }
-
-        const newComponents: T[] = [];
-        const newIndexToEntity: number[] = [];
-        const newEntityToIndex = new Map<number, number>();
-
-        let newIndex = 0;
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            if (component) {
-                newComponents[newIndex] = component;
-                newIndexToEntity[newIndex] = this.indexToEntity[i];
-                newEntityToIndex.set(this.indexToEntity[i], newIndex);
-                newIndex++;
-            }
-        }
-
-        this.components = newComponents;
-        this.indexToEntity = newIndexToEntity;
-        this.entityToIndex = newEntityToIndex;
-        this.freeIndices.length = 0;
-    }
 
     /**
      * 获取存储统计信息
@@ -385,10 +154,10 @@ export class ComponentStorage<T extends Component> {
         freeSlots: number;
         fragmentation: number;
     } {
-        const totalSlots = this.components.length;
-        const usedSlots = this._size;
-        const freeSlots = this.freeIndices.length;
-        const fragmentation = totalSlots > 0 ? freeSlots / totalSlots : 0;
+        const totalSlots = this.dense.length;
+        const usedSlots = this.dense.length;
+        const freeSlots = 0; // 永远无空洞
+        const fragmentation = 0; // 永远无碎片
 
         return {
             totalSlots,
@@ -573,27 +342,19 @@ export class ComponentStorageManager {
      * @param entityId 实体ID
      * @returns 组件位掩码
      */
-    public getComponentMask(entityId: number): IBigIntLike {
-        let mask = BigIntFactory.zero();
+    public getComponentMask(entityId: number): BitMask64Data {
+        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         
         for (const [componentType, storage] of this.storages.entries()) {
             if (storage.hasComponent(entityId)) {
                 const componentMask = ComponentRegistry.getBitMask(componentType as ComponentType);
-                mask = mask.or(componentMask);
+                BitMask64Utils.orInPlace(mask, componentMask);
             }
         }
         
         return mask;
     }
 
-    /**
-     * 压缩所有存储器
-     */
-    public compactAll(): void {
-        for (const storage of this.storages.values()) {
-            storage.compact();
-        }
-    }
 
     /**
      * 获取所有存储器的统计信息

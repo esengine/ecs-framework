@@ -1,21 +1,10 @@
 import { Component } from './Component';
 import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
 import { EventBus } from './Core/EventBus';
-import { IBigIntLike, BigIntFactory } from './Utils/BigIntCompatibility';
+import { BitMask64Utils, BitMask64Data } from './Utils/BigIntCompatibility';
 import { createLogger } from '../Utils/Logger';
 import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
-
-// Forward declaration to avoid circular dependency
-interface IScene {
-    readonly name: string;
-    readonly componentStorageManager: import('./Core/ComponentStorage').ComponentStorageManager;
-    readonly querySystem: import('./Core/QuerySystem').QuerySystem;
-    readonly eventSystem: import('./Core/EventSystem').TypeSafeEventSystem;
-    readonly entities: import('./Utils/EntityList').EntityList;
-    addEntity(entity: Entity): Entity;
-    initialize(): void;
-    update(deltaTime: number): void;
-}
+import type { IScene } from './IScene';
 
 /**
  * 实体比较器
@@ -85,101 +74,78 @@ export class Entity {
     
     /**
      * 实体名称
-     * 
-     * 用于标识和调试的友好名称。
      */
     public name: string;
     
     /**
      * 实体唯一标识符
-     * 
-     * 在场景中唯一的数字标识符。
      */
     public readonly id: number;
     
     /**
      * 组件集合
-     * 
-     * 存储实体拥有的所有组件。
      */
     public readonly components: Component[] = [];
     
     /**
      * 所属场景引用
-     * 
-     * 指向实体所在的场景实例。
      */
     public scene: IScene | null = null;
     
     /**
      * 更新间隔
-     * 
-     * 控制实体更新的频率，值越大更新越不频繁。
      */
     public updateInterval: number = 1;
     
     /**
      * 销毁状态标志
-     * 
-     * 标记实体是否已被销毁。
      */
     public _isDestroyed: boolean = false;
 
     /**
      * 父实体引用
-     * 
-     * 指向父级实体，用于构建实体层次结构。
      */
     private _parent: Entity | null = null;
 
     /**
      * 子实体集合
-     * 
-     * 存储所有子级实体的数组。
      */
     private _children: Entity[] = [];
 
     /**
      * 激活状态
-     * 
-     * 控制实体是否处于激活状态。
      */
     private _active: boolean = true;
     
     /**
      * 实体标签
-     * 
-     * 用于分类和查询的数字标签。
      */
     private _tag: number = 0;
     
     /**
      * 启用状态
-     * 
-     * 控制实体是否启用更新和处理。
      */
     private _enabled: boolean = true;
     
     /**
      * 更新顺序
-     * 
-     * 控制实体在系统中的更新优先级。
      */
     private _updateOrder: number = 0;
 
     /**
      * 组件位掩码
-     * 
-     * 用于快速查询实体拥有的组件类型。
      */
-    private _componentMask: IBigIntLike = BigIntFactory.zero();
+    private _componentMask: BitMask64Data = BitMask64Utils.clone(BitMask64Utils.ZERO);
 
     /**
-     * 组件类型到索引的映射
-     * 
-     * 用于快速定位组件在数组中的位置。
+     * 按组件类型ID直址的稀疏数组
      */
-    private _componentTypeToIndex = new Map<ComponentType, number>();
+    private _componentsByTypeId: (Component | undefined)[] = [];
+
+    /**
+     * typeId到components数组中密集索引的映射表
+     */
+    private _componentDenseIndexByTypeId: number[] = [];
 
     /**
      * 构造函数
@@ -194,7 +160,6 @@ export class Entity {
 
     /**
      * 获取销毁状态
-     * 
      * @returns 如果实体已被销毁则返回true
      */
     public get isDestroyed(): boolean {
@@ -203,7 +168,6 @@ export class Entity {
 
     /**
      * 获取父实体
-     * 
      * @returns 父实体，如果没有父实体则返回null
      */
     public get parent(): Entity | null {
@@ -323,7 +287,7 @@ export class Entity {
      * 
      * @returns 实体的组件位掩码
      */
-    public get componentMask(): IBigIntLike {
+    public get componentMask(): BitMask64Data {
         return this._componentMask;
     }
 
@@ -351,22 +315,22 @@ export class Entity {
     private addComponentInternal<T extends Component>(component: T): T {
         const componentType = component.constructor as ComponentType<T>;
 
-        // 注册组件类型（如果尚未注册）
         if (!ComponentRegistry.isRegistered(componentType)) {
             ComponentRegistry.register(componentType);
         }
 
-        // 设置组件的实体引用
+        const typeId = ComponentRegistry.getBitIndex(componentType);
+
         component.entity = this;
 
-        // 添加到组件列表并建立索引映射
-        const index = this.components.length;
+        this._componentsByTypeId[typeId] = component;
+        
+        const denseIndex = this.components.length;
+        this._componentDenseIndexByTypeId[typeId] = denseIndex;
         this.components.push(component);
-        this._componentTypeToIndex.set(componentType, index);
 
-        // 更新位掩码
         const componentMask = ComponentRegistry.getBitMask(componentType);
-        this._componentMask = this._componentMask.or(componentMask);
+        BitMask64Utils.orInPlace(this._componentMask, componentMask);
 
         return component;
     }
@@ -381,23 +345,18 @@ export class Entity {
     public addComponent<T extends Component>(component: T): T {
         const componentType = component.constructor as ComponentType<T>;
         
-        // 检查是否已有此类型的组件
         if (this.hasComponent(componentType)) {
             throw new Error(`Entity ${this.name} already has component ${getComponentTypeName(componentType)}`);
         }
 
-        // 使用内部方法添加组件
         this.addComponentInternal(component);
         
-        // 如果场景存在且有组件存储管理器，添加到存储器
         if (this.scene && this.scene.componentStorageManager) {
             this.scene.componentStorageManager.addComponent(this.id, component);
         }
 
-        // 调用组件的生命周期方法
         component.onAddedToEntity();
         
-        // 发射组件添加事件
         if (Entity.eventBus) {
             Entity.eventBus.emitComponentAdded({
                 timestamp: Date.now(),
@@ -411,9 +370,7 @@ export class Entity {
         }
         
         
-        // 通知QuerySystem实体组件已改变，需要重新索引
         if (this.scene && this.scene.querySystem) {
-            // 移除旧的索引，重新添加以更新索引
             this.scene.querySystem.removeEntity(this);
             this.scene.querySystem.addEntity(this);
         }
@@ -428,41 +385,40 @@ export class Entity {
      * @returns 组件实例或null
      */
     public getComponent<T extends Component>(type: ComponentType<T>): T | null {
-        // 首先检查位掩码，快速排除（O(1)）
         if (!ComponentRegistry.isRegistered(type)) {
             return null;
         }
 
         const mask = ComponentRegistry.getBitMask(type);
-        if (this._componentMask.and(mask).isZero()) {
+        if (BitMask64Utils.hasNone(this._componentMask, mask)) {
             return null;
         }
 
-        // 尝试从索引映射获取（O(1)）
-        const index = this._componentTypeToIndex.get(type);
-        if (index !== undefined && index < this.components.length) {
-            const component = this.components[index];
-            if (component && component.constructor === type) {
-                return component as T;
-            }
+        const typeId = ComponentRegistry.getBitIndex(type);
+        const component = this._componentsByTypeId[typeId];
+        
+        if (component && component.constructor === type) {
+            return component as T;
         }
 
-        // 如果场景有组件存储管理器，从存储器获取
         if (this.scene && this.scene.componentStorageManager) {
-            const component = this.scene.componentStorageManager.getComponent(this.id, type);
-            if (component) {
-                // 重建索引映射
-                this.rebuildComponentIndex();
-                return component;
+            const storageComponent = this.scene.componentStorageManager.getComponent(this.id, type);
+            if (storageComponent) {
+                this._componentsByTypeId[typeId] = storageComponent;
+                if (!this.components.includes(storageComponent)) {
+                    const denseIndex = this.components.length;
+                    this._componentDenseIndexByTypeId[typeId] = denseIndex;
+                    this.components.push(storageComponent);
+                }
+                return storageComponent;
             }
         }
 
-        // 最后回退到线性搜索并重建索引（O(n)，但n很小且很少发生）
         for (let i = 0; i < this.components.length; i++) {
             const component = this.components[i];
             if (component instanceof type) {
-                // 重建索引映射
-                this._componentTypeToIndex.set(type, i);
+                this._componentsByTypeId[typeId] = component;
+                this._componentDenseIndexByTypeId[typeId] = i;
                 return component as T;
             }
         }
@@ -472,18 +428,6 @@ export class Entity {
 
 
 
-    /**
-     * 重建组件索引映射
-     */
-    private rebuildComponentIndex(): void {
-        this._componentTypeToIndex.clear();
-        
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            const componentType = component.constructor as ComponentType;
-            this._componentTypeToIndex.set(componentType, i);
-        }
-    }
 
     /**
      * 检查实体是否有指定类型的组件
@@ -497,7 +441,7 @@ export class Entity {
         }
         
         const mask = ComponentRegistry.getBitMask(type);
-        return !this._componentMask.and(mask).isZero();
+        return BitMask64Utils.hasAny(this._componentMask, mask);
     }
 
     /**
@@ -526,32 +470,42 @@ export class Entity {
     public removeComponent(component: Component): void {
         const componentType = component.constructor as ComponentType;
         
-        // 从组件列表中移除
-        const index = this.components.indexOf(component);
-        if (index !== -1) {
-            this.components.splice(index, 1);
+        if (!ComponentRegistry.isRegistered(componentType)) {
+            return;
+        }
+
+        const typeId = ComponentRegistry.getBitIndex(componentType);
+        
+        this._componentsByTypeId[typeId] = undefined;
+        
+        BitMask64Utils.clearBit(this._componentMask, typeId);
+        
+        const denseIndex = this._componentDenseIndexByTypeId[typeId];
+        if (denseIndex !== undefined && denseIndex < this.components.length) {
+            const lastIndex = this.components.length - 1;
             
-            // 重建索引映射（因为数组索引发生了变化）
-            this.rebuildComponentIndex();
+            if (denseIndex !== lastIndex) {
+                const lastComponent = this.components[lastIndex];
+                this.components[denseIndex] = lastComponent;
+                
+                const lastComponentType = lastComponent.constructor as ComponentType;
+                const lastTypeId = ComponentRegistry.getBitIndex(lastComponentType);
+                this._componentDenseIndexByTypeId[lastTypeId] = denseIndex;
+            }
+            
+            this.components.pop();
         }
+        
+        this._componentDenseIndexByTypeId[typeId] = -1;
 
-        // 更新位掩码
-        if (ComponentRegistry.isRegistered(componentType)) {
-            const componentMask = ComponentRegistry.getBitMask(componentType);
-            this._componentMask = this._componentMask.and(componentMask.not());
-        }
-
-        // 从组件存储管理器中移除
         if (this.scene && this.scene.componentStorageManager) {
             this.scene.componentStorageManager.removeComponent(this.id, componentType);
         }
 
-        // 调用组件的生命周期方法
         if (component.onRemovedFromEntity) {
             component.onRemovedFromEntity();
         }
         
-        // 发射组件移除事件
         if (Entity.eventBus) {
             Entity.eventBus.emitComponentRemoved({
                 timestamp: Date.now(),
@@ -564,13 +518,9 @@ export class Entity {
             });
         }
         
-        // 清除组件的实体引用
         component.entity = null as any;
 
-        
-        // 通知QuerySystem实体组件已改变，需要重新索引
         if (this.scene && this.scene.querySystem) {
-            // 移除旧的索引，重新添加以更新索引
             this.scene.querySystem.removeEntity(this);
             this.scene.querySystem.addEntity(this);
         }
@@ -595,32 +545,25 @@ export class Entity {
      * 移除所有组件
      */
     public removeAllComponents(): void {
-        // 复制组件列表，避免在迭代时修改
         const componentsToRemove = [...this.components];
         
-        // 清空索引和位掩码
-        this._componentTypeToIndex.clear();
-        this._componentMask = BigIntFactory.zero();
+        this._componentsByTypeId.length = 0;
+        this._componentDenseIndexByTypeId.length = 0;
+        BitMask64Utils.clear(this._componentMask);
         
-        // 移除组件
         for (const component of componentsToRemove) {
             const componentType = component.constructor as ComponentType;
             
-            // 从组件存储管理器中移除
             if (this.scene && this.scene.componentStorageManager) {
                 this.scene.componentStorageManager.removeComponent(this.id, componentType);
             }
 
-            // 调用组件的生命周期方法
             component.onRemovedFromEntity();
             
-            // 清除组件的实体引用
             component.entity = null as any;
         }
         
-        // 清空组件列表
         this.components.length = 0;
-
     }
 
     /**
@@ -636,7 +579,6 @@ export class Entity {
             try {
                 addedComponents.push(this.addComponent(component));
             } catch (error) {
-                // 如果某个组件添加失败，继续添加其他组件
                 Entity._logger.warn(`添加组件失败 ${getComponentInstanceTypeName(component)}:`, error);
             }
         }
@@ -695,16 +637,13 @@ export class Entity {
             return child; // 已经是子实体
         }
 
-        // 如果子实体已有父实体，先从原父实体移除
         if (child._parent) {
             child._parent.removeChild(child);
         }
 
-        // 设置父子关系
         child._parent = this;
         this._children.push(child);
 
-        // 如果子实体还没有场景，设置为父实体的场景
         if (!child.scene && this.scene) {
             child.scene = this.scene;
             this.scene.addEntity(child);
@@ -725,7 +664,6 @@ export class Entity {
             return false;
         }
 
-        // 移除父子关系
         this._children.splice(index, 1);
         child._parent = null;
 
@@ -736,7 +674,6 @@ export class Entity {
      * 移除所有子实体
      */
     public removeAllChildren(): void {
-        // 复制子实体列表，避免在迭代时修改
         const childrenToRemove = [...this._children];
         
         for (const child of childrenToRemove) {
@@ -752,14 +689,12 @@ export class Entity {
      * @returns 找到的子实体或null
      */
     public findChild(name: string, recursive: boolean = false): Entity | null {
-        // 在直接子实体中查找
         for (const child of this._children) {
             if (child.name === name) {
                 return child;
             }
         }
 
-        // 递归查找
         if (recursive) {
             for (const child of this._children) {
                 const found = child.findChild(name, true);
@@ -782,14 +717,12 @@ export class Entity {
     public findChildrenByTag(tag: number, recursive: boolean = false): Entity[] {
         const result: Entity[] = [];
 
-        // 在直接子实体中查找
         for (const child of this._children) {
             if (child.tag === tag) {
                 result.push(child);
             }
         }
 
-        // 递归查找
         if (recursive) {
             for (const child of this._children) {
                 result.push(...child.findChildrenByTag(tag, true));
@@ -873,14 +806,12 @@ export class Entity {
      * 活跃状态改变时的回调
      */
     private onActiveChanged(): void {
-        // 通知所有组件活跃状态改变
         for (const component of this.components) {
             if ('onActiveChanged' in component && typeof component.onActiveChanged === 'function') {
                 (component as any).onActiveChanged();
             }
         }
 
-        // 通知场景实体状态改变
         if (this.scene && this.scene.eventSystem) {
             this.scene.eventSystem.emitSync('entity:activeChanged', { 
                 entity: this, 
@@ -900,14 +831,12 @@ export class Entity {
             return;
         }
 
-        // 更新所有组件
         for (const component of this.components) {
             if (component.enabled) {
                 component.update();
             }
         }
 
-        // 更新所有子实体
         for (const child of this._children) {
             child.update();
         }
@@ -925,28 +854,22 @@ export class Entity {
 
         this._isDestroyed = true;
         
-        // 销毁所有子实体
         const childrenToDestroy = [...this._children];
         for (const child of childrenToDestroy) {
             child.destroy();
         }
         
-        // 从父实体中移除
         if (this._parent) {
             this._parent.removeChild(this);
         }
         
-        // 移除所有组件
         this.removeAllComponents();
         
-        // 从场景中移除
         if (this.scene) {
-            // 从查询系统中移除
             if (this.scene.querySystem) {
                 this.scene.querySystem.removeEntity(this);
             }
             
-            // 从实体列表中移除
             if (this.scene.entities) {
                 this.scene.entities.remove(this);
             }
@@ -992,6 +915,7 @@ export class Entity {
         childIds: number[];
         depth: number;
         indexMappingSize: number;
+        denseIndexMappingSize: number;
     } {
         return {
             name: this.name,
@@ -1002,12 +926,13 @@ export class Entity {
             destroyed: this._isDestroyed,
             componentCount: this.components.length,
             componentTypes: this.components.map(c => getComponentInstanceTypeName(c)),
-            componentMask: this._componentMask.toString(2), // 二进制表示
+            componentMask: BitMask64Utils.toString(this._componentMask, 2), // 二进制表示
             parentId: this._parent?.id || null,
             childCount: this._children.length,
             childIds: this._children.map(c => c.id),
             depth: this.getDepth(),
-            indexMappingSize: this._componentTypeToIndex.size
+            indexMappingSize: this._componentsByTypeId.filter(c => c !== undefined).length,
+            denseIndexMappingSize: this._componentDenseIndexByTypeId.filter(idx => idx !== -1 && idx !== undefined).length
         };
     }
 }

@@ -1,6 +1,6 @@
 import { Entity } from '../Entity';
 import { ComponentType, ComponentRegistry } from '../Core/ComponentStorage';
-import { IBigIntLike, BigIntFactory } from './BigIntCompatibility';
+import { BitMask64Utils, BitMask64Data } from './BigIntCompatibility';
 import { SparseSet } from './SparseSet';
 import { Pool } from '../../Utils/Pool/Pool';
 import { IPoolable } from '../../Utils/Pool/IPoolable';
@@ -44,7 +44,7 @@ export class ComponentSparseSet {
      * 与实体稀疏集合的密集数组对应，存储每个实体的组件位掩码。
      * 数组索引与稀疏集合的密集数组索引一一对应。
      */
-    private _componentMasks: IBigIntLike[] = [];
+    private _componentMasks: BitMask64Data[] = [];
     
     /**
      * 组件类型到实体集合的映射
@@ -77,7 +77,7 @@ export class ComponentSparseSet {
             this.removeEntity(entity);
         }
         
-        let componentMask = BigIntFactory.zero();
+        let componentMask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         const entityComponents = new Set<ComponentType>();
         
         // 分析实体组件并构建位掩码
@@ -92,7 +92,7 @@ export class ComponentSparseSet {
             
             // 获取组件位掩码并合并
             const bitMask = ComponentRegistry.getBitMask(componentType);
-            componentMask = componentMask.or(bitMask);
+            BitMask64Utils.orInPlace(componentMask, bitMask);
         }
         
         // 添加实体到稀疏集合
@@ -101,7 +101,7 @@ export class ComponentSparseSet {
         
         // 确保位掩码数组有足够空间
         while (this._componentMasks.length <= entityIndex) {
-            this._componentMasks.push(BigIntFactory.zero());
+            this._componentMasks.push(BitMask64Utils.clone(BitMask64Utils.ZERO));
         }
         this._componentMasks[entityIndex] = componentMask;
         
@@ -169,13 +169,13 @@ export class ComponentSparseSet {
         }
         
         // 构建目标位掩码
-        let targetMask = BigIntFactory.zero();
+        let targetMask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const componentType of componentTypes) {
             if (!ComponentRegistry.isRegistered(componentType)) {
                 return new Set<Entity>(); // 未注册的组件类型，结果为空
             }
             const bitMask = ComponentRegistry.getBitMask(componentType);
-            targetMask = targetMask.or(bitMask);
+            BitMask64Utils.orInPlace(targetMask, bitMask);
         }
         
         const result = ComponentSparseSet._entitySetPool.obtain();
@@ -183,7 +183,7 @@ export class ComponentSparseSet {
         // 遍历所有实体，检查位掩码匹配
         this._entities.forEach((entity, index) => {
             const entityMask = this._componentMasks[index];
-            if ((entityMask.and(targetMask)).equals(targetMask)) {
+            if (BitMask64Utils.hasAll(entityMask, targetMask)) {
                 result.add(entity);
             }
         });
@@ -209,15 +209,15 @@ export class ComponentSparseSet {
         }
         
         // 构建目标位掩码
-        let targetMask = BigIntFactory.zero();
+        let targetMask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const componentType of componentTypes) {
             if (ComponentRegistry.isRegistered(componentType)) {
                 const bitMask = ComponentRegistry.getBitMask(componentType);
-                targetMask = targetMask.or(bitMask);
+                BitMask64Utils.orInPlace(targetMask, bitMask);
             }
         }
         
-        if (targetMask.equals(BigIntFactory.zero())) {
+        if (BitMask64Utils.equals(targetMask, BitMask64Utils.ZERO)) {
             return new Set<Entity>(); // 没有有效的组件类型
         }
         
@@ -226,7 +226,7 @@ export class ComponentSparseSet {
         // 遍历所有实体，检查位掩码匹配
         this._entities.forEach((entity, index) => {
             const entityMask = this._componentMasks[index];
-            if (!(entityMask.and(targetMask)).equals(BigIntFactory.zero())) {
+            if (BitMask64Utils.hasAny(entityMask, targetMask)) {
                 result.add(entity);
             }
         });
@@ -254,7 +254,7 @@ export class ComponentSparseSet {
         const entityMask = this._componentMasks[entityIndex];
         const componentMask = ComponentRegistry.getBitMask(componentType);
         
-        return !(entityMask.and(componentMask)).equals(BigIntFactory.zero());
+        return BitMask64Utils.hasAny(entityMask, componentMask);
     }
     
     /**
@@ -263,7 +263,7 @@ export class ComponentSparseSet {
      * @param entity 实体
      * @returns 组件位掩码，如果实体不存在则返回undefined
      */
-    public getEntityMask(entity: Entity): IBigIntLike | undefined {
+    public getEntityMask(entity: Entity): BitMask64Data | undefined {
         const entityIndex = this._entities.getIndex(entity);
         if (entityIndex === undefined) {
             return undefined;
@@ -299,7 +299,7 @@ export class ComponentSparseSet {
      * 
      * @param callback 遍历回调函数
      */
-    public forEach(callback: (entity: Entity, mask: IBigIntLike, index: number) => void): void {
+    public forEach(callback: (entity: Entity, mask: BitMask64Data, index: number) => void): void {
         this._entities.forEach((entity, index) => {
             callback(entity, this._componentMasks[index], index);
         });
