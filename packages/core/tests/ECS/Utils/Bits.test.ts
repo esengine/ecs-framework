@@ -430,13 +430,31 @@ describe('Bits - 高性能位操作类测试', () => {
     });
 
     describe('大数值处理', () => {
+        const supportsBigInt = (() => {
+            try {
+                return typeof BigInt !== 'undefined' && BigInt(0) === 0n;
+            } catch {
+                return false;
+            }
+        })();
+
         it('应该能够处理超过64位的数值', () => {
+            if (!supportsBigInt) {
+                pending('BigInt not supported in this environment');
+                return;
+            }
+            
             bits.set(100);
             expect(bits.get(100)).toBe(true);
             expect(bits.cardinality()).toBe(1);
         });
 
         it('应该能够处理非常大的位索引', () => {
+            if (!supportsBigInt) {
+                pending('BigInt not supported in this environment');
+                return;
+            }
+            
             bits.set(1000);
             bits.set(2000);
             expect(bits.get(1000)).toBe(true);
@@ -445,6 +463,11 @@ describe('Bits - 高性能位操作类测试', () => {
         });
 
         it('大数值的位运算应该正确', () => {
+            if (!supportsBigInt) {
+                pending('BigInt not supported in this environment');
+                return;
+            }
+            
             const largeBits1 = new Bits();
             const largeBits2 = new Bits();
             

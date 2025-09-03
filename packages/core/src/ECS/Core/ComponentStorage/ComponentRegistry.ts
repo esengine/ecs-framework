@@ -6,7 +6,7 @@ import { getComponentTypeName } from '../../Decorators';
 /**
  * 组件类型定义
  */
-export type ComponentType<T extends Component = Component> = new (...args: unknown[]) => T;
+export type ComponentType<T extends Component = Component> = new (...args: any[]) => T;
 
 /**
  * 组件注册表
