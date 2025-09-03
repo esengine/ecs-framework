@@ -5,6 +5,6 @@ export { IdentifierPool } from './IdentifierPool';
 export { Matcher } from './Matcher';
 export { Bits } from './Bits';
 export { ComponentTypeManager } from './ComponentTypeManager';
-export { BigIntFactory } from './BigIntCompatibility';
+export { BitMask64Utils, BitMask64Data } from './BigIntCompatibility';
 export { SparseSet } from './SparseSet';
 export { ComponentSparseSet } from './ComponentSparseSet';

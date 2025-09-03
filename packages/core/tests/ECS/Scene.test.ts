@@ -468,18 +468,6 @@ describe('Scene - 场景管理系统测试', () => {
             expect(parseFloat(stats.cacheStats.hitRate)).toBeGreaterThanOrEqual(0);
         });
 
-        test('应该能够压缩组件存储', () => {
-            // 创建一些实体和组件
-            const entities = scene.createEntities(10, "Entity");
-            entities.forEach(entity => {
-                entity.addComponent(new PositionComponent(Math.random() * 100, Math.random() * 100));
-            });
-            
-            // 压缩组件存储应该不抛出异常
-            expect(() => {
-                scene.compactComponentStorage();
-            }).not.toThrow();
-        });
     });
 
     describe('内存管理和性能', () => {

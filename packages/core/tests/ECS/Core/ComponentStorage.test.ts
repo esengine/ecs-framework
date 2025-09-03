@@ -5,7 +5,7 @@ import {
     ComponentType 
 } from '../../../src/ECS/Core/ComponentStorage';
 import { Component } from '../../../src/ECS/Component';
-import { BigIntFactory } from '../../../src/ECS/Utils/BigIntCompatibility';
+import { BitMask64Utils } from '../../../src/ECS/Utils/BigIntCompatibility';
 
 // 测试组件类（默认使用原始存储）
 class TestComponent extends Component {
@@ -116,8 +116,8 @@ describe('ComponentRegistry - 组件注册表测试', () => {
             const mask1 = ComponentRegistry.getBitMask(TestComponent);
             const mask2 = ComponentRegistry.getBitMask(PositionComponent);
             
-            expect(mask1.toString()).toBe('1'); // 2^0
-            expect(mask2.toString()).toBe('2'); // 2^1
+            expect(mask1.lo).toBe(1); // 2^0
+            expect(mask2.lo).toBe(2); // 2^1
         });
 
         test('应该能够获取组件的位索引', () => {
@@ -301,7 +301,7 @@ describe('ComponentStorage - 组件存储器测试', () => {
     });
 
     describe('内存管理和优化', () => {
-        test('应该能够重用空闲索引', () => {
+        test('应该维持紧凑存储', () => {
             const component1 = new TestComponent(100);
             const component2 = new TestComponent(200);
             const component3 = new TestComponent(300);
@@ -311,68 +311,37 @@ describe('ComponentStorage - 组件存储器测试', () => {
             storage.addComponent(2, component2);
             storage.addComponent(3, component3);
             
-            // 移除中间的组件
+            // 移除中间的组件，稀疏集合会自动保持紧凑
             storage.removeComponent(2);
             
-            // 添加新组件应该重用空闲索引
+            // 添加新组件
             const component4 = new TestComponent(400);
             storage.addComponent(4, component4);
             
             expect(storage.size).toBe(3);
             expect(storage.getComponent(4)).toBe(component4);
-        });
-
-        test('应该能够压缩存储', () => {
-            // 添加多个组件
-            storage.addComponent(1, new TestComponent(100));
-            storage.addComponent(2, new TestComponent(200));
-            storage.addComponent(3, new TestComponent(300));
-            storage.addComponent(4, new TestComponent(400));
             
-            // 移除部分组件创建空洞
-            storage.removeComponent(2);
-            storage.removeComponent(3);
-            
-            let stats = storage.getStats();
-            expect(stats.freeSlots).toBe(2);
-            expect(stats.fragmentation).toBeGreaterThan(0);
-            
-            // 压缩存储
-            storage.compact();
-            
-            stats = storage.getStats();
+            // 验证存储保持紧凑
+            const stats = storage.getStats();
             expect(stats.freeSlots).toBe(0);
             expect(stats.fragmentation).toBe(0);
-            expect(storage.size).toBe(2);
-            expect(storage.hasComponent(1)).toBe(true);
-            expect(storage.hasComponent(4)).toBe(true);
         });
 
-        test('没有空洞时压缩应该不做任何操作', () => {
-            storage.addComponent(1, new TestComponent(100));
-            storage.addComponent(2, new TestComponent(200));
-            
-            const statsBefore = storage.getStats();
-            storage.compact();
-            const statsAfter = storage.getStats();
-            
-            expect(statsBefore).toEqual(statsAfter);
-        });
 
         test('应该能够获取存储统计信息', () => {
             storage.addComponent(1, new TestComponent(100));
             storage.addComponent(2, new TestComponent(200));
             storage.addComponent(3, new TestComponent(300));
             
-            // 移除一个组件创建空洞
+            // 移除一个组件，稀疏集合会自动紧凑
             storage.removeComponent(2);
             
             const stats = storage.getStats();
             
-            expect(stats.totalSlots).toBe(3);
+            expect(stats.totalSlots).toBe(2); // 稀疏集合自动紧凑
             expect(stats.usedSlots).toBe(2);
-            expect(stats.freeSlots).toBe(1);
-            expect(stats.fragmentation).toBeCloseTo(1/3);
+            expect(stats.freeSlots).toBe(0); // 无空洞
+            expect(stats.fragmentation).toBe(0); // 无碎片
         });
     });
 
@@ -514,12 +483,12 @@ describe('ComponentStorageManager - 组件存储管理器测试', () => {
             const mask = manager.getComponentMask(1);
             
             // 应该包含TestComponent(位0)和PositionComponent(位1)的掩码
-            expect(mask.toString()).toBe('3'); // 1 | 2 = 3
+            expect(mask.lo).toBe(3); // 1 | 2 = 3
         });
 
         test('没有组件的实体应该有零掩码', () => {
             const mask = manager.getComponentMask(999);
-            expect(mask.isZero()).toBe(true);
+            expect(BitMask64Utils.equals(mask, BitMask64Utils.ZERO)).toBe(true);
         });
 
         test('添加和移除组件应该更新掩码', () => {
@@ -528,35 +497,19 @@ describe('ComponentStorageManager - 组件存储管理器测试', () => {
             
             manager.addComponent(1, new TestComponent(100));
             let mask = manager.getComponentMask(1);
-            expect(mask.toString()).toBe('1');
+            expect(mask.lo).toBe(1);
             
             manager.addComponent(1, new PositionComponent(10, 20));
             mask = manager.getComponentMask(1);
-            expect(mask.toString()).toBe('3'); // 0b11
+            expect(mask.lo).toBe(3); // 0b11
             
             manager.removeComponent(1, TestComponent);
             mask = manager.getComponentMask(1);
-            expect(mask.toString()).toBe('2'); // 0b10
+            expect(mask.lo).toBe(2); // 0b10
         });
     });
 
     describe('管理器级别操作', () => {
-        test('应该能够压缩所有存储器', () => {
-            manager.addComponent(1, new TestComponent(100));
-            manager.addComponent(2, new TestComponent(200));
-            manager.addComponent(3, new TestComponent(300));
-            
-            manager.addComponent(1, new PositionComponent(10, 20));
-            manager.addComponent(2, new PositionComponent(30, 40));
-            
-            // 移除部分组件创建空洞
-            manager.removeComponent(2, TestComponent);
-            manager.removeComponent(1, PositionComponent);
-            
-            expect(() => {
-                manager.compactAll();
-            }).not.toThrow();
-        });
 
         test('应该能够获取所有存储器的统计信息', () => {
             manager.addComponent(1, new TestComponent(100));

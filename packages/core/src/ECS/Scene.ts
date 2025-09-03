@@ -364,12 +364,6 @@ export class Scene implements IScene {
         };
     }
 
-    /**
-     * 压缩组件存储（清理碎片）
-     */
-    public compactComponentStorage(): void {
-        this.componentStorageManager.compactAll();
-    }
 
     /**
      * 获取场景的调试信息

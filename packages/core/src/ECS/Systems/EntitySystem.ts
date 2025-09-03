@@ -166,7 +166,6 @@ export abstract class EntitySystem implements ISystemBase {
         const querySystem = this.scene.querySystem;
         let currentEntities: Entity[] = [];
 
-
         // 空条件返回所有实体
         if (this._matcher.isEmpty()) {
             currentEntities = querySystem.getAllEntities();
@@ -180,7 +179,6 @@ export abstract class EntitySystem implements ISystemBase {
 
         // 检查实体变化并触发回调
         this.updateEntityTracking(currentEntities);
-
 
         return currentEntities;
     }
@@ -196,7 +194,6 @@ export abstract class EntitySystem implements ISystemBase {
             (condition.tag !== undefined ? 1 : 0) +
             (condition.name !== undefined ? 1 : 0) +
             (condition.component !== undefined ? 1 : 0);
-
 
         return conditionCount === 1;
     }
@@ -239,138 +236,129 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 执行复合查询
      */
-    private executeComplexQuery(condition: any, querySystem: QuerySystem): Entity[] {
-        let result: Set<Entity> | null = null;
-
+    private executeComplexQueryWithIdSets(condition: any, querySystem: QuerySystem): Entity[] {
+        let resultIds: Set<number> | null = null;
 
         // 1. 应用标签条件作为基础集合
         if (condition.tag !== undefined) {
             const tagResult = querySystem.queryByTag(condition.tag);
-            result = new Set(tagResult.entities);
+            resultIds = this.extractEntityIds(tagResult.entities);
         }
 
-        // 2. 应用名称条件
+        // 2. 应用名称条件 (交集)
         if (condition.name !== undefined) {
-            const nameResult = querySystem.queryByName(condition.name);
-            const nameSet = new Set(nameResult.entities);
-
-            if (result) {
-                const intersection = [];
-                for (const entity of result) {
-                    for (const nameEntity of nameSet) {
-                        if (entity === nameEntity || entity.id === nameEntity.id) {
-                            intersection.push(entity);
-                            break;
-                        }
-                    }
-                }
-                result = new Set(intersection);
-            } else {
-                result = nameSet;
-            }
+            const nameIds = this.extractEntityIds(querySystem.queryByName(condition.name).entities);
+            resultIds = resultIds ? this.intersectIdSets(resultIds, nameIds) : nameIds;
         }
 
-        // 3. 应用单组件条件
+        // 3. 应用单组件条件 (交集)
         if (condition.component !== undefined) {
-            const componentResult = querySystem.queryByComponent(condition.component);
-            const componentSet = new Set(componentResult.entities);
-
-            if (result) {
-                const intersection = [];
-                for (const entity of result) {
-                    for (const componentEntity of componentSet) {
-                        if (entity === componentEntity || entity.id === componentEntity.id) {
-                            intersection.push(entity);
-                            break;
-                        }
-                    }
-                }
-                result = new Set(intersection);
-            } else {
-                result = componentSet;
-            }
+            const componentIds = this.extractEntityIds(querySystem.queryByComponent(condition.component).entities);
+            resultIds = resultIds ? this.intersectIdSets(resultIds, componentIds) : componentIds;
         }
 
-        // 4. 应用all条件
+        // 4. 应用all条件 (交集)
         if (condition.all.length > 0) {
-            const allResult = querySystem.queryAll(...condition.all);
-            const allSet = new Set(allResult.entities);
-
-
-            if (result) {
-                const intersection = [];
-                for (const entity of result) {
-                    for (const allEntity of allSet) {
-                        if (entity === allEntity || entity.id === allEntity.id) {
-                            intersection.push(entity);
-                            break;
-                        }
-                    }
-                }
-                result = new Set(intersection);
-            } else {
-                result = allSet;
-            }
+            const allIds = this.extractEntityIds(querySystem.queryAll(...condition.all).entities);
+            resultIds = resultIds ? this.intersectIdSets(resultIds, allIds) : allIds;
         }
 
-        // 5. 应用any条件（求交集）
+        // 5. 应用any条件 (交集)
         if (condition.any.length > 0) {
-            const anyResult = querySystem.queryAny(...condition.any);
-            const anySet = new Set(anyResult.entities);
-
-
-            if (result) {
-                const intersection = [];
-                for (const entity of result) {
-                    // 通过id匹配来确保正确的交集计算
-                    for (const anyEntity of anySet) {
-                        if (entity === anyEntity || entity.id === anyEntity.id) {
-                            intersection.push(entity);
-                            break;
-                        }
-                    }
-                }
-
-                result = new Set(intersection);
-
-            } else {
-                result = anySet;
-            }
+            const anyIds = this.extractEntityIds(querySystem.queryAny(...condition.any).entities);
+            resultIds = resultIds ? this.intersectIdSets(resultIds, anyIds) : anyIds;
         }
 
-        // 6. 应用none条件（排除）
+        // 6. 应用none条件 (差集)
         if (condition.none.length > 0) {
-            if (!result) {
-                // 如果没有前置条件，从所有实体开始
-                result = new Set(querySystem.getAllEntities());
+            if (!resultIds) {
+                resultIds = this.extractEntityIds(querySystem.getAllEntities());
             }
 
             const noneResult = querySystem.queryAny(...condition.none);
-            const noneSet = new Set(noneResult.entities);
-
-            const filteredEntities = [];
-            for (const entity of result) {
-                let shouldExclude = false;
-                for (const noneEntity of noneSet) {
-                    if (entity === noneEntity || entity.id === noneEntity.id) {
-                        shouldExclude = true;
-                        break;
-                    }
-                }
-                if (!shouldExclude) {
-                    filteredEntities.push(entity);
-                }
-            }
-            result = new Set(filteredEntities);
+            const noneIds = this.extractEntityIds(noneResult.entities);
+            resultIds = this.differenceIdSets(resultIds, noneIds);
         }
 
-        const finalResult = result ? Array.from(result) : [];
-
-
-        return finalResult;
+        return resultIds ? this.idSetToEntityArray(resultIds, querySystem.getAllEntities()) : [];
     }
 
+    /**
+     * 提取实体ID集合
+     */
+    private extractEntityIds(entities: Entity[]): Set<number> {
+        const idSet = new Set<number>();
+        for (let i = 0; i < entities.length; i++) {
+            idSet.add(entities[i].id);
+        }
+        return idSet;
+    }
 
+    /**
+     * ID集合交集运算
+     * 
+     * 使用单次扫描算法，选择较小集合进行迭代以提高效率
+     */
+    private intersectIdSets(setA: Set<number>, setB: Set<number>): Set<number> {
+        const [smaller, larger] = setA.size <= setB.size ? [setA, setB] : [setB, setA];
+        const result = new Set<number>();
+        
+        for (const id of smaller) {
+            if (larger.has(id)) {
+                result.add(id);
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * ID集合差集运算
+     * 
+     * 使用单次扫描算法计算setA - setB
+     */
+    private differenceIdSets(setA: Set<number>, setB: Set<number>): Set<number> {
+        const result = new Set<number>();
+        
+        for (const id of setA) {
+            if (!setB.has(id)) {
+                result.add(id);
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * 从ID集合构建Entity数组
+     * 
+     * 先构建ID到Entity的映射，然后根据ID集合构建结果数组
+     */
+    private idSetToEntityArray(idSet: Set<number>, allEntities: Entity[]): Entity[] {
+        const entityMap = new Map<number, Entity>();
+        for (const entity of allEntities) {
+            entityMap.set(entity.id, entity);
+        }
+
+        const result: Entity[] = [];
+        for (const id of idSet) {
+            const entity = entityMap.get(id);
+            if (entity) {
+                result.push(entity);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * 执行复合查询
+     * 
+     * 使用基于ID集合的单次扫描算法进行复杂查询
+     */
+    private executeComplexQuery(condition: any, querySystem: QuerySystem): Entity[] {
+        return this.executeComplexQueryWithIdSets(condition, querySystem);
+    }
 
     /**
      * 更新系统
@@ -382,7 +370,6 @@ export abstract class EntitySystem implements ISystemBase {
             return;
         }
 
-
         const startTime = this._performanceMonitor.startMonitoring(this._systemName);
         let entityCount = 0;
 
@@ -391,7 +378,6 @@ export abstract class EntitySystem implements ISystemBase {
             // 动态查询实体并处理
             const entities = this.queryEntities();
             entityCount = entities.length;
-
 
             this.process(entities);
         } finally {
@@ -499,7 +485,6 @@ export abstract class EntitySystem implements ISystemBase {
     public resetPerformanceData(): void {
         this._performanceMonitor.resetSystem(this._systemName);
     }
-
 
     /**
      * 获取系统信息的字符串表示

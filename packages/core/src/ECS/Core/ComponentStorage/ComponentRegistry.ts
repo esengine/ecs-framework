@@ -1,12 +1,12 @@
 import { Component } from '../../Component';
-import { IBigIntLike, BigIntFactory } from '../../Utils/BigIntCompatibility';
+import { BitMask64Utils, BitMask64Data } from '../../Utils/BigIntCompatibility';
 import { createLogger } from '../../../Utils/Logger';
 import { getComponentTypeName } from '../../Decorators';
 
 /**
  * 组件类型定义
  */
-export type ComponentType<T extends Component = Component> = new (...args: unknown[]) => T;
+export type ComponentType<T extends Component = Component> = new (...args: any[]) => T;
 
 /**
  * 组件注册表
@@ -17,7 +17,7 @@ export class ComponentRegistry {
     private static componentTypes = new Map<Function, number>();
     private static componentNameToType = new Map<string, Function>();
     private static componentNameToId = new Map<string, number>();
-    private static maskCache = new Map<string, IBigIntLike>();
+    private static maskCache = new Map<string, BitMask64Data>();
     private static nextBitIndex = 0;
     private static maxComponents = 64; // 支持最多64种组件类型
 
@@ -51,13 +51,13 @@ export class ComponentRegistry {
      * @param componentType 组件类型
      * @returns 位掩码
      */
-    public static getBitMask<T extends Component>(componentType: ComponentType<T>): IBigIntLike {
+    public static getBitMask<T extends Component>(componentType: ComponentType<T>): BitMask64Data {
         const bitIndex = this.componentTypes.get(componentType);
         if (bitIndex === undefined) {
             const typeName = getComponentTypeName(componentType);
             throw new Error(`Component type ${typeName} is not registered`);
         }
-        return BigIntFactory.one().shiftLeft(bitIndex);
+        return BitMask64Utils.create(bitIndex);
     }
 
     /**
@@ -141,7 +141,7 @@ export class ComponentRegistry {
      * @param componentName 组件名称
      * @returns 组件掩码
      */
-    public static createSingleComponentMask(componentName: string): IBigIntLike {
+    public static createSingleComponentMask(componentName: string): BitMask64Data {
         const cacheKey = `single:${componentName}`;
         
         if (this.maskCache.has(cacheKey)) {
@@ -153,7 +153,7 @@ export class ComponentRegistry {
             throw new Error(`Component type ${componentName} is not registered`);
         }
 
-        const mask = BigIntFactory.one().shiftLeft(componentId);
+        const mask = BitMask64Utils.create(componentId);
         this.maskCache.set(cacheKey, mask);
         return mask;
     }
@@ -163,7 +163,7 @@ export class ComponentRegistry {
      * @param componentNames 组件名称数组
      * @returns 组合掩码
      */
-    public static createComponentMask(componentNames: string[]): IBigIntLike {
+    public static createComponentMask(componentNames: string[]): BitMask64Data {
         const sortedNames = [...componentNames].sort();
         const cacheKey = `multi:${sortedNames.join(',')}`;
         
@@ -171,11 +171,12 @@ export class ComponentRegistry {
             return this.maskCache.get(cacheKey)!;
         }
 
-        let mask = BigIntFactory.zero();
+        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const name of componentNames) {
             const componentId = this.getComponentId(name);
             if (componentId !== undefined) {
-                mask = mask.or(BigIntFactory.one().shiftLeft(componentId));
+                const componentMask = BitMask64Utils.create(componentId);
+                BitMask64Utils.orInPlace(mask, componentMask);
             }
         }
 
