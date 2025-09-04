@@ -1,6 +1,7 @@
 const resolve = require('@rollup/plugin-node-resolve');
 const commonjs = require('@rollup/plugin-commonjs');
 const terser = require('@rollup/plugin-terser');
+const babel = require('@rollup/plugin-babel');
 const dts = require('rollup-plugin-dts').default;
 const { readFileSync } = require('fs');
 
@@ -23,6 +24,11 @@ const commonPlugins = [
   }),
   commonjs({
     include: /node_modules/
+  }),
+  babel({
+    babelHelpers: 'bundled',
+    exclude: 'node_modules/**',
+    extensions: ['.js', '.ts']
   })
 ];
 
@@ -93,6 +99,60 @@ module.exports = [
       terser({
         format: {
           comments: /^!/
+        }
+      })
+    ],
+    external: [],
+    treeshake: {
+      moduleSideEffects: false
+    }
+  },
+
+  // ES5兼容构建 - 适用于只支持ES5语法的JavaScript环境
+  {
+    input: 'bin/index.js',
+    output: {
+      file: 'dist/index.es5.js',
+      format: 'cjs',
+      banner: banner + '\n// ES5 Compatible Build for legacy JavaScript environments',
+      sourcemap: true,
+      exports: 'named'
+    },
+    plugins: [
+      resolve({
+        browser: true,
+        preferBuiltins: false
+      }),
+      commonjs({
+        include: /node_modules/
+      }),
+      babel({
+        babelHelpers: 'bundled',
+        exclude: 'node_modules/**',
+        extensions: ['.js', '.ts'],
+        presets: [
+          ['@babel/preset-env', {
+            targets: {
+              browsers: ['ie >= 9', 'chrome >= 30', 'firefox >= 30', 'safari >= 8']
+            },
+            modules: false,
+            loose: true,
+            forceAllTransforms: true
+          }]
+        ],
+        plugins: [
+          '@babel/plugin-transform-optional-chaining',
+          '@babel/plugin-transform-nullish-coalescing-operator'
+        ]
+      }),
+      terser({
+        ecma: 5,
+        format: {
+          comments: /^!/
+        },
+        compress: {
+          drop_console: false,
+          drop_debugger: false
         }
       })
     ],
