@@ -327,6 +327,12 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
      */
     private handleClientMessage(clientId: string, data: WebSocket.Data): void {
         try {
+            // 检查是否为有效的应用消息
+            if (!this.isApplicationMessage(data)) {
+                this.logger.debug(`忽略非应用消息 (${clientId}): ${typeof data} ${data instanceof ArrayBuffer ? data.byteLength : data.toString().length} bytes`);
+                return;
+            }
+            
             const message = data instanceof ArrayBuffer ? data : new TextEncoder().encode(data.toString()).buffer;
             
             // 触发消息事件
@@ -341,6 +347,35 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
         } catch (error) {
             this.logger.error(`处理客户端 ${clientId} 消息失败:`, error);
             this.handleError(error as Error);
+        }
+    }
+
+    /**
+     * 检查是否为有效的应用消息
+     */
+    private isApplicationMessage(data: WebSocket.Data): boolean {
+        try {
+            // 转换为字符串进行检查
+            const jsonString = data instanceof ArrayBuffer 
+                ? new TextDecoder().decode(data) 
+                : data.toString();
+            
+            // 基本长度检查 - 空消息或过短消息通常不是应用消息
+            if (!jsonString || jsonString.length < 10) {
+                return false;
+            }
+            
+            // 尝试解析JSON
+            const parsed = JSON.parse(jsonString);
+            
+            // 检查是否有基本的消息结构
+            return parsed && 
+                   typeof parsed === 'object' && 
+                   (parsed.type || parsed.messageId || parsed.data);
+                   
+        } catch (error) {
+            // JSON解析失败，可能是握手数据或其他非JSON消息
+            return false;
         }
     }
 
