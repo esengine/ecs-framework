@@ -22,6 +22,48 @@ export interface ILogger {
 }
 
 /**
+ * 日志颜色配置接口
+ */
+export interface LoggerColorConfig {
+    debug?: string;
+    info?: string;
+    warn?: string;
+    error?: string;
+    fatal?: string;
+    reset?: string;
+}
+
+/**
+ * 预定义的颜色常量
+ */
+export const Colors = {
+    // 基础颜色
+    BLACK: '\x1b[30m',
+    RED: '\x1b[31m',
+    GREEN: '\x1b[32m',
+    YELLOW: '\x1b[33m',
+    BLUE: '\x1b[34m',
+    MAGENTA: '\x1b[35m',
+    CYAN: '\x1b[36m',
+    WHITE: '\x1b[37m',
+    
+    // 亮色版本
+    BRIGHT_BLACK: '\x1b[90m',
+    BRIGHT_RED: '\x1b[91m',
+    BRIGHT_GREEN: '\x1b[92m',
+    BRIGHT_YELLOW: '\x1b[93m',
+    BRIGHT_BLUE: '\x1b[94m',
+    BRIGHT_MAGENTA: '\x1b[95m',
+    BRIGHT_CYAN: '\x1b[96m',
+    BRIGHT_WHITE: '\x1b[97m',
+    
+    // 特殊
+    RESET: '\x1b[0m',
+    BOLD: '\x1b[1m',
+    UNDERLINE: '\x1b[4m'
+} as const;
+
+/**
  * 日志配置
  */
 export interface LoggerConfig {
@@ -35,6 +77,8 @@ export interface LoggerConfig {
     prefix?: string;
     /** 自定义输出函数 */
     output?: (level: LogLevel, message: string) => void;
+    /** 自定义颜色配置 */
+    colors?: LoggerColorConfig;
 }
 
 /**
@@ -106,6 +150,22 @@ export class ConsoleLogger implements ILogger {
     }
 
     /**
+     * 设置颜色配置
+     * @param colors 颜色配置
+     */
+    public setColors(colors: LoggerColorConfig): void {
+        if (Object.keys(colors).length === 0) {
+            // 重置为默认颜色
+            delete this._config.colors;
+        } else {
+            this._config.colors = {
+                ...this._config.colors,
+                ...colors
+            };
+        }
+    }
+
+    /**
      * 设置日志前缀
      * @param prefix 前缀字符串
      */
@@ -161,29 +221,35 @@ export class ConsoleLogger implements ILogger {
         switch (level) {
             case LogLevel.Debug:
                 if (colors) {
-                    console.debug(`${colors.gray}${message}${colors.reset}`, ...args);
+                    console.debug(`${colors.debug}${message}${colors.reset}`, ...args);
                 } else {
                     console.debug(message, ...args);
                 }
                 break;
             case LogLevel.Info:
                 if (colors) {
-                    console.info(`${colors.blue}${message}${colors.reset}`, ...args);
+                    console.info(`${colors.info}${message}${colors.reset}`, ...args);
                 } else {
                     console.info(message, ...args);
                 }
                 break;
             case LogLevel.Warn:
                 if (colors) {
-                    console.warn(`${colors.yellow}${message}${colors.reset}`, ...args);
+                    console.warn(`${colors.warn}${message}${colors.reset}`, ...args);
                 } else {
                     console.warn(message, ...args);
                 }
                 break;
             case LogLevel.Error:
+                if (colors) {
+                    console.error(`${colors.error}${message}${colors.reset}`, ...args);
+                } else {
+                    console.error(message, ...args);
+                }
+                break;
             case LogLevel.Fatal:
                 if (colors) {
-                    console.error(`${colors.red}${message}${colors.reset}`, ...args);
+                    console.error(`${colors.fatal}${message}${colors.reset}`, ...args);
                 } else {
                     console.error(message, ...args);
                 }
@@ -196,12 +262,20 @@ export class ConsoleLogger implements ILogger {
      * @returns 颜色配置对象
      */
     private getColors() {
+        // 默认颜色配置
+        const defaultColors = {
+            debug: Colors.BRIGHT_BLACK,     // 灰色
+            info: Colors.GREEN,             // 绿色
+            warn: Colors.YELLOW,            // 黄色
+            error: Colors.RED,              // 红色
+            fatal: Colors.BRIGHT_RED,       // 亮红色
+            reset: Colors.RESET             // 重置
+        };
+
+        // 合并用户自定义颜色
         return {
-            reset: '\x1b[0m',
-            red: '\x1b[31m',
-            yellow: '\x1b[33m',
-            blue: '\x1b[34m',
-            gray: '\x1b[90m'
+            ...defaultColors,
+            ...this._config.colors
         };
     }
 }
@@ -285,6 +359,37 @@ export class LoggerManager {
         const fullName = `${parentName}.${childName}`;
         return this.getLogger(fullName);
     }
+
+    /**
+     * 设置全局颜色配置
+     * @param colors 颜色配置
+     */
+    public setGlobalColors(colors: LoggerColorConfig): void {
+        if (this._defaultLogger instanceof ConsoleLogger) {
+            this._defaultLogger.setColors(colors);
+        }
+
+        for (const logger of this._loggers.values()) {
+            if (logger instanceof ConsoleLogger) {
+                logger.setColors(colors);
+            }
+        }
+    }
+
+    /**
+     * 重置为默认颜色配置
+     */
+    public resetColors(): void {
+        if (this._defaultLogger instanceof ConsoleLogger) {
+            this._defaultLogger.setColors({});
+        }
+
+        for (const logger of this._loggers.values()) {
+            if (logger instanceof ConsoleLogger) {
+                logger.setColors({});
+            }
+        }
+    }
 }
 
 /**
@@ -299,6 +404,21 @@ export const Logger = LoggerManager.getInstance().getLogger();
  */
 export function createLogger(name: string): ILogger {
     return LoggerManager.getInstance().getLogger(name);
+}
+
+/**
+ * 设置全局日志颜色配置
+ * @param colors 颜色配置
+ */
+export function setLoggerColors(colors: LoggerColorConfig): void {
+    LoggerManager.getInstance().setGlobalColors(colors);
+}
+
+/**
+ * 重置日志颜色为默认配置
+ */
+export function resetLoggerColors(): void {
+    LoggerManager.getInstance().resetColors();
 }
 
 /**
