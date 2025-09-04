@@ -531,7 +531,7 @@ export class NetworkServer extends EventEmitter {
             // 反序列化消息
             const deserializationResult = this.serializer.deserialize<INetworkMessage>(data);
             if (!deserializationResult.isValid) {
-                this.logger.warn(`消息反序列化失败: ${deserializationResult.errors?.join(', ')}`);
+                this.logger.debug(`消息反序列化失败 (${clientId}): ${deserializationResult.errors?.join(', ')}`);
                 this.stats.messages.errors++;
                 return;
             }
