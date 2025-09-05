@@ -102,6 +102,7 @@ export class Matcher {
 
     /**
      * 创建空匙配器（向后兼容）
+     * @deprecated 使用 Matcher.all() 或其他具体的静态方法替代
      */
     public static empty(): Matcher {
         return new Matcher();
