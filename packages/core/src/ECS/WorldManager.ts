@@ -34,11 +34,7 @@ export interface IWorldManagerConfig {
  * WorldManager是全局单例，负责管理所有World的生命周期。
  * 每个World都是独立的ECS环境，可以包含多个Scene。
  * 
- * 设计理念：
- * - Core负责单Scene的传统ECS管理
- * - World负责多Scene的管理和协调
- * - WorldManager负责多World的全局管理
- * 
+ 
  * @example
  * ```typescript
  * // 获取全局WorldManager

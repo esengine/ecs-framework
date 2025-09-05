@@ -182,7 +182,7 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
                 if (dictSize >= 0xFFFF) {
                     dictSize = 256;
                     // 重置字典
-                    for (const key in dictionary) {
+                    for (const key of Object.keys(dictionary)) {
                         if (dictionary[key] >= 256) {
                             delete dictionary[key];
                         }
@@ -240,7 +240,7 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
             if (dictSize >= 0xFFFF) {
                 dictSize = 256;
                 // 重置字典
-                for (const key in dictionary) {
+                for (const key of Object.keys(dictionary)) {
                     if (parseInt(key) >= 256) {
                         delete dictionary[key];
                     }

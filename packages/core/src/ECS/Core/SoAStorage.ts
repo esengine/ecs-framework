@@ -142,8 +142,8 @@ export class SoAStorage<T extends Component> {
         const serializeArrayFields = (componentType as any).__serializeArrayFields || new Set();
         // const deepCopyFields = (componentType as any).__deepCopyFields || new Set(); // 未使用，但保留供future使用
         
-        for (const key in instance) {
-            if (instance.hasOwnProperty(key) && key !== 'id') {
+        for (const key of Object.keys(instance)) {
+            if (key !== 'id') {
                 const value = (instance as any)[key];
                 const type = typeof value;
                 
@@ -215,8 +215,8 @@ export class SoAStorage<T extends Component> {
         const deepCopyFields = (this.type as any).__deepCopyFields || new Set();
         
         // 处理所有字段
-        for (const key in component) {
-            if (component.hasOwnProperty(key) && key !== 'id') {
+        for (const key of Object.keys(component)) {
+            if (key !== 'id') {
                 const value = (component as any)[key];
                 const type = typeof value;
                 
@@ -342,10 +342,8 @@ export class SoAStorage<T extends Component> {
         
         // 普通对象
         const cloned: any = {};
-        for (const key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                cloned[key] = this.deepClone(obj[key]);
-            }
+        for (const key of Object.keys(obj)) {
+            cloned[key] = this.deepClone(obj[key]);
         }
         return cloned;
     }

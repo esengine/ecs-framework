@@ -97,7 +97,7 @@ export class DebugDataFormatter {
             let itemSize = 0;
             
             try {
-                for (const key in item) {
+                for (const key of Object.keys(item)) {
                     if (excludeKeys.includes(key)) continue;
                     
                     const value = item[key];

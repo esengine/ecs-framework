@@ -123,11 +123,8 @@ export class World {
         // 如果没有提供Scene实例，创建默认Scene
         const scene = sceneInstance || (new Scene() as unknown as T);
         
-        // 设置Scene的标识
-        if ('id' in scene) {
-            (scene as any).id = sceneId;
-        }
-        if ('name' in scene && !scene.name) {
+        // 设置Scene名称（如果未设置）
+        if (!scene.name) {
             scene.name = sceneId;
         }
 
