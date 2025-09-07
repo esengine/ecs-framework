@@ -35,10 +35,6 @@ export interface ICompressionAlgorithm {
      */
     decompressAsync?(data: ArrayBuffer): Promise<ArrayBuffer>;
     
-    /**
-     * 估算压缩后大小（可选）
-     */
-    estimateCompressedSize?(data: ArrayBuffer): number;
 }
 
 /**
@@ -131,10 +127,6 @@ export class NoCompressionAlgorithm implements ICompressionAlgorithm {
     
     decompress(data: ArrayBuffer): ArrayBuffer {
         return data.slice(0);
-    }
-    
-    estimateCompressedSize(data: ArrayBuffer): number {
-        return data.byteLength;
     }
 }
 
@@ -241,8 +233,9 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
                 dictSize = 256;
                 // 重置字典
                 for (const key of Object.keys(dictionary)) {
-                    if (parseInt(key) >= 256) {
-                        delete dictionary[key];
+                    const numKey = parseInt(key);
+                    if (numKey >= 256) {
+                        delete dictionary[numKey];
                     }
                 }
             }
@@ -252,12 +245,6 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
         const output = result.join('');
         const encoder = new TextEncoder();
         return encoder.encode(output).buffer;
-    }
-    
-    estimateCompressedSize(data: ArrayBuffer): number {
-        // 简单估算：假设压缩率在30%-70%之间
-        const size = data.byteLength;
-        return Math.floor(size * 0.5); // 50%的估算压缩率
     }
     
     /**
@@ -545,27 +532,6 @@ export class MessageCompressor {
         }
     }
 
-    /**
-     * 估算压缩后大小
-     */
-    public estimateCompressedSize(
-        data: ArrayBuffer, 
-        algorithmName?: string
-    ): number {
-        const selectedAlgorithm = algorithmName || this.config.defaultAlgorithm;
-        const algorithm = this.algorithms.get(selectedAlgorithm);
-        
-        if (!algorithm) {
-            return data.byteLength;
-        }
-
-        if (algorithm.estimateCompressedSize) {
-            return algorithm.estimateCompressedSize(data);
-        }
-
-        // 如果没有估算函数，返回原始大小
-        return data.byteLength;
-    }
 
     /**
      * 获取压缩统计信息
