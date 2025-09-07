@@ -60,6 +60,16 @@ docs/build/
 docs/.vitepress/dist
 docs/.vitepress/cache
 
+# Microsoft API 工具链
+temp/
+dist/ecs-framework.d.ts
+packages/core/temp/
+packages/core/dist/ecs-framework.d.ts
+
+# API 文档（保留生成的文档，但忽略临时文件）
+!docs/api/
+docs/api/*.api.json
+
 # 备份文件
 *.bak
 *.backup

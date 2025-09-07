@@ -1,6 +1,5 @@
 {
   "name": "@esengine/ecs-framework-monorepo",
-  "version": "2.1.29",
   "description": "ECS Framework Monorepo - 高性能ECS框架及其网络插件",
   "private": true,
   "workspaces": [
@@ -33,8 +32,18 @@
     "test": "lerna run test",
     "test:coverage": "lerna run test:coverage",
     "test:ci": "lerna run test:ci",
+    "docs:api:extract": "npm run docs:api:extract:core && npm run docs:api:extract:math && npm run docs:api:extract:network-shared",
+    "docs:api:extract:core": "api-extractor run --config ./api-extractor.core.json --local",
+    "docs:api:extract:math": "api-extractor run --config ./api-extractor.math.json --local",
+    "docs:api:extract:network-shared": "api-extractor run --config ./api-extractor.network-shared.json --local",
+    "docs:api:document": "npm run docs:api:document:core && npm run docs:api:document:math && npm run docs:api:document:network-shared && npm run docs:api:cleanup",
+    "docs:api:cleanup": "find docs/api/ -maxdepth 1 -name 'ecs-framework-monorepo*.md' -delete",
+    "docs:api:document:core": "mkdir -p temp/api-model-core && cp temp/api-model/ecs-framework-core.api.json temp/api-model-core/ && npx api-documenter markdown -i temp/api-model-core -o docs/api/core",
+    "docs:api:document:math": "mkdir -p temp/api-model-math && cp temp/api-model/ecs-framework-math.api.json temp/api-model-math/ && npx api-documenter markdown -i temp/api-model-math -o docs/api/math",
+    "docs:api:document:network-shared": "mkdir -p temp/api-model-network-shared && cp temp/api-model/ecs-framework-network-shared.api.json temp/api-model-network-shared/ && npx api-documenter markdown -i temp/api-model-network-shared -o docs/api/network-shared",
+    "docs:api": "npm run build:core && npm run build:math && npm run build:network-shared && npm run docs:api:extract && npm run docs:api:document",
     "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
+    "docs:build": "npm run docs:api && vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "prepare:publish": "npm run build:npm && node scripts/pre-publish-check.cjs",
     "sync:versions": "node scripts/sync-versions.cjs",
@@ -70,7 +79,9 @@
     "semver": "^7.6.3",
     "ts-jest": "^29.4.0",
     "typescript": "^5.8.3",
-    "vitepress": "^1.6.4"
+    "vitepress": "^1.6.4",
+    "@microsoft/api-extractor": "^7.47.9",
+    "@microsoft/api-documenter": "^7.25.16"
   },
   "publishConfig": {
     "access": "public"

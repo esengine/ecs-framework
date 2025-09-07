@@ -1,0 +1,111 @@
+{
+  /**
+   * Microsoft API Documenter 配置文件
+   * 
+   * 此配置用于将 API Extractor 生成的模型文件
+   * 转换为 Markdown 格式的文档，供 VitePress 使用。
+   * 
+   * @see https://api-extractor.com/pages/setup/generating_docs/
+   */
+  
+  /**
+   * 输入配置
+   * 指定 API Extractor 生成的 .api.json 文件位置
+   */
+  "inputFolder": "./temp/api-model/",
+  
+  /**
+   * 输出配置
+   * 指定生成的 Markdown 文档输出位置
+   */
+  "outputFolder": "./docs/api/",
+  
+  /**
+   * 文档生成选项
+   */
+  "documentationOptions": {
+    /**
+     * 包含私有成员的文档
+     */
+    "includePrivateMembers": false,
+    
+    /**
+     * 包含受保护成员的文档
+     */
+    "includeProtectedMembers": false,
+    
+    /**
+     * 包含内部成员的文档
+     */
+    "includeInternalMembers": false,
+    
+    /**
+     * 生成目录页面
+     */
+    "generateToc": true,
+    
+    /**
+     * 自定义页面标题
+     */
+    "pageTitle": "ECS Framework API 参考"
+  },
+  
+  /**
+   * Markdown 选项
+   */
+  "markdownOptions": {
+    /**
+     * 使用 VitePress 兼容的链接格式
+     */
+    "linkMode": "relative",
+    
+    /**
+     * 文件扩展名
+     */
+    "fileExtension": ".md",
+    
+    /**
+     * 生成导航文件
+     */
+    "generateNavigation": true,
+    
+    /**
+     * 自定义模板配置
+     */
+    "customTemplates": {
+      "headerTemplate": "",
+      "footerTemplate": ""
+    }
+  },
+  
+  /**
+   * 本地化配置
+   */
+  "localization": {
+    "language": "zh-CN",
+    "translations": {
+      "class": "类",
+      "interface": "接口",
+      "enum": "枚举",
+      "function": "函数",
+      "type": "类型",
+      "namespace": "命名空间",
+      "property": "属性",
+      "method": "方法",
+      "constructor": "构造函数",
+      "parameter": "参数",
+      "returns": "返回值",
+      "example": "示例",
+      "remarks": "备注",
+      "see": "参见",
+      "deprecated": "已废弃",
+      "beta": "测试版",
+      "public": "公共",
+      "protected": "受保护",
+      "private": "私有",
+      "static": "静态",
+      "readonly": "只读",
+      "optional": "可选"
+    }
+  }
+}

@@ -1,0 +1,110 @@
+{
+  /**
+   * Microsoft API Extractor 配置文件
+   * 
+   * 此配置用于从 TypeScript 源码中提取公共 API 信息，
+   * 生成 API 报告和类型定义文件，支持版本管理和变更追踪。
+   * 
+   * @see https://api-extractor.com/pages/configs/api-extractor_json/
+   */
+  "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
+
+  /**
+   * 项目配置
+   */
+  "projectFolder": ".",
+  
+  /**
+   * 主入口点配置
+   * 指定 TypeScript 编译器生成的 .d.ts 文件作为 API 提取的入口
+   */
+  "mainEntryPointFilePath": "bin/index.d.ts",
+
+  /**
+   * 编译器配置
+   * 指定 TypeScript 配置文件的路径
+   */
+  "compiler": {
+    "tsconfigFilePath": "./tsconfig.json"
+  },
+
+  /**
+   * API 报告配置
+   * 生成 API 变更报告，用于版本管理和变更追踪
+   */
+  "apiReport": {
+    "enabled": true,
+    "reportFolder": "./temp/api-report/",
+    "reportFileName": "ecs-framework.api.md"
+  },
+
+  /**
+   * 文档模型配置
+   * 生成用于 API Documenter 的中间文件
+   */
+  "docModel": {
+    "enabled": true,
+    "apiJsonFilePath": "./temp/api-model/ecs-framework.api.json"
+  },
+
+  /**
+   * 汇总 .d.ts 文件配置
+   * 将所有类型定义汇总到一个文件中
+   */
+  "dtsRollup": {
+    "enabled": true,
+    "untrimmedFilePath": "./temp/rollup/ecs-framework.d.ts",
+    "publicTrimmedFilePath": "./dist/ecs-framework.d.ts"
+  },
+
+  /**
+   * TSDoc 元数据配置
+   * 支持 TSDoc 注释的处理
+   */
+  "tsdocMetadata": {
+    "enabled": false
+  },
+
+  /**
+   * 消息配置
+   * 配置各种警告和错误消息的处理方式
+   */
+  "messages": {
+    "compilerMessageReporting": {
+      "default": {
+        "logLevel": "warning"
+      }
+    },
+    "extractorMessageReporting": {
+      "default": {
+        "logLevel": "warning"
+      },
+      /**
+       * 忽略一些常见的警告
+       */
+      "ae-missing-release-tag": {
+        "logLevel": "none"
+      },
+      "ae-unresolved-inheritdoc-reference": {
+        "logLevel": "none"
+      }
+    },
+    "tsdocMessageReporting": {
+      "default": {
+        "logLevel": "warning"
+      }
+    }
+  },
+
+  /**
+   * 测试模式配置
+   * 用于单元测试时的特殊配置
+   */
+  "testMode": false,
+
+  /**
+   * 新建项目的配置模板
+   * 用于自动化创建新的 API 项目
+   */
+  "newlineKind": "lf"
+}

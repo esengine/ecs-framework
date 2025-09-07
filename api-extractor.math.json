@@ -1,0 +1,65 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
+
+  "projectFolder": "./packages/math",
+  
+  "mainEntryPointFilePath": "./packages/math/bin/index.d.ts",
+
+  "compiler": {
+    "tsconfigFilePath": "./packages/math/tsconfig.json"
+  },
+
+  "apiReport": {
+    "enabled": true,
+    "reportFolder": "./temp/api-report/",
+    "reportFileName": "ecs-framework-math.api.md"
+  },
+
+  "docModel": {
+    "enabled": true,
+    "apiJsonFilePath": "./temp/api-model/ecs-framework-math.api.json"
+  },
+
+  "dtsRollup": {
+    "enabled": true,
+    "untrimmedFilePath": "./temp/rollup/ecs-framework-math.d.ts",
+    "publicTrimmedFilePath": "./dist/ecs-framework-math.d.ts"
+  },
+
+  "tsdocMetadata": {
+    "enabled": false
+  },
+
+  "messages": {
+    "compilerMessageReporting": {
+      "default": {
+        "logLevel": "warning"
+      }
+    },
+    "extractorMessageReporting": {
+      "default": {
+        "logLevel": "warning"
+      },
+      "ae-missing-release-tag": {
+        "logLevel": "none"
+      },
+      "ae-unresolved-inheritdoc-reference": {
+        "logLevel": "none"
+      },
+      "ae-internal-missing-underscore": {
+        "logLevel": "none"
+      }
+    },
+    "tsdocMessageReporting": {
+      "default": {
+        "logLevel": "warning"
+      },
+      "tsdoc-undefined-tag": {
+        "logLevel": "none"
+      }
+    }
+  },
+
+  "testMode": false,
+  "newlineKind": "lf"
+}

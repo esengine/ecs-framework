@@ -5,6 +5,7 @@
     "moduleResolution": "node",
     "allowImportingTsExtensions": false,
     "lib": ["ES2020", "DOM"],
+    "types": ["node", "jest"],
     "outDir": "./bin",
     "rootDir": "./src",
     "strict": true,
