@@ -33,13 +33,16 @@
     "test": "lerna run test",
     "test:coverage": "lerna run test:coverage",
     "test:ci": "lerna run test:ci",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "prepare:publish": "npm run build:npm && node scripts/pre-publish-check.cjs",
     "sync:versions": "node scripts/sync-versions.cjs",
     "publish:all": "npm run prepare:publish && npm run publish:all:dist",
     "publish:all:dist": "npm run publish:core && npm run publish:math && npm run publish:network-shared && npm run publish:network-client && npm run publish:network-server",
     "publish:core": "cd packages/core && npm run publish:npm",
     "publish:core:patch": "cd packages/core && npm run publish:patch",
-    "publish:math": "cd packages/math && npm run publish:npm", 
+    "publish:math": "cd packages/math && npm run publish:npm",
     "publish:math:patch": "cd packages/math && npm run publish:patch",
     "publish:network-shared": "cd packages/network-shared && npm run publish:npm",
     "publish:network-shared:patch": "cd packages/network-shared && npm run publish:patch",
@@ -66,7 +69,8 @@
     "rollup-plugin-dts": "^6.2.1",
     "semver": "^7.6.3",
     "ts-jest": "^29.4.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitepress": "^1.6.4"
   },
   "publishConfig": {
     "access": "public"

@@ -1,0 +1,30 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- ECS Framework Logo -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#646cff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#747bff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 外圈 - 代表 System -->
+  <circle cx="32" cy="32" r="30" fill="none" stroke="url(#gradient)" stroke-width="2" opacity="0.8"/>
+  
+  <!-- 内圈 - 代表 Component -->
+  <circle cx="32" cy="32" r="20" fill="none" stroke="url(#gradient)" stroke-width="1.5" opacity="0.6"/>
+  
+  <!-- 中心点 - 代表 Entity -->
+  <circle cx="32" cy="32" r="4" fill="url(#gradient)"/>
+  
+  <!-- 连接线 - 代表关系 -->
+  <line x1="32" y1="12" x2="32" y2="28" stroke="url(#gradient)" stroke-width="1" opacity="0.7"/>
+  <line x1="32" y1="36" x2="32" y2="52" stroke="url(#gradient)" stroke-width="1" opacity="0.7"/>
+  <line x1="12" y1="32" x2="28" y2="32" stroke="url(#gradient)" stroke-width="1" opacity="0.7"/>
+  <line x1="36" y1="32" x2="52" y2="32" stroke="url(#gradient)" stroke-width="1" opacity="0.7"/>
+  
+  <!-- 装饰点 -->
+  <circle cx="32" cy="12" r="2" fill="url(#gradient)" opacity="0.8"/>
+  <circle cx="32" cy="52" r="2" fill="url(#gradient)" opacity="0.8"/>
+  <circle cx="12" cy="32" r="2" fill="url(#gradient)" opacity="0.8"/>
+  <circle cx="52" cy="32" r="2" fill="url(#gradient)" opacity="0.8"/>
+</svg>

@@ -1,0 +1,92 @@
+# 文档自动构建和部署工作流
+#
+# 此工作流程负责：
+# 1. 在推送到 master 分支时自动构建文档
+# 2. 将构建结果部署到 GitHub Pages
+# 3. 确保文档站点始终保持最新状态
+#
+# 工作流触发条件：
+# - 推送到 master 分支
+# - docs/ 目录下文件发生变更
+# - 手动触发
+
+name: 构建和部署文档
+
+# 触发条件
+on:
+  # 推送到 master 分支时触发
+  push:
+    branches: [master]
+    paths:
+      - 'docs/**'
+      - 'package.json'
+      - '.github/workflows/docs.yml'
+  
+  # 允许手动触发工作流
+  workflow_dispatch:
+
+# 设置 GITHUB_TOKEN 的权限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 确保只有一个部署作业同时运行
+# 取消正在进行的运行，但让正在进行的部署完成
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # 构建作业
+  build:
+    name: 构建文档
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 检出代码
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          # 获取完整的 git 历史，用于显示最后修改时间
+          fetch-depth: 0
+      
+      # 设置 Node.js 环境
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      # 安装依赖
+      - name: 安装依赖
+        run: npm ci
+        
+      # 构建文档
+      - name: 构建文档
+        run: npm run docs:build
+        
+      # 设置 Pages 配置
+      - name: 设置 Pages
+        uses: actions/configure-pages@v4
+        
+      # 上传构建产物
+      - name: 上传构建产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/.vitepress/dist
+
+  # 部署作业
+  deploy:
+    name: 部署到 GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      # 部署到 GitHub Pages
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
