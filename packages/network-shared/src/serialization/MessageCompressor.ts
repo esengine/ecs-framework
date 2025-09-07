@@ -17,23 +17,27 @@ export interface ICompressionAlgorithm {
     
     /**
      * 同步压缩
+     * @param data - 待压缩的字节数据
+     * @returns 压缩后的字节数据
      */
-    compress(data: ArrayBuffer): ArrayBuffer;
+    compress(data: Uint8Array): Uint8Array;
     
     /**
      * 同步解压缩
+     * @param data - 待解压的字节数据
+     * @returns 解压后的字节数据
      */
-    decompress(data: ArrayBuffer): ArrayBuffer;
+    decompress(data: Uint8Array): Uint8Array;
     
     /**
      * 异步压缩（可选）
      */
-    compressAsync?(data: ArrayBuffer): Promise<ArrayBuffer>;
+    compressAsync?(data: Uint8Array): Promise<Uint8Array>;
     
     /**
      * 异步解压缩（可选）
      */
-    decompressAsync?(data: ArrayBuffer): Promise<ArrayBuffer>;
+    decompressAsync?(data: Uint8Array): Promise<Uint8Array>;
     
 }
 
@@ -121,12 +125,12 @@ export class NoCompressionAlgorithm implements ICompressionAlgorithm {
     readonly version = '1.0.0';
     readonly supportsAsync = false;
     
-    compress(data: ArrayBuffer): ArrayBuffer {
-        return data.slice(0);
+    compress(data: Uint8Array): Uint8Array {
+        return new Uint8Array(data);
     }
     
-    decompress(data: ArrayBuffer): ArrayBuffer {
-        return data.slice(0);
+    decompress(data: Uint8Array): Uint8Array {
+        return new Uint8Array(data);
     }
 }
 
@@ -138,13 +142,9 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
     readonly version = '1.0.0';
     readonly supportsAsync = false;
     
-    compress(data: ArrayBuffer): ArrayBuffer {
-        // 将ArrayBuffer转换为字符串
-        const decoder = new TextDecoder();
-        const input = decoder.decode(data);
-        
-        if (!input) {
-            return data.slice(0);
+    compress(data: Uint8Array): Uint8Array {
+        if (data.length === 0) {
+            return new Uint8Array(0);
         }
         
         // LZ压缩算法
@@ -153,15 +153,15 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
         
         // 初始化字典
         for (let i = 0; i < 256; i++) {
-            dictionary[String.fromCharCode(i)] = i;
+            dictionary[String(i)] = i;
         }
         
-        let w = '';
+        let w = String(data[0]);
         const result: number[] = [];
         
-        for (let i = 0; i < input.length; i++) {
-            const c = input.charAt(i);
-            const wc = w + c;
+        for (let i = 1; i < data.length; i++) {
+            const c = String(data[i]);
+            const wc = w + ',' + c; // 使用逗号分隔以避免歧义
             
             if (dictionary[wc] !== undefined) {
                 w = wc;
@@ -171,14 +171,14 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
                 w = c;
                 
                 // 防止字典过大
-                if (dictSize >= 0xFFFF) {
+                if (dictSize >= 0x8000) {
                     dictSize = 256;
-                    // 重置字典
-                    for (const key of Object.keys(dictionary)) {
-                        if (dictionary[key] >= 256) {
-                            delete dictionary[key];
-                        }
+                    // 重置字典，只保留单字节序列
+                    const newDict: { [key: string]: number } = {};
+                    for (let j = 0; j < 256; j++) {
+                        newDict[String(j)] = j;
                     }
+                    Object.assign(dictionary, newDict);
                 }
             }
         }
@@ -187,70 +187,65 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
             result.push(dictionary[w]);
         }
         
-        // 将结果转换为ArrayBuffer
-        return this.numbersToArrayBuffer(result);
+        return this.numbersToUint8Array(result);
     }
     
-    decompress(data: ArrayBuffer): ArrayBuffer {
-        if (data.byteLength === 0) {
-            return data.slice(0);
+    decompress(data: Uint8Array): Uint8Array {
+        if (data.length === 0) {
+            return new Uint8Array(0);
         }
         
-        const numbers = this.arrayBufferToNumbers(data);
+        const numbers = this.uint8ArrayToNumbers(data);
         if (numbers.length === 0) {
-            return data.slice(0);
+            return new Uint8Array(0);
         }
         
-        const dictionary: { [key: number]: string } = {};
+        const dictionary: { [key: number]: number[] } = {};
         let dictSize = 256;
         
         // 初始化字典
         for (let i = 0; i < 256; i++) {
-            dictionary[i] = String.fromCharCode(i);
+            dictionary[i] = [i];
         }
         
-        let w = String.fromCharCode(numbers[0]);
-        const result = [w];
+        let w = dictionary[numbers[0]];
+        const result: number[] = [...w];
         
         for (let i = 1; i < numbers.length; i++) {
             const k = numbers[i];
-            let entry: string;
+            let entry: number[];
             
             if (dictionary[k] !== undefined) {
                 entry = dictionary[k];
             } else if (k === dictSize) {
-                entry = w + w.charAt(0);
+                entry = [...w, w[0]];
             } else {
                 throw new Error('LZ解压缩错误：无效的压缩数据');
             }
             
-            result.push(entry);
-            dictionary[dictSize++] = w + entry.charAt(0);
+            result.push(...entry);
+            dictionary[dictSize++] = [...w, entry[0]];
             w = entry;
             
             // 防止字典过大
-            if (dictSize >= 0xFFFF) {
+            if (dictSize >= 0x8000) {
                 dictSize = 256;
-                // 重置字典
-                for (const key of Object.keys(dictionary)) {
-                    const numKey = parseInt(key);
-                    if (numKey >= 256) {
-                        delete dictionary[numKey];
-                    }
+                // 重置字典，只保留单字节序列
+                const newDict: { [key: number]: number[] } = {};
+                for (let j = 0; j < 256; j++) {
+                    newDict[j] = [j];
                 }
+                Object.assign(dictionary, newDict);
             }
         }
         
-        // 将结果转换为ArrayBuffer
-        const output = result.join('');
-        const encoder = new TextEncoder();
-        return encoder.encode(output).buffer;
+        return new Uint8Array(result);
     }
     
     /**
-     * 将数字数组转换为ArrayBuffer
+     * 将数字数组编码为字节数组
      */
-    private numbersToArrayBuffer(numbers: number[]): ArrayBuffer {
+    private numbersToUint8Array(numbers: number[]): Uint8Array {
         // 使用变长编码以节省空间
         const bytes: number[] = [];
         
@@ -270,14 +265,14 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
             }
         }
         
-        return new Uint8Array(bytes).buffer;
+        return new Uint8Array(bytes);
     }
     
     /**
-     * 将ArrayBuffer转换为数字数组
+     * 将字节数组解码为数字数组
      */
-    private arrayBufferToNumbers(buffer: ArrayBuffer): number[] {
-        const bytes = new Uint8Array(buffer);
+    private uint8ArrayToNumbers(data: Uint8Array): number[] {
+        const bytes = data;
         const numbers: number[] = [];
         
         for (let i = 0; i < bytes.length; i++) {
@@ -407,11 +402,11 @@ export class MessageCompressor {
     ): Promise<CompressionResult> {
         const startTime = performance.now();
         
-        // 转换输入数据
-        const inputBuffer = typeof data === 'string' 
-            ? new TextEncoder().encode(data).buffer 
-            : data;
-        const originalSize = inputBuffer.byteLength;
+        // 转换输入数据为 Uint8Array
+        const inputData = typeof data === 'string' 
+            ? new TextEncoder().encode(data)
+            : new Uint8Array(data);
+        const originalSize = inputData.length;
         
         // 选择压缩算法
         const selectedAlgorithm = algorithmName || this.config.defaultAlgorithm;
@@ -422,18 +417,18 @@ export class MessageCompressor {
         }
 
         try {
-            let compressedData: ArrayBuffer;
+            let compressedData: Uint8Array;
             let wasCompressed = false;
 
             // 检查是否需要压缩
             if (originalSize < this.config.threshold || selectedAlgorithm === 'none') {
-                compressedData = inputBuffer.slice(0);
+                compressedData = new Uint8Array(inputData);
             } else {
                 // 选择同步或异步压缩
                 if (this.config.enableAsync && algorithm.supportsAsync && algorithm.compressAsync) {
-                    compressedData = await algorithm.compressAsync(inputBuffer);
+                    compressedData = await algorithm.compressAsync(inputData);
                 } else {
-                    compressedData = algorithm.compress(inputBuffer);
+                    compressedData = algorithm.compress(inputData);
                 }
                 wasCompressed = true;
             }
@@ -454,7 +449,7 @@ export class MessageCompressor {
             }
 
             const result: CompressionResult = {
-                data: compressedData,
+                data: compressedData.buffer.slice(compressedData.byteOffset, compressedData.byteOffset + compressedData.byteLength) as ArrayBuffer,
                 originalSize,
                 compressedSize,
                 compressionRatio,
@@ -486,6 +481,7 @@ export class MessageCompressor {
     ): Promise<DecompressionResult> {
         const startTime = performance.now();
         const compressedSize = data.byteLength;
+        const inputData = new Uint8Array(data);
         
         const algorithm = this.algorithms.get(algorithmName);
         if (!algorithm) {
@@ -493,14 +489,16 @@ export class MessageCompressor {
         }
 
         try {
-            let decompressedData: ArrayBuffer;
+            let decompressedUint8Array: Uint8Array;
 
             // 选择同步或异步解压缩
             if (this.config.enableAsync && algorithm.supportsAsync && algorithm.decompressAsync) {
-                decompressedData = await algorithm.decompressAsync(data);
+                decompressedUint8Array = await algorithm.decompressAsync(inputData);
             } else {
-                decompressedData = algorithm.decompress(data);
+                decompressedUint8Array = algorithm.decompress(inputData);
             }
+
+            const decompressedData = decompressedUint8Array.buffer.slice(decompressedUint8Array.byteOffset, decompressedUint8Array.byteOffset + decompressedUint8Array.byteLength);
 
             const endTime = performance.now();
             const decompressionTime = endTime - startTime;
@@ -512,7 +510,7 @@ export class MessageCompressor {
             }
 
             const result: DecompressionResult = {
-                data: decompressedData,
+                data: decompressedData as ArrayBuffer,
                 compressedSize,
                 decompressedSize,
                 decompressionTime,
