@@ -5,6 +5,34 @@
 import { createLogger } from '@esengine/ecs-framework';
 
 /**
+ * 容器头结构
+ */
+export interface ContainerHeader {
+    /** 魔数标识 'MCF0' */
+    magic: 'MCF0';
+    /** 版本号 */
+    version: 1;
+    /** 压缩算法名称 */
+    algo: string;
+    /** 原始数据大小 */
+    originalSize: number;
+    /** 标志位，预留扩展用 */
+    flags: number;
+}
+
+/**
+ * 容器头解析结果
+ */
+export interface ParsedHeader {
+    /** 解析到的头部信息 */
+    header: ContainerHeader;
+    /** 头部字节长度 */
+    headerSize: number;
+    /** 载荷数据 */
+    payload: Uint8Array;
+}
+
+/**
  * 压缩算法接口
  */
 export interface ICompressionAlgorithm {
@@ -438,29 +466,43 @@ export class MessageCompressor {
             const compressedSize = compressedData.byteLength;
             const compressionRatio = originalSize > 0 ? compressedSize / originalSize : 1;
 
+            // 创建容器头
+            const header: ContainerHeader = {
+                magic: 'MCF0',
+                version: 1,
+                algo: selectedAlgorithm,
+                originalSize,
+                flags: 0 // 暂时保留扩展用
+            };
+
+            // 编码容器格式数据
+            const containerData = this.encodeContainerHeader(header, compressedData);
+            const finalCompressedSize = containerData.byteLength;
+            const finalCompressionRatio = originalSize > 0 ? finalCompressedSize / originalSize : 1;
+
             // 更新统计信息
             if (this.config.enableStats) {
                 this.updateCompressionStats(
                     selectedAlgorithm, 
                     originalSize, 
-                    compressedSize, 
+                    finalCompressedSize, 
                     compressionTime
                 );
             }
 
             const result: CompressionResult = {
-                data: compressedData.buffer.slice(compressedData.byteOffset, compressedData.byteOffset + compressedData.byteLength) as ArrayBuffer,
+                data: containerData.buffer.slice(containerData.byteOffset, containerData.byteOffset + containerData.byteLength) as ArrayBuffer,
                 originalSize,
-                compressedSize,
-                compressionRatio,
+                compressedSize: finalCompressedSize,
+                compressionRatio: finalCompressionRatio,
                 compressionTime,
                 algorithm: selectedAlgorithm,
                 wasCompressed
             };
 
             this.logger.debug(
-                `压缩完成: ${originalSize}B -> ${compressedSize}B ` +
-                `(${(compressionRatio * 100).toFixed(1)}%) ` +
+                `压缩完成: ${originalSize}B -> ${finalCompressedSize}B ` +
+                `(${(finalCompressionRatio * 100).toFixed(1)}%) ` +
                 `用时 ${compressionTime.toFixed(2)}ms, 算法: ${selectedAlgorithm}`
             );
 
@@ -475,17 +517,22 @@ export class MessageCompressor {
     /**
      * 解压缩数据
      */
-    public async decompress(
-        data: ArrayBuffer, 
-        algorithmName: string
-    ): Promise<DecompressionResult> {
+    public async decompress(data: ArrayBuffer): Promise<DecompressionResult> {
         const startTime = performance.now();
         const compressedSize = data.byteLength;
         const inputData = new Uint8Array(data);
         
-        const algorithm = this.algorithms.get(algorithmName);
+        // 检测并解析容器头
+        if (!this.isContainerFormat(inputData)) {
+            throw new Error('无效的压缩数据格式，缺少容器头');
+        }
+
+        const parsed = this.decodeContainerHeader(inputData);
+        const { header, payload } = parsed;
+        
+        const algorithm = this.algorithms.get(header.algo);
         if (!algorithm) {
-            throw new Error(`未找到解压缩算法: ${algorithmName}`);
+            throw new Error(`未找到解压缩算法: ${header.algo}`);
         }
 
         try {
@@ -493,12 +540,22 @@ export class MessageCompressor {
 
             // 选择同步或异步解压缩
             if (this.config.enableAsync && algorithm.supportsAsync && algorithm.decompressAsync) {
-                decompressedUint8Array = await algorithm.decompressAsync(inputData);
+                decompressedUint8Array = await algorithm.decompressAsync(payload);
             } else {
-                decompressedUint8Array = algorithm.decompress(inputData);
+                decompressedUint8Array = algorithm.decompress(payload);
             }
 
-            const decompressedData = decompressedUint8Array.buffer.slice(decompressedUint8Array.byteOffset, decompressedUint8Array.byteOffset + decompressedUint8Array.byteLength);
+            // 验证解压缩后的大小是否与头部记录一致
+            if (decompressedUint8Array.length !== header.originalSize) {
+                throw new Error(
+                    `解压缩大小不匹配: 期望 ${header.originalSize}B, 实际 ${decompressedUint8Array.length}B`
+                );
+            }
+
+            const decompressedData = decompressedUint8Array.buffer.slice(
+                decompressedUint8Array.byteOffset, 
+                decompressedUint8Array.byteOffset + decompressedUint8Array.byteLength
+            );
 
             const endTime = performance.now();
             const decompressionTime = endTime - startTime;
@@ -506,7 +563,7 @@ export class MessageCompressor {
 
             // 更新统计信息
             if (this.config.enableStats) {
-                this.updateDecompressionStats(algorithmName, decompressionTime);
+                this.updateDecompressionStats(header.algo, decompressionTime);
             }
 
             const result: DecompressionResult = {
@@ -514,18 +571,18 @@ export class MessageCompressor {
                 compressedSize,
                 decompressedSize,
                 decompressionTime,
-                algorithm: algorithmName
+                algorithm: header.algo
             };
 
             this.logger.debug(
                 `解压缩完成: ${compressedSize}B -> ${decompressedSize}B ` +
-                `用时 ${decompressionTime.toFixed(2)}ms, 算法: ${algorithmName}`
+                `用时 ${decompressionTime.toFixed(2)}ms, 算法: ${header.algo}`
             );
 
             return result;
 
         } catch (error) {
-            this.logger.error(`解压缩失败 (${algorithmName}):`, error);
+            this.logger.error(`解压缩失败 (${header.algo}):`, error);
             throw error;
         }
     }
@@ -609,6 +666,134 @@ export class MessageCompressor {
         this.stats.averageDecompressionTime = 
             (this.stats.averageDecompressionTime * (this.stats.totalDecompressions - 1) + decompressionTime) 
             / this.stats.totalDecompressions;
+    }
+
+    /**
+     * 编码容器头
+     * 格式: [MAGIC:4] 'MCF0' | [ver:1] | [algoLen:1] | [algoName:algoLen]
+     *       [origLen:4, LE] | [flags:1] | [payload:...]
+     */
+    private encodeContainerHeader(header: ContainerHeader, payload: Uint8Array): Uint8Array {
+        const textEncoder = new TextEncoder();
+        const algoBytes = textEncoder.encode(header.algo);
+        
+        if (algoBytes.length > 255) {
+            throw new Error(`算法名称过长: ${header.algo.length} > 255`);
+        }
+
+        // 计算头部总长度: 4(magic) + 1(version) + 1(algoLen) + algoLen + 4(originalSize) + 1(flags)
+        const headerSize = 4 + 1 + 1 + algoBytes.length + 4 + 1;
+        const totalSize = headerSize + payload.length;
+        const result = new Uint8Array(totalSize);
+        
+        let offset = 0;
+
+        // Magic number 'MCF0'
+        result[offset++] = 77;  // 'M'
+        result[offset++] = 67;  // 'C'
+        result[offset++] = 70;  // 'F'
+        result[offset++] = 48;  // '0'
+
+        // Version
+        result[offset++] = header.version;
+
+        // Algorithm length and name
+        result[offset++] = algoBytes.length;
+        result.set(algoBytes, offset);
+        offset += algoBytes.length;
+
+        // Original size (Little Endian)
+        const originalSizeBytes = new ArrayBuffer(4);
+        const originalSizeView = new DataView(originalSizeBytes);
+        originalSizeView.setUint32(0, header.originalSize, true); // Little Endian
+        result.set(new Uint8Array(originalSizeBytes), offset);
+        offset += 4;
+
+        // Flags
+        result[offset++] = header.flags;
+
+        // Payload
+        result.set(payload, offset);
+
+        return result;
+    }
+
+    /**
+     * 解码容器头
+     */
+    private decodeContainerHeader(data: Uint8Array): ParsedHeader {
+        if (data.length < 11) { // 最小头部大小
+            throw new Error('数据太小，无法包含有效的容器头');
+        }
+
+        let offset = 0;
+
+        // 验证 Magic number
+        const magic = String.fromCharCode(data[offset], data[offset + 1], data[offset + 2], data[offset + 3]);
+        if (magic !== 'MCF0') {
+            throw new Error(`无效的魔数: ${magic}，期望: MCF0`);
+        }
+        offset += 4;
+
+        // 版本
+        const version = data[offset++];
+        if (version !== 1) {
+            throw new Error(`不支持的版本: ${version}，期望: 1`);
+        }
+
+        // 算法名长度和名称
+        const algoLen = data[offset++];
+        if (offset + algoLen > data.length) {
+            throw new Error('算法名称长度超出数据边界');
+        }
+
+        const textDecoder = new TextDecoder();
+        const algoBytes = data.slice(offset, offset + algoLen);
+        const algo = textDecoder.decode(algoBytes);
+        offset += algoLen;
+
+        // 原始大小 (Little Endian)
+        if (offset + 4 > data.length) {
+            throw new Error('原始大小字段超出数据边界');
+        }
+        const originalSizeBytes = data.slice(offset, offset + 4);
+        const originalSizeView = new DataView(originalSizeBytes.buffer, originalSizeBytes.byteOffset, 4);
+        const originalSize = originalSizeView.getUint32(0, true); // Little Endian
+        offset += 4;
+
+        // 标志位
+        if (offset >= data.length) {
+            throw new Error('标志位字段超出数据边界');
+        }
+        const flags = data[offset++];
+
+        // 载荷数据
+        const payload = data.slice(offset);
+
+        const header: ContainerHeader = {
+            magic: 'MCF0',
+            version: version as 1,
+            algo,
+            originalSize,
+            flags
+        };
+
+        return {
+            header,
+            headerSize: offset,
+            payload
+        };
+    }
+
+    /**
+     * 检测是否为新的容器格式
+     */
+    private isContainerFormat(data: Uint8Array): boolean {
+        return data.length >= 4 && 
+               data[0] === 77 && // 'M'
+               data[1] === 67 && // 'C'
+               data[2] === 70 && // 'F'
+               data[3] === 48;   // '0'
     }
 }
 
