@@ -76,8 +76,7 @@ export default defineConfig({
       },
       { 
         text: '示例', 
-        link: '/examples/',
-        activeMatch: '/examples/'
+        link: 'https://github.com/esengine/lawn-mower-demo/tree/master'
       }
     ],
     
