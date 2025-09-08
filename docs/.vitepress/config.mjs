@@ -86,7 +86,41 @@ export default defineConfig({
      * 定义各个部分的详细导航结构
      */
     sidebar: {
-      '/guide/': [],
+      '/guide/': [
+        {
+          text: 'ECS Framework 文档',
+          items: [
+            { 
+              text: '概述', 
+              link: '/guide/01-overview',
+              items: [
+                { text: '架构概述', link: '/guide/01-01-architecture-overview' },
+                { text: '快速开始', link: '/guide/01-02-getting-started' },
+                { text: '包结构', link: '/guide/01-03-package-structure' }
+              ]
+            },
+            { 
+              text: '核心 ECS 框架', 
+              link: '/guide/02-core-ecs-framework',
+              items: [
+                { text: '实体与实体管理', link: '/guide/02-01-entities-and-entity-management' },
+                { text: '组件与存储', link: '/guide/02-02-components-and-storage' },
+                { text: '系统与处理', link: '/guide/02-03-systems-and-processing' },
+                { text: '场景与世界', link: '/guide/02-04-scenes-and-worlds' }
+              ]
+            },
+            { 
+              text: '高级特性', 
+              link: '/guide/03-advanced-features',
+              items: [
+                { text: '查询系统与性能', link: '/guide/03-01-query-system-and-performance' }
+              ]
+            },
+            { text: '平台集成', link: '/guide/04-platform-integrations' },
+            { text: '开发与部署', link: '/guide/05-development-and-deployment' }
+          ]
+        }
+      ],
       '/api/': [],
       '/examples/': []
     },
