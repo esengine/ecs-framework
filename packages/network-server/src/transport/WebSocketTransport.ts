@@ -333,7 +333,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
                 return;
             }
             
-            const message = data instanceof ArrayBuffer ? data : new TextEncoder().encode(data.toString()).buffer;
+            const message = data instanceof ArrayBuffer ? data : new TextEncoder().encode(data.toString()).buffer as ArrayBuffer;
             
             // 触发消息事件
             this.messageHandlers.forEach(handler => {

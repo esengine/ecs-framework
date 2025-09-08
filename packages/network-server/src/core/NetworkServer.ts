@@ -286,7 +286,10 @@ export class NetworkServer extends EventEmitter {
 
         try {
             const serializedMessage = this.serializer.serialize(message);
-            this.transport.send(clientId, serializedMessage.data);
+            const data = Buffer.isBuffer(serializedMessage.data) 
+                ? serializedMessage.data.buffer.slice(serializedMessage.data.byteOffset, serializedMessage.data.byteOffset + serializedMessage.data.byteLength) as ArrayBuffer
+                : serializedMessage.data;
+            this.transport.send(clientId, data);
 
             // 更新统计
             this.stats.messages.sent++;
@@ -314,7 +317,10 @@ export class NetworkServer extends EventEmitter {
 
         try {
             const serializedMessage = this.serializer.serialize(message);
-            this.transport.broadcast(serializedMessage.data, exclude);
+            const data = Buffer.isBuffer(serializedMessage.data) 
+                ? serializedMessage.data.buffer.slice(serializedMessage.data.byteOffset, serializedMessage.data.byteOffset + serializedMessage.data.byteLength) as ArrayBuffer
+                : serializedMessage.data;
+            this.transport.broadcast(data, exclude);
 
             const clientCount = this.connectionManager.getAllSessions().length - (exclude?.length || 0);
             
