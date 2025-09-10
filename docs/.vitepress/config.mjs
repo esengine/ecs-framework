@@ -121,11 +121,76 @@ export default defineConfig({
               link: '/guide/04-platform-integrations',
               items: [
                 { text: 'Cocos Creator 集成', link: '/guide/04-01-cocos-creator-integration' },
-                { text: 'AI 与行为系统', link: '/guide/04-02-ai-behavior-systems' },
-                { text: 'MVVM UI 框架', link: '/guide/04-03-mvvm-ui-framework' }
+                { 
+                  text: 'AI 与行为系统', 
+                  link: '/guide/04-02-ai-behavior-systems',
+                  items: [
+                    { 
+                      text: '快速开始', 
+                      link: '/guide/04-02-01-getting-started',
+                      items: [
+                        { text: 'BehaviorTreeBuilder', link: '/guide/04-02-01-01-behaviortreebuilder' },
+                        { text: '复合节点', link: '/guide/04-02-01-02-composite-nodes' },
+                        { text: '装饰器节点', link: '/guide/04-02-01-03-decorator-nodes' },
+                        { text: '行动节点', link: '/guide/04-02-01-04-action-nodes' },
+                        { text: '运行时执行', link: '/guide/04-02-01-05-runtime-execution' },
+                        { text: '黑板系统', link: '/guide/04-02-01-06-blackboard-system' },
+                        { text: '事件系统', link: '/guide/04-02-01-07-event-system' }
+                      ]
+                    },
+                    { text: '行为树', link: '/guide/04-02-02-behavior-trees' },
+                    { text: '效用 AI', link: '/guide/04-02-03-utility-ai' },
+                    { text: '有限状态机', link: '/guide/04-02-04-finite-state-machine' },
+                    { text: '性能与优化', link: '/guide/04-02-05-performance-optimization' }
+                  ]
+                },
+                { 
+                  text: 'MVVM UI 框架', 
+                  link: '/guide/04-03-mvvm-ui-framework',
+                  items: [
+                    { text: '快速开始', link: '/guide/04-03-01-getting-started' },
+                    { 
+                      text: '核心 MVVM 组件', 
+                      link: '/guide/04-03-02-core-mvvm-components',
+                      items: [
+                        { text: 'ViewModel 系统', link: '/guide/04-03-02-01-viewmodel-system' },
+                        { text: '数据绑定', link: '/guide/04-03-02-02-data-binding' },
+                        { text: '命令系统', link: '/guide/04-03-02-03-command-system' },
+                        { text: '装饰器', link: '/guide/04-03-02-04-decorators' }
+                      ]
+                    },
+                    { 
+                      text: 'UI 管理系统', 
+                      link: '/guide/04-03-03-ui-management-system',
+                      items: [
+                        { text: 'UIManager 核心', link: '/guide/04-03-03-01-uimanager-core' },
+                        { text: 'UI 操作', link: '/guide/04-03-03-02-ui-operations' },
+                        { text: 'UI 配置与层', link: '/guide/04-03-03-03-ui-configuration-layers' },
+                        { text: '引擎集成', link: '/guide/04-03-03-04-engine-integration' }
+                      ]
+                    },
+                    { 
+                      text: '高级功能', 
+                      link: '/guide/04-03-04-advanced-features',
+                      items: [
+                        { text: '类型安全', link: '/guide/04-03-04-01-type-safety' },
+                        { text: '值转换器', link: '/guide/04-03-04-02-value-converters' },
+                        { text: '自定义命令', link: '/guide/04-03-04-03-custom-commands' }
+                      ]
+                    },
+                    { 
+                      text: 'API 参考', 
+                      link: '/guide/04-03-05-api-reference',
+                      items: [
+                        { text: 'Core APIs', link: '/guide/04-03-05-01-core-apis' },
+                        { text: 'Data Binding APIs', link: '/guide/04-03-05-02-data-binding-apis' },
+                        { text: 'UI Management APIs', link: '/guide/04-03-05-03-ui-management-apis' }
+                      ]
+                    }
+                  ]
+                }
               ]
-            },
-            { text: '开发与部署', link: '/guide/05-development-and-deployment' }
+            }
           ]
         }
       ],
