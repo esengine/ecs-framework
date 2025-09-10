@@ -5,7 +5,7 @@ import { PerformanceDataCollector } from './PerformanceDataCollector';
 import { ComponentDataCollector } from './ComponentDataCollector';
 import { SceneDataCollector } from './SceneDataCollector';
 import { WebSocketManager } from './WebSocketManager';
-import { Core } from '../../Core';
+import { ICoreProvider } from './ICoreProvider';
 import { Component } from '../../ECS/Component';
 import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
 import { Pool } from '../../Utils/Pool';
@@ -29,9 +29,11 @@ export class DebugManager {
     private lastSendTime: number = 0;
     private sendInterval: number;
     private isRunning: boolean = false;
+    private coreProvider: ICoreProvider;
 
-    constructor(core: Core, config: IECSDebugConfig) {
+    constructor(coreProvider: ICoreProvider, config: IECSDebugConfig) {
         this.config = config;
+        this.coreProvider = coreProvider;
 
         // 初始化数据收集器
         this.entityCollector = new EntityDataCollector();
@@ -327,12 +329,12 @@ export class DebugManager {
         const timestamp = Date.now();
 
         // 使用专门的内存计算方法收集实体数据
-        const entityData = this.entityCollector.collectEntityDataWithMemory();
+        const scene = this.coreProvider.getCurrentScene();
+        const entityData = this.entityCollector.collectEntityDataWithMemory(scene);
 
         // 收集其他内存统计
         const baseMemoryInfo = this.collectBaseMemoryInfo();
-        const scene = Core.scene;
-        const componentMemoryStats = scene?.entities ? this.collectComponentMemoryStats(scene.entities) : { totalMemory: 0, componentTypes: 0, totalInstances: 0, breakdown: [] };
+        const componentMemoryStats = scene?.entities ? this.collectComponentMemoryStats(scene.entities, scene) : { totalMemory: 0, componentTypes: 0, totalInstances: 0, breakdown: [] };
         const systemMemoryStats = this.collectSystemMemoryStats();
         const poolMemoryStats = this.collectPoolMemoryStats();
         const performanceStats = this.collectPerformanceStats();
@@ -442,7 +444,7 @@ export class DebugManager {
     /**
      * 收集组件内存统计（仅用于内存快照）
      */
-    private collectComponentMemoryStats(entityList: { buffer: Array<{ id: number; name?: string; destroyed?: boolean; components?: Component[] }> }): {
+    private collectComponentMemoryStats(entityList: { buffer: Array<{ id: number; name?: string; destroyed?: boolean; components?: Component[] }> }, scene?: any): {
         totalMemory: number;
         componentTypes: number;
         totalInstances: number;
@@ -475,7 +477,7 @@ export class DebugManager {
 
         // 为每种组件类型计算详细内存（只计算一次，然后乘以数量）
         for (const [typeName, count] of componentTypeCounts.entries()) {
-            const detailedMemoryPerInstance = this.componentCollector.calculateDetailedComponentMemory(typeName);
+            const detailedMemoryPerInstance = this.componentCollector.calculateDetailedComponentMemory(typeName, scene);
             const totalMemoryForType = detailedMemoryPerInstance * count;
             totalComponentMemory += totalMemoryForType;
 
@@ -536,7 +538,7 @@ export class DebugManager {
             updateOrder: number;
         }>;
     } {
-        const scene = Core.scene;
+        const scene = this.coreProvider.getCurrentScene();
         let totalSystemMemory = 0;
         const systemBreakdown: Array<{
             name: string;
@@ -710,8 +712,7 @@ export class DebugManager {
         error?: string;
     } {
         try {
-            const coreInstance = Core.Instance as Core & { _performanceMonitor?: unknown };
-            const performanceMonitor = coreInstance._performanceMonitor;
+            const performanceMonitor = this.coreProvider.getPerformanceMonitor();
             if (!performanceMonitor) {
                 return { enabled: false };
             }
@@ -744,7 +745,7 @@ export class DebugManager {
      */
     public getDebugData(): IECSDebugData {
         const currentTime = Date.now();
-        const scene = Core.scene;
+        const scene = this.coreProvider.getCurrentScene();
 
         const debugData: IECSDebugData = {
             timestamp: currentTime,
@@ -756,27 +757,25 @@ export class DebugManager {
 
         // 根据配置收集各种数据
         if (this.config.channels.entities) {
-            debugData.entities = this.entityCollector.collectEntityData();
+            debugData.entities = this.entityCollector.collectEntityData(scene);
         }
 
         if (this.config.channels.systems) {
-            const coreInstance = Core.Instance as Core & { _performanceMonitor?: unknown };
-            const performanceMonitor = coreInstance._performanceMonitor;
-            debugData.systems = this.systemCollector.collectSystemData(performanceMonitor);
+            const performanceMonitor = this.coreProvider.getPerformanceMonitor();
+            debugData.systems = this.systemCollector.collectSystemData(performanceMonitor, scene);
         }
 
         if (this.config.channels.performance) {
-            const coreInstance = Core.Instance as Core & { _performanceMonitor?: unknown };
-            const performanceMonitor = coreInstance._performanceMonitor;
+            const performanceMonitor = this.coreProvider.getPerformanceMonitor();
             debugData.performance = this.performanceCollector.collectPerformanceData(performanceMonitor);
         }
 
         if (this.config.channels.components) {
-            debugData.components = this.componentCollector.collectComponentData();
+            debugData.components = this.componentCollector.collectComponentData(scene);
         }
 
         if (this.config.channels.scenes) {
-            debugData.scenes = this.sceneCollector.collectSceneData();
+            debugData.scenes = this.sceneCollector.collectSceneData(scene);
         }
 
         return debugData;

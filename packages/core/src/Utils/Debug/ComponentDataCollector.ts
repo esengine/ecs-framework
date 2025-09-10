@@ -1,7 +1,7 @@
 import { IComponentDebugData } from '../../Types';
-import { Core } from '../../Core';
 import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
 import { getComponentInstanceTypeName } from '../../ECS/Decorators';
+import { IScene } from '../../ECS/IScene';
 
 /**
  * 组件数据收集器
@@ -12,8 +12,7 @@ export class ComponentDataCollector {
     /**
      * 收集组件数据（轻量版，不计算实际内存大小）
      */
-    public collectComponentData(): IComponentDebugData {
-        const scene = Core.scene;
+    public collectComponentData(scene?: IScene | null): IComponentDebugData {
         if (!scene) {
             return {
                 componentTypes: 0,
@@ -22,7 +21,7 @@ export class ComponentDataCollector {
             };
         }
 
-        const entityList = (scene as any).entities;
+        const entityList = scene.entities;
         if (!entityList?.buffer) {
             return {
                 componentTypes: 0,
@@ -73,7 +72,7 @@ export class ComponentDataCollector {
                 const poolSize = poolSizes.get(typeName) || 0;
                 const poolUtilization = poolUtilizations.get(typeName) || 0;
                 // 使用预估的基础内存大小，避免每帧计算
-                const memoryPerInstance = this.getEstimatedComponentSize(typeName);
+                const memoryPerInstance = this.getEstimatedComponentSize(typeName, scene);
                 
                 return {
                     typeName,
@@ -91,15 +90,14 @@ export class ComponentDataCollector {
     /**
      * 获取组件类型的估算内存大小（基于预设值，不进行实际计算）
      */
-    private getEstimatedComponentSize(typeName: string): number {
+    private getEstimatedComponentSize(typeName: string, scene?: IScene): number {
         if (ComponentDataCollector.componentSizeCache.has(typeName)) {
             return ComponentDataCollector.componentSizeCache.get(typeName)!;
         }
 
-        const scene = Core.scene;
         if (!scene) return 64;
         
-        const entityList = (scene as any).entities;
+        const entityList = scene.entities;
         if (!entityList?.buffer) return 64;
         
         let calculatedSize = 64;
@@ -170,8 +168,7 @@ export class ComponentDataCollector {
      * 为内存快照功能提供的详细内存计算
      * 只在用户主动请求内存快照时调用
      */
-    public calculateDetailedComponentMemory(typeName: string): number {
-        const scene = Core.scene;
+    public calculateDetailedComponentMemory(typeName: string, scene?: IScene | null): number {
         if (!scene) return this.getEstimatedComponentSize(typeName);
         
         const entityList = (scene as any).entities;
@@ -191,7 +188,7 @@ export class ComponentDataCollector {
             // 忽略错误，使用估算值
         }
         
-        return this.getEstimatedComponentSize(typeName);
+        return this.getEstimatedComponentSize(typeName, scene);
     }
 
     /**
